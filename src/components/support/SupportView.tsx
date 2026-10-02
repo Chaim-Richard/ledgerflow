@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useId } from 'react';
 import { 
   Headphones, 
   Send, 
@@ -30,6 +30,7 @@ import { doc, setDoc, updateDoc } from '../../lib/db/firestore';
 import { Labelled } from '../ui/Labelled';
 
 export default function SupportView() {
+  const formId = useId();
   const { user, getCurrentWorkspace } = useAuthStore();
   const currentWorkspace = getCurrentWorkspace();
   const { 
@@ -272,10 +273,11 @@ export default function SupportView() {
           <h1 className="text-xl font-bold text-slate-900">Support</h1>
           {!isAdmin && (
             <button 
+              aria-label="Create support ticket"
               onClick={() => setIsCreating(true)}
               className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              <Plus className="w-5 h-5" />
+              <Plus aria-hidden="true" className="w-5 h-5" />
             </button>
           )}
         </div>
@@ -300,7 +302,7 @@ export default function SupportView() {
         <div className="flex-1 overflow-y-auto">
           {filteredTickets.length === 0 ? (
             <div className="p-8 text-center text-[var(--muted)]">
-              <Headphones className="w-12 h-12 mx-auto mb-4 opacity-20" />
+              <Headphones aria-hidden="true" className="w-12 h-12 mx-auto mb-4 opacity-20" />
               <p>No support tickets found.</p>
             </div>
           ) : (
@@ -328,11 +330,11 @@ export default function SupportView() {
                   </span>
                 </div>
                 <div className="flex items-center text-xs text-[var(--muted)] gap-2">
-                  <Clock className="w-3 h-3" />
+                  <Clock aria-hidden="true" className="w-3 h-3" />
                   {format(new Date(ticket.lastMessageAt), 'MMM d, HH:mm')}
                   {ticket.errorDiagnostics && (
                     <span className="inline-flex items-center gap-1 text-[10px] text-rose-600 font-medium bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
-                      <Bug className="w-2.5 h-2.5" /> Stack
+                      <Bug aria-hidden="true" className="w-2.5 h-2.5" /> Stack
                     </span>
                   )}
                 </div>
@@ -361,8 +363,8 @@ export default function SupportView() {
             >
               <div className="bg-white rounded-2xl shadow-xl border p-8">
                 <div className="flex items-center gap-4 mb-8">
-                  <button onClick={() => setIsCreating(false)} className="p-2 hover:bg-slate-100 rounded-full">
-                    <ArrowLeft className="w-6 h-6" />
+                  <button onClick={() => setIsCreating(false)} aria-label="Back to support tickets" className="p-2 hover:bg-slate-100 rounded-full">
+                    <ArrowLeft aria-hidden="true" className="w-6 h-6" />
                   </button>
                   <h2 className="text-2xl font-bold">New Support Ticket</h2>
                 </div>
@@ -383,12 +385,13 @@ export default function SupportView() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Priority</label>
-                    <div className="flex gap-4">
+                    <div id={`${formId}-priority`} className="block text-sm font-medium text-slate-700 mb-2">Priority</div>
+                    <div role="group" aria-labelledby={`${formId}-priority`} className="flex gap-4">
                       {(['low', 'normal', 'high'] as const).map(p => (
                         <button
                           key={p}
                           type="button"
+                          aria-pressed={newTicketPriority === p}
                           onClick={() => setNewTicketPriority(p)}
                           className={cn(
                             "flex-1 py-3 rounded-xl border text-sm font-medium transition-all",
@@ -406,12 +409,13 @@ export default function SupportView() {
                   {latestError && (
                     <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 text-sm">
                       <div className="flex items-start gap-3">
-                        <Bug className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <Bug aria-hidden="true" className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
                           <p className="font-semibold text-amber-900">Recent application error detected</p>
                           <p className="text-xs text-amber-800 mt-1 font-mono truncate">{latestError.diagnostics.message}</p>
-                          <label className="flex items-center gap-2 mt-3 cursor-pointer text-xs font-medium text-amber-900">
+                          <label htmlFor={`${formId}-diagnostics`} className="flex items-center gap-2 mt-3 cursor-pointer text-xs font-medium text-amber-900">
                             <input 
+                              id={`${formId}-diagnostics`}
                               type="checkbox"
                               checked={attachDiagnostics}
                               onChange={e => setAttachDiagnostics(e.target.checked)}
@@ -458,8 +462,8 @@ export default function SupportView() {
               {/* Chat Header */}
               <div className="bg-white border-b p-4 flex items-center justify-between sticky top-0 z-20 shadow-sm">
                 <div className="flex items-center gap-4">
-                  <button onClick={() => setSelectedTicketId(null)} className="md:hidden p-2">
-                    <ChevronLeft className="w-6 h-6" />
+                  <button onClick={() => setSelectedTicketId(null)} aria-label="Back to support tickets" className="md:hidden p-2">
+                    <ChevronLeft aria-hidden="true" className="w-6 h-6" />
                   </button>
                   <div>
                     <h3 className="font-bold text-slate-900 line-clamp-1">{selectedTicket.subject}</h3>
@@ -477,14 +481,14 @@ export default function SupportView() {
                       onClick={() => updateStatus('resolved')}
                       className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-emerald-100"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5" />
                       Resolve
                     </button>
                     <button 
                       onClick={() => updateStatus('closed')}
                       className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-slate-200"
                     >
-                      <AlertCircle className="w-3.5 h-3.5" />
+                      <AlertCircle aria-hidden="true" className="w-3.5 h-3.5" />
                       Close
                     </button>
                   </div>
@@ -496,7 +500,7 @@ export default function SupportView() {
                 <div className="bg-slate-900 text-slate-100 border-b border-slate-800 text-xs px-4 py-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 font-mono">
-                      <Bug className="w-4 h-4 text-rose-400" />
+                      <Bug aria-hidden="true" className="w-4 h-4 text-rose-400" />
                       <span className="text-rose-300 font-semibold">Diagnostic Trace:</span>
                       <span className="truncate max-w-md text-slate-300">{selectedTicket.errorDiagnostics.message}</span>
                     </div>
@@ -508,7 +512,7 @@ export default function SupportView() {
                         onClick={() => setShowDiagnosticsDetail(!showDiagnosticsDetail)}
                         className="text-slate-400 hover:text-white flex items-center gap-1 py-0.5 px-1.5 rounded hover:bg-slate-800"
                       >
-                        {showDiagnosticsDetail ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        {showDiagnosticsDetail ? <ChevronUp aria-hidden="true" className="w-3.5 h-3.5" /> : <ChevronDown aria-hidden="true" className="w-3.5 h-3.5" />}
                         {showDiagnosticsDetail ? 'Hide' : 'Details'}
                       </button>
                     </div>
@@ -528,7 +532,7 @@ export default function SupportView() {
                               onClick={copyDiagnostics}
                               className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1"
                             >
-                              {copiedTrace ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                              {copiedTrace ? <Check aria-hidden="true" className="w-3 h-3 text-emerald-400" /> : <Copy aria-hidden="true" className="w-3 h-3" />}
                               {copiedTrace ? 'Copied' : 'Copy'}
                             </button>
                           </div>
@@ -557,7 +561,7 @@ export default function SupportView() {
                       )}>
                         {!isOwn && (
                           <div className="flex items-center gap-1.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                            <User className="w-3 h-3" />
+                            <User aria-hidden="true" className="w-3 h-3" />
                             {msg.authorRole === 'admin' ? 'Support Agent' : 'User'}
                           </div>
                         )}
@@ -580,6 +584,7 @@ export default function SupportView() {
                 <div className="p-4 bg-white border-t">
                   <form onSubmit={handleSendMessage} className="flex gap-4">
                     <input
+                      aria-label="Reply to support ticket"
                       type="text"
                       value={messageInput}
                       onChange={e => setMessageInput(e.target.value)}
@@ -587,11 +592,12 @@ export default function SupportView() {
                       className="flex-1 px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                     <button
+                      aria-label="Send reply"
                       type="submit"
                       disabled={isSending || !messageInput.trim()}
                       className="p-3 bg-blue-600 text-white rounded-xl shadow-md hover:bg-blue-700 transition-colors disabled:opacity-50"
                     >
-                      <Send className="w-6 h-6" />
+                      <Send aria-hidden="true" className="w-6 h-6" />
                     </button>
                   </form>
                 </div>
@@ -619,7 +625,7 @@ export default function SupportView() {
               className="flex flex-col items-center justify-center p-8 text-center"
             >
               <div className="w-20 h-20 bg-blue-100 rounded-3xl flex items-center justify-center mb-6">
-                <MessageSquare className="w-10 h-10 text-blue-600" />
+                <MessageSquare aria-hidden="true" className="w-10 h-10 text-blue-600" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900 mb-2">Select a ticket to view</h2>
               <p className="text-[var(--muted)] max-w-sm">
@@ -632,4 +638,3 @@ export default function SupportView() {
     </div>
   );
 }
-

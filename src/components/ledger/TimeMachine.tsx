@@ -76,7 +76,7 @@ export default function TimeMachine() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
-            <GitMerge className="text-[var(--brass)]" size={32} />
+            <GitMerge aria-hidden="true" className="text-[var(--brass)]" size={32} />
             Time Machine
           </h2>
           <p className="text-[var(--muted)] font-medium mt-1">Git for your books. Fearless scenario testing and immutable history.</p>
@@ -85,7 +85,7 @@ export default function TimeMachine() {
           onClick={() => setShowNewBranchModal(true)}
           className="h-10 px-4 bg-[var(--brass)] hover:opacity-90 text-black rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-md"
         >
-          <GitBranch size={16} />
+          <GitBranch aria-hidden="true" size={16} />
           Try something (New Branch)
         </button>
       </div>
@@ -131,7 +131,7 @@ export default function TimeMachine() {
                 )}
                 
                 <h3 className="font-black text-[var(--text)] text-lg flex items-center gap-2 mb-2">
-                  <GitBranch size={20} className={isActive ? "text-[#0047AB]" : "text-[var(--muted)]"} />
+                  <GitBranch aria-hidden="true" size={20} className={isActive ? "text-[#0047AB]" : "text-[var(--muted)]"} />
                   {scenario.name}
                 </h3>
                 <p className="text-sm text-[var(--muted)] mb-6 h-10">{scenario.description}</p>
@@ -144,7 +144,7 @@ export default function TimeMachine() {
                         onClick={() => setShowNewGhostModal(scenario.id)}
                         className="text-[#0047AB] hover:underline flex items-center gap-1"
                       >
-                        <Plus size={12} /> Add
+                        <Plus aria-hidden="true" size={12} /> Add
                       </button>
                     </h4>
                     {scenario.ghosts.length === 0 ? (
@@ -160,7 +160,7 @@ export default function TimeMachine() {
                             <span className={cn("font-mono font-bold text-sm", ghost.type === 'expense' ? "text-red-600" : "text-green-600")}>
                               {ghost.type === 'expense' ? '-' : '+'}{formatCurrency(ghost.amountCents)}
                             </span>
-                            <button onClick={async () => { if (await safeConfirm('Delete ghost transaction?')) deleteGhost(scenario.id, ghost.id); }} className="text-[var(--muted)] hover:text-red-500"><Trash2 size={14}/></button>
+                            <button aria-label="Delete scenario transaction" onClick={async () => { if (await safeConfirm('Delete ghost transaction?')) deleteGhost(scenario.id, ghost.id); }} className="text-[var(--muted)] hover:text-red-500"><Trash2 aria-hidden="true" size={14}/></button>
                           </div>
                         </div>
                       ))
@@ -168,7 +168,7 @@ export default function TimeMachine() {
                     
                     {showNewGhostModal === scenario.id && (
                       <div className="bg-slate-100 p-3 rounded-xl space-y-3 mt-3">
-                        <input 
+                        <input aria-label="Scenario transaction description"
                           type="text" 
                           placeholder="e.g. Purchase Delivery Truck" 
                           className="w-full text-sm p-2 rounded-lg border border-[var(--line)]"
@@ -176,14 +176,14 @@ export default function TimeMachine() {
                           onChange={e => setGhostForm({...ghostForm, description: e.target.value})}
                         />
                         <div className="flex gap-2">
-                          <input 
+                          <input aria-label="Scenario transaction amount"
                             type="number" 
                             placeholder="Amount" 
                             className="w-1/2 text-sm p-2 rounded-lg border border-[var(--line)]"
                             value={ghostForm.amount}
                             onChange={e => setGhostForm({...ghostForm, amount: e.target.value})}
                           />
-                          <select 
+                          <select aria-label="Scenario transaction type"
                             className="w-1/2 text-sm p-2 rounded-lg border border-[var(--line)]"
                             value={ghostForm.type}
                             onChange={e => setGhostForm({...ghostForm, type: e.target.value as any})}
@@ -222,8 +222,8 @@ export default function TimeMachine() {
                     </button>
                   )}
                   {!isMain && (
-                    <button onClick={async () => { if (await safeConfirm('Delete scenario?')) deleteScenario(scenario.id); }} className="p-2 bg-[var(--ink)] hover:bg-red-50 text-[var(--muted)] hover:text-red-500 rounded-xl transition-colors">
-                      <Trash2 size={16} />
+                    <button aria-label="Delete scenario" onClick={async () => { if (await safeConfirm('Delete scenario?')) deleteScenario(scenario.id); }} className="p-2 bg-[var(--ink)] hover:bg-red-50 text-[var(--muted)] hover:text-red-500 rounded-xl transition-colors">
+                      <Trash2 aria-hidden="true" size={16} />
                     </button>
                   )}
                 </div>
@@ -237,7 +237,7 @@ export default function TimeMachine() {
         <div className="space-y-4">
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 flex gap-4">
             <div className="w-12 h-12 bg-[var(--surface)] rounded-xl shadow-sm flex items-center justify-center shrink-0">
-              <CheckCircle2 className="text-[#0047AB]" size={24} />
+              <CheckCircle2 aria-hidden="true" className="text-[#0047AB]" size={24} />
             </div>
             <div>
               <h4 className="font-bold text-[var(--text)] text-lg">Provable History</h4>
@@ -257,7 +257,7 @@ export default function TimeMachine() {
                         <span className="text-xs font-mono font-bold text-[var(--muted)] bg-slate-100 px-2 py-1 rounded-md">{commit.hash.substring(0, 7)}</span>
                       </div>
                       <div className="text-sm text-[var(--muted)] mt-1 flex items-center gap-2">
-                        <Activity size={14} />
+                        <Activity aria-hidden="true" size={14} />
                         Posted {commit.txs.length} transactions
                       </div>
                     </div>
@@ -268,7 +268,7 @@ export default function TimeMachine() {
                       className="text-xs font-bold text-[#0047AB] bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors cursor-pointer" 
                       aria-label="Checkout"
                     >
-                      <RotateCcw size={14} />
+                      <RotateCcw aria-hidden="true" size={14} />
                       Checkout
                     </button>
                   </div>
@@ -277,7 +277,7 @@ export default function TimeMachine() {
                     {(expandedCommitHash === commit.hash ? commit.txs : commit.txs.slice(0, 3)).map((tx: any) => (
                       <div key={tx.id} className="text-sm py-2 flex justify-between border-t border-slate-50">
                         <span className="text-slate-700 font-medium truncate flex items-center gap-2">
-                          <FileText size={14} className="text-[var(--muted)]" />
+                          <FileText aria-hidden="true" size={14} className="text-[var(--muted)]" />
                           {tx.description || 'Unknown'}
                         </span>
                         <span className="font-mono text-[var(--text)] font-bold ml-4 tabular-nums">{formatCurrency(tx.totalAmountCents, tx.currency)}</span>
@@ -302,12 +302,12 @@ export default function TimeMachine() {
       {activeTab === 'diff' && (
         <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)] p-12 text-center shadow-sm">
           <div className="w-20 h-20 bg-[var(--ink)] rounded-full flex items-center justify-center mx-auto mb-6">
-            <GitPullRequest className="text-[var(--muted)]" size={40} />
+            <GitPullRequest aria-hidden="true" className="text-[var(--muted)]" size={40} />
           </div>
           <h3 className="text-2xl font-black text-[var(--text)] mb-3">Period Differences (Diff)</h3>
           <p className="text-[var(--muted)] max-w-lg mx-auto text-lg">Compare changes between any two points in time. See exactly what changed in Q1 since you filed your taxes — in one click.</p>
           <div className="flex items-center justify-center gap-4 mt-8">
-            <select 
+            <select aria-label="First comparison period"
               value={diffPeriodA}
               onChange={(e) => setDiffPeriodA(e.target.value)}
               className="border border-[var(--line)] rounded-xl px-4 py-3 text-sm font-bold text-slate-700 shadow-sm focus:border-[#0047AB] outline-none bg-[var(--surface)]"
@@ -315,8 +315,8 @@ export default function TimeMachine() {
               <option value="Tax Filing (March 15)">Tax Filing (March 15)</option>
               <option value="Q1 Close (April 1)">Q1 Close (April 1)</option>
             </select>
-            <ArrowRight className="text-[var(--muted)]" size={20} />
-            <select 
+            <ArrowRight aria-hidden="true" className="text-[var(--muted)]" size={20} />
+            <select aria-label="Second comparison period"
               value={diffPeriodB}
               onChange={(e) => setDiffPeriodB(e.target.value)}
               className="border border-[var(--line)] rounded-xl px-4 py-3 text-sm font-bold text-slate-700 shadow-sm focus:border-[#0047AB] outline-none bg-[var(--surface)]"
@@ -359,7 +359,7 @@ export default function TimeMachine() {
             <div className="bg-[var(--surface)] rounded-3xl p-8 max-w-md w-full shadow-2xl border border-[var(--line)]">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
-                  <GitBranch className="text-[#0047AB]" size={24} />
+                  <GitBranch aria-hidden="true" className="text-[#0047AB]" size={24} />
                 </div>
                 <div>
                   <h3 className="text-xl font-black text-[var(--text)]">New Scenario</h3>

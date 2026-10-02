@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { 
   Activity, 
   Server, 
@@ -53,6 +53,7 @@ function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
 }
 
 export default function SystemCommandCenter() {
+  const formId = useId();
   const [telemetry, setTelemetry] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   useAuthStore(s => s.user);
@@ -405,7 +406,7 @@ export default function SystemCommandCenter() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[var(--line)]">
         <div>
           <div className="flex items-center gap-1.5 text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest truncate mb-1">
-            <Server size={12} />
+            <Server aria-hidden="true" size={12} />
             Institutional Telemetry & Control Tower
           </div>
           <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Admin Panel</h2>
@@ -425,12 +426,12 @@ export default function SystemCommandCenter() {
 
       {loading && !telemetry ? (
         <div className="h-96 flex items-center justify-center flex-col gap-3">
-          <Loader2 className="animate-spin text-[var(--text)] opacity-40" size={32} />
+          <Loader2 aria-hidden="true" className="animate-spin text-[var(--text)] opacity-40" size={32} />
           <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">Hooking operational datastream...</span>
         </div>
       ) : !telemetry || !telemetry.tenants ? (
         <div className="h-96 flex flex-col items-center justify-center gap-4 border border-dashed border-[var(--line)] rounded-[32px]">
-          <AlertOctagon size={40} className="text-rose-500 opacity-60" />
+          <AlertOctagon aria-hidden="true" size={40} className="text-rose-500 opacity-60" />
           <div className="text-center">
             <h3 className="text-sm font-black text-[var(--text)] uppercase tracking-wider">Interface Refused</h3>
             <p className="text-xs text-[var(--muted)] mt-1">Unable to construct reliable stream channel to backend metrics.</p>
@@ -446,7 +447,7 @@ export default function SystemCommandCenter() {
                 activeMainTab === 'workspaces' ? "bg-[var(--brass)] text-[var(--ink)] shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] hover:bg-[var(--ink)] hover:text-[var(--text)]"
               )}
             >
-              <Building className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
+              <Building aria-hidden="true" className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
               Workspaces & Tenants
             </button>
             <button
@@ -456,7 +457,7 @@ export default function SystemCommandCenter() {
                 activeMainTab === 'users' ? "bg-[var(--brass)] text-[var(--ink)] shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] hover:bg-[var(--ink)] hover:text-[var(--text)]"
               )}
             >
-              <Users className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
+              <Users aria-hidden="true" className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
               Deep User Matrix
             </button>
             <button
@@ -466,7 +467,7 @@ export default function SystemCommandCenter() {
                 activeMainTab === 'lexicon' ? "bg-[var(--brass)] text-[var(--ink)] shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] hover:bg-[var(--ink)] hover:text-[var(--text)]"
               )}
             >
-              <BookA className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
+              <BookA aria-hidden="true" className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
               Site Lexicon Control
             </button>
             <button
@@ -476,7 +477,7 @@ export default function SystemCommandCenter() {
                 activeMainTab === 'audit' ? "bg-[var(--brass)] text-[var(--ink)] shadow-md font-bold" : "bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] hover:bg-[var(--ink)] hover:text-[var(--text)]"
               )}
             >
-              <History className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
+              <History aria-hidden="true" className="inline-block w-3.5 h-3.5 mr-2 -mt-0.5" />
               Institutional Audit Trail
             </button>
           </div>
@@ -488,7 +489,7 @@ export default function SystemCommandCenter() {
               <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] shadow-3xs overflow-hidden">
                 <div className="p-4 md:p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]">
                   <div className="flex items-center gap-3">
-                    <BookA size={16} className="text-[#0047AB]" />
+                    <BookA aria-hidden="true" size={16} className="text-[#0047AB]" />
                     <h3 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Global Lexicon Override</h3>
                   </div>
                 </div>
@@ -524,7 +525,7 @@ export default function SystemCommandCenter() {
                 <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] shadow-3xs overflow-hidden">
                   <div className="p-4 md:p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]">
                     <div className="flex items-center gap-3">
-                      <Users size={16} className="text-[var(--muted)]" />
+                      <Users aria-hidden="true" size={16} className="text-[var(--muted)]" />
                       <h3 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Platform User Ledger</h3>
                     </div>
                   </div>
@@ -597,7 +598,7 @@ export default function SystemCommandCenter() {
                 )}>
                   <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[var(--line)]">
                     <div className="w-8 h-8 rounded-lg bg-[#0047AB]/10 flex items-center justify-center">
-                      <Wrench size={14} className="text-[#0047AB]" />
+                      <Wrench aria-hidden="true" size={14} className="text-[#0047AB]" />
                     </div>
                     <div>
                       <h3 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Deep Profile Tuning</h3>
@@ -647,10 +648,10 @@ export default function SystemCommandCenter() {
                             />
                           </Labelled>
                         </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                        <div role="group" aria-labelledby={`${formId}-quick-actions`}>
+                          <div id={`${formId}-quick-actions`} className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
                             Quick Actions
-                          </label>
+                          </div>
                           <div className="flex gap-2">
                             <button
                               type="button"
@@ -682,7 +683,7 @@ export default function SystemCommandCenter() {
                           type="submit"
                           disabled={savingUser}
                           className="flex-[2] px-4 py-3 bg-[#0047AB] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#003380] transition-all disabled:opacity-50"
-                         aria-label="Action button">
+                         aria-label={savingUser ? 'Syncing user directives' : 'Deploy Directives'}>
                           {savingUser ? 'Syncing...' : 'Deploy Directives'}
                         </button>
                       </div>
@@ -703,11 +704,11 @@ export default function SystemCommandCenter() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className="bg-[var(--surface)] border border-[var(--line)] p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 md:p-8 opacity-[0.02] pointer-events-none group-hover:opacity-[0.05] transition-all">
-                  <Database size={80} />
+                  <Database aria-hidden="true" size={80} />
                 </div>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 bg-slate-900 text-white rounded-[32px] flex items-center justify-center">
-                    <Database size={18} />
+                    <Database aria-hidden="true" size={18} />
                   </div>
                   <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Active Tenants</h4>
                 </div>
@@ -717,11 +718,11 @@ export default function SystemCommandCenter() {
 
               <div className="bg-[var(--surface)] border border-[var(--line)] p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 md:p-8 opacity-[0.02] pointer-events-none group-hover:opacity-[0.05] transition-all">
-                  <Activity size={80} />
+                  <Activity aria-hidden="true" size={80} />
                 </div>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 bg-slate-900 text-white rounded-[32px] flex items-center justify-center">
-                    <Activity size={18} />
+                    <Activity aria-hidden="true" size={18} />
                   </div>
                   <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Global Ledger Rows</h4>
                 </div>
@@ -733,11 +734,11 @@ export default function SystemCommandCenter() {
 
               <div className="bg-[var(--surface)] border border-[var(--line)] p-4 md:p-8 rounded-[32px] shadow-3xs hover:border-slate-300 transition-all duration-300 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 md:p-8 opacity-[0.02] pointer-events-none group-hover:opacity-[0.05] transition-all">
-                  <AlertOctagon size={80} />
+                  <AlertOctagon aria-hidden="true" size={80} />
                 </div>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 bg-rose-500/10 text-rose-600 rounded-[32px] flex items-center justify-center">
-                    <AlertOctagon size={18} />
+                    <AlertOctagon aria-hidden="true" size={18} />
                   </div>
                   <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">API Incidents (400+)</h4>
                 </div>
@@ -753,7 +754,7 @@ export default function SystemCommandCenter() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-[32px] flex items-center justify-center border border-indigo-500/30">
-                    <Sliders size={24} className="text-indigo-400" />
+                    <Sliders aria-hidden="true" size={24} className="text-indigo-400" />
                   </div>
                   <div>
                     <h3 className="text-xl font-black uppercase tracking-tight italic">Global Baseline Billing & Multiplier Registry</h3>
@@ -768,7 +769,7 @@ export default function SystemCommandCenter() {
                   onClick={handleBulkApplyBaseline}
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-md transition-all flex items-center gap-2 border border-indigo-400/30 disabled:opacity-40"
                  aria-label="Sync to All Workspaces">
-                  <RefreshCw size={11} className={cn(bulkSyncing && "animate-spin")} />
+                  <RefreshCw aria-hidden="true" size={11} className={cn(bulkSyncing && "animate-spin")} />
                   Sync to All Workspaces
                 </button>
               </div>
@@ -784,7 +785,7 @@ export default function SystemCommandCenter() {
                   >
                     <div className="flex justify-between items-center text-xs font-mono">
                       <span className="text-indigo-300 uppercase font-black tracking-widest text-[9px] flex items-center gap-2">
-                        <Loader2 size={12} className="animate-spin" />
+                        <Loader2 aria-hidden="true" size={12} className="animate-spin" />
                         {bulkSyncStatusText}
                       </span>
                       <span className="text-indigo-400 font-bold text-[10px]">
@@ -805,12 +806,13 @@ export default function SystemCommandCenter() {
                 {/* Multiplier 1 */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
+                    <label htmlFor={`${formId}-credit-multiplier`} className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
                       Credit Cost Multiplier
                     </label>
                     <span className="text-[10px] font-mono text-indigo-400 font-bold">{globalConfig.creditCostMultiplier}x</span>
                   </div>
                   <input
+                    id={`${formId}-credit-multiplier`}
                     type="range"
                     min="0"
                     max="5"
@@ -829,12 +831,13 @@ export default function SystemCommandCenter() {
                 {/* Multiplier 2 */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
+                    <label htmlFor={`${formId}-spend-multiplier`} className="block text-[10px] font-bold text-white/50 uppercase tracking-widest ml-0.5">
                       Platform spend Multiplier
                     </label>
                     <span className="text-[10px] font-mono text-indigo-400 font-bold">{globalConfig.quotaCentsMultiplier}x</span>
                   </div>
                   <input
+                    id={`${formId}-spend-multiplier`}
                     type="range"
                     min="0"
                     max="5"
@@ -916,7 +919,7 @@ export default function SystemCommandCenter() {
                     type="submit"
                     disabled={updatingGlobal}
                     className="w-full h-11 bg-[#0047AB] hover:bg-[#0047AB]/90 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
-                   aria-label="Action button">
+                   aria-label="Save baseline pricing">
                     {updatingGlobal ? (
                       <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
@@ -926,12 +929,12 @@ export default function SystemCommandCenter() {
                   <div className="flex items-center gap-1.5 justify-center">
                     <input 
                       type="checkbox" 
-                      id="globalBypass"
+                      id={`${formId}-global-bypass`}
                       checked={globalConfig.bypassBilling}
                       onChange={(e) => setGlobalConfig(prev => ({ ...prev, bypassBilling: e.target.checked }))}
                       className="cursor-pointer" 
                     />
-                    <label htmlFor="globalBypass" className="text-[9px] font-black uppercase tracking-wider text-pink-400 cursor-pointer select-none">
+                    <label htmlFor={`${formId}-global-bypass`} className="text-[9px] font-black uppercase tracking-wider text-pink-400 cursor-pointer select-none">
                       MASTER BYPASS FREE
                     </label>
                   </div>
@@ -945,7 +948,7 @@ export default function SystemCommandCenter() {
               
               <div className="flex items-center gap-3 pb-6 border-b border-[var(--line)] mb-6">
                 <div className="w-10 h-10 bg-[#0047AB]/5 text-[#0047AB] rounded-[32px] flex items-center justify-center">
-                  <Calculator size={18} />
+                  <Calculator aria-hidden="true" size={18} />
                 </div>
                 <div>
                   <h3 className="text-lg font-black uppercase tracking-tight italic">Platform Revenue & Surcharge Modeler Simulation</h3>
@@ -963,6 +966,7 @@ export default function SystemCommandCenter() {
                     <span className="text-xs font-mono font-black text-[#0047AB]">{simulatedQueries.toLocaleString()} / mo</span>
                   </div>
                   <input
+                    aria-label="Load-test queries per month"
                     type="range"
                     min="10000"
                     max="5000000"
@@ -984,6 +988,7 @@ export default function SystemCommandCenter() {
                     <span className="text-xs font-mono font-black text-indigo-650">{customKeyRatio}% of tenants</span>
                   </div>
                   <input
+                    aria-label="Proportion of custom key users"
                     type="range"
                     min="0"
                     max="100"
@@ -1185,7 +1190,7 @@ export default function SystemCommandCenter() {
                           : "text-[var(--muted)] hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
-                      <Sparkles size={12} /> Pricing & Plan
+                      <Sparkles aria-hidden="true" size={12} /> Pricing & Plan
                     </button>
                     <button
                       type="button"
@@ -1197,7 +1202,7 @@ export default function SystemCommandCenter() {
                           : "text-[var(--muted)] hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
-                      <Users size={12} /> Access & Seats
+                      <Users aria-hidden="true" size={12} /> Access & Seats
                     </button>
                     <button
                       type="button"
@@ -1209,7 +1214,7 @@ export default function SystemCommandCenter() {
                           : "text-[var(--muted)] hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
-                      <Gift size={12} /> Grant Free Credits
+                      <Gift aria-hidden="true" size={12} /> Grant Free Credits
                     </button>
                     <button
                       type="button"
@@ -1221,7 +1226,7 @@ export default function SystemCommandCenter() {
                           : "text-[var(--muted)] hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
-                      <DollarSign size={12} /> Monetization
+                      <DollarSign aria-hidden="true" size={12} /> Monetization
                     </button>
                     <button
                       type="button"
@@ -1233,7 +1238,7 @@ export default function SystemCommandCenter() {
                           : "text-[var(--muted)] hover:text-slate-700 hover:bg-[var(--ink)]"
                       )}
                     >
-                      <Cpu size={12} /> Rates & Keys
+                      <Cpu aria-hidden="true" size={12} /> Rates & Keys
                     </button>
 
 
@@ -1277,7 +1282,7 @@ export default function SystemCommandCenter() {
                           )}>
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-xs font-black text-[#2e7d32] uppercase tracking-tight flex items-center gap-1">
-                                <Zap size={10} /> Growth Business Plan
+                                <Zap aria-hidden="true" size={10} /> Growth Business Plan
                               </span>
                               <span className="text-[9px] font-black uppercase text-[#2e7d32] bg-emerald-50 px-2 py-0.5 rounded-lg">$49.00 / mo</span>
                             </div>
@@ -1290,7 +1295,7 @@ export default function SystemCommandCenter() {
                           )}>
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-xs font-black text-purple-700 uppercase tracking-tight flex items-center gap-1">
-                                <Building size={10} /> Institutional Enterprise
+                                <Building aria-hidden="true" size={10} /> Institutional Enterprise
                               </span>
                               <span className="text-[9px] font-black uppercase text-purple-700 bg-purple-100 px-2 py-0.5 rounded-lg">Custom Quote</span>
                             </div>
@@ -1304,7 +1309,7 @@ export default function SystemCommandCenter() {
                     {activeFormTab === 'access' && (
                       <div className="space-y-4">
                         <div className="p-4 bg-[var(--ink)] rounded-[32px] border border-slate-150 flex items-center gap-3">
-                          <Users size={16} className="text-[#0047AB]" />
+                          <Users aria-hidden="true" size={16} className="text-[#0047AB]" />
                           <div>
                             <p className="text-xs font-black text-[var(--text)]">Seat Limits & Operations</p>
                             <p className="text-[10px] text-[var(--muted)]">Determine user access size per tenant. If seats count surpasses maximum limit, further user registration is blocked automatically.</p>
@@ -1342,10 +1347,10 @@ export default function SystemCommandCenter() {
                         </div>
 
                         {/* Lock / Suspense simulations */}
-                        <div className="pt-2">
-                          <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                        <div role="group" aria-labelledby={`${formId}-access-status`} className="pt-2">
+                          <div id={`${formId}-access-status`} className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
                             Workspace Access Status
-                          </label>
+                          </div>
                           <div className="grid grid-cols-2 gap-3">
                             <button
                               type="button"
@@ -1354,7 +1359,7 @@ export default function SystemCommandCenter() {
                                 setFormState(prev => ({ ...prev, concurrentUserLimit: 60 }));
                               }}
                             >
-                              <ShieldCheck size={12} /> Normal Access
+                              <ShieldCheck aria-hidden="true" size={12} /> Normal Access
                             </button>
                             <button
                               type="button"
@@ -1364,7 +1369,7 @@ export default function SystemCommandCenter() {
                                 setFormState(prev => ({ ...prev, concurrentUserLimit: 0 }));
                               }}
                             >
-                              <AlertOctagon size={12} /> Freeze Account
+                              <AlertOctagon aria-hidden="true" size={12} /> Freeze Account
                             </button>
                           </div>
                         </div>
@@ -1375,7 +1380,7 @@ export default function SystemCommandCenter() {
                     {activeFormTab === 'credits' && (
                       <div className="space-y-4">
                         <div className="p-4 bg-indigo-50/50 rounded-[32px] border border-indigo-150 flex items-center gap-3">
-                          <Gift size={16} className="text-indigo-650" />
+                          <Gift aria-hidden="true" size={16} className="text-indigo-650" />
                           <div>
                             <p className="text-xs font-black text-[var(--text)]">Assign Free Promotional Allocations</p>
                             <p className="text-[10px] text-[var(--muted)]">Inject computational balance credits for testing, marketing, or to reward long-term institutional customers with free credit balances.</p>
@@ -1430,7 +1435,7 @@ export default function SystemCommandCenter() {
                     {activeFormTab === 'roadmap' && (
                       <div className="space-y-4 text-left">
                         <div className="p-4 bg-[#0047AB]/5 rounded-[32px] border border-[#0047AB]/10 flex items-center gap-3">
-                          <DollarSign size={16} className="text-[#0047AB]" />
+                          <DollarSign aria-hidden="true" size={16} className="text-[#0047AB]" />
                           <div>
                             <p className="text-xs font-black text-[var(--text)]">Monetization & API Limits ($)</p>
                             <p className="text-[10px] text-[var(--muted)]">Establish maximum billing limits per workspace to charge for premium services. Limit over-spending and manage enterprise custom invoicing.</p>
@@ -1452,9 +1457,9 @@ export default function SystemCommandCenter() {
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
+                            <div className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5 ml-0.5">
                               Estimated Monthly Bill
-                            </label>
+                            </div>
                             <div className="w-full h-11 bg-slate-100 border border-[var(--line)] rounded-xl px-4 text-xs font-mono font-bold text-slate-600 flex items-center">
                               ${formState.plan === 'growth' ? '49.00 / mo' : formState.plan === 'enterprise' ? '299.00 / mo' : '0.00 (Free)'}
                             </div>
@@ -1475,7 +1480,7 @@ export default function SystemCommandCenter() {
                     {activeFormTab === 'rates' && (
                       <div className="space-y-4 text-left">
                         <div className="p-4 bg-emerald-50/50 rounded-[32px] border border-emerald-250/30 flex items-center gap-3">
-                          <Cpu size={16} className="text-emerald-505 animate-pulse" />
+                          <Cpu aria-hidden="true" size={16} className="text-emerald-505 animate-pulse" />
                           <div>
                             <p className="text-xs font-black text-[var(--text)]">Dynamic Pricing Multipliers & Private Key Surcharges</p>
                             <p className="text-[10px] text-[var(--muted)] leading-relaxed">Provide granular overrides for this specific workspace. You can scale charging metrics from zero to premium amounts dynamically.</p>
@@ -1488,8 +1493,10 @@ export default function SystemCommandCenter() {
                             <p className="text-xs font-black text-[var(--text)] uppercase tracking-tight">Bypass All Billing & Caps</p>
                             <p className="text-[9px] text-[var(--muted)] uppercase font-black tracking-wider mt-0.5">Gives unmetered free operations, bypassing freeze limits completely</p>
                           </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
+                          <label htmlFor={`${formId}-workspace-bypass`} className="relative inline-flex items-center cursor-pointer">
                             <input 
+                              id={`${formId}-workspace-bypass`}
+                              aria-label="Bypass all billing and caps"
                               type="checkbox" 
                               checked={formState.bypassBilling}
                               onChange={(e) => setFormState(prev => ({ ...prev, bypassBilling: e.target.checked }))}
@@ -1594,7 +1601,7 @@ export default function SystemCommandCenter() {
                         type="submit"
                         disabled={savingWorkspace}
                         className="flex-1 h-12 bg-slate-900 text-white hover:bg-[#0047AB] rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2"
-                       aria-label="Action button">
+                       aria-label="Save administrative override">
                         {savingWorkspace ? (
                           <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         ) : (
@@ -1614,7 +1621,7 @@ export default function SystemCommandCenter() {
             <div className="bg-slate-900 border border-slate-800 text-white rounded-[32px] p-4 md:p-8 shadow-lg relative overflow-hidden">
               <div className="absolute inset-0 technical-grid opacity-[0.03] pointer-events-none" />
               <div className="flex items-center gap-3 mb-4 pb-2 border-b border-white/10">
-                <Wrench className="text-pink-400 animate-spin-slow" size={18} />
+                <Wrench aria-hidden="true" className="text-pink-400 animate-spin-slow" size={18} />
                 <h3 className="text-sm font-black uppercase tracking-wider text-pink-400">Stress Test Injector</h3>
               </div>
               <p className="text-[10px] text-white/50 uppercase font-black mb-4 leading-relaxed">
@@ -1627,7 +1634,7 @@ export default function SystemCommandCenter() {
                   className="w-full py-2.5 bg-[var(--surface)]/5 hover:bg-[var(--surface)]/10 rounded-xl text-[9px] font-black uppercase text-white hover:text-indigo-300 transition-all text-left px-4 flex items-center justify-between"
                 >
                   <span>1. POST /gemini/summarize (200 OK)</span>
-                  <Play size={10} className="text-indigo-400" />
+                  <Play aria-hidden="true" size={10} className="text-indigo-400" />
                 </button>
                 <button
                   type="button"
@@ -1635,7 +1642,7 @@ export default function SystemCommandCenter() {
                   className="w-full py-2.5 bg-amber-500/10 hover:bg-amber-500/20 rounded-xl text-[9px] font-black uppercase text-amber-300 border border-amber-500/20 transition-all text-left px-4 flex items-center justify-between"
                 >
                   <span>2. GET /transactions/ledger_audit (429 Rate Exceeded)</span>
-                  <Play size={10} className="text-amber-400 animate-pulse" />
+                  <Play aria-hidden="true" size={10} className="text-amber-400 animate-pulse" />
                 </button>
                 <button
                   type="button"
@@ -1643,7 +1650,7 @@ export default function SystemCommandCenter() {
                   className="w-full py-2.5 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl text-[9px] font-black uppercase text-rose-300 border border-rose-500/20 transition-all text-left px-4 flex items-center justify-between"
                 >
                   <span>3. GET /admin/telemetry (503 Service Unavailable)</span>
-                  <Play size={10} className="text-rose-400 animate-pulse" />
+                  <Play aria-hidden="true" size={10} className="text-rose-400 animate-pulse" />
                 </button>
               </div>
             </div>
@@ -1652,7 +1659,7 @@ export default function SystemCommandCenter() {
             <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] p-4 md:p-8 shadow-3xs flex flex-col h-[520px]">
               <div className="flex items-center justify-between pb-4 border-b border-[var(--line)] mb-4">
                 <div className="flex items-center gap-3">
-                  <Terminal size={18} className="text-indigo-600 animate-pulse" />
+                  <Terminal aria-hidden="true" size={18} className="text-indigo-600 animate-pulse" />
                   <h3 className="text-base font-black uppercase tracking-tight italic text-[var(--text)]">Event Logging Stream</h3>
                 </div>
                 <div className="flex h-2.5 w-2.5 relative">
@@ -1666,7 +1673,7 @@ export default function SystemCommandCenter() {
                 <button 
                   type="button"
                   className="flex-1 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg bg-[var(--surface)] text-[var(--text)] shadow-3xs"
-                 aria-label="Latest Events ( )">
+                 aria-label={`Latest events (${liveErrors.length})`}>
                   Latest Events ({liveErrors.length})
                 </button>
                 {simulatedLogs.length > 0 && (
@@ -1683,7 +1690,7 @@ export default function SystemCommandCenter() {
               <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3 font-mono text-[10px]">
                 {liveErrors.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-[var(--muted)] opacity-50 gap-2 text-center p-4">
-                    <ShieldCheck size={36} className="text-emerald-500" />
+                    <ShieldCheck aria-hidden="true" size={36} className="text-emerald-500" />
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-700">Audit pipeline is empty</p>
                     <p className="text-[9px] lowercase max-w-[170px]">Invoke client endpoints to stream event triggers.</p>
                   </div>
@@ -1734,7 +1741,7 @@ export default function SystemCommandCenter() {
             {/* Platform spec box */}
             <div className="bg-slate-900 text-white rounded-[32px] p-4 md:p-8 relative overflow-hidden group">
               <div className="absolute technical-grid inset-0 opacity-[0.05]" />
-              <Cpu size={32} className="text-emerald-400 mb-4" />
+              <Cpu aria-hidden="true" size={32} className="text-emerald-400 mb-4" />
               <h5 className="text-lg font-black tracking-tight italic uppercase mb-1">Decentralized Trust Hook</h5>
               <p className="text-[10px] font-medium text-white/40 leading-relaxed uppercase tracking-widest leading-loose">
                 Real-time cryptographic pipeline audits. Mutex locks prevent race overrides, securing multi-tenant ledger synchronization bounds on memory channels.
@@ -1757,7 +1764,7 @@ export default function SystemCommandCenter() {
               className="bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-2xl p-4 md:p-8 max-w-sm w-full text-center relative"
             >
               <div className="mx-auto w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle2 size={24} />
+                <CheckCircle2 aria-hidden="true" size={24} />
               </div>
               <h3 className="text-xl font-black text-[var(--text)] uppercase tracking-tight">Ledger Synchronized</h3>
               <p className="text-xs text-[var(--muted)] mt-2 uppercase tracking-wide leading-relaxed">

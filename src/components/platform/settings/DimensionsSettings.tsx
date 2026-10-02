@@ -34,7 +34,7 @@ function EditableNodeDescription({
   }
 
   return (
-    <input
+    <input aria-label="Dimension node description"
       type="text"
       value={val}
       onChange={e => setVal(e.target.value)}
@@ -72,7 +72,7 @@ function EditableNodeAliases({
   }
 
   return (
-    <input
+    <input aria-label="Dimension node aliases"
       type="text"
       value={val}
       onChange={e => setVal(e.target.value)}
@@ -404,7 +404,7 @@ export default function DimensionsSettings() {
       <div className="p-6 md:p-8 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] space-y-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-indigo-500/10 text-indigo-500 rounded-2xl">
-            <Layers size={22} />
+            <Layers aria-hidden="true" size={22} />
           </div>
           <div>
             <h3 className="text-xl font-bold text-[var(--text)] tracking-tight">Dimensions & Label Node Registry</h3>
@@ -417,7 +417,7 @@ export default function DimensionsSettings() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
           <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl text-xs space-y-1">
             <div className="flex items-center gap-2 text-[var(--muted)] font-bold uppercase tracking-wider text-[9px]">
-              <Lock size={12} className="text-indigo-500" /> Immutable Axis ID
+              <Lock aria-hidden="true" size={12} className="text-indigo-500" /> Immutable Axis ID
             </div>
             <p className="text-slate-600 font-medium leading-relaxed">
               Axis keys (e.g., <code className="text-indigo-600 font-bold">category</code>, <code className="text-indigo-600 font-bold">project</code>) cannot be renamed to prevent orphaned querying history.
@@ -426,7 +426,7 @@ export default function DimensionsSettings() {
 
           <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl text-xs space-y-1">
             <div className="flex items-center gap-2 text-[var(--muted)] font-bold uppercase tracking-wider text-[9px]">
-              <ShieldCheck size={12} className="text-emerald-500" /> Stable Node Identity
+              <ShieldCheck aria-hidden="true" size={12} className="text-emerald-500" /> Stable Node Identity
             </div>
             <p className="text-slate-600 font-medium leading-relaxed">
               Transactions store short stable codes (e.g. <code className="text-emerald-600 font-bold">P1</code>). Changing the description instantly updates all past transactions.
@@ -435,7 +435,7 @@ export default function DimensionsSettings() {
 
           <div className="p-4 bg-[var(--surface)] border border-[var(--line)] rounded-2xl text-xs space-y-1">
             <div className="flex items-center gap-2 text-[var(--muted)] font-bold uppercase tracking-wider text-[9px]">
-              <Archive size={12} className="text-amber-500" /> Append-Only Archiving
+              <Archive aria-hidden="true" size={12} className="text-amber-500" /> Append-Only Archiving
             </div>
             <p className="text-slate-600 font-medium leading-relaxed">
               Nodes are archived rather than deleted, keeping existing transaction lines valid while hiding old categories from new entries.
@@ -448,7 +448,7 @@ export default function DimensionsSettings() {
       <div className="p-6 bg-gradient-to-r from-indigo-950/20 via-purple-950/10 to-transparent border border-indigo-500/20 rounded-[28px] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1 max-w-xl">
           <div className="inline-flex items-center gap-2 px-2.5 py-0.5 bg-indigo-500/10 text-indigo-400 rounded-full text-[10px] font-bold uppercase tracking-widest">
-            <Database size={12} /> Auto-Migration Engine
+            <Database aria-hidden="true" size={12} /> Auto-Migration Engine
           </div>
           <h4 className="text-base font-bold text-[var(--text)]">Migrate Free-Text Labels to Stable Nodes</h4>
           <p className="text-xs text-[var(--muted)] font-medium">
@@ -463,7 +463,7 @@ export default function DimensionsSettings() {
             onClick={handleRunBackfillOnly}
             className="px-4 py-3 bg-[var(--surface)] border border-indigo-500/40 hover:bg-indigo-500/10 text-indigo-300 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 whitespace-nowrap"
           >
-            <Database size={14} />
+            <Database aria-hidden="true" size={14} />
             One-Time Node Backfill
           </AsyncButton>
 
@@ -473,7 +473,7 @@ export default function DimensionsSettings() {
             onClick={handleRunMigration}
             className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 whitespace-nowrap"
           >
-            <RefreshCw size={14} className={isMigrating ? "animate-spin" : ""} />
+            <RefreshCw aria-hidden="true" size={14} className={isMigrating ? "animate-spin" : ""} />
             Run Full Migration Sweep
           </AsyncButton>
         </div>
@@ -488,7 +488,7 @@ export default function DimensionsSettings() {
             onClick={() => setShowAddAxis(!showAddAxis)}
             className="px-4 py-2 bg-[var(--surface)] border border-[var(--line)] hover:border-indigo-500/50 text-[var(--text)] text-xs font-bold rounded-xl transition-all flex items-center gap-2"
           >
-            <Plus size={14} /> Add Dimension Axis
+            <Plus aria-hidden="true" size={14} /> Add Dimension Axis
           </button>
         </div>
 
@@ -548,7 +548,7 @@ export default function DimensionsSettings() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--line)]">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <input
+                    <input aria-label="Dimension name"
                       type="text"
                       value={dim.name}
                       onChange={e => handleUpdateAxisName(dim.id, e.target.value)}
@@ -608,11 +608,11 @@ export default function DimensionsSettings() {
                           <td className="py-2.5 px-3">
                             {node.status === 'archived' ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] font-bold rounded-full">
-                                <Archive size={10} /> Archived
+                                <Archive aria-hidden="true" size={10} /> Archived
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded-full">
-                                <Check size={10} /> Active
+                                <Check aria-hidden="true" size={10} /> Active
                               </span>
                             )}
                           </td>
@@ -651,7 +651,7 @@ export default function DimensionsSettings() {
                     {nextSuggestedId}
                   </div>
                   <div className="sm:col-span-5">
-                    <input
+                    <input aria-label="Display Description for new dimension value"
                       type="text"
                       value={nodeInput.description}
                       onChange={e => handleNodeInputChange(dim.id, 'description', e.target.value)}
@@ -660,7 +660,7 @@ export default function DimensionsSettings() {
                     />
                   </div>
                   <div className="sm:col-span-3">
-                    <input
+                    <input aria-label="Aliases for new dimension value"
                       type="text"
                       value={nodeInput.aliases}
                       onChange={e => handleNodeInputChange(dim.id, 'aliases', e.target.value)}
@@ -674,7 +674,7 @@ export default function DimensionsSettings() {
                       onClick={() => handleAddNode(dim.id)}
                       className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5"
                     >
-                      <Plus size={14} /> Add Node
+                      <Plus aria-hidden="true" size={14} /> Add Node
                     </button>
                   </div>
                 </div>
@@ -692,7 +692,7 @@ export default function DimensionsSettings() {
           onClick={handleSaveChanges}
           className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center gap-2"
         >
-          <Check size={16} /> Save Dimension Registry
+          <Check aria-hidden="true" size={16} /> Save Dimension Registry
         </AsyncButton>
       </div>
     </div>

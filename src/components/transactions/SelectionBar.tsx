@@ -44,7 +44,7 @@ export default function SelectionBar({
       
       <div className="flex items-center gap-3">
         <div className="relative">
-          <input 
+          <input aria-label="Bulk Categorize"
             list="selection-bulk-account"
             placeholder="Bulk Categorize..."
             onChange={(e) => {
@@ -61,10 +61,10 @@ export default function SelectionBar({
         </div>
         
         <button type="button" aria-label="Copy Text" onClick={onCopy} className="p-2.5 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors" title="Copy Text">
-          <Clipboard size={16} />
+          <Clipboard aria-hidden="true" size={16} />
         </button>
         <button type="button" aria-label="Clear Selection" onClick={onClear} className="p-2.5 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors ml-2" title="Clear Selection">
-          <X size={16} />
+          <X aria-hidden="true" size={16} />
         </button>
       </div>
     </motion.div>

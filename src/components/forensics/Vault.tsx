@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   FileText, 
@@ -41,6 +41,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 
 export default function Vault() {
+  const uploadId = useId();
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const uid = useAuthStore(s => s.user?.uid);
   const transactions = useLedgerStore(s => s.transactions);
@@ -294,20 +295,21 @@ export default function Vault() {
           <p className="text-[var(--muted)] font-black text-[10px] uppercase tracking-widest truncate opacity-80">Enterprise Secure Storage • Encryption Active</p>
         </div>
         <div className="flex items-center gap-4">
-          <label className="h-12 px-6 bg-[var(--brass)] text-[var(--ink)] rounded-xl cursor-pointer flex items-center gap-3 font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all shadow-md group">
+          <label htmlFor={uploadId} className="h-12 px-6 bg-[var(--brass)] text-[var(--ink)] rounded-xl cursor-pointer flex items-center gap-3 font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all shadow-md group">
             <div className="w-7 h-7 bg-black/10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Upload size={16} />
+              <Upload aria-hidden="true" size={16} />
             </div>
             Protocol Upload
-            <input type="file" className="hidden" onChange={handleFileUpload} />
+            <input id={uploadId} type="file" className="hidden" onChange={handleFileUpload} />
           </label>
         </div>
       </div>
 
       <div className="flex items-center gap-4 bg-[var(--surface)] p-3 rounded-[32px] border border-[var(--line)] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.1)]">
         <div className="relative flex-1">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--muted)] opacity-40" size={24} />
+          <Search aria-hidden="true" className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--muted)] opacity-40" size={24} />
           <input 
+            aria-label="Search documents by name, tag, or checksum"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search documents by name, tag, or checksum..."
@@ -344,16 +346,16 @@ export default function Vault() {
             >
               <div className="flex items-start justify-between">
                 <div className="w-16 h-16 bg-[var(--ink)] rounded-[32px] flex items-center justify-center text-slate-500 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-sm">
-                  <FileText size={32} />
+                  <FileText aria-hidden="true" size={32} />
                 </div>
                 <div className="flex items-center gap-2">
                   {docItem.linkedTransactionId ? (
                     <div className="w-8 h-8 flex items-center justify-center bg-emerald-50 text-emerald-500 rounded-xl border border-emerald-100" title="Linked to transaction">
-                      <Paperclip size={16} />
+                      <Paperclip aria-hidden="true" size={16} />
                     </div>
                   ) : (
                     <div className="w-8 h-8 flex items-center justify-center bg-amber-50 text-amber-500 rounded-xl border border-amber-100" title="Unlinked document">
-                      <Clock size={16} />
+                      <Clock aria-hidden="true" size={16} />
                     </div>
                   )}
                 </div>
@@ -378,10 +380,11 @@ export default function Vault() {
 
               <div className="absolute top-6 right-6 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-2">
                  <AsyncButton 
+                  aria-label={`Delete document ${docItem.name}`}
                   onClick={async () => { handleDelete(docItem.id); }}
                   className="w-10 h-10 flex items-center justify-center bg-rose-50 text-rose-500 rounded-[32px] hover:bg-rose-500 hover:text-white transition-all shadow-sm border border-rose-100"
                 >
-                  <Trash2 size={18} />
+                  <Trash2 aria-hidden="true" size={18} />
                 </AsyncButton>
               </div>
             </motion.div>
@@ -390,7 +393,7 @@ export default function Vault() {
           {filteredDocs.length === 0 && !loading && (
             <div className="col-span-full py-40 flex flex-col items-center justify-center bg-[var(--ink)]/20 border-4 border-dashed border-[var(--line)] rounded-[32px] text-center">
               <div className="w-32 h-32 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-slate-200 mb-8 shadow-sm">
-                <File size={64} />
+                <File aria-hidden="true" size={64} />
               </div>
               <h3 className="text-3xl font-black text-[var(--text)] tracking-tight mb-3">Vault Depleted</h3>
               <p className="text-[var(--muted)] max-w-sm mx-auto text-xs font-black uppercase tracking-[0.2em] opacity-50">Secure storage is currently empty. Initialize upload to establish audit compliance.</p>
@@ -419,7 +422,7 @@ export default function Vault() {
               <div className="p-4 md:p-10 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
                 <div className="flex items-center gap-6">
                   <div className="w-16 h-16 bg-slate-900 text-white rounded-[32px] flex items-center justify-center shadow-xl">
-                    <FileText size={32} />
+                    <FileText aria-hidden="true" size={32} />
                   </div>
                   <div>
                     <h3 className="text-2xl font-black text-[var(--text)] tracking-tight line-clamp-1 leading-none mb-2">{selectedDoc.name}</h3>
@@ -428,8 +431,8 @@ export default function Vault() {
                     </p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedDoc(null)} className="w-12 h-12 flex items-center justify-center hover:bg-[var(--ink)] rounded-[32px] transition-all text-[var(--muted)]">
-                  <X size={28} />
+                <button onClick={() => setSelectedDoc(null)} aria-label="Close document details" className="w-12 h-12 flex items-center justify-center hover:bg-[var(--ink)] rounded-[32px] transition-all text-[var(--muted)]">
+                  <X aria-hidden="true" size={28} />
                 </button>
               </div>
 
@@ -444,7 +447,7 @@ export default function Vault() {
                 ) : (
                   <div className="text-center space-y-6">
                     <div className="w-24 h-24 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-slate-200 mx-auto shadow-sm">
-                      <File size={48} />
+                      <File aria-hidden="true" size={48} />
                     </div>
                     <div>
                       <h4 className="text-xl font-black text-[var(--text)] tracking-tight">Preview Restricted</h4>
@@ -456,7 +459,7 @@ export default function Vault() {
                       rel="noopener noreferrer"
                       className="h-14 px-8 bg-slate-900 text-white rounded-[32px] inline-flex items-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-black shadow-xl"
                     >
-                      <Download size={20} />
+                      <Download aria-hidden="true" size={20} />
                       Export to Reader
                     </a>
                   </div>
@@ -471,14 +474,14 @@ export default function Vault() {
                           {selectedDoc.linkedTransactionId ? (
                             <>
                               <div className="w-6 h-6 flex items-center justify-center bg-emerald-50 text-emerald-500 rounded-lg">
-                                <CheckCircle2 size={16} />
+                                <CheckCircle2 aria-hidden="true" size={16} />
                               </div>
                               <span className="text-emerald-600">CERTIFIED LINK</span>
                             </>
                           ) : (
                             <>
                               <div className="w-6 h-6 flex items-center justify-center bg-amber-50 text-amber-500 rounded-lg">
-                                <Clock size={16} />
+                                <Clock aria-hidden="true" size={16} />
                               </div>
                               <span className="text-amber-600">ISOLATED DEPOSIT</span>
                             </>
@@ -504,7 +507,7 @@ export default function Vault() {
                              ID: {selectedDoc.linkedTransactionId.substring(0, 8)} • {transactions.find(t => t.id === selectedDoc.linkedTransactionId)?.date || ''}
                           </p>
                         </div>
-                        <ExternalLink size={20} className="text-white/20 group-hover:text-emerald-400 transition-colors z-10" />
+                        <ExternalLink aria-hidden="true" size={20} className="text-white/20 group-hover:text-emerald-400 transition-colors z-10" />
                      </div>
                    </div>
                  )}
@@ -535,7 +538,7 @@ export default function Vault() {
                           onClick={handleInjectTransaction}
                           className="w-full mt-6 h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-sm"
                          aria-label="Inject & Sync Ledger">
-                          <CheckCircle2 size={16} />
+                          <CheckCircle2 aria-hidden="true" size={16} />
                           Inject & Sync Ledger
                         </button>
                      </div>
@@ -546,15 +549,15 @@ export default function Vault() {
                     <button 
                       onClick={handleScanReceipt}
                       disabled={isScanning || !!selectedDoc.linkedTransactionId || !!extractedData}
-                      className="h-14 px-8 bg-slate-900 text-white rounded-[32px] flex-1 font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" aria-label=")}">
+                      className="h-14 px-8 bg-slate-900 text-white rounded-[32px] flex-1 font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                       {isScanning ? (
                         <>
-                          <Sparkles size={16} className="animate-spin-slow text-emerald-400" />
+                          <Sparkles aria-hidden="true" size={16} className="animate-spin-slow text-emerald-400" />
                           <span className="text-emerald-400">Scanning Tensor...</span>
                         </>
                       ) : (
                         <>
-                          <Brain size={16} className={selectedDoc.linkedTransactionId ? "opacity-30" : "text-emerald-400"} />
+                          <Brain aria-hidden="true" size={16} className={selectedDoc.linkedTransactionId ? "opacity-30" : "text-emerald-400"} />
                           {selectedDoc.linkedTransactionId ? 'Already Synced' : 'Deep OCR Scan'}
                         </>
                       )}
@@ -564,14 +567,14 @@ export default function Vault() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="h-14 px-8 bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] rounded-[32px] flex-[0.7] font-black text-[10px] uppercase tracking-[0.2em] hover:bg-[var(--ink)] transition-all flex items-center justify-center gap-3">
-                      <ExternalLink size={18} />
+                      <ExternalLink aria-hidden="true" size={18} />
                       Raw
                     </a>
-                    <AsyncButton 
+                    <AsyncButton aria-label={`Delete document ${selectedDoc.name}`}
                       onClick={async () => handleDelete(selectedDoc.id)}
                       className="w-14 h-14 flex items-center justify-center bg-rose-50 text-rose-500 rounded-[32px] hover:bg-rose-500 hover:text-white transition-all shadow-sm border border-rose-100"
                     >
-                      <Trash2 size={24} />
+                      <Trash2 aria-hidden="true" size={24} />
                     </AsyncButton>
                  </div>
               </div>

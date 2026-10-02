@@ -38,7 +38,7 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
               "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-[var(--line)] transition-colors",
               log.action?.includes('ERROR') || log.action?.includes('DRIFT') ? "bg-rose-500/10 text-rose-500" : "bg-[var(--bg)] text-[var(--muted)]"
             )}>
-              <Activity size={18} />
+              <Activity aria-hidden="true" size={18} />
             </div>
             <div className="overflow-hidden">
               <div className="flex items-center gap-3 mb-1">
@@ -56,8 +56,8 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
                 </p>
               </div>
               <div className="flex items-center gap-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-widest italic opacity-60">
-                <span className="flex items-center gap-1.5"><History size={10} />{auditTime(log) ? format(auditTime(log)!, 'MMM dd, HH:mm:ss') : 'N/A'}</span>
-                <span className="flex items-center gap-1.5"><User size={10} />{log.userEmail || log.email || log.uid?.substring(0, 8) || 'SYSTEM'}</span>
+                <span className="flex items-center gap-1.5"><History aria-hidden="true" size={10} />{auditTime(log) ? format(auditTime(log)!, 'MMM dd, HH:mm:ss') : 'N/A'}</span>
+                <span className="flex items-center gap-1.5"><User aria-hidden="true" size={10} />{log.userEmail || log.email || log.uid?.substring(0, 8) || 'SYSTEM'}</span>
               </div>
             </div>
           </div>
@@ -69,7 +69,7 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
                 </p>
               </div>
             </div>
-            <ChevronRight size={18} className={cn("text-zinc-400 transition-transform", isExpanded && "rotate-90")} />
+            <ChevronRight aria-hidden="true" size={18} className={cn("text-zinc-400 transition-transform", isExpanded && "rotate-90")} />
           </div>
         </div>
 
@@ -99,7 +99,7 @@ const Row = ({ index, style, data }: { index: number, style: React.CSSProperties
                   </div>
                 </div>
                 <div className="bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/10 flex items-start gap-3">
-                  <Shield size={16} className="text-indigo-500 shrink-0 mt-0.5" />
+                  <Shield aria-hidden="true" size={16} className="text-indigo-500 shrink-0 mt-0.5" />
                   <p className="text-xs text-indigo-400 leading-relaxed italic">
                     This event is locked and cryptographically anchored to the ledger history. Any tampering will be detected by the shadow reconciler.
                   </p>
@@ -163,7 +163,7 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
       <div className="flex items-center justify-between shrink-0">
         <div>
           <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest truncate mb-4">
-            <Shield size={14} />
+            <Shield aria-hidden="true" size={14} />
             Verified Audit Stream
           </div>
           <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Audit Trail</h2>
@@ -171,8 +171,8 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
         </div>
         <div className="flex items-center gap-4">
           <div className="relative group/search">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--muted)] group-hover/search:text-indigo-600 transition-colors" size={18} />
-            <input 
+            <Search aria-hidden="true" className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--muted)] group-hover/search:text-indigo-600 transition-colors" size={18} />
+            <input aria-label="Search history"
               type="text"
               placeholder="Search history..."
               value={searchTerm}
@@ -184,7 +184,7 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
             onClick={downloadAuditLog}
             className="h-14 px-8 bg-zinc-900 text-white hover:bg-zinc-800 rounded-[32px] flex items-center gap-3 text-[10px] font-medium uppercase tracking-wider transition-all shadow-xl"
            aria-label="Export Core">
-            <Download size={18} />
+            <Download aria-hidden="true" size={18} />
             Export
           </button>
         </div>

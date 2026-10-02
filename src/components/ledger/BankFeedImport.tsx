@@ -299,7 +299,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
             <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1 opacity-40">Rule CSV parsing & topological mapping</p>
           </div>
           <button onClick={onClose} className="w-10 h-10 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-[var(--muted)] transition-all" aria-label="Alert Circle action">
-            <AlertCircle className="rotate-45" size={20} />
+            <AlertCircle aria-hidden="true" className="rotate-45" size={20} />
           </button>
         </div>
 
@@ -312,9 +312,9 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                 isDragActive ? "border-indigo-600 bg-indigo-600/5" : "border-[var(--line)] hover:border-indigo-600/30 hover:bg-[var(--ink)]/20"
               )}
             >
-              <input {...getInputProps()} />
+              <input {...getInputProps()} aria-label="Upload bank statement" />
               <div className="w-24 h-24 bg-[var(--ink)] rounded-[32px] flex items-center justify-center mb-8 border border-[var(--line)] group-hover:scale-110 transition-transform">
-                <Upload className={cn("text-[var(--muted)] group-hover:text-indigo-600 transition-colors", isDragActive && "text-indigo-600")} size={40} />
+                <Upload aria-hidden="true" className={cn("text-[var(--muted)] group-hover:text-indigo-600 transition-colors", isDragActive && "text-indigo-600")} size={40} />
               </div>
               {file ? (
                 <div className="text-center">
@@ -325,7 +325,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                     disabled={isUploading}
                     className="mt-10 px-10 py-3 bg-indigo-600 text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-xs hover:brightness-110 transition-all flex items-center gap-3 shadow-xl shadow-ledger-accent/20"
                   >
-                    {isUploading ? <Loader2 className="animate-spin" size={18} /> : <ArrowRight size={18} />}
+                    {isUploading ? <Loader2 aria-hidden="true" className="animate-spin" size={18} /> : <ArrowRight aria-hidden="true" size={18} />}
                     Initialize Upload
                   </button>
                 </div>
@@ -341,7 +341,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                       disabled={isUploading}
                       className="h-12 px-6 bg-slate-900 hover:bg-black text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center gap-2 active:scale-95 disabled:opacity-50"
                     >
-                      {isUploading ? <Loader2 size={14} className="animate-spin" /> : <ArrowRight size={14} />}
+                      {isUploading ? <Loader2 aria-hidden="true" size={14} className="animate-spin" /> : <ArrowRight aria-hidden="true" size={14} />}
                       Sync from Plaid
                     </button>
                   </div>
@@ -382,7 +382,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                     {mappedTransactions.map((tx, idx) => (
                       <tr key={tx.id} className={cn("hover:bg-[var(--ink)]/30 transition-all group", !selectedIndices.has(idx) && "opacity-30")}>
                         <td className="px-6 py-4">
-                          <button 
+                          <button aria-label={`${selectedIndices.has(idx) ? "Deselect" : "Select"} bank statement row ${idx + 1}`}
                             onClick={() => {
                               const next = new Set(selectedIndices);
                               if (next.has(idx)) next.delete(idx);
@@ -394,7 +394,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                               selectedIndices.has(idx) ? "bg-indigo-600 border-indigo-600 text-white" : "border-[var(--line)] bg-[var(--ink)]"
                             )}
                           >
-                            {selectedIndices.has(idx) && <Check size={14} />}
+                            {selectedIndices.has(idx) && <Check aria-hidden="true" size={14} />}
                           </button>
                         </td>
                         <td className="px-4 py-4 text-[11px] font-mono font-bold text-[var(--muted)]">{tx.date}</td>

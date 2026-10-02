@@ -213,10 +213,10 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
           >
             <div className="bg-slate-800 px-5 py-3.5 flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-3">
-                <Terminal size={16} className="text-indigo-400" />
+                <Terminal aria-hidden="true" size={16} className="text-indigo-400" />
                 <span className="text-[11px] font-medium text-slate-100 uppercase tracking-wider">System Terminal :: LedgerFlow</span>
               </div>
-              <button aria-label="Close" onClick={onClose} className="text-slate-400 hover:text-white transition-colors"><X size={18} /></button>
+              <button aria-label="Close" onClick={onClose} className="text-slate-400 hover:text-white transition-colors"><X aria-hidden="true" size={18} /></button>
             </div>
 
             <div 
@@ -234,15 +234,15 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
               ))}
               {isProcessing && (
                 <div className="flex items-center gap-2 text-indigo-400 mt-1 animate-pulse">
-                  <Loader2 size={12} className="animate-spin" />
+                  <Loader2 aria-hidden="true" size={12} className="animate-spin" />
                   <span>Processing...</span>
                 </div>
               )}
             </div>
 
             <form onSubmit={handleCommand} className="px-6 py-4 bg-slate-900 border-t border-slate-800 flex items-center gap-3">
-              <ChevronRight size={16} className="text-indigo-400" />
-              <input 
+              <ChevronRight aria-hidden="true" size={16} className="text-indigo-400" />
+              <input aria-label="Diagnostic command"
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -250,7 +250,7 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
                 className="flex-1 bg-transparent border-none outline-none text-slate-100 text-[13px] placeholder:text-slate-500"
               />
               <div className="flex items-center gap-2 px-2.5 py-1 bg-slate-800 rounded-md border border-slate-800">
-                <Command size={10} className="text-[var(--muted)]" />
+                <Command aria-hidden="true" size={10} className="text-[var(--muted)]" />
                 <span className="text-[10px] font-medium text-[var(--muted)]">ENTER</span>
               </div>
             </form>
@@ -261,11 +261,11 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
                 <span className="text-[10px] text-[var(--muted)] uppercase font-medium tracking-wider">Connected</span>
               </div>
               <div className="flex items-center gap-2">
-                <Globe size={11} className="text-[var(--muted)]" />
+                <Globe aria-hidden="true" size={11} className="text-[var(--muted)]" />
                 <span className="text-[10px] text-[var(--muted)] uppercase font-medium tracking-wider">TLS 1.3 Encryption</span>
               </div>
               <div className="ml-auto flex items-center gap-2">
-                <Sparkles size={11} className="text-indigo-400" />
+                <Sparkles aria-hidden="true" size={11} className="text-indigo-400" />
                 <span className="text-[10px] text-[var(--muted)] uppercase font-medium tracking-wider">AI Guard Active</span>
               </div>
             </div>

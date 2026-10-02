@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { aiService } from '../../services/aiService';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { parseNaturalLanguageEntry } from '../../lib/algorithms/nl-parser';
@@ -11,6 +11,7 @@ import { isCashAccount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
 
 export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
+  const formId = useId();
   const [isAiParsing, setIsAiParsing] = useState(false);
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState<any>(null);
@@ -134,16 +135,17 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
     <div className="p-6 space-y-6">
       <div className="relative">
         <input 
+          aria-label="Describe the transaction"
           autoFocus
           className="w-full text-lg py-6 pl-12 pr-32 rounded-xl border border-[var(--line)] bg-[var(--panel)] text-[var(--text)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--brass)] focus:border-[var(--brass)] placeholder:text-[var(--faint)]"
           placeholder="e.g., paid $40 gas cash yesterday"
           value={text}
           onChange={(e) => handleParse(e.target.value)}
         />
-        {isAiParsing ? <Loader2 className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--brass)] w-5 h-5 animate-spin" /> : <Wand2 className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--brass)] w-5 h-5" />}
-        <label className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] px-3 py-2 rounded-lg font-medium text-sm flex items-center transition-colors cursor-pointer">
-          <Camera className="w-4 h-4 mr-2" /> Snap Receipt
-          <input type="file" accept="image/*" className="hidden" onChange={handleUploadReceipt} />
+        {isAiParsing ? <Loader2 aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--brass)] w-5 h-5 animate-spin" /> : <Wand2 aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--brass)] w-5 h-5" />}
+        <label htmlFor={`${formId}-receipt`} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] px-3 py-2 rounded-lg font-medium text-sm flex items-center transition-colors cursor-pointer">
+          <Camera aria-hidden="true" className="w-4 h-4 mr-2" /> Snap Receipt
+          <input id={`${formId}-receipt`} type="file" accept="image/*" className="hidden" onChange={handleUploadReceipt} />
         </label>
       </div>
 
@@ -157,6 +159,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
               <div>
                 <p className="text-xs text-[var(--faint)] mb-1">Amount ($)</p>
                 <input 
+                  aria-label="Amount ($)"
                   type="number" 
                   step="0.01"
                   className="w-full bg-[var(--surface)] border border-[var(--line)] rounded p-2 text-sm focus:outline-none focus:border-[var(--brass)] text-[var(--text)]"
@@ -167,6 +170,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
               <div>
                 <p className="text-xs text-[var(--faint)] mb-1">Action</p>
                 <select 
+                  aria-label="Action"
                   className="w-full bg-[var(--surface)] border border-[var(--line)] rounded p-2 text-sm focus:outline-none focus:border-[var(--brass)] text-[var(--text)]"
                   value={parsed.action}
                   onChange={(e) => setParsed({...parsed, action: e.target.value})}
@@ -178,6 +182,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
               <div>
                 <p className="text-xs text-[var(--faint)] mb-1">Method</p>
                 <input 
+                  aria-label="Method"
                   type="text" 
                   className="w-full bg-[var(--surface)] border border-[var(--line)] rounded p-2 text-sm focus:outline-none focus:border-[var(--brass)] text-[var(--text)]"
                   value={parsed.method}
@@ -187,6 +192,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
               <div>
                 <p className="text-xs text-[var(--faint)] mb-1">Date</p>
                 <input 
+                  aria-label="Date"
                   type="date" 
                   className="w-full bg-[var(--surface)] border border-[var(--line)] rounded p-2 text-sm focus:outline-none focus:border-[var(--brass)] text-[var(--text)]"
                   value={parsed.dateStr}
@@ -196,6 +202,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
               <div className="col-span-2">
                 <p className="text-xs text-[var(--faint)] mb-1">Description / Category</p>
                 <input 
+                  aria-label="Description / Category"
                   type="text" 
                   className="w-full bg-[var(--surface)] border border-[var(--line)] rounded p-2 text-sm focus:outline-none focus:border-[var(--brass)] text-[var(--text)]"
                   value={parsed.description}
@@ -232,7 +239,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
                 className="w-full sm:w-1/3 bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] font-medium py-3 px-4 rounded-xl transition-colors hover:bg-[var(--elevated)] shadow-sm flex items-center justify-center"
                 onClick={() => setIsEditing(true)}
               >
-                <Edit2 className="w-4 h-4 mr-2" /> Edit Details
+                <Edit2 aria-hidden="true" className="w-4 h-4 mr-2" /> Edit Details
               </button>
             ) : (
               <button 
@@ -247,7 +254,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
               onClick={handleSave}
               loadingText="Saving..."
             >
-              <Check className="w-4 h-4 mr-2" /> Looks Right - Save It
+              <Check aria-hidden="true" className="w-4 h-4 mr-2" /> Looks Right - Save It
             </AsyncButton>
           </div>
         </div>
@@ -274,7 +281,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
               <p className="text-[var(--muted)]">Just type what happened. No debit/credit knowledge required.</p>
             </div>
             {onClose && (
-              <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-[var(--muted)]"><X className="w-5 h-5" /></button>
+              <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-[var(--muted)]"><X aria-hidden="true" className="w-5 h-5" /></button>
             )}
           </div>
           {content}

@@ -108,14 +108,14 @@ const Sidebar = React.memo(({
           <div className="w-full relative group/workspace cursor-pointer">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] shrink-0 shadow-sm">
-                 <Compass size={18} className="animate-spin-slow" />
+                 <Compass aria-hidden="true" size={18} className="animate-spin-slow" />
               </div>
               <div className="flex-1 overflow-hidden">
                  <div className="flex items-center justify-between">
                    <h1 className="text-[14px] font-bold text-[var(--text)] tracking-tight leading-none truncate">
                      {workspaces.find(w => w.id === currentWorkspaceId)?.name || 'LedgerFlow'}
                    </h1>
-                   <ChevronDown size={14} className="text-[var(--faint)] group-hover/workspace:text-[var(--text)] transition-colors" />
+                   <ChevronDown aria-hidden="true" size={14} className="text-[var(--faint)] group-hover/workspace:text-[var(--text)] transition-colors" />
                  </div>
                  <p className="text-[10px] font-mono text-[var(--faint)] mt-1 truncate uppercase tracking-wider">Workspace</p>
               </div>
@@ -139,7 +139,7 @@ const Sidebar = React.memo(({
                 onClick={onNewWorkspace}
                 className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] transition-colors"
                aria-label="New Workspace">
-                <Plus size={14} />
+                <Plus aria-hidden="true" size={14} />
                 <span>New Workspace</span>
               </button>
             </div>
@@ -147,7 +147,7 @@ const Sidebar = React.memo(({
         ) : (
           <div className="flex items-center justify-center w-full">
             <div className="w-8 h-8 rounded-lg bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] shrink-0 shadow-sm" title={workspaces.find(w => w.id === currentWorkspaceId)?.name || 'LedgerFlow'}>
-              <Compass size={18} className="animate-spin-slow" />
+              <Compass aria-hidden="true" size={18} className="animate-spin-slow" />
             </div>
           </div>
         )}
@@ -168,7 +168,7 @@ const Sidebar = React.memo(({
                  const firstTabInGroup = APP_TABS.find(t => t.groupId === groupId && (!t.isAdvanced || uiStore.isProMode));
 
                  return (
-                   <button
+                   <button aria-label={groupLabel[uiStore.language as "en" | "he"] || groupLabel.en}
                      key={groupId}
                      data-testid={`nav-${firstTabInGroup?.id || groupId}`}
                      onClick={() => {
@@ -227,7 +227,7 @@ const Sidebar = React.memo(({
            title={uiStore.isSidebarOpen ? undefined : "Global Coordinate Search"}
          >
            <span className="flex items-center gap-2.5">
-             <Command size={16} className="shrink-0 text-[var(--faint)] group-hover:text-[var(--text)] transition-colors" /> 
+             <Command aria-hidden="true" size={16} className="shrink-0 text-[var(--faint)] group-hover:text-[var(--text)] transition-colors" />
              {uiStore.isSidebarOpen && <span>Command Bar</span>}
            </span>
            {uiStore.isSidebarOpen && <span className="text-[10px] font-mono text-[var(--faint)] border border-[var(--line)] rounded px-1">⌘K</span>}
@@ -244,7 +244,7 @@ const Sidebar = React.memo(({
              title={uiStore.isSidebarOpen ? undefined : "Admin Control Panel"}
            >
              <div className="flex items-center gap-2.5">
-               <ShieldCheck size={16} className="shrink-0 text-amber-400 group-hover:scale-110 transition-transform" />
+               <ShieldCheck aria-hidden="true" size={16} className="shrink-0 text-amber-400 group-hover:scale-110 transition-transform" />
                {uiStore.isSidebarOpen && <span>Admin Panel</span>}
              </div>
              {uiStore.isSidebarOpen && (
@@ -265,7 +265,7 @@ const Sidebar = React.memo(({
              title={uiStore.isSidebarOpen ? undefined : "Install App"}
             aria-label="Install App">
              <div className="flex items-center gap-2.5">
-               <Download size={16} className="shrink-0 text-emerald-400 group-hover:scale-110 transition-transform" />
+               <Download aria-hidden="true" size={16} className="shrink-0 text-emerald-400 group-hover:scale-110 transition-transform" />
                {uiStore.isSidebarOpen && <span>Install App</span>}
              </div>
              {uiStore.isSidebarOpen && (
@@ -283,7 +283,7 @@ const Sidebar = React.memo(({
            )}
            title={uiStore.isSidebarOpen ? undefined : (user ? "Log Out" : "Exit Guest / Sign In")}
           aria-label="Log Out">
-           <LogOut size={16} className="shrink-0 text-[var(--faint)] group-hover:text-red-400 transition-colors" />
+           <LogOut aria-hidden="true" size={16} className="shrink-0 text-[var(--faint)] group-hover:text-red-400 transition-colors" />
            {uiStore.isSidebarOpen && <span>{user ? "Log Out" : "Exit Guest / Sign In"}</span>}
          </button>
       </div>

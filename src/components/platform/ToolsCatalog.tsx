@@ -183,7 +183,7 @@ export default function ToolsCatalog() {
           <div className="space-y-4">
              <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-[var(--brass)] rounded-xl flex items-center justify-center text-black shadow-lg">
-                   <Library size={24} />
+                   <Library aria-hidden="true" size={24} />
                 </div>
                 <div>
                   <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase leading-none text-[var(--text)]">Tool Catalog</h1>
@@ -194,8 +194,8 @@ export default function ToolsCatalog() {
 
           <div className="flex items-center gap-6">
              <div className="relative group">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-[var(--text)] transition-colors" />
-                <input 
+                <Search aria-hidden="true" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-[var(--text)] transition-colors" />
+                <input aria-label="Search tools and capabilities"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Query capabilities..." 
@@ -209,7 +209,7 @@ export default function ToolsCatalog() {
        <div className="mb-8 bg-[var(--surface)] border border-[var(--brass-line)]/40 rounded-2xl p-4 md:p-5 shadow-lg relative overflow-hidden">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-               <Flame size={16} className="text-amber-500 fill-amber-500" />
+               <Flame aria-hidden="true" size={16} className="text-amber-500 fill-amber-500" />
                <h2 className="text-xs font-black uppercase tracking-wider text-[var(--text)]">Speed Dial Shortcuts</h2>
                <span className="text-[10px] font-mono font-bold text-[var(--muted)] px-2 py-0.5 bg-[var(--ink)] border border-[var(--line)] rounded-full">
                  {speedDialTools.length} pinned
@@ -228,9 +228,9 @@ export default function ToolsCatalog() {
                    onClick={() => setActiveSandbox({ id: tool.id, name: tool.name })}
                    className="flex items-center gap-3 px-4 py-2.5 bg-[var(--ink)] hover:bg-[var(--brass)]/10 border border-[var(--line)] hover:border-[var(--brass)] rounded-xl text-left transition-all cursor-pointer group shrink-0"
                  >
-                    <Star size={14} className="text-amber-400 fill-amber-400 shrink-0" />
+                    <Star aria-hidden="true" size={14} className="text-amber-400 fill-amber-400 shrink-0" />
                     <span className="text-xs font-bold uppercase tracking-tight text-[var(--text)] group-hover:text-[var(--brass)] transition-colors whitespace-nowrap">{tool.name}</span>
-                    <ArrowRight size={12} className="text-[var(--muted)] group-hover:text-[var(--brass)] group-hover:translate-x-0.5 transition-all" />
+                    <ArrowRight aria-hidden="true" size={12} className="text-[var(--muted)] group-hover:text-[var(--brass)] group-hover:translate-x-0.5 transition-all" />
                  </button>
                ))}
             </div>
@@ -247,7 +247,7 @@ export default function ToolsCatalog() {
                 activeCat === cat ? "bg-[var(--brass)] text-[var(--ink)] shadow-md font-bold" : "bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:border-[var(--brass-line)] hover:text-[var(--text)]"
               )}
             >
-              {cat === 'Speed Dial' && <Star size={12} className={activeCat === cat ? "fill-black" : "fill-amber-400 text-amber-400"} />}
+              {cat === 'Speed Dial' && <Star aria-hidden="true" size={12} className={activeCat === cat ? "fill-black" : "fill-amber-400 text-amber-400"} />}
               {cat}
             </button>
           ))}
@@ -274,15 +274,15 @@ export default function ToolsCatalog() {
                   )}
                 >
                    <div className="absolute top-6 right-6 flex items-center gap-2">
-                      <button
+                      <button aria-label={isPinned ? "Unpin from Speed Dial" : "Pin to Speed Dial"}
                         onClick={(e) => toggleSpeedDial(e, tool.id)}
                         title={isPinned ? "Unpin from Speed Dial" : "Pin to Speed Dial"}
                         className="p-1.5 rounded-lg hover:bg-[var(--ink)] text-[var(--muted)] hover:text-amber-400 transition-all cursor-pointer"
                       >
-                         <Star size={16} className={cn(isPinned ? "text-amber-400 fill-amber-400" : "text-[var(--muted)]")} />
+                         <Star aria-hidden="true" size={16} className={cn(isPinned ? "text-amber-400 fill-amber-400" : "text-[var(--muted)]")} />
                       </button>
                       {tool.implemented ? (
-                        <CheckCircle2 size={16} className="text-emerald-500" />
+                        <CheckCircle2 aria-hidden="true" size={16} className="text-emerald-500" />
                       ) : (
                         <span className="px-2 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded text-[8px] font-medium uppercase tracking-wider">Backlog</span>
                       )}
@@ -315,7 +315,7 @@ export default function ToolsCatalog() {
                         tool.implemented ? "text-[var(--text)] group-hover:text-[var(--brass)]" : "text-[var(--muted)] cursor-not-allowed"
                       )} aria-label="Zap action">
                          {tool.implemented ? 'Open Mathematical Sandbox' : 'In Development'}
-                         {tool.implemented && <Zap size={14} className="text-[var(--brass)]" />}
+                         {tool.implemented && <Zap aria-hidden="true" size={14} className="text-[var(--brass)]" />}
                       </button>
                    </div>
                 </motion.div>

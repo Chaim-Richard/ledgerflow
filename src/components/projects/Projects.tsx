@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useId } from 'react';
 import { Project, Transaction } from '../../types';
 import { 
   BrainCircuit,
@@ -44,6 +44,7 @@ function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
 }
 
 export default function Projects() {
+  const formId = useId();
   const user = useAuthStore(s => s.user);
   const projects = useLedgerStore(s => s.projects);
   const transactions = useLedgerStore(s => s.transactions);
@@ -241,7 +242,7 @@ export default function Projects() {
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)]/60 text-[10px] font-mono text-[var(--brass)] font-semibold mb-2 shadow-xs">
-              <FolderKanban size={12} />
+              <FolderKanban aria-hidden="true" size={12} />
               DIMENSIONAL COST ARCHITECTURE
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text)] tracking-tight">Project & Initiative Tracking</h1>
@@ -259,7 +260,7 @@ export default function Projects() {
                     : "text-[var(--muted)] hover:text-[var(--text)]"
                 )}
               >
-                 <LayoutDashboard size={13} /> Board
+                 <LayoutDashboard aria-hidden="true" size={13} /> Board
               </button>
               <button
                 onClick={() => setActiveSubTab('list')}
@@ -270,12 +271,13 @@ export default function Projects() {
                     : "text-[var(--muted)] hover:text-[var(--text)]"
                 )}
               >
-                <List size={13} /> List
+                <List aria-hidden="true" size={13} /> List
               </button>
             </div>
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-[var(--brass)] transition-colors" size={14} />
+              <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-[var(--brass)] transition-colors" size={14} />
               <input 
+                aria-label="Search projects or tags"
                 type="text"
                 placeholder="Search projects or tags..."
                 value={searchTerm}
@@ -287,7 +289,7 @@ export default function Projects() {
               onClick={() => setIsNewProjectModalOpen(true)}
               className="h-9 px-4 bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black hover:opacity-95 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-md hover:shadow-lg cursor-pointer"
             >
-              <Plus size={15} />
+              <Plus aria-hidden="true" size={15} />
               Initialize Project
             </button>
           </div>
@@ -338,7 +340,7 @@ export default function Projects() {
                         "w-10 h-10 rounded-lg flex items-center justify-center transition-all",
                         selectedProjectId === project.id ? "bg-[var(--surface)]/10" : "bg-slate-100 border border-[var(--line)]/40"
                       )}>
-                        <FolderKanban size={18} className={selectedProjectId === project.id ? "text-orange-300" : "text-slate-600"} />
+                        <FolderKanban aria-hidden="true" size={18} className={selectedProjectId === project.id ? "text-orange-300" : "text-slate-600"} />
                       </div>
                       <div dir="auto">
                         <h3 className="font-bold text-sm tracking-tight">{project.name}</h3>
@@ -355,6 +357,7 @@ export default function Projects() {
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1 bg-[var(--surface)]/5 p-0.5 rounded-lg border border-slate-250/10">
                         <button 
+                          aria-label={`Edit project ${project.name}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingProject(project);
@@ -364,9 +367,10 @@ export default function Projects() {
                             selectedProjectId === project.id ? "text-white/80 hover:text-white hover:bg-[var(--surface)]/10" : "text-slate-400 hover:text-[var(--text)] hover:bg-[var(--ink)]"
                           )}
                         >
-                          <Pencil size={12} />
+                          <Pencil aria-hidden="true" size={12} />
                         </button>
                         <AsyncButton 
+                          aria-label={`Delete project ${project.name}`}
                           onClick={async () => {
                             handleDeleteProject(project.id);
                           }}
@@ -375,7 +379,7 @@ export default function Projects() {
                             selectedProjectId === project.id ? "text-white/80 hover:text-red-400 hover:bg-[var(--surface)]/10" : "text-slate-400 hover:text-rose-600 hover:bg-rose-50/50"
                           )}
                         >
-                          <Trash2 size={12} />
+                          <Trash2 aria-hidden="true" size={12} />
                         </AsyncButton>
                       </div>
                       <div className="text-right">
@@ -439,7 +443,7 @@ export default function Projects() {
                       <h3 className="text-sm font-black text-[var(--text)] tracking-tight mt-0.5">{selectedProject.name}</h3>
                     </div>
                     <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)]/60 rounded-lg flex items-center justify-center">
-                      <Users size={14} className="text-[var(--muted)]" />
+                      <Users aria-hidden="true" size={14} className="text-[var(--muted)]" />
                     </div>
                   </div>
 
@@ -470,7 +474,7 @@ export default function Projects() {
                     )) : (
                       <div className="text-center py-10 bg-[var(--ink)]/50 rounded-xl border border-dashed border-[var(--line)]">
                         <div className="w-10 h-10 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center mx-auto mb-3 opacity-60">
-                          <BrainCircuit size={18} className="text-[var(--muted)]" />
+                          <BrainCircuit aria-hidden="true" size={18} className="text-[var(--muted)]" />
                         </div>
                         <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">No active project members</p>
                       </div>
@@ -503,7 +507,7 @@ export default function Projects() {
 
                   <div className="mt-6 pt-4 border-t border-[var(--line)]">
                     <button className="w-full h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold uppercase tracking-wider text-[9px] transition-all flex items-center justify-center gap-2 shadow-3xs cursor-pointer" aria-label="Generate Brief">
-                      <BarChart3 size={12} className="text-slate-300" />
+                      <BarChart3 aria-hidden="true" size={12} className="text-slate-300" />
                       Generate Brief
                     </button>
                   </div>
@@ -512,7 +516,7 @@ export default function Projects() {
             ) : (
               <div className="bg-slate-100/30 rounded-xl border border-dashed border-[var(--line)] p-4 md:p-8 text-center h-full flex flex-col items-center justify-center">
                 <div className="w-12 h-12 bg-[var(--surface)] rounded-lg shadow-3xs flex items-center justify-center text-[var(--muted)] border border-[var(--line)] mx-auto mb-4">
-                  <BrainCircuit size={20} />
+                  <BrainCircuit aria-hidden="true" size={20} />
                 </div>
                 <h3 className="text-xs font-bold text-[var(--text)] mb-1 uppercase tracking-wider">Select Initiative</h3>
                 <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider max-w-[200px] mx-auto leading-relaxed">
@@ -539,10 +543,11 @@ export default function Projects() {
                 <p className="text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider mt-1">Deploying new objective into ledger matrix</p>
               </div>
               <button 
+                aria-label="Close new project dialog"
                 onClick={() => setIsNewProjectModalOpen(false)}
                 className="p-2 text-[var(--muted)] hover:text-[var(--text)] transition-colors"
               >
-                <Plus size={24} className="rotate-45" />
+                <Plus aria-hidden="true" size={24} className="rotate-45" />
               </button>
             </div>
             
@@ -561,8 +566,8 @@ export default function Projects() {
               </div>
 
               <div className="space-y-4">
-                <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Dimensional Type</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div id={`${formId}-new-type`} className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Dimensional Type</div>
+                <div role="group" aria-labelledby={`${formId}-new-type`} className="grid grid-cols-2 gap-3">
                   {[
                     { id: 'general', label: 'General', icon: FolderKanban },
                     { id: 'book', label: 'Publication', icon: BookOpen },
@@ -571,6 +576,7 @@ export default function Projects() {
                   ].map((type) => (
                     <button
                       key={type.id}
+                      aria-pressed={newProject.type === type.id}
                       onClick={() => setNewProject({ ...newProject, type: type.id as any })}
                       className={cn(
                         "flex items-center gap-3 p-4 rounded-[32px] border transition-all text-left",
@@ -633,10 +639,11 @@ export default function Projects() {
                 <p className="text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider mt-1">Rule settings for project matrix {editingProject.id.slice(0, 8)}</p>
               </div>
               <button 
+                aria-label="Close project configuration dialog"
                 onClick={() => setEditingProject(null)}
                 className="p-2 text-[var(--muted)] hover:text-[var(--text)] transition-colors"
               >
-                <Plus size={24} className="rotate-45" />
+                <Plus aria-hidden="true" size={24} className="rotate-45" />
               </button>
             </div>
             
@@ -654,8 +661,8 @@ export default function Projects() {
               </div>
 
               <div className="space-y-4">
-                <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Status</label>
-                <div className="grid grid-cols-3 gap-3">
+                <div id={`${formId}-status`} className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Status</div>
+                <div role="group" aria-labelledby={`${formId}-status`} className="grid grid-cols-3 gap-3">
                   {[
                     { id: 'active', label: 'Active', color: 'ledger-success' },
                     { id: 'completed', label: 'Done', color: 'ledger-accent' },
@@ -663,6 +670,7 @@ export default function Projects() {
                   ].map((status) => (
                     <button
                       key={status.id}
+                      aria-pressed={editingProject.status === status.id}
                       onClick={() => setEditingProject({ ...editingProject, status: status.id as any })}
                       className={cn(
                         "p-3 rounded-[32px] border transition-all text-xs font-bold uppercase tracking-wider",
@@ -678,8 +686,8 @@ export default function Projects() {
               </div>
 
               <div className="space-y-4">
-                <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Dimensional Type</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div id={`${formId}-edit-type`} className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Dimensional Type</div>
+                <div role="group" aria-labelledby={`${formId}-edit-type`} className="grid grid-cols-2 gap-3">
                     {[
                       { id: 'general', label: 'General', icon: FolderKanban },
                       { id: 'book', label: 'Publication', icon: BookOpen },
@@ -688,6 +696,7 @@ export default function Projects() {
                     ].map((type) => (
                       <button
                         key={type.id}
+                        aria-pressed={editingProject.type === type.id}
                         onClick={() => setEditingProject({ ...editingProject, type: type.id as any })}
                         className={cn(
                           "flex items-center gap-3 p-4 rounded-[32px] border transition-all text-left",
@@ -705,10 +714,11 @@ export default function Projects() {
 
                 <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Budget Allocation</label>
+                  <label htmlFor={`${formId}-budget`} className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest px-1">Budget Allocation</label>
                   <div className="relative">
-                    <DollarSign size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+                    <DollarSign aria-hidden="true" size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
                     <input 
+                      id={`${formId}-budget`}
                       type="number"
                       value={editingProject.budgetCents / 100}
                       onChange={(e) => setEditingProject({ ...editingProject, budgetCents: parseAmountToCents(e.target.value) })}

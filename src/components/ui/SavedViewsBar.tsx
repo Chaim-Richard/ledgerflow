@@ -73,7 +73,7 @@ export default function SavedViewsBar({ currentSearchTerm, className }: SavedVie
         {/* Left: View Chips */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
           <div className="flex items-center gap-1 pr-2 border-r border-[var(--line)] shrink-0">
-            <Filter size={14} className="text-[var(--muted)]" />
+            <Filter aria-hidden="true" size={14} className="text-[var(--muted)]" />
             <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">Views</span>
           </div>
 
@@ -124,7 +124,7 @@ export default function SavedViewsBar({ currentSearchTerm, className }: SavedVie
                   </div>
                 </button>
 
-                <button
+                <button aria-label={view.isPinned ? "Unpin view" : "Pin view"}
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -133,7 +133,7 @@ export default function SavedViewsBar({ currentSearchTerm, className }: SavedVie
                   title={view.isPinned ? "Unpin view" : "Pin view"}
                   className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-0.5 text-[var(--muted)] hover:text-amber-400 transition-opacity"
                 >
-                  <Star size={12} className={cn(view.isPinned && "fill-amber-400 text-amber-400 opacity-100")} />
+                  <Star aria-hidden="true" size={12} className={cn(view.isPinned && "fill-amber-400 text-amber-400 opacity-100")} />
                 </button>
               </div>
             );
@@ -147,14 +147,14 @@ export default function SavedViewsBar({ currentSearchTerm, className }: SavedVie
               onClick={() => setIsSavePromptOpen(true)}
               className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-[var(--brass)]/10 text-[var(--brass)] hover:bg-[var(--brass)]/20 rounded-lg border border-[var(--brass)]/30 transition-all cursor-pointer"
             >
-              <Plus size={13} />
+              <Plus aria-hidden="true" size={13} />
               <span>Save Active Search</span>
             </button>
           )}
 
           {isSavePromptOpen && (
             <div className="flex items-center gap-1.5 bg-[var(--surface-elevated)] p-1 rounded-lg border border-[var(--brass)] shadow-xs animate-in fade-in duration-150">
-              <input
+              <input aria-label="View Name"
                 type="text"
                 placeholder="View Name..."
                 value={newViewName}
@@ -182,7 +182,7 @@ export default function SavedViewsBar({ currentSearchTerm, className }: SavedVie
             onClick={() => setIsManagerOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--line)]/50 rounded-lg border border-[var(--line)] transition-all cursor-pointer"
           >
-            <SlidersHorizontal size={13} />
+            <SlidersHorizontal aria-hidden="true" size={13} />
             <span>Manage All Views ({views.length})</span>
           </button>
         </div>

@@ -83,7 +83,7 @@ export default function SecuritySettings() {
       <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm rounded-2xl">
         <div className="flex items-center gap-5 mb-8">
           <div className="w-12 h-12 bg-[var(--brass)] text-[var(--ink)] rounded-xl flex items-center justify-center shadow-md">
-            <Lock size={24} />
+            <Lock aria-hidden="true" size={24} />
           </div>
           <div>
             <h3 className="text-2xl font-black text-[var(--text)] uppercase tracking-wider">Fiscal Period Locking</h3>
@@ -98,7 +98,7 @@ export default function SecuritySettings() {
               Transactions on or before this date cannot be modified without administrative override.
             </p>
           </div>
-          <input 
+          <input aria-label="Closed Period Lock Date"
             type="date" 
             value={lockDate || ''}
             onChange={(e) => handleLockDateChange(e.target.value || null)}
@@ -110,7 +110,7 @@ export default function SecuritySettings() {
       <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm rounded-2xl">
         <div className="flex items-center gap-5 mb-8">
           <div className="w-12 h-12 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex items-center justify-center shadow-sm">
-            <ShieldCheck size={24} className="text-[var(--pos)]" />
+            <ShieldCheck aria-hidden="true" size={24} className="text-[var(--pos)]" />
           </div>
           <div>
             <h3 className="text-2xl font-black text-[var(--text)] uppercase tracking-wider">High-Integrity Firewall</h3>
@@ -159,7 +159,7 @@ export default function SecuritySettings() {
                       </code>
                       <p className="text-sm font-bold text-[var(--text)] mb-2">2. Enter the 6-digit code:</p>
                       <div className="flex gap-2">
-                        <input 
+                        <input aria-label="6-digit authentication code"
                           type="text" 
                           value={mfaCode}
                           onChange={e => setMfaCode(e.target.value)}
@@ -182,7 +182,7 @@ export default function SecuritySettings() {
                     disabled={isEnrollingMfa}
                     className="px-6 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--ink)] transition-all flex items-center gap-2 cursor-pointer shrink-0"
                   >
-                    <ShieldCheck size={14} />
+                    <ShieldCheck aria-hidden="true" size={14} />
                     {isEnrollingMfa ? 'ENROLLING...' : 'ENROLL TOTP'}
                   </button>
                 )}
@@ -212,7 +212,7 @@ export default function SecuritySettings() {
                   }}
                   className="px-6 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--ink)] transition-all flex items-center gap-2 cursor-pointer shrink-0"
                 >
-                  <AlertCircle size={14} />
+                  <AlertCircle aria-hidden="true" size={14} />
                   REVOKE ALL SESSIONS
                 </button>
             </div>
@@ -280,7 +280,7 @@ export default function SecuritySettings() {
                   }}
                   className="px-6 py-3 bg-rose-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-rose-600 transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0"
                 >
-                  <AlertCircle size={14} />
+                  <AlertCircle aria-hidden="true" size={14} />
                   DELETE ACCOUNT
                 </button>
             </div>
@@ -299,7 +299,7 @@ export default function SecuritySettings() {
                     disabled={isResetting}
                     className="px-6 py-3 bg-rose-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-rose-600 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
                   >
-                    {isResetting ? <RefreshCw size={14} className="animate-spin" /> : <AlertCircle size={14} />}
+                    {isResetting ? <RefreshCw aria-hidden="true" size={14} className="animate-spin" /> : <AlertCircle aria-hidden="true" size={14} />}
                     {isResetting ? 'Deleting…' : 'Delete workspace'}
                   </button>
                 </RequireRole>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useId } from 'react';
 import { toast } from 'sonner';
 import { Bell, CheckCheck, X, FileText, CreditCard, Landmark, Users, MailWarning, Settings2, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -26,6 +26,7 @@ function KindIcon({ kind }: { kind: string }) {
 }
 
 function Preferences({ onDone }: { onDone: () => void }) {
+  const preferencesId = useId();
   const uid = useAuthStore(s => s.user?.uid) || '';
   const role = useCurrentRole();
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
@@ -61,8 +62,8 @@ function Preferences({ onDone }: { onDone: () => void }) {
         <ul className="space-y-2">
           {types.map(type => (
             <li key={type}>
-              <label className="flex items-center gap-2 text-sm text-[var(--text)]">
-                <input type="checkbox" checked={wantsNotification(prefs, type)}
+              <label htmlFor={`${preferencesId}-${type}`} className="flex items-center gap-2 text-sm text-[var(--text)]">
+                <input id={`${preferencesId}-${type}`} type="checkbox" checked={wantsNotification(prefs, type)}
                   onChange={e => setPrefs({ ...prefs, [type]: e.target.checked })} />
                 {NOTIFICATION_TYPES[type].label}
               </label>

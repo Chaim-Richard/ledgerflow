@@ -157,7 +157,7 @@ export function TaxReserveWidget() {
         <div>
           <div className="flex items-center gap-2">
             <span className="p-1 rounded bg-[var(--brass-soft)] border border-[var(--brass-line)] text-[var(--brass)]">
-              <Landmark size={14} />
+              <Landmark aria-hidden="true" size={14} />
             </span>
             <h3 className="font-bold text-sm text-[var(--text)] font-sans">Safe-to-Spend & Liquidity Autopilot</h3>
           </div>
@@ -188,7 +188,7 @@ export function TaxReserveWidget() {
                 : "text-[var(--muted)] hover:text-[var(--text)]"
             )}
           >
-            <Sparkles size={11} />
+            <Sparkles aria-hidden="true" size={11} />
             Autopilot Risk Contract
           </button>
         </div>
@@ -218,14 +218,14 @@ export function TaxReserveWidget() {
 
           <div className="flex items-center justify-between text-xs bg-[var(--brass-soft)]/20 border border-[var(--brass-line)]/30 rounded-xl px-4 py-2.5">
             <div className="flex items-center gap-2">
-              <Sparkles size={14} className="text-[var(--brass)] animate-pulse shrink-0" />
+              <Sparkles aria-hidden="true" size={14} className="text-[var(--brass)] animate-pulse shrink-0" />
               <span className="text-[var(--muted)]">Want real-time safety buffers, committed bill protection, and irregular outlays reserving?</span>
             </div>
             <button
               onClick={() => setMode('autopilot')}
               className="text-[var(--brass)] font-bold hover:underline cursor-pointer text-xs flex items-center gap-1 shrink-0 ml-2"
             >
-              Configure Autopilot <ArrowRight size={12} />
+              Configure Autopilot <ArrowRight aria-hidden="true" size={12} />
             </button>
           </div>
         </div>
@@ -243,10 +243,10 @@ export function TaxReserveWidget() {
             dailyMessage.severity === 'safe' && "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
           )}>
             <div className="shrink-0 mt-0.5">
-              {dailyMessage.severity === 'danger' && <ShieldAlert size={16} />}
-              {dailyMessage.severity === 'warning' && <AlertTriangle size={16} />}
-              {dailyMessage.severity === 'caution' && <Info size={16} className="text-[var(--brass)]" />}
-              {dailyMessage.severity === 'safe' && <CheckCircle2 size={16} />}
+              {dailyMessage.severity === 'danger' && <ShieldAlert aria-hidden="true" size={16} />}
+              {dailyMessage.severity === 'warning' && <AlertTriangle aria-hidden="true" size={16} />}
+              {dailyMessage.severity === 'caution' && <Info aria-hidden="true" size={16} className="text-[var(--brass)]" />}
+              {dailyMessage.severity === 'safe' && <CheckCircle2 aria-hidden="true" size={16} />}
             </div>
             <div className="space-y-1">
               <p className="text-xs font-semibold leading-relaxed">
@@ -294,7 +294,7 @@ export function TaxReserveWidget() {
                   {/* Slider */}
                   <div className="pl-7 pr-2 flex items-center gap-3">
                     <span className="text-[10px] text-[var(--muted)]">Rate:</span>
-                    <input 
+                    <input aria-label="Tax rate"
                       type="range" 
                       min="0" 
                       max="50" 
@@ -323,7 +323,7 @@ export function TaxReserveWidget() {
                   <div className="pl-7 pr-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-[var(--muted)]">Target Payday:</span>
-                      <input 
+                      <input aria-label="Target Payday"
                         type="date" 
                         value={nextPayday} 
                         onChange={(e) => setNextPayday(e.target.value)}
@@ -405,7 +405,7 @@ export function TaxReserveWidget() {
                   {/* Slider */}
                   <div className="pl-7 pr-2 flex items-center gap-3">
                     <span className="text-[10px] text-[var(--muted)]">Buffer:</span>
-                    <input 
+                    <input aria-label="Safety buffer"
                       type="range" 
                       min="0" 
                       max="1000" 
@@ -471,13 +471,13 @@ export function TaxReserveWidget() {
               {/* Recommended Autopilot Decisions */}
               <div className="bg-[var(--panel)] border border-[var(--line)] rounded-xl p-4 space-y-3.5 shadow-xs">
                 <h5 className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--brass)] flex items-center gap-1.5">
-                  <Sparkles size={12} /> Optimization Interventions
+                  <Sparkles aria-hidden="true" size={12} /> Optimization Interventions
                 </h5>
 
                 <div className="space-y-2.5">
                   {/* Decision 1 */}
                   <div className="flex gap-2.5 items-start text-xs bg-[var(--surface)] p-2.5 border border-[var(--line)]/60 rounded-lg">
-                    <input 
+                    <input aria-label="Auto-Transfer Outlay Reserves"
                       type="checkbox" 
                       defaultChecked={autopilotSafeToSpendCents > 0} 
                       className="mt-0.5 h-3.5 w-3.5 accent-[var(--brass)] cursor-pointer" 
@@ -490,7 +490,7 @@ export function TaxReserveWidget() {
 
                   {/* Decision 2 */}
                   <div className="flex gap-2.5 items-start text-xs bg-[var(--surface)] p-2.5 border border-[var(--line)]/60 rounded-lg">
-                    <input 
+                    <input aria-label="Lock Pre-funded Bill Balances"
                       type="checkbox" 
                       defaultChecked={upcomingBillsList.length > 0} 
                       className="mt-0.5 h-3.5 w-3.5 accent-[var(--brass)] cursor-pointer" 
@@ -503,7 +503,7 @@ export function TaxReserveWidget() {
 
                   {/* Decision 3 */}
                   <div className="flex gap-2.5 items-start text-xs bg-[var(--surface)] p-2.5 border border-[var(--line)]/60 rounded-lg">
-                    <input 
+                    <input aria-label="Contractual Due Date Realignment"
                       type="checkbox" 
                       defaultChecked={false} 
                       className="mt-0.5 h-3.5 w-3.5 accent-[var(--brass)] cursor-pointer" 

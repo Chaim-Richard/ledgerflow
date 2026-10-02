@@ -1,5 +1,5 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useId } from 'react';
 import { Transaction, TransactionLine, ChartAccount, Project } from '../../types';
 import { Plus, Trash2, Save, X, AlertCircle, Layers } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -32,6 +32,7 @@ export default function SplitEditor({
   onSave,
   onClose
 }: SplitEditorProps) {
+  const editorId = useId();
   const [lines, setLines] = useState<TransactionLine[]>(
     transaction.lines?.length > 0 
       ? [...transaction.lines] 
@@ -86,12 +87,12 @@ export default function SplitEditor({
         <div className="p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--surface)]/50">
           <div>
             <h3 className="text-xl font-medium text-[var(--text)] tracking-tight flex items-center gap-2">
-               <Layers className="text-indigo-600" size={20} />
+               <Layers aria-hidden="true" className="text-indigo-600" size={20} />
                Split Transaction Lines
             </h3>
             <p className="text-[10px] text-[var(--muted)] mt-1 font-black uppercase tracking-[0.2em]">{transaction.description} • {new Intl.NumberFormat('en-US', { style: 'currency', currency: transaction.currency }).format(transaction.totalAmountCents / 100)}</p>
           </div>
-          <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors text-slate-500 hover:text-white"><X size={20} /></button>
+          <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors text-slate-500 hover:text-white"><X aria-hidden="true" size={20} /></button>
         </div>
 
         <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 custom-scrollbar bg-[var(--ink)]">
@@ -114,7 +115,8 @@ export default function SplitEditor({
                   <div className="flex flex-col gap-1">
                     <div className="relative">
                       <input 
-                        list={`split-account-${idx}`}
+                        aria-label={`Account for split line ${idx + 1}`}
+                        list={`${editorId}-account-options-${idx}`}
                         value={resolveAccountName(accounts, line.accountId, line.accountName)}
                         onChange={(e) => {
                           const acc = accounts.find(a => a.name === e.target.value || a.id === e.target.value);
@@ -123,13 +125,14 @@ export default function SplitEditor({
                         placeholder="Type or select account"
                         className="bg-transparent border-none outline-none font-bold text-sm text-[var(--text)] focus:text-indigo-600 transition-colors"
                       />
-                      <datalist id={`split-account-${idx}`}>
+                      <datalist id={`${editorId}-account-options-${idx}`}>
                         {accounts.map(acc => (
                           <option key={acc.id} value={acc.name}>{acc.code}</option>
                         ))}
                       </datalist>
                     </div>
                     <input 
+                      aria-label={`Description for split line ${idx + 1}`}
                       type="text"
                       placeholder="Line item description (e.g. Milk 2%)"
                       value={line.description || ''}
@@ -140,6 +143,7 @@ export default function SplitEditor({
 
                   <div className="flex items-center gap-2">
                     <input 
+                      aria-label={`Quantity for split line ${idx + 1}`}
                       type="number"
                       placeholder="Qty"
                       value={line.quantity || ''}
@@ -148,6 +152,7 @@ export default function SplitEditor({
                     />
                     <span className="text-[var(--muted)] text-[10px] font-black uppercase">×</span>
                     <input 
+                      aria-label={`Unit price for split line ${idx + 1}`}
                       type="number"
                       placeholder="Price"
                       value={line.unitPriceCents ? line.unitPriceCents / 100 : ''}
@@ -159,6 +164,7 @@ export default function SplitEditor({
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] font-mono text-xs opacity-50">$</span>
                     <input 
+                      aria-label={`Amount for split line ${idx + 1}`}
                       type="number"
                       step="0.01"
                       value={line.amountCents / 100}
@@ -175,19 +181,22 @@ export default function SplitEditor({
 
                   <div className="flex items-center gap-1">
                     <button 
+                      aria-label={`Details for split line ${idx + 1}`}
+                      aria-expanded={expandedLineKey === lineKeys[idx]}
                       onClick={() => setExpandedLineKey(expandedLineKey === lineKeys[idx] ? null : lineKeys[idx])}
                       className={cn(
                         "p-2 rounded-lg transition-all",
                         expandedLineKey === lineKeys[idx] ? "bg-indigo-600 text-white" : "text-slate-500 hover:bg-[var(--ink)]"
                       )}
                     >
-                      <Layers size={14} />
+                      <Layers aria-hidden="true" size={14} />
                     </button>
                     <button 
+                      aria-label={`Remove split line ${idx + 1}`}
                       onClick={() => removeLine(idx)}
                       className="text-[var(--muted)] hover:text-rose-600 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all p-2 flex items-center justify-center hover:bg-rose-50/10 rounded-lg"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 aria-hidden="true" size={16} />
                     </button>
                   </div>
                 </div>
@@ -200,9 +209,10 @@ export default function SplitEditor({
                   >
                     <div className="flex flex-wrap gap-4">
                       <div className="flex-1 space-y-2">
-                        <label className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Dimension Attribution</label>
+                        <label htmlFor={`${editorId}-project-${idx}`} className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Dimension Attribution</label>
                         <div className="relative">
                           <select 
+                            id={`${editorId}-project-${idx}`}
                             value={line.project || ''}
                             onChange={(e) => updateLine(idx, { project: e.target.value })}
                             className="w-full px-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] focus:text-indigo-600 outline-none cursor-pointer"
@@ -215,31 +225,33 @@ export default function SplitEditor({
                         </div>
                       </div>
                       <div className="flex-[0.5] space-y-2">
-                        <label className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Class</label>
+                        <label htmlFor={`${editorId}-class-${idx}`} className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Class</label>
                         <div className="relative">
                           <input 
-                            list={`split-class-${idx}`}
+                            id={`${editorId}-class-${idx}`}
+                            list={`${editorId}-class-options-${idx}`}
                             value={line.class || ''}
                             onChange={(e) => updateLine(idx, { class: e.target.value })}
                             placeholder="Type or select class"
                             className="w-full px-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[11px] font-black uppercase tracking-wider text-[var(--muted)] focus:text-indigo-600 outline-none"
                           />
-                          <datalist id={`split-class-${idx}`}>
+                          <datalist id={`${editorId}-class-options-${idx}`}>
                             {useLedgerStore.getState().classes?.map(c => <option key={c} value={c} />)}
                           </datalist>
                         </div>
                       </div>
                       <div className="flex-[0.5] space-y-2">
-                        <label className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Location</label>
+                        <label htmlFor={`${editorId}-location-${idx}`} className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Location</label>
                         <div className="relative">
                           <input 
-                            list={`split-location-${idx}`}
+                            id={`${editorId}-location-${idx}`}
+                            list={`${editorId}-location-options-${idx}`}
                             value={line.location || ''}
                             onChange={(e) => updateLine(idx, { location: e.target.value })}
                             placeholder="Type or select location"
                             className="w-full px-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[11px] font-black uppercase tracking-wider text-[var(--muted)] focus:text-indigo-600 outline-none"
                           />
-                          <datalist id={`split-location-${idx}`}>
+                          <datalist id={`${editorId}-location-options-${idx}`}>
                             {useLedgerStore.getState().locations?.map(l => <option key={l} value={l} />)}
                           </datalist>
                         </div>
@@ -267,7 +279,7 @@ export default function SplitEditor({
             onClick={addLine}
             className="flex items-center gap-3 px-6 py-4 bg-[var(--surface)]/50 hover:bg-[var(--ink)]/50 text-indigo-600 rounded-[32px] text-[10px] font-black uppercase tracking-[0.2em] transition-all mt-6 w-full justify-center border border-dashed border-[var(--line)] group"
            aria-label="Append Split Line">
-            <Plus size={16} className="group-hover:scale-125 transition-transform" />
+            <Plus aria-hidden="true" size={16} className="group-hover:scale-125 transition-transform" />
             Append Split Line
           </button>
           </div>
@@ -286,7 +298,7 @@ export default function SplitEditor({
                 </>
               ) : (
                 <>
-                  <AlertCircle size={14} className="animate-bounce" />
+                  <AlertCircle aria-hidden="true" size={14} className="animate-bounce" />
                   Discrepancy: {new Intl.NumberFormat('en-US', { style: 'currency', currency: transaction.currency }).format(diff / 100)}
                 </>
               )}
@@ -305,7 +317,7 @@ export default function SplitEditor({
               disabled={!isBalanced || lines.some(l => !l.accountId)}
               className="btn-primary !px-10 flex items-center gap-3 disabled:opacity-30 disabled:grayscale transition-all shadow-[0_0_20px_rgba(26,115,232,0.2)]"
             >
-              <Save size={18} />
+              <Save aria-hidden="true" size={18} />
               Commit Atomic Split
             </button>
           </div>

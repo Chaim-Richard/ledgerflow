@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useId } from 'react';
 import { toast } from 'sonner';
 import { Mail, RotateCcw } from 'lucide-react';
 import { useAuthStore } from '../../../stores/useAuthStore';
@@ -26,6 +26,7 @@ const SAMPLE = {
 const inputClass = 'w-full px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] text-sm text-[var(--text)]';
 
 export default function EmailSettings() {
+  const formId = useId();
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const workspaces = useAuthStore(s => s.workspaces);
   const setWorkspaces = useAuthStore(s => s.setWorkspaces);
@@ -73,11 +74,11 @@ export default function EmailSettings() {
 
   return (
     <div className="space-y-8">
-      <section className="ledger-card p-6 md:p-8 bg-[var(--surface)] border border-[var(--line)] rounded-2xl space-y-5" aria-labelledby="email-templates">
+      <section className="ledger-card p-6 md:p-8 bg-[var(--surface)] border border-[var(--line)] rounded-2xl space-y-5" aria-labelledby={`${formId}-email-templates`}>
         <div className="flex items-center gap-3">
           <Mail className="w-5 h-5 text-[var(--brass)]" aria-hidden="true" />
           <div>
-            <h3 id="email-templates" className="text-lg font-bold text-[var(--text)]">Email templates</h3>
+            <h3 id={`${formId}-email-templates`} className="text-lg font-bold text-[var(--text)]">Email templates</h3>
             <p className="text-xs text-[var(--muted)]">The text of the emails your customers receive. A plain-text version is always sent with it.</p>
           </div>
         </div>
@@ -94,13 +95,13 @@ export default function EmailSettings() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-3">
             <div>
-              <label htmlFor="tpl-subject" className="block text-xs font-semibold text-[var(--text)] mb-1">Subject</label>
-              <input id="tpl-subject" maxLength={MAX_SUBJECT} disabled={!canEdit} value={drafts[key]?.subject ?? DEFAULT_TEMPLATES[key].subject}
+              <label htmlFor={`${formId}-tpl-subject`} className="block text-xs font-semibold text-[var(--text)] mb-1">Subject</label>
+              <input id={`${formId}-tpl-subject`} maxLength={MAX_SUBJECT} disabled={!canEdit} value={drafts[key]?.subject ?? DEFAULT_TEMPLATES[key].subject}
                 onChange={e => editTemplate('subject', e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label htmlFor="tpl-body" className="block text-xs font-semibold text-[var(--text)] mb-1">Text</label>
-              <textarea id="tpl-body" rows={12} maxLength={MAX_BODY} disabled={!canEdit} value={drafts[key]?.body ?? DEFAULT_TEMPLATES[key].body}
+              <label htmlFor={`${formId}-tpl-body`} className="block text-xs font-semibold text-[var(--text)] mb-1">Text</label>
+              <textarea id={`${formId}-tpl-body`} rows={12} maxLength={MAX_BODY} disabled={!canEdit} value={drafts[key]?.body ?? DEFAULT_TEMPLATES[key].body}
                 onChange={e => editTemplate('body', e.target.value)} className={`${inputClass} font-mono text-xs`} />
             </div>
             <p className="text-[11px] text-[var(--muted)]">You can use: {PLACEHOLDERS.map(p => `{{${p}}}`).join(' ')}</p>
@@ -126,18 +127,18 @@ export default function EmailSettings() {
         </div>
       </section>
 
-      <section className="ledger-card p-6 md:p-8 bg-[var(--surface)] border border-[var(--line)] rounded-2xl space-y-4" aria-labelledby="reminders">
+      <section className="ledger-card p-6 md:p-8 bg-[var(--surface)] border border-[var(--line)] rounded-2xl space-y-4" aria-labelledby={`${formId}-reminders`}>
         <div>
-          <h3 id="reminders" className="text-lg font-bold text-[var(--text)]">Automatic payment reminders</h3>
+          <h3 id={`${formId}-reminders`} className="text-lg font-bold text-[var(--text)]">Automatic payment reminders</h3>
           <p className="text-xs text-[var(--muted)]">Customers with an overdue invoice get the "Payment reminder" email on these days after the due date (checked every morning).</p>
         </div>
-        <label className="flex items-center gap-2 text-sm text-[var(--text)]">
-          <input type="checkbox" disabled={!canEdit} checked={reminders.enabled} onChange={e => setReminders({ ...reminders, enabled: e.target.checked })} />
+        <label htmlFor={`${formId}-enabled`} className="flex items-center gap-2 text-sm text-[var(--text)]">
+          <input id={`${formId}-enabled`} type="checkbox" disabled={!canEdit} checked={reminders.enabled} onChange={e => setReminders({ ...reminders, enabled: e.target.checked })} />
           Send reminders automatically
         </label>
         <div className="max-w-sm">
-          <label htmlFor="reminder-days" className="block text-xs font-semibold text-[var(--text)] mb-1">Days after the due date</label>
-          <input id="reminder-days" disabled={!canEdit} value={daysText} onChange={e => setDaysText(e.target.value)} placeholder="3, 14, 30" className={inputClass} />
+          <label htmlFor={`${formId}-reminder-days`} className="block text-xs font-semibold text-[var(--text)] mb-1">Days after the due date</label>
+          <input id={`${formId}-reminder-days`} disabled={!canEdit} value={daysText} onChange={e => setDaysText(e.target.value)} placeholder="3, 14, 30" className={inputClass} />
         </div>
         {canEdit && (
           <button type="button" disabled={saving} onClick={saveReminders} className="px-4 py-2 rounded-lg bg-[var(--brass)] text-[var(--ink)] text-sm font-bold disabled:opacity-50">Save reminders</button>

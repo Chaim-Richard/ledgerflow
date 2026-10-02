@@ -196,7 +196,7 @@ export default function HelpGuideView() {
           <div className="space-y-1">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)]">
-                <BookOpen size={20} />
+                <BookOpen aria-hidden="true" size={20} />
               </div>
               <div>
                 <h1 className="text-2xl font-black tracking-tight">Help & Operational Guide</h1>
@@ -207,8 +207,8 @@ export default function HelpGuideView() {
           </div>
 
           <div className="relative w-full md:w-80">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} />
-            <input
+            <Search aria-hidden="true" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} />
+            <input aria-label="Search guide and workflows"
               type="text"
               placeholder="Search guide & workflows..."
               value={searchQuery}
@@ -256,7 +256,7 @@ export default function HelpGuideView() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--faint)]">{section.category}</span>
-                    <ChevronRight size={14} className={isSelected ? "text-[var(--brass)]" : "text-transparent"} />
+                    <ChevronRight aria-hidden="true" size={14} className={isSelected ? "text-[var(--brass)]" : "text-transparent"} />
                   </div>
                   <h4 className="text-sm font-bold truncate mt-0.5">{section.title}</h4>
                   <p className="text-xs text-[var(--muted)] line-clamp-1 mt-0.5">{section.summary}</p>
@@ -305,7 +305,7 @@ export default function HelpGuideView() {
             {selectedSection.tips && selectedSection.tips.length > 0 && (
               <div className="space-y-3 bg-[var(--brass-soft)] border border-[var(--brass-line)] p-4 rounded-xl">
                 <div className="flex items-center gap-2 text-[var(--brass)] font-bold text-xs uppercase tracking-wider">
-                  <Sparkles size={14} />
+                  <Sparkles aria-hidden="true" size={14} />
                   <span>Important Operational Tips</span>
                 </div>
                 <ul className="space-y-1.5 pl-5 list-disc text-xs text-[var(--text)] leading-relaxed">
@@ -322,7 +322,7 @@ export default function HelpGuideView() {
                 className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)] transition-colors"
               >
                 <span>Need more help? Open a Support Ticket</span>
-                <ArrowRight size={14} />
+                <ArrowRight aria-hidden="true" size={14} />
               </button>
             </div>
           </motion.div>

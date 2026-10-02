@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useId } from 'react';
 import { useSavedViewsStore, computeSavedViewMetrics, SavedView, SavedViewFilter } from '../../stores/useSavedViewsStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, parseAmountToCents, cn } from '../../lib/utils';
@@ -42,6 +42,7 @@ interface SavedViewsManagerModalProps {
 }
 
 export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsManagerModalProps) {
+  const formId = useId();
   const views = useSavedViewsStore(s => s.views);
   const activeViewId = useSavedViewsStore(s => s.activeViewId);
   const setActiveView = useSavedViewsStore(s => s.setActiveView);
@@ -193,7 +194,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
         <div className="flex items-center justify-between p-5 border-b border-[var(--line)] bg-[var(--surface-elevated)]/50">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-[var(--brass)]/15 border border-[var(--brass)]/30 text-[var(--brass)]">
-              <Filter size={20} />
+              <Filter aria-hidden="true" size={20} />
             </div>
             <div>
               <h2 className="text-lg font-bold">Saved Views & Default Lenses</h2>
@@ -206,8 +207,8 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
           <button
             onClick={onClose}
             className="p-2 text-[var(--muted)] hover:text-[var(--text)] rounded-lg hover:bg-[var(--line)] transition-colors cursor-pointer"
-           aria-label="Action button">
-            <X size={18} />
+           aria-label="Close saved views dialog">
+            <X aria-hidden="true" size={18} />
           </button>
         </div>
 
@@ -217,8 +218,9 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
           {!isCreating && (
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <div className="relative flex-1">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+                <Search aria-hidden="true" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
                 <input
+                  aria-label="Search saved views"
                   type="text"
                   placeholder="Search saved views..."
                   value={searchQuery}
@@ -239,7 +241,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                   onClick={handleStartCreate}
                   className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[var(--brass)] text-[var(--ink)] rounded-xl hover:opacity-90 shadow-xs transition-all cursor-pointer"
                  aria-label="Create Custom View">
-                  <Plus size={15} />
+                  <Plus aria-hidden="true" size={15} />
                   <span>Create Custom View</span>
                 </button>
               </div>
@@ -288,10 +290,10 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
+                    <div id={`${formId}-icon-color`} className="block text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1">
                       Icon & Badge Color
-                    </label>
-                    <div className="flex flex-wrap gap-2 mb-2">
+                    </div>
+                    <div role="group" aria-label="View icon" className="flex flex-wrap gap-2 mb-2">
                       {AVAILABLE_ICONS.map(item => {
                         const IconComp = item.icon;
                         const isSelected = formData.icon === item.name;
@@ -301,6 +303,8 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                             type="button"
                             onClick={() => setFormData(prev => ({ ...prev, icon: item.name }))}
                             title={item.label}
+                            aria-label={item.label}
+                            aria-pressed={isSelected}
                             className={cn(
                               "p-2 rounded-lg border transition-all cursor-pointer",
                               isSelected 
@@ -314,7 +318,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                       })}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div role="group" aria-label="Badge color" className="flex items-center gap-2">
                       {PRESET_COLORS.map(c => (
                         <button
                           key={c}
@@ -333,8 +337,9 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                   </div>
 
                   <div className="flex items-center gap-6 pt-2">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold">
+                    <label htmlFor={`${formId}-default`} className="flex items-center gap-2 cursor-pointer text-xs font-semibold">
                       <input
+                        id={`${formId}-default`}
                         type="checkbox"
                         checked={formData.isDefault}
                         onChange={(e) => setFormData(prev => ({ ...prev, isDefault: e.target.checked }))}
@@ -343,8 +348,9 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                       <span>Default View (Allowed Multiple)</span>
                     </label>
 
-                    <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold">
+                    <label htmlFor={`${formId}-pinned`} className="flex items-center gap-2 cursor-pointer text-xs font-semibold">
                       <input
+                        id={`${formId}-pinned`}
                         type="checkbox"
                         checked={formData.isPinned}
                         onChange={(e) => setFormData(prev => ({ ...prev, isPinned: e.target.checked }))}
@@ -357,7 +363,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
 
                 <div className="space-y-3 bg-[var(--bg)] p-4 rounded-xl border border-[var(--line)]">
                   <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <Filter size={13} className="text-[var(--brass)]" />
+                    <Filter aria-hidden="true" size={13} className="text-[var(--brass)]" />
                     <span>Filter Rules</span>
                   </h4>
 
@@ -451,8 +457,9 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                   </div>
 
                   <div className="pt-2">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[var(--text-secondary)]">
+                    <label htmlFor={`${formId}-deductible`} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[var(--text-secondary)]">
                       <input
+                        id={`${formId}-deductible`}
                         type="checkbox"
                         checked={!!formData.filter.isTaxDeductibleOnly}
                         onChange={(e) => setFormData(prev => ({
@@ -496,7 +503,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
 
               {filteredViews.length === 0 ? (
                 <div className="p-8 text-center bg-[var(--bg)] rounded-2xl border border-[var(--line)] text-[var(--muted)]">
-                  <AlertCircle size={24} className="mx-auto mb-2 opacity-50" />
+                  <AlertCircle aria-hidden="true" size={24} className="mx-auto mb-2 opacity-50" />
                   <p className="text-xs">No saved views match your search criteria.</p>
                 </div>
               ) : (
@@ -535,7 +542,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
 
                             {view.isPinned && (
                               <span className="text-[9px] px-1.5 py-0.5 bg-amber-400/20 text-amber-400 rounded font-semibold uppercase tracking-wider flex items-center gap-0.5">
-                                <Star size={9} className="fill-amber-400" />
+                                <Star aria-hidden="true" size={9} className="fill-amber-400" />
                                 Pinned
                               </span>
                             )}
@@ -584,12 +591,14 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                                 : "bg-[var(--bg)] border border-[var(--line)] text-[var(--text)] hover:bg-[var(--line)]/50"
                             )}
                           >
-                            <Eye size={12} />
+                            <Eye aria-hidden="true" size={12} />
                             <span>{isActive ? 'Active' : 'Apply'}</span>
                           </button>
 
                           <button
                             onClick={() => toggleDefaultView(view.id)}
+                            aria-label={`${view.isDefault ? 'Unset' : 'Set'} ${view.name} as default view`}
+                            aria-pressed={view.isDefault}
                             title={view.isDefault ? "Unset as Default" : "Set as Default View"}
                             className={cn(
                               "p-1.5 rounded-lg border text-xs transition-colors cursor-pointer",
@@ -598,11 +607,13 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                                 : "bg-[var(--bg)] border-[var(--line)] text-[var(--muted)] hover:text-[var(--text)]"
                             )}
                           >
-                            <Check size={14} />
+                            <Check aria-hidden="true" size={14} />
                           </button>
 
                           <button
                             onClick={() => togglePinView(view.id)}
+                            aria-label={`${view.isPinned ? 'Unpin' : 'Pin'} ${view.name}`}
+                            aria-pressed={view.isPinned}
                             title={view.isPinned ? "Unpin from header bar" : "Pin to header bar"}
                             className={cn(
                               "p-1.5 rounded-lg border text-xs transition-colors cursor-pointer",
@@ -611,23 +622,25 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                                 : "bg-[var(--bg)] border-[var(--line)] text-[var(--muted)] hover:text-[var(--text)]"
                             )}
                           >
-                            <Star size={14} className={cn(view.isPinned && "fill-amber-400")} />
+                            <Star aria-hidden="true" size={14} className={cn(view.isPinned && "fill-amber-400")} />
                           </button>
 
                           <button
                             onClick={() => handleDuplicate(view)}
+                            aria-label={`Duplicate view ${view.name}`}
                             title="Duplicate view"
                             className="p-1.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
                           >
-                            <Copy size={14} />
+                            <Copy aria-hidden="true" size={14} />
                           </button>
 
                           <button
                             onClick={() => handleStartEdit(view)}
+                            aria-label={`Edit rules for view ${view.name}`}
                             title="Edit view rules"
                             className="p-1.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
                           >
-                            <Edit3 size={14} />
+                            <Edit3 aria-hidden="true" size={14} />
                           </button>
 
                           <button
@@ -637,9 +650,10 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
                               }
                             }}
                             title="Delete view"
+                            aria-label={`Delete view ${view.name}`}
                             className="p-1.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-[var(--muted)] hover:text-red-400 transition-colors cursor-pointer"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 aria-hidden="true" size={14} />
                           </button>
                         </div>
 

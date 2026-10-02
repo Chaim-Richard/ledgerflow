@@ -179,14 +179,14 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
         <div className="p-4 md:p-10 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/30">
           <div className="flex items-center gap-6">
             <div className="w-16 h-16 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center border border-indigo-600/20 shadow-lg shadow-ledger-accent/10">
-              <RefreshCw size={32} />
+              <RefreshCw aria-hidden="true" size={32} />
             </div>
             <div>
               <h2 className="text-2xl font-black text-[var(--text)] uppercase italic tracking-tighter">Reconciliation Wizard</h2>
               <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1 opacity-40">Step {step} of 2 // {step === 1 ? 'Statement Target Definition' : 'Rule Transaction Alignment'}</p>
             </div>
           </div>
-          <button aria-label="Close" onClick={onClose} className="w-12 h-12 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-[var(--muted)] transition-all"><X size={24} /></button>
+          <button aria-label="Close" onClick={onClose} className="w-12 h-12 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-[var(--muted)] transition-all"><X aria-hidden="true" size={24} /></button>
         </div>
 
         <div className="flex-1 overflow-auto p-4 md:p-10 bg-[var(--ink)]">
@@ -241,7 +241,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                 </div>
 
                 <div className="p-4 md:p-8 bg-[var(--ink)]/40 border border-[var(--line)] rounded-[32px] flex gap-5 shadow-inner">
-                  <AlertCircle className="text-indigo-600 shrink-0" size={24} />
+                  <AlertCircle aria-hidden="true" className="text-indigo-600 shrink-0" size={24} />
                   <p className="text-[11px] text-[var(--muted)] leading-relaxed font-bold italic opacity-70">
                     Precision is mandatory. Enter terminal statement values exactly as specified by the regulatory entity. This defines the target resonance for the rule alignment phase.
                   </p>
@@ -292,8 +292,8 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                         <p className="text-[8px] font-black text-[var(--muted)] uppercase mt-1 opacity-40">Awaiting registry alignment</p>
                     </div>
                     <div className="relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={14} />
-                      <input 
+                      <Search aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={14} />
+                      <input aria-label="Search ledger transactions"
                         type="text" 
                         placeholder="Search Registry..."
                         value={searchTerm}
@@ -317,7 +317,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                             "w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all transform",
                             reconciledIds.includes(t.id) ? "bg-indigo-600 border-indigo-600 text-white scale-105" : "border-[var(--line)] bg-[var(--ink)] group-hover:bg-slate-200/50"
                           )}>
-                            {reconciledIds.includes(t.id) && <CheckSquare size={16} />}
+                            {reconciledIds.includes(t.id) && <CheckSquare aria-hidden="true" size={16} />}
                           </div>
                           <div>
                             <p className="text-xs font-black text-[var(--text)] uppercase italic tracking-tight">{t.description}</p>
@@ -346,7 +346,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               onClick={() => setStep(1)}
               className="flex items-center gap-3 px-8 py-4 bg-[var(--ink)] text-[var(--muted)] rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] border border-[var(--line)] hover:text-[var(--text)] transition-all"
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft aria-hidden="true" size={18} />
               Rollback
             </button>
           )}
@@ -363,7 +363,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               className="flex items-center gap-3 px-12 py-4 bg-indigo-600 text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] hover:brightness-110 transition-all shadow-xl shadow-ledger-accent/20"
             >
               Initialize Matching Protocol
-              <ChevronRight size={18} />
+              <ChevronRight aria-hidden="true" size={18} />
             </button>
           ) : (
             <div className="flex items-center gap-5">
@@ -371,7 +371,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                 onClick={handleAutoMatch}
                 className="flex items-center gap-3 px-8 py-4 bg-[var(--ink)] text-indigo-600 rounded-[32px] font-black uppercase tracking-[0.1em] text-[10px] border border-indigo-600/20 hover:bg-indigo-600/10 transition-all"
                aria-label="Rule Auto-Match">
-                <Sparkles size={18} />
+                <Sparkles aria-hidden="true" size={18} />
                 Rule Auto-Match
               </button>
               <button 
@@ -383,7 +383,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                     : "bg-[var(--ink)] text-slate-500/30 cursor-not-allowed border border-[var(--line)] grayscale"
                 )}
                aria-label="Finalize Alignment">
-                <CheckCircle2 size={18} />
+                <CheckCircle2 aria-hidden="true" size={18} />
                 Finalize Alignment
               </button>
             </div>

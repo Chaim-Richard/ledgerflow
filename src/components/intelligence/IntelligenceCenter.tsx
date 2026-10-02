@@ -230,7 +230,7 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
     <div ref={containerRef} className="w-full bg-[var(--surface)] rounded-[32px] p-5 border border-[var(--line)]/80 relative shadow-3xs overflow-hidden group">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-3">
          <div className="flex items-center gap-2">
-           <Activity size={13} className="text-indigo-600 shrink-0" />
+           <Activity aria-hidden="true" size={13} className="text-indigo-600 shrink-0" />
            <span className="text-[10px] font-mono font-bold tracking-wider text-[var(--muted)] uppercase">Recent Transaction Volume</span>
          </div>
          <div className="flex items-center gap-2">
@@ -435,7 +435,7 @@ export default function AnalyticalCenter() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 bg-[var(--brass)] text-[var(--ink)] rounded-lg flex items-center justify-center shrink-0 shadow-xs font-bold">
-                  <Target size={14} className="stroke-[2.5px]" />
+                  <Target aria-hidden="true" size={14} className="stroke-[2.5px]" />
                 </div>
                 <div>
                   <h2 className="text-xs font-bold text-[var(--text)] leading-snug">Advanced Overview</h2>
@@ -455,14 +455,14 @@ export default function AnalyticalCenter() {
 
             {/* Instant Filter Box */}
             <div className="relative">
-              <input
+              <input aria-label="Search analytics and auditing"
                 type="text"
                 placeholder="Search analytics & auditing..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full text-xs px-3 py-1.5 pl-8 bg-[var(--surface)] border border-[var(--line)] focus:border-[var(--brass-line)] focus:outline-none rounded-lg transition-all text-[var(--text)] placeholder:text-[var(--faint)]"
               />
-              <Search size={12} className="absolute left-2.5 top-2.5 text-[var(--muted)]" />
+              <Search aria-hidden="true" size={12} className="absolute left-2.5 top-2.5 text-[var(--muted)]" />
               {searchTerm && (
                 <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1.5 text-[var(--muted)] hover:text-[var(--text)] font-mono text-[11px] px-1">
                   ×
@@ -549,19 +549,19 @@ export default function AnalyticalCenter() {
         <header className="px-5 py-3 border-b border-[var(--line)] flex items-center justify-between shrink-0 bg-[var(--ink)]/50">
           <div className="flex items-center gap-3">
             {/* Mobile menu trigger */}
-            <button 
+            <button aria-label="Toggle Menu"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)} 
               className="lg:hidden p-1.5 border border-slate-250 hover:bg-slate-100 text-slate-600 rounded-lg shrink-0 cursor-pointer"
               title="Toggle Menu"
             >
-              <Menu size={14} />
+              <Menu aria-hidden="true" size={14} />
             </button>
 
             {/* Display active state details */}
             <div className="space-y-0.5">
               <div className="flex items-center gap-1">
                 <span className="text-[9px] font-bold text-indigo-650 uppercase tracking-widest">{(activeChannelDef as any).badge || "PRO"}</span>
-                <ChevronRight size={10} className="text-slate-350" />
+                <ChevronRight aria-hidden="true" size={10} className="text-slate-350" />
                 <span className="text-[9px] font-semibold text-slate-450 uppercase tracking-wider">{activeChannelDef.id} lens</span>
               </div>
               <h1 className="text-sm font-bold tracking-tight text-[var(--text)] flex items-center gap-1.5 leading-none">
@@ -589,12 +589,12 @@ export default function AnalyticalCenter() {
             </div>
 
             {/* Minimal focus controller */}
-            <button
+            <button aria-label={isFocusMode ? "Standard Workspace View" : "Maximize Intelligence Lens"}
               onClick={() => onAction?.('toggle-focus-mode')}
               title={isFocusMode ? "Standard Workspace View" : "Maximize Intelligence Lens"}
               className="p-1.5 border border-[var(--line)] hover:bg-[var(--ink)] rounded-lg text-[var(--muted)] hover:text-[var(--text)] shadow-3xs cursor-pointer transition-all shrink-0"
             >
-              {isFocusMode ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+              {isFocusMode ? <Minimize2 aria-hidden="true" size={12} /> : <Maximize2 aria-hidden="true" size={12} />}
             </button>
 
             {/* Export data trigger */}
@@ -602,7 +602,7 @@ export default function AnalyticalCenter() {
               onClick={() => onAction?.('export', { transactions })} 
               className="px-2.5 py-1.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all shadow-3xs flex items-center gap-1.5 shrink-0 cursor-pointer"
             >
-              <Download size={10} /> 
+              <Download aria-hidden="true" size={10} />
               <span>Export</span>
             </button>
           </div>
@@ -649,7 +649,7 @@ export default function AnalyticalCenter() {
                   <div className="p-4 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
                     <div className="flex items-center justify-between text-[var(--muted)] mb-2">
                       <span className="text-[8.5px] font-bold uppercase tracking-wider text-[var(--muted)]">Data Integrity</span>
-                      <ShieldCheck size={14} className="text-emerald-500" />
+                      <ShieldCheck aria-hidden="true" size={14} className="text-emerald-500" />
                     </div>
                     <div className="space-y-0.5">
                       <p className="text-lg font-black text-[var(--text)] leading-none">
@@ -665,7 +665,7 @@ export default function AnalyticalCenter() {
                   <div className="p-4 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
                     <div className="flex items-center justify-between text-[var(--muted)] mb-2">
                       <span className="text-[8.5px] font-bold uppercase tracking-wider">Health Score</span>
-                      <Sparkles size={14} className="text-indigo-500" />
+                      <Sparkles aria-hidden="true" size={14} className="text-indigo-500" />
                     </div>
                     <div className="space-y-1.5">
                       <p className="text-lg font-black text-[var(--text)] leading-none">
@@ -685,7 +685,7 @@ export default function AnalyticalCenter() {
                   <div className="p-4 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
                     <div className="flex items-center justify-between text-[var(--muted)] mb-2">
                       <span className="text-[8.5px] font-bold uppercase tracking-wider">Estimated Runway</span>
-                      <Calendar size={14} className="text-amber-500" />
+                      <Calendar aria-hidden="true" size={14} className="text-amber-500" />
                     </div>
                     <div className="space-y-0.5">
                       <p className="text-lg font-black text-[var(--text)] leading-none whitespace-nowrap">
@@ -701,7 +701,7 @@ export default function AnalyticalCenter() {
                   <div className="p-4 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs flex flex-col justify-between hover:border-slate-350 transition-colors">
                     <div className="flex items-center justify-between text-[var(--muted)] mb-2">
                       <span className="text-[8.5px] font-bold uppercase tracking-wider">Trend Volatility</span>
-                      <Flame size={14} className="text-rose-500" />
+                      <Flame aria-hidden="true" size={14} className="text-rose-500" />
                     </div>
                     <div className="space-y-0.5">
                       <p className="text-lg font-black text-[var(--text)] leading-none">
@@ -763,7 +763,7 @@ export default function AnalyticalCenter() {
                   <div className="xl:col-span-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] p-5 shadow-3xs h-[420px] flex flex-col justify-between">
                      <div className="space-y-4">
                         <div className="flex items-center gap-2 pb-2.5 border-b border-[var(--line)]">
-                          <BrainCircuit size={15} className="text-indigo-600 shrink-0" />
+                          <BrainCircuit aria-hidden="true" size={15} className="text-indigo-600 shrink-0" />
                           <h3 className="text-xs font-extrabold text-[var(--text)] uppercase tracking-wider">Key Metrics Summary</h3>
                         </div>
                         
@@ -806,7 +806,7 @@ export default function AnalyticalCenter() {
                      </div>
 
                      <div className="p-3 bg-indigo-50/45 border border-indigo-100/65 rounded-xl flex items-start gap-2.5">
-                        <Info size={13} className="text-indigo-600 shrink-0 mt-0.5" />
+                        <Info aria-hidden="true" size={13} className="text-indigo-600 shrink-0 mt-0.5" />
                         <p className="text-[9.5px] text-indigo-950 font-medium leading-relaxed">
                           Analysis is computed locally based on the transactions and accounts present in the workspace database.
                         </p>
@@ -892,7 +892,7 @@ export default function AnalyticalCenter() {
                          <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-[var(--ink)]/50 border border-[var(--line)]/60 rounded-xl hover:bg-slate-100/40 transition-colors gap-3">
                             <div className="flex items-center gap-3">
                                <div className="w-6 h-6 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center justify-center shrink-0">
-                                  <TrendingUp size={11} className="stroke-[2.5px]" />
+                                  <TrendingUp aria-hidden="true" size={11} className="stroke-[2.5px]" />
                                </div>
                                <div>
                                   <p className="text-xs font-bold text-slate-850">{p.name}</p>
@@ -1025,7 +1025,7 @@ export default function AnalyticalCenter() {
                       <ViewErrorBoundary viewName={(lensDef as any)?.label?.en || lensDef.id || activeChannel}>
                         <React.Suspense fallback={
                           <div className="flex flex-col items-center justify-center p-16 space-y-3 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] min-h-[380px] text-center">
-                            <Loader2 className="w-7 h-7 text-indigo-650 animate-spin shrink-0" />
+                            <Loader2 aria-hidden="true" className="w-7 h-7 text-indigo-650 animate-spin shrink-0" />
                             <p className="text-[10px] uppercase font-mono font-bold tracking-widest text-[var(--muted)]">Restructuring Lens Component...</p>
                           </div>
                         }>
@@ -1078,14 +1078,14 @@ export default function AnalyticalCenter() {
             >
               <div className="p-4 border-b border-[var(--line)] bg-[var(--ink)] flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-1.5">
-                  <Target size={14} className="text-indigo-650 stroke-[2.5px]" />
+                  <Target aria-hidden="true" size={14} className="text-indigo-650 stroke-[2.5px]" />
                   <span className="text-xs font-bold text-[var(--text)] tracking-tight">Advanced Overview</span>
                 </div>
-                <button 
+                <button aria-label="Close intelligence menu"
                   onClick={() => setMobileMenuOpen(false)} 
                   className="p-1 border border-[var(--line)] hover:bg-slate-100 rounded-lg text-[var(--muted)] cursor-pointer"
                 >
-                  <X size={13} />
+                  <X aria-hidden="true" size={13} />
                 </button>
               </div>
 

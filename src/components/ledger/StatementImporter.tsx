@@ -1,5 +1,5 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { headerSignature, mappingToSaved, savedToMapping } from '../../lib/importColumnMaps';
 import type { ColumnMapping } from '../../lib/importColumnMaps';
 import { getIdToken } from '../../firebase';
@@ -81,6 +81,7 @@ export default function StatementImporter({
   accounts,
   patternCache
 }: StatementImporterProps) {
+  const formId = useId();
   const user = useAuthStore(s => s.user);
   const [rawText, setRawText] = useState('');
   const [isParsing, setIsParsing] = useState(false);
@@ -421,14 +422,14 @@ export default function StatementImporter({
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--surface)]">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-[var(--brass-soft)] border border-[var(--brass-line)] rounded-xl flex items-center justify-center text-[var(--brass)]">
-              <FileText size={24} />
+              <FileText aria-hidden="true" size={24} />
             </div>
             <div>
               <h2 className="text-2xl font-black text-[var(--text)] tracking-tight">Statement Intelligence</h2>
               <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-wider">Rule Parsing & Causal Deduplication</p>
             </div>
           </div>
-          <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-all text-[var(--muted)] cursor-pointer"><X size={24} /></button>
+          <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-all text-[var(--muted)] cursor-pointer"><X aria-hidden="true" size={24} /></button>
         </div>
 
         {/* Content */}
@@ -444,25 +445,26 @@ export default function StatementImporter({
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <label className="micro-label">Paste Statement Text or Upload CSV</label>
+                    <label htmlFor={`${formId}-statement-text`} className="micro-label">Paste Statement Text or Upload CSV</label>
                     <div className="flex items-center gap-2">
                       <input 
                         type="file" 
-                        id="csv-upload" 
+                        id={`${formId}-csv-upload`}
                         accept=".csv,.txt"
                         className="hidden" 
                         onChange={handleFileUpload}
                       />
                       <label 
-                        htmlFor="csv-upload"
+                        htmlFor={`${formId}-csv-upload`}
                         className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all cursor-pointer"
                       >
-                        <Upload size={14} />
+                        <Upload aria-hidden="true" size={14} />
                         Upload CSV / Excel
                       </label>
                     </div>
                   </div>
-                  <textarea 
+                  <textarea
+                    id={`${formId}-statement-text`}
                     value={rawText}
                     onChange={(e) => setRawText(e.target.value)}
                     placeholder="Paste raw text from your bank statement, CSV, or PDF export here..."
@@ -546,7 +548,7 @@ export default function StatementImporter({
                     <button 
                       onClick={toggleAll}
                       className="text-xs font-black text-indigo-600 uppercase tracking-widest hover:underline"
-                     aria-label="Action button">
+                     >
                       {parsedTxs.every(t => t.selected) ? 'Deselect All' : 'Select All'}
                     </button>
                     <span className="text-xs text-[var(--muted)] font-bold uppercase tracking-widest">
@@ -554,7 +556,7 @@ export default function StatementImporter({
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-[10px] font-black text-rose-500 uppercase tracking-widest">
-                    <AlertCircle size={12} />
+                    <AlertCircle aria-hidden="true" size={12} />
                     {parsedTxs.filter(t => t.isDuplicate).length} Potential Duplicates
                   </div>
                 </div>
@@ -573,14 +575,16 @@ export default function StatementImporter({
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div role="button" tabIndex={0} 
+                          <div role="button" tabIndex={0}
+                            aria-label={`Select ${tx.description} on ${formatDate(tx.date)}`}
+                            aria-pressed={tx.selected}
                             onKeyDown={activateOnKey} onClick={(e) => { e.stopPropagation(); toggleSelect(idx); }}
                             className={cn(
                               "w-6 h-6 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
                               tx.selected ? "bg-[var(--brass)] border-[var(--brass-line)] text-black" : "bg-[var(--surface)] border-[var(--line)]"
                             )}
                           >
-                            {tx.selected && <Check size={14} />}
+                            {tx.selected && <Check aria-hidden="true" size={14} />}
                           </div>
                           <div>
                             <div className="flex items-center gap-2 mb-0.5">
@@ -590,7 +594,7 @@ export default function StatementImporter({
                                   "flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-tighter",
                                   tx.isLearned ? "text-[var(--brass)] bg-[var(--brass-soft)] border-[var(--brass-line)]" : "text-[var(--pos)] bg-[var(--pos)]/10 border-[var(--pos)]/20"
                                 )}>
-                                  {tx.isLearned ? <Zap size={8} /> : <Activity size={8} />}
+                                  {tx.isLearned ? <Zap aria-hidden="true" size={8} /> : <Activity aria-hidden="true" size={8} />}
                                   {tx.isLearned ? "Rule Memory" : `Pattern Resolved (${Math.round((tx.resolutionScore || 0) * 100)}%)`}
                                   {tx.suggestedAccount && ` → ${tx.suggestedAccount}`}
                                   {tx.suggestedProject && ` [Proj: ${tx.suggestedProject}]`}
@@ -669,8 +673,8 @@ export default function StatementImporter({
                 onClick={handleParse}
                 disabled={isParsing || !rawText.trim()}
                 className="px-8 py-3 bg-[var(--brass)] text-[var(--ink)] rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-xs uppercase tracking-wider cursor-pointer"
-               aria-label="Loader2 action">
-                {isParsing ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />}
+               >
+                {isParsing ? <Loader2 aria-hidden="true" className="animate-spin" size={16} /> : <ArrowRight aria-hidden="true" size={16} />}
                 {isParsing ? 'Rule Analysis...' : 'Unstructured Parse'}
               </button>
             ) : step === 'mapping' ? (
@@ -678,7 +682,7 @@ export default function StatementImporter({
                 onClick={handleMapColumns}
                 className="px-8 py-3 bg-[var(--brass)] text-[var(--ink)] rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-md text-xs uppercase tracking-wider cursor-pointer"
                aria-label="Process Deterministic Mapping">
-                <ArrowRight size={16} />
+                <ArrowRight aria-hidden="true" size={16} />
                 Process Deterministic Mapping
               </button>
             ) : (
@@ -687,7 +691,7 @@ export default function StatementImporter({
                 loadingText="Importing..."
                 className="px-8 py-3 bg-[var(--brass)] text-[var(--ink)] rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-md text-xs uppercase tracking-wider cursor-pointer"
               >
-                <Check size={16} />
+                <Check aria-hidden="true" size={16} />
                 Import {parsedTxs.filter(t => t.selected).length} Entries
               </AsyncButton>
             )}

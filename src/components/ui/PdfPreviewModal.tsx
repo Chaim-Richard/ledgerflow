@@ -140,7 +140,7 @@ export default function PdfPreviewModal({
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
-              <FileText className="w-5 h-5" />
+              <FileText aria-hidden="true" className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-bold text-slate-900 dark:text-white text-base leading-tight">{title}</h3>
@@ -150,20 +150,20 @@ export default function PdfPreviewModal({
           <div className="flex items-center gap-2">
             {blobUrl && (
               <>
-                <button
+                <button aria-label="Open in new tab"
                   type="button"
                   onClick={handleOpenNewTab}
                   className="p-2 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                   title="Open in new tab"
                 >
-                  <ExternalLink className="w-4 h-4" />
+                  <ExternalLink aria-hidden="true" className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
                   onClick={handleDownload}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-xs"
                 >
-                  <Download className="w-4 h-4" />
+                  <Download aria-hidden="true" className="w-4 h-4" />
                   <span>Download PDF</span>
                 </button>
               </>
@@ -174,7 +174,7 @@ export default function PdfPreviewModal({
               className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors ml-2"
               aria-label="Close"
             >
-              <X className="w-5 h-5" />
+              <X aria-hidden="true" className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -183,12 +183,12 @@ export default function PdfPreviewModal({
         <div className="flex-1 min-h-[550px] bg-slate-100 dark:bg-slate-950 p-4 flex items-center justify-center overflow-hidden">
           {isLoading ? (
             <div className="flex flex-col items-center gap-3 text-[var(--muted)]">
-              <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+              <Loader2 aria-hidden="true" className="w-8 h-8 animate-spin text-indigo-600" />
               <p className="text-sm font-medium">Generating PDF document...</p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center gap-3 max-w-md text-center p-6 bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-900/50 shadow-sm">
-              <AlertCircle className="w-8 h-8 text-rose-500" />
+              <AlertCircle aria-hidden="true" className="w-8 h-8 text-rose-500" />
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Unable to render PDF</p>
               <p className="text-xs text-[var(--muted)] dark:text-slate-400">{error}</p>
               <button

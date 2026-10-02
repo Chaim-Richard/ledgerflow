@@ -232,7 +232,7 @@ export default function TeamSettings() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px]">
         <div className="space-y-1">
           <h3 className="text-xl font-black text-[var(--text)] tracking-tight flex items-center gap-2">
-            <Users size={22} className="text-indigo-600" />
+            <Users aria-hidden="true" size={22} className="text-indigo-600" />
             Workspace Team & Role Management
           </h3>
           <p className="text-xs text-[var(--muted)] max-w-xl">
@@ -264,13 +264,13 @@ export default function TeamSettings() {
       <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can invite new members">
         <form onSubmit={handleSendInvite} className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-5">
           <div className="text-xs font-black uppercase tracking-wider text-[var(--muted)] flex items-center gap-1.5">
-            <UserPlus size={15} className="text-indigo-500" /> Invite Team Member or Accountant
+            <UserPlus aria-hidden="true" size={15} className="text-indigo-500" /> Invite Team Member or Accountant
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
             <div className="relative sm:col-span-6">
-              <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-              <input
+              <Mail aria-hidden="true" size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+              <input aria-label="Invite team member email"
                 type="email"
                 required
                 value={inviteInput}
@@ -281,7 +281,7 @@ export default function TeamSettings() {
             </div>
 
             <div className="sm:col-span-4">
-              <select
+              <select aria-label="Role for invited team member"
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value as WorkspaceRole)}
                 className="w-full px-3 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 capitalize"
@@ -298,7 +298,7 @@ export default function TeamSettings() {
               disabled={submitting || !inviteInput.trim() || isSeatLimitReached}
               className="sm:col-span-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
-              {submitting ? <RefreshCw size={14} className="animate-spin" /> : <UserPlus size={14} />}
+              {submitting ? <RefreshCw aria-hidden="true" size={14} className="animate-spin" /> : <UserPlus aria-hidden="true" size={14} />}
               <span>Invite</span>
             </button>
           </div>
@@ -307,7 +307,7 @@ export default function TeamSettings() {
           <div className="p-4 bg-[var(--ink)]/40 border border-[var(--line)] rounded-2xl space-y-2">
             <div className="flex items-center justify-between text-xs font-black text-indigo-400 uppercase tracking-wider">
               <span>Role Powers: {ROLE_DESCRIPTIONS[selectedRole].title}</span>
-              <Shield size={14} />
+              <Shield aria-hidden="true" size={14} />
             </div>
             <p className="text-xs text-slate-300">
               {ROLE_DESCRIPTIONS[selectedRole].summary}
@@ -315,7 +315,7 @@ export default function TeamSettings() {
             <div className="flex flex-wrap gap-2 pt-1">
               {ROLE_DESCRIPTIONS[selectedRole].permissions.map((perm) => (
                 <span key={perm} className="px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] font-semibold rounded-md flex items-center gap-1">
-                  <Check size={10} className="text-indigo-400" /> {perm}
+                  <Check aria-hidden="true" size={10} className="text-indigo-400" /> {perm}
                 </span>
               ))}
             </div>
@@ -327,7 +327,7 @@ export default function TeamSettings() {
       {invites.length > 0 && (
         <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-4">
           <div className="text-xs font-black uppercase tracking-wider text-amber-500 flex items-center gap-2">
-            <Clock size={16} /> Pending Invitations ({invites.length})
+            <Clock aria-hidden="true" size={16} /> Pending Invitations ({invites.length})
           </div>
 
           <div className="space-y-2">
@@ -351,7 +351,7 @@ export default function TeamSettings() {
                     className="px-2.5 py-1.5 bg-[var(--surface)] border border-[var(--line)] hover:border-indigo-500 text-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all"
                     title="Copy invite acceptance link"
                   >
-                    <Copy size={12} />
+                    <Copy aria-hidden="true" size={12} />
                     <span>Copy Link</span>
                   </button>
                   <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can revoke invites">
@@ -360,7 +360,7 @@ export default function TeamSettings() {
                       className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-xs font-bold flex items-center gap-1"
                       title="Revoke invitation"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 aria-hidden="true" size={14} />
                       <span className="text-[10px] uppercase">Revoke</span>
                     </button>
                   </RequireRole>
@@ -375,14 +375,14 @@ export default function TeamSettings() {
       <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-4">
         <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
           <div className="text-xs font-black uppercase tracking-wider text-[var(--muted)] flex items-center gap-2">
-            <Users size={16} className="text-indigo-500" />
+            <Users aria-hidden="true" size={16} className="text-indigo-500" />
             Authorized Active Workspace Members ({activeSeatCount})
           </div>
           <button
             onClick={fetchTeamData}
             className="text-[10px] font-bold text-[var(--muted)] hover:text-slate-200 flex items-center gap-1"
           >
-            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
+            <RefreshCw aria-hidden="true" size={12} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
         </div>
 
@@ -404,7 +404,7 @@ export default function TeamSettings() {
                     </span>
                   </div>
                   <div className="text-[10px] text-[var(--muted)] flex items-center gap-1">
-                    <ShieldCheck size={10} className="text-indigo-500" /> Workspace Creator & Owner
+                    <ShieldCheck aria-hidden="true" size={10} className="text-indigo-500" /> Workspace Creator & Owner
                   </div>
                 </div>
               </div>
@@ -414,7 +414,7 @@ export default function TeamSettings() {
                   onClick={() => handleOpenMemberActivity(ownerUid || auth.currentUser?.uid || '')}
                   className="px-2.5 py-1 bg-[var(--surface)] border border-[var(--line)] hover:border-indigo-500 text-slate-300 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all"
                 >
-                  <Activity size={12} /> Activity Log
+                  <Activity aria-hidden="true" size={12} /> Activity Log
                 </button>
                 <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                   Owner
@@ -436,7 +436,7 @@ export default function TeamSettings() {
                     <div>
                       <div className="text-xs font-bold text-[var(--text)] font-mono">{mUid}</div>
                       <div className="text-[10px] text-[var(--muted)] flex items-center gap-1">
-                        <Check size={10} className="text-emerald-500" /> Active Member
+                        <Check aria-hidden="true" size={10} className="text-emerald-500" /> Active Member
                       </div>
                     </div>
                   </div>
@@ -446,12 +446,12 @@ export default function TeamSettings() {
                       onClick={() => handleOpenMemberActivity(mUid)}
                       className="px-2.5 py-1 bg-[var(--surface)] border border-[var(--line)] hover:border-indigo-500 text-slate-300 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all"
                     >
-                      <Activity size={12} /> Activity
+                      <Activity aria-hidden="true" size={12} /> Activity
                     </button>
 
                     {/* Role Picker Dropdown */}
                     <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can change roles">
-                      <select
+                      <select aria-label="Team member role"
                         value={currentRole}
                         onChange={(e) => handleRoleChange(mUid, e.target.value as WorkspaceRole)}
                         disabled={isOwner}
@@ -471,7 +471,7 @@ export default function TeamSettings() {
                           className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-xs font-bold flex items-center gap-1"
                           title="Revoke workspace access"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 aria-hidden="true" size={14} />
                           <span className="text-[10px] uppercase">Revoke</span>
                         </button>
                       </RequireRole>
@@ -496,16 +496,16 @@ export default function TeamSettings() {
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
             <div className="p-4 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/40">
               <div className="flex items-center gap-2">
-                <Activity size={18} className="text-indigo-500" />
+                <Activity aria-hidden="true" size={18} className="text-indigo-500" />
                 <h4 className="text-sm font-bold text-[var(--text)] uppercase tracking-wider">
                   Member Activity History — {selectedMemberForLogs.email || selectedMemberForLogs.uid}
                 </h4>
               </div>
-              <button
+              <button aria-label="Close member activity"
                 onClick={() => setSelectedMemberForLogs(null)}
                 className="p-1 text-[var(--muted)] hover:text-slate-100 rounded-lg"
               >
-                <X size={18} />
+                <X aria-hidden="true" size={18} />
               </button>
             </div>
 

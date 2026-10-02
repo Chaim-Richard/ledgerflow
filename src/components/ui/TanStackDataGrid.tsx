@@ -54,8 +54,8 @@ export function TanStackDataGrid<TData extends object>({
       {enableGlobalFilter && (
         <div className="flex items-center justify-between gap-4">
           <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={15} />
-            <input
+            <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={15} />
+            <input aria-label={searchPlaceholder || "Search table"}
               type="text"
               value={globalFilter ?? ''}
               onChange={e => setGlobalFilter(e.target.value)}
@@ -91,8 +91,8 @@ export function TanStackDataGrid<TData extends object>({
                     <div className="flex items-center gap-1.5">
                       {flexRender(header.column.columnDef.header, header.getContext())}
                       {{
-                        asc: <ChevronUp size={13} className="text-indigo-600" />,
-                        desc: <ChevronDown size={13} className="text-indigo-600" />
+                        asc: <ChevronUp aria-hidden="true" size={13} className="text-indigo-600" />,
+                        desc: <ChevronDown aria-hidden="true" size={13} className="text-indigo-600" />
                       }[header.column.getIsSorted() as string] ?? null}
                     </div>
                   </th>
@@ -125,40 +125,40 @@ export function TanStackDataGrid<TData extends object>({
       {/* Pagination Controls */}
       <div className="flex items-center justify-between gap-4 pt-2">
         <div className="flex items-center gap-1">
-          <button
+          <button aria-label="First page"
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
             className="p-1.5 text-[var(--muted)] hover:text-slate-900 disabled:opacity-30 rounded-lg hover:bg-slate-100 cursor-pointer"
           >
-            <ChevronsLeft size={16} />
+            <ChevronsLeft aria-hidden="true" size={16} />
           </button>
-          <button
+          <button aria-label="Previous page"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
             className="p-1.5 text-[var(--muted)] hover:text-slate-900 disabled:opacity-30 rounded-lg hover:bg-slate-100 cursor-pointer"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft aria-hidden="true" size={16} />
           </button>
           <span className="px-3 text-xs font-bold text-slate-700">
             Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
           </span>
-          <button
+          <button aria-label="Next page"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
             className="p-1.5 text-[var(--muted)] hover:text-slate-900 disabled:opacity-30 rounded-lg hover:bg-slate-100 cursor-pointer"
           >
-            <ChevronRight size={16} />
+            <ChevronRight aria-hidden="true" size={16} />
           </button>
-          <button
+          <button aria-label="Last page"
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
             className="p-1.5 text-[var(--muted)] hover:text-slate-900 disabled:opacity-30 rounded-lg hover:bg-slate-100 cursor-pointer"
           >
-            <ChevronsRight size={16} />
+            <ChevronsRight aria-hidden="true" size={16} />
           </button>
         </div>
 
-        <select
+        <select aria-label="Rows per page"
           value={table.getState().pagination.pageSize}
           onChange={e => table.setPageSize(Number(e.target.value))}
           className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none"

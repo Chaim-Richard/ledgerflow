@@ -114,7 +114,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
       category: cmd.category,
       actionId: cmd.actionId,
       payload: cmd.payload,
-      icon: <ArrowRight size={16} />
+      icon: <ArrowRight aria-hidden="true" size={16} />
     }));
     
     const lenses = ANALYTICAL_LENSES_REGISTRY.map((lens: any) => ({
@@ -124,7 +124,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
       category: 'Calculators & Analytics',
       actionId: 'switch-tab',
       payload: { tab: 'intelligence', channel: lens.id },
-      icon: <ArrowRight size={16} />
+      icon: <ArrowRight aria-hidden="true" size={16} />
     }));
     
     return [...base, ...lenses];
@@ -173,7 +173,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           category: `Transaction • ${t.date} ${t.tags ? '• ' + t.tags.join(', ') : ''}`,
           actionId: 'switch-tab',
           payload: { tab: 'transactions', id: t.id },
-          icon: <DollarSign size={16} className="text-emerald-500 shrink-0" />
+          icon: <DollarSign aria-hidden="true" size={16} className="text-emerald-500 shrink-0" />
         });
       } else {
         // Search inside lines
@@ -189,7 +189,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
               category: `Transaction Line • ${(Math.abs(amount) / 100).toLocaleString('en-US', { style: 'currency', currency: t.currency || 'USD' })} ${line.tags ? '• ' + line.tags.join(', ') : ''}`,
               actionId: 'switch-tab',
               payload: { tab: 'transactions', id: t.id },
-              icon: <FileText size={16} className="text-blue-500 shrink-0" />
+              icon: <FileText aria-hidden="true" size={16} className="text-blue-500 shrink-0" />
             });
             break; // Don't duplicate if multiple lines match
           }
@@ -207,7 +207,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           category: `Dimension Node • ${node.dimensionId}`,
           actionId: 'switch-tab',
           payload: { tab: 'intelligence-center' },
-          icon: <FolderPlus size={16} className="text-purple-500 shrink-0" />
+          icon: <FolderPlus aria-hidden="true" size={16} className="text-purple-500 shrink-0" />
         });
       }
     });
@@ -222,7 +222,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           category: `Project / Unit • ${p.status}`,
           actionId: 'switch-tab',
           payload: { tab: 'projects', id: p.id },
-          icon: <FolderKanban size={16} className="text-purple-500 shrink-0" />
+          icon: <FolderKanban aria-hidden="true" size={16} className="text-purple-500 shrink-0" />
         });
       }
     });
@@ -237,7 +237,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           category: `Customer ${(c as any).group ? '• ' + (c as any).group : ''}`,
           actionId: 'switch-tab',
           payload: { tab: 'sales', id: c.id },
-          icon: <User size={16} className="text-amber-500 shrink-0" />
+          icon: <User aria-hidden="true" size={16} className="text-amber-500 shrink-0" />
         });
       }
     });
@@ -252,7 +252,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           category: `Vendor ${(v as any).group ? '• ' + (v as any).group : ''}`,
           actionId: 'switch-tab',
           payload: { tab: 'expenses', id: v.id },
-          icon: <Building size={16} className="text-rose-500 shrink-0" />
+          icon: <Building aria-hidden="true" size={16} className="text-rose-500 shrink-0" />
         });
       }
     });
@@ -267,7 +267,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           category: `Account • ${a.type} ${a.category ? '• ' + a.category : ''}`,
           actionId: 'switch-tab',
           payload: { tab: 'ledger', accountId: a.id },
-          icon: <Tags size={16} className="text-blue-500 shrink-0" />
+          icon: <Tags aria-hidden="true" size={16} className="text-blue-500 shrink-0" />
         });
       }
     });
@@ -282,7 +282,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           category: `Invoice • ${i.customerName} • ${i.number}`,
           actionId: 'switch-tab',
           payload: { tab: 'sales', id: i.id },
-          icon: <FileText size={16} className="text-emerald-500 shrink-0" />
+          icon: <FileText aria-hidden="true" size={16} className="text-emerald-500 shrink-0" />
         });
       }
     });
@@ -297,7 +297,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           category: `Bill • ${b.vendorName} • ${b.number}`,
           actionId: 'switch-tab',
           payload: { tab: 'purchases', id: b.id },
-          icon: <FileText size={16} className="text-rose-500 shrink-0" />
+          icon: <FileText aria-hidden="true" size={16} className="text-rose-500 shrink-0" />
         });
       }
     });
@@ -371,8 +371,8 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
             className="fixed z-[201] top-[10%] left-1/2 -translate-x-1/2 w-full max-w-3xl bg-[var(--surface)] rounded-[32px] shadow-2xl overflow-hidden border border-gray-200"
           >
             <div className="flex items-center px-6 py-5 border-b border-gray-100">
-              <Search className="text-indigo-600 mr-4" size={24} />
-              <input
+              <Search aria-hidden="true" className="text-indigo-600 mr-4" size={24} />
+              <input aria-label="Search commands or enter a transaction"
                 autoFocus
                 className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400 text-xl font-medium"
                 placeholder='Type $40 gas cash, paid Maria 150, new project: Aspen, or search...'
@@ -400,7 +400,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
                    aria-label="Instant Command Execution (Press Enter) Execute">
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 bg-white/20 rounded-xl">
-                        {parsedIntent.type === 'project' ? <FolderPlus size={20} /> : <Zap size={20} />}
+                        {parsedIntent.type === 'project' ? <FolderPlus aria-hidden="true" size={20} /> : <Zap aria-hidden="true" size={20} />}
                       </div>
                       <div>
                         <p className="text-sm font-bold tracking-wide uppercase text-indigo-200">Instant Command Execution (Press Enter)</p>
@@ -409,7 +409,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
                     </div>
                     <div className="flex items-center gap-2 text-xs font-bold bg-white/20 px-3 py-1.5 rounded-lg group-hover:bg-white/30 transition-colors">
                       <span>Execute</span>
-                      <ArrowRight size={14} />
+                      <ArrowRight aria-hidden="true" size={14} />
                     </div>
                   </button>
                 </div>
@@ -417,7 +417,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
               {isExecuting ? (
                 <div className="flex flex-col items-center justify-center p-16 text-gray-500">
-                  <Loader2 className="animate-spin mb-4" size={32} />
+                  <Loader2 aria-hidden="true" className="animate-spin mb-4" size={32} />
                   <p className="text-base font-medium">Navigating universe...</p>
                 </div>
               ) : combinedResults.length > 0 ? (
@@ -439,14 +439,14 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
                       </div>
                       <div className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center shrink-0">
                          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 mr-2 hidden sm:inline">Jump</span>
-                         <ArrowRight size={16} className="text-indigo-600 inline-block -translate-x-2 group-hover:translate-x-0 transition-all shrink-0" />
+                         <ArrowRight aria-hidden="true" size={16} className="text-indigo-600 inline-block -translate-x-2 group-hover:translate-x-0 transition-all shrink-0" />
                       </div>
                     </button>
                   ))}
                 </div>
               ) : query.length > 0 ? (
                 <div className="p-16 text-center text-gray-500">
-                  <Tags size={48} className="mx-auto mb-4 text-gray-300" />
+                  <Tags aria-hidden="true" size={48} className="mx-auto mb-4 text-gray-300" />
                   <p className="text-lg font-bold text-gray-900">No dimensions matched</p>
                   <p className="text-sm font-medium mt-1">Try searching by tags, units, categories, or dollar amounts.</p>
                 </div>

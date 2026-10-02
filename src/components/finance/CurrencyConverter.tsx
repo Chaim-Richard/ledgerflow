@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { X } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import { useUIStore } from '../../stores/useUIStore';
 
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -12,6 +12,7 @@ interface CurrencyConverterProps {
 }
 
 export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverterProps) {
+  const formId = useId();
   const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
   const activeWorkspace = getCurrentWorkspace();
   const [isRevaluing, setIsRevaluing] = useState(false);
@@ -90,10 +91,11 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-[var(--muted)] mb-1">
+          <label htmlFor={`${formId}-amount`} className="block text-sm font-medium text-[var(--muted)] mb-1">
             {language === 'he' ? 'סכום' : 'Amount'}
           </label>
           <input
+            id={`${formId}-amount`}
             type="number"
             value={amount}
             onChange={(e) => setAmount(Number(e.target.value))}
@@ -103,10 +105,11 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-[var(--muted)] mb-1">
+            <label htmlFor={`${formId}-from`} className="block text-sm font-medium text-[var(--muted)] mb-1">
               {language === 'he' ? 'ממטבע' : 'From'}
             </label>
             <select
+              id={`${formId}-from`}
               value={fromCurrency}
               onChange={(e) => setFromCurrency(e.target.value)}
               className="w-full px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-sm text-[var(--text)]"
@@ -118,10 +121,11 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--muted)] mb-1">
+            <label htmlFor={`${formId}-to`} className="block text-sm font-medium text-[var(--muted)] mb-1">
               {language === 'he' ? 'למטבע' : 'To'}
             </label>
             <select
+              id={`${formId}-to`}
               value={toCurrency}
               onChange={(e) => setToCurrency(e.target.value)}
               className="w-full px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-sm text-[var(--text)]"
@@ -146,7 +150,7 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
             onClick={runRevaluation} 
             disabled={isRevaluing || !activeWorkspace}
             className="w-full px-4 py-2 bg-[var(--brass)] hover:opacity-90 text-black rounded-lg text-sm font-bold transition-colors cursor-pointer"
-           aria-label="Action button">
+          >
             {isRevaluing ? 'Processing...' : (language === 'he' ? 'הפעל שערוך סוף חודש (API)' : 'Run Month-End Revaluation (API)')}
           </button>
           {revalResult && (
@@ -181,7 +185,7 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
             <button aria-label="Close" 
               onClick={onClose}
               className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors z-10"
-            ><X size={20} /></button>
+            ><X aria-hidden="true" size={20} /></button>
           )}
           {innerContent}
         </motion.div>

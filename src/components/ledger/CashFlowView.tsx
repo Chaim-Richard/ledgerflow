@@ -1,5 +1,5 @@
 import { resolveAccountRole } from '../../lib/accountUtils';
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useId, useState, useMemo, useCallback, useEffect } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { getComparePeriod } from '../../lib/fiscalCalendar';
 import { formatCurrency, cn, getLocalDateISO, monthBoundsISO } from '../../lib/utils';
@@ -19,6 +19,7 @@ interface CashFlowViewProps {
 }
 
 export default function CashFlowView({ startDate, endDate, compareStartDate, compareEndDate }: CashFlowViewProps = {}) {
+  const formId = useId();
   const transactions = useLedgerStore(s => s.transactions);
   const rawAccounts = useLedgerStore(s => s.accounts);
   const computedAccounts = useLedgerStore(s => s.computedAccounts);
@@ -276,28 +277,28 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
       {!isServerAuthoritative && isDataTruncated ? (
         <div id="cf-statement-truncation-banner" className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-medium">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <AlertCircle aria-hidden="true" className="w-4 h-4 text-amber-400 shrink-0" />
             <span>Showing 2,000 of N transactions — totals are incomplete without server sync</span>
           </div>
           <button
             onClick={() => loadServerReport()}
             className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 rounded-lg text-xs transition-colors shrink-0 cursor-pointer"
           >
-            {loadingStates.cf ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+            {loadingStates.cf ? <RefreshCw aria-hidden="true" className="w-3.5 h-3.5 animate-spin" /> : null}
             <span>{loadingStates.cf ? "Loading Server..." : "Load Full Server Report"}</span>
           </button>
         </div>
       ) : isServerAuthoritative ? (
         <div id="cf-statement-authoritative-badge" className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-between text-xs font-semibold">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5 text-emerald-400" />
             <span>Server-Authoritative Statement (Full Streaming History Verified)</span>
           </div>
           <button
             onClick={() => loadServerReport()}
             className="flex items-center gap-1 text-[11px] hover:underline cursor-pointer"
           >
-            {loadingStates.cf ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}
+            {loadingStates.cf ? <RefreshCw aria-hidden="true" className="w-3 h-3 animate-spin" /> : null}
             <span>Refresh</span>
           </button>
         </div>
@@ -313,12 +314,13 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
           />
           <div className="flex items-center gap-3 w-full">
             <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-[var(--muted)] shrink-0">
-               <Calendar size={13} />
+               <Calendar aria-hidden="true" size={13} />
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mb-0.5">Temporal Range</span>
               <div className="flex flex-wrap items-center gap-2">
                 <input 
+                  aria-label="Reporting period start date"
                   type="date" 
                   value={dateRange.start}
                   onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
@@ -326,6 +328,7 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
                 />
                 <span className="text-slate-300 font-mono text-sm leading-none">/</span>
                 <input 
+                  aria-label="Reporting period end date"
                   type="date" 
                   value={dateRange.end}
                   onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
@@ -335,8 +338,9 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
             </div>
           </div>
           <div className="hidden sm:block w-px h-8 bg-slate-200" />
-          <label className="flex items-center gap-2 cursor-pointer group/toggle">
+          <label htmlFor={`${formId}-comparative`} aria-label="Comparative Mode" className="flex items-center gap-2 cursor-pointer group/toggle">
             <input 
+               id={`${formId}-comparative`}
                type="checkbox" 
                className="hidden" 
                checked={isComparative} 
@@ -353,7 +357,7 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider group-hover/toggle:text-[var(--text)] transition-colors flex items-center gap-1">
-                Comparative Mode <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--muted)]")} />
+                Comparative Mode <SplitSquareHorizontal aria-hidden="true" size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--muted)]")} />
               </span>
               <span className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest">Compare to Prior Prev</span>
             </div>
@@ -363,14 +367,14 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
           onClick={exportCashFlow}
           className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider hover:bg-slate-800 transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
         >
-          <FileSpreadsheet size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
+          <FileSpreadsheet aria-hidden="true" size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
           <span>Export Synthesis</span>
         </button>
       </div>
 
       <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative p-4 md:p-8">
         <div className="absolute top-0 right-0 p-4 md:p-8 opacity-[0.02] pointer-events-none">
-          <Waves size={160} />
+          <Waves aria-hidden="true" size={160} />
         </div>
         
         <div className="relative z-10 max-w-4xl mx-auto space-y-12">
@@ -379,7 +383,7 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
                 <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase italic">{labels.title}</h3>
                 <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest">For period ending {dateRange.end}</p>
               </div>
-              <Waves size={24} className="text-slate-200" />
+              <Waves aria-hidden="true" size={24} className="text-slate-200" />
            </div>
 
            <div className="space-y-8">

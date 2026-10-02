@@ -34,7 +34,7 @@ export default function ShortcutSettings() {
     <div className="space-y-8 animate-fade-in">
       <div>
         <h2 className="text-2xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
-          <Keyboard size={24} className="text-[var(--muted)]" />
+          <Keyboard aria-hidden="true" size={24} className="text-[var(--muted)]" />
           Speed Dial Shortcuts
         </h2>
         <p className="text-[var(--muted)] mt-2">
@@ -78,7 +78,7 @@ export default function ShortcutSettings() {
             disabled={!newKey || !selectedTab}
             className="h-10 px-6 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
            aria-label="Add">
-            <Plus size={16} />
+            <Plus aria-hidden="true" size={16} />
             Add
           </button>
         </div>
@@ -107,11 +107,11 @@ export default function ShortcutSettings() {
                       <div className="text-xs text-[var(--muted)]">Alt + {key.toUpperCase()}</div>
                     </div>
                   </div>
-                  <button 
+                  <button aria-label="Remove speed dial shortcut"
                     onClick={() => removeSpeedDial(key)}
                     className="p-2 text-[var(--muted)] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 aria-hidden="true" size={16} />
                   </button>
                 </div>
               );

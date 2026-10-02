@@ -53,9 +53,9 @@ export default function DeepSearchBar({ value, onChange, metrics, placeholder = 
             : "border-[var(--line)] hover:border-[var(--line-strong)]"
         )}
       >
-        <Search size={16} className={cn("shrink-0 transition-colors", isFocused ? "text-[var(--brass)]" : "text-[var(--muted)]")} />
+        <Search aria-hidden="true" size={16} className={cn("shrink-0 transition-colors", isFocused ? "text-[var(--brass)]" : "text-[var(--muted)]")} />
 
-        <input
+        <input aria-label={placeholder || "Search transactions"}
           ref={inputRef}
           type="text"
           value={value}
@@ -67,11 +67,11 @@ export default function DeepSearchBar({ value, onChange, metrics, placeholder = 
         />
 
         {value && (
-          <button
+          <button aria-label="Clear search"
             onClick={() => onChange('')}
             className="p-1 text-[var(--muted)] hover:text-[var(--text)] rounded-md hover:bg-[var(--line)]/50 transition-colors cursor-pointer"
           >
-            <X size={14} />
+            <X aria-hidden="true" size={14} />
           </button>
         )}
 
@@ -86,7 +86,7 @@ export default function DeepSearchBar({ value, onChange, metrics, placeholder = 
           </div>
         )}
 
-        <button
+        <button aria-label="Search Operator Guide"
           type="button"
           onClick={() => setShowHelper(!showHelper)}
           title="Search Operator Guide"
@@ -97,7 +97,7 @@ export default function DeepSearchBar({ value, onChange, metrics, placeholder = 
               : "bg-[var(--bg)] border-[var(--line)] text-[var(--muted)] hover:text-[var(--text)]"
           )}
         >
-          <HelpCircle size={14} />
+          <HelpCircle aria-hidden="true" size={14} />
         </button>
       </div>
 
@@ -105,7 +105,7 @@ export default function DeepSearchBar({ value, onChange, metrics, placeholder = 
         <div className="absolute left-0 right-0 top-full mt-2 z-40 p-4 bg-[var(--surface-card)] border border-[var(--brass)]/50 rounded-2xl shadow-xl space-y-3 animate-in fade-in duration-150 text-[var(--text)]">
           <div className="flex items-center justify-between border-b border-[var(--line)] pb-2">
             <span className="text-xs font-bold text-[var(--brass)] flex items-center gap-1.5">
-              <Sparkles size={14} />
+              <Sparkles aria-hidden="true" size={14} />
               <span>Deep Search Operators</span>
             </span>
             <button 

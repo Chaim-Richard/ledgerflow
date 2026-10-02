@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { Key, AlertCircle, RefreshCw, CheckCircle2, Lock, Eye, EyeOff, Database, Cpu as CpuIcon, Activity, ExternalLink, Sliders, Sparkles, BrainCircuit } from 'lucide-react';
@@ -10,6 +10,7 @@ import AsyncButton from '../../ui/AsyncButton';
 import { useTimeout } from '../../../hooks/useTimeout';
 
 export default function AISettings() {
+  const settingsId = useId();
   const updateGeminiApiKey = useAuthStore(s => s.updateGeminiApiKey);
   const userProfile = useAuthStore(state => state.userProfile);
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
@@ -159,12 +160,12 @@ export default function AISettings() {
     <div className="space-y-10">
       <div className="ledger-card p-6 md:p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm relative overflow-hidden group">
         <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none transition-opacity group-hover:opacity-[0.05]">
-          <Key size={140} />
+          <Key aria-hidden="true" size={140} />
         </div>
         
         <div className="flex items-center gap-5 mb-12">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center shadow-xl shadow-ledger-accent/20 rotate-3 animate-pulse">
-            <BrainCircuit size={28} />
+            <BrainCircuit aria-hidden="true" size={28} />
           </div>
           <div>
             <h3 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase tracking-widest">Rule Key & Intelligence Provisioning</h3>
@@ -174,20 +175,21 @@ export default function AISettings() {
 
         <div className="space-y-8">
           <div className="space-y-4">
-            <label className="text-[10px] font-black uppercase text-[var(--muted)] tracking-[0.2em] flex items-center justify-between">
+            <label htmlFor={`${settingsId}-api-key`} className="text-[10px] font-black uppercase text-[var(--muted)] tracking-[0.2em] flex items-center justify-between">
               <span className="flex items-center gap-2">Enterprise API Key Override</span>
               {userProfile?.geminiApiKey && (
                 <span className="inline-flex items-center gap-1 text-emerald-600 font-extrabold text-[9px] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-                  <CheckCircle2 size={10} />
+                  <CheckCircle2 aria-hidden="true" size={10} />
                   CLOUD PERSISTED OVERRIDE
                 </span>
               )}
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-[var(--muted)]">
-                <Lock size={18} />
+                <Lock aria-hidden="true" size={18} />
               </div>
               <input
+                id={`${settingsId}-api-key`}
                 type={showKey ? "text" : "password"}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
@@ -195,19 +197,20 @@ export default function AISettings() {
                 className="w-full pl-14 pr-14 py-5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] text-sm font-mono focus:bg-[var(--surface)] focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all outline-none"
               />
               <button 
+                aria-label={showKey ? "Hide API key" : "Show API key"}
                 onClick={() => setShowKey(!showKey)}
                 type="button"
                 className="absolute inset-y-0 right-0 pr-5 flex items-center text-[var(--muted)] hover:text-[var(--text)] transition-colors"
                 style={{ right: '1.25rem' }}
               >
-                {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showKey ? <EyeOff aria-hidden="true" size={18} /> : <Eye aria-hidden="true" size={18} />}
               </button>
             </div>
           </div>
 
           <div className="p-6 bg-slate-900 rounded-[32px] border border-slate-800 flex flex-col sm:flex-row gap-5">
             <div className="w-10 h-10 bg-[var(--surface)]/5 rounded-[32px] flex items-center justify-center shrink-0 border border-white/10">
-              <AlertCircle className="text-amber-400" size={20} />
+              <AlertCircle aria-hidden="true" className="text-amber-400" size={20} />
             </div>
             <div className="space-y-2">
               <p className="text-xs font-bold text-slate-200 leading-relaxed uppercase tracking-wider">Enterprise Cryptograph Awareness</p>
@@ -223,7 +226,7 @@ export default function AISettings() {
       <div className="ledger-card p-6 md:p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center gap-5 mb-10">
           <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-[32px] flex items-center justify-center shrink-0 border border-indigo-100">
-            <Sliders size={22} />
+            <Sliders aria-hidden="true" size={22} />
           </div>
           <div>
             <h4 className="text-lg font-black text-[var(--text)] tracking-tight uppercase">Statistical Self-Learning Calibration</h4>
@@ -234,7 +237,7 @@ export default function AISettings() {
         <div className="space-y-8">
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <label className="text-[10px] font-black uppercase text-[var(--muted)] tracking-[0.2em]">
+              <label htmlFor={`${settingsId}-matching-gate`} className="text-[10px] font-black uppercase text-[var(--muted)] tracking-[0.2em]">
                 Self-Learning Matching Gate (Certainty Edge)
               </label>
               <span className="font-mono text-sm font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-xl">
@@ -243,6 +246,7 @@ export default function AISettings() {
             </div>
             
             <input 
+              id={`${settingsId}-matching-gate`}
               type="range" 
               min="0.50" 
               max="0.99" 
@@ -260,10 +264,10 @@ export default function AISettings() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
             {/* Soft-Learning Rate Adjuster */}
-            <div className="space-y-4">
-              <label className="text-[10px] font-black uppercase text-[var(--muted)] tracking-[0.2em] block">
+            <div role="group" aria-labelledby={`${settingsId}-learning-weight`} className="space-y-4">
+              <span id={`${settingsId}-learning-weight`} className="text-[10px] font-black uppercase text-[var(--muted)] tracking-[0.2em] block">
                 Unsupervised Learning Memory Weight
-              </label>
+              </span>
               <div className="flex flex-col sm:flex-row gap-4">
                 {[
                   { value: 1.0, label: 'Standard / Fluid (1.0x)' },
@@ -272,6 +276,7 @@ export default function AISettings() {
                 ].map((scale) => (
                   <button
                     key={scale.value}
+                    aria-pressed={learningScale === scale.value}
                     type="button"
                     onClick={() => setLearningScale(scale.value)}
                     className={cn(
@@ -292,7 +297,7 @@ export default function AISettings() {
             <div className="p-6 bg-rose-500/5 rounded-[32px] border border-rose-500/10 flex flex-col justify-between">
               <div className="space-y-1">
                 <h4 className="text-xs font-black text-rose-600 uppercase tracking-widest flex items-center gap-1.5">
-                  <Activity size={14} />
+                  <Activity aria-hidden="true" size={14} />
                   Purge Algorithmic Drift
                 </h4>
                 <p className="text-[10px] text-rose-500/70 leading-relaxed font-bold uppercase tracking-wider">
@@ -305,7 +310,7 @@ export default function AISettings() {
                 loadingText="Wiping..."
                 className="w-full mt-4 px-6 py-3 bg-red-50 hover:bg-red-100 text-rose-600 rounded-[32px] text-[10px] font-medium uppercase tracking-wider transition-all ring-1 ring-inset ring-rose-500/35 flex items-center justify-center gap-2 active:scale-95"
               >
-                <RefreshCw size={12} />
+                <RefreshCw aria-hidden="true" size={12} />
                 Wipe Neuromatrix Pattern Cache
               </AsyncButton>
             </div>
@@ -316,12 +321,13 @@ export default function AISettings() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="ledger-card p-6 md:p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
           <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-6 flex items-center gap-2">
-            <CpuIcon size={14} className="text-indigo-500" />
+            <CpuIcon aria-hidden="true" size={14} className="text-indigo-500" />
             Vivid Logic Routing Precision
           </h4>
           <div className="space-y-4">
             {MODEL_OPTIONS.map((m) => (
-              <div role="button" tabIndex={0} 
+              <div role="button" tabIndex={0}
+                aria-pressed={selectedModel === m.name}
                 key={m.name} 
                 onKeyDown={activateOnKey} onClick={() => handleSelectModel(m.name)}
                 className={cn(
@@ -347,7 +353,7 @@ export default function AISettings() {
         <div className="ledger-card p-6 md:p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm flex flex-col justify-between">
           <div>
             <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-6 flex items-center gap-2">
-              <Activity size={14} className="text-emerald-500" />
+              <Activity aria-hidden="true" size={14} className="text-emerald-500" />
               Intelligence Bridge Telemetry
             </h4>
             <div className="space-y-6 pt-2">
@@ -374,7 +380,7 @@ export default function AISettings() {
               rel="noopener noreferrer"
               className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2 hover:opacity-70 transition-opacity"
             >
-              <ExternalLink size={16} />
+              <ExternalLink aria-hidden="true" size={16} />
               Launch Google AI Studio Workbench
             </a>
           </div>
@@ -385,7 +391,7 @@ export default function AISettings() {
       <div className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="space-y-1">
           <h4 className="text-xs font-black text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles size={14} className="text-amber-500" />
+            <Sparkles aria-hidden="true" size={14} className="text-amber-500" />
             Enterprise Veracity Gate
           </h4>
           <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-wider">
@@ -397,7 +403,7 @@ export default function AISettings() {
           loadingText="SYNCHRONIZING..."
           className="btn-primary !px-10 !py-5 flex items-center justify-center gap-3 disabled:bg-zinc-300 shadow-2xl shadow-ledger-accent/20 w-full sm:w-auto sm:min-w-[240px] whitespace-nowrap active:scale-95 transition-all text-xs font-medium uppercase tracking-wider text-white leading-none inline-flex items-center"
         >
-          <Database size={16} />
+          <Database aria-hidden="true" size={16} />
           <span>COMMIT RULES PLATFORM</span>
         </AsyncButton>
       </div>

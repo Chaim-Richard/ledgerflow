@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useId, useState, useMemo, useEffect, useCallback } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn, getLocalDateISO, monthBoundsISO, formatCurrency, activateOnKey } from '../../lib/utils';
@@ -31,6 +31,7 @@ interface ProfitAndLossViewProps {
 }
 
 const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDate, compareStartDate, compareEndDate }) => {
+  const formId = useId();
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   const [dateRange, setDateRange] = useState({
@@ -307,7 +308,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
       {!isServerAuthoritative && isDataTruncated ? (
         <div id="pl-statement-truncation-banner" className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-medium">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <AlertCircle aria-hidden="true" className="w-4 h-4 text-amber-400 shrink-0" />
             <span>Showing 2,000 of N transactions — totals are incomplete</span>
           </div>
           <button
@@ -315,22 +316,23 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             disabled={loadingStates.pl}
             className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded text-xs transition flex items-center gap-1.5"
           >
-            {loadingStates.pl ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+            {loadingStates.pl ? <RefreshCw aria-hidden="true" className="w-3.5 h-3.5 animate-spin" /> : null}
             <span>{loadingStates.pl ? "Loading Server..." : "Load Full Server Report"}</span>
           </button>
         </div>
       ) : isServerAuthoritative ? (
         <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-between text-xs font-semibold">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5 text-emerald-400" />
             <span>Server-Authoritative Report (Full Streaming History Verified)</span>
           </div>
           <button 
             onClick={loadServerReport} 
             title="Refresh server report"
+            aria-label="Refresh server report"
             className="text-emerald-400/80 hover:text-emerald-300 p-0.5 rounded transition"
           >
-            <RefreshCw className={cn("w-3 h-3", loadingStates.pl && "animate-spin")} />
+            <RefreshCw aria-hidden="true" className={cn("w-3 h-3", loadingStates.pl && "animate-spin")} />
           </button>
         </div>
       ) : null}
@@ -345,12 +347,13 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           />
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-[var(--muted)] shrink-0">
-               <Calendar size={13} />
+               <Calendar aria-hidden="true" size={13} />
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mb-0.5">Temporal Range</span>
               <div className="flex flex-wrap items-center gap-2">
                 <input 
+                  aria-label="Reporting period start date"
                   type="date" 
                   value={dateRange.start}
                   onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
@@ -358,6 +361,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                 />
                 <span className="text-slate-300 font-mono text-sm leading-none">/</span>
                 <input 
+                  aria-label="Reporting period end date"
                   type="date" 
                   value={dateRange.end}
                   onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
@@ -367,8 +371,9 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             </div>
           </div>
           <div className="hidden sm:block w-px h-8 bg-slate-200" />
-          <label className="flex items-center gap-2 cursor-pointer group/toggle">
+          <label htmlFor={`${formId}-comparative`} aria-label="Comparative Mode" className="flex items-center gap-2 cursor-pointer group/toggle">
             <input 
+               id={`${formId}-comparative`}
                type="checkbox" 
                className="hidden" 
                checked={isComparative} 
@@ -385,7 +390,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider group-hover/toggle:text-[var(--text)] transition-colors flex items-center gap-1">
-                Comparative Mode <SplitSquareHorizontal size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--muted)]")} />
+                Comparative Mode <SplitSquareHorizontal aria-hidden="true" size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--muted)]")} />
               </span>
               <span className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest">Compare to Prior Prev</span>
             </div>
@@ -395,7 +400,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           onClick={exportToExcel}
           className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider hover:bg-slate-800 transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
          aria-label="Export Synthesis">
-          <FileSpreadsheet size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
+          <FileSpreadsheet aria-hidden="true" size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
           <span>Export Synthesis</span>
         </button>
       </div>
@@ -408,7 +413,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           className="bg-[var(--surface)] p-5 rounded-xl border border-[var(--line)]/80 shadow-3xs relative overflow-hidden group hover:border-slate-300 transition-all flex flex-col justify-between"
         >
            <div className="absolute -top-3 -right-3 p-3 opacity-[0.015] group-hover:rotate-6 transition-transform text-[var(--text)]">
-             <TrendingUp size={80} />
+             <TrendingUp aria-hidden="true" size={80} />
            </div>
           <div>
             <p className="text-[9px] font-bold text-[var(--muted)] mb-2 uppercase tracking-wider">{labels.inflowLabel}</p>
@@ -416,7 +421,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           </div>
           <div className="flex items-center gap-2">
             <div className="inline-flex items-center gap-1 text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-wider w-fit">
-              <Activity size={10} className="animate-pulse" />
+              <Activity aria-hidden="true" size={10} className="animate-pulse" />
               {labels.inflowSub}
             </div>
             {isComparative && prevData.income?.total !== 0 && (
@@ -437,7 +442,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           className="bg-[var(--surface)] p-5 rounded-xl border border-[var(--line)]/80 shadow-3xs relative overflow-hidden group hover:border-slate-300 transition-all flex flex-col justify-between"
         >
           <div className="absolute -top-3 -right-3 p-3 opacity-[0.015] group-hover:-rotate-6 transition-transform text-[var(--text)]">
-              <TrendingDown size={80} />
+              <TrendingDown aria-hidden="true" size={80} />
            </div>
           <div>
             <p className="text-[9px] font-bold text-[var(--muted)] mb-2 uppercase tracking-wider">{labels.outflowLabel}</p>
@@ -445,7 +450,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           </div>
           <div className="flex items-center gap-2">
             <div className="inline-flex items-center gap-1 text-rose-800 bg-rose-50 px-2.5 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-wider w-fit">
-              <Zap size={10} />
+              <Zap aria-hidden="true" size={10} />
               {labels.outflowSub}
             </div>
             {isComparative && prevData.expense?.total !== 0 && (
@@ -469,7 +474,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           )}
         >
           <div className="absolute -top-3 -right-3 p-3 opacity-[0.05] group-hover:scale-105 transition-transform text-white">
-              <Target size={80} />
+              <Target aria-hidden="true" size={80} />
            </div>
           <div>
             <p className="text-[9px] font-bold text-white/40 mb-2 uppercase tracking-wider">{labels.netLabel}</p>
@@ -515,7 +520,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                 >
                   <span>{field}</span>
                   {sortBy === field && (
-                    sortDir === 'asc' ? <ArrowUp size={9} /> : <ArrowDown size={9} />
+                    sortDir === 'asc' ? <ArrowUp aria-hidden="true" size={9} /> : <ArrowDown aria-hidden="true" size={9} />
                   )}
                 </button>
               ))}
@@ -582,7 +587,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       <span className="font-mono text-[8px] font-bold text-[var(--muted)] bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
                       <span className="text-[var(--text)] font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-tight text-xs truncate flex items-center gap-1.5">
                         {acc.name}
-                        <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
+                        <ExternalLink aria-hidden="true" size={10} className="opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
                       </span>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
@@ -661,7 +666,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       <span className="font-mono text-[8px] font-bold text-[var(--muted)] bg-[var(--ink)] px-1.5 py-0.5 rounded border border-[var(--line)] uppercase shrink-0">{acc.code}</span>
                       <span className="text-[var(--text)] font-bold group-hover:text-indigo-600 transition-colors uppercase tracking-tight text-xs truncate flex items-center gap-1.5">
                         {acc.name}
-                        <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
+                        <ExternalLink aria-hidden="true" size={10} className="opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
                       </span>
                     </div>
                     <div className="flex flex-col items-end shrink-0">

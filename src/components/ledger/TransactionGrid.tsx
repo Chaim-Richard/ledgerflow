@@ -1,5 +1,5 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useId, useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Transaction } from '../../types';
 import { 
   Search, 
@@ -49,12 +49,14 @@ const GridEditor = ({
   value, 
   onSave, 
   onClose,
-  type = 'text'
+  type = 'text',
+  label
 }: { 
   value: any, 
   onSave: (val: any) => void, 
   onClose: () => void,
-  type?: 'text' | 'number' | 'category'
+  type?: 'text' | 'number' | 'category',
+  label: string
 }) => {
   const [val, setVal] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -94,6 +96,7 @@ const GridEditor = ({
          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
          <input 
           ref={inputRef}
+          aria-label={label}
           type="text"
           value={val}
           onChange={(e) => setVal(e.target.value)}
@@ -214,7 +217,8 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
         <div className="absolute inset-0 pointer-events-none">
           {data.editingCell.field === 'description' && (
             <div style={{ left: 140, right: data.isMobileGrid ? 100 : (data.isTabletGrid ? 400 : 700) }} className="absolute inset-y-0 z-[70] pointer-events-auto">
-              <GridEditor 
+              <GridEditor
+                label="Transaction description"
                 value={tx.description}
                 onSave={(v) => {
                   data.onUpdate?.(tx.id, { description: v });
@@ -226,7 +230,8 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
           )}
           {data.editingCell.field === 'amountCents' && (
             <div style={{ right: data.isMobileGrid ? 0 : 280, width: data.isMobileGrid ? 100 : 140 }} className="absolute inset-y-0 z-[70] pointer-events-auto">
-              <GridEditor 
+              <GridEditor
+                label="Transaction amount"
                 value={tx.totalAmountCents / 100}
                 type="number"
                 onSave={(v) => {
@@ -239,7 +244,8 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
           )}
           {data.editingCell.field === 'category' && !data.isMobileGrid && (
             <div style={{ left: data.isTabletGrid ? 'auto' : '55%', right: data.isTabletGrid ? 220 : 'auto', width: 160 }} className="absolute inset-y-0 z-[70] pointer-events-auto">
-              <GridEditor 
+              <GridEditor
+                label="Transaction account"
                 value={resolveAccountName(accounts, tx.lines?.[0]?.accountId, tx.lines?.[0]?.accountName)}
                 type="category"
                 onSave={(v) => {
@@ -261,7 +267,8 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
           )}
           {data.editingCell.field === 'project' && !data.isMobileGrid && !data.isTabletGrid && (
             <div style={{ left: '68%', width: 140 }} className="absolute inset-y-0 z-[70] pointer-events-auto">
-              <GridEditor 
+              <GridEditor
+                label="Transaction project"
                 value={tx.project || ''}
                 onSave={(v) => {
                   data.onUpdate?.(tx.id, { 
@@ -281,6 +288,7 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
 });
 
 export default function TransactionGrid() {
+  const formId = useId();
   const transactions = useLedgerStore(s => s.transactions);
   const filterCriteria = useUIStore(s => s.filterCriteria);
   const onFilterApplied = (c: any) => useUIStore.getState().setFilterCriteria(c);
@@ -781,7 +789,7 @@ export default function TransactionGrid() {
         <div className="absolute inset-0 z-[100] bg-indigo-600/10 backdrop-blur-sm flex items-center justify-center pointer-events-none">
           <div className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] shadow-2xl border-2 border-indigo-600 flex flex-col items-center gap-4 animate-in fade-in zoom-in slide-in-from-bottom-4">
              <div className="w-16 h-16 rounded-full bg-indigo-600/10 flex items-center justify-center text-indigo-600">
-                <Plus size={32} />
+                <Plus aria-hidden="true" size={32} />
              </div>
              <div className="text-center">
                 <p className="text-xl font-bold text-[var(--text)] uppercase tracking-tight">Drop receipts here</p>
@@ -805,11 +813,11 @@ export default function TransactionGrid() {
               >
                 <div className="w-8 h-8 rounded-lg bg-[var(--surface)]/5 flex items-center justify-center">
                   {item.status === 'done' ? (
-                    <ShieldCheck size={16} className="text-emerald-500" />
+                    <ShieldCheck aria-hidden="true" size={16} className="text-emerald-500" />
                   ) : item.status === 'error' ? (
-                    <AlertCircle size={16} className="text-rose-500" />
+                    <AlertCircle aria-hidden="true" size={16} className="text-rose-500" />
                   ) : (
-                    <Loader2 size={16} className="text-indigo-600 animate-spin" />
+                    <Loader2 aria-hidden="true" size={16} className="text-indigo-600 animate-spin" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -817,11 +825,12 @@ export default function TransactionGrid() {
                   <p className="text-[11px] font-medium text-white truncate">{item.name}</p>
                 </div>
                 {item.status === 'error' && (
-                  <button 
+                  <button
+                    aria-label={`Dismiss import error for ${item.name}`}
                     onClick={() => setParsingQueue(parsingQueue.filter(i => i.id !== item.id))}
                     className="p-1 hover:bg-[var(--surface)]/10 rounded"
                   >
-                    <Plus size={10} className="text-white rotate-45" />
+                    <Plus aria-hidden="true" size={10} className="text-white rotate-45" />
                   </button>
                 )}
               </motion.div>
@@ -912,7 +921,7 @@ export default function TransactionGrid() {
                   ? "bg-black border-black text-white" 
                   : "border-[var(--line)] bg-[var(--surface)]"
                 )}>
-                  {selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0 && <Check size={10} className="stroke-[3px]" />}
+                  {selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0 && <Check aria-hidden="true" size={10} className="stroke-[3px]" />}
                   {selectedIds.size > 0 && selectedIds.size < transactionsWithBalance.length && <div className="w-2 h-0.5 bg-black" />}
                 </div>
                 <span>{selectedIds.size > 0 ? `${selectedIds.size} Selected` : 'Select All'}</span>
@@ -946,8 +955,8 @@ export default function TransactionGrid() {
                   </button>
                   
                   <div className="flex-1" />
-                  <button onClick={() => setSelectedIds(new Set())} className="p-1 hover:bg-black/5 rounded text-[var(--muted)]">
-                    <X size={14} />
+                  <button aria-label="Clear transaction selection" onClick={() => setSelectedIds(new Set())} className="p-1 hover:bg-black/5 rounded text-[var(--muted)]">
+                    <X aria-hidden="true" size={14} />
                   </button>
                 </motion.div>
               )}
@@ -973,7 +982,7 @@ export default function TransactionGrid() {
                       activeFilterColumn === 'visibility' ? "bg-[var(--brass)] text-[var(--ink)] border-[var(--brass-line)] font-bold" : "bg-[var(--surface)] text-[var(--muted)] border-[var(--line)] hover:text-[var(--text)] shadow-3xs"
                     )}
                   >
-                    <Layers size={13} className="shrink-0" />
+                    <Layers aria-hidden="true" size={13} className="shrink-0" />
                     Columns
                   </button>
 
@@ -982,8 +991,9 @@ export default function TransactionGrid() {
                       <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest mb-2">Visible Columns</p>
                       <div className="space-y-1">
                         {['date', 'description', 'category', 'project', 'amount', 'status'].map(col => (
-                          <label key={col} className="flex items-center gap-2 p-1.5 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
+                          <label htmlFor={`${formId}-column-${col}`} key={col} className="flex items-center gap-2 p-1.5 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
                             <input 
+                              id={`${formId}-column-${col}`}
                               type="checkbox" 
                               checked={visibleColumns.has(col)}
                               onChange={() => toggleColumnVisibility(col)}
@@ -1001,7 +1011,7 @@ export default function TransactionGrid() {
                     className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)] rounded-xl text-[10px] font-bold uppercase tracking-wider hover:text-[var(--text)] transition-all shrink-0 shadow-3xs cursor-pointer"
                     aria-label="Export CSV"
                   >
-                    <ArrowDownRight size={13} className="rotate-90 shrink-0" />
+                    <ArrowDownRight aria-hidden="true" size={13} className="rotate-90 shrink-0" />
                     Export
                   </button>
 
@@ -1009,8 +1019,9 @@ export default function TransactionGrid() {
                     onClick={() => onAction?.('open-command-center')}
                     className="w-9 h-9 bg-[var(--brass)] text-[var(--ink)] rounded-xl flex items-center justify-center hover:opacity-90 transition-all shadow-sm shrink-0 cursor-pointer"
                     title="Open Command Center"
+                    aria-label="Open Command Center"
                   >
-                    <Sparkles size={15} className="shrink-0 text-black" />
+                    <Sparkles aria-hidden="true" size={15} className="shrink-0 text-black" />
                   </button>
                 </div>
               </div>
@@ -1021,7 +1032,7 @@ export default function TransactionGrid() {
               className="h-10 px-5 bg-[var(--brass)] text-[var(--ink)] hover:opacity-90 rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap flex items-center gap-2 shadow-xs cursor-pointer"
               aria-label="Create new entry"
             >
-              <Plus size={14} className="stroke-[3px]" />
+              <Plus aria-hidden="true" size={14} className="stroke-[3px]" />
               New Entry
             </button>
           </div>
@@ -1061,7 +1072,7 @@ export default function TransactionGrid() {
              </div>
              {searchTerm && (
                <div style={{ height: '50.5px' }} className="hidden sm:flex items-center gap-3 px-5 py-2 bg-indigo-600/5 border border-indigo-600/20 rounded-full">
-                  <Sparkles size={14} className="text-indigo-600" />
+                  <Sparkles aria-hidden="true" size={14} className="text-indigo-600" />
                   <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest truncate italic serif">Analytical Filtering Enabled</span>
                </div>
              )}
@@ -1097,7 +1108,7 @@ export default function TransactionGrid() {
               }}
               className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-[var(--muted)] uppercase tracking-widest hover:text-[var(--text)] hover:bg-[var(--surface)] rounded-xl transition-all"
             >
-              <TableIcon size={16} />
+              <TableIcon aria-hidden="true" size={16} />
               <span className="hidden sm:inline">Export Matrix</span>
               <span className="sm:hidden">Export</span>
             </button>
@@ -1107,7 +1118,7 @@ export default function TransactionGrid() {
               className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-[var(--surface)] border border-indigo-600/20 hover:border-indigo-600 rounded-xl transition-all shadow-sm shrink-0 cursor-pointer"
               aria-label="Analytical Categorization"
             >
-              <Sparkles size={16} className="shrink-0" />
+              <Sparkles aria-hidden="true" size={16} className="shrink-0" />
               <span className="hidden sm:inline">Analytical Categorization</span>
               <span className="sm:hidden">Auto Cat</span>
             </button>
@@ -1125,7 +1136,8 @@ export default function TransactionGrid() {
                <div key={key} className="flex items-center gap-2 bg-[var(--ink)] border border-[var(--line)] px-3 py-1 rounded-full text-[10px] font-bold text-[var(--text)] group/chip hover:border-indigo-600 transition-all">
                  <span className="text-[var(--muted)] uppercase tracking-widest text-[9px]">{key}:</span>
                  <span>{String(value)}</span>
-                 <button 
+                 <button
+                   aria-label={`Remove ${key} filter`}
                    onClick={() => {
                      const next = { ...filterCriteria };
                      delete next[key];
@@ -1133,7 +1145,7 @@ export default function TransactionGrid() {
                    }}
                    className="hover:text-rose-600 transition-colors ml-1"
                  >
-                   <Plus className="rotate-45" size={14} />
+                   <Plus aria-hidden="true" className="rotate-45" size={14} />
                  </button>
                </div>
              );
@@ -1152,18 +1164,19 @@ export default function TransactionGrid() {
           <div className="h-full flex flex-col">
             <div className="grid sticky top-0 bg-slate-900 text-white/75 z-20" style={{ gridTemplateColumns: gridCols }}>
               <div className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-center">
-                <input type="checkbox" checked={selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0} onChange={(e) => setSelectedIds(e.target.checked ? new Set(transactionsWithBalance.map(t => t.id)) : new Set())} className="w-4 h-4 rounded border-white/20 bg-transparent accent-emerald-500" />
+                <input type="checkbox" aria-label="Select all transactions" checked={selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0} onChange={(e) => setSelectedIds(e.target.checked ? new Set(transactionsWithBalance.map(t => t.id)) : new Set())} className="w-4 h-4 rounded border-white/20 bg-transparent accent-emerald-500" />
               </div>
               <div role="button" tabIndex={0} 
                 onKeyDown={activateOnKey} onClick={() => handleSort('date')}
                 className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
               >
-                Date {sortConfig?.key === 'date' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
+                Date {sortConfig?.key === 'date' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
                 <button 
+                  aria-label="Filter by date"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'date' ? null : 'date'); }}
                   className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-slate-200 rounded transition-all", (filterCriteria?.startDate || filterCriteria?.endDate) && "opacity-100 text-indigo-600")}
                 >
-                  <Filter size={10} />
+                  <Filter aria-hidden="true" size={10} />
                 </button>
                 {activeFilterColumn === 'date' && (
                   <div role="presentation" className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
@@ -1191,11 +1204,13 @@ export default function TransactionGrid() {
                          <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest mb-2">Custom Range</p>
                          <div className="grid grid-cols-2 gap-2">
                            <input 
+                             aria-label="Filter start date"
                              type="date" 
                              className="text-xs p-1 h-8 bg-[var(--ink)] border border-[var(--line)] rounded" 
                              onChange={(e) => onFilterApplied({ ...filterCriteria, startDate: e.target.value })}
                            />
                            <input 
+                             aria-label="Filter end date"
                              type="date" 
                              className="text-xs p-1 h-8 bg-[var(--ink)] border border-[var(--line)] rounded"
                              onChange={(e) => onFilterApplied({ ...filterCriteria, endDate: e.target.value })}
@@ -1210,12 +1225,13 @@ export default function TransactionGrid() {
                 onKeyDown={activateOnKey} onClick={() => handleSort('description')}
                 className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
               >
-                Description {sortConfig?.key === 'description' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
+                Description {sortConfig?.key === 'description' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
                 <button 
+                  aria-label="Filter by description"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'description' ? null : 'description'); }}
                   className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all"
                 >
-                  <Filter size={10} />
+                  <Filter aria-hidden="true" size={10} />
                 </button>
                 {activeFilterColumn === 'description' && (
                   <div role="presentation" className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
@@ -1233,20 +1249,22 @@ export default function TransactionGrid() {
                   onKeyDown={activateOnKey} onClick={() => handleSort('category')}
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
                 >
-                  Category {sortConfig?.key === 'category' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
+                  Category {sortConfig?.key === 'category' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'category' ? null : 'category'); }}
+                    aria-label="Filter by category"
+                  onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'category' ? null : 'category'); }}
                     className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedCategories?.length > 0) && "opacity-100 text-emerald-500")}
                   >
-                    <Filter size={10} />
+                    <Filter aria-hidden="true" size={10} />
                   </button>
                   {activeFilterColumn === 'category' && (
                     <div role="presentation" className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                       <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-3">Filter Category</p>
                       <div className="mb-3 relative group/lsearch">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] group-hover/lsearch:text-indigo-600 transition-colors" size={12} />
+                        <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] group-hover/lsearch:text-indigo-600 transition-colors" size={12} />
                         <input 
                           type="text" 
+                          aria-label="Search category filters"
                           placeholder="Search categories..."
                           className="w-full pl-8 pr-3 py-1.5 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-600"
                           value={columnSearchTerms.category || ''}
@@ -1257,8 +1275,10 @@ export default function TransactionGrid() {
                         {columnFilterValues.category
                           .filter(val => !columnSearchTerms.category || (val || '').toLowerCase().includes(columnSearchTerms.category.toLowerCase()))
                           .map(val => (
-                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
-                            <input 
+                          <label htmlFor={`${formId}-category-${encodeURIComponent(val)}`} key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
+                            <input
+                              id={`${formId}-category-${encodeURIComponent(val)}`}
+                              aria-label={`Category filter: ${val || "Unassigned"}`}
                               type="checkbox" 
                               checked={filterCriteria?.selectedCategories?.includes(val)}
                               onChange={() => toggleColumnFilter('category', val)}
@@ -1291,20 +1311,22 @@ export default function TransactionGrid() {
                   onKeyDown={activateOnKey} onClick={() => handleSort('project')}
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
                 >
-                  Project {sortConfig?.key === 'project' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
+                  Project {sortConfig?.key === 'project' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'project' ? null : 'project'); }}
+                    aria-label="Filter by project"
+                  onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'project' ? null : 'project'); }}
                     className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedProjects?.length > 0) && "opacity-100 text-emerald-500")}
                   >
-                    <Filter size={10} />
+                    <Filter aria-hidden="true" size={10} />
                   </button>
                   {activeFilterColumn === 'project' && (
                     <div role="presentation" className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                       <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-3">Filter Projects</p>
                       <div className="mb-3 relative group/psearch">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] group-hover/psearch:text-indigo-600 transition-colors" size={12} />
+                        <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] group-hover/psearch:text-indigo-600 transition-colors" size={12} />
                         <input 
                           type="text" 
+                          aria-label="Search project filters"
                           placeholder="Search entities..."
                           className="w-full pl-8 pr-3 py-1.5 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-600"
                           value={columnSearchTerms.project || ''}
@@ -1315,8 +1337,10 @@ export default function TransactionGrid() {
                         {columnFilterValues.project
                           .filter(val => !columnSearchTerms.project || (val || '').toLowerCase().includes(columnSearchTerms.project.toLowerCase()))
                           .map(val => (
-                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
-                            <input 
+                          <label htmlFor={`${formId}-project-${encodeURIComponent(val)}`} key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
+                            <input
+                              id={`${formId}-project-${encodeURIComponent(val)}`}
+                              aria-label={`Project filter: ${val || "Unassigned"}`}
                               type="checkbox" 
                               checked={filterCriteria?.selectedProjects?.includes(val)}
                               onChange={() => toggleColumnFilter('project', val)}
@@ -1335,20 +1359,23 @@ export default function TransactionGrid() {
                   onKeyDown={activateOnKey} onClick={() => handleSort('class')}
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-between gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
-                  <div className="flex items-center gap-2">Class {sortConfig?.key === 'class' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}</div>
+                  <div className="flex items-center gap-2">Class {sortConfig?.key === 'class' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}</div>
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'class' ? null : 'class'); }}
+                    aria-label="Filter by class"
+                  onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'class' ? null : 'class'); }}
                     className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedClasses?.length || 0) > 0 && "opacity-100 text-emerald-500")}
                   >
-                    <Filter size={10} />
+                    <Filter aria-hidden="true" size={10} />
                   </button>
                   {activeFilterColumn === 'class' && (
                     <div role="presentation" className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                       <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-3">Filter by Class</p>
                       <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar">
                         {useLedgerStore.getState().classes?.map(val => (
-                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
-                            <input 
+                          <label htmlFor={`${formId}-class-${encodeURIComponent(val)}`} key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
+                            <input
+                              id={`${formId}-class-${encodeURIComponent(val)}`}
+                              aria-label={`Class filter: ${val || "Unassigned"}`}
                               type="checkbox" 
                               checked={filterCriteria?.selectedClasses?.includes(val)}
                               onChange={() => toggleColumnFilter('class', val)}
@@ -1367,20 +1394,23 @@ export default function TransactionGrid() {
                   onKeyDown={activateOnKey} onClick={() => handleSort('location')}
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-between gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
-                  <div className="flex items-center gap-2">Location {sortConfig?.key === 'location' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}</div>
+                  <div className="flex items-center gap-2">Location {sortConfig?.key === 'location' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}</div>
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'location' ? null : 'location'); }}
+                    aria-label="Filter by location"
+                  onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'location' ? null : 'location'); }}
                     className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedLocations?.length || 0) > 0 && "opacity-100 text-emerald-500")}
                   >
-                    <Filter size={10} />
+                    <Filter aria-hidden="true" size={10} />
                   </button>
                   {activeFilterColumn === 'location' && (
                     <div role="presentation" className="absolute top-full left-0 z-[100] mt-1 w-64 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
                       <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-3">Filter by Location</p>
                       <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar">
                         {useLedgerStore.getState().locations?.map(val => (
-                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
-                            <input 
+                          <label htmlFor={`${formId}-location-${encodeURIComponent(val)}`} key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
+                            <input
+                              id={`${formId}-location-${encodeURIComponent(val)}`}
+                              aria-label={`Location filter: ${val || "Unassigned"}`}
                               type="checkbox" 
                               checked={filterCriteria?.selectedLocations?.includes(val)}
                               onChange={() => toggleColumnFilter('location', val)}
@@ -1399,12 +1429,13 @@ export default function TransactionGrid() {
                 onKeyDown={activateOnKey} onClick={() => handleSort('amount')}
                 className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-right flex items-center justify-end gap-2 group relative cursor-pointer hover:bg-[var(--surface)]/5 transition-colors"
               >
-                Amount {sortConfig?.key === 'amount' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
+                Amount {sortConfig?.key === 'amount' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
                 <button 
+                  aria-label="Filter by amount"
                   onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'amount' ? null : 'amount'); }}
                   className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.minAmount !== undefined || filterCriteria?.maxAmount !== undefined) && "opacity-100 text-emerald-500")}
                 >
-                  <Filter size={10} />
+                  <Filter aria-hidden="true" size={10} />
                 </button>
                 {activeFilterColumn === 'amount' && (
                   <div role="presentation" className="absolute top-full right-0 z-[100] mt-1 w-72 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-5 normal-case font-medium text-[var(--text)] cursor-default" onClick={e => e.stopPropagation()}>
@@ -1412,10 +1443,11 @@ export default function TransactionGrid() {
                     <div className="space-y-5">
                        <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                             <label className="text-[9px] font-black uppercase text-[var(--muted)] tracking-wider">Min Value</label>
+                             <label htmlFor={`${formId}-min-amount`} className="text-[9px] font-black uppercase text-[var(--muted)] tracking-wider">Min Value</label>
                              <div className="relative">
                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-[10px] italic">$</span>
                                <input 
+                                  id={`${formId}-min-amount`}
                                   type="number" 
                                   placeholder="0" 
                                   className="w-full pl-6 pr-3 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs font-mono focus:ring-1 focus:ring-indigo-600 outline-none"
@@ -1425,10 +1457,11 @@ export default function TransactionGrid() {
                              </div>
                           </div>
                           <div className="space-y-2">
-                             <label className="text-[9px] font-black uppercase text-[var(--muted)] tracking-wider">Max Value</label>
+                             <label htmlFor={`${formId}-max-amount`} className="text-[9px] font-black uppercase text-[var(--muted)] tracking-wider">Max Value</label>
                              <div className="relative">
                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-[10px] italic">$</span>
                                <input 
+                                  id={`${formId}-max-amount`}
                                   type="number" 
                                   placeholder="∞" 
                                   className="w-full pl-6 pr-3 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs font-mono focus:ring-1 focus:ring-indigo-600 outline-none"
@@ -1444,15 +1477,15 @@ export default function TransactionGrid() {
                           <div className="grid grid-cols-1 gap-1">
                              <button onClick={() => { setSearchTerm('above average'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-xs font-bold flex justify-between items-center group">
                                 Above Average
-                                <TrendingUp size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-emerald-500" />
+                                <TrendingUp aria-hidden="true" size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-emerald-500" />
                              </button>
                              <button onClick={() => { setSearchTerm('top 10 %'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-xs font-bold flex justify-between items-center group">
                                 Top 10% (High Value)
-                                <Sparkles size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-amber-500" />
+                                <Sparkles aria-hidden="true" size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-amber-500" />
                              </button>
                              <button onClick={() => { setSearchTerm('below average'); setActiveFilterColumn(null); }} className="w-full text-left p-2 hover:bg-[var(--ink)] rounded-lg text-xs font-bold flex justify-between items-center group">
                                 Below Average
-                                <TrendingDown size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-rose-500" />
+                                <TrendingDown aria-hidden="true" size={12} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 text-rose-500" />
                              </button>
                           </div>
                        </div>
@@ -1484,20 +1517,23 @@ export default function TransactionGrid() {
                   onKeyDown={activateOnKey} onClick={() => handleSort('status')}
                   className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate text-center flex items-center justify-center gap-2 group cursor-pointer hover:bg-[var(--surface)]/5 transition-colors relative"
                 >
-                  System Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUpRight size={10} className="text-indigo-600" /> : <ArrowDownRight size={10} className="text-indigo-600" />)}
+                  System Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUpRight aria-hidden="true" size={10} className="text-indigo-600" /> : <ArrowDownRight aria-hidden="true" size={10} className="text-indigo-600" />)}
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'status' ? null : 'status'); }}
+                    aria-label="Filter by status"
+                  onClick={(e) => { e.stopPropagation(); setActiveFilterColumn(activeFilterColumn === 'status' ? null : 'status'); }}
                     className={cn("opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 hover:bg-[var(--surface)]/10 rounded transition-all", (filterCriteria?.selectedStatuses?.length > 0) && "opacity-100 text-emerald-500")}
                   >
-                    <Filter size={10} />
+                    <Filter aria-hidden="true" size={10} />
                   </button>
                   {activeFilterColumn === 'status' && (
                     <div className="absolute top-full right-0 z-[100] mt-1 w-48 bg-[var(--ink)] border border-[var(--line)] rounded-xl shadow-2xl p-4 normal-case font-medium">
                       <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-3">Filter Type</p>
                       <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar">
                         {['Active', 'Pending', 'Void', 'Reconciled'].map(val => (
-                          <label key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
-                            <input 
+                          <label htmlFor={`${formId}-status-${encodeURIComponent(val)}`} key={val} className="flex items-center gap-3 p-2 hover:bg-[var(--ink)] rounded-lg cursor-pointer transition-colors">
+                            <input
+                              id={`${formId}-status-${encodeURIComponent(val)}`}
+                              aria-label={`Status filter: ${val || "Unassigned"}`}
                               type="checkbox" 
                               checked={filterCriteria?.selectedStatuses?.includes(val)}
                               onChange={() => toggleColumnFilter('status', val)}
@@ -1565,7 +1601,7 @@ export default function TransactionGrid() {
                        exit={{ opacity: 0, x: 20 }}
                        className="flex items-center gap-3 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl"
                      >
-                        <Sparkles size={14} className="text-emerald-400" />
+                        <Sparkles aria-hidden="true" size={14} className="text-emerald-400" />
                         <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Duplicate Probability: 94%</span>
                      </motion.div>
                    )}

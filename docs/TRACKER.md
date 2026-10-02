@@ -1370,12 +1370,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 # SECTION E — ACCESSIBILITY
 
 - [x] E-01 Lint script — type check and ESLint are separate CI steps now
-- [~] E-02 Inputs: 142 labels linked (Labelled codemod); 46 labels in other layouts left
-- [~] E-03 Selects: linked with the same codemod where label + select are siblings
+- [x] E-02 Eligible inputs named and labels linked, including the 46 remaining layouts and fields missed by lint (codex, branch `codex/c-3-accessible-form-labels`, PR pending)
+- [x] E-03 Eligible selects linked to labels or given accessible names (codex, branch `codex/c-3-accessible-form-labels`, PR pending)
 - [x] E-04 Icon-only buttons and switches named (lint rule now clean)
 - [ ] E-05 23 tables without caption
 - [ ] E-06 2 `<img>` without alt
-- [~] E-07 htmlFor coverage: label-has-associated-control 185 → 46
+- [x] E-07 Eligible labels use matching htmlFor/id; per-instance IDs verified in Chromium; label-has-associated-control 185 → 46 → 0 (codex, branch `codex/c-3-accessible-form-labels`, PR pending)
 - [ ] E-08 InvoiceModal
 - [ ] E-09 BillModal
 - [ ] E-10 ReceivePaymentModal
@@ -1427,19 +1427,19 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION G — REACT CORRECTNESS
 
-- [x] G-01 StatementImporter (4) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
-- [x] G-02 TransactionRow (3) — the money grid (codex, branch `codex/c-2-stable-list-keys`, PR pending)
+- [x] G-01 StatementImporter (4) (codex, PR #32; merged snapshot verified)
+- [x] G-02 TransactionRow (3) — the money grid (codex, PR #32; merged snapshot verified)
 - [ ] G-03 PurchaseOrdersView (3)
-- [x] G-04 ToolSandbox (3) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
-- [x] G-05 QBOMigrationWizard (3) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
-- [x] G-06 TransactionEditModal (2) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
-- [x] G-07 HelpGuideView (2) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
-- [x] G-08 ForensicAuditor (2) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
-- [x] G-09 RulesSettings (2) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
-- [x] G-10 CashFlowPredictor (2) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
-- [x] G-11 ProjectProfitabilityView (2) (codex, branch `codex/c-2-stable-list-keys`, PR pending)
-- [x] G-12 IntelligenceCenter / AICustomBlueprint / AICommandCenter / Dashboard (codex, branch `codex/c-2-stable-list-keys`, PR pending)
-- [~] G-13 Remaining single-occurrence files — all eligible files fixed; `BillModal` and `InvoiceModal` remain in Claude's lane (codex, branch `codex/c-2-stable-list-keys`, PR pending)
+- [x] G-04 ToolSandbox (3) (codex, PR #32; merged snapshot verified)
+- [x] G-05 QBOMigrationWizard (3) (codex, PR #32; merged snapshot verified)
+- [x] G-06 TransactionEditModal (2) (codex, PR #32; merged snapshot verified)
+- [x] G-07 HelpGuideView (2) (codex, PR #32; merged snapshot verified)
+- [x] G-08 ForensicAuditor (2) (codex, PR #32; merged snapshot verified)
+- [x] G-09 RulesSettings (2) (codex, PR #32; merged snapshot verified)
+- [x] G-10 CashFlowPredictor (2) (codex, PR #32; merged snapshot verified)
+- [x] G-11 ProjectProfitabilityView (2) (codex, PR #32; merged snapshot verified)
+- [x] G-12 IntelligenceCenter / AICustomBlueprint / AICommandCenter / Dashboard (codex, PR #32; merged snapshot verified)
+- [~] G-13 Remaining single-occurrence files — all eligible files fixed; `BillModal` and `InvoiceModal` remain in Claude's lane (codex, PR #32; merged snapshot verified)
 - [x] G-14 `react/no-array-index-key` rule (plugin installed, ESLint passes)
 - [x] G-15 Error boundary per view (`MainViewSwitcher`, `key={activeTab}`)
 - [x] G-16 Recovery action on the boundary

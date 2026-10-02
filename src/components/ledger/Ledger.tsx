@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useId, useState, useMemo } from 'react';
 import { usePerformanceTrace } from '../../hooks/usePerformanceTrace';
 import { motion, AnimatePresence } from 'motion/react';
 import { BookOpen, Plus, Search, ArrowRightLeft, Scale, ShieldCheck, AlertCircle, Activity, Cpu, Layers, Zap } from 'lucide-react';
@@ -49,8 +49,8 @@ const TabButton = ({ label, icon: Icon, active, onClick, cardKey }: { id: SubTab
         ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold border-[var(--brass-line)] shadow-sm" 
         : "bg-[var(--surface)] border-[var(--line)]/80 text-[var(--muted)] hover:border-[var(--brass-line)]/60 hover:text-[var(--text)] shadow-3xs"
     )}
-   aria-label="Icon action">
-    <Icon size={14} />
+   >
+    <Icon aria-hidden="true" size={14} />
     {cardKey ? <LexiconText cardKey={cardKey} defaultVal={label} /> : label}
   </button>
 );
@@ -64,6 +64,7 @@ import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { Labelled } from '../ui/Labelled';
 
 const Ledger = React.memo(() => {
+  const formId = useId();
   const user = useAuthStore(s => s.user) || ({} as any);
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const transactions = useLedgerStore(s => s.transactions);
@@ -205,7 +206,7 @@ const Ledger = React.memo(() => {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)]/60 text-[10px] font-mono text-[var(--brass)] font-semibold mb-2 shadow-xs">
-              <Layers size={12} />
+              <Layers aria-hidden="true" size={12} />
               <LexiconText cardKey="ledger.unifiedFinancialLedger" defaultVal="Unified Financial Ledger" />
             </div>
             <LexiconText cardKey="ledger.coreMatrix" defaultVal="Core Matrix" as="h1" className="text-2xl sm:text-3xl font-bold text-[var(--text)] tracking-tight" />
@@ -217,18 +218,18 @@ const Ledger = React.memo(() => {
             />
           </div>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button 
+            <button aria-label="New journal entry"
               onClick={() => setActiveModal('journal')}
               className="h-10 px-4 bg-[var(--surface)]/90 text-[var(--text)] rounded-xl text-xs font-bold hover:bg-[var(--elevated)] transition-all border border-[var(--line)] shadow-xs flex items-center gap-2 cursor-pointer"
             >
-              <ArrowRightLeft size={14} />
+              <ArrowRightLeft aria-hidden="true" size={14} />
               <LexiconText cardKey="ledger.button.journalEntry" defaultVal="Journal Entry" />
             </button>
-            <button 
+            <button aria-label="Add account"
               onClick={() => setActiveModal('account')}
               className="h-10 px-5 bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black hover:opacity-95 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-95"
             >
-              <Plus size={14} className="stroke-[3px]" />
+              <Plus aria-hidden="true" size={14} className="stroke-[3px]" />
               <LexiconText cardKey="ledger.button.appendNode" defaultVal="Append Node" />
             </button>
           </div>
@@ -239,7 +240,7 @@ const Ledger = React.memo(() => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] hover:border-[var(--brass-line)] transition-all relative overflow-hidden shadow-sm bg-gradient-to-b from-[var(--brass-soft)]/30 via-[var(--panel)] to-[var(--panel)] group">
           <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--muted)] font-semibold flex items-center justify-between mb-2">
-            <span className="flex items-center gap-1.5"><Scale size={13} className="text-[var(--brass)]" /><LexiconText cardKey="ledger.stabilityVector" defaultVal="Stability Vector" /></span>
+            <span className="flex items-center gap-1.5"><Scale aria-hidden="true" size={13} className="text-[var(--brass)]" /><LexiconText cardKey="ledger.stabilityVector" defaultVal="Stability Vector" /></span>
           </div>
           <div className="flex items-center gap-3 mt-1">
             <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", totalProfitCents !== undefined ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-rose-500")} />
@@ -253,13 +254,13 @@ const Ledger = React.memo(() => {
         <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] hover:border-[var(--brass-line)] transition-all relative overflow-hidden shadow-sm bg-gradient-to-b from-[var(--brass-soft)]/20 via-[var(--panel)] to-[var(--panel)] group">
           <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--muted)] font-semibold flex items-center justify-between mb-2">
             <span><LexiconText cardKey="ledger.netInternalFlux" defaultVal="Net Internal Flux" /></span>
-            <Activity size={14} className="text-[var(--brass)]" />
+            <Activity aria-hidden="true" size={14} className="text-[var(--brass)]" />
           </div>
           <p className={cn("text-2xl font-mono font-bold tracking-tight mt-1 truncate", totalProfitCents >= 0 ? "text-[var(--pos)]" : "text-[var(--neg)]")}>
             {formatCurrency(totalProfitCents)}
           </p>
           <div className="mt-3 flex items-center gap-1.5 text-[10px] font-mono text-[var(--muted)]">
-             <Activity size={12} className="text-[var(--brass)] shrink-0" />
+             <Activity aria-hidden="true" size={12} className="text-[var(--brass)] shrink-0" />
              <LexiconText cardKey="ledger.liveThrottling" defaultVal="Live Throttling" />
           </div>
         </div>
@@ -267,14 +268,14 @@ const Ledger = React.memo(() => {
         <div className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] hover:border-[var(--brass-line)] transition-all relative overflow-hidden shadow-sm bg-gradient-to-b from-[var(--brass-soft)]/20 via-[var(--panel)] to-[var(--panel)] group">
           <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--muted)] font-semibold flex items-center justify-between mb-2">
             <span><LexiconText cardKey="ledger.forensicIntegrity" defaultVal="Forensic Integrity" /></span>
-            <ShieldCheck size={14} className="text-[var(--brass)]" />
+            <ShieldCheck aria-hidden="true" size={14} className="text-[var(--brass)]" />
           </div>
           <div className="flex items-center gap-2 mt-1">
-             <ShieldCheck size={18} className="text-[var(--pos)] shrink-0" />
+             <ShieldCheck aria-hidden="true" size={18} className="text-[var(--pos)] shrink-0" />
              <LexiconText cardKey="ledger.absoluteStatus" defaultVal="Absolute" as="p" className="text-xl font-bold text-[var(--text)] tracking-tight" />
           </div>
           <div className="mt-3 flex items-center gap-1 text-[10px] font-mono text-[var(--pos)]">
-             <Zap size={12} className="shrink-0" />
+             <Zap aria-hidden="true" size={12} className="shrink-0" />
              <LexiconText cardKey="ledger.immutableStatus" defaultVal="100% Immutable" />
           </div>
         </div>
@@ -282,16 +283,16 @@ const Ledger = React.memo(() => {
         <div className="p-5 bg-[var(--panel)] border border-[var(--brass-line)] rounded-2xl shadow-sm relative overflow-hidden group bg-gradient-to-b from-[var(--brass-soft)] via-[var(--brass-soft)]/30 to-[var(--panel)]">
           <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--brass)] font-semibold flex items-center justify-between mb-2">
             <span><LexiconText cardKey="ledger.coreBackboneProtocol" defaultVal="Core Backbone Protocol" /></span>
-            <Cpu size={14} className="text-[var(--brass)]" />
+            <Cpu aria-hidden="true" size={14} className="text-[var(--brass)]" />
           </div>
           <div className="flex items-center gap-3 mt-1">
             <div className="w-8 h-8 rounded-lg bg-[var(--brass-soft)] flex items-center justify-center border border-[var(--brass-line)]/60 shrink-0 shadow-xs">
-               <Cpu size={16} className="text-[var(--brass)]" />
+               <Cpu aria-hidden="true" size={16} className="text-[var(--brass)]" />
             </div>
             <p className="text-xs font-mono font-bold text-[var(--brass)] tracking-wider truncate">CB-0x{(workspaceId || "TEMP_WS").slice(0, 6).toUpperCase()}</p>
           </div>
           <div className="mt-3 flex items-center gap-1 text-[10px] font-mono text-[var(--muted)]">
-             <ShieldCheck size={12} className="shrink-0 text-[var(--brass)]" />
+             <ShieldCheck aria-hidden="true" size={12} className="shrink-0 text-[var(--brass)]" />
              <LexiconText cardKey="ledger.nexusSecurityActive" defaultVal="Nexus Security Active" />
           </div>
         </div>
@@ -315,9 +316,10 @@ const Ledger = React.memo(() => {
 
         {activeSubTab === 'coa' && (
           <div className="relative group max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-slate-600 transition-colors" size={16} />
+            <Search aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)] group-focus-within:text-slate-600 transition-colors" size={16} />
             <input 
-              type="text" 
+              type="text"
+              aria-label="Search accounts by name, code, or type"
               placeholder="Search accounts by name, code, or type..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -409,8 +411,8 @@ const Ledger = React.memo(() => {
             >
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-3xl font-black text-[var(--text)] tracking-tight uppercase italic">Add New Account</h2>
-                <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors">
-                  <Plus className="rotate-45 text-[var(--muted)]" size={24} />
+                <button aria-label="Close add account" onClick={() => setActiveModal(null)} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors">
+                  <Plus aria-hidden="true" className="rotate-45 text-[var(--muted)]" size={24} />
                 </button>
               </div>
 
@@ -484,10 +486,11 @@ const Ledger = React.memo(() => {
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50">Parent Account</label>
+                    <label htmlFor={`${formId}-parent-account`} className="block text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50">Parent Account</label>
                     <div className="relative">
                       <input 
-                        list="ledger-parent-account"
+                        id={`${formId}-parent-account`}
+                        list={`${formId}-parent-account-options`}
                         value={accounts.find(a => a.id === newAccount.parentId)?.name || newAccount.parentId || ''}
                         onChange={(e) => {
                           const acc = accounts.find(a => a.name === e.target.value || a.id === e.target.value);
@@ -496,7 +499,7 @@ const Ledger = React.memo(() => {
                         placeholder="None (Root)"
                         className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)]"
                       />
-                      <datalist id="ledger-parent-account">
+                      <datalist id={`${formId}-parent-account-options`}>
                         {accounts.map(acc => (
                           <option key={acc.id} value={acc.name}>{acc.code}</option>
                         ))}
@@ -571,7 +574,7 @@ const Ledger = React.memo(() => {
             >
               <div className="flex items-center gap-5 mb-8">
                 <div className="w-16 h-16 bg-amber-50 rounded-[32px] flex items-center justify-center text-amber-600 border border-amber-100">
-                  <ShieldCheck size={32} />
+                  <ShieldCheck aria-hidden="true" size={32} />
                 </div>
                 <div>
                   <h2 className="text-2xl font-black text-[var(--text)] tracking-tight">Close Period</h2>
@@ -594,7 +597,7 @@ const Ledger = React.memo(() => {
                 </div>
 
                 <div className="p-5 bg-amber-50 border border-amber-100 rounded-[32px] flex gap-4">
-                  <AlertCircle className="text-amber-600 shrink-0" size={20} />
+                  <AlertCircle aria-hidden="true" className="text-amber-600 shrink-0" size={20} />
                   <p className="text-xs text-amber-800 leading-relaxed font-medium">
                     Closing a period will lock all transactions and journal entries. This action is usually performed by a professional accountant after tax verification.
                   </p>

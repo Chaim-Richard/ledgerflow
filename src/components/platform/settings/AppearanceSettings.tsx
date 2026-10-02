@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import { 
   Type, 
   Sliders, 
@@ -20,6 +20,7 @@ import { db } from '../../../firebase';
 import { doc, updateDoc } from '../../../lib/db/firestore';
 
 export default function AppearanceSettings() {
+  const settingsId = useId();
   const theme = useUIStore(state => state.theme);
   const setTheme = useUIStore(state => state.setTheme);
   const fontSizeScale = useUIStore(state => state.fontSizeScale);
@@ -118,7 +119,7 @@ export default function AppearanceSettings() {
         <div className="flex items-center justify-between flex-wrap gap-4 border-b border-[var(--line)] pb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-[var(--brass-soft)] border border-[var(--brass-line)] text-[var(--brass)] rounded-xl flex items-center justify-center">
-              <Type size={22} />
+              <Type aria-hidden="true" size={22} />
             </div>
             <div>
               <h3 className="text-xl font-bold text-[var(--text)]">Text Sizing & Font Scale</h3>
@@ -131,12 +132,13 @@ export default function AppearanceSettings() {
         </div>
 
         {/* Preset Selector */}
-        <div className="space-y-3">
-          <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Size Presets</label>
+        <div role="group" aria-labelledby={`${settingsId}-size-presets`} className="space-y-3">
+          <span id={`${settingsId}-size-presets`} className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Size Presets</span>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {fontPresets.map((preset) => (
               <button
                 key={preset.id}
+                aria-pressed={fontSizePreset === preset.id}
                 onClick={() => setFontSizePreset(preset.id as any)}
                 className={cn(
                   "p-3.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1",
@@ -155,13 +157,14 @@ export default function AppearanceSettings() {
         {/* Fine Slider */}
         <div className="space-y-3 p-5 bg-[var(--panel)] border border-[var(--line)] rounded-xl">
           <div className="flex items-center justify-between text-xs font-bold text-[var(--text)]">
-            <span className="flex items-center gap-2">
-              <Sliders size={14} className="text-[var(--brass)]" />
+            <label htmlFor={`${settingsId}-font-scale`} className="flex items-center gap-2">
+              <Sliders aria-hidden="true" size={14} className="text-[var(--brass)]" />
               Fine-Grained Font Scale Slider
-            </span>
+            </label>
             <span className="font-mono text-[var(--brass)]">{fontSizeScale}%</span>
           </div>
           <input
+            id={`${settingsId}-font-scale`}
             type="range"
             min={80}
             max={150}
@@ -210,6 +213,7 @@ export default function AppearanceSettings() {
           {fontFamilies.map((font) => (
             <button
               key={font.id}
+              aria-pressed={fontFamily === font.id}
               onClick={() => setFontFamily(font.id as any)}
               className={cn(
                 "p-5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 group",
@@ -220,7 +224,7 @@ export default function AppearanceSettings() {
             >
               <div className="flex items-center justify-between">
                 <span className="font-bold text-xs uppercase tracking-wider text-[var(--text)]">{font.name}</span>
-                {fontFamily === font.id && <Check size={16} className="text-[var(--brass)]" />}
+                {fontFamily === font.id && <Check aria-hidden="true" size={16} className="text-[var(--brass)]" />}
               </div>
               <p className={cn("text-base text-[var(--text)] font-semibold truncate", font.style)}>
                 Sample $1,250.00
@@ -249,6 +253,7 @@ export default function AppearanceSettings() {
             return (
               <button
                 key={item.id}
+                aria-pressed={theme === item.id}
                 onClick={() => setTheme(item.id as any)}
                 className={cn(
                   "p-4 rounded-xl border flex flex-col items-center gap-2 transition-all cursor-pointer",
@@ -257,7 +262,7 @@ export default function AppearanceSettings() {
                     : "bg-[var(--panel)] border-[var(--line)] text-[var(--muted)] hover:text-[var(--text)]"
                 )}
               >
-                <Icon size={20} className={theme === item.id ? "text-[var(--brass)]" : "text-[var(--muted)]"} />
+                <Icon aria-hidden="true" size={20} className={theme === item.id ? "text-[var(--brass)]" : "text-[var(--muted)]"} />
                 <span className="text-xs font-bold uppercase tracking-wider">{item.name}</span>
               </button>
             );
@@ -265,15 +270,16 @@ export default function AppearanceSettings() {
         </div>
 
         {/* Accent Color Palette Picker */}
-        <div className="space-y-3">
-          <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] flex items-center gap-2">
-            <Palette size={14} className="text-[var(--brass)]" />
+        <div role="group" aria-labelledby={`${settingsId}-accent-palette`} className="space-y-3">
+          <span id={`${settingsId}-accent-palette`} className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] flex items-center gap-2">
+            <Palette aria-hidden="true" size={14} className="text-[var(--brass)]" />
             Accent Palette
-          </label>
+          </span>
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
             {accentPalettes.map((palette) => (
               <button
                 key={palette.id}
+                aria-pressed={accentColor === palette.id}
                 onClick={() => setAccentColor(palette.id as any)}
                 className={cn(
                   "p-3 rounded-xl border flex flex-col items-center gap-2 transition-all cursor-pointer",
@@ -299,11 +305,11 @@ export default function AppearanceSettings() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Row Density */}
-          <div className="p-5 bg-[var(--panel)] border border-[var(--line)] rounded-xl space-y-3">
-            <label className="text-xs font-bold uppercase tracking-wider text-[var(--text)] flex items-center gap-2">
-              <Grid size={15} className="text-[var(--brass)]" />
+          <div role="group" aria-labelledby={`${settingsId}-row-density`} className="p-5 bg-[var(--panel)] border border-[var(--line)] rounded-xl space-y-3">
+            <span id={`${settingsId}-row-density`} className="text-xs font-bold uppercase tracking-wider text-[var(--text)] flex items-center gap-2">
+              <Grid aria-hidden="true" size={15} className="text-[var(--brass)]" />
               Table & Row Density
-            </label>
+            </span>
             <div className="flex gap-2">
               {[
                 { id: 'compact', label: 'Compact' },
@@ -312,6 +318,7 @@ export default function AppearanceSettings() {
               ].map((d) => (
                 <button
                   key={d.id}
+                  aria-pressed={rowDensity === d.id}
                   onClick={() => setRowDensity(d.id as any)}
                   className={cn(
                     "flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all cursor-pointer",
@@ -327,15 +334,16 @@ export default function AppearanceSettings() {
           </div>
 
           {/* Date Format */}
-          <div className="p-5 bg-[var(--panel)] border border-[var(--line)] rounded-xl space-y-3">
-            <label className="text-xs font-bold uppercase tracking-wider text-[var(--text)] flex items-center gap-2">
-              <Calendar size={15} className="text-[var(--brass)]" />
+          <div role="group" aria-labelledby={`${settingsId}-date-format`} className="p-5 bg-[var(--panel)] border border-[var(--line)] rounded-xl space-y-3">
+            <span id={`${settingsId}-date-format`} className="text-xs font-bold uppercase tracking-wider text-[var(--text)] flex items-center gap-2">
+              <Calendar aria-hidden="true" size={15} className="text-[var(--brass)]" />
               Date Display Format
-            </label>
+            </span>
             <div className="flex gap-2">
               {DATE_DISPLAY_FORMATS.map((fmt) => (
                 <button
                   key={fmt}
+                  aria-pressed={dateFormatPref === fmt}
                   onClick={() => setDateFormatPref(fmt)}
                   className={cn(
                     "flex-1 py-2 text-[11px] font-mono font-bold rounded-lg border transition-all cursor-pointer",
@@ -352,13 +360,13 @@ export default function AppearanceSettings() {
 
           {/* Workspace Timezone */}
           <div className="p-5 bg-[var(--panel)] border border-[var(--line)] rounded-xl space-y-3 md:col-span-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-[var(--text)] flex items-center gap-2">
-              <Clock size={15} className="text-[var(--brass)]" />
+            <label htmlFor={`${settingsId}-timezone`} className="text-xs font-bold uppercase tracking-wider text-[var(--text)] flex items-center gap-2">
+              <Clock aria-hidden="true" size={15} className="text-[var(--brass)]" />
               Workspace Timezone
             </label>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <select
-                id="timezone-select"
+                id={`${settingsId}-timezone`}
                 value={currentTimezone}
                 onChange={(e) => handleTimezoneChange(e.target.value)}
                 disabled={isUpdatingZone}
@@ -376,7 +384,7 @@ export default function AppearanceSettings() {
                 <option value="Australia/Sydney">Australia/Sydney (Australian Eastern Time)</option>
               </select>
               <div className="flex items-center gap-2 text-xs text-[var(--muted)] px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg">
-                <Globe size={14} className="text-[var(--brass)]" />
+                <Globe aria-hidden="true" size={14} className="text-[var(--brass)]" />
                 <span>Active: <strong>{currentTimezone}</strong></span>
               </div>
             </div>
@@ -385,12 +393,12 @@ export default function AppearanceSettings() {
 
           {/* Fiscal year start */}
           <div className="p-5 bg-[var(--panel)] border border-[var(--line)] rounded-xl space-y-3 md:col-span-2">
-            <label htmlFor="fiscal-start-select" className="text-xs font-bold uppercase tracking-wider text-[var(--text)] flex items-center gap-2">
-              <Clock size={15} className="text-[var(--brass)]" />
+            <label htmlFor={`${settingsId}-fiscal-start`} className="text-xs font-bold uppercase tracking-wider text-[var(--text)] flex items-center gap-2">
+              <Clock aria-hidden="true" size={15} className="text-[var(--brass)]" />
               Fiscal year starts in
             </label>
             <select
-              id="fiscal-start-select"
+              id={`${settingsId}-fiscal-start`}
               value={fiscalStartMonth}
               onChange={(e) => handleFiscalStartChange(Number(e.target.value))}
               className="w-full sm:w-64 bg-[var(--surface)] text-[var(--text)] text-sm font-medium p-2.5 rounded-lg border border-[var(--line)] focus:outline-none focus:ring-1 focus:ring-[var(--brass)] cursor-pointer"
