@@ -33,7 +33,7 @@ the checks pass and the change is right, and writes the next tasks here.
 Counts are from `npx eslint . -f json` on 2026-09-28. Check a file's warnings with
 `npx eslint <file>`.
 
-- [ ] **C-1 Unused code (no-unused-vars, 741 warnings).** Remove unused imports, variables and
+- [ ] **C-1 Unused code (no-unused-vars, 741 warnings).** *Update 2 Oct: Claude removed the unused **imports** (aeb3c5c); what is left is unused variables and parameters, about 270.* Remove unused imports, variables and
   parameters (prefix a required but unused parameter with `_`). Do all of `src/components/`,
   `src/lib/`, `src/hooks/`, `src/stores/` except the files under Claude is working on.
   Leave `server.ts` and `src/server/` to Claude. *Done when:* `npx eslint src/components src/lib src/hooks src/stores`
