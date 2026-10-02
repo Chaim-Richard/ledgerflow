@@ -62,6 +62,12 @@ describe('Money Format Guard', () => {
     assert.deepStrictEqual(violations, []);
   });
 
+  it('no screen divides by 100 before formatDecimal (it takes cents; the query builder showed 100x too little)', () => {
+    const srcDir = path.resolve(__dirname, '../components');
+    const violations = scanDirForPattern(srcDir, /formatDecimal\([^)]*\/\s*100/, ['.ts', '.tsx']);
+    assert.deepStrictEqual(violations, []);
+  });
+
   it('no screen formats cents by hand with toLocaleString (use formatCurrency: workspace currency, right decimals)', () => {
     const srcDir = path.resolve(__dirname, '../components');
     const violations = scanDirForPattern(srcDir, /\/\s*100\)\.toLocaleString\(/, ['.tsx']);
