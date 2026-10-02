@@ -1,8 +1,9 @@
 import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { formatCurrency } from '../../lib/utils';
-import { differenceInDays, parseISO } from 'date-fns';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { AGING_BUCKETS, computePartyAging, daysOverdue, emptyAging, outstandingBaseCents, type AgingBucketKey, type PartyAgingRow } from '../../lib/aging';
+import { calculateAmountDue } from '../../lib/documentMath';
 import { FileText, ArrowLeft, Download, ChevronRight, Users, Clock, Search, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
@@ -12,15 +13,6 @@ interface PartyAgingReportViewProps {
   side: 'customer' | 'vendor';
 }
 
-interface AgingRow {
-  partyId: string;
-  partyName: string;
-  current: number;       // 0 - 30 days
-  thirtyToSixty: number; // 31 - 60 days
-  sixtyToNinety: number; // 61 - 90 days
-  overNinety: number;    // 91+ days
-  total: number;
-}
 
 export default function PartyAgingReportView({ side }: PartyAgingReportViewProps) {
   const isCustomer = side === 'customer';
@@ -39,64 +31,13 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
   const [selectedPartyId, setSelectedPartyId] = useState<string | null>(null);
 
   // Sorting state
-  const [sortBy, setSortBy] = useState<'partyName' | 'current' | 'thirtyToSixty' | 'sixtyToNinety' | 'overNinety' | 'total'>('partyName');
+  const [sortBy, setSortBy] = useState<'partyName' | AgingBucketKey | 'total'>('partyName');
+  const today = getLocalDateISO();
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Filter only outstanding documents (status not paid, void, draft)
-  const outstandingDocs = useMemo(() => {
-    return documents.filter(doc => {
-      const status = (doc.status || '').toLowerCase();
-      return status !== 'paid' && status !== 'void' && status !== 'draft';
-    });
-  }, [documents]);
-
-  // Calculate aging for each party
-  const agingRows: AgingRow[] = useMemo(() => {
-    return parties.map(party => {
-      const partyDocs = outstandingDocs.filter(d => {
-        const matchId = isCustomer ? (d as typeof d & { customerId?: string; vendorId?: string }).customerId : (d as typeof d & { customerId?: string; vendorId?: string }).vendorId;
-        return matchId === party.id;
-      });
-
-      let current = 0;
-      let thirtyToSixty = 0;
-      let sixtyToNinety = 0;
-      let overNinety = 0;
-      let total = 0;
-
-      partyDocs.forEach(doc => {
-        const docDate = doc.date ? parseISO(doc.date.slice(0, 10)) : new Date();
-        const ageDays = differenceInDays(new Date(), docDate);
-        
-        const docTotal = doc.amountCents || 0;
-        const docPaid = (doc as typeof doc & { amountPaidCents?: number }).amountPaidCents || 0;
-        const outstandingAmount = Math.max(0, docTotal - docPaid);
-
-        if (outstandingAmount > 0) {
-          total += outstandingAmount;
-          if (ageDays <= 30) {
-            current += outstandingAmount;
-          } else if (ageDays <= 60) {
-            thirtyToSixty += outstandingAmount;
-          } else if (ageDays <= 90) {
-            sixtyToNinety += outstandingAmount;
-          } else {
-            overNinety += outstandingAmount;
-          }
-        }
-      });
-
-      return {
-        partyId: party.id,
-        partyName: party.name,
-        current,
-        thirtyToSixty,
-        sixtyToNinety,
-        overNinety,
-        total
-      };
-    }).filter(row => row.total > 0); // Only show parties with outstanding balance
-  }, [parties, outstandingDocs, isCustomer]);
+  // open documents with something still owed (src/lib/aging.ts, shared with the /aging API; L-159)
+  const outstandingDocs = useMemo(() => documents.filter(doc => outstandingBaseCents(doc, side) > 0), [documents, side]);
+  const agingRows: PartyAgingRow[] = useMemo(() => computePartyAging(parties, documents, side, today), [parties, documents, side, today]);
 
   // Search filter and Sorting
   const sortedAndFilteredRows = useMemo(() => {
@@ -105,8 +46,9 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
     );
 
     return [...filtered].sort((a, b) => {
-      let valA = a[sortBy];
-      let valB = b[sortBy];
+      const value = (r: PartyAgingRow) => (sortBy === 'partyName' ? r.partyName : sortBy === 'total' ? r.total : r.buckets[sortBy]);
+      let valA = value(a);
+      let valB = value(b);
 
       if (typeof valA === 'string') {
         valA = valA.toLowerCase();
@@ -120,10 +62,10 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
   }, [agingRows, searchTerm, sortBy, sortOrder]);
 
   // Totals
-  const totalCurrent = useMemo(() => sortedAndFilteredRows.reduce((sum, r) => sum + r.current, 0), [sortedAndFilteredRows]);
-  const total30to60 = useMemo(() => sortedAndFilteredRows.reduce((sum, r) => sum + r.thirtyToSixty, 0), [sortedAndFilteredRows]);
-  const total60to90 = useMemo(() => sortedAndFilteredRows.reduce((sum, r) => sum + r.sixtyToNinety, 0), [sortedAndFilteredRows]);
-  const total90plus = useMemo(() => sortedAndFilteredRows.reduce((sum, r) => sum + r.overNinety, 0), [sortedAndFilteredRows]);
+  const bucketTotals = useMemo(() => sortedAndFilteredRows.reduce((sum, r) => {
+    for (const b of AGING_BUCKETS) sum[b.key] += r.buckets[b.key];
+    return sum;
+  }, emptyAging()), [sortedAndFilteredRows]);
   const grandTotal = useMemo(() => sortedAndFilteredRows.reduce((sum, r) => sum + r.total, 0), [sortedAndFilteredRows]);
 
   // Selected party documents for drill down
@@ -149,8 +91,8 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
 
   const exportToCSV = () => {
     downloadCsv(`${isCustomer ? 'ar' : 'ap'}_aging_report.csv`,
-      [isCustomer ? 'Customer' : 'Vendor', '0-30 Days', '31-60 Days', '61-90 Days', '91+ Days', 'Total Outstanding'],
-      sortedAndFilteredRows.map(r => [r.partyName, csvMoney(r.current), csvMoney(r.thirtyToSixty), csvMoney(r.sixtyToNinety), csvMoney(r.overNinety), csvMoney(r.total)]));
+      [isCustomer ? 'Customer' : 'Vendor', ...AGING_BUCKETS.map(b => b.key === 'current' ? 'Current' : `${b.label} overdue`), 'Total Outstanding'],
+      sortedAndFilteredRows.map(r => [r.partyName, ...AGING_BUCKETS.map(b => csvMoney(r.buckets[b.key])), csvMoney(r.total)]));
     toast.success('Aging report exported successfully to CSV');
   };
 
@@ -164,7 +106,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
             {isCustomer ? 'Accounts Receivable (AR) Aging' : 'Accounts Payable (AP) Aging'}
           </h2>
           <p className="text-sm text-[var(--muted)] dark:text-slate-400">
-            Aging schedule of outstanding {isCustomer ? 'customer invoices' : 'vendor bills'} grouped by outstanding duration.
+            Aging schedule of outstanding {isCustomer ? 'customer invoices' : 'vendor bills'} grouped by days past the due date, in the base currency.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -179,37 +121,21 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
       </div>
 
       {/* Visual Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block">Total Outstanding</span>
           <span className="text-xl font-mono font-black text-slate-900 dark:text-white tracking-tight block mt-1">
             {formatCurrency(grandTotal)}
           </span>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-          <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block">0 - 30 Days</span>
-          <span className="text-xl font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-tight block mt-1">
-            {formatCurrency(totalCurrent)}
-          </span>
-        </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-          <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block">31 - 60 Days</span>
-          <span className="text-xl font-mono font-black text-amber-500 tracking-tight block mt-1">
-            {formatCurrency(total30to60)}
-          </span>
-        </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-          <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block">61 - 90 Days</span>
-          <span className="text-xl font-mono font-black text-orange-500 tracking-tight block mt-1">
-            {formatCurrency(total60to90)}
-          </span>
-        </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-          <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block">91+ Days</span>
-          <span className="text-xl font-mono font-black text-rose-600 dark:text-rose-400 tracking-tight block mt-1">
-            {formatCurrency(total90plus)}
-          </span>
-        </div>
+        {AGING_BUCKETS.map((b, i) => (
+          <div key={b.key} className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+            <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block">{b.key === 'current' ? 'Not yet due' : `${b.label} overdue`}</span>
+            <span className={`text-xl font-mono font-black tracking-tight block mt-1 ${['text-emerald-600 dark:text-emerald-400', 'text-amber-600', 'text-amber-600', 'text-orange-600', 'text-rose-600 dark:text-rose-400'][i]}`}>
+              {formatCurrency(bucketTotals[b.key])}
+            </span>
+          </div>
+        ))}
       </div>
 
       {/* Main Filter & Table area */}
@@ -240,30 +166,14 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                     <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
-                <th scope="col" className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('current')}>
-                  <span className="flex items-center justify-end gap-1">
-                    0-30 Days
-                    <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
-                  </span>
-                </th>
-                <th scope="col" className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('thirtyToSixty')}>
-                  <span className="flex items-center justify-end gap-1">
-                    31-60 Days
-                    <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
-                  </span>
-                </th>
-                <th scope="col" className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('sixtyToNinety')}>
-                  <span className="flex items-center justify-end gap-1">
-                    61-90 Days
-                    <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
-                  </span>
-                </th>
-                <th scope="col" className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('overNinety')}>
-                  <span className="flex items-center justify-end gap-1">
-                    91+ Days
-                    <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
-                  </span>
-                </th>
+                {AGING_BUCKETS.map(b => (
+                  <th key={b.key} scope="col" className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort(b.key)}>
+                    <span className="flex items-center justify-end gap-1">
+                      {b.label}
+                      <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
+                    </span>
+                  </th>
+                ))}
                 <th scope="col" className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('total')}>
                   <span className="flex items-center justify-end gap-1">
                     Total Outstanding
@@ -284,30 +194,25 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                     <Users aria-hidden="true" className="w-4 h-4 text-[var(--muted)]" />
                     {row.partyName}
                   </td>
-                  <td className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
-                    {row.current > 0 ? formatCurrency(row.current) : '-'}
-                  </td>
-                  <td className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
-                    {row.thirtyToSixty > 0 ? formatCurrency(row.thirtyToSixty) : '-'}
-                  </td>
-                  <td className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
-                    {row.sixtyToNinety > 0 ? formatCurrency(row.sixtyToNinety) : '-'}
-                  </td>
-                  <td className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
-                    {row.overNinety > 0 ? formatCurrency(row.overNinety) : '-'}
-                  </td>
+                  {AGING_BUCKETS.map(b => (
+                    <td key={b.key} className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
+                      {row.buckets[b.key] > 0 ? formatCurrency(row.buckets[b.key]) : '-'}
+                    </td>
+                  ))}
                   <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
                     {formatCurrency(row.total)}
                   </td>
                   <td className="p-4 text-right">
-                    <ChevronRight aria-hidden="true" className="w-4 h-4 text-slate-300 group-hover:text-slate-600 dark:group-hover:text-white transition-colors" />
+                    <button type="button" aria-label={`Open ${row.partyName}`} onClick={e => { e.stopPropagation(); setSelectedPartyId(row.partyId); }} className="p-1 rounded-md">
+                      <ChevronRight aria-hidden="true" className="w-4 h-4 text-slate-500 group-hover:text-slate-700 dark:group-hover:text-white transition-colors" />
+                    </button>
                   </td>
                 </tr>
               ))}
 
               {sortedAndFilteredRows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
+                  <td colSpan={AGING_BUCKETS.length + 3} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
                     No outstanding {isCustomer ? 'receivables' : 'payables'} found matching criteria.
                   </td>
                 </tr>
@@ -317,10 +222,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
               <tfoot>
                 <tr className="bg-slate-50 dark:bg-slate-800/30 font-bold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-800">
                   <td className="p-4">Grand Total</td>
-                  <td className="p-4 text-right font-mono">{formatCurrency(totalCurrent)}</td>
-                  <td className="p-4 text-right font-mono">{formatCurrency(total30to60)}</td>
-                  <td className="p-4 text-right font-mono">{formatCurrency(total60to90)}</td>
-                  <td className="p-4 text-right font-mono">{formatCurrency(total90plus)}</td>
+                  {AGING_BUCKETS.map(b => <td key={b.key} className="p-4 text-right font-mono">{formatCurrency(bucketTotals[b.key])}</td>)}
                   <td className="p-4 text-right font-mono text-lg">{formatCurrency(grandTotal)}</td>
                   <td></td>
                 </tr>
@@ -359,10 +261,8 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {selectedPartyDocs.map(doc => {
                 const docTotal = doc.amountCents || 0;
-                const docPaid = (doc as typeof doc & { amountPaidCents?: number }).amountPaidCents || 0;
-                const outstanding = Math.max(0, docTotal - docPaid);
-                const docDate = doc.date ? parseISO(doc.date.slice(0, 10)) : new Date();
-                const ageDays = differenceInDays(new Date(), docDate);
+                const owed = calculateAmountDue(doc);
+                const overdue = daysOverdue(doc, today);
 
                 return (
                   <div 
@@ -376,7 +276,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                           #{doc.number || doc.id.slice(0, 8).toUpperCase()}
                         </span>
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider">
-                          {ageDays} Days Old
+                          {overdue > 0 ? `${overdue} days overdue` : 'Not yet due'}
                         </span>
                       </div>
                       <div className="text-xs text-[var(--muted)] dark:text-slate-400">
@@ -385,10 +285,10 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-mono font-black text-slate-900 dark:text-white">
-                        {formatCurrency(outstanding)}
+                        {formatCurrency(owed, doc.currency)}
                       </div>
                       <div className="text-xs text-[var(--muted)]">
-                        Total {formatCurrency(docTotal)} | Paid {formatCurrency(docPaid)}
+                        Total {formatCurrency(docTotal, doc.currency)} | Still owed {formatCurrency(owed, doc.currency)}
                       </div>
                     </div>
                   </div>
