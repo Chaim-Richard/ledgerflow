@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Transaction, FilterCriteria, ChartAccount } from '../types';
 import { LedgerEngine } from '../kernel/ledger/LedgerEngine';
-import { isPostable, calculateFilteredTotals, runningBalances } from '../lib/txFilters';
+import { isPostable, calculateFilteredTotals, runningBalances, baseAbsoluteTotal } from '../lib/txFilters';
 import { useScenarioStore } from '../lib/scenarioStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -91,7 +91,7 @@ export function useLedgerComputation(
     });
 
     return [...transactions, ...materializedGhosts];
-  }, [transactions, activeScenario]);
+  }, [transactions, activeScenario, accounts]);
 
   // O(1) Lookup Maps for financial entities
   const accountMap = useMemo(() => new Set(accounts.map(a => a.id)), [accounts]);
@@ -112,9 +112,9 @@ export function useLedgerComputation(
             valB = b.date;
             break;
           }
-          case 'amount':
-            valA = Number(a.totalAmountCents) || 0;
-            valB = Number(b.totalAmountCents) || 0;
+          case 'amount': // in the base currency, so a €100 entry doesn't sort as $100
+            valA = baseAbsoluteTotal(a);
+            valB = baseAbsoluteTotal(b);
             break;
           case 'description':
             valA = (a.description || '').toLowerCase();
@@ -276,9 +276,6 @@ export function useLedgerComputation(
       outflowCents,
       discrepancies, 
       conflicts,
-      totalValues: {
-        sum: smartFilteredTransactions.filter(isPostable).reduce((acc, t) => acc + (t.totalAmountCents || 0), 0)
-      }
     };
   }, [smartFilteredTransactions, accounts]);
 

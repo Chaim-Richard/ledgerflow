@@ -1473,7 +1473,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] H-25 CustomerModal (customer-modal.test.tsx; names and emails are trimmed, blank names refused)
 - [x] H-26 AuditLogViewer (audit-log-viewer.test.tsx, codex)
 - [x] H-27 `src/components/finance` (account register, payments list; found L-165)
-- [ ] H-28 `src/hooks`
+- [x] H-28 `src/hooks` (hooks.test.tsx renders the hooks: ledger totals, reports, role, timers, shortcuts; found L-166)
 - [ ] H-29 `src/stores`
 - [~] H-30 Property tests (added) + raise the `test:cov` gate (not done)
 
@@ -1725,6 +1725,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-163 Converting an estimate to an invoice wrote the invoice straight to the database as "sent": no ledger posting (no receivable, no revenue: P&L and balance sheet missed it while Sales and aging showed it), a dropped `totalCents` field, no lines, and a random invoice number when numbering failed. Now a draft invoice with the estimate's lines through the posting path (useEntityOperations), no made-up number or account; guard test: no screen writes invoices, bills, credits, payments or transactions to the database directly
 - [x] L-164 Forensic Auditor called balanced foreign-currency entries unbalanced: it converted and rounded each line separately (+5.5 → 6, −5.5 → −5) before adding them up. It now checks the lines in the entry's own currency, like the server's validator (`src/lib/forensicChecks.ts`, tested)
 - [x] L-165 Finance screens: the payments list showed foreign payments in the base currency and every allocation as "invoice: undefined"; it now shows the payment's currency and the invoice/bill number. Credit notes and vendor credits showed amounts without their currency. The account register treated cost-of-goods-sold accounts as credit accounts, so their running balance had the wrong sign (tested)
+- [x] L-166 Transactions screen totals: a customer's payment was counted as "Filtered Outflow" (any entry without an income or expense line went there, transfers too); now only money entering or leaving bank/cash accounts counts, and transfers count as neither. The search total and "sort by amount" used foreign amounts as if they were in the base currency. The statements' report hook recomputed an unused profit figure on every ledger change; it now only fetches, with the dates encoded. An unknown stored role now shows as Viewer, as the server treats it (tested)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION

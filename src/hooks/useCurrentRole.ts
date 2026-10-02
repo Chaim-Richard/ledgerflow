@@ -39,10 +39,9 @@ export function useCurrentRole(): WorkspaceRole {
   if (!currentWorkspace || !user) return 'viewer';
   if (currentWorkspace.uid === user.uid) return 'owner';
 
+  // any other stored value (an old 'admin', a typo) gets no more than the server gives it: read-only
   const role = currentWorkspace.roles?.[user.uid];
-  if (role) return role;
-
-  return 'viewer';
+  return role && role in ROLE_HIERARCHY ? role : 'viewer';
 }
 
 export function hasRoleAtLeast(currentRole: WorkspaceRole, requiredRole: WorkspaceRole): boolean {
