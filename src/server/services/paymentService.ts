@@ -1,4 +1,4 @@
-import { calculateAmountDue } from '../../lib/documentMath';
+import { calculateAmountDue, settledStatus } from '../../lib/documentMath';
 import { writeServerAuditLog } from './auditLogService';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import type { ChartAccount } from '../../types';
@@ -126,7 +126,6 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       paymentRate = docCurrency === baseCurrency ? 1 : docRate;
 
       const currentPaid = docData.amountPaidCents || 0;
-      const total = docData.amountCents || 0;
       const remainingBalance = calculateAmountDue(docData);
 
       if (alloc.amountCents > remainingBalance) {
@@ -135,12 +134,7 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
 
       const newPaid = currentPaid + alloc.amountCents;
 
-      let newStatus = docData.status;
-      if (newPaid >= total) {
-        newStatus = 'paid';
-      } else if (newPaid > 0) {
-        newStatus = 'partially_paid';
-      }
+      const newStatus = newPaid > 0 ? settledStatus(docData, newPaid) : docData.status;
 
       docUpdates.push({
         ref: docRef,

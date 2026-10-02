@@ -71,7 +71,9 @@ Last updated: 2026-10-02.
     reverse charge, configurable return boxes).*
 13. **Deposits on invoices.** Is a deposit a payment in advance (tax on the full invoice; the
     deposit only lowers the amount still due) or a discount? *Default: payment in advance
-    (normal practice).*
+    (normal practice).* **Built that way (2 Oct).** Record the deposit money to a "Customer
+    Deposits" liability account when it arrives; the invoice then moves it against what the
+    customer owes. An invoice with a deposit needs that account (it says so if missing).
 14. **Dependency updates** (the open Dependabot pull requests on GitHub). *Default: Claude
     applies the safe updates directly on `main` during the trust & compliance step and closes
     the PRs they replace; the big ones (Plaid 47) wait until a feature needs them.*

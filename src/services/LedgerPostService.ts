@@ -18,7 +18,7 @@ import {
   InventoryItem
 } from '../types';
 import { isPostable } from '../lib/txFilters';
-import { calculateDocumentTax, cashPostedWithDocumentCents } from '../lib/documentMath';
+import { calculateDocumentTax, cashPostedWithDocumentCents, depositAppliedCents } from '../lib/documentMath';
 import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
 import type { LineAccountWeight } from '../kernel/templates/TransactionTemplates';
 import { planInvoiceCogs } from './invoiceCogs';
@@ -336,6 +336,37 @@ export class LedgerPostService {
       lines: accrualLines
     };
     txsToPost.push(this.inBaseCurrency(accrualTx, workspaceId, context));
+
+    // 2.2 Deposit received in advance (AF-03): the money was booked to a Customer Deposits liability
+    // when it came in; the invoice moves it against the receivable. Tax stays on the full invoice.
+    const depositAmount = roundCents(depositAppliedCents(invoiceData) * rate);
+    if (depositAmount > 0) {
+      const depositAccount = this.resolveAccount(
+        accounts,
+        mappings,
+        ['customer deposits', 'deposits', 'customer advances'],
+        a => resolveAccountRole(a) === 'liability' && /deposit|advance|unearned|retainer/i.test(a.name || ''),
+        'Customer Deposits'
+      );
+      const description = `Deposit applied to Invoice ${invoiceNum} - ${customer}`;
+      txsToPost.push(this.inBaseCurrency({
+        uid,
+        workspaceId,
+        date: invoiceDate,
+        description,
+        totalAmountCents: depositAmount,
+        currency: invoiceData.currency || 'USD',
+        exchangeRate: rate,
+        status: 'completed',
+        type: 'actual',
+        createdAt: new Date().toISOString(),
+        metadata: { invoiceId, customerId: invoiceData.customerId, type: 'invoice-deposit' },
+        lines: [
+          { accountId: depositAccount.id, accountName: depositAccount.name, amountCents: depositAmount, description, exchangeRate: rate },
+          { accountId: arAccount.id, accountName: arAccount.name, amountCents: -depositAmount, description, exchangeRate: rate },
+        ],
+      }, workspaceId, context));
+    }
 
     // 2.5 Cost of goods sold for lines that sell inventory items (the server moves the stock).
     const cogs = planInvoiceCogs({

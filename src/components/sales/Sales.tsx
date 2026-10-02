@@ -113,7 +113,7 @@ export default function Sales() {
       const anchorDay = Number(startDateStr.split('-')[2]) || 1;
       const nextOcc = calculateNextOccurrence(startDateStr, data.recurringInterval || 'monthly', anchorDay);
       // The daily job copies this invoice as a draft on each date (recurringService.ts)
-      const { id: _id, number: _number, status: _status, date: _date, dueDate, amountPaidCents: _paid, paymentToken: _token,
+      const { id: _id, number: _number, status: _status, date: _date, dueDate, amountPaidCents: _paid, depositCents: _deposit, paymentToken: _token,
         metadata: _metadata, type: _type, recurringInterval: _interval, createdAt: _created, updatedAt: _updated, ...invoiceFields } = data;
       const dueDays = dueDate && startDateStr ? Math.max(0, Math.round((Date.parse(`${String(dueDate).slice(0, 10)}T00:00:00Z`) - Date.parse(`${startDateStr.slice(0, 10)}T00:00:00Z`)) / 86400000)) : 30;
       await addEntity('recurring', {
@@ -470,7 +470,7 @@ export default function Sales() {
                           onClick={() => {
                             // a new draft with the same customer and lines: no number (the series gives one), no payments,
                             // write-offs, links or sent/viewed history carried over
-                            const { id: _id, uid: _uid, number: _number, status: _status, amountPaidCents: _paid, settledByRecordsCents: _settled,
+                            const { id: _id, uid: _uid, number: _number, status: _status, amountPaidCents: _paid, depositCents: _deposit, settledByRecordsCents: _settled,
                               writtenOffCents: _wo, writeOffTransactionId: _woTx, writeOffReason: _wr, writtenOffAt: _woAt, writeOffReversalTransactionId: _woRev,
                               paymentDate: _pd, paidAt: _pa, posted: _posted, isLocked: _locked, lockedAt: _lockedAt, paymentToken: _token, metadata: _meta,
                               dueDate: _due, ...fields } = inv;

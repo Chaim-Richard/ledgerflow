@@ -6,8 +6,11 @@ import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import { useTimeout } from '../../hooks/useTimeout';
 
+/** The invoice as the public link returns it, with what is still due. */
+type PublicInvoice = Invoice & { remainingBalanceCents?: number };
+
 export default function PublicInvoicePage() {
-  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [invoice, setInvoice] = useState<PublicInvoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
@@ -76,7 +79,9 @@ export default function PublicInvoicePage() {
     );
   }
 
-  const isPaid = invoice.status === 'paid';
+  const currency = invoice.currency || 'USD';
+  const dueCents = invoice.remainingBalanceCents ?? Math.max(0, invoice.amountCents - (invoice.depositCents || 0) - (invoice.amountPaidCents || 0));
+  const isPaid = invoice.status === 'paid' || dueCents <= 0;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -106,7 +111,7 @@ export default function PublicInvoicePage() {
                 disabled={isPaying}
                 className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-md transition-all flex items-center gap-2 disabled:opacity-50 tabular-nums"
               >
-                {isPaying ? 'Processing...' : `Pay ${formatCurrency(invoice.amountCents)}`}
+                {isPaying ? 'Processing...' : `Pay ${formatCurrency(dueCents, currency)}`}
               </button>
             )}
           </div>
@@ -122,9 +127,15 @@ export default function PublicInvoicePage() {
               </div>
               <div className="sm:text-right">
                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Total Amount</h3>
-                <p className="text-4xl font-bold text-gray-900 tabular-nums">{formatCurrency(invoice.amountCents)}</p>
+                <p className="text-4xl font-bold text-gray-900 tabular-nums">{formatCurrency(invoice.amountCents, currency)}</p>
+                {(invoice.depositCents || 0) > 0 && (
+                  <p className="text-sm text-gray-600 mt-1 tabular-nums">Deposit received: −{formatCurrency(invoice.depositCents || 0, currency)}</p>
+                )}
+                {(invoice.amountPaidCents || 0) > 0 && (
+                  <p className="text-sm text-gray-600 mt-1 tabular-nums">Paid: −{formatCurrency(invoice.amountPaidCents || 0, currency)}</p>
+                )}
                 {!isPaid && (
-                  <p className="text-sm text-gray-500 mt-1">Due by {formatDate(invoice.dueDate || '')}</p>
+                  <p className="text-sm text-gray-700 mt-1 tabular-nums">Amount due {formatCurrency(dueCents, currency)} by {formatDate(invoice.dueDate || '')}</p>
                 )}
               </div>
             </div>

@@ -1,6 +1,6 @@
 import { FieldValue } from '../db/firestore';
 import type { DocumentData, Firestore } from '../db/firestore';
-import { calculateAmountDue } from '../../lib/documentMath';
+import { calculateAmountDue, settledStatus } from '../../lib/documentMath';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import type { ChartAccount } from '../../types';
@@ -85,7 +85,7 @@ export async function applyCredit(db: Firestore, input: ApplyCreditInput) {
     t.update(documentRef, {
       amountPaidCents: newPaid,
       settledByRecordsCents: (document.settledByRecordsCents || 0) + amountCents,
-      status: newPaid >= (document.amountCents || 0) ? 'paid' : 'partially_paid',
+      status: settledStatus(document, newPaid),
       updatedAt: now,
     });
     return { creditRemainingCents: newRemaining, documentAmountDueCents: due - amountCents };

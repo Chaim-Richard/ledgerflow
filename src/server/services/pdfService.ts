@@ -1,4 +1,5 @@
 import { getLocalDateISO } from '../../lib/utils';
+import { depositAppliedCents } from '../../lib/documentMath';
 
 /**
  * Enterprise PDF Document Generator Service (Zero-Dependency PDF 1.4 Engine)
@@ -61,6 +62,12 @@ export async function generateDocumentPdf(
     itemLines += `BT /F1 10 Tf 450 ${y} Td (${value}) Tj ET\n`;
   }
 
+  // A deposit is a payment in advance: the total keeps its tax, the deposit lowers what is due (AF-03)
+  const depositCents = type === 'invoice' ? depositAppliedCents(docData || {}) : 0;
+  const depositLines = depositCents > 0
+    ? `BT /F1 10 Tf 330 ${y - 43} Td (Deposit received: -${money(depositCents)}) Tj ET\nBT /F2 12 Tf 330 ${y - 61} Td (AMOUNT DUE: ${money(totalCents - depositCents)}) Tj ET\n`
+    : '';
+
   const streamContent = `
 q
 0.1 0.1 0.1 rg
@@ -78,7 +85,7 @@ BT /F2 10 Tf 480 615 Td (AMOUNT) Tj ET
 ${itemLines}
 0.8 0.8 0.8 RG 1 w 50 ${y - 5} m 550 ${y - 5} l S
 BT /F2 12 Tf 330 ${y - 25} Td (TOTAL: ${totalFormatted}) Tj ET
-Q
+${depositLines}Q
 `.trim();
 
   const streamBytes = Buffer.from(streamContent, 'utf-8');

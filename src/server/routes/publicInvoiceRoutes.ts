@@ -2,7 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import { getDb } from '../db/firestore';
 import { getTrustedAppUrl } from '../utils/urlHelper';
-import { calculateAmountDue } from '../../lib/documentMath';
+import { calculateAmountDue, depositAppliedCents } from '../../lib/documentMath';
 import Stripe from 'stripe';
 
 let stripeClient: Stripe | null = null;
@@ -74,6 +74,7 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
         status: invoice.status,
         amountCents: totalInvoiceAmount,
         amountPaidCents: amountPaid,
+        depositCents: depositAppliedCents(invoice),
         remainingBalanceCents: remainingBalance,
         currency: invoice.currency || 'USD',
         customerName: invoice.customerName,

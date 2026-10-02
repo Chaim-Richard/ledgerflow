@@ -266,6 +266,25 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
     }, /overpayment not allowed/i);
   });
 
+  test('Deposit (AF-03): paying what the deposit left marks the invoice paid; paying more is refused', async () => {
+    const db = new MockTransactionalDb();
+    db.data.set('workspaces/ws-1', { id: 'ws-1' });
+    db.data.set('chartAccounts/acc-cash', { id: 'acc-cash', workspaceId: 'ws-1' });
+    db.data.set('chartAccounts/acc-ar', { id: 'acc-ar', workspaceId: 'ws-1' });
+    db.data.set('invoices/inv-dep', { id: 'inv-dep', workspaceId: 'ws-1', amountCents: 12000, depositCents: 3000, amountPaidCents: 0, status: 'pending' });
+    const pay = (amountCents: number) => createPaymentAtomic(db, {
+      workspaceId: 'ws-1', uid: 'user-1', paymentDate: '2026-09-15', amountCents,
+      cashAccountId: 'acc-cash', offsetAccountId: 'acc-ar',
+      allocations: [{ documentId: 'inv-dep', documentType: 'invoice', amountCents }],
+    });
+
+    await assert.rejects(() => pay(12000), /overpayment not allowed/i);
+    await pay(9000);
+    const inv = db.getDocData('invoices', 'inv-dep');
+    assert.equal(inv.amountPaidCents, 9000);
+    assert.equal(inv.status, 'paid');
+  });
+
   test('Rejects payment if cash account belongs to another workspace', async () => {
     const db = new MockTransactionalDb();
     db.data.set('workspaces/ws-1', { id: 'ws-1' });

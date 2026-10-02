@@ -94,15 +94,34 @@ export function calculateDocumentNet(doc: DocumentTaxInput): number {
 }
 
 /**
- * Computes remaining amount due for invoices or bills considering payments made.
+ * The deposit taken off an invoice (AF-03). A deposit is a payment in advance: tax is charged on
+ * the full invoice, and the deposit only lowers the amount still due. It never changes the
+ * taxable amount, and it can't be more than the invoice total.
+ */
+export function depositAppliedCents(doc: { amountCents?: number; depositCents?: number }): number {
+  return Math.min(Math.max(0, doc.amountCents || 0), Math.max(0, Math.round(doc.depositCents || 0)));
+}
+
+/**
+ * Computes remaining amount due for invoices or bills: the total less the deposit received in
+ * advance and the payments and credits made.
  */
 export function calculateAmountDue(doc: {
   amountCents?: number;
   amountPaidCents?: number;
+  depositCents?: number;
 }): number {
   const total = Math.max(0, doc.amountCents || 0);
   const paid = Math.max(0, doc.amountPaidCents || 0);
-  return Math.max(0, total - paid);
+  return Math.max(0, total - depositAppliedCents(doc) - paid);
+}
+
+/** Status of a document once `paidCents` in total has been paid or credited on it. */
+export function settledStatus(
+  doc: { amountCents?: number; depositCents?: number },
+  paidCents: number
+): 'paid' | 'partially_paid' {
+  return calculateAmountDue({ ...doc, amountPaidCents: paidCents }) === 0 ? 'paid' : 'partially_paid';
 }
 
 /**
@@ -110,15 +129,18 @@ export function calculateAmountDue(doc: {
  * Payments recorded as payment records, and credits applied to the document, post their own
  * entries (or none: a credit already reduced receivables/payables when it was issued); they are
  * counted in `settledByRecordsCents` and must not be posted again when the document is re-posted.
- * A document marked paid without a recorded amount counts as paid in full ("mark as paid").
+ * A document marked paid without a recorded amount counts as paid in full, less its deposit
+ * ("mark as paid").
  */
 export function cashPostedWithDocumentCents(doc: {
   amountCents?: number;
   amountPaidCents?: number;
+  depositCents?: number;
   settledByRecordsCents?: number;
   status?: string;
 }): number {
   if (doc.status !== 'paid' && doc.status !== 'partially_paid') return 0;
-  const paid = doc.amountPaidCents || (doc.status === 'paid' ? Math.max(0, doc.amountCents || 0) : 0);
+  // "Mark as paid" settles what the deposit left
+  const paid = doc.amountPaidCents || (doc.status === 'paid' ? Math.max(0, doc.amountCents || 0) - depositAppliedCents(doc) : 0);
   return Math.max(0, paid - Math.max(0, doc.settledByRecordsCents || 0));
 }

@@ -13,6 +13,7 @@ import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { formatCurrency, safeConfirm } from '../../lib/utils';
 import { lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
 import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
+import { depositAppliedCents } from '../../lib/documentMath';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface InvoiceModalProps {
@@ -108,6 +109,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const taxCode = taxChoice === 'custom' ? customRateCode(Number(invoice.taxRate) || 0) : salesCodes.find(c => c.id === taxChoice) || null;
   const pricesIncludeTax = invoice.pricesIncludeTax ?? (invoice.taxVersion === 2 ? false : Boolean(invoice.taxInclusive));
   const totals = documentTotals(total, invoice.discountCents || 0, taxCode, pricesIncludeTax);
+  const depositCents = depositAppliedCents({ amountCents: totals.amountCents, depositCents: invoice.depositCents });
   const currency = invoice.currency || workspaceCurrency;
   const currencyChoices = [...new Set([workspaceCurrency, currency, 'USD', 'EUR', 'GBP'])];
   const money = (cents: number) => formatCurrency(cents, currency);
@@ -117,6 +119,10 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     if (isSubmitting) return;
     if (!invoice.customerId) {
       toast.error('Please select a customer');
+      return;
+    }
+    if ((invoice.depositCents || 0) > totals.amountCents) {
+      toast.error("The deposit can't be more than the invoice total");
       return;
     }
     
@@ -355,8 +361,10 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  id="inv-deposit"
                  type="number" step="0.01" min="0" value={(invoice.depositCents || 0) / 100}
                  onChange={(e) => setInvoice({ ...invoice, depositCents: TruthEngine.parseAmountToCents(e.target.value || '0') })}
+                 aria-describedby="inv-deposit-help"
                  className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                />
+               <p id="inv-deposit-help" className="text-[11px] text-[var(--muted)]">Paid in advance (booked to Customer Deposits). Tax stays on the full total; the deposit lowers the amount due.</p>
              </div>
              <div className="space-y-2">
                <label htmlFor="inv-retainage" className="micro-label">Retainage ({currency})</label>
@@ -604,10 +612,11 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               {totals.discountCents > 0 && <><dt>Discount</dt><dd className="text-right font-mono">−{money(totals.discountCents)}</dd></>}
               {totals.components.map(c => <React.Fragment key={c.name}><dt>{c.name} {c.rate}%{pricesIncludeTax ? ' (included)' : ''}</dt><dd className="text-right font-mono">{money(c.taxCents)}</dd></React.Fragment>)}
               {taxCode && taxCode.treatment !== 'standard' && <><dt>Tax</dt><dd className="text-right">{TAX_TREATMENTS[taxCode.treatment]}</dd></>}
+              {depositCents > 0 && <><dt>Total</dt><dd className="text-right font-mono">{money(totals.amountCents)}</dd><dt>Deposit received</dt><dd className="text-right font-mono">−{money(depositCents)}</dd></>}
             </dl>
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total</span>
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{depositCents > 0 ? 'Amount due' : 'Total'}</span>
             <span className="text-3xl font-black text-[var(--text)] font-mono">
-              {money(totals.amountCents)}
+              {money(totals.amountCents - depositCents)}
             </span>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3 w-full sm:w-auto">

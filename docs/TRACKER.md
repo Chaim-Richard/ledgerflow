@@ -1711,7 +1711,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [~] AE-04 Recompute-tax script: read-only listing done (94661cd); `--apply` (adjusting entries) later
 - [x] AF-01 Discount/retainage in tax
 - [x] AF-02 In shared `documentMath`
-- [ ] AF-03 Decide `depositCents` — CARD 4.2 (your decision)
+- [x] AF-03 Deposits = payment in advance (FOR_YOU 13 default): tax on the full invoice, the deposit lowers the amount due; posted DR Customer Deposits / CR A/R; payments, credits, Stripe link, PDF and public page follow it (tested)
 - [x] AF-04 Tie-out fixture: EUR + discount + retainage + tax on top (94661cd)
 - [x] AG-01 Canonical `amountCents`
 - [x] AG-02 `totalCents` removed from Invoice
