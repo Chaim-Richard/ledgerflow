@@ -1,3 +1,4 @@
+import { useDialog } from '../../../hooks/useDialog';
 import { formatCurrency } from '../../../lib/utils';
 import React, { useState, useMemo, useId } from 'react';
 import { AutoRule, Transaction } from '../../../types';
@@ -39,6 +40,7 @@ export const RulesSettings: React.FC = () => {
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreatingRule, setIsCreatingRule] = useState(false);
+  const { dialogProps: overlay2DialogProps, titleId: overlay2TitleId } = useDialog(() => setIsCreatingRule(false), isCreatingRule);
   const [editingRule, setEditingRule] = useState<AutoRule | null>(null);
 
   // AI Rule Builder State
@@ -50,6 +52,7 @@ export const RulesSettings: React.FC = () => {
   // Dry run & Test state
   const [dryRunResult, setDryRunResult] = useState<ReturnType<typeof dryRunRules> | null>(null);
   const [isTestingRule, setIsTestingRule] = useState(false);
+  const { dialogProps: overlay1DialogProps, titleId: overlay1TitleId } = useDialog(() => setIsTestingRule(false), !!(isTestingRule && dryRunResult));
   const [isApplyingExisting, setIsApplyingExisting] = useState(false);
   const [applySuccessMessage, setApplySuccessMessage] = useState<string | null>(null);
   const { setSafeTimeout } = useTimeout();
@@ -633,11 +636,11 @@ export const RulesSettings: React.FC = () => {
 
       {/* Dry Run / Test Results Modal */}
       {isTestingRule && dryRunResult && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div {...overlay1DialogProps} className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-neutral-200">
             <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
               <div>
-                <h3 className="text-base font-bold text-neutral-900 flex items-center gap-2">
+                <h3 id={overlay1TitleId} className="text-base font-bold text-neutral-900 flex items-center gap-2">
                   <Play aria-hidden="true" className="w-4 h-4 text-emerald-600" />
                   Ledger Rules Dry-Run Simulation
                 </h3>
@@ -714,10 +717,10 @@ export const RulesSettings: React.FC = () => {
 
       {/* Create / Edit Rule Modal */}
       {isCreatingRule && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div {...overlay2DialogProps} className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-neutral-200">
             <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
-              <h3 className="text-base font-bold text-neutral-900">
+              <h3 id={overlay2TitleId} className="text-base font-bold text-neutral-900">
                 {editingRule ? 'Edit Automation Rule' : 'Create Automation Rule'}
               </h3>
               <button onClick={() => setIsCreatingRule(false)} aria-label="Close rule editor" className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">

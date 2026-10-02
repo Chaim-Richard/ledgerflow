@@ -1,3 +1,4 @@
+import { useDialog } from '../../../hooks/useDialog';
 import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, Trash2, Mail, ShieldCheck, Check, RefreshCw, Copy, Shield, Activity, Clock, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,6 +25,7 @@ export default function TeamSettings() {
 
   // Member activity drawer state
   const [selectedMemberForLogs, setSelectedMemberForLogs] = useState<{ uid: string; email?: string } | null>(null);
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => setSelectedMemberForLogs(null), !!selectedMemberForLogs);
   const [memberLogs, setMemberLogs] = useState<AuditLog[]>([]);
   const [logsLoading, setLogsLoading] = useState<boolean>(false);
 
@@ -492,12 +494,12 @@ export default function TeamSettings() {
 
       {/* Member Activity Modal */}
       {selectedMemberForLogs && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div {...overlayDialogProps} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
             <div className="p-4 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/40">
               <div className="flex items-center gap-2">
                 <Activity aria-hidden="true" size={18} className="text-indigo-500" />
-                <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-wider">
+                <h3 id={overlayTitleId} className="text-sm font-bold text-[var(--text)] uppercase tracking-wider">
                   Member Activity History — {selectedMemberForLogs.email || selectedMemberForLogs.uid}
                 </h3>
               </div>

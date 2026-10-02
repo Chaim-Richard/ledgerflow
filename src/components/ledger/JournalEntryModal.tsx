@@ -309,7 +309,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+        <div {...dialogProps} className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -318,7 +318,6 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
             className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
           />
           <motion.div
-            {...dialogProps}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}

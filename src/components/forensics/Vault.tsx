@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useEffect, useId } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -51,6 +52,7 @@ export default function Vault() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<CloudDocument | null>(null);
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => setSelectedDoc(null), !!selectedDoc);
   const [isScanning, setIsScanning] = useState(false);
   const [extractedData, setExtractedData] = useState<(import("../../lib/receiptIngestion").ParsedReceiptData & { merchant?: string; description?: string; category?: string; confidence: number }) | null>(null);
   const { setSafeTimeout } = useTimeout();
@@ -404,7 +406,7 @@ export default function Vault() {
 
       <AnimatePresence>
         {selectedDoc && (
-          <div className="fixed inset-0 z-[500] flex items-center justify-end">
+          <div {...overlayDialogProps} className="fixed inset-0 z-[500] flex items-center justify-end">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -425,7 +427,7 @@ export default function Vault() {
                     <FileText aria-hidden="true" size={32} />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-black text-[var(--text)] tracking-tight line-clamp-1 leading-none mb-2">{selectedDoc.name}</h2>
+                    <h2 id={overlayTitleId} className="text-2xl font-black text-[var(--text)] tracking-tight line-clamp-1 leading-none mb-2">{selectedDoc.name}</h2>
                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest truncate opacity-40 font-mono">
                       Timestamp: {format(new Date(selectedDoc.createdAt), 'yyyy-MM-dd HH:mm:ss')}
                     </p>

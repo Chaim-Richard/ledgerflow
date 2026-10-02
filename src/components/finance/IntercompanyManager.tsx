@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useMemo } from 'react';
 import { 
   ArrowLeftRight, 
@@ -25,6 +26,7 @@ export default function IntercompanyManager() {
   useLedgerStore(s => s.accounts || []);
 
   const [isAdding, setIsAdding] = useState(false);
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => setIsAdding(false), isAdding);
   const [formData, setFormData] = useState({
     targetWorkspaceId: '',
     amountCents: 0,
@@ -219,7 +221,7 @@ export default function IntercompanyManager() {
       {/* Initiation Modal */}
       <AnimatePresence>
         {isAdding && (
-          <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+          <div {...overlayDialogProps} className="fixed inset-0 z-[600] flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsAdding(false)}
@@ -230,7 +232,7 @@ export default function IntercompanyManager() {
               className="relative w-full max-w-2xl bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
               <div className="p-10 border-b border-[var(--line)]">
-                <h2 className="text-3xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
+                <h2 id={overlayTitleId} className="text-3xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
                   <ArrowLeftRight aria-hidden="true" className="text-[#0047AB]" size={32} />
                   New Cross-Entity Transfer
                 </h2>

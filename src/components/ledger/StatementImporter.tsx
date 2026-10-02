@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useId, useState } from 'react';
 import { headerSignature, mappingToSaved, savedToMapping } from '../../lib/importColumnMaps';
@@ -84,6 +85,7 @@ export default function StatementImporter({
   accounts,
   patternCache
 }: StatementImporterProps) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   const formId = useId();
   const user = useAuthStore(s => s.user);
   const [rawText, setRawText] = useState('');
@@ -406,7 +408,7 @@ export default function StatementImporter({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+    <div {...overlayDialogProps} className="fixed inset-0 z-[500] flex items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -428,7 +430,7 @@ export default function StatementImporter({
               <FileText aria-hidden="true" size={24} />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-[var(--text)] tracking-tight">Statement Intelligence</h2>
+              <h2 id={overlayTitleId} className="text-2xl font-black text-[var(--text)] tracking-tight">Statement Intelligence</h2>
               <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-wider">Rule Parsing & Causal Deduplication</p>
             </div>
           </div>

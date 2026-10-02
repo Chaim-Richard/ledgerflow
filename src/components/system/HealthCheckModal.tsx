@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Activity, CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw } from 'lucide-react';
@@ -13,6 +14,7 @@ interface HealthCheckModalProps {
 }
 
 export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalProps) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   const transactions = useLedgerStore(s => s.transactions);
   useLedgerStore(s => s.accounts);
   const bankLines = useLedgerStore(s => s.bankLines);
@@ -166,7 +168,7 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div {...overlayDialogProps} className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -187,7 +189,7 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
                 <Activity aria-hidden="true" size={20} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Ledger Health Check</h2>
+                <h2 id={overlayTitleId} className="text-xl font-bold text-slate-900">Ledger Health Check</h2>
                 <p className="text-sm text-[var(--muted)]">"Are my books right?"</p>
               </div>
             </div>

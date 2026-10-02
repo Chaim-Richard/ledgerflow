@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useMemo } from 'react';
 import { Employee, PayRun, Transaction, TransactionLine } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -33,7 +34,9 @@ export const PayrollView: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'runs' | 'employees'>('runs');
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
+  const { dialogProps: overlay1DialogProps, titleId: overlay1TitleId } = useDialog(() => setIsAddingEmployee(false), isAddingEmployee);
   const [isGeneratingRun, setIsGeneratingRun] = useState(false);
+  const { dialogProps: overlay2DialogProps, titleId: overlay2TitleId } = useDialog(() => setIsGeneratingRun(false), isGeneratingRun);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { setSafeTimeout } = useTimeout();
 
@@ -392,10 +395,10 @@ export const PayrollView: React.FC = () => {
 
       {/* Add Employee Modal */}
       {isAddingEmployee && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div {...overlay1DialogProps} className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden border border-neutral-200">
             <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
-              <h2 className="text-sm font-bold text-neutral-900">Add Employee to Roster</h2>
+              <h2 id={overlay1TitleId} className="text-sm font-bold text-neutral-900">Add Employee to Roster</h2>
               <button aria-label="Close employee dialog" onClick={() => setIsAddingEmployee(false)} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
                 <X aria-hidden="true" className="w-4 h-4" />
               </button>
@@ -519,11 +522,11 @@ export const PayrollView: React.FC = () => {
 
       {/* Generate Pay Run Modal & Preview */}
       {isGeneratingRun && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div {...overlay2DialogProps} className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-neutral-200">
             <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
               <div>
-                <h2 className="text-base font-bold text-neutral-900">Execute Pay Run</h2>
+                <h2 id={overlay2TitleId} className="text-base font-bold text-neutral-900">Execute Pay Run</h2>
                 <p className="text-xs text-neutral-500 mt-0.5">
                   Preview withholding taxes and post balanced journal entries to the ledger.
                 </p>

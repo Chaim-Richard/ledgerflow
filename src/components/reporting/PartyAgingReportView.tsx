@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
@@ -127,6 +128,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
 
   // Selected party documents for drill down
   const selectedParty = parties.find(p => p.id === selectedPartyId);
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => setSelectedPartyId(null), !!(selectedPartyId && selectedParty));
   const selectedPartyDocs = useMemo(() => {
     return selectedPartyId
       ? outstandingDocs.filter(d => {
@@ -330,7 +332,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
 
       {/* Drill-down Drawer */}
       {selectedPartyId && selectedParty && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
+        <div {...overlayDialogProps} className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl h-full shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800">
             {/* Drawer Header */}
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
@@ -341,7 +343,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                 >
                   <ArrowLeft aria-hidden="true" className="w-3 h-3" /> Back to Aging Schedule
                 </button>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                <h3 id={overlayTitleId} className="text-xl font-black text-slate-900 dark:text-white">
                   Outstanding Ledger: {selectedParty.name}
                 </h3>
               </div>

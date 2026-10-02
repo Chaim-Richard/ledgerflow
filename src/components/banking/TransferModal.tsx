@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useMemo, useId } from 'react';
 import { Transaction } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -20,6 +21,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
   onClose,
   defaultFromAccountId
 }) => {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   const amountId = useId();
   const accounts = useLedgerStore(s => s.accounts);
   const transactions = useLedgerStore(s => s.transactions);
@@ -118,12 +120,12 @@ export const TransferModal: React.FC<TransferModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div {...overlayDialogProps} className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden border border-neutral-200">
         <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
           <div className="flex items-center gap-2">
             <ArrowRightLeft aria-hidden="true" className="w-4 h-4 text-neutral-800" />
-            <h2 className="text-sm font-bold text-neutral-900">Inter-Account Transfer</h2>
+            <h2 id={overlayTitleId} className="text-sm font-bold text-neutral-900">Inter-Account Transfer</h2>
           </div>
           <button onClick={onClose} aria-label="Close transfer dialog" className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
             <X aria-hidden="true" className="w-4 h-4" />

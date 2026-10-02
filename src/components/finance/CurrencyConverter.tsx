@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import { motion } from 'motion/react';
 import { X } from 'lucide-react';
 import React, { useState, useId } from 'react';
@@ -12,6 +13,7 @@ interface CurrencyConverterProps {
 }
 
 export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverterProps) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => onClose?.(), !!isOpen);
   const formId = useId();
   const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
   const activeWorkspace = getCurrentWorkspace();
@@ -167,7 +169,8 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
   if (isOpen !== undefined) {
     if (!isOpen) return null;
     return (
-      <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+      <div {...overlayDialogProps} className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+        <h2 id={overlayTitleId} className="sr-only">Currency converter</h2>
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useSavedViewsStore, SavedViewFilter } from '../../stores/useSavedViewsStore';
@@ -30,6 +31,7 @@ export default function QueryView() {
 
   const [savedQueryName, setSavedQueryName] = useState('');
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => setShowSaveModal(false), showSaveModal);
 
   // Execute query against transactions using txFilters primitives
   const queryResults = useMemo(() => {
@@ -271,9 +273,9 @@ export default function QueryView() {
 
       {/* Save Query Modal */}
       {showSaveModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div {...overlayDialogProps} className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 max-w-md w-full">
-            <h2 className="text-base font-bold text-slate-900 mb-2">Save Custom Ledger Query</h2>
+            <h2 id={overlayTitleId} className="text-base font-bold text-slate-900 mb-2">Save Custom Ledger Query</h2>
             <p className="text-xs text-[var(--muted)] mb-4">Saved queries can be executed instantly at any time from your Saved Views drawer.</p>
             <input aria-label="Saved query name"
               type="text"

@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -10,12 +11,13 @@ import ArchitectureMonitor from './ArchitectureMonitor';
 import { useAuditTelemetry } from '../../hooks/useAuditTelemetry';
 
 export default function SystemArchitecture({ isOpen, onClose, transactions, accounts }: { isOpen: boolean; onClose: () => void; transactions?: import("../../types").Transaction[]; accounts: import("../../types").ChartAccount[] }) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   const telemetry = useAuditTelemetry(transactions!, accounts);
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
+        <div {...overlayDialogProps} className="fixed inset-0 z-[160] flex items-center justify-center p-4">
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -36,7 +38,7 @@ export default function SystemArchitecture({ isOpen, onClose, transactions, acco
                     <Layers size={24} />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-[var(--text)] tracking-tight">System Architecture</h2>
+                    <h2 id={overlayTitleId} className="text-2xl font-bold text-[var(--text)] tracking-tight">System Architecture</h2>
                     <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-widest mt-1">High-Level Deterministic Data Flow</p>
                   </div>
                </div>

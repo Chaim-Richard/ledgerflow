@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useMemo, useId } from 'react';
 import { Project, Transaction } from '../../types';
 import {
@@ -77,7 +78,9 @@ export default function Projects() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'pipeline' | 'list'>('pipeline');
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
+  const { dialogProps: overlay1DialogProps, titleId: overlay1TitleId } = useDialog(() => setIsNewProjectModalOpen(false), isNewProjectModalOpen);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const { dialogProps: overlay2DialogProps, titleId: overlay2TitleId } = useDialog(() => setEditingProject(null), !!editingProject);
   const [_saving, setSaving] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
@@ -531,7 +534,7 @@ export default function Projects() {
 
       {/* New Project Modal */}
       {isNewProjectModalOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+        <div {...overlay1DialogProps} className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -539,7 +542,7 @@ export default function Projects() {
           >
             <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-black text-[var(--text)] uppercase italic font-display">Initialize Project</h2>
+                <h2 id={overlay1TitleId} className="text-xl font-black text-[var(--text)] uppercase italic font-display">Initialize Project</h2>
                 <p className="text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider mt-1">Deploying new objective into ledger matrix</p>
               </div>
               <button
@@ -627,7 +630,7 @@ export default function Projects() {
 
       {/* Edit Project Modal */}
       {editingProject && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+        <div {...overlay2DialogProps} className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -635,7 +638,7 @@ export default function Projects() {
           >
             <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-black text-[var(--text)] uppercase italic font-display">Configure Project</h2>
+                <h2 id={overlay2TitleId} className="text-xl font-black text-[var(--text)] uppercase italic font-display">Configure Project</h2>
                 <p className="text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider mt-1">Rule settings for project matrix {editingProject.id.slice(0, 8)}</p>
               </div>
               <button

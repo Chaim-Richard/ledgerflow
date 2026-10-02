@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import React, { useState, useMemo } from 'react';
 import { User } from '../../lib/db/auth';
@@ -141,6 +142,7 @@ export default function TaxManager({
   
   const [selectedYear, setSelectedYear] = useState(workspaceYearMonth().year);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { dialogProps: taxDialogProps } = useDialog(() => setIsModalOpen(false), isModalOpen);
   const [editingRate, setEditingRate] = useState<TaxRate | null>(null);
   const [activeTab, setActiveTab] = useState<'rates' | 'contractors' | 'reporting'>('rates');
   const [includeSE, setIncludeSE] = useState(false);
@@ -429,7 +431,7 @@ export default function TaxManager({
       {/* Persistence Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+          <div {...taxDialogProps} aria-labelledby="tax-rate-form-title" className="fixed inset-0 z-[600] flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

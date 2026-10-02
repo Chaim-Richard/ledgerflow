@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useRef, useId } from 'react';
 import { Transaction, TransactionLine, ChartAccount, Project } from '../../types';
@@ -32,6 +33,7 @@ export default function SplitEditor({
   onSave,
   onClose
 }: SplitEditorProps) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, true);
   const editorId = useId();
   const [lines, setLines] = useState<TransactionLine[]>(
     transaction.lines?.length > 0 
@@ -78,7 +80,7 @@ export default function SplitEditor({
   const [expandedLineKey, setExpandedLineKey] = useState<string | null>(null);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div {...overlayDialogProps} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -86,7 +88,7 @@ export default function SplitEditor({
       >
         <div className="p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--surface)]/50">
           <div>
-            <h2 className="text-xl font-medium text-[var(--text)] tracking-tight flex items-center gap-2">
+            <h2 id={overlayTitleId} className="text-xl font-medium text-[var(--text)] tracking-tight flex items-center gap-2">
                <Layers aria-hidden="true" className="text-indigo-600" size={20} />
                Split Transaction Lines
             </h2>

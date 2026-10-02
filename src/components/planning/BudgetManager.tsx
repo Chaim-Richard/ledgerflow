@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import type { Budget } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -38,6 +39,7 @@ export default function BudgetManager() {
   const accounts = useLedgerStore((s) => s.accounts);
   useLedgerCollections('budgets');
   const [isAdding, setIsAdding] = useState(false);
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => setIsAdding(false), isAdding);
   const [editingBudget, setEditingBudget] = useState<string | null>(null);
   const [newBudget, setNewBudget] = useState({
     targetId: '',
@@ -295,7 +297,7 @@ export default function BudgetManager() {
       {/* Add Budget Modal */}
       <AnimatePresence>
         {isAdding && (
-          <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+          <div {...overlayDialogProps} className="fixed inset-0 z-[500] flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -311,7 +313,7 @@ export default function BudgetManager() {
             >
               <div className="flex items-center justify-between mb-10">
                  <div>
-                    <h2 className="text-2xl md:text-4xl font-black text-[var(--text)] tracking-tight uppercase italic">Define Objective</h2>
+                    <h2 id={overlayTitleId} className="text-2xl md:text-4xl font-black text-[var(--text)] tracking-tight uppercase italic">Define Objective</h2>
                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.3em] mt-1 opacity-50">Operational Resource Allocation</p>
                  </div>
                  <button onClick={() => setIsAdding(false)} aria-label="Close budget dialog" className="w-12 h-12 bg-[var(--ink)] rounded-[32px] flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] transition-all rotate-45 border border-[var(--line)]">

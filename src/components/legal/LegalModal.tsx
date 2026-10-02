@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState } from 'react';
 import { X, ShieldCheck, FileText, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -9,13 +10,14 @@ interface LegalModalProps {
 }
 
 export default function LegalModal({ isOpen, onClose, initialTab = 'terms' }: LegalModalProps) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   const [activeTab, setActiveTab] = useState<'terms' | 'privacy'>(initialTab);
 
   if (!isOpen) return null;
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div {...overlayDialogProps} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -29,7 +31,7 @@ export default function LegalModal({ isOpen, onClose, initialTab = 'terms' }: Le
                 {activeTab === 'privacy' ? <ShieldCheck size={20} /> : <FileText size={20} />}
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 id={overlayTitleId} className="text-lg font-bold text-slate-900">
                   {activeTab === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}
                 </h2>
                 <p className="text-xs text-[var(--muted)] font-medium">LedgerFlow Platform Compliance & Legal Agreement</p>

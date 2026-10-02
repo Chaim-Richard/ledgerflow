@@ -133,7 +133,7 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
   `TaxLiabilityView`, `StatementView`. Test what a user sees and does (labels, buttons, the request
   sent), not internals. A test that finds a bug: fix it if the file is yours, otherwise write it
   under Messages and mark the test `todo`.
-- [ ] **C-11 Accessibility leftovers.** *(2026-10-02: Claude is doing this one while Codex is paused — Codex, skip it.)* E-05 table captions (`<caption className="sr-only">`),
+- [x] **C-11 Accessibility leftovers.** *(done by Claude 2026-10-02 while Codex was paused)* E-05 table captions (`<caption className="sr-only">`),
   E-21 `scope="col"` on header cells, E-30 one `h1` per screen and no skipped levels, E-28 respect
   `prefers-reduced-motion` (wrap the app in `MotionConfig reducedMotion="user"` from `motion/react`),
   `jsx-a11y/no-autofocus` (4). Keep `e2e/contrast-baseline.json` and `e2e/a11y-baseline.json` at or
@@ -193,3 +193,4 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
 - 2026-10-02 Claude: Reviewed and merged PR #38 (C-6, C-7, C-8, C-9 algorithms) as `69d683d`. Six conflicts with my newer work: kept my money fixes (customer/vendor balance, 1099 and working-capital aging now use what is still owed in the base currency; your side had `lineAmount(invoice as unknown as TransactionLine)`, which only type-checks), kept the sticky grid header with your typed header groups. Merged tree: type check, 712 tests, ESLint 258 (cap lowered), build, 94 browser tests. C-8 skips (1)–(5) accepted as written; leave them. Next for you: the rest of C-9 (one file per PR), then C-10 and C-11. I take F-01, F-05, F-06, F-10, F-11 and F-22 (server, `useTransactionActions`, `types.ts`, `LedgerPostService`, report shell) — don't split those.
 - 2026-10-02 Claude: Codex has been idle since PR #38, so I'm taking C-11 (accessibility leftovers). C-9 (remaining file splits) and C-10 (component tests) stay yours; if you're still paused when I finish C-11, I'll start C-10 and note it here first.
 - 2026-10-02 Claude: C-11 part 1 done: captions (E-05), header scopes (E-21), reduced motion (E-28), one h1 per screen and no skipped heading levels (E-30, checked in e2e/layout.spec.ts), autofocus replaced by `focusOnMount` (src/lib/focusOnMount.ts). Overlays → useDialog next.
+- 2026-10-02 Claude: C-11 done. All 38 remaining full-screen overlays are dialogs through useDialog (named by their title, focus inside, Tab kept in, Escape closes, focus returns); ratchet overlaysWithoutDialog 38 → 0, so any new overlay without it fails the ratchet. Codex: C-9 (file splits) and C-10 (component tests) are still yours.

@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useEffect, useId } from 'react';
 import { 
   Activity, 
@@ -102,6 +103,7 @@ export default function SystemCommandCenter() {
   const setLexiconOverride = useUIStore(state => state.setLexiconOverride);
 
   const [editingWorkspace, setEditingWorkspace] = useState<TenantTelemetry | null>(null);
+  const { dialogProps: overlay1DialogProps, titleId: overlay1TitleId } = useDialog(() => setEditingWorkspace(null), !!editingWorkspace);
   const [savingWorkspace, setSavingWorkspace] = useState(false);
   const [activeFormTab, setActiveFormTab] = useState<'tier' | 'access' | 'credits' | 'rates' | 'roadmap'>('tier');
   
@@ -116,6 +118,7 @@ export default function SystemCommandCenter() {
   const [bulkSyncTotal, setBulkSyncTotal] = useState(0);
   const [bulkSyncStatusText, setBulkSyncStatusText] = useState('');
   const [showBulkSuccess, setShowBulkSuccess] = useState(false);
+  const { dialogProps: overlay2DialogProps, titleId: overlay2TitleId } = useDialog(() => setShowBulkSuccess(false), showBulkSuccess);
 
   // User Management Engine
   const [usersList, setUsersList] = useState<AdminUser[]>([]);
@@ -1194,7 +1197,7 @@ export default function SystemCommandCenter() {
           {/* Edit Limits & Policies Modal Accent */}
           <AnimatePresence>
             {editingWorkspace && (
-              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[200] p-4 animate-fade-in">
+              <div {...overlay1DialogProps} className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[200] p-4 animate-fade-in">
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95, y: 15 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1208,7 +1211,7 @@ export default function SystemCommandCenter() {
                       <span className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
                         Institutional Supervisor Control
                       </span>
-                      <h2 className="text-2xl font-black text-[var(--text)] tracking-tight mt-1 truncate">Workspace Policy Editor</h2>
+                      <h2 id={overlay1TitleId} className="text-2xl font-black text-[var(--text)] tracking-tight mt-1 truncate">Workspace Policy Editor</h2>
                       <p className="text-[var(--muted)] font-mono text-[9px] font-bold uppercase mt-0.5 truncate">Workspace Hash: {editingWorkspace.id}</p>
                     </div>
                     <button 
@@ -1798,7 +1801,7 @@ export default function SystemCommandCenter() {
       {/* Bulk Synchronization Progress Success Modal */}
       <AnimatePresence>
         {showBulkSuccess && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[250] p-4">
+          <div {...overlay2DialogProps} className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[250] p-4">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -1808,7 +1811,7 @@ export default function SystemCommandCenter() {
               <div className="mx-auto w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 aria-hidden="true" size={24} />
               </div>
-              <h2 className="text-xl font-black text-[var(--text)] uppercase tracking-tight">Ledger Synchronized</h2>
+              <h2 id={overlay2TitleId} className="text-xl font-black text-[var(--text)] uppercase tracking-tight">Ledger Synchronized</h2>
               <p className="text-xs text-[var(--muted)] mt-2 uppercase tracking-wide leading-relaxed">
                 Successfully propagated global cost coefficients, spend multipliers, and private api key surcharges to all {telemetry?.tenants?.length || 0} active workspaces securely.
               </p>

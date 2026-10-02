@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useEffect, useId } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import {
@@ -74,6 +75,7 @@ export default function ApiHub() {
   const [selectedScopes, setSelectedScopes] = useState<string[]>(AVAILABLE_SCOPES.map(s => s.id));
   const [expiration, setExpiration] = useState<'never' | '1h' | '24h' | '30d' | '90d'>('never');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => setShowCreateModal(false), showCreateModal);
 
   // Corporate Billing and Computational Resource Metering
   const [simSeatsCount, setSimSeatsCount] = useState(1);
@@ -858,7 +860,7 @@ export default function ApiHub() {
 
           {/* CREATE DETAILED KEY MODAL */}
           {showCreateModal && (
-            <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div {...overlayDialogProps} className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
               <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex justify-between items-center p-6 border-b border-[var(--line)]">
                   <div className="flex items-center gap-3">
@@ -866,7 +868,7 @@ export default function ApiHub() {
                       <Key aria-hidden="true" size={20} />
                     </div>
                     <div>
-                      <h3 className="font-bold text-[var(--text)] font-display text-base">Provision New Developer Credential</h3>
+                      <h3 id={overlayTitleId} className="font-bold text-[var(--text)] font-display text-base">Provision New Developer Credential</h3>
                       <p className="text-xs text-[var(--muted)] font-mono mt-0.5">Workspace: {currentWorkspace?.name}</p>
                     </div>
                   </div>
