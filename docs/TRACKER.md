@@ -1578,7 +1578,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-16 Health endpoint
 - [x] L-17 Status page: public /status (no sign-in) from GET /api/v1/public/status — app, database, daily job (recorded by the cron, late/failed = problems), sign-in, email, card payments, bank feeds (set up or not); 30 s cache (tested + browser test)
 - [ ] L-18 i18n: finish or remove
-- [ ] L-19 Onboarding wizard → balanced trial balance
+- [x] L-19 Setup wizard for new workspaces: business basics, chart template, opening balances posted as one entry that balances by construction (difference → Opening Balance Equity; receivables/payables come from invoices/bills), or start from zero; owners/accountants; server-side, audited (tested). The old welcome screen's "Explore with sample data" button only showed a toast; removed
 - [ ] L-20 Docs page for all 74 views
 - [x] L-21 Lockfile-platforms guard test
 - [x] L-22 Type check as its own CI step
@@ -1787,7 +1787,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] P-06 Usage metering
 - [ ] P-07 In-app changelog
 - [ ] P-08 Product tour
-- [ ] P-09 Onboarding checklist
+- [x] P-09 Onboarding (= L-19 setup wizard)
 - [ ] P-10 Referrals
 - [ ] P-11 Multi-language documents
 - [ ] P-12 Per-customer templates
@@ -2152,7 +2152,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BN-07 Runbooks
 - [ ] BO-01 Contextual help per view
 - [ ] BO-02 Searchable docs
-- [ ] BO-03 First-run wizard
+- [x] BO-03 First-run wizard (= L-19)
 - [ ] BO-04 Video walkthroughs
 - [ ] BO-05 Feedback widget
 - [x] BO-06 Status page link in Help ("Something not working? System status")

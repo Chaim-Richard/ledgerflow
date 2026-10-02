@@ -20,6 +20,8 @@ import { useUIStore } from '../stores/useUIStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { TaxReserveWidget } from './finance/TaxReserveWidget';
 import OnboardingView from './onboarding/OnboardingView';
+import SetupWizard from './onboarding/SetupWizard';
+import { useDataNeedsStore } from '../stores/useDataNeedsStore';
 import SavedViewsBar from './ui/SavedViewsBar';
 import { formatCurrency, resolveAccountName, cn } from '../lib/utils';
 import { isPostable, lineAmount } from '../lib/txFilters';
@@ -55,6 +57,14 @@ export default function Dashboard() {
   // Setup completion criteria:
   // Brand new workspace has 0 transactions AND 0 accounts.
   const isCompletelyEmpty = rawTransactions.length === 0 && accounts.length === 0;
+  // First-run setup (L-19): a signed-in workspace not set up yet and without entries (once its
+  // entries have loaded). The wizard stays until finished, even after it posts the first entry.
+  const isGuest = useAuthStore(s => s.isGuest);
+  const transactionsLoaded = useDataNeedsStore(s => Boolean(s.loaded.transactions));
+  const workspaceForSetup = workspaces.find(w => w.id === currentWorkspaceId);
+  const needsSetup = !isGuest && Boolean(workspaceForSetup) && !workspaceForSetup?.setupCompletedAt && transactionsLoaded && rawTransactions.length === 0;
+  const [setupStarted, setSetupStarted] = useState(false);
+  const [setupClosed, setSetupClosed] = useState(false);
 
   // Lens state: 'owner' vs 'accountant'
   const [lens, setLens] = useState<'owner' | 'accountant'>('owner');
@@ -201,6 +211,10 @@ export default function Dashboard() {
       color: colors[type] || 'var(--brass)'
     }));
   }, [activeAccounts]);
+
+  if ((needsSetup || setupStarted) && !setupClosed) {
+    return <SetupWizard onStarted={() => setSetupStarted(true)} onDone={() => setSetupClosed(true)} />;
+  }
 
   if (isCompletelyEmpty) {
     return <OnboardingView />;

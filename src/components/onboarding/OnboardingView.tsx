@@ -1,10 +1,7 @@
-import React, { useState } from 'react';
-import { Building2, UploadCloud, PieChart, Sparkles, Plus, ArrowRight, Play, ServerCog, Layers } from 'lucide-react';
+import React from 'react';
+import { UploadCloud, PieChart, Sparkles, Plus, ServerCog, Layers } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
-import { useAuthStore } from '../../stores/useAuthStore';
 import { SYSTEM_GLOSSARY } from '../../config/registry';
-import { toast } from 'sonner';
-import { useTimeout } from '../../hooks/useTimeout';
 
 export default function OnboardingView() {
   const setQuickEntryOpen = useUIStore(s => s.setQuickEntryOpen);
@@ -12,25 +9,10 @@ export default function OnboardingView() {
   const setActiveTab = useUIStore(s => s.setActiveTab);
   const language = useUIStore(s => s.language) as 'en' | 'he';
   
-  const [isDemoLoading, setIsDemoLoading] = useState(false);
-  const { setSafeTimeout } = useTimeout();
 
   // Helper for translated terms with fallbacks
   const t = (key: string, defaultVal: string) => {
     return SYSTEM_GLOSSARY[key]?.[language] || defaultVal;
-  };
-
-  const loadDemoData = () => {
-    setIsDemoLoading(true);
-    toast.promise(new Promise(resolve => setTimeout(resolve, 2500)), {
-      loading: language === 'he' ? 'טוען סביבת הדגמה...' : 'Synthesizing demo data matrix...',
-      success: language === 'he' ? 'סביבת ההדגמה נטענה בהצלחה.' : 'Demo environment fully populated.',
-      error: language === 'he' ? 'שגיאה בטעינת נתוני הדגמה.' : 'Failed to load demo.'
-    });
-    setSafeTimeout(() => {
-      setIsDemoLoading(false);
-      setActiveTab('dashboard');
-    }, 2500);
   };
 
   return (
@@ -130,22 +112,6 @@ export default function OnboardingView() {
             {language === 'he' ? 'רישום תנועה ראשונה ידנית' : 'Record First Entry Manually'}
           </button>
           
-          <span className="text-[var(--faint)] font-mono text-xs uppercase tracking-widest hidden sm:inline-block">
-            {language === 'he' ? 'או' : 'or'}
-          </span>
-          
-          <button 
-            type="button"
-            onClick={loadDemoData}
-            disabled={isDemoLoading}
-            className="w-full sm:w-auto px-6 py-3 bg-[var(--elevated)] border border-[var(--line)] text-[var(--text)] font-medium rounded-xl hover:bg-[var(--line)] transition-colors flex items-center justify-center gap-2 cursor-pointer"
-           aria-label=") : ( <> )}">
-            {isDemoLoading ? (
-              <span className="flex items-center gap-2"><Sparkles className="w-4 h-4 animate-pulse text-[var(--brass)]" /> {language === 'he' ? 'טוען סביבה...' : 'Loading Matrix...'}</span>
-            ) : (
-              <><Play className="w-4 h-4 text-emerald-500" /> {language === 'he' ? 'חקור נתוני הדגמה' : 'Explore with Sample Data'}</>
-            )}
-          </button>
         </div>
 
       </div>

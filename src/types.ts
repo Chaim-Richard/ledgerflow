@@ -81,6 +81,10 @@ export interface Workspace {
   lastUpgradedAt?: string;
   deletedAt?: string;
   scheduledPurgeAt?: string;
+  /** First-run setup finished (src/server/services/openingBalanceService.ts). Server-only. */
+  setupCompletedAt?: string;
+  /** The start date of the books (opening balances). Server-only. */
+  openingBalanceDate?: string;
   /** How long logs are kept, recovery window, legal hold (src/lib/retention.ts). Server-only. */
   retention?: Partial<import('./lib/retention').RetentionSettings>;
   /** 'pending_deletion' while a deleted workspace waits out its 30 days */

@@ -16,6 +16,7 @@ import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
 import { retentionFor, RetentionSettingsSchema, scheduledPurgeAt as purgeDate } from '../../lib/retention';
 import { RetentionError, updateRetention } from '../services/retentionService';
+import { completeSetup, recordOpeningBalances, SetupError } from '../services/openingBalanceService';
 
 export const workspaceRouter = express.Router();
 
@@ -470,6 +471,37 @@ workspaceRouter.delete('/:workspaceId/invites/:inviteId', requireWorkspaceRole([
     res.json({ status: 'success', message: 'Invite revoked successfully' });
   } catch (err: any) {
     sendError(res, 'Failed to revoke invite', 500, err.message);
+  }
+});
+
+/** First-run setup (L-19): opening balances as one balanced entry, or "start from zero". */
+const openingBalancesSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  balances: z.array(z.object({ accountId: z.string().min(1).max(127), amountCents: z.number().int() }).strict()).max(300),
+}).strict();
+
+workspaceRouter.post('/:workspaceId/opening-balances', requireWorkspaceRole(['owner', 'accountant']), async (req, res) => {
+  const { workspaceId } = req.params as Record<string, string>;
+  const parsed = openingBalancesSchema.safeParse(req.body);
+  if (!parsed.success) return sendError(res, 'Invalid opening balances', 400, parsed.error.issues.map(i => i.message).join('; '));
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    const result = await recordOpeningBalances(getDb(), { workspaceId, uid: user.uid, email: user.email, ...parsed.data });
+    res.json({ status: 'success', ...result });
+  } catch (err) {
+    if (err instanceof SetupError) return sendError(res, err.message, err.status);
+    sendError(res, 'Failed to record the opening balances', 500, err instanceof Error ? err.message : String(err));
+  }
+});
+
+workspaceRouter.post('/:workspaceId/setup-complete', requireWorkspaceRole(['owner', 'accountant']), async (req, res) => {
+  const { workspaceId } = req.params as Record<string, string>;
+  try {
+    await completeSetup(getDb(), { workspaceId, uid: (req as AuthenticatedRequest).user.uid });
+    res.json({ status: 'success' });
+  } catch (err) {
+    if (err instanceof SetupError) return sendError(res, err.message, err.status);
+    sendError(res, 'Failed to finish the setup', 500, err instanceof Error ? err.message : String(err));
   }
 });
 
