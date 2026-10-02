@@ -1565,7 +1565,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-03 `test:e2e` in CI — runs fully (23 pass, 8 fail)
 - [x] L-04 `npm audit` in CI — green
 - [x] L-05 TZ matrix in CI: Auckland + Los Angeles (94661cd) — found L-79 on its first run
-- [ ] L-06 Triage dependabot PRs (#25, #2, #3, #4) — CARD 3.4
+- [~] L-06 Dependencies: all in-range updates applied on main 2026-10-02 (the Dependabot group PR closes itself); majors wait for a feature that needs them (Vite 8, TypeScript 7, Recharts 3, Plaid 47, Stripe 23, React Window 2…); npm audit clean
 - [x] L-07 Backup restore test: export → change → restore gives the same trial balance and documents (database test); backup holds all the books
 - [ ] L-08 Per-workspace retention settings
 - [x] L-09 Account deletion: shared workspaces handed over (or blocked with a clear message), solo ones scheduled for deletion, personal data removed (tested)
