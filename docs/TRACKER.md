@@ -1570,7 +1570,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] L-08 Per-workspace retention settings
 - [x] L-09 Account deletion: shared workspaces handed over (or blocked with a clear message), solo ones scheduled for deletion, personal data removed (tested)
 - [x] L-10 Download my data (Settings → Security; tested)
-- [ ] L-11 Record of processing activities
+- [x] L-11 Record of processing activities: docs/privacy/ROPA.md (controller + processor parts, rights; company details for you to fill in)
 - [x] L-12 Structured logging: `src/server/utils/logger.ts` (JSON lines) used by server.ts (94661cd)
 - [x] L-13 `console.log` in `server.ts`: 0 (94661cd)
 - [x] L-14 Browser errors and screen crashes reported to errorLogs with a daily digest; server errors as JSON log lines

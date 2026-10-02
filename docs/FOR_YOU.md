@@ -58,6 +58,11 @@ Last updated: 2026-10-02.
 9. **Old settings to delete** in Vercel (unused since the move to Supabase): `FIREBASE_PROJECT_ID`,
    `SQL_*`, `JWT_SECRET`.
 
+17. **Privacy papers (before real customers, 15 minutes + a lawyer).** Put your company name,
+   address and privacy email into `docs/privacy/ROPA.md` and `docs/privacy/DPA_TEMPLATE.md`
+   (Claude wrote everything else from the code), then have someone who knows the law where you
+   operate read them.
+
 ## B. Decisions (Claude uses the default until you say otherwise)
 
 10. **Hebrew.** Some screens have Hebrew labels, most don't. Finish Hebrew everywhere, or remove
