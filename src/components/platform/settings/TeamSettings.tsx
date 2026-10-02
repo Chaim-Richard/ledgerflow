@@ -313,8 +313,8 @@ export default function TeamSettings() {
               {ROLE_DESCRIPTIONS[selectedRole].summary}
             </p>
             <div className="flex flex-wrap gap-2 pt-1">
-              {ROLE_DESCRIPTIONS[selectedRole].permissions.map((perm, idx) => (
-                <span key={idx} className="px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] font-semibold rounded-md flex items-center gap-1">
+              {ROLE_DESCRIPTIONS[selectedRole].permissions.map((perm) => (
+                <span key={perm} className="px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] font-semibold rounded-md flex items-center gap-1">
                   <Check size={10} className="text-indigo-400" /> {perm}
                 </span>
               ))}

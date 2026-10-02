@@ -34,6 +34,7 @@ export default function Copilot() {
 
   const [messages, setMessages] = useState([
     { 
+      id: 0,
       role: "assistant", 
       content: "I am your advanced financial modeling intelligence. Connected with **verified read-only access** to your live general ledger. How may I assist your strategy today?" 
     },
@@ -41,6 +42,12 @@ export default function Copilot() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const nextMessageId = useRef(1);
+
+  const appendMessage = (role: 'assistant' | 'user', content: string) => {
+    const id = nextMessageId.current++;
+    setMessages(m => [...m, { id, role, content }]);
+  };
 
   useEffect(() => { 
     endRef.current?.scrollIntoView({ behavior: "smooth" }); 
@@ -48,7 +55,7 @@ export default function Copilot() {
 
   const ask = async (question: string) => {
     if (!question.trim() || loading) return;
-    setMessages((m) => [...m, { role: "user", content: question }]);
+    appendMessage('user', question);
     setInput("");
     setLoading(true);
     try {
@@ -148,9 +155,9 @@ export default function Copilot() {
         answer = `*Ledger Intelligence Offline Fallback*\n\n**Financial Snapshot:**\n- **Verified Cash:** ${ledgerSummary.totalCash}\n- **Estimated Burn Rate:** ${ledgerSummary.monthlyBurn} / mo\n- **Runway:** ${ledgerSummary.runwayMonths} months\n- **Accounts Receivable:** ${ledgerSummary.totalAccountsReceivable}\n- **Accounts Payable:** ${ledgerSummary.totalAccountsPayable}\n\n*(Notice: Live Gemini backend unreachable: ${err.message}. Operating in deterministic heuristic mode).*`;
       }
       
-      setMessages((m) => [...m, { role: "assistant", content: answer }]);
+      appendMessage('assistant', answer);
     } catch (err: any) {
-      setMessages((m) => [...m, { role: "assistant", content: "**Error computing metric**: " + err.message }]);
+      appendMessage('assistant', "**Error computing metric**: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -189,9 +196,9 @@ export default function Copilot() {
       <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 space-y-6 custom-scrollbar relative bg-[var(--ink)]/50">
         <div className="max-w-4xl mx-auto space-y-6 pb-20">
           <AnimatePresence initial={false}>
-            {messages.map((m, i) => (
+            {messages.map(m => (
               <motion.div 
-                key={i} 
+                key={m.id}
                 initial={{ opacity: 0, y: 10, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 className={`flex gap-4 ${m.role === "user" ? "justify-end" : ""}`}

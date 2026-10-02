@@ -2,6 +2,16 @@ import React, { useState, KeyboardEvent } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
+function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const content = identity(item);
+    const occurrence = occurrences.get(content) ?? 0;
+    occurrences.set(content, occurrence + 1);
+    return { item, key: JSON.stringify([content, occurrence]) };
+  });
+}
+
 interface TagInputProps {
   tags: string[];
   onChange: (tags: string[]) => void;
@@ -35,8 +45,8 @@ export default function TagInput({ tags, onChange, disabled, placeholder = "Add 
 
   return (
     <div className={cn("flex flex-wrap items-center gap-1.5 p-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl focus-within:border-zinc-400 transition-colors", className, disabled && "opacity-50 bg-[var(--ink)] cursor-not-allowed")}>
-      {tags.map((tag, index) => (
-        <span key={index} className="flex items-center gap-1 px-2 py-0.5 bg-zinc-100 text-zinc-700 text-xs rounded-md">
+      {withOccurrenceKeys(tags, tag => tag).map(({ item: tag, key }, index) => (
+        <span key={key} className="flex items-center gap-1 px-2 py-0.5 bg-zinc-100 text-zinc-700 text-xs rounded-md">
           {tag}
           {!disabled && (
             <button

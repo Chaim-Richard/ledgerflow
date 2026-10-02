@@ -16,6 +16,16 @@ interface ToolSandboxProps {
   onClose: () => void;
 }
 
+function withStableKeys<T>(items: T[], getContentKey: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const contentKey = getContentKey(item);
+    const occurrence = occurrences.get(contentKey) ?? 0;
+    occurrences.set(contentKey, occurrence + 1);
+    return { item, key: JSON.stringify([contentKey, occurrence]) };
+  });
+}
+
 export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
   const setActiveTab = useUIStore(state => state.setActiveTab);
   const transactions = useLedgerStore(state => state.transactions || []);
@@ -283,8 +293,8 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
            <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#fafafa] dark:bg-[#161718] p-4 md:p-8 space-y-8">
                {/* Metrics Row */}
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {results.metrics.map((m: any, idx: number) => (
-                     <div key={idx} className="p-6 bg-[var(--surface)] dark:bg-[#1b1c1d] border border-[var(--line)] rounded-[32px] shadow-sm">
+                  {withStableKeys(results.metrics, m => m.label).map(({ item: m, key }) => (
+                     <div key={key} className="p-6 bg-[var(--surface)] dark:bg-[#1b1c1d] border border-[var(--line)] rounded-[32px] shadow-sm">
                         <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)] block mb-1">{m.label}</span>
                         <h4 className="text-3xl font-black text-[var(--text)] dark:text-white tracking-tighter italic">
                            {m.value}
@@ -295,8 +305,8 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                </div>
 
                {/* Engine Output Chart */}
-               {results.charts.map((c: any, idx: number) => (
-                  <div key={idx} className="p-6 bg-[var(--surface)] dark:bg-[#1b1c1d] border border-[var(--line)] rounded-[32px] shadow-sm h-96 flex flex-col">
+               {withStableKeys(results.charts, c => JSON.stringify(c.config)).map(({ item: c, key }) => (
+                  <div key={key} className="p-6 bg-[var(--surface)] dark:bg-[#1b1c1d] border border-[var(--line)] rounded-[32px] shadow-sm h-96 flex flex-col">
                      <div className="flex justify-between items-center mb-6">
                          <h3 className="text-sm font-black uppercase tracking-wider text-[var(--text)] dark:text-white flex items-center gap-2">
                             <BarChart3 size={16} /> Operational Topology Projection
@@ -325,8 +335,8 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                <div className="p-6 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900 rounded-[32px] space-y-4">
                   <h3 className="text-xs font-black uppercase tracking-wider text-indigo-800 dark:text-indigo-400">Algorithmic Consensus Output</h3>
                   <div className="space-y-2">
-                     {results.insights.map((ins: string, i: number) => (
-                        <div key={i} className="flex gap-3 text-sm text-indigo-900 dark:text-indigo-200">
+                     {withStableKeys(results.insights, ins => ins).map(({ item: ins, key }) => (
+                        <div key={key} className="flex gap-3 text-sm text-indigo-900 dark:text-indigo-200">
                            <CheckCircle2 size={16} className="text-indigo-500 shrink-0 mt-0.5" />
                            <p className="leading-relaxed font-medium">{ins}</p>
                         </div>
@@ -390,8 +400,10 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                          </tr>
                        </thead>
                        <tbody className="divide-y divide-white/5 font-mono">
-                         {results.rows.map((row: any, idx: number) => (
-                           <tr key={row.id || idx} className="hover:bg-white/5 transition-colors">
+                         {withStableKeys(results.rows, row => JSON.stringify(
+                           row.id != null ? ['id', row.id] : tableColumns.map(col => [col.key, String(row[col.key] ?? '')])
+                         )).map(({ item: row, key }) => (
+                           <tr key={key} className="hover:bg-white/5 transition-colors">
                              {tableColumns.map(col => {
                                const val = row[col.key];
                                const isFlagType = col.key === 'type';

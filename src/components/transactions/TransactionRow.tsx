@@ -21,16 +21,26 @@ import AsyncButton from '../ui/AsyncButton';
 import CategoryWhyPopover from '../common/CategoryWhyPopover';
 import { isLockedDate } from '../../lib/periodLock';
 
+function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const content = identity(item);
+    const occurrence = occurrences.get(content) ?? 0;
+    occurrences.set(content, occurrence + 1);
+    return { item, key: JSON.stringify([content, occurrence]) };
+  });
+}
+
 const HighlightMatch = ({ text, match }: { text: string; match?: string }) => {
   if (!match) return <>{text}</>;
   const parts = text.split(new RegExp(`(${match})`, 'gi'));
   return (
     <>
-      {parts.map((p, i) =>
+      {withOccurrenceKeys(parts, part => part).map(({ item: p, key }) =>
         p.toLowerCase() === match.toLowerCase() ? (
-          <mark key={i} className="bg-yellow-200 text-yellow-900 rounded-[2px] px-0.5 font-bold">{p}</mark>
+          <mark key={key} className="bg-yellow-200 text-yellow-900 rounded-[2px] px-0.5 font-bold">{p}</mark>
         ) : (
-          <span key={i}>{p}</span>
+          <span key={key}>{p}</span>
         )
       )}
     </>
@@ -226,8 +236,8 @@ const TransactionRow = React.memo(({
             isFocused && focusedField === 'category' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}>
             <div className="flex flex-col gap-1 w-full">
-              {tx.lines?.slice(0, 2).map((line, idx) => (
-                <div key={line.id || `${line.accountId}-${idx}`} className="flex items-center justify-between gap-1 w-full">
+              {withOccurrenceKeys(tx.lines?.slice(0, 2) || [], line => line.id || JSON.stringify([line.accountId, line.description, line.project, line.class, line.location])).map(({ item: line, key }, idx) => (
+                <div key={key} className="flex items-center justify-between gap-1 w-full">
                   <span 
                     dir="auto"
                     className={cn(
@@ -254,9 +264,9 @@ const TransactionRow = React.memo(({
                 </div>
               ))}
               
-              {tx.lines?.map(l => l.tags || []).flat().filter((v, i, a) => a.indexOf(v) === i).slice(0, 2).map((tag, idx) => (
+              {tx.lines?.map(l => l.tags || []).flat().filter((v, i, a) => a.indexOf(v) === i).slice(0, 2).map(tag => (
                 <span 
-                  key={`tag-${idx}`}
+                  key={`tag-${tag}`}
                   dir="auto"
                   className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest truncate w-full border transition-all bg-indigo-50 text-indigo-600 border-indigo-200 group-hover/active:bg-indigo-500 group-hover/active:text-white group-hover/active:border-white/20"
                 >

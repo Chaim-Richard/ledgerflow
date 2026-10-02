@@ -11,6 +11,16 @@ import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { parseExcelToRows } from '../../lib/excelExport';
 import { resolveAccountRole } from '../../lib/accountUtils';
 
+function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const content = identity(item);
+    const occurrence = occurrences.get(content) ?? 0;
+    occurrences.set(content, occurrence + 1);
+    return { item, key: JSON.stringify([content, occurrence]) };
+  });
+}
+
 interface ParsedRow {
   date: string;
   num?: string;
@@ -651,8 +661,8 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--line)]">
-                          {parsedRows.slice(0, 3).map((r, i) => (
-                            <tr key={i}>
+                          {withOccurrenceKeys(parsedRows.slice(0, 3), row => JSON.stringify(row)).map(({ item: r, key }) => (
+                            <tr key={key}>
                               <td className="p-2 font-mono">{r.date}</td>
                               <td className="p-2 truncate max-w-[200px]">{r.payee || r.memo}</td>
                               <td className="p-2 font-medium">{r.account}</td>
@@ -696,7 +706,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
                     </thead>
                     <tbody className="divide-y divide-[var(--line)]">
                       {accountMappings.map((m, idx) => (
-                        <tr key={idx} className="hover:bg-[var(--surface)] transition-colors">
+                        <tr key={m.qbAccount} className="hover:bg-[var(--surface)] transition-colors">
                           <td className="p-3 font-bold text-[var(--text)]">
                             {m.qbAccount}
                           </td>

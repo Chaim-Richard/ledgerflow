@@ -27,6 +27,14 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
   if (!isOpen) return null;
   if (!parsedData) return null;
 
+  const lineOccurrences = new Map<string, number>();
+  const keyedLineItems = parsedData.lineItems.map(item => {
+    const content = JSON.stringify([item.description, item.amountCents, item.categorySuggestion]);
+    const occurrence = lineOccurrences.get(content) || 0;
+    lineOccurrences.set(content, occurrence + 1);
+    return { item, key: JSON.stringify([content, occurrence]) };
+  });
+
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 md:p-4 md:p-10">
       <motion.div 
@@ -114,8 +122,8 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
           <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-6">
             <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest">Line Item Splits</h3>
             <div className="space-y-3">
-              {parsedData.lineItems.map((item, idx) => (
-                <div key={idx} className="group p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] hover:border-zinc-900 transition-all">
+              {keyedLineItems.map(({ item, key }) => (
+                <div key={key} className="group p-4 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] hover:border-zinc-900 transition-all">
                   <div className="flex justify-between items-start mb-2">
                     <p className="font-bold text-[var(--text)] text-sm leading-tight">{item.description}</p>
                     <p className="font-mono font-bold text-[var(--text)] tabular-nums">{formatCurrency(item.amountCents, parsedData.currency)}</p>

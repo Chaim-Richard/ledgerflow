@@ -241,8 +241,8 @@ const ForensicAudit = React.memo(() => {
                  Compliance Radar
               </h4>
               <div className="space-y-4">
-                 {complianceStats.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm">
+                 {complianceStats.map(item => (
+                    <div key={item.label} className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm">
                        <span className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest">{item.label}</span>
                        <div className="flex items-center gap-2">
                           <span className={cn("text-xs font-black", item.status === 'pass' ? 'text-emerald-600' : 'text-amber-500')}>{item.count}</span>

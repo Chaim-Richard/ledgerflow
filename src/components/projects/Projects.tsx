@@ -33,6 +33,16 @@ import { Labelled } from '../ui/Labelled';
 import { EmptyState } from '../ui/EmptyState';
 import { LoadingState } from '../ui/LoadingState';
 
+function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const contentKey = keyForItem(item);
+    const occurrence = occurrences.get(contentKey) ?? 0;
+    occurrences.set(contentKey, occurrence + 1);
+    return { item, key: JSON.stringify([contentKey, occurrence]) };
+  });
+}
+
 export default function Projects() {
   const user = useAuthStore(s => s.user);
   const projects = useLedgerStore(s => s.projects);
@@ -474,8 +484,8 @@ export default function Projects() {
                     </div>
                     
                     <div className="space-y-3">
-                      {selectedProject.splitRules?.map((rule, idx) => (
-                        <div key={idx} className="space-y-1">
+                      {selectedProject.splitRules && withOccurrenceKeys(selectedProject.splitRules, rule => JSON.stringify([rule.partnerId, rule.partnerName, rule.percentage])).map(({ item: rule, key }) => (
+                        <div key={key} className="space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] font-semibold text-[var(--muted)]">{rule.partnerName}</span>
                             <span className="text-[10px] font-bold font-mono text-[var(--text)]">{rule.percentage}%</span>

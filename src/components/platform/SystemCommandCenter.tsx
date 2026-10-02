@@ -42,6 +42,16 @@ const fetchWithAuth = async (url: string, options: any = {}) => {
   return fetch(url, { ...options, headers });
 };
 
+function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const contentKey = keyForItem(item);
+    const occurrence = occurrences.get(contentKey) ?? 0;
+    occurrences.set(contentKey, occurrence + 1);
+    return { item, key: JSON.stringify([contentKey, occurrence]) };
+  });
+}
+
 export default function SystemCommandCenter() {
   const [telemetry, setTelemetry] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -1678,12 +1688,12 @@ export default function SystemCommandCenter() {
                     <p className="text-[9px] lowercase max-w-[170px]">Invoke client endpoints to stream event triggers.</p>
                   </div>
                 ) : (
-                  liveErrors.map((log: any, idx: number) => {
+                  withOccurrenceKeys(liveErrors, log => log.id || JSON.stringify([log.timestamp, log.method, log.path, log.statusCode, log.ip, log.apiKeyUsed])).map(({ item: log, key }) => {
                     const isError = log.statusCode >= 500;
                     const isWarning = log.statusCode === 429;
                     return (
                       <div 
-                        key={idx} 
+                        key={key}
                         className={cn(
                           "p-4 border rounded-[32px] relative overflow-hidden shadow-3xs transition-all",
                           isError ? "bg-rose-50/50 border-rose-150" : 

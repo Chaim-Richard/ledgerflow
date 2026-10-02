@@ -8,6 +8,16 @@ import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
 
+function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const contentKey = keyForItem(item);
+    const occurrence = occurrences.get(contentKey) ?? 0;
+    occurrences.set(contentKey, occurrence + 1);
+    return { item, key: JSON.stringify([contentKey, occurrence]) };
+  });
+}
+
 export default function PaymentsView() {
   const payments = useLedgerStore(s => s.payments) || [];
   useLedgerStore(s => s.customers);
@@ -95,8 +105,8 @@ export default function PaymentsView() {
                   </td>
                   <td className="p-4 md:p-8">
                     <div className="flex flex-col gap-1">
-                      {payment.allocations?.map((alloc: any, i: number) => (
-                        <span key={i} className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest bg-[var(--surface)] px-2 py-1 rounded-md border border-[var(--line)]">
+                      {payment.allocations && withOccurrenceKeys(payment.allocations, alloc => JSON.stringify([alloc.documentType, alloc.documentId, alloc.amountCents])).map(({ item: alloc, key }) => (
+                        <span key={key} className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest bg-[var(--surface)] px-2 py-1 rounded-md border border-[var(--line)]">
                           {alloc.documentType}: {alloc.documentId.split('-')[1]} ({formatCurrency(alloc.amountCents)})
                         </span>
                       ))}

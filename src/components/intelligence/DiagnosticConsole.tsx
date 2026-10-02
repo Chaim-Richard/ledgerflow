@@ -13,6 +13,15 @@ interface DiagnosticConsoleProps {
   onClose: () => void;
 }
 
+function withHistoryKeys(history: string[]) {
+  const occurrences = new Map<string, number>();
+  return history.map(line => {
+    const occurrence = occurrences.get(line) ?? 0;
+    occurrences.set(line, occurrence + 1);
+    return { line, key: JSON.stringify([line, occurrence]) };
+  });
+}
+
 export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsoleProps) {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -214,8 +223,8 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
               ref={scrollRef}
               className="min-h-[250px] max-h-[55vh] p-6 overflow-y-auto custom-scrollbar text-[12px] leading-relaxed text-slate-100"
             >
-              {history.map((line, i) => (
-                <div key={i} className={cn(
+              {withHistoryKeys(history).map(({ line, key }) => (
+                <div key={key} className={cn(
                   "mb-1 whitespace-pre-wrap",
                   line.startsWith('>') ? "text-indigo-400 font-bold" : 
                   line.toLowerCase().includes('error') ? "text-rose-400" : "opacity-90"

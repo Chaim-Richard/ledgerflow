@@ -282,8 +282,8 @@ export default function BillingSettings() {
                     </div>
 
                     <ul className="space-y-2.5 text-xs text-slate-600 mb-6">
-                      {p.features.map((f, idx) => (
-                        <li key={idx} className="flex items-center gap-2">
+                      {p.features.map((f) => (
+                        <li key={f} className="flex items-center gap-2">
                           <CheckCircle2 size={14} className="text-indigo-600 shrink-0" />
                           <span>{f}</span>
                         </li>

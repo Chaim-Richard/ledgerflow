@@ -79,9 +79,9 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
                   System Shortcuts
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {shortcuts.map((s, i) => (
+                  {shortcuts.map((s) => (
                     <div 
-                      key={i}
+                      key={s.key}
                       className="flex items-center justify-between p-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:border-slate-300 transition-all group"
                     >
                       <div className="flex items-center gap-4">

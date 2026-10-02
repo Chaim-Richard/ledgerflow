@@ -473,8 +473,8 @@ export default function AnalyticalCenter() {
 
           {/* Categorized Options List as Cards */}
           <div className="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar select-none">
-            {filteredChannels.map((group, groupIdx) => (
-              <div key={groupIdx} className="space-y-1">
+            {filteredChannels.map(group => (
+              <div key={group.group.en} className="space-y-1">
                 <div className="px-2 pb-1 flex items-center justify-between">
                   <span className="text-[8.5px] font-mono font-bold uppercase tracking-widest text-[var(--muted)] block">
                     {group.group[language] || group.group['en']}
@@ -789,8 +789,8 @@ export default function AnalyticalCenter() {
                                status: metrics.anomalies.length > 0 ? 'ALERT' : 'PASS',
                                color: metrics.anomalies.length > 0 ? 'border-rose-500' : 'border-emerald-500'
                              }
-                           ].map((item: any, i: number) => (
-                             <div key={i} className={cn("p-2.5 border-l-2 bg-[var(--ink)]/50 rounded-r-lg space-y-1.5 transition-all hover:bg-[var(--ink)]", item.color)}>
+                           ].map((item: any) => (
+                             <div key={item.title} className={cn("p-2.5 border-l-2 bg-[var(--ink)]/50 rounded-r-lg space-y-1.5 transition-all hover:bg-[var(--ink)]", item.color)}>
                                <div className="flex items-center justify-between">
                                  <span className="text-[10px] font-bold text-slate-850">{item.title}</span>
                                  <span className="text-[8px] font-mono font-black tracking-wider uppercase bg-[var(--surface)] border px-1.5 py-0.5 rounded-sm text-[var(--muted)]">
@@ -888,8 +888,8 @@ export default function AnalyticalCenter() {
                 <div className="p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] shadow-3xs">
                    <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-3">Enterprise Segment Allocations Performance</h4>
                    <div className="space-y-2">
-                      {projectStats.map((p, i) => (
-                         <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-[var(--ink)]/50 border border-[var(--line)]/60 rounded-xl hover:bg-slate-100/40 transition-colors gap-3">
+                      {projectStats.map(p => (
+                         <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-[var(--ink)]/50 border border-[var(--line)]/60 rounded-xl hover:bg-slate-100/40 transition-colors gap-3">
                             <div className="flex items-center gap-3">
                                <div className="w-6 h-6 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center justify-center shrink-0">
                                   <TrendingUp size={11} className="stroke-[2.5px]" />
@@ -1091,8 +1091,8 @@ export default function AnalyticalCenter() {
 
               {/* Channels navigation selector */}
               <div className="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar select-none">
-                {CHANNELS.map((group, groupIdx) => (
-                  <div key={groupIdx} className="space-y-1">
+                {CHANNELS.map(group => (
+                  <div key={group.group.en} className="space-y-1">
                     <span className="text-[8.5px] font-bold text-[var(--muted)] uppercase tracking-widest px-2 block">
                       {group.group[language] || group.group['en']}
                     </span>

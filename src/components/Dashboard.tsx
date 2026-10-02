@@ -12,9 +12,20 @@ import { useDataNeedsStore } from '../stores/useDataNeedsStore';
 import SavedViewsBar from './ui/SavedViewsBar';
 import { formatCurrency, resolveAccountName, cn } from '../lib/utils';
 import { isPostable, lineAmount } from '../lib/txFilters';
+import { TransactionLine } from '../types';
 
 import { useShallow } from 'zustand/react/shallow';
 import { useLedgerCollections } from '../hooks/useLedgerCollections';
+
+function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
+  const occurrences = new Map<string, number>();
+  return items.map(item => {
+    const contentKey = keyForItem(item);
+    const occurrence = occurrences.get(contentKey) ?? 0;
+    occurrences.set(contentKey, occurrence + 1);
+    return { item, key: JSON.stringify([contentKey, occurrence]) };
+  });
+}
 
 export default function Dashboard() {
   const { 
@@ -517,8 +528,8 @@ export default function Dashboard() {
                       
                       <div className="flex flex-wrap gap-1.5 pt-1">
                         {tx.lines && tx.lines.length > 0 ? (
-                          tx.lines.slice(0, 2).map((l, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 font-mono text-[10.5px] bg-[var(--surface)] border border-[var(--line)] rounded-md px-2 py-0.5 text-[var(--muted)]">
+                          withOccurrenceKeys(tx.lines.slice(0, 2), (line: TransactionLine) => line.id || JSON.stringify([line.accountId, line.amountCents, line.description])).map(({ item: l, key }) => (
+                            <span key={key} className="inline-flex items-center gap-1.5 font-mono text-[10.5px] bg-[var(--surface)] border border-[var(--line)] rounded-md px-2 py-0.5 text-[var(--muted)]">
                               <span className="w-1.5 h-1.5 rounded-full bg-[var(--brass)]" />
                               {resolveAccountName(accounts, l.accountId, l.accountName)}
                             </span>
@@ -528,8 +539,8 @@ export default function Dashboard() {
                             {tx.status || 'posted'}
                           </span>
                         )}
-                        {tx.tags && tx.tags.map((tag, idx) => (
-                          <span key={idx} className="inline-flex items-center font-mono text-[10.5px] bg-[var(--surface)] border border-[var(--line)] rounded-md px-2 py-0.5 text-[var(--faint)]">
+                        {tx.tags && withOccurrenceKeys(tx.tags, tag => tag).map(({ item: tag, key }) => (
+                          <span key={key} className="inline-flex items-center font-mono text-[10.5px] bg-[var(--surface)] border border-[var(--line)] rounded-md px-2 py-0.5 text-[var(--faint)]">
                             #{tag}
                           </span>
                         ))}

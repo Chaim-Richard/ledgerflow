@@ -124,8 +124,8 @@ export default function SecuritySettings() {
             { label: 'Institutional Sync', status: 'Real-time', desc: 'Secure profile synchronization with Firestore Enterprise identity provider.', active: true },
             { label: 'Deterministic Fallback', status: 'Enabled', desc: 'Automatically switch to algorithmic logic if rule confidence drops below 0.65.', active: true },
             { label: 'Blockchain Hashing', status: 'Queued', desc: 'Optional: Commit ledger hashes to an immutable chain for public verification.', active: false }
-          ].map((item, i) => (
-            <div key={i} className="flex items-start gap-6 p-5 bg-[var(--ink)]/40 border border-[var(--line)] rounded-xl hover:border-[var(--brass-line)] transition-all group">
+          ].map((item) => (
+            <div key={item.label} className="flex items-start gap-6 p-5 bg-[var(--ink)]/40 border border-[var(--line)] rounded-xl hover:border-[var(--brass-line)] transition-all group">
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-bold text-[var(--brass)] uppercase tracking-widest">{item.label}</p>

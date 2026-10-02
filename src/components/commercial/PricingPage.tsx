@@ -87,8 +87,8 @@ export const PricingPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-2.5 mb-8">
-                  {tier.features.map((feat, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
+                  {tier.features.map((feat) => (
+                    <div key={feat} className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
                       <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                       <span>{feat}</span>
                     </div>
