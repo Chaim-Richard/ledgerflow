@@ -1450,28 +1450,28 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] H-02 BillModal (component test: tax included/excluded, approval limit, edit keeps number)
 - [x] H-03 ReceivePaymentModal (component test: open documents only, oldest first, amounts sent, refusal)
 - [x] H-04 WriteOffModal (component test: amount still owed, bad debt account, refusal)
-- [~] H-05 CustomerDetailView (merged into PartyDetailView; untested)
-- [ ] H-06 VendorDetailView
-- [ ] H-07 TaxLiabilityView
-- [ ] H-08 StatementView
-- [ ] H-09 ARAgingReportView
-- [ ] H-10 APAgingReportView
+- [x] H-05 CustomerDetailView (Codex component tests)
+- [x] H-06 VendorDetailView (Codex component tests)
+- [x] H-07 TaxLiabilityView (Codex component tests)
+- [x] H-08 StatementView (Codex component tests)
+- [x] H-09 ARAgingReportView (Codex component tests)
+- [x] H-10 APAgingReportView (Codex component tests)
 - [x] H-11 ExpenseByCategoryReportView (report-views.test.tsx)
 - [x] H-12 IncomeBySourceReportView (report-views.test.tsx; found L-158)
 - [x] H-13 AverageMonthlyReportView (report-views.test.tsx)
 - [x] H-14 TopExpensesIncomeReportView (report-views.test.tsx)
 - [x] H-15 TagBreakdownReportView (report-views.test.tsx)
 - [ ] H-16 ForensicAuditor
-- [ ] H-17 TanStackDataGrid
-- [ ] H-18 RadixModal
-- [ ] H-19 RequireRole
-- [ ] H-20 AsyncButton
-- [ ] H-21 ConfirmButton
-- [ ] H-22 EmptyState
-- [ ] H-23 PublicInvoicePage
-- [ ] H-24 EstimatesView
-- [ ] H-25 CustomerModal
-- [ ] H-26 AuditLogViewer
+- [x] H-17 TanStackDataGrid (Codex component tests)
+- [x] H-18 native useDialog replacement (RadixModal retired) (Codex component tests)
+- [x] H-19 RequireRole (Codex component tests)
+- [x] H-20 AsyncButton (Codex component tests)
+- [x] H-21 ConfirmButton (Codex component tests)
+- [x] H-22 EmptyState (Codex component tests)
+- [x] H-23 PublicInvoicePage (Codex component tests)
+- [x] H-24 EstimatesView (Codex component tests)
+- [x] H-25 CustomerModal (Codex component tests)
+- [x] H-26 AuditLogViewer (Codex component tests)
 - [ ] H-27 `src/components/finance`
 - [ ] H-28 `src/hooks`
 - [ ] H-29 `src/stores`

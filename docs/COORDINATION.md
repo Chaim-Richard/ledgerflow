@@ -126,7 +126,7 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
   `IntelligenceCenter.tsx`, `Reconciliation.tsx`, `TransactionGrid.tsx`, `RulesSettings.tsx`,
   `lib/algorithms.ts`. Move self-contained parts (sub-components, tabs, pure helpers) into sibling
   files; no behaviour change; one file per PR. Not the reserved files below.
-- [ ] **C-10 Component tests** *(2026-10-02: Claude started this while Codex is paused; Codex, check the tracker H items before picking one)* (tracker H-05…H-29). With the pattern of
+- [x] **C-10 Component tests** *(2026-10-02: Codex covered the assigned controls, contacts and document/report screens; Claude added H-11…H-15 report tests.)* (tracker H-05…H-29). With the pattern of
   `src/tests/invoice-modal.test.tsx` (`src/tests/helpers/dom.ts`): `TanStackDataGrid`, `RadixModal`,
   `RequireRole`, `AsyncButton`, `ConfirmButton`, `EmptyState`, `PublicInvoicePage`, `EstimatesView`,
   `CustomerModal`, `AuditLogViewer`, `CustomerDetailView`/`VendorDetailView`, the aging reports,

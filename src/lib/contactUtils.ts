@@ -1,3 +1,4 @@
+import { normalizeSearchText } from './textNormalization';
 export interface ContactCandidate {
   id: string;
   name: string;
@@ -20,7 +21,7 @@ export function detectDuplicateContacts(contacts: ContactCandidate[]): Duplicate
   const groups: DuplicateGroup[] = [];
   const processedIds = new Set<string>();
 
-  const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const normalize = (str: string) => normalizeSearchText(str).replace(/[^\p{L}\p{M}\p{N}]/gu, '');
 
   for (let i = 0; i < contacts.length; i++) {
     const c1 = contacts[i];

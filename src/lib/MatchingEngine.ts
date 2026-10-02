@@ -1,3 +1,4 @@
+import { normalizeSearchText } from './textNormalization';
 import { AhoCorasick, optimizedTransactionSimilarity, BayesianClassifier, SpellChecker } from './algorithms';
 import { Transaction, AutoRule, DimensionNode, ChartAccount } from '../types';
 import { extractMultiDimensionalLabels, expandDeepLabels, decomposeHierarchicalLabel } from './dimensionUtils';
@@ -138,7 +139,7 @@ export class MatchingEngine {
    * Fully supports deep and multi-dimensional labeling (nested tags, coordinate paths, sub-labels).
    */
   resolveCategory(description: string, accountsOverride?: ChartAccount[]): { accountName: string, tags?: string[], dimensions?: Record<string, string> } | null {
-    const lowerDesc = (description || '').toLowerCase().trim();
+    const lowerDesc = normalizeSearchText(description).trim();
     if (!lowerDesc) return null;
 
     // Extract deep multi-dimensional coordinates and tags from description (e.g. [Project:Apollo/Phase1] or #dept/eng)
@@ -268,7 +269,7 @@ export class MatchingEngine {
    * Explains and debugs which mathematical layer matched a description
    */
   debugResolveCategory(description: string): { accountName: string; layer: string; confidence?: number; dimensions?: Record<string, string> } {
-    const lowerDesc = (description || '').toLowerCase().trim();
+    const lowerDesc = normalizeSearchText(description).trim();
     if (!lowerDesc) return { accountName: 'Manual Review', layer: 'Empty Input' };
 
     let dimensionReason = '';
@@ -414,9 +415,9 @@ export class MatchingEngine {
    * Includes specific heuristics for stripping transaction metadata (The Google Way).
    */
   resolveMerchant(description: string, knownMerchants: { id: string, name: string }[]): string {
-    const cleanDesc = (description || '').toLowerCase()
+    const cleanDesc = normalizeSearchText(description)
       .replace(/\b(sq \*|visa|pos|purchase|txn|val|int|ext|csh)\b/g, '') // Strip common bank metadata
-      .replace(/[^a-z0-9 \u0590-\u05FF]/g, ' ')
+      .replace(/[^\p{L}\p{M}\p{N} ]/gu, ' ')
       .trim();
     
     if (cleanDesc.length === 0) return description;
@@ -424,7 +425,7 @@ export class MatchingEngine {
     let bestMatch = { id: description, score: 0 };
     
     for (const merchant of knownMerchants) {
-      const merchantName = merchant.name.toLowerCase();
+      const merchantName = normalizeSearchText(merchant.name);
       
       // 1. Direct Pattern Intersection (High Confidence for partial matches)
       if (cleanDesc.includes(merchantName) || merchantName.includes(cleanDesc)) {

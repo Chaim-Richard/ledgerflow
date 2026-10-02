@@ -37,31 +37,31 @@ export function resolveDimensionLabel(
   if (!storedValue || storedValue === 'Unassigned') return 'Unassigned';
   if (!nodes || nodes.length === 0) return storedValue;
 
-  const normDim = (dimensionId || '').toLowerCase().trim();
+  const normDim = (dimensionId || '').normalize('NFC').toLowerCase().trim();
   const target = storedValue.trim();
-  const cleanTarget = target.toLowerCase();
+  const cleanTarget = target.normalize('NFC').toLowerCase();
 
   // 1. Exact ID match
-  const matchById = nodes.find(n => n.dimensionId.toLowerCase() === normDim && n.id.toLowerCase() === cleanTarget);
+  const matchById = nodes.find(n => n.dimensionId.normalize('NFC').toLowerCase() === normDim && n.id.normalize('NFC').toLowerCase() === cleanTarget);
   if (matchById) return matchById.description;
 
   // 2. Exact Description match (already stored as description or legacy)
-  const matchByDesc = nodes.find(n => n.dimensionId.toLowerCase() === normDim && n.description.toLowerCase() === cleanTarget);
+  const matchByDesc = nodes.find(n => n.dimensionId.normalize('NFC').toLowerCase() === normDim && n.description.normalize('NFC').toLowerCase() === cleanTarget);
   if (matchByDesc) return matchByDesc.description;
 
   // 3. Alias match
-  const matchByAlias = nodes.find(n => n.dimensionId.toLowerCase() === normDim && n.aliases?.some(a => a.toLowerCase() === cleanTarget));
+  const matchByAlias = nodes.find(n => n.dimensionId.normalize('NFC').toLowerCase() === normDim && n.aliases?.some(a => a.normalize('NFC').toLowerCase() === cleanTarget));
   if (matchByAlias) return matchByAlias.description;
 
   // 4. Hierarchical path check (e.g. "P1/sub1" where "P1" is node.id or description)
   if (target.includes('/')) {
     const parts = target.split('/');
-    const rootPart = parts[0].trim().toLowerCase();
-    const rootNode = nodes.find(n => 
-      n.dimensionId.toLowerCase() === normDim && 
-      (n.id.toLowerCase() === rootPart || 
-       n.description.toLowerCase() === rootPart || 
-       n.aliases?.some(a => a.toLowerCase() === rootPart))
+    const rootPart = parts[0].trim().normalize('NFC').toLowerCase();
+    const rootNode = nodes.find(n =>
+      n.dimensionId.normalize('NFC').toLowerCase() === normDim &&
+      (n.id.normalize('NFC').toLowerCase() === rootPart ||
+       n.description.normalize('NFC').toLowerCase() === rootPart ||
+       n.aliases?.some(a => a.normalize('NFC').toLowerCase() === rootPart))
     );
     if (rootNode) {
       return [rootNode.description, ...parts.slice(1)].join('/');
@@ -81,7 +81,7 @@ export function getLineDimension(
   dimensionId: string,
   nodes?: DimensionNode[]
 ): string {
-  const normDim = (dimensionId || '').toLowerCase().trim();
+  const normDim = (dimensionId || '').normalize('NFC').toLowerCase().trim();
   let rawVal = 'Unassigned';
 
   // 1. Check line.dimensions map
@@ -105,7 +105,7 @@ export function getLineDimension(
       if (!tag) continue;
       if (tag.includes(':')) {
         const [key, ...valParts] = tag.split(':');
-        if (key.trim().toLowerCase() === normDim) {
+        if (key.trim().normalize('NFC').toLowerCase() === normDim) {
           rawVal = valParts.join(':').trim();
           break;
         }
@@ -141,33 +141,33 @@ export function setLineDimension(
   value: string,
   nodes?: DimensionNode[]
 ): TransactionLine {
-  const normDim = dimensionId.toLowerCase().trim();
+  const normDim = dimensionId.normalize('NFC').toLowerCase().trim();
   let targetValue = value;
 
   if (nodes && value && value.trim() !== '' && value !== 'Unassigned') {
-    const cleanVal = value.trim().toLowerCase();
+    const cleanVal = value.trim().normalize('NFC').toLowerCase();
     // 1. Check if value matches an existing node ID exactly
-    const exactNodeId = nodes.find(n => n.dimensionId.toLowerCase() === normDim && n.id.toLowerCase() === cleanVal);
+    const exactNodeId = nodes.find(n => n.dimensionId.normalize('NFC').toLowerCase() === normDim && n.id.normalize('NFC').toLowerCase() === cleanVal);
     if (exactNodeId) {
       targetValue = exactNodeId.id;
     } else {
       // 2. Check if value matches node description or alias
       const matchingNode = nodes.find(n =>
-        n.dimensionId.toLowerCase() === normDim &&
-        (n.description.toLowerCase() === cleanVal ||
-         n.aliases?.some(a => a.toLowerCase() === cleanVal))
+        n.dimensionId.normalize('NFC').toLowerCase() === normDim &&
+        (n.description.normalize('NFC').toLowerCase() === cleanVal ||
+         n.aliases?.some(a => a.normalize('NFC').toLowerCase() === cleanVal))
       );
       if (matchingNode) {
         targetValue = matchingNode.id;
       } else if (cleanVal.includes('/')) {
         // Check if prefix matches description or alias of a node
         const parts = value.split('/');
-        const rootPart = parts[0].trim().toLowerCase();
+        const rootPart = parts[0].trim().normalize('NFC').toLowerCase();
         const rootNode = nodes.find(n =>
-          n.dimensionId.toLowerCase() === normDim &&
-          (n.id.toLowerCase() === rootPart ||
-           n.description.toLowerCase() === rootPart ||
-           n.aliases?.some(a => a.toLowerCase() === rootPart))
+          n.dimensionId.normalize('NFC').toLowerCase() === normDim &&
+          (n.id.normalize('NFC').toLowerCase() === rootPart ||
+           n.description.normalize('NFC').toLowerCase() === rootPart ||
+           n.aliases?.some(a => a.normalize('NFC').toLowerCase() === rootPart))
         );
         if (rootNode) {
           targetValue = [rootNode.id, ...parts.slice(1)].join('/');
@@ -201,15 +201,15 @@ export function findOrCreateDimensionNode(
   dimensionId: string,
   descriptionOrValue: string
 ): { node: DimensionNode; isNew: boolean; updatedNodes: DimensionNode[] } {
-  const normDim = dimensionId.toLowerCase().trim();
+  const normDim = dimensionId.normalize('NFC').toLowerCase().trim();
   const clean = descriptionOrValue.trim();
-  const cleanLower = clean.toLowerCase();
+  const cleanLower = clean.normalize('NFC').toLowerCase();
 
   const existing = nodes.find(n =>
-    n.dimensionId.toLowerCase() === normDim &&
-    (n.id.toLowerCase() === cleanLower ||
-     n.description.toLowerCase() === cleanLower ||
-     n.aliases?.some(a => a.toLowerCase() === cleanLower))
+    n.dimensionId.normalize('NFC').toLowerCase() === normDim &&
+    (n.id.normalize('NFC').toLowerCase() === cleanLower ||
+     n.description.normalize('NFC').toLowerCase() === cleanLower ||
+     n.aliases?.some(a => a.normalize('NFC').toLowerCase() === cleanLower))
   );
 
   if (existing) {
@@ -238,14 +238,14 @@ export function updateDimensionNodeDescription(
   dimensionId: string,
   newDescription: string
 ): DimensionNode[] {
-  const normDim = (dimensionId || '').toLowerCase().trim();
+  const normDim = (dimensionId || '').normalize('NFC').toLowerCase().trim();
   const cleanNew = newDescription.trim();
 
   return nodes.map(n => {
-    if (n.id === nodeId && n.dimensionId.toLowerCase() === normDim) {
+    if (n.id === nodeId && n.dimensionId.normalize('NFC').toLowerCase() === normDim) {
       const prevDesc = n.description?.trim();
       const aliases = [...(n.aliases || [])];
-      if (prevDesc && prevDesc !== cleanNew && !aliases.some(a => a.toLowerCase() === prevDesc.toLowerCase())) {
+      if (prevDesc && prevDesc !== cleanNew && !aliases.some(a => a.normalize('NFC').toLowerCase() === prevDesc.normalize('NFC').toLowerCase())) {
         aliases.push(prevDesc);
       }
       return { ...n, description: newDescription, aliases };
@@ -311,9 +311,9 @@ export function migrateWorkspaceDimensionNodes(
         if (!rawVal || rawVal === 'Unassigned') continue;
 
         // Check if rawVal is already a node ID
-        const normDim = axisId.toLowerCase().trim();
+        const normDim = axisId.normalize('NFC').toLowerCase().trim();
         const isAlreadyNodeId = currentNodes.some(n =>
-          n.dimensionId.toLowerCase() === normDim && n.id === rawVal
+          n.dimensionId.normalize('NFC').toLowerCase() === normDim && n.id === rawVal
         );
 
         if (!isAlreadyNodeId) {
@@ -347,8 +347,8 @@ export function migrateWorkspaceDimensionNodes(
  */
 export function isPathSubtreeMatch(path: string, parentPath: string): boolean {
   if (!path || !parentPath) return false;
-  const p = path.toLowerCase().trim();
-  const target = parentPath.toLowerCase().trim();
+  const p = path.normalize('NFC').toLowerCase().trim();
+  const target = parentPath.normalize('NFC').toLowerCase().trim();
   if (p === target) return true;
   return p.startsWith(target + '/');
 }
@@ -393,7 +393,7 @@ export function extractUniqueDimensionPaths(
   dimensionId: string
 ): string[] {
   const pathSet = new Set<string>();
-  
+
   transactions.forEach(tx => {
     tx.lines?.forEach(line => {
       const val = getLineDimension(line, tx, dimensionId);
@@ -461,21 +461,21 @@ export function decomposeHierarchicalLabel(label: string): DecomposedLabel {
  */
 export function matchDeepLabel(assigned: string, target: string, matchAncestors = true): boolean {
   if (!assigned || !target) return false;
-  const a = assigned.toLowerCase().trim();
-  const t = target.toLowerCase().trim();
+  const a = assigned.normalize('NFC').toLowerCase().trim();
+  const t = target.normalize('NFC').toLowerCase().trim();
   if (a === t) return true;
 
   const aDec = decomposeHierarchicalLabel(a);
   const tDec = decomposeHierarchicalLabel(t);
 
   // Exact normalized path match
-  if (aDec.fullPath.toLowerCase() === tDec.fullPath.toLowerCase()) return true;
+  if (aDec.fullPath.normalize('NFC').toLowerCase() === tDec.fullPath.normalize('NFC').toLowerCase()) return true;
 
   if (matchAncestors) {
     // Child matches ancestor (e.g. 'engineering/backend' matches 'engineering')
-    if (aDec.fullPath.toLowerCase().startsWith(tDec.fullPath.toLowerCase() + '/')) return true;
+    if (aDec.fullPath.normalize('NFC').toLowerCase().startsWith(tDec.fullPath.normalize('NFC').toLowerCase() + '/')) return true;
     // Ancestor matches child if desired
-    if (tDec.fullPath.toLowerCase().startsWith(aDec.fullPath.toLowerCase() + '/')) return true;
+    if (tDec.fullPath.normalize('NFC').toLowerCase().startsWith(aDec.fullPath.normalize('NFC').toLowerCase() + '/')) return true;
   }
 
   return false;
@@ -535,10 +535,10 @@ export function extractMultiDimensionalLabels(
   if (!text) return { dimensions, tags: Array.from(tagSet), deepPaths };
 
   // 1. Match bracketed dimensions: [Key:Value] or [Key:Value/SubValue]
-  const bracketRegex = /\[([a-zA-Z0-9_-]+)\s*[:=]\s*([^\]]+)\]/g;
+  const bracketRegex = /\[([\p{L}\p{M}\p{N}_-]+)\s*[:=]\s*([^\]]+)\]/gu;
   let bMatch;
   while ((bMatch = bracketRegex.exec(text)) !== null) {
-    const dimKey = bMatch[1].toLowerCase().trim();
+    const dimKey = bMatch[1].normalize('NFC').toLowerCase().trim();
     const dimVal = bMatch[2].trim();
     dimensions[dimKey] = dimVal;
     deepPaths.push(`${dimKey}:${dimVal}`);
@@ -546,7 +546,7 @@ export function extractMultiDimensionalLabels(
   }
 
   // 2. Match hashtag deep paths: #project/apollo/subphase or #dept/eng
-  const hashRegex = /#([a-zA-Z0-9_/: -]+)/g;
+  const hashRegex = /#([\p{L}\p{M}\p{N}_/: -]+)/gu;
   let hMatch;
   while ((hMatch = hashRegex.exec(text)) !== null) {
     const tag = hMatch[1].trim();

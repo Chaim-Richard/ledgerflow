@@ -61,10 +61,10 @@ test('confirm button refuses cancellation and invokes approved action once', asy
 });
 
 test('role gate shows a refusal, custom fallback, and then owner controls', () => {
-  const view = render(<RequireRole role="owner"><button>Close period</button></RequireRole>);
+  const view = render(<RequireRole requiredRole="owner"><button>Close period</button></RequireRole>);
   assert.equal(view.queryByRole('button', { name: 'Close period' }), null);
   assert.ok(view.getByText(/requires OWNER privileges/));
-  view.rerender(<RequireRole role="owner" fallback={<p>Ask the owner</p>}><button>Close period</button></RequireRole>);
+  view.rerender(<RequireRole requiredRole="owner" fallback={<p>Ask the owner</p>}><button>Close period</button></RequireRole>);
   assert.ok(view.getByText('Ask the owner'));
   act(() => { setComponentWorkspace('owner'); });
   assert.ok(view.getByRole('button', { name: 'Close period' }));
@@ -72,7 +72,7 @@ test('role gate shows a refusal, custom fallback, and then owner controls', () =
 
 test('role gate with disabled controls prevents click and keyboard activation', () => {
   let calls = 0;
-  const view = render(<RequireRole role="owner" disableOnly><button onClick={() => { calls++; }}>Close period</button></RequireRole>);
+  const view = render(<RequireRole requiredRole="owner" disableOnly><button onClick={() => { calls++; }}>Close period</button></RequireRole>);
   const button = view.getByRole('button', { name: 'Close period' });
   fireEvent.click(button);
   fireEvent.keyDown(button, { key: 'Enter' });

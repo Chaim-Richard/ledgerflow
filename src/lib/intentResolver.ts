@@ -14,8 +14,8 @@ export const PATTERNS = {
   RELATIVE: /\b(last (?:month|week|year)|this (?:month|week|year)|yesterday|today|last \d+ days|ytd)\b/,
   QUARTER: /\b(q[1-4])\b/,
   DATE_RANGE: /(\d{4}-\d{2}-\d{2})\s*(?:to|until|through|-)\s*(\d{4}-\d{2}-\d{2})/,
-  CATEGORY: /(category|type|account|sector):\s*([a-zA-Z\s]+)/,
-  PROJECT: /(project|initiative|tag|venture):\s*([a-zA-Z\s]+)/,
+  CATEGORY: /(category|type|account|sector):\s*([\p{L}\p{M}\p{N}\s]+)/u,
+  PROJECT: /(project|initiative|tag|venture):\s*([\p{L}\p{M}\p{N}\s]+)/u,
   ERROR: /\b(error|mismatch|conflict|audit|review|unbalanced|weird|anomaly|fix)\b/,
 };
 
@@ -43,7 +43,7 @@ export interface ResolvedIntent {
 
 export class IntentResolver {
   static resolve(query: string, categories: string[] = [], projects: string[] = []): ResolvedIntent {
-    const lowerQuery = query.toLowerCase().trim();
+    const lowerQuery = query.normalize('NFC').toLowerCase().trim();
     const result: ResolvedIntent = { searchTerm: query };
 
     // 1. Semantic Mapping & Intent Steering
@@ -57,11 +57,11 @@ export class IntentResolver {
     // 2. Fuzzy Entity Detection (Smart Matching)
     const findEntity = (entities: string[], query: string) => {
         // Direct containment check (greedy)
-        const direct = entities.find(e => query.includes(e.toLowerCase()));
+        const direct = entities.find(e => query.includes(e.normalize('NFC').toLowerCase()));
         if (direct) return direct;
 
         // Sub-word check (e.g. "advertising" matches "ads")
-        const sub = entities.find(e => e.split(' ').some(word => word.length > 3 && query.includes(word.toLowerCase())));
+        const sub = entities.find(e => e.split(' ').some(word => word.length > 3 && query.includes(word.normalize('NFC').toLowerCase())));
         return sub;
     };
 
@@ -106,12 +106,12 @@ export class IntentResolver {
         result.endDate = dateRangeMatch[2];
     } else if (monthMatch) {
         const mNames = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december", "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-        const monthIdx = mNames.indexOf(monthMatch[1].toLowerCase()) % 12;
+        const monthIdx = mNames.indexOf(monthMatch[1].normalize('NFC').toLowerCase()) % 12;
         const year = yearMatch ? parseInt(yearMatch[1]) : now.getFullYear();
         result.startDate = format(new Date(year, monthIdx, 1), 'yyyy-MM-dd');
         result.endDate = format(new Date(year, monthIdx + 1, 0), 'yyyy-MM-dd');
     } else if (relativeTimeMatch) {
-        const rel = relativeTimeMatch[1].toLowerCase();
+        const rel = relativeTimeMatch[1].normalize('NFC').toLowerCase();
         if (rel.includes('last 7 days')) {
           result.startDate = format(subDays(now, 7), 'yyyy-MM-dd');
           result.endDate = format(now, 'yyyy-MM-dd');
@@ -145,15 +145,15 @@ export class IntentResolver {
     const results: ResolvedEntry[] = [];
 
     for (const line of lines) {
-        const lowerInput = line.toLowerCase().trim();
+        const lowerInput = line.normalize('NFC').toLowerCase().trim();
         let learnedCategory: string | null = null;
         let isRuleConfirmed = false;
 
         // 0. High-Confidence Rule Mapping (Hardened User Rules)
         if (options?.rules) {
             const matchingRule = options.rules.find(r => 
-                (r.condition.descriptionContains && lowerInput.includes(r.condition.descriptionContains.toLowerCase())) ||
-                (r.condition.vendor && lowerInput.includes(r.condition.vendor.toLowerCase()))
+                (r.condition.descriptionContains && lowerInput.includes(r.condition.descriptionContains.normalize('NFC').toLowerCase())) ||
+                (r.condition.vendor && lowerInput.includes(r.condition.vendor.normalize('NFC').toLowerCase()))
             );
 
             if (matchingRule) {
@@ -172,7 +172,7 @@ export class IntentResolver {
         }
         
         // 1. Check for Split Patterns: "Walmart $100 ($40 Groceries, $60 Electronics)"
-        const splitMatch = lowerInput.match(/([a-zA-Z0-9\s.]+)\s*\$?([\d,]+(?:\.\d+)?[km]?)\s*\(([^)]+)\)/i);
+        const splitMatch = lowerInput.match(/([\p{L}\p{M}\p{N}\s.]+)\s*\$?([\d,]+(?:\.\d+)?[km]?)\s*\(([^)]+)\)/iu);
         
         if (splitMatch) {
             const store = splitMatch[1].trim();
@@ -186,7 +186,7 @@ export class IntentResolver {
             totalAmt *= 100;
 
             const splitLines = itemsStr.split(',').map(item => {
-                const itemMatch = item.trim().match(/\$?([\d,]+(?:\.\d+)?[km]?)\s*([a-zA-Z\s]+)/i);
+                const itemMatch = item.trim().match(/\$?([\d,]+(?:\.\d+)?[km]?)\s*([\p{L}\p{M}\p{N}\s]+)/iu);
                 if (itemMatch) {
                     const cleanedItemAmtStr = itemMatch[1].replace(/[km]/i, '');
                     let itemAmt = TruthEngine.parseAmountToCents(cleanedItemAmtStr) / 100;
@@ -220,8 +220,8 @@ export class IntentResolver {
         }
 
         // 2. Standard Pattern Matching
-        const amountRegex = /(?:spent|paid|received|deposited)?\s*\$?([\d,]+(?:\.\d+)?[km]?)\s*(?:for|on|at|from)?\s*([a-zA-Z0-9\s.]+)/i;
-        const amountSuffixRegex = /([a-zA-Z0-9\s.]+)\s*\$?([\d,]+(?:\.\d+)?[km]?)/i;
+        const amountRegex = /(?:spent|paid|received|deposited)?\s*\$?([\d,]+(?:\.\d+)?[km]?)\s*(?:for|on|at|from)?\s*([\p{L}\p{M}\p{N}\s.]+)/iu;
+        const amountSuffixRegex = /([\p{L}\p{M}\p{N}\s.]+)\s*\$?([\d,]+(?:\.\d+)?[km]?)/iu;
 
         let match = lowerInput.match(amountRegex);
         let desc = '';
@@ -249,13 +249,13 @@ export class IntentResolver {
             // Deterministic Category Mapping (Hardware logic)
             let category = learnedCategory || "Uncategorized";
             if (!learnedCategory) {
-                const dLower = desc.toLowerCase();
+                const dLower = desc.normalize('NFC').toLowerCase();
                 
                 // Check provided accounts first (dynamic learning)
                 if (options?.accounts) {
                     const dynamicMatch = options.accounts.find(acc => {
                         const name = typeof acc === 'string' ? acc : acc.name;
-                        return dLower.includes(name.toLowerCase());
+                        return dLower.includes(name.normalize('NFC').toLowerCase());
                     });
                     if (dynamicMatch) {
                         category = typeof dynamicMatch === 'string' ? dynamicMatch : dynamicMatch.name;
@@ -281,7 +281,7 @@ export class IntentResolver {
                 txDate = format(subDays(new Date(), 1), 'yyyy-MM-dd');
             } else if (dateMatch) {
                 const day = parseInt(dateMatch[1]);
-                const monthName = dateMatch[2].toLowerCase();
+                const monthName = dateMatch[2].normalize('NFC').toLowerCase();
                 const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
                 const monthIdx = months.indexOf(monthName);
                 if (monthIdx !== -1) {

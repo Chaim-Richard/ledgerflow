@@ -1,3 +1,4 @@
+import { unquoteSearchValue } from '../textNormalization';
 import { AlgorithmDefinition } from './types';
 import { addToDateISO, getLocalDateISO } from '../utils';
 
@@ -77,9 +78,9 @@ export function parseNaturalLanguageEntry(text: string): ParsedCommandIntent {
     }
 
     // Payee extraction e.g. "paid Maria 150", "paid $100 to Starbucks"
-    const payeeMatch = trimmed.match(/(?:paid|to|from|vendor)\s+([A-Z][a-z0-9]+(?:\s+[A-Z][a-z0-9]+)?)/);
+    const payeeMatch = trimmed.match(/(?:paid|to|from|vendor)\s+("[^"]+"|'[^']+'|[A-Z][a-z0-9]+(?:\s+[A-Z][a-z0-9]+)?|[\p{Script=Hebrew}\p{M}]+(?:\s+[\p{L}\p{M}]+)?)/u);
     if (payeeMatch && payeeMatch[1]) {
-      payee = payeeMatch[1].trim();
+      payee = unquoteSearchValue(payeeMatch[1]).trim();
     }
 
     // Description extraction

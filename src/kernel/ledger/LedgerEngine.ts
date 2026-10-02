@@ -1,3 +1,4 @@
+import { normalizeSearchText } from '../../lib/textNormalization';
 import { ChartAccount, Transaction, JournalEntry } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { allocateCents } from '../../lib/Allocation';
@@ -22,11 +23,11 @@ export class LedgerEngine {
   private static normalizationCache = new Map<string, NormalizedLedgerTransaction>();
   private static MAX_CACHE_SIZE = 150000;
 
-  private static CACHED_SANITIZE_REGEX_CORP = /\b(inc|ltd|corp|co|llc|plc|gmbh|sa|bv|nv|ag|sas)\b/g;
-  private static CACHED_SANITIZE_REGEX_CHARS = /[^a-z0-9]/g;
+  private static CACHED_SANITIZE_REGEX_CORP = /(?<![\p{L}\p{M}\p{N}_])(inc|ltd|corp|co|llc|plc|gmbh|sa|bv|nv|ag|sas)(?![\p{L}\p{M}\p{N}_])/gu;
+  private static CACHED_SANITIZE_REGEX_CHARS = /[^\p{L}\p{M}\p{N}]/gu;
 
   private static sanitizeText(s: string) {
-    return (s || '').toLowerCase()
+    return normalizeSearchText(s)
         .replace(LedgerEngine.CACHED_SANITIZE_REGEX_CORP, '')
         .replace(LedgerEngine.CACHED_SANITIZE_REGEX_CHARS, ' ')
         .trim();
