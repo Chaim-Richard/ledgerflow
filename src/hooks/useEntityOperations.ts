@@ -6,7 +6,9 @@ import { toast } from 'sonner';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 import { LedgerPostService } from '../services/LedgerPostService';
 
-import { isOpenInvoice, isOpenBill, lineAmount } from '../lib/txFilters';
+import { isOpenInvoice, isOpenBill } from '../lib/txFilters';
+import { calculateAmountDue } from '../lib/documentMath';
+import { toBaseCents } from '../server/reports/partyReports';
 import type { Bill, CreditNote, Customer, Invoice, VendorCredit } from '../types';
 
 type StoredDocumentPath = 'invoices' | 'bills' | 'creditNotes' | 'vendorCredits' | 'customers';
@@ -45,7 +47,8 @@ export function useEntityOperations() {
         );
         const snap = await getDocs(q);
         const customerInvoices = snap.docs.map(d => d.data()).filter(isOpenInvoice);
-        balanceCents = customerInvoices.reduce((sum, inv) => sum + lineAmount(inv as any), 0);
+        // what is still owed (after deposits, payments, credits), in the base currency
+        balanceCents = customerInvoices.reduce((sum, inv) => sum + toBaseCents(calculateAmountDue(inv), inv.exchangeRate), 0);
       } else {
         const q = query(
           collection(db, 'bills'),
@@ -54,7 +57,7 @@ export function useEntityOperations() {
         );
         const snap = await getDocs(q);
         const vendorBills = snap.docs.map(d => d.data()).filter(isOpenBill);
-        balanceCents = vendorBills.reduce((sum, b) => sum + lineAmount(b as any), 0);
+        balanceCents = vendorBills.reduce((sum, b) => sum + toBaseCents(calculateAmountDue(b), b.exchangeRate), 0);
       }
 
       await updateDoc(doc(db, entityType, entityId), {

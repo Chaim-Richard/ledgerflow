@@ -1,3 +1,5 @@
+import { calculateAmountDue } from '../documentMath';
+import { toBaseCents } from '../../server/reports/partyReports';
 import { parseLocalDate } from '../../lib/utils';
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { resolveAccountRole } from '../accountUtils';
@@ -36,7 +38,7 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
         const dueDateStr = inv.dueDate || inv.date;
         const dueDate = dueDateStr ? parseLocalDate(dueDateStr).getTime() : now;
         const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
-        const amount = Math.abs(lineAmount(inv as any));
+        const amount = toBaseCents(calculateAmountDue(inv), inv.exchangeRate); // still owed, base currency
 
         arPending += amount;
         if (daysOverdue > thresholdDays) arOverdue += amount;
@@ -56,7 +58,7 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
         const dueDateStr = bill.dueDate || bill.date;
         const dueDate = dueDateStr ? parseLocalDate(dueDateStr).getTime() : now;
         const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
-        const amount = Math.abs(lineAmount(bill as any));
+        const amount = toBaseCents(calculateAmountDue(bill), bill.exchangeRate);
 
         apPending += amount;
 

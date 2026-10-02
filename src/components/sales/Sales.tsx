@@ -16,8 +16,8 @@ import {
 } from 'lucide-react';
 import { parseLocalDate, cn, formatCurrency, getLocalDateISO, safeConfirm, formatDate } from '../../lib/utils';
 import { getIdToken } from '../../firebase';
-import { resolveAccountRole } from '../../lib/accountUtils';
-import { isPostable, lineAmount, isOpenInvoice } from '../../lib/txFilters';
+import { isOpenInvoice } from '../../lib/txFilters';
+import { calculateAmountDue } from '../../lib/documentMath';
 import { differenceInDays } from 'date-fns';
 import { motion } from 'motion/react';
 
@@ -33,6 +33,7 @@ import ReceivePaymentModal from './ReceivePaymentModal';
 
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { computeCustomerBalanceSummary, toBaseCents } from '../../server/reports/partyReports';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { printInvoice } from '../../lib/printInvoice';
 import { convertEstimateToInvoice } from '../../lib/estimateConverter';
@@ -49,47 +50,24 @@ export default function Sales() {
   const invoices = useLedgerStore(s => s.invoices);
   const customers = useLedgerStore(s => s.customers);
   const accounts = useLedgerStore(s => s.accounts);
-  const { loading } = useLedgerCollections('customers', 'invoices');
+  const { loading } = useLedgerCollections('creditNotes', 'customers', 'invoices', 'payments');
   const { addEntity, updateEntity } = useEntityOperations();
 
   const transactions = useLedgerStore(s => s.transactions);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
+  // What each customer owes: the same calculation as the Customer Balance Summary report (open
+  // invoices less payments and credits, base currency). It used to add unpaid invoice totals, then
+  // receivable postings whose text mentioned the name, and fell back to a stored balance.
+  const payments = useLedgerStore(s => s.payments);
+  const creditNotes = useLedgerStore(s => s.creditNotes);
   const customerBalances = useMemo(() => {
     const map: Record<string, number> = {};
-    
-    // 1. Unpaid invoices
-    (invoices || []).forEach(inv => {
-      if (inv.customerId && isOpenInvoice(inv)) {
-        map[inv.customerId] = (map[inv.customerId] || 0) + lineAmount(inv as any);
-      }
-    });
-
-    // 2. Transaction-based AR logic (fallback aging report logic)
-    // Add pending AR lines that map to this customer by name
-    if (transactions) {
-      transactions.filter(isPostable).forEach(tx => {
-        let arAmount = 0;
-        tx.lines?.forEach(l => {
-          const acc = accounts?.find(a => a.id === l.accountId);
-          // If it's an AR account
-          if (acc && (resolveAccountRole(acc) === 'ar' || (acc.type === 'asset' && acc.name.toLowerCase().includes('receivable')))) {
-            arAmount += lineAmount(l, tx); // Positive is debit (increase AR)
-          }
-        });
-        
-        if (arAmount > 0) {
-          // Try to match to a customer
-          const matchedCust = customers?.find(c => tx.payee?.toLowerCase() === c.name.toLowerCase() || tx.description?.toLowerCase().includes(c.name.toLowerCase()));
-          if (matchedCust) {
-            map[matchedCust.id] = (map[matchedCust.id] || 0) + arAmount;
-          }
-        }
-      });
+    for (const row of computeCustomerBalanceSummary(customers || [], invoices || [], payments || [], creditNotes || [])) {
+      map[row.customerId] = row.balanceCents;
     }
-
     return map;
-  }, [invoices, transactions, customers, accounts]);
+  }, [customers, invoices, payments, creditNotes]);
   const onAddInvoice = async (data: any) => { 
     // A customer typed in the invoice that isn't on the list yet is added first, so the invoice
     // belongs to a real customer (statements, balances, emails)
@@ -138,7 +116,8 @@ export default function Sales() {
     return res;
   };
   const onAddCustomer = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('customers', id, updates); } return addEntity('customers', data); };
-  const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'customers' | 'pipeline'>('pipeline');
+  // opens on the invoice list ('pipeline' was the default but nothing draws it: the page was blank)
+  const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'customers'>('invoices');
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [newInvoiceFor, setNewInvoiceFor] = useState<Partial<Invoice> | undefined>(undefined);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -172,16 +151,18 @@ export default function Sales() {
     }
   };
 
+  // what is still owed on an invoice (after deposit, payments, credits), in the base currency
+  const owedInBase = (i: Invoice) => toBaseCents(calculateAmountDue(i), i.exchangeRate);
   const agingBuckets = useMemo(() => {
     const now = new Date();
     return {
-      overdue: invoices.filter(i => isOpenInvoice(i) && (i.status === 'overdue' || parseLocalDate(i.dueDate) < now)).reduce((sum, i) => sum + lineAmount(i as any), 0),
+      overdue: invoices.filter(i => isOpenInvoice(i) && (i.status === 'overdue' || parseLocalDate(i.dueDate) < now)).reduce((sum, i) => sum + owedInBase(i), 0),
       dueSoon: invoices.filter(i => {
         const dueDate = parseLocalDate(i.dueDate);
         const diff = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
         return isOpenInvoice(i) && (i.status === 'sent' || i.status === 'pending') && diff >= 0 && diff <= 30;
-      }).reduce((sum, i) => sum + lineAmount(i as any), 0),
-      total: invoices.filter(isOpenInvoice).reduce((sum, i) => sum + lineAmount(i as any), 0)
+      }).reduce((sum, i) => sum + owedInBase(i), 0),
+      total: invoices.filter(isOpenInvoice).reduce((sum, i) => sum + owedInBase(i), 0)
     };
   }, [invoices]);
 
@@ -563,7 +544,7 @@ export default function Sales() {
                        </div>
                     </td>
                     <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-xl tracking-tighter tabular-nums">
-                      {formatCurrency(customerBalances[cust.id] ?? cust.balanceCents ?? 0)}
+                      {formatCurrency(customerBalances[cust.id] ?? 0)}
                     </td>
                     <td className="p-4 md:p-8">
                       <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all justify-end">

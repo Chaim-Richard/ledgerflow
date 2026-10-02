@@ -66,7 +66,8 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
           // Check actual payment date (cash basis)
           const paymentDateStr = bill.paidAt || bill.paymentDate || bill.paidDate || bill.date || '';
           if (paymentDateStr.startsWith(year)) {
-            paidCents += lineAmount(bill as any);
+            // what was actually paid (a part-paid bill counts its payments, not its total)
+            paidCents += Math.round((bill.amountPaidCents ?? (bill.status === 'paid' ? bill.amountCents : 0) ?? 0) * (bill.exchangeRate || 1));
           }
         }
       });
