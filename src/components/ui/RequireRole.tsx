@@ -30,7 +30,18 @@ export const RequireRole: React.FC<RequireRoleProps> = ({
   if (disableOnly) {
     const defaultTooltip = tooltip || `${targetRole.toUpperCase()} role required (your role: ${currentRole.toUpperCase()})`;
     return (
-      <div className="relative group inline-block cursor-not-allowed opacity-50 pointer-events-none" title={defaultTooltip}>
+      <div
+        className="relative group inline-block cursor-not-allowed opacity-50 pointer-events-none"
+        title={defaultTooltip}
+        aria-disabled="true"
+        onClickCapture={event => { event.preventDefault(); event.stopPropagation(); }}
+        onKeyDownCapture={event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }}
+      >
         {children}
       </div>
     );
