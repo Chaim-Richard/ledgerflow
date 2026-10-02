@@ -6,13 +6,14 @@ import {
   ArrowUpDown, ArrowUp, ArrowDown, Download, 
   Calendar, FileSpreadsheet, RefreshCw 
 } from 'lucide-react';
-import { formatDecimal, sanitizeCsvCell, cn } from '../../lib/utils';
+import { cn } from '../../lib/utils';
 import { exportToExcel } from '../../lib/excelExport';
 import { motion } from 'motion/react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
 import { useFinancialReporting, ServerTrialBalanceData } from '../../hooks/useFinancialReporting';
 import MonthNavigator from '../ui/MonthNavigator';
+import { csvMoney, downloadCsv } from '../../lib/csvExport';
 
 interface TrialBalanceViewProps {
   accounts: ChartAccount[];
@@ -234,30 +235,12 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
   }, [isServerAuthoritative, serverData, localTrialBalance, sortField, sortDir]);
 
   const handleExportCSV = () => {
-    const headers = ['Account Code', 'Account Name', 'Classification', 'Debit ($)', 'Credit ($)'];
-    const rows = trialBalance.lines.map(line => [
-      sanitizeCsvCell(line.code || ''),
-      sanitizeCsvCell(line.name || ''),
-      sanitizeCsvCell(line.type || ''),
-      formatDecimal(line.debit),
-      formatDecimal(line.credit)
-    ]);
-    rows.push([
-      sanitizeCsvCell('TOTAL'),
-      '',
-      '',
-      formatDecimal(trialBalance.totalDebits),
-      formatDecimal(trialBalance.totalCredits)
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.join(",")).join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `trial_balance_as_of_${asOfDate}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv(`trial_balance_as_of_${asOfDate}.csv`,
+      ['Account Code', 'Account Name', 'Classification', 'Debit', 'Credit'],
+      [
+        ...trialBalance.lines.map(line => [line.code || '', line.name || '', line.type || '', csvMoney(line.debit), csvMoney(line.credit)]),
+        ['TOTAL', '', '', csvMoney(trialBalance.totalDebits), csvMoney(trialBalance.totalCredits)],
+      ]);
   };
 
   const handleExportExcel = async () => {

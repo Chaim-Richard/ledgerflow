@@ -7,6 +7,7 @@ import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { getFiscalYearBounds } from '../../lib/fiscalCalendar';
 import { computeTransactionsByCustomer, PartyTransactionRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
+import { csvMoney, downloadCsv } from '../../lib/csvExport';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export const TransactionsByCustomerView: React.FC<{ startDate?: string; endDate?: string }> = ({ startDate: pageStartDate, endDate: pageEndDate }) => {
@@ -73,24 +74,9 @@ export const TransactionsByCustomerView: React.FC<{ startDate?: string; endDate?
   }, [filteredRows]);
 
   const handleExportCSV = () => {
-    const headers = ['Date', 'Customer Name', 'Type', 'Reference / Number', 'Status', 'Amount ($)'];
-    const csvRows = filteredRows.map(r => [
-      r.date,
-      `"${r.partyName.replace(/"/g, '""')}"`,
-      r.type,
-      `"${r.reference.replace(/"/g, '""')}"`,
-      r.status,
-      (r.amountCents / 100).toFixed(2)
-    ]);
-    const csvContent = [headers.join(','), ...csvRows.map(row => row.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `transactions_by_customer_${getLocalDateISO()}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv(`transactions_by_customer_${getLocalDateISO()}.csv`,
+      ['Date', 'Customer Name', 'Type', 'Reference / Number', 'Status', 'Amount'],
+      filteredRows.map(r => [r.date, r.partyName, r.type, r.reference, r.status, csvMoney(r.amountCents)]));
     toast.success('Transactions by Customer exported to CSV');
   };
 

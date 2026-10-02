@@ -6,6 +6,7 @@ import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { cn, getLocalDateISO } from '../../lib/utils';
 import { auditDescription, auditTime } from '../../lib/auditFormat';
+import { downloadCsv } from '../../lib/csvExport';
 
 interface AuditTrailViewProps {
   auditLogs: AuditLog[];
@@ -101,24 +102,9 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
   }, [auditLogs, userFilter, actionFilter, searchTerm]);
 
   const handleExportCSV = () => {
-    const headers = ['Timestamp', 'Action', 'User/Email', 'Entity Type', 'Entity ID', 'Description'];
-    const rows = filteredLogs.map(l => [
-      auditTime(l)?.toISOString() || '',
-      l.action || '',
-      l.email || l.userEmail || l.uid || '',
-      l.entityType || '',
-      l.entityId || '',
-      auditDescription(l).replace(/,/g, ';')
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `audit_trail_export_${getLocalDateISO()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv(`audit_trail_export_${getLocalDateISO()}.csv`,
+      ['Timestamp', 'Action', 'User/Email', 'Entity Type', 'Entity ID', 'Description'],
+      filteredLogs.map(l => [auditTime(l)?.toISOString() || '', l.action || '', l.email || l.userEmail || l.uid || '', l.entityType || '', l.entityId || '', auditDescription(l)]));
   };
 
   return (

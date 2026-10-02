@@ -10,6 +10,7 @@ import { buildAlgorithmContext } from '../../lib/algorithms/types';
 import { exportToExcel } from '../../lib/excelExport';
 import { getLocalDateISO } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { downloadCsv } from '../../lib/csvExport';
 
 type ParameterValue = AlgoInput['defaultValue'];
 type DateRangeValue = Extract<AlgoInput, { kind: 'dateRange' }>['defaultValue'];
@@ -130,24 +131,12 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
   const handleExportCSV = () => {
     if (!results.rows || results.rows.length === 0) return;
     const columns = Object.keys(results.rows[0]).filter(k => k !== 'id' && k !== 'sourceIds');
-    const headers = columns.join(',');
-    const rows = results.rows.map(row => 
-      columns.map(col => {
-        const val = row[col];
-        const str = val !== undefined && val !== null ? String(val) : '';
-        return str.includes(',') ? `"${str.replace(/"/g, '""')}"` : str;
-      }).join(',')
-    );
-    const csv = [headers, ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
     const sanitizedName = algorithm.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-    link.setAttribute('download', `${sanitizedName}_${getLocalDateISO()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv(`${sanitizedName}_${getLocalDateISO()}.csv`, columns,
+      results.rows.map(row => columns.map(col => {
+        const val = row[col];
+        return val === undefined || val === null ? '' : typeof val === 'number' || typeof val === 'boolean' ? val : String(val);
+      })));
   };
 
   return (

@@ -5,6 +5,7 @@ import { differenceInDays, parseISO } from 'date-fns';
 import { FileText, ArrowLeft, Download, ChevronRight, Users, Clock, Search, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { csvMoney, downloadCsv } from '../../lib/csvExport';
 
 interface PartyAgingReportViewProps {
   side: 'customer' | 'vendor';
@@ -145,24 +146,9 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
   };
 
   const exportToCSV = () => {
-    const headers = [isCustomer ? 'Customer' : 'Vendor', '0-30 Days', '31-60 Days', '61-90 Days', '91+ Days', 'Total Outstanding'];
-    const rows = sortedAndFilteredRows.map(r => [
-      `"${r.partyName.replace(/"/g, '""')}"`,
-      r.current / 100,
-      r.thirtyToSixty / 100,
-      r.sixtyToNinety / 100,
-      r.overNinety / 100,
-      r.total / 100
-    ]);
-    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${isCustomer ? 'ar' : 'ap'}_aging_report.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv(`${isCustomer ? 'ar' : 'ap'}_aging_report.csv`,
+      [isCustomer ? 'Customer' : 'Vendor', '0-30 Days', '31-60 Days', '61-90 Days', '91+ Days', 'Total Outstanding'],
+      sortedAndFilteredRows.map(r => [r.partyName, csvMoney(r.current), csvMoney(r.thirtyToSixty), csvMoney(r.sixtyToNinety), csvMoney(r.overNinety), csvMoney(r.total)]));
     toast.success('Aging report exported successfully to CSV');
   };
 

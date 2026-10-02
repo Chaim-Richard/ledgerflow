@@ -5,13 +5,14 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { Transaction } from '../../types';
 import { toast } from 'sonner';
-import { formatDecimal, sanitizeCsvCell, formatDate } from '../../lib/utils';
+import { formatDate } from '../../lib/utils';
 import { describeError } from '../../lib/errorRemedies';
 import { safeConfirm, getLocalDateISO } from '../../lib/utils';
 import { retentionFor } from '../../lib/retention';
 import { handleFirestoreError, OperationType } from '../../lib/firebaseUtils';
 import type { ActionContext } from './shared';
 import { errorMessage } from './shared';
+import { csvMoney, downloadCsv } from '../../lib/csvExport';
 
 /** Workspace and period work: reset, year and month close, export, delete an account, recurring entries. (F-05, moved from useTransactionActions.) */
 export function createWorkspaceActions(ctx: ActionContext) {
@@ -92,33 +93,13 @@ export function createWorkspaceActions(ctx: ActionContext) {
     transactions.forEach(t => {
       t.lines.forEach(l => {
         const amt = lineAmount(l, t);
-        const debit = amt > 0 ? formatDecimal(amt) : '0.00';
-        const credit = amt < 0 ? formatDecimal(Math.abs(amt)) : '0.00';
-        rows.push([
-          sanitizeCsvCell(t.date),
-          sanitizeCsvCell(t.id),
-          sanitizeCsvCell(t.description),
-          sanitizeCsvCell(l.accountId),
-          sanitizeCsvCell(l.accountName),
-          sanitizeCsvCell(debit),
-          sanitizeCsvCell(credit),
-          sanitizeCsvCell(t.status),
-          sanitizeCsvCell(t.project || ''),
-          sanitizeCsvCell(l.department || '')
-        ]);
+        const debit = amt > 0 ? csvMoney(amt) : '0.00';
+        const credit = amt < 0 ? csvMoney(Math.abs(amt)) : '0.00';
+        rows.push([t.date, t.id, t.description, l.accountId, l.accountName || '', debit, credit, t.status, t.project || '', l.department || '']);
       });
     });
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.map(sanitizeCsvCell), ...rows].map(e => e.join(",")).join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `general_ledger_export_${getLocalDateISO()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv(`general_ledger_export_${getLocalDateISO()}.csv`, headers, rows);
     toast.success('General Ledger Export completed successfully');
   };
 

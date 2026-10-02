@@ -1423,7 +1423,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] F-19 `businessTemplates.ts`
 - [ ] F-20 `Projects.tsx`
 - [~] F-21 800-line limit (eslint `max-lines` warning on; 11 files over)
-- [ ] F-22 Shared report shell
+- [x] F-22 Shared report shell: period presets, compare, permalink and print on the Reports page (Prompt R); one table layout with sticky header and totals (`PartyReportLayout`); one CSV writer for every export (`src/lib/csvExport.ts`, 15 screens moved, guard test)
 
 # SECTION G — REACT CORRECTNESS
 
@@ -1712,6 +1712,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-150 Sales opened on a tab nothing draws ("pipeline"): below the cards the page was blank until you clicked a tab; now opens on the invoice list
 - [x] L-151 Customer balances in Sales added unpaid invoice totals (part-payments ignored), then any receivable posting whose text mentioned the customer's name, and fell back to a stored balance that never updated (demo: Stark "owed" $9,000 with no invoices). Now the Customer Balance Summary calculation. Same "total instead of still owed" mistake fixed in the Sales cards (overdue / 30 days / total receivable), the stored customer/vendor balance, the working-capital aging tool and the 1099 tool (paid = what was paid)
 - [x] L-152 Screens cut off on ordinary laptops: the Overview (and Reports, Settings, Projects, admin) were centred flex items that sized to their content (up to 1,360–1,600 px), so on windows under ~1,600 px the right side was hidden; the transaction list's toolbar and table pushed the page 1,160 px wider at 1,280. Now everything fits at 1,280 × 800 (the table scrolls sideways in its box, the toolbar stacks); new browser test opens all 33 screens by address and checks they fit and draw something
+- [x] L-153 Pivot Sheet counted foreign-currency entries twice over: `lineAmount()` already converts to the base currency and the sheet (grouped view, cross-tab and its export) multiplied by the rate again (EUR 100 at 1.10 showed 121 instead of 110). Fixed; guard test fails on `lineAmount(...) *`
+- [x] L-154 CSV exports: five built the file as a `data:` link through `encodeURI`, which leaves `#` alone, so the file stopped at the first "#" ("Invoice #1001"): General Ledger export, Trial Balance, Audit Trail; most didn't neutralise text a spreadsheet runs as a formula (`=…`, `@…`); none had the UTF-8 marker Excel needs for accented/Hebrew names; money was written as raw cents (bills) or `x/100`. All 15 exports now use `downloadCsv` (quoted cells, formula guard, UTF-8 marker, `csvMoney`); the transaction list exports amounts signed like the screen (in +, out −)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION

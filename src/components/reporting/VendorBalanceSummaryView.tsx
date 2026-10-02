@@ -6,6 +6,7 @@ import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeVendorBalanceSummary, VendorBalanceSummaryRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
+import { csvMoney, downloadCsv } from '../../lib/csvExport';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export const VendorBalanceSummaryView: React.FC<{ asOfDate?: string }> = ({ asOfDate: pageAsOfDate }) => {
@@ -47,25 +48,9 @@ export const VendorBalanceSummaryView: React.FC<{ asOfDate?: string }> = ({ asOf
   }, [vendorRows]);
 
   const handleExportCSV = () => {
-    const headers = ['Vendor Name', 'Email', 'Phone', 'Open Bills', 'Total Billed ($)', 'Total Paid ($)', 'Balance Due ($)'];
-    const rows = filteredRows.map(r => [
-      `"${r.name.replace(/"/g, '""')}"`,
-      `"${(r.email || '').replace(/"/g, '""')}"`,
-      `"${(r.phone || '').replace(/"/g, '""')}"`,
-      r.openBillsCount,
-      (r.totalBilledCents / 100).toFixed(2),
-      (r.totalPaidCents / 100).toFixed(2),
-      (r.balanceCents / 100).toFixed(2)
-    ]);
-    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `vendor_balance_summary_${getLocalDateISO()}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv(`vendor_balance_summary_${getLocalDateISO()}.csv`,
+      ['Vendor Name', 'Email', 'Phone', 'Open Bills', 'Total Billed', 'Total Paid', 'Balance Due'],
+      filteredRows.map(r => [r.name, r.email || '', r.phone || '', r.openBillsCount, csvMoney(r.totalBilledCents), csvMoney(r.totalPaidCents), csvMoney(r.balanceCents)]));
     toast.success('Vendor Balance Summary exported to CSV');
   };
 

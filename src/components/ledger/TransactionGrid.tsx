@@ -24,8 +24,9 @@ import { withNewAmount } from '../../lib/transactionEdits';
 import { gridMinWidth, gridTemplate, OPTIONAL_COLUMNS, readHiddenColumns } from '../../lib/transactionColumns';
 import { listStateFromParams, listStateToParams, replaceSearchParams } from '../../lib/listPermalink';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { formatDecimal, cn, sanitizeCsvCell, resolveAccountName, formatCurrency, getLocalDateISO } from '../../lib/utils';
-import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
+import { cn, resolveAccountName, formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { csvMoney, downloadCsv } from '../../lib/csvExport';
+import { isCashAccount, isInflow, isPostable, lineAmount } from '../../lib/txFilters';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import TransactionRow from '../transactions/TransactionRow';
@@ -635,26 +636,13 @@ export default function TransactionGrid() {
     [transactions, selectedIds]
   );
 
+  // amounts signed like the list: money in positive, money out negative (E-26)
+  const signedCents = (t: Transaction) => (isInflow(t, accounts) ? 1 : -1) * (t.totalAmountCents || 0);
+
   const handleExportCSV = () => {
-    const headers = ['Date', 'Description', 'Category', 'Project', 'Amount', 'Status'];
-    const rows = transactionsWithBalance.map(t => [
-      sanitizeCsvCell(t.date),
-      sanitizeCsvCell(t.description),
-      sanitizeCsvCell(resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName)),
-      sanitizeCsvCell(t.project || 'General'),
-      sanitizeCsvCell(formatDecimal(t.totalAmountCents || 0)),
-      sanitizeCsvCell(t.status)
-    ]);
-    
-    const csvContent = [headers.map(sanitizeCsvCell), ...rows].map(e => e.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `ledger_export_${getLocalDateISO()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv(`ledger_export_${getLocalDateISO()}.csv`,
+      ['Date', 'Description', 'Category', 'Project', 'Amount', 'Currency', 'Status'],
+      transactionsWithBalance.map(t => [t.date, t.description, resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName), t.project || 'General', csvMoney(signedCents(t)), t.currency || '', t.status]));
     toast.success('Ledger Export Matrix Generated');
   };
 
@@ -1111,29 +1099,9 @@ export default function TransactionGrid() {
           <div className="flex flex-wrap items-center gap-2 md:gap-4 bg-[var(--ink)]/20 p-1.5 rounded-[32px] border border-[var(--line)]/40 w-full sm:w-auto">
             <button 
               onClick={() => {
-                const headers = ['Date', 'Description', 'Amount', 'Currency', 'Account', 'Project', 'Notes'];
-                const rows = transactionsWithBalance.map(t => [
-                  sanitizeCsvCell(t.date),
-                  sanitizeCsvCell(t.description),
-                  sanitizeCsvCell(formatDecimal(t.totalAmountCents)),
-                  sanitizeCsvCell(t.currency || 'USD'),
-                  sanitizeCsvCell(resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName)),
-                  sanitizeCsvCell(t.project || ''),
-                  sanitizeCsvCell(t.notes || '')
-                ]);
-                
-                const csvContent = [
-                  headers.map(sanitizeCsvCell).join(','),
-                  ...rows.map(r => r.join(','))
-                ].join('\n');
-                
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.setAttribute('download', `ledgerflow_matrix_${getLocalDateISO()}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                downloadCsv(`ledgerflow_matrix_${getLocalDateISO()}.csv`,
+                  ['Date', 'Description', 'Amount', 'Currency', 'Account', 'Project', 'Notes'],
+                  transactionsWithBalance.map(t => [t.date, t.description, csvMoney(signedCents(t)), t.currency || 'USD', resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName), t.project || '', t.notes || '']));
                 toast.success('Matrix exported to Excel-compatible CSV.');
               }}
               className="flex-1 sm:flex-none flex justify-center items-center gap-2 md:gap-3 px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black text-[var(--muted)] uppercase tracking-widest hover:text-[var(--text)] hover:bg-[var(--surface)] rounded-xl transition-all"

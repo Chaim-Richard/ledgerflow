@@ -3,12 +3,13 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Transaction } from '../../types';
 import { Table as TableIcon, Search, Download, ChevronDown, ChevronRight, Calculator, Grid3X3, ListCollapse, ExternalLink, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatDecimal, cn, formatCurrency, resolveAccountName, getLocalDateISO, formatSignedAmount } from '../../lib/utils';
+import { cn, formatCurrency, resolveAccountName, getLocalDateISO, formatSignedAmount } from '../../lib/utils';
 import { isPostable, isTransactionInDateRange, lineAmount } from '../../lib/txFilters';
 import { getLineDimension, DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import DrillDownModal from '../layout/DrillDownModal';
+import { csvMoney, downloadCsv } from '../../lib/csvExport';
 
 interface PivotSheetProps {
   transactions: Transaction[];
@@ -128,7 +129,6 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
     const seenTxInGroup: Record<string, Set<string>> = {};
     
     scopedTransactions.forEach(t => {
-      const txRate = t.exchangeRate || 1;
       const linesToProcess = (t.lines && t.lines.length > 0) 
         ? t.lines 
         : [{ accountId: '', accountName: '', amountCents: t.totalAmountCents, description: t.description }];
@@ -143,7 +143,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
           return;
         }
 
-        const convertedCents = Math.round((lineAmount(line, t) || 0) * txRate);
+        const convertedCents = lineAmount(line, t) || 0; // already in the base currency (L-153)
 
         if (!groups[key]) {
           groups[key] = { total: 0, items: [], lineCount: 0 };
@@ -185,7 +185,6 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
     const colKeys = new Set<string>();
 
     scopedTransactions.forEach(t => {
-      const txRate = t.exchangeRate || 1;
       const linesToProcess = (t.lines && t.lines.length > 0) 
         ? t.lines 
         : [{ accountId: '', accountName: '', amountCents: t.totalAmountCents, description: t.description }];
@@ -204,7 +203,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
         rowKeys.add(rKey);
         colKeys.add(cKey);
 
-        const convertedCents = Math.round((lineAmount(line, t) || 0) * txRate);
+        const convertedCents = lineAmount(line, t) || 0; // already in the base currency (L-153)
 
         if (!cells[rKey]) cells[rKey] = {};
         if (!cells[rKey][cKey]) cells[rKey][cKey] = 0;
@@ -353,28 +352,14 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                     toast.error("No transactions to export in this scope.");
                     return;
                   }
-                  const headers = ['Date', 'Transaction ID', 'Description', 'Payee', 'Account', 'Amount (USD)'];
-                  const rows = scopedTransactions.flatMap(t => {
-                    const lines = (t.lines && t.lines.length > 0) 
-                      ? t.lines 
-                      : [{ accountId: '', accountName: '', amountCents: t.totalAmountCents }];
-                    return lines.map(l => [
-                      t.date,
-                      t.id,
-                      `"${t.description.replace(/"/g, '""')}"`,
-                      `"${(t.payee || '').replace(/"/g, '""')}"`,
-                      `"${resolveAccountName(accounts, l.accountId, l.accountName).replace(/"/g, '""')}"`,
-                      formatDecimal(Math.round((lineAmount(l, t) || 0) * (t.exchangeRate || 1)))
-                    ]);
-                  });
-                  const csvString = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-                  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-                  const url = URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = `pivot_export_${getLocalDateISO()}.csv`;
-                  link.click();
-                  URL.revokeObjectURL(url);
+                  downloadCsv(`pivot_export_${getLocalDateISO()}.csv`,
+                    ['Date', 'Transaction ID', 'Description', 'Payee', 'Account', 'Amount (base currency)'],
+                    scopedTransactions.flatMap(t => {
+                      const lines = (t.lines && t.lines.length > 0)
+                        ? t.lines
+                        : [{ accountId: '', accountName: '', amountCents: t.totalAmountCents }];
+                      return lines.map(l => [t.date, t.id, t.description, t.payee || '', resolveAccountName(accounts, l.accountId, l.accountName), csvMoney(lineAmount(l, t) || 0)]);
+                    }));
                 }}
                 className="h-9 px-3 border border-[var(--line)] hover:border-slate-350 bg-[var(--surface)] hover:bg-[var(--ink)] rounded-xl flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0"
               >

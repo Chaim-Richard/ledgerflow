@@ -12,6 +12,7 @@ import {
   IMPORT_DEFINITIONS, IMPORT_KINDS, MAX_IMPORT_ROWS, applyMapping, guessMapping, openingStockCents, prepareImport,
 } from '../../../lib/recordImport';
 import type { FieldMapping, ImportIssue, ImportKind } from '../../../lib/recordImport';
+import { downloadCsv } from '../../../lib/csvExport';
 
 /**
  * Settings → Import data (K-01): customers, vendors, items or accounts from a CSV or Excel file.
@@ -71,13 +72,7 @@ async function loadRecentImports(workspaceId: string): Promise<RecentImport[]> {
 }
 
 function downloadSample(kind: ImportKind) {
-  const labels = IMPORT_DEFINITIONS[kind].fields.map(f => f.label);
-  const blob = new Blob([`${labels.join(',')}\n`], { type: 'text/csv' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${kind}-import-template.csv`;
-  link.click();
-  URL.revokeObjectURL(link.href);
+  downloadCsv(`${kind}-import-template.csv`, IMPORT_DEFINITIONS[kind].fields.map(f => f.label), []);
 }
 
 export default function ImportSettings() {

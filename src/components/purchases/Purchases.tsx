@@ -12,6 +12,7 @@ import ReceivePaymentModal from '../sales/ReceivePaymentModal';
 import { toast } from 'sonner';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
+import { csvMoney, downloadCsv } from '../../lib/csvExport';
 
 export default function Purchases() {
   const vendors = useLedgerStore(s => s.vendors) || [];
@@ -84,24 +85,9 @@ export default function Purchases() {
   };
 
   const exportBillsToCSV = () => {
-    const headers = ['Vendor Name', 'Bill Number', 'Date', 'Due Date', 'Status', 'Amount Cents'];
-    const rows = filteredBills.map(b => [
-      `"${(b.vendorName || 'Unknown Vendor').replace(/"/g, '""')}"`,
-      `"${(b.number || b.id).replace(/"/g, '""')}"`,
-      b.date || '',
-      b.dueDate || '',
-      b.status || 'unpaid',
-      b.amountCents || 0
-    ]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'bills_export.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv('bills_export.csv',
+      ['Vendor Name', 'Bill Number', 'Date', 'Due Date', 'Status', 'Amount', 'Currency'],
+      filteredBills.map(b => [b.vendorName || 'Unknown Vendor', b.number || b.id, b.date || '', b.dueDate || '', b.status || 'unpaid', csvMoney(b.amountCents || 0), b.currency || '']));
     toast.success('Bills exported successfully to CSV');
   };
 

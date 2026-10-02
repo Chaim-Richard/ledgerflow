@@ -3,9 +3,10 @@ import { Download, Database, FileSpreadsheet, Archive, AlertCircle, Upload } fro
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { toast } from 'sonner';
-import { formatDecimal, resolveAccountName, getLocalDateISO } from '../../../lib/utils';
+import { resolveAccountName, getLocalDateISO } from '../../../lib/utils';
 import { recordBackupCompleted } from '../../../lib/ledgerBackupHealth';
 import { isPostable } from '../../../lib/txFilters';
+import { csvMoney, downloadCsv } from '../../../lib/csvExport';
 
 export default function BackupExportSettings() {
   const [isExporting, setIsExporting] = useState(false);
@@ -136,31 +137,18 @@ export default function BackupExportSettings() {
 
       if (!downloadedViaServer) {
         const { transactions, accounts } = useLedgerStore.getState();
-        let csvContent = "Date,Amount,Description,Category,Type,Status,Reference\n";
-        transactions.filter(isPostable).forEach(t => {
-          const categoryName = t.lines && t.lines.length > 0 ? resolveAccountName(accounts, t.lines[0].accountId, t.lines[0].accountName) : 'Uncategorized';
-          const amountStr = formatDecimal(t.totalAmountCents || 0);
-          const row = [
+        type ExportTx = (typeof transactions)[number] & { reference?: string };
+        downloadCsv(`ledgerflow-transactions-${getLocalDateISO()}.csv`,
+          ['Date', 'Amount', 'Description', 'Category', 'Type', 'Status', 'Reference'],
+          transactions.filter(isPostable).map((t: ExportTx) => [
             t.date,
-            amountStr,
-            `"${(t.description || '').replace(/"/g, '""')}"`,
-            `"${categoryName.replace(/"/g, '""')}"`,
-            (t as typeof t & { merchant?: string; notes?: string; category?: string; reference?: string }).type || 'actual',
-            (t as typeof t & { merchant?: string; notes?: string; category?: string; reference?: string }).status || 'posted',
-            `"${((t as typeof t & { merchant?: string; notes?: string; category?: string; reference?: string }).reference || '').replace(/"/g, '""')}"`
-          ];
-          csvContent += row.join(",") + "\n";
-        });
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `ledgerflow-transactions-${getLocalDateISO()}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+            csvMoney(t.totalAmountCents || 0),
+            t.description || '',
+            t.lines && t.lines.length > 0 ? resolveAccountName(accounts, t.lines[0].accountId, t.lines[0].accountName) : 'Uncategorized',
+            t.type || 'actual',
+            t.status || 'posted',
+            t.reference || '',
+          ]));
       }
 
       if (workspaceId) {

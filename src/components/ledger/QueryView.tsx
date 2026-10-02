@@ -9,6 +9,7 @@ import { Filter, Download, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { Transaction } from '../../types';
 import { Labelled } from '../ui/Labelled';
+import { csvMoney, downloadCsv } from '../../lib/csvExport';
 
 // Credit note for Fava (MIT License) inspiration:
 // Inspired by Fava (beancount/fava - MIT License) ad-hoc ledger query engine architecture.
@@ -137,24 +138,9 @@ export default function QueryView() {
       return;
     }
 
-    const headers = ['Date', 'Transaction ID', 'Payee', 'Description', 'Amount'];
-    const rows = queryResults.map(tx => [
-      tx.date,
-      tx.id,
-      `"${(tx.payee || '').replace(/"/g, '""')}"`,
-      `"${(tx.description || '').replace(/"/g, '""')}"`,
-      (getAbsoluteTotal(tx) / 100).toFixed(2)
-    ]);
-
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `ledger_query_${getLocalDateISO()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv(`ledger_query_${getLocalDateISO()}.csv`,
+      ['Date', 'Transaction ID', 'Payee', 'Description', 'Amount'],
+      queryResults.map(tx => [tx.date, tx.id, tx.payee || '', tx.description || '', csvMoney(getAbsoluteTotal(tx))]));
     toast.success('Query results exported to CSV');
   };
 
