@@ -201,7 +201,7 @@ const Reports = React.memo(() => {
   }, [accounts]);
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-6" data-print-root>
+    <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-6" data-print-root>
       {/* Printed / PDF heading: the report and its period */}
       <div className="hidden print:block">
         <h1 className="text-xl font-bold">{(REPORT_TABS_REGISTRY.find(t => t.id === activeTab)?.label as Record<string, string> | undefined)?.en || 'Report'}</h1>

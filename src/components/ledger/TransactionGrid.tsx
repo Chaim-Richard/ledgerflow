@@ -21,7 +21,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { withNewAmount } from '../../lib/transactionEdits';
-import { gridTemplate, OPTIONAL_COLUMNS, readHiddenColumns } from '../../lib/transactionColumns';
+import { gridMinWidth, gridTemplate, OPTIONAL_COLUMNS, readHiddenColumns } from '../../lib/transactionColumns';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatDecimal, cn, sanitizeCsvCell, resolveAccountName, formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
@@ -874,7 +874,7 @@ export default function TransactionGrid() {
       </AnimatePresence>
 
       <div className="p-5 border-b border-[var(--line)] space-y-4 bg-[var(--surface)]/95 backdrop-blur-md sticky top-0 z-30 shadow-xs">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex flex-col">
               <h2 className="text-xl md:text-2xl font-black text-[var(--text)] tracking-tight leading-none">
@@ -920,7 +920,7 @@ export default function TransactionGrid() {
             </div>
           </div>
           
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 flex-1 max-w-[900px] mt-2 xl:mt-0">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 flex-1 min-w-0 max-w-[900px] mt-2 2xl:mt-0">
              <button 
                 onClick={toggleSelectAll}
                 aria-label={selectedIds.size > 0 ? `Selected ${selectedIds.size} transactions` : 'Select all transactions'}
@@ -943,7 +943,7 @@ export default function TransactionGrid() {
                 <span>{selectedIds.size > 0 ? `${selectedIds.size} Selected` : 'Select All'}</span>
               </button>
             
-            <div className="flex flex-col gap-2 flex-1">
+            <div className="flex flex-col gap-2 flex-1 min-w-0">
               {selectedIds.size > 0 && (
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
@@ -980,8 +980,8 @@ export default function TransactionGrid() {
               {/* Saved Views Bar */}
               <SavedViewsBar currentSearchTerm={searchTerm} className="mb-2" />
 
-              <div className="flex flex-col lg:flex-row items-center gap-2 flex-1">
-                <div className="flex-1 w-full">
+              <div className="flex flex-col lg:flex-row lg:flex-wrap items-center gap-2 flex-1 min-w-0">
+                <div className="flex-1 w-full min-w-0">
                   <DeepSearchBar 
                     value={searchTerm} 
                     onChange={setSearchTerm} 
@@ -1175,9 +1175,10 @@ export default function TransactionGrid() {
         </div>
       )}
 
-      <div className="flex-1 overflow-hidden relative bg-[var(--surface)]" dir="auto">
+      {/* the table scrolls sideways inside its box when the window is narrower than its columns */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden relative bg-[var(--surface)]" dir="auto">
         {viewMode === 'grid' ? (
-          <div className="h-full flex flex-col">
+          <div className="h-full flex flex-col" style={{ minWidth: gridMinWidth(gridCols) }}>
             <div data-testid="tx-header" className="grid sticky top-0 bg-slate-900 text-white/75 z-20" style={{ gridTemplateColumns: gridCols }}>
               <div className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-center">
                 <input type="checkbox" aria-label="Select all transactions" checked={selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0} onChange={(e) => setSelectedIds(e.target.checked ? new Set(transactionsWithBalance.map(t => t.id)) : new Set())} className="w-4 h-4 rounded border-white/20 bg-transparent accent-emerald-500" />

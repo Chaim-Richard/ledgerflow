@@ -235,7 +235,7 @@ export default function Projects() {
   }, [selectedProjectId, projects, transactions, bills, vendors]);
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
+    <div className="w-full space-y-6 max-w-[1600px] mx-auto pb-12">
       {/* Header with brand gold backdrop */}
       <div className="relative overflow-hidden bg-gradient-to-r from-[var(--brass-soft)] via-[var(--surface)]/40 to-[var(--panel)] p-6 rounded-2xl border border-[var(--brass-line)]/50 shadow-sm">
         <div className="absolute -top-16 -left-16 w-56 h-56 bg-[var(--brass)] opacity-10 rounded-full blur-3xl hidden md:block pointer-events-none" />

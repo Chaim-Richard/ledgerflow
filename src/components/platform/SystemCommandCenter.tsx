@@ -441,7 +441,7 @@ export default function SystemCommandCenter() {
 
 
   return (
-    <div className="space-y-12 max-w-[1600px] mx-auto pb-12 px-4">
+    <div className="w-full space-y-12 max-w-[1600px] mx-auto pb-12 px-4">
       {/* Header section matching upgraded architecture */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-[var(--line)]">
         <div>

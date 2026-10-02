@@ -27,7 +27,7 @@ export default function ArchitectureViewer() {
   }, [searchQuery]);
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto h-full overflow-y-auto bg-[var(--ink)]/50 min-h-screen">
+    <div className="w-full p-8 max-w-[1600px] mx-auto h-full overflow-y-auto bg-[var(--ink)]/50 min-h-screen">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-8 border-b border-[var(--line)]">
         <div>

@@ -15,7 +15,7 @@ export default function Settings() {
   const ActiveComponent = activeTabDef ? SETTINGS_COMPONENTS[activeTabDef.componentName] : null;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12 py-6 px-4 md:py-12 md:px-8">
+    <div className="w-full max-w-6xl mx-auto space-y-12 py-6 px-4 md:py-12 md:px-8">
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-8 pb-12 border-b border-[var(--line)]">
         <div className="space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-[0.3em]">

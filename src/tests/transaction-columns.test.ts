@@ -2,7 +2,7 @@
 import test, { describe } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { gridTemplate, readHiddenColumns } from '../lib/transactionColumns';
+import { gridMinWidth, gridTemplate, readHiddenColumns } from '../lib/transactionColumns';
 
 const count = (template: string) => template.split(' ').length;
 const none = new Set<string>();
@@ -26,6 +26,11 @@ describe('Transaction list columns', () => {
     assert.equal(count(gridTemplate({ mobile: false, tablet: false, compact: false }, hidden)), 9);
     assert.equal(count(gridTemplate({ mobile: false, tablet: true, compact: false }, hidden)), 5);
     assert.equal(count(gridTemplate({ mobile: true, tablet: false, compact: false }, hidden)), 4);
+  });
+
+  test('the table is never narrower than its columns plus room for the description', () => {
+    assert.equal(gridMinWidth('40px 100px 1fr 100px'), 480);
+    assert.equal(gridMinWidth(gridTemplate({ mobile: false, tablet: false, compact: false }, none)), 1330);
   });
 
   test('stored choices: unknown names and broken storage are ignored', () => {
