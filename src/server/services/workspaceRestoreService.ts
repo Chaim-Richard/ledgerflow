@@ -36,10 +36,23 @@ export const RESTORE_COLLECTIONS: { key: string; coll: string }[] = [
   { key: 'taxRates', coll: 'taxRates' },
   { key: 'autoRules', coll: 'autoRules' },
   { key: 'reconciliations', coll: 'reconciliations' },
+  // L-07: the rest of the books (older backups simply don't have these keys)
+  { key: 'creditNotes', coll: 'creditNotes' },
+  { key: 'vendorCredits', coll: 'vendorCredits' },
+  { key: 'bankLines', coll: 'bankLines' },
+  { key: 'journalEntries', coll: 'journalEntries' },
+  { key: 'purchaseOrders', coll: 'purchaseOrders' },
+  { key: 'employees', coll: 'employees' },
+  { key: 'payRuns', coll: 'payRuns' },
+  { key: 'partners', coll: 'partners' },
+  { key: 'dimensionNodes', coll: 'dimensionNodes' },
+  { key: 'numberingSeries', coll: 'numberingSeries' },
+  { key: 'periods', coll: 'periods' },
 ];
 
-/** Workspace fields a backup may not change: ownership, membership, billing and system state. */
+/** Workspace fields a backup may not change: ownership, membership, billing, closing and system state. */
 export const PROTECTED_WORKSPACE_FIELDS = new Set([
+  'lockDate', 'softLockDate', 'lockException',
   'id', 'uid', 'createdAt', 'plan', 'billingCycle', 'computeCreditBalance', 'apiQuotaMonthlyLimitCents',
   'apiQuotaTotalCentsUsed', 'maxSeats', 'seatCount', 'concurrentUserLimit', 'activeUserCount',
   'stripeCustomerId', 'stripeSubscriptionId', 'bypassBilling', 'status', 'lockedUntilDate',
@@ -66,6 +79,12 @@ export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string,
   }
   if (backup.schemaVersion !== undefined && Number(backup.schemaVersion) !== 1) {
     throw new RestoreError(400, 'Unsupported schema version');
+  }
+
+  // Closed books are never rewritten by a restore: refuse once any period is closed.
+  const current = (await db.collection('workspaces').doc(workspaceId).get()).data() || {};
+  if (current.lockDate || current.softLockDate) {
+    throw new RestoreError(409, `Books are closed through ${current.lockDate || current.softLockDate}; a backup can't replace closed periods. Reopen them first (Month-End Close) if you really need to restore.`);
   }
 
   // 1. Collect the backup's records (the same record under two keys: the last one wins).
@@ -124,3 +143,39 @@ export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string,
     counts,
   };
 }
+
+/** Collections a backup holds: one entry per table (old backups used "recurringRules" too). */
+const BACKUP_TABLES = RESTORE_COLLECTIONS.filter(c => c.key !== 'recurring');
+
+/**
+ * The backup file (export): every collection RESTORE_COLLECTIONS restores, the workspace's
+ * settings, counts, and a SHA-256 checksum over the payload without it (the Settings screen checks
+ * it before restoring).
+ */
+export async function exportWorkspaceBackup(db: Firestore, workspaceId: string, exportedBy: string): Promise<Record<string, unknown> & { metadata: Record<string, unknown> }> {
+  const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+  const wsData = wsDoc.exists ? wsDoc.data() || {} : {};
+  const payload: Record<string, unknown> & { metadata: Record<string, unknown> } = {
+    schemaVersion: 1,
+    exportedAt: new Date().toISOString(),
+    workspace: { ...wsData, id: workspaceId },
+    metadata: {},
+  };
+  const counts: Record<string, number> = {};
+  for (const { key, coll } of BACKUP_TABLES) {
+    const snap = await db.collection(coll).where('workspaceId', '==', workspaceId).get();
+    payload[key] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    counts[key] = snap.size;
+  }
+  payload.metadata = {
+    counts,
+    transactionCount: counts.transactions || 0,
+    currency: (wsData.currency as string) || 'USD',
+    exportedBy,
+    serverAuthoritative: true,
+  };
+  const { createHash } = await import('node:crypto');
+  payload.metadata.checksum = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  return payload;
+}
+

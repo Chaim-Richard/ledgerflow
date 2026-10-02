@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { Lock, ShieldCheck, AlertCircle, RefreshCw } from 'lucide-react';
-import { cn } from '../../../lib/utils';
+import { cn, safeConfirm } from '../../../lib/utils';
+import { describeError } from '../../../lib/errorRemedies';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { doc, updateDoc } from '../../../lib/db/firestore';
@@ -69,7 +70,8 @@ export default function SecuritySettings() {
     try {
         await txActions.handleResetWorkspace();
     } catch (err: any) {
-        toast.error("Decommission protocol failed: " + err.message);
+        const described = describeError(err, 'delete');
+        toast.error(described.title, { description: described.remedy });
     } finally {
         setIsResetting(false);
     }
@@ -219,12 +221,12 @@ export default function SecuritySettings() {
                 <div className="space-y-1">
                   <h4 className="text-base font-black text-rose-500 uppercase tracking-tight">Delete User Account</h4>
                   <p className="text-xs font-medium text-[var(--muted)] leading-relaxed max-w-md">
-                    Permanently delete your user account and all personal data. Workspaces you own will be orphaned unless transferred.
+                    Deletes your sign-in and personal data. A workspace only you use is deleted after 30 days; you leave workspaces you share. If you are the only owner of a shared workspace, make someone else an owner first (Settings → Team).
                   </p>
                 </div>
                 <button 
                   onClick={async () => {
-                    if (confirm('Are you absolutely sure you want to permanently delete your account? This action cannot be undone.')) {
+                    if (safeConfirm('Delete your account? Your sign-in and personal data are deleted; workspaces only you use are deleted after 30 days. This can\'t be undone.')) {
                       try {
                         const res = await fetch('/api/v1/auth/delete-account', {
                           method: 'DELETE',
@@ -232,11 +234,17 @@ export default function SecuritySettings() {
                             'Authorization': `Bearer ${await useAuthStore.getState().user?.getIdToken()}`
                           }
                         });
-                        if (!res.ok) throw new Error(await res.text());
-                        toast.success('Account deleted successfully.');
+                        const body = await res.json().catch(() => ({}));
+                        if (res.status === 409) {
+                          toast.error('Your account was not deleted', { description: body.error });
+                          return;
+                        }
+                        if (!res.ok) throw new Error(body.error || 'Failed to delete account');
+                        toast.success('Your account was deleted.');
                         auth.signOut();
-                      } catch (err: any) {
-                        toast.error('Failed to delete account: ' + err.message);
+                      } catch (err) {
+                        const described = describeError(err, 'delete');
+                        toast.error(described.title, { description: described.remedy });
                       }
                     }
                   }}
@@ -249,19 +257,18 @@ export default function SecuritySettings() {
 
             <div className="p-6 bg-rose-500/5 border border-rose-500/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-1">
-                  <h4 className="text-base font-black text-rose-500 uppercase tracking-tight">Institutional Purge System</h4>
+                  <h4 className="text-base font-black text-rose-500 uppercase tracking-tight">Delete this workspace</h4>
                   <p className="text-xs font-medium text-[var(--muted)] leading-relaxed max-w-md">
-                    CRITICAL: This protocol will permanently decommission all topological nodes, transactions, and audit logs within this workspace.
-                  </p>
+                    Everything in this workspace is deleted after 30 days; until then an owner can keep it. The audit trail is kept.</p>
                 </div>
-                <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can initiate a workspace purge">
+                <RequireRole requiredRole="owner" disableOnly tooltip="Only an owner can delete the workspace">
                   <button 
                     onClick={handleSystemPurge}
                     disabled={isResetting}
                     className="px-6 py-3 bg-rose-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-rose-600 transition-all shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
                   >
                     {isResetting ? <RefreshCw size={14} className="animate-spin" /> : <AlertCircle size={14} />}
-                    {isResetting ? 'DECOMMISSIONING...' : 'INITIATE PURGE'}
+                    {isResetting ? 'Deleting…' : 'Delete workspace'}
                   </button>
                 </RequireRole>
             </div>

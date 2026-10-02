@@ -1,6 +1,6 @@
 import type { Firestore } from '../db/firestore';
 import { deleteFilesWithPrefix, StorageNotConfiguredError } from '../storage/supabaseStorage';
-import { WORKSPACE_SCOPED_COLLECTIONS } from '../../constants/collections';
+import { WORKSPACE_PURGE_ORDER } from '../../constants/collections';
 import { writeServerAuditLog } from './auditLogService';
 
 export async function purgePendingWorkspaces(db: Firestore): Promise<{ purgedWorkspaces: string[]; errors: string[] }> {
@@ -30,7 +30,7 @@ export async function purgePendingWorkspaces(db: Firestore): Promise<{ purgedWor
         let lastCursorDocId: string | null = jobRunData.lastCursorDocId || null;
 
         if (jobRunData.lastUpdatedCollection) {
-          const foundIdx = WORKSPACE_SCOPED_COLLECTIONS.indexOf(jobRunData.lastUpdatedCollection as any);
+          const foundIdx = WORKSPACE_PURGE_ORDER.indexOf(String(jobRunData.lastUpdatedCollection));
           if (foundIdx >= 0) {
             startIndex = foundIdx;
           }
@@ -45,9 +45,9 @@ export async function purgePendingWorkspaces(db: Firestore): Promise<{ purgedWor
           updatedAt: new Date().toISOString()
         }, { merge: true });
 
-        // 1. Delete all workspace-scoped collections in batches <= 450
-        for (let i = startIndex; i < WORKSPACE_SCOPED_COLLECTIONS.length; i++) {
-          const collectionName = WORKSPACE_SCOPED_COLLECTIONS[i];
+        // 1. Delete the workspace's data in every table that holds it, in batches of 400
+        for (let i = startIndex; i < WORKSPACE_PURGE_ORDER.length; i++) {
+          const collectionName = WORKSPACE_PURGE_ORDER[i];
 
           let hasMore = true;
           while (hasMore) {

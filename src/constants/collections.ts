@@ -40,3 +40,42 @@ export const WORKSPACE_SCOPED_COLLECTIONS = [
 ] as const;
 
 export type WorkspaceScopedCollection = typeof WORKSPACE_SCOPED_COLLECTIONS[number];
+
+/**
+ * Other tables that hold a workspace's data (the browser doesn't load them into the store). A
+ * workspace purge deletes these too (L-124: bank connections with their tokens, API keys, members,
+ * notifications, filed tax returns, purchase orders and email events were left behind).
+ */
+export const WORKSPACE_PURGE_EXTRA = [
+  'purchaseOrders',
+  'taxReturns',
+  'notifications',
+  'emailEvents',
+  'numberingSeries',
+  'members',
+  'banks',
+  'documents',
+  'apiKeys',
+  'idempotencyKeys',
+  'fixedAssets',
+  'learnedDeltas',
+  'presence',
+  'deepAuditJobs',
+  'errorLogs',
+] as const;
+
+/** Everything a workspace purge deletes, in order (the job resumes by position in this list). */
+export const WORKSPACE_PURGE_ORDER: readonly string[] = [...WORKSPACE_SCOPED_COLLECTIONS, ...WORKSPACE_PURGE_EXTRA];
+
+/** Tables a workspace purge leaves alone, and why (workspace-purge-coverage guard). */
+export const KEPT_AFTER_WORKSPACE_PURGE: Record<string, string> = {
+  workspaces: 'the workspace row itself is deleted last, after its data',
+  auditLogs: 'the audit trail is kept (forensic and legal record), including the purge entry',
+  jobRuns: 'the purge job records its own progress here',
+  users: 'people, not workspace data; deleted with the account (L-09)',
+  admins: 'platform administrators',
+  loginAudits: 'per-person sign-in security log',
+  stripeProcessedEvents: 'payment webhook de-duplication across all workspaces',
+  external_api_cache: 'shared cache of public data (exchange rates)',
+};
+

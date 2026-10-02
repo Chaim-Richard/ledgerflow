@@ -21,6 +21,7 @@ import ShortcutOverlay from '../../components/layout/ShortcutOverlay';
 import DiagnosticConsole from '../../components/intelligence/DiagnosticConsole';
 import ConnectionBanner from '../../components/platform/ConnectionBanner';
 import DataStatusBar from '../../components/layout/DataStatusBar';
+import PendingDeletionBanner from '../../components/layout/PendingDeletionBanner';
 import LedgerBackupReminder from '../../components/platform/LedgerBackupReminder';
 
 import { useCommandDispatcher } from '../../hooks/useSystemContext';
@@ -154,6 +155,7 @@ export function RootLayout() {
             Demo data — sign up to save your own
           </div>
         )}
+        <PendingDeletionBanner />
         <DataStatusBar />
         {!isFocusMode && <Header onLogout={handleLogout} onLoginPrompt={handleLoginPrompt} />}
         {!isFocusMode && <ModuleSubNav activeTab={activeTab as any} onTabChange={setActiveTab as any} />}

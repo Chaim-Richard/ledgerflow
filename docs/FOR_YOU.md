@@ -76,6 +76,10 @@ Last updated: 2026-10-02.
     applies the safe updates directly on `main` during the trust & compliance step and closes
     the PRs they replace; the big ones (Plaid 47) wait until a feature needs them.*
 
+15. **Restoring a backup after closing months.** A backup can't replace closed periods: once any month is closed, restore is refused (reopen first). *Default: refuse.* Say if you prefer "restore only the months after the lock date".
+
+16. **Audit trail after a workspace is deleted.** The workspace's data is deleted after 30 days, but its audit trail is kept (it is the legal record of who did what). *Default: keep it.* If you want it deleted after a number of years, say how many.
+
 ## C. Good to know (no action needed)
 
 - Vercel deploys by itself about a minute after each push to `main`.

@@ -520,9 +520,10 @@ workspaceRouter.delete('/:workspaceId', requireWorkspaceRole(['owner']), async (
 });
 
 /**
- * Restore workspace within retention window (Owner only)
+ * Keep a workspace that was scheduled for deletion, within the 30-day window (Owner only).
+ * (Its own path: POST /:workspaceId/restore is the backup import in server.ts, L-130.)
  */
-workspaceRouter.post('/:workspaceId/restore', requireWorkspaceRole(['owner']), async (req, res) => {
+workspaceRouter.post('/:workspaceId/cancel-deletion', requireWorkspaceRole(['owner']), async (req, res) => {
   const { workspaceId } = req.params as Record<string, string>;
   try {
     const db = getDb();

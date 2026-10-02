@@ -1,10 +1,10 @@
 {
-  "anyCount": 1108,
+  "anyCount": 1104,
   "utcDateCount": 37,
   "arrayIndexKeys": 61,
   "blankNoOpener": 3,
   "consoleLog": 0,
-  "serverTsLines": 4203,
+  "serverTsLines": 4140,
   "filesOver800": 15,
   "orphanFiles": 0,
   "eslintWarnings": 3,

@@ -81,6 +81,8 @@ export interface Workspace {
   lastUpgradedAt?: string;
   deletedAt?: string;
   scheduledPurgeAt?: string;
+  /** 'pending_deletion' while a deleted workspace waits out its 30 days */
+  status?: string;
   creditCostMultiplier?: number;
   quotaCentsMultiplier?: number;
   customKeyCreditCharge?: number;

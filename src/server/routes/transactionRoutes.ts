@@ -1378,6 +1378,11 @@ transactionRouter.post('/reset', async (req, res) => {
     if (confirmReset !== true) {
       return res.status(400).json({ error: 'Explicit confirmation required (confirmReset: true).' });
     }
+    // Real books are never wiped on the spot: delete the workspace instead (30-day window, then
+    // purge). Only a workspace holding demo data can be emptied at once.
+    if (wsDoc.data()?.isDemoLoaded !== true) {
+      return res.status(409).json({ error: 'Only demo data can be cleared at once. To remove real books, delete the workspace (Settings → Security): it is kept for 30 days first.' });
+    }
 
     // Never wipe auditLogs - the audit trail must be preserved
     const collections = [

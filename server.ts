@@ -69,9 +69,10 @@ import { MatchingEngine } from "./src/lib/MatchingEngine.ts";
 import { TruthEngine } from "./src/modules/integrity/TruthEngine.ts";
 import { calculateNetIncome, isPostable, lineAmount } from "./src/lib/txFilters.ts";
 import { assertWorkspaceAccess, getDb, FieldValue } from "./src/server/db/firestore.ts";
+import { AccountDeletionBlocked, deleteAccount } from "./src/server/services/accountDeletionService.ts";
 import { cronRouter } from "./src/server/routes/cronRoutes.ts";
 import { runDailyMaintenance } from "./src/server/services/maintenanceService.ts";
-import { restoreWorkspaceBackup, RestoreError } from "./src/server/services/workspaceRestoreService.ts";
+import { exportWorkspaceBackup, restoreWorkspaceBackup, RestoreError } from "./src/server/services/workspaceRestoreService.ts";
 import type { Transaction } from "./src/server/db/firestore.ts";
 import { verifyIdToken, authAdmin, supabaseUrl } from "./src/server/auth/supabaseAuth.ts";
 import type { DecodedIdToken } from "./src/server/auth/supabaseAuth.ts";
@@ -1366,43 +1367,11 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         }
       };
 
-      const [
-        transactions,
-        accounts,
-        projects,
-        budgets,
-        vendors,
-        customers,
-        invoices,
-        bills,
-        payments,
-        estimates,
-        recurring,
-        inventory,
-        assets,
-        taxRates,
-        autoRules,
-        reconciliations
-      ] = await Promise.all([
-        streamCollection("transactions"),
-        streamCollection("chartAccounts"),
-        streamCollection("projects"),
-        streamCollection("budgets"),
-        streamCollection("vendors"),
-        streamCollection("customers"),
-        streamCollection("invoices"),
-        streamCollection("bills"),
-        streamCollection("payments"),
-        streamCollection("estimates"),
-        streamCollection("recurring"),
-        streamCollection("inventory"),
-        streamCollection("assets"),
-        streamCollection("taxRates"),
-        streamCollection("autoRules"),
-        streamCollection("reconciliations")
-      ]);
-
       const format = (req.query.format as string)?.toLowerCase();
+      const [transactions, accounts] = format === "csv"
+        ? await Promise.all([streamCollection("transactions"), streamCollection("chartAccounts")])
+        : [[], []];
+
       const todayIso = formatTzDate(new Date(), wsData?.settings?.timezone || wsData?.timezone);
 
       if (format === "csv") {
@@ -1427,42 +1396,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         return res.send(csvContent);
       }
 
-      const payload: any = {
-        schemaVersion: 1,
-        exportedAt: new Date().toISOString(),
-        workspace: { id: workspaceId, ...(wsData || {}) },
-        transactions,
-        accounts,
-        projects,
-        budgets,
-        vendors,
-        customers,
-        invoices,
-        bills,
-        payments,
-        estimates,
-        inventory,
-        assets,
-        recurringRules: recurring,
-        taxRates,
-        autoRules,
-        reconciliations,
-        metadata: {
-          transactionCount: transactions.length,
-          invoiceCount: invoices.length,
-          billCount: bills.length,
-          accountCount: accounts.length,
-          projectCount: projects.length,
-          currency: (wsData as any)?.currency || (wsData as any)?.baseCurrency || 'USD',
-          exportedBy: authReq.user?.uid || 'user',
-          serverAuthoritative: true
-        }
-      };
-
-      // Server SHA-256 Checksum over complete unabridged payload string
-      const payloadString = JSON.stringify(payload);
-      const checksum = crypto.createHash("sha256").update(payloadString).digest("hex");
-      payload.metadata.checksum = checksum;
+      // JSON backup: every collection the restore brings back (workspaceRestoreService.ts, L-07)
+      const payload = await exportWorkspaceBackup(db, workspaceId, authReq.user?.uid || 'user');
 
       res.setHeader("Content-Disposition", `attachment; filename="ledgerflow-backup-${workspaceId}-${todayIso}.json"`);
       res.setHeader("Content-Type", "application/json");
@@ -3713,7 +3648,7 @@ You MUST output a valid JSON object matching this schema exactly:
   app.use("/api/v1/plaid", authenticate, plaidRouter);
 
   app.use("/api/reports", authenticate, reportRouter);
-  app.use("/api/v1/reports", authenticate, reportRouter);
+  // /api/v1/reports is mounted once, with apiAuthenticate (signed-in users and API keys), below
 
   app.post("/api/v1/forensics/anomaly-scan", authenticate, async (req: express.Request, res: express.Response) => {
     const authReq = req as AuthenticatedRequest;
@@ -3995,13 +3930,15 @@ You MUST output a valid JSON object matching this schema exactly:
     }
   });
 
-  // Delete user account
+  // Delete user account (accountDeletionService.ts: shared books are never left without an owner)
   app.delete("/api/v1/auth/delete-account", apiAuthenticate, async (req: any, res) => {
     try {
-      const uid = req.user.uid;
-      await authAdmin.deleteUser(uid);
-      res.json({ success: true, message: 'Account deleted successfully.' });
+      const result = await deleteAccount(getDb(), { uid: req.user.uid, email: req.user.email }, uid => authAdmin.deleteUser(uid));
+      res.json({ success: true, message: 'Account deleted.', ...result });
     } catch (error: any) {
+      if (error instanceof AccountDeletionBlocked) {
+        return res.status(409).json({ error: error.message, workspaces: error.workspaces });
+      }
       console.error('Failed to delete account:', error);
       res.status(500).json({ error: error.message || 'Failed to delete account' });
     }

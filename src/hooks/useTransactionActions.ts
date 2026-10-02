@@ -24,7 +24,8 @@ import { useUIStore } from '../stores/useUIStore';
 import { MatchingEngine } from '../lib/MatchingEngine';
 import { Transaction, BankStatementLine, AutoRule, TransactionLine } from '../types';
 import { toast } from 'sonner';
-import { formatDecimal, parseLocalDate, sanitizeCsvCell } from '../lib/utils';
+import { formatDecimal, parseLocalDate, sanitizeCsvCell, formatDate } from '../lib/utils';
+import { describeError } from '../lib/errorRemedies';
 import { aiService } from '../services/aiService';
 import { DoubleEntryAuditor } from '../services/auditor';
 import { 
@@ -976,52 +977,26 @@ export function useTransactionActions() {
     }
   };
 
+  // "Delete this workspace": the server keeps it for 30 days (an owner can keep it until then),
+  // then deletes everything in it; the audit trail stays (workspaceRoutes.ts, workspacePurgeService.ts)
   const handleResetWorkspace = async () => {
     if (!user || !currentWorkspaceId) return;
-    const confirm = safeConfirm("CRITICAL PROTOCOL: This will permanently purge ALL data in this institutional workspace including transactions, architectural nodes, and forensic records. This cannot be undone. Are you absolutely sure?");
-    if (!confirm) return;
-
-    const loader = toast.loading('Initiating deep system reset...');
+    const workspace = useAuthStore.getState().getCurrentWorkspace();
+    const name = workspace?.name || 'this workspace';
+    if (!safeConfirm(`Delete "${name}"? Everything in it (entries, invoices, bills, contacts, files) will be deleted in 30 days. Until then an owner can keep it. The audit trail is kept.`)) return;
     try {
-      setIsSyncing(true);
-      
-      const response = await fetch('/api/v1/transactions/reset', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user.getIdToken()}` },
-         body: JSON.stringify({ workspaceId: currentWorkspaceId, confirmReset: true })
+      const response = await fetch(`/api/v1/workspaces/${encodeURIComponent(currentWorkspaceId)}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${await user.getIdToken()}` },
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to reset workspace data on server.');
-      }
-      
-      // Also clear the store immediately to reflect the void state
-      useLedgerStore.setState({
-          transactions: [],
-          accounts: [],
-          journalEntries: [],
-          computedAccounts: [],
-          totalLedgerBalance: 0,
-          runningBalances: {
-              totalIncome: 0,
-              totalExpense: 0,
-              totalBalance: 0,
-              projectMetrics: {},
-              categoryMetrics: {}
-          }
-      });
-
-      // Clear the isDemoLoaded flag
-      await updateDoc(doc(db, 'workspaces', currentWorkspaceId), {
-        isDemoLoaded: false
-      });
-
-      toast.success('System purged. All topological nodes and records cleared.', { id: loader });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.message || body.error || 'The workspace could not be deleted');
+      const when = body.scheduledPurgeAt ? formatDate(String(body.scheduledPurgeAt).slice(0, 10)) : 'in 30 days';
+      toast.success(`"${name}" will be deleted on ${when}`, { description: 'Until then, an owner can keep it from the banner at the top of the screen.' });
+      useAuthStore.getState().setWorkspaces(useAuthStore.getState().workspaces.map(w => w.id === currentWorkspaceId ? { ...w, status: 'pending_deletion', scheduledPurgeAt: body.scheduledPurgeAt } as typeof w : w));
     } catch (error) {
-      console.error('Reset Error:', error);
-      toast.error('Reset failed partially. Check permissions.', { id: loader });
-    } finally {
-      setIsSyncing(false);
+      const described = describeError(error, 'delete');
+      toast.error(described.title, { description: described.remedy });
     }
   };
 
