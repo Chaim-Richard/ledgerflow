@@ -4,7 +4,8 @@ import { ShieldAlert, Fingerprint, Zap, AlertTriangle, CheckCircle2, Loader2, Fi
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { AnomalyDetector } from '../../lib/algorithms';
 import { formatDecimal, cn, getLocalDateISO } from '../../lib/utils';
-import { isPostable, lineAmount } from '../../lib/txFilters';
+import { isPostable } from '../../lib/txFilters';
+import { ledgerComplianceStats } from '../../lib/forensicChecks';
 import { toast } from 'sonner';
 import { useTimeout } from '../../hooks/useTimeout';
 
@@ -32,32 +33,8 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
     return 'NOMINAL';
   }, [forensicData.score]);
 
-  // Derived compliance statistics based on actual balances
-  const complianceStats = useMemo(() => {
-    let unbalancedCount = 0;
-    let missingProjectCount = 0;
-    const sameSigMap = new Map<string, number>();
-    
-    for (const t of transactions) {
-      if (!isPostable(t)) continue;
-      
-      const lineSum = (t.lines || []).reduce((sum, l) => sum + lineAmount(l, t), 0);
-      if (lineSum !== 0) unbalancedCount++;
-      if (!t.projectId && !t.project) missingProjectCount++;
-      
-      const sig = `${t.totalAmountCents}_${t.date}_${t.payee || 'general'}`;
-      sameSigMap.set(sig, (sameSigMap.get(sig) || 0) + 1);
-    }
-    
-    let duplicateCount = 0;
-    sameSigMap.forEach(count => { if (count > 1) duplicateCount += (count - 1); });
-
-    return [
-      { label: 'Unbalanced Journal Entries', count: unbalancedCount, status: unbalancedCount === 0 ? 'pass' : 'fail' },
-      { label: 'Missing Project Classifications', count: missingProjectCount, status: missingProjectCount < 5 ? 'pass' : 'warn' },
-      { label: 'Potential Redundant Entries', count: duplicateCount, status: duplicateCount === 0 ? 'pass' : 'warn' },
-    ];
-  }, [transactions]);
+  // Derived compliance statistics based on actual balances (src/lib/forensicChecks.ts, tested)
+  const complianceStats = useMemo(() => ledgerComplianceStats(transactions), [transactions]);
 
   const handleGenerateAuditReport = () => {
     setIsRunning(true);

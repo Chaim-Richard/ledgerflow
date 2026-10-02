@@ -1461,7 +1461,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] H-13 AverageMonthlyReportView (report-views.test.tsx)
 - [x] H-14 TopExpensesIncomeReportView (report-views.test.tsx)
 - [x] H-15 TagBreakdownReportView (report-views.test.tsx)
-- [ ] H-16 ForensicAuditor
+- [x] H-16 ForensicAuditor (forensic-checks.test.ts; found L-164)
 - [x] H-17 TanStackDataGrid (ui-primitives.test.tsx; sort headers are buttons now)
 - [x] H-18 RadixModal — no longer exists (dialogs use useDialog, tested)
 - [x] H-19 RequireRole (ui-primitives.test.tsx; found L-161)
@@ -1470,7 +1470,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] H-22 EmptyState (ui-primitives.test.tsx)
 - [x] H-23 PublicInvoicePage (public-invoice-page.test.tsx; loading/error states readable by screen readers)
 - [x] H-24 EstimatesView (estimate-conversion.test.ts; found L-163)
-- [ ] H-25 CustomerModal
+- [x] H-25 CustomerModal (customer-modal.test.tsx; names and emails are trimmed, blank names refused)
 - [x] H-26 AuditLogViewer (audit-log-viewer.test.tsx, codex)
 - [ ] H-27 `src/components/finance`
 - [ ] H-28 `src/hooks`
@@ -1723,6 +1723,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-161 Buttons: a quick double click on any AsyncButton (payments, saves, filings) ran the action twice (the "busy" flag only took effect after a re-render; now a ref guards it, test fails on the old code); RequireRole's greyed-out mode only blocked the mouse, Tab + Enter still pressed the button (now `inert`); the data grid's sort headers were mouse-only (now buttons)
 - [x] L-162 Customer and vendor pages: "Outstanding" was total − paid (deposits ignored) added across currencies, cancelled invoices counted, and "overdue" compared a due date read as UTC midnight with the current time (a day off in the Americas). Now `partyStats` / the aging rule (still owed, base currency, days past due, tested); each document shows its open amount in its own currency
 - [x] L-163 Converting an estimate to an invoice wrote the invoice straight to the database as "sent": no ledger posting (no receivable, no revenue: P&L and balance sheet missed it while Sales and aging showed it), a dropped `totalCents` field, no lines, and a random invoice number when numbering failed. Now a draft invoice with the estimate's lines through the posting path (useEntityOperations), no made-up number or account; guard test: no screen writes invoices, bills, credits, payments or transactions to the database directly
+- [x] L-164 Forensic Auditor called balanced foreign-currency entries unbalanced: it converted and rounded each line separately (+5.5 → 6, −5.5 → −5) before adding them up. It now checks the lines in the entry's own currency, like the server's validator (`src/lib/forensicChecks.ts`, tested)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION

@@ -1,0 +1,43 @@
+/** Adding a customer (H-25): a named dialog, trimmed fields, no blank names, Escape closes. */
+import { stubFetch } from './helpers/dom';
+import test, { afterEach, describe } from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import CustomerModal from '../components/sales/CustomerModal';
+import type { Customer } from '../types';
+
+function setup() {
+  stubFetch(404);
+  const saved: Partial<Customer>[] = [];
+  let closed = 0;
+  render(<CustomerModal isOpen onClose={() => { closed++; }} onSave={c => { saved.push(c); }} />);
+  return { saved, closed: () => closed };
+}
+
+describe('customer dialog', () => {
+  afterEach(() => cleanup());
+
+  test('saves the trimmed name, email and phone', () => {
+    const { saved } = setup();
+    assert.ok(screen.getByRole('dialog', { name: /Customer/ }));
+    fireEvent.change(screen.getByLabelText('Customer Name'), { target: { value: '  Acme Ltd ' } });
+    fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: ' billing@acme.test ' } });
+    fireEvent.change(screen.getByLabelText('Phone Number'), { target: { value: ' 555 0100 ' } });
+    fireEvent.submit(screen.getByLabelText('Customer Name').closest('form')!);
+    assert.deepEqual(saved, [{ name: 'Acme Ltd', email: 'billing@acme.test', phone: '555 0100', status: 'active', balanceCents: 0 }]);
+  });
+
+  test('a name of only spaces is not saved', () => {
+    const { saved } = setup();
+    fireEvent.change(screen.getByLabelText('Customer Name'), { target: { value: '   ' } });
+    fireEvent.submit(screen.getByLabelText('Customer Name').closest('form')!);
+    assert.equal(saved.length, 0);
+  });
+
+  test('Escape closes it', () => {
+    const { closed } = setup();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    assert.equal(closed(), 1);
+  });
+});

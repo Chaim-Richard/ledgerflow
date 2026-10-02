@@ -21,10 +21,12 @@ export default function CustomerModal({ isOpen, onClose, onSave }: CustomerModal
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // "required" lets a name of only spaces through; spaces around an email would break sending
+    if (!name.trim()) return;
     onSave({
-      name,
-      email,
-      phone,
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
       status,
       balanceCents: 0
     });
