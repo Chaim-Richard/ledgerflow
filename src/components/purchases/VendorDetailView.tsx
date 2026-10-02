@@ -13,6 +13,7 @@ import {
   Inbox,
   User
 } from 'lucide-react';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface VendorDetailViewProps {
   vendorId: string;
@@ -23,6 +24,7 @@ export default function VendorDetailView({ vendorId, onBack }: VendorDetailViewP
   const vendors = useLedgerStore(s => s.vendors) || [];
   const bills = useLedgerStore(s => s.bills) || [];
   const payments = useLedgerStore(s => s.payments) || [];
+  useLedgerCollections('bills', 'payments', 'vendors');
 
   const vendor = useMemo(() => vendors.find(v => v.id === vendorId), [vendors, vendorId]);
 

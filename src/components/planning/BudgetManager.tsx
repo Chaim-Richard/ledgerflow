@@ -23,6 +23,7 @@ import { addDoc, collection, deleteDoc, doc, updateDoc } from '../../lib/db/fire
 import { db } from '../../firebase';
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 
 
@@ -32,6 +33,7 @@ export default function BudgetManager() {
   const budgets = useLedgerStore((s: any) => s.budgets);
   const transactions = useLedgerStore((s: any) => s.transactions);
   const accounts = useLedgerStore((s: any) => s.accounts);
+  useLedgerCollections('budgets');
   const [isAdding, setIsAdding] = useState(false);
   const [editingBudget, setEditingBudget] = useState<string | null>(null);
   const [newBudget, setNewBudget] = useState({

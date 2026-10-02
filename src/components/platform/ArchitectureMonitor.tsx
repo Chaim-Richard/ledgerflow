@@ -122,8 +122,8 @@ export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any
                 <Database size={24} />
               </div>
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 mb-1">Data Access Layer (DAL)</h4>
-              <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">Abstract Storage Provider</h3>
-              <p className="text-xs text-slate-500 mt-2">Currently mapped to FirebaseAdapter. Ready to swap to SupabaseAdapter with zero UI changes.</p>
+              <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">Supabase (Postgres)</h3>
+              <p className="text-xs text-slate-500 mt-2">Screens read through src/lib/db with row level security; live lists fetch only what changed.</p>
             </div>
           </div>
         </motion.div>

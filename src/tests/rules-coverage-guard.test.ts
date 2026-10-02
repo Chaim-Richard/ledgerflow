@@ -4,6 +4,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { WORKSPACE_SCOPED_COLLECTIONS } from '../constants/collections';
 import { documentTables, tablesWithRules } from './helpers/migrations';
+import { LEDGER_COLLECTIONS } from '../lib/ledgerCollections';
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -46,21 +47,29 @@ describe('Database coverage guard (every collection has a table and access rules
     assert.deepStrictEqual(missing, [], `Tables without lf_rules rows: ${missing.join(', ')}`);
   });
 
-  test('WORKSPACE_SCOPED_COLLECTIONS matches the collections useLedgerData subscribes to', () => {
+  test('WORKSPACE_SCOPED_COLLECTIONS covers what the browser loads, and every entry is loaded or explained', () => {
     const ledgerContent = fs.readFileSync(path.join(process.cwd(), 'src/hooks/useLedgerData.ts'), 'utf8');
-    const subscribed = new Set<string>();
-    for (const m of ledgerContent.matchAll(/collection\(db,\s*['"]([a-zA-Z0-9_]+)['"]\)/g)) subscribed.add(m[1]);
-    for (const m of ledgerContent.matchAll(/doc\(db,\s*['"]([a-zA-Z0-9_]+)['"]/g)) subscribed.add(m[1]);
+    const loaded = new Set<string>(Object.values(LEDGER_COLLECTIONS).map(spec => spec.collection));
+    for (const m of ledgerContent.matchAll(/collection\(db,\s*['"]([a-zA-Z0-9_]+)['"]\)/g)) loaded.add(m[1]);
+    for (const m of ledgerContent.matchAll(/doc\(db,\s*['"]([a-zA-Z0-9_]+)['"]/g)) loaded.add(m[1]);
 
-    const expectedScoped = Array.from(subscribed).filter(c => c !== 'users' && c !== 'workspaces' && c !== 'auditLogs');
+    const expectedScoped = Array.from(loaded).filter(c => c !== 'users' && c !== 'workspaces' && c !== 'auditLogs');
     const scopedSet = new Set<string>(WORKSPACE_SCOPED_COLLECTIONS);
     const missingFromScoped = expectedScoped.filter(c => !scopedSet.has(c));
     assert.deepStrictEqual(missingFromScoped, [],
-      `Subscribed collections missing from WORKSPACE_SCOPED_COLLECTIONS: ${missingFromScoped.join(', ')}`);
-    const expectedSet = new Set(expectedScoped);
-    const missingFromSubscribed = WORKSPACE_SCOPED_COLLECTIONS.filter(c => !expectedSet.has(c));
-    assert.deepStrictEqual(missingFromSubscribed, [],
-      `WORKSPACE_SCOPED_COLLECTIONS entries missing from useLedgerData.ts subscriptions: ${missingFromSubscribed.join(', ')}`);
+      `Loaded collections missing from WORKSPACE_SCOPED_COLLECTIONS: ${missingFromScoped.join(', ')}`);
+    // Workspace data the browser doesn't keep in the store (the purge still deletes it)
+    const NOT_LOADED_BY_BROWSER: Record<string, string> = {
+      periods: 'period close runs on the server (/periods routes)',
+      invites: 'Team settings reads invites from the server',
+      workspaceShards: 'server-side counters',
+      billingLedgerTraces: 'written by the billing routes on the server',
+      supportTickets: 'no screen reads them',
+      supportMessages: 'no screen reads them',
+    };
+    const unexplained = WORKSPACE_SCOPED_COLLECTIONS.filter(c => !loaded.has(c) && !NOT_LOADED_BY_BROWSER[c]);
+    assert.deepStrictEqual(unexplained, [],
+      `WORKSPACE_SCOPED_COLLECTIONS entries the browser doesn't load and no reason given: ${unexplained.join(', ')}`);
 
     const withoutTable = WORKSPACE_SCOPED_COLLECTIONS.filter(c => !tables.has(c));
     assert.deepStrictEqual(withoutTable, [], `Scoped collections without a table: ${withoutTable.join(', ')}`);

@@ -9,6 +9,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { toast } from 'sonner';
 import { useTimeout } from '../../hooks/useTimeout';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface HealthCheckModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalPr
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   const bankLines = useLedgerStore(s => s.bankLines);
+  useLedgerCollections('bankLines');
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const workspaces = useAuthStore(s => s.workspaces);
   

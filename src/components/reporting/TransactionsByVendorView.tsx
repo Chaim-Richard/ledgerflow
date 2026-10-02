@@ -6,12 +6,14 @@ import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { getFiscalYearBounds } from '../../lib/fiscalCalendar';
 import { computeTransactionsByVendor, PartyTransactionRow } from '../../server/reports/computeReports';
 import { toast } from 'sonner';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export const TransactionsByVendorView: React.FC<{ startDate?: string; endDate?: string }> = ({ startDate: pageStartDate, endDate: pageEndDate }) => {
   const vendors = useLedgerStore(s => s.vendors);
   const bills = useLedgerStore(s => s.bills);
   const payments = useLedgerStore(s => s.payments);
   const vendorCredits = useLedgerStore(s => s.vendorCredits);
+  useLedgerCollections('bills', 'payments', 'vendorCredits', 'vendors');
   const [searchTerm, setSearchTerm] = useState('');
 
   const [startDate, setStartDate] = useState(() => {

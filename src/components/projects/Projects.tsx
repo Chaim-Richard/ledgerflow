@@ -29,6 +29,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useCommandDispatcher } from '../../hooks/useSystemContext';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export default function Projects() {
   const user = useAuthStore(s => s.user);
@@ -38,6 +39,7 @@ export default function Projects() {
   const bills = useLedgerStore(s => s.bills);
   const budgets = useLedgerStore(s => s.budgets);
   const vendors = useLedgerStore(s => s.vendors);
+  useLedgerCollections('bills', 'budgets', 'vendors');
   const { handleAction: onAction } = useCommandDispatcher();
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
   const onAdd = (data: any) => addEntity('projects', data);

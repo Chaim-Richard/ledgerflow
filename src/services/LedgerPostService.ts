@@ -1,5 +1,6 @@
 import { resolveAccountRole } from '../lib/accountUtils';
-import { getIdToken } from '../firebase';
+import { db, getIdToken } from '../firebase';
+import { doc, getDoc } from '../lib/db/firestore';
 import { toast } from 'sonner';
 import { getLocalDateISO, roundCents } from '../lib/utils';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -68,8 +69,22 @@ export class LedgerPostService {
     return context?.workspaces || useAuthStore.getState().workspaces || [];
   }
 
-  private static getInventory(context?: LedgerPostContext): InventoryItem[] {
-    return context?.inventory || useLedgerStore.getState().inventory || [];
+  /**
+   * The items an invoice sells, for cost of goods sold: the caller's list, else the loaded
+   * inventory, plus any item on the invoice that isn't loaded yet (inventory loads only once a
+   * screen needs it: src/lib/ledgerCollections.ts), read from the database.
+   */
+  private static async loadInventory(invoiceData: Partial<Invoice>, context?: LedgerPostContext): Promise<InventoryItem[]> {
+    if (context?.inventory) return context.inventory;
+    const loaded = useLedgerStore.getState().inventory || [];
+    const known = new Set(loaded.map(i => i.id));
+    const missing = [...new Set((invoiceData.items || []).map(l => l.itemId).filter((id): id is string => Boolean(id) && !known.has(id as string)))];
+    if (!missing.length) return loaded;
+    const fetched = await Promise.all(missing.map(async id => {
+      const snap = await getDoc(doc(db, 'inventory', id)).catch(() => null);
+      return snap?.exists() ? ({ id: snap.id, ...snap.data() } as InventoryItem) : null;
+    }));
+    return [...loaded, ...fetched.filter((i): i is InventoryItem => i !== null)];
   }
 
   /**
@@ -328,7 +343,7 @@ export class LedgerPostService {
       baseCurrency: currentWs?.currency || 'USD',
       inventoryAccount: this.findAccount(accounts, mappings, ['inventory', 'stock', 'inventory asset'], a => resolveAccountRole(a) === 'inventory'),
       cogsAccount: this.findAccount(accounts, mappings, ['cogs', 'cost of goods sold', 'direct costs'], a => resolveAccountRole(a) === 'cogs'),
-      items: this.getInventory(context),
+      items: await this.loadInventory(invoiceData, context),
     });
     txsToPost.push(...cogs.entries);
     const wasPending = Boolean(invoiceData.metadata?.cogsPending);

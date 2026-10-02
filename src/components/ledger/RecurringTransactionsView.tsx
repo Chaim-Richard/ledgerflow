@@ -20,6 +20,7 @@ import { cn } from '../../lib/utils';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 /**
  * Recurring invoices and entries. The daily job (src/server/services/recurringService.ts) runs
@@ -28,6 +29,7 @@ import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
  */
 export default function RecurringTransactionsView() {
   const recurring = useLedgerStore(s => s.recurring) || [];
+  useLedgerCollections('recurring');
   const [searchTerm, setSearchTerm] = useState('');
   const focusedId = useRecordFocus('recurring', { ready: recurring.length > 0, onFocus: () => setSearchTerm('') });
   const { updateEntity, deleteEntity } = useEntityOperations();

@@ -10,6 +10,7 @@ import { performThreeWayMatch } from '../../lib/threeWayMatchEngine';
 import { billLinesFromOrder, nextPoNumber } from '../../lib/purchaseOrders';
 import { formatCurrency, formatDate, formatTzDate } from '../../lib/utils';
 import BillModal from './BillModal';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 /**
  * Purchase orders (saved in `purchaseOrders`), goods received against them, and turning an order
@@ -28,6 +29,7 @@ export const PurchaseOrdersView: React.FC = () => {
   const bills = useLedgerStore(s => (s.bills || []) as Bill[]);
   const vendors = useLedgerStore(s => (s.vendors || []) as Vendor[]);
   const accounts = useLedgerStore(s => s.accounts || []);
+  useLedgerCollections('bills', 'vendors');
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const role = useCurrentRole();
   const canEdit = role === 'owner' || role === 'accountant' || role === 'bookkeeper';

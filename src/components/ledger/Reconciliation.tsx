@@ -39,6 +39,7 @@ import { isPostable, lineAmount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
 import BankLineActionDialog from './BankLineActionDialog';
 import type { BankLineActionTarget } from './BankLineActionDialog';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export default function Reconciliation() {
   const user = useAuthStore((s: any) => s.user);
@@ -46,6 +47,7 @@ export default function Reconciliation() {
   const transactions = useLedgerStore((s: any) => s.transactions);
   const bankLines = useLedgerStore((s: any) => s.bankLines || []);
   const accounts = useLedgerStore((s: any) => s.accounts);
+  useLedgerCollections('bankLines');
   const txActions = useTransactionActions();
   const onMatch = txActions.handleReconcileMatch;
   const onIgnore = txActions.handleReconcileIgnore;

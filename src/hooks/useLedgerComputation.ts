@@ -9,6 +9,7 @@ import { useSavedViewsStore } from '../stores/useSavedViewsStore';
 import { addDays, addWeeks, addMonths, addYears, format } from 'date-fns';
 import { parseLocalDate } from '../lib/utils';
 import { TransactionQueryEngine } from '../lib/TransactionQueryEngine';
+import { useLedgerCollections } from './useLedgerCollections';
 
 export function useLedgerComputation(
   transactions: Transaction[] = [], 
@@ -23,6 +24,7 @@ export function useLedgerComputation(
   
   const scenarios = useScenarioStore(state => state.scenarios);
   const activeScenarioId = useScenarioStore(state => state.activeScenarioId);
+  useLedgerCollections('scenarios');
   const activeScenario = Array.isArray(scenarios) ? scenarios.find(s => s.id === activeScenarioId) : null;
 
   const views = useSavedViewsStore(s => s.views);

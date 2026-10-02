@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import SavedViewsManagerModal from './SavedViewsManagerModal';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 const ICON_MAP: Record<string, any> = {
   Wallet,
@@ -40,6 +41,7 @@ export default function SavedViewsBar({ currentSearchTerm, className }: SavedVie
   const accounts = useLedgerStore(s => s.accounts);
   const invoices = useLedgerStore(s => s.invoices);
   const bills = useLedgerStore(s => s.bills);
+  useLedgerCollections('bills', 'invoices');
 
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [isSavePromptOpen, setIsSavePromptOpen] = useState(false);

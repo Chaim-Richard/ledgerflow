@@ -5,11 +5,13 @@ import { formatCurrency, parseLocalDate, cn } from '../../lib/utils';
 import { format } from 'date-fns';
 import { DollarSign, Search, Filter, Eye, Download } from 'lucide-react';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export default function PaymentsView() {
   const payments = useLedgerStore(s => s.payments) || [];
   const customers = useLedgerStore(s => s.customers) || [];
   const vendors = useLedgerStore(s => s.vendors) || [];
+  useLedgerCollections('customers', 'payments', 'vendors');
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [previewPayment, setPreviewPayment] = useState<any | null>(null);
   

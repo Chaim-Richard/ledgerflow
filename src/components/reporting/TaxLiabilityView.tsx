@@ -10,6 +10,7 @@ import { buildTaxReturn, returnChanges } from '../../lib/taxReturnDocs';
 import type { TaxableDocument } from '../../lib/taxReturnDocs';
 import { TAX_TREATMENTS } from '../../lib/taxCodes';
 import type { TaxReturnBox, TaxTreatment } from '../../lib/taxCodes';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 /**
  * The tax return for a period (T-06): boxes in the home currency from invoices, bills, credit
@@ -31,6 +32,7 @@ export default function TaxLiabilityView({ startDate: pageStartDate, endDate: pa
   const bills = useLedgerStore(s => s.bills);
   const creditNotes = useLedgerStore(s => s.creditNotes);
   const vendorCredits = useLedgerStore(s => s.vendorCredits);
+  useLedgerCollections('bills', 'creditNotes', 'invoices', 'vendorCredits');
   const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
   const currency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const role = useCurrentRole();

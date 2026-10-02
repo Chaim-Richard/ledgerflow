@@ -13,6 +13,7 @@ import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { formatCurrency } from '../../lib/utils';
 import { lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
 import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface InvoiceModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const inventoryItems = useLedgerStore(s => s.inventory || []);
+  useLedgerCollections('inventory');
   const [showPdfPreview, setShowPdfPreview] = useState(false);
 
   const [invoice, setInvoice] = useState<Partial<Invoice>>(() => initialInvoice || ({

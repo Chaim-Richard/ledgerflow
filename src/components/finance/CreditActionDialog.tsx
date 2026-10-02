@@ -7,6 +7,7 @@ import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import { calculateAmountDue } from '../../lib/documentMath';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export interface CreditActionTarget {
   kind: 'customer' | 'vendor';
@@ -27,6 +28,7 @@ export default function CreditActionDialog({ target, onClose }: { target: Credit
   const invoices = useLedgerStore(s => s.invoices);
   const bills = useLedgerStore(s => s.bills);
   const accounts = useLedgerStore(s => s.accounts);
+  useLedgerCollections('bills', 'invoices');
   const [documentId, setDocumentId] = useState('');
   const [cashAccountId, setCashAccountId] = useState('');
   const [amount, setAmount] = useState((target.remainingCents / 100).toFixed(2));

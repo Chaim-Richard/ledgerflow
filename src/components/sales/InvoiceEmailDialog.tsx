@@ -5,6 +5,7 @@ import type { Invoice } from '../../types';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { getIdToken } from '../../firebase';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 /**
  * Email an invoice or a payment reminder to the customer, and see every email sent for it
@@ -25,6 +26,7 @@ async function authorized(path: string, init?: RequestInit) {
 export default function InvoiceEmailDialog({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
   const customer = useLedgerStore(s => s.customers).find(c => c.id === invoice.customerId);
+  useLedgerCollections('customers');
   const overdue = !!invoice.dueDate && invoice.status !== 'paid' && invoice.status !== 'draft';
   const [to, setTo] = useState(() => String(invoice.metadata?.sentTo || customer?.email || ''));
   const [template, setTemplate] = useState<'invoice' | 'reminder'>(overdue && invoice.status !== 'pending' ? 'reminder' : 'invoice');

@@ -27,6 +27,7 @@ import FinancialCalculatorView from './FinancialCalculatorView';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
 import { ANALYTICAL_LENSES_REGISTRY, LENS_COMPONENTS } from '../../config/registry';
 import { ViewErrorBoundary } from '../common/ViewErrorBoundary';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 // -------------------------------------------------------------
 // Interactive D3 Ledger Volumetric Flow & Activity Visualizer
@@ -332,6 +333,7 @@ export default function AnalyticalCenter() {
   const projects = useLedgerStore(s => s.projects);
   const bills = useLedgerStore(s => s.bills);
   const invoices = useLedgerStore(s => s.invoices);
+  useLedgerCollections('bills', 'invoices');
   const filterCriteria = useUIStore(s => s.filterCriteria);
   const { handleAction: onAction } = useCommandDispatcher();
   const passedMetrics = useAuditTelemetry(transactions, accounts);
@@ -347,6 +349,7 @@ export default function AnalyticalCenter() {
   const runningBalances = useLedgerStore(state => state.runningBalances);
   const integrityStatus = useLedgerStore(state => state.integrityStatus);
   const budgets = useLedgerStore(state => state.budgets);
+  useLedgerCollections('budgets');
   
   // High efficiency metrics calculations
   const metrics = useAuditTelemetry(transactions, accounts, timeRange, (timeRange === 30) ? passedMetrics : undefined);

@@ -18,6 +18,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { motion, AnimatePresence } from 'motion/react';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface AuditTrailProps {
   auditLogs?: any[];
@@ -125,6 +126,7 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
   usePerformanceTrace("AuditTrail");
 
   const storeLogs = useLedgerStore(state => state.auditLogs || []);
+  useLedgerCollections('auditLogs');
   const auditLogs = passedLogs || storeLogs;
   const [searchTerm, setSearchTerm] = React.useState('');
   const [expandedId, setExpandedId] = React.useState<string | null>(null);

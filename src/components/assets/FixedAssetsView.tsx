@@ -9,6 +9,7 @@ import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { getIdToken } from '../../firebase';
 import { depreciationThrough } from '../../lib/depreciationEngine';
 import { formatCurrency, formatDate, formatTzDate, parseAmountToCents } from '../../lib/utils';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 /**
  * Fixed asset register (R-06). Assets are saved in the database ('assets'); depreciation is posted
@@ -29,6 +30,7 @@ const byName = (pattern: RegExp, type: string) => (a: ChartAccount) => pattern.t
 export const FixedAssetsView: React.FC = () => {
   const assets = useLedgerStore(s => s.assets) as FixedAsset[] | undefined;
   const accounts = useLedgerStore(s => s.accounts) as ChartAccount[] | undefined;
+  useLedgerCollections('assets');
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const { addEntity } = useEntityOperations();
   const role = useCurrentRole();

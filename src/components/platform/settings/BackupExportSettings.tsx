@@ -93,7 +93,7 @@ export default function BackupExportSettings() {
       if (usedServer) {
         toast.success(`Full verified backup exported (${payload.metadata?.transactionCount || payload.transactions?.length} transactions)`);
       } else {
-        toast.warning('Offline backup — contains at most 2,000 transactions and is not a complete archive.');
+        toast.warning('Offline backup: only what this page has loaded, not a complete archive.');
       }
     } catch (e: any) {
       console.error(e);

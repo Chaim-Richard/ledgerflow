@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { creditTaxFrom } from '../../lib/taxCodes';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export default function CreditNotesView() {
   const [activeTab, setActiveTab] = useState<'customer' | 'vendor'>('customer');
@@ -39,6 +40,7 @@ export default function CreditNotesView() {
   const vendorCredits = useLedgerStore(s => s.vendorCredits || []);
   const invoices = useLedgerStore(s => s.invoices || []);
   const bills = useLedgerStore(s => s.bills || []);
+  useLedgerCollections('bills', 'creditNotes', 'customers', 'invoices', 'vendorCredits', 'vendors');
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
 
   const { addEntity } = useEntityOperations();

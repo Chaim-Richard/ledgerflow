@@ -24,11 +24,13 @@ import VendorModal from './VendorModal';
 import VendorDetailView from './VendorDetailView';
 import ReceivePaymentModal from '../sales/ReceivePaymentModal';
 import { toast } from 'sonner';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export default function Purchases() {
   const vendors = useLedgerStore(s => s.vendors) || [];
   const bills = useLedgerStore(s => s.bills) || [];
   const accounts = useLedgerStore(s => s.accounts) || [];
+  useLedgerCollections('bills', 'vendors');
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
 
   const [activeSubTab, setActiveSubTab] = useState<'bills' | 'vendors'>('bills');

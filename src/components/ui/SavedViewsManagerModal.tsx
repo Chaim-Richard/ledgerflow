@@ -7,6 +7,7 @@ import {
   Wallet, TrendingUp, TrendingDown, Tag, Clock, ShieldAlert, Building, FolderKanban, DollarSign, Sparkles, AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 const AVAILABLE_ICONS = [
   { name: 'Wallet', icon: Wallet, label: 'Wallet / Cash' },
@@ -54,6 +55,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
   const accounts = useLedgerStore(s => s.accounts);
   const invoices = useLedgerStore(s => s.invoices);
   const bills = useLedgerStore(s => s.bills);
+  useLedgerCollections('bills', 'invoices');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [editingView, setEditingView] = useState<SavedView | null>(null);

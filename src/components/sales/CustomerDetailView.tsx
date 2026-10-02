@@ -14,6 +14,7 @@ import {
   User
 } from 'lucide-react';
 import { differenceInDays, parseISO } from 'date-fns';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface CustomerDetailViewProps {
   customerId: string;
@@ -24,6 +25,7 @@ export default function CustomerDetailView({ customerId, onBack }: CustomerDetai
   const customers = useLedgerStore(s => s.customers) || [];
   const invoices = useLedgerStore(s => s.invoices) || [];
   const payments = useLedgerStore(s => s.payments) || [];
+  useLedgerCollections('customers', 'invoices', 'payments');
 
   const customer = useMemo(() => customers.find(c => c.id === customerId), [customers, customerId]);
 

@@ -16,6 +16,7 @@ import {
   X,
   Check
 } from 'lucide-react';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export const PayrollView: React.FC = () => {
   const employees = useLedgerStore(s => (s.employees || []) as Employee[]);
@@ -25,6 +26,7 @@ export const PayrollView: React.FC = () => {
   const accounts = useLedgerStore(s => s.accounts);
   const transactions = useLedgerStore(s => s.transactions);
   const setTransactions = useLedgerStore(s => s.setTransactions);
+  useLedgerCollections('employees', 'payRuns');
   const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
   const user = useAuthStore(s => s.user);
   const currentWorkspace = getCurrentWorkspace();

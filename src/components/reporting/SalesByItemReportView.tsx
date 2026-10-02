@@ -3,6 +3,7 @@ import { Package } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, cn } from '../../lib/utils';
 import { computeSalesByItem, yearRange } from '../../server/reports/itemReports';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface Props {
   selectedYear?: number;
@@ -17,6 +18,7 @@ export const SalesByItemReportView: React.FC<Props> = ({ selectedYear, startDate
   const items = useLedgerStore(s => s.inventory);
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
+  useLedgerCollections('inventory', 'invoices');
 
   const { startDate: from, endDate: to } = startDate || endDate ? { startDate, endDate } : yearRange(selectedYear);
   const report = useMemo(

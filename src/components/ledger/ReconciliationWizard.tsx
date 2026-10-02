@@ -19,6 +19,7 @@ import {
 import { parseLocalDate, cn } from '../../lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface ReconciliationWizardProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ interface ReconciliationWizardProps {
 export default function ReconciliationWizard({ isOpen, onClose, accounts, onComplete, formatCurrency }: ReconciliationWizardProps) {
   const transactions = useLedgerStore(state => state.transactions || []);
   const reconciliations = useLedgerStore(state => state.reconciliations || []);
+  useLedgerCollections('reconciliations');
   
   const [step, setStep] = useState(1);
   const [selectedAccount, setSelectedAccount] = useState<string>('');

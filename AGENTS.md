@@ -13,6 +13,8 @@ To ensure complexity does not grow over time, all "tools" are separated into thr
 - All financial data is stored in `useLedgerStore` (`src/stores/useLedgerStore.ts`).
 - The canonical sources of truth are the arrays: `transactions: Transaction[]` and `accounts: ChartAccount[]`.
 
+- **Loading data:** only the ledger, chart of accounts, projects, journal entries, tax rates and rules load when a workspace opens. Any other collection (invoices, bills, customers, payments, bank lines, …) loads the first time a screen asks for it: a component that reads one from `useLedgerStore` must call `useLedgerCollections('invoices', ...)` (`src/hooks/useLedgerCollections.ts`; the list is `src/lib/ledgerCollections.ts`). `ledger-collections-guard.test.ts` fails otherwise. Code that edits a document must not assume its list is loaded (see `savedRecord` in `useEntityOperations.ts`).
+
 ### Layer 2: Pure Math Algorithms (`src/lib/algorithms/`)
 - Algorithms are 100% pure math functions. They **never** fetch their own data or access state directly.
 - They are defined in `src/lib/algorithms/` and must adhere to the `AlgorithmDefinition` interface.

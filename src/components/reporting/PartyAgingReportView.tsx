@@ -16,6 +16,7 @@ import {
   ArrowUpDown
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface PartyAgingReportViewProps {
   side: 'customer' | 'vendor';
@@ -39,6 +40,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
   const rawVendors = useLedgerStore(s => s.vendors) || [];
   const rawInvoices = useLedgerStore(s => s.invoices) || [];
   const rawBills = useLedgerStore(s => s.bills) || [];
+  useLedgerCollections('bills', 'customers', 'invoices', 'vendors');
 
   const parties = isCustomer ? rawCustomers : rawVendors;
   const documents = isCustomer ? rawInvoices : rawBills;

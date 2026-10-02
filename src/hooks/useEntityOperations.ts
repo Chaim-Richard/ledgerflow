@@ -7,7 +7,8 @@ import {
   setDoc,
   query,
   where,
-  getDocs
+  getDocs,
+  getDoc
 } from '../lib/db/firestore';
 import { db, getIdToken } from '../firebase';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -17,6 +18,21 @@ import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 import { LedgerPostService } from '../services/LedgerPostService';
 
 import { isOpenInvoice, isOpenBill, lineAmount } from '../lib/txFilters';
+import type { Bill, CreditNote, Customer, Invoice, VendorCredit } from '../types';
+
+type StoredDocumentPath = 'invoices' | 'bills' | 'creditNotes' | 'vendorCredits' | 'customers';
+
+/**
+ * The saved copy of a record: the loaded one, else read from the database. Collections load only
+ * when a screen needs them (src/lib/ledgerCollections.ts), so an edit must never be merged with
+ * "nothing" and posted as a partial document.
+ */
+async function savedRecord<T>(path: StoredDocumentPath, id: string): Promise<T | undefined> {
+  const loaded = (useLedgerStore.getState()[path] as Array<{ id: string }> | undefined)?.find(r => r.id === id);
+  if (loaded) return loaded as T;
+  const snap = await getDoc(doc(db, path, id));
+  return snap.exists() ? ({ id: snap.id, ...snap.data() } as T) : undefined;
+}
 
 export function useEntityOperations() {
   const user = useAuthStore(s => s.user);
@@ -157,8 +173,7 @@ export function useEntityOperations() {
   // is posted, so the server sees an issued invoice; the send is logged there.
   const sendInvoiceEmail = async (id: string, invoiceData: { customerId?: string; metadata?: Record<string, unknown> }) => {
     if (!currentWorkspaceId) return false;
-    const customers = useLedgerStore.getState().customers || [];
-    const customer = customers.find(c => c.id === invoiceData.customerId);
+    const customer = invoiceData.customerId ? await savedRecord<Customer>('customers', invoiceData.customerId) : undefined;
     const to = String(invoiceData.metadata?.sentTo || customer?.email || '').trim();
     if (!to) {
       toast.error('The invoice was not emailed: the customer has no email address.');
@@ -197,11 +212,11 @@ export function useEntityOperations() {
       };
 
       // Email the invoice when it becomes "sent" (after it is posted below)
-      const previousInvoice = path === 'invoices' ? useLedgerStore.getState().invoices.find(i => i.id === id) : undefined;
+      const previousInvoice = path === 'invoices' ? await savedRecord<Invoice>('invoices', id) : undefined;
       const emailAfterSave = path === 'invoices' && finalData.status === 'sent' && (previousInvoice?.status !== 'sent' || Boolean(forceSend));
 
       if (path === 'invoices' && user && currentWorkspaceId) {
-        const existingInvoice = useLedgerStore.getState().invoices.find(i => i.id === id) || {};
+        const existingInvoice = previousInvoice || {};
         const mergedData = { ...existingInvoice, ...finalData };
         const posted = await LedgerPostService.postInvoiceLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
         if (posted.cogsPendingReason) toast.warning(posted.cogsPendingReason);
@@ -210,7 +225,7 @@ export function useEntityOperations() {
           syncEntityBalance('customers', targetCustId);
         }
       } else if (path === 'bills' && user && currentWorkspaceId) {
-        const existingBill = useLedgerStore.getState().bills.find(b => b.id === id) || {};
+        const existingBill = (await savedRecord<Bill>('bills', id)) || {};
         const mergedData = { ...existingBill, ...finalData };
         await LedgerPostService.postBillLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
         const targetVendId = mergedData.vendorId || finalData.vendorId;
@@ -218,11 +233,11 @@ export function useEntityOperations() {
           syncEntityBalance('vendors', targetVendId);
         }
       } else if (path === 'creditNotes' && user && currentWorkspaceId) {
-        const existing = useLedgerStore.getState().creditNotes.find(c => c.id === id) || {};
+        const existing = (await savedRecord<CreditNote>('creditNotes', id)) || {};
         const mergedData = { ...existing, ...finalData };
         await LedgerPostService.postCreditNoteLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
       } else if (path === 'vendorCredits' && user && currentWorkspaceId) {
-        const existing = useLedgerStore.getState().vendorCredits.find(v => v.id === id) || {};
+        const existing = (await savedRecord<VendorCredit>('vendorCredits', id)) || {};
         const mergedData = { ...existing, ...finalData };
         await LedgerPostService.postVendorCreditLedger(id, mergedData, currentWorkspaceId, user.uid, { collection: path, docId: id, action: 'update', data: finalData });
       } else {
@@ -239,13 +254,13 @@ export function useEntityOperations() {
   const deleteEntity = async (path: string, id: string, successMsg?: string) => {
     try {
       if (path === 'invoices' && currentWorkspaceId) {
-        const existingInvoice = useLedgerStore.getState().invoices.find(i => i.id === id);
+        const existingInvoice = await savedRecord<Invoice>('invoices', id);
         await LedgerPostService.deletePostings(id, 'invoiceId', currentWorkspaceId, { collection: path, docId: id, action: 'delete' });
         if (existingInvoice?.customerId) {
           syncEntityBalance('customers', existingInvoice.customerId);
         }
       } else if (path === 'bills' && currentWorkspaceId) {
-        const existingBill = useLedgerStore.getState().bills.find(b => b.id === id);
+        const existingBill = await savedRecord<Bill>('bills', id);
         await LedgerPostService.deletePostings(id, 'billId', currentWorkspaceId, { collection: path, docId: id, action: 'delete' });
         if (existingBill?.vendorId) {
           syncEntityBalance('vendors', existingBill.vendorId);

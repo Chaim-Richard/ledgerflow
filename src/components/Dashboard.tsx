@@ -25,6 +25,7 @@ import { formatCurrency, resolveAccountName, cn } from '../lib/utils';
 import { isPostable, lineAmount } from '../lib/txFilters';
 
 import { useShallow } from 'zustand/react/shallow';
+import { useLedgerCollections } from '../hooks/useLedgerCollections';
 
 export default function Dashboard() {
   const { 
@@ -44,6 +45,7 @@ export default function Dashboard() {
   })));
   const scenarios = useScenarioStore(s => s.scenarios);
   const activeScenarioId = useScenarioStore(s => s.activeScenarioId);
+  useLedgerCollections('scenarios');
   const setQuickEntryOpen = useUIStore(s => s.setQuickEntryOpen);
   const setTemplateSelectorOpen = useUIStore(s => s.setTemplateSelectorOpen);
   const setActiveTab = useUIStore(s => s.setActiveTab);

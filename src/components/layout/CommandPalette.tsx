@@ -15,6 +15,7 @@ import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
 import { useTimeout } from '../../hooks/useTimeout';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
     invoices: state.invoices,
     bills: state.bills
   })));
+  useLedgerCollections('bills', 'customers', 'invoices', 'vendors');
   const { handleQuickAdd } = useTransactionActions();
   const { addEntity } = useEntityOperations();
 

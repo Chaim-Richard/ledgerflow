@@ -8,6 +8,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, getLocalDateISO, roundCents } from '../../lib/utils';
 import { LedgerPostService } from '../../services/LedgerPostService';
 import { toast } from 'sonner';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
 
@@ -34,6 +35,7 @@ export default function ReceivePaymentModal({
   const invoices = useLedgerStore(s => s.invoices);
   const bills = useLedgerStore(s => s.bills);
   const accounts = useLedgerStore(s => s.accounts);
+  useLedgerCollections('bills', 'customers', 'invoices', 'vendors');
 
   const [direction, setDirection] = useState<'received' | 'made'>(defaultDirection);
   const [contactId, setContactId] = useState<string>(defaultContactId);

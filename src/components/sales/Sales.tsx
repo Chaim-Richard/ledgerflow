@@ -41,12 +41,14 @@ import { getDefaultTaxConfig, generateDefaultTaxRates } from '../../lib/taxRateD
 import { calculateNextOccurrence } from '../../lib/recurringEngine';
 
 import CustomerDetailView from './CustomerDetailView';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export default function Sales() {
   const user = useAuthStore(s => s.user);
   const invoices = useLedgerStore(s => s.invoices);
   const customers = useLedgerStore(s => s.customers);
   const accounts = useLedgerStore(s => s.accounts);
+  useLedgerCollections('customers', 'invoices');
   const { addEntity, updateEntity } = useEntityOperations();
 
   const transactions = useLedgerStore(s => s.transactions);

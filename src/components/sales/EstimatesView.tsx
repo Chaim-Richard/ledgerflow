@@ -7,6 +7,7 @@ import { collection, addDoc, doc, updateDoc } from '../../lib/db/firestore';
 import { db, getIdToken } from '../../firebase';
 import { toast } from 'sonner';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export default function EstimatesView() {
   const user = useAuthStore(s => s.user);
@@ -14,6 +15,7 @@ export default function EstimatesView() {
 
   const estimates = useLedgerStore(s => s.estimates);
   const customers = useLedgerStore(s => s.customers);
+  useLedgerCollections('customers', 'estimates');
 
   const [isCreating, setIsCreating] = useState(false);
   const [customerId, setCustomerId] = useState('');

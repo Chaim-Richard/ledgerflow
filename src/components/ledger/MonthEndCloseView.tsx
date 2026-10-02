@@ -15,6 +15,7 @@ import { useEntityOperations } from '../../hooks/useEntityOperations';
 import type { CloseItem } from '../../lib/closeChecklist';
 import { monthCloseState, monthEnd } from '../../lib/periodLock';
 import type { AppTab, PeriodStatus, Workspace } from '../../types';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 /**
  * Month-End Close (R-01 checklist, R-02 sign-offs, R-03 soft/hard close, R-08 drafts, R-10 roles,
@@ -66,6 +67,7 @@ export default function MonthEndCloseView() {
   const bills = useLedgerStore(s => s.bills);
   const journalEntries = useLedgerStore(s => s.journalEntries);
   const assets = useLedgerStore(s => s.assets);
+  useLedgerCollections('assets', 'bankLines', 'bills', 'invoices');
   const workspaces = useAuthStore(s => s.workspaces) || [];
   const setWorkspaces = useAuthStore(s => s.setWorkspaces);
   const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';

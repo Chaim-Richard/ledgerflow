@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, getLocalDateISO, cn } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export function TaxReserveWidget() {
   const transactions = useLedgerStore(s => s.transactions);
@@ -19,6 +20,7 @@ export function TaxReserveWidget() {
     return computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
   }, [computedAccounts, rawAccounts]);
   const bills = useLedgerStore(s => s.bills);
+  useLedgerCollections('bills');
 
   // Mode: 'simple' vs 'autopilot'
   const [mode, setMode] = useState<'simple' | 'autopilot'>('simple');

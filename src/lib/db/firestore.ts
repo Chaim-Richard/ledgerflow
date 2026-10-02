@@ -13,6 +13,8 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './client';
+import { changedSince, latestUpdate, mergeChanges } from './liveQuery';
+import type { LiveRow } from './liveQuery';
 
 // Same shape as firebase's DocumentData: documents are free-form JSON whose fields the
 // screens read directly, so field values are deliberately untyped (as in Firebase).
@@ -285,11 +287,13 @@ function toFirestoreError(err: DbError | Error, path: string): FirestoreError {
   return new FirestoreError(code, `${e.message || 'Database error'} (${path})`);
 }
 
-const localListeners = new Map<string, Set<() => void>>();
+const localListeners = new Map<string, Set<(deletedIds: string[]) => void>>();
 
-function notifyLocalWrite(tables: Iterable<string>): void {
+/** Our own writes refresh the live lists at once; deletes say which rows went. */
+function notifyLocalWrite(tables: Iterable<string>, deleted: Array<{ table: string; id: string }> = []): void {
   for (const t of new Set(tables)) {
-    localListeners.get(t)?.forEach(fn => fn());
+    const ids = deleted.filter(d => d.table === t).map(d => d.id);
+    localListeners.get(t)?.forEach(fn => fn(ids));
   }
 }
 
@@ -358,7 +362,7 @@ function applyFilter(b: FilterBuilder, f: Filter): FilterBuilder {
 
 const PAGE_SIZE = 1000;
 
-interface Row { id: string; data: DocumentData }
+interface Row { id: string; data: DocumentData; updated_at?: string }
 
 async function fetchRows(q: Query): Promise<Row[]> {
   const client = q.firestore.client();
@@ -366,7 +370,7 @@ async function fetchRows(q: Query): Promise<Row[]> {
   const max = q.limitCount ?? Number.POSITIVE_INFINITY;
   for (let from = 0; rows.length < max; from += PAGE_SIZE) {
     const to = Math.min(from + PAGE_SIZE, from + (max - rows.length)) - 1;
-    let b = client.from(q.collectionId).select('id,data') as unknown as FilterBuilder;
+    let b = client.from(q.collectionId).select('id,data,updated_at') as unknown as FilterBuilder;
     for (const f of q.filters) b = applyFilter(b, f);
     for (const o of q.orders) {
       // Firestore leaves out documents that don't have the orderBy field.
@@ -436,7 +440,7 @@ export async function addDoc<T = DocumentData>(coll: CollectionReference<T>, dat
 
 export async function deleteDoc<T = DocumentData>(ref: DocumentReference<T>): Promise<void> {
   await rpc(ref.firestore, 'lf_delete', { p_table: ref.collectionId, p_id: ref.id }, ref.path);
-  notifyLocalWrite([ref.collectionId]);
+  notifyLocalWrite([ref.collectionId], [{ table: ref.collectionId, id: ref.id }]);
 }
 
 type BatchOp = Record<string, unknown> & { table: string };
@@ -470,7 +474,8 @@ export class WriteBatch {
   async commit(): Promise<void> {
     if (this.ops.length === 0) return;
     await rpc(this.db, 'lf_batch', { p_ops: this.ops }, 'batch');
-    notifyLocalWrite(this.ops.map(o => o.table));
+    notifyLocalWrite(this.ops.map(o => o.table),
+      this.ops.filter(o => o.op === 'delete').map(o => ({ table: o.table, id: String(o.id) })));
   }
 }
 
@@ -509,6 +514,45 @@ type OnError = (err: FirestoreError) => void;
 
 let channelCounter = 0;
 
+/** Rows changed since `since` in one workspace, oldest change first; null when too many (reload). */
+const MAX_CHANGED_ROWS = 2000;
+async function fetchChanged(q: Query, workspaceId: string, since: string): Promise<LiveRow[] | null> {
+  const client = q.firestore.client();
+  const out: LiveRow[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const b = (client.from(q.collectionId).select('id,data,updated_at') as unknown as FilterBuilder)
+      .eq('workspace_id', workspaceId)
+      .gt('updated_at', since)
+      .order('updated_at', { ascending: true })
+      .order('id', { ascending: true });
+    const { data, error } = await b.range(from, from + PAGE_SIZE - 1);
+    if (error) throw toFirestoreError(error, q.collectionId);
+    const page = (data || []) as Row[];
+    out.push(...page.map(r => ({ id: r.id, data: r.data, updatedAt: r.updated_at || '' })));
+    if (out.length > MAX_CHANGED_ROWS) return null;
+    if (page.length < PAGE_SIZE) return out;
+  }
+}
+
+/**
+ * A safety net for missed live events: coming back online, or to the tab after more than a
+ * minute away, reloads every live list in full.
+ */
+const fullReloadListeners = new Set<() => void>();
+let reloadTriggersInstalled = false;
+function installReloadTriggers(): void {
+  if (reloadTriggersInstalled || typeof window === 'undefined' || typeof document === 'undefined') return;
+  reloadTriggersInstalled = true;
+  let hiddenAt = 0;
+  const reloadAll = () => fullReloadListeners.forEach(fn => fn());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+    if (hiddenAt && Date.now() - hiddenAt > 60_000) reloadAll();
+    hiddenAt = 0;
+  });
+  window.addEventListener('online', reloadAll);
+}
+
 export function onSnapshot<T = DocumentData>(ref: DocumentReference<T>,
   onNext: (snap: DocumentSnapshot<T>) => void, onError?: OnError): Unsubscribe;
 export function onSnapshot<T = DocumentData>(ref: DocumentReference<T>, options: SnapshotListenOptions,
@@ -532,56 +576,133 @@ export function onSnapshot<T = DocumentData>(target: SnapshotTarget<T>, ...args:
   const db = target.firestore;
   const table = target instanceof DocumentReference ? target.collectionId
     : target instanceof Query ? target.collectionId : target.id;
+  const q: Query | null = target instanceof DocumentReference ? null
+    : (target instanceof Query ? target : query(target)) as unknown as Query;
+  // Lists of one workspace fetch only what changed after the first load (liveQuery.ts).
+  const wsFilter = q?.filters.find(f => f.field === 'workspaceId' && f.op === '==' && typeof f.value === 'string');
+  const incremental = Boolean(q && wsFilter);
+  installReloadTriggers();
 
   let active = true;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let inFlight = false;
-  let again = false;
+  let wantFull = true;
+  let wantDelta = false;
+  const pendingDeletes = new Set<string>();
+  let current: LiveRow[] = [];
+  let latest: string | null = null;
 
-  const load = async () => {
-    if (!active) return;
-    if (inFlight) { again = true; return; }
+  const emitList = () => {
+    if (!q) return;
+    onNext(new QuerySnapshot(q, current.map(r =>
+      new QueryDocumentSnapshot(new DocumentReference(q.firestore, q.collectionId, r.id), r.data))));
+  };
+
+  const fullLoad = async () => {
+    if (target instanceof DocumentReference) {
+      const snap = await getDoc(target);
+      if (active) onNext(snap);
+      return;
+    }
+    if (!q) return;
+    if (!incremental) {
+      const snap = await getDocs(q);
+      if (active) onNext(snap);
+      return;
+    }
+    const rows = await fetchRows(q);
+    current = rows.map(r => ({ id: r.id, data: r.data, updatedAt: r.updated_at || '' }));
+    latest = latestUpdate(current, null);
+    if (active) emitList();
+  };
+
+  const deltaLoad = async () => {
+    if (!q || !wsFilter) return;
+    const deletes = [...pendingDeletes];
+    pendingDeletes.clear();
+    let changed: LiveRow[] = [];
+    if (latest) {
+      const fetched = await fetchChanged(q, String(wsFilter.value), changedSince(latest));
+      if (fetched === null) return fullLoad();
+      changed = fetched;
+    } else if (deletes.length === 0) {
+      return fullLoad(); // nothing loaded yet to measure changes from
+    }
+    const out = mergeChanges(current, changed, deletes, { filters: q.filters, orders: q.orders, limitCount: q.limitCount });
+    if (out.rows === null) return fullLoad();
+    latest = latestUpdate(changed, latest);
+    if (out.changed) {
+      current = out.rows;
+      if (active) emitList();
+    }
+  };
+
+  const run = async () => {
+    if (!active || inFlight) return;
     inFlight = true;
     try {
-      const snap = target instanceof DocumentReference ? await getDoc(target) : await getDocs(target);
-      if (active) onNext(snap);
+      while (active && (wantFull || wantDelta || pendingDeletes.size > 0)) {
+        if (wantFull || !incremental) {
+          wantFull = false; wantDelta = false; pendingDeletes.clear();
+          await fullLoad();
+        } else {
+          wantDelta = false;
+          await deltaLoad();
+        }
+      }
     } catch (err) {
+      wantFull = true; wantDelta = false; // start over on the next change
       if (active) onError(err instanceof FirestoreError ? err : toFirestoreError(err as Error, table));
     } finally {
       inFlight = false;
-      if (again && active) { again = false; void load(); }
     }
   };
 
   const schedule = () => {
     if (!active) return;
     if (timer) clearTimeout(timer);
-    timer = setTimeout(() => { timer = null; void load(); }, 150);
+    timer = setTimeout(() => { timer = null; void run(); }, 150);
   };
 
   // Our own writes refresh listeners right away (like Firestore's local cache).
+  const onLocalWrite = (deletedIds: string[]) => {
+    deletedIds.forEach(id => pendingDeletes.add(id));
+    wantDelta = true;
+    schedule();
+  };
   let set = localListeners.get(table);
   if (!set) { set = new Set(); localListeners.set(table, set); }
-  set.add(schedule);
+  set.add(onLocalWrite);
+
+  const reloadAll = () => { wantFull = true; schedule(); };
+  fullReloadListeners.add(reloadAll);
 
   // Changes by other people arrive through Supabase Realtime.
   let filter: string | undefined;
   if (target instanceof DocumentReference) filter = `id=eq.${target.id}`;
-  else if (target instanceof Query) {
-    const ws = target.filters.find(f => f.field === 'workspaceId' && f.op === '==');
-    if (ws && typeof ws.value === 'string') filter = `workspace_id=eq.${ws.value}`;
-  }
+  else if (wsFilter) filter = `workspace_id=eq.${String(wsFilter.value)}`;
   const client = db.client();
+  const onRealtime = (payload: { eventType?: string; old?: { id?: unknown } }) => {
+    if (payload?.eventType === 'DELETE') {
+      const id = payload.old?.id;
+      if (typeof id === 'string') pendingDeletes.add(id);
+      else wantFull = true;
+    } else {
+      wantDelta = true;
+    }
+    schedule();
+  };
   const channel = client.channel(`lf-${table}-${++channelCounter}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table, ...(filter ? { filter } : {}) }, schedule)
+    .on('postgres_changes', { event: '*', schema: 'public', table, ...(filter ? { filter } : {}) }, onRealtime)
     .subscribe();
 
-  void load();
+  void run();
 
   return () => {
     active = false;
     if (timer) clearTimeout(timer);
-    localListeners.get(table)?.delete(schedule);
+    localListeners.get(table)?.delete(onLocalWrite);
+    fullReloadListeners.delete(reloadAll);
     void client.removeChannel(channel);
   };
 }

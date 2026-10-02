@@ -13,6 +13,7 @@ import { evaluateApprovalRequirement } from '../../lib/approvalWorkflow';
 import { addComment, getCommentsForEntity } from '../../lib/commentService';
 import { documentTotals, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import { formatCurrency } from '../../lib/utils';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface BillModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   
   const storeBills = useLedgerStore(s => s.bills) || [];
   const storeTransactions = useLedgerStore(s => s.transactions) || [];
+  useLedgerCollections('bills');
   const [autofillNotice, setAutofillNotice] = useState<string | null>(null);
 
   const [bill, setBill] = useState<Partial<Bill>>(() => ({

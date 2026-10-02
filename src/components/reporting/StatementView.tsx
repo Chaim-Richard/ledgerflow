@@ -5,6 +5,7 @@ import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeStatement } from '../../server/reports/computeReports';
 import { FileText, Printer, Eye, Download } from 'lucide-react';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export default function StatementView({ startDate: pageStartDate, endDate: pageEndDate }: { startDate?: string; endDate?: string } = {}) {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -14,6 +15,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
   const invoices = useLedgerStore(s => s.invoices);
   const bills = useLedgerStore(s => s.bills);
   const payments = useLedgerStore(s => s.payments);
+  useLedgerCollections('bills', 'customers', 'invoices', 'payments', 'vendors');
 
   const [type, setType] = useState<'customer' | 'vendor'>('customer');
   const [contactId, setContactId] = useState<string>('');

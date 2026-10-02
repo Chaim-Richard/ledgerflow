@@ -25,6 +25,7 @@ import { getComparePeriod, getReportPeriod } from '../../lib/fiscalCalendar';
 import type { CompareMode } from '../../lib/fiscalCalendar';
 import { reportStateFromParams, reportStateToParams } from '../../lib/reportPermalink';
 import { isTransactionInDateRange } from '../../lib/txFilters';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 /** The report settings in the address bar when the page opened (a shared link), if any. */
 function linkedReportParams(): URLSearchParams {
@@ -36,6 +37,7 @@ const Reports = React.memo(() => {
   const accounts = useLedgerStore(s => s.accounts);
   const projects = useLedgerStore(s => s.projects);
   const budgets = useLedgerStore(s => s.budgets);
+  useLedgerCollections('budgets');
   const { handleAction: onAction } = useCommandDispatcher();
   usePerformanceTrace("Reports");
   const activeTab = useUIStore(state => state.activeReportTab || 'pnl');

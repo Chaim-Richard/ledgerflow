@@ -7,6 +7,7 @@ import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import { calculateAmountDue } from '../../lib/documentMath';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { formatCurrency } from '../../lib/utils';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export interface BankLineActionTarget {
   mode: 'pay' | 'split';
@@ -26,6 +27,7 @@ export default function BankLineActionDialog({ target, onClose }: { target: Bank
   const invoices = useLedgerStore(s => s.invoices);
   const bills = useLedgerStore(s => s.bills);
   const accounts = useLedgerStore(s => s.accounts);
+  useLedgerCollections('bills', 'invoices');
   const isDeposit = line.amountCents > 0;
   const lineCents = Math.abs(line.amountCents);
   const bankAccounts = useMemo(() => (accounts || []).filter(a => resolveAccountRole(a) === 'cash'), [accounts]);

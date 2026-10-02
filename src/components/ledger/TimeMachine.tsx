@@ -7,6 +7,7 @@ import { isPostable, lineAmount } from '../../lib/txFilters';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export default function TimeMachine() {
   const transactions = useLedgerStore(s => s.transactions);
@@ -19,6 +20,7 @@ export default function TimeMachine() {
   const deleteScenario = useScenarioStore(s => s.deleteScenario);
   const addGhost = useScenarioStore(s => s.addGhost);
   const deleteGhost = useScenarioStore(s => s.deleteGhost);
+  useLedgerCollections('scenarios');
 
   const [activeTab, setActiveTab] = useState<'history' | 'branches' | 'diff'>('branches');
   const [showNewBranchModal, setShowNewBranchModal] = useState(false);

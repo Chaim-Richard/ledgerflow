@@ -9,6 +9,7 @@ import { AlgorithmContext, buildAlgorithmContext } from '../../lib/algorithms/ty
 import { isPostable } from '../../lib/txFilters';
 import { exportToExcel } from '../../lib/excelExport';
 import { getLocalDateISO } from '../../lib/utils';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface ToolSandboxProps {
   toolId: string;
@@ -29,6 +30,7 @@ export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxPr
   const budgets = useLedgerStore(state => state.budgets || []);
   const customers = useLedgerStore(state => state.customers || []);
   const baseCurrency = useLedgerStore(state => state.baseCurrency || 'USD');
+  useLedgerCollections('bills', 'budgets', 'customers', 'employees', 'invoices', 'vendors');
   const reportingCurrency = baseCurrency;
   
   const algorithm = useMemo(() => {

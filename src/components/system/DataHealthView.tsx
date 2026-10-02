@@ -6,6 +6,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { getLocalDateISO } from '../../lib/utils';
 import { DATA_CHECKS, runDataChecks } from '../../lib/dataChecks';
 import type { CheckSeverity } from '../../lib/dataChecks';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 /**
  * Data Health (launch step 8): runs every check in the registry (src/lib/dataChecks.ts) over the
@@ -26,6 +27,7 @@ export default function DataHealthView() {
   const bills = useLedgerStore(s => s.bills);
   const recurring = useLedgerStore(s => s.recurring);
   const inventory = useLedgerStore(s => s.inventory);
+  useLedgerCollections('bills', 'inventory', 'invoices', 'recurring');
   const baseCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const openRecord = useUIStore(s => s.openRecord);
   const [only, setOnly] = useState<string>('all');

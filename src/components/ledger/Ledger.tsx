@@ -89,6 +89,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { useCommandDispatcher } from '../../hooks/useSystemContext';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 const Ledger = React.memo(() => {
   const user = useAuthStore(s => s.user) || ({} as any);
@@ -124,6 +125,7 @@ const Ledger = React.memo(() => {
   const auditLogs = useLedgerStore(s => s.auditLogs || []);
   const budgets = useLedgerStore(s => s.budgets);
   const taxRates = useLedgerStore(s => s.taxRates);
+  useLedgerCollections('auditLogs', 'bankLines', 'budgets', 'reconciliations');
   const { handleAction: onAction } = useCommandDispatcher();
   const txActions = useTransactionActions();
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();

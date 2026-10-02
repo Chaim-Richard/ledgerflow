@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { getIdToken } from '../../firebase';
 import { isUndepositedFundsAccount, resolveAccountRole } from '../../lib/accountUtils';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 type WaitingPayment = { id: string; number?: string; contactName?: string; date?: string; amountCents: number; holdingId: string };
 
@@ -13,6 +14,7 @@ export default function MakeDepositDialog({ onClose }: { onClose: () => void }) 
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const payments = useLedgerStore(s => s.payments);
   const accounts = useLedgerStore(s => s.accounts);
+  useLedgerCollections('payments');
   const [bankAccountId, setBankAccountId] = useState('');
   const [date, setDate] = useState(getLocalDateISO());
   const [chosen, setChosen] = useState<Set<string>>(new Set());
