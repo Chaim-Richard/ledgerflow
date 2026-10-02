@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { daysOverdue, outstandingBaseCents, partyStats } from '../../lib/aging';
+import { calculateAmountDue } from '../../lib/documentMath';
 import { ArrowLeft, DollarSign, FileText, User } from 'lucide-react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
@@ -25,37 +27,12 @@ export default function CustomerDetailView({ customerId, onBack }: CustomerDetai
     return payments.filter(p => p.contactId === customerId && p.direction === 'received' && p.status !== 'void');
   }, [payments, customerId]);
 
+  // still owed, overdue, lifetime and payments in the base currency (src/lib/aging.ts, tested)
+  const today = getLocalDateISO();
   const stats = useMemo(() => {
-    let outstanding = 0;
-    let overdue = 0;
-    let lifetimeSales = 0;
-    let totalPayments = 0;
-
-    customerInvoices.forEach(inv => {
-      const status = (inv.status || '').toLowerCase();
-      if (status !== 'void' && status !== 'draft') {
-        const total = inv.amountCents || 0;
-        lifetimeSales += total;
-
-        if (status !== 'paid') {
-          const paid = inv.amountPaidCents || 0;
-          const openAmount = Math.max(0, total - paid);
-          outstanding += openAmount;
-
-          const isOverdue = inv.dueDate && new Date(inv.dueDate) < new Date();
-          if (isOverdue) {
-            overdue += openAmount;
-          }
-        }
-      }
-    });
-
-    customerPayments.forEach(p => {
-      totalPayments += p.amountCents || 0;
-    });
-
-    return { outstanding, overdue, lifetimeSales, totalPayments };
-  }, [customerInvoices, customerPayments]);
+    const t = partyStats(customerInvoices, customerPayments, 'customer', today);
+    return { outstanding: t.outstandingCents, overdue: t.overdueCents, lifetimeSales: t.lifetimeCents, totalPayments: t.paymentsCents };
+  }, [customerInvoices, customerPayments, today]);
 
   if (!customer) {
     return (
@@ -133,8 +110,8 @@ export default function CustomerDetailView({ customerId, onBack }: CustomerDetai
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-y-auto max-h-[380px]">
             {customerInvoices.map(inv => {
-              const isOverdue = inv.dueDate && new Date(inv.dueDate) < new Date() && inv.status !== 'paid' && inv.status !== 'void';
-              const outstanding = Math.max(0, (inv.amountCents || 0) - (inv.amountPaidCents || 0));
+              const isOverdue = outstandingBaseCents(inv, 'customer') > 0 && daysOverdue(inv, today) > 0;
+              const outstanding = outstandingBaseCents(inv, 'customer') > 0 ? calculateAmountDue(inv) : 0; // in the document's currency
               return (
                 <div key={inv.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors flex items-center justify-between">
                   <div>
@@ -158,10 +135,10 @@ export default function CustomerDetailView({ customerId, onBack }: CustomerDetai
                   </div>
                   <div className="text-right">
                     <div className="font-mono font-bold text-slate-900 dark:text-white text-sm">
-                      {formatCurrency(inv.amountCents || 0)}
+                      {formatCurrency(inv.amountCents || 0, inv.currency)}
                     </div>
                     <div className="text-xs text-[var(--muted)] mt-0.5">
-                      Open: {formatCurrency(outstanding)}
+                      Open: {formatCurrency(outstanding, inv.currency)}
                     </div>
                   </div>
                 </div>
@@ -196,7 +173,7 @@ export default function CustomerDetailView({ customerId, onBack }: CustomerDetai
                 </div>
                 <div className="text-right">
                   <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                    +{formatCurrency(p.amountCents || 0)}
+                    +{formatCurrency(p.amountCents || 0, p.currency)}
                   </div>
                 </div>
               </div>

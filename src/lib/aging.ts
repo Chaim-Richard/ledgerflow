@@ -73,3 +73,32 @@ export function computePartyAging(
   }
   return [...rows.values()].filter(r => r.total > 0).sort((a, b) => a.partyName.localeCompare(b.partyName));
 }
+
+export interface PartyStats { outstandingCents: number; overdueCents: number; lifetimeCents: number; paymentsCents: number }
+
+/**
+ * The money cards on a customer's or vendor's page (H-05, H-06), in cents of the base currency:
+ * still owed and overdue (as the aging), everything ever invoiced/billed (issued documents), and
+ * payments received/made.
+ */
+export function partyStats(
+  documents: Array<Invoice | Bill>,
+  payments: Array<{ direction?: string; status?: string; amountCents?: number; exchangeRate?: number }>,
+  side: 'customer' | 'vendor',
+  today: string,
+): PartyStats {
+  const stats: PartyStats = { outstandingCents: 0, overdueCents: 0, lifetimeCents: 0, paymentsCents: 0 };
+  for (const doc of documents) {
+    if (['draft', 'void', 'cancelled'].includes(doc.status || '')) continue;
+    stats.lifetimeCents += toBaseCents(doc.amountCents || 0, doc.exchangeRate);
+    const owed = outstandingBaseCents(doc, side);
+    stats.outstandingCents += owed;
+    if (owed > 0 && daysOverdue(doc, today) > 0) stats.overdueCents += owed;
+  }
+  const direction = side === 'customer' ? 'received' : 'made';
+  for (const p of payments) {
+    if (p.direction !== direction || p.status === 'void' || p.status === 'draft') continue;
+    stats.paymentsCents += toBaseCents(p.amountCents || 0, p.exchangeRate);
+  }
+  return stats;
+}
