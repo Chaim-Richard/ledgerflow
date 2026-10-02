@@ -138,7 +138,10 @@ export function formatDecimal(cents: number): string {
 }
 
 /**
- * Returns YYYY-MM-DD string in workspace or local user timezone to prevent UTC shift off-by-one errors
+ * The date of a moment (default: now) in the workspace's time zone, or the device's when the
+ * workspace has none: "today in the workspace". For a Date that stands for a calendar day
+ * (new Date(y, m, d), a date picker), use calendarDateISO; for date arithmetic on YYYY-MM-DD
+ * strings, use addToDateISO / monthEndISO (L-80).
  */
 export function getLocalDateISO(d: Date = new Date()): string {
   let timezone = '';
@@ -182,6 +185,69 @@ export function getLocalDateISO(d: Date = new Date()): string {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * The calendar day a Date stands for, read in the device's own time zone (L-80): for Dates built
+ * from a day (new Date(y, m, d), parseLocalDate), which getLocalDateISO would move to the
+ * previous or next day when the workspace's time zone differs from the device's.
+ */
+export function calendarDateISO(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/**
+ * A YYYY-MM-DD date moved by whole years, months and days, in plain calendar maths (no time
+ * zones). Moving by months or years keeps the day, capped at the month's last day
+ * (2024-02-29 − 1 year = 2023-02-28; 2026-01-31 + 1 month = 2026-02-28).
+ */
+export function addToDateISO(ymd: string, by: { years?: number; months?: number; days?: number }): string {
+  const [y, m, d] = ymd.slice(0, 10).split('-').map(Number);
+  const monthIndex = (y + (by.years || 0)) * 12 + (m - 1) + (by.months || 0);
+  const year = Math.floor(monthIndex / 12);
+  const month = monthIndex - year * 12 + 1;
+  const day = Math.min(d, daysInMonth(year, month));
+  return civilFromDays(daysFromCivil(year, month, day) + (by.days || 0));
+}
+
+function daysInMonth(year: number, month: number): number {
+  return [31, (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+}
+
+// Day numbers for the proleptic Gregorian calendar (H. Hinnant's algorithms): pure integer maths
+function daysFromCivil(year: number, month: number, day: number): number {
+  const y = month <= 2 ? year - 1 : year;
+  const era = Math.floor(y / 400);
+  const yoe = y - era * 400;
+  const doy = Math.floor((153 * (month + (month > 2 ? -3 : 9)) + 2) / 5) + day - 1;
+  const doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
+  return era * 146097 + doe;
+}
+
+function civilFromDays(days: number): string {
+  const era = Math.floor(days / 146097);
+  const doe = days - era * 146097;
+  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
+  const mp = Math.floor((5 * doy + 2) / 153);
+  const day = doy - Math.floor((153 * mp + 2) / 5) + 1;
+  const month = mp < 10 ? mp + 3 : mp - 9;
+  const year = yoe + era * 400 + (month <= 2 ? 1 : 0);
+  return `${year}-${pad2(month)}-${pad2(day)}`;
+}
+
+/** This year and month (0–11) in the workspace, for "this year" defaults (L-80). */
+export function workspaceYearMonth(): { year: number; month: number } {
+  const today = getLocalDateISO();
+  return { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) - 1 };
+}
+
+/** The first and last day of the month a YYYY-MM-DD date is in. */
+export function monthBoundsISO(ymd: string): { start: string; end: string } {
+  const start = `${ymd.slice(0, 7)}-01`;
+  return { start, end: addToDateISO(addToDateISO(start, { months: 1 }), { days: -1 }) };
 }
 
 /**

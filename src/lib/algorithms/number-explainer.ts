@@ -1,6 +1,7 @@
 import { Transaction, ChartAccount } from '../../types';
 import { AlgorithmDefinition } from './types';
 import { isPostable, lineAmount, isRevenueAccount, isExpenseAccount } from '../txFilters';
+import { workspaceYearMonth } from '../utils';
 
 // Takes a number (e.g. net profit) and the transactions that make it up, and generates a natural sentence.
 export function explainNetProfit(transactions: readonly Transaction[], month: string, accounts?: readonly ChartAccount[]) {
@@ -83,14 +84,14 @@ export const NUMBER_EXPLAINER_ALGO: AlgorithmDefinition = {
   name: 'Number Explainer (Data to Text)',
   description: 'Turns raw figures like Net Profit into a plain-English explanatory sentence by analyzing the top drivers.',
   inputs: [
-      { key: 'targetMonth', label: 'Month Index (1-12)', min: 1, max: 12, step: 1, defaultValue: new Date().getMonth() + 1 }
+      { key: 'targetMonth', label: 'Month Index (1-12)', min: 1, max: 12, step: 1, defaultValue: workspaceYearMonth().month + 1 }
   ],
   compute: (ctx, inputs) => {
     const { transactions, accounts } = ctx;
     const start = performance.now();
     
-    const year = new Date().getFullYear();
-    const targetMonth = Number(inputs?.targetMonth) || (new Date().getMonth() + 1);
+    const year = workspaceYearMonth().year;
+    const targetMonth = Number(inputs?.targetMonth) || (workspaceYearMonth().month + 1);
     const monthStr = `${year}-${targetMonth.toString().padStart(2, '0')}`;
     
     const result = explainNetProfit(transactions, monthStr, accounts);

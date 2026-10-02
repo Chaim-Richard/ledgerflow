@@ -8,7 +8,7 @@ import {
   Printer
 } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
-import { cn, formatCurrency } from '../../lib/utils';
+import { cn, formatCurrency, workspaceYearMonth } from '../../lib/utils';
 const DrillDownModal = React.lazy(() => import('../layout/DrillDownModal'));
 
 import { REPORT_TABS_REGISTRY, REPORT_COMPONENTS } from '../../config/registry';
@@ -54,7 +54,7 @@ const Reports = React.memo(() => {
   const language = useUIStore(state => state.language);
 
   const availableYears = useMemo(() => {
-    if (!transactions || transactions.length === 0) return [new Date().getFullYear()];
+    if (!transactions || transactions.length === 0) return [workspaceYearMonth().year];
     const yearsSet = new Set<number>();
     for (let i = 0; i < transactions.length; i++) {
       const d = transactions[i].date;
@@ -67,7 +67,7 @@ const Reports = React.memo(() => {
 
   const [selectedYear, setSelectedYear] = useState<number>(() => {
     if (linked.year) return linked.year;
-    if (!transactions || transactions.length === 0) return new Date().getFullYear();
+    if (!transactions || transactions.length === 0) return workspaceYearMonth().year;
     let maxYear = 0;
     for (let i = 0; i < transactions.length; i++) {
       const d = transactions[i].date;
@@ -76,14 +76,14 @@ const Reports = React.memo(() => {
         if (y > maxYear) maxYear = y;
       }
     }
-    return maxYear || new Date().getFullYear();
+    return maxYear || workspaceYearMonth().year;
   });
 
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const quarterNames = ["Q1", "Q2", "Q3", "Q4"];
 
   const availableMonths = useMemo(() => {
-    if (!transactions || transactions.length === 0) return [new Date().getMonth()];
+    if (!transactions || transactions.length === 0) return [workspaceYearMonth().month];
     const monthsSet = new Set<number>();
     for (let i = 0; i < transactions.length; i++) {
       const t = transactions[i];
@@ -97,7 +97,7 @@ const Reports = React.memo(() => {
 
   const [selectedMonth, setSelectedMonth] = useState<number>(() => {
     if (linked.month >= 0) return linked.month;
-    if (!transactions || transactions.length === 0) return new Date().getMonth();
+    if (!transactions || transactions.length === 0) return workspaceYearMonth().month;
     let maxMonth = -1;
     for (let i = 0; i < transactions.length; i++) {
       const t = transactions[i];
@@ -106,7 +106,7 @@ const Reports = React.memo(() => {
         if (m > maxMonth) maxMonth = m;
       }
     }
-    return maxMonth === -1 ? new Date().getMonth() : maxMonth;
+    return maxMonth === -1 ? workspaceYearMonth().month : maxMonth;
   });
 
   const [selectedQuarter, setSelectedQuarter] = useState<number>(() => (linked.quarter >= 0 ? linked.quarter : 0));

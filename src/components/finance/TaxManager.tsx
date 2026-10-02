@@ -16,7 +16,7 @@ import {
   Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { parseLocalDate, cn, formatCurrency, safeConfirm } from '../../lib/utils';
+import { parseLocalDate, cn, formatCurrency, safeConfirm, workspaceYearMonth } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
 import { effectiveRate, TAX_TREATMENTS } from '../../lib/taxCodes';
@@ -139,7 +139,7 @@ export default function TaxManager({
 }: TaxManagerProps = {}) {
   const transactions = useLedgerStore(state => state.transactions || []);
   
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState(workspaceYearMonth().year);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRate, setEditingRate] = useState<TaxRate | null>(null);
   const [activeTab, setActiveTab] = useState<'rates' | 'contractors' | 'reporting'>('rates');

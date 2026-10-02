@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
-import { parseLocalDate, cn, getLocalDateISO, formatCurrency, activateOnKey } from '../../lib/utils';
+import { parseLocalDate, cn, getLocalDateISO, monthBoundsISO, formatCurrency, activateOnKey } from '../../lib/utils';
 import { exportToExcel as exportToExcelHelper } from '../../lib/excelExport';
 import { isPostable, lineAmount, calculateNetIncome, isTransactionInDateRange } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
@@ -34,7 +34,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   const [dateRange, setDateRange] = useState({
-    start: getLocalDateISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+    start: monthBoundsISO(getLocalDateISO()).start,
     end: getLocalDateISO()
   });
   const [isComparative, setIsComparative] = useState(false);

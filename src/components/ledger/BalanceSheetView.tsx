@@ -17,7 +17,7 @@ import {
   CheckCircle2,
   RefreshCw
 } from 'lucide-react';
-import { formatDecimal, cn, getLocalDateISO, formatCurrency as utilsFormatCurrency, activateOnKey } from '../../lib/utils';
+import { formatDecimal, cn, getLocalDateISO, addToDateISO, formatCurrency as utilsFormatCurrency, activateOnKey } from '../../lib/utils';
 import { exportToExcel } from '../../lib/excelExport';
 import { isPostable, isTransactionInDateRange, lineAmount, calculateNetIncome } from '../../lib/txFilters';
 import { motion } from 'motion/react';
@@ -40,7 +40,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
   const [asOfDate, setAsOfDate] = useState<string>(getLocalDateISO());
   const [isComparative, setIsComparative] = useState<boolean>(false);
   const [priorDate, setPriorDate] = useState<string>(
-    getLocalDateISO(new Date(new Date().getFullYear() - 1, new Date().getMonth(), new Date().getDate()))
+    addToDateISO(getLocalDateISO(), { years: -1 })
   );
   useEffect(() => {
     if (pageAsOfDate) setAsOfDate(pageAsOfDate);

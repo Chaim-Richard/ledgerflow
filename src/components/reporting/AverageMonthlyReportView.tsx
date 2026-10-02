@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, workspaceYearMonth } from '../../lib/utils';
 import { computeMonthlyAverages } from '../../lib/reportGenerators';
 import { Calendar, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
 
@@ -9,7 +9,7 @@ interface Props {
 }
 
 export const AverageMonthlyReportView: React.FC<Props> = ({
-  selectedYear = new Date().getFullYear()
+  selectedYear = workspaceYearMonth().year
 }) => {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);

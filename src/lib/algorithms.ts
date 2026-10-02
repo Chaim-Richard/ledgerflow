@@ -1,5 +1,5 @@
 import { isPostable, lineAmount, isRevenueAccount, isExpenseAccount, calculateTransactionImpact } from './txFilters';
-import { parseLocalDate, getLocalDateISO } from './utils';
+import { parseLocalDate, getLocalDateISO, addToDateISO } from './utils';
 import { PerformanceTelemetry } from "./telemetry";
 
 const globalSeed = 42;
@@ -41,11 +41,8 @@ export function aggregateLedgerToDailySeries(
   const days = options.days || 30;
   const metric = options.metric || 'net_flow';
   
-  const end = options.endDateStr ? new Date(options.endDateStr) : new Date();
-  end.setUTCHours(12, 0, 0, 0); // Use mid-day to completely eliminate timezone rollover variances
-
-  const start = new Date(end.getTime());
-  start.setUTCDate(end.getUTCDate() - days + 1);
+  // calendar days ending on endDateStr (default: today in the workspace), in plain date maths (L-80)
+  const endStr = (options.endDateStr || getLocalDateISO()).slice(0, 10);
 
   const accountMap = new Map(accounts.map(a => [a.id, a]));
 
@@ -54,9 +51,7 @@ export function aggregateLedgerToDailySeries(
   const datesList: string[] = [];
 
   for (let i = 0; i < days; i++) {
-    const d = new Date(start.getTime());
-    d.setUTCDate(start.getUTCDate() + i);
-    const dateStr = getLocalDateISO(d);
+    const dateStr = addToDateISO(endStr, { days: i - days + 1 });
     datesList.push(dateStr);
     seriesMap[dateStr] = 0;
   }

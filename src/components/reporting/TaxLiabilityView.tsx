@@ -5,7 +5,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { getIdToken } from '../../firebase';
-import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO, workspaceYearMonth } from '../../lib/utils';
 import { buildTaxReturn, returnChanges } from '../../lib/taxReturnDocs';
 import type { TaxableDocument } from '../../lib/taxReturnDocs';
 import { TAX_TREATMENTS } from '../../lib/taxCodes';
@@ -38,7 +38,7 @@ export default function TaxLiabilityView({ startDate: pageStartDate, endDate: pa
   const role = useCurrentRole();
   const canFile = role === 'owner' || role === 'accountant';
 
-  const [startDate, setStartDate] = useState(`${new Date().getFullYear()}-01-01`);
+  const [startDate, setStartDate] = useState(`${workspaceYearMonth().year}-01-01`);
   const [endDate, setEndDate] = useState(getLocalDateISO());
   // Follow the Reports page period when it gives one
   useEffect(() => { if (pageStartDate) setStartDate(pageStartDate); if (pageEndDate) setEndDate(pageEndDate); }, [pageStartDate, pageEndDate]);

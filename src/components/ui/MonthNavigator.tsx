@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, RotateCcw } from 'lucide-react';
-import { getLocalDateISO, parseLocalDate } from '../../lib/utils';
+import { calendarDateISO, getLocalDateISO, monthBoundsISO, parseLocalDate } from '../../lib/utils';
 
 export interface MonthNavigatorProps {
   currentDate?: Date | string;
@@ -24,16 +24,15 @@ export const MonthNavigator: React.FC<MonthNavigatorProps> = ({
 
   const stepMonth = (offset: number) => {
     const nextDate = new Date(activeDate.getFullYear(), activeDate.getMonth() + offset, 1);
-    const start = getLocalDateISO(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
-    const end = getLocalDateISO(new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0));
+    const { start, end } = monthBoundsISO(calendarDateISO(nextDate));
     onMonthChange({ start, end, date: nextDate });
   };
 
   const resetToCurrentMonth = () => {
-    const now = new Date();
-    const start = getLocalDateISO(new Date(now.getFullYear(), now.getMonth(), 1));
-    const end = getLocalDateISO(new Date(now.getFullYear(), now.getMonth() + 1, 0));
-    onMonthChange({ start, end, date: now });
+    // this month in the workspace, not on the device (L-80)
+    const today = getLocalDateISO();
+    const { start, end } = monthBoundsISO(today);
+    onMonthChange({ start, end, date: parseLocalDate(today) });
   };
 
   return (

@@ -2,7 +2,7 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { getComparePeriod } from '../../lib/fiscalCalendar';
-import { parseLocalDate, formatDecimal, formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
+import { parseLocalDate, formatDecimal, formatCurrency, cn, getLocalDateISO, monthBoundsISO } from '../../lib/utils';
 import { exportToExcel } from '../../lib/excelExport';
 import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
 import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
@@ -27,7 +27,7 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
   }, [computedAccounts, rawAccounts]);
 
   const [dateRange, setDateRange] = useState({
-    start: getLocalDateISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+    start: monthBoundsISO(getLocalDateISO()).start,
     end: getLocalDateISO()
   });
   const [isComparative, setIsComparative] = useState(false);

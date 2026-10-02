@@ -8,7 +8,7 @@ import {
   Sparkles, Info, AlertTriangle, ShieldAlert, CheckCircle2, 
   HelpCircle, DollarSign, Wallet, ArrowRight, TrendingUp, AlertCircle
 } from 'lucide-react';
-import { formatCurrency, getLocalDateISO, cn } from '../../lib/utils';
+import { addToDateISO, formatCurrency, getLocalDateISO, cn } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
@@ -30,9 +30,7 @@ export function TaxReserveWidget() {
   const [safetyBuffer, setSafetyBuffer] = useState<number>(200); // in dollars
   const [nextPayday, setNextPayday] = useState<string>(() => {
     // Default to 10 days from now
-    const d = new Date();
-    d.setDate(d.getDate() + 10);
-    return getLocalDateISO(d);
+    return addToDateISO(getLocalDateISO(), { days: 10 });
   });
 
   // Irregular annual expense templates with status

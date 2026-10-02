@@ -35,7 +35,7 @@ import {
   MinHash,
   jaroWinklerSimilarity
 } from '../lib/algorithms';
-import { safeAsync, safeConfirm, getLocalDateISO } from '../lib/utils';
+import { safeAsync, safeConfirm, getLocalDateISO, workspaceYearMonth } from '../lib/utils';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 import { useBillingStore } from '../modules/billing/BillingService';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
@@ -609,7 +609,7 @@ export function useTransactionActions() {
     }
 
     // --- Autonomous Yearly Tax Law Provisioner ---
-    const txYearNum = data.date ? parseInt(data.date.split('-')[0]) : new Date().getFullYear();
+    const txYearNum = data.date ? parseInt(data.date.split('-')[0]) : workspaceYearMonth().year;
     const allTxs = useLedgerStore.getState().transactions;
     const existingYears = new Set(allTxs.map(t => {
       const yearStr = t.date ? t.date.split('-')[0] : '';

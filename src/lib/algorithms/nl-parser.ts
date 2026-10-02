@@ -1,5 +1,5 @@
 import { AlgorithmDefinition } from './types';
-import { getLocalDateISO } from '../utils';
+import { addToDateISO, getLocalDateISO } from '../utils';
 
 export interface ParsedCommandIntent {
   type: 'transaction' | 'project' | 'query' | 'unknown';
@@ -73,9 +73,7 @@ export function parseNaturalLanguageEntry(text: string): ParsedCommandIntent {
 
     // Date
     if (/(yesterday)/.test(lower)) {
-      const d = new Date();
-      d.setDate(d.getDate() - 1);
-      dateStr = getLocalDateISO(d);
+      dateStr = addToDateISO(getLocalDateISO(), { days: -1 });
     }
 
     // Payee extraction e.g. "paid Maria 150", "paid $100 to Starbucks"

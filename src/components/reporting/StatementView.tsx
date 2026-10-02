@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO, workspaceYearMonth } from '../../lib/utils';
 import { computeStatement } from '../../server/reports/computeReports';
 import { FileText, Printer, Eye, Download } from 'lucide-react';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
@@ -20,7 +20,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
 
   const [type, setType] = useState<'customer' | 'vendor'>('customer');
   const [contactId, setContactId] = useState<string>('');
-  const [startDate, setStartDate] = useState(`${new Date().getFullYear()}-01-01`);
+  const [startDate, setStartDate] = useState(`${workspaceYearMonth().year}-01-01`);
   const [endDate, setEndDate] = useState(getLocalDateISO());
   // Follow the Reports page period when it gives one
   useEffect(() => { if (pageStartDate) setStartDate(pageStartDate); if (pageEndDate) setEndDate(pageEndDate); }, [pageStartDate, pageEndDate]);
