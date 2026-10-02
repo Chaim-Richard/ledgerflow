@@ -9,6 +9,7 @@ import express from "express";
 import crypto from "crypto";
 import { WorkspaceSchema } from "../../schemas";
 import { getDb } from "../db/firestore";
+import type { DocumentData } from "../db/firestore";
 import { exportWorkspaceBackup, restoreWorkspaceBackup, RestoreError } from "../services/workspaceRestoreService";
 import { authAdmin } from "../auth/supabaseAuth";
 
@@ -18,7 +19,7 @@ export function registerWorkspaceApiRoutes(app: express.Express, _ctx: ServerCon
     try {
       const uid = (req as AuthenticatedRequest).user.uid;
       const db = getDb();
-      let ownedWorkspaces: any[] = [];
+      let ownedWorkspaces: Array<Record<string, unknown>> = [];
       
       try {
         const ownedWSQuery = await db.collection("workspaces").where("uid", "==", uid).get();
@@ -115,17 +116,17 @@ export function registerWorkspaceApiRoutes(app: express.Express, _ctx: ServerCon
       const wsData = wsDoc.exists ? wsDoc.data() : { id: workspaceId };
 
       // Helper to stream all documents of a collection scoped to this workspace
-      const streamCollection = async (collectionName: string): Promise<any[]> => {
+      const streamCollection = async (collectionName: string): Promise<Array<DocumentData & { id: string }>> => {
         try {
           const query = db.collection(collectionName).where("workspaceId", "==", workspaceId);
-          const items: any[] = [];
-          return await new Promise<any[]>((resolve, reject) => {
+          const items: Array<DocumentData & { id: string }> = [];
+          return await new Promise<Array<DocumentData & { id: string }>>((resolve, reject) => {
             const stream = query.stream();
-            stream.on("data", (doc: any) => {
+            stream.on("data", (doc: { id: string; data: () => DocumentData }) => {
               items.push({ id: doc.id, ...doc.data() });
             });
             stream.on("end", () => resolve(items));
-            stream.on("error", async (err: any) => {
+            stream.on("error", async (err: unknown) => {
               try {
                 const snap = await query.get();
                 resolve(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -148,7 +149,7 @@ export function registerWorkspaceApiRoutes(app: express.Express, _ctx: ServerCon
 
       if (format === "csv") {
         let csvContent = "Date,Amount,Description,Category,Type,Status,Reference\n";
-        const accountsMap = new Map(accounts.map((a: any) => [a.id, a.name || a.code || a.id]));
+        const accountsMap = new Map(accounts.map((a) => [a.id, a.name || a.code || a.id]));
         transactions.forEach((t) => {
           const categoryName = t.lines && t.lines.length > 0 ? (accountsMap.get(t.lines[0].accountId) || t.lines[0].accountName || 'Uncategorized') : 'Uncategorized';
           const amountStr = ((t.totalAmountCents || 0) / 100).toFixed(2);

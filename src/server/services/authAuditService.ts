@@ -1,3 +1,4 @@
+import type { Firestore } from '../db/firestore';
 import { getDb } from '../db/firestore';
 
 export type AuthAuditEventType = 'login' | 'logout' | 'failed_login' | 'password_reset' | 'token_refresh';
@@ -8,7 +9,7 @@ export interface AuthAuditEvent {
   ip?: string;
   userAgent?: string;
   email?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   timestamp?: string;
 }
 
@@ -17,7 +18,7 @@ export interface AuthAuditEvent {
  */
 export async function recordAuthEvent(
   eventData: AuthAuditEvent,
-  dbOverride?: any
+  dbOverride?: Firestore
 ): Promise<string> {
   const db = dbOverride || getDb();
   const docRef = db.collection('loginAudits').doc();

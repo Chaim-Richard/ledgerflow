@@ -1,8 +1,8 @@
 {
-  "anyCount": 571,
+  "anyCount": 484,
   "utcDateCount": 35,
-  "arrayIndexKeys": 7,
-  "blankNoOpener": 3,
+  "arrayIndexKeys": 0,
+  "blankNoOpener": 0,
   "consoleLog": 0,
   "serverTsLines": 824,
   "filesOver800": 15,

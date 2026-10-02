@@ -1339,18 +1339,18 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] C-19 `transactionsArchive` tier for closed years
 - [ ] C-20 Seed 200k transactions, record load time + reads
 
-# SECTION D — TYPE SAFETY (1,251 `any`, was 1,365)
+# SECTION D — TYPE SAFETY (484 `any` by the ratchet count, was 1,365)
 
-- [ ] D-01 `computeReports.ts`
+- [x] D-01 `computeReports.ts` (0 `any`)
 - [x] D-02 `LedgerPostService.ts` (18 → 0)
 - [x] D-03 `useTransactionActions.ts` (codex, `codex/c-5-explicit-types`)
 - [x] D-04 `useLedgerStore.ts` (codex, `codex/c-5-explicit-types`)
 - [ ] D-05 `useLedgerData.ts` (reserved for Claude; untouched by codex C-5)
-- [ ] D-06 `server.ts`
+- [x] D-06 `server.ts` and the route files split from it (0 `any`; Stripe webhook objects typed)
 - [x] D-07 `transactionRoutes.ts` (92 → 0 `any`; typed caller, `HttpError`, database types)
-- [ ] D-08 `reportRoutes.ts`
-- [ ] D-09 `workspaceRoutes.ts`
-- [ ] D-10 `documentRoutes.ts`
+- [x] D-08 `reportRoutes.ts` (23 → 0; found L-139, L-140)
+- [x] D-09 `workspaceRoutes.ts` (0 `any`; found L-138)
+- [x] D-10 `documentRoutes.ts` (0 `any`, one lookup instead of the if/else chain; found L-137)
 - [x] D-11 `TransactionQueryEngine.ts` (codex, `codex/c-5-explicit-types`)
 - [x] D-12 `algorithms/niche-tools.ts` (codex, `codex/c-5-explicit-types`)
 - [ ] D-13 `algorithms.ts`
@@ -1429,7 +1429,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [x] G-01 StatementImporter (4) (codex, PR #32; merged snapshot verified)
 - [x] G-02 TransactionRow (3) — the money grid (codex, PR #32; merged snapshot verified)
-- [ ] G-03 PurchaseOrdersView (3)
+- [x] G-03 PurchaseOrdersView (3) (no index keys left)
 - [x] G-04 ToolSandbox (3) (codex, PR #32; merged snapshot verified)
 - [x] G-05 QBOMigrationWizard (3) (codex, PR #32; merged snapshot verified)
 - [x] G-06 TransactionEditModal (2) (codex, PR #32; merged snapshot verified)
@@ -1439,7 +1439,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] G-10 CashFlowPredictor (2) (codex, PR #32; merged snapshot verified)
 - [x] G-11 ProjectProfitabilityView (2) (codex, PR #32; merged snapshot verified)
 - [x] G-12 IntelligenceCenter / AICustomBlueprint / AICommandCenter / Dashboard (codex, PR #32; merged snapshot verified)
-- [~] G-13 Remaining single-occurrence files — all eligible files fixed; `BillModal` and `InvoiceModal` remain in Claude's lane (codex, PR #32; merged snapshot verified)
+- [x] G-13 Remaining single-occurrence files (codex, PR #32) + `BillModal`, `InvoiceModal` and 3 step/dot lists (Claude); ratchet `arrayIndexKeys` 0
 - [x] G-14 `react/no-array-index-key` rule (plugin installed, ESLint passes)
 - [x] G-15 Error boundary per view (`MainViewSwitcher`, `key={activeTab}`)
 - [x] G-16 Recovery action on the boundary
@@ -1697,6 +1697,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-133 "Apply rules to existing transactions" said it applied them but saved nothing — now saved through the server (role, period lock, balance checked)
 - [x] L-134 Adding a budget always failed ("Workspace context missing") — fixed, guard test (found by Codex)
 - [x] L-135 Reconciliation matching hung on a single strong match (Hungarian algorithm arrays one short) — rewritten, tested against brute force (found by Codex)
+- [x] L-137 Document PDFs (Preview / Download PDF) always failed: Express passed `next` as the handler's third argument, which it took for the database. Fixed; tested through the router and the database. Estimate PDFs now list their lines (they printed a placeholder), statements show dates, strangers get 403
+- [x] L-138 New numbering series started with "2026" hard-coded in the prefix (INV-2026-…) whatever the year; now the current year (tested)
+- [x] L-139 Server budget-vs-actual report read `accountId`, which budgets don't have (always "Unknown", 0 spent), and summed raw line amounts; now finds the account by id/name/code and uses posted entries in the base currency (tested)
+- [x] L-140 Server aging report ignored deposits and foreign currency and left out approved bills; now uses calculateAmountDue in the base currency and the shared open-document rule (cancelled documents are closed everywhere) (tested)
+- [x] L-141 **SECURITY** `POST /api/v1/auth/audit` needed no sign-in and wrote a sign-in record for any user id in the body (shown in that person's "Download my data"); now signed-in only, for yourself, body checked (guard test)
+- [x] L-142 Bank CSV upload: dates without a clear format fell back to the UTC day (the workspace was never read); now the workspace's time zone, members only
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION

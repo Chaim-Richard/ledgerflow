@@ -445,8 +445,8 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                 </div>
                 {attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
-                     {attachments.map((f, i) => (
-                       <span key={i} className="px-2 py-1 bg-zinc-100 text-zinc-600 text-xs rounded-lg">{f.name}</span>
+                     {attachments.map(f => (
+                       <span key={`${f.name}-${f.size}-${f.lastModified}`} className="px-2 py-1 bg-zinc-100 text-zinc-600 text-xs rounded-lg">{f.name}</span>
                      ))}
                   </div>
                 )}

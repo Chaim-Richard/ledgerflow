@@ -3,6 +3,11 @@ import { formatTzDate, sendError, authorizeWorkspace, authenticate } from "../ht
 import type { AuthenticatedRequest, ServerContext } from "../http/serverKit";
 import { apiAuthenticate } from "../auth/apiAuthenticate";
 import express from "express";
+import type { AutoRule, Transaction as LedgerTransaction } from "../../types";
+
+/** An account the labeler can pick, and one row of the body's transactions (any shape the caller sends). */
+type LabelAccount = { id: string; name: string; type?: string };
+type LabelInput = { id?: unknown; description?: unknown; memo?: unknown; payee?: unknown; date?: unknown; amountCents?: unknown; amount?: unknown };
 import { WorkspaceIdSchema } from "../../schemas";
 import { TruthEngine } from "../../modules/integrity/TruthEngine";
 import { assertWorkspaceAccess, getDb } from "../db/firestore";
@@ -20,10 +25,10 @@ export function registerLabelingRoutes(app: express.Express, _ctx: ServerContext
         .where("workspaceId", "==", workspaceId)
         .limit(200)
         .get();
-      const txs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+      const txs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as LedgerTransaction);
       
       const amounts = txs.map(t => Math.abs(t.totalAmountCents || 0)).filter(a => a > 0);
-      let anomalies: any[] = [];
+      let anomalies: Array<{ id: string; description: string; amountCents: number; reason: string }> = [];
       if (amounts.length >= 5) {
         const mean = amounts.reduce((a, b) => a + b, 0) / amounts.length;
         const stdDev = Math.sqrt(amounts.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / amounts.length);
@@ -92,8 +97,8 @@ export function registerLabelingRoutes(app: express.Express, _ctx: ServerContext
         return sendError(res, "Missing or invalid 'transactions' payload. Must be an array of objects.", 400);
       }
 
-      let accounts: any[] = [];
-      let rules: any[] = [];
+      let accounts: LabelAccount[] = [];
+      let rules: AutoRule[] = [];
 
       try {
         if (finalWorkspaceId && finalWorkspaceId !== "sandbox_labeling") {
@@ -101,8 +106,8 @@ export function registerLabelingRoutes(app: express.Express, _ctx: ServerContext
             db.collection("chartAccounts").where("workspaceId", "==", finalWorkspaceId).get(),
             db.collection("autoRules").where("workspaceId", "==", finalWorkspaceId).get()
           ]);
-          accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          rules = rulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as LabelAccount);
+          rules = rulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as AutoRule);
         }
       } catch (err) {
         console.warn("[Labeler API] Direct DB configuration fetch bypassed safely: ", (err as Error).message || err);
@@ -121,10 +126,10 @@ export function registerLabelingRoutes(app: express.Express, _ctx: ServerContext
         ];
       }
 
-      const labeledTransactions = transactions.map((tx: any, idx: number) => {
+      const labeledTransactions = (transactions as LabelInput[]).map((tx, idx: number) => {
         const rawDesc = String(tx.description || tx.memo || tx.payee || "").trim();
         const rawDate = String(tx.date || formatTzDate(new Date()));
-        const amountCents = typeof tx.amountCents === "number" ? tx.amountCents : TruthEngine.parseAmountToCents(tx.amount || "0");
+        const amountCents = typeof tx.amountCents === "number" ? tx.amountCents : TruthEngine.parseAmountToCents(typeof tx.amount === 'number' ? tx.amount : String(tx.amount || "0"));
         const payeeVal = String(tx.payee || "").trim();
 
         let matchedAccountName = "Uncategorized/Suspense";
@@ -226,7 +231,7 @@ export function registerLabelingRoutes(app: express.Express, _ctx: ServerContext
 
         // 3. Jaccard-style String Word Similarity Tokenizer Match
         if (confidenceScore < 0.6) {
-          let bestMatch = null;
+          let bestMatch = null as LabelAccount | null; // set inside forEach (no narrowing to null)
           let highestSim = 0;
           accounts.forEach(acc => {
             const accNameWords = (acc.name || '').toLowerCase().split(/\s+/);
@@ -242,8 +247,8 @@ export function registerLabelingRoutes(app: express.Express, _ctx: ServerContext
           });
 
           if (bestMatch && highestSim > 0) {
-            matchedAccountName = (bestMatch as any).name;
-            matchedCategoryId = (bestMatch as any).id;
+            matchedAccountName = bestMatch.name;
+            matchedCategoryId = bestMatch.id;
             confidenceScore = 0.60 + Math.min(0.20, highestSim * 0.05);
           }
         }
@@ -251,7 +256,7 @@ export function registerLabelingRoutes(app: express.Express, _ctx: ServerContext
         const isExpense = amountCents < 0 || (amountCents > 0 && !/(revenue|income|sales)/i.test(matchedAccountName));
 
         return {
-          id: tx.id || `lbl-${idx}-${Date.now()}`,
+          id: typeof tx.id === "string" && tx.id ? tx.id : `lbl-${idx}-${Date.now()}`,
           date: rawDate,
           description: rawDesc,
           payee: payeeVal || "N/A",

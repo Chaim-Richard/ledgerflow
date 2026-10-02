@@ -5,10 +5,39 @@ import { depositAppliedCents } from '../../lib/documentMath';
  * Enterprise PDF Document Generator Service (Zero-Dependency PDF 1.4 Engine)
  * Generates standards-compliant PDF binary buffers for Invoices, Estimates, Credit Notes, Payments, and Statements.
  */
+export type PdfDocumentType = 'invoice' | 'estimate' | 'creditNote' | 'payment' | 'statement';
+
+/** One printed row: invoice items, estimate lines or statement entries. */
+export interface PdfLine { description?: string; name?: string; quantity?: number; amountCents?: number | string }
+
+/** What a document PDF prints. Any saved invoice, estimate, credit note, payment or statement fits. */
+export interface PdfDocument {
+  id?: string;
+  number?: string;
+  date?: string;
+  customerName?: string;
+  vendorName?: string;
+  contactName?: string;
+  amountCents?: number;
+  currency?: string;
+  items?: PdfLine[];
+  lines?: PdfLine[];
+  transactions?: PdfLine[];
+  taxAmountCents?: number;
+  discountCents?: number;
+  lineSumCents?: number;
+  taxRate?: number;
+  taxBreakdown?: Array<{ name?: string; rate?: number; taxCents?: number }>;
+  pricesIncludeTax?: boolean;
+  depositCents?: number;
+}
+
+export interface PdfWorkspace { name?: string; companyName?: string; currency?: string }
+
 export async function generateDocumentPdf(
-  type: 'invoice' | 'estimate' | 'creditNote' | 'payment' | 'statement',
-  docData: any,
-  workspace: any
+  type: PdfDocumentType,
+  docData: PdfDocument | null | undefined,
+  workspace: PdfWorkspace | null | undefined
 ): Promise<Buffer> {
   const wsName = (workspace?.name || workspace?.companyName || 'LedgerFlow Workspace').replace(/[()\\]/g, ' ');
   const docTitle = type.toUpperCase().replace(/([A-Z])/g, ' $1').trim();
@@ -21,12 +50,13 @@ export async function generateDocumentPdf(
   const money = (cents: number) => `${currency} ${(Math.round(cents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const totalFormatted = money(totalCents);
 
-  const items = docData?.items || docData?.transactions || [];
+  // invoices keep `items`, estimates `lines`, statements `transactions`
+  const items = docData?.items || docData?.lines || docData?.transactions || [];
   let itemLines = '';
   let y = 600;
 
   if (Array.isArray(items) && items.length > 0) {
-    items.slice(0, 15).forEach((item: any) => {
+    items.slice(0, 15).forEach((item) => {
       const desc = String(item.description || item.name || 'Item').replace(/[()\\]/g, ' ').slice(0, 45);
       const qty = item.quantity !== undefined ? item.quantity : 1;
       const amt = money(Number(item.amountCents) || 0);

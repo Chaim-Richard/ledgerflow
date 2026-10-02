@@ -1,4 +1,4 @@
-import type { Transaction as LedgerTransaction } from "./src/types.ts";
+import type { AutoRule, Transaction as LedgerTransaction } from "./src/types.ts";
 import { registerWorkspaceApiRoutes } from "./src/server/routes/workspaceApiRoutes.ts";
 import { registerDeveloperApiRoutes } from "./src/server/routes/developerApiRoutes.ts";
 import { registerApiKeysRoutes } from "./src/server/routes/apiKeysRoutes.ts";
@@ -31,7 +31,7 @@ import { documentRouter } from "./src/server/routes/documentRoutes";
 import { mathRouter } from "./src/server/routes/mathRoutes";
 import { plaidRouter } from "./src/server/routes/plaidRoutes";
 import { billingRouter } from "./src/server/routes/billingRoutes";
-import { getStripe } from "./src/server/services/stripeService";
+import { getStripe, stripeId, type Stripe } from "./src/server/services/stripeService";
 export { getStripe };
 import { assertStartupConfig } from "./src/server/config/assertStartupConfig";
 import { logger } from "./src/server/utils/logger";
@@ -235,7 +235,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       const eventRef = db.collection('stripeProcessedEvents').doc(eventId);
 
       if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
-        const session = event.data.object as any;
+        const session = event.data.object as Stripe.Checkout.Session;
         const isPaid = session.payment_status === 'paid';
         
         // --- 1. A customer paid an invoice through its payment link (K-11) ---
@@ -266,15 +266,15 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
               const wsSnap = await t.get(wsRef);
               const wsData = wsSnap.data() || {};
               const currentSubId = wsData.stripeSubscriptionId;
-              const incomingSubId = session.subscription || null;
+              const incomingSubId = stripeId(session.subscription);
 
               // Only increment compute credits if this is a fresh upgrade or distinct subscription
               const isNewSubscription = incomingSubId && incomingSubId !== currentSubId;
-              const updatePayload: Record<string, any> = {
+              const updatePayload: Record<string, unknown> = {
                 plan: plan,
                 billingCycle: "monthly",
                 computeLimit: creditsToGrant,
-                stripeCustomerId: session.customer || null,
+                stripeCustomerId: stripeId(session.customer),
                 stripeSubscriptionId: incomingSubId,
                 lastUpgradedAt: new Date().toISOString()
               };
@@ -303,8 +303,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
           }
         }
       } else if (event.type === 'customer.subscription.deleted') {
-        const subscription = event.data.object as any;
-        const customerId = subscription.customer;
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = stripeId(subscription.customer);
         const subscriptionId = subscription.id;
         
         await db.runTransaction(async (t) => {
@@ -397,7 +397,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       const rulesSnap = await db.collection("autoRules")
         .where("workspaceId", "==", workspaceId)
         .get();
-      const rules = rulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      const rules = rulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as AutoRule);
 
       const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
       const wsData = wsDoc.data() || {};
@@ -583,7 +583,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
     const start = Date.now();
     const originalEnd = res.end;
 
-    res.end = function(chunk?: any, encoding?: any, callback?: any) {
+    res.end = function(this: express.Response, ...args: Parameters<typeof originalEnd>) {
       const latency = Date.now() - start;
       const authHeader = req.headers.authorization || (req.headers['x-api-key'] as string) || '';
       
@@ -618,8 +618,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       });
 
       if (apiLogs.length > 100) apiLogs.pop();
-      return originalEnd.call(this, chunk, encoding, callback);
-    };
+      return originalEnd.apply(this, args);
+    } as typeof res.end;
 
     next();
   });
@@ -763,7 +763,7 @@ async function startServer() {
     });
   }
 
-  httpServer.on('error', (e: any) => {
+  httpServer.on('error', (e: NodeJS.ErrnoException) => {
     if (e.code === 'EADDRINUSE') {
       console.debug(`💥 Port ${PORT} is in use, retrying...`);
       setTimeout(() => {

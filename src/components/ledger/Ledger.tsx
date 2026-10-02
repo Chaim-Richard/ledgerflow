@@ -342,11 +342,11 @@ const Ledger = React.memo(() => {
         <React.Suspense fallback={
           <div className="py-24 text-center space-y-4">
             <div className="flex justify-center gap-2">
-              {[0, 1, 2].map(i => (
+              {[0, 1, 2].map(dot => (
                 <motion.div 
-                  key={i}
+                  key={dot}
                   animate={{ scale: [1, 1.2, 1], opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }}
+                  transition={{ duration: 0.8, repeat: Infinity, delay: dot * 0.15 }}
                   className="w-3 h-3 bg-indigo-600 rounded-full"
                 />
               ))}

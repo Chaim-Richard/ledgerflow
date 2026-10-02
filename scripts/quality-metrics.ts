@@ -165,23 +165,34 @@ export function computeQualityMetrics(rootDir: string = process.cwd()): QualityM
       serverTsLines = lines.length;
     }
 
-    for (const line of lines) {
+    lines.forEach((line, n) => {
       if (/:\s*any\b/.test(line) || /as\s+any\b/.test(line)) {
         anyCount++;
       }
       if (/\bgetUTC(Date|Month|FullYear|Hours|Minutes|Seconds|Day)\b|\bDate\.UTC\b|\btoUTCString\b/.test(line)) {
         utcDateCount++;
       }
-      if (/key=\{.*index.*\}/.test(line) || /key=\{i\}/.test(line) || /key=\{idx\}/.test(line)) {
+      if (/key=\{[^}]*\bindex\b[^}]*\}/.test(line) || /key=\{i\}/.test(line) || /key=\{idx\}/.test(line)) {
         arrayIndexKeys++;
       }
-      if (/target="_blank"/.test(line) && !/rel=".*noopener.*"/.test(line)) {
+      // the tag's attributes can span lines: look up to the end of the tag
+      if (/target="_blank"/.test(line) && !/rel="[^"]*noopener[^"]*"/.test(tagText(lines, n))) {
         blankNoOpener++;
       }
       if (/console\.log\(/.test(line)) {
         consoleLog++;
       }
+    });
+  }
+
+  /** From line n to the line that closes the tag (">"), at most 10 lines. */
+  function tagText(lines: string[], n: number): string {
+    let text = '';
+    for (let k = n; k < Math.min(lines.length, n + 10); k++) {
+      text += lines[k] + '\n';
+      if (/>/.test(lines[k])) break;
     }
+    return text;
   }
 
   function scanDir(dir: string) {

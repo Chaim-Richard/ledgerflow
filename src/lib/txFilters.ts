@@ -1,4 +1,4 @@
-import { Transaction, TransactionLine, ChartAccount } from '../types';
+import type { AccountingPeriod, Transaction, TransactionLine, ChartAccount } from '../types';
 
 /**
  * Checks if a transaction is a simulation/ghost transaction created for scenario forecasting
@@ -14,18 +14,27 @@ export function isSimulationTransaction(t: Transaction): boolean {
   );
 }
 
+/** isPostable options: include simulations; skip entries inside these closed periods. */
+export interface PostableOptions {
+  includeSimulations?: boolean;
+  periods?: Array<Pick<AccountingPeriod, 'status' | 'startDate' | 'endDate'>>;
+}
+
+/** Statuses of an invoice or bill that is not owed (cancelled ones too, as the server services treat them). */
+const CLOSED_DOCUMENT_STATUSES = new Set(['paid', 'void', 'draft', 'rejected', 'cancelled']);
+
 /**
  * Predicate to determine if a transaction is postable / active
  * Filters out void, failed, draft, soft-deleted, and by default simulation/ghost transactions.
  */
 export function isPostable(t: Transaction): boolean;
-export function isPostable(t: Transaction, options: { includeSimulations?: boolean, periods?: any[] }): boolean;
-export function isPostable(t: Transaction, options?: any): boolean {
+export function isPostable(t: Transaction, options: PostableOptions): boolean;
+export function isPostable(t: Transaction, options?: PostableOptions): boolean {
   if (!t) return false;
-  if (t.status === 'void' || t.status === 'failed' || (t as any).status === 'draft' || t.deletedAt) {
+  if (t.status === 'void' || t.status === 'failed' || t.status === 'draft' || t.deletedAt) {
     return false;
   }
-  const includeSimulations = typeof options === 'object' && options !== null && Boolean(options.includeSimulations);
+  const includeSimulations = Boolean(options?.includeSimulations);
   if (!includeSimulations && isSimulationTransaction(t)) {
     return false;
   }
@@ -60,7 +69,7 @@ export function isTransactionInDateRange(t: Pick<Transaction, 'date'>, start?: s
 /**
  * Checks if a date falls within any closed accounting period.
  */
-export function isPeriodLocked(date: string, periods: any[]): boolean {
+export function isPeriodLocked(date: string, periods: Array<Pick<AccountingPeriod, 'status' | 'startDate' | 'endDate'>>): boolean {
   if (!date || !Array.isArray(periods)) return false;
   const d = date.slice(0, 10);
   return periods.some(p => 
@@ -105,9 +114,9 @@ export function isExpenseAccount(account?: ChartAccount): boolean {
 export function isCashAccount(account?: ChartAccount): boolean {
   if (!account) return false;
   const category = (account.category || '').toLowerCase();
-  const subType = (account.subtype || (account as any).subType || '').toLowerCase();
+  const subType = (account.subtype || (account as ChartAccount & { subType?: string }).subType || '').toLowerCase();
   const name = (account.name || '').toLowerCase();
-  const role = ((account as any).role || '').toLowerCase();
+  const role = (account.role || '').toLowerCase();
   return (
     role === 'cash' ||
     category.includes('cash') ||
@@ -252,17 +261,17 @@ export function calculateTransactionImpact(t: Transaction, accountMap?: Map<stri
 /**
  * Predicate to determine if an invoice is open/unpaid
  */
-export function isOpenInvoice(item: any): boolean {
+export function isOpenInvoice(item: { status?: string } | null | undefined): boolean {
   if (!item) return false;
-  return item.status !== 'paid' && item.status !== 'void' && item.status !== 'draft' && item.status !== 'rejected';
+  return !CLOSED_DOCUMENT_STATUSES.has(item.status || '');
 }
 
 /**
  * Predicate to determine if a bill is open/unpaid
  */
-export function isOpenBill(item: any): boolean {
+export function isOpenBill(item: { status?: string } | null | undefined): boolean {
   if (!item) return false;
-  return item.status !== 'paid' && item.status !== 'void' && item.status !== 'draft' && item.status !== 'rejected';
+  return !CLOSED_DOCUMENT_STATUSES.has(item.status || '');
 }
 
 /**
@@ -299,7 +308,7 @@ export function calculateNetIncome(
 
       const amt = lineAmount(l, t);
 
-      const isCogs = acc.type === 'cost_of_goods' || acc.category === 'COGS' || acc.category === 'Direct Costs' || (acc as any).role === 'cogs';
+      const isCogs = acc.type === 'cost_of_goods' || acc.category === 'COGS' || acc.category === 'Direct Costs' || acc.role === 'cogs';
 
       if (acc.type === 'income' || acc.type === 'revenue') {
         income += -amt;

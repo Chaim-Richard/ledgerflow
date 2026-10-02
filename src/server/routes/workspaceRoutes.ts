@@ -29,11 +29,11 @@ export interface AuthenticatedRequest extends express.Request {
   user: AuthUser;
 }
 
-function sendError(res: express.Response, message: string, status: number = 500, details?: any) {
+function sendError(res: express.Response, message: string, status: number = 500, details?: unknown) {
   res.status(status).json({
     status: 'error',
     message,
-    ...(details && { details })
+    ...(details ? { details } : {})
   });
 }
 
@@ -64,7 +64,7 @@ export function requireWorkspaceRole(allowedRoles: string[]) {
         return sendError(res, `Forbidden: requires one of roles [${allowedRoles.join(', ')}]`, 403);
       }
 
-      (authReq as any).userRole = userRole;
+      (authReq as AuthenticatedRequest & { userRole?: string }).userRole = userRole;
       next();
     } catch (err) {
       if (errorMessage(err) === 'FORBIDDEN' || /Unauthorized|not a member/i.test(errorMessage(err) || '')) return sendError(res, 'Forbidden', 403);
@@ -74,11 +74,16 @@ export function requireWorkspaceRole(allowedRoles: string[]) {
   };
 }
 
-export async function allocateNextNumber(db: any, workspaceId: string, type: 'invoice' | 'bill' | 'estimate'): Promise<string> {
+/**
+ * Next number of a workspace's invoice/bill/estimate series, in one database transaction (no gaps,
+ * no duplicates). A new series starts with this year in its prefix (INV-<year>-0001).
+ */
+export async function allocateNextNumber(db: Firestore, workspaceId: string, type: 'invoice' | 'bill' | 'estimate', today: string = formatTzDate(new Date())): Promise<string> {
+  const defaultPrefix = `${type === 'invoice' ? 'INV' : type === 'bill' ? 'BIL' : 'EST'}-${today.slice(0, 4)}-`;
   const nsDocRef = db.collection('numberingSeries').doc(`${workspaceId}_${type}`);
   const wsRef = db.collection('workspaces').doc(workspaceId);
 
-  return await db.runTransaction(async (tx: any) => {
+  return await db.runTransaction(async (tx) => {
     const nsSnap = await tx.get(nsDocRef);
     
     let prefix: string;
@@ -87,7 +92,7 @@ export async function allocateNextNumber(db: any, workspaceId: string, type: 'in
 
     if (nsSnap.exists) {
       const data = nsSnap.data() || {};
-      prefix = data.prefix ?? (type === 'invoice' ? 'INV-2026-' : type === 'bill' ? 'BIL-2026-' : 'EST-2026-');
+      prefix = data.prefix ?? defaultPrefix;
       nextNum = data.nextNumber ?? 1;
       padding = data.padding ?? 4;
 
@@ -102,22 +107,22 @@ export async function allocateNextNumber(db: any, workspaceId: string, type: 'in
       const ns = wsData.numberingSeries || {};
 
       if (ns[type] && typeof ns[type] === 'object') {
-        prefix = ns[type].prefix ?? (type === 'invoice' ? 'INV-2026-' : type === 'bill' ? 'BIL-2026-' : 'EST-2026-');
+        prefix = ns[type].prefix ?? defaultPrefix;
         nextNum = ns[type].nextNumber ?? 1;
         padding = ns[type].padding ?? 4;
       } else {
         // Fallback for legacy simple fields
         if (type === 'invoice') {
-          prefix = ns.invoicePrefix || 'INV-2026-';
+          prefix = ns.invoicePrefix || defaultPrefix;
           nextNum = ns.invoiceNextNumber || 1;
         } else if (type === 'bill') {
-          prefix = ns.billPrefix || 'BIL-2026-';
+          prefix = ns.billPrefix || defaultPrefix;
           nextNum = ns.billNextNumber || 1;
         } else if (type === 'estimate') {
-          prefix = ns.estimatePrefix || 'EST-2026-';
+          prefix = ns.estimatePrefix || defaultPrefix;
           nextNum = ns.estimateNextNumber || 1;
         } else {
-          prefix = type === 'invoice' ? 'INV-2026-' : type === 'bill' ? 'BIL-2026-' : 'EST-2026-';
+          prefix = defaultPrefix;
           nextNum = 1;
         }
       }
@@ -266,7 +271,7 @@ workspaceRouter.all('/:workspaceId/next-number', (req, res) => {
 
 import { generateInviteToken } from '../../lib/inviteManager';
 
-export function countWorkspaceOwners(workspaceData: any): { count: number; ownerUids: string[] } {
+export function countWorkspaceOwners(workspaceData: { uid?: string; roles?: Record<string, unknown> }): { count: number; ownerUids: string[] } {
   const ownerUids: string[] = [];
   if (workspaceData.uid) ownerUids.push(workspaceData.uid);
   if (workspaceData.roles) {

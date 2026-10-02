@@ -28,7 +28,7 @@ export function registerDeveloperApiRoutes(app: express.Express, _ctx: ServerCon
       const accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ChartAccount);
 
       const mapped = validation.data.transactions.map(tx => {
-        const bestAccount = (accounts.find(a => (a as any).name?.toLowerCase().includes(tx.description.toLowerCase())) || accounts[0]) as any;
+        const bestAccount: ChartAccount | undefined = accounts.find(a => a.name?.toLowerCase().includes(tx.description.toLowerCase())) || accounts[0];
         return {
           id: tx.id,
           description: tx.description,

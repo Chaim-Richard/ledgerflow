@@ -7,6 +7,8 @@ import { incrementShardedCounter } from "../services/shardedCounterService";
 import express from "express";
 import crypto from "crypto";
 import { isPostable, lineAmount } from "../../lib/txFilters";
+import { calculateAmountDue } from "../../lib/documentMath";
+import { toBaseCents } from "../reports/partyReports";
 import { getDb } from "../db/firestore";
 
 /** Routes moved out of server.ts (F-01), registered in the same place and order. */
@@ -55,7 +57,7 @@ export function registerMetricsAuditRoutes(app: express.Express, _ctx: ServerCon
       });
 
       // Shifting Metrics Logic based on Business Archetype
-      let shiftingMetrics: any = {};
+      let shiftingMetrics: Record<string, unknown> = {};
 
       if (businessType === 'saas') {
         const recent3MonthsRevenues = transactions.filter(t => {
@@ -331,7 +333,8 @@ export function registerMetricsAuditRoutes(app: express.Express, _ctx: ServerCon
          const invDateStr = inv.dueDate || inv.date || new Date().toISOString();
          const txDateMs = new Date(invDateStr).getTime();
          const daysOutstanding = Math.max(0, Math.floor((nowMs - txDateMs) / (1000 * 60 * 60 * 24)));
-         const totalAmount = lineAmount(inv as any);
+         // still owed, in the base currency
+         const totalAmount = toBaseCents(calculateAmountDue(inv), inv.exchangeRate);
          const impliedCostOfCapitalCents = Math.round(totalAmount * (0.08 / 365) * daysOutstanding);
          return {
            invoiceId: inv.id,

@@ -55,6 +55,11 @@ describe('Server write roles', () => {
     assert.match(server.slice(start, start + 1500), /await assertWorkspaceAccess\(db, finalWorkspaceId, /);
   });
 
+  test('sign-in records are written only for the signed-in person', () => {
+    assert.match(server, /app\.post\("\/api\/v1\/auth\/audit", apiAuthenticate,/);
+    assert.match(server, /recordAuthEvent\(\{ uid: user\.uid,/);
+  });
+
   test('billing changes (checkout, portal, confirming a payment) are owner-only', () => {
     const billing = fs.readFileSync('src/server/routes/billingRoutes.ts', 'utf8');
     for (const route of ['/checkout', '/portal', '/verify-session']) {

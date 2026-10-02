@@ -3,6 +3,7 @@ import { formatTzDate, sendError, authorizeWorkspace, authenticate, upload } fro
 import type { AuthenticatedRequest, ServerContext } from "../http/serverKit";
 import { apiAuthenticate } from "../auth/apiAuthenticate";
 import express from "express";
+import { assertWorkspaceAccess, getDb } from "../db/firestore";
 import fs from "fs";
 import { parse as parseCsv } from 'csv-parse/sync';
 import crypto from "crypto";
@@ -88,7 +89,9 @@ export function registerLogsUploadRoutes(app: express.Express, ctx: ServerContex
       const amountKey = findBestCol([/^amount$/i, /^total$/i, /^net$/i, /^sum$/i, /amount/i], [/balance/i, /account[_\s]?num/i, /debit/i, /credit/i]);
       const categoryKey = findBestCol([/^category$/i, /^account[_\s]?category$/i, /^class$/i, /^label$/i, /category/i]);
 
-      const wsData = (authReq as any).workspace;
+      // dates without a year/format fall back to today in the workspace's time zone
+      const uploadWorkspaceId = typeof req.body?.workspaceId === 'string' ? req.body.workspaceId : '';
+      const wsData = uploadWorkspaceId ? (await assertWorkspaceAccess(getDb(), uploadWorkspaceId, authReq.user)).data : undefined;
       const normalizeDate = (rawDate: string): string => {
         if (!rawDate) return formatTzDate(new Date(), wsData?.settings?.timezone || wsData?.timezone);
         const s = rawDate.trim();
@@ -110,8 +113,8 @@ export function registerLogsUploadRoutes(app: express.Express, ctx: ServerContex
       };
 
       const batchId = crypto.randomUUID().split('-')[0];
-      const transactions: any[] = [];
-      const rejected: any[] = [];
+      const transactions: Array<{ id: string; date: string; description: string; amountCents: number; category?: string }> = [];
+      const rejected: Array<{ row: number; reason: string; raw: Record<string, string> }> = [];
 
       records.forEach((r, idx) => {
         try {
@@ -150,7 +153,8 @@ export function registerLogsUploadRoutes(app: express.Express, ctx: ServerContex
       fs.unlinkSync(req.file.path);
       res.json(transactions);
     } catch (error) {
-      if (req.file) fs.unlinkSync(req.file.path);
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      if (/not a member|API key is scoped/i.test(errorMessage(error))) return sendError(res, "Forbidden workspace access", 403);
       sendError(res, "Failed to parse CSV", 500, error);
     }
   });

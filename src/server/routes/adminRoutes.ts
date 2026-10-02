@@ -3,6 +3,7 @@ import { errorMessage } from "../auth/requestUser";
 import { globalAdminConfig, sendError, handleApiError, authenticate, requireAdmin, writeAuditLog, getReportContext } from "../http/serverKit";
 import type { AuthenticatedRequest, ServerContext } from "../http/serverKit";
 import express from "express";
+import type { DocumentData } from "../db/firestore";
 import { AdminUserUpdateSchema, AdminWorkspaceUpdateSchema, AdminGlobalConfigSchema } from "../../schemas";
 import { TruthEngine } from "../../modules/integrity/TruthEngine";
 import { getDb } from "../db/firestore";
@@ -27,7 +28,7 @@ export function registerAdminRoutes(app: express.Express, ctx: ServerContext): v
       
       const workspacesSnap = await db.collection("workspaces").limit(100).get();
       const wsIds = workspacesSnap.docs.map(d => d.id).slice(0, 30);
-      let transactionsSnap: { docs: any[] } = { docs: [] };
+      let transactionsSnap: { docs: Array<{ data: () => DocumentData }> } = { docs: [] };
       if (wsIds.length > 0) {
           transactionsSnap = await db.collection("transactions").where("workspaceId", "in", wsIds).get();
       }

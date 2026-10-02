@@ -91,7 +91,16 @@ export async function syncGlobalAdminConfig() {
   }
 }
 
-export function calculateWorkspaceCharges(wsData: any, baseCredits: number, baseCents: number, isCustomKeyUsed: boolean) {
+/** Workspace overrides of the admin billing settings (all optional). */
+export interface WorkspaceBillingOverrides {
+  creditCostMultiplier?: number | string;
+  quotaCentsMultiplier?: number | string;
+  customKeyCreditCharge?: number | string;
+  customKeyCentsCharge?: number | string;
+  bypassBilling?: boolean;
+}
+
+export function calculateWorkspaceCharges(wsData: WorkspaceBillingOverrides | null | undefined, baseCredits: number, baseCents: number, isCustomKeyUsed: boolean) {
   const creditMult = wsData?.creditCostMultiplier !== undefined 
     ? Number(wsData.creditCostMultiplier) 
     : globalAdminConfig.creditCostMultiplier;
@@ -126,21 +135,21 @@ export function calculateWorkspaceCharges(wsData: any, baseCredits: number, base
 /**
  * Standard API error response
  */
-export function sendError(res: express.Response, message: string, status: number = 500, details?: any) {
+export function sendError(res: express.Response, message: string, status: number = 500, details?: unknown) {
   console.error(`[API Error] ${status}: ${message} (Path: ${res.req?.originalUrl || "unknown"})`, details || "");
   res.status(status).json({
     status: "error",
     message,
-    ...(details && { details })
+    ...(details ? { details } : {})
   });
 }
 
 /**
  * Centralized API error handler
  */
-export function handleApiError(res: express.Response, err: any) {
-  const message = errorMessage(err) || err.toString() || "";
-  const code = err.code || "";
+export function handleApiError(res: express.Response, err: unknown) {
+  const message = errorMessage(err) || String(err) || "";
+  const code = (err as { code?: unknown } | null)?.code ?? "";
   
   console.error("[Handling API Error]", err);
   console.error("[API Error Details] message:", message, "code:", code);
@@ -236,7 +245,7 @@ export const authenticate = async (req: express.Request, res: express.Response, 
   try {
     const decodedToken = await verifyIdToken(idToken) as AuthUser;
     
-    if (decodedToken.admin === true || (decodedToken as any).role === 'admin') {
+    if (decodedToken.admin === true || decodedToken.role === 'admin') {
       decodedToken.admin = true;
     } else {
       // Check if user has admin role in Firestore users collection
@@ -244,7 +253,7 @@ export const authenticate = async (req: express.Request, res: express.Response, 
         const userDoc = await getDb().collection("users").doc(decodedToken.uid).get();
         if (userDoc.exists && userDoc.data()?.role === 'admin') {
           decodedToken.admin = true;
-          (decodedToken as any).role = 'admin';
+          decodedToken.role = 'admin';
         }
       } catch (dbErr) {
         // Fallback silently if DB read restricted
@@ -303,8 +312,8 @@ export async function writeAuditLog(
   action: string, 
   details: string, 
   workspaceId: string = 'system',
-  before?: any,
-  after?: any,
+  before?: unknown,
+  after?: unknown,
   transaction?: Transaction
 ) {
   try {
@@ -321,7 +330,7 @@ export async function writeAuditLog(
         before: before || null,
         after: after || null
       }
-    }, { db, tx: transaction as any });
+    }, { db, tx: transaction });
   } catch (err) {
     console.warn("[AuditLog] Failed to persist audit log entry to database:", errorMessage(err));
   }

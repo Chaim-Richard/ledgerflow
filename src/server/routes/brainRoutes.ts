@@ -185,7 +185,7 @@ You MUST output a valid JSON object matching this schema exactly:
       }
 
       const responseText = result.text || "";
-      let parsedJson: any;
+      let parsedJson: unknown;
       try {
         parsedJson = JSON.parse(responseText);
       } catch (e) {
