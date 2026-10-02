@@ -13,6 +13,8 @@ export default function DeveloperSettings() {
   const accounts = computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
   
   const language = useUIStore(state => state.language);
+  const developerMode = useUIStore(state => state.developerMode);
+  const setDeveloperMode = useUIStore(state => state.setDeveloperMode);
   const lexiconOverrides = useUIStore(state => state.lexiconOverrides);
   const resetLexiconOverrides = useUIStore(state => state.resetLexiconOverrides);
 
@@ -48,6 +50,17 @@ export default function DeveloperSettings() {
 
   return (
     <div className="space-y-10">
+      <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-xl flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h3 id="dev-mode-title" className="text-base font-black text-[var(--text)] uppercase tracking-tight">Developer switch</h3>
+          <p id="dev-mode-help" className="text-xs text-[var(--muted)] max-w-xl">Shows demo screens that run on made-up data (the Admin Panel&apos;s simulated logs and load figures). Off for normal use. Only on this device.</p>
+        </div>
+        <button type="button" role="switch" aria-checked={developerMode} aria-labelledby="dev-mode-title" aria-describedby="dev-mode-help"
+          onClick={() => setDeveloperMode(!developerMode)}
+          className={`shrink-0 px-4 py-2 rounded-lg text-xs font-bold border ${developerMode ? 'bg-[var(--brass)] text-black border-[var(--brass)]' : 'border-[var(--line)] text-[var(--text)]'}`}>
+          {developerMode ? 'On' : 'Off'}
+        </button>
+      </div>
       <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border-[var(--line)] shadow-sm">
         <div className="flex items-center gap-5 mb-10">
           <div className="w-12 h-12 bg-[var(--brass)] text-[var(--ink)] rounded-xl flex items-center justify-center shadow-md">

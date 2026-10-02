@@ -534,18 +534,6 @@ export default function ApiHub() {
       case 'POST_ledger_match': return 'ledger/match';
       case 'POST_brain_analyze': return 'brain/analyze';
       case 'POST_v1_brain_classify_batch': return 'brain/classify-batch';
-      case 'GET_v1_ecommerce': return 'ecommerce';
-      case 'POST_v1_ecommerce': return 'ecommerce';
-      case 'GET_v1_marketing': return 'marketing';
-      case 'POST_v1_marketing': return 'marketing';
-      case 'GET_v1_helpdesk': return 'helpdesk';
-      case 'POST_v1_helpdesk': return 'helpdesk';
-      case 'GET_v1_hr': return 'hr';
-      case 'POST_v1_hr': return 'hr';
-      case 'GET_v1_manufacturing': return 'manufacturing';
-      case 'POST_v1_manufacturing': return 'manufacturing';
-      case 'GET_v1_universal_ops': return 'universal-ops';
-      case 'POST_v1_universal_ops': return 'universal-ops';
       default: return 'status';
     }
   };
@@ -613,18 +601,6 @@ export default function ApiHub() {
           workspaceId: wsId,
           prompt: fieldAIPrompt || "Generate executive review of cash allocation anomalies across our ledger assets."
         };
-      case 'POST_v1_ecommerce':
-        return { workspaceId: wsId, channel: "Shopify Store", syncStatus: "live" };
-      case 'POST_v1_marketing':
-        return { workspaceId: wsId, campaignName: "Q4 Outreach", audienceSize: 12500 };
-      case 'POST_v1_helpdesk':
-        return { workspaceId: wsId, ticketTitle: "Billing failure", priority: "High" };
-      case 'POST_v1_hr':
-        return { workspaceId: wsId, employeeName: "John Doe", role: "Engineer" };
-      case 'POST_v1_manufacturing':
-        return { workspaceId: wsId, workOrder: "WO-10492", product: "HVAC Unit" };
-      case 'POST_v1_universal_ops':
-        return { workspaceId: wsId, dimensionName: "Property A / Unit 101" };
       default:
         return null;
     }
@@ -753,25 +729,6 @@ export default function ApiHub() {
               ? fieldMatchDesc.split('\n').filter(x => x.trim())
               : ["Rent Payment Suite A", "GitHub Team Subscription", "Stripe Fee Processing", "Starbucks Coffee Retail Store #13"]
           };
-          break;
-        case 'GET_v1_ecommerce':
-        case 'GET_v1_marketing':
-        case 'GET_v1_helpdesk':
-        case 'GET_v1_hr':
-        case 'GET_v1_manufacturing':
-        case 'GET_v1_universal_ops':
-          endpointUrl = `/api/v1/${getEndpointPath(sandboxEndpoint)}?workspaceId=${currentWorkspace.id}`;
-          method = 'GET';
-          break;
-        case 'POST_v1_ecommerce':
-        case 'POST_v1_marketing':
-        case 'POST_v1_helpdesk':
-        case 'POST_v1_hr':
-        case 'POST_v1_manufacturing':
-        case 'POST_v1_universal_ops':
-          endpointUrl = `/api/v1/${getEndpointPath(sandboxEndpoint)}`;
-          method = 'POST';
-          bodyData = getSandboxPayload(sandboxEndpoint);
           break;
         default:
           throw new Error('Unsupported sandbox endpoint selective pathway.');
@@ -2414,18 +2371,6 @@ fetch(url, {
                     <option value="POST_ledger_match">POST /api/v1/ledger/match (Parallel Rule Matching)</option>
                     <option value="POST_brain_analyze">POST /api/v1/brain/analyze (Query LedgerFlow AI Cognitive AI)</option>
                     <option value="POST_v1_brain_classify_batch">POST /api/v1/brain/classify-batch (10x Cognitive NLP Batch Categorizer)</option>
-                    <option value="GET_v1_ecommerce">GET /api/v1/ecommerce (Fetch Channels)</option>
-                    <option value="POST_v1_ecommerce">POST /api/v1/ecommerce (Sync Channel)</option>
-                    <option value="GET_v1_marketing">GET /api/v1/marketing (Fetch Campaigns)</option>
-                    <option value="POST_v1_marketing">POST /api/v1/marketing (Create Campaign)</option>
-                    <option value="GET_v1_helpdesk">GET /api/v1/helpdesk (Fetch Tickets)</option>
-                    <option value="POST_v1_helpdesk">POST /api/v1/helpdesk (Create Ticket)</option>
-                    <option value="GET_v1_hr">GET /api/v1/hr (Fetch Headcount)</option>
-                    <option value="POST_v1_hr">POST /api/v1/hr (Add Employee)</option>
-                    <option value="GET_v1_manufacturing">GET /api/v1/manufacturing (Fetch Work Orders)</option>
-                    <option value="POST_v1_manufacturing">POST /api/v1/manufacturing (Create WO)</option>
-                    <option value="GET_v1_universal_ops">GET /api/v1/universal-ops (Fetch Dimensions)</option>
-                    <option value="POST_v1_universal_ops">POST /api/v1/universal-ops (Tag Dimension)</option>
                   </select>
                 </Labelled>
               </div>

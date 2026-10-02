@@ -251,7 +251,7 @@ const Sidebar = React.memo(({
            {uiStore.isSidebarOpen && <span className="text-[10px] font-mono text-[var(--faint)] border border-[var(--line)] rounded px-1">⌘K</span>}
          </button>
          
-         {isAdmin && (
+         {isAdmin && uiStore.developerMode && (
            <button
              onClick={() => setActiveTab('system-command-center' as any)}
              className={cn(

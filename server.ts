@@ -2079,44 +2079,6 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
     }
   });
 
-  // --- Operations / New Modals Endpoints ---
-  app.get("/api/v1/ecommerce", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    res.json({ status: "success", channels: [{ name: "Shopify", status: "live" }] });
-  });
-  app.post("/api/v1/ecommerce", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    res.json({ status: "success", message: "Channel synced", data: req.body });
-  });
-  app.get("/api/v1/marketing", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    res.json({ status: "success", campaigns: [{ name: "Q4 Outreach", status: "Active" }] });
-  });
-  app.post("/api/v1/marketing", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    res.json({ status: "success", message: "Campaign created", data: req.body });
-  });
-  app.get("/api/v1/helpdesk", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    res.json({ status: "success", tickets: [{ id: "TKT-100", title: "Test Ticket", status: "Open" }] });
-  });
-  app.post("/api/v1/helpdesk", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    res.json({ status: "success", message: "Ticket created", data: req.body });
-  });
-  app.get("/api/v1/hr", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    res.json({ status: "success", employees: [{ name: "Jane Doe", type: "Full-Time" }] });
-  });
-  app.post("/api/v1/hr", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    res.json({ status: "success", message: "Employee added", data: req.body });
-  });
-  app.get("/api/v1/manufacturing", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    res.json({ status: "success", workOrders: [{ id: "WO-999", product: "Test Product", status: "Queued" }] });
-  });
-  app.post("/api/v1/manufacturing", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    res.json({ status: "success", message: "Work order created", data: req.body });
-  });
-  app.get("/api/v1/universal-ops", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    res.json({ status: "success", dimensions: [{ id: "DIM-1", name: "Location" }] });
-  });
-  app.post("/api/v1/universal-ops", apiAuthenticate, async (req: express.Request, res: express.Response) => {
-    res.json({ status: "success", message: "Dimension tagged", data: req.body });
-  });
-
   app.get("/api/v1/metrics", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
       const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;

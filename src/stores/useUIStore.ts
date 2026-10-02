@@ -15,6 +15,9 @@ interface UIState {
   isSidebarOpen: boolean;
   isCompactMode: boolean;
   isProMode: boolean;
+  /** Developer switch (Settings → Developer): shows demo screens that run on made-up data. Per device. */
+  developerMode: boolean;
+  setDeveloperMode: (on: boolean) => void;
   isQuickEntryOpen: boolean;
   isHealthCheckOpen: boolean;
   isCommandPaletteOpen: boolean;
@@ -127,6 +130,7 @@ export const useUIStore = create<UIState>((set) => ({
   isSidebarOpen: true,
   isCompactMode: false,
   isProMode: false,
+  developerMode: (() => { try { return typeof localStorage !== 'undefined' && localStorage.getItem('lf_developer_mode') === 'true'; } catch { return false; } })(),
   isQuickEntryOpen: false,
   isHealthCheckOpen: false,
   isCommandPaletteOpen: false,
@@ -328,6 +332,10 @@ export const useUIStore = create<UIState>((set) => ({
   setLanguage: (language) => set({ language }),
   setCompactMode: (isCompactMode) => set({ isCompactMode }),
   setProMode: (isProMode) => set({ isProMode }),
+  setDeveloperMode: (developerMode) => {
+    try { localStorage.setItem('lf_developer_mode', developerMode ? 'true' : 'false'); } catch { /* private window: this session only */ }
+    set({ developerMode });
+  },
   setQuickEntryOpen: (isQuickEntryOpen) => set({ isQuickEntryOpen }),
   setHealthCheckOpen: (isHealthCheckOpen) => set({ isHealthCheckOpen }),
   setCommandPaletteOpen: (isCommandPaletteOpen) => set({ isCommandPaletteOpen }),

@@ -1648,7 +1648,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-88 Two-step login enforced on Supabase (database + server + code screen)
 - [x] L-89 Moved off AI Studio / Firebase to Supabase + Vercel
 - [x] L-90 **SECURITY** server write routes check roles (viewers read-only; members/API keys/billing owner-only; labeler membership)
-- [ ] L-91 Fake success endpoints (/api/v1/ecommerce, marketing, helpdesk, hr, manufacturing, universal-ops) — delete or mark demo
+- [x] L-91 Fake success endpoints (/api/v1/ecommerce, marketing, helpdesk, hr, manufacturing, universal-ops) deleted (API-key callers got "success" for nothing); Admin Panel (simulated logs) behind the developer switch (Settings → Developer)
 - [x] L-92 Plaid bank connections belong to the workspace; /sync only that workspace's banks (tested)
 - [x] L-93 Express 5 compatibility (params types, wildcard routes, empty body)
 - [ ] L-94 Build invoice/bill postings on the server (with the document engine)

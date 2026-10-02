@@ -65,7 +65,7 @@ Last updated: 2026-10-02.
 11. **Demo and fake features.** Some screens and endpoints return made-up data (the "API Hub" demo
     endpoints for e-commerce/marketing/HR, the Admin "command center" with simulated logs).
     Delete them, or keep them behind a "developer" switch? *Default: hide them behind a
-    developer switch when Claude gets to the clean-up step.*
+    developer switch when Claude gets to the clean-up step.* **Done (2 Oct):** the fake API endpoints are deleted (they answered "success" to API-key users without doing anything); the Admin Panel with simulated logs shows only with Settings → Developer → Developer switch on.
 12. **Which country's tax rules first?** (VAT/GST return boxes, reverse charge, US sales tax…)
     *Default: generic rules that work anywhere (tax groups, compound tax, zero-rated vs exempt,
     reverse charge, configurable return boxes).*

@@ -106,7 +106,11 @@ export interface AppTabDefinition {
   groupId?: string;
   requiresOwner?: boolean;
   isAdvanced?: boolean;
+  /** Demo screen on made-up data: only with the developer switch on (FOR_YOU 11). */
+  developerOnly?: boolean;
 }
+
+export { isTabVisible } from './tabVisibility';
 
 export const APP_TABS: AppTabDefinition[] = [
   { id: 'dashboard', label: { en: 'Overview', he: 'סקירה' }, icon: Home, groupId: 'dashboard' },
@@ -148,7 +152,7 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'vault', label: { en: 'Documents', he: 'מסמכים' }, icon: ShieldCheck, groupId: 'settings' },
   { id: 'pricing', label: { en: 'Pricing & Plans', he: 'תמחור ומסלולים' }, icon: Zap, groupId: 'settings' },
   { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'settings' },
-  { id: 'system-command-center', label: { en: 'Admin Panel', he: 'ניהול' }, icon: Building, groupId: 'settings', requiresOwner: true }
+  { id: 'system-command-center', label: { en: 'Admin Panel', he: 'ניהול' }, icon: Building, groupId: 'settings', requiresOwner: true, developerOnly: true }
 ];
 
 export const NAV_GROUPS: Record<string, Record<string, string>> = {

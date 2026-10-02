@@ -51,6 +51,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
 
   const language = useUIStore(s => s.language) || 'en';
   const isAdmin = useAuthStore(state => state.isAdmin);
+  const developerMode = useUIStore(state => state.developerMode);
   const setActiveTab = useUIStore(state => state.setActiveTab);
 
   return (
@@ -151,7 +152,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
 
         {user ? (
           <div className="flex items-center gap-2">
-            {isAdmin && (
+            {isAdmin && developerMode && (
               <button
                 onClick={() => setActiveTab('system-command-center' as any)}
                 title="Open Admin Control Panel"
