@@ -22,7 +22,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { parseLocalDate, cn, formatCurrency, resolveAccountName } from '../../lib/utils';
+import { parseLocalDate, cn, formatCurrency, resolveAccountName, formatDate } from '../../lib/utils';
 import { useTimeout } from '../../hooks/useTimeout';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { Transaction, BankStatementLine, ChartAccount, User } from '../../types';
@@ -33,8 +33,6 @@ import {
 } from '../../lib/algorithms';
 import { toast } from 'sonner';
 import { isPostable, lineAmount } from '../../lib/txFilters';
-
-
 
 import AsyncButton from '../ui/AsyncButton';
 import BankLineActionDialog from './BankLineActionDialog';
@@ -471,7 +469,7 @@ export default function Reconciliation() {
 
                       <div className="flex flex-col gap-1 overflow-hidden pl-1">
                         <span className={cn("text-[8px] font-bold uppercase tracking-wider font-mono", isSelected ? "text-[var(--brass)]" : "text-[var(--muted)]")}>
-                          {format(parseLocalDate(btx.date), 'MMMM dd, yyyy')}
+                          {formatDate(btx.date)}
                         </span>
                         <span className="text-sm font-bold tracking-tight truncate max-w-[220px] md:max-w-xs">{btx.description}</span>
                         {matchedLedgerId && !isSelected && (

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useScenarioStore } from '../../lib/scenarioStore';
 import { GitMerge, GitCommit, GitPullRequest, GitBranch, RotateCcw, Clock, ArrowRight, Save, Trash2, Zap, CheckCircle2, AlertCircle, Plus, FileText, Activity } from 'lucide-react';
-import { parseLocalDate, formatCurrency, cn, getLocalDateISO, safeConfirm } from '../../lib/utils';
+import { parseLocalDate, formatCurrency, cn, getLocalDateISO, safeConfirm, formatDate } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -253,7 +253,7 @@ export default function TimeMachine() {
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <div className="flex items-center gap-3">
-                        <span className="font-black text-[var(--text)] text-lg">{parseLocalDate(commit.date).toLocaleDateString()}</span>
+                        <span className="font-black text-[var(--text)] text-lg">{formatDate(commit.date)}</span>
                         <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md">{commit.hash.substring(0, 7)}</span>
                       </div>
                       <div className="text-sm text-slate-500 mt-1 flex items-center gap-2">

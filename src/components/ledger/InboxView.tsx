@@ -19,7 +19,7 @@ import {
   BrainCircuit,
   MessageSquare
 } from 'lucide-react';
-import { parseLocalDate, cn, formatCurrency } from '../../lib/utils';
+import { cn, formatCurrency, formatDate } from '../../lib/utils';
 import { format } from 'date-fns';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
@@ -220,7 +220,7 @@ export default function InboxView() {
                     <div className="w-2 h-2 rounded-full bg-[#0047AB]"></div>
                     <div>
                       <p className="font-bold text-[var(--text)] text-sm">{t.description}</p>
-                      <p className="text-xs text-slate-500">{parseLocalDate(t.date).toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-500">{formatDate(t.date)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-6">

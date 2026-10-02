@@ -13,7 +13,7 @@ import {
   Clock,
   Globe
 } from 'lucide-react';
-import { cn } from '../../../lib/utils';
+import { cn, DATE_DISPLAY_FORMATS, formatDate } from '../../../lib/utils';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { db } from '../../../firebase';
@@ -333,7 +333,7 @@ export default function AppearanceSettings() {
               Date Display Format
             </label>
             <div className="flex gap-2">
-              {['YYYY-MM-DD', 'MM/DD/YYYY', 'DD/MM/YYYY'].map((fmt) => (
+              {DATE_DISPLAY_FORMATS.map((fmt) => (
                 <button
                   key={fmt}
                   onClick={() => setDateFormatPref(fmt)}
@@ -344,7 +344,7 @@ export default function AppearanceSettings() {
                       : "bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:text-[var(--text)]"
                   )}
                 >
-                  {fmt}
+                  {formatDate('2026-10-02', fmt)}
                 </button>
               ))}
             </div>

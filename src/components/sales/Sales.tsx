@@ -14,11 +14,11 @@ import {
   Trash2, DollarSign,
   Eye, Ban, Undo2, Bell, BellOff, Pencil
 } from 'lucide-react';
-import { parseLocalDate, cn, formatCurrency, getLocalDateISO, safeConfirm } from '../../lib/utils';
+import { parseLocalDate, cn, formatCurrency, getLocalDateISO, safeConfirm, formatDate } from '../../lib/utils';
 import { getIdToken } from '../../firebase';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isPostable, lineAmount, isOpenInvoice } from '../../lib/txFilters';
-import { format, differenceInDays } from 'date-fns';
+import { differenceInDays } from 'date-fns';
 import { motion } from 'motion/react';
 
 import InvoiceModal from './InvoiceModal';
@@ -351,7 +351,7 @@ export default function Sales() {
                        </div>
                     </td>
                     <td className="p-4 md:p-8">
-                       <span className="font-bold text-[var(--text)]">{inv.date ? format(parseLocalDate(inv.date), 'MMM dd, yyyy') : 'N/A'}</span>
+                       <span className="font-bold text-[var(--text)]">{inv.date ? formatDate(inv.date) : 'N/A'}</span>
                     </td>
                     <td className="p-4 md:p-8">
                       <div className="flex flex-col">
@@ -359,7 +359,7 @@ export default function Sales() {
                           "font-bold text-[var(--text)]",
                           inv.status === 'overdue' && "text-rose-600"
                         )}>
-                          {inv.dueDate ? format(parseLocalDate(inv.dueDate), 'MMM dd, yyyy') : 'N/A'}
+                          {inv.dueDate ? formatDate(inv.dueDate) : 'N/A'}
                         </span>
                         {inv.status === 'pending' && (
                           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1 opacity-50">

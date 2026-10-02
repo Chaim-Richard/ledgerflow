@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { AppTab } from '../types';
 import { parseRecordHash, recordHash } from '../lib/recordLinks';
+import { setDateDisplayFormat } from '../lib/utils';
 import type { RecordRef } from '../lib/recordLinks';
 
 const initialHash = typeof window !== 'undefined' ? parseRecordHash(window.location.hash) : { tab: '' };
@@ -218,7 +219,8 @@ export const useUIStore = create<UIState>((set) => ({
     try { return localStorage.getItem('lf_default_landing') || 'dashboard'; } catch (e) { return 'dashboard'; }
   })(),
   dateFormatPref: (() => {
-    try { return localStorage.getItem('lf_date_format') || 'YYYY-MM-DD'; } catch (e) { return 'YYYY-MM-DD'; }
+    // the same default as formatDate (src/lib/utils.ts)
+    try { return localStorage.getItem('lf_date_format') || 'MMM DD, YYYY'; } catch (_e) { return 'MMM DD, YYYY'; }
   })(),
   numberDecimals: (() => {
     try {
@@ -269,6 +271,7 @@ export const useUIStore = create<UIState>((set) => ({
   },
   setDateFormatPref: (dateFormatPref) => {
     try { localStorage.setItem('lf_date_format', dateFormatPref); } catch (_e) { /* ignore storage error */ }
+    setDateDisplayFormat(dateFormatPref);
     set({ dateFormatPref });
   },
   setNumberDecimals: (numberDecimals) => {

@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { formatCurrency, parseLocalDate, cn } from '../../lib/utils';
-import { format } from 'date-fns';
+import { formatCurrency, parseLocalDate, cn, formatDate } from '../../lib/utils';
+
 import { DollarSign, Search, Filter, Eye, Download } from 'lucide-react';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
@@ -68,7 +68,7 @@ export default function PaymentsView() {
               {filteredPayments.map(payment => (
                 <tr key={payment.id} className="group hover:bg-[var(--ink)]/30 transition-all">
                   <td className="p-4 md:p-8 font-mono font-bold text-slate-500 group-hover:text-[var(--text)] transition-colors">
-                    {format(parseLocalDate(payment.date), 'MMM dd, yyyy')}
+                    {formatDate(payment.date)}
                   </td>
                   <td className="p-4 md:p-8">
                     <div className="flex flex-col">

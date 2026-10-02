@@ -8,6 +8,7 @@ import { formatCurrency } from '../../lib/utils';
 import { calculateAmountDue } from '../../lib/documentMath';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { toast } from 'sonner';
+import { describeError } from '../../lib/errorRemedies';
 
 interface WriteOffModalProps {
   isOpen: boolean;
@@ -52,7 +53,8 @@ export default function WriteOffModal({ isOpen, onClose, invoice }: WriteOffModa
       toast.success(`Written off ${formatCurrency(remainingCents, invoice.currency)} as bad debt`);
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to write off bad debt');
+      const described = describeError(err, 'create');
+      toast.error(`Not written off: ${described.title.charAt(0).toLowerCase()}${described.title.slice(1)}`, { description: described.remedy });
     } finally {
       setIsSubmitting(false);
     }

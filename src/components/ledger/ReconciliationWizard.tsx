@@ -16,7 +16,7 @@ import {
   CheckSquare,
   Sparkles
 } from 'lucide-react';
-import { parseLocalDate, cn } from '../../lib/utils';
+import { cn, formatDate } from '../../lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
@@ -321,7 +321,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                           </div>
                           <div>
                             <p className="text-xs font-black text-[var(--text)] uppercase italic tracking-tight">{t.description}</p>
-                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1 opacity-50">{format(parseLocalDate(t.date), 'MMM dd, yyyy')} // NODE_ID: {t.id.substring(0,8)}</p>
+                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1 opacity-50">{formatDate(t.date)} // NODE_ID: {t.id.substring(0,8)}</p>
                           </div>
                         </div>
                         <p className="text-sm font-black font-mono text-[var(--text)] italic tracking-tight tabular-nums">

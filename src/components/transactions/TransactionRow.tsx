@@ -1,6 +1,6 @@
 import React from 'react';
 import { Transaction } from '../../types';
-import { format } from 'date-fns';
+
 import { 
   Zap,
   RotateCcw,
@@ -14,7 +14,7 @@ import {
   BrainCircuit,
   Paperclip
 } from 'lucide-react';
-import { parseLocalDate, resolveAccountName, cn } from '../../lib/utils';
+import { resolveAccountName, cn, formatDate } from '../../lib/utils';
 import { isInflow } from '../../lib/txFilters';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import AsyncButton from '../ui/AsyncButton';
@@ -155,7 +155,7 @@ const TransactionRow = React.memo(({
           isCompactMode && "px-1 text-[9px]",
           isFocused && focusedField === 'date' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
         )}>
-          {displayTx.date ? format(parseLocalDate(displayTx.date), 'dd MMM yyyy') : 'N/A'}
+          {displayTx.date ? formatDate(displayTx.date) : 'N/A'}
         </div>
         <div 
           onDoubleClick={(e) => {

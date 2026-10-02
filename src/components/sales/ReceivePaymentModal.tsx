@@ -9,6 +9,7 @@ import { formatCurrency, getLocalDateISO, roundCents } from '../../lib/utils';
 import { LedgerPostService } from '../../services/LedgerPostService';
 import { toast } from 'sonner';
 import { calculateAmountDue } from '../../lib/documentMath';
+import { describeError } from '../../lib/errorRemedies';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
@@ -222,7 +223,8 @@ export default function ReceivePaymentModal({
       onClose();
     } catch (err: any) {
       console.error('Failed to post payment:', err);
-      toast.error(err.message || 'Failed to record payment');
+      const described = describeError(err, 'create');
+      toast.error(`Payment not recorded: ${described.title.charAt(0).toLowerCase()}${described.title.slice(1)}`, { description: described.remedy });
     } finally {
       setIsSubmitting(false);
     }

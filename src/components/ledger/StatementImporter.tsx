@@ -18,8 +18,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Transaction } from '../../types';
 import { aiService } from '../../services/aiService';
 import { IntentResolver } from '../../lib/intentResolver';
-import { parseLocalDate, cn, getLocalDateISO } from '../../lib/utils';
-import { format } from 'date-fns';
+import { cn, getLocalDateISO, formatDate } from '../../lib/utils';
+
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -573,7 +573,7 @@ export default function StatementImporter({
                           </div>
                           <div>
                             <div className="flex items-center gap-2 mb-0.5">
-                              <p className="text-[10px] font-mono text-[var(--muted)]">{format(parseLocalDate(tx.date), 'MMM dd, yyyy')}</p>
+                              <p className="text-[10px] font-mono text-[var(--muted)]">{formatDate(tx.date)}</p>
                               {tx.hasResolvedEntity && (
                                 <span className={cn(
                                   "flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-tighter",

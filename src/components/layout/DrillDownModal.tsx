@@ -2,8 +2,8 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Table, Search } from 'lucide-react';
 import { Transaction } from '../../types';
-import { format } from 'date-fns';
-import { parseLocalDate, cn } from '../../lib/utils';
+
+import { cn, formatDate } from '../../lib/utils';
 
 interface DrillDownModalProps {
   isOpen: boolean;
@@ -66,7 +66,7 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
                     return (
                       <tr key={tx.id} className="group hover:bg-[var(--ink)] transition-all rounded-[32px] overflow-hidden">
                         <td className="py-4 pl-4 text-xs font-black text-slate-500 font-mono rounded-l-2xl border-y border-l border-[var(--line)] group-hover:border-slate-300">
-                          {tx.date ? format(parseLocalDate(tx.date), 'MMM dd, yyyy') : 'N/A'}
+                          {tx.date ? formatDate(tx.date) : 'N/A'}
                         </td>
                         <td className="py-4 text-sm font-bold text-[var(--text)] border-y border-[var(--line)] group-hover:border-slate-300">
                            <div className="flex flex-col">

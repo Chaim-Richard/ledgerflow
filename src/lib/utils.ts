@@ -3,6 +3,7 @@ import { twMerge } from 'tailwind-merge';
 import { toast } from 'sonner';
 import Decimal from 'decimal.js';
 import { useAuthStore } from '../stores/useAuthStore';
+import { describeError } from './errorRemedies';
 
 // Set default rounding mode to HALF_UP (standard financial rounding)
 Decimal.set({ rounding: Decimal.ROUND_HALF_UP });
@@ -256,11 +257,38 @@ export function parseLocalDate(s: string): Date {
   return new Date(s);
 }
 
-export function formatDate(dateStr: string | Date | undefined | null): string {
+/** Date display choices (Preferences → Date Display Format, I-12). */
+export const DATE_DISPLAY_FORMATS = ['MMM DD, YYYY', 'YYYY-MM-DD', 'MM/DD/YYYY', 'DD/MM/YYYY'] as const;
+export const DEFAULT_DATE_DISPLAY = 'MMM DD, YYYY';
+let dateDisplay: string | null = null;
+/** The user's choice (saved by useUIStore.setDateFormatPref), read when first needed. */
+function currentDateDisplay(): string {
+  if (dateDisplay === null) {
+    let saved: string | null = null;
+    try { saved = typeof localStorage !== 'undefined' ? localStorage.getItem('lf_date_format') : null; } catch { /* storage unavailable */ }
+    dateDisplay = saved && (DATE_DISPLAY_FORMATS as readonly string[]).includes(saved) ? saved : DEFAULT_DATE_DISPLAY;
+  }
+  return dateDisplay;
+}
+/** Called when the user picks another format. */
+export function setDateDisplayFormat(pref: string): void {
+  dateDisplay = (DATE_DISPLAY_FORMATS as readonly string[]).includes(pref) ? pref : DEFAULT_DATE_DISPLAY;
+}
+
+/** A calendar date for display, in the user's chosen format (never for inputs or files: use YYYY-MM-DD there). */
+export function formatDate(dateStr: string | Date | undefined | null, pref: string = currentDateDisplay()): string {
   if (!dateStr) return '';
   const d = typeof dateStr === 'string' ? parseLocalDate(dateStr) : dateStr;
   if (isNaN(d.getTime())) return String(dateStr);
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  const y = String(d.getFullYear());
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  switch (pref) {
+    case 'YYYY-MM-DD': return `${y}-${m}-${day}`;
+    case 'MM/DD/YYYY': return `${m}/${day}/${y}`;
+    case 'DD/MM/YYYY': return `${day}/${m}/${y}`;
+    default: return `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]} ${day}, ${y}`;
+  }
 }
 
 export function cn(...inputs: ClassValue[]) {
@@ -326,10 +354,9 @@ export function reportError(error: unknown, operationType: OperationType, path: 
 
   console.error(`[FORENSIC ERROR] ${(operationType || 'UNKNOWN').toUpperCase()}:`, JSON.stringify(errInfo, null, 2));
   
-  // UI Feedback
-  toast.error(`SYSTEM ERROR: ${(operationType || 'UNKNOWN').toUpperCase()}`, {
-    description: message.length > 100 ? message.slice(0, 100) + '...' : message
-  });
+  // UI feedback: what happened in plain words and what to do (errorRemedies.ts); details stay in the console
+  const described = describeError(error, String(operationType || ''));
+  toast.error(described.title, { description: described.remedy });
 
   return errInfo;
 }
