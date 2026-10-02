@@ -84,6 +84,19 @@ describe('On-demand collections are asked for by the files that read them', () =
     assert.deepEqual(problems, []);
   });
 
+  test('a screen that loads data on demand and shows an empty state also shows loading (I-05)', () => {
+    const problems: string[] = [];
+    for (const file of sourceFiles(ROOT)) {
+      const rel = relative(ROOT, file).replace(/\\/g, '/');
+      const text = readFileSync(file, 'utf8');
+      if (!/<EmptyState\b/.test(text) || !/useLedgerCollections\(/.test(text)) continue;
+      if (!/\{\s*loading\s*\}\s*=\s*useLedgerCollections\(/.test(text) || !/<LoadingState\b/.test(text)) {
+        problems.push(`${rel}: shows <EmptyState> but not <LoadingState> while useLedgerCollections is loading`);
+      }
+    }
+    assert.deepEqual(problems, []);
+  });
+
   test('the detector sees selectors, destructuring and getState reads', () => {
     const src = `
       const a = useLedgerStore(s => s.invoices);

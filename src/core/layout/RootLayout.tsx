@@ -20,6 +20,7 @@ import { useUIStore } from '../../stores/useUIStore';
 import ShortcutOverlay from '../../components/layout/ShortcutOverlay';
 import DiagnosticConsole from '../../components/intelligence/DiagnosticConsole';
 import ConnectionBanner from '../../components/platform/ConnectionBanner';
+import DataStatusBar from '../../components/layout/DataStatusBar';
 import LedgerBackupReminder from '../../components/platform/LedgerBackupReminder';
 
 import { useCommandDispatcher } from '../../hooks/useSystemContext';
@@ -61,7 +62,6 @@ export function RootLayout() {
   const isDiagnosticConsoleOpen = useUIStore(state => state.isDiagnosticConsoleOpen);
   const setDiagnosticConsoleOpen = useUIStore(state => state.setDiagnosticConsoleOpen);
 
-  const isDataTruncated = useLedgerStore(state => state.isDataTruncated);
 
   const modals = {
     commandPalette: useUIStore(state => state.isCommandPaletteOpen),
@@ -149,11 +149,7 @@ export function RootLayout() {
             Demo data — sign up to save your own
           </div>
         )}
-        {isDataTruncated && (
-          <div className="bg-amber-500/10 text-amber-500 border-b border-amber-500/20 px-4 py-2 text-sm text-center font-medium">
-            Showing 2,000 of N transactions — totals are incomplete without server sync.
-          </div>
-        )}
+        <DataStatusBar />
         {!isFocusMode && <Header onLogout={handleLogout} onLoginPrompt={handleLoginPrompt} />}
         {!isFocusMode && <ModuleSubNav activeTab={activeTab as any} onTabChange={setActiveTab as any} />}
         

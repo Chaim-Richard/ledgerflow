@@ -109,4 +109,22 @@ describe('Invoice dialog', () => {
     await new Promise(resolve => setTimeout(resolve, 50));
     assert.equal(saved.length, 0);
   });
+
+  test('closing with unsaved changes asks first; untouched, it just closes (I-07)', () => {
+    let closed = 0;
+    const asked: string[] = [];
+    let answer = false;
+    window.confirm = (message?: string) => { asked.push(String(message)); return answer; };
+    render(<InvoiceModal isOpen onClose={() => { closed++; }} onSave={() => {}} customers={customers} accounts={accounts} />);
+    fireEvent.click(screen.getByText('Cancel'));
+    assert.equal(closed, 1, 'nothing typed: closes without asking');
+    assert.equal(asked.length, 0);
+    type(input('Customer'), 'Acme Ltd');
+    fireEvent.click(screen.getByText('Cancel'));
+    assert.equal(closed, 1, 'kept open when the answer is no');
+    assert.match(asked[0], /Discard your changes to this invoice/);
+    answer = true;
+    fireEvent.click(screen.getByLabelText('Close'));
+    assert.equal(closed, 2);
+  });
 });

@@ -12,7 +12,7 @@ import AsyncButton from '../ui/AsyncButton';
 import { evaluateApprovalRequirement } from '../../lib/approvalWorkflow';
 import { addComment, getCommentsForEntity } from '../../lib/commentService';
 import { documentTotals, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, safeConfirm } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface BillModalProps {
@@ -214,6 +214,12 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     }
   };
 
+  // I-07: closing with unsaved edits asks first
+  const [dirty, setDirty] = useState(false);
+  const requestClose = () => {
+    if (!dirty || safeConfirm('Discard your changes to this bill?')) onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -222,7 +228,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={onClose}
+        onClick={requestClose}
         className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
       />
       
@@ -242,10 +248,10 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Purchases & Payables</p>
             </div>
           </div>
-          <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400"><X size={24} /></button>
+          <button aria-label="Close" onClick={requestClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400"><X size={24} /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar">
+        <form onSubmit={handleSubmit} onChange={() => setDirty(true)} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -463,7 +469,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
           <div className="flex flex-wrap items-center justify-end gap-3 w-full sm:w-auto">
             <button 
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className="px-6 py-3.5 bg-[var(--surface)] border border-[var(--line)] text-zinc-600 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-[var(--ink)] transition-all"
              aria-label="Cancel">
               Cancel

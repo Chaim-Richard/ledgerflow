@@ -21,6 +21,7 @@ import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { LoadingState } from '../ui/LoadingState';
 
 /**
  * Recurring invoices and entries. The daily job (src/server/services/recurringService.ts) runs
@@ -29,9 +30,9 @@ import { useLedgerCollections } from '../../hooks/useLedgerCollections';
  */
 export default function RecurringTransactionsView() {
   const recurring = useLedgerStore(s => s.recurring) || [];
-  useLedgerCollections('recurring');
   const [searchTerm, setSearchTerm] = useState('');
   const focusedId = useRecordFocus('recurring', { ready: recurring.length > 0, onFocus: () => setSearchTerm('') });
+  const { loading } = useLedgerCollections('recurring');
   const { updateEntity, deleteEntity } = useEntityOperations();
   const role = useCurrentRole();
   const canEdit = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
@@ -214,9 +215,11 @@ export default function RecurringTransactionsView() {
               {filteredRecurring.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-zinc-500">
+                    {loading ? <LoadingState what="recurring schedules" /> : (<>
                     <RefreshCw size={48} className="mx-auto mb-4 opacity-10" />
                     <p className="text-sm font-medium">No recurring invoices or entries yet</p>
                     <p className="mt-2 text-xs">Create an invoice in Sales and choose "Recurring" to send the same invoice on a schedule.</p>
+                    </>)}
                   </td>
                 </tr>
               )}

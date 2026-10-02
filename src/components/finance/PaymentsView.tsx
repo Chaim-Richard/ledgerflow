@@ -6,12 +6,13 @@ import { format } from 'date-fns';
 import { DollarSign, Search, Filter, Eye, Download } from 'lucide-react';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { LoadingState } from '../ui/LoadingState';
 
 export default function PaymentsView() {
   const payments = useLedgerStore(s => s.payments) || [];
   const customers = useLedgerStore(s => s.customers) || [];
   const vendors = useLedgerStore(s => s.vendors) || [];
-  useLedgerCollections('customers', 'payments', 'vendors');
+  const { loading } = useLedgerCollections('customers', 'payments', 'vendors');
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [previewPayment, setPreviewPayment] = useState<any | null>(null);
   
@@ -125,12 +126,14 @@ export default function PaymentsView() {
                 <tr>
                   <td colSpan={6} className="p-24 text-center relative overflow-hidden">
                     <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
+                    {loading ? <LoadingState what="payments" /> : (
                     <div className="relative z-10 flex flex-col items-center gap-4">
                       <div className="w-20 h-20 bg-slate-200/20 rounded-[32px] flex items-center justify-center text-slate-500/30">
                         <DollarSign size={40} />
                       </div>
-                      <p className="text-base font-black text-slate-500/40 uppercase tracking-[0.5em]">No Payments Recorded</p>
+                      <p className="text-base font-black text-[var(--muted)] uppercase tracking-[0.3em]">No payments recorded</p>
                     </div>
+                    )}
                   </td>
                 </tr>
               )}

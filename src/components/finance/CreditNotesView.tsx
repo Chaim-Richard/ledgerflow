@@ -27,6 +27,7 @@ import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { creditTaxFrom } from '../../lib/taxCodes';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { LoadingState } from '../ui/LoadingState';
 
 export default function CreditNotesView() {
   const [activeTab, setActiveTab] = useState<'customer' | 'vendor'>('customer');
@@ -40,7 +41,7 @@ export default function CreditNotesView() {
   const vendorCredits = useLedgerStore(s => s.vendorCredits || []);
   const invoices = useLedgerStore(s => s.invoices || []);
   const bills = useLedgerStore(s => s.bills || []);
-  useLedgerCollections('bills', 'creditNotes', 'customers', 'invoices', 'vendorCredits', 'vendors');
+  const { loading } = useLedgerCollections('bills', 'creditNotes', 'customers', 'invoices', 'vendorCredits', 'vendors');
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
 
   const { addEntity } = useEntityOperations();
@@ -190,7 +191,7 @@ export default function CreditNotesView() {
       {/* Main List */}
       {activeTab === 'customer' ? (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
-          {creditNotes.length === 0 ? (
+          {loading ? <LoadingState what="credit notes" /> : creditNotes.length === 0 ? (
             <EmptyState
               title="No Customer Credit Notes"
               description="Issue credit notes for refunds or overbilling adjustments."
@@ -259,7 +260,7 @@ export default function CreditNotesView() {
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
-          {vendorCredits.length === 0 ? (
+          {loading ? <LoadingState what="vendor credits" /> : vendorCredits.length === 0 ? (
             <EmptyState
               title="No Vendor Credits"
               description="Record rebates, returned goods, or price adjustments from suppliers."

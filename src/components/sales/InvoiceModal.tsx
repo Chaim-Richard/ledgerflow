@@ -10,7 +10,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, safeConfirm } from '../../lib/utils';
 import { lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
 import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
@@ -166,6 +166,12 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     }
   };
 
+  // I-07: closing with unsaved edits asks first
+  const [dirty, setDirty] = useState(false);
+  const requestClose = () => {
+    if (!dirty || safeConfirm('Discard your changes to this invoice?')) onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -174,7 +180,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={onClose}
+        onClick={requestClose}
         className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
       />
       
@@ -193,11 +199,11 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             <button type="button" onClick={() => window.print()} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400" title="Print Invoice">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
             </button>
-            <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400"><X size={24} /></button>
+            <button aria-label="Close" onClick={requestClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400"><X size={24} /></button>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar">
+        <form onSubmit={handleSubmit} onChange={() => setDirty(true)} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-2">
               <label htmlFor="inv-customer" className="micro-label">Customer</label>
@@ -627,7 +633,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             )}
             <button 
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className="px-6 py-3.5 bg-[var(--surface)] border border-[var(--line)] text-zinc-600 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-[var(--ink)] transition-all"
              aria-label="Cancel">
               Cancel

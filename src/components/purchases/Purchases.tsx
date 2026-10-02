@@ -18,19 +18,20 @@ import {
 } from 'lucide-react';
 import type { Bill } from '../../types';
 import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, safeConfirm } from '../../lib/utils';
 import BillModal from './BillModal';
 import VendorModal from './VendorModal';
 import VendorDetailView from './VendorDetailView';
 import ReceivePaymentModal from '../sales/ReceivePaymentModal';
 import { toast } from 'sonner';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { LoadingState } from '../ui/LoadingState';
 
 export default function Purchases() {
   const vendors = useLedgerStore(s => s.vendors) || [];
   const bills = useLedgerStore(s => s.bills) || [];
   const accounts = useLedgerStore(s => s.accounts) || [];
-  useLedgerCollections('bills', 'vendors');
+  const { loading } = useLedgerCollections('bills', 'vendors');
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
 
   const [activeSubTab, setActiveSubTab] = useState<'bills' | 'vendors'>('bills');
@@ -81,14 +82,19 @@ export default function Purchases() {
     setEditingBill(undefined);
   };
 
-  const handleDeleteBill = async (id: string) => {
-    if (confirm('Are you sure you want to delete this bill?')) {
-      await deleteEntity('bills', id, 'Bill deleted successfully');
+  const describeBill = (b: Bill) => `bill ${b.number || ''} from ${b.vendorName || 'this vendor'} (${formatCurrency(b.amountCents || 0, b.currency)})`.replace('bill  from', 'bill from');
+
+  // Only drafts can be deleted (the database keeps issued bills; void them instead)
+  const handleDeleteBill = async (b: Bill) => {
+    if (safeConfirm(`Delete the draft ${describeBill(b)}? This can't be undone.`)) {
+      await deleteEntity('bills', b.id, 'Draft bill deleted');
     }
   };
 
-  const handleVoidBill = async (id: string) => {
-    await updateEntity('bills', id, { status: 'void' }, 'Bill voided successfully');
+  const handleVoidBill = async (b: Bill) => {
+    if (safeConfirm(`Void ${describeBill(b)}? It stays on record as void and its entries are reversed.`)) {
+      await updateEntity('bills', b.id, { status: 'void' }, 'Bill voided');
+    }
   };
 
   const exportBillsToCSV = () => {
@@ -279,7 +285,7 @@ export default function Purchases() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleVoidBill(b.id);
+                                handleVoidBill(b);
                               }}
                               className="px-2 py-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 font-semibold rounded-md flex items-center gap-1 shadow-xs transition-colors"
                             >
@@ -288,15 +294,17 @@ export default function Purchases() {
                             </button>
                           </>
                         )}
-                        <button
+                        {b.status === 'draft' && <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDeleteBill(b.id);
+                            handleDeleteBill(b);
                           }}
                           className="text-rose-500 hover:text-rose-700 p-1 rounded-lg"
+                          title="Delete draft"
+                          aria-label={`Delete draft bill ${b.number || ''}`.trim()}
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </button>}
                       </td>
                     </tr>
                   );
@@ -305,7 +313,7 @@ export default function Purchases() {
                 {filteredBills.length === 0 && (
                   <tr>
                     <td colSpan={7} className="p-8 text-center text-slate-500 dark:text-slate-400">
-                      No bills recorded yet.
+                      {loading ? <LoadingState what="bills" /> : searchTerm ? 'No bills match your search.' : 'No bills recorded yet.'}
                     </td>
                   </tr>
                 )}

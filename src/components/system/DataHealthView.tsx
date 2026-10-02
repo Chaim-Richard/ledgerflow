@@ -7,6 +7,7 @@ import { getLocalDateISO } from '../../lib/utils';
 import { DATA_CHECKS, runDataChecks } from '../../lib/dataChecks';
 import type { CheckSeverity } from '../../lib/dataChecks';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { LoadingState } from '../ui/LoadingState';
 
 /**
  * Data Health (launch step 8): runs every check in the registry (src/lib/dataChecks.ts) over the
@@ -27,7 +28,7 @@ export default function DataHealthView() {
   const bills = useLedgerStore(s => s.bills);
   const recurring = useLedgerStore(s => s.recurring);
   const inventory = useLedgerStore(s => s.inventory);
-  useLedgerCollections('bills', 'inventory', 'invoices', 'recurring');
+  const { loading } = useLedgerCollections('bills', 'inventory', 'invoices', 'recurring');
   const baseCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const openRecord = useUIStore(s => s.openRecord);
   const [only, setOnly] = useState<string>('all');
@@ -70,7 +71,7 @@ export default function DataHealthView() {
         ))}
       </div>
 
-      {findings.length === 0 ? (
+      {loading ? <LoadingState what="your records to check" /> : findings.length === 0 ? (
         <div className="p-12 text-center border border-[var(--line)] rounded-2xl">
           <CheckCircle2 size={40} className="text-[var(--pos)] mx-auto mb-3" aria-hidden="true" />
           <h2 className="text-base font-bold">Everything checks out</h2>

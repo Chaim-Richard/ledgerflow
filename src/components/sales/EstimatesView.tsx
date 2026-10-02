@@ -8,6 +8,7 @@ import { db, getIdToken } from '../../firebase';
 import { toast } from 'sonner';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { LoadingState } from '../ui/LoadingState';
 
 export default function EstimatesView() {
   const user = useAuthStore(s => s.user);
@@ -15,7 +16,7 @@ export default function EstimatesView() {
 
   const estimates = useLedgerStore(s => s.estimates);
   const customers = useLedgerStore(s => s.customers);
-  useLedgerCollections('customers', 'estimates');
+  const { loading } = useLedgerCollections('customers', 'estimates');
 
   const [isCreating, setIsCreating] = useState(false);
   const [customerId, setCustomerId] = useState('');
@@ -238,7 +239,7 @@ export default function EstimatesView() {
 
       {/* Estimates Table */}
       <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xs">
-        {estimates.length === 0 ? (
+        {loading ? <LoadingState what="estimates" /> : estimates.length === 0 ? (
           <div className="p-8 text-center text-xs text-slate-500">
             No estimates found. Click "New Estimate" to create one.
           </div>

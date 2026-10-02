@@ -14,7 +14,7 @@ import {
   Trash2, DollarSign,
   Eye, Ban, Undo2, Bell, BellOff, Pencil
 } from 'lucide-react';
-import { parseLocalDate, cn, formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { parseLocalDate, cn, formatCurrency, getLocalDateISO, safeConfirm } from '../../lib/utils';
 import { getIdToken } from '../../firebase';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isPostable, lineAmount, isOpenInvoice } from '../../lib/txFilters';
@@ -42,13 +42,14 @@ import { calculateNextOccurrence } from '../../lib/recurringEngine';
 
 import CustomerDetailView from './CustomerDetailView';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { LoadingState } from '../ui/LoadingState';
 
 export default function Sales() {
   const user = useAuthStore(s => s.user);
   const invoices = useLedgerStore(s => s.invoices);
   const customers = useLedgerStore(s => s.customers);
   const accounts = useLedgerStore(s => s.accounts);
-  useLedgerCollections('customers', 'invoices');
+  const { loading } = useLedgerCollections('customers', 'invoices');
   const { addEntity, updateEntity } = useEntityOperations();
 
   const transactions = useLedgerStore(s => s.transactions);
@@ -483,7 +484,11 @@ export default function Sales() {
                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         </button>
                         <button 
-                          onClick={() => onAddInvoice({ id: inv.id, status: 'void' })} 
+                          onClick={() => {
+                            if (safeConfirm(`Void invoice ${inv.number || ''} for ${inv.customerName || 'this customer'} (${formatCurrency(inv.amountCents || 0, inv.currency)})? It stays on record as void and its entries are reversed.`)) {
+                              onAddInvoice({ id: inv.id, status: 'void' });
+                            }
+                          }}
                           className="p-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-slate-500 hover:text-rose-500 transition-all"
                           title="Void invoice"
                           aria-label="Void invoice"
@@ -497,13 +502,14 @@ export default function Sales() {
                 {filteredInvoices.length === 0 && (
                   <tr>
                     <td colSpan={7} className="p-12">
-                      <EmptyState 
-                        title="No Invoices Detected" 
-                        description="There are currently no accounts receivable in this view. Create a new invoice or seed demo data to populate."
-                        actionLabel="CREATE INVOICE"
-                        onAction={() => setIsInvoiceModalOpen(true)}
-                        showSeedData={true}
-                      />
+                      {loading ? <LoadingState what="invoices" /> : (
+                        <EmptyState
+                          title={searchTerm ? 'No invoices match your search' : 'No invoices yet'}
+                          description={searchTerm ? 'Try another name or number.' : 'Create your first invoice to bill a customer.'}
+                          actionLabel="Create invoice"
+                          onAction={() => setIsInvoiceModalOpen(true)}
+                        />
+                      )}
                     </td>
                   </tr>
                 )}

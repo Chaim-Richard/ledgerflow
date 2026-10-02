@@ -224,6 +224,7 @@ export function useLedgerData() {
   // the others the first time a screen asks for them (useLedgerCollections). Each stays live until
   // the workspace changes, so no screen sees a stale copy; changes are fetched incrementally.
   const asked = useDataNeedsStore(s => s.asked);
+  const failed = useDataNeedsStore(s => s.failed);
   const active = useRef(new Map<string, () => void>());
   useEffect(() => {
     const subscriptions = active.current;
@@ -234,10 +235,16 @@ export function useLedgerData() {
   }, [user, currentWorkspaceId]);
   useEffect(() => {
     if (!user || !currentWorkspaceId) return;
-    for (const key of keysToStart(asked, new Set(active.current.keys()))) {
-      active.current.set(key, subscribeLedgerCollection(key, currentWorkspaceId));
+    // a failed collection waits for "Try again" (useDataNeedsStore.retry) before starting over
+    const skip = new Set([...active.current.keys(), ...Object.keys(failed)]);
+    for (const key of keysToStart(asked, skip)) {
+      const subscriptions = active.current;
+      subscriptions.set(key, subscribeLedgerCollection(key, currentWorkspaceId, () => {
+        subscriptions.get(key)?.();
+        subscriptions.delete(key);
+      }));
     }
-  }, [user, currentWorkspaceId, asked]);
+  }, [user, currentWorkspaceId, asked, failed]);
 
   return null;
 }
@@ -278,8 +285,8 @@ function toStore(key: LedgerKey, rows: StoredRow[]): void {
   }
 }
 
-/** One live collection of one workspace into the store. */
-function subscribeLedgerCollection(key: LedgerKey, workspaceId: string): () => void {
+/** One live collection of one workspace into the store; `onFailed` stops it after an error. */
+function subscribeLedgerCollection(key: LedgerKey, workspaceId: string, onFailed: () => void): () => void {
   const spec: LedgerCollectionSpec = LEDGER_COLLECTIONS[key];
   const constraints = [where('workspaceId', '==', workspaceId)];
   if (spec.newestFirstBy) constraints.push(orderBy(spec.newestFirstBy, 'desc'));
@@ -289,5 +296,14 @@ function subscribeLedgerCollection(key: LedgerKey, workspaceId: string): () => v
     useLedgerStore.getState().setCollectionTruncated(spec.collection, snap.docs.length >= spec.cap);
     toStore(key, snap.docs.map(d => ({ id: d.id, ...d.data() })));
     useDataNeedsStore.getState().markLoaded(key);
-  }, (err) => handleFirestoreError(err, OperationType.LIST, spec.collection));
+  }, (err) => {
+    if (useAuthStore.getState().currentWorkspaceId !== workspaceId) return;
+    useDataNeedsStore.getState().markFailed(key, err instanceof Error ? err.message : String(err));
+    onFailed();
+    try {
+      handleFirestoreError(err, OperationType.LIST, spec.collection);
+    } catch {
+      // reported in the data status bar with "Try again"
+    }
+  });
 }

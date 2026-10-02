@@ -48,6 +48,7 @@ then the 488 LATER items. Claude works through them in that order and ticks them
 | Bulk import | K-01 (= M-18 BK-01 BK-05 BK-06 CA-11): Settings → Import Data — customers, vendors, items, accounts from CSV/Excel; columns matched by name; every row checked, all or nothing; duplicates skipped; items' opening stock posted; undo keeps records already in use (12 tests) |
 | Period close 1 | R-01 R-02 R-03 R-08 R-10 BA-15: one lock rule (hard close, soft close for bookkeepers, partial unlock) in database + server + screens; close / reopen (reason; owner for hard) / unlock only through the server, audited; checklist with sign-offs; drafts block the close. Fixed: the close screen never loaded invoices/bills/bank lines; a lock on the 28th closed the month; "clear lock date" only changed the screen; bookkeepers could close months (11 tests) |
 | Notifications | S-01 S-03 S-04 S-06 S-14 S-19 + bounces: real notifications from the server (one per person, stored in the database, live bell): invoice emailed, invoice overdue (daily), customer payment received, email bounced / marked spam, bank connection expired, person invited / joined. Each person marks their own read and chooses which types they get (bell → gear). Only their own are visible (database rules tested). **The old bell showed made-up alerts kept only in the open page** |
+| Loading and confirmations | I-01 I-02 I-05 I-07 I-08 (AA-02): one data status line above every screen says what is loading, what failed to load (with "Try again") and which lists are cut at their limit (the old banner said "2,000 of N"); Sales, Purchases, Payments, Credit notes, Estimates, Recurring and Data Health show "Loading…" instead of "nothing here" (Data Health said "Everything checks out" before checking); guard test. Void and delete name the record and ask first (voiding an invoice happened on one click); Delete only on draft bills (the database refuses the rest). Invoice and bill dialogs ask before discarding unsaved changes. Removed the "seed demo data" button that wrote 20 fake records into a real workspace (**L-127**) |
 | Money dialogs | H-01 H-02 H-03 H-04: component tests (jsdom + Testing Library, `src/tests/*.test.tsx`) for the invoice, bill, payment and bad debt dialogs check what each saves or sends: lines, tax on top or included, totals, numbers kept on edit, approval limit, allocations, refusals. Fixed **L-125** (invoice dialog: a customer typed but not on the list was saved as a made-up customer id; editing wiped the memo, terms and email text; currency defaulted to USD in any workspace) and **L-126** (payments: "apply" paid the newest invoices first, and drafts were offered though the server refuses them) |
 | Speed at scale | C-14 C-16 (C-15, AA-06 partly): screens ask for the data they read (`useLedgerCollections`); the ledger and chart of accounts load when a workspace opens, everything else the first time a screen needs it, then stays live; a guard test fails if a screen reads data without asking. Live lists now fetch **only the rows that changed** (by `updated_at`), not the whole list after every edit (tested on a fake database). Fixed **L-121**: balances and reports used only the last 12 months of entries, and invoices/bills loaded only on a few tabs (Reports, Data Health and the dashboard saw none or an old copy); editing a document whose list wasn't loaded now reads it from the database instead of posting a partial one. Removed 6 listeners nobody read and **L-122** (a writer that failed on every balance change) |
 | Data health | Z-07 Z-08 Z-09 Z-10 Z-14 Z-15 Z-32: Data Health now runs 11 checks from one list (`src/lib/dataChecks.ts`): entries that don't balance (with exchange rates), lines on missing accounts, duplicate invoice numbers, the same vendor bill entered twice, future-dated entries, empty invoices or lines without an account, overpaid invoices, foreign documents at rate 1, negative stock, recurring schedules with problems, invoices long overdue; each says what to do and opens the record. **Links to any record** (`#sales/invoice/<id>`) open the screen and highlight it (transactions open directly). Invoices and bills can now be **edited from the lists**. Fixed **L-120** |
@@ -1471,14 +1472,14 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION I — UX COMPLETENESS
 
-- [ ] I-01 Loading state on 32 views
-- [ ] I-02 Error state with retry on 29 views
+- [x] I-01 Loading state: data status line + "Loading…" on the money lists (guard test)
+- [x] I-02 Failed loads shown with "Try again" (data status line); render errors already have the view boundary with retry
 - [ ] I-03 `EmptyState` on 14 views
 - [ ] I-04 `<ViewShell>` wrapper
-- [ ] I-05 Guard test for all three states
+- [x] I-05 Guard test: a screen with an empty state that loads data on demand must show loading
 - [ ] I-06 Optimistic updates with rollback
-- [ ] I-07 Unsaved-changes warning
-- [ ] I-08 Confirmation naming the record
+- [x] I-07 Unsaved-changes warning in the invoice and bill dialogs (tested)
+- [x] I-08 Void/delete confirmations name the record (Sales, Purchases)
 - [ ] I-09 30-second undo
 - [ ] I-10 Discoverable keyboard shortcuts
 - [ ] I-11 Tabular figures everywhere
@@ -1674,6 +1675,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] L-124 Deleting a workspace leaves newer tables behind (purchase orders, tax returns, notifications, email events, numbering, members, bank connections, documents, API keys). Fix with account deletion (L-09, launch step 11)
 - [x] L-125 Invoice dialog: a customer typed but not on the list was saved as a made-up customer id (no customer record: no statement, balance or email); editing an invoice wiped its memo, terms and email text; the currency defaulted to USD in any workspace
 - [x] L-126 Payments: "apply to invoices" paid the newest invoices first (the list is newest first), and draft invoices/bills were offered though the server refuses them
+- [x] L-127 The empty invoice list offered "Seed demo data", which wrote 20 made-up invoices, bills and entries into a real workspace's books; removed
 - [x] L-105 Foreign-currency documents converted twice in the ledger (amounts converted, then the rate applied again); fixed, test proves it; old entries: Month-End Close → Repost
 - [x] L-104 Bad debt write-off counted the loss twice (voided the sale and booked the expense); FX ignored
 - [x] L-103 Fixed Asset Register saved nothing (assets + depreciation only in the page); now saved + server run
