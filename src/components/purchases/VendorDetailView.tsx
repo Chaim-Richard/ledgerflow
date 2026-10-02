@@ -10,9 +10,9 @@ interface VendorDetailViewProps {
 }
 
 export default function VendorDetailView({ vendorId, onBack }: VendorDetailViewProps) {
-  const vendors = useLedgerStore(s => s.vendors) || [];
-  const bills = useLedgerStore(s => s.bills) || [];
-  const payments = useLedgerStore(s => s.payments) || [];
+  const vendors = useLedgerStore(s => s.vendors);
+  const bills = useLedgerStore(s => s.bills);
+  const payments = useLedgerStore(s => s.payments);
   useLedgerCollections('bills', 'payments', 'vendors');
 
   const vendor = useMemo(() => vendors.find(v => v.id === vendorId), [vendors, vendorId]);

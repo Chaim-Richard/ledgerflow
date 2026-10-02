@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { usePageSyncedState } from '../../hooks/usePageSyncedState';
+import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, getLocalDateISO, workspaceYearMonth } from '../../lib/utils';
@@ -20,10 +21,9 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
 
   const [type, setType] = useState<'customer' | 'vendor'>('customer');
   const [contactId, setContactId] = useState<string>('');
-  const [startDate, setStartDate] = useState(`${workspaceYearMonth().year}-01-01`);
-  const [endDate, setEndDate] = useState(getLocalDateISO());
+  const [startDate, setStartDate] = usePageSyncedState(JSON.stringify([pageStartDate, pageEndDate]), pageStartDate || undefined, `${workspaceYearMonth().year}-01-01`);
+  const [endDate, setEndDate] = usePageSyncedState(JSON.stringify([pageStartDate, pageEndDate]), pageEndDate || undefined, getLocalDateISO());
   // Follow the Reports page period when it gives one
-  useEffect(() => { if (pageStartDate) setStartDate(pageStartDate); if (pageEndDate) setEndDate(pageEndDate); }, [pageStartDate, pageEndDate]);
 
   // Default to first contact
   const selectedContact = useMemo(() => {

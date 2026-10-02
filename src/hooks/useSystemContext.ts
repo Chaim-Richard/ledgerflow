@@ -98,9 +98,9 @@ export function useCommandDispatcher() {
       console.warn(`Unmapped command received: ${action}`);
     }
   }, [
-    setConverterOpen, setIntegrityOpen, setGuideOpen, setCommandPaletteOpen, 
-    setQuickEntryOpen, txActions, aiActions, setTemplateSelectorOpen, 
-    setActiveTab, setFilterCriteria, activeTab, setImporterOpen, setCommandCenterOpen, 
+    setConverterOpen, setIntegrityOpen, setGuideOpen, setCommandPaletteOpen,
+    setQuickEntryOpen, txActions, aiActions, setTemplateSelectorOpen,
+    setActiveTab, setFilterCriteria, activeTab, setImporterOpen, setCommandCenterOpen, updateEntity,
   ]);
 
   return { handleAction };

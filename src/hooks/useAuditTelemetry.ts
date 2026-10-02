@@ -13,10 +13,10 @@ import { resolveAccountRole } from '../lib/accountUtils';
  * Provides real-time financial health monitoring.
  */
 export function useAuditTelemetry(transactions: Transaction[] = [], accounts: ChartAccount[] = [], days = 30, passedMetrics?: AnalyticalMetrics): AnalyticalMetrics {
-  const safeTxs = Array.isArray(transactions) ? transactions : [];
-  const safeAccs = Array.isArray(accounts) ? accounts : [];
 
   return useMemo(() => {
+    const safeTxs = Array.isArray(transactions) ? transactions : [];
+    const safeAccs = Array.isArray(accounts) ? accounts : [];
     if (passedMetrics) return passedMetrics;
     if (!safeTxs.length || !safeAccs.length) {
        return {

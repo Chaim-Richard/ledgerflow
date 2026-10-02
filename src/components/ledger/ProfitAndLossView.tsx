@@ -1,3 +1,4 @@
+import { usePageSyncedState } from '../../hooks/usePageSyncedState';
 import type { Transaction } from '../../types';
 import React, { useId, useState, useMemo, useEffect, useCallback } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
@@ -37,11 +38,15 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   const formId = useId();
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
-  const [dateRange, setDateRange] = useState({
+  const [dateRange, setDateRange] = usePageSyncedState(
+    JSON.stringify([startDate, endDate]),
+    startDate && endDate ? { start: startDate, end: endDate } : undefined,
+    () => ({
     start: monthBoundsISO(getLocalDateISO()).start,
     end: getLocalDateISO()
-  });
-  const [isComparative, setIsComparative] = useState(false);
+  }));
+  const [isComparative, setIsComparative] = usePageSyncedState(
+    JSON.stringify([startDate, compareStartDate]), startDate ? Boolean(compareStartDate) : undefined, false);
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('balance');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[] } | null>(null);
@@ -53,12 +58,6 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
 
   // Follow the Reports page period and comparison
-  useEffect(() => {
-    if (startDate && endDate) setDateRange({ start: startDate, end: endDate });
-  }, [startDate, endDate]);
-  useEffect(() => {
-    if (startDate) setIsComparative(Boolean(compareStartDate));
-  }, [startDate, compareStartDate]);
 
   // Comparison period: the page's choice, else the calendar period just before (the month before
   // March is February, not the same number of days)

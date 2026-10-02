@@ -19,7 +19,7 @@ function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
 }
 
 export default function PaymentsView() {
-  const payments = useLedgerStore(s => s.payments) || [];
+  const payments = useLedgerStore(s => s.payments);
   useLedgerStore(s => s.customers);
   useLedgerStore(s => s.vendors);
   const { loading } = useLedgerCollections('customers', 'payments', 'vendors');

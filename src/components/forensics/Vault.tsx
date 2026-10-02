@@ -72,7 +72,7 @@ export default function Vault() {
       setDocuments(data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setLoading(false);
     }, () => setLoading(false));
-  }, [workspaceId, uid]);
+  }, [workspaceId, uid, setSafeTimeout]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

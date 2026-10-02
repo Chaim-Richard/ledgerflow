@@ -1,5 +1,5 @@
 import type { TransactionLine } from '../../types';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Transaction } from '../../types';
 import { Table as TableIcon, Search, Download, ChevronDown, ChevronRight, Calculator, Grid3X3, ListCollapse, ExternalLink, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
@@ -97,7 +97,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
   }, [transactions, startDate, endDate]);
 
   // Helper code to map a Transaction/Line to a group key representation
-  const getLineDimensionValue = (t: Transaction, line: TransactionLine, dim: GroupBy): string => {
+  const getLineDimensionValue = useCallback((t: Transaction, line: TransactionLine, dim: GroupBy): string => {
     if (dim === 'payee') {
       return t.payee || t.description || 'Direct Entry';
     }
@@ -111,7 +111,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
 
     const lineVal = line ? getLineDimension(line, t, dim, dimensionNodes) : 'Unassigned';
     return lineVal || 'Unassigned';
-  };
+  }, [accounts, dimensionNodes]);
 
   const formatDimensionDisplay = (dim: GroupBy, key: string): string => {
     if (dim === 'month' && /^\d{4}-\d{2}$/.test(key)) {
@@ -160,7 +160,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
     });
 
     return Object.entries(groups).sort((a, b) => Math.abs(b[1].total) - Math.abs(a[1].total));
-  }, [scopedTransactions, groupBy, searchTerm, accounts]);
+  }, [scopedTransactions, groupBy, searchTerm, getLineDimensionValue]);
 
   // 2. CROSS-TAB MATRIX MODE COMPILATION
   const matrixData = useMemo(() => {
@@ -261,7 +261,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
       grandTotal
     };
 
-  }, [scopedTransactions, pivotMode, rowDim, colDim, searchTerm, accounts]);
+  }, [scopedTransactions, pivotMode, rowDim, colDim, searchTerm, getLineDimensionValue]);
 
   return (
     <div className={cn(

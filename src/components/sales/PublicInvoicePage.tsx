@@ -39,7 +39,7 @@ export default function PublicInvoicePage() {
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [setSafeTimeout]);
 
   const handlePay = async () => {
     if (!invoice) return;

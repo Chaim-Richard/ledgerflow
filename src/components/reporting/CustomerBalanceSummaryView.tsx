@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { usePageSyncedState } from '../../hooks/usePageSyncedState';
+import React, { useState, useMemo } from 'react';
 import { Users, Mail, Phone } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
@@ -14,9 +15,8 @@ export const CustomerBalanceSummaryView: React.FC<{ asOfDate?: string }> = ({ as
   const creditNotes = useLedgerStore(s => s.creditNotes);
   useLedgerCollections('creditNotes', 'customers', 'invoices', 'payments');
   const [searchTerm, setSearchTerm] = useState('');
-  const [asOfDate, setAsOfDate] = useState(getLocalDateISO());
+  const [asOfDate, setAsOfDate] = usePageSyncedState(pageAsOfDate || '', pageAsOfDate || undefined, getLocalDateISO);
   // Follow the Reports page period when it gives one
-  useEffect(() => { if (pageAsOfDate) setAsOfDate(pageAsOfDate); }, [pageAsOfDate]);
 
   const customerRows = useMemo<CustomerBalanceSummaryRow[]>(() => {
     return computeCustomerBalanceSummary(

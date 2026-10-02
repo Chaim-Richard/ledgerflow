@@ -47,9 +47,10 @@ export function useTimeout(callback?: () => void, delay?: number | null) {
 
   // Cleanup all imperative timers on unmount
   useEffect(() => {
+    const timers = activeTimersRef.current;
     return () => {
-      activeTimersRef.current.forEach((timerId) => clearTimeout(timerId));
-      activeTimersRef.current.clear();
+      timers.forEach((timerId) => clearTimeout(timerId));
+      timers.clear();
     };
   }, []);
 

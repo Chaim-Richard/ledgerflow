@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { usePageSyncedState } from '../../hooks/usePageSyncedState';
+import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeGeneralLedger } from '../../server/reports/computeReports';
@@ -21,10 +22,9 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
   const accounts = useLedgerStore(s => s.accounts);
   const transactions = useLedgerStore(s => s.transactions);
 
-  const [startDate, setStartDate] = useState('2026-01-01');
-  const [endDate, setEndDate] = useState(getLocalDateISO());
+  const [startDate, setStartDate] = usePageSyncedState(JSON.stringify([pageStartDate, pageEndDate]), pageStartDate || undefined, '2026-01-01');
+  const [endDate, setEndDate] = usePageSyncedState(JSON.stringify([pageStartDate, pageEndDate]), pageEndDate || undefined, getLocalDateISO());
   // Follow the Reports page period when it gives one
-  useEffect(() => { if (pageStartDate) setStartDate(pageStartDate); if (pageEndDate) setEndDate(pageEndDate); }, [pageStartDate, pageEndDate]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 

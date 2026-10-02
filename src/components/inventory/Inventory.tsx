@@ -82,7 +82,7 @@ export default function Inventory() {
     return () => {
       unsubInventory();
     };
-  }, [workspaceId, uid]);
+  }, [workspaceId, uid, setSafeTimeout]);
 
   const activeTransactions = useMemo(() => {
     return storeTransactions.filter(isPostable);

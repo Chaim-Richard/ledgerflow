@@ -29,7 +29,7 @@ import { LoadingState } from '../ui/LoadingState';
  * stops a schedule until it is resumed (BE-03).
  */
 export default function RecurringTransactionsView() {
-  const recurring = useLedgerStore(s => s.recurring) || [];
+  const recurring = useLedgerStore(s => s.recurring);
   const [searchTerm, setSearchTerm] = useState('');
   const focusedId = useRecordFocus('recurring', { ready: recurring.length > 0, onFocus: () => setSearchTerm('') });
   const { loading } = useLedgerCollections('recurring');

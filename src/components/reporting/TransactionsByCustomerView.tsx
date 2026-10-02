@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { usePageSyncedState } from '../../hooks/usePageSyncedState';
+import React, { useState, useMemo } from 'react';
 import { FileText } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
@@ -16,16 +17,15 @@ export const TransactionsByCustomerView: React.FC<{ startDate?: string; endDate?
   useLedgerCollections('creditNotes', 'customers', 'invoices', 'payments');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [startDate, setStartDate] = useState(() => {
+  const [startDate, setStartDate] = usePageSyncedState(JSON.stringify([pageStartDate, pageEndDate]), pageStartDate || undefined, () => {
     const params = new URLSearchParams(window.location.search);
     return params.get('startDate') || getFiscalYearBounds().startDate;
   });
-  const [endDate, setEndDate] = useState(() => {
+  const [endDate, setEndDate] = usePageSyncedState(JSON.stringify([pageStartDate, pageEndDate]), pageEndDate || undefined, () => {
     const params = new URLSearchParams(window.location.search);
     return params.get('endDate') || getFiscalYearBounds().endDate;
   });
   // Follow the Reports page period when it gives one
-  useEffect(() => { if (pageStartDate) setStartDate(pageStartDate); if (pageEndDate) setEndDate(pageEndDate); }, [pageStartDate, pageEndDate]);
 
   const handleStartDateChange = (val: string) => {
     setStartDate(val);

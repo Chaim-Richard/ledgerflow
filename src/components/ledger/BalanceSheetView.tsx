@@ -1,3 +1,4 @@
+import { usePageSyncedState } from '../../hooks/usePageSyncedState';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import React, { useId, useState, useMemo, useCallback, useEffect } from 'react';
 import { ChartAccount, Transaction } from '../../types';
@@ -23,19 +24,12 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
   const formId = useId();
   const transactions = useLedgerStore(state => state.transactions || []);
   
-  const [asOfDate, setAsOfDate] = useState<string>(getLocalDateISO());
-  const [isComparative, setIsComparative] = useState<boolean>(false);
-  const [priorDate, setPriorDate] = useState<string>(
-    addToDateISO(getLocalDateISO(), { years: -1 })
+  const [asOfDate, setAsOfDate] = usePageSyncedState(pageAsOfDate || '', pageAsOfDate || undefined, getLocalDateISO);
+  const [isComparative, setIsComparative] = usePageSyncedState(JSON.stringify([pageAsOfDate, compareEndDate]), pageAsOfDate ? Boolean(compareEndDate) : undefined, false);
+  const [priorDate, setPriorDate] = usePageSyncedState(
+    JSON.stringify([pageAsOfDate, compareEndDate]), pageAsOfDate && compareEndDate ? compareEndDate : undefined,
+    () => addToDateISO(getLocalDateISO(), { years: -1 })
   );
-  useEffect(() => {
-    if (pageAsOfDate) setAsOfDate(pageAsOfDate);
-  }, [pageAsOfDate]);
-  useEffect(() => {
-    if (!pageAsOfDate) return;
-    setIsComparative(Boolean(compareEndDate));
-    if (compareEndDate) setPriorDate(compareEndDate);
-  }, [pageAsOfDate, compareEndDate]);
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('code');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[] } | null>(null);

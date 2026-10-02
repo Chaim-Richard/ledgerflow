@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Cookie, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -7,14 +7,7 @@ interface CookieConsentProps {
 }
 
 export default function CookieConsent({ onOpenPrivacyPolicy }: CookieConsentProps) {
-  const [showBanner, setShowBanner] = useState(false);
-
-  useEffect(() => {
-    const consent = localStorage.getItem('ledgerflow-cookie-consent');
-    if (!consent) {
-      setShowBanner(true);
-    }
-  }, []);
+  const [showBanner, setShowBanner] = useState(() => !localStorage.getItem('ledgerflow-cookie-consent'));
 
   const handleAccept = (type: 'all' | 'essential') => {
     localStorage.setItem('ledgerflow-cookie-consent', JSON.stringify({
