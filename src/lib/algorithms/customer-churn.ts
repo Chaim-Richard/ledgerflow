@@ -12,7 +12,7 @@ export const CUSTOMER_CHURN_ALGO: AlgorithmDefinition = {
     { key: 'churnThresholdDays', label: 'Churn Threshold (Days)', min: 30, max: 365, step: 30, defaultValue: 90 }
   ],
   compute: (ctx, inputs): AlgoResult => {
-    const { transactions, accounts, accounting } = ctx;
+    const { transactions, accounting } = ctx;
     const thresholdDays = inputs.churnThresholdDays ?? 90;
     
     // Identification of customers from transaction data based on income/revenue

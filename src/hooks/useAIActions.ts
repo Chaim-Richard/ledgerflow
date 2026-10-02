@@ -8,16 +8,13 @@ import { toast } from 'sonner';
 import { reportError, OperationType } from '../lib/utils';
 
 export function useAIActions() {
-  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
-  const workspaces = useAuthStore(s => s.workspaces);
-  const userProfile = useAuthStore(s => s.userProfile);
+  useAuthStore(s => s.currentWorkspaceId);
+  useAuthStore(s => s.workspaces);
+  useAuthStore(s => s.userProfile);
   const transactions = useLedgerStore(s => s.transactions);
   const uiStore = useUIStore();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [strategicInsights, setStrategicInsights] = useState<any>(null);
-
-  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
-  const userKey = userProfile?.geminiApiKey;
 
   const handleAnalyzeTrends = async () => {
     if (!transactions.length) return;

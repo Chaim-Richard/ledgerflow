@@ -89,7 +89,6 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
     });
     
     const totalVariance = totalBudget - totalActual;
-    const totalVariancePct = totalBudget !== 0 ? (totalVariance / totalBudget) * 100 : 0;
 
     return {
       metrics: [

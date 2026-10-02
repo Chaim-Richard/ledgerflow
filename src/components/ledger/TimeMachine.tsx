@@ -12,7 +12,7 @@ import { Labelled } from '../ui/Labelled';
 
 export default function TimeMachine() {
   const transactions = useLedgerStore(s => s.transactions);
-  const accounts = useLedgerStore(s => s.accounts);
+  useLedgerStore(s => s.accounts);
   
   const scenarios = useScenarioStore(s => s.scenarios);
   const activeScenarioId = useScenarioStore(s => s.activeScenarioId);

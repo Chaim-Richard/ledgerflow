@@ -11,7 +11,7 @@ export const CURRENCY_EXPOSURE_ALGO: AlgorithmDefinition = {
     { key: 'shockPct', label: 'Simulated FX Shock (%)', min: 1, max: 25, step: 1, defaultValue: 10 }
   ],
   compute: (ctx, inputs): AlgoResult => {
-    const { transactions, accounts, accounting } = ctx;
+    const { transactions, accounting } = ctx;
     const shockPct = (inputs.shockPct ?? 10) / 100;
     
     const fxNetBalances: Record<string, number> = {};

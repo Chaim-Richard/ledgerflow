@@ -82,7 +82,7 @@ const Reports = React.memo(() => {
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const quarterNames = ["Q1", "Q2", "Q3", "Q4"];
 
-  const availableMonths = useMemo(() => {
+  useMemo(() => {
     if (!transactions || transactions.length === 0) return [workspaceYearMonth().month];
     const monthsSet = new Set<number>();
     for (let i = 0; i < transactions.length; i++) {

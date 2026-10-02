@@ -330,10 +330,10 @@ export default function AnalyticalCenter() {
     return computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
   }, [computedAccounts, rawAccounts]);
   const projects = useLedgerStore(s => s.projects);
-  const bills = useLedgerStore(s => s.bills);
-  const invoices = useLedgerStore(s => s.invoices);
+  useLedgerStore(s => s.bills);
+  useLedgerStore(s => s.invoices);
   useLedgerCollections('bills', 'invoices');
-  const filterCriteria = useUIStore(s => s.filterCriteria);
+  useUIStore(s => s.filterCriteria);
   const { handleAction: onAction } = useCommandDispatcher();
   const passedMetrics = useAuditTelemetry(transactions, accounts);
   

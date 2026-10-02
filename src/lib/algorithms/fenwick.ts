@@ -92,7 +92,7 @@ export const FENWICK_TIME_TRAVEL_ALGO: AlgorithmDefinition = {
     const start = performance.now();
     
     // Build tree
-    const { tree, sortedDates, dateToIndex } = buildTimeTravelLedger(transactions);
+    const { tree, sortedDates } = buildTimeTravelLedger(transactions);
     
     // Query
     const maxIdx = sortedDates.length;

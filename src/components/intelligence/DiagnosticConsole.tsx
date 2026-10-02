@@ -25,8 +25,7 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
   const computedAccounts = useLedgerStore(s => s.computedAccounts);
   const accounts = computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
   const projects = useLedgerStore(s => s.projects);
-  const userProfile = useAuthStore(s => s.userProfile);
-  const userKey = userProfile?.geminiApiKey;
+  useAuthStore(s => s.userProfile);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -54,7 +53,6 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
       setHistory(newHistory);
       
       try {
-        const queryText = cmd.substring(1);
         const accountMap = new Map(accounts.map(a => [a.id, a]));
         
         // Compute real metrics from accounts and transactions
@@ -102,7 +100,7 @@ export default function DiagnosticConsole({ isOpen, onClose }: DiagnosticConsole
             newHistory.push(`[System Intel]: ${result.strategicAdvice[1]}`);
           }
         }
-      } catch (err) {
+      } catch {
         newHistory.pop();
         newHistory.push('Error: AI service unavailable. Please check your connection.');
       } finally {

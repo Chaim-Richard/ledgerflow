@@ -33,7 +33,7 @@ export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {
     }
   ],
   compute: (ctx, inputs): AlgoResult => {
-    const { transactions, accounts, accounting } = ctx;
+    const { transactions, accounting } = ctx;
     const vendors = ctx.entities?.vendors || [];
     const bills = ctx.entities?.bills || [];
     

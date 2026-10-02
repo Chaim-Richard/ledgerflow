@@ -14,13 +14,12 @@ interface HealthCheckModalProps {
 
 export default function HealthCheckModal({ isOpen, onClose }: HealthCheckModalProps) {
   const transactions = useLedgerStore(s => s.transactions);
-  const accounts = useLedgerStore(s => s.accounts);
+  useLedgerStore(s => s.accounts);
   const bankLines = useLedgerStore(s => s.bankLines);
   useLedgerCollections('bankLines');
-  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
-  const workspaces = useAuthStore(s => s.workspaces);
+  useAuthStore(s => s.currentWorkspaceId);
+  useAuthStore(s => s.workspaces);
   
-  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
 
   const [isScanning, setIsScanning] = useState(false);
   const [report, setReport] = useState<any>(null);

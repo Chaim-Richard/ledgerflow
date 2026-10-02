@@ -68,7 +68,6 @@ export class TransactionQueryEngine {
     const hasFilter = filterCriteria && Object.keys(filterCriteria).length > 0;
     
     // Determine effective search term from component props AND active view
-    const viewSearch = activeView?.filter?.searchTerm;
     const effectiveSearchTerm = searchTerm.trim();
     const hasSearch = effectiveSearchTerm.length > 0;
     
@@ -290,10 +289,6 @@ export class TransactionQueryEngine {
     const parsedTodayStr = format(parsedNow, 'yyyy-MM-dd');
 
     // Precalculate prefix filter parameters
-    const queryCategory = categoryMatch ? categoryMatch[2].trim().toLowerCase() : '';
-    const queryProject = projectMatch ? projectMatch[2].trim().toLowerCase() : '';
-    const queryClass = classMatch ? classMatch[2].trim().toLowerCase() : '';
-    const queryLocation = locationMatch ? locationMatch[2].trim().toLowerCase() : '';
     const queryStartsWith = startsWithMatch ? startsWithMatch[1].trim().toLowerCase() : '';
     const queryEndsWith = endsWithMatch ? endsWithMatch[1].trim().toLowerCase() : '';
     const queryContains = containsMatch ? containsMatch[1].trim().toLowerCase() : '';

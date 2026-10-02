@@ -20,7 +20,6 @@ export const VENDOR_CHURN_ALGO: AlgorithmDefinition = {
   compute: (ctx, inputs): AlgoResult => {
     const { transactions } = ctx;
     const inactivityDays = inputs['inactivityDays'] ?? 90;
-    const inactivityMs = inactivityDays * 24 * 60 * 60 * 1000;
     const now = new Date().getTime();
     
     // Group transactions by Payee/Description

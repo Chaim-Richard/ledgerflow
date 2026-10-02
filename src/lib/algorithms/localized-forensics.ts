@@ -112,7 +112,7 @@ export const LOCALIZED_FORENSICS_ALGO: AlgorithmDefinition = {
   name: 'Localized Forensics & Coordinate Anomaly Detective',
   description: 'Runs Benford Law, Z-Score spikes, and round-number density on individual coordinate nodes (projects, vendors, properties) instead of global haystack alerts.',
   inputs: [],
-  compute: (ctx, inputs) => {
+  compute: (ctx, _inputs) => {
     const { transactions } = ctx;
     const start = performance.now();
     const anomalies = computeLocalizedForensics(transactions);

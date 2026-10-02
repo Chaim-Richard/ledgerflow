@@ -14,7 +14,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
   const [isAiParsing, setIsAiParsing] = useState(false);
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState<any>(null);
-  const [receiptMode, setReceiptMode] = useState(false);
+  const [, setReceiptMode] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const { handleQuickAdd, handleParseReceipt } = useTransactionActions();
 
@@ -55,7 +55,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: any) {
             dateStr: fallback.dateStr
           });
         }
-      } catch (e) {
+      } catch {
         const fallback = parseNaturalLanguageEntry(text);
         setParsed({
             action: fallback.action,

@@ -10,8 +10,8 @@ import { LoadingState } from '../ui/LoadingState';
 
 export default function PaymentsView() {
   const payments = useLedgerStore(s => s.payments) || [];
-  const customers = useLedgerStore(s => s.customers) || [];
-  const vendors = useLedgerStore(s => s.vendors) || [];
+  useLedgerStore(s => s.customers);
+  useLedgerStore(s => s.vendors);
   const { loading } = useLedgerCollections('customers', 'payments', 'vendors');
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [previewPayment, setPreviewPayment] = useState<any | null>(null);

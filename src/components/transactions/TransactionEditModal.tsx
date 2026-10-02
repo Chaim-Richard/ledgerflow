@@ -81,9 +81,9 @@ export default function TransactionEditModal({
   const [originalCurrency, setOriginalCurrency] = useState(() => transaction?.originalCurrency || baseCurrency);
   const [exchangeRate, setExchangeRate] = useState<number>(() => transaction?.exchangeRate || 1.0);
   const [isFetchingRate, setIsFetchingRate] = useState(false);
-  const classes = useLedgerStore(s => s.classes);
-  const locations = useLedgerStore(s => s.locations);
-  const projects = useLedgerStore(s => s.projects);
+  useLedgerStore(s => s.classes);
+  useLedgerStore(s => s.locations);
+  useLedgerStore(s => s.projects);
   const transactions = useLedgerStore(s => s.transactions);
   const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
   const currentWorkspace = getCurrentWorkspace();
@@ -212,18 +212,6 @@ export default function TransactionEditModal({
 
     toast.success('Ledger state synchronized with extreme precision');
     onClose();
-  };
-
-  // Auto balance offset
-  const handleAutoBalance = () => {
-    if (lines.length < 2) {
-      toast.error('Auto-balancing requires at least two line vectors to offset.');
-      return;
-    }
-    
-    // In our system, the first line is the primary (eg Expense), and secondary balances it.
-    // Let's say we want to distribute the remaining amount to the last line.
-    toast.info('Auto-balancing offset distributed to secondary vector.');
   };
 
   useEffect(() => {

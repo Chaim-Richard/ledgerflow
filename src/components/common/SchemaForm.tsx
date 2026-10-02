@@ -88,15 +88,12 @@ export function SchemaForm<T extends z.ZodObject<any>>({
 
   const renderControl = (key: string, zodType: z.ZodTypeAny) => {
     let currentType: z.ZodTypeAny = zodType;
-    let isOptional = false;
 
     if (currentType instanceof z.ZodOptional || currentType instanceof z.ZodNullable) {
-      isOptional = true;
       currentType = (currentType as any)._def.innerType;
     }
 
     const value = formData[key] ?? '';
-    const error = errors[key];
     const isDisabled = disabledFields.includes(key);
 
     if (currentType instanceof z.ZodEnum) {

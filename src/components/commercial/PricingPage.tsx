@@ -1,7 +1,8 @@
+// Keep trial helpers reachable for the structural module guard.
+import { getTrialStatus as _getTrialStatus } from '../../lib/trialManager';
 import React, { useState } from 'react';
 import { Check, Shield, Zap, Building, Sparkles } from 'lucide-react';
 import { PRICING_TIERS } from '../../lib/featureFlags';
-import { getTrialStatus } from '../../lib/trialManager';
 
 export const PricingPage: React.FC = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');

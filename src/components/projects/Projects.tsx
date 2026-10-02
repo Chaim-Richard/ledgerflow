@@ -39,10 +39,10 @@ export default function Projects() {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   const bills = useLedgerStore(s => s.bills);
-  const budgets = useLedgerStore(s => s.budgets);
+  useLedgerStore(s => s.budgets);
   const vendors = useLedgerStore(s => s.vendors);
   const { loading } = useLedgerCollections('bills', 'budgets', 'vendors');
-  const { handleAction: onAction } = useCommandDispatcher();
+  useCommandDispatcher();
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
   const onAdd = (data: any) => addEntity('projects', data);
   const onUpdate = (id: string, data: any) => updateEntity('projects', id, data);
@@ -80,7 +80,7 @@ export default function Projects() {
         budgetCents: 0
       });
       toast.success('Project initialized successfully');
-    } catch (err) {
+    } catch {
       toast.error('Failed to initialize project');
     } finally {
       setSaving(false);
@@ -94,7 +94,7 @@ export default function Projects() {
       await onUpdate(editingProject.id, editingProject);
       setEditingProject(null);
       toast.success('Project updated successfully');
-    } catch (err) {
+    } catch {
       toast.error('Failed to update project');
     } finally {
       setSaving(false);
@@ -135,7 +135,7 @@ export default function Projects() {
       await onDelete(id);
       if (selectedProjectId === id) setSelectedProjectId(null);
       toast.success('Project deleted successfully');
-    } catch (err) {
+    } catch {
       toast.error('Deletion failed');
     }
   };

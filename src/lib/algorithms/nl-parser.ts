@@ -111,7 +111,7 @@ export const NL_PARSER_ALGO: AlgorithmDefinition = {
   name: 'Deterministic NL Entry Grammar',
   description: 'Parses natural sentences like "paid $40 gas cash yesterday" or "new project: Aspen" using PEG-lite regex slots.',
   inputs: [],
-  compute: (ctx, inputs) => {
+  compute: (_ctx, _inputs) => {
     const start = performance.now();
     const sample = "paid $40 gas cash yesterday";
     const result = parseNaturalLanguageEntry(sample);

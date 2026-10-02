@@ -331,8 +331,8 @@ export function computeSavedViewMetrics(
   view: SavedView,
   transactions: Transaction[] = [],
   accounts: ChartAccount[] = [],
-  invoices: any[] = [],
-  bills: any[] = []
+  _invoices: any[] = [],
+  _bills: any[] = []
 ): ViewMetrics {
   const filter = view.filter || {};
   const searchLower = (filter.searchTerm || '').toLowerCase();

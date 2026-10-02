@@ -19,7 +19,7 @@ export function useLedgerComputation(
   sortConfig?: { key: string, direction: 'asc' | 'desc' } | null
 ) {
   const user = useAuthStore(s => s.user);
-  const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
+  useAuthStore(s => s.getCurrentWorkspace());
   const dimensionNodes = useLedgerStore(s => s.dimensionNodes);
   
   const scenarios = useScenarioStore(state => state.scenarios);

@@ -19,7 +19,7 @@ export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
     }
   ],
   compute: (ctx, inputs): AlgoResult => {
-    const { transactions, accounts, accounting } = ctx;
+    const { transactions, accounts } = ctx;
     const minRoundAmount = (inputs['minRoundAmount'] ?? 100) * 100; // in cents
     
     let weekendCount = 0;

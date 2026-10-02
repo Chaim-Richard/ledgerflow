@@ -81,7 +81,7 @@ export const SUBSCRIPTION_AUDIT_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'lookbackMonths', label: 'Lookback Window (Months)', min: 1, max: 12, step: 1, defaultValue: 6 }
   ],
-  compute: (ctx, inputs: any = {}) => {
+  compute: (ctx, _inputs: any = {}) => {
     const { transactions, accounts } = ctx;
     const payeeMap = new Map<string, { count: number; totalCents: number; avgCents: number; lastDate: string }>();
 
@@ -293,7 +293,7 @@ export const RESTRICTED_FUND_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'warningThreshold', label: 'Warning Burn %', min: 50, max: 95, step: 5, defaultValue: 80 }
   ],
-  compute: (ctx, inputs: any = {}) => {
+  compute: (ctx, _inputs: any = {}) => {
     const { transactions, accounts } = ctx;
     const grantMap = new Map<string, { receivedCents: number; spentCents: number }>();
 

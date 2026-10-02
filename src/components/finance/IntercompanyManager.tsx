@@ -18,11 +18,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Labelled } from '../ui/Labelled';
 
 export default function IntercompanyManager() {
-  const user = useAuthStore(s => s.user);
+  useAuthStore(s => s.user);
   const workspaces = useAuthStore(s => s.workspaces || []);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const transactions = useLedgerStore(s => s.transactions || []);
-  const accounts = useLedgerStore(s => s.accounts || []);
+  useLedgerStore(s => s.accounts || []);
 
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({

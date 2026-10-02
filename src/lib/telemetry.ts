@@ -23,7 +23,7 @@ export class PerformanceTelemetry {
   /**
    * Specifically for tracking component "opening" (mount time)
    */
-  static traceComponent(name: string) {
+  static traceComponent(_name: string) {
     const start = performance.now();
     let captured = false;
     

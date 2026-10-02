@@ -8,7 +8,7 @@ export const DUPONT_ANALYSIS_ALGO: AlgorithmDefinition = {
   tags: ['DuPont', 'ROE', 'Profitability', 'Efficiency', 'Leverage'],
   description: 'Deconstructs Return on Equity (ROE) into Profit Margin, Asset Turnover, and Financial Leverage to identify the core drivers of shareholder return.',
   inputs: [],
-  compute: (ctx, inputs): AlgoResult => {
+  compute: (ctx, _inputs): AlgoResult => {
     const { transactions, accounts, accounting } = ctx;
     let revenue = 0;
     let netIncome = 0;

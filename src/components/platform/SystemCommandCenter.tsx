@@ -45,8 +45,8 @@ const fetchWithAuth = async (url: string, options: any = {}) => {
 export default function SystemCommandCenter() {
   const [telemetry, setTelemetry] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const user = useAuthStore(s => s.user);
-  const userProfile = useAuthStore(s => s.userProfile);
+  useAuthStore(s => s.user);
+  useAuthStore(s => s.userProfile);
   const lexiconOverrides = useUIStore(state => state.lexiconOverrides);
   const setLexiconOverride = useUIStore(state => state.setLexiconOverride);
 
@@ -68,7 +68,7 @@ export default function SystemCommandCenter() {
 
   // User Management Engine
   const [usersList, setUsersList] = useState<any[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [, setLoadingUsers] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState<'workspaces' | 'users' | 'global' | 'lexicon' | 'audit'>('workspaces');
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [savingUser, setSavingUser] = useState(false);
@@ -327,7 +327,7 @@ export default function SystemCommandCenter() {
           tenants: Object.values(tenants),
           liveLogs: []
         });
-      } catch (e) {
+      } catch {
         setTelemetry({
           status: 'success',
           tenants: [],
@@ -385,7 +385,7 @@ export default function SystemCommandCenter() {
   const totalErrors = allLogsCombined.filter((l: any) => l.statusCode >= 500).length;
   const liveErrors = allLogsCombined.filter((l: any) => l.statusCode >= 400);
 
-  const isSystemAdmin = useAuthStore(s => s.isAdmin);
+  useAuthStore(s => s.isAdmin);
 
 
 

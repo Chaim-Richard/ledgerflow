@@ -41,7 +41,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
   const [endingBalance, setEndingBalance] = useState<string>('0');
   const [reconciledIds, setReconciledIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isFinalizing, setIsFinalizing] = useState(false);
+  const [, setIsFinalizing] = useState(false);
 
   const account = useMemo(() => accounts.find(a => a.name === selectedAccount || a.id === selectedAccount), [accounts, selectedAccount]);
   

@@ -98,7 +98,6 @@ export function TaxReserveWidget() {
 
   // 5. Safe-to-Spend calculations
   const bufferCents = safetyBuffer * 100;
-  const rawCash = taxReserveResult.rawCashCents;
   const estimatedTax = taxReserveResult.estimatedTaxCents;
 
   // Real autopilot formula

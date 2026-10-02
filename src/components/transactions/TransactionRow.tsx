@@ -92,7 +92,6 @@ const TransactionRow = React.memo(({
   isCompactMode = false,
   isMobileGrid = false,
   isTabletGrid = false,
-  dateFormat = 'MMM dd, yyyy',
   gridColumns,
   anomaly,
   internalConflict,

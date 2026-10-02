@@ -97,57 +97,47 @@ export function applyRuleAction(rule: AutoRule, tx: Transaction): { modifiedTx: 
   if (!act) return { modifiedTx: tx, changes };
 
   const updatedLines: TransactionLine[] = (tx.lines || []).map(line => {
-    let lineModified = false;
     const newLine: TransactionLine = { ...line };
 
     if (act.targetCategory && line.category !== act.targetCategory) {
       newLine.category = act.targetCategory;
-      lineModified = true;
     }
 
     if (act.targetNodeId && line.accountId !== act.targetNodeId) {
       newLine.accountId = act.targetNodeId;
-      lineModified = true;
     }
 
     if (act.targetProject && line.project !== act.targetProject) {
       newLine.project = act.targetProject;
-      lineModified = true;
     }
 
     if (act.targetClass && line.class !== act.targetClass) {
       newLine.class = act.targetClass;
-      lineModified = true;
     }
 
     if (act.targetLocation && line.location !== act.targetLocation) {
       newLine.location = act.targetLocation;
-      lineModified = true;
     }
 
     if (act.targetDimensions) {
       newLine.dimensions = { ...(newLine.dimensions || {}), ...act.targetDimensions };
-      lineModified = true;
     }
 
     if (act.targetTags && act.targetTags.length > 0) {
       const existingTags = new Set(newLine.tags || []);
       act.targetTags.forEach(t => existingTags.add(t));
       newLine.tags = Array.from(existingTags);
-      lineModified = true;
     }
 
     if (act.addTags && act.addTags.length > 0) {
       const existingTags = new Set(newLine.tags || []);
       act.addTags.forEach(t => existingTags.add(t));
       newLine.tags = Array.from(existingTags);
-      lineModified = true;
     }
 
     if (act.removeTags && act.removeTags.length > 0) {
       const removeSet = new Set(act.removeTags);
       newLine.tags = (newLine.tags || []).filter(t => !removeSet.has(t));
-      lineModified = true;
     }
 
     return newLine;
@@ -241,7 +231,6 @@ export function dryRunRules(rules: AutoRule[], transactions: Transaction[]): Dry
 
   for (const tx of postableTransactions) {
     let currentTx = { ...tx };
-    let txMatched = false;
 
     for (const rule of sortedRules) {
       if (evaluateRuleCondition(rule, currentTx)) {
@@ -255,7 +244,6 @@ export function dryRunRules(rules: AutoRule[], transactions: Transaction[]): Dry
             changes
           });
           rulesTriggered[rule.id] = (rulesTriggered[rule.id] || 0) + 1;
-          txMatched = true;
           currentTx = modifiedTx;
         }
 

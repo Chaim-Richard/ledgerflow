@@ -10,8 +10,8 @@ export default function LedgerInterruptOverlay() {
   const [activeAlert, setActiveAlert] = useState<any>(null);
   const [isDismissed, setIsDismissed] = useState(false);
   const setActiveTab = useUIStore(s => s.setActiveTab);
-  const transactions = useLedgerStore(s => s.transactions);
-  const accounts = useLedgerStore(s => s.accounts);
+  useLedgerStore(s => s.transactions);
+  useLedgerStore(s => s.accounts);
   const recomputeBalances = useLedgerStore(s => s.recomputeBalances);
   const runFullAudit = useLedgerStore(s => s.runFullAudit);
 
@@ -31,7 +31,6 @@ export default function LedgerInterruptOverlay() {
   if (!activeAlert || isDismissed) return null;
 
   const result = activeAlert.result;
-  const severity = activeAlert.severity;
 
   const handleInspect = () => {
     setIsDismissed(true);

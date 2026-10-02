@@ -16,7 +16,7 @@ interface ToolSandboxProps {
   onClose: () => void;
 }
 
-export default function ToolSandbox({ toolId, toolName, onClose }: ToolSandboxProps) {
+export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
   const setActiveTab = useUIStore(state => state.setActiveTab);
   const transactions = useLedgerStore(state => state.transactions || []);
   const rawAccounts = useLedgerStore(state => state.accounts || []);

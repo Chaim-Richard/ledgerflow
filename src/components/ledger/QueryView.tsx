@@ -15,7 +15,7 @@ import { Labelled } from '../ui/Labelled';
 
 export default function QueryView() {
   const transactions = useLedgerStore(s => s.transactions);
-  const { views, addSavedView } = useSavedViewsStore();
+  const { addSavedView } = useSavedViewsStore();
 
   const [queryFilter, setQueryFilter] = useState<SavedViewFilter>({
     searchTerm: '',

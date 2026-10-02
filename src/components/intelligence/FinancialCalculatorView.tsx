@@ -68,14 +68,14 @@ export default function FinancialCalculatorView({ type }: FinancialCalculatorVie
 
   const [costEquity, setCostEquity] = useState<number>(10);
   const [costDebt, setCostDebt] = useState<number>(5);
-  const [equityVal, setEquityVal] = useState<number>(500000);
-  const [debtVal, setDebtVal] = useState<number>(200000);
+  const [equityVal] = useState<number>(500000);
+  const [debtVal] = useState<number>(200000);
   const [taxRate, setTaxRate] = useState<number>(21);
 
   const [initialInv, setInitialInv] = useState<number>(100000);
-  const [cashFlow1, setCashFlow1] = useState<number>(30000);
-  const [cashFlow2, setCashFlow2] = useState<number>(40000);
-  const [cashFlow3, setCashFlow3] = useState<number>(50000);
+  const [cashFlow1] = useState<number>(30000);
+  const [cashFlow2] = useState<number>(40000);
+  const [cashFlow3] = useState<number>(50000);
   const [discountRate, setDiscountRate] = useState<number>(8);
 
   // Renderer mapping

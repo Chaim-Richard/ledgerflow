@@ -96,7 +96,7 @@ export function useSystemActions() {
         createdAt: new Date().toISOString()
       });
       toast.success('TEMPLATE SAVED');
-    } catch (e) {
+    } catch {
       toast.error('SNAPSHOT FAILED');
     }
   }, [user, currentWorkspaceId, currentWorkspace]);

@@ -20,7 +20,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 
 const ForensicAudit = React.memo(() => {
   const transactions = useLedgerStore(s => s.transactions);
-  const accounts = useLedgerStore(s => s.accounts);
+  useLedgerStore(s => s.accounts);
   // 1. BENFORD'S LAW CALCULATION
   const benfordAnalysis = useMemo(() => {
     const counts = Uint32Array ? new Uint32Array(9) : Array(9).fill(0);
@@ -59,7 +59,7 @@ const ForensicAudit = React.memo(() => {
   // 2. Z-SCORE ANOMALY DETECTION
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [anomalies, setAnomalies] = useState<any[]>([]);
-  const [isScanning, setIsScanning] = useState(false);
+  const [, setIsScanning] = useState(false);
 
   useEffect(() => {
     async function scan() {
@@ -203,7 +203,7 @@ const ForensicAudit = React.memo(() => {
            </div>
 
            <div className="space-y-4">
-              {anomalies.length > 0 ? anomalies.map((t: any, i: number) => (
+              {anomalies.length > 0 ? anomalies.map((t: any, _i: number) => (
                  <div key={t.id} className="p-6 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] flex items-center justify-between group hover:border-indigo-600 transition-all">
                     <div className="flex items-center gap-6">
                        <div className="w-12 h-12 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-[var(--text)] border border-[var(--line)] font-black text-sm">

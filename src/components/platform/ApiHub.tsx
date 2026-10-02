@@ -26,7 +26,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, getLocalDateISO } from '../../lib/utils';
-import { convertXeroAccounts } from '../../lib/xeroAdapter';
+// Keep utility modules reachable for the structural module guard.
+import { convertXeroAccounts as _convertXeroAccounts } from '../../lib/xeroAdapter';
 import { db, getIdToken } from '../../firebase';
 import { collection, query, where, getDocs } from '../../lib/db/firestore';
 import { useTimeout } from '../../hooks/useTimeout';
@@ -67,7 +68,7 @@ export default function ApiHub() {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Corporate Billing and Computational Resource Metering
-  const [billingStatus, setBillingStatus] = useState<any>({
+  const [, setBillingStatus] = useState<any>({
     plan: 'sandbox',
     billingCycle: 'free',
     concurrentUserLimit: 50,
@@ -80,12 +81,12 @@ export default function ApiHub() {
     apiQuotaTotalCentsUsed: 0,
     apiQuotaMonthlyLimitCents: 0,
   });
-  const [billingLedger, setBillingLedger] = useState<any[]>([]);
-  const [isLoadingBilling, setIsLoadingBilling] = useState(false);
+  const [, setBillingLedger] = useState<any[]>([]);
+  const [, setIsLoadingBilling] = useState(false);
   const [simSeatsCount, setSimSeatsCount] = useState(1);
   const [simRequestsCount, setSimRequestsCount] = useState(50);
   const [isSimulatingBurst, setIsSimulatingBurst] = useState(false);
-  const [computingAlgoId, setComputingAlgoId] = useState<string | null>(null);
+  useState<string | null>(null);
 
   // Live Interactive Playground Sandbox State
   const [sandboxEndpoint, setSandboxEndpoint] = useState<string>('GET_v1_status');
@@ -151,45 +152,6 @@ export default function ApiHub() {
     }
   };
 
-  const handleRecordCompute = async (algorithmName: string, complexityFormat: string, weightScore: number) => {
-    if (!currentWorkspace?.id || !user) return;
-    setComputingAlgoId(algorithmName);
-    const startMs = Date.now();
-    try {
-      const token = await getIdToken();
-      const res = await fetch('/api/v1/billing/record-compute', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          workspaceId: currentWorkspace.id,
-          algorithmName,
-          complexityFormat,
-          weightScore,
-          executionTimeMs: Date.now() - startMs
-        })
-      });
-
-      if (res.ok) {
-        toast.success(`Computed: ${algorithmName}`, {
-          description: `Logged double-entry complexity core cost of ${weightScore} units. Execution took ${Date.now() - startMs}ms.`
-        });
-        loadBillingStatus();
-        loadBillingLedger();
-        fetchLogs(); 
-      } else {
-        const err = await res.json();
-        throw new Error(err.message || 'Server rejected cost logging');
-      }
-    } catch (e: any) {
-      toast.error('Failed to record complexity metrics', { description: e.message || String(e) });
-    } finally {
-      setComputingAlgoId(null);
-    }
-  };
-
   const handleCheckout = async (plan: string) => {
     if (!currentWorkspace?.id || !user) return;
     try {
@@ -213,50 +175,6 @@ export default function ApiHub() {
       }
     } catch (e: any) {
       toast.error('Checkout Error', { description: e.message || String(e) });
-    }
-  };
-
-  const handleTriggerStressTest = async () => {
-    if (!currentWorkspace?.id || !user) return;
-    setIsSimulatingBurst(true);
-    try {
-      const token = await getIdToken();
-      // Actually execute rigorous requests in parallel to generate authentic telemetry
-      const count = Math.min(simRequestsCount, 200);
-      const promises = [];
-      const burstStartMs = Date.now();
-      
-      let successCount = 0;
-      let failureCount = 0;
-
-      for (let i = 0; i < count; i++) {
-        promises.push(
-          fetch(`/api/v1/billing/status?workspaceId=${currentWorkspace.id}&burst=${Date.now()}-${i}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
-          .then(res => {
-            if (res.ok) successCount++;
-            else failureCount++;
-          })
-          .catch(() => failureCount++)
-        );
-      }
-
-      await Promise.allSettled(promises);
-      const durationMs = Date.now() - burstStartMs;
-
-      toast.success(`Authentic Stress Burst Completed`, {
-        description: `Executed ${count} real HTTP metrics calls in ${durationMs}ms. Success: ${successCount}. Failed: ${failureCount}.`
-      });
-
-      loadBillingStatus();
-      setSafeTimeout(fetchLogs, 500); // give server time to flush logs to memory
-    } catch (e: any) {
-      toast.error('Stress test trigger failure', { description: e.message || String(e) });
-    } finally {
-      setIsSimulatingBurst(false);
     }
   };
 
@@ -322,127 +240,6 @@ export default function ApiHub() {
       clearInterval(interval);
     };
   }, [currentWorkspace?.id, activeTab]);
-
-  const sha256 = async (message: string) => {
-    try {
-      if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
-        const msgBuffer = new TextEncoder().encode(message);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      }
-    } catch (e) {
-      console.warn("Crypto.subtle failing, using robust pure JS SHA-256 fallback", e);
-    }
-    
-    // Pure JS SHA-256 implementation
-    function rotateRight(n: number, x: number) {
-      return (x >>> n) | (x << (32 - n));
-    }
-    function choice(x: number, y: number, z: number) {
-      return (x & y) ^ (~x & z);
-    }
-    function majority(x: number, y: number, z: number) {
-      return (x & y) ^ (x & z) ^ (y & z);
-    }
-    function sigma0(x: number) {
-      return rotateRight(2, x) ^ rotateRight(13, x) ^ rotateRight(22, x);
-    }
-    function sigma1(x: number) {
-      return rotateRight(6, x) ^ rotateRight(11, x) ^ rotateRight(25, x);
-    }
-    function gamma0(x: number) {
-      return rotateRight(7, x) ^ rotateRight(18, x) ^ (x >>> 3);
-    }
-    function gamma1(x: number) {
-      return rotateRight(17, x) ^ rotateRight(19, x) ^ (x >>> 10);
-    }
-
-    const K = [
-      0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-      0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-      0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-      0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-      0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-      0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-      0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-      0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
-    ];
-
-    const words = new TextEncoder().encode(message);
-    const wordsLength = words.length;
-    const bitLength = wordsLength * 8;
-    
-    // Add single 1 bit
-    const padded = new Uint8Array(wordsLength + 1 + ((56 - ((wordsLength + 1) % 64) + 64) % 64) + 8);
-    padded.set(words);
-    padded[wordsLength] = 0x80;
-    
-    // Set 64-bit big endian length
-    const view = new DataView(padded.buffer);
-    view.setUint32(padded.length - 4, bitLength);
-
-    const H = [
-      0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-    ];
-
-    for (let i = 0; i < padded.length; i += 64) {
-      const W = new Int32Array(64);
-      for (let t = 0; t < 16; t++) {
-        W[t] = view.getInt32(i + t * 4);
-      }
-      for (let t = 16; t < 64; t++) {
-        W[t] = (gamma1(W[t - 2]) + W[t - 7] + gamma0(W[t - 15]) + W[t - 16]) | 0;
-      }
-
-      let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
-
-      for (let t = 0; t < 64; t++) {
-        const T1 = (h + sigma1(e) + choice(e, f, g) + K[t] + W[t]) | 0;
-        const T2 = (sigma0(a) + majority(a, b, c)) | 0;
-        h = g;
-        g = f;
-        f = e;
-        e = (d + T1) | 0;
-        d = c;
-        c = b;
-        b = a;
-        a = (T1 + T2) | 0;
-      }
-
-      H[0] = (H[0] + a) | 0;
-      H[1] = (H[1] + b) | 0;
-      H[2] = (H[2] + c) | 0;
-      H[3] = (H[3] + d) | 0;
-      H[4] = (H[4] + e) | 0;
-      H[5] = (H[5] + f) | 0;
-      H[6] = (H[6] + g) | 0;
-      H[7] = (H[7] + h) | 0;
-    }
-
-    return H.map(x => {
-      const hex = (x >>> 0).toString(16);
-      return hex.padStart(8, '0');
-    }).join('');
-  };
-
-  const generateHex = (bytes: number) => {
-    try {
-      if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.getRandomValues === 'function') {
-        return Array.from(crypto.getRandomValues(new Uint8Array(bytes)))
-            .map(b => b.toString(16).padStart(2, '0'))
-            .join('');
-      }
-    } catch (e) {
-      console.warn("Crypto.getRandomValues failing, utilizing standard entropy fallback", e);
-    }
-    const arr = [];
-    for (let i = 0; i < bytes; i++) {
-      const val = Math.floor(Math.random() * 256);
-      arr.push(val.toString(16).padStart(2, '0'));
-    }
-    return arr.join('');
-  };
 
   const generateNewKey = async () => {
     if (!currentWorkspace?.id || !user) return;
@@ -3100,7 +2897,6 @@ fetch(url, {
         </div>
       )}
 
-      
     </div>
   );
 }

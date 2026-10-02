@@ -46,7 +46,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
   const { addEntity } = useEntityOperations();
 
   // Helper to parse file into rows
-  const parseSpreadsheetData = async (data: ArrayBuffer | string, fileName: string) => {
+  const parseSpreadsheetData = async (data: ArrayBuffer | string, _fileName: string) => {
     try {
       let json: any[][] = [];
 

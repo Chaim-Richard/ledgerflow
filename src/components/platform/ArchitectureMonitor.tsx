@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { Database, Activity, Brain, Settings, FileText, Component, Zap, GitCommit, Code } from 'lucide-react';
 import { APP_TABS, SETTINGS_TABS_REGISTRY, REPORT_TABS_REGISTRY, INTELLIGENCE_TABS_REGISTRY, ANALYTICAL_LENSES_REGISTRY, DASHBOARD_KPI_REGISTRY, SYSTEM_COMMANDS } from '../../config/registry';
 
-export default function ArchitectureMonitor({ layerStatus }: { layerStatus?: any[] }) {
+export default function ArchitectureMonitor(_props: { layerStatus?: any[] }) {
   
   const structureNodes = useMemo(() => [
     {

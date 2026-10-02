@@ -101,7 +101,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         const rate = TruthEngine.resolveEffectiveValue(series, date);
         const fixedRate = Number(rate.toFixed(6));
         setSafeTimeout(() => setExchangeRate(fixedRate), 0);
-      } catch (err) {
+      } catch {
         setSafeTimeout(() => setExchangeRate(1.0), 0);
       }
     } else {

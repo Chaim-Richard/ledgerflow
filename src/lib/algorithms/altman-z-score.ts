@@ -8,7 +8,7 @@ export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
   tags: ['Solvency', 'Risk', 'Bankruptcy', 'Z-Score'],
   description: 'Calculates the Altman Z-Score to predict the probability of bankruptcy or severe financial distress based on balance sheet and income statement ratios.',
   inputs: [],
-  compute: (ctx, inputs) => {
+  compute: (ctx, _inputs) => {
     const { transactions, accounts, accounting } = ctx;
     
     let totalAssets = 0;

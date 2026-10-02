@@ -76,7 +76,7 @@ const GridEditor = ({
           onSave(parsed);
           return;
         }
-      } catch (_e) {
+      } catch {
         // Fallback to saving raw input
       }
     }
@@ -290,8 +290,6 @@ export default function TransactionGrid() {
   const onUpdate = useCallback((id: string, updates: any) => txActions?.handleUpdateTransaction ? txActions.handleUpdateTransaction(id, updates) : updateEntity('transactions', id, updates), [txActions, updateEntity]);
   const onVoid = (id: string) => deleteEntity('transactions', id);
   const onNewEntry = () => { txActions.handleQuickAdd?.({} as any); onAction("quick-entry"); };
-  const onImport = () => onAction('open-importer');
-  const onOpenImporter = () => onAction('open-importer');
   const isProMode = useUIStore(s => s.isProMode);
   const isCompactMode = useUIStore(s => s.isCompactMode);
   const setProMode = useUIStore(s => s.setProMode);
@@ -346,7 +344,7 @@ export default function TransactionGrid() {
     if (selectedIds.size === rows.length && rows.length > 0) setSelectedIds(new Set());
     else setSelectedIds(new Set(rows.map(r => r.id)));
   };
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  useRef<HTMLInputElement>(null);
   
   const parsingQueue = useUIStore(s => s.parsingQueue);
   const setParsingQueue = useUIStore(s => s.setParsingQueue);
