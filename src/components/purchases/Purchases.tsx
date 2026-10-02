@@ -115,7 +115,7 @@ export default function Purchases() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6 p-4 sm:p-6 lg:p-8">
       {/* Purchases Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
