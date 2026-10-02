@@ -9,6 +9,7 @@ import {
 import { cn } from '../../lib/utils';
 import SavedViewsManagerModal from './SavedViewsManagerModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { focusOnMount } from '../../lib/focusOnMount';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Wallet,
@@ -161,7 +162,7 @@ export default function SavedViewsBar({ currentSearchTerm, className }: SavedVie
                 onChange={(e) => setNewViewName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleQuickSaveCurrent()}
                 className="px-2 py-1 text-xs bg-[var(--bg)] border border-[var(--line)] rounded text-[var(--text)] outline-none w-32 focus:border-[var(--brass)]"
-                autoFocus
+                ref={focusOnMount}
               />
               <button
                 onClick={handleQuickSaveCurrent}

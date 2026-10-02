@@ -143,7 +143,7 @@ export default function PdfPreviewModal({
               <FileText aria-hidden="true" className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 dark:text-white text-base leading-tight">{title}</h3>
+              <h2 className="font-bold text-slate-900 dark:text-white text-base leading-tight">{title}</h2>
               <p className="text-xs text-[var(--muted)] dark:text-slate-400 font-mono mt-0.5">{downloadName}</p>
             </div>
           </div>

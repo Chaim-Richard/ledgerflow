@@ -505,7 +505,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
         <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
         <div className="p-4 border-b border-slate-150 bg-[var(--ink)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">{labels.title}</h3>
+            <h2 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">{labels.title}</h2>
             <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-0.5">Hierarchical Performance Synthesis</p>
           </div>
           <div className="flex items-center gap-2">
@@ -537,7 +537,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             <div className="flex items-center justify-between pb-3 border-b border-slate-900">
               <div className="flex items-center gap-2">
                  <div className="w-1 h-3.5 bg-emerald-500 rounded-full shrink-0" />
-                 <h4 className="font-bold text-[var(--text)] uppercase tracking-wider text-xs">{labels.revenueStreams}</h4>
+                 <h3 className="font-bold text-[var(--text)] uppercase tracking-wider text-xs">{labels.revenueStreams}</h3>
               </div>
               <div className="flex flex-col items-end">
                 <span className="font-mono text-base font-black text-emerald-700 tabular-nums">{formatCurrency(data.income?.total || 0)}</span>
@@ -616,7 +616,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             <div className="flex items-center justify-between pb-3 border-b border-[var(--line)]">
                <div className="flex items-center gap-2">
                   <div className="w-1 h-3.5 bg-rose-500 rounded-full shrink-0" />
-                  <h4 className="font-bold text-[var(--text)] uppercase tracking-wider text-xs">{labels.expenseClusters}</h4>
+                  <h3 className="font-bold text-[var(--text)] uppercase tracking-wider text-xs">{labels.expenseClusters}</h3>
                </div>
                <div className="flex flex-col items-end">
                  <span className="font-mono text-base font-black text-rose-700 tabular-nums">{formatCurrency(data.expense?.total || 0)}</span>
@@ -693,7 +693,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           {/* Net Income Cluster */}
           <div className="mt-6 p-4 bg-slate-900 text-white rounded-lg border border-slate-950 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex flex-col self-start sm:self-auto">
-              <h4 className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">{labels.netChangeTitle}</h4>
+              <h3 className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">{labels.netChangeTitle}</h3>
               <p className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-wider">{labels.netSub}</p>
             </div>
             <div className="flex flex-col items-end sm:items-center sm:flex-row gap-4 text-right tabular-nums">

@@ -45,9 +45,9 @@ export class ViewErrorBoundary extends Component<Props, State> {
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-xl font-black text-[var(--text)] tracking-tight">
+            <h2 className="text-xl font-black text-[var(--text)] tracking-tight">
               View Render Error {this.props.viewName ? `(${this.props.viewName})` : ''}
-            </h3>
+            </h2>
             <p className="text-xs text-[var(--muted)] max-w-md mx-auto leading-relaxed">
               An unexpected exception occurred while rendering this module. Your ledger data remains safe and intact.
             </p>

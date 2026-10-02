@@ -343,7 +343,7 @@ export default function Projects() {
                         <FolderKanban aria-hidden="true" size={18} className={selectedProjectId === project.id ? "text-orange-300" : "text-slate-600"} />
                       </div>
                       <div dir="auto">
-                        <h3 className="font-bold text-sm tracking-tight">{project.name}</h3>
+                        <h2 className="font-bold text-sm tracking-tight">{project.name}</h2>
                         <div className="flex items-center gap-1.5 mt-1">
                           <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider", selectedProjectId === project.id ? "bg-[var(--surface)]/10 text-white" : "bg-slate-100 text-slate-600")}>
                             {project.type}
@@ -439,8 +439,8 @@ export default function Projects() {
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4 pb-2 border-b border-[var(--line)]">
                     <div>
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">Collaborators</h4>
-                      <h3 className="text-sm font-black text-[var(--text)] tracking-tight mt-0.5">{selectedProject.name}</h3>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">Collaborators</h3>
+                      <h2 className="text-sm font-black text-[var(--text)] tracking-tight mt-0.5">{selectedProject.name}</h2>
                     </div>
                     <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)]/60 rounded-lg flex items-center justify-center">
                       <Users aria-hidden="true" size={14} className="text-[var(--muted)]" />
@@ -484,7 +484,7 @@ export default function Projects() {
                   <div className="mt-5 pt-4 border-t border-[var(--line)]">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="w-1.5 h-4 bg-[var(--brass)] rounded-full" />
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">Split Tranches</h3>
+                      <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">Split Tranches</h2>
                     </div>
 
                     <div className="space-y-3">
@@ -518,7 +518,7 @@ export default function Projects() {
                 <div className="w-12 h-12 bg-[var(--surface)] rounded-lg shadow-3xs flex items-center justify-center text-[var(--muted)] border border-[var(--line)] mx-auto mb-4">
                   <BrainCircuit aria-hidden="true" size={20} />
                 </div>
-                <h3 className="text-xs font-bold text-[var(--text)] mb-1 uppercase tracking-wider">Select Initiative</h3>
+                <h2 className="text-xs font-bold text-[var(--text)] mb-1 uppercase tracking-wider">Select Initiative</h2>
                 <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider max-w-[200px] mx-auto leading-relaxed">
                   Select a workflow folder from the left pane to analyze members, expenses, and split tranches.
                 </p>
@@ -539,7 +539,7 @@ export default function Projects() {
           >
             <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-black text-[var(--text)] uppercase italic font-display">Initialize Project</h3>
+                <h2 className="text-xl font-black text-[var(--text)] uppercase italic font-display">Initialize Project</h2>
                 <p className="text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider mt-1">Deploying new objective into ledger matrix</p>
               </div>
               <button
@@ -635,7 +635,7 @@ export default function Projects() {
           >
             <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-black text-[var(--text)] uppercase italic font-display">Configure Project</h3>
+                <h2 className="text-xl font-black text-[var(--text)] uppercase italic font-display">Configure Project</h2>
                 <p className="text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider mt-1">Rule settings for project matrix {editingProject.id.slice(0, 8)}</p>
               </div>
               <button

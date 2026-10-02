@@ -143,14 +143,15 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
     <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/85 shadow-3xs overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-xs min-w-[750px]">
+          <caption className="sr-only">Chart of accounts</caption>
           <thead>
             <tr className="border-b border-[var(--line)] bg-[var(--ink)]/70 text-[var(--muted)] font-bold uppercase tracking-wider">
-              <th className="p-4 font-bold text-[9px] text-[var(--muted)]">Node ID</th>
-              <th className="p-4 font-bold text-[9px] text-[var(--muted)]">Entity Identity</th>
-              <th className="p-4 font-bold text-[9px] text-[var(--muted)]">Topology Type</th>
-              <th className="p-4 font-bold text-[9px] text-[var(--muted)]">Classification</th>
-              <th className="p-4 font-bold text-[9px] text-[var(--muted)] text-right">Total Aggregate</th>
-              <th className="p-4 w-10"><span className="sr-only">Actions</span></th>
+              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)]">Node ID</th>
+              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)]">Entity Identity</th>
+              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)]">Topology Type</th>
+              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)]">Classification</th>
+              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)] text-right">Total Aggregate</th>
+              <th scope="col" className="p-4 w-10"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

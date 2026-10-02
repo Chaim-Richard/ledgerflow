@@ -112,9 +112,9 @@ const Sidebar = React.memo(({
               </div>
               <div className="flex-1 overflow-hidden">
                  <div className="flex items-center justify-between">
-                   <h1 className="text-[14px] font-bold text-[var(--text)] tracking-tight leading-none truncate">
+                   <p className="text-[14px] font-bold text-[var(--text)] tracking-tight leading-none truncate">
                      {workspaces.find(w => w.id === currentWorkspaceId)?.name || 'LedgerFlow'}
-                   </h1>
+                   </p>
                    <ChevronDown aria-hidden="true" size={14} className="text-[var(--faint)] group-hover/workspace:text-[var(--text)] transition-colors" />
                  </div>
                  <p className="text-[10px] font-mono text-[var(--faint)] mt-1 truncate uppercase tracking-wider">Workspace</p>
@@ -154,10 +154,10 @@ const Sidebar = React.memo(({
       </div>
 
       {/* Navigation Groups */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4 mt-1">
+      <div role="navigation" aria-label="Main navigation" className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4 mt-1">
          <div>
             {uiStore.isSidebarOpen && (
-              <h4 className="font-mono text-[10px] uppercase tracking-widest text-[var(--faint)] px-2 mb-2 font-semibold">Navigate</h4>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-[var(--faint)] px-2 mb-2 font-semibold">Navigate</p>
             )}
             <div className="space-y-1">
               {Object.entries(NAV_GROUPS).map(([groupId, groupLabel]) => {
@@ -197,7 +197,7 @@ const Sidebar = React.memo(({
          {/* Worlds Rail Section */}
          {uiStore.isSidebarOpen && (
            <div className="pt-2 border-t border-[var(--line)]">
-              <h4 className="font-mono text-[10px] uppercase tracking-widest text-[var(--faint)] px-2 mb-2 font-semibold">Worlds</h4>
+              <h2 className="font-mono text-[10px] uppercase tracking-widest text-[var(--faint)] px-2 mb-2 font-semibold">Worlds</h2>
               <div className="space-y-1">
                  {worldItems.map((w) => (
                    <div 

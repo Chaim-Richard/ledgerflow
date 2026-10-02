@@ -200,7 +200,7 @@ export default function BillingSettings() {
           <div className="flex items-center gap-3">
             <AlertTriangle className="text-amber-600 shrink-0" size={20} />
             <div>
-              <h4 className="font-bold text-sm">Payment Past Due</h4>
+              <h3 className="font-bold text-sm">Payment Past Due</h3>
               <p className="text-xs text-amber-700">Your last subscription payment failed. Please update your payment method to avoid service interruption.</p>
             </div>
           </div>
@@ -221,7 +221,7 @@ export default function BillingSettings() {
               <CreditCard size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-900 tracking-tight">Subscription & Plan Tiers</h3>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">Subscription & Plan Tiers</h2>
               <p className="text-xs text-[var(--muted)] font-medium">Manage workspace plan capacity, billing cycle, and billing portal</p>
             </div>
           </div>
@@ -274,7 +274,7 @@ export default function BillingSettings() {
                   )}
 
                   <div>
-                    <h4 className="text-base font-bold text-slate-900">{p.name}</h4>
+                    <h3 className="text-base font-bold text-slate-900">{p.name}</h3>
                     <p className="text-xs text-[var(--muted)] mt-1 min-h-[32px]">{p.desc}</p>
                     <div className="mt-4 mb-6">
                       <span className="text-3xl font-extrabold text-slate-900">{p.price}</span>

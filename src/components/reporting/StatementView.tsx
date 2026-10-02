@@ -206,14 +206,15 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
           {/* Activity Table */}
           <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
             <table className="w-full text-left text-xs">
+              <caption className="sr-only">Account statement</caption>
               <thead>
                 <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 uppercase text-[10px] font-bold">
-                  <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4">Transaction Type</th>
-                  <th className="py-3 px-4">Reference / #</th>
-                  <th className="py-3 px-4 text-right">Amount Billed</th>
-                  <th className="py-3 px-4 text-right">Amount Paid</th>
-                  <th className="py-3 px-4 text-right">Running Balance</th>
+                  <th scope="col" className="py-3 px-4">Date</th>
+                  <th scope="col" className="py-3 px-4">Transaction Type</th>
+                  <th scope="col" className="py-3 px-4">Reference / #</th>
+                  <th scope="col" className="py-3 px-4 text-right">Amount Billed</th>
+                  <th scope="col" className="py-3 px-4 text-right">Amount Paid</th>
+                  <th scope="col" className="py-3 px-4 text-right">Running Balance</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-mono">

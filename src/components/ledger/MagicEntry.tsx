@@ -9,6 +9,7 @@ import { getLocalDateISO, formatCurrency } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isCashAccount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
+import { focusOnMount } from '../../lib/focusOnMount';
 
 export default function MagicEntry({ isOpen, onClose, onAdd }: { isOpen?: boolean; onClose?: () => void; onAdd?: (data: Partial<import("../../types").Transaction> & { amount: number }) => void; categories?: string[]; accounts?: import("../../types").ChartAccount[]; projects?: string[]; autoRules?: import("../../types").AutoRule[]; patternCache?: Record<string, unknown> }) {
   const formId = useId();
@@ -136,7 +137,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: { isOpen?: boolea
       <div className="relative">
         <input 
           aria-label="Describe the transaction"
-          autoFocus
+          ref={focusOnMount}
           className="w-full text-lg py-6 pl-12 pr-32 rounded-xl border border-[var(--line)] bg-[var(--panel)] text-[var(--text)] shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--brass)] focus:border-[var(--brass)] placeholder:text-[var(--faint)]"
           placeholder="e.g., paid $40 gas cash yesterday"
           value={text}

@@ -879,9 +879,9 @@ export default function TransactionGrid() {
         <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex flex-col">
-              <h2 className="text-xl md:text-2xl font-black text-[var(--text)] tracking-tight leading-none">
+              <h1 className="text-xl md:text-2xl font-black text-[var(--text)] tracking-tight leading-none">
                 Journal Entries
-              </h2>
+              </h1>
               <div className="flex items-center gap-3 mt-2">
                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/5 border border-emerald-500/20 rounded-full">
                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.4)]" />

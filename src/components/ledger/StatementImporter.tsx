@@ -518,10 +518,11 @@ export default function StatementImporter({
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs min-w-[600px]">
+                      <caption className="sr-only">Statement preview</caption>
                       <thead>
                         <tr className="bg-[var(--ink)] border-b border-[var(--line)]">
                           {csvHeaders.map(({ item: col, key }, idx) => (
-                            <th key={key} className="p-4 font-black text-[var(--text)] truncate max-w-[150px]">{col || `Col ${idx + 1}`}</th>
+                            <th scope="col" key={key} className="p-4 font-black text-[var(--text)] truncate max-w-[150px]">{col || `Col ${idx + 1}`}</th>
                           ))}
                         </tr>
                       </thead>

@@ -52,7 +52,7 @@ export default function RetentionSettingsPanel() {
   return (
     <section aria-labelledby="retention-title" className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-xl space-y-4">
       <div className="space-y-1">
-        <h4 id="retention-title" className="text-base font-black text-[var(--text)] uppercase tracking-tight">Data retention</h4>
+        <h2 id="retention-title" className="text-base font-black text-[var(--text)] uppercase tracking-tight">Data retention</h2>
         <p className="text-xs text-[var(--muted)] max-w-2xl">
           The books and the audit trail are kept as long as the workspace exists. These settings decide how long the logs around
           them are kept. Bounced and spam-reported email addresses are always remembered, so they are never emailed again.

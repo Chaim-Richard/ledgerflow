@@ -3,7 +3,8 @@ import { test, expect } from '@playwright/test';
 /**
  * Every screen fits a 1280 px laptop: nothing sticks out past the right edge of the main area (the
  * Overview was cut off on screens under ~1600 px), and the screen draws something. Opened by
- * address (#tab), as a shared link would.
+ * address (#tab), as a shared link would. Screen readers (E-30): each screen has exactly one h1,
+ * and headings after it never skip a level (h1 -> h3).
  */
 const screens = [
   'dashboard', 'inbox', 'copilot', 'transactions', 'credit-notes', 'assets', 'register', 'ledger',
@@ -28,6 +29,21 @@ test.describe('Layout at 1280 x 800', () => {
       const { overflow, text } = await main.evaluate(el => ({ overflow: el.scrollWidth - el.clientWidth, text: el.innerText.trim().length }));
       expect(overflow, `${screen} is ${overflow}px wider than the window`).toBeLessThanOrEqual(1);
       expect(text, `${screen} drew nothing`).toBeGreaterThan(20);
+      const headings = await page.evaluate(() => {
+        const visible = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')]
+          .filter(h => (h as HTMLElement).offsetParent !== null || getComputedStyle(h).position === 'fixed');
+        const h1s = visible.filter(h => h.tagName === 'H1').map(h => (h.textContent || '').trim());
+        const skips: string[] = [];
+        let prev = 0;
+        for (const h of visible.slice(visible.findIndex(x => x.tagName === 'H1'))) {
+          const level = Number(h.tagName[1]);
+          if (prev && level > prev + 1) skips.push(`h${prev} -> h${level} "${(h.textContent || '').trim().slice(0, 40)}"`);
+          prev = level;
+        }
+        return { h1s, skips };
+      });
+      expect(headings.h1s, `${screen}: one h1`).toHaveLength(1);
+      expect(headings.skips, `${screen}: heading levels`).toEqual([]);
     });
   }
 });

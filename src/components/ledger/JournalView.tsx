@@ -62,7 +62,7 @@ export default function JournalView({ journalEntries = [], formatCurrency }: Jou
        
        <div className="p-4 border-b border-slate-150 flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[var(--ink)] shrink-0 relative z-10 gap-3">
         <div>
-          <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider leading-none">Journal Protocol</h3>
+          <h2 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider leading-none">Journal Protocol</h2>
           <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-1">Verified Cryptographic Log</p>
         </div>
         <div className="flex gap-2">

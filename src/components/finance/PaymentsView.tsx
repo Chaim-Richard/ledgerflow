@@ -64,14 +64,15 @@ export default function PaymentsView() {
       <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[800px]">
+            <caption className="sr-only">Payments Register</caption>
             <thead>
               <tr className="text-left border-b border-[var(--line)]/50">
-                <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Date</th>
-                <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Entity</th>
-                <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Method & Ref</th>
-                <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap text-right">Amount</th>
-                <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Allocations</th>
-                <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap text-right">Actions</th>
+                <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Date</th>
+                <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Entity</th>
+                <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Method & Ref</th>
+                <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap text-right">Amount</th>
+                <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Allocations</th>
+                <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ledger-line/30">

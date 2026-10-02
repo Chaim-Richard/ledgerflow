@@ -93,8 +93,8 @@ export default function ArchitectureMonitor(_props: { layerStatus?: unknown[] })
               <div className="w-14 h-14 bg-indigo-500/20 text-indigo-400 rounded-2xl border border-indigo-500/30 flex items-center justify-center mb-4">
                 <Database size={28} />
               </div>
-              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 mb-1">State Machine</h4>
-              <h3 className="text-xl font-bold text-white tracking-tight">Zustand Central Store</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 mb-1">State Machine</h3>
+              <h2 className="text-xl font-bold text-white tracking-tight">Zustand Central Store</h2>
               <p className="text-xs text-[var(--muted)] mt-2">Single source of integrity for UI state, Active Tools, and Global Data.</p>
             </div>
           </div>
@@ -121,8 +121,8 @@ export default function ArchitectureMonitor(_props: { layerStatus?: unknown[] })
               <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100 flex items-center justify-center mb-4 shadow-inner">
                 <Database size={24} />
               </div>
-              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 mb-1">Data Access Layer (DAL)</h4>
-              <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">Supabase (Postgres)</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 mb-1">Data Access Layer (DAL)</h3>
+              <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">Supabase (Postgres)</h2>
               <p className="text-xs text-[var(--muted)] mt-2">Screens read through src/lib/db with row level security; live lists fetch only what changed.</p>
             </div>
           </div>
@@ -151,7 +151,7 @@ export default function ArchitectureMonitor(_props: { layerStatus?: unknown[] })
                 <GitCommit size={24} />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">Dynamic Registry Hub</h3>
+                <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">Dynamic Registry Hub</h2>
                 <p className="text-[10px] font-black uppercase tracking-widest text-[var(--muted)] mt-1">{totalModules} Total Active Modules</p>
               </div>
             </div>
@@ -175,7 +175,7 @@ export default function ArchitectureMonitor(_props: { layerStatus?: unknown[] })
                   </div>
                 </div>
                 <div>
-                  <h5 className="text-sm font-bold text-[var(--text)] tracking-tight">{node.name}</h5>
+                  <h4 className="text-sm font-bold text-[var(--text)] tracking-tight">{node.name}</h4>
                   <p className="text-[10px] font-medium text-[var(--muted)] mt-0.5 leading-snug">{node.desc}</p>
                 </div>
               </motion.div>

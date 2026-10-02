@@ -199,10 +199,10 @@ export default function QueryView() {
       {/* Query Filter Controls Box */}
       <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-2xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+          <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
             <Filter aria-hidden="true" size={14} className="text-indigo-600" />
             <span>Query Filters & Criteria</span>
-          </h3>
+          </h2>
           <button
             onClick={() => setQueryFilter({ searchTerm: '', startDate: '', endDate: '', minAmountCents: undefined, maxAmountCents: undefined, accountIds: [], status: 'all' })}
             className="text-xs text-[var(--muted)] hover:text-slate-600 font-medium"
@@ -262,6 +262,7 @@ export default function QueryView() {
 
       {/* Query Results Table */}
       <TanStackDataGrid
+        caption="Query results"
         data={queryResults}
         columns={columns}
         pageSize={15}
@@ -272,7 +273,7 @@ export default function QueryView() {
       {showSaveModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 max-w-md w-full">
-            <h3 className="text-base font-bold text-slate-900 mb-2">Save Custom Ledger Query</h3>
+            <h2 className="text-base font-bold text-slate-900 mb-2">Save Custom Ledger Query</h2>
             <p className="text-xs text-[var(--muted)] mb-4">Saved queries can be executed instantly at any time from your Saved Views drawer.</p>
             <input aria-label="Saved query name"
               type="text"

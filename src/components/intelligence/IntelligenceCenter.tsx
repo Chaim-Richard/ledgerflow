@@ -734,7 +734,7 @@ export default function AnalyticalCenter() {
                   <div className="xl:col-span-7 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] p-5 flex flex-col justify-between shadow-3xs min-h-[420px]">
                      <div className="pb-3 border-b border-[var(--line)] flex items-center justify-between">
                         <div>
-                           <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">Metric Distribution Web</h3>
+                           <h2 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">Metric Distribution Web</h2>
                            <p className="text-[9px] text-[var(--muted)]">Comparative metrics across baseline dimensions</p>
                         </div>
                      </div>
@@ -776,7 +776,7 @@ export default function AnalyticalCenter() {
                      <div className="space-y-4">
                         <div className="flex items-center gap-2 pb-2.5 border-b border-[var(--line)]">
                           <BrainCircuit aria-hidden="true" size={15} className="text-indigo-600 shrink-0" />
-                          <h3 className="text-xs font-extrabold text-[var(--text)] uppercase tracking-wider">Key Metrics Summary</h3>
+                          <h2 className="text-xs font-extrabold text-[var(--text)] uppercase tracking-wider">Key Metrics Summary</h2>
                         </div>
                         
                         <div className="space-y-3.5">
@@ -844,7 +844,7 @@ export default function AnalyticalCenter() {
               >
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                    <div className="p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] shadow-3xs flex flex-col h-[320px]">
-                      <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-3 pb-2 border-b border-[var(--line)]">Project Raw Revenue & Profit Matrix</h4>
+                      <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-3 pb-2 border-b border-[var(--line)]">Project Raw Revenue & Profit Matrix</h3>
                       <div className="flex-1 min-h-[180px]">
                          <ResponsiveContainer width="100%" height="100%">
                             <BarChart 
@@ -871,7 +871,7 @@ export default function AnalyticalCenter() {
                    </div>
 
                    <div className="p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] shadow-3xs flex flex-col h-[320px]">
-                      <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-3 pb-2 border-b border-[var(--line)]">Relative Profit Margins</h4>
+                      <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-3 pb-2 border-b border-[var(--line)]">Relative Profit Margins</h3>
                       <div className="flex-1 min-h-[180px]">
                          <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={projectStats}>
@@ -898,7 +898,7 @@ export default function AnalyticalCenter() {
 
                 {/* Strategic Profitability List */}
                 <div className="p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] shadow-3xs">
-                   <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-3">Enterprise Segment Allocations Performance</h4>
+                   <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-3">Enterprise Segment Allocations Performance</h3>
                    <div className="space-y-2">
                       {projectStats.map(p => (
                          <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-[var(--ink)]/50 border border-[var(--line)]/60 rounded-xl hover:bg-slate-100/40 transition-colors gap-3">

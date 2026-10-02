@@ -120,10 +120,10 @@ export default function FiscalPeriodManager() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[var(--color-ledger-line)] shadow-xs">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2.5">
+          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2.5">
             <Lock className="w-5 h-5 text-indigo-600" />
             Fiscal Periods & Hard Close
-          </h2>
+          </h1>
           <p className="text-xs text-[var(--muted)] mt-1">
             Manage accounting periods and enforce immutable record locking for finalized cycles.
           </p>
@@ -152,7 +152,7 @@ export default function FiscalPeriodManager() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Period List */}
         <div className="lg:col-span-2 space-y-3">
-          <h3 className="text-sm font-bold text-slate-900 px-1">Accounting Cycles</h3>
+          <h2 className="text-sm font-bold text-slate-900 px-1">Accounting Cycles</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {periods.map(p => (
               <div 
@@ -210,10 +210,10 @@ export default function FiscalPeriodManager() {
         {/* Audit & Action Sidebar */}
         <div className="space-y-4">
           <div className="bg-white p-6 rounded-3xl border border-[var(--color-ledger-line)] shadow-xs sticky top-6">
-            <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
               <History className="w-4 h-4 text-[var(--muted)]" />
               Period Closing Audit
-            </h3>
+            </h2>
 
             {selectedPeriod ? (
               <div className="space-y-6">
@@ -277,7 +277,7 @@ export default function FiscalPeriodManager() {
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
               <FileText className="w-24 h-24 rotate-12" />
             </div>
-            <h4 className="text-sm font-bold mb-2 relative z-10">Year-End Close</h4>
+            <h3 className="text-sm font-bold mb-2 relative z-10">Year-End Close</h3>
             <p className="text-xs text-indigo-100 mb-4 relative z-10 leading-relaxed">
               Performing a year-end close resets temporary accounts (Revenue/Expense) and shifts net income to Retained Earnings.
             </p>

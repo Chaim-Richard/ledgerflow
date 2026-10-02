@@ -305,10 +305,10 @@ export const RulesSettings: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
-          <h1 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
             <SlidersHorizontal aria-hidden="true" className="w-5 h-5 text-neutral-700" />
             Rules & Automation Engine
-          </h1>
+          </h2>
           <p className="text-sm text-neutral-500 mt-1">
             Automate categorization, tagging, classification, and validation across all past and future transactions.
           </p>
@@ -511,14 +511,15 @@ export const RulesSettings: React.FC = () => {
       ) : (
         <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-xs">
           <table className="w-full text-left text-xs">
+            <caption className="sr-only">Automation rules</caption>
             <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider">
               <tr>
-                <th className="py-2.5 px-3 w-16">Active</th>
-                <th className="py-2.5 px-3">Rule Name & Group</th>
-                <th className="py-2.5 px-3">When Transaction Matches</th>
-                <th className="py-2.5 px-3">Actions Applied</th>
-                <th className="py-2.5 px-3 text-center">Hits</th>
-                <th className="py-2.5 px-3 text-right">Actions</th>
+                <th scope="col" className="py-2.5 px-3 w-16">Active</th>
+                <th scope="col" className="py-2.5 px-3">Rule Name & Group</th>
+                <th scope="col" className="py-2.5 px-3">When Transaction Matches</th>
+                <th scope="col" className="py-2.5 px-3">Actions Applied</th>
+                <th scope="col" className="py-2.5 px-3 text-center">Hits</th>
+                <th scope="col" className="py-2.5 px-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">

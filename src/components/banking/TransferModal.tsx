@@ -123,7 +123,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
         <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
           <div className="flex items-center gap-2">
             <ArrowRightLeft aria-hidden="true" className="w-4 h-4 text-neutral-800" />
-            <h3 className="text-sm font-bold text-neutral-900">Inter-Account Transfer</h3>
+            <h2 className="text-sm font-bold text-neutral-900">Inter-Account Transfer</h2>
           </div>
           <button onClick={onClose} aria-label="Close transfer dialog" className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
             <X aria-hidden="true" className="w-4 h-4" />

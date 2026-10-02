@@ -197,7 +197,7 @@ export default function ImportSettings() {
             <Upload size={22} aria-hidden="true" />
           </div>
           <div>
-            <h3 id="import-title" className="text-xl font-bold text-[var(--text)]">Import data</h3>
+            <h2 id="import-title" className="text-xl font-bold text-[var(--text)]">Import data</h2>
             <p className="text-xs text-[var(--muted)]">Bring in customers, vendors, items or your chart of accounts from a spreadsheet (CSV or Excel). Nothing is saved until every row is correct.</p>
           </div>
         </div>
@@ -276,7 +276,7 @@ export default function ImportSettings() {
 
         {table.length > 1 && (
           <div className="space-y-4" aria-live="polite">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">4. Check and import</h4>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">4. Check and import</h3>
             <p className="text-sm text-[var(--text)]">
               <strong>{prepared.records.length}</strong> row{prepared.records.length === 1 ? '' : 's'} ready
               {issues.length > 0 && <>, <strong className="text-[var(--neg)]">{new Set(issues.map(i => i.row)).size}</strong> with problems (fix them in the file and choose it again)</>}.
@@ -375,7 +375,7 @@ export default function ImportSettings() {
 
       {recent.length > 0 && (
         <section className="ledger-card p-6 bg-[var(--surface)] border border-[var(--line)] rounded-2xl space-y-3" aria-labelledby="recent-imports">
-          <h3 id="recent-imports" className="text-sm font-bold text-[var(--text)] inline-flex items-center gap-2"><History size={16} aria-hidden="true" /> Recent imports</h3>
+          <h2 id="recent-imports" className="text-sm font-bold text-[var(--text)] inline-flex items-center gap-2"><History size={16} aria-hidden="true" /> Recent imports</h2>
           <p className="text-[11px] text-[var(--muted)]">Undo removes the imported records nothing uses yet; records already on invoices, bills or ledger entries are kept.</p>
           <ul className="divide-y divide-[var(--line)]">
             {recent.map(r => (

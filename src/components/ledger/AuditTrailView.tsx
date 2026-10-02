@@ -111,7 +111,7 @@ const AuditTrailView = React.memo(({ auditLogs = [] }: AuditTrailViewProps) => {
     <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)] shadow-sm overflow-hidden flex-1 min-h-[500px] flex flex-col">
       <div className="p-4 md:p-6 border-b border-[var(--line)] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--ink)]/30 shrink-0">
         <div>
-          <h3 className="text-lg font-black text-[var(--text)] uppercase tracking-tight">Audit Trail Matrix</h3>
+          <h2 className="text-lg font-black text-[var(--text)] uppercase tracking-tight">Audit Trail Matrix</h2>
           <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mt-0.5">Immutable cryptographic record of system directives</p>
         </div>
         <div className="flex items-center gap-2">

@@ -191,14 +191,15 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
+            <caption className="sr-only">Project profitability</caption>
             <thead>
               <tr className="bg-[var(--ink)]/80 border-b border-[var(--line)]">
-                <th className="px-8 py-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em]">Project Node</th>
-                <th className="px-8 py-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-right">Transactions</th>
-                <th className="px-8 py-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-right">Flux Income</th>
-                <th className="px-8 py-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-right">Energy Expense</th>
-                <th className="px-8 py-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-right">Net Amount</th>
-                <th className="px-8 py-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-right">Yield Resonance</th>
+                <th scope="col" className="px-8 py-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em]">Project Node</th>
+                <th scope="col" className="px-8 py-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-right">Transactions</th>
+                <th scope="col" className="px-8 py-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-right">Flux Income</th>
+                <th scope="col" className="px-8 py-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-right">Energy Expense</th>
+                <th scope="col" className="px-8 py-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-right">Net Amount</th>
+                <th scope="col" className="px-8 py-4 text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-right">Yield Resonance</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100/50">

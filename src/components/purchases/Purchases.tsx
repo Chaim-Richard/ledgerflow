@@ -184,15 +184,16 @@ export default function Purchases() {
         {activeSubTab === 'bills' ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
+              <caption className="sr-only">Bills</caption>
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
-                  <th className="p-4">Vendor</th>
-                  <th className="p-4">Bill #</th>
-                  <th className="p-4">Date</th>
-                  <th className="p-4">Due Date</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Amount</th>
-                  <th className="p-4 w-10"><span className="sr-only">Actions</span></th>
+                  <th scope="col" className="p-4">Vendor</th>
+                  <th scope="col" className="p-4">Bill #</th>
+                  <th scope="col" className="p-4">Date</th>
+                  <th scope="col" className="p-4">Due Date</th>
+                  <th scope="col" className="p-4">Status</th>
+                  <th scope="col" className="p-4 text-right">Amount</th>
+                  <th scope="col" className="p-4 w-10"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
@@ -295,13 +296,14 @@ export default function Purchases() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
+              <caption className="sr-only">Vendors</caption>
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
-                  <th className="p-4">Vendor Name</th>
-                  <th className="p-4">Category</th>
-                  <th className="p-4">Email</th>
-                  <th className="p-4">Phone</th>
-                  <th className="p-4 text-right">Outstanding balance</th>
+                  <th scope="col" className="p-4">Vendor Name</th>
+                  <th scope="col" className="p-4">Category</th>
+                  <th scope="col" className="p-4">Email</th>
+                  <th scope="col" className="p-4">Phone</th>
+                  <th scope="col" className="p-4 text-right">Outstanding balance</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">

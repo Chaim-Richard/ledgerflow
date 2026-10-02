@@ -191,16 +191,17 @@ export default function CreditNotesView() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
+                <caption className="sr-only">Credit notes</caption>
                 <thead className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 uppercase text-xs">
                   <tr>
-                    <th className="p-3">Number</th>
-                    <th className="p-3">Customer</th>
-                    <th className="p-3">Date</th>
-                    <th className="p-3">Reason</th>
-                    <th className="p-3 text-right">Amount</th>
-                    <th className="p-3 text-right">Remaining Credit</th>
-                    <th className="p-3 text-center">Status</th>
-                    <th className="p-3 text-right">Actions</th>
+                    <th scope="col" className="p-3">Number</th>
+                    <th scope="col" className="p-3">Customer</th>
+                    <th scope="col" className="p-3">Date</th>
+                    <th scope="col" className="p-3">Reason</th>
+                    <th scope="col" className="p-3 text-right">Amount</th>
+                    <th scope="col" className="p-3 text-right">Remaining Credit</th>
+                    <th scope="col" className="p-3 text-center">Status</th>
+                    <th scope="col" className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
@@ -260,16 +261,17 @@ export default function CreditNotesView() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
+                <caption className="sr-only">Vendor credits</caption>
                 <thead className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 uppercase text-xs">
                   <tr>
-                    <th className="p-3">Number</th>
-                    <th className="p-3">Vendor</th>
-                    <th className="p-3">Date</th>
-                    <th className="p-3">Reason</th>
-                    <th className="p-3 text-right">Amount</th>
-                    <th className="p-3 text-right">Remaining Credit</th>
-                    <th className="p-3 text-center">Status</th>
-                    <th className="p-3 text-right">Actions</th>
+                    <th scope="col" className="p-3">Number</th>
+                    <th scope="col" className="p-3">Vendor</th>
+                    <th scope="col" className="p-3">Date</th>
+                    <th scope="col" className="p-3">Reason</th>
+                    <th scope="col" className="p-3 text-right">Amount</th>
+                    <th scope="col" className="p-3 text-right">Remaining Credit</th>
+                    <th scope="col" className="p-3 text-center">Status</th>
+                    <th scope="col" className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-800">

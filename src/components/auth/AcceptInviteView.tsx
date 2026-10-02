@@ -118,9 +118,9 @@ export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initi
           <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center mx-auto">
             <Building2 size={24} />
           </div>
-          <h2 className="text-xl font-black text-[var(--text)] tracking-tight">
+          <h1 className="text-xl font-black text-[var(--text)] tracking-tight">
             Workspace Invitation
-          </h2>
+          </h1>
           <p className="text-xs text-[var(--muted)]">
             LedgerFlow Enterprise Permissioned Multi-User Invite
           </p>
@@ -134,13 +134,13 @@ export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initi
         ) : error ? (
           <div className="p-5 bg-rose-500/10 border border-rose-500/20 rounded-2xl space-y-3 text-center">
             <AlertTriangle size={28} className="text-rose-500 mx-auto" />
-            <h3 className="text-sm font-bold text-rose-400">Invitation Invalid or Expired</h3>
+            <h2 className="text-sm font-bold text-rose-400">Invitation Invalid or Expired</h2>
             <p className="text-xs text-slate-300">{error}</p>
           </div>
         ) : accepted ? (
           <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl space-y-3 text-center">
             <CheckCircle2 size={32} className="text-emerald-500 mx-auto animate-bounce" />
-            <h3 className="text-base font-bold text-emerald-400">Welcome to {inviteDetails?.workspaceName}!</h3>
+            <h2 className="text-base font-bold text-emerald-400">Welcome to {inviteDetails?.workspaceName}!</h2>
             <p className="text-xs text-slate-300">Your role ({inviteDetails?.role?.toUpperCase()}) is active. Redirecting to workspace dashboard...</p>
           </div>
         ) : (

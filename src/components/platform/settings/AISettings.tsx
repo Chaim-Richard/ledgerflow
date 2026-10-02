@@ -168,7 +168,7 @@ export default function AISettings() {
             <BrainCircuit aria-hidden="true" size={28} />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase tracking-widest">Rule Key & Intelligence Provisioning</h3>
+            <h2 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase tracking-widest">Rule Key & Intelligence Provisioning</h2>
             <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1">Google Gemini Enterprise Routing Infrastructure</p>
           </div>
         </div>
@@ -229,7 +229,7 @@ export default function AISettings() {
             <Sliders aria-hidden="true" size={22} />
           </div>
           <div>
-            <h4 className="text-lg font-black text-[var(--text)] tracking-tight uppercase">Statistical Self-Learning Calibration</h4>
+            <h3 className="text-lg font-black text-[var(--text)] tracking-tight uppercase">Statistical Self-Learning Calibration</h3>
             <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-[0.15em] mt-0.5">Control match thresholds and update rates at absolute integrity</p>
           </div>
         </div>
@@ -296,10 +296,10 @@ export default function AISettings() {
             {/* Clear Brain memory state */}
             <div className="p-6 bg-rose-500/5 rounded-[32px] border border-rose-500/10 flex flex-col justify-between">
               <div className="space-y-1">
-                <h4 className="text-xs font-black text-rose-600 uppercase tracking-widest flex items-center gap-1.5">
+                <h3 className="text-xs font-black text-rose-600 uppercase tracking-widest flex items-center gap-1.5">
                   <Activity aria-hidden="true" size={14} />
                   Purge Algorithmic Drift
-                </h4>
+                </h3>
                 <p className="text-[10px] text-rose-500/70 leading-relaxed font-bold uppercase tracking-wider">
                   Purge Bayes classifiers and fast heuristic pattern models mapping to current Workspace. Structured analytical custom rules remain persistent.
                 </p>
@@ -320,10 +320,10 @@ export default function AISettings() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="ledger-card p-6 md:p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm">
-          <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-6 flex items-center gap-2">
+          <h3 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-6 flex items-center gap-2">
             <CpuIcon aria-hidden="true" size={14} className="text-indigo-500" />
             Vivid Logic Routing Precision
-          </h4>
+          </h3>
           <div className="space-y-4">
             {MODEL_OPTIONS.map((m) => (
               <button type="button"
@@ -352,10 +352,10 @@ export default function AISettings() {
 
         <div className="ledger-card p-6 md:p-12 bg-[var(--surface)] border-[var(--line)] shadow-sm flex flex-col justify-between">
           <div>
-            <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-6 flex items-center gap-2">
+            <h3 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mb-6 flex items-center gap-2">
               <Activity aria-hidden="true" size={14} className="text-emerald-500" />
               Intelligence Bridge Telemetry
-            </h4>
+            </h3>
             <div className="space-y-6 pt-2">
               {[
                 { label: 'Rule Resolution Latency', value: '42ms', status: 'Optimal' },
@@ -390,10 +390,10 @@ export default function AISettings() {
       {/* Persistence commit line */}
       <div className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h4 className="text-xs font-black text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
+          <h3 className="text-xs font-black text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles aria-hidden="true" size={14} className="text-amber-500" />
             Enterprise Veracity Gate
-          </h4>
+          </h3>
           <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-wider">
             Consolidate keys, dynamic model routing rules, and the mathematical classifier threshold variables.
           </p>

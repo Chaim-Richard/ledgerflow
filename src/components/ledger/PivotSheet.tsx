@@ -275,7 +275,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
                 <TableIcon aria-hidden="true" size={16} />
              </div>
              <div>
-                <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-tight leading-none">Spreadsheet Pivot Matrix</h3>
+                <h2 className="text-sm font-bold text-[var(--text)] uppercase tracking-tight leading-none">Spreadsheet Pivot Matrix</h2>
                 <p className="text-[9.5px] text-[var(--muted)] font-mono tracking-tight mt-1">Cross-tabulation & Dimension Aggregator</p>
              </div>
           </div>
@@ -458,13 +458,14 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
         {pivotMode === 'flat' ? (
           // Standard Hierarchical List View
           <table className="w-full border-collapse">
+            <caption className="sr-only">Pivot: totals by group</caption>
              <thead className="sticky top-0 z-20 bg-slate-55/90 backdrop-blur-md border-b border-[var(--line)] shadow-3xs">
                 <tr className="text-left bg-[var(--ink)]">
-                   <th className="px-6 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest w-12 text-center">Collapse</th>
-                   <th className="px-4 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest min-w-[320px]">Dimension Name / Nodes</th>
-                   <th className="px-4 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest text-center">Count</th>
-                   <th className="px-4 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest">Type Category</th>
-                   <th className="px-6 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest text-right">Sum value</th>
+                   <th scope="col" className="px-6 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest w-12 text-center">Collapse</th>
+                   <th scope="col" className="px-4 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest min-w-[320px]">Dimension Name / Nodes</th>
+                   <th scope="col" className="px-4 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest text-center">Count</th>
+                   <th scope="col" className="px-4 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest">Type Category</th>
+                   <th scope="col" className="px-6 py-3.5 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest text-right">Sum value</th>
                 </tr>
              </thead>
              <tbody>
@@ -547,17 +548,18 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
           // Advanced Matrix View (Intersection crosstab tabulation)
           <div className="w-full min-w-max pb-4">
             <table className="w-full border-collapse">
+              <caption className="sr-only">Pivot: cross-tab</caption>
               <thead>
                 <tr className="bg-[var(--ink)] border-b border-[var(--line)]">
-                  <th className="sticky left-0 z-30 bg-[var(--ink)] text-left px-6 py-4 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest border-r border-[var(--line)] min-w-[200px]">
+                  <th scope="col" className="sticky left-0 z-30 bg-[var(--ink)] text-left px-6 py-4 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest border-r border-[var(--line)] min-w-[200px]">
                     Row Dim / Column Dim
                   </th>
                   {matrixData.cols.map(cKey => (
-                    <th key={cKey} className="px-4 py-4 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest text-right font-mono border-r border-slate-150">
+                    <th scope="col" key={cKey} className="px-4 py-4 text-[9.5px] font-bold text-[var(--muted)] uppercase tracking-widest text-right font-mono border-r border-slate-150">
                       {formatDimensionDisplay(colDim, cKey)}
                     </th>
                   ))}
-                  <th className="px-6 py-4 text-[9.5px] font-bold text-slate-700 uppercase tracking-widest text-right bg-slate-100/70">
+                  <th scope="col" className="px-6 py-4 text-[9.5px] font-bold text-slate-700 uppercase tracking-widest text-right bg-slate-100/70">
                     Row Total
                   </th>
                 </tr>

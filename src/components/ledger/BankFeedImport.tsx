@@ -374,13 +374,14 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
 
               <div className="border border-[var(--line)] rounded-[32px] overflow-hidden bg-[var(--surface)]/50">
                 <table className="w-full text-left text-sm border-collapse">
+                  <caption className="sr-only">Imported bank lines</caption>
                   <thead>
                     <tr className="bg-[var(--ink)]/50 border-b border-[var(--line)]">
-                      <th className="px-6 py-4 w-12"><span className="sr-only">Actions</span></th>
-                      <th className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Timestamp</th>
-                      <th className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Description</th>
-                      <th className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Amount</th>
-                      <th className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">AI Topology Hint</th>
+                      <th scope="col" className="px-6 py-4 w-12"><span className="sr-only">Actions</span></th>
+                      <th scope="col" className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Timestamp</th>
+                      <th scope="col" className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Description</th>
+                      <th scope="col" className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Amount</th>
+                      <th scope="col" className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">AI Topology Hint</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ledger-line/50">

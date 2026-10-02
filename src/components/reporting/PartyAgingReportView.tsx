@@ -157,10 +157,10 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
       {/* Title Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
             <Clock aria-hidden="true" className="w-6 h-6 text-indigo-500" />
             {isCustomer ? 'Accounts Receivable (AR) Aging' : 'Accounts Payable (AP) Aging'}
-          </h1>
+          </h2>
           <p className="text-sm text-[var(--muted)] dark:text-slate-400">
             Aging schedule of outstanding {isCustomer ? 'customer invoices' : 'vendor bills'} grouped by outstanding duration.
           </p>
@@ -229,45 +229,46 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
+            <caption className="sr-only">{isCustomer ? 'Receivables aging by customer' : 'Payables aging by vendor'}</caption>
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
-                <th className="p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('partyName')}>
+                <th scope="col" className="p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('partyName')}>
                   <span className="flex items-center gap-1">
                     {isCustomer ? 'Customer' : 'Vendor'}
                     <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
-                <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('current')}>
+                <th scope="col" className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('current')}>
                   <span className="flex items-center justify-end gap-1">
                     0-30 Days
                     <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
-                <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('thirtyToSixty')}>
+                <th scope="col" className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('thirtyToSixty')}>
                   <span className="flex items-center justify-end gap-1">
                     31-60 Days
                     <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
-                <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('sixtyToNinety')}>
+                <th scope="col" className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('sixtyToNinety')}>
                   <span className="flex items-center justify-end gap-1">
                     61-90 Days
                     <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
-                <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('overNinety')}>
+                <th scope="col" className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('overNinety')}>
                   <span className="flex items-center justify-end gap-1">
                     91+ Days
                     <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
-                <th className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('total')}>
+                <th scope="col" className="p-4 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('total')}>
                   <span className="flex items-center justify-end gap-1">
                     Total Outstanding
                     <ArrowUpDown aria-hidden="true" className="w-3 h-3 text-[var(--muted)]" />
                   </span>
                 </th>
-                <th className="p-4 w-10"><span className="sr-only">Actions</span></th>
+                <th scope="col" className="p-4 w-10"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">

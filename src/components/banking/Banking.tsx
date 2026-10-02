@@ -105,7 +105,7 @@ export default function Banking() {
                     <Building className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-900 text-sm leading-tight">{account.name}</h3>
+                    <h2 className="font-semibold text-slate-900 text-sm leading-tight">{account.name}</h2>
                     <p className="text-xs text-[var(--muted)] font-mono mt-0.5">{account.code ? `Acct ${account.code}` : 'Bank Account'}</p>
                   </div>
                 </div>
@@ -139,7 +139,7 @@ export default function Banking() {
               <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4">
                 <Landmark className="w-7 h-7" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900">No Bank Connections Found</h3>
+              <h2 className="text-lg font-bold text-slate-900">No Bank Connections Found</h2>
               <p className="text-[var(--muted)] mt-1 max-w-md text-sm leading-relaxed">
                 Connect your checking accounts, credit cards, or cash repositories via secure Plaid link to stream transactions automatically into your ledger.
               </p>

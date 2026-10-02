@@ -73,13 +73,14 @@ export const TopExpensesIncomeReportView: React.FC<Props> = ({
       ) : (
         <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden shadow-xs">
           <table className="w-full text-left text-xs">
+            <caption className="sr-only">Top expenses and income</caption>
             <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider">
               <tr>
-                <th className="py-3 px-4 w-12 text-center">#</th>
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Description & Payee</th>
-                <th className="py-3 px-4">Account / Category</th>
-                <th className="py-3 px-4 text-right">Amount</th>
+                <th scope="col" className="py-3 px-4 w-12 text-center">#</th>
+                <th scope="col" className="py-3 px-4">Date</th>
+                <th scope="col" className="py-3 px-4">Description & Payee</th>
+                <th scope="col" className="py-3 px-4">Account / Category</th>
+                <th scope="col" className="py-3 px-4 text-right">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">

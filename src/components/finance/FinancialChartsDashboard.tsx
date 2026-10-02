@@ -157,10 +157,10 @@ export default function FinancialChartsDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Monthly Revenue vs Expense */}
         <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
             <BarChart2 size={16} className="text-indigo-600" />
             <span>Monthly Profitability & Mix</span>
-          </h3>
+          </h2>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -178,10 +178,10 @@ export default function FinancialChartsDashboard() {
 
         {/* Burn Rate Trend Area Chart */}
         <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
             <Flame size={16} className="text-rose-600" />
             <span>Operating Expense Burn Rate</span>
-          </h3>
+          </h2>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -200,10 +200,10 @@ export default function FinancialChartsDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Cash Distribution Donut */}
         <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
             <DollarSign size={16} className="text-emerald-600" />
             <span>Cash Balance Allocation</span>
-          </h3>
+          </h2>
           <div className="h-64 w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -221,10 +221,10 @@ export default function FinancialChartsDashboard() {
 
         {/* Category Expense Donut */}
         <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
             <PieIcon size={16} className="text-amber-600" />
             <span>Expense Category Mix</span>
-          </h3>
+          </h2>
           <div className="h-64 w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>

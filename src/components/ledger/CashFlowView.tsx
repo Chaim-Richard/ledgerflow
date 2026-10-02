@@ -379,7 +379,7 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
         <div className="relative z-10 max-w-4xl mx-auto space-y-12">
            <div className="border-b border-slate-900 pb-4 flex items-end justify-between">
               <div>
-                <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase italic">{labels.title}</h3>
+                <h2 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase italic">{labels.title}</h2>
                 <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest">For period ending {dateRange.end}</p>
               </div>
               <Waves aria-hidden="true" size={24} className="text-slate-200" />
@@ -393,7 +393,7 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
               ].map(section => (
                   <div key={section.id} className="space-y-4">
                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
-                        <h4 className="text-[11px] font-bold bg-slate-900 text-white px-3 py-1 rounded inline-flex uppercase tracking-wider">{section.label}</h4>
+                        <h3 className="text-[11px] font-bold bg-slate-900 text-white px-3 py-1 rounded inline-flex uppercase tracking-wider">{section.label}</h3>
                         <span className="text-[9px] font-semibold text-slate-450 uppercase tracking-wider text-[var(--muted)]">{section.desc}</span>
                      </div>
                      

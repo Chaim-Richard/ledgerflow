@@ -126,7 +126,7 @@ export default function BudgetManager() {
             <Target aria-hidden="true" size={14} />
             Resource Allocation Matrix
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Budget Protocol</h2>
+          <h1 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Budget Protocol</h1>
           <p className="text-[var(--muted)] font-medium text-lg mt-2 italic opacity-60">Strategic variance analysis and predictive consumption monitoring.</p>
         </div>
 
@@ -201,7 +201,7 @@ export default function BudgetManager() {
               </div>
 
               <div className="space-y-2 relative z-10">
-                 <h3 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase italic truncate">{b.targetId}</h3>
+                 <h2 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase italic truncate">{b.targetId}</h2>
                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] opacity-40">{b.period} Allocation</p>
               </div>
 
@@ -278,7 +278,7 @@ export default function BudgetManager() {
                 <Target aria-hidden="true" size={48} />
               </div>
               <div className="space-y-2">
-                <h3 className="text-3xl font-black text-[var(--text)] uppercase tracking-tighter italic">Zero Objectives Detected</h3>
+                <h2 className="text-3xl font-black text-[var(--text)] uppercase tracking-tighter italic">Zero Objectives Detected</h2>
                 <p className="text-sm font-black text-slate-500/40 uppercase tracking-widest truncate">Initialize target matrix to begin forensic consumption mapping.</p>
               </div>
               <button 

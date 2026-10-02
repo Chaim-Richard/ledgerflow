@@ -194,7 +194,7 @@ export default function BlueprintSettings() {
             <SlidersHorizontal aria-hidden="true" size={22} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest">Base Ledger Variables</h3>
+            <h2 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest">Base Ledger Variables</h2>
             <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-[0.2em] mt-0.5">Core Accounting Configurations</p>
           </div>
         </div>
@@ -270,7 +270,7 @@ export default function BlueprintSettings() {
               <Zap aria-hidden="true" size={20} className="text-amber-400" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest font-display">Rule Ingestion Architecture</h3>
+              <h2 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest font-display">Rule Ingestion Architecture</h2>
               <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-[0.2em] mt-0.5">Automated Accounts & Fallback Mappings</p>
             </div>
           </div>
@@ -291,7 +291,7 @@ export default function BlueprintSettings() {
           <div className="p-5 bg-amber-50 rounded-[32px] border border-amber-200 flex items-start gap-3.5">
             <AlertTriangle aria-hidden="true" className="text-amber-600 shrink-0 mt-0.5" size={16} />
             <div className="space-y-1">
-              <h5 className="text-xs font-bold text-amber-900 uppercase tracking-wider">Unmapped Fallback Warnings</h5>
+              <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider">Unmapped Fallback Warnings</h4>
               <p className="text-[11px] text-amber-700 leading-relaxed font-semibold uppercase tracking-wide">
                 Transactions uploaded via API or scanned via OCR cannot be saved without default fallbacks. Configure Debit Fallback (expense) and Credit Fallback (asset) immediately.
               </p>
@@ -343,7 +343,7 @@ export default function BlueprintSettings() {
         {/* Category Specific Overrides */}
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--line)] pb-4">
-            <h4 className="text-xs font-black text-[var(--text)] uppercase tracking-widest">Category-Specific Routing Exclusions</h4>
+            <h3 className="text-xs font-black text-[var(--text)] uppercase tracking-widest">Category-Specific Routing Exclusions</h3>
             <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--muted)]">
               {Object.keys(mappings).filter(k => k !== 'expense' && k !== 'asset').length} rules registered
             </span>
@@ -432,7 +432,7 @@ export default function BlueprintSettings() {
             <Eye aria-hidden="true" size={22} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest font-display">Workflow Tab Architect</h3>
+            <h2 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest font-display">Workflow Tab Architect</h2>
             <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-[0.2em] mt-0.5">Workspace Navigation Elasticity</p>
           </div>
         </div>
@@ -496,7 +496,7 @@ export default function BlueprintSettings() {
               <Sliders aria-hidden="true" size={22} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest">Aesthetic Nomenclature Registry</h3>
+              <h2 className="text-xl font-bold text-[var(--text)] tracking-tight uppercase tracking-widest">Aesthetic Nomenclature Registry</h2>
               <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-[0.2em] mt-0.5 font-display">System-Wide Glossary Patch Engine</p>
             </div>
           </div>

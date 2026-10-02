@@ -126,10 +126,10 @@ export default function CustomerDetailView({ customerId, onBack }: CustomerDetai
         {/* Invoices List */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
           <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-            <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+            <h2 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
               <FileText className="w-4 h-4 text-indigo-500" />
               Invoices ({customerInvoices.length})
-            </h3>
+            </h2>
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-y-auto max-h-[380px]">
             {customerInvoices.map(inv => {
@@ -178,10 +178,10 @@ export default function CustomerDetailView({ customerId, onBack }: CustomerDetai
         {/* Payments List */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
           <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-            <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+            <h2 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
               <DollarSign className="w-4 h-4 text-emerald-500" />
               Payments Received ({customerPayments.length})
-            </h3>
+            </h2>
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-y-auto max-h-[380px]">
             {customerPayments.map(p => (

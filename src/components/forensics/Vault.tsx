@@ -291,7 +291,7 @@ export default function Vault() {
     <div className="space-y-8 h-full flex flex-col">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter mb-2">Documents</h2>
+          <h1 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter mb-2">Documents</h1>
           <p className="text-[var(--muted)] font-black text-[10px] uppercase tracking-widest truncate opacity-80">Enterprise Secure Storage • Encryption Active</p>
         </div>
         <div className="flex items-center gap-4">
@@ -362,7 +362,7 @@ export default function Vault() {
               </div>
 
               <div className="space-y-2">
-                <h4 className="text-base font-black text-[var(--text)] line-clamp-1 leading-none tracking-tight">{docItem.name}</h4>
+                <h3 className="text-base font-black text-[var(--text)] line-clamp-1 leading-none tracking-tight">{docItem.name}</h3>
                 <div className="flex items-center gap-3 text-[10px] font-bold text-[var(--muted)] uppercase tracking-[0.1em] font-mono">
                   <span>{format(new Date(docItem.createdAt), 'MMM dd, yyyy')}</span>
                   <span className="w-1 h-1 bg-slate-100 rounded-full" />
@@ -395,7 +395,7 @@ export default function Vault() {
               <div className="w-32 h-32 bg-[var(--surface)] rounded-[32px] flex items-center justify-center text-slate-200 mb-8 shadow-sm">
                 <File aria-hidden="true" size={64} />
               </div>
-              <h3 className="text-3xl font-black text-[var(--text)] tracking-tight mb-3">Vault Depleted</h3>
+              <h2 className="text-3xl font-black text-[var(--text)] tracking-tight mb-3">Vault Depleted</h2>
               <p className="text-[var(--muted)] max-w-sm mx-auto text-xs font-black uppercase tracking-[0.2em] opacity-50">Secure storage is currently empty. Initialize upload to establish audit compliance.</p>
             </div>
           )}
@@ -425,7 +425,7 @@ export default function Vault() {
                     <FileText aria-hidden="true" size={32} />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black text-[var(--text)] tracking-tight line-clamp-1 leading-none mb-2">{selectedDoc.name}</h3>
+                    <h2 className="text-2xl font-black text-[var(--text)] tracking-tight line-clamp-1 leading-none mb-2">{selectedDoc.name}</h2>
                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest truncate opacity-40 font-mono">
                       Timestamp: {format(new Date(selectedDoc.createdAt), 'yyyy-MM-dd HH:mm:ss')}
                     </p>
@@ -450,7 +450,7 @@ export default function Vault() {
                       <File aria-hidden="true" size={48} />
                     </div>
                     <div>
-                      <h4 className="text-xl font-black text-[var(--text)] tracking-tight">Preview Restricted</h4>
+                      <h3 className="text-xl font-black text-[var(--text)] tracking-tight">Preview Restricted</h3>
                       <p className="text-sm font-medium text-[var(--muted)] mt-2">MIME: {selectedDoc.mimeType}</p>
                     </div>
                     <a 

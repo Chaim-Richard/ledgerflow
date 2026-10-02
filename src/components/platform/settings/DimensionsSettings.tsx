@@ -407,7 +407,7 @@ export default function DimensionsSettings() {
             <Layers aria-hidden="true" size={22} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-[var(--text)] tracking-tight">Dimensions & Label Node Registry</h3>
+            <h2 className="text-xl font-bold text-[var(--text)] tracking-tight">Dimensions & Label Node Registry</h2>
             <p className="text-xs text-[var(--muted)] font-medium">
               Stable identity map for dimensional accounting. Renaming a label node description updates all historical reporting without splitting buckets.
             </p>
@@ -450,7 +450,7 @@ export default function DimensionsSettings() {
           <div className="inline-flex items-center gap-2 px-2.5 py-0.5 bg-indigo-500/10 text-indigo-400 rounded-full text-[10px] font-bold uppercase tracking-widest">
             <Database aria-hidden="true" size={12} /> Auto-Migration Engine
           </div>
-          <h4 className="text-base font-bold text-[var(--text)]">Migrate Free-Text Labels to Stable Nodes</h4>
+          <h3 className="text-base font-bold text-[var(--text)]">Migrate Free-Text Labels to Stable Nodes</h3>
           <p className="text-xs text-[var(--muted)] font-medium">
             Scans all existing transaction lines, automatically mints node records for free-text dimension labels, and rewrites lines to store stable node IDs.
           </p>
@@ -482,7 +482,7 @@ export default function DimensionsSettings() {
       {/* Dimension Axes & Nodes */}
       <div className="space-y-8">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-[var(--text)]">Configured Dimensions ({dimensions.length})</h3>
+          <h2 className="text-lg font-bold text-[var(--text)]">Configured Dimensions ({dimensions.length})</h2>
           <button
             type="button"
             onClick={() => setShowAddAxis(!showAddAxis)}
@@ -494,7 +494,7 @@ export default function DimensionsSettings() {
 
         {showAddAxis && (
           <div className="p-6 bg-[var(--surface)] border border-indigo-500/30 rounded-2xl space-y-4 animate-fadeIn">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-400">Add New Dimension Axis</h4>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400">Add New Dimension Axis</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Labelled labelClassName="text-[10px] font-bold text-[var(--muted)] uppercase" label="Axis Key / ID (Immutable)">
@@ -578,13 +578,14 @@ export default function DimensionsSettings() {
               {axisNodes.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
+                    <caption className="sr-only">Dimensions</caption>
                     <thead>
                       <tr className="border-b border-[var(--line)] text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
-                        <th className="py-2 px-3 w-24">Node ID</th>
-                        <th className="py-2 px-3">Display Description</th>
-                        <th className="py-2 px-3">Aliases (CSV)</th>
-                        <th className="py-2 px-3 w-28">Status</th>
-                        <th className="py-2 px-3 w-28 text-right">Actions</th>
+                        <th scope="col" className="py-2 px-3 w-24">Node ID</th>
+                        <th scope="col" className="py-2 px-3">Display Description</th>
+                        <th scope="col" className="py-2 px-3">Aliases (CSV)</th>
+                        <th scope="col" className="py-2 px-3 w-28">Status</th>
+                        <th scope="col" className="py-2 px-3 w-28 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--line)]">

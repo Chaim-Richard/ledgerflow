@@ -274,7 +274,7 @@ export const PayrollView: React.FC = () => {
         payRuns.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg border border-neutral-200 p-6">
             <Briefcase aria-hidden="true" className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
-            <h3 className="text-sm font-semibold text-neutral-800">No Pay Runs Processed Yet</h3>
+            <h2 className="text-sm font-semibold text-neutral-800">No Pay Runs Processed Yet</h2>
             <p className="text-xs text-neutral-500 mt-1 max-w-md mx-auto">
               Add employees to your roster and execute your first automated pay run to calculate deductions and post wages to the ledger.
             </p>
@@ -290,12 +290,13 @@ export const PayrollView: React.FC = () => {
         ) : (
           <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-xs">
             <table className="w-full text-left text-xs">
+              <caption className="sr-only">Pay runs</caption>
               <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider">
                 <tr>
-                  <th className="py-3 px-4">Pay Run Date</th>
-                  <th className="py-3 px-4 text-center">Employees</th>
-                  <th className="py-3 px-4 text-right">Total Employer Cost</th>
-                  <th className="py-3 px-4 text-center">Status</th>
+                  <th scope="col" className="py-3 px-4">Pay Run Date</th>
+                  <th scope="col" className="py-3 px-4 text-center">Employees</th>
+                  <th scope="col" className="py-3 px-4 text-right">Total Employer Cost</th>
+                  <th scope="col" className="py-3 px-4 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
@@ -326,7 +327,7 @@ export const PayrollView: React.FC = () => {
         employees.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg border border-neutral-200 p-6">
             <Users aria-hidden="true" className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
-            <h3 className="text-sm font-semibold text-neutral-800">No Employees in Directory</h3>
+            <h2 className="text-sm font-semibold text-neutral-800">No Employees in Directory</h2>
             <p className="text-xs text-neutral-500 mt-1 max-w-md mx-auto">
               Add team members to calculate recurring payroll obligations, tax withholdings, and pay stubs.
             </p>
@@ -341,14 +342,15 @@ export const PayrollView: React.FC = () => {
         ) : (
           <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-xs">
             <table className="w-full text-left text-xs">
+              <caption className="sr-only">Employees</caption>
               <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider">
                 <tr>
-                  <th className="py-3 px-4">Employee</th>
-                  <th className="py-3 px-4">Role & State</th>
-                  <th className="py-3 px-4">Frequency</th>
-                  <th className="py-3 px-4 text-right">Annual Gross</th>
-                  <th className="py-3 px-4 text-right">Period Net Pay</th>
-                  <th className="py-3 px-4 text-center">Status</th>
+                  <th scope="col" className="py-3 px-4">Employee</th>
+                  <th scope="col" className="py-3 px-4">Role & State</th>
+                  <th scope="col" className="py-3 px-4">Frequency</th>
+                  <th scope="col" className="py-3 px-4 text-right">Annual Gross</th>
+                  <th scope="col" className="py-3 px-4 text-right">Period Net Pay</th>
+                  <th scope="col" className="py-3 px-4 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
@@ -393,7 +395,7 @@ export const PayrollView: React.FC = () => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden border border-neutral-200">
             <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
-              <h3 className="text-sm font-bold text-neutral-900">Add Employee to Roster</h3>
+              <h2 className="text-sm font-bold text-neutral-900">Add Employee to Roster</h2>
               <button aria-label="Close employee dialog" onClick={() => setIsAddingEmployee(false)} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
                 <X aria-hidden="true" className="w-4 h-4" />
               </button>
@@ -521,7 +523,7 @@ export const PayrollView: React.FC = () => {
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-neutral-200">
             <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
               <div>
-                <h3 className="text-base font-bold text-neutral-900">Execute Pay Run</h3>
+                <h2 className="text-base font-bold text-neutral-900">Execute Pay Run</h2>
                 <p className="text-xs text-neutral-500 mt-0.5">
                   Preview withholding taxes and post balanced journal entries to the ledger.
                 </p>
@@ -582,13 +584,14 @@ export const PayrollView: React.FC = () => {
               {/* Employee Breakdown */}
               <div className="border border-neutral-200 rounded-lg overflow-hidden">
                 <table className="w-full text-left text-[11px]">
+                  <caption className="sr-only">Pay run by employee</caption>
                   <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold">
                     <tr>
-                      <th className="py-2 px-3">Employee</th>
-                      <th className="py-2 px-3 text-right">Gross</th>
-                      <th className="py-2 px-3 text-right">Income Tax W/H</th>
-                      <th className="py-2 px-3 text-right">FICA & Med</th>
-                      <th className="py-2 px-3 text-right">Net Pay</th>
+                      <th scope="col" className="py-2 px-3">Employee</th>
+                      <th scope="col" className="py-2 px-3 text-right">Gross</th>
+                      <th scope="col" className="py-2 px-3 text-right">Income Tax W/H</th>
+                      <th scope="col" className="py-2 px-3 text-right">FICA & Med</th>
+                      <th scope="col" className="py-2 px-3 text-right">Net Pay</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100">

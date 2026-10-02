@@ -20,6 +20,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import AsyncButton from '../ui/AsyncButton';
 import CategoryWhyPopover from '../common/CategoryWhyPopover';
 import { isLockedDate } from '../../lib/periodLock';
+import { focusOnMount } from '../../lib/focusOnMount';
 
 function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => string) {
   const occurrences = new Map<string, number>();
@@ -188,7 +189,7 @@ const TransactionRow = React.memo(({
           {isEditingDesc ? (
             <input aria-label="Transaction description"
               type="text"
-              autoFocus
+              ref={focusOnMount}
               value={descValue}
               onChange={(e) => setEditDraft(e.target.value)}
               onBlur={() => handleDescSubmit()}
@@ -475,7 +476,7 @@ const TransactionRow = React.memo(({
               <BrainCircuit aria-hidden="true" className="text-indigo-600" size={16} />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-indigo-900">Anomaly Detected</h4>
+              <h2 className="text-sm font-bold text-indigo-900">Anomaly Detected</h2>
               <p className="text-xs text-indigo-700/80 mt-0.5">{anomaly.reason}</p>
             </div>
           </div>

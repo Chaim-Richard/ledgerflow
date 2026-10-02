@@ -530,7 +530,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
               <Layers aria-hidden="true" size={80} className="text-[var(--text)]" />
             </div>
             <div className="relative z-10">
-              <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider leading-none">{labels.assetsLabel}</h3>
+              <h2 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider leading-none">{labels.assetsLabel}</h2>
               <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-1 block">{labels.assetsSub}</span>
             </div>
           </div>
@@ -616,7 +616,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
                <HandCoins aria-hidden="true" size={80} className="text-[var(--text)]" />
             </div>
             <div className="relative z-10">
-              <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider leading-none">{labels.liabilitiesLabel} & {labels.equityLabel}</h3>
+              <h2 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider leading-none">{labels.liabilitiesLabel} & {labels.equityLabel}</h2>
               <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-1 block">{labels.liabilitiesSub} / {labels.equitySub}</span>
             </div>
           </div>

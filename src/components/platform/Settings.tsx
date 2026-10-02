@@ -71,7 +71,7 @@ export default function Settings() {
         {/* Global Sidebar Documentation Context (Could also be modularized later) */}
         <div className="space-y-10">
           <div className="p-4 md:p-10 bg-[var(--surface)] rounded-[40px] border border-[var(--line)] shadow-sm group hover:border-indigo-600 transition-all duration-500">
-            <h4 className="text-[11px] font-black text-[var(--text)] uppercase tracking-[0.3em] mb-6 opacity-40">Documentation Protocol</h4>
+            <h2 className="text-[11px] font-black text-[var(--text)] uppercase tracking-[0.3em] mb-6 opacity-40">Documentation Protocol</h2>
             <div className="space-y-4">
               <p className="text-[11px] text-[var(--muted)] leading-relaxed font-bold uppercase tracking-widest mb-8">
                 The architecture runs entirely on dynamic topological registries. Settings components are lazy-loaded on demand via the SETTINGS_COMPONENTS registry mapping.

@@ -323,7 +323,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                <Scale aria-hidden="true" size={12} className="shrink-0" />
                Double-Entry Stability Protocol
             </div>
-            <h3 className="text-xl font-bold text-[var(--text)] tracking-tight">Trial Balance</h3>
+            <h2 className="text-xl font-bold text-[var(--text)] tracking-tight">Trial Balance</h2>
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <MonthNavigator
                 currentDate={asOfDate}
@@ -418,9 +418,10 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
       {/* Table */}
       <div className="overflow-x-auto relative z-10 custom-scrollbar">
         <table className="w-full text-left min-w-[700px] text-xs">
+          <caption className="sr-only">Trial Balance</caption>
           <thead>
             <tr className="bg-slate-900 text-white whitespace-nowrap select-none">
-              <th 
+              <th scope="col"
                 onClick={() => handleSort('code')}
                 className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
               >
@@ -429,7 +430,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                   {renderSortIcon('code')}
                 </div>
               </th>
-              <th 
+              <th scope="col"
                 onClick={() => handleSort('name')}
                 className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
               >
@@ -438,7 +439,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                   {renderSortIcon('name')}
                 </div>
               </th>
-              <th 
+              <th scope="col"
                 onClick={() => handleSort('debit')}
                 className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right cursor-pointer hover:bg-slate-800 transition-colors"
               >
@@ -447,7 +448,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                   {renderSortIcon('debit')}
                 </div>
               </th>
-              <th 
+              <th scope="col"
                 onClick={() => handleSort('credit')}
                 className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right cursor-pointer hover:bg-slate-800 transition-colors"
               >

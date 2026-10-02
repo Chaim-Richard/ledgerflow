@@ -122,7 +122,7 @@ export default function AppearanceSettings() {
               <Type aria-hidden="true" size={22} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-[var(--text)]">Text Sizing & Font Scale</h3>
+              <h2 className="text-xl font-bold text-[var(--text)]">Text Sizing & Font Scale</h2>
               <p className="text-xs text-[var(--muted)]">Adjust text size dynamically across all views, tables, and dashboards.</p>
             </div>
           </div>
@@ -187,9 +187,9 @@ export default function AppearanceSettings() {
             Live Typography Preview
           </span>
           <div className="space-y-1">
-            <h4 className="text-lg font-bold text-[var(--text)]">
+            <h3 className="text-lg font-bold text-[var(--text)]">
               General Ledger Account Summary - FY 2026
-            </h4>
+            </h3>
             <p className="text-sm text-[var(--muted)] leading-relaxed">
               Operating cash flow generated $142,500.00 this month across all active accounts. All double-entry transactions meet double-entry balance constraints.
             </p>
@@ -205,7 +205,7 @@ export default function AppearanceSettings() {
       {/* 3. Typography & Font Family */}
       <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm rounded-2xl space-y-6">
         <div>
-          <h3 className="text-xl font-bold text-[var(--text)]">Typography & Font Family</h3>
+          <h2 className="text-xl font-bold text-[var(--text)]">Typography & Font Family</h2>
           <p className="text-xs text-[var(--muted)] mt-1">Select the typeface family for the user interface.</p>
         </div>
 
@@ -238,7 +238,7 @@ export default function AppearanceSettings() {
       {/* 4. Color Palette & Theme Modes */}
       <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm rounded-2xl space-y-8">
         <div>
-          <h3 className="text-xl font-bold text-[var(--text)]">Theme Mode & Color Accent</h3>
+          <h2 className="text-xl font-bold text-[var(--text)]">Theme Mode & Color Accent</h2>
           <p className="text-xs text-[var(--muted)] mt-1">Choose your base theme mode and accent color highlight palette.</p>
         </div>
 
@@ -299,7 +299,7 @@ export default function AppearanceSettings() {
       {/* 5. Layout Density & Formatting */}
       <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm rounded-2xl space-y-8">
         <div>
-          <h3 className="text-xl font-bold text-[var(--text)]">Layout Density & Regional Preferences</h3>
+          <h2 className="text-xl font-bold text-[var(--text)]">Layout Density & Regional Preferences</h2>
           <p className="text-xs text-[var(--muted)] mt-1">Configure row spacing, date formats, and contrast options.</p>
         </div>
 
@@ -413,7 +413,7 @@ export default function AppearanceSettings() {
           {/* High Contrast Toggle */}
           <div className="p-5 bg-[var(--panel)] border border-[var(--line)] rounded-xl flex items-center justify-between">
             <div>
-              <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">High Contrast Mode</h4>
+              <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">High Contrast Mode</h3>
               <p className="text-[10px] text-[var(--muted)] mt-0.5">Increases text contrast and border legibility.</p>
             </div>
             <button
@@ -437,7 +437,7 @@ export default function AppearanceSettings() {
           {/* Reduced Motion Toggle */}
           <div className="p-5 bg-[var(--panel)] border border-[var(--line)] rounded-xl flex items-center justify-between">
             <div>
-              <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">Reduced Motion</h4>
+              <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">Reduced Motion</h3>
               <p className="text-[10px] text-[var(--muted)] mt-0.5">Minimizes page transitions and animations.</p>
             </div>
             <button

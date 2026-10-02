@@ -29,6 +29,15 @@ test.describe('Dialogs', () => {
     await page.waitForSelector('text="Overview"', { timeout: 15000 });
   });
 
+  test('command palette: Ctrl+K opens it with the cursor in the search box', async ({ page }) => {
+    await page.keyboard.press('Control+k');
+    const search = page.getByRole('textbox', { name: 'Search commands or enter a transaction' });
+    await expect(search).toBeVisible();
+    await expect(search).toBeFocused();
+    await page.keyboard.type('rep');
+    await expect(search).toHaveValue('rep');
+  });
+
   for (const d of dialogs) {
     test(`${d.name}: a named dialog, focus inside, no accessibility problems, Escape closes`, async ({ page }) => {
       await d.show(page);

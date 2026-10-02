@@ -71,7 +71,7 @@ export const PricingPage: React.FC = () => {
 
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">{tier.name}</h3>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">{tier.name}</h2>
                   {tier.id === 'growth' && <Zap className="w-5 h-5 text-amber-500" />}
                   {tier.id === 'pro' && <Shield className="w-5 h-5 text-emerald-500" />}
                   {tier.id === 'enterprise' && <Building className="w-5 h-5 text-blue-500" />}

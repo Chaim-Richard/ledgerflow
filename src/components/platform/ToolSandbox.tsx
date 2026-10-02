@@ -385,10 +385,11 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
 
                    <div className="overflow-x-auto">
                      <table className="w-full text-left text-xs text-slate-300">
+                       <caption className="sr-only">Tool results</caption>
                        <thead className="border-b border-white/10 text-[10px] uppercase font-bold text-[var(--muted)]">
                          <tr>
                            {tableColumns.map(col => (
-                             <th key={col.key} className="py-2.5 px-3 whitespace-nowrap">
+                             <th scope="col" key={col.key} className="py-2.5 px-3 whitespace-nowrap">
                                {col.label}
                              </th>
                            ))}

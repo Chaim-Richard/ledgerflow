@@ -17,7 +17,7 @@ export default function PivotView({ pivotData }: PivotViewProps) {
               <div className="w-10 h-10 bg-[var(--ink)] rounded-[32px] flex items-center justify-center text-zinc-400 group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors">
                 <ChevronRight size={20} />
               </div>
-              <h3 className="font-bold text-[var(--text)]">{item.name}</h3>
+              <h2 className="font-bold text-[var(--text)]">{item.name}</h2>
             </div>
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{item.count} txns</span>
           </div>

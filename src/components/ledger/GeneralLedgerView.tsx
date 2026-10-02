@@ -171,14 +171,15 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
+                  <caption className="sr-only">General Ledger</caption>
                   <thead>
                     <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-[var(--muted)] font-semibold uppercase text-[10px]">
-                      <th className="py-2.5 px-4">Date</th>
-                      <th className="py-2.5 px-4">Description</th>
-                      <th className="py-2.5 px-4">Reference</th>
-                      <th className="py-2.5 px-4 text-right">Debit</th>
-                      <th className="py-2.5 px-4 text-right">Credit</th>
-                      <th className="py-2.5 px-4 text-right">Running Balance</th>
+                      <th scope="col" className="py-2.5 px-4">Date</th>
+                      <th scope="col" className="py-2.5 px-4">Description</th>
+                      <th scope="col" className="py-2.5 px-4">Reference</th>
+                      <th scope="col" className="py-2.5 px-4 text-right">Debit</th>
+                      <th scope="col" className="py-2.5 px-4 text-right">Credit</th>
+                      <th scope="col" className="py-2.5 px-4 text-right">Running Balance</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">

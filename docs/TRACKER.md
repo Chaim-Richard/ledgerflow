@@ -1373,7 +1373,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] E-02 Eligible inputs named and labels linked, including the 46 remaining layouts and fields missed by lint (codex, branch `codex/c-3-accessible-form-labels`, PR pending)
 - [x] E-03 Eligible selects linked to labels or given accessible names (codex, branch `codex/c-3-accessible-form-labels`, PR pending)
 - [x] E-04 Icon-only buttons and switches named (lint rule now clean)
-- [ ] E-05 23 tables without caption
+- [x] E-05 Every table names itself with a caption (43 added, 56 tables; guard test)
 - [x] E-06 Both images have alt text (receipt viewer, document vault)
 - [x] E-07 Eligible labels use matching htmlFor/id; per-instance IDs verified in Chromium; label-has-associated-control 185 → 46 → 0 (codex, branch `codex/c-3-accessible-form-labels`, PR pending)
 - [x] E-08 InvoiceModal — dialog role + name, focus in, Tab kept inside, Escape (asks before discarding), focus returned; axe 0 (browser test)
@@ -1389,16 +1389,16 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] E-18 Item editor — item and cost-of-sale dialogs in Inventory
 - [x] E-19 Payment run — no payment-run screen exists yet (K-24, later); new dialogs get the same behaviour from `useDialog`, and a ratchet counts overlays without a dialog role (40, only goes down)
 - [x] E-20 WriteOffModal — same as the other money dialogs
-- [ ] E-21 `scope="col"` on headers
+- [x] E-21 `scope` on every header cell (221 added; guard test)
 - [x] E-22 Visible focus ring on every keyboard-focused control (index.css; browser test)
 - [x] E-23 Keyboard-only invoicing (browser test); native buttons on report rows, grid headers and reconciliation controls; independent filter/Tab behavior (codex, `codex/c-4-keyboard-controls`)
 - [ ] E-24 Screen-reader pass
 - [x] E-25 `aria-live` for async results — save/fail messages go to the toast live region, loading/failed lines use `role="status"`, field errors `role="alert"`; buttons that wait say so (`aria-busy`)
 - [x] E-26 Colour not the only +/− signal — transaction list, pivot sheet and owner overview show "+" / "−" with the colour (`formatSignedAmount`, tested); found L-145
 - [x] E-27 Contrast in both themes: axe color-contrast on 6 screens × 2 themes with a baseline (0–4 left per screen)
-- [ ] E-28 `prefers-reduced-motion`
+- [x] E-28 Reduced motion: animations follow the system setting (`MotionConfig reducedMotion="user"` + CSS)
 - [x] E-29 Skip-to-content link, first Tab stop (browser test)
-- [ ] E-30 Heading hierarchy
+- [x] E-30 Headings: one h1 per screen (was the sidebar logo on every screen; 7 screens had none), no skipped levels; checked on all 33 screens by the layout browser test
 
 # SECTION F — CODE STRUCTURE
 

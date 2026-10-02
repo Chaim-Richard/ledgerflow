@@ -135,7 +135,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
               <ShieldAlert size={24} />
             </div>
             <div>
-              <h3 className="text-lg font-bold tracking-tight text-[var(--text)] leading-none">Forensic Protocol</h3>
+              <h2 className="text-lg font-bold tracking-tight text-[var(--text)] leading-none">Forensic Protocol</h2>
               <span className="text-[10px] font-mono text-[var(--muted)] uppercase tracking-widest mt-1.5 block">Logarithmic Digits Divergence Filter (Benford v2.1)</span>
             </div>
           </div>
@@ -157,7 +157,7 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
                <div className="absolute top-4 right-4 p-4 opacity-[0.03] pointer-events-none">
                   <Fingerprint size={48} />
                </div>
-               <h4 className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-6">Digit Distribution Curve (1-9)</h4>
+               <h3 className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-6">Digit Distribution Curve (1-9)</h3>
                
                <div className="flex items-end justify-between gap-1.5 h-36">
                   {BENFORD_DIGITS.slice(0, forensicData.distribution.length).map(digit => {
@@ -227,10 +227,10 @@ export default function ForensicAuditor({ isEmbedded = false }: { isEmbedded?: b
             </div>
 
             <div className="p-5 bg-[var(--ink)] border border-[var(--line)] rounded-xl space-y-4">
-               <h4 className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest flex items-center gap-2">
+               <h3 className="text-[10px] font-bold text-[var(--text)] uppercase tracking-widest flex items-center gap-2">
                   <Zap size={12} className="text-indigo-600" />
                   Target Audit Recommendations
-               </h4>
+               </h3>
                <div className="space-y-3">
                   {(forensicData.score > 0.3 ? [
                     "Analyze high digit frequency skewness",

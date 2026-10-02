@@ -43,9 +43,9 @@ export default function OnboardingView() {
             <div className="w-9 h-9 bg-[var(--brass)]/10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
               <Layers className="w-4 h-4 text-[var(--brass)]" />
             </div>
-            <h3 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">
+            <h2 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">
               1. {t('dashboard.onboarding.step1.title', 'Select Chart Template')}
-            </h3>
+            </h2>
             <p className="text-[11px] text-[var(--muted)] leading-relaxed">
               {t('dashboard.onboarding.step1.desc', 'Seed 200+ industry accounts for SaaS, E-Commerce, Consulting, or Real Estate.')}
             </p>
@@ -59,9 +59,9 @@ export default function OnboardingView() {
             <div className="w-9 h-9 bg-[var(--elevated)] rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
               <UploadCloud className="w-4 h-4 text-indigo-500" />
             </div>
-            <h3 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">
+            <h2 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">
               2. {t('dashboard.onboarding.step2.title', 'Import History')}
-            </h3>
+            </h2>
             <p className="text-[11px] text-[var(--muted)] leading-relaxed">
               {t('dashboard.onboarding.step2.desc', 'Connect bank lines or upload CSV statements to populate transaction history.')}
             </p>
@@ -75,9 +75,9 @@ export default function OnboardingView() {
             <div className="w-9 h-9 bg-[var(--elevated)] rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
               <Sparkles className="w-4 h-4 text-amber-500" />
             </div>
-            <h3 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">
+            <h2 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">
               3. {language === 'he' ? 'אימון התאמות AI' : '3. Train AI Matching'}
-            </h3>
+            </h2>
             <p className="text-[11px] text-[var(--muted)] leading-relaxed">
               {language === 'he' ? 'בדיקת סיווגים. שכבת הבינה לומדת כללים באופן אוטומטי.' : 'Review categorizations. The intelligence layer learns rules automatically.'}
             </p>
@@ -91,9 +91,9 @@ export default function OnboardingView() {
             <div className="w-9 h-9 bg-[var(--elevated)] rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
               <PieChart className="w-4 h-4 text-emerald-500" />
             </div>
-            <h3 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">
+            <h2 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">
               4. {t('dashboard.onboarding.step3.title', 'Financial Statements')}
-            </h3>
+            </h2>
             <p className="text-[11px] text-[var(--muted)] leading-relaxed">
               {t('dashboard.onboarding.step3.desc', 'Generate instant P&L, Balance Sheets, and Cash Flow statements.')}
             </p>

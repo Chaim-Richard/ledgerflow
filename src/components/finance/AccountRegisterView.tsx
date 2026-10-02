@@ -228,16 +228,17 @@ export const AccountRegisterView: React.FC = () => {
       {/* Checkbook Register Table */}
       <div className="flex-1 overflow-auto custom-scrollbar">
         <table className="w-full text-left border-collapse text-xs sm:text-sm">
+          <caption className="sr-only">Account Register</caption>
           <thead className="sticky top-0 bg-[var(--surface-sunken)] border-b border-[var(--border)] text-[var(--text-muted)] uppercase tracking-wider font-semibold text-[11px] z-10">
             <tr>
-              <th className="py-2.5 px-3 w-10 text-center">Clr</th>
-              <th className="py-2.5 px-3 w-28">Date</th>
-              <th className="py-2.5 px-3 w-24">Ref / Chk</th>
-              <th className="py-2.5 px-3 w-40">Payee</th>
-              <th className="py-2.5 px-3">Description / Memo</th>
-              <th className="py-2.5 px-3 text-right w-28">Increase (Dr)</th>
-              <th className="py-2.5 px-3 text-right w-28">Decrease (Cr)</th>
-              <th className="py-2.5 px-3 text-right w-32">Running Balance</th>
+              <th scope="col" className="py-2.5 px-3 w-10 text-center">Clr</th>
+              <th scope="col" className="py-2.5 px-3 w-28">Date</th>
+              <th scope="col" className="py-2.5 px-3 w-24">Ref / Chk</th>
+              <th scope="col" className="py-2.5 px-3 w-40">Payee</th>
+              <th scope="col" className="py-2.5 px-3">Description / Memo</th>
+              <th scope="col" className="py-2.5 px-3 text-right w-28">Increase (Dr)</th>
+              <th scope="col" className="py-2.5 px-3 text-right w-28">Decrease (Cr)</th>
+              <th scope="col" className="py-2.5 px-3 text-right w-32">Running Balance</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">

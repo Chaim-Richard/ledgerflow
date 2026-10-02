@@ -17,6 +17,8 @@ interface TanStackDataGridProps<TData extends object> {
   pageSize?: number;
   searchPlaceholder?: string;
   enableGlobalFilter?: boolean;
+  /** read out by screen readers as the table's name (E-05) */
+  caption?: string;
 }
 
 export function TanStackDataGrid<TData extends object>({
@@ -24,7 +26,8 @@ export function TanStackDataGrid<TData extends object>({
   columns,
   pageSize = 15,
   searchPlaceholder = 'Search records...',
-  enableGlobalFilter = true
+  enableGlobalFilter = true,
+  caption = 'Data table'
 }: TanStackDataGridProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -71,6 +74,7 @@ export function TanStackDataGrid<TData extends object>({
 
       <div className="overflow-auto max-h-[70vh] print:max-h-none print:overflow-visible border border-slate-200 rounded-2xl bg-white shadow-2xs">
         <table className="w-full text-left border-collapse">
+          <caption className="sr-only">{caption}</caption>
           <thead className="sticky top-0 z-10">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="bg-slate-50 border-b border-slate-200">

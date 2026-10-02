@@ -57,12 +57,13 @@ export const IncomeBySourceReportView: React.FC<Props> = ({
       ) : (
         <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden shadow-xs">
           <table className="w-full text-left text-xs">
+            <caption className="sr-only">Income by source</caption>
             <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider">
               <tr>
-                <th className="py-3 px-4">Customer / Revenue Source</th>
-                <th className="py-3 px-4 text-center">Invoices / Entries</th>
-                <th className="py-3 px-4 text-right">Revenue Contribution</th>
-                <th className="py-3 px-4 text-right">Total Inflow</th>
+                <th scope="col" className="py-3 px-4">Customer / Revenue Source</th>
+                <th scope="col" className="py-3 px-4 text-center">Invoices / Entries</th>
+                <th scope="col" className="py-3 px-4 text-right">Revenue Contribution</th>
+                <th scope="col" className="py-3 px-4 text-right">Total Inflow</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">

@@ -32,7 +32,7 @@ export default function CookieConsent({ onOpenPrivacyPolicy }: CookieConsentProp
             <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-lg">
               <Cookie size={18} />
             </div>
-            <h4 className="text-sm font-bold text-white">Cookie & Privacy Notice</h4>
+            <h2 className="text-sm font-bold text-white">Cookie & Privacy Notice</h2>
           </div>
           <button
             onClick={() => handleAccept('essential')}

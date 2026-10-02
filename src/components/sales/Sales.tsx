@@ -310,15 +310,16 @@ export default function Sales() {
         <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse min-w-[700px]">
+              <caption className="sr-only">Invoices</caption>
               <thead>
                 <tr className="text-left border-b border-[var(--line)]/50">
-                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Number</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Customer</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Date</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Due</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-right">Amount</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-center">State</th>
-                  <th className="p-4 md:p-8 w-10"><span className="sr-only">Actions</span></th>
+                  <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Number</th>
+                  <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Customer</th>
+                  <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Date</th>
+                  <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Due</th>
+                  <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-right">Amount</th>
+                  <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] text-center">State</th>
+                  <th scope="col" className="p-4 md:p-8 w-10"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-ledger-line/30">
@@ -504,12 +505,13 @@ export default function Sales() {
         <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse min-w-[700px]">
+              <caption className="sr-only">Customers</caption>
               <thead>
                 <tr className="text-left border-b border-[var(--line)]/50">
-                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Customer Profile</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Contact</th>
-                  <th className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap text-right">Net Receivable</th>
-                  <th className="p-4 md:p-8 w-10"><span className="sr-only">Actions</span></th>
+                  <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Customer Profile</th>
+                  <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Contact</th>
+                  <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap text-right">Net Receivable</th>
+                  <th scope="col" className="p-4 md:p-8 w-10"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-ledger-line/30">

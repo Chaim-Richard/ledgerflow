@@ -86,10 +86,10 @@ export default function SplitEditor({
       >
         <div className="p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--surface)]/50">
           <div>
-            <h3 className="text-xl font-medium text-[var(--text)] tracking-tight flex items-center gap-2">
+            <h2 className="text-xl font-medium text-[var(--text)] tracking-tight flex items-center gap-2">
                <Layers aria-hidden="true" className="text-indigo-600" size={20} />
                Split Transaction Lines
-            </h3>
+            </h2>
             <p className="text-[10px] text-[var(--muted)] mt-1 font-black uppercase tracking-[0.2em]">{transaction.description} • {new Intl.NumberFormat('en-US', { style: 'currency', currency: transaction.currency }).format(transaction.totalAmountCents / 100)}</p>
           </div>
           <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-colors text-slate-500 hover:text-white"><X aria-hidden="true" size={20} /></button>

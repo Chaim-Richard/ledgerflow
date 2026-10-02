@@ -163,7 +163,7 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
 
           <div className="grid grid-cols-2 gap-10 relative z-10">
             <div className="space-y-6">
-              <h4 className="text-[10px] font-black text-white/20 uppercase tracking-widest truncate">Command History</h4>
+              <h2 className="text-[10px] font-black text-white/20 uppercase tracking-widest truncate">Command History</h2>
               <div className="space-y-3">
                 {history.length > 0 ? history.map(h => (
                   <button 
@@ -181,7 +181,7 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
             </div>
 
             <div className="space-y-6">
-               <h4 className="text-[10px] font-black text-white/20 uppercase tracking-widest truncate">System Shortcuts</h4>
+               <h2 className="text-[10px] font-black text-white/20 uppercase tracking-widest truncate">System Shortcuts</h2>
                <div className="grid grid-cols-1 gap-3">
                  {[
                    { label: "Analyze High-Value Outflow", icon: AlertCircle, color: 'text-rose-400' },

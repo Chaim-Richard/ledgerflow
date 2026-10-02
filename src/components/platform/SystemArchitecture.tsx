@@ -36,7 +36,7 @@ export default function SystemArchitecture({ isOpen, onClose, transactions, acco
                     <Layers size={24} />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-[var(--text)] tracking-tight">System Architecture</h3>
+                    <h2 className="text-2xl font-bold text-[var(--text)] tracking-tight">System Architecture</h2>
                     <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-widest mt-1">High-Level Deterministic Data Flow</p>
                   </div>
                </div>
@@ -52,7 +52,7 @@ export default function SystemArchitecture({ isOpen, onClose, transactions, acco
                <div className="flex items-start gap-4 relative z-10">
                   <Terminal size={18} className="text-emerald-500 mt-1" />
                   <div>
-                     <h4 className="text-zinc-100 text-[10px] font-medium uppercase tracking-wider mb-2">Analytical Summary</h4>
+                     <h3 className="text-zinc-100 text-[10px] font-medium uppercase tracking-wider mb-2">Analytical Summary</h3>
                      <p className="text-xs leading-relaxed text-zinc-300">
                         The LedgerFlow data pipeline implements a <span className="text-white font-bold italic">Deterministic Intelligence</span> protocol. 
                         Every transaction passes through O(1) Bloom filters, MinHash Entity Resolution, and Trend Analysis 

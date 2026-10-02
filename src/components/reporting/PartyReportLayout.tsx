@@ -156,6 +156,7 @@ export function PartyReportLayout<T>({
         {/* the table scrolls inside its box so the header (and totals) stay in view (I-14) */}
         <div className="overflow-auto max-h-[70vh] print:max-h-none print:overflow-visible">
           <table className="w-full text-left text-xs">
+            <caption className="sr-only">{title}</caption>
             <thead className="sticky top-0 z-10 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[10px]">
               <tr>
                 {columns.map((col) => (

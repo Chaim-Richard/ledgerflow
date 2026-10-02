@@ -61,10 +61,10 @@ export default function OwnerLens() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-[var(--panel)] border border-[var(--line)] hover:border-[var(--pos)]/50 rounded-2xl shadow-sm p-6 bg-gradient-to-b from-[var(--brass-soft)]/20 via-[var(--panel)] to-[var(--panel)] transition-all">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[var(--pos)] font-mono text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
+            <h2 className="text-[var(--pos)] font-mono text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
               <ArrowUpRight className="w-4 h-4" />
               Money In
-            </h3>
+            </h2>
             <span className="w-2 h-2 rounded-full bg-[var(--pos)] animate-pulse" />
           </div>
           <p className="text-3xl sm:text-4xl font-mono font-bold text-[var(--text)] tracking-tight">{formatCurrency(stats.moneyIn)}</p>
@@ -73,10 +73,10 @@ export default function OwnerLens() {
 
         <div className="bg-[var(--panel)] border border-[var(--line)] hover:border-[var(--neg)]/50 rounded-2xl shadow-sm p-6 bg-gradient-to-b from-[var(--brass-soft)]/20 via-[var(--panel)] to-[var(--panel)] transition-all">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[var(--neg)] font-mono text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
+            <h2 className="text-[var(--neg)] font-mono text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
               <ArrowDownRight className="w-4 h-4" />
               Money Out
-            </h3>
+            </h2>
             <span className="w-2 h-2 rounded-full bg-[var(--neg)]" />
           </div>
           <p className="text-3xl sm:text-4xl font-mono font-bold text-[var(--text)] tracking-tight">{formatCurrency(stats.moneyOut)}</p>
@@ -85,10 +85,10 @@ export default function OwnerLens() {
 
         <div className="bg-[var(--panel)] border border-[var(--brass-line)] rounded-2xl shadow-sm p-6 bg-gradient-to-b from-[var(--brass-soft)] via-[var(--brass-soft)]/30 to-[var(--panel)] transition-all">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[var(--brass)] font-mono text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
+            <h2 className="text-[var(--brass)] font-mono text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
               <Wallet className="w-4 h-4 text-[var(--brass)]" />
               Net Capital Remaining
-            </h3>
+            </h2>
             <span className="w-2 h-2 rounded-full bg-[var(--brass)] shadow-[0_0_8px_var(--brass)]" />
           </div>
           <p className="text-3xl sm:text-4xl font-mono font-bold text-[var(--text)] tracking-tight">{formatCurrency(stats.left)}</p>
@@ -108,7 +108,7 @@ export default function OwnerLens() {
       
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">Recent Activity Stream</h3>
+          <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">Recent Activity Stream</h2>
           {transactions.length > 5 && (
             <button 
               onClick={() => setShowAllActivity(!showAllActivity)}

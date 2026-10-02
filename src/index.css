@@ -225,3 +225,14 @@
   outline: 2px solid var(--brass) !important;
   outline-offset: 2px;
 }
+
+/* E-28: with "reduce motion" on (system setting), CSS animations and transitions finish at once;
+   motion/react animations follow the same setting (MotionConfig reducedMotion="user" in main.tsx). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

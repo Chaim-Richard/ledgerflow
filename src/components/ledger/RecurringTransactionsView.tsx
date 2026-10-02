@@ -133,15 +133,16 @@ export default function RecurringTransactionsView() {
       <div className="flex-1 overflow-auto p-6 pt-0">
         <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm">
           <table className="w-full text-left border-collapse">
+            <caption className="sr-only">Recurring Transactions</caption>
             <thead>
               <tr className="bg-[var(--bg)]/50 text-[10px] uppercase font-bold text-zinc-500 tracking-widest border-b border-[var(--line)]">
-                <th className="px-6 py-4">Template Description</th>
-                <th className="px-6 py-4">Frequency</th>
-                <th className="px-6 py-4">Last Run</th>
-                <th className="px-6 py-4">Next Occurrence</th>
-                <th className="px-6 py-4 text-right">Amount</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 w-20"><span className="sr-only">Actions</span></th>
+                <th scope="col" className="px-6 py-4">Template Description</th>
+                <th scope="col" className="px-6 py-4">Frequency</th>
+                <th scope="col" className="px-6 py-4">Last Run</th>
+                <th scope="col" className="px-6 py-4">Next Occurrence</th>
+                <th scope="col" className="px-6 py-4 text-right">Amount</th>
+                <th scope="col" className="px-6 py-4">Status</th>
+                <th scope="col" className="px-6 py-4 w-20"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)]">

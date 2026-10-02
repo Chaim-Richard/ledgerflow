@@ -60,13 +60,14 @@ export const AverageMonthlyReportView: React.FC<Props> = ({
       {/* Monthly Breakdown Table */}
       <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden shadow-xs">
         <table className="w-full text-left text-xs">
+          <caption className="sr-only">Monthly averages</caption>
           <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider">
             <tr>
-              <th className="py-3 px-4">Month</th>
-              <th className="py-3 px-4 text-right">Revenue</th>
-              <th className="py-3 px-4 text-right">Expense / Burn</th>
-              <th className="py-3 px-4 text-right">Net Cash Flow</th>
-              <th className="py-3 px-4 text-center">Status / Anomaly</th>
+              <th scope="col" className="py-3 px-4">Month</th>
+              <th scope="col" className="py-3 px-4 text-right">Revenue</th>
+              <th scope="col" className="py-3 px-4 text-right">Expense / Burn</th>
+              <th scope="col" className="py-3 px-4 text-right">Net Cash Flow</th>
+              <th scope="col" className="py-3 px-4 text-center">Status / Anomaly</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">

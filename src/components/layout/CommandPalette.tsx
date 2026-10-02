@@ -16,6 +16,7 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
 import { useTimeout } from '../../hooks/useTimeout';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { focusOnMount } from '../../lib/focusOnMount';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -374,7 +375,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
             <div className="flex items-center px-6 py-5 border-b border-gray-100">
               <Search aria-hidden="true" className="text-indigo-600 mr-4" size={24} />
               <input aria-label="Search commands or enter a transaction"
-                autoFocus
+                ref={focusOnMount}
                 className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400 text-xl font-medium"
                 placeholder='Type $40 gas cash, paid Maria 150, new project: Aspen, or search...'
                 value={query}

@@ -108,7 +108,7 @@ export default function InboxView() {
         <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6">
           <CheckCircle2 size={48} className="text-green-500" />
         </div>
-        <h2 className="text-2xl font-black text-[var(--text)] mb-2">Inbox Zero</h2>
+        <h1 className="text-2xl font-black text-[var(--text)] mb-2">Inbox Zero</h1>
         <p className="text-[var(--muted)] text-center max-w-sm">
           All transactions have been categorized and filed. Your books are perfectly up to date.
         </p>
@@ -120,10 +120,10 @@ export default function InboxView() {
     <div className="space-y-8 max-w-5xl mx-auto pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
+          <h1 className="text-3xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
             <Zap className="text-[var(--brass)]" size={32} />
             AI Inbox
-          </h2>
+          </h1>
           <p className="text-[var(--muted)] font-medium mt-1">Confidence-driven transaction categorization and inbox zero.</p>
         </div>
       </div>
@@ -138,7 +138,7 @@ export default function InboxView() {
                   <BrainCircuit className="text-green-600" size={20} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-[var(--text)] text-lg">High Confidence ({highConfidence.length})</h3>
+                  <h2 className="font-bold text-[var(--text)] text-lg">High Confidence ({highConfidence.length})</h2>
                   <p className="text-sm text-[var(--muted)]">Over 90% match certainty. Ready to auto-file.</p>
                 </div>
               </div>
@@ -180,7 +180,7 @@ export default function InboxView() {
                   <AlertCircle className="text-[#0047AB]" size={20} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-[var(--text)] text-lg">Needs Quick Review ({mediumConfidence.length})</h3>
+                  <h2 className="font-bold text-[var(--text)] text-lg">Needs Quick Review ({mediumConfidence.length})</h2>
                   <p className="text-sm text-[var(--muted)]">We're fairly sure about these. One tap to confirm the batch.</p>
                 </div>
               </div>
@@ -224,7 +224,7 @@ export default function InboxView() {
                   <HelpCircle className="text-orange-500" size={20} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-[var(--text)] text-lg">Your Input Needed ({lowConfidence.length})</h3>
+                  <h2 className="font-bold text-[var(--text)] text-lg">Your Input Needed ({lowConfidence.length})</h2>
                   <p className="text-sm text-[var(--muted)]">Unrecognized patterns. Answer a simple question to train the model.</p>
                 </div>
               </div>

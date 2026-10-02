@@ -95,7 +95,7 @@ export default function IntercompanyManager() {
             <Building2 aria-hidden="true" size={14} />
             Consolidated Financial Group
           </div>
-          <h2 className="text-4xl font-black text-[var(--text)] tracking-tighter">Intercompany Clearing</h2>
+          <h1 className="text-4xl font-black text-[var(--text)] tracking-tighter">Intercompany Clearing</h1>
           <p className="text-[var(--muted)] font-medium mt-2 italic opacity-60">Manage cross-entity transfers and reciprocal ledger balances.</p>
         </div>
 
@@ -112,9 +112,9 @@ export default function IntercompanyManager() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-8 bg-white rounded-[32px] border-2 border-[var(--line)] shadow-sm">
            <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1">Total Cross-Entity Volume</p>
-           <h3 className="text-3xl font-black text-[var(--text)]">
+           <h2 className="text-3xl font-black text-[var(--text)]">
              {formatCurrency(intercompanyTransactions.reduce((sum, t) => sum + (t.totalAmountCents || 0), 0))}
-           </h3>
+           </h2>
            <div className="flex items-center gap-1.5 mt-3 text-xs font-bold text-emerald-600">
              <CheckCircle2 aria-hidden="true" size={14} />
              All Entities Reconciled
@@ -123,13 +123,13 @@ export default function IntercompanyManager() {
 
         <div className="p-8 bg-[#0047AB] rounded-[32px] text-white shadow-xl">
            <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-1">Active Entities</p>
-           <h3 className="text-3xl font-black">{workspaces.length}</h3>
+           <h2 className="text-3xl font-black">{workspaces.length}</h2>
            <p className="text-xs text-blue-200 mt-2 font-medium">Monitoring reciprocal balances across group.</p>
         </div>
 
         <div className="p-8 bg-[var(--brass)] rounded-[32px] text-black shadow-lg">
            <p className="text-[10px] font-bold text-black/40 uppercase tracking-widest mb-1">Pending Eliminations</p>
-           <h3 className="text-3xl font-black">0</h3>
+           <h2 className="text-3xl font-black">0</h2>
            <div className="flex items-center gap-1.5 mt-3 text-xs font-bold opacity-60">
              <Clock aria-hidden="true" size={14} />
              Next consolidation in 12 days
@@ -140,7 +140,7 @@ export default function IntercompanyManager() {
       {/* Transaction Table */}
       <div className="bg-white rounded-[32px] border-2 border-[var(--line)] overflow-hidden shadow-sm">
         <div className="p-6 border-b border-[var(--line)] flex items-center justify-between bg-slate-50/50">
-          <h3 className="font-bold text-[var(--text)]">Reciprocal Audit Trail</h3>
+          <h2 className="font-bold text-[var(--text)]">Reciprocal Audit Trail</h2>
           <div className="relative">
             <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} />
             <input 
@@ -154,15 +154,16 @@ export default function IntercompanyManager() {
 
         <div className="overflow-x-auto">
           <table className="w-full">
+            <caption className="sr-only">Intercompany transfers</caption>
             <thead>
               <tr className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest border-b border-[var(--line)]">
-                <th className="px-6 py-4 text-left">Date</th>
-                <th className="px-6 py-4 text-left">Source Entity</th>
-                <th className="px-6 py-4 text-center">Direction</th>
-                <th className="px-6 py-4 text-left">Target Entity</th>
-                <th className="px-6 py-4 text-left">Description</th>
-                <th className="px-6 py-4 text-right">Amount</th>
-                <th className="px-6 py-4 text-center">Status</th>
+                <th scope="col" className="px-6 py-4 text-left">Date</th>
+                <th scope="col" className="px-6 py-4 text-left">Source Entity</th>
+                <th scope="col" className="px-6 py-4 text-center">Direction</th>
+                <th scope="col" className="px-6 py-4 text-left">Target Entity</th>
+                <th scope="col" className="px-6 py-4 text-left">Description</th>
+                <th scope="col" className="px-6 py-4 text-right">Amount</th>
+                <th scope="col" className="px-6 py-4 text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)]">
@@ -229,10 +230,10 @@ export default function IntercompanyManager() {
               className="relative w-full max-w-2xl bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
               <div className="p-10 border-b border-[var(--line)]">
-                <h3 className="text-3xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
+                <h2 className="text-3xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
                   <ArrowLeftRight aria-hidden="true" className="text-[#0047AB]" size={32} />
                   New Cross-Entity Transfer
-                </h3>
+                </h2>
                 <p className="text-[var(--muted)] font-medium mt-1">Initiate an atomic reciprocal posting between group entities.</p>
               </div>
 

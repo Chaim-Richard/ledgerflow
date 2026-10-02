@@ -78,7 +78,7 @@ export default function EmailSettings() {
         <div className="flex items-center gap-3">
           <Mail className="w-5 h-5 text-[var(--brass)]" aria-hidden="true" />
           <div>
-            <h3 id={`${formId}-email-templates`} className="text-lg font-bold text-[var(--text)]">Email templates</h3>
+            <h2 id={`${formId}-email-templates`} className="text-lg font-bold text-[var(--text)]">Email templates</h2>
             <p className="text-xs text-[var(--muted)]">The text of the emails your customers receive. A plain-text version is always sent with it.</p>
           </div>
         </div>
@@ -129,7 +129,7 @@ export default function EmailSettings() {
 
       <section className="ledger-card p-6 md:p-8 bg-[var(--surface)] border border-[var(--line)] rounded-2xl space-y-4" aria-labelledby={`${formId}-reminders`}>
         <div>
-          <h3 id={`${formId}-reminders`} className="text-lg font-bold text-[var(--text)]">Automatic payment reminders</h3>
+          <h2 id={`${formId}-reminders`} className="text-lg font-bold text-[var(--text)]">Automatic payment reminders</h2>
           <p className="text-xs text-[var(--muted)]">Customers with an overdue invoice get the "Payment reminder" email on these days after the due date (checked every morning).</p>
         </div>
         <label htmlFor={`${formId}-enabled`} className="flex items-center gap-2 text-sm text-[var(--text)]">

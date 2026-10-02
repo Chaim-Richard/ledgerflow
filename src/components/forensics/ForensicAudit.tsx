@@ -134,7 +134,7 @@ const ForensicAudit = React.memo(() => {
             <ShieldAlert size={12} />
             Forensic Integrity Suite
           </div>
-          <h2 className="text-2xl md:text-4xl font-black text-[var(--text)] tracking-tight">Audit Intelligence</h2>
+          <h1 className="text-2xl md:text-4xl font-black text-[var(--text)] tracking-tight">Audit Intelligence</h1>
           <p className="text-[var(--muted)] font-medium text-sm">Automated fraud detection and anomaly projection across the general ledger.</p>
         </div>
       </div>
@@ -146,7 +146,7 @@ const ForensicAudit = React.memo(() => {
               <div className="lg:w-1/3 space-y-6">
                  <div className="flex items-center gap-3 text-indigo-400">
                     <Fingerprint size={28} />
-                    <h3 className="text-xl font-medium uppercase tracking-wider text-white">Benford Patterns</h3>
+                    <h2 className="text-xl font-medium uppercase tracking-wider text-white">Benford Patterns</h2>
                  </div>
                  <p className="text-sm text-zinc-400 leading-relaxed">
                     Analyzing the distribution of first digits. In a natural dataset, the digit '1' should appear roughly 30% of the time, while '9' appears less than 5%. Deviations here indicate potential artificial entry or systematic errors.
@@ -191,10 +191,10 @@ const ForensicAudit = React.memo(() => {
         <div className="xl:col-span-8 google-card p-4 md:p-10 space-y-10 border-[var(--line)]">
            <div className="flex items-center justify-between">
               <div>
-                 <h3 className="text-xl font-black text-[var(--text)] uppercase tracking-widest flex items-center gap-3">
+                 <h2 className="text-xl font-black text-[var(--text)] uppercase tracking-widest flex items-center gap-3">
                     <Brain className="text-indigo-600" size={24} />
                     Statistical Outliers
-                 </h3>
+                 </h2>
                  <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mt-1">Z-Score Deviation Map (&gt;2.5σ)</p>
               </div>
               <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-500 rounded-lg text-[9px] font-medium uppercase tracking-wider border border-amber-500/20">
@@ -236,10 +236,10 @@ const ForensicAudit = React.memo(() => {
         {/* Audit Shortcuts */}
         <div className="xl:col-span-4 space-y-8">
            <div className="google-card p-4 md:p-8 border-[var(--line)] bg-slate-900/5">
-              <h4 className="text-xs font-medium uppercase tracking-wider text-[var(--text)] mb-6 flex items-center gap-2">
+              <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--text)] mb-6 flex items-center gap-2">
                  <AlertCircle size={16} />
                  Compliance Radar
-              </h4>
+              </h3>
               <div className="space-y-4">
                  {complianceStats.map(item => (
                     <div key={item.label} className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-sm">
@@ -254,9 +254,9 @@ const ForensicAudit = React.memo(() => {
            </div>
 
            <div className="google-card p-4 md:p-8 border-[var(--line)] bg-slate-900 text-white">
-              <h4 className="text-xs font-medium uppercase tracking-wider text-indigo-400 mb-6">
+              <h3 className="text-xs font-medium uppercase tracking-wider text-indigo-400 mb-6">
                  Audit Protocol
-              </h4>
+              </h3>
               <p className="text-[11px] text-zinc-400 leading-relaxed">
                  All transactions are passed through a series of deterministic and heuristic filters. The integrity suite continuously monitors for data drift and classification mismatches to ensure audit-ready ledger states.
               </p>

@@ -159,7 +159,7 @@ export function TaxReserveWidget() {
             <span className="p-1 rounded bg-[var(--brass-soft)] border border-[var(--brass-line)] text-[var(--brass)]">
               <Landmark aria-hidden="true" size={14} />
             </span>
-            <h3 className="font-bold text-sm text-[var(--text)] font-sans">Safe-to-Spend & Liquidity Autopilot</h3>
+            <h2 className="font-bold text-sm text-[var(--text)] font-sans">Safe-to-Spend & Liquidity Autopilot</h2>
           </div>
           <p className="text-[11px] text-[var(--faint)] font-mono mt-0.5">
             Running dynamic scenario check on virtual ledger envelopes
@@ -264,7 +264,7 @@ export function TaxReserveWidget() {
             
             {/* Left Hand: Controls & Formula Rollups (7/12 cols) */}
             <div className="lg:col-span-7 space-y-4">
-              <h4 className="font-semibold text-xs text-[var(--muted)] uppercase tracking-wider font-mono">Live Safe-to-Spend Breakdown</h4>
+              <h3 className="font-semibold text-xs text-[var(--muted)] uppercase tracking-wider font-mono">Live Safe-to-Spend Breakdown</h3>
               
               <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl divide-y divide-[var(--line)] font-mono text-xs shadow-inner">
                 {/* 1. Liquid Cash */}
@@ -436,7 +436,7 @@ export function TaxReserveWidget() {
 
             {/* Right Hand: Safety Contract Dashboard & Optimization (5/12 cols) */}
             <div className="lg:col-span-5 space-y-5">
-              <h4 className="font-semibold text-xs text-[var(--muted)] uppercase tracking-wider font-mono">Probability Safety Contract</h4>
+              <h3 className="font-semibold text-xs text-[var(--muted)] uppercase tracking-wider font-mono">Probability Safety Contract</h3>
               
               {/* Overdraft Risk Meter */}
               <div className="bg-[var(--panel)] border border-[var(--line)] rounded-xl p-4 space-y-3 shadow-xs relative overflow-hidden">
@@ -470,9 +470,9 @@ export function TaxReserveWidget() {
 
               {/* Recommended Autopilot Decisions */}
               <div className="bg-[var(--panel)] border border-[var(--line)] rounded-xl p-4 space-y-3.5 shadow-xs">
-                <h5 className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--brass)] flex items-center gap-1.5">
+                <h4 className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--brass)] flex items-center gap-1.5">
                   <Sparkles aria-hidden="true" size={12} /> Optimization Interventions
-                </h5>
+                </h4>
 
                 <div className="space-y-2.5">
                   {/* Decision 1 */}

@@ -231,10 +231,10 @@ export default function TeamSettings() {
       {/* Header & Seat Gauge */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px]">
         <div className="space-y-1">
-          <h3 className="text-xl font-black text-[var(--text)] tracking-tight flex items-center gap-2">
+          <h2 className="text-xl font-black text-[var(--text)] tracking-tight flex items-center gap-2">
             <Users aria-hidden="true" size={22} className="text-indigo-600" />
             Workspace Team & Role Management
-          </h3>
+          </h2>
           <p className="text-xs text-[var(--muted)] max-w-xl">
             Control member roles and permissions for <span className="font-bold text-[var(--text)]">{currentWorkspace?.name || 'this workspace'}</span>. Role gates enforce access across reports, transactions, period locks, and administration.
           </p>
@@ -497,9 +497,9 @@ export default function TeamSettings() {
             <div className="p-4 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/40">
               <div className="flex items-center gap-2">
                 <Activity aria-hidden="true" size={18} className="text-indigo-500" />
-                <h4 className="text-sm font-bold text-[var(--text)] uppercase tracking-wider">
+                <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-wider">
                   Member Activity History — {selectedMemberForLogs.email || selectedMemberForLogs.uid}
-                </h4>
+                </h3>
               </div>
               <button aria-label="Close member activity"
                 onClick={() => setSelectedMemberForLogs(null)}

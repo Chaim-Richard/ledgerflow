@@ -310,7 +310,7 @@ export default function Inventory() {
                     <Zap aria-hidden="true" size={32} />
                  </div>
                  <div>
-                    <h3 className="text-3xl font-black uppercase tracking-tighter">Rule Inventory Core</h3>
+                    <h2 className="text-3xl font-black uppercase tracking-tighter">Rule Inventory Core</h2>
                     <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest truncate italic font-mono">Real-time Data Chain Synthesis Enabled</p>
                  </div>
               </div>
@@ -376,14 +376,15 @@ export default function Inventory() {
 
       <div className="bg-[var(--surface)] rounded-[40px] border border-[var(--line)] overflow-hidden shadow-sm">
         <table className="w-full text-left border-collapse">
+          <caption className="sr-only">Inventory items</caption>
           <thead>
             <tr className="bg-[var(--ink)] border-b border-[var(--line)]">
-              <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Item / SKU</th>
-              <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</th>
-              <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Stock Level</th>
-              <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">{showRuleIntel ? "Rule True Cost" : "Unit Cost"}</th>
-              <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">{showRuleIntel ? "Net Margin %" : "Unit Price"}</th>
-              <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+              <th scope="col" className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Item / SKU</th>
+              <th scope="col" className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</th>
+              <th scope="col" className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Stock Level</th>
+              <th scope="col" className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">{showRuleIntel ? "Rule True Cost" : "Unit Cost"}</th>
+              <th scope="col" className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">{showRuleIntel ? "Net Margin %" : "Unit Price"}</th>
+              <th scope="col" className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
@@ -591,9 +592,9 @@ export default function Inventory() {
               className="relative w-full max-w-2xl bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden"
             >
               <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between">
-                <h3 id={itemTitleId} className="text-xl font-black text-[var(--text)] tracking-tighter">
+                <h2 id={itemTitleId} className="text-xl font-black text-[var(--text)] tracking-tighter">
                   {editingItem ? 'Edit Inventory Item' : 'New Inventory Item'}
-                </h3>
+                </h2>
                 <button aria-label="Close item dialog"
                   onClick={() => {
                     setIsAdding(false);
@@ -734,9 +735,9 @@ export default function Inventory() {
             >
               <div className="p-6 border-b border-[var(--line)] flex items-center justify-between">
                 <div>
-                  <h3 id={cogsTitleId} className="text-lg font-black text-[var(--text)] tracking-tight">
+                  <h2 id={cogsTitleId} className="text-lg font-black text-[var(--text)] tracking-tight">
                     Recognize COGS / Record Sale
-                  </h3>
+                  </h2>
                   <p className="text-xs text-[var(--muted)] font-mono mt-0.5">{cogsItem.name} ({cogsItem.sku})</p>
                 </div>
                 <button aria-label="Close cost of goods sold dialog"

@@ -61,11 +61,12 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
 
             <div className="flex-1 overflow-auto p-4 md:p-8 custom-scrollbar">
               <table className="w-full text-left border-separate border-spacing-y-2">
+                <caption className="sr-only">Entries behind this amount</caption>
                 <thead>
                   <tr className="micro-label text-[var(--muted)]">
-                    <th className="pb-4 pl-4 font-black">Date</th>
-                    <th className="pb-4 font-black">Description</th>
-                    <th className="pb-4 text-right pr-4 font-black">Impact</th>
+                    <th scope="col" className="pb-4 pl-4 font-black">Date</th>
+                    <th scope="col" className="pb-4 font-black">Description</th>
+                    <th scope="col" className="pb-4 text-right pr-4 font-black">Impact</th>
                   </tr>
                 </thead>
                 <tbody>

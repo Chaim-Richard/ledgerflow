@@ -88,7 +88,7 @@ export default function AuditLogViewer() {
 
     return (
       <div className="space-y-2 mt-4">
-        <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--muted)] mb-2">Field Diffs</h4>
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--muted)] mb-2">Field Diffs</h3>
         <div className="grid grid-cols-1 gap-2">
           {changedKeys.map(key => (
             <div key={key} className="flex flex-col p-2 bg-slate-50 rounded-lg border border-slate-100">
@@ -115,7 +115,7 @@ export default function AuditLogViewer() {
       <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] p-6 shadow-3xs">
         <div className="flex items-center gap-3 mb-6">
           <Filter aria-hidden="true" size={18} className="text-[var(--muted)]" />
-          <h3 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Forensic Audit Filter</h3>
+          <h2 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Forensic Audit Filter</h2>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -193,7 +193,7 @@ export default function AuditLogViewer() {
         <div className="p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]">
           <div className="flex items-center gap-3">
             <History aria-hidden="true" size={16} className="text-[var(--muted)]" />
-            <h3 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Institutional Audit Trail</h3>
+            <h2 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Institutional Audit Trail</h2>
           </div>
           <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest">Showing {logs.length} most recent operations</span>
         </div>
@@ -265,7 +265,7 @@ export default function AuditLogViewer() {
                       <div className="px-6 pb-6 pt-2 border-t border-slate-100">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-4">
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--muted)]">Operation Metadata</h4>
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--muted)]">Operation Metadata</h3>
                             <div className="space-y-2">
                               <div className="flex justify-between py-1.5 border-b border-dashed border-slate-100">
                                 <span className="text-[9px] font-bold text-[var(--muted)] uppercase">Audit ID</span>

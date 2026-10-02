@@ -75,10 +75,10 @@ export default function TimeMachine() {
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
+          <h1 className="text-3xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
             <GitMerge aria-hidden="true" className="text-[var(--brass)]" size={32} />
             Time Machine
-          </h2>
+          </h1>
           <p className="text-[var(--muted)] font-medium mt-1">Git for your books. Fearless scenario testing and immutable history.</p>
         </div>
         <button 
@@ -130,15 +130,15 @@ export default function TimeMachine() {
                   <div className="absolute top-0 right-0 bg-slate-200 text-slate-600 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-bl-xl">Main Reality</div>
                 )}
                 
-                <h3 className="font-black text-[var(--text)] text-lg flex items-center gap-2 mb-2">
+                <h2 className="font-black text-[var(--text)] text-lg flex items-center gap-2 mb-2">
                   <GitBranch aria-hidden="true" size={20} className={isActive ? "text-[#0047AB]" : "text-[var(--muted)]"} />
                   {scenario.name}
-                </h3>
+                </h2>
                 <p className="text-sm text-[var(--muted)] mb-6 h-10">{scenario.description}</p>
                 
                 {!isMain && (
                   <div className="mb-6 space-y-2">
-                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex justify-between items-center">
+                    <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex justify-between items-center">
                       Scenario Projection Entries
                       <button 
                         onClick={() => setShowNewGhostModal(scenario.id)}
@@ -146,7 +146,7 @@ export default function TimeMachine() {
                       >
                         <Plus aria-hidden="true" size={12} /> Add
                       </button>
-                    </h4>
+                    </h3>
                     {scenario.ghosts.length === 0 ? (
                       <p className="text-xs text-[var(--muted)] italic">No simulated entries yet.</p>
                     ) : (
@@ -240,7 +240,7 @@ export default function TimeMachine() {
               <CheckCircle2 aria-hidden="true" className="text-[#0047AB]" size={24} />
             </div>
             <div>
-              <h4 className="font-bold text-[var(--text)] text-lg">Provable History</h4>
+              <h3 className="font-bold text-[var(--text)] text-lg">Provable History</h3>
               <p className="text-sm text-slate-600 mt-1 max-w-2xl">Every posting batch is a cryptographically chained commit. You can checkout any point in time to view the ledger exactly as it was. Your auditor's dream.</p>
             </div>
           </div>
@@ -304,7 +304,7 @@ export default function TimeMachine() {
           <div className="w-20 h-20 bg-[var(--ink)] rounded-full flex items-center justify-center mx-auto mb-6">
             <GitPullRequest aria-hidden="true" className="text-[var(--muted)]" size={40} />
           </div>
-          <h3 className="text-2xl font-black text-[var(--text)] mb-3">Period Differences (Diff)</h3>
+          <h2 className="text-2xl font-black text-[var(--text)] mb-3">Period Differences (Diff)</h2>
           <p className="text-[var(--muted)] max-w-lg mx-auto text-lg">Compare changes between any two points in time. See exactly what changed in Q1 since you filed your taxes — in one click.</p>
           <div className="flex items-center justify-center gap-4 mt-8">
             <select aria-label="First comparison period"
@@ -362,7 +362,7 @@ export default function TimeMachine() {
                   <GitBranch aria-hidden="true" className="text-[#0047AB]" size={24} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-[var(--text)]">New Scenario</h3>
+                  <h2 className="text-xl font-black text-[var(--text)]">New Scenario</h2>
                   <p className="text-sm text-[var(--muted)]">Fork your real books to try something safely.</p>
                 </div>
               </div>

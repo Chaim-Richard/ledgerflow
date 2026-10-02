@@ -505,7 +505,7 @@ export default function Reconciliation() {
                 {filteredBankFeed.length === 0 && (
                   <div className="h-full py-20 flex flex-col items-center justify-center p-10 text-center opacity-70">
                      <ShieldCheck aria-hidden="true" size={40} className="text-[var(--pos)] mb-3" />
-                     <h3 className="font-bold text-sm text-[var(--text)] uppercase tracking-tight">Zero Pending Streams</h3>
+                     <h2 className="font-bold text-sm text-[var(--text)] uppercase tracking-tight">Zero Pending Streams</h2>
                      <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-1">Bank Statement Feed is pre-synchronized</p>
                   </div>
                 )}
@@ -561,7 +561,7 @@ export default function Reconciliation() {
                 {filteredLedgerEntries.length === 0 && (
                   <div className="h-full py-20 flex flex-col items-center justify-center p-10 text-center opacity-70">
                      <ShieldCheck aria-hidden="true" size={40} className="text-indigo-500 mb-3" />
-                     <h3 className="font-extrabold text-sm text-[var(--text)] uppercase tracking-tight">Registry Unoccupied</h3>
+                     <h2 className="font-extrabold text-sm text-[var(--text)] uppercase tracking-tight">Registry Unoccupied</h2>
                      <p className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-widest mt-1">No unverified entries on the active chart</p>
                   </div>
                 )}
@@ -587,7 +587,7 @@ export default function Reconciliation() {
                {filteredBankFeed.length === 0 ? (
                  <div className="py-24 text-center text-[var(--muted)] flex flex-col items-center justify-center space-y-3">
                    <History aria-hidden="true" size={36} className="text-slate-300" />
-                   <h4 className="font-extrabold text-[11px] uppercase tracking-widest">No cleared alignment history found</h4>
+                   <h3 className="font-extrabold text-[11px] uppercase tracking-widest">No cleared alignment history found</h3>
                    <p className="text-[10px] font-medium uppercase tracking-tight text-[var(--muted)] max-w-xs leading-normal">
                      Use the Pending Streams tab to forge balances and trace links
                    </p>
@@ -610,7 +610,7 @@ export default function Reconciliation() {
                                  <span className="text-[8px] font-black uppercase text-[var(--muted)] font-mono tracking-wider">{line.date}</span>
                                  <span className="px-2 py-0.2 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[7px] font-black uppercase tracking-wider">Locked Status</span>
                                </div>
-                               <h5 className="font-extrabold text-sm text-[var(--text)] truncate">{line.description}</h5>
+                               <h4 className="font-extrabold text-sm text-[var(--text)] truncate">{line.description}</h4>
                                <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 tabular-nums">Statement Amount: {formatCurrency(line.amountCents)}</p>
                              </button>
 
@@ -623,7 +623,7 @@ export default function Reconciliation() {
                              {/* Internal Ledger Match Info */}
                              <div className="flex-1 min-w-0">
                                <span className="text-[8px] font-black uppercase text-indigo-400 font-mono tracking-wider">Linked Registry Record</span>
-                               <h5 className="font-bold text-sm text-slate-700 truncate">{linkedTx?.description || 'Legacy Synapsed Node'}</h5>
+                               <h4 className="font-bold text-sm text-slate-700 truncate">{linkedTx?.description || 'Legacy Synapsed Node'}</h4>
                                <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 mt-0.5 tabular-nums">Registry value: {linkedTx ? formatCurrency(linkedTx.totalAmountCents) : 'N/A'}</p>
                              </div>
 
@@ -854,9 +854,9 @@ export default function Reconciliation() {
                     <div className="flex items-center gap-3">
                        <Zap aria-hidden="true" size={24} className="text-amber-500 fill-amber-500" />
                        <div>
-                         <h3 className="text-xl font-black uppercase tracking-tight text-[var(--text)]">
+                         <h2 className="text-xl font-black uppercase tracking-tight text-[var(--text)]">
                             Cognitive Alignments Panel
-                         </h3>
+                         </h2>
                          <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-widest mt-0.5">Select synapses to reconcile at once. Toggle individual checkboxes or apply bulk verification instantly.</p>
                        </div>
                     </div>

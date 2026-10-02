@@ -207,7 +207,7 @@ export default function TaxManager({
             <Receipt size={24} className="text-slate-600" />
             Fiscal Compliance Protocol
           </div>
-          <h2 className="text-3xl font-black text-[var(--text)] tracking-tight uppercase font-display">Tax Reserve Estimator</h2>
+          <h1 className="text-3xl font-black text-[var(--text)] tracking-tight uppercase font-display">Tax Reserve Estimator</h1>
           <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-wider mt-1">Rough tax reserve estimate — not tax advice. Confirm with your accountant.</p>
         </div>
 
@@ -306,7 +306,7 @@ export default function TaxManager({
         {/* Rate Matrix */}
         <div className="lg:col-span-4 space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-black text-[var(--text)] tracking-tight uppercase font-display">Rate Protocols</h3>
+            <h2 className="text-lg font-black text-[var(--text)] tracking-tight uppercase font-display">Rate Protocols</h2>
             <button 
               onClick={() => {
                 setEditingRate(null);
@@ -349,7 +349,7 @@ export default function TaxManager({
         {/* Forensic Breakdown */}
         <div className="lg:col-span-8 space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-black text-[var(--text)] tracking-tight uppercase font-display">Liability Mapping</h3>
+            <h2 className="text-lg font-black text-[var(--text)] tracking-tight uppercase font-display">Liability Mapping</h2>
             <div className="flex items-center gap-2 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">
                <Layers size={14} />
                Cross-Analysis active
@@ -360,12 +360,13 @@ export default function TaxManager({
             <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
             <div className="overflow-x-auto">
               <table className="w-full text-left relative z-10 min-w-[700px]">
+                <caption className="sr-only">Tax liability accounts</caption>
               <thead>
                 <tr className="bg-[var(--ink)] border-b border-[var(--line)]">
-                  <th className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Protocol Domain</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest text-right">Basis</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest text-center">Metric</th>
-                  <th className="px-6 py-5 text-[10px] font-black text-slate-700 uppercase tracking-widest text-right bg-slate-100/50">Apportionment</th>
+                  <th scope="col" className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Protocol Domain</th>
+                  <th scope="col" className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest text-right">Basis</th>
+                  <th scope="col" className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest text-center">Metric</th>
+                  <th scope="col" className="px-6 py-5 text-[10px] font-black text-slate-700 uppercase tracking-widest text-right bg-slate-100/50">Apportionment</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

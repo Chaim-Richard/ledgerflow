@@ -650,10 +650,10 @@ export default function ApiHub() {
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="ledger-card p-6 md:col-span-2 space-y-6">
-            <h3 className="font-bold flex items-center gap-2 text-lg">
+            <h2 className="font-bold flex items-center gap-2 text-lg">
               <Activity aria-hidden="true" className="text-indigo-600" size={20} />
               Platform Architecture
-            </h3>
+            </h2>
             <p className="text-sm text-[var(--muted)] leading-relaxed">
               LedgerFlow's Integrity API is built on a high-throughput Express Node architecture, 
               connecting natively to the unified workspace data layer. 
@@ -679,10 +679,10 @@ export default function ApiHub() {
             </div>
           </div>
           <div className="ledger-card p-6">
-             <h3 className="font-bold flex items-center gap-2 mb-4">
+             <h2 className="font-bold flex items-center gap-2 mb-4">
                <CpuIcon aria-hidden="true" className="text-emerald-500" size={18} />
                Brain Integration
-             </h3>
+             </h2>
              <p className="text-xs text-[var(--muted)] mb-4">
                The API exposes a direct line to the LedgerFlow AI (`/brain/analyze`), allowing your external services to query the intelligent agent based on live ledger data.
              </p>
@@ -768,13 +768,14 @@ export default function ApiHub() {
                ) : (
                   <div className="border border-slate-150 rounded-[32px] shadow-3xs overflow-hidden">
                      <table className="w-full text-left text-sm">
+                       <caption className="sr-only">API keys</caption>
                         <thead className="bg-[var(--ink)]/80 border-b border-slate-150 text-[10px] uppercase tracking-wider text-[var(--muted)] font-black">
                            <tr>
-                              <th className="p-4 py-3.5">Details</th>
-                              <th className="p-4 py-3.5">Granted Scopes</th>
-                              <th className="p-4 py-3.5">Usage Telemetry</th>
-                              <th className="p-4 py-3.5">Expiration</th>
-                              <th className="p-4 py-3.5 text-right">Actions</th>
+                              <th scope="col" className="p-4 py-3.5">Details</th>
+                              <th scope="col" className="p-4 py-3.5">Granted Scopes</th>
+                              <th scope="col" className="p-4 py-3.5">Usage Telemetry</th>
+                              <th scope="col" className="p-4 py-3.5">Expiration</th>
+                              <th scope="col" className="p-4 py-3.5 text-right">Actions</th>
                            </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-[var(--surface)]">
@@ -2609,14 +2610,15 @@ fetch(url, {
             <div className="border border-slate-150 rounded-[32px] shadow-3xs overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
+                  <caption className="sr-only">API request log</caption>
                   <thead className="bg-[#FAFBFB] border-b border-slate-150 text-[10px] text-[var(--muted)] uppercase tracking-wider font-extrabold">
                     <tr>
-                      <th className="p-4">Timestamp</th>
-                      <th className="p-4">Request Specs</th>
-                      <th className="p-4">Key Credit Cost</th>
-                      <th className="p-4">API Origin Credentials</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4 text-right">Details</th>
+                      <th scope="col" className="p-4">Timestamp</th>
+                      <th scope="col" className="p-4">Request Specs</th>
+                      <th scope="col" className="p-4">Key Credit Cost</th>
+                      <th scope="col" className="p-4">API Origin Credentials</th>
+                      <th scope="col" className="p-4">Status</th>
+                      <th scope="col" className="p-4 text-right">Details</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-[var(--surface)]">

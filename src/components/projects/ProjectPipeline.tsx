@@ -138,7 +138,7 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
                   <stage.icon size={18} className="opacity-90" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-[var(--text)] tracking-tight">{stage.label}</h3>
+                  <h2 className="font-bold text-[var(--text)] tracking-tight">{stage.label}</h2>
                   <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)] mt-0.5">{stageProjects.length} Projects</p>
                 </div>
               </div>
@@ -176,7 +176,7 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1">{project.type}</p>
-                        <h4 className="font-black text-[var(--text)] leading-tight">{project.name}</h4>
+                        <h3 className="font-black text-[var(--text)] leading-tight">{project.name}</h3>
                       </div>
                       <GripVertical size={14} className="text-slate-300 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
                     </div>

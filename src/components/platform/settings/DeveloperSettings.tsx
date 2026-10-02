@@ -52,7 +52,7 @@ export default function DeveloperSettings() {
     <div className="space-y-10">
       <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-xl flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h3 id="dev-mode-title" className="text-base font-black text-[var(--text)] uppercase tracking-tight">Developer switch</h3>
+          <h2 id="dev-mode-title" className="text-base font-black text-[var(--text)] uppercase tracking-tight">Developer switch</h2>
           <p id="dev-mode-help" className="text-xs text-[var(--muted)] max-w-xl">Shows demo screens that run on made-up data (the Admin Panel&apos;s simulated logs and load figures). Off for normal use. Only on this device.</p>
         </div>
         <button type="button" role="switch" aria-checked={developerMode} aria-labelledby="dev-mode-title" aria-describedby="dev-mode-help"
@@ -67,14 +67,14 @@ export default function DeveloperSettings() {
             <Globe size={24} />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-[var(--text)] uppercase tracking-wider">Enterprise API & Webhooks</h3>
+            <h2 className="text-2xl font-black text-[var(--text)] uppercase tracking-wider">Enterprise API & Webhooks</h2>
             <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mt-1">Autonomous Event Propagation</p>
           </div>
         </div>
 
         <div className="space-y-12">
           <div className="space-y-6">
-            <h4 className="text-xs font-black uppercase text-[var(--text)] tracking-widest border-l-4 border-[var(--brass)] pl-4">Active Webhooks</h4>
+            <h3 className="text-xs font-black uppercase text-[var(--text)] tracking-widest border-l-4 border-[var(--brass)] pl-4">Active Webhooks</h3>
             <div className="p-4 md:p-8 bg-[var(--ink)]/50 rounded-2xl border border-[var(--line)] flex flex-col items-center justify-center text-center gap-4 py-16">
               <Webhook size={40} className="text-[var(--muted)]" />
               <div className="space-y-1">
@@ -90,7 +90,7 @@ export default function DeveloperSettings() {
           </div>
 
           <div className="space-y-6">
-            <h4 className="text-xs font-black uppercase text-[var(--text)] tracking-widest border-l-4 border-[var(--brass)] pl-4">Visual Content & Lexicon Engine</h4>
+            <h3 className="text-xs font-black uppercase text-[var(--text)] tracking-widest border-l-4 border-[var(--brass)] pl-4">Visual Content & Lexicon Engine</h3>
             <div className="p-4 md:p-8 bg-[var(--ink)]/50 rounded-2xl border border-[var(--line)] space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
@@ -150,7 +150,7 @@ ${JSON.stringify(lexiconOverrides, null, 2)}`}
           </div>
 
           <div className="space-y-6">
-            <h4 className="text-xs font-black uppercase text-[var(--text)] tracking-widest border-l-4 border-[var(--brass)] pl-4">Institutional Export Protocols</h4>
+            <h3 className="text-xs font-black uppercase text-[var(--text)] tracking-widest border-l-4 border-[var(--brass)] pl-4">Institutional Export Protocols</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <button 
                 onClick={() => exportData('json')}

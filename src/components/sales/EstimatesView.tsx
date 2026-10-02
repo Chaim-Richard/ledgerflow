@@ -250,14 +250,15 @@ export default function EstimatesView() {
           </div>
         ) : (
           <table className="w-full text-left text-xs">
+            <caption className="sr-only">Estimates</caption>
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-[var(--muted)] font-semibold uppercase text-[10px]">
-                <th className="py-3 px-4">Estimate #</th>
-                <th className="py-3 px-4">Customer</th>
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Amount</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th scope="col" className="py-3 px-4">Estimate #</th>
+                <th scope="col" className="py-3 px-4">Customer</th>
+                <th scope="col" className="py-3 px-4">Date</th>
+                <th scope="col" className="py-3 px-4">Status</th>
+                <th scope="col" className="py-3 px-4 text-right">Amount</th>
+                <th scope="col" className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">

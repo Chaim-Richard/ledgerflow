@@ -100,7 +100,7 @@ export default function AskLoop() {
             <div className="w-14 h-14 bg-emerald-100/80 rounded-2xl flex items-center justify-center mb-4">
               <CheckCircle2 aria-hidden="true" className="h-8 w-8 text-emerald-600" />
             </div>
-            <h3 className="font-bold text-[var(--text)] text-lg mb-1">Inbox Zero — All Caught Up!</h3>
+            <h2 className="font-bold text-[var(--text)] text-lg mb-1">Inbox Zero — All Caught Up!</h2>
             <p className="text-[var(--muted)] text-sm max-w-md">
               All transactions in your General Ledger are fully categorized and verified. No pending questions.
             </p>
@@ -118,7 +118,7 @@ export default function AskLoop() {
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h3 className="font-bold text-lg text-[var(--text)]">{tx.description || 'Unlabeled Transaction'}</h3>
+                      <h2 className="font-bold text-lg text-[var(--text)]">{tx.description || 'Unlabeled Transaction'}</h2>
                       <p className="text-xs font-semibold text-[var(--muted)] mt-0.5">
                         {tx.date} • <span className="font-mono text-[var(--text)] font-bold">{formattedAmt}</span>
                       </p>

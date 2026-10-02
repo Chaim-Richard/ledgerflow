@@ -291,7 +291,7 @@ export default function Dashboard() {
                 <span className="font-mono text-[10px] uppercase tracking-wider bg-[var(--brass)] text-[var(--ink)] px-2 py-0.5 rounded-md font-bold">
                   Setup Progress ({setupStepCount}/3)
                 </span>
-                <h3 className="text-sm font-semibold text-[var(--text)]">Workspace Setup Checklist</h3>
+                <h2 className="text-sm font-semibold text-[var(--text)]">Workspace Setup Checklist</h2>
               </div>
               <p className="text-xs text-[var(--muted)]">
                 Ensure your chart of accounts and transactions are configured for complete algorithmic accuracy.
@@ -483,7 +483,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2 bg-[var(--panel)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm">
           <div className="flex items-center justify-between p-4 border-b border-[var(--line)] bg-[var(--surface)]">
             <div>
-              <h3 className="font-bold text-sm text-[var(--text)]">Recent Transactions</h3>
+              <h2 className="font-bold text-sm text-[var(--text)]">Recent Transactions</h2>
               <div className="font-mono text-[11px] text-[var(--faint)]">
                 {transactions.length} record{transactions.length === 1 ? '' : 's'} in general ledger
               </div>
@@ -572,7 +572,7 @@ export default function Dashboard() {
         <div className="bg-[var(--panel)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm flex flex-col">
           <div className="flex items-center justify-between p-4 border-b border-[var(--line)] bg-[var(--surface)]">
             <div>
-              <h3 className="font-bold text-sm text-[var(--text)] font-sans">Account ledgerflows</h3>
+              <h2 className="font-bold text-sm text-[var(--text)] font-sans">Account ledgerflows</h2>
               <div className="font-mono text-[11px] text-[var(--faint)]">roll-up by type</div>
             </div>
             <button 

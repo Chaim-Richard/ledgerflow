@@ -449,7 +449,7 @@ export default function SystemCommandCenter() {
             <Server aria-hidden="true" size={12} />
             Institutional Telemetry & Control Tower
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Admin Panel</h2>
+          <h1 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Admin Panel</h1>
           <p className="text-[var(--muted)] font-medium text-lg mt-2 italic opacity-60">Consolidated platform health, multi-tenant matrices, live billing pipelines, and granular override dials.</p>
         </div>
 
@@ -473,7 +473,7 @@ export default function SystemCommandCenter() {
         <div className="h-96 flex flex-col items-center justify-center gap-4 border border-dashed border-[var(--line)] rounded-[32px]">
           <AlertOctagon aria-hidden="true" size={40} className="text-rose-500 opacity-60" />
           <div className="text-center">
-            <h3 className="text-sm font-black text-[var(--text)] uppercase tracking-wider">Interface Refused</h3>
+            <h2 className="text-sm font-black text-[var(--text)] uppercase tracking-wider">Interface Refused</h2>
             <p className="text-xs text-[var(--muted)] mt-1">Unable to construct reliable stream channel to backend metrics.</p>
           </div>
         </div>
@@ -530,7 +530,7 @@ export default function SystemCommandCenter() {
                 <div className="p-4 md:p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]">
                   <div className="flex items-center gap-3">
                     <BookA aria-hidden="true" size={16} className="text-[#0047AB]" />
-                    <h3 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Global Lexicon Override</h3>
+                    <h2 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Global Lexicon Override</h2>
                   </div>
                 </div>
                 <div className="p-6 md:p-8 space-y-6">
@@ -566,18 +566,19 @@ export default function SystemCommandCenter() {
                   <div className="p-4 md:p-6 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]">
                     <div className="flex items-center gap-3">
                       <Users aria-hidden="true" size={16} className="text-[var(--muted)]" />
-                      <h3 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Platform User Ledger</h3>
+                      <h2 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Platform User Ledger</h2>
                     </div>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
+                      <caption className="sr-only">Platform users</caption>
                       <thead>
                         <tr className="border-b border-[var(--line)] bg-[var(--surface)] text-[9px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                          <th className="py-4 px-6 font-medium">User Details</th>
-                          <th className="py-4 px-6 font-medium">Role</th>
-                          <th className="py-4 px-6 font-medium text-right">Custom Limit ($)</th>
-                          <th className="py-4 px-6 font-medium text-right">Compute Limit (Cr)</th>
-                          <th className="py-4 px-6 text-center font-medium">Actions</th>
+                          <th scope="col" className="py-4 px-6 font-medium">User Details</th>
+                          <th scope="col" className="py-4 px-6 font-medium">Role</th>
+                          <th scope="col" className="py-4 px-6 font-medium text-right">Custom Limit ($)</th>
+                          <th scope="col" className="py-4 px-6 font-medium text-right">Compute Limit (Cr)</th>
+                          <th scope="col" className="py-4 px-6 text-center font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-ledger-line/50">
@@ -641,7 +642,7 @@ export default function SystemCommandCenter() {
                       <Wrench aria-hidden="true" size={14} className="text-[#0047AB]" />
                     </div>
                     <div>
-                      <h3 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Deep Profile Tuning</h3>
+                      <h2 className="text-[12px] font-black uppercase tracking-widest text-[var(--text)]">Deep Profile Tuning</h2>
                       {editingUser && (
                         <div className="flex flex-col mt-1">
                           <span className="text-[11px] font-bold text-slate-700">{editingUser.email || 'Unknown Email'}</span>
@@ -750,9 +751,9 @@ export default function SystemCommandCenter() {
                   <div className="w-10 h-10 bg-slate-900 text-white rounded-[32px] flex items-center justify-center">
                     <Database aria-hidden="true" size={18} />
                   </div>
-                  <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Active Tenants</h4>
+                  <h3 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Active Tenants</h3>
                 </div>
-                <h3 className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">{telemetry.tenants.length}</h3>
+                <h2 className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">{telemetry.tenants.length}</h2>
                 <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-2">Isolated workspaces in sync</p>
               </div>
 
@@ -764,11 +765,11 @@ export default function SystemCommandCenter() {
                   <div className="w-10 h-10 bg-slate-900 text-white rounded-[32px] flex items-center justify-center">
                     <Activity aria-hidden="true" size={18} />
                   </div>
-                  <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Global Ledger Rows</h4>
+                  <h3 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Global Ledger Rows</h3>
                 </div>
-                <h3 className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">
+                <h2 className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">
                   {telemetry.tenants.reduce((acc, t) => acc + t.txCount, 0).toLocaleString()}
-                </h3>
+                </h2>
                 <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-2">Total transactional assertions</p>
               </div>
 
@@ -780,9 +781,9 @@ export default function SystemCommandCenter() {
                   <div className="w-10 h-10 bg-rose-500/10 text-rose-600 rounded-[32px] flex items-center justify-center">
                     <AlertOctagon aria-hidden="true" size={18} />
                   </div>
-                  <h4 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">API Incidents (400+)</h4>
+                  <h3 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">API Incidents (400+)</h3>
                 </div>
-                <h3 className="text-2xl md:text-4xl font-black font-mono text-rose-600 tracking-tight">{totalErrors}</h3>
+                <h2 className="text-2xl md:text-4xl font-black font-mono text-rose-600 tracking-tight">{totalErrors}</h2>
                 <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-2">Aggregated active warning nodes</p>
               </div>
             </div>
@@ -797,7 +798,7 @@ export default function SystemCommandCenter() {
                     <Sliders aria-hidden="true" size={24} className="text-indigo-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-black uppercase tracking-tight italic">Global Baseline Billing & Multiplier Registry</h3>
+                    <h2 className="text-xl font-black uppercase tracking-tight italic">Global Baseline Billing & Multiplier Registry</h2>
                     <p className="text-[10px] text-white/40 font-bold tracking-widest uppercase mt-1">Configure standard fallback coefficients applied automatically or synced globally</p>
                   </div>
                 </div>
@@ -991,7 +992,7 @@ export default function SystemCommandCenter() {
                   <Calculator aria-hidden="true" size={18} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black uppercase tracking-tight italic">Platform Revenue & Surcharge Modeler Simulation</h3>
+                  <h2 className="text-lg font-black uppercase tracking-tight italic">Platform Revenue & Surcharge Modeler Simulation</h2>
                   <p className="text-[10px] text-[var(--muted)] font-bold tracking-wide uppercase mt-0.5">
                     Model monetization yield based on query volume, cost multipliers, and proportion of private key users
                   </p>
@@ -1083,7 +1084,7 @@ export default function SystemCommandCenter() {
                 <div className="flex items-center gap-3">
                   <div className="w-2.5 h-6 bg-slate-900 rounded-full" />
                   <div>
-                    <h3 className="text-lg font-black uppercase tracking-tight italic">Multi-Tenant Ledger Matrix</h3>
+                    <h2 className="text-lg font-black uppercase tracking-tight italic">Multi-Tenant Ledger Matrix</h2>
                     <p className="text-[10px] text-[var(--muted)] font-bold tracking-wide uppercase mt-0.5">Click any workspace parameters row to customize limits & plans as Admin</p>
                   </div>
                 </div>
@@ -1091,18 +1092,19 @@ export default function SystemCommandCenter() {
 
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-left text-xs">
+                  <caption className="sr-only">Workspaces</caption>
                   <thead>
                     <tr className="border-b border-[var(--line)] text-[var(--muted)] text-[10px] font-medium uppercase tracking-wider bg-[var(--ink)]/50">
-                      <th className="py-4 px-4">Workspace Identity / Name</th>
-                      <th className="py-4 px-4 text-center">Plan</th>
-                      <th className="py-4 px-4 text-right">Max Seats</th>
-                      <th className="py-4 px-4 text-right">Compute Bal</th>
-                      <th className="py-4 px-4 text-right">Quota ($)</th>
-                      <th className="py-4 px-4 text-right">Used ($)</th>
-                      <th className="py-4 px-4 text-right">Cost/User</th>
-                      <th className="py-4 px-4 text-right">Tx Rows</th>
-                      <th className="py-4 px-4 text-right">AI Requests</th>
-                      <th className="py-4 px-4 text-center">Status</th>
+                      <th scope="col" className="py-4 px-4">Workspace Identity / Name</th>
+                      <th scope="col" className="py-4 px-4 text-center">Plan</th>
+                      <th scope="col" className="py-4 px-4 text-right">Max Seats</th>
+                      <th scope="col" className="py-4 px-4 text-right">Compute Bal</th>
+                      <th scope="col" className="py-4 px-4 text-right">Quota ($)</th>
+                      <th scope="col" className="py-4 px-4 text-right">Used ($)</th>
+                      <th scope="col" className="py-4 px-4 text-right">Cost/User</th>
+                      <th scope="col" className="py-4 px-4 text-right">Tx Rows</th>
+                      <th scope="col" className="py-4 px-4 text-right">AI Requests</th>
+                      <th scope="col" className="py-4 px-4 text-center">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ledger-line font-medium text-[var(--text)]">
@@ -1206,7 +1208,7 @@ export default function SystemCommandCenter() {
                       <span className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
                         Institutional Supervisor Control
                       </span>
-                      <h3 className="text-2xl font-black text-[var(--text)] tracking-tight mt-1 truncate">Workspace Policy Editor</h3>
+                      <h2 className="text-2xl font-black text-[var(--text)] tracking-tight mt-1 truncate">Workspace Policy Editor</h2>
                       <p className="text-[var(--muted)] font-mono text-[9px] font-bold uppercase mt-0.5 truncate">Workspace Hash: {editingWorkspace.id}</p>
                     </div>
                     <button 
@@ -1508,7 +1510,7 @@ export default function SystemCommandCenter() {
                         </div>
 
                         <div className="p-4 bg-[var(--ink)] rounded-[32px] border border-[var(--line)]">
-                          <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1.5">Monetization Deployment Strategy</h4>
+                          <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1.5">Monetization Deployment Strategy</h3>
                           <p className="text-[10px] text-[var(--muted)] leading-relaxed uppercase tracking-wide">
                             LedgerFlow is fully structured to receive custom payment processors (e.g. Stripe Customer Portal). This admin system already manages and updates plans, quotas, and limits. By connecting a Stripe webhook, you will be able to process subscriptions and charge client cards directly, with this UI serving as your operational control tower.
                           </p>
@@ -1585,7 +1587,7 @@ export default function SystemCommandCenter() {
 
                         {/* Custom Key Parameters */}
                         <div className="p-4 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] space-y-4">
-                          <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Self-Funded API Key Rates</h4>
+                          <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Self-Funded API Key Rates</h3>
                           <p className="text-[9px] text-[var(--muted)] leading-normal uppercase tracking-wider font-extrabold">
                             Specify billing charges if this account provides their private Gemini key:
                           </p>
@@ -1662,7 +1664,7 @@ export default function SystemCommandCenter() {
               <div className="absolute inset-0 technical-grid opacity-[0.03] pointer-events-none" />
               <div className="flex items-center gap-3 mb-4 pb-2 border-b border-white/10">
                 <Wrench aria-hidden="true" className="text-pink-400 animate-spin-slow" size={18} />
-                <h3 className="text-sm font-black uppercase tracking-wider text-pink-400">Stress Test Injector</h3>
+                <h2 className="text-sm font-black uppercase tracking-wider text-pink-400">Stress Test Injector</h2>
               </div>
               <p className="text-[10px] text-white/50 uppercase font-black mb-4 leading-relaxed">
                 Manually dispatch synthetic test requests to visualize real-time error piping, quota exception handling, and diagnostic reporting on the dashboard.
@@ -1700,7 +1702,7 @@ export default function SystemCommandCenter() {
               <div className="flex items-center justify-between pb-4 border-b border-[var(--line)] mb-4">
                 <div className="flex items-center gap-3">
                   <Terminal aria-hidden="true" size={18} className="text-indigo-600 animate-pulse" />
-                  <h3 className="text-base font-black uppercase tracking-tight italic text-[var(--text)]">Event Logging Stream</h3>
+                  <h2 className="text-base font-black uppercase tracking-tight italic text-[var(--text)]">Event Logging Stream</h2>
                 </div>
                 <div className="flex h-2.5 w-2.5 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
@@ -1782,7 +1784,7 @@ export default function SystemCommandCenter() {
             <div className="bg-slate-900 text-white rounded-[32px] p-4 md:p-8 relative overflow-hidden group">
               <div className="absolute technical-grid inset-0 opacity-[0.05]" />
               <Cpu aria-hidden="true" size={32} className="text-emerald-400 mb-4" />
-              <h5 className="text-lg font-black tracking-tight italic uppercase mb-1">Decentralized Trust Hook</h5>
+              <h4 className="text-lg font-black tracking-tight italic uppercase mb-1">Decentralized Trust Hook</h4>
               <p className="text-[10px] font-medium text-white/40 leading-relaxed uppercase tracking-widest leading-loose">
                 Real-time cryptographic pipeline audits. Mutex locks prevent race overrides, securing multi-tenant ledger synchronization bounds on memory channels.
               </p>
@@ -1806,7 +1808,7 @@ export default function SystemCommandCenter() {
               <div className="mx-auto w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 aria-hidden="true" size={24} />
               </div>
-              <h3 className="text-xl font-black text-[var(--text)] uppercase tracking-tight">Ledger Synchronized</h3>
+              <h2 className="text-xl font-black text-[var(--text)] uppercase tracking-tight">Ledger Synchronized</h2>
               <p className="text-xs text-[var(--muted)] mt-2 uppercase tracking-wide leading-relaxed">
                 Successfully propagated global cost coefficients, spend multipliers, and private api key surcharges to all {telemetry?.tenants?.length || 0} active workspaces securely.
               </p>

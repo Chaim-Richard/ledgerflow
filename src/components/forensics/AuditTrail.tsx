@@ -166,7 +166,7 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
             <Shield aria-hidden="true" size={14} />
             Verified Audit Stream
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Audit Trail</h2>
+          <h1 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Audit Trail</h1>
           <p className="text-[var(--muted)] font-normal text-lg mt-2 max-w-xl leading-relaxed italic opacity-80">Continuous cryptographic observability of legal and fiscal vectors.</p>
         </div>
         <div className="flex items-center gap-4">

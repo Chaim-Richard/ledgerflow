@@ -650,14 +650,15 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs border-collapse">
+                        <caption className="sr-only">Sample QuickBooks export</caption>
                         <thead>
                           <tr className="border-b border-[var(--line)] text-[var(--muted)]">
-                            <th className="p-2 font-semibold">Date</th>
-                            <th className="p-2 font-semibold">Payee/Memo</th>
-                            <th className="p-2 font-semibold">Source Account</th>
-                            <th className="p-2 font-semibold">Split</th>
-                            <th className="p-2 font-semibold text-right">Debit ($)</th>
-                            <th className="p-2 font-semibold text-right">Credit ($)</th>
+                            <th scope="col" className="p-2 font-semibold">Date</th>
+                            <th scope="col" className="p-2 font-semibold">Payee/Memo</th>
+                            <th scope="col" className="p-2 font-semibold">Source Account</th>
+                            <th scope="col" className="p-2 font-semibold">Split</th>
+                            <th scope="col" className="p-2 font-semibold text-right">Debit ($)</th>
+                            <th scope="col" className="p-2 font-semibold text-right">Credit ($)</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--line)]">
@@ -696,12 +697,13 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
 
                 <div className="border border-[var(--line)] rounded-xl overflow-hidden bg-[var(--panel)]">
                   <table className="w-full text-left text-xs border-collapse">
+                    <caption className="sr-only">Chart of accounts mapping</caption>
                     <thead>
                       <tr className="border-b border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]">
-                        <th className="p-3 font-bold uppercase tracking-wider">QuickBooks Account</th>
-                        <th className="p-3 font-bold uppercase tracking-wider">Category Type</th>
-                        <th className="p-3 font-bold uppercase tracking-wider text-center">Tx Count</th>
-                        <th className="p-3 font-bold uppercase tracking-wider">Target LedgerFlow Account</th>
+                        <th scope="col" className="p-3 font-bold uppercase tracking-wider">QuickBooks Account</th>
+                        <th scope="col" className="p-3 font-bold uppercase tracking-wider">Category Type</th>
+                        <th scope="col" className="p-3 font-bold uppercase tracking-wider text-center">Tx Count</th>
+                        <th scope="col" className="p-3 font-bold uppercase tracking-wider">Target LedgerFlow Account</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--line)]">

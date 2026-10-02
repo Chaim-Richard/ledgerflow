@@ -86,7 +86,7 @@ export default function SecuritySettings() {
             <Lock aria-hidden="true" size={24} />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-[var(--text)] uppercase tracking-wider">Fiscal Period Locking</h3>
+            <h2 className="text-2xl font-black text-[var(--text)] uppercase tracking-wider">Fiscal Period Locking</h2>
             <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mt-1">Immutable Ledger Storage Compliance</p>
           </div>
         </div>
@@ -113,7 +113,7 @@ export default function SecuritySettings() {
             <ShieldCheck aria-hidden="true" size={24} className="text-[var(--pos)]" />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-[var(--text)] uppercase tracking-wider">High-Integrity Firewall</h3>
+            <h2 className="text-2xl font-black text-[var(--text)] uppercase tracking-wider">High-Integrity Firewall</h2>
             <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mt-1">Zero-Trust Modal Configuration</p>
           </div>
         </div>
@@ -144,7 +144,7 @@ export default function SecuritySettings() {
           <div className="pt-6 mt-4 border-t border-[var(--line)] space-y-6">
             <div className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-1">
-                  <h4 className="text-base font-black text-[var(--text)] uppercase tracking-tight">Multi-Factor Authentication (MFA)</h4>
+                  <h3 className="text-base font-black text-[var(--text)] uppercase tracking-tight">Multi-Factor Authentication (MFA)</h3>
                   <p className="text-xs font-medium text-[var(--muted)] leading-relaxed max-w-md">
                     Secure your account using an authenticator app (TOTP). Required for administrative actions.
                   </p>
@@ -190,7 +190,7 @@ export default function SecuritySettings() {
 
             <div className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-1">
-                  <h4 className="text-base font-black text-[var(--text)] uppercase tracking-tight">Active Sessions</h4>
+                  <h3 className="text-base font-black text-[var(--text)] uppercase tracking-tight">Active Sessions</h3>
                   <p className="text-xs font-medium text-[var(--muted)] leading-relaxed max-w-md">
                     Revoke all existing sessions and refresh tokens globally. You will be signed out on all devices.
                   </p>
@@ -219,7 +219,7 @@ export default function SecuritySettings() {
 
             <div className="p-6 bg-[var(--ink)]/50 border border-[var(--line)] rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-1">
-                  <h4 className="text-base font-black text-[var(--text)] uppercase tracking-tight">Download my data</h4>
+                  <h3 className="text-base font-black text-[var(--text)] uppercase tracking-tight">Download my data</h3>
                   <p className="text-xs font-medium text-[var(--muted)] leading-relaxed max-w-md">
                     Your profile, the workspaces you belong to, your notifications, sign-ins and what you did (audit trail), as one file. The books themselves are in each workspace's backup.
                   </p>
@@ -249,7 +249,7 @@ export default function SecuritySettings() {
 
             <div className="p-6 bg-rose-500/5 border border-rose-500/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-1">
-                  <h4 className="text-base font-black text-rose-500 uppercase tracking-tight">Delete User Account</h4>
+                  <h3 className="text-base font-black text-rose-500 uppercase tracking-tight">Delete User Account</h3>
                   <p className="text-xs font-medium text-[var(--muted)] leading-relaxed max-w-md">
                     Deletes your sign-in and personal data. A workspace only you use is deleted after 30 days; you leave workspaces you share. If you are the only owner of a shared workspace, make someone else an owner first (Settings → Team).
                   </p>
@@ -289,7 +289,7 @@ export default function SecuritySettings() {
 
             <div className="p-6 bg-rose-500/5 border border-rose-500/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-1">
-                  <h4 className="text-base font-black text-rose-500 uppercase tracking-tight">Delete this workspace</h4>
+                  <h3 className="text-base font-black text-rose-500 uppercase tracking-tight">Delete this workspace</h3>
                   <p className="text-xs font-medium text-[var(--muted)] leading-relaxed max-w-md">
                     Everything in this workspace is deleted after {retentionFor(useAuthStore.getState().getCurrentWorkspace()).deletionGraceDays} days (Data retention above); until then an owner can keep it. The audit trail is kept.</p>
                 </div>
