@@ -1,3 +1,4 @@
+import type { Firestore } from '../server/db/firestore';
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { WORKSPACE_SCOPED_COLLECTIONS } from '../constants/collections';
@@ -17,7 +18,7 @@ describe('Workspace Purge Job Service Suite (§3 Workspace Purge)', () => {
     let workspaceDeleted = false;
     let auditLogWritten = false;
 
-    const mockDb: any = {
+    const mockDb = {
       collection(colName: string) {
         if (colName === 'workspaces') {
           return {
@@ -69,7 +70,7 @@ describe('Workspace Purge Job Service Suite (§3 Workspace Purge)', () => {
                 async get() {
                   return { exists: false, data: () => ({}) };
                 },
-                async set(_data: any, _opts?: any) {}
+                async set(_data: Record<string, unknown>, _opts?: { merge?: boolean }) {}
               };
             }
           };
@@ -79,7 +80,7 @@ describe('Workspace Purge Job Service Suite (§3 Workspace Purge)', () => {
           return {
             doc() {
               return {
-                async set(_data: any) {
+                async set(_data: Record<string, unknown>) {
                   auditLogWritten = true;
                 }
               };
@@ -115,14 +116,14 @@ describe('Workspace Purge Job Service Suite (§3 Workspace Purge)', () => {
       },
       batch() {
         return {
-          delete(_ref: any) {},
+          delete(_ref: unknown) {},
           async commit() {}
         };
       }
     };
 
     const { purgePendingWorkspaces } = await import('../server/services/workspacePurgeService');
-    const result = await purgePendingWorkspaces(mockDb as any);
+    const result = await purgePendingWorkspaces(mockDb as unknown as Firestore);
 
     assert.deepEqual(result.purgedWorkspaces, ['ws_test_purge_123']);
     assert.equal(workspaceDeleted, true, 'Workspace document must be deleted last');
@@ -134,7 +135,7 @@ describe('Workspace Purge Job Service Suite (§3 Workspace Purge)', () => {
     let jobFailedRecorded = false;
     let lastRecordedError = '';
 
-    const mockDb: any = {
+    const mockDb = {
       collection(colName: string) {
         if (colName === 'workspaces') {
           return {
@@ -177,7 +178,7 @@ describe('Workspace Purge Job Service Suite (§3 Workspace Purge)', () => {
                 async get() {
                   return { exists: false, data: () => ({}) };
                 },
-                async set(data: any) {
+                async set(data: { status?: string; lastError?: string }) {
                   if (data.status === 'failed') {
                     jobFailedRecorded = true;
                     lastRecordedError = data.lastError || '';
@@ -219,7 +220,7 @@ describe('Workspace Purge Job Service Suite (§3 Workspace Purge)', () => {
 
     try {
       const { purgePendingWorkspaces } = await import('../server/services/workspacePurgeService');
-      const result = await purgePendingWorkspaces(mockDb as any);
+      const result = await purgePendingWorkspaces(mockDb as unknown as Firestore);
 
       assert.equal(result.purgedWorkspaces.length, 0, 'Workspace must NOT be marked purged if storage fails');
       assert.equal(workspaceDeleted, false, 'Workspace doc must not be deleted on storage error');

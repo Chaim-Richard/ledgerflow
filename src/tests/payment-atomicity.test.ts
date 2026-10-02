@@ -1,3 +1,5 @@
+import type { TestDocument, TestDocumentReference, TestTransaction, TestResponseBody } from './helpers/mockTypes';
+import type { TransactionLine } from '../types';
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import type express from 'express';
@@ -6,7 +8,7 @@ import { createPaymentAtomic } from '../server/services/paymentService';
 import { handleCreatePayment } from '../server/routes/paymentRoutes';
 
 class MockTransactionalDb {
-  public data: Map<string, any> = new Map();
+  public data: Map<string, TestDocument> = new Map();
 
   collection(collName: string) {
     return {
@@ -22,27 +24,27 @@ class MockTransactionalDb {
     };
   }
 
-  async runTransaction<T>(updateFunction: (tx: any) => Promise<T>): Promise<T> {
+  async runTransaction<T>(updateFunction: (tx: TestTransaction) => Promise<T>): Promise<T> {
     // Snapshot current state
-    const snapshotMap = new Map<string, any>();
+    const snapshotMap = new Map<string, TestDocument>();
     for (const [k, v] of this.data.entries()) {
       snapshotMap.set(k, JSON.parse(JSON.stringify(v)));
     }
 
     const tx = {
-      get: async (docRef: any) => {
+      get: async (docRef: TestDocumentReference) => {
         const val = snapshotMap.get(docRef.key);
         return {
           exists: val !== undefined,
           data: () => val ? JSON.parse(JSON.stringify(val)) : undefined
         };
       },
-      update: (docRef: any, updates: any) => {
+      update: (docRef: TestDocumentReference, updates: TestDocument) => {
         const current = snapshotMap.get(docRef.key) || {};
         const updated = { ...current, ...updates };
         snapshotMap.set(docRef.key, updated);
       },
-      set: (docRef: any, newData: any) => {
+      set: (docRef: TestDocumentReference, newData: TestDocument) => {
         snapshotMap.set(docRef.key, newData);
       }
     };
@@ -61,7 +63,7 @@ class MockTransactionalDb {
   }
 
   getCollectionDocs(collName: string) {
-    const docs: any[] = [];
+    const docs: TestDocument[] = [];
     const prefix = `${collName}/`;
     for (const [k, v] of this.data.entries()) {
       if (k.startsWith(prefix)) {
@@ -199,8 +201,8 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
     assert.equal(txDoc.totalAmountCents, 10000);
     assert.equal(txDoc.lines.length, 2);
 
-    const debitLine = txDoc.lines.find((l: any) => l.accountId === 'acc-cash');
-    const creditLine = txDoc.lines.find((l: any) => l.accountId === 'acc-ar');
+    const debitLine = txDoc.lines.find((l: TransactionLine) => l.accountId === 'acc-cash');
+    const creditLine = txDoc.lines.find((l: TransactionLine) => l.accountId === 'acc-ar');
 
     assert.equal(debitLine.amountCents, 10000, 'Cash account must be debited 10,000 cents');
     assert.equal(creditLine.amountCents, -10000, 'A/R account must be credited -10,000 cents');
@@ -414,7 +416,7 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
     } as unknown as Firestore;
 
     let statusCode = 200;
-    let jsonBody: Record<string, any> | null = null;
+    let jsonBody: TestResponseBody | null = null;
     const req = {
       user: { uid: 'user-viewer' },
       body: {
@@ -425,25 +427,25 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
         allocations: []
       }
     } as unknown as express.Request;
-    const res: any = {
+    const res: express.Response = {
       status: (code: number) => {
         statusCode = code;
         return res;
       },
-      json: (data: Record<string, any>) => {
+      json: (data: TestResponseBody) => {
         jsonBody = data;
         return res;
       }
-    };
+    } as unknown as express.Response;
 
     await handleCreatePayment(req, res, db);
     assert.equal(statusCode, 403);
-    assert.ok((jsonBody as any)?.message?.includes('Forbidden'));
+    assert.ok((jsonBody as unknown as TestResponseBody)?.message?.includes('Forbidden'));
   });
 
   test('Unauthenticated request (no user) receives 401', async () => {
     let statusCode = 200;
-    let jsonBody: Record<string, any> | null = null;
+    let jsonBody: TestResponseBody | null = null;
     const req = {
       body: {
         workspaceId: 'ws-test',
@@ -451,20 +453,20 @@ describe('Payment Creation & Ledger Posting Atomicity Test Suite (Task 4)', () =
         cashAccountId: 'acc-cash'
       }
     } as unknown as express.Request;
-    const res: any = {
+    const res: express.Response = {
       status: (code: number) => {
         statusCode = code;
         return res;
       },
-      json: (data: Record<string, any>) => {
+      json: (data: TestResponseBody) => {
         jsonBody = data;
         return res;
       }
-    };
+    } as unknown as express.Response;
 
     await handleCreatePayment(req, res);
     assert.equal(statusCode, 401);
-    assert.equal((jsonBody as any)?.message, 'Sign in required');
+    assert.equal((jsonBody as unknown as TestResponseBody)?.message, 'Sign in required');
   });
 });
 

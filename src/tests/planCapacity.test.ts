@@ -1,3 +1,5 @@
+import type { Request } from 'express';
+import type { CapturedResponse, TestResponseBody } from './helpers/mockTypes';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { requirePlanCapacity, PLAN_LIMITS } from '../server/middleware/planCapacity';
@@ -12,20 +14,20 @@ describe('Server Plan Capacity Middleware (402 Payment Required Enforcement)', (
   it('rejects transaction creation with 402 when free workspace is at transaction cap', async () => {
     const mockReq = {
       body: { workspaceId: 'ws-free-cap-test' }
-    } as any;
+     } as unknown as Request;
 
     const mockRes = {
       statusCode: 200,
-      jsonBody: null as any,
-      status(code: number) {
+      jsonBody: null as unknown as TestResponseBody,
+      status(this: CapturedResponse, code: number) {
         this.statusCode = code;
         return this;
       },
-      json(body: any) {
+      json(this: CapturedResponse, body: TestResponseBody) {
         this.jsonBody = body;
         return this;
       }
-    } as any;
+     } as unknown as CapturedResponse;
 
     let nextCalled = false;
     const next = () => { nextCalled = true; };
@@ -68,20 +70,20 @@ describe('Server Plan Capacity Middleware (402 Payment Required Enforcement)', (
   it('uses native count aggregation when available without scanning collections', async () => {
     const mockReq = {
       body: { workspaceId: 'ws-free-cap-count-test' }
-    } as any;
+     } as unknown as Request;
 
     const mockRes = {
       statusCode: 200,
-      jsonBody: null as any,
-      status(code: number) {
+      jsonBody: null as unknown as TestResponseBody,
+      status(this: CapturedResponse, code: number) {
         this.statusCode = code;
         return this;
       },
-      json(body: any) {
+      json(this: CapturedResponse, body: TestResponseBody) {
         this.jsonBody = body;
         return this;
       }
-    } as any;
+     } as unknown as CapturedResponse;
 
     let nextCalled = false;
     const next = () => { nextCalled = true; };
@@ -136,20 +138,20 @@ describe('Server Plan Capacity Middleware (402 Payment Required Enforcement)', (
   it('rejects member invitation with 402 when free workspace is at seat cap', async () => {
     const mockReq = {
       params: { workspaceId: 'ws-seat-cap-test' }
-    } as any;
+     } as unknown as Request;
 
     const mockRes = {
       statusCode: 200,
-      jsonBody: null as any,
-      status(code: number) {
+      jsonBody: null as unknown as TestResponseBody,
+      status(this: CapturedResponse, code: number) {
         this.statusCode = code;
         return this;
       },
-      json(body: any) {
+      json(this: CapturedResponse, body: TestResponseBody) {
         this.jsonBody = body;
         return this;
       }
-    } as any;
+     } as unknown as CapturedResponse;
 
     let nextCalled = false;
     const next = () => { nextCalled = true; };

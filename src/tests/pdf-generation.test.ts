@@ -1,10 +1,12 @@
+import type { Request, Response } from 'express';
+import type { TestDocument, TestResponseBody } from './helpers/mockTypes';
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { handlePdfRequest } from '../server/routes/documentRoutes';
 import { generateDocumentPdf } from '../server/services/pdfService';
 
 class MockPdfDb {
-  private data: Record<string, Record<string, any>> = {
+  private data: Record<string, Record<string, TestDocument>> = {
     workspaces: {
       'ws-test': { name: 'Acme International Workspace', uid: 'user-admin' }
     },
@@ -109,19 +111,19 @@ class MockPdfDb {
 }
 
 function createMockHttp(type: string, id: string, workspaceId = 'ws-test') {
-  const req: any = {
+  const req: Request = {
     params: { type, id },
     query: { workspaceId },
     body: {},
     headers: {},
     user: { uid: 'user-admin', admin: true }
-  };
+  } as unknown as Request;
 
   let responseBuffer: Buffer | null = null;
   let responseStatus = 200;
   const responseHeaders: Record<string, string> = {};
 
-  const res: any = {
+  const res: Response = {
     status: (code: number) => {
       responseStatus = code;
       return res;
@@ -130,17 +132,17 @@ function createMockHttp(type: string, id: string, workspaceId = 'ws-test') {
       responseHeaders[name] = val;
       return res;
     },
-    send: (payload: any) => {
+    send: (payload: Buffer | string) => {
       responseBuffer = Buffer.isBuffer(payload) ? payload : Buffer.from(payload);
       return res;
     },
-    json: (obj: any) => {
+    json: (obj: TestResponseBody) => {
       if (obj?.data?.pdfBase64) {
         responseBuffer = Buffer.from(obj.data.pdfBase64, 'base64');
       }
       return res;
     }
-  };
+  } as unknown as Response;
 
   return { req, res, getBuffer: () => responseBuffer, getStatus: () => responseStatus, getHeaders: () => responseHeaders };
 }
