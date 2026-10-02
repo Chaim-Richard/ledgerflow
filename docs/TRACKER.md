@@ -1343,26 +1343,26 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [ ] D-01 `computeReports.ts`
 - [x] D-02 `LedgerPostService.ts` (18 → 0)
-- [ ] D-03 `useTransactionActions.ts`
-- [ ] D-04 `useLedgerStore.ts`
-- [ ] D-05 `useLedgerData.ts`
+- [x] D-03 `useTransactionActions.ts` (codex, `codex/c-5-explicit-types`)
+- [x] D-04 `useLedgerStore.ts` (codex, `codex/c-5-explicit-types`)
+- [ ] D-05 `useLedgerData.ts` (reserved for Claude; untouched by codex C-5)
 - [ ] D-06 `server.ts`
 - [ ] D-07 `transactionRoutes.ts`
 - [ ] D-08 `reportRoutes.ts`
 - [ ] D-09 `workspaceRoutes.ts`
 - [ ] D-10 `documentRoutes.ts`
-- [ ] D-11 `TransactionQueryEngine.ts`
-- [ ] D-12 `algorithms/niche-tools.ts`
+- [x] D-11 `TransactionQueryEngine.ts` (codex, `codex/c-5-explicit-types`)
+- [x] D-12 `algorithms/niche-tools.ts` (codex, `codex/c-5-explicit-types`)
 - [ ] D-13 `algorithms.ts`
-- [ ] D-14 `IntelligenceCenter.tsx`
+- [x] D-14 `IntelligenceCenter.tsx` (codex, `codex/c-5-explicit-types`)
 - [ ] D-15 `SystemCommandCenter.tsx`
 - [ ] D-16 `ApiHub.tsx`
-- [ ] D-17 `StatementImporter.tsx`
-- [ ] D-18 `TransactionGrid.tsx`
-- [ ] D-19 `BudgetManager.tsx`
+- [x] D-17 `StatementImporter.tsx` (codex, `codex/c-5-explicit-types`)
+- [x] D-18 `TransactionGrid.tsx` (codex, `codex/c-5-explicit-types`)
+- [x] D-19 `BudgetManager.tsx` (codex, `codex/c-5-explicit-types`)
 - [ ] D-20 `useUIStore.ts`
-- [ ] D-21 `ToolSandbox.tsx`
-- [ ] D-22 `registry.tsx`
+- [x] D-21 `ToolSandbox.tsx` (codex, `codex/c-5-explicit-types`)
+- [x] D-22 `registry.tsx` (codex, `codex/c-5-explicit-types`)
 - [ ] D-23 `Ledger.tsx`
 - [ ] D-24 `Reconciliation.tsx` / `App.tsx`
 - [ ] D-25 Enable `noImplicitAny`

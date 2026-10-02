@@ -1,4 +1,5 @@
 import { AlgorithmDefinition } from './types';
+import type { ChartAccount } from '../../types';
 import { isOutflow, isInflow, transactionDate } from '../txFilters';
 
 // 1. Mortgage / Loan Amortization Schedule
@@ -24,7 +25,7 @@ export const LOAN_AMORTIZATION_ALGO: AlgorithmDefinition = {
 
     let balance = principal;
     let totalInterest = 0;
-    const schedule: any[] = [];
+    const schedule: { year: string; Principal: number; Interest: number; Balance: number }[] = [];
 
     for (let year = 1; year <= Math.min(inputs.termYears ?? 30, 10); year++) {
       let yearInterest = 0;
@@ -81,12 +82,12 @@ export const SUBSCRIPTION_AUDIT_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'lookbackMonths', label: 'Lookback Window (Months)', min: 1, max: 12, step: 1, defaultValue: 6 }
   ],
-  compute: (ctx, _inputs: any = {}) => {
+  compute: (ctx, _inputs: Record<string, number> = {}) => {
     const { transactions, accounts } = ctx;
     const payeeMap = new Map<string, { count: number; totalCents: number; avgCents: number; lastDate: string }>();
 
-    transactions.forEach((t: any) => {
-      if (!t || !isOutflow(t, accounts as any)) return; // Outflows only
+    transactions.forEach((t) => {
+      if (!t || !isOutflow(t, accounts as ChartAccount[])) return; // Outflows only
       const payee = t.payee || t.description || 'Unknown Vendor';
       const tDate = transactionDate(t);
       const existing = payeeMap.get(payee) || { count: 0, totalCents: 0, avgCents: 0, lastDate: tDate };
@@ -96,7 +97,7 @@ export const SUBSCRIPTION_AUDIT_ALGO: AlgorithmDefinition = {
       payeeMap.set(payee, existing);
     });
 
-    const recurringList: any[] = [];
+    const recurringList: { payee: string; MonthlyEst: number; AnnualEst: number; Count: number }[] = [];
     let annualRunrateCents = 0;
 
     payeeMap.forEach((val, payee) => {
@@ -147,14 +148,14 @@ export const DEDUCTION_FINDER_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'taxRate', label: 'Estimated Tax Rate (%)', min: 10, max: 50, step: 1, defaultValue: 25 }
   ],
-  compute: (ctx, inputs: any = {}) => {
+  compute: (ctx, inputs: Record<string, number> = {}) => {
     const { transactions, accounts } = ctx;
     let deductibleCents = 0;
     const categoryBreakdown: Record<string, number> = {};
     let deductibleCount = 0;
 
-    transactions.forEach((t: any) => {
-      if (!t || !isOutflow(t, accounts as any)) return;
+    transactions.forEach((t) => {
+      if (!t || !isOutflow(t, accounts as ChartAccount[])) return;
       const amt = Math.abs(t.totalAmountCents);
       const desc = (t.description || '').toLowerCase();
       const payee = (t.payee || '').toLowerCase();
@@ -215,15 +216,15 @@ export const PROPERTY_PNL_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'targetCapRate', label: 'Target Cap Rate (%)', min: 3, max: 12, step: 0.5, defaultValue: 6.5 }
   ],
-  compute: (ctx, inputs: any = {}) => {
+  compute: (ctx, inputs: Record<string, number> = {}) => {
     const { transactions, accounts } = ctx;
     const propertyMap = new Map<string, { revCents: number; expCents: number }>();
 
-    transactions.forEach((t: any) => {
+    transactions.forEach((t) => {
       if (!t || !t.project) return;
       const prop = t.project;
       const existing = propertyMap.get(prop) || { revCents: 0, expCents: 0 };
-      if (isInflow(t, accounts as any)) {
+      if (isInflow(t, accounts as ChartAccount[])) {
         existing.revCents += t.totalAmountCents;
       } else {
         existing.expCents += Math.abs(t.totalAmountCents);
@@ -231,7 +232,7 @@ export const PROPERTY_PNL_ALGO: AlgorithmDefinition = {
       propertyMap.set(prop, existing);
     });
 
-    const chartData: any[] = [];
+    const chartData: { Property: string; Revenue: number; Expenses: number; NOI: number }[] = [];
     let totalNOICents = 0;
 
     propertyMap.forEach((val, prop) => {
@@ -293,15 +294,15 @@ export const RESTRICTED_FUND_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'warningThreshold', label: 'Warning Burn %', min: 50, max: 95, step: 5, defaultValue: 80 }
   ],
-  compute: (ctx, _inputs: any = {}) => {
+  compute: (ctx, _inputs: Record<string, number> = {}) => {
     const { transactions, accounts } = ctx;
     const grantMap = new Map<string, { receivedCents: number; spentCents: number }>();
 
-    transactions.forEach((t: any) => {
+    transactions.forEach((t) => {
       if (!t || !t.projectId) return;
       const key = t.project || t.projectId;
       const existing = grantMap.get(key) || { receivedCents: 0, spentCents: 0 };
-      if (isInflow(t, accounts as any)) {
+      if (isInflow(t, accounts as ChartAccount[])) {
         existing.receivedCents += t.totalAmountCents;
       } else {
         existing.spentCents += Math.abs(t.totalAmountCents);
@@ -309,7 +310,7 @@ export const RESTRICTED_FUND_ALGO: AlgorithmDefinition = {
       grantMap.set(key, existing);
     });
 
-    const chartData: any[] = [];
+    const chartData: { Fund: string; Granted: number; Spent: number; Remaining: number }[] = [];
     let totalRemainingCents = 0;
 
     grantMap.forEach((val, name) => {
@@ -369,15 +370,15 @@ export const PROJECT_PROFITABILITY_ALGO: AlgorithmDefinition = {
   inputs: [
     { key: 'minMargin', label: 'Minimum Target Margin (%)', min: 10, max: 70, step: 5, defaultValue: 30 }
   ],
-  compute: (ctx, inputs: any = {}) => {
+  compute: (ctx, inputs: Record<string, number> = {}) => {
     const { transactions, accounts } = ctx;
     const projMap = new Map<string, { revCents: number; expCents: number }>();
 
-    transactions.forEach((t: any) => {
+    transactions.forEach((t) => {
       if (!t || !t.project) return;
       const p = t.project;
       const existing = projMap.get(p) || { revCents: 0, expCents: 0 };
-      if (isInflow(t, accounts as any)) {
+      if (isInflow(t, accounts as ChartAccount[])) {
         existing.revCents += t.totalAmountCents;
       } else {
         existing.expCents += Math.abs(t.totalAmountCents);
@@ -385,7 +386,7 @@ export const PROJECT_PROFITABILITY_ALGO: AlgorithmDefinition = {
       projMap.set(p, existing);
     });
 
-    const list: any[] = [];
+    const list: { Project: string; Revenue: number; NetProfit: number; MarginPct: number }[] = [];
     projMap.forEach((val, p) => {
       const net = val.revCents - val.expCents;
       const marginPct = val.revCents > 0 ? Math.round((net / val.revCents) * 100) : 0;

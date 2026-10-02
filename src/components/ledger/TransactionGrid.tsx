@@ -1,6 +1,6 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useId, useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { Transaction } from '../../types';
+import { Transaction, FilterCriteria, AnalyticalMetrics } from '../../types';
 import { 
   Search, 
   Plus,
@@ -52,8 +52,8 @@ const GridEditor = ({
   type = 'text',
   label
 }: { 
-  value: any, 
-  onSave: (val: any) => void, 
+  value: string | number,
+  onSave: (val: string | number) => void,
   onClose: () => void,
   type?: 'text' | 'number' | 'category',
   label: string
@@ -70,10 +70,10 @@ const GridEditor = ({
       .slice(0, 5);
   }, [val, type, accounts]);
 
-  const handleEvaluateAndSave = (input: string) => {
+  const handleEvaluateAndSave = (input: string | number) => {
     if (type === 'number') {
       try {
-        const parsed = parseFloat(input.replace(/[^0-9.-]/g, ''));
+        const parsed = parseFloat((input as string).replace(/[^0-9.-]/g, ''));
         if (!isNaN(parsed)) {
           onSave(parsed);
           return;
@@ -143,16 +143,16 @@ interface VirtualRowProps extends ListChildComponentProps {
     selectedIds: Set<string>;
     focusedCell: { id: string, field: string, index: number } | null;
     editingCell: { id: string, field: string } | null;
-    anomalyMap: Map<string, any>;
-    deterministicConflicts: Map<string, any>;
+    anomalyMap: Map<string, AnalyticalMetrics['anomalies'][number]>;
+    deterministicConflicts: ReturnType<typeof useLedgerComputation>['conflicts'];
     onToggleSelection: (id: string) => void;
     onVoid: (id: string) => void;
     onUpdate?: (id: string, updates: Partial<Transaction>) => void;
     onCreateRule: (tx: Transaction) => void;
     onProjectClick: (projectName: string) => void;
     setSplittingTxId: (id: string | null) => void;
-    setFocusedCell: (v: any) => void;
-    setEditingCell: (v: any) => void;
+    setFocusedCell: (v: VirtualRowProps['data']['focusedCell']) => void;
+    setEditingCell: (v: VirtualRowProps['data']['editingCell']) => void;
     isProMode: boolean;
     isCompactMode: boolean;
     isMobileGrid: boolean;
@@ -185,7 +185,7 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
       onDoubleClick={() => data.setEditingCell({ id: tx.id, field: 'description' })}
     >
       <TransactionRow
-        tx={tx as any}
+        tx={tx}
         isSelected={data.selectedIds.has(tx.id)}
         isSetA={false}
         isSetB={false}
@@ -221,7 +221,7 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
                 label="Transaction description"
                 value={tx.description}
                 onSave={(v) => {
-                  data.onUpdate?.(tx.id, { description: v });
+                  data.onUpdate?.(tx.id, { description: v as string });
                   data.setEditingCell(null);
                 }}
                 onClose={() => data.setEditingCell(null)}
@@ -249,7 +249,7 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
                 value={resolveAccountName(accounts, tx.lines?.[0]?.accountId, tx.lines?.[0]?.accountName)}
                 type="category"
                 onSave={(v) => {
-                  const targetAcc = accounts.find(a => a.name === v || a.id === v) || { id: tx.lines?.[0]?.accountId || '', name: v };
+                  const targetAcc = accounts.find(a => a.name === v || a.id === v) || { id: tx.lines?.[0]?.accountId || '', name: v as string };
                   const bankAcc = accounts.find(a => isCashAccount(a)) || accounts[0];
                   const updatedLines = tx.lines && tx.lines.length >= 2 ? [
                     { ...tx.lines[0], accountId: targetAcc.id, accountName: targetAcc.name },
@@ -272,8 +272,8 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
                 value={tx.project || ''}
                 onSave={(v) => {
                   data.onUpdate?.(tx.id, { 
-                    project: v,
-                    lines: (tx.lines || []).map(l => ({ ...l, project: v }))
+                    project: v as string,
+                    lines: (tx.lines || []).map(l => ({ ...l, project: v as string }))
                   });
                   data.setEditingCell(null);
                 }}
@@ -291,19 +291,19 @@ export default function TransactionGrid() {
   const formId = useId();
   const transactions = useLedgerStore(s => s.transactions);
   const filterCriteria = useUIStore(s => s.filterCriteria);
-  const onFilterApplied = (c: any) => useUIStore.getState().setFilterCriteria(c);
+  const onFilterApplied = (c: FilterCriteria) => useUIStore.getState().setFilterCriteria(c);
   const { handleAction: onAction } = useCommandDispatcher();
   const txActions = useTransactionActions();
   const { updateEntity, deleteEntity } = useEntityOperations();
-  const onUpdate = useCallback((id: string, updates: any) => txActions?.handleUpdateTransaction ? txActions.handleUpdateTransaction(id, updates) : updateEntity('transactions', id, updates), [txActions, updateEntity]);
+  const onUpdate = useCallback((id: string, updates: Partial<Transaction>) => txActions?.handleUpdateTransaction ? txActions.handleUpdateTransaction(id, updates) : updateEntity('transactions', id, updates), [txActions, updateEntity]);
   const onVoid = (id: string) => deleteEntity('transactions', id);
-  const onNewEntry = () => { txActions.handleQuickAdd?.({} as any); onAction("quick-entry"); };
+  const onNewEntry = () => { txActions.handleQuickAdd?.({}); onAction("quick-entry"); };
   const isProMode = useUIStore(s => s.isProMode);
   const isCompactMode = useUIStore(s => s.isCompactMode);
   const setProMode = useUIStore(s => s.setProMode);
   const setCompactMode = useUIStore(s => s.setCompactMode);
 
-  const onCreateRule = (tx: any) => {
+  const onCreateRule = (tx: Transaction) => {
     if (!tx || !tx.description) return;
     const accountId = tx.lines?.[0]?.accountId;
     const accountName = tx.lines?.[0]?.accountName || 'Unassigned';
@@ -325,7 +325,6 @@ export default function TransactionGrid() {
     toast.success(`Rule created for "${tx.description.slice(0, 25)}" → ${accountName}`);
   };
   const dateFormat = 'MMM dd, yyyy';
-  const passedAnomalies = undefined;
   // Defensive array checks
   const safeTransactions = useMemo(() => Array.isArray(transactions) ? transactions : [], [transactions]);
   
@@ -388,12 +387,11 @@ export default function TransactionGrid() {
   const telemetry = useAuditTelemetry(
     safeTransactions, 
     accounts, 
-    30, 
-    passedAnomalies ? { anomalies: passedAnomalies } as any : undefined
+    30
   );
-  const anomaliesValues = passedAnomalies || telemetry.anomalies;
+  const anomaliesValues = telemetry.anomalies;
   
-  const anomalyMap = useMemo(() => new Map(anomaliesValues.map((a: any) => [a.transactionId, a])), [anomaliesValues]);
+  const anomalyMap = useMemo(() => new Map(anomaliesValues.map((a) => [a.transactionId, a])), [anomaliesValues]);
 
   // High volume pre-computations
   const totalBalancedSum = useMemo(() => {
@@ -632,7 +630,7 @@ export default function TransactionGrid() {
     toast.success('Ledger Export Matrix Generated');
   };
 
-  const handleBulkUpdate = useCallback(async (updates: any) => {
+  const handleBulkUpdate = useCallback(async (updates: Partial<Transaction>) => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
     if (txActions?.handleBulkUpdate) {
@@ -655,9 +653,9 @@ export default function TransactionGrid() {
     const state = useLedgerStore.getState();
     const rules = state.autoRules;
     const accounts = state.accounts;
-    const engine = new MatchingEngine(rules, state.analyticalPatternCache, undefined, state.matchingThreshold, transactionsWithBalance as any, state.dimensionNodes, accounts);
+    const engine = new MatchingEngine(rules, state.analyticalPatternCache, undefined, state.matchingThreshold, transactionsWithBalance, state.dimensionNodes, accounts);
     
-    const suggestions = await engine.suggestCategoriesAsync(transactionsWithBalance as any, Math.round);
+    const suggestions = await engine.suggestCategoriesAsync(transactionsWithBalance, Math.round);
     
     let count = 0;
     
@@ -771,7 +769,7 @@ export default function TransactionGrid() {
     gridCols
   ]);
 
-  const itemKey = useCallback((index: number, data: any) => {
+  const itemKey = useCallback((index: number, data: VirtualRowProps['data']) => {
     return data.transactions[index]?.id || `idx-${index}`;
   }, []);
 

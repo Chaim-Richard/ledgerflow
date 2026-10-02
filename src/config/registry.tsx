@@ -11,6 +11,8 @@
  */
 
 import { lazy } from 'react';
+import type { ComponentType, ElementType } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { 
   LayoutGrid, BarChart3, Activity, FileText, Database, Layers, 
   ArrowDownRight, ArrowUpRight, FolderKanban, Users, RefreshCw, 
@@ -22,9 +24,9 @@ import {
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
-const pluginModules = import.meta.glob('../plugins/*.tsx');
-const dynamicTabs: any[] = [];
-const dynamicComponents: Record<string, any> = {};
+const pluginModules = import.meta.glob<{ default: ComponentType }>('../plugins/*.tsx');
+const dynamicTabs: AppTabDefinition[] = [];
+const dynamicComponents: Record<string, ElementType> = {};
 for (const path in pluginModules) {
   const fileName = path.split('/').pop()?.replace('.tsx', '') || '';
   if (fileName && fileName !== 'README' && fileName !== 'README.md') {
@@ -32,7 +34,7 @@ for (const path in pluginModules) {
     
     // Wrap component lazily using React.lazy code-splitting
     dynamicComponents[fileName] = lazy(() => {
-      return pluginModules[path]().then((mod: any) => {
+      return pluginModules[path]().then((mod) => {
         return { default: mod.default };
       });
     });
@@ -47,7 +49,7 @@ for (const path in pluginModules) {
 }
 
 // 1. Definition of all View Components
-export const VIEW_COMPONENTS: Record<string, any> = {
+export const VIEW_COMPONENTS: Record<string, ElementType> = {
   'inventory': lazy(() => import('../components/inventory/Inventory')),
   'accept-invite': lazy(() => import('../components/auth/AcceptInviteView')),
   ...dynamicComponents,
@@ -102,7 +104,7 @@ export const VIEW_COMPONENTS: Record<string, any> = {
 export interface AppTabDefinition {
   id: string;
   label: Record<string, string>;
-  icon: any;
+  icon: LucideIcon;
   groupId?: string;
   requiresOwner?: boolean;
   isAdvanced?: boolean;
@@ -166,12 +168,12 @@ export const NAV_GROUPS: Record<string, Record<string, string>> = {
 };
 
 export const getVisibleTabs = (lang: string, isOwner: boolean, hiddenTabs?: string[]) => {
-  const groups: Record<string, any[]> = Object.keys(NAV_GROUPS).reduce((acc, key) => {
+  const groups: Record<string, { id: string; label: string; icon: LucideIcon }[]> = Object.keys(NAV_GROUPS).reduce((acc, key) => {
     acc[key] = [];
     return acc;
-  }, {} as Record<string, any[]>);
+  }, {} as Record<string, { id: string; label: string; icon: LucideIcon }[]>);
 
-  const dynamicGroups: Record<string, any[]> = {};
+  const dynamicGroups: Record<string, { id: string; label: string; icon: LucideIcon }[]> = {};
 
   APP_TABS.forEach(tab => {
     if (tab.requiresOwner && !isOwner) return;
@@ -240,7 +242,7 @@ export interface CommandDefinition {
   label: { en: string; he: string };
   category: string;
   actionId: string;
-  payload?: any;
+  payload?: Record<string, unknown>;
 }
 
 export const SYSTEM_COMMANDS: CommandDefinition[] = [
@@ -260,15 +262,22 @@ export const SYSTEM_COMMANDS: CommandDefinition[] = [
   { id: 'settings-profile', label: { en: 'User Profile', he: 'פרופיל משתמש' }, category: 'Settings', actionId: 'switch-tab', payload: { tab: 'settings', subTab: 'profile' } }
 ];
 
+interface DashboardKpiStats {
+  revenue: string; revenueTrend: number;
+  expenses: string; expensesTrend: number;
+  netCash: string; netCashTrend: number;
+  runway: number;
+}
+
 export interface DashboardKpiDefinition {
   id: string;
   title: Record<string, string>;
-  icon: any;
+  icon: LucideIcon;
   color: 'emerald' | 'rose' | 'azure' | 'amber';
   actionId: string;
-  actionPayload?: any;
-  valueExtractor: (stats: any) => string;
-  trendExtractor: (stats: any) => number;
+  actionPayload?: Record<string, unknown>;
+  valueExtractor: (stats: DashboardKpiStats) => string;
+  trendExtractor: (stats: DashboardKpiStats) => number;
 }
 
 export const DASHBOARD_KPI_REGISTRY: DashboardKpiDefinition[] = [
@@ -313,7 +322,7 @@ export const DASHBOARD_KPI_REGISTRY: DashboardKpiDefinition[] = [
   }
 ];
 
-export const REPORT_COMPONENTS: Record<string, any> = {
+export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'PNLView': lazy(() => import('../components/ledger/ProfitAndLossView')),
   'BalanceSheetReportView': lazy(() => import('../components/ledger/BalanceSheetView')),
   'CashFlowView': lazy(() => import('../components/ledger/CashFlowView')),
@@ -340,7 +349,7 @@ export const ANALYTICAL_LENSES_REGISTRY = [
   { id: 'forensics_2', label: { en: 'Categorization Consistency Checker', he: 'בדיקת עקביות סיווגים' }, componentName: 'ToolSandbox' }
 ];
 
-export const LENS_COMPONENTS: Record<string, any> = {
+export const LENS_COMPONENTS: Record<string, ElementType> = {
   'ToolSandbox': lazy(() => import('../components/platform/ToolsCatalog'))
 };
 export const REPORT_TABS_REGISTRY = [
@@ -381,7 +390,7 @@ export const SETTINGS_TABS_REGISTRY = [
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ];
 
-export const SETTINGS_COMPONENTS: Record<string, any> = {
+export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'RulesSettingsView': lazy(() => import('../components/platform/settings/RulesSettings')),
   'DimensionsView': lazy(() => import('../components/platform/settings/DimensionsSettings')),
   'AppearanceSettingsView': lazy(() => import('../components/platform/settings/AppearanceSettings')),

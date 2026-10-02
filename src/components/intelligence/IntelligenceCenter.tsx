@@ -1,3 +1,5 @@
+import type { Transaction } from '../../types';
+import type { LucideIcon } from 'lucide-react';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -31,7 +33,7 @@ import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 // -------------------------------------------------------------
 // Interactive D3 Ledger Volumetric Flow & Activity Visualizer
 // -------------------------------------------------------------
-const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
+const D3LedgerVisualizer = ({ data }: { data: (Transaction & { category?: string })[] }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height: 180 });
@@ -132,11 +134,11 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
     svg.append("path")
       .datum(processed)
       .attr("fill", "url(#areaTrendGradient)")
-      .attr("d", area()
-        .x((d: any) => (x(d.label) || 0) + x.bandwidth() / 2)
+      .attr("d", area<(typeof processed)[number]>()
+        .x((d) => (x(d.label) || 0) + x.bandwidth() / 2)
         .y0(height - margin.bottom)
-        .y1((d: any) => y(d.value))
-        .curve(curveMonotoneX) as any
+        .y1((d) => y(d.value))
+        .curve(curveMonotoneX)
       );
 
     // 2. Bars
@@ -144,9 +146,9 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
       .selectAll("rect")
       .data(processed)
       .join("rect")
-      .attr("x", (d: any) => x(d.label) || 0)
-      .attr("y", (d: any) => y(d.value))
-      .attr("height", (d: any) => Math.max(0, (height - margin.bottom) - y(d.value)))
+      .attr("x", (d) => x(d.label) || 0)
+      .attr("y", (d) => y(d.value))
+      .attr("height", (d) => Math.max(0, (height - margin.bottom) - y(d.value)))
       .attr("width", x.bandwidth())
       .attr("fill", "url(#modernBarGradient)")
       .attr("rx", 3.5)
@@ -160,10 +162,10 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
       .attr("stroke", "#10b981")
       .attr("stroke-width", 1.8)
       .attr("stroke-opacity", 0.8)
-      .attr("d", line()
-        .x((d: any) => (x(d.label) || 0) + x.bandwidth() / 2)
-        .y((d: any) => y(d.value))
-        .curve(curveMonotoneX) as any
+      .attr("d", line<(typeof processed)[number]>()
+        .x((d) => (x(d.label) || 0) + x.bandwidth() / 2)
+        .y((d) => y(d.value))
+        .curve(curveMonotoneX)
       );
 
     // 4. Glowing trend points
@@ -171,8 +173,8 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
       .selectAll("circle")
       .data(processed)
       .join("circle")
-      .attr("cx", (d: any) => (x(d.label) || 0) + x.bandwidth() / 2)
-      .attr("cy", (d: any) => y(d.value))
+      .attr("cx", (d) => (x(d.label) || 0) + x.bandwidth() / 2)
+      .attr("cy", (d) => y(d.value))
       .attr("r", 3)
       .attr("fill", "#ffffff")
       .attr("stroke", "#10b981")
@@ -185,7 +187,7 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
       .selectAll("rect")
       .data(processed)
       .join("rect")
-      .attr("x", (d: any) => (x(d.label) || 0))
+      .attr("x", (d) => (x(d.label) || 0))
       .attr("y", margin.top)
       .attr("width", x.bandwidth())
       .attr("height", bandHeight)
@@ -277,7 +279,17 @@ const D3LedgerVisualizer = ({ data }: { data: any[] }) => {
 // -------------------------------------------------------------
 // Core Redesigned Analytical Channels
 // -------------------------------------------------------------
-const CHANNELS = [
+interface ChannelItem {
+  id: string;
+  icon: LucideIcon;
+  label: Record<string, string>;
+  desc?: Record<string, string>;
+  name?: string;
+  description?: string;
+  badge?: string;
+}
+
+const CHANNELS: { group: Record<string, string>; items: ChannelItem[] }[] = [
   {
     group: { en: 'Executive Overview', he: 'סקירת מנהלים' },
     items: [
@@ -354,9 +366,9 @@ export default function AnalyticalCenter() {
   const metrics = useAuditTelemetry(transactions, accounts, timeRange, (timeRange === 30) ? passedMetrics : undefined);
 
   // Active channel attributes lookup
-  const activeChannelDef: any = useMemo(() => {
+  const activeChannelDef = useMemo(() => {
     for (const group of CHANNELS) {
-      const match = group.items.find((item: any) => item?.id === activeChannel);
+      const match = group.items.find((item) => item?.id === activeChannel);
       if (match) return match;
     }
     return CHANNELS[0].items[0];
@@ -387,7 +399,7 @@ export default function AnalyticalCenter() {
   const filteredChannels = useMemo(() => {
     return CHANNELS.map(g => ({
       ...g,
-      items: g.items.filter((i: any) => 
+      items: g.items.filter((i) =>
         i?.label?.en?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         i?.desc?.en?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (i?.label?.he && i.label.he.includes(searchTerm))
@@ -395,7 +407,7 @@ export default function AnalyticalCenter() {
     })).filter(g => g.items.length > 0);
   }, [searchTerm]);
 
-  const activeChannelName = activeChannelDef ? ((activeChannelDef.label && (activeChannelDef.label[language] || activeChannelDef.label['en'])) || (activeChannelDef as any).name || activeChannelDef.id) : '';
+  const activeChannelName = activeChannelDef ? ((activeChannelDef.label && (activeChannelDef.label[language] || activeChannelDef.label['en'])) || (activeChannelDef).name || activeChannelDef.id) : '';
 
   if (!activeChannelDef) {
     return null;
@@ -483,7 +495,7 @@ export default function AnalyticalCenter() {
                 </div>
                 
                 <div className="space-y-0.5">
-                  {group.items.map((item: any) => {
+                  {group.items.map((item) => {
                     const isActive = activeChannel === item.id;
                     const IconComponent = item.icon;
                     return (
@@ -505,10 +517,10 @@ export default function AnalyticalCenter() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className={cn("text-[11.5px] leading-none tracking-tight transition-colors", isActive ? "font-bold text-[var(--text)]" : "font-medium text-[var(--text)]")}>
-                            {((item as any).label?.[language] || (item as any).label?.['en']) || (item as any).name || item.id}
+                            {((item).label?.[language] || (item).label?.['en']) || (item).name || item.id}
                           </p>
                           <p className="text-[9px] text-[var(--muted)] mt-1 leading-normal font-medium truncate group-hover:text-[var(--text)] transition-colors">
-                            {((item as any).desc?.[language] || (item as any).desc?.['en']) || item.description || ''}
+                            {((item).desc?.[language] || (item).desc?.['en']) || item.description || ''}
                           </p>
                         </div>
                         {isActive && (
@@ -560,7 +572,7 @@ export default function AnalyticalCenter() {
             {/* Display active state details */}
             <div className="space-y-0.5">
               <div className="flex items-center gap-1">
-                <span className="text-[9px] font-bold text-indigo-650 uppercase tracking-widest">{(activeChannelDef as any).badge || "PRO"}</span>
+                <span className="text-[9px] font-bold text-indigo-650 uppercase tracking-widest">{(activeChannelDef).badge || "PRO"}</span>
                 <ChevronRight aria-hidden="true" size={10} className="text-slate-350" />
                 <span className="text-[9px] font-semibold text-slate-450 uppercase tracking-wider">{activeChannelDef.id} lens</span>
               </div>
@@ -789,7 +801,7 @@ export default function AnalyticalCenter() {
                                status: metrics.anomalies.length > 0 ? 'ALERT' : 'PASS',
                                color: metrics.anomalies.length > 0 ? 'border-rose-500' : 'border-emerald-500'
                              }
-                           ].map((item: any) => (
+                           ].map((item) => (
                              <div key={item.title} className={cn("p-2.5 border-l-2 bg-[var(--ink)]/50 rounded-r-lg space-y-1.5 transition-all hover:bg-[var(--ink)]", item.color)}>
                                <div className="flex items-center justify-between">
                                  <span className="text-[10px] font-bold text-slate-850">{item.title}</span>
@@ -849,7 +861,7 @@ export default function AnalyticalCenter() {
                                <YAxis tick={{ fontSize: 8, fill: '#64748b' }} />
                                <Tooltip 
                                  contentStyle={{ borderRadius: '0.5rem', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px -1px rgb(0 0 0 / 0.05)', fontSize: '10px' }}
-                                 formatter={(val: any) => [`$${val.toLocaleString()}`, 'Profit']}
+                                 formatter={(val) => [`$${val.toLocaleString()}`, 'Profit']}
                                />
                                <Bar dataKey="profit" fill="#6366f1" radius={[3, 3, 0, 0]} />
                             </BarChart>
@@ -874,7 +886,7 @@ export default function AnalyticalCenter() {
                                <YAxis tick={{ fontSize: 8, fill: '#64748b' }} />
                                <Tooltip 
                                  contentStyle={{ fontSize: '10px', borderRadius: '0.5rem' }} 
-                                 formatter={(val: any) => [`${parseFloat(val).toFixed(1)}%`, 'Operational Margin']} 
+                                 formatter={(val) => [`${parseFloat(val as string).toFixed(1)}%`, 'Operational Margin']}
                                />
                                <Area type="monotone" dataKey="margin" stroke="#10b981" strokeWidth={1.8} fillOpacity={1} fill="url(#marginColorGrad)" />
                             </AreaChart>
@@ -993,7 +1005,7 @@ export default function AnalyticalCenter() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
               >
-                <FinancialCalculatorView type={activeChannel as any} />
+                <FinancialCalculatorView type={activeChannel as React.ComponentProps<typeof FinancialCalculatorView>['type']} />
               </motion.div>
             )}
 
@@ -1022,7 +1034,7 @@ export default function AnalyticalCenter() {
                       exit={{ opacity: 0 }}
                       className="h-full"
                     >
-                      <ViewErrorBoundary viewName={(lensDef as any)?.label?.en || lensDef.id || activeChannel}>
+                      <ViewErrorBoundary viewName={(lensDef)?.label?.en || lensDef.id || activeChannel}>
                         <React.Suspense fallback={
                           <div className="flex flex-col items-center justify-center p-16 space-y-3 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] min-h-[380px] text-center">
                             <Loader2 aria-hidden="true" className="w-7 h-7 text-indigo-650 animate-spin shrink-0" />
@@ -1097,7 +1109,7 @@ export default function AnalyticalCenter() {
                       {group.group[language] || group.group['en']}
                     </span>
                     <div className="space-y-0.5">
-                      {group.items.map((item: any) => {
+                      {group.items.map((item) => {
                         const isActive = activeChannel === item.id;
                         const IconComponent = item.icon;
                         return (
@@ -1115,7 +1127,7 @@ export default function AnalyticalCenter() {
                             )}
                           >
                             <IconComponent size={13} className={cn(isActive ? "text-indigo-600" : "text-[var(--muted)]")} />
-                            <span>{((item as any).label?.[language] || (item as any).label?.['en']) || (item as any).name || item.id}</span>
+                            <span>{((item).label?.[language] || (item).label?.['en']) || (item).name || item.id}</span>
                           </button>
                         );
                       })}
