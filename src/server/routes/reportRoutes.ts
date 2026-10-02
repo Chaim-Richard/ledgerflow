@@ -5,10 +5,8 @@ import type { DocumentData, Query } from "../db/firestore";
 import { z } from "zod";
 import { getDb, validateWorkspaceMember } from "../db/firestore";
 import { isOpenBill, isOpenInvoice, isPostable, lineAmount } from "../../lib/txFilters";
-import { calculateAmountDue } from "../../lib/documentMath";
-import { toBaseCents } from "../reports/partyReports";
 import { ReportRangeSchema, WorkspaceIdSchema } from "../../schemas";
-import { parseLocalDate, getLocalDateISO } from "../../lib/utils";
+import { getLocalDateISO } from "../../lib/utils";
 import crypto from "crypto";
 import {
   computeProfitAndLoss,
@@ -20,6 +18,7 @@ import {
   computeTaxLiability
 } from "../reports/computeReports";
 import type { Bill, Budget, ChartAccount, Customer, Invoice, Payment, Transaction as LedgerTransaction } from "../../types";
+import { agingBucket, daysOverdue, outstandingBaseCents } from '../../lib/aging';
 
 export const reportRouter = express.Router();
 
@@ -137,8 +136,6 @@ reportRouter.get("/aging", async (req, res) => {
     
     // open documents only (approved bills too; drafts, void, cancelled and paid are not owed)
     items = items.filter(item => (type === 'ar' ? isOpenInvoice(item) : isOpenBill(item)));
-    const today = parseLocalDate(getLocalDateISO());
-    
     const aging = {
       current: 0,
       "1-30": 0,
@@ -148,30 +145,14 @@ reportRouter.get("/aging", async (req, res) => {
       total: 0
     };
 
+    // the same rule as the aging screens (src/lib/aging.ts): what is still owed, base currency, by due date
+    const side = type === 'ar' ? 'customer' : 'vendor';
+    const keyOf = { current: 'current', d1_30: '1-30', d31_60: '31-60', d61_90: '61-90', d90plus: '90+' } as const;
+    const todayIso = getLocalDateISO();
     items.forEach((item) => {
-      // what is still owed (total less any deposit and what was paid), in the base currency
-      const outstanding = toBaseCents(calculateAmountDue(item), item.exchangeRate);
+      const outstanding = outstandingBaseCents(item, side);
       if (outstanding <= 0) return;
-
-      let diffDays = 0;
-      const dateStr = item.dueDate || item.date;
-      if (dateStr && typeof dateStr === 'string') {
-        try {
-          const parsed = parseLocalDate(dateStr);
-          if (!isNaN(parsed.getTime())) {
-            diffDays = Math.floor((today.getTime() - parsed.getTime()) / (1000 * 60 * 60 * 24));
-          }
-        } catch {
-          diffDays = 0;
-        }
-      }
-
-      if (diffDays <= 0) aging.current += outstanding;
-      else if (diffDays <= 30) aging["1-30"] += outstanding;
-      else if (diffDays <= 60) aging["31-60"] += outstanding;
-      else if (diffDays <= 90) aging["61-90"] += outstanding;
-      else aging["90+"] += outstanding;
-
+      aging[keyOf[agingBucket(daysOverdue(item, todayIso))]] += outstanding;
       aging.total += outstanding;
     });
 

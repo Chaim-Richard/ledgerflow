@@ -1454,8 +1454,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] H-06 VendorDetailView
 - [ ] H-07 TaxLiabilityView
 - [ ] H-08 StatementView
-- [ ] H-09 ARAgingReportView
-- [ ] H-10 APAgingReportView
+- [x] H-09 ARAgingReportView (aging-views.test.tsx; found L-159)
+- [x] H-10 APAgingReportView (aging-views.test.tsx)
 - [x] H-11 ExpenseByCategoryReportView (report-views.test.tsx)
 - [x] H-12 IncomeBySourceReportView (report-views.test.tsx; found L-158)
 - [x] H-13 AverageMonthlyReportView (report-views.test.tsx)
@@ -1718,6 +1718,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-156 Query builder showed amounts 100× too small (divided by 100, then `formatDecimal`, which takes cents) with a hard-coded "$": the Amount column and each line in the expanded rows. Now `formatCurrency` in the entry's currency; money guard bans `formatDecimal(x / 100)`
 - [x] L-157 Expense by Category, Income by Source, Monthly Averages, Top Line Items and Tag Breakdown counted only the positive half of expense lines / negative half of revenue lines: a reversed entry still showed in full (its reversal was skipped) and refunds or credits back to customers never reduced the totals, so these reports disagreed with the P&L. Now every line counts with its sign; top-item lists leave out reversed pairs (reportGenerators.ts, tested)
 - [x] L-158 Income by Source report crashed on opening ("Maximum update depth exceeded"): its store selector filtered the transactions, making a new array on every read. Fixed; guard test bans `.filter/.map/...` inside store selectors
+- [x] L-159 A/R and A/P aging screens: counted total − paid (deposits and applied credits ignored) in each document's own currency (a EUR invoice added as dollars) and aged by the document date, while the /aging API used what is still owed in the base currency by due date — two different agings. Now one rule, `src/lib/aging.ts` (tested), used by both: Current / 1–30 / 31–60 / 61–90 / over 90 days past due; the drawer says "N days overdue"; rows open from a real button
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
