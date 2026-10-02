@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
+import { withNewAmount } from '../../lib/transactionEdits';
 import { formatDecimal, cn, sanitizeCsvCell, resolveAccountName, formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { isCashAccount, isPostable } from '../../lib/txFilters';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
@@ -236,7 +237,10 @@ const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) => {
                 value={tx.totalAmountCents / 100}
                 type="number"
                 onSave={(v) => {
-                  data.onUpdate?.(tx.id, { totalAmountCents: TruthEngine.parseAmountToCents(v || '0') });
+                  // the server works the total out from the lines: change both lines (L-147)
+                  const next = withNewAmount(tx, TruthEngine.parseAmountToCents(v || '0'));
+                  if (next) data.onUpdate?.(tx.id, next);
+                  else toast.info('This entry has several lines: open it to change the amounts.');
                   data.setEditingCell(null);
                 }}
                 onClose={() => data.setEditingCell(null)}

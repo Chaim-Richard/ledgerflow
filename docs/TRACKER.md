@@ -1493,7 +1493,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] I-12 Dates follow the user's chosen format (formatDate; Preferences); tested
 - [ ] I-13 Persist column layout per user
 - [x] I-14 Sticky headers + totals row — report tables (shared report layout, data grid) scroll in their box with the header kept in view (full length when printed); balance summaries have a totals row over the rows shown (component test)
-- [ ] I-15 Inline row editing
+- [x] I-15 Inline row editing — description, account and amount can be changed in the transaction list; changing the amount now resizes both lines of a simple entry (L-147); split entries open the dialog
 - [ ] I-16 Breadcrumb on drill-down
 - [~] I-17 Deep-linkable report settings done; list filters elsewhere not yet
 - [x] I-18 Print stylesheet (Reports page)
@@ -1706,6 +1706,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-143 Command palette "show …" never filtered the transaction list (it set a filter field nobody read); saved views put fields the filter doesn't know into the filter chips (they did nothing). Now the palette search filters (tested) and a view only adds its date range
 - [x] L-144 API Hub request log showed every request as "Error" (read `status`, the server sends `statusCode`)
 - [x] L-145 Six amounts were printed with a hard-coded "$" and their own division by 100 (owner overview totals, rule previews, saved-view minimum, transfer matches): wrong in any other currency; now `formatCurrency`, and a guard test stops it · L-146 same for 17 more: command palette results (invoices and bills always "USD"), statement and bank-feed import previews, Copilot's figures sent to the AI, tax reserve card, insights, Magic Entry, document vault, transaction pivot; two more guard patterns
+- [x] L-147 An amount changed in the transaction list showed the new number, but only the total was sent; the server works the total out from the lines, so the change was dropped. Both lines of a simple entry now change together (tested); split entries say to open the entry
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
