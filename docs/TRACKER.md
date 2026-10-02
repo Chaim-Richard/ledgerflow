@@ -48,6 +48,7 @@ then the 488 LATER items. Claude works through them in that order and ticks them
 | Bulk import | K-01 (= M-18 BK-01 BK-05 BK-06 CA-11): Settings → Import Data — customers, vendors, items, accounts from CSV/Excel; columns matched by name; every row checked, all or nothing; duplicates skipped; items' opening stock posted; undo keeps records already in use (12 tests) |
 | Period close 1 | R-01 R-02 R-03 R-08 R-10 BA-15: one lock rule (hard close, soft close for bookkeepers, partial unlock) in database + server + screens; close / reopen (reason; owner for hard) / unlock only through the server, audited; checklist with sign-offs; drafts block the close. Fixed: the close screen never loaded invoices/bills/bank lines; a lock on the 28th closed the month; "clear lock date" only changed the screen; bookkeepers could close months (11 tests) |
 | Notifications | S-01 S-03 S-04 S-06 S-14 S-19 + bounces: real notifications from the server (one per person, stored in the database, live bell): invoice emailed, invoice overdue (daily), customer payment received, email bounced / marked spam, bank connection expired, person invited / joined. Each person marks their own read and chooses which types they get (bell → gear). Only their own are visible (database rules tested). **The old bell showed made-up alerts kept only in the open page** |
+| Dates and errors | I-12: dates on screen follow Preferences → Date Display Format (it changed nothing before: **L-128**), with "Oct 02, 2026" as a choice and the default; inputs and files stay YYYY-MM-DD (tested in 3 time zones). BO-07: failed saves and loads say what happened and what to do (closed period → reopen in Month-End Close, no permission → ask an owner, session ended, offline, duplicate, unbalanced, invalid…) instead of "SYSTEM ERROR: CREATE" and a database message (tested) |
 | Accessibility 1 | E-02 E-03 E-07 (most) E-04 E-22 E-29: 142 form labels are now linked to their fields (`Labelled`, unique id per field, same look; done by a codemod), icon-only buttons and switches have names, empty action-column headers say "Actions", backdrops are no longer fake focusable buttons; every keyboard-focused control shows a ring; "Skip to content" is the first Tab stop (it was skipped: the sub-navigation's scrollIntoView moved the browser's Tab starting point); browser test. Lint warnings 2,612 → 2,420 |
 | Loading and confirmations | I-01 I-02 I-05 I-07 I-08 (AA-02): one data status line above every screen says what is loading, what failed to load (with "Try again") and which lists are cut at their limit (the old banner said "2,000 of N"); Sales, Purchases, Payments, Credit notes, Estimates, Recurring and Data Health show "Loading…" instead of "nothing here" (Data Health said "Everything checks out" before checking); guard test. Void and delete name the record and ask first (voiding an invoice happened on one click); Delete only on draft bills (the database refuses the rest). Invoice and bill dialogs ask before discarding unsaved changes. Removed the "seed demo data" button that wrote 20 fake records into a real workspace (**L-127**) |
 | Money dialogs | H-01 H-02 H-03 H-04: component tests (jsdom + Testing Library, `src/tests/*.test.tsx`) for the invoice, bill, payment and bad debt dialogs check what each saves or sends: lines, tax on top or included, totals, numbers kept on edit, approval limit, allocations, refusals. Fixed **L-125** (invoice dialog: a customer typed but not on the list was saved as a made-up customer id; editing wiped the memo, terms and email text; currency defaulted to USD in any workspace) and **L-126** (payments: "apply" paid the newest invoices first, and drafts were offered though the server refuses them) |
@@ -1484,7 +1485,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] I-09 30-second undo
 - [ ] I-10 Discoverable keyboard shortcuts
 - [ ] I-11 Tabular figures everywhere
-- [ ] I-12 Workspace date format everywhere
+- [x] I-12 Dates follow the user's chosen format (formatDate; Preferences); tested
 - [ ] I-13 Persist column layout per user
 - [ ] I-14 Sticky headers + totals row
 - [ ] I-15 Inline row editing
@@ -1677,6 +1678,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-125 Invoice dialog: a customer typed but not on the list was saved as a made-up customer id (no customer record: no statement, balance or email); editing an invoice wiped its memo, terms and email text; the currency defaulted to USD in any workspace
 - [x] L-126 Payments: "apply to invoices" paid the newest invoices first (the list is newest first), and draft invoices/bills were offered though the server refuses them
 - [x] L-127 The empty invoice list offered "Seed demo data", which wrote 20 made-up invoices, bills and entries into a real workspace's books; removed
+- [x] L-128 Preferences → Date Display Format saved a choice that no screen used; dates now follow it
 - [x] L-105 Foreign-currency documents converted twice in the ledger (amounts converted, then the rate applied again); fixed, test proves it; old entries: Month-End Close → Repost
 - [x] L-104 Bad debt write-off counted the loss twice (voided the sale and booked the expense); FX ignored
 - [x] L-103 Fixed Asset Register saved nothing (assets + depreciation only in the page); now saved + server run
@@ -2148,7 +2150,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BO-04 Video walkthroughs
 - [ ] BO-05 Feedback widget
 - [ ] BO-06 Status page link
-- [ ] BO-07 Errors naming a remedy
+- [x] BO-07 Errors name a remedy (describeError: central reporter, payment and write-off dialogs; tested)
 - [ ] BO-08 Undo for destructive actions
 - [ ] BP-01 Docker compose
 - [ ] BP-02 Emulator setup docs
