@@ -826,6 +826,7 @@ export default function BalanceSheetView({ accounts = [], formatCurrency, asOfDa
           isOpen={!!drillDownTarget}
           onClose={() => setDrillDownTarget(null)}
           accountName={drillDownTarget.accountName}
+          from="Balance Sheet"
           transactions={drillDownTarget.transactions}
           formatCurrency={formatCurrency}
         />

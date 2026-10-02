@@ -4,6 +4,7 @@ import { X, Table, Search } from 'lucide-react';
 import { Transaction } from '../../types';
 
 import { cn, formatDate } from '../../lib/utils';
+import { useDialog } from '../../hooks/useDialog';
 
 interface DrillDownModalProps {
   isOpen: boolean;
@@ -11,14 +12,17 @@ interface DrillDownModalProps {
   accountName: string;
   transactions: Transaction[];
   formatCurrency: (val: number) => string;
+  /** where the drill-down came from, shown as a breadcrumb: e.g. 'Profit & Loss' (I-16) */
+  from?: string;
 }
 
-export default function DrillDownModal({ isOpen, onClose, accountName, transactions, formatCurrency }: DrillDownModalProps) {
+export default function DrillDownModal({ isOpen, onClose, accountName, transactions, formatCurrency, from }: DrillDownModalProps) {
   const [displayLimit, setDisplayLimit] = React.useState(50);
+  const { dialogProps, titleId } = useDialog(onClose, isOpen);
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+        <div {...dialogProps} className="fixed inset-0 z-[600] flex items-center justify-center p-4">
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -38,7 +42,14 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
                   <Table size={24} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-[var(--text)] tracking-tight">{accountName}</h3>
+                  {from && (
+                    <nav aria-label="Breadcrumb" className="text-xs text-[var(--muted)] mb-1">
+                      <button type="button" onClick={onClose} className="hover:underline">{from}</button>
+                      <span aria-hidden="true"> › </span>
+                      <span aria-current="page">{accountName}</span>
+                    </nav>
+                  )}
+                  <h2 id={titleId} className="text-2xl font-black text-[var(--text)] tracking-tight">{accountName}</h2>
                   <p className="micro-label">Transaction Drill-Down • {transactions.length} matched events</p>
                 </div>
               </div>

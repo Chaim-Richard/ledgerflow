@@ -733,6 +733,7 @@ export default function PivotSheet({ transactions, isEmbedded = false }: PivotSh
           isOpen={!!drillDownTarget}
           onClose={() => setDrillDownTarget(null)}
           accountName={drillDownTarget.title}
+          from="Pivot sheet"
           transactions={drillDownTarget.transactions}
           formatCurrency={formatCurrency}
         />

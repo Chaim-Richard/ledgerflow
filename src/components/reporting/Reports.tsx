@@ -385,6 +385,7 @@ const Reports = React.memo(() => {
           isOpen={!!drillDownAccount}
           onClose={() => setDrillDownAccount(null)}
           accountName={drillDownAccount || ''}
+          from="Reports"
           transactions={drillDownTransactions}
           formatCurrency={formatCurrency}
         />

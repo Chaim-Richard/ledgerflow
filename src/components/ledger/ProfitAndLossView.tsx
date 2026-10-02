@@ -726,6 +726,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           isOpen={!!drillDownTarget}
           onClose={() => setDrillDownTarget(null)}
           accountName={drillDownTarget.accountName}
+          from="Profit & Loss"
           transactions={drillDownTarget.transactions}
           formatCurrency={formatCurrency}
         />

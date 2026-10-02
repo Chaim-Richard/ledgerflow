@@ -1482,9 +1482,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] I-01 Loading state: data status line + "Loading…" on the money lists (guard test)
 - [x] I-02 Failed loads shown with "Try again" (data status line); render errors already have the view boundary with retry
 - [x] I-03 Empty states: the list screens have one (Projects and Audit trail added, with loading first; the rest already had them)
-- [ ] I-04 `<ViewShell>` wrapper
+- [x] I-04 `<ViewShell>` wrapper — done another way: one data status line above every screen (loading / failed with "Try again" / cut at limit), an error boundary per screen with a recovery action, and a guard test that screens ask for their data and show "Loading…" (I-01 I-02 I-05)
 - [x] I-05 Guard test: a screen with an empty state that loads data on demand must show loading
-- [ ] I-06 Optimistic updates with rollback
+- [x] I-06 Optimistic updates with rollback — transaction edits show at once and roll back on failure (verified); other saves wait for the server and the live lists update, so nothing is shown that was not saved
 - [x] I-07 Unsaved-changes warning in the invoice and bill dialogs (tested)
 - [x] I-08 Void/delete confirmations name the record (Sales, Purchases)
 - [x] I-09 30-second undo — "Undo" stays 30 seconds after adding or voiding a transaction, and says whether it worked (a failed undo was silent before)
@@ -1494,7 +1494,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] I-13 Persist column layout per user — the transaction list's Columns menu now really hides account, project, class, location, running balance or status, remembered per person on this device (browser test); it changed nothing before (L-148)
 - [x] I-14 Sticky headers + totals row — report tables (shared report layout, data grid) scroll in their box with the header kept in view (full length when printed); balance summaries have a totals row over the rows shown (component test)
 - [x] I-15 Inline row editing — description, account and amount can be changed in the transaction list; changing the amount now resizes both lines of a simple entry (L-147); split entries open the dialog
-- [ ] I-16 Breadcrumb on drill-down
+- [x] I-16 Breadcrumb on drill-down — the account drill-down from P&L, Balance Sheet, Reports and the pivot sheet shows "Report › Account" and goes back from it; it is a proper dialog now (component test)
 - [~] I-17 Deep-linkable report settings done; list filters elsewhere not yet
 - [x] I-18 Print stylesheet (Reports page)
 - [x] I-19 Active filters as chips — the transaction list shows each active filter as a chip with a remove button and "Clear All"; the command palette's search now shows there too (L-143)
