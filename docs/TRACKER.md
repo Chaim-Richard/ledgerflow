@@ -1787,7 +1787,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] P-04 Support impersonation
 - [ ] P-05 Two-person rule
 - [ ] P-06 Usage metering
-- [ ] P-07 In-app changelog
+- [x] P-07 In-app changelog (codex, `codex/p-07-in-app-changelog`): Help & Guide → What’s new; dated shipped updates, keyboard-accessible disclosure
 - [ ] P-08 Product tour
 - [x] P-09 Onboarding (= L-19 setup wizard)
 - [ ] P-10 Referrals
