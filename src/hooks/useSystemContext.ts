@@ -1,13 +1,11 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { useUIStore } from '../stores/useUIStore';
 import { useEntityOperations } from './useEntityOperations';
 import { useTransactionActions } from './useTransactionActions';
-import { useFinancialReporting } from './useFinancialReporting';
 import { useAIActions } from './useAIActions';
-import { useAuditTelemetry } from './useAuditTelemetry';
 import { VIEW_COMPONENTS, APP_TABS } from '../config/registry';
 
 export function useCommandDispatcher() {

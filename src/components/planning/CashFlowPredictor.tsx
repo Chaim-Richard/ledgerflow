@@ -1,6 +1,6 @@
 import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, Activity, BarChart, Zap, Calendar, ArrowUpRight, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, Activity, BarChart, Zap, Calendar, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { cn, formatCurrency } from '../../lib/utils';
 import { StrategicEngine } from '../../services/strategicEngine';
 import { isPostable, lineAmount } from '../../lib/txFilters';

@@ -1,21 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  History, 
-  Search, 
-  User, 
-  Building, 
-  Calendar, 
-  ChevronDown, 
-  ChevronUp, 
-  Eye,
-  Filter,
-  ArrowRight
-} from 'lucide-react';
+import { History, Search, User, Building, Calendar, ChevronDown, ChevronUp, Filter, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, activateOnKey } from '../../lib/utils';
 import { auditDescription, auditTime } from '../../lib/auditFormat';
 import { auth } from '../../firebase';
-import { useCollection } from '../../hooks/useCollection';
 import { Labelled } from '../ui/Labelled';
 
 const fetchWithAuth = async (url: string, options: any = {}) => {

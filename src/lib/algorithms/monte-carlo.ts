@@ -1,5 +1,5 @@
 import { resolveAccountRole } from '../accountUtils';
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition } from './types';
 import { standardDeviation, mean } from './math';
 import { isPostable, isCashAccount, lineAmount } from '../txFilters';
 

@@ -1,21 +1,5 @@
 import React from 'react';
-import { RefreshCw, 
-  LogOut,
-  Command,
-  LayoutGrid,
-  Briefcase,
-  Layers,
-  BarChart3,
-  Settings,
-  ShieldAlert,
-  ShieldCheck,
-  Building,
-  Compass,
-  ChevronDown,
-  Plus,
-  ArrowUpRight,
-  ArrowDownRight
-} from 'lucide-react';
+import { RefreshCw, LogOut, Command, LayoutGrid, Layers, BarChart3, Settings, ShieldCheck, Compass, ChevronDown, Plus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { cn, formatCurrency } from '../../lib/utils';
 import { AppTab } from '../../types';
 import { useUIStore } from '../../stores/useUIStore';

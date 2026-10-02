@@ -1,12 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, DollarSign, Check, AlertCircle, Sparkles } from 'lucide-react';
-import { runTransaction, doc, collection } from '../../lib/db/firestore';
-import { db } from '../../firebase';
+import { X, DollarSign, Sparkles } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isUndepositedFundsAccount } from '../../lib/accountUtils';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { formatCurrency, getLocalDateISO, roundCents } from '../../lib/utils';
-import { LedgerPostService } from '../../services/LedgerPostService';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { toast } from 'sonner';
 import { calculateAmountDue } from '../../lib/documentMath';
 import { describeError } from '../../lib/errorRemedies';

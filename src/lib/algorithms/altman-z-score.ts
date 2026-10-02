@@ -1,4 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
+import { AlgorithmDefinition } from './types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {

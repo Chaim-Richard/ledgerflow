@@ -1,20 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { ChartAccount, Transaction } from '../../types';
+import { Transaction } from '../../types';
 import { isPostable, lineAmount } from '../../lib/txFilters';
-import { formatDecimal, formatCurrency, cn, parseLocalDate } from '../../lib/utils';
+import { formatDecimal, formatCurrency, cn } from '../../lib/utils';
 import { calculateAccountRegisterBalances, visibleAccountRegisterEntries } from '../../lib/accountRegister';
-import { 
-  BookOpen, 
-  Search, 
-  CheckCircle2, 
-  Circle, 
-  Filter, 
-  ArrowDownLeft, 
-  ArrowUpRight,
-  Building2,
-  Calendar
-} from 'lucide-react';
+import { BookOpen, Search, CheckCircle2, Circle, Filter, Building2 } from 'lucide-react';
 
 export const AccountRegisterView: React.FC = () => {
   const accounts = useLedgerStore(s => s.accounts);

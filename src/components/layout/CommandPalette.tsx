@@ -1,14 +1,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Loader2, ArrowRight, FileText, User, Building, FolderKanban, Tags, DollarSign, Zap, FolderPlus, Sparkles } from 'lucide-react';
+import { Search, Loader2, ArrowRight, FileText, User, Building, FolderKanban, Tags, DollarSign, Zap, FolderPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { SYSTEM_COMMANDS, ANALYTICAL_LENSES_REGISTRY } from '../../config/registry';
 import { useUIStore } from '../../stores/useUIStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { useAuthStore } from '../../stores/useAuthStore';
 import { parseNaturalLanguageEntry, ParsedCommandIntent } from '../../lib/algorithms/nl-parser';
 import { useShallow } from 'zustand/react/shallow';
-import { Transaction, Project, DimensionNode } from '../../types';
+import { DimensionNode } from '../../types';
 import { getLocalDateISO, resolveAccountName } from '../../lib/utils';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { useEntityOperations } from '../../hooks/useEntityOperations';

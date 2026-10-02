@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cookie, ShieldCheck, X } from 'lucide-react';
+import { Cookie, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface CookieConsentProps {

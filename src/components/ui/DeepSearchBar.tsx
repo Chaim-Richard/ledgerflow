@@ -1,6 +1,5 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef } from 'react';
 import { Search, X, Filter, DollarSign, Tag, Shield, Building, FolderKanban, HelpCircle, Sparkles, Clock } from 'lucide-react';
-import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
 import { cn } from '../../lib/utils';
 import { useTimeout } from '../../hooks/useTimeout';

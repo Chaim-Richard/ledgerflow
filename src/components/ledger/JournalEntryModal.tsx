@@ -13,11 +13,10 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, getLocalDateISO, formatCurrency } from '../../lib/utils';
-import { collection, writeBatch, doc } from '../../lib/db/firestore';
-import { db, getIdToken } from '../../firebase';
+import { getIdToken } from '../../firebase';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { isPostable, lineAmount } from '../../lib/txFilters';
+import { isPostable } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
 import { MatchingEngine } from '../../lib/MatchingEngine';
 import { SpellChecker } from '../../lib/algorithms';

@@ -3,7 +3,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
 import { computeIncomeBySource } from '../../lib/reportGenerators';
 import { isPostable } from '../../lib/txFilters';
-import { TrendingUp, Users, ArrowUpRight } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 interface Props {
   selectedYear?: number;

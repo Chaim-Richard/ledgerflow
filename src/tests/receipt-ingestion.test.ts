@@ -1,12 +1,6 @@
-import test, { describe, it } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { 
-  validateReceiptPayload, 
-  mapReceiptToCoordinates, 
-  buildBalancedReceiptTransaction,
-  isReceiptAggregateRow,
-  ParsedReceiptData
-} from '../lib/receiptIngestion';
+import { validateReceiptPayload, buildBalancedReceiptTransaction, isReceiptAggregateRow, ParsedReceiptData } from '../lib/receiptIngestion';
 import { ChartAccount } from '../types';
 import { MatchingEngine } from '../lib/MatchingEngine';
 

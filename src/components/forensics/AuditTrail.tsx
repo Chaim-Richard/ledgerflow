@@ -1,23 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { usePerformanceTrace } from '../../hooks/usePerformanceTrace';
-import { 
-  History, 
-  Search, 
-  Download,
-  User,
-  Activity,
-  Info,
-  ChevronRight,
-  Shield,
-  Filter
-} from 'lucide-react';
+import { History, Search, Download, User, Activity, ChevronRight, Shield } from 'lucide-react';
 import { cn, activateOnKey } from '../../lib/utils';
 import { auditDescription, auditTime } from '../../lib/auditFormat';
 import { format } from 'date-fns';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
-import { motion, AnimatePresence } from 'motion/react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { EmptyState } from '../ui/EmptyState';
 import { LoadingState } from '../ui/LoadingState';

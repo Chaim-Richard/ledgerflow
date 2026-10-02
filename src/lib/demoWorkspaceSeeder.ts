@@ -1,4 +1,4 @@
-import { ChartAccount, Transaction, Invoice, Bill, Customer, Vendor } from '../types';
+import { ChartAccount, Transaction, Customer, Vendor } from '../types';
 
 export function seedDemoWorkspace(workspaceId: string) {
   const accounts: ChartAccount[] = [

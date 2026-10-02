@@ -1,8 +1,6 @@
 import { motion } from 'motion/react';
 import { X } from 'lucide-react';
 import React, { useState } from 'react';
-import { useLedgerStore } from '../../stores/useLedgerStore';
-import { format } from 'date-fns';
 import { useUIStore } from '../../stores/useUIStore';
 
 import { useAuthStore } from '../../stores/useAuthStore';

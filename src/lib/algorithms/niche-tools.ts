@@ -1,5 +1,4 @@
-import { AlgorithmDefinition, AlgoResult } from './types';
-import { Transaction, ChartAccount } from '../../types';
+import { AlgorithmDefinition } from './types';
 import { isOutflow, isInflow, transactionDate } from '../txFilters';
 
 // 1. Mortgage / Loan Amortization Schedule

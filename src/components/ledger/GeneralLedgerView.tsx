@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeGeneralLedger } from '../../server/reports/computeReports';
-import { Search, Filter, BookOpen, Download } from 'lucide-react';
+import { Search, BookOpen } from 'lucide-react';
 import { Labelled } from '../ui/Labelled';
 
 export default function GeneralLedgerView({ startDate: pageStartDate, endDate: pageEndDate }: { startDate?: string; endDate?: string } = {}) {

@@ -3,7 +3,7 @@ import type { DecodedIdToken } from "../auth/supabaseAuth";
 import type { Query } from "../db/firestore";
 import { z } from "zod";
 import { getDb, validateWorkspaceMember } from "../db/firestore";
-import { isTransactionInDateRange, isPostable } from "../../lib/txFilters";
+import { isPostable } from "../../lib/txFilters";
 import { ReportRangeSchema, WorkspaceIdSchema } from "../../schemas";
 import { parseLocalDate, getLocalDateISO } from "../../lib/utils";
 import crypto from "crypto";
@@ -16,7 +16,7 @@ import {
   computeStatement,
   computeTaxLiability
 } from "../reports/computeReports";
-import { Customer, Vendor } from "../../types";
+import { Customer } from "../../types";
 
 export const reportRouter = express.Router();
 

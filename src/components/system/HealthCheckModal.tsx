@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  X, Activity, CheckCircle2, AlertTriangle, ShieldCheck,
-  RefreshCw, FileText
-} from 'lucide-react';
+import { X, Activity, CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { isPostable, lineAmount } from '../../lib/txFilters';
-import { toast } from 'sonner';
 import { useTimeout } from '../../hooks/useTimeout';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 

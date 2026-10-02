@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { LedgerEngine } from '../kernel/ledger/LedgerEngine';
 import { DoubleEntryAuditor, AuditResult } from '../services/auditor';
 import { globalEventBus } from '../lib/eventBus';
-import { isPostable, lineAmount, isRevenueAccount, isExpenseAccount, calculateTransactionImpact } from '../lib/txFilters';
+import { isPostable, lineAmount, calculateTransactionImpact } from '../lib/txFilters';
 import { 
   Transaction, 
   ChartAccount, 

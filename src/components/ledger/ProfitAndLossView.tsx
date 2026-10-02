@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
-import { parseLocalDate, cn, getLocalDateISO, monthBoundsISO, formatCurrency, activateOnKey } from '../../lib/utils';
+import { cn, getLocalDateISO, monthBoundsISO, formatCurrency, activateOnKey } from '../../lib/utils';
 import { exportToExcel as exportToExcelHelper } from '../../lib/excelExport';
 import { isPostable, lineAmount, calculateNetIncome, isTransactionInDateRange } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { useFinancialReporting, ServerPLData } from '../../hooks/useFinancialReporting';
+import { useFinancialReporting } from '../../hooks/useFinancialReporting';
 import { getComparePeriod } from '../../lib/fiscalCalendar';
 import MonthNavigator from '../ui/MonthNavigator';
 import DrillDownModal from '../layout/DrillDownModal';

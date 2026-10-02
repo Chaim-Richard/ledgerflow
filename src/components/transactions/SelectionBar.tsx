@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Clipboard, X } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface SelectionBarProps {
   selectedCount: number;

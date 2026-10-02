@@ -1,6 +1,5 @@
 import { Transaction } from '../../types';
 import { AlgorithmDefinition } from './types';
-import { computeTFIDFWeights } from './tf-idf';
 
 export function fingerprintBusiness(transactions: readonly Transaction[]) {
     if (!transactions.length) return { industry: 'Unknown', confidence: 0, clusters: [] };

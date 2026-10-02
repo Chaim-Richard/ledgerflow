@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import Decimal from 'decimal.js';
 import { DoubleEntryValidator } from '../kernel/validation/DoubleEntryValidator';
 import { TransactionTemplates } from '../kernel/templates/TransactionTemplates';
 import { Transaction, TransactionLine } from '../types';

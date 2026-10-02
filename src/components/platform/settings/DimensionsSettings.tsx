@@ -1,17 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Tag, 
-  Plus, 
-  Archive, 
-  Check, 
-  Database, 
-  Layers, 
-  RefreshCw, 
-  ShieldCheck, 
-  Info,
-  ChevronRight,
-  Lock
-} from 'lucide-react';
+import { Plus, Archive, Check, Database, Layers, RefreshCw, ShieldCheck, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { doc, updateDoc, writeBatch } from '../../../lib/db/firestore';
 import { db } from '../../../firebase';

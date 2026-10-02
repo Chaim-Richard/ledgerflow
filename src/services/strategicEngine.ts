@@ -5,7 +5,7 @@ import { format, addMonths } from "date-fns";
 
 import { predictHoltWinters } from "../lib/algorithms";
 import { parseLocalDate } from '../lib/utils';
-import { isPostable, calculateTransactionImpact, lineAmount, isExpenseAccount, isRevenueAccount, isInflow, isOutflow } from '../lib/txFilters';
+import { isPostable, calculateTransactionImpact, lineAmount, isExpenseAccount, isInflow, isOutflow } from '../lib/txFilters';
 
 export interface Insight {
   type: string;

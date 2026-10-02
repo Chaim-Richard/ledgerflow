@@ -3,11 +3,7 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useState, useMemo } from 'react';
 import { calculateSafeToSpend } from '../../lib/algorithms/tax-set-aside';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { 
-  ShieldCheck, ArrowDownToLine, Landmark, Sliders, Calendar, 
-  Sparkles, Info, AlertTriangle, ShieldAlert, CheckCircle2, 
-  HelpCircle, DollarSign, Wallet, ArrowRight, TrendingUp, AlertCircle
-} from 'lucide-react';
+import { Landmark, Sparkles, Info, AlertTriangle, ShieldAlert, CheckCircle2, ArrowRight } from 'lucide-react';
 import { addToDateISO, formatCurrency, getLocalDateISO, cn } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';

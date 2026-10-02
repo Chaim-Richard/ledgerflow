@@ -1,28 +1,9 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { usePerformanceTrace } from '../../hooks/usePerformanceTrace';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  BookOpen, 
-  Plus, 
-  Search, 
-  ArrowRightLeft, 
-  Scale, 
-  ShieldCheck, 
-  RefreshCw, 
-  BarChart3, 
-  History, 
-  AlertCircle,
-  ArrowDownRight,
-  Inbox,
-  Clock,
-  Target,
-  Activity,
-  Cpu,
-  Layers,
-  Zap
-} from 'lucide-react';
-import { Transaction, ChartAccount, JournalEntry, Budget, TaxRate } from '../../types';
+import { BookOpen, Plus, Search, ArrowRightLeft, Scale, ShieldCheck, AlertCircle, Activity, Cpu, Layers, Zap } from 'lucide-react';
+import { JournalEntry } from '../../types';
 import { cn, reportError, OperationType, formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { format } from 'date-fns';

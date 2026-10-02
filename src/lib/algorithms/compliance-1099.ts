@@ -1,6 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
-import { Transaction } from '../../types';
-import { formatCurrency, parseLocalDate } from '../../lib/utils';
+import { formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const COMPLIANCE_1099_ALGO: AlgorithmDefinition = {

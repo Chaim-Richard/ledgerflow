@@ -1,22 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { ChartAccount, Transaction } from '../../types';
+import { Transaction } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { createAccountTransfer, detectPotentialTransfers, TransferMatchCandidate } from '../../lib/transferEngine';
-import { formatCurrency, formatDate, getLocalDateISO } from '../../lib/utils';
+import { getLocalDateISO } from '../../lib/utils';
 import { isCashAccount } from '../../lib/txFilters';
 import { useTimeout } from '../../hooks/useTimeout';
-import { 
-  ArrowRightLeft, 
-  Check, 
-  X, 
-  Sparkles, 
-  AlertCircle, 
-  HelpCircle,
-  Building2,
-  Calendar,
-  DollarSign
-} from 'lucide-react';
+import { ArrowRightLeft, Check, X, Sparkles, HelpCircle, DollarSign } from 'lucide-react';
 import { Labelled } from '../ui/Labelled';
 
 interface TransferModalProps {

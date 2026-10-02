@@ -1,6 +1,6 @@
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Trash2, Save, FileText, Download, Eye } from 'lucide-react';
+import { X, Plus, Trash2, Save, Download, Eye } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Invoice, Customer, ChartAccount } from '../../types';
 import { format } from 'date-fns';

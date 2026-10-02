@@ -1,11 +1,11 @@
-import { Transaction, FilterCriteria, ChartAccount } from '../types';
+import { FilterCriteria, ChartAccount } from '../types';
 import { LedgerEngine } from '../kernel/ledger/LedgerEngine';
 import { jaroWinklerSimilarity } from '../lib/algorithms';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
 import { format } from 'date-fns';
 import { parseLocalDate, resolveAccountName } from '../lib/utils';
 import { isSimulationTransaction, isTransactionInDateRange } from './txFilters';
-import { searchTransactions, generateSearchTokens } from './serverSearch';
+import { searchTransactions } from './serverSearch';
 
 // RULES PATTERN ENGINE: Pre-compiled static regex for maximum pipeline throughput
 export const PATTERNS = {

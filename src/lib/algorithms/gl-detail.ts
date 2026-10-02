@@ -1,8 +1,7 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
-import { Transaction } from '../../types';
 import { parseLocalDate, formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
-import { format, isWithinInterval } from 'date-fns';
+import { isWithinInterval } from 'date-fns';
 
 export const GL_DETAIL_ALGO: AlgorithmDefinition = {
   id: 'gl-detail',

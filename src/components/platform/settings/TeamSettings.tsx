@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Trash2, Mail, ShieldCheck, Check, AlertCircle, RefreshCw, Copy, ExternalLink, Shield, Activity, Clock, Info, X } from 'lucide-react';
+import { Users, UserPlus, Trash2, Mail, ShieldCheck, Check, RefreshCw, Copy, Shield, Activity, Clock, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { auth } from '../../../firebase';
 import { useAuthStore } from '../../../stores/useAuthStore';

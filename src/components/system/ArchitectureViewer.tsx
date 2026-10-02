@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Network, Database, Cpu, Layers, ArrowRight, Waypoints, Code2, FolderTree, Blocks, Sparkles, Activity, FileText, Component } from 'lucide-react';
+import { Network, Database, Cpu, Layers, ArrowRight, Waypoints, Code2, Blocks, Sparkles, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { APP_TABS, ANALYTICAL_LENSES_REGISTRY, VIEW_COMPONENTS } from '../../config/registry';
+import { APP_TABS } from '../../config/registry';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
 
 export default function ArchitectureViewer() {

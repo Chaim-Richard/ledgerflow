@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useUIStore } from '../../../stores/useUIStore';
 import { APP_TABS, SETTINGS_TABS_REGISTRY, REPORT_TABS_REGISTRY, INTELLIGENCE_TABS_REGISTRY, ANALYTICAL_LENSES_REGISTRY } from '../../../config/registry';
-import { Command, Plus, Trash2, Keyboard } from 'lucide-react';
+import { Plus, Trash2, Keyboard } from 'lucide-react';
 import { Labelled } from '../../ui/Labelled';
 
 export default function ShortcutSettings() {

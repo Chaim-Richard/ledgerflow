@@ -1,23 +1,8 @@
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { ChartAccount, Transaction, JournalEntry } from '../../types';
-import { 
-  AlertCircle, 
-  Layers, 
-  HandCoins, 
-  ShieldCheck, 
-  Activity, 
-  Calendar, 
-  FileSpreadsheet, 
-  SplitSquareHorizontal,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  ExternalLink,
-  CheckCircle2,
-  RefreshCw
-} from 'lucide-react';
-import { formatDecimal, cn, getLocalDateISO, addToDateISO, formatCurrency as utilsFormatCurrency, activateOnKey } from '../../lib/utils';
+import { ChartAccount, Transaction } from '../../types';
+import { AlertCircle, Layers, HandCoins, ShieldCheck, Activity, Calendar, FileSpreadsheet, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, CheckCircle2, RefreshCw } from 'lucide-react';
+import { cn, getLocalDateISO, addToDateISO, activateOnKey } from '../../lib/utils';
 import { exportToExcel } from '../../lib/excelExport';
 import { isPostable, isTransactionInDateRange, lineAmount, calculateNetIncome } from '../../lib/txFilters';
 import { motion } from 'motion/react';

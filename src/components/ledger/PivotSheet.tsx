@@ -1,20 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Transaction } from '../../types';
-import { 
-  Table as TableIcon, 
-  Search, 
-  Download, 
-  ChevronDown, 
-  ChevronRight,
-  Calculator,
-  Grid3X3,
-  ListCollapse,
-  Plus,
-  ExternalLink,
-  Calendar
-} from 'lucide-react';
+import { Table as TableIcon, Search, Download, ChevronDown, ChevronRight, Calculator, Grid3X3, ListCollapse, ExternalLink, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatDecimal, cn, formatCurrency, sanitizeCsvCell, resolveAccountName, getLocalDateISO } from '../../lib/utils';
+import { formatDecimal, cn, formatCurrency, resolveAccountName, getLocalDateISO } from '../../lib/utils';
 import { isPostable, isTransactionInDateRange, lineAmount } from '../../lib/txFilters';
 import { getLineDimension, DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { useAuthStore } from '../../stores/useAuthStore';

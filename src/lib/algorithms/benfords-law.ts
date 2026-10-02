@@ -1,5 +1,4 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
-import { Transaction } from '../../types';
 
 export const BENFORDS_LAW_ALGO: AlgorithmDefinition = {
   id: 'forensics_benford',

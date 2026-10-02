@@ -1,4 +1,3 @@
-import { Transaction } from '../../types';
 import { AlgorithmDefinition } from './types';
 import { isPostable } from '../txFilters';
 import { seedPRNG } from '../algorithms';

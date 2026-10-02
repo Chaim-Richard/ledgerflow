@@ -5,8 +5,6 @@ import { cn, safeConfirm } from '../../../lib/utils';
 import { describeError } from '../../../lib/errorRemedies';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useTransactionActions } from '../../../hooks/useTransactionActions';
-import { doc, updateDoc } from '../../../lib/db/firestore';
-import { db } from '../../../firebase';
 import { multiFactor, TotpMultiFactorGenerator } from '../../../lib/db/auth';
 import { auth } from '../../../firebase';
 import { toast } from 'sonner';

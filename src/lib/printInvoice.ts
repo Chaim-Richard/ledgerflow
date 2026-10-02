@@ -1,4 +1,4 @@
-import { Invoice, Customer, ChartAccount, Transaction } from '../types';
+import { Invoice, Customer } from '../types';
 import { formatCurrency } from './utils';
 
 export function printInvoice(invoice: Invoice, customer?: Customer, workspaceName: string = 'My Company') {

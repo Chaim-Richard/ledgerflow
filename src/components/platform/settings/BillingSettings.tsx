@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../../stores/useAuthStore';
-import { CreditCard, Zap, Server, ChevronRight, CheckCircle2, AlertTriangle, Clock, ShieldCheck } from 'lucide-react';
+import { CreditCard, ChevronRight, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { auth } from '../../../firebase';
 import { RequireRole } from '../../ui/RequireRole';

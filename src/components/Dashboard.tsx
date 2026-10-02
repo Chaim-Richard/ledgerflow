@@ -1,19 +1,6 @@
 import { resolveAccountRole } from '../lib/accountUtils';
 import { useState, useMemo } from 'react';
-import { 
-  Plus,
-  ArrowUpRight,
-  ArrowDownRight,
-  Scale,
-  Wallet,
-  ShieldCheck,
-  Building2,
-  CheckCircle2,
-  Layers,
-  UploadCloud,
-  Sparkles,
-  X
-} from 'lucide-react';
+import { Plus, ArrowUpRight, Scale, Wallet, ShieldCheck, Building2, CheckCircle2, Layers, UploadCloud, Sparkles, X } from 'lucide-react';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { useScenarioStore } from '../lib/scenarioStore';
 import { useUIStore } from '../stores/useUIStore';

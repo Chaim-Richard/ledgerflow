@@ -2,7 +2,7 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { getComparePeriod } from '../../lib/fiscalCalendar';
-import { parseLocalDate, formatDecimal, formatCurrency, cn, getLocalDateISO, monthBoundsISO } from '../../lib/utils';
+import { formatCurrency, cn, getLocalDateISO, monthBoundsISO } from '../../lib/utils';
 import { exportToExcel } from '../../lib/excelExport';
 import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
 import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';

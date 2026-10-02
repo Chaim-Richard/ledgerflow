@@ -2,9 +2,8 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import { IntercompanyEliminationEngine } from '../lib/intercompanyElimination';
 import { calculateSafeToSpend } from '../lib/algorithms/tax-set-aside';
-import { parseLocalDate, getLocalDateISO } from '../lib/utils';
+import { parseLocalDate } from '../lib/utils';
 import { Transaction, ChartAccount } from '../types';
-import { isPostable, lineAmount } from '../lib/txFilters';
 import { optimizedTransactionSimilarity } from '../lib/algorithms';
 import { deriveScopedOperationKey } from '../server/utils/idempotency';
 

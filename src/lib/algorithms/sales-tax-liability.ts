@@ -1,6 +1,6 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
 import { formatCurrency, parseLocalDate } from '../../lib/utils';
-import { isPostable, lineAmount } from '../../lib/txFilters';
+import { lineAmount } from '../../lib/txFilters';
 import { calculateDocumentTax, calculateDocumentNet } from '../documentMath';
 
 /**

@@ -1,7 +1,7 @@
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import React, { useState, useMemo } from 'react';
 import { User } from '../../lib/db/auth';
-import { Transaction, ChartAccount, TaxRate } from '../../types';
+import { ChartAccount, TaxRate } from '../../types';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import { 
   Receipt, 
@@ -16,7 +16,7 @@ import {
   Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { parseLocalDate, cn, formatCurrency, safeConfirm, workspaceYearMonth } from '../../lib/utils';
+import { parseLocalDate, cn, formatCurrency, workspaceYearMonth } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
 import { effectiveRate, TAX_TREATMENTS } from '../../lib/taxCodes';

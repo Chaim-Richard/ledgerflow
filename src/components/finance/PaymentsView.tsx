@@ -3,7 +3,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, parseLocalDate, cn, formatDate } from '../../lib/utils';
 
-import { DollarSign, Search, Filter, Eye, Download } from 'lucide-react';
+import { DollarSign, Search, Eye, Download } from 'lucide-react';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';

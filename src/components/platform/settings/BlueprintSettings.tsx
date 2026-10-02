@@ -6,23 +6,7 @@ import { useTransactionActions } from '../../../hooks/useTransactionActions';
 import { db } from '../../../firebase';
 import { doc, updateDoc } from '../../../lib/db/firestore';
 import { APP_TABS, SYSTEM_GLOSSARY } from '../../../config/registry';
-import { 
-  Sliders, 
-  Eye, 
-  EyeOff, 
-  Search, 
-  Save, 
-  RefreshCw, 
-  Calendar, 
-  Globe, 
-  Check, 
-  SlidersHorizontal,
-  FolderLock,
-  Plus,
-  Trash2,
-  AlertTriangle,
-  Zap
-} from 'lucide-react';
+import { Sliders, Eye, EyeOff, Search, Save, Calendar, Globe, Check, SlidersHorizontal, FolderLock, Plus, Trash2, AlertTriangle, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import AsyncButton from '../../ui/AsyncButton';
 import { useTimeout } from '../../../hooks/useTimeout';

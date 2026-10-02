@@ -1,12 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { X, Play, CheckCircle2, BarChart3, ListFilter, ArrowUpRight, Download, FileSpreadsheet, RotateCcw } from 'lucide-react';
-import { LineChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
+import { Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
-import { AlgorithmContext, buildAlgorithmContext } from '../../lib/algorithms/types';
-import { isPostable } from '../../lib/txFilters';
+import { buildAlgorithmContext } from '../../lib/algorithms/types';
 import { exportToExcel } from '../../lib/excelExport';
 import { getLocalDateISO } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';

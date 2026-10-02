@@ -1,12 +1,6 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
-import { 
-  computePeriodPayroll, 
-  computeFederalIncomeTaxWithholding, 
-  getFederalTaxYearConfig,
-  getRegionalTaxConfig,
-  PAYROLL_DISCLAIMER 
-} from '../lib/payroll-engine.js';
+import { computePeriodPayroll, getFederalTaxYearConfig, PAYROLL_DISCLAIMER } from '../lib/payroll-engine.js';
 import { Employee } from '../types.js';
 
 describe('Payroll Engine Mathematical Tie-Out & Cap Verification', () => {

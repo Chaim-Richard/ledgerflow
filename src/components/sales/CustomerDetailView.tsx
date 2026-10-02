@@ -1,19 +1,7 @@
 import React, { useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  DollarSign, 
-  FileText, 
-  CheckCircle, 
-  AlertCircle,
-  Plus,
-  TrendingUp,
-  Inbox,
-  User
-} from 'lucide-react';
-import { differenceInDays, parseISO } from 'date-fns';
+import { ArrowLeft, DollarSign, FileText, User } from 'lucide-react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 interface CustomerDetailViewProps {

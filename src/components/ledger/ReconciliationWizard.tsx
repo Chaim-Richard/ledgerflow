@@ -3,7 +3,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React,
  { useState, useMemo } from 'react';
-import { Transaction, ChartAccount } from '../../types';
+import { ChartAccount } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   RefreshCw, 

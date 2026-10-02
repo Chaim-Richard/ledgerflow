@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, ShieldCheck, Mail, UserPlus, FileText } from 'lucide-react';
+import { LogIn, ShieldCheck, Mail, UserPlus } from 'lucide-react';
 import { useBillingStore } from '../../modules/billing/BillingService';
 import LegalModal from '../../components/legal/LegalModal';
 import AsyncButton from '../../components/ui/AsyncButton';

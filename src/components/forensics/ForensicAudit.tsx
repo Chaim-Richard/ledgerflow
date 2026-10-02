@@ -10,7 +10,6 @@ import {
   Brain,
   History
 } from 'lucide-react';
-import { Transaction, ChartAccount } from '../../types';
 import { parseLocalDate, cn } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { format } from 'date-fns';

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { cn, safeConfirm } from '../../lib/utils';
+import React from 'react';
+import { safeConfirm } from '../../lib/utils';
 import AsyncButton from './AsyncButton';
 
 interface ConfirmButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

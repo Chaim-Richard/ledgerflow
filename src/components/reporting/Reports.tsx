@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { usePerformanceTrace } from '../../hooks/usePerformanceTrace';
-import { Transaction, ChartAccount, Project, Budget } from '../../types';
+import { Transaction } from '../../types';
 import { 
   Activity,
   Download,

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
 import { computeTagReport } from '../../lib/reportGenerators';
-import { Tag, Hash, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Tag, Hash } from 'lucide-react';
 
 interface Props {
   selectedYear?: number;

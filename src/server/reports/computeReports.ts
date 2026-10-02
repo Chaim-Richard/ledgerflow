@@ -1,7 +1,7 @@
 import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lineAmount, isTransactionInDateRange } from "../../lib/txFilters";
 import { resolveAccountRole } from "../../lib/accountUtils";
 import { calculateDocumentTax, calculateDocumentNet } from "../../lib/documentMath";
-import type { Invoice, Bill, Payment, CreditNote, VendorCredit, Customer, Vendor, Transaction, ChartAccount, TransactionLine } from "../../types";
+import type { Invoice, Bill, Payment, Customer, Vendor, Transaction, ChartAccount, TransactionLine } from "../../types";
 
 export const INVOICE_IS_ISSUED = new Set<Invoice['status']>([
   'sent', 'approved', 'invoiced', 'pending', 'overdue', 'partially_paid', 'paid'

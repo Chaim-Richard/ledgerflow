@@ -3,7 +3,7 @@ import { isPostable, lineAmount } from '../../lib/txFilters';
 import React,
  { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Project, Transaction } from '../../types';
+import { Project } from '../../types';
 import { cn, formatCurrency } from '../../lib/utils';
 import { GripVertical, CheckCircle, Target, Users, PlayCircle, Clock, Archive } from 'lucide-react';
 

@@ -5,7 +5,7 @@ import {
   BarChart, Bar,
   Radar, RadarChart, PolarGrid, PolarAngleAxis
 } from 'recharts';
-import { BarChart3, ShieldCheck, Target, Download, Maximize2, Minimize2, BrainCircuit, TrendingUp, Activity, Info, ChevronRight, Sparkles, Menu, X, Search, Calendar, Flame, Loader2, LayoutGrid, Building, Clock, DollarSign, Users, BarChart as BarChartIcon, Calculator, Zap } from 'lucide-react';
+import { BarChart3, ShieldCheck, Target, Download, Maximize2, Minimize2, BrainCircuit, TrendingUp, Activity, Info, ChevronRight, Sparkles, Menu, X, Search, Calendar, Flame, Loader2, LayoutGrid, Building, DollarSign, Users, BarChart as BarChartIcon, Calculator, Zap } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuditTelemetry } from '../../hooks/useAuditTelemetry';
@@ -14,7 +14,6 @@ import { scaleBand, scaleLinear } from 'd3-scale';
 import { max } from 'd3-array';
 import { axisBottom, axisLeft } from 'd3-axis';
 import { area, line, curveMonotoneX } from 'd3-shape';
-import { Transaction, ChartAccount, Project, Bill, Invoice } from '../../types';
 import { useUIStore } from '../../stores/useUIStore';
 import { useCommandDispatcher } from '../../hooks/useSystemContext';
 import ForensicAuditor from '../reporting/ForensicAuditor';

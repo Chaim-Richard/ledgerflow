@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { getDb, assertPeriodOpen } from '../db/firestore';
-import { Transaction } from '../../types';
 import { getLocalDateISO } from '../../lib/utils';
 
 const RecognizeRevenueSchema = z.object({

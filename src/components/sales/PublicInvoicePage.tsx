@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Invoice } from '../../types';
 import { formatCurrency, formatDate } from '../../lib/utils';
-import { CheckCircle2, AlertCircle, Building2, Download } from 'lucide-react';
-import { motion } from 'motion/react';
+import { CheckCircle2, AlertCircle, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTimeout } from '../../hooks/useTimeout';
 

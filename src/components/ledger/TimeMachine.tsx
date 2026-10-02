@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useScenarioStore } from '../../lib/scenarioStore';
-import { GitMerge, GitCommit, GitPullRequest, GitBranch, RotateCcw, Clock, ArrowRight, Save, Trash2, Zap, CheckCircle2, AlertCircle, Plus, FileText, Activity } from 'lucide-react';
+import { GitMerge, GitPullRequest, GitBranch, RotateCcw, Clock, ArrowRight, Trash2, CheckCircle2, Plus, FileText, Activity } from 'lucide-react';
 import { parseLocalDate, formatCurrency, cn, getLocalDateISO, safeConfirm, formatDate } from '../../lib/utils';
-import { isPostable, lineAmount } from '../../lib/txFilters';
+import { isPostable } from '../../lib/txFilters';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';

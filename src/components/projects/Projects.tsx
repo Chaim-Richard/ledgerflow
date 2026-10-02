@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { User } from '../../lib/db/auth';
-import { Project, Transaction, Budget, Vendor } from '../../types';
+import { Project, Transaction } from '../../types';
 import { 
   BrainCircuit,
   Pencil,

@@ -1,6 +1,5 @@
-import { Transaction, ChartAccount } from '../../types';
+import { ChartAccount } from '../../types';
 import { AlgorithmDefinition } from './types';
-import { isPostable, lineAmount } from '../txFilters';
 
 function normalize(description: string): string {
   return description

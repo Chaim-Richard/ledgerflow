@@ -2,19 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
 import { differenceInDays, parseISO } from 'date-fns';
-import { 
-  FileText, 
-  ArrowLeft, 
-  Calendar, 
-  TrendingUp, 
-  Download, 
-  ChevronRight, 
-  Users, 
-  Clock, 
-  Search,
-  Filter,
-  ArrowUpDown
-} from 'lucide-react';
+import { FileText, ArrowLeft, Download, ChevronRight, Users, Clock, Search, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 

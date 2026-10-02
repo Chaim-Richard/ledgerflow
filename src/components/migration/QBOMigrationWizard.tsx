@@ -1,29 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  FileUp, 
-  CheckCircle2, 
-  ChevronRight, 
-  Download, 
-  Activity, 
-  RefreshCw, 
-  Loader2, 
-  AlertCircle, 
-  Table, 
-  ArrowRight,
-  Sparkles,
-  FileSpreadsheet
-} from 'lucide-react';
+import { FileUp, CheckCircle2, Download, Activity, RefreshCw, Loader2, Sparkles } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
-import { ChartAccount, Transaction } from '../../types';
-import { formatCurrency, parseLocalDate, getLocalDateISO } from '../../lib/utils';
+import { ChartAccount } from '../../types';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { parseExcelToRows } from '../../lib/excelExport';
 import { resolveAccountRole } from '../../lib/accountUtils';
-import { format } from 'date-fns';
 
 interface ParsedRow {
   date: string;

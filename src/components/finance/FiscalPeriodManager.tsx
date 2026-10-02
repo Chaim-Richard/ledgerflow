@@ -14,12 +14,11 @@ import {
   FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, startOfMonth, endOfMonth, isAfter, isBefore, parseISO, addMonths, subMonths } from 'date-fns';
-import { cn, formatCurrency, getLocalDateISO, activateOnKey } from '../../lib/utils';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { cn, formatCurrency, activateOnKey } from '../../lib/utils';
 import { useUIStore } from '../../stores/useUIStore';
 import { getIdToken } from '../../firebase';
 import { monthCloseState } from '../../lib/periodLock';
-import { LedgerPostService } from '../../services/LedgerPostService';
 import { isPostable, calculateTransactionImpact, lineAmount } from '../../lib/txFilters';
 
 export default function FiscalPeriodManager() {

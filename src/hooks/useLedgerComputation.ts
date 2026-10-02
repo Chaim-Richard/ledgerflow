@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Transaction, FilterCriteria, ChartAccount } from '../types';
 import { LedgerEngine } from '../kernel/ledger/LedgerEngine';
-import { isPostable, lineAmount, isInflow, isOutflow, isRevenueAccount, isExpenseAccount, calculateFilteredTotals } from '../lib/txFilters';
+import { isPostable, calculateFilteredTotals } from '../lib/txFilters';
 import { useScenarioStore } from '../lib/scenarioStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';

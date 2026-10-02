@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert';
-import { getFiscalYearBounds, getFiscalQuarter, getFiscalPeriodLabel, getPrevPeriod } from './fiscalCalendar';
+import { getFiscalYearBounds, getFiscalQuarter, getPrevPeriod } from './fiscalCalendar';
 
 describe('Fiscal Calendar Suite', () => {
   test('standard calendar year (January start)', () => {

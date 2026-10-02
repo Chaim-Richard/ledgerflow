@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { MessageSquare, CheckCircle2, Building2, User, ChevronDown, Check, Tag } from 'lucide-react';
+import { MessageSquare, CheckCircle2, Building2, User, Tag } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { formatCurrency } from '../../lib/utils';

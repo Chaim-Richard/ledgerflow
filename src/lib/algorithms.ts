@@ -1,5 +1,5 @@
-import { isPostable, lineAmount, isRevenueAccount, isExpenseAccount, calculateTransactionImpact } from './txFilters';
-import { parseLocalDate, getLocalDateISO, addToDateISO } from './utils';
+import { isPostable, lineAmount, calculateTransactionImpact } from './txFilters';
+import { getLocalDateISO, addToDateISO } from './utils';
 import { PerformanceTelemetry } from "./telemetry";
 
 const globalSeed = 42;

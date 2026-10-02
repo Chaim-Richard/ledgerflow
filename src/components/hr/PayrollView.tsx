@@ -4,7 +4,6 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { computePeriodPayroll, PAYROLL_DISCLAIMER } from '../../lib/payroll-engine';
 import { formatCurrency, formatDate, getLocalDateISO } from '../../lib/utils';
-import { isPostable, lineAmount } from '../../lib/txFilters';
 import { useTimeout } from '../../hooks/useTimeout';
 import { 
   Users, 

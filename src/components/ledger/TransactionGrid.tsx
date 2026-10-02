@@ -21,7 +21,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { formatDecimal, cn, sanitizeCsvCell, resolveAccountName, formatCurrency, getLocalDateISO, activateOnKey } from '../../lib/utils';
-import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
+import { isCashAccount, isPostable } from '../../lib/txFilters';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import TransactionRow from '../transactions/TransactionRow';
@@ -29,7 +29,6 @@ import PivotView from '../transactions/PivotView';
 import SelectionBar from '../transactions/SelectionBar';
 import { useAuditTelemetry } from '../../hooks/useAuditTelemetry';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { useLedgerComputation } from '../../hooks/useLedgerComputation';
 import { useTransactionActions } from '../../hooks/useTransactionActions';

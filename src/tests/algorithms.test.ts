@@ -1,11 +1,9 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
-import { CASH_CONVERSION_CYCLE_ALGO } from '../lib/algorithms/cash-conversion-cycle.js';
 import { ALTMAN_Z_SCORE_ALGO } from '../lib/algorithms/altman-z-score.js';
 import { EXPENSE_VELOCITY_ALGO } from '../lib/algorithms/expense-velocity.js';
 import { MONTE_CARLO_ALGO } from '../lib/algorithms/monte-carlo.js';
 import { assetAmortizer } from '../lib/algorithms/asset-amortizer.js';
-import { ANOMALY_DETECTION_ALGO } from '../lib/algorithms/anomaly-detection.js';
 import { parseNaturalLanguageEntry } from '../lib/algorithms/nl-parser.js';
 import { buildAlgorithmContext } from '../lib/algorithms/types.js';
 import { isPostable, isSimulationTransaction } from '../lib/txFilters.js';

@@ -3,28 +3,9 @@ import { AutoRule, Transaction } from '../../../types';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useCurrentRole } from '../../../hooks/useCurrentRole';
-import { formatCurrency, formatDate } from '../../../lib/utils';
 import { dryRunRules, executeRulesOnTransactions, sortRulesByPriority, evaluateRuleCondition } from '../../../lib/rulesEngine';
 import { useTimeout } from '../../../hooks/useTimeout';
-import { 
-  SlidersHorizontal, 
-  Plus, 
-  Play, 
-  Trash2, 
-  Copy, 
-  CheckCircle2, 
-  AlertCircle, 
-  ArrowUpDown, 
-  Filter, 
-  Tag, 
-  FolderPlus,
-  RotateCw,
-  Search,
-  Eye,
-  Check,
-  X,
-  Sparkles
-} from 'lucide-react';
+import { SlidersHorizontal, Plus, Play, Trash2, Copy, CheckCircle2, AlertCircle, Filter, Tag, RotateCw, Search, Eye, Check, X, Sparkles } from 'lucide-react';
 
 import { aiService } from '../../../services/aiService';
 import { AutoRuleSchema } from '../../../schemas';

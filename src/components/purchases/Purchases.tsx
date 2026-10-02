@@ -1,21 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
-import { 
-  ShoppingBag, 
-  Users, 
-  Clock, 
-  Plus, 
-  Search, 
-  FileText, 
-  Trash2, 
-  CheckCircle,
-  AlertCircle,
-  DollarSign,
-  Ban,
-  Download,
-  Pencil
-} from 'lucide-react';
+import { ShoppingBag, Plus, Search, Trash2, CheckCircle, AlertCircle, DollarSign, Ban, Download, Pencil } from 'lucide-react';
 import type { Bill } from '../../types';
 import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 import { formatCurrency, safeConfirm } from '../../lib/utils';

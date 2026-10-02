@@ -1,26 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Transaction, ChartAccount } from '../../types';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Inbox, 
-  CheckCircle2, 
-  ArrowRight, 
-  Tag, 
-  Building2, 
-  Search,
-  CheckSquare,
-  Square,
-  Upload,
-  Zap,
-  FileImage,
-  AlertCircle,
-  HelpCircle,
-  Check,
-  BrainCircuit,
-  MessageSquare
-} from 'lucide-react';
-import { cn, formatCurrency, formatDate } from '../../lib/utils';
-import { format } from 'date-fns';
+import { CheckCircle2, CheckSquare, Zap, AlertCircle, HelpCircle, Check, BrainCircuit, MessageSquare } from 'lucide-react';
+import { formatCurrency, formatDate } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 

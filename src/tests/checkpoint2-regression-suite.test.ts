@@ -1,9 +1,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { TransactionValidator } from '../kernel/validation/TransactionValidator';
-import { DoubleEntryValidator } from '../kernel/validation/DoubleEntryValidator';
 import { getTrustedAppUrl } from '../server/utils/urlHelper';
-import { calculateNetIncome, isPostable, getAbsoluteTotal, lineAmount } from '../lib/txFilters';
+import { calculateNetIncome, getAbsoluteTotal } from '../lib/txFilters';
 import { ChartAccount, Transaction } from '../types';
 
 describe('Checkpoint 2 Regression & Security Hardening Suite (N1 - N18)', () => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, ArrowRight, UserCheck, AlertTriangle, RefreshCw, CheckCircle2, Lock, Building2 } from 'lucide-react';
+import { ArrowRight, UserCheck, AlertTriangle, RefreshCw, CheckCircle2, Lock, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { auth } from '../../firebase';
 import { useAuthStore } from '../../stores/useAuthStore';

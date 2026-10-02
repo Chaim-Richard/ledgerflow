@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { cn, formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
 import { motion, AnimatePresence } from 'motion/react';

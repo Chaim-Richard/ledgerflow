@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
 import { computeExpenseByCategory } from '../../lib/reportGenerators';
-import { PieChart, ArrowDownRight, Tag } from 'lucide-react';
+import { PieChart } from 'lucide-react';
 
 interface Props {
   selectedYear?: number;

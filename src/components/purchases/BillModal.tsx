@@ -10,7 +10,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
 import { evaluateApprovalRequirement } from '../../lib/approvalWorkflow';
-import { addComment, getCommentsForEntity } from '../../lib/commentService';
+import { addComment } from '../../lib/commentService';
 import { documentTotals, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import { formatCurrency, safeConfirm } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';

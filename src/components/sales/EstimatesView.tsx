@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
-import { Plus, ArrowRight, FileText, CheckCircle, Clock, Eye, Download } from 'lucide-react';
+import { Plus, ArrowRight, FileText, Eye, Download } from 'lucide-react';
 import { collection, addDoc, doc, updateDoc } from '../../lib/db/firestore';
 import { db, getIdToken } from '../../firebase';
 import { toast } from 'sonner';

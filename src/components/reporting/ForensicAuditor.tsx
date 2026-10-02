@@ -1,7 +1,6 @@
 import React,
  { useMemo, useState } from 'react';
 import { ShieldAlert, Fingerprint, Zap, AlertTriangle, CheckCircle2, Loader2, FileText } from 'lucide-react';
-import { Transaction } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { AnomalyDetector } from '../../lib/algorithms';
 import { formatDecimal, cn, getLocalDateISO } from '../../lib/utils';

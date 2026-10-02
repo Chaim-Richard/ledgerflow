@@ -4,10 +4,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { StrategicEngine } from '../../services/strategicEngine';
-import { useUIStore } from '../../stores/useUIStore';
 import { DoubleEntryAuditor } from '../../services/auditor';
 import { cn } from '../../lib/utils';
-import { isRevenueAccount, isExpenseAccount, isCashAccount, isPostable, calculateTransactionImpact } from '../../lib/txFilters';
+import { isCashAccount, isPostable, calculateTransactionImpact } from '../../lib/txFilters';
 
 interface DiagnosticConsoleProps {
   isOpen: boolean;

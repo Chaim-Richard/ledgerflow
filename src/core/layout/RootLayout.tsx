@@ -1,7 +1,5 @@
 import React, { Suspense } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
-import { Minimize2 } from 'lucide-react';
 
 import Sidebar from '../../components/layout/Sidebar';
 import Header from '../../components/layout/Header';

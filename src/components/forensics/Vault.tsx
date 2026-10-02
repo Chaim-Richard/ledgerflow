@@ -32,9 +32,8 @@ import { CloudDocument, Transaction } from '../../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { aiService } from '../../services/aiService';
-import { resolveAccountRole } from '../../lib/accountUtils';
 import { useTimeout } from '../../hooks/useTimeout';
-import { buildBalancedReceiptTransaction, validateReceiptPayload, resolveDeepAccount } from '../../lib/receiptIngestion';
+import { buildBalancedReceiptTransaction, validateReceiptPayload } from '../../lib/receiptIngestion';
 
 
 

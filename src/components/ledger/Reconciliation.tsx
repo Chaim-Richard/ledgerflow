@@ -25,7 +25,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { parseLocalDate, cn, formatCurrency, resolveAccountName, formatDate } from '../../lib/utils';
 import { useTimeout } from '../../hooks/useTimeout';
 import { resolveAccountRole } from '../../lib/accountUtils';
-import { Transaction, BankStatementLine, ChartAccount, User } from '../../types';
 import { format } from 'date-fns';
 import { 
   jaroWinklerSimilarity, 

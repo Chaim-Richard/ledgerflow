@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { Calculator, ArrowRight, DollarSign, Percent, TrendingUp, BarChart3, RefreshCw, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
+import { Calculator } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';

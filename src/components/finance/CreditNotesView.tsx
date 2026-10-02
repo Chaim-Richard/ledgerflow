@@ -6,22 +6,8 @@ import CreditActionDialog from './CreditActionDialog';
 import type { CreditActionTarget } from './CreditActionDialog';
 import { EmptyState } from '../ui/EmptyState';
 import { Money } from '../ui/Money';
-import { 
-  FileText, 
-  Plus, 
-  Users, 
-  Building2, 
-  DollarSign, 
-  Calendar, 
-  Tag, 
-  CheckCircle2, 
-  RotateCcw, 
-  ShieldAlert,
-  ArrowRight,
-  Eye,
-  Download
-} from 'lucide-react';
-import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { Plus, Users, Building2, RotateCcw, Eye, Download } from 'lucide-react';
+import { getLocalDateISO } from '../../lib/utils';
 import { toast } from 'sonner';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
