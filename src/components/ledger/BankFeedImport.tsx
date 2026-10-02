@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Check, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
@@ -33,6 +34,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
   onImport,
   onClose
 }) => {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, true);
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isMapping, setIsMapping] = useState(false);
@@ -292,7 +294,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+    <div {...overlayDialogProps} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -300,7 +302,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
       >
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/30">
           <div>
-            <h2 className="text-xl font-black text-[var(--text)] uppercase italic tracking-tighter">Bank Feed Ingestion</h2>
+            <h2 id={overlayTitleId} className="text-xl font-black text-[var(--text)] uppercase italic tracking-tighter">Bank Feed Ingestion</h2>
             <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1 opacity-40">Rule CSV parsing & topological mapping</p>
           </div>
           <button onClick={onClose} className="w-10 h-10 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-[var(--muted)] transition-all" aria-label="Alert Circle action">

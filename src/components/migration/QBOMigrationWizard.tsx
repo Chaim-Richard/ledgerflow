@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FileUp, CheckCircle2, Download, Activity, RefreshCw, Loader2, Sparkles } from 'lucide-react';
@@ -44,6 +45,7 @@ interface AccountMapping {
 }
 
 export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -549,7 +551,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+    <div {...overlayDialogProps} className="fixed inset-0 z-[600] flex items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -572,7 +574,7 @@ export default function QBOMigrationWizard({ isOpen, onClose }: { isOpen: boolea
                 <RefreshCw aria-hidden="true" size={14} className={isProcessing ? 'animate-spin' : ''} />
                 QuickBooks Migration Engine
               </div>
-              <h2 className="text-2xl md:text-3xl font-black text-[var(--text)] tracking-tight">QuickBooks Switcher</h2>
+              <h2 id={overlayTitleId} className="text-2xl md:text-3xl font-black text-[var(--text)] tracking-tight">QuickBooks Switcher</h2>
               <p className="text-sm text-[var(--muted)] mt-1">Import your historical general ledger, chart of accounts, and transactions with double-entry integrity.</p>
             </div>
             

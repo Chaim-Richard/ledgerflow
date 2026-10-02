@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React from 'react';
 import { motion } from 'motion/react';
 import { FileText, CheckCircle2, ArrowRight, Tag, DollarSign, Calendar, Building2, ShieldCheck } from 'lucide-react';
@@ -24,6 +25,7 @@ interface DocumentEntanglementProps {
 }
 
 export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, parsedData, onVerify }: DocumentEntanglementProps) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   if (!isOpen) return null;
   if (!parsedData) return null;
 
@@ -36,7 +38,8 @@ export default function DocumentEntanglement({ isOpen, onClose, receiptUrl, pars
   });
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 md:p-4 md:p-10">
+    <div {...overlayDialogProps} className="fixed inset-0 z-[300] flex items-center justify-center p-4 md:p-4 md:p-10">
+      <h2 id={overlayTitleId} className="sr-only">Receipt and entry side by side</h2>
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

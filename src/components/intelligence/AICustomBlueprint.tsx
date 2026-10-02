@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
@@ -34,6 +35,7 @@ function withStableKeys<T>(items: T[], getContentKey: (item: T) => string) {
 }
 
 export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICustomBlueprintProps) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedData, setGeneratedData] = useState<import("../../services/aiService").GeneratedBlueprint | null>(null);
@@ -134,7 +136,7 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+    <div {...overlayDialogProps} className="fixed inset-0 z-[300] flex items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -156,7 +158,7 @@ export default function AICustomBlueprint({ isOpen, onClose, onGenerated }: AICu
               <Sparkles size={32} />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-[var(--text)] tracking-tight">Analytical Architect</h2>
+              <h2 id={overlayTitleId} className="text-2xl font-black text-[var(--text)] tracking-tight">Analytical Architect</h2>
               <p className="text-sm text-zinc-500">Describe your business model, and we'll architect the system structure.</p>
             </div>
           </div>

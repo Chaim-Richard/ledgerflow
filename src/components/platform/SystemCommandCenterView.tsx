@@ -16,7 +16,7 @@ import { WorkspacePolicyDialog } from './WorkspacePolicyDialog';
 import { StressTestPanel } from './StressTestPanel';
 import type { SystemCommandCenterModel } from './SystemCommandCenter';
 export function SystemCommandCenterView(model: SystemCommandCenterModel) {
- const { telemetry, loading, lexiconOverrides, setLexiconOverride, showBulkSuccess, setShowBulkSuccess, activeMainTab, setActiveMainTab } = model;
+ const { overlay2DialogProps, overlay2TitleId, telemetry, loading, lexiconOverrides, setLexiconOverride, showBulkSuccess, setShowBulkSuccess, activeMainTab, setActiveMainTab } = model;
  return (
     <div className="w-full space-y-12 max-w-[1600px] mx-auto pb-12 px-4">
       {/* Header section matching upgraded architecture */}
@@ -156,7 +156,7 @@ export function SystemCommandCenterView(model: SystemCommandCenterModel) {
       {/* Bulk Synchronization Progress Success Modal */}
       <AnimatePresence>
         {showBulkSuccess && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[250] p-4">
+          <div {...overlay2DialogProps} className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[250] p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -166,7 +166,7 @@ export function SystemCommandCenterView(model: SystemCommandCenterModel) {
               <div className="mx-auto w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 aria-hidden="true" size={24} />
               </div>
-              <h2 className="text-xl font-black text-[var(--text)] uppercase tracking-tight">Ledger Synchronized</h2>
+              <h2 id={overlay2TitleId} className="text-xl font-black text-[var(--text)] uppercase tracking-tight">Ledger Synchronized</h2>
               <p className="text-xs text-[var(--muted)] mt-2 uppercase tracking-wide leading-relaxed">
                 Successfully propagated global cost coefficients, spend multipliers, and private api key surcharges to all {telemetry?.tenants?.length || 0} active workspaces securely.
               </p>

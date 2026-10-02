@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import type { FilterCriteria } from '../../types';
 import React, { useState, useRef, useEffect } from 'react';
 import { 
@@ -24,6 +25,7 @@ interface AICommandCenterProps {
 }
 
 export default function AICommandCenter({ isOpen, onClose, onFilter, businessContext }: AICommandCenterProps) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   const [query, setQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
@@ -88,7 +90,8 @@ export default function AICommandCenter({ isOpen, onClose, onFilter, businessCon
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[700] flex items-start justify-center pt-32 px-4">
+    <div {...overlayDialogProps} className="fixed inset-0 z-[700] flex items-start justify-center pt-32 px-4">
+      <h2 id={overlayTitleId} className="sr-only">AI command center</h2>
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

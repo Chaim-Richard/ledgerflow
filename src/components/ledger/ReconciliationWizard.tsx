@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import { isTransactionInDateRange, isPostable, lineAmount } from '../../lib/txFilters';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
@@ -41,6 +42,7 @@ interface ReconciliationWizardProps {
 }
 
 export default function ReconciliationWizard({ isOpen, onClose, accounts, onComplete, formatCurrency }: ReconciliationWizardProps) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   const transactions = useLedgerStore(state => state.transactions || []);
   const reconciliations = useLedgerStore(state => state.reconciliations || []);
   useLedgerCollections('reconciliations');
@@ -170,7 +172,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+    <div {...overlayDialogProps} className="fixed inset-0 z-[300] flex items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -192,7 +194,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               <RefreshCw aria-hidden="true" size={32} />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-[var(--text)] uppercase italic tracking-tighter">Reconciliation Wizard</h2>
+              <h2 id={overlayTitleId} className="text-2xl font-black text-[var(--text)] uppercase italic tracking-tighter">Reconciliation Wizard</h2>
               <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1 opacity-40">Step {step} of 2 // {step === 1 ? 'Statement Target Definition' : 'Rule Transaction Alignment'}</p>
             </div>
           </div>

@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import { useState, useEffect, useId } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 
@@ -33,6 +34,7 @@ export function useApiHubModel() {
   const [selectedScopes, setSelectedScopes] = useState<string[]>(AVAILABLE_SCOPES.map(s => s.id));
   const [expiration, setExpiration] = useState<'never' | '1h' | '24h' | '30d' | '90d'>('never');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => setShowCreateModal(false), showCreateModal);
 
   // Corporate Billing and Computational Resource Metering
   const [simSeatsCount, setSimSeatsCount] = useState(1);
@@ -512,5 +514,5 @@ export function useApiHubModel() {
     }
   };
 
-  return { formId, currentWorkspaceId, workspaces, setCurrentWorkspaceId, currentWorkspace, nowMs, apiKey, apiLogs, isRegenerating, isCopied, activeTab, setActiveTab, activeDoc, setActiveDoc, docLang, setDocLang, publicKeys, newKeyName, setNewKeyName, selectedScopes, setSelectedScopes, expiration, setExpiration, showCreateModal, setShowCreateModal, simSeatsCount, setSimSeatsCount, simRequestsCount, setSimRequestsCount, isSimulatingBurst, setIsSimulatingBurst, sandboxEndpoint, setSandboxEndpoint, sandboxCredType, setSandboxCredType, sandboxSelectedKey, setSandboxSelectedKey, sandboxResult, setSandboxResult, sandboxStatus, setSandboxStatus, sandboxLatency, setSandboxLatency, sandboxLoading, sandboxLang, setSandboxLang, fieldDesc, setFieldDesc, fieldAmountCents, setFieldAmountCents, fieldDate, setFieldDate, fieldDryRun, setFieldDryRun, fieldIdempotencyKey, setFieldIdempotencyKey, fieldCOAName, setFieldCOAName, fieldCOAType, setFieldCOAType, fieldCOACode, setFieldCOACode, fieldProjectName, setFieldProjectName, fieldProjectCode, setFieldProjectCode, fieldMatchDesc, setFieldMatchDesc, fieldAIPrompt, setFieldAIPrompt, loadBillingStatus, handleCheckout, fetchLogs, generateNewKey, revokeKey, copyKey, getEndpointPath, getSandboxPayload, runSandboxRequest };
+  return { overlayDialogProps, overlayTitleId, formId, currentWorkspaceId, workspaces, setCurrentWorkspaceId, currentWorkspace, nowMs, apiKey, apiLogs, isRegenerating, isCopied, activeTab, setActiveTab, activeDoc, setActiveDoc, docLang, setDocLang, publicKeys, newKeyName, setNewKeyName, selectedScopes, setSelectedScopes, expiration, setExpiration, showCreateModal, setShowCreateModal, simSeatsCount, setSimSeatsCount, simRequestsCount, setSimRequestsCount, isSimulatingBurst, setIsSimulatingBurst, sandboxEndpoint, setSandboxEndpoint, sandboxCredType, setSandboxCredType, sandboxSelectedKey, setSandboxSelectedKey, sandboxResult, setSandboxResult, sandboxStatus, setSandboxStatus, sandboxLatency, setSandboxLatency, sandboxLoading, sandboxLang, setSandboxLang, fieldDesc, setFieldDesc, fieldAmountCents, setFieldAmountCents, fieldDate, setFieldDate, fieldDryRun, setFieldDryRun, fieldIdempotencyKey, setFieldIdempotencyKey, fieldCOAName, setFieldCOAName, fieldCOAType, setFieldCOAType, fieldCOACode, setFieldCOACode, fieldProjectName, setFieldProjectName, fieldProjectCode, setFieldProjectCode, fieldMatchDesc, setFieldMatchDesc, fieldAIPrompt, setFieldAIPrompt, loadBillingStatus, handleCheckout, fetchLogs, generateNewKey, revokeKey, copyKey, getEndpointPath, getSandboxPayload, runSandboxRequest };
 }

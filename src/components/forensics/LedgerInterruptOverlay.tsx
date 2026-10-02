@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShieldAlert, RefreshCw, Eye, Activity } from 'lucide-react';
@@ -9,6 +10,7 @@ import { formatCurrency } from '../../lib/utils';
 export default function LedgerInterruptOverlay() {
   const [activeAlert, setActiveAlert] = useState<{ severity: string; result: NonNullable<ReturnType<typeof useLedgerStore.getState>['auditResult']> } | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => setIsDismissed(true), !!activeAlert && !isDismissed);
   const setActiveTab = useUIStore(s => s.setActiveTab);
   useLedgerStore(s => s.transactions);
   useLedgerStore(s => s.accounts);
@@ -62,7 +64,7 @@ export default function LedgerInterruptOverlay() {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[99999] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl overflow-y-auto">
+      <div {...overlayDialogProps} className="fixed inset-0 z-[99999] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl overflow-y-auto">
         <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -88,7 +90,7 @@ export default function LedgerInterruptOverlay() {
                 <span className="inline-flex px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 text-[10px] font-medium uppercase tracking-wider rounded-lg">
                   TRIPLE-ENTRY SECURITY PROTOCOL BREACHED
                 </span>
-                <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight leading-none">
+                <h2 id={overlayTitleId} className="text-2xl md:text-4xl font-extrabold text-white tracking-tight leading-none">
                   Ledger Disparity Identified
                 </h2>
                 <p className="text-zinc-400 text-xs tracking-wider uppercase font-mono mt-1">

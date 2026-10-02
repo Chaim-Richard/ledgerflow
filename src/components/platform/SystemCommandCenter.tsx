@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import { SystemCommandCenterView } from './SystemCommandCenterView';
 import React, { useState, useEffect, useId } from 'react';
 
@@ -21,6 +22,7 @@ function useSystemCommandCenterModel() {
   const setLexiconOverride = useUIStore(state => state.setLexiconOverride);
 
   const [editingWorkspace, setEditingWorkspace] = useState<TenantTelemetry | null>(null);
+  const { dialogProps: overlay1DialogProps, titleId: overlay1TitleId } = useDialog(() => setEditingWorkspace(null), !!editingWorkspace);
   const [savingWorkspace, setSavingWorkspace] = useState(false);
   const [activeFormTab, setActiveFormTab] = useState<'tier' | 'access' | 'credits' | 'rates' | 'roadmap'>('tier');
 
@@ -35,6 +37,7 @@ function useSystemCommandCenterModel() {
   const [bulkSyncTotal, setBulkSyncTotal] = useState(0);
   const [bulkSyncStatusText, setBulkSyncStatusText] = useState('');
   const [showBulkSuccess, setShowBulkSuccess] = useState(false);
+  const { dialogProps: overlay2DialogProps, titleId: overlay2TitleId } = useDialog(() => setShowBulkSuccess(false), showBulkSuccess);
 
   // User Management Engine
   const [usersList, setUsersList] = useState<AdminUser[]>([]);
@@ -357,7 +360,7 @@ function useSystemCommandCenterModel() {
 
   useAuthStore(s => s.isAdmin);
 
-  return { formatPlatformUsdQuota, formId, telemetry, loading, lexiconOverrides, setLexiconOverride, editingWorkspace, setEditingWorkspace, savingWorkspace, activeFormTab, setActiveFormTab, simulatedQueries, setSimulatedQueries, customKeyRatio, setCustomKeyRatio, simulatedLogs, setSimulatedLogs, bulkSyncing, bulkSyncProgress, bulkSyncTotal, bulkSyncStatusText, showBulkSuccess, setShowBulkSuccess, usersList, activeMainTab, setActiveMainTab, editingUser, setEditingUser, savingUser, userFormState, setUserFormState, formState, setFormState, startEditing, handleSaveWorkspaceLimits, handleBulkApplyBaseline, handleTriggerStressEvent, globalConfig, setGlobalConfig, updatingGlobal, startEditingUser, handleSaveUser, handleSaveGlobalConfig, totalErrors, liveErrors };
+  return { overlay1DialogProps, overlay1TitleId, overlay2DialogProps, overlay2TitleId, formatPlatformUsdQuota, formId, telemetry, loading, lexiconOverrides, setLexiconOverride, editingWorkspace, setEditingWorkspace, savingWorkspace, activeFormTab, setActiveFormTab, simulatedQueries, setSimulatedQueries, customKeyRatio, setCustomKeyRatio, simulatedLogs, setSimulatedLogs, bulkSyncing, bulkSyncProgress, bulkSyncTotal, bulkSyncStatusText, showBulkSuccess, setShowBulkSuccess, usersList, activeMainTab, setActiveMainTab, editingUser, setEditingUser, savingUser, userFormState, setUserFormState, formState, setFormState, startEditing, handleSaveWorkspaceLimits, handleBulkApplyBaseline, handleTriggerStressEvent, globalConfig, setGlobalConfig, updatingGlobal, startEditingUser, handleSaveUser, handleSaveGlobalConfig, totalErrors, liveErrors };
 }
 
 export type SystemCommandCenterModel = ReturnType<typeof useSystemCommandCenterModel>;

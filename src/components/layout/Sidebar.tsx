@@ -96,6 +96,8 @@ const Sidebar = React.memo(({
 
   return (
     <div 
+      role="navigation"
+      aria-label="Main navigation"
       className={cn(
         "h-[100dvh] lg:h-full bg-[var(--surface)] text-[var(--text)] flex flex-col z-[100] border-r border-[var(--line)] shrink-0 transition-all duration-300",
         "fixed lg:sticky top-0 left-0",
@@ -154,7 +156,7 @@ const Sidebar = React.memo(({
       </div>
 
       {/* Navigation Groups */}
-      <div role="navigation" aria-label="Main navigation" className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4 mt-1">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4 mt-1">
          <div>
             {uiStore.isSidebarOpen && (
               <p className="font-mono text-[10px] uppercase tracking-widest text-[var(--faint)] px-2 mb-2 font-semibold">Navigate</p>

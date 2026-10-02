@@ -9,10 +9,10 @@ import { Labelled } from '../ui/Labelled';
 
 import type { SystemCommandCenterModel } from './SystemCommandCenter';
 export function WorkspacePolicyDialog({ model }: { model: SystemCommandCenterModel }) {
- const { formId, editingWorkspace, setEditingWorkspace, savingWorkspace, activeFormTab, setActiveFormTab, formState, setFormState, handleSaveWorkspaceLimits } = model;
+ const { overlay1DialogProps, overlay1TitleId, formId, editingWorkspace, setEditingWorkspace, savingWorkspace, activeFormTab, setActiveFormTab, formState, setFormState, handleSaveWorkspaceLimits } = model;
  return (<AnimatePresence>
             {editingWorkspace && (
-              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[200] p-4 animate-fade-in">
+              <div {...overlay1DialogProps} className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[200] p-4 animate-fade-in">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95, y: 15 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -26,7 +26,7 @@ export function WorkspacePolicyDialog({ model }: { model: SystemCommandCenterMod
                       <span className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
                         Institutional Supervisor Control
                       </span>
-                      <h2 className="text-2xl font-black text-[var(--text)] tracking-tight mt-1 truncate">Workspace Policy Editor</h2>
+                      <h2 id={overlay1TitleId} className="text-2xl font-black text-[var(--text)] tracking-tight mt-1 truncate">Workspace Policy Editor</h2>
                       <p className="text-[var(--muted)] font-mono text-[9px] font-bold uppercase mt-0.5 truncate">Workspace Hash: {editingWorkspace.id}</p>
                     </div>
                     <button

@@ -1,8 +1,9 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useSavedViewsStore, SavedViewFilter } from '../../stores/useSavedViewsStore';
 import { isPostable, isTransactionInDateRange, getAbsoluteTotal } from '../../lib/txFilters';
-import { formatDecimal, getLocalDateISO } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { TanStackDataGrid } from '../ui/TanStackDataGrid';
 import { ColumnDef } from '@tanstack/react-table';
 import { Filter, Download, Bookmark } from 'lucide-react';
@@ -30,6 +31,7 @@ export default function QueryView() {
 
   const [savedQueryName, setSavedQueryName] = useState('');
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => setShowSaveModal(false), showSaveModal);
 
   // Execute query against transactions using txFilters primitives
   const queryResults = useMemo(() => {
@@ -113,7 +115,7 @@ export default function QueryView() {
           <div className="space-y-0.5">
             {displayedLines.map(({ line: l, key }) => (
               <div key={key} className="text-xs text-slate-600">
-                <span className="font-semibold">{l.accountName}</span> ({formatDecimal(l.amountCents / 100)})
+                <span className="font-semibold">{l.accountName}</span> ({formatCurrency(l.amountCents, info.row.original.currency)})
               </div>
             ))}
             {lines.length > 2 && <div className="text-[10px] text-[var(--muted)]">+{lines.length - 2} more lines</div>}
@@ -125,8 +127,7 @@ export default function QueryView() {
       id: 'total',
       header: 'Amount',
       cell: (info) => {
-        const total = getAbsoluteTotal(info.row.original) / 100;
-        return <span className="font-mono font-bold text-slate-900">${formatDecimal(total)}</span>;
+        return <span className="font-mono font-bold text-slate-900">{formatCurrency(getAbsoluteTotal(info.row.original), info.row.original.currency)}</span>;
       }
     }
   ], []);
@@ -271,9 +272,9 @@ export default function QueryView() {
 
       {/* Save Query Modal */}
       {showSaveModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div {...overlayDialogProps} className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 max-w-md w-full">
-            <h2 className="text-base font-bold text-slate-900 mb-2">Save Custom Ledger Query</h2>
+            <h2 id={overlayTitleId} className="text-base font-bold text-slate-900 mb-2">Save Custom Ledger Query</h2>
             <p className="text-xs text-[var(--muted)] mb-4">Saved queries can be executed instantly at any time from your Saved Views drawer.</p>
             <input aria-label="Saved query name"
               type="text"

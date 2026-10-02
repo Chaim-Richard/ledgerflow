@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useEffect, useState, useId } from 'react';
 import { toast } from 'sonner';
 import { Bell, CheckCheck, X, FileText, CreditCard, Landmark, Users, MailWarning, Settings2, ArrowRight } from 'lucide-react';
@@ -89,6 +90,8 @@ export default function NotificationDrawer() {
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [choosing, setChoosing] = useState(false);
 
+  const { dialogProps, titleId } = useDialog(() => setDrawerOpen(false), isDrawerOpen);
+
   if (!isDrawerOpen) return null;
 
   const unread = unreadCount(notifications);
@@ -107,16 +110,16 @@ export default function NotificationDrawer() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div {...dialogProps} className="fixed inset-0 z-50 overflow-hidden">
       <button type="button" aria-label="Close notifications" onClick={() => setDrawerOpen(false)} className="absolute inset-0 bg-black/40 cursor-default" />
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div role="dialog" aria-modal="true" aria-labelledby="notifications-title"
+        <div
           className="w-screen max-w-md bg-[var(--surface)] border-l border-[var(--line)] shadow-2xl flex flex-col text-[var(--text)]">
           <div className="p-5 border-b border-[var(--line)] flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <Bell size={18} className="text-[var(--brass)]" aria-hidden="true" />
               <div>
-                <h2 id="notifications-title" className="text-base font-bold">{choosing ? 'Choose notifications' : 'Notifications'}</h2>
+                <h2 id={titleId} className="text-base font-bold">{choosing ? 'Choose notifications' : 'Notifications'}</h2>
                 {!choosing && <p className="text-xs text-[var(--muted)]">{unread} unread</p>}
               </div>
             </div>

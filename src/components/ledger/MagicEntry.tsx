@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useEffect, useId } from 'react';
 import { aiService } from '../../services/aiService';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -21,6 +22,7 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: { isOpen?: boolea
   const { handleQuickAdd, handleParseReceipt } = useTransactionActions();
 
   const isModal = isOpen !== undefined;
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => onClose?.(), !!isModal && isOpen !== false);
 
   const handleParse = (val: string) => {
     setText(val);
@@ -273,12 +275,12 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: { isOpen?: boolea
 
   if (isModal) {
     return (
-      <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+      <div {...overlayDialogProps} className="fixed inset-0 z-[300] flex items-center justify-center p-4">
         <div role="presentation" aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
         <div className="relative w-full max-w-2xl bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--line)] overflow-hidden">
           <div className="flex items-center justify-between p-6 border-b border-[var(--line)]">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">Magic Entry</h2>
+              <h2 id={overlayTitleId} className="text-2xl font-bold tracking-tight">Magic Entry</h2>
               <p className="text-[var(--muted)]">Just type what happened. No debit/credit knowledge required.</p>
             </div>
             {onClose && (

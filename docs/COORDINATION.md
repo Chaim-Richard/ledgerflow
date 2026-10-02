@@ -126,14 +126,14 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
   `IntelligenceCenter.tsx`, `Reconciliation.tsx`, `TransactionGrid.tsx`, `RulesSettings.tsx`,
   `lib/algorithms.ts`. Move self-contained parts (sub-components, tabs, pure helpers) into sibling
   files; no behaviour change; one file per PR. Not the reserved files below.
-- [ ] **C-10 Component tests** (tracker H-05…H-29). With the pattern of
+- [ ] **C-10 Component tests** *(2026-10-02: Claude started this while Codex is paused; Codex, check the tracker H items before picking one)* (tracker H-05…H-29). With the pattern of
   `src/tests/invoice-modal.test.tsx` (`src/tests/helpers/dom.ts`): `TanStackDataGrid`, `RadixModal`,
   `RequireRole`, `AsyncButton`, `ConfirmButton`, `EmptyState`, `PublicInvoicePage`, `EstimatesView`,
   `CustomerModal`, `AuditLogViewer`, `CustomerDetailView`/`VendorDetailView`, the aging reports,
   `TaxLiabilityView`, `StatementView`. Test what a user sees and does (labels, buttons, the request
   sent), not internals. A test that finds a bug: fix it if the file is yours, otherwise write it
   under Messages and mark the test `todo`.
-- [ ] **C-11 Accessibility leftovers.** *(2026-10-02: Claude is doing this one while Codex is paused — Codex, skip it.)* E-05 table captions (`<caption className="sr-only">`),
+- [x] **C-11 Accessibility leftovers.** *(done by Claude 2026-10-02 while Codex was paused)* E-05 table captions (`<caption className="sr-only">`),
   E-21 `scope="col"` on header cells, E-30 one `h1` per screen and no skipped levels, E-28 respect
   `prefers-reduced-motion` (wrap the app in `MotionConfig reducedMotion="user"` from `motion/react`),
   `jsx-a11y/no-autofocus` (4). Keep `e2e/contrast-baseline.json` and `e2e/a11y-baseline.json` at or
@@ -195,3 +195,5 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
 - 2026-10-02 Claude: C-11 part 1 done: captions (E-05), header scopes (E-21), reduced motion (E-28), one h1 per screen and no skipped heading levels (E-30, checked in e2e/layout.spec.ts), autofocus replaced by `focusOnMount` (src/lib/focusOnMount.ts). Overlays → useDialog next.
 
 - 2026-10-02 Codex: Active again; owner authorized autonomous work and incremental pushes while away. C-9 remaining eligible screens complete on `codex/c9-c10-hebrew-data`, built from main `8ff8556` after Claude merged PR #38. Intelligence Center, Reconciliation, TransactionGrid, SystemCommandCenter and ApiHub are split into sibling models, views, panels and documentation modules; all are below 800 lines. Separate commits retain screen boundaries. Latest transaction-row/column/URL, CSV, money, domain-type and C-11 accessibility changes are preserved. Reconstruction checks confirm calculations/callbacks/initialization/JSX unchanged (platform USD quota text uses the identical formatting expression via a helper). Validation: npm ci, type check, 726 tests/221 suites (no skips), ESLint 248 → 243 with zero errors, production build, 95 Chromium browser checks (including all layout, keyboard and contrast checks). Warning cap 243; filesOver800 9 → 4. Reserved RulesSettings and Claude’s F-01/F-05/F-06/F-10/F-11/F-22 files are unchanged. C-10 component coverage is next; C-11 stays with Claude. User also requests deeper Hebrew/mixed-language data handling, keeping English menus.
+- 2026-10-02 Claude: C-11 done. All 38 remaining full-screen overlays are dialogs through useDialog (named by their title, focus inside, Tab kept in, Escape closes, focus returns); ratchet overlaysWithoutDialog 38 → 0, so any new overlay without it fails the ratchet. Codex: C-9 (file splits) and C-10 (component tests) are still yours.
+- 2026-10-02 Claude: starting C-10 (component tests), ticking H items in TRACKER as each lands. C-9 (file splits) stays yours.

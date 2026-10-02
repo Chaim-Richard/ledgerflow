@@ -9,7 +9,7 @@ import { Labelled } from '../ui/Labelled';
 import { AVAILABLE_SCOPES } from './ApiHubShared';
 import type { useApiHubModel } from './useApiHubModel';
 export function ApiHubKeys({ model }: { model: ReturnType<typeof useApiHubModel> }) {
- const { formId, currentWorkspace, nowMs, apiKey, isRegenerating, isCopied, publicKeys, newKeyName, setNewKeyName, selectedScopes, setSelectedScopes, expiration, setExpiration, showCreateModal, setShowCreateModal, generateNewKey, revokeKey, copyKey } = model;
+ const { overlayDialogProps, overlayTitleId, formId, currentWorkspace, nowMs, apiKey, isRegenerating, isCopied, publicKeys, newKeyName, setNewKeyName, selectedScopes, setSelectedScopes, expiration, setExpiration, showCreateModal, setShowCreateModal, generateNewKey, revokeKey, copyKey } = model;
  return (<div className="space-y-6">
           <div className="ledger-card p-4 md:p-8 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--line)] pb-6">
@@ -171,7 +171,7 @@ export function ApiHubKeys({ model }: { model: ReturnType<typeof useApiHubModel>
 
           {/* CREATE DETAILED KEY MODAL */}
           {showCreateModal && (
-            <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div {...overlayDialogProps} className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
               <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[32px] w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex justify-between items-center p-6 border-b border-[var(--line)]">
                   <div className="flex items-center gap-3">
@@ -179,7 +179,7 @@ export function ApiHubKeys({ model }: { model: ReturnType<typeof useApiHubModel>
                       <Key aria-hidden="true" size={20} />
                     </div>
                     <div>
-                      <h3 className="font-bold text-[var(--text)] font-display text-base">Provision New Developer Credential</h3>
+                      <h3 id={overlayTitleId} className="font-bold text-[var(--text)] font-display text-base">Provision New Developer Credential</h3>
                       <p className="text-xs text-[var(--muted)] font-mono mt-0.5">Workspace: {currentWorkspace?.name}</p>
                     </div>
                   </div>

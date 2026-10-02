@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useEffect, useState } from 'react';
 import { X, Download, ExternalLink, Loader2, AlertCircle, FileText } from 'lucide-react';
 import { getIdToken } from '../../firebase';
@@ -71,6 +72,7 @@ export default function PdfPreviewModal({
   workspaceId,
   filename
 }: PdfPreviewModalProps) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +136,7 @@ export default function PdfPreviewModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+    <div {...overlayDialogProps} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
@@ -143,7 +145,7 @@ export default function PdfPreviewModal({
               <FileText aria-hidden="true" className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-slate-900 dark:text-white text-base leading-tight">{title}</h2>
+              <h2 id={overlayTitleId} className="font-bold text-slate-900 dark:text-white text-base leading-tight">{title}</h2>
               <p className="text-xs text-[var(--muted)] dark:text-slate-400 font-mono mt-0.5">{downloadName}</p>
             </div>
           </div>

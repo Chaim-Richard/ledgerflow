@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
 import { computeIncomeBySource } from '../../lib/reportGenerators';
-import { isPostable } from '../../lib/txFilters';
 import { TrendingUp } from 'lucide-react';
 
 interface Props {
@@ -16,7 +15,9 @@ export const IncomeBySourceReportView: React.FC<Props> = ({
   startDate,
   endDate
 }) => {
-  const transactions = useLedgerStore(s => s.transactions.filter(isPostable));
+  // the whole list (computeIncomeBySource keeps posted entries); a filtered list made here would be
+  // a new array on every read, and the store would re-render forever (L-158)
+  const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
 
   const start = startDate || (selectedYear ? `${selectedYear}-01-01` : undefined);

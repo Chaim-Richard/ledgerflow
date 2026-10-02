@@ -50,6 +50,23 @@ export interface TagBreakdown {
   count: number;
 }
 
+/**
+ * Entries that cancel out: every reversal and the entry it reverses. Lists of single items (top
+ * expenses) leave both out; totals simply add every line with its sign, so a reversal cancels
+ * what it reverses and a refund reduces the total (L-157).
+ */
+function reversalPairIds(transactions: Transaction[]): Set<string> {
+  const ids = new Set<string>();
+  for (const tx of transactions) {
+    const reversed = tx.metadata?.reversesTxId || tx.metadata?.reversedTransactionId;
+    if (tx.metadata?.isReversal && typeof reversed === 'string') {
+      ids.add(tx.id);
+      ids.add(reversed);
+    }
+  }
+  return ids;
+}
+
 export function computeExpenseByCategory(
   accounts: ChartAccount[],
   transactions: Transaction[],
@@ -58,6 +75,7 @@ export function computeExpenseByCategory(
 ): CategoryExpenseBreakdown[] {
   const accountMap = new Map(accounts.map(a => [a.id, a]));
   const catTotals: Record<string, { total: number; count: number }> = {};
+  const paired = reversalPairIds(transactions);
   let grandTotal = 0;
 
   for (const tx of transactions) {
@@ -69,18 +87,20 @@ export function computeExpenseByCategory(
       const acc = accountMap.get(line.accountId);
       const isExp = isExpenseAccount(acc);
 
-      if (isExp && line.amountCents > 0) {
+      if (isExp) {
         const amt = lineAmount(line, tx);
+        if (!amt) return;
         const cat = line.category || acc?.category || acc?.name || 'General Expense';
         if (!catTotals[cat]) catTotals[cat] = { total: 0, count: 0 };
         catTotals[cat].total += amt;
-        catTotals[cat].count += 1;
+        if (!paired.has(tx.id)) catTotals[cat].count += 1;
         grandTotal += amt;
       }
     });
   }
 
   return Object.entries(catTotals)
+    .filter(([, data]) => data.total !== 0)
     .map(([category, data]) => ({
       category,
       totalAmountCents: data.total,
@@ -98,6 +118,7 @@ export function computeIncomeBySource(
 ): IncomeBySourceBreakdown[] {
   const accountMap = new Map(accounts.map(a => [a.id, a]));
   const sourceTotals: Record<string, { total: number; count: number }> = {};
+  const paired = reversalPairIds(transactions);
   let grandTotal = 0;
 
   for (const tx of transactions) {
@@ -109,18 +130,20 @@ export function computeIncomeBySource(
       const acc = accountMap.get(line.accountId);
       const isRev = isRevenueAccount(acc);
 
-      if (isRev && line.amountCents < 0) {
+      if (isRev) {
         const amt = -lineAmount(line, tx);
+        if (!amt) return;
         const source = tx.payee || line.description || acc?.name || 'Direct Revenue';
         if (!sourceTotals[source]) sourceTotals[source] = { total: 0, count: 0 };
         sourceTotals[source].total += amt;
-        sourceTotals[source].count += 1;
+        if (!paired.has(tx.id)) sourceTotals[source].count += 1;
         grandTotal += amt;
       }
     });
   }
 
   return Object.entries(sourceTotals)
+    .filter(([, data]) => data.total !== 0)
     .map(([source, data]) => ({
       source,
       totalAmountCents: data.total,
@@ -140,9 +163,10 @@ export function computeTopExpensesAndIncome(
   const accountMap = new Map(accounts.map(a => [a.id, a]));
   const expenses: TopLineItem[] = [];
   const income: TopLineItem[] = [];
+  const paired = reversalPairIds(transactions);
 
   for (const tx of transactions) {
-    if (!isPostable(tx) || isTransferTransaction(tx)) continue;
+    if (!isPostable(tx) || isTransferTransaction(tx) || paired.has(tx.id)) continue;
     if (!isTransactionInDateRange(tx, startDate, endDate)) continue;
 
     tx.lines?.forEach(line => {
@@ -217,16 +241,16 @@ export function computeMonthlyAverages(
       const acc = accountMap.get(line.accountId);
       const amt = lineAmount(line, tx);
 
-      if (isExpenseAccount(acc) && amt > 0) {
+      if (isExpenseAccount(acc)) {
         targetMonth.expenseCents += amt;
-      } else if (isRevenueAccount(acc) && amt < 0) {
+      } else if (isRevenueAccount(acc)) {
         targetMonth.incomeCents += -amt;
       }
     });
   }
 
-  const activeExpenseMonths = monthlyTotals.filter(m => m.expenseCents > 0);
-  const activeIncomeMonths = monthlyTotals.filter(m => m.incomeCents > 0);
+  const activeExpenseMonths = monthlyTotals.filter(m => m.expenseCents !== 0);
+  const activeIncomeMonths = monthlyTotals.filter(m => m.incomeCents !== 0);
 
   const avgExpense = activeExpenseMonths.length > 0
     ? Math.round(activeExpenseMonths.reduce((sum, m) => sum + m.expenseCents, 0) / activeExpenseMonths.length)
@@ -262,6 +286,7 @@ export function computeTagReport(
 ): TagBreakdown[] {
   const accountMap = new Map(accounts.map(a => [a.id, a]));
   const tagMap: Record<string, { income: number; expense: number; count: number }> = {};
+  const paired = reversalPairIds(transactions);
 
   for (const tx of transactions) {
     if (!isPostable(tx) || isTransferTransaction(tx)) continue;
@@ -279,11 +304,11 @@ export function computeTagReport(
 
       lineTags.forEach(tag => {
         if (!tagMap[tag]) tagMap[tag] = { income: 0, expense: 0, count: 0 };
-        tagMap[tag].count += 1;
+        if (!paired.has(tx.id)) tagMap[tag].count += 1;
 
-        if (isExpenseAccount(acc) && amt > 0) {
+        if (isExpenseAccount(acc)) {
           tagMap[tag].expense += amt;
-        } else if (isRevenueAccount(acc) && amt < 0) {
+        } else if (isRevenueAccount(acc)) {
           tagMap[tag].income += -amt;
         }
       });

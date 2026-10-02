@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { BUSINESS_TEMPLATES } from '../../lib/businessTemplates';
@@ -88,6 +89,7 @@ export default function TemplateSelector({
   customTemplates = [], 
   onSaveCurrent 
 }: TemplateSelectorProps) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   
   const [inspectedTemplateId, setInspectedTemplateId] = useState<string>(
     currentType && BUSINESS_TEMPLATES[currentType] ? currentType : Object.keys(BUSINESS_TEMPLATES)[0]
@@ -124,7 +126,7 @@ export default function TemplateSelector({
   const activeInspected = BUSINESS_TEMPLATES[inspectedTemplateId] || Object.values(BUSINESS_TEMPLATES)[0];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[var(--ink)]/85 backdrop-blur-2xl">
+    <div {...overlayDialogProps} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[var(--ink)]/85 backdrop-blur-2xl">
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -146,7 +148,7 @@ export default function TemplateSelector({
                 Verified Invariant Maturation
               </span>
             </div>
-            <h2 className="text-3xl font-black text-[var(--text)] mt-2 tracking-tight flex items-center gap-3 uppercase italic leading-none">
+            <h2 id={overlayTitleId} className="text-3xl font-black text-[var(--text)] mt-2 tracking-tight flex items-center gap-3 uppercase italic leading-none">
               <Plus className="text-[var(--text)]" size={24} />
               Analytical Workspace Selector
             </h2>

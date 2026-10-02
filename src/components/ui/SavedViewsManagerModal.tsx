@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useMemo, useId } from 'react';
 import { useSavedViewsStore, computeSavedViewMetrics, SavedView, SavedViewFilter } from '../../stores/useSavedViewsStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -42,6 +43,7 @@ interface SavedViewsManagerModalProps {
 }
 
 export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsManagerModalProps) {
+  const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   const formId = useId();
   const views = useSavedViewsStore(s => s.views);
   const activeViewId = useSavedViewsStore(s => s.activeViewId);
@@ -187,7 +189,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div {...overlayDialogProps} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl max-h-[90vh] bg-[var(--surface-card)] border border-[var(--line)] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-[var(--text)]">
         
         {/* Header */}
@@ -197,7 +199,7 @@ export default function SavedViewsManagerModal({ isOpen, onClose }: SavedViewsMa
               <Filter aria-hidden="true" size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Saved Views & Default Lenses</h2>
+              <h2 id={overlayTitleId} className="text-lg font-bold">Saved Views & Default Lenses</h2>
               <p className="text-xs text-[var(--muted)]">
                 Configure multiple default views, customized search filters, and live monetary balance tracking.
               </p>

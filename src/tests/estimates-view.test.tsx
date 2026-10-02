@@ -14,7 +14,7 @@ beforeEach(() => {
   markComponentCollectionsLoaded('customers', 'estimates');
   useLedgerStore.setState({ customers: [makeCustomer({ name: 'לקוח Acme' })], estimates: [] });
 });
-afterEach(async () => { cleanup(); await getSupabase().auth.stopAutoRefresh(); });
+afterEach(async () => { cleanup(); await getSupabase().auth.dispose(); });
 
 test('estimate creation preserves mixed-language fields in the persisted request', async () => {
   const calls = stubFetchWithBodies(200, { number: 'EST-2026-1' });
