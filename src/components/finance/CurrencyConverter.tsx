@@ -11,7 +11,7 @@ interface CurrencyConverterProps {
   baseCurrency?: string;
 }
 
-export default function CurrencyConverter({ isOpen, onClose, baseCurrency }: CurrencyConverterProps) {
+export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverterProps) {
   const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
   const activeWorkspace = getCurrentWorkspace();
   const [isRevaluing, setIsRevaluing] = useState(false);

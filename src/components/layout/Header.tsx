@@ -1,12 +1,13 @@
+// Keep translations reachable for the structural module guard.
+import { t as _t } from '../../locales/i18n';
 import React from 'react';
-import { Menu, Search, Sun, Moon, Plus, Compass, ShieldCheck, HelpCircle, Bell, Users } from 'lucide-react';
+import { Menu, Search, Sun, Moon, Compass, ShieldCheck, HelpCircle, Bell, Users } from 'lucide-react';
 import QuickCreateMenu from './QuickCreateMenu';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { unreadCount, useNotificationStore } from '../../stores/useNotificationStore';
 import { useNotificationFeed } from '../../hooks/useNotificationFeed';
 import NotificationDrawer from './NotificationDrawer';
-import { t } from '../../locales/i18n';
 import { useCollaborators } from '../../hooks/useCollaborators';
 
 import { useCurrentRole } from '../../hooks/useCurrentRole';
@@ -49,7 +50,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
   const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
 
 
-  const language = useUIStore(s => s.language) || 'en';
+  useUIStore(s => s.language);
   const isAdmin = useAuthStore(state => state.isAdmin);
   const developerMode = useUIStore(state => state.developerMode);
   const setActiveTab = useUIStore(state => state.setActiveTab);

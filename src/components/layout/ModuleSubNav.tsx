@@ -11,8 +11,8 @@ interface ModuleSubNavProps {
 
 export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const user = useAuthStore(s => s.user);
-  const userProfile = useAuthStore(s => s.userProfile);
+  useAuthStore(s => s.user);
+  useAuthStore(s => s.userProfile);
   const isOwner = useAuthStore(s => s.isAdmin);
   const isProMode = useUIStore(s => s.isProMode);
   const developerMode = useUIStore(s => s.developerMode);

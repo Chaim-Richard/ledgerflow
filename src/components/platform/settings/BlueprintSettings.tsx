@@ -19,7 +19,7 @@ export default function BlueprintSettings() {
   const toggleTabVisibility = useUIStore(state => state.toggleTabVisibility);
   const lexiconOverrides = useUIStore(state => state.lexiconOverrides);
   const setLexiconOverride = useUIStore(state => state.setLexiconOverride);
-  const resetLexiconOverrides = useUIStore(state => state.resetLexiconOverrides);
+  useUIStore(state => state.resetLexiconOverrides);
 
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
   const txActions = useTransactionActions();
@@ -44,8 +44,8 @@ export default function BlueprintSettings() {
   const [mappings, setMappings] = useState<Record<string, string>>({});
   const [newCatName, setNewCatName] = useState('');
   const [newCatAccountId, setNewCatAccountId] = useState('');
-  const [isSavingMappings, setIsSavingMappings] = useState(false);
-  const [hasInitializedMappings, setHasInitializedMappings] = useState(false);
+  const [, setIsSavingMappings] = useState(false);
+  useState(false);
   const { setSafeTimeout } = useTimeout();
 
   // Sync mappings with workspace document

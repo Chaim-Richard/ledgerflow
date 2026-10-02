@@ -44,7 +44,7 @@ export const CONTINUOUS_CLOSE_ALGO: AlgorithmDefinition = {
   name: 'Silent Micro-Close & Nightly Hash Anchor',
   description: 'Reconciles, flags unfiled items, and computes hash-anchored snapshots every night so the books are always closed and audit-ready.',
   inputs: [],
-  compute: (ctx, inputs) => {
+  compute: (ctx, _inputs) => {
     const { transactions } = ctx;
     const res = runContinuousCloseCheck(transactions);
 

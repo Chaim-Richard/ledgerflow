@@ -84,13 +84,10 @@ export const SUBSET_SUM_RECONCILIATION: AlgorithmDefinition = {
     if (candidates.length < 3) {
       isSynthetic = true;
       const rng = seedPRNG(Math.abs(target) ^ (numInvoices * 7919));
-      const subsetSize = Math.floor(numInvoices / 3) || 1;
       candidates = [];
-      let subsetSum = 0;
       for (let i = 0; i < numInvoices; i++) {
         const amt = Math.floor(rng() * (target / 2)) + 1000;
         candidates.push({ id: `INV-${i + 1}`, amountCents: amt });
-        if (i < subsetSize) subsetSum += amt;
       }
     }
 

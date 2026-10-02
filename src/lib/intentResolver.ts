@@ -95,7 +95,6 @@ export class IntentResolver {
     const monthMatch = lowerQuery.match(PATTERNS.MONTH);
     const yearMatch = lowerQuery.match(PATTERNS.YEAR);
     const relativeTimeMatch = lowerQuery.match(PATTERNS.RELATIVE);
-    const quarterMatch = lowerQuery.match(PATTERNS.QUARTER);
     const dateRangeMatch = lowerQuery.match(PATTERNS.DATE_RANGE);
     const now = new Date();
 
@@ -145,7 +144,6 @@ export class IntentResolver {
     for (const line of lines) {
         const lowerInput = line.toLowerCase().trim();
         let learnedCategory: string | null = null;
-        const learnedAccount: string | null = null;
         let isRuleConfirmed = false;
 
         // 0. High-Confidence Rule Mapping (Hardened User Rules)

@@ -46,7 +46,7 @@ export const AUTO_SETUP_ALGO: AlgorithmDefinition = {
   name: 'Zero-Setup Books (Industry Fingerprinting)',
   description: 'Clusters merchant tokens using TF-IDF to fingerprint the business industry and propose a bespoke Chart of Accounts without a setup wizard.',
   inputs: [],
-  compute: (ctx, inputs) => {
+  compute: (ctx, _inputs) => {
     const { transactions } = ctx;
     const start = performance.now();
     const result = fingerprintBusiness(transactions);

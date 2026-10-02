@@ -12,6 +12,8 @@ tell Claude, or delete it under Routines on claude.ai.
 **Second AI:** if another AI works on the repository too, the lanes and the "who edits which
 files" board are in [COORDINATION.md](COORDINATION.md).
 
+- [x] Codex C-1: unused variables and parameters outside Claude's reserved files; ESLint warnings 2022 → 1805 (codex, branch `codex/c-1-unused-code`, PR pending).
+
 **Setting up a fresh machine (for Claude):** Node 24 and PostgreSQL 16. Create a local test
 database, apply `supabase/migrations/*` with `LF_TEST_DATABASE_URL=... npx tsx scripts/db-test.ts setup`,
 then the checks: `npx tsc --noEmit -p tsconfig.json`, `LF_TEST_DATABASE_URL=... npm test`,

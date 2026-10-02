@@ -10,10 +10,6 @@ function normalize(description: string): string {
     .trim();
 }
 
-function tokens(description: string): Set<string> {
-  return new Set(normalize(description).split(" ").filter((t) => t.length > 2));
-}
-
 export const CATEGORIZATION_CONSISTENCY_ALGO: AlgorithmDefinition = {
   id: 'forensics_categorization_consistency',
   name: 'Categorization Consistency Checker',
@@ -69,7 +65,7 @@ export const CATEGORIZATION_CONSISTENCY_ALGO: AlgorithmDefinition = {
     const exactMatchAnomalies = [];
     let wellCategorizedGroups = 0;
 
-    for (const [norm, items] of groups.entries()) {
+    for (const [, items] of groups.entries()) {
       if (items.length < 3) continue; // Not enough history to judge consistency
       
       // Count categorizations for this exact normalized description

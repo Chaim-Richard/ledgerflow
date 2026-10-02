@@ -36,7 +36,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const user = useAuthStore(s => s.user);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
-  const userProfile = useAuthStore(s => s.userProfile);
+  useAuthStore(s => s.userProfile);
   const matchingThreshold = useLedgerStore(state => state.matchingThreshold);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {

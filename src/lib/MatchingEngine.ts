@@ -1,4 +1,4 @@
-import { AhoCorasick, lexicalSimilarity, optimizedTransactionSimilarity, BayesianClassifier, SpellChecker } from './algorithms';
+import { AhoCorasick, optimizedTransactionSimilarity, BayesianClassifier, SpellChecker } from './algorithms';
 import { Transaction, AutoRule, DimensionNode, ChartAccount } from '../types';
 import { extractMultiDimensionalLabels, expandDeepLabels, decomposeHierarchicalLabel } from './dimensionUtils';
 
@@ -427,7 +427,6 @@ export class MatchingEngine {
       }
 
       // 2. Statistical Similarity Scoring
-      const levScore = lexicalSimilarity(cleanDesc, merchantName, this.analyticalSalt);
       const compositeScore = optimizedTransactionSimilarity(cleanDesc, merchantName);
       
       if (compositeScore > 0.88 && compositeScore > bestMatch.score) {

@@ -23,7 +23,7 @@ export default function BillingSettings() {
         });
         const data = await res.json();
         setBillingStatus(data);
-      } catch (err) {
+      } catch {
         console.error("Failed to fetch billing status");
       }
     };

@@ -89,7 +89,7 @@ export function formatCurrency(cents: number | undefined | null, currency?: stri
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
     }).format(safeCents / divisor);
-  } catch (_e) {
+  } catch {
     return `${targetCurrency} ${(safeCents / divisor).toFixed(digits)}`;
   }
 }
@@ -151,7 +151,7 @@ export function getLocalDateISO(d: Date = new Date()): string {
     if (activeWorkspace?.timezone) {
       timezone = activeWorkspace.timezone;
     }
-  } catch (_e) {
+  } catch {
     // Fallback if store is not yet accessible
   }
 
@@ -177,7 +177,7 @@ export function getLocalDateISO(d: Date = new Date()): string {
     if (y && m && day) {
       return `${y}-${m}-${day}`;
     }
-  } catch (_e) {
+  } catch {
     // Fallback to standard local Date string formatting
   }
 
@@ -316,7 +316,7 @@ export function parseLocalDate(s: string): Date {
       const offsetMs = tempDate.getTime() - formattedDate.getTime();
       
       return new Date(localDate.getTime() + offsetMs);
-    } catch (_e) {
+    } catch {
       return localDate;
     }
   }
@@ -514,7 +514,7 @@ export function formatTzDate(d: Date = new Date(), timezone = 'UTC'): string {
       day: '2-digit'
     });
     return formatter.format(d); // Output: YYYY-MM-DD in en-CA locale
-  } catch (err) {
+  } catch {
     return d.toISOString().split('T')[0];
   }
 }

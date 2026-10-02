@@ -171,7 +171,7 @@ export default function Inventory() {
       await updateDoc(doc(db, 'inventory', editingItem.id), updates);
       setEditingItem(null);
       toast.success('Inventory item updated');
-    } catch (err) {
+    } catch {
       toast.error('Failed to update item');
     }
   };
@@ -200,7 +200,7 @@ export default function Inventory() {
       await addDoc(collection(db, 'inventory'), newItem);
       setIsAdding(false);
       toast.success('Inventory item added');
-    } catch (err) {
+    } catch {
       toast.error('Failed to add item');
     }
   };
@@ -220,7 +220,7 @@ export default function Inventory() {
     try {
       await deleteDoc(doc(db, 'inventory', id));
       toast.success('Item removed');
-    } catch (err) {
+    } catch {
       toast.error('Failed to remove item');
     }
   };
@@ -235,7 +235,6 @@ export default function Inventory() {
     i.sku.toLowerCase().includes(searchTerm.toLowerCase())
   ) : filteredItems;
 
-  const lowStockItems = items.filter(item => item.quantityAtHand <= item.reorderPoint);
 
   return (
     <div className="space-y-8">

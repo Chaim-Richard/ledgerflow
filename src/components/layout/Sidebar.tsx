@@ -45,8 +45,6 @@ const Sidebar = React.memo(({
   setActiveTab, 
   onLogout, 
   onLoginPrompt,
-  projects,
-  onNewProject,
   workspaces,
   currentWorkspaceId,
   onSelectWorkspace,
@@ -56,7 +54,7 @@ const Sidebar = React.memo(({
   const uiStore = useUIStore();
   const { isInstallable, promptInstall } = usePWAInstall();
   const user = useAuthStore(s => s.user);
-  const userProfile = useAuthStore(s => s.userProfile);
+  useAuthStore(s => s.userProfile);
   const isAdmin = useAuthStore(s => s.isAdmin);
   const realProjects = useLedgerStore(s => s.projects);
   const rawAccounts = useLedgerStore(s => s.accounts);

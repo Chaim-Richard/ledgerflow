@@ -11,7 +11,7 @@ interface MainViewSwitcherProps {
 
 const MainViewSwitcher = React.memo(({ activeTab }: MainViewSwitcherProps) => {
   const Component = VIEW_COMPONENTS[activeTab];
-  const { handleAction } = useCommandDispatcher();
+  useCommandDispatcher();
   
   return (
     <div className="relative flex-1 flex flex-col w-full min-h-full">

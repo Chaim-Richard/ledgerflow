@@ -365,9 +365,6 @@ export function useAuditTelemetry(transactions: Transaction[] = [], accounts: Ch
     // Complex heuristics only on sufficient data and NOT on every tick
     const performDeepAnalysis = safeTxs.length > 50 && safeTxs.length < 5000;
     
-    // Performance Guard: Only run expensive analysis if the dataset or timeframe changed significantly
-    const analysisToken = `${safeTxs.length}_${days}`;
-    
     if (performDeepAnalysis && metrics.timeSeries.length >= 20) {
       PerformanceTelemetry.start("useAuditTelemetry:deepAnalysis");
       const outflowSignal = metrics.timeSeries.map(d => d.outflow);

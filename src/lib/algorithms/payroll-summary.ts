@@ -40,7 +40,6 @@ export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
     const rows: any[] = [];
     
     let totalGross = 0;
-    let totalTaxes = 0;
     let totalNet = 0;
     let totalEmployerBurden = 0;
     let totalLiability = 0;
@@ -49,7 +48,6 @@ export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
       const breakdown = computePeriodPayroll(emp, year);
       
       totalGross += breakdown.grossPayCents;
-      totalTaxes += breakdown.totalWithholdingCents;
       totalNet += breakdown.netPayCents;
       totalEmployerBurden += breakdown.totalEmployerTaxCents;
       totalLiability += breakdown.totalPeriodLiabilityCents;

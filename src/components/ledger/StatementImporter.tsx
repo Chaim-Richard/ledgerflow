@@ -69,7 +69,6 @@ export default function StatementImporter({
   existingTransactions,
   businessContext,
   accounts,
-  autoRules,
   patternCache
 }: StatementImporterProps) {
   const user = useAuthStore(s => s.user);
@@ -196,7 +195,7 @@ export default function StatementImporter({
     }
   };
 
-  const [skippedCount, setSkippedCount] = useState(0);
+  const [, setSkippedCount] = useState(0);
 
   const handleMapColumns = () => {
     const hasAmount = mapping.amount !== -1;

@@ -22,8 +22,7 @@ export default function Dashboard() {
     accounts, 
     computedAccounts, 
     totalLedgerBalance, 
-    integrityStatus, 
-    projects 
+    integrityStatus
   } = useLedgerStore(useShallow(s => ({
     rawTransactions: s.transactions,
     accounts: s.accounts,

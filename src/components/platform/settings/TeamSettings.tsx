@@ -219,7 +219,7 @@ export default function TeamSettings() {
       if (data.status === 'success' || Array.isArray(data.logs)) {
         setMemberLogs(data.logs || data.auditLogs || []);
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to load member activity history');
     } finally {
       setLogsLoading(false);

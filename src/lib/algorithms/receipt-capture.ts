@@ -55,7 +55,7 @@ export const RECEIPT_CAPTURE_ALGO: AlgorithmDefinition = {
   name: 'Positional Receipt Capture (No ML)',
   description: 'Parses raw OCR text lines using spatial heuristics to extract Merchant, Date, and Total without a costly vision model.',
   inputs: [],
-  compute: (ctx, inputs) => {
+  compute: (ctx, _inputs) => {
     const { transactions } = ctx;
     const start = performance.now();
     

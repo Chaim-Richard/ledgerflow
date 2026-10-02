@@ -17,7 +17,6 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
     let arPending = 0;
     let apPending = 0;
     let arOverdue = 0;
-    let apOverdue = 0;
     const thresholdDays = inputs.lateThresholdDays ?? 30;
     const now = new Date().getTime();
     const chartData = [
@@ -60,7 +59,6 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
         const amount = Math.abs(lineAmount(bill as any));
 
         apPending += amount;
-        if (daysOverdue > thresholdDays) apOverdue += amount;
 
         if (daysOverdue <= 0) chartData[0].AP += (amount / 100);
         else if (daysOverdue <= 30) chartData[1].AP += (amount / 100);
@@ -145,7 +143,6 @@ export const WORKING_CAPITAL_AGING_ALGO: AlgorithmDefinition = {
         if (remaining > 0) {
           const daysOverdue = Math.floor((now - bill.dueDate) / (1000 * 60 * 60 * 24));
           apPending += remaining;
-          if (daysOverdue > thresholdDays) apOverdue += remaining;
 
           if (daysOverdue <= 0) chartData[0].AP += (remaining / 100);
           else if (daysOverdue <= 30) chartData[1].AP += (remaining / 100);

@@ -78,7 +78,7 @@ export default function BudgetManager() {
         period: 'monthly',
         startDate: getLocalDateISO()
       });
-    } catch (error) {
+    } catch {
       toast.error('Could not save budget objective. Please try again.');
     }
   };

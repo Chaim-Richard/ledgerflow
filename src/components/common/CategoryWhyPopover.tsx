@@ -20,7 +20,7 @@ export default function CategoryWhyPopover({ description, accountName, className
   const accounts = useLedgerStore(s => s.accounts);
   const dimensionNodes = useLedgerStore(s => s.dimensionNodes);
   const user = useAuthStore(s => s.user);
-  const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
+  useAuthStore(s => s.getCurrentWorkspace());
 
   const engine = useMemo(() => {
     return new MatchingEngine(

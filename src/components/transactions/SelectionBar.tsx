@@ -16,7 +16,6 @@ interface SelectionBarProps {
 export default function SelectionBar({ 
   selectedCount, 
   totalAmount, 
-  avgAmount, 
   onCopy, 
   onClear,
   onBulkUpdate,

@@ -30,7 +30,7 @@ import { doc, setDoc, updateDoc } from '../../lib/db/firestore';
 import { Labelled } from '../ui/Labelled';
 
 export default function SupportView() {
-  const { user, userProfile, getCurrentWorkspace } = useAuthStore();
+  const { user, getCurrentWorkspace } = useAuthStore();
   const currentWorkspace = getCurrentWorkspace();
   const { 
     tickets, 

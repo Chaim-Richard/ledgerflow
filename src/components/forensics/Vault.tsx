@@ -260,7 +260,7 @@ export default function Vault() {
       toast.success('Ledger injected and cryptographically linked!', { id: toastId });
       setExtractedData(null);
       setSelectedDoc(null);
-    } catch (err) {
+    } catch {
       toast.error('Failed to inject into ledger', { id: toastId });
     }
   };
@@ -272,7 +272,7 @@ export default function Vault() {
     try {
       await deleteDoc(doc(db, 'documents', id));
       toast.success('Document deleted');
-    } catch (err) {
+    } catch {
       toast.success('Document removed locally');
     }
   };

@@ -54,7 +54,7 @@ export const SHARED_TRANSACTION_IDENTITY_ALGO: AlgorithmDefinition = {
   name: 'Shared Transaction Identity & Dual-Sided Elimination',
   description: 'Eliminates two-party reconciliation by replacing separate debit/credit records with a single, permissioned, dual-signed transaction object.',
   inputs: [],
-  compute: (ctx, inputs) => {
+  compute: (ctx, _inputs) => {
     const { transactions } = ctx;
     const start = performance.now();
     const res = computeSharedTransactionIdentity(transactions);

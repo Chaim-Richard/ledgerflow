@@ -38,8 +38,8 @@ export default function AppearanceSettings() {
   const setReduceMotion = useUIStore(state => state.setReduceMotion);
   const dateFormatPref = useUIStore(state => state.dateFormatPref);
   const setDateFormatPref = useUIStore(state => state.setDateFormatPref);
-  const numberDecimals = useUIStore(state => state.numberDecimals);
-  const setNumberDecimals = useUIStore(state => state.setNumberDecimals);
+  useUIStore(state => state.numberDecimals);
+  useUIStore(state => state.setNumberDecimals);
 
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
   const workspaces = useAuthStore(state => state.workspaces);

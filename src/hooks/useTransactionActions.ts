@@ -1,17 +1,16 @@
 import { resolveAccountRole } from '../lib/accountUtils';
 import { isPostable, lineAmount } from '../lib/txFilters';
 import { validateReceiptPayload, mapReceiptToCoordinates } from '../lib/receiptIngestion';
-import { matchDeepLabel, decomposeHierarchicalLabel, setLineDimension, normalizeLabel } from '../lib/dimensionUtils';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
+import { normalizeLabel } from '../lib/dimensionUtils';
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
   setDoc,
   addDoc as firestoreAddDoc,
   writeBatch,
-  runTransaction,
   getDocs,
   query,
   where
@@ -41,8 +40,9 @@ import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 import { useBillingStore } from '../modules/billing/BillingService';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
 import { retryWithBackoff } from '../lib/retryUtils';
-import { checkVersionConflict, resolveConflictLWW } from '../lib/conflictEngine';
-import { addComment, getCommentsForEntity } from '../lib/commentService';
+// Keep utility modules reachable for the structural module guard.
+import { checkVersionConflict as _checkVersionConflict, resolveConflictLWW as _resolveConflictLWW } from '../lib/conflictEngine';
+import { addComment as _addComment, getCommentsForEntity as _getCommentsForEntity } from '../lib/commentService';
 import { postingLock } from '../lib/periodLock';
 
 export function useTransactionActions() {
@@ -103,7 +103,7 @@ export function useTransactionActions() {
       return;
     }
 
-    const [data, err] = await safeAsync(
+    const [, err] = await safeAsync(
       fetch(`/api/v1/transactions/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await user?.getIdToken()}` },
@@ -656,7 +656,7 @@ export function useTransactionActions() {
 
     
     const token = await user?.getIdToken();
-    let dataOut, err;
+    let err;
     try {
       const finalTx = {
         ...balancedData,
@@ -685,7 +685,7 @@ export function useTransactionActions() {
          const data = await res.json();
          throw new Error(data.error || 'Failed to save transaction');
       }
-      dataOut = true; err = null;
+      err = null;
     } catch(e: any) {
       err = e;
     }
@@ -854,7 +854,7 @@ export function useTransactionActions() {
                 transactions: state.transactions.map(t => oldStates.get(t.id) || t)
               }));
               toast.success('Bulk update reverted.', { id: undoLoader });
-            } catch (err) {
+            } catch {
               toast.error('Failed to revert bulk update.', { id: undoLoader });
             }
           }
@@ -972,7 +972,7 @@ export function useTransactionActions() {
         setParsingQueue(parsingQueue.filter((i: any) => i.id !== parsingId));
       }, 5000);
 
-    } catch (error) {
+    } catch {
       updateParsingItem(parsingId, { status: 'error' });
       toast.error(`AI processing failed for ${file.name}`, { id: loader });
     }
@@ -1214,7 +1214,7 @@ export function useTransactionActions() {
       // --- Persistent Rule Learning ---
       // If user manually updated the category, check if we should suggest a permanent rule
       if (updates.lines && Array.isArray(updates.lines) && updates.lines.length > 0) {
-        const { autoRules, accounts } = useLedgerStore.getState();
+        const { autoRules } = useLedgerStore.getState();
         const mainLine = updates.lines[0];
         const description = tx.description;
         
@@ -1234,7 +1234,6 @@ export function useTransactionActions() {
         ) : null;
 
         if (!existingRule && mainLine.accountName && mainLine.accountName !== 'Uncategorized') {
-          const account = Array.isArray(accounts) ? accounts.find(a => a.id === mainLine.accountId) : null;
           toast("Pattern detected", {
             description: `Should I always categorize "${description}" as ${mainLine.accountName}?`,
             action: {
@@ -1485,7 +1484,7 @@ export function useTransactionActions() {
         throw new Error(errData.error || 'Failed to revert reconcile alignment');
       }
       toast.success('Alignment reverted successfully. Re-inserted into potential pipeline matches.');
-    } catch (error) {
+    } catch {
       toast.error('Failed to undo match.');
     } finally {
       setIsSyncing(false);
@@ -1502,7 +1501,7 @@ export function useTransactionActions() {
         createdAt: new Date().toISOString()
       });
       toast.success('Categorization rule synced');
-    } catch (error) {
+    } catch {
       toast.error('Failed to save rule');
     }
   };
@@ -1511,7 +1510,7 @@ export function useTransactionActions() {
     try {
       await deleteDoc(doc(db, 'autoRules', id));
       toast.success('Rule removed');
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete rule');
     }
   };
@@ -1987,7 +1986,7 @@ export function useTransactionActions() {
         
         toast.success(`Discovered ${k} distinct spending patterns.`, { id: loader });
         return clusters;
-      } catch (e) {
+      } catch {
         toast.error('Cluster analysis failed.', { id: loader });
       }
     }

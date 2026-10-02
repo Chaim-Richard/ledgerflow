@@ -422,7 +422,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
                 </div>
               ) : combinedResults.length > 0 ? (
                 <div className="p-3 space-y-1">
-                  {combinedResults.map((item, index) => (
+                  {combinedResults.map((item, _index) => (
                     <button
                       key={item.id}
                       onClick={() => handleSelect(item)}

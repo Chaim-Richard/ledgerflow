@@ -15,7 +15,7 @@ import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 
 export function useSupportData() {
   const user = useAuthStore(s => s.user);
-  const userProfile = useAuthStore(s => s.userProfile);
+  useAuthStore(s => s.userProfile);
   const isAdmin = useAuthStore(s => s.isAdmin);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const { setTickets, setMessages, setIsSyncing, selectedTicketId } = useSupportStore();

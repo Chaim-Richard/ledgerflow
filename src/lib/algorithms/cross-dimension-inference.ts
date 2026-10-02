@@ -53,7 +53,7 @@ export const CROSS_DIMENSION_INFERENCE_ALGO: AlgorithmDefinition = {
   name: 'Cross-Dimension Co-occurrence Auto-fill',
   description: 'Learns co-occurrence patterns across dimensions (e.g. Vendor "Archival Paper" -> World: BookCo, Phase: Printing) so tagging one coordinate auto-populates the rest.',
   inputs: [],
-  compute: (ctx, inputs) => {
+  compute: (ctx, _inputs) => {
     const { transactions } = ctx;
     const rules = learnCrossDimensionRules(transactions);
 

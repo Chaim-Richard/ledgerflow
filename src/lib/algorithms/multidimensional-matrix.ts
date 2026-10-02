@@ -80,7 +80,7 @@ export const MULTIDIMENSIONAL_MATRIX: AlgorithmDefinition = {
     const start = performance.now();
     
     // Pivot: Property/Dimension (Row) x Category (Col)
-    const { matrix, rowTotals, colTotals } = buildOLAPCube(processedTxs, 'property', 'category');
+    const { rowTotals, colTotals } = buildOLAPCube(processedTxs, 'property', 'category');
     
     const ms = performance.now() - start;
 

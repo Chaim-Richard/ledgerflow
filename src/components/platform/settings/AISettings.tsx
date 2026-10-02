@@ -19,7 +19,7 @@ export default function AISettings() {
   const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
 
   const [apiKey, setApiKey] = useState(userProfile?.geminiApiKey || '');
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [, setIsUpdating] = useState(false);
   const [showKey, setShowKey] = useState(false);
   
   // Track selected model with modern fallback mapping

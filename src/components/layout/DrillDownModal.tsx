@@ -60,7 +60,6 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
                 <tbody>
                   {transactions.slice(0, displayLimit).map((tx) => {
                     const matchedLine = tx.lines?.find(l => l.accountName === accountName || l.accountId === accountName);
-                    const line = matchedLine || tx.lines?.[0];
                     const amount = matchedLine ? matchedLine.amountCents : tx.totalAmountCents;
 
                     return (

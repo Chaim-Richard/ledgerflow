@@ -16,7 +16,7 @@ export const CAPITAL_BUDGETING_ALGO: AlgorithmDefinition = {
     { key: 'equityDebtRatio', label: 'Equity Weight (%)', min: 0, max: 100, step: 5, defaultValue: 70 }
   ],
   compute: (ctx, inputs): AlgoResult => {
-    const { transactions, accounts, accounting } = ctx;
+    const { transactions, accounting } = ctx;
     const ke = (inputs['costOfEquityPct'] ?? 10) / 100;
     const kd = (inputs['costOfDebtPct'] ?? 5) / 100;
     const tax = (inputs['taxRatePct'] ?? 21) / 100;

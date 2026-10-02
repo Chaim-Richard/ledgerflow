@@ -30,7 +30,7 @@ export default function InboxView() {
       .sort((a, b) => b.uiConfidence - a.uiConfidence)
   , [transactions]);
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  useState<Set<string>>(new Set());
 
   const highConfidence = pendingTransactions.filter(t => t.uiConfidence >= 90);
   const mediumConfidence = pendingTransactions.filter(t => t.uiConfidence >= 60 && t.uiConfidence < 90);

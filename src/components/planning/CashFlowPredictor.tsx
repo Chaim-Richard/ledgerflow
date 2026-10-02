@@ -33,7 +33,6 @@ export default function CashFlowPredictor() {
     return Object.entries(monthlyMap).sort((a, b) => a[0].localeCompare(b[0])).map(([m, val]) => ({ month: m, value: val }));
   }, [transactions, accounts]);
   
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   return (
     <div className="h-full flex flex-col bg-[var(--ink)] text-[var(--text)]">

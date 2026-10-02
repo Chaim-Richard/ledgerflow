@@ -18,7 +18,7 @@ export const RulesSettings: React.FC = () => {
   const autoRules = useLedgerStore(s => (s.autoRules || []) as AutoRule[]);
   const setAutoRules = useLedgerStore(s => s.setAutoRules);
   const transactions = useLedgerStore(s => s.transactions);
-  const setTransactions = useLedgerStore(s => s.setTransactions);
+  useLedgerStore(s => s.setTransactions);
   const updateTransaction = useLedgerStore(s => s.updateTransaction);
   const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
   const user = useAuthStore(s => s.user);

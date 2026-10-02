@@ -40,7 +40,7 @@ import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 export default function Reconciliation() {
   const user = useAuthStore((s: any) => s.user);
-  const workspaceId = useAuthStore((s: any) => s.currentWorkspaceId);
+  useAuthStore((s: any) => s.currentWorkspaceId);
   const transactions = useLedgerStore((s: any) => s.transactions);
   const bankLines = useLedgerStore((s: any) => s.bankLines || []);
   const accounts = useLedgerStore((s: any) => s.accounts);
@@ -54,7 +54,7 @@ export default function Reconciliation() {
   const [selectedBankId, setSelectedBankId] = useState<string | null>(null);
   const [selectedLedgerId, setSelectedLedgerId] = useState<string | null>(null);
   const [showAutoConfirm, setShowAutoConfirm] = useState(false);
-  const [matchToleranceCents, setMatchToleranceCents] = useState(0);
+  const [matchToleranceCents] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAutoReconciling, setIsAutoReconciling] = useState(false);
   
