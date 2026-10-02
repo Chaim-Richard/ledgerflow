@@ -1,3 +1,5 @@
+import type { AutoRule, ChartAccount, InventoryItem, Invoice, Transaction as LedgerTransaction } from "./src/types.ts";
+import { errorMessage, requestUser } from "./src/server/auth/requestUser.ts";
 import { fxRouter } from "./src/server/routes/fxRoutes";
 import { aiRouter } from "./src/server/routes/aiRoutes";
 import { reportRouter } from "./src/server/routes/reportRoutes";
@@ -27,7 +29,7 @@ import { assertStartupConfig } from "./src/server/config/assertStartupConfig";
 import { logger } from "./src/server/utils/logger";
 import { recordStripeInvoicePayment } from "./src/server/services/onlinePaymentService";
 import express from "express";
-import { safeFetch } from "./src/server/utils/safeFetch.js";
+import { currencyRouter, taxDataRouter } from "./src/server/routes/externalDataRoutes.ts";
 import cors from "cors";
 import Stripe from "stripe";
 import rateLimit from "express-rate-limit";
@@ -65,7 +67,7 @@ import { cronRouter } from "./src/server/routes/cronRoutes.ts";
 import { statusRouter } from "./src/server/routes/statusRoutes.ts";
 import { runDailyMaintenance } from "./src/server/services/maintenanceService.ts";
 import { exportWorkspaceBackup, restoreWorkspaceBackup, RestoreError } from "./src/server/services/workspaceRestoreService.ts";
-import type { Transaction } from "./src/server/db/firestore.ts";
+import type { DocumentData, Transaction } from "./src/server/db/firestore.ts";
 import { verifyIdToken, authAdmin, supabaseUrl } from "./src/server/auth/supabaseAuth.ts";
 import type { DecodedIdToken } from "./src/server/auth/supabaseAuth.ts";
 
@@ -150,8 +152,8 @@ process.env.NODE_ENV = envResult.data.NODE_ENV;
 
 try {
   assertStartupConfig();
-} catch (err: any) {
-  console.error("❌ Startup config assertion failed:", err.message);
+} catch (err) {
+  console.error("❌ Startup config assertion failed:", errorMessage(err));
   if (process.env.NODE_ENV !== "test") {
     process.exit(1);
   }
@@ -203,7 +205,7 @@ async function syncGlobalAdminConfig() {
       };
       console.debug("🌀 [Global Billing Config Sync] Loaded from database:", globalAdminConfig);
     }
-  } catch (err: any) {
+  } catch (err) {
     console.debug("🌀 [Global Billing Config Sync] Bypassed (Using default settings)");
   }
 }
@@ -256,7 +258,7 @@ function sendError(res: express.Response, message: string, status: number = 500,
  * Centralized API error handler
  */
 function handleApiError(res: express.Response, err: any) {
-  const message = err.message || err.toString() || "";
+  const message = errorMessage(err) || err.toString() || "";
   const code = err.code || "";
   
   console.error("[Handling API Error]", err);
@@ -330,8 +332,8 @@ async function authorizeWorkspace(req: AuthenticatedRequest, workspaceId: string
     }
     
     return data;
-  } catch (err: any) {
-    if (err.message && (err.message.includes("FORBIDDEN") || err.message.includes("PAYMENT_REQUIRED") || err.message.includes("QUOTA_EXCEEDED"))) {
+  } catch (err) {
+    if (errorMessage(err) && (errorMessage(err).includes("FORBIDDEN") || errorMessage(err).includes("PAYMENT_REQUIRED") || errorMessage(err).includes("QUOTA_EXCEEDED"))) {
       throw err;
     }
     throw err;
@@ -439,8 +441,8 @@ async function writeAuditLog(
         after: after || null
       }
     }, { db, tx: transaction as any });
-  } catch (err: any) {
-    console.warn("[AuditLog] Failed to persist audit log entry to database:", err.message);
+  } catch (err) {
+    console.warn("[AuditLog] Failed to persist audit log entry to database:", errorMessage(err));
   }
 }
 
@@ -453,15 +455,15 @@ async function getReportContext(req: AuthenticatedRequest, workspaceId: string) 
   const accountsSnap = await db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get();
   
   // Streaming approach for transactions guarantees linear memory bounds and prevents Node.js OOM crashes on 100,000+ entries
-  const transactions: any[] = [];
+  const transactions: LedgerTransaction[] = [];
   const txStream = db.collection("transactions").where("workspaceId", "==", workspaceId).stream();
   
-  for await (const chunk of txStream as any) {
-    transactions.push((chunk as any).data());
+  for await (const chunk of txStream as AsyncIterable<{ data: () => DocumentData }>) {
+    transactions.push(chunk.data() as LedgerTransaction);
   }
   
   return {
-    accounts: accountsSnap.docs.map((doc: any) => ({ id: doc.id, ...(doc.data() as any) })),
+    accounts: accountsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as ChartAccount),
     transactions
   };
 }
@@ -490,8 +492,8 @@ async function resolveUserGeminiApiKey(uid?: string): Promise<{ apiKey: string; 
         return { apiKey: data.geminiApiKey, isCustom: true };
       }
     }
-  } catch (err: any) {
-    console.warn("[resolveUserGeminiApiKey] Error fetching user API key:", err.message);
+  } catch (err) {
+    console.warn("[resolveUserGeminiApiKey] Error fetching user API key:", errorMessage(err));
   }
   return { apiKey: process.env.GEMINI_API_KEY || "", isCustom: false };
 }
@@ -604,9 +606,9 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
 
       try {
         event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-      } catch (err: any) {
-        console.error('Webhook signature verification failed.', err.message);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
+      } catch (err) {
+        console.error('Webhook signature verification failed.', errorMessage(err));
+        return res.status(400).send(`Webhook Error: ${errorMessage(err)}`);
       }
 
       const eventId = event.id;
@@ -723,7 +725,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       }
 
       res.json({received: true});
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       res.status(500).send('Internal Server Error');
     }
@@ -788,7 +790,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         .where("workspaceId", "==", workspaceId)
         .limit(200)
         .get();
-      const transactions = transactionsSnap.docs.map(doc => doc.data() as any);
+      const transactions = transactionsSnap.docs.map(doc => doc.data() as LedgerTransaction);
 
       // Dyn Salt Entropy combines Server Secret with client workspace signature to prevent side-channel inference
       const serverSecret = process.env.SESSION_SECRET as string;
@@ -812,8 +814,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         workspaceId,
         matches
       });
-    } catch (err: any) {
-      sendError(res, err.message, 500);
+    } catch (err) {
+      sendError(res, errorMessage(err), 500);
     }
   });
 
@@ -879,11 +881,11 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
 
       try {
         await db.collection("errorLogs").doc(errorId).set(record);
-      } catch (dbErr: any) {
-        console.warn("[Telemetry] Error doc persistence bypassed due to sandbox constraint:", dbErr.message);
+      } catch (dbErr) {
+        console.warn("[Telemetry] Error doc persistence bypassed due to sandbox constraint:", errorMessage(dbErr));
       }
       res.json({ status: "success", errorId });
-    } catch (err: any) {
+    } catch (err) {
       console.warn("[Telemetry] Failed to record error log:", err);
       res.status(200).json({ status: "success", message: "Telemetry received" });
     }
@@ -933,7 +935,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       }
 
       res.json(payload);
-    } catch (_err: any) {
+    } catch (_err) {
       res.json({
         status: "success",
         maxRegistrationLimit: globalAdminConfig.maxRegistrationLimit || 100,
@@ -1081,7 +1083,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
               message: "Payment Required: Workspace compute credit balance depleted. Please recharge your API balance or enable bypass billing."
             });
           }
-        } catch (quotaErr: any) {
+        } catch (quotaErr) {
           console.error("[Deep Auth] Quota check failed - Denying access (Fail Closed)", quotaErr);
           return res.status(500).json({
             status: "error",
@@ -1106,13 +1108,13 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
           db.collection("apiKeys").doc(keyId).update({
             lastUsedAt: new Date().toISOString(),
             totalRequests: FieldValue.increment(1)
-          }).catch((err: any) => console.error("[Deep Auth] Failed incrementing API key metrics: ", err));
+          }).catch((err: unknown) => console.error("[Deep Auth] Failed incrementing API key metrics: ", err));
         } catch (mErr) {
           // stats silently fail with safety
         }
 
         return next();
-      } catch (err: any) {
+      } catch (err) {
         console.error("[Deep Auth] Token verification failure:", err);
         return res.status(500).json({ status: "error", message: "Authentication / Verification failure within LedgerFlow core." });
       }
@@ -1157,10 +1159,10 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       const authHeader = req.headers.authorization || (req.headers['x-api-key'] as string) || '';
       
       let apiPart = 'Bearer Token';
-      const reqUser = (req as any).user;
+      const reqUser = requestUser(req);
       
       if (reqUser && reqUser.apiKeyName) {
-        apiPart = `Key: ${reqUser.apiKeyName} (${reqUser.usedApiKeyId.substring(0, 10)}...)`;
+        apiPart = `Key: ${reqUser.apiKeyName} (${(reqUser.usedApiKeyId || '').substring(0, 10)}...)`;
       } else if (authHeader.startsWith('Bearer lf_sec_') || authHeader.startsWith('lf_sec_')) {
         const parts = authHeader.replace('Bearer ', '').split('_');
         if (parts.length >= 4) {
@@ -1196,7 +1198,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   // Endpoints v1
   app.get("/api/v1/status", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.query.workspaceId as string) || requestUser(req).developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId parameters in query", 400);
 
       const authReq = req as AuthenticatedRequest;
@@ -1220,8 +1222,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         uptime: process.uptime(),
         timestamp: new Date().toISOString()
       });
-    } catch (err: any) {
-      sendError(res, err.message, 500);
+    } catch (err) {
+      sendError(res, errorMessage(err), 500);
     }
   });
 
@@ -1245,8 +1247,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
           createdAt: doc.data().createdAt || null,
           role: "owner"
         }));
-      } catch (dbErr: any) {
-        console.warn("[Firebase Admin] /api/v1/workspaces database check failed:", dbErr.message);
+      } catch (dbErr) {
+        console.warn("[Firebase Admin] /api/v1/workspaces database check failed:", errorMessage(dbErr));
         ownedWorkspaces = [];
       }
 
@@ -1255,8 +1257,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         workspacesCount: ownedWorkspaces.length,
         workspaces: ownedWorkspaces
       });
-    } catch (err: any) {
-      sendError(res, err.message, 500);
+    } catch (err) {
+      sendError(res, errorMessage(err), 500);
     }
   });
 
@@ -1268,7 +1270,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         uid
       });
       if (!validation.success) {
-        return sendError(res, "Validation Error: " + validation.error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', '), 400);
+        return sendError(res, "Validation Error: " + validation.error.issues.map((e) => `${e.path.join('.')}: ${errorMessage(e)}`).join(', '), 400);
       }
       const db = getDb();
       const newId = validation.data.id || `ws_${crypto.randomUUID().replace(/-/g, '')}`;
@@ -1284,8 +1286,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         message: "Workspace created successfully.",
         workspace: newWorkspace
       });
-    } catch (err: any) {
-      sendError(res, err.message, 500);
+    } catch (err) {
+      sendError(res, errorMessage(err), 500);
     }
   });
 
@@ -1312,7 +1314,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         members,
         total: members.length + 1
       });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -1342,7 +1344,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
             stream.on("error", async (err: any) => {
               try {
                 const snap = await query.get();
-                resolve(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
+                resolve(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
               } catch (fallbackErr) {
                 reject(err);
               }
@@ -1363,7 +1365,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       if (format === "csv") {
         let csvContent = "Date,Amount,Description,Category,Type,Status,Reference\n";
         const accountsMap = new Map(accounts.map((a: any) => [a.id, a.name || a.code || a.id]));
-        transactions.forEach((t: any) => {
+        transactions.forEach((t) => {
           const categoryName = t.lines && t.lines.length > 0 ? (accountsMap.get(t.lines[0].accountId) || t.lines[0].accountName || 'Uncategorized') : 'Uncategorized';
           const amountStr = ((t.totalAmountCents || 0) / 100).toFixed(2);
           const row = [
@@ -1388,7 +1390,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       res.setHeader("Content-Disposition", `attachment; filename="ledgerflow-backup-${workspaceId}-${todayIso}.json"`);
       res.setHeader("Content-Type", "application/json");
       return res.send(JSON.stringify(payload, null, 2));
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   };
@@ -1403,8 +1405,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       await authorizeWorkspace(req as AuthenticatedRequest, workspaceId);
       const result = await restoreWorkspaceBackup(getDb(), workspaceId, req.body);
       return res.json({ success: true, message: "General ledger workspace successfully restored from backup.", ...result });
-    } catch (err: any) {
-      if (err instanceof RestoreError) return sendError(res, err.message, err.status);
+    } catch (err) {
+      if (err instanceof RestoreError) return sendError(res, errorMessage(err), err.status);
       handleApiError(res, err);
     }
   });
@@ -1456,7 +1458,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         workspaceId,
         members: existingMembers
       });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -1513,7 +1515,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         workspaceId,
         members: updatedMembers
       });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -1522,14 +1524,14 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
     try {
       const validation = BankMappingRequestSchema.safeParse(req.body);
       if (!validation.success) {
-        return sendError(res, "Validation Error: " + validation.error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', '), 400);
+        return sendError(res, "Validation Error: " + validation.error.issues.map((e) => `${e.path.join('.')}: ${errorMessage(e)}`).join(', '), 400);
       }
       const authReq = req as AuthenticatedRequest;
       await authorizeWorkspace(authReq, validation.data.workspaceId);
 
       const db = getDb();
       const accountsSnap = await db.collection("chartAccounts").where("workspaceId", "==", validation.data.workspaceId).get();
-      const accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ChartAccount);
 
       const mapped = validation.data.transactions.map(tx => {
         const bestAccount = (accounts.find(a => (a as any).name?.toLowerCase().includes(tx.description.toLowerCase())) || accounts[0]) as any;
@@ -1548,14 +1550,14 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         workspaceId: validation.data.workspaceId,
         mappedTransactions: mapped
       });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
 
   app.get("/api/v1/projects", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.query.workspaceId as string) || requestUser(req).developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId parameters in query", 400);
 
       const authReq = req as AuthenticatedRequest;
@@ -1571,14 +1573,14 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         projectsCount: projects.length,
         projects
       });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
 
   app.post("/api/v1/projects", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.body.workspaceId as string) || requestUser(req).developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId parameters in body", 400);
 
       const authReq = req as AuthenticatedRequest;
@@ -1608,14 +1610,14 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         message: "Project resource created successfully.",
         project: newProject
       });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
 
   app.get("/api/v1/ledger", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.query.workspaceId as string) || requestUser(req).developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId query parameters", 400);
 
       const authReq = req as AuthenticatedRequest;
@@ -1623,7 +1625,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
 
       const db = getDb();
       const accountsSnap = await db.collection("chartAccounts").where("workspaceId", "==", workspaceId).get();
-      const accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ChartAccount);
 
       res.json({
         status: "success",
@@ -1631,16 +1633,16 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         accountsCount: accounts.length,
         accounts
       });
-    } catch (err: any) {
-      if (err.message === "FORBIDDEN") return sendError(res, "Forbidden workspace access", 403);
-      if (err.message === "NOT_FOUND" || err.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-      sendError(res, err.message, 500);
+    } catch (err) {
+      if (errorMessage(err) === "FORBIDDEN") return sendError(res, "Forbidden workspace access", 403);
+      if (errorMessage(err) === "NOT_FOUND" || errorMessage(err).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+      sendError(res, errorMessage(err), 500);
     }
   });
 
   app.post("/api/v1/ledger", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.body.workspaceId as string) || requestUser(req).developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId parameter", 400);
 
       const authReq = req as AuthenticatedRequest;
@@ -1653,7 +1655,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       });
 
       if (!validation.success) {
-        return sendError(res, "Validation Error: " + validation.error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', '), 400);
+        return sendError(res, "Validation Error: " + validation.error.issues.map((e) => `${e.path.join('.')}: ${errorMessage(e)}`).join(', '), 400);
       }
 
       const { name, type, code, parentId, isActive, tags } = validation.data;
@@ -1679,14 +1681,14 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         message: "Chart of Accounts entry created.",
         account: newAccount
       });
-    } catch (err: any) {
-      sendError(res, err.message, 500);
+    } catch (err) {
+      sendError(res, errorMessage(err), 500);
     }
   });
 
   app.get("/api/v1/ledger/diagnostics", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.query.workspaceId as string) || requestUser(req).developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId parameter in query", 400);
 
       const authReq = req as AuthenticatedRequest;
@@ -1699,8 +1701,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         db.collection("transactions").where("workspaceId", "==", workspaceId).get()
       ]);
 
-      const accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
-      const transactions = transactionsSnap.docs.map(doc => doc.data() as any);
+      const accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ChartAccount);
+      const transactions = transactionsSnap.docs.map(doc => doc.data() as LedgerTransaction);
 
       // Trial balance double-entry cross checking
       let globalNetBalanceCents = 0;
@@ -1710,10 +1712,10 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         accountBalances[a.id] = 0;
       });
 
-      transactions.forEach((tx: any) => {
+      transactions.forEach((tx) => {
         if (!isPostable(tx)) return;
         const txLines = tx.lines || [];
-        txLines.forEach((line: any) => {
+        txLines.forEach((line) => {
           const amt = lineAmount(line, tx);
           globalNetBalanceCents += amt;
           if (line.accountId) {
@@ -1765,8 +1767,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
 
       // Geographical jurisdictions diagnostics from metadata state tag
       const stateTaxMetrics: Record<string, { count: number; volumeCents: number }> = {};
-      transactions.forEach((tx: any) => {
-        const state = tx.metadata?.taxState || tx.taxState;
+      transactions.forEach((tx) => {
+        const state = tx.metadata?.taxState || (tx as LedgerTransaction & { taxState?: string }).taxState;
         if (state) {
           const stats = stateTaxMetrics[state] || { count: 0, volumeCents: 0 };
           stats.count += 1;
@@ -1803,14 +1805,14 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         }
       });
 
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
 
   app.post("/api/v1/brain/classify-batch", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.body.workspaceId as string) || requestUser(req).developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId parameter", 400);
 
       const authReq = req as AuthenticatedRequest;
@@ -1821,7 +1823,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         return sendError(res, "The parameter 'descriptions' must be an array of transaction raw strings.", 400);
       }
 
-      const activeApiKeyId = (req as any).user?.usedApiKeyId || "human_web_console";
+      const activeApiKeyId = requestUser(req)?.usedApiKeyId || "human_web_console";
       const classifier = new BayesianClassifier();
       const trainedCount = await trainClassifierWithWorkspaceData(classifier, workspaceId, activeApiKeyId);
 
@@ -1898,7 +1900,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         predictions
       });
 
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -1971,7 +1973,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
           createdAt: keyPayload.createdAt
         }
       });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -2001,7 +2003,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
 
       await db.collection("apiKeys").doc(keyId).delete();
       res.json({ status: "success", message: "API key revoked successfully." });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -2033,7 +2035,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         hasCustomApiKey: true,
         apiKeySuffix: suffix
       });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -2055,7 +2057,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         message: "Custom Gemini API key removed.",
         hasCustomApiKey: false
       });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -2074,14 +2076,14 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         hasCustomApiKey,
         apiKeySuffix
       });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
 
   app.get("/api/v1/metrics", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.query.workspaceId as string) || requestUser(req).developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId query parameter", 400);
 
       const authReq = req as AuthenticatedRequest;
@@ -2093,8 +2095,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
          db.collection("transactions").where("workspaceId", "==", workspaceId).get()
       ]);
 
-      const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
-      const transactions = transactionsSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+      const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }) as ChartAccount);
+      const transactions = transactionsSnap.docs.map(d => ({ id: d.id, ...d.data() }) as LedgerTransaction);
 
       const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
       const wsData = wsDoc.data() || {};
@@ -2109,7 +2111,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
 
       transactions.forEach(tx => {
          if (!isPostable(tx)) return;
-         tx.lines?.forEach((line: any) => {
+         tx.lines?.forEach((line) => {
              accountBalances[line.accountId] = (accountBalances[line.accountId] || 0) + lineAmount(line, tx);
          });
       });
@@ -2133,7 +2135,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
           return isPostable(t) && tDate >= limitDate;
         }).reduce((acc, t) => {
           let sumRev = 0;
-          t.lines?.forEach((l: any) => {
+          t.lines?.forEach((l) => {
              const accObj = accounts.find(a => a.id === l.accountId);
              if (accObj?.type === 'revenue') {
                sumRev -= l.amountCents;
@@ -2161,7 +2163,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         const rentalRevenueCents = transactions.reduce((acc, t) => {
           if (!isPostable(t)) return acc;
           let sumRental = 0;
-          t.lines?.forEach((l: any) => {
+          t.lines?.forEach((l) => {
              const accObj = accounts.find(a => a.id === l.accountId);
              if (accObj?.type === 'revenue' && (accObj.name.toLowerCase().includes('rent') || accObj.name.toLowerCase().includes('lease'))) {
                sumRental -= lineAmount(l, t);
@@ -2189,7 +2191,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         const cogsCents = transactions.reduce((acc, t) => {
           if (!isPostable(t)) return acc;
           let sumCogs = 0;
-          t.lines?.forEach((l: any) => {
+          t.lines?.forEach((l) => {
              const accObj = accounts.find(a => a.id === l.accountId);
              if (accObj?.type === 'expense' && (accObj.name.toLowerCase().includes('cogs') || accObj.name.toLowerCase().includes('cost of goods') || accObj.name.toLowerCase().includes('inventory'))) {
                 sumCogs += lineAmount(l, t);
@@ -2248,15 +2250,15 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         timestamp: new Date().toISOString()
       });
 
-    } catch (err: any) {
-      if (err.message === "FORBIDDEN") return sendError(res, "Forbidden workspace access", 403);
-      sendError(res, err.message, 500);
+    } catch (err) {
+      if (errorMessage(err) === "FORBIDDEN") return sendError(res, "Forbidden workspace access", 403);
+      sendError(res, errorMessage(err), 500);
     }
   });
 
   app.get("/api/v1/metrics/summary", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.query.workspaceId as string) || requestUser(req).developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId query parameters", 400);
 
       const authReq = req as AuthenticatedRequest;
@@ -2268,8 +2270,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
          db.collection("transactions").where("workspaceId", "==", workspaceId).get()
       ]);
 
-      const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
-      const transactions = transactionsSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+      const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }) as ChartAccount);
+      const transactions = transactionsSnap.docs.map(d => ({ id: d.id, ...d.data() }) as LedgerTransaction);
 
       let totalRevenue = 0;
       let totalExpense = 0;
@@ -2280,7 +2282,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
 
       transactions.forEach(tx => {
          if (tx.status === 'void') return;
-         tx.lines?.forEach((line: any) => {
+         tx.lines?.forEach((line) => {
              accountBalances[line.accountId] = (accountBalances[line.accountId] || 0) + line.amountCents;
          });
       });
@@ -2308,15 +2310,15 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         timestamp: new Date().toISOString()
       });
 
-    } catch (err: any) {
-      if (err.message === "FORBIDDEN") return sendError(res, "Forbidden workspace access", 403);
-      sendError(res, err.message, 500);
+    } catch (err) {
+      if (errorMessage(err) === "FORBIDDEN") return sendError(res, "Forbidden workspace access", 403);
+      sendError(res, errorMessage(err), 500);
     }
   });
 
   app.post("/api/v1/audit/deep", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.body.workspaceId as string) || requestUser(req).developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId parameters in request", 400);
 
       const authReq = req as AuthenticatedRequest;
@@ -2349,8 +2351,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         check_status_url: `/api/v1/audit/jobs/${jobId}`
       });
 
-    } catch (err: any) {
-      sendError(res, err.message, 500);
+    } catch (err) {
+      sendError(res, errorMessage(err), 500);
     }
   });
 
@@ -2366,10 +2368,10 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
         db.collection("inventory").where("workspaceId", "==", workspaceId).get()
       ]);
 
-      const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
-      const transactions = transactionsSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
-      const invoices = invoicesSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
-      const inventory = inventorySnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+      const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }) as ChartAccount);
+      const transactions = transactionsSnap.docs.map(d => ({ id: d.id, ...d.data() }) as LedgerTransaction);
+      const invoices = invoicesSnap.docs.map(d => ({ id: d.id, ...d.data() }) as Invoice);
+      const inventory = inventorySnap.docs.map(d => ({ id: d.id, ...d.data() }) as InventoryItem);
 
       const wsDoc = await db.collection("workspaces").doc(workspaceId).get();
       const wsData = wsDoc.data() || {};
@@ -2382,7 +2384,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       const balances: Record<string, number> = {};
       transactions.forEach(t => {
         if (!isPostable(t)) return;
-        t.lines?.forEach((l: any) => {
+        t.lines?.forEach((l) => {
           balances[l.accountId] = (balances[l.accountId] || 0) + lineAmount(l, t);
         });
       });
@@ -2417,7 +2419,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       transactions.forEach(t => {
         if (!isPostable(t)) return;
         let revVal = 0;
-        t.lines?.forEach((l: any) => {
+        t.lines?.forEach((l) => {
            const a = accounts.find(x => x.id === l.accountId);
            if (a?.type === 'revenue') revVal -= lineAmount(l, t);
         });
@@ -2438,7 +2440,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
       const concentrationMultiplierHaircut = isHighConcentrationRisk ? 0.85 : 1.00;
 
       // 3. Inventory margin review
-      const inventoryMismatches = inventory.map(item => {
+      // costCents/priceCents: field names of items saved by older versions
+      const inventoryMismatches = inventory.map((item: InventoryItem & { costCents?: number; priceCents?: number }) => {
          const directCost = item.unitCostCents || item.costCents || 0;
          const salePrice = item.unitPriceCents || item.priceCents || 1;
          const margin = (salePrice - directCost) / salePrice;
@@ -2543,7 +2546,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
          await incrementShardedCounter(db, workspaceId, 'computeCreditBalance', -1200);
       }
 
-    } catch (e: any) {
+    } catch (e) {
        console.error("[Deep Audit Worker Crash]: ", e);
        await db.collection("deepAuditJobs").doc(jobId).set({
           id: jobId,
@@ -2552,7 +2555,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
           workspaceId,
           uid,
           completedAt: new Date().toISOString(),
-          error: e.message || String(e)
+          error: errorMessage(e) || String(e)
        });
     }
   }
@@ -2560,7 +2563,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
   app.get("/api/v1/audit/jobs/:job_id", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
       const jobId = (req.params as Record<string, string>).job_id;
-      const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.query.workspaceId as string) || requestUser(req).developerWorkspaceId;
 
       if (!workspaceId) {
          return sendError(res, "Missing workspaceId query parameters during poll checks.", 400);
@@ -2594,14 +2597,14 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
          results: jobData.results || null
       });
 
-    } catch (err: any) {
-      sendError(res, err.message, 500);
+    } catch (err) {
+      sendError(res, errorMessage(err), 500);
     }
   });
 
   app.post("/api/v1/brain/analyze", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.body.workspaceId as string) || requestUser(req).developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId parameters", 400);
 
       const authReq = req as AuthenticatedRequest;
@@ -2647,10 +2650,12 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         // Intelligent native search / basic RAG filter
         const queryWords = prompt.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
         let relevantTx = transactions;
+        // a transaction's accounts are on its lines (it has no category of its own)
+        const txAccounts = (t: LedgerTransaction) => (t.lines || []).map(l => l.accountName || l.accountId).filter(Boolean).join(' / ');
         
         if (queryWords.length > 0) {
            relevantTx = transactions.filter(t => {
-              const str = `${t.description || ''} ${t.category || ''} ${t.accountId || ''}`.toLowerCase();
+              const str = `${t.description || ''} ${txAccounts(t)}`.toLowerCase();
               return queryWords.some((w: string) => str.includes(w));
            });
            
@@ -2668,7 +2673,7 @@ ${inventoryMismatches.slice(0, 4).map(m => `  - **${m.name}** (${m.sku}): Margin
         const accountsSummary = accounts.map(a => `${a.name} (${a.type})`).slice(0, 10).join(", ");
         const transactionSummary = relevantTx.map(t => {
           const cleanDesc = sanitizeDescription(t.description || '');
-          return `${t.date}: ${cleanDesc} | ${t.category} ($${(t.totalAmountCents / 100).toFixed(2)})`;
+          return `${t.date}: ${cleanDesc} | ${txAccounts(t)} ($${(t.totalAmountCents / 100).toFixed(2)})`;
         }).join("\n");
         contextSummary = `- Accounts Map: [${accountsSummary}]\n- Relevancy Filtered Records (${relevantTx.length} items):\n<ledger_data untrusted="true">\n${transactionSummary || 'None'}\n</ledger_data>`;
       }
@@ -2784,14 +2789,14 @@ You MUST output a valid JSON object matching this schema exactly:
         status: "success",
         analysis: validatedResponse.analysis
       });
-    } catch (err: any) {
-      sendError(res, err.message, 500);
+    } catch (err) {
+      sendError(res, errorMessage(err), 500);
     }
   });
 
   app.post("/api/v1/brain/classify", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.body.workspaceId as string) || requestUser(req).developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId parameters", 400);
 
       const authReq = req as AuthenticatedRequest;
@@ -2802,13 +2807,13 @@ You MUST output a valid JSON object matching this schema exactly:
         return sendError(res, "Missing transaction description to classify.", 400);
       }
 
-      const activeApiKeyId = (req as any).user?.usedApiKeyId || "human_web_console";
+      const activeApiKeyId = requestUser(req)?.usedApiKeyId || "human_web_console";
       const classifier = new BayesianClassifier();
       let trainedCount = await trainClassifierWithWorkspaceData(classifier, workspaceId, activeApiKeyId);
 
       // Also support custom manual weights if passed
       if (targetFeatures && Array.isArray(targetFeatures)) {
-        targetFeatures.forEach((item: any) => {
+        targetFeatures.forEach((item) => {
           if (item.text && item.category) {
             classifier.train(item.text, item.category, 3.0);
             trainedCount++;
@@ -2876,8 +2881,8 @@ You MUST output a valid JSON object matching this schema exactly:
           label: "UNCATEGORIZED_SUSPENSE"
         }
       });
-    } catch (err: any) {
-      sendError(res, err.message, 500);
+    } catch (err) {
+      sendError(res, errorMessage(err), 500);
     }
   });
 
@@ -2901,7 +2906,7 @@ You MUST output a valid JSON object matching this schema exactly:
       wsIds.forEach(id => {
         shardSums[id] = { totalQueriesThisMonth: 0, computeCreditBalance: 0 };
       });
-      shardsSnap.docs.forEach((doc: any) => {
+      shardsSnap.docs.forEach((doc) => {
         const sData = doc.data() || {};
         const wsId = sData.workspaceId;
         const metric = sData.metric;
@@ -2915,7 +2920,7 @@ You MUST output a valid JSON object matching this schema exactly:
         }
       });
       
-      const transactions = transactionsSnap.docs.map(doc => doc.data() as any);
+      const transactions = transactionsSnap.docs.map(doc => doc.data() as LedgerTransaction);
       
       const tenants: Record<string, { 
         id: string, 
@@ -2983,7 +2988,7 @@ You MUST output a valid JSON object matching this schema exactly:
         tenants: Object.values(tenants),
         liveLogs: apiLogs
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("[Admin Telemetry] Failed to fetch telemetry data:", err);
       sendError(res, "Failed to retrieve telemetry data", 500);
     }
@@ -3000,7 +3005,7 @@ You MUST output a valid JSON object matching this schema exactly:
         ? deriveScopedOperationKey(workspaceId, 'ADMIN_WORKSPACE_UPDATED', rawOpId)
         : undefined;
 
-      const performMutation = async (t: any) => {
+      const performMutation = async (t: Transaction) => {
         const wsRef = db.collection("workspaces").doc(workspaceId);
         const wsSnap = await t.get(wsRef);
         if (!wsSnap.exists) throw new Error("Workspace not found");
@@ -3041,7 +3046,7 @@ You MUST output a valid JSON object matching this schema exactly:
       }
 
       res.json({ status: "success", data: result });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -3051,14 +3056,14 @@ You MUST output a valid JSON object matching this schema exactly:
     try {
       const db = getDb();
       const usersSnap = await db.collection("users").limit(100).get();
-      const users = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() as any }));
+      const users = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
       
       res.json({
         status: "success",
         users
       });
-    } catch (err: any) {
-      sendError(res, err.message, 500);
+    } catch (err) {
+      sendError(res, errorMessage(err), 500);
     }
   });
 
@@ -3079,7 +3084,7 @@ You MUST output a valid JSON object matching this schema exactly:
         ? deriveScopedOperationKey('system', 'ADMIN_USER_UPDATED', `${userId}:${rawOpId}`)
         : undefined;
 
-      const performMutation = async (t: any) => {
+      const performMutation = async (t: Transaction) => {
         const userRef = db.collection("users").doc(userId);
         const userSnap = await t.get(userRef);
         if (!userSnap.exists) {
@@ -3144,7 +3149,7 @@ You MUST output a valid JSON object matching this schema exactly:
       }
 
       res.json({ status: "success", data: mutationOutput?.auditResult || { userId, role: validated.role } });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -3166,7 +3171,7 @@ You MUST output a valid JSON object matching this schema exactly:
       const logs = snap.docs.map(doc => doc.data());
       
       res.json({ status: "success", logs });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -3183,7 +3188,7 @@ You MUST output a valid JSON object matching this schema exactly:
       const snap = await query.limit(Number(limit)).get();
       const logs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       res.json({ status: "success", logs });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -3214,9 +3219,9 @@ You MUST output a valid JSON object matching this schema exactly:
 
       const result = await processAllRecurring();
       res.json({ status: "success", data: result });
-    } catch (err: any) {
+    } catch (err) {
       console.error("[System Cron] Recurring processing failed:", err);
-      res.status(500).json({ status: "error", message: err.message });
+      res.status(500).json({ status: "error", message: errorMessage(err) });
     }
   });
 
@@ -3250,9 +3255,9 @@ You MUST output a valid JSON object matching this schema exactly:
 
       const result = await processErrorDigest({ hoursBack, recipientEmail, forceSendZero });
       res.json({ status: "success", data: result });
-    } catch (err: any) {
+    } catch (err) {
       console.error("[System Cron] Error digest job failed:", err);
-      res.status(500).json({ status: "error", message: err.message });
+      res.status(500).json({ status: "error", message: errorMessage(err) });
     }
   });
 
@@ -3262,8 +3267,8 @@ You MUST output a valid JSON object matching this schema exactly:
         status: "success",
         globalAdminConfig
       });
-    } catch (err: any) {
-      res.status(500).json({ status: "error", message: err.message });
+    } catch (err) {
+      res.status(500).json({ status: "error", message: errorMessage(err) });
     }
   });
 
@@ -3277,7 +3282,7 @@ You MUST output a valid JSON object matching this schema exactly:
         ? deriveScopedOperationKey('system', 'ADMIN_GLOBAL_CONFIG_UPDATED', rawOpId)
         : undefined;
 
-      const performMutation = async (t: any) => {
+      const performMutation = async (t: Transaction) => {
         const configRef = db.collection("admins").doc("globalConfig");
         const configSnap = await t.get(configRef);
         
@@ -3316,7 +3321,7 @@ You MUST output a valid JSON object matching this schema exactly:
 
       globalAdminConfig = result as any;
       res.json({ status: "success", data: result });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -3336,7 +3341,7 @@ You MUST output a valid JSON object matching this schema exactly:
         scannedAt: new Date().toISOString(),
         ...scanResult
       });
-    } catch (err: any) {
+    } catch (err) {
       handleApiError(res, err);
     }
   });
@@ -3348,7 +3353,7 @@ You MUST output a valid JSON object matching this schema exactly:
 
   app.get("/api/v1/logs", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.query.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.query.workspaceId as string) || requestUser(req).developerWorkspaceId;
       if (!workspaceId) return sendError(res, "Missing workspaceId parameters", 400);
 
       const authReq = req as AuthenticatedRequest;
@@ -3357,15 +3362,15 @@ You MUST output a valid JSON object matching this schema exactly:
       const filtered = apiLogs.filter(log => {
         const isPathMatch = typeof log.path === "string" && (log.path.includes(workspaceId) || log.path.includes("workspaceId=" + workspaceId));
         const isKeyMatch = typeof log.apiKeyUsed === "string" && log.apiKeyUsed.includes(workspaceId.substring(0, 5));
-        const isDeveloperWsMatch = (req as any).user.developerWorkspaceId === workspaceId;
+        const isDeveloperWsMatch = requestUser(req).developerWorkspaceId === workspaceId;
         return isPathMatch || isKeyMatch || isDeveloperWsMatch;
       });
 
       res.json(filtered);
-    } catch (err: any) {
-      if (err.message === "NOT_FOUND" || err.message?.includes("NOT_FOUND")) return res.json([]);
-      if (err.message === "FORBIDDEN") return sendError(res, "Forbidden workspace access", 403);
-      sendError(res, err.message, 500);
+    } catch (err) {
+      if (errorMessage(err) === "NOT_FOUND" || errorMessage(err).includes("NOT_FOUND")) return res.json([]);
+      if (errorMessage(err) === "FORBIDDEN") return sendError(res, "Forbidden workspace access", 403);
+      sendError(res, errorMessage(err), 500);
     }
   });
 
@@ -3472,10 +3477,10 @@ You MUST output a valid JSON object matching this schema exactly:
             amountCents,
             category: categoryVal ? categoryVal.trim() : undefined
           });
-        } catch (rowErr: any) {
+        } catch (rowErr) {
           rejected.push({
             row: idx + 1,
-            reason: rowErr?.message || "Invalid row format",
+            reason: errorMessage(rowErr) || "Invalid row format",
             raw: r
           });
         }
@@ -3489,108 +3494,9 @@ You MUST output a valid JSON object matching this schema exactly:
     }
   });
 
-  // --- External API Call Helper with Firestore Caching ---
-  async function fetchWithFirestoreCache(url: string, headers: any, cacheKey: string, ttlMs: number) {
-    const db = getDb();
-    // Use an external_api_cache collection to store responses
-    const cacheRef = db.collection("external_api_cache").doc(cacheKey);
-    const snap = await cacheRef.get();
-    
-    if (snap.exists) {
-      const data = snap.data();
-      if (Date.now() - (data?.timestamp || 0) < ttlMs) {
-        console.debug(`[Cache Hit] Serving from cache: ${cacheKey}`);
-        return data?.payload;
-      }
-    }
-    
-    console.debug(`[Cache Miss] Fetching from API: ${cacheKey}`);
-    const response = await safeFetch(url, { method: 'GET', headers, allowedHostnames: ['api.apilayer.com'] });
-    
-    if (!response.ok) {
-      throw new Error(`API responded with ${response.status}: ${await response.text()}`);
-    }
-    
-    const payload = await response.json();
-    
-    // Do not cache API-level errors
-    if (payload.success === false) {
-      console.warn("API returned application-level error:", payload);
-      return payload; // don't cache
-    }
-
-    // Save to cache
-    try {
-      await cacheRef.set({
-        timestamp: Date.now(),
-        payload
-      });
-    } catch (err) {
-      console.error("Cache save error:", err);
-    }
-    
-    return payload;
-  }
-
-  // --- Currency Data Integration ---
-  app.get("/api/v1/currency/:endpoint", authenticate, async (req: express.Request, res: express.Response) => {
-    try {
-      const allowedEndpoints = ["list", "live", "convert", "historical", "timeframe", "change"];
-      const { endpoint } = req.params as Record<string, string>;
-      
-      if (!allowedEndpoints.includes(endpoint)) {
-        return sendError(res, "Invalid currency API endpoint", 400);
-      }
-
-      const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
-      const apiKey = process.env.CURRENCY_API_KEY;
-      if (!apiKey) return sendError(res, "Currency rates are not set up yet (CURRENCY_API_KEY)", 503);
-      const url = `https://api.apilayer.com/currency_data/${endpoint}?${queryString}`;
-      
-      // Cache live endpoint for 6 hours, historical/list for 365 days
-      let ttlMs = 1000 * 60 * 60 * 6; // 6 hours
-      if (["historical", "list", "timeframe"].includes(endpoint)) {
-         ttlMs = 1000 * 60 * 60 * 24 * 365; // 365 days
-      }
-
-      // We hash the full URL as a cache key to uniquely identify these queries
-      const cacheKey = crypto.createHash('md5').update(url).digest('hex');
-      const data = await fetchWithFirestoreCache(url, { "apikey": apiKey }, `currency_${cacheKey}`, ttlMs);
-
-      res.json(data);
-    } catch (error: any) {
-      console.error("[Currency] Proxy error:", error);
-      sendError(res, "Failed to fetch currency data", 500, error.message);
-    }
-  });
-
-  // --- Tax Data Integration ---
-  app.get("/api/v1/tax/:endpoint", authenticate, async (req: express.Request, res: express.Response) => {
-    try {
-      const allowedEndpoints = ["tax_rates", "us_rate_list"];
-      const { endpoint } = req.params as Record<string, string>;
-
-      if (!allowedEndpoints.includes(endpoint)) {
-         return sendError(res, "Invalid tax API endpoint", 400);
-      }
-
-      const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
-      const apiKey = process.env.TAX_API_KEY;
-      if (!apiKey) return sendError(res, "Tax rates are not set up yet (TAX_API_KEY)", 503);
-      const url = `https://api.apilayer.com/tax_data/${endpoint}?${queryString}`;
-
-      // Tax data changes very rarely, cache for 30 days
-      const ttlMs = 1000 * 60 * 60 * 24 * 30; // 30 days
-      const cacheKey = crypto.createHash('md5').update(url).digest('hex');
-      
-      const data = await fetchWithFirestoreCache(url, { "apikey": apiKey }, `tax_${cacheKey}`, ttlMs);
-
-      res.json(data);
-    } catch (error: any) {
-      console.error("[Tax] Proxy error:", error);
-      sendError(res, "Failed to fetch tax data", 500, error.message);
-    }
-  });
+  // Currency rates and tax-rate lookups (apilayer.com, cached)
+  app.use("/api/v1/currency", authenticate, currencyRouter);
+  app.use("/api/v1/tax", authenticate, taxDataRouter);
 
   // --- Plaid Integration ---
   app.use("/api/v1/plaid", authenticate, plaidRouter);
@@ -3627,8 +3533,8 @@ You MUST output a valid JSON object matching this schema exactly:
         }));
       }
       res.json({ status: "success", anomalies });
-    } catch (error: any) {
-      sendError(res, "Failed to run anomaly scan", 500, error.message);
+    } catch (error) {
+      sendError(res, "Failed to run anomaly scan", 500, errorMessage(error));
     }
   });
 
@@ -3647,12 +3553,12 @@ You MUST output a valid JSON object matching this schema exactly:
         .limit(20)
         .get();
 
-      const logs = snap.docs.map((doc: any) => doc.data());
+      const logs = snap.docs.map((doc) => doc.data());
       res.json(logs);
-    } catch (error: any) {
-      if (error.message === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-      if (error.message === "NOT_FOUND" || error.message?.includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-      sendError(res, "Failed to fetch activity feed", 500, error.message);
+    } catch (error) {
+      if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
+      if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
+      sendError(res, "Failed to fetch activity feed", 500, errorMessage(error));
     }
   });
 
@@ -3660,12 +3566,12 @@ You MUST output a valid JSON object matching this schema exactly:
 
   app.post("/api/v1/label-transactions", apiAuthenticate, async (req: express.Request, res: express.Response) => {
     try {
-      const workspaceId = (req.body.workspaceId as string) || (req as any).user.developerWorkspaceId;
+      const workspaceId = (req.body.workspaceId as string) || requestUser(req).developerWorkspaceId;
       let finalWorkspaceId = workspaceId;
       const db = getDb();
 
       if (!finalWorkspaceId) {
-        const wsSnap = await db.collection("workspaces").where("uid", "==", (req as any).user.uid).limit(1).get();
+        const wsSnap = await db.collection("workspaces").where("uid", "==", requestUser(req).uid).limit(1).get();
         if (!wsSnap.empty) finalWorkspaceId = wsSnap.docs[0].id;
       }
 
@@ -3690,10 +3596,10 @@ You MUST output a valid JSON object matching this schema exactly:
             db.collection("chartAccounts").where("workspaceId", "==", finalWorkspaceId).get(),
             db.collection("autoRules").where("workspaceId", "==", finalWorkspaceId).get()
           ]);
-          accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-          rules = rulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+          accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          rules = rulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         }
-      } catch (err: any) {
+      } catch (err) {
         console.warn("[Labeler API] Direct DB configuration fetch bypassed safely: ", (err as Error).message || err);
       }
 
@@ -3860,9 +3766,9 @@ You MUST output a valid JSON object matching this schema exactly:
         labeledTransactionsCount: labeledTransactions.length,
         labeledTransactions
       });
-    } catch (error: any) {
-      if (error.status === 403) return sendError(res, error.message, 403);
-      sendError(res, "Labeling Engine Operation Failure", 500, error.message);
+    } catch (error) {
+      if ((error as { status?: number }).status === 403) return sendError(res, errorMessage(error), 403);
+      sendError(res, "Labeling Engine Operation Failure", 500, errorMessage(error));
     }
   });
 
@@ -3872,9 +3778,9 @@ You MUST output a valid JSON object matching this schema exactly:
       const uid = req.user.uid;
       await authAdmin.revokeRefreshTokens(uid);
       res.json({ success: true, message: 'All active sessions revoked successfully. You will be signed out shortly.' });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to revoke sessions:', error);
-      res.status(500).json({ error: error.message || 'Failed to revoke sessions' });
+      res.status(500).json({ error: errorMessage(error) || 'Failed to revoke sessions' });
     }
   });
 
@@ -3883,12 +3789,12 @@ You MUST output a valid JSON object matching this schema exactly:
     try {
       const result = await deleteAccount(getDb(), { uid: req.user.uid, email: req.user.email }, uid => authAdmin.deleteUser(uid));
       res.json({ success: true, message: 'Account deleted.', ...result });
-    } catch (error: any) {
+    } catch (error) {
       if (error instanceof AccountDeletionBlocked) {
-        return res.status(409).json({ error: error.message, workspaces: error.workspaces });
+        return res.status(409).json({ error: errorMessage(error), workspaces: error.workspaces });
       }
       console.error('Failed to delete account:', error);
-      res.status(500).json({ error: error.message || 'Failed to delete account' });
+      res.status(500).json({ error: errorMessage(error) || 'Failed to delete account' });
     }
   });
 
@@ -3907,8 +3813,8 @@ You MUST output a valid JSON object matching this schema exactly:
       const userAgent = (req.headers['user-agent'] as string) || 'unknown';
       const id = await recordAuthEvent({ uid, event, ip, userAgent, email, metadata });
       res.json({ success: true, id });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error) {
+      res.status(500).json({ error: errorMessage(error) });
     }
   });
 
@@ -4058,7 +3964,7 @@ async function trainClassifierWithWorkspaceData(classifier: import("./src/lib/al
         }
       }
     });
-  } catch (err: any) {
+  } catch (err) {
     /* ignore */
   }
 
@@ -4080,7 +3986,7 @@ async function trainClassifierWithWorkspaceData(classifier: import("./src/lib/al
         }
       });
     });
-  } catch (err: any) {
+  } catch (err) {
     /* ignore */
   }
   
