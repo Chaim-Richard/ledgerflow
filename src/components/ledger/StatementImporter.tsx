@@ -19,7 +19,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Transaction, ChartAccount, AutoRule } from '../../types';
 import { aiService } from '../../services/aiService';
 import { IntentResolver } from '../../lib/intentResolver';
-import { cn, getLocalDateISO, formatDate, activateOnKey } from '../../lib/utils';
+import { cn, getLocalDateISO, formatDate } from '../../lib/utils';
 
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
@@ -578,17 +578,17 @@ export default function StatementImporter({
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div role="button" tabIndex={0}
+                          <button type="button"
                             aria-label={`Select ${tx.description} on ${formatDate(tx.date)}`}
                             aria-pressed={tx.selected}
-                            onKeyDown={activateOnKey} onClick={(e) => { e.stopPropagation(); toggleSelect(idx); }}
+                            onClick={(e) => { e.stopPropagation(); toggleSelect(idx); }}
                             className={cn(
                               "w-6 h-6 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
                               tx.selected ? "bg-[var(--brass)] border-[var(--brass-line)] text-black" : "bg-[var(--surface)] border-[var(--line)]"
                             )}
                           >
                             {tx.selected && <Check aria-hidden="true" size={14} />}
-                          </div>
+                          </button>
                           <div>
                             <div className="flex items-center gap-2 mb-0.5">
                               <p className="text-[10px] font-mono text-[var(--muted)]">{formatDate(tx.date)}</p>

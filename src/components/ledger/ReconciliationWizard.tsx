@@ -16,7 +16,7 @@ import {
   CheckSquare,
   Sparkles
 } from 'lucide-react';
-import { cn, formatDate, activateOnKey } from '../../lib/utils';
+import { cn, formatDate } from '../../lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
@@ -304,11 +304,11 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                   </div>
                   <div className="divide-y divide-ledger-line/50 max-h-[400px] overflow-auto scrollbar-thin scrollbar-thumb-ledger-line">
                     {filteredTransactions.map(t => (
-                      <div role="button" tabIndex={0} 
+                      <button type="button"
                         key={t.id}
-                        onKeyDown={activateOnKey} onClick={() => handleToggle(t.id)}
+                        onClick={() => handleToggle(t.id)}
                         className={cn(
-                          "p-6 flex items-center justify-between hover:bg-[var(--ink)]/40 transition-all cursor-pointer group",
+                          "w-full text-left p-6 flex items-center justify-between hover:bg-[var(--ink)]/40 transition-all cursor-pointer group",
                           reconciledIds.includes(t.id) && "bg-indigo-600/[0.03]"
                         )}
                       >
@@ -327,7 +327,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                         <p className="text-sm font-black font-mono text-[var(--text)] italic tracking-tight tabular-nums">
                           {formatCurrency(t.relevantAmountCents)}
                         </p>
-                      </div>
+                      </button>
                     ))}
                     {filteredTransactions.length === 0 && (
                       <div className="p-24 text-center text-[var(--muted)] font-medium uppercase tracking-wider truncate text-[10px] italic opacity-20">No orphaned directives detected in current topology</div>

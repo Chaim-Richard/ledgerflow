@@ -14,7 +14,7 @@ import {
   BrainCircuit,
   Paperclip
 } from 'lucide-react';
-import { resolveAccountName, cn, formatDate, activateOnKey } from '../../lib/utils';
+import { resolveAccountName, cn, formatDate } from '../../lib/utils';
 import { isInflow } from '../../lib/txFilters';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import AsyncButton from '../ui/AsyncButton';
@@ -130,8 +130,8 @@ const TransactionRow = React.memo(({
 
   return (
     <div className="flex flex-col w-full h-full relative group/row">
-      <div role="button" tabIndex={0} 
-        onKeyDown={activateOnKey} onClick={() => onSelect?.(tx.id)}
+      <div role="presentation"
+        onClick={() => onSelect?.(tx.id)}
         className={cn(
           "grid w-full h-full items-center transition-all border-b border-[var(--line)] cursor-pointer relative",
           tx.type === 'reversal' && "bg-rose-50/5",
@@ -200,7 +200,7 @@ const TransactionRow = React.memo(({
             />
           ) : (
             <>
-              <span className="truncate w-full font-sans tracking-tight flex items-center gap-1.5 flex-wrap">
+              <button type="button" className="text-left truncate w-full font-sans tracking-tight flex items-center gap-1.5 flex-wrap">
                 <HighlightMatch text={displayTx.description} match={searchTerm} />
                 {displayTx.fileUrls && displayTx.fileUrls.length > 0 && (
                   <span 
@@ -218,7 +218,7 @@ const TransactionRow = React.memo(({
                     <Lock aria-hidden="true" className="text-amber-500 inline shrink-0 animate-pulse" size={11} />
                   </span>
                 )}
-              </span>
+              </button>
               {!isCompactMode && tx.verification?.hash && (
                 <span className="text-[9px] text-slate-500 font-mono flex items-center gap-1 transition-colors group-hover/active:text-white/40">
                   <Zap aria-hidden="true" size={9} className={isLocked ? "text-amber-400" : "text-emerald-500"} />
@@ -405,7 +405,7 @@ const TransactionRow = React.memo(({
               </div>
             ) : (
               <div className={cn(
-                "flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity", 
+                "flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity",
                 (isProMode || isCompactMode) && "opacity-100"
               )}>
                 <button aria-label="Edit Transaction Details"
