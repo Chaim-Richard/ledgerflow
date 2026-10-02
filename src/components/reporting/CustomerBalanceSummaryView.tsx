@@ -144,6 +144,7 @@ export const CustomerBalanceSummaryView: React.FC<{ asOfDate?: string }> = ({ as
       columns={columns}
       data={filteredRows}
       emptyMessage="No customer records found matching search filter."
+      sumKeys={['totalInvoicedCents', 'totalPaidCents', 'balanceCents']}
       getRowId={(item) => item.customerId}
     />
   );

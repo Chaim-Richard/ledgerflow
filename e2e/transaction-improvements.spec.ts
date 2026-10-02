@@ -90,6 +90,20 @@ test.describe('Transaction List Improvements Suite', () => {
     }
   });
 
+  test('figures in tables and fields line up (tabular figures everywhere, I-11)', async ({ page }) => {
+    const style = await page.evaluate(() => {
+      const td = document.createElement('td');
+      const input = document.createElement('input');
+      const table = document.createElement('table');
+      const tr = document.createElement('tr');
+      tr.appendChild(td); table.appendChild(tr); document.body.append(table, input);
+      const out = [getComputedStyle(td).fontVariantNumeric, getComputedStyle(input).fontVariantNumeric];
+      table.remove(); input.remove();
+      return out;
+    });
+    expect(style).toEqual(['tabular-nums', 'tabular-nums']);
+  });
+
   test('Tabular figures (tabular-nums) class is present on transaction amounts', async ({ page }) => {
     const txNav = page.locator('[data-testid="nav-transactions"]');
     await txNav.first().click();

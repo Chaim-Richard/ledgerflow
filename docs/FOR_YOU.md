@@ -82,7 +82,20 @@ Last updated: 2026-10-02.
 
 16. **Audit trail after a workspace is deleted.** The workspace's data is deleted after 30 days, but its audit trail is kept (it is the legal record of who did what). *Default: keep it.* If you want it deleted after a number of years, say how many.
 
+17. **The "LATER" pile (about 480 of the open items).** They came from comparing LedgerFlow with
+   12 big products (payroll extras, industry add-ons, extra reports, integrations…). Doing all of
+   them one by one takes weeks. *Default: Claude finishes the QUALITY items, then builds the LATER
+   items most small businesses use daily (data checks, everyday reports, invoice extras) and leaves
+   the niche ones until a customer asks.* Say "do them all" or name the ones you want first.
+18. **Go faster: start Codex again** (its app, this repository). It has 6 tasks waiting in
+   docs/COORDINATION.md (C-6…C-11). *Default: Claude keeps going alone.* Optional: say "use helpers"
+   and Claude runs 2–3 extra workers in parallel (faster, but uses your Claude usage faster).
+
 ## C. Good to know (no action needed)
+
+- **Keyboard shortcuts changed (2 Oct)** so they no longer take the browser's own keys: Quick entry
+  ⌘⇧E (was ⌘Q, which quits the browser on a Mac), Focus mode ⌘⇧F (⌘F is find again), Reports ⌘4
+  (⌘P prints again). Press **?** to see them all.
 
 - Vercel deploys by itself about a minute after each push to `main`.
 - Database changes are applied to Supabase by Claude and tested on a local copy first.

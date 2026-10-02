@@ -69,9 +69,9 @@ export function TanStackDataGrid<TData extends object>({
         </div>
       )}
 
-      <div className="overflow-x-auto border border-slate-200 rounded-2xl bg-white shadow-2xs">
+      <div className="overflow-auto max-h-[70vh] print:max-h-none print:overflow-visible border border-slate-200 rounded-2xl bg-white shadow-2xs">
         <table className="w-full text-left border-collapse">
-          <thead>
+          <thead className="sticky top-0 z-10">
             {table.getHeaderGroups().map((headerGroup: any) => (
               <tr key={headerGroup.id} className="bg-slate-50 border-b border-slate-200">
                 {headerGroup.headers.map((header: any) => (

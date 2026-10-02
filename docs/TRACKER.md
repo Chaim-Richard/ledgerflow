@@ -1489,10 +1489,10 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] I-08 Void/delete confirmations name the record (Sales, Purchases)
 - [ ] I-09 30-second undo
 - [x] I-10 Discoverable keyboard shortcuts — one list (`src/config/shortcuts.ts`) feeds the keys and the card (press ?, or "Keyboard shortcuts" in the command palette); Ctrl/⌘ shown per platform; keys the browser keeps freed: Quick entry ⌘Q → ⌘⇧E (⌘Q quits the browser on a Mac), Focus mode ⌘F → ⌘⇧F (find works again), Reports ⌘P → ⌘4 (print works again); tested
-- [ ] I-11 Tabular figures everywhere
+- [x] I-11 Tabular figures everywhere — table cells, fields and mono text use tabular figures app-wide (one CSS rule; browser test)
 - [x] I-12 Dates follow the user's chosen format (formatDate; Preferences); tested
 - [ ] I-13 Persist column layout per user
-- [ ] I-14 Sticky headers + totals row
+- [x] I-14 Sticky headers + totals row — report tables (shared report layout, data grid) scroll in their box with the header kept in view (full length when printed); balance summaries have a totals row over the rows shown (component test)
 - [ ] I-15 Inline row editing
 - [ ] I-16 Breadcrumb on drill-down
 - [~] I-17 Deep-linkable report settings done; list filters elsewhere not yet

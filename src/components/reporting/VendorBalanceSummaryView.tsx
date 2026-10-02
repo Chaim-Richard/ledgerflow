@@ -144,6 +144,7 @@ export const VendorBalanceSummaryView: React.FC<{ asOfDate?: string }> = ({ asOf
       columns={columns}
       data={filteredRows}
       emptyMessage="No vendor records found matching search filter."
+      sumKeys={['totalBilledCents', 'totalPaidCents', 'balanceCents']}
       getRowId={(item) => item.vendorId}
     />
   );

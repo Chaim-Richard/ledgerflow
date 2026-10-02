@@ -33,6 +33,8 @@ export interface PartyReportLayoutProps<T> {
   data: T[];
   emptyMessage?: string;
   getRowId?: (item: T, index: number) => string;
+  /** Columns (cents) to total in a footer row over the rows shown, e.g. ['balanceCents'] (I-14) */
+  sumKeys?: Array<keyof T & string>;
 }
 
 export function PartyReportLayout<T>({
@@ -56,7 +58,8 @@ export function PartyReportLayout<T>({
   columns,
   data,
   emptyMessage = 'No records found matching criteria.',
-  getRowId = (_, i) => String(i)
+  getRowId = (_, i) => String(i),
+  sumKeys = [],
 }: PartyReportLayoutProps<T>) {
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-4 sm:p-6">
@@ -150,9 +153,10 @@ export function PartyReportLayout<T>({
 
       {/* Report Table */}
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
+        {/* the table scrolls inside its box so the header (and totals) stay in view (I-14) */}
+        <div className="overflow-auto max-h-[70vh] print:max-h-none print:overflow-visible">
           <table className="w-full text-left text-xs">
-            <thead className="bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[10px]">
+            <thead className="sticky top-0 z-10 bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[10px]">
               <tr>
                 {columns.map((col) => (
                   <th
@@ -201,6 +205,19 @@ export function PartyReportLayout<T>({
                 })
               )}
             </tbody>
+            {sumKeys.length > 0 && data.length > 0 && (
+              <tfoot className="sticky bottom-0 bg-neutral-50 dark:bg-neutral-800 border-t-2 border-neutral-300 dark:border-neutral-700 font-bold text-neutral-900 dark:text-white">
+                <tr>
+                  {columns.map((col, i) => (
+                    <td key={col.key} className={`px-4 py-3 ${col.align === 'right' ? 'text-right font-mono' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
+                      {(sumKeys as string[]).includes(col.key)
+                        ? formatCurrency(data.reduce((sum, item) => sum + (Number((item as Record<string, unknown>)[col.key]) || 0), 0))
+                        : i === 0 ? `Total (${data.length})` : ''}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>
