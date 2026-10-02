@@ -31,6 +31,8 @@ import { useCommandDispatcher } from '../../hooks/useSystemContext';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { Labelled } from '../ui/Labelled';
+import { EmptyState } from '../ui/EmptyState';
+import { LoadingState } from '../ui/LoadingState';
 
 export default function Projects() {
   const user = useAuthStore(s => s.user);
@@ -40,7 +42,7 @@ export default function Projects() {
   const bills = useLedgerStore(s => s.bills);
   const budgets = useLedgerStore(s => s.budgets);
   const vendors = useLedgerStore(s => s.vendors);
-  useLedgerCollections('bills', 'budgets', 'vendors');
+  const { loading } = useLedgerCollections('bills', 'budgets', 'vendors');
   const { handleAction: onAction } = useCommandDispatcher();
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
   const onAdd = (data: any) => addEntity('projects', data);
@@ -50,7 +52,7 @@ export default function Projects() {
   const [activeSubTab, setActiveSubTab] = useState<'pipeline' | 'list'>('pipeline');
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [_saving, setSaving] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   const [newProject, setNewProject] = useState<Partial<Project>>({
@@ -63,7 +65,7 @@ export default function Projects() {
 
   const handleAddProject = async () => {
     if (!newProject.name || !onAdd) return;
-    setLoading(true);
+    setSaving(true);
     try {
       await onAdd({
         ...newProject,
@@ -82,13 +84,13 @@ export default function Projects() {
     } catch (err) {
       toast.error('Failed to initialize project');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   const handleUpdateProject = async () => {
     if (!editingProject || !onUpdate) return;
-    setLoading(true);
+    setSaving(true);
     try {
       await onUpdate(editingProject.id, editingProject);
       setEditingProject(null);
@@ -96,7 +98,7 @@ export default function Projects() {
     } catch (err) {
       toast.error('Failed to update project');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -292,6 +294,15 @@ export default function Projects() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Project List */}
         <div className="xl:col-span-2 space-y-3">
+          {loading && <LoadingState what="projects" />}
+          {!loading && filteredProjects.length === 0 && (
+            <EmptyState
+              title={projects.length ? 'No projects match the search' : 'No projects yet'}
+              description={projects.length ? 'Try other words, or clear the search.' : 'A project groups the income and costs of one job or client, with its budget and progress.'}
+              actionLabel={projects.length ? 'Clear the search' : 'New project'}
+              onAction={projects.length ? () => setSearchTerm('') : () => setIsNewProjectModalOpen(true)}
+            />
+          )}
           {filteredProjects.map((project) => {
             const stats = projectStats[project.id];
             const progress = stats.budgetCents > 0 ? (stats.expenseCents / stats.budgetCents) * 100 : 0;

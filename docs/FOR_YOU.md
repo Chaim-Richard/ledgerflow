@@ -16,12 +16,7 @@ Last updated: 2026-10-02.
    the whole session stops. That is what paused work from 26 to 28 September. Until you do
    this, Claude calls them as rarely as possible, and the 5-hour check-in cancels any
    approval that is still waiting so work carries on.
-   **Waiting to be applied (the approval was cancelled twice):** `tax_returns`
-   (`supabase/migrations/20260929000000_tax_returns.sql`, adds the table for filed tax returns;
-   until then "File this return" fails on the live site) and `updated_at_indexes`
-   (`20261002000000_updated_at_indexes.sql`, makes live lists' "what changed" check fast; the
-   app works without it). Everything else works. Once the setting above is on, Claude applies it at the next check-in
-   (or say "apply tax_returns" and approve once).
+   *Both waiting changes (`tax_returns`, `updated_at_indexes`) were applied on 2 Oct while you were here.*
 1. **Sign-in addresses (Supabase).** supabase.com → project *ledgerflow* → Authentication → URL
    Configuration. Site URL: `https://ledgerflow-one-pearl.vercel.app`. Redirect URLs: add
    `https://ledgerflow-one-pearl.vercel.app/**` and `http://localhost:3000/**`.

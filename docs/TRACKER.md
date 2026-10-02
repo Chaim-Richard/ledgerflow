@@ -1479,7 +1479,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [x] I-01 Loading state: data status line + "Loading…" on the money lists (guard test)
 - [x] I-02 Failed loads shown with "Try again" (data status line); render errors already have the view boundary with retry
-- [ ] I-03 `EmptyState` on 14 views
+- [x] I-03 Empty states: the list screens have one (Projects and Audit trail added, with loading first; the rest already had them)
 - [ ] I-04 `<ViewShell>` wrapper
 - [x] I-05 Guard test: a screen with an empty state that loads data on demand must show loading
 - [ ] I-06 Optimistic updates with rollback

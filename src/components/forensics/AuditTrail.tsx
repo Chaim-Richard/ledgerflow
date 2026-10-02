@@ -19,6 +19,8 @@ import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { EmptyState } from '../ui/EmptyState';
+import { LoadingState } from '../ui/LoadingState';
 
 interface AuditTrailProps {
   auditLogs?: any[];
@@ -126,7 +128,7 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
   usePerformanceTrace("AuditTrail");
 
   const storeLogs = useLedgerStore(state => state.auditLogs || []);
-  useLedgerCollections('auditLogs');
+  const { loading } = useLedgerCollections('auditLogs');
   const auditLogs = passedLogs || storeLogs;
   const [searchTerm, setSearchTerm] = React.useState('');
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
@@ -216,12 +218,16 @@ const AuditTrail = React.memo(({ auditLogs: passedLogs }: AuditTrailProps) => {
                 </List>
               )}
             </AutoSizer>
+          ) : loading && !passedLogs ? (
+            <LoadingState what="the audit trail" />
           ) : (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <History size={64} className="text-slate-200 mx-auto mb-6 opacity-20" />
-                <p className="text-[10px] text-[var(--muted)] font-medium uppercase tracking-wider truncate">Zero Vectors Detected in Current Buffer</p>
-              </div>
+            <div className="h-full flex items-center justify-center p-6">
+              <EmptyState
+                title={searchTerm ? 'Nothing matches the search' : 'No activity yet'}
+                description={searchTerm ? 'Try other words, or clear the search.' : 'Every change to the books (who, what, when) is listed here as soon as it happens.'}
+                actionLabel={searchTerm ? 'Clear the search' : undefined}
+                onAction={searchTerm ? () => setSearchTerm('') : undefined}
+              />
             </div>
           )}
         </div>
