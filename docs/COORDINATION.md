@@ -15,12 +15,13 @@ the checks pass and the change is right, and writes the next tasks here.
 Codex is taking **P-07 in-app changelog** on `codex/p-07-in-app-changelog`. Scope:
 `src/components/support/ReleaseNotes.tsx`, its integration in `HelpGuideView.tsx`, and progress
 notes. No changes to Claude's launch/forms, server, database, or accounting files. This branch
-starts independently from main; the earlier D-15 review branch is separate.
+started independently from main and now includes the reviewed D-15 merge (PR #36). Its diff
+against current main contains only P-07.
 
 **P-07 complete for review:** Help & Guide now includes a native “What’s new” disclosure with
 dated notes for already-shipped features. Future entries belong in `ReleaseNotes.tsx`, newest
 first; do not announce unfinished work. Validation passed: npm ci, type checking, 657 tests
-(201 suites, no skips), ESLint (1459 warnings unchanged on this independent main-based branch),
+(201 suites, no skips), ESLint (1436 warnings unchanged from merged D-15 main),
 production build, 10 existing browser tests, and 20 targeted desktop/light and mobile/dark
 checks covering keyboard toggles, dates in two time zones, bounded content, guide search,
 and zero browser errors. Quality baseline, existing tests, financial logic, and reserved
