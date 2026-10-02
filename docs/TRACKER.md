@@ -1402,7 +1402,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION F — CODE STRUCTURE
 
-- [~] F-01 Split `server.ts` (**4,693**, was 5,383; target < 300)
+- [~] F-01 Split `server.ts` (**824** lines, was 5,383; target < 300): routes in `src/server/routes/*Routes.ts` (registered in the same order, checked), shared helpers in `src/server/http/serverKit.ts`; left: the start-up code (security headers, rate limits, Stripe webhook)
 - [x] F-02 Lint rule blocking new routes in `server.ts`
 - [ ] F-03 `ApiHub.tsx` (3,147)
 - [ ] F-04 `algorithms.ts` (2,611)

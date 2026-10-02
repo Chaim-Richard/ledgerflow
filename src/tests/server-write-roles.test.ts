@@ -8,8 +8,10 @@ import fs from 'node:fs';
 import type express from 'express';
 import { LEDGER_WRITER_ROLES, roleInWorkspace, targetWorkspaces } from '../server/middleware/requireLedgerWriter';
 
-// server.ts plus the shared helpers it was split into (F-01)
-const server = ['server.ts', 'src/server/http/serverKit.ts'].map(f => fs.readFileSync(f, 'utf8')).join('\n');
+import { serverSource } from './helpers/serverSource';
+
+// server.ts plus the helpers and route files it was split into (F-01)
+const server = serverSource();
 
 describe('Server write roles', () => {
   test('role from the workspace document', () => {

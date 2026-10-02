@@ -5,6 +5,7 @@
 import test, { describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'fs';
+import { serverSource } from './helpers/serverSource';
 import { isTabVisible } from '../config/tabVisibility';
 
 describe('Developer switch', () => {
@@ -18,7 +19,7 @@ describe('Developer switch', () => {
   });
 
   test('no fake success endpoints on the server', () => {
-    const server = readFileSync('server.ts', 'utf8');
+    const server = serverSource();
     for (const path of ['ecommerce', 'marketing', 'helpdesk', 'hr', 'manufacturing', 'universal-ops']) {
       const route = ['', 'api', 'v1', path].join('/');
       assert.ok(!server.includes(`"${route}"`), `${route} is still there`);

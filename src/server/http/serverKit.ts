@@ -378,3 +378,23 @@ export async function resolveUserGeminiApiKey(uid?: string): Promise<{ apiKey: s
   }
   return { apiKey: process.env.GEMINI_API_KEY || "", isCustom: false };
 }
+
+/** One request to the developer API, kept in memory for GET /api/v1/logs (the last 100). */
+export interface ApiLog {
+  id: string;
+  timestamp: string;
+  method: string;
+  path: string;
+  statusCode: number;
+  latencyMs: number;
+  apiKeyUsed: string;
+  ip: string;
+}
+
+/** What route files moved out of server.ts need from buildApp(): its rate limiters and the API log. */
+export interface ServerContext {
+  apiLogs: ApiLog[];
+  apiLimiter: express.RequestHandler;
+  matchLimiter: express.RequestHandler;
+  limiter: express.RequestHandler;
+}
