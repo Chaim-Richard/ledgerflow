@@ -10,6 +10,7 @@ import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import type { Firestore } from '../server/db/pgFirestore';
+import { pdfText } from './helpers/pdfText';
 
 const url = process.env.LF_TEST_DATABASE_URL;
 
@@ -64,8 +65,9 @@ describe('Document PDF downloads', { skip: !url && 'LF_TEST_DATABASE_URL not set
     const res = await download('owner-1', 'invoice', id('inv'));
     assert.equal(res.status, 200, await res.clone().text());
     assert.equal(res.headers.get('content-type'), 'application/pdf');
-    const pdf = Buffer.from(await res.arrayBuffer()).toString('latin1');
-    assert.ok(pdf.startsWith('%PDF-'));
+    const bytes = Buffer.from(await res.arrayBuffer());
+    assert.ok(bytes.toString('latin1').startsWith('%PDF-'));
+    const pdf = pdfText(bytes);
     assert.match(pdf, /INV-0007/);
     assert.match(pdf, /Consulting/);
   });
@@ -73,7 +75,7 @@ describe('Document PDF downloads', { skip: !url && 'LF_TEST_DATABASE_URL not set
   test("an estimate's PDF lists its lines (estimates keep `lines`, not `items`)", async () => {
     const res = await download('view-1', 'estimate', id('est'));
     assert.equal(res.status, 200);
-    const pdf = Buffer.from(await res.arrayBuffer()).toString('latin1');
+    const pdf = pdfText(Buffer.from(await res.arrayBuffer()));
     assert.match(pdf, /Site survey/);
     assert.doesNotMatch(pdf, /Standard Ledger Transaction/);
   });
@@ -81,7 +83,7 @@ describe('Document PDF downloads', { skip: !url && 'LF_TEST_DATABASE_URL not set
   test('a customer statement downloads with its invoices', async () => {
     const res = await download('owner-1', 'statement', id('c1'));
     assert.equal(res.status, 200);
-    const pdf = Buffer.from(await res.arrayBuffer()).toString('latin1');
+    const pdf = pdfText(Buffer.from(await res.arrayBuffer()));
     assert.match(pdf, /2026-06-01 Invoice INV-0007/);
   });
 

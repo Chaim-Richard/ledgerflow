@@ -1729,6 +1729,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-167 The Transactions list opened filtered by a saved view nobody chose ("Liquid Cash & Bank Funds" was switched on at every start and after each workspace switch), so most entries looked missing; no view is on until the person picks one. Switching workspace kept the old workspace's closed periods, lock exception, invites and "data truncated" banner until the new one loaded, and its hidden sidebar tabs for good. Income/expense totals stayed at zero when the entries loaded before the accounts, and each load rebuilt the account list once per entry (tested)
 - [x] L-168 Cash flow statement: the server version ("Load Full Server Report") counted only income, expense, receivable and payable lines of every entry, so tax paid, stock bought and other working-capital money were missing and the total didn't match the change in cash; the screen had its own different math. One function now (`computeCashFlow`, direct method: money in and out of bank, cash and undeposited-funds accounts, by what it was for; debt and equity financing, fixed assets investing). The General Ledger report got its first test (tested)
 - [x] L-169 The server's tax liability report (`/api/v1/reports/tax-liability`) added foreign invoices' and bills' tax in their own currency; now in the home currency. Data Health called balanced foreign entries "unbalanced" because of per-line rounding (same as L-164), and its findings showed raw cents ("1250 cents"); now money (tested)
+- [x] L-170 Document PDFs printed only the first 15 lines (the total still covered all of them), on one page, and only Latin letters (Hebrew names came out as garbage). PDFs are now made with pdfkit and an embedded font (DejaVu Sans): every line over as many pages as needed, Hebrew and mixed Hebrew/English text in reading order, the due date and payment terms printed (tested, including the text read back from the PDF)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
@@ -1960,12 +1961,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Y-09 Split one bank line (tested)
 - [x] Y-10 Match one bank line to many invoices/bills → payment record (tested)
 - [ ] Y-11 PDF template designer
-- [ ] Y-12 Logo upload
-- [ ] Y-13 Brand colour on documents
-- [ ] Y-14 Custom footer / terms
-- [ ] Y-15 QR code on invoices
+- [x] Y-12 Logo upload (Settings → Branding & PDFs; PNG/JPEG up to 200 KB, checked by the server)
+- [x] Y-13 Brand colour on documents (title, rule and table header)
+- [x] Y-14 Custom footer / terms (footer on every page, terms at the end, address under the name)
+- [x] Y-15 QR code on invoices (to the invoice's payment page once sent; can be switched off)
 - [ ] Y-16 Watermark
-- [ ] Y-17 Page numbers
+- [x] Y-17 Page numbers ("Page x of y"; long documents run over pages with the table header repeated)
 - [ ] Y-18 Batch PDF zip
 - [ ] Y-19 Print stylesheet
 - [ ] Y-20 Digital signature
@@ -1981,8 +1982,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] Y-30 2FA enforcement policy
 - [ ] Y-31 Password policy
 - [ ] Y-32 Data region selection
-- [ ] Y-33 Branding settings page
-- [ ] Y-34 Default terms per document type
+- [x] Y-33 Branding settings page (with "Preview PDF" of unsaved choices; owners and accountants)
+- [x] Y-34 Default terms per document type (invoices, estimates, credit notes, statements, receipts)
 - [ ] Y-35 Rounding policy setting
 
 # SECTION Z — API · DATA QUALITY · MULTI-ENTITY · INTEGRATIONS
@@ -2043,7 +2044,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BA-16 Branch activate / deactivate
 - [ ] BA-17 Money-In / Money-Out dialogs
 - [ ] BA-18 Import uncategorised transactions
-- [ ] BA-19 Branding templates screen
+- [x] BA-19 Branding templates screen (= Y-33)
 - [ ] BA-20 Export dialog
 
 # SECTION BB — SETTINGS PAGES

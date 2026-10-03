@@ -100,6 +100,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
   const settingsTabs = [
     { label: 'Import Data', componentName: 'ImportDataView' },
     { label: 'Emails & Reminders', componentName: 'EmailSettingsView' },
+    { label: 'Branding & PDFs', componentName: 'BrandingSettingsView' },
   ];
 
   for (const tab of settingsTabs) {

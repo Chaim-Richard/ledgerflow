@@ -7,6 +7,7 @@ import type { PdfDocument, PdfDocumentType, PdfWorkspace } from '../services/pdf
 import type { Bill, CreditNote, Customer, Invoice, Payment, VendorCredit } from '../../types';
 import { computeStatement } from '../reports/computeReports';
 import { getLocalDateISO } from '../../lib/utils';
+import { getTrustedAppUrl } from '../utils/urlHelper';
 
 export const documentRouter = express.Router();
 
@@ -42,6 +43,7 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
     const workspace: PdfWorkspace = wsSnap.exists ? (wsSnap.data() as PdfWorkspace) : { name: 'LedgerFlow Workspace' };
 
     let docData: PdfDocument | null = null;
+    let paymentUrl: string | undefined;
 
     if (type !== 'statement') {
       const source = PDF_SOURCES[type];
@@ -52,6 +54,10 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
         return res.status(404).json({ status: 'error', message: `${source.label} not found` });
       }
       docData = data as PdfDocument;
+      // a sent invoice has a payment page: its QR code goes on the PDF (Y-15)
+      if (type === 'invoice' && typeof data.paymentToken === 'string' && data.paymentToken) {
+        try { paymentUrl = `${getTrustedAppUrl(req).replace(/\/+$/, '')}/i/${data.paymentToken}`; } catch { paymentUrl = undefined; }
+      }
     } else {
       // id is customer/vendor contact ID
       const customerSnap = await db.collection('customers').doc(id).get();
@@ -91,7 +97,7 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
       };
     }
 
-    const pdfBuffer = await generateDocumentPdf(type, docData, workspace);
+    const pdfBuffer = await generateDocumentPdf(type, docData, workspace, { paymentUrl });
 
     if (req.query.format === 'json' || req.headers.accept?.includes('application/json')) {
       return res.json({
