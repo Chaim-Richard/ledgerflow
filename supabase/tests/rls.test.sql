@@ -159,6 +159,8 @@ select pg_temp.expect_ok('customer', 'u-book',
   $$insert into customers(id,data) values ('c2', '{"workspaceId":"ws1","name":"A"}')$$);
 select pg_temp.expect_ok('customer form (with status)', 'u-book',
   $$insert into customers(id,data) values ('c3', '{"workspaceId":"ws1","name":"B","email":"b@x.test","phone":"1","status":"active","balanceCents":0,"uid":"u-book","createdAt":"2026-05-01"}')$$);
+select pg_temp.expect_ok('customer with people, tags, currency, address and notes (Y-21 Y-22 Y-24 Y-25)', 'u-book',
+  $$insert into customers(id,data) values ('c4', '{"workspaceId":"ws1","name":"C","currency":"EUR","tags":["vip"],"address":"1 Main St","contacts":[{"name":"Dana","email":"d@x.test"}],"noteLog":[{"id":"n1","text":"Called","at":"2026-10-03T09:00:00Z"}]}')$$);
 select pg_temp.expect_ok('template account with a role (FX rounding)', 'u-acct',
   $$insert into "chartAccounts"(id,data) values ('a-fx', '{"workspaceId":"ws1","name":"FX Rounding","type":"expense","category":"Rounding Differences","subtype":"rounding","role":"fx_rounding","code":"8999"}')$$);
 

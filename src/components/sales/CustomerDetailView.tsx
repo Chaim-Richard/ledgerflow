@@ -5,6 +5,7 @@ import { daysOverdue, outstandingBaseCents, partyStats } from '../../lib/aging';
 import { calculateAmountDue } from '../../lib/documentMath';
 import { ArrowLeft, DollarSign, FileText, User } from 'lucide-react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import PartyProfilePanel from '../common/PartyProfilePanel';
 
 interface CustomerDetailViewProps {
   customerId: string;
@@ -69,6 +70,8 @@ export default function CustomerDetailView({ customerId, onBack }: CustomerDetai
           </div>
         </div>
       </div>
+
+      <PartyProfilePanel side="customer" party={customer} />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

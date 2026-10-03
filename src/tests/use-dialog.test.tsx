@@ -91,7 +91,7 @@ describe('useDialog', () => {
   test('the money dialogs use it', () => {
     const files = [
       'src/components/sales/InvoiceModal.tsx', 'src/components/purchases/BillModal.tsx', 'src/components/sales/ReceivePaymentModal.tsx',
-      'src/components/sales/CustomerModal.tsx', 'src/components/purchases/VendorModal.tsx', 'src/components/transactions/TransactionEditModal.tsx',
+      'src/components/common/PartyModal.tsx', 'src/components/transactions/TransactionEditModal.tsx',
       'src/components/ledger/JournalEntryModal.tsx', 'src/components/purchases/PurchaseOrdersView.tsx', 'src/components/finance/CreditNotesView.tsx',
       'src/components/inventory/Inventory.tsx', 'src/components/sales/WriteOffModal.tsx',
     ];

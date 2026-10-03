@@ -25,6 +25,8 @@ import InvoiceModal from './InvoiceModal';
 import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 import { EmptyState } from '../ui/EmptyState';
 import CustomerModal from './CustomerModal';
+import TagFilter from '../common/TagFilter';
+import { allTags, hasTag } from '../../lib/contacts';
 import { PartyDetailView } from '../common/PartyDetailView';
 import WriteOffModal from './WriteOffModal';
 import InvoiceEmailDialog from './InvoiceEmailDialog';
@@ -121,6 +123,9 @@ export default function Sales() {
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [newInvoiceFor, setNewInvoiceFor] = useState<Partial<Invoice> | undefined>(undefined);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [customerTag, setCustomerTag] = useState<string | null>(null);
+  const customerTags = useMemo(() => allTags(customers), [customers]);
+  const shownCustomers = useMemo(() => customers.filter(c => hasTag(c, customerTag)), [customers, customerTag]);
   const [paymentDocumentId, setPaymentDocumentId] = useState<string | null>(null);
   const [paymentContactId, setPaymentContactId] = useState<string | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -503,6 +508,7 @@ export default function Sales() {
       
       {activeSubTab === 'customers' && (
         <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
+          <TagFilter tags={customerTags} value={customerTag} onChange={setCustomerTag} label="Show customers with the tag" />
           <div className="overflow-x-auto">
             <table className="w-full border-collapse min-w-[700px]">
               <caption className="sr-only">Customers</caption>
@@ -515,7 +521,7 @@ export default function Sales() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-ledger-line/30">
-                {customers.map((cust) => (
+                {shownCustomers.map((cust) => (
                   <tr 
                     key={cust.id} 
                     onClick={() => setSelectedCustomerId(cust.id)}

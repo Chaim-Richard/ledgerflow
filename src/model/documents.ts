@@ -1,4 +1,5 @@
 import type { TaxTreatment } from '../lib/taxCodes';
+import type { ContactNote, ContactPerson } from '../lib/contacts';
 import type { EntityMetadata } from './ledger';
 import type { DashboardSchema } from './workspace';
 
@@ -24,6 +25,13 @@ export interface Vendor {
   tags?: string[];
   metadata?: EntityMetadata;
   balanceCents?: number;
+  address?: string;
+  /** Currency new bills from this vendor start in (Y-22). */
+  currency?: string;
+  /** People to deal with at the vendor (Y-21). */
+  contacts?: ContactPerson[];
+  /** Notes timeline, newest first (Y-25). */
+  noteLog?: ContactNote[];
   /** Set when the vendor came from a spreadsheet import (src/lib/recordImport.ts); lets the import be undone. */
   importBatchId?: string;
 }
@@ -281,6 +289,13 @@ export interface Customer {
   metadata?: EntityMetadata;
   notes?: string;
   isForeign?: boolean;
+  address?: string;
+  /** Currency new invoices for this customer start in (Y-22). */
+  currency?: string;
+  /** People to deal with at the customer (Y-21). */
+  contacts?: ContactPerson[];
+  /** Notes timeline, newest first (Y-25). */
+  noteLog?: ContactNote[];
   /** No automatic payment reminders for this customer (Settings → Emails & Reminders). */
   noReminders?: boolean;
   /** Set when the customer came from a spreadsheet import; lets the import be undone. */

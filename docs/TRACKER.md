@@ -1730,6 +1730,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-168 Cash flow statement: the server version ("Load Full Server Report") counted only income, expense, receivable and payable lines of every entry, so tax paid, stock bought and other working-capital money were missing and the total didn't match the change in cash; the screen had its own different math. One function now (`computeCashFlow`, direct method: money in and out of bank, cash and undeposited-funds accounts, by what it was for; debt and equity financing, fixed assets investing). The General Ledger report got its first test (tested)
 - [x] L-169 The server's tax liability report (`/api/v1/reports/tax-liability`) added foreign invoices' and bills' tax in their own currency; now in the home currency. Data Health called balanced foreign entries "unbalanced" because of per-line rounding (same as L-164), and its findings showed raw cents ("1250 cents"); now money (tested)
 - [x] L-170 Document PDFs printed only the first 15 lines (the total still covered all of them), on one page, and only Latin letters (Hebrew names came out as garbage). PDFs are now made with pdfkit and an embedded font (DejaVu Sans): every line over as many pages as needed, Hebrew and mixed Hebrew/English text in reading order, the due date and payment terms printed (tested, including the text read back from the PDF)
+- [x] L-171 Customers and vendors could not be edited at all (the forms only added), so a wrong email or name could not be fixed; one shared form now adds and edits (Edit on the contact page). Bills had no currency field, so a bill from a foreign supplier could only be entered in the home currency (tested)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
@@ -1970,11 +1971,11 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] Y-18 Batch PDF zip
 - [ ] Y-19 Print stylesheet
 - [ ] Y-20 Digital signature
-- [ ] Y-21 Multiple contacts per company
-- [ ] Y-22 Default currency per contact
+- [x] Y-21 Multiple contacts per company (people with role, email, phone on the customer/vendor form and page)
+- [x] Y-22 Default currency per contact (new invoices and bills start in it; bills got a currency and rate field)
 - [ ] Y-23 Merge duplicate contacts
-- [ ] Y-24 Contact tags
-- [ ] Y-25 Notes timeline per contact
+- [x] Y-24 Contact tags (on the form, shown on the page, filter chips on the customer and vendor lists)
+- [x] Y-25 Notes timeline per contact (newest first, who and when; viewers read)
 - [ ] Y-26 Portal access toggle
 - [ ] Y-27 Preferred delivery method
 - [ ] Y-28 Statement send preference
