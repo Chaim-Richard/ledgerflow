@@ -1,0 +1,90 @@
+import React, { useMemo, useState } from 'react';
+import { Hash } from 'lucide-react';
+import { toast } from 'sonner';
+import { usePageSyncedState } from '../../hooks/usePageSyncedState';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { useUIStore } from '../../stores/useUIStore';
+import { PartyReportLayout, ColumnDef } from './PartyReportLayout';
+import { formatCurrency } from '../../lib/utils';
+import { getFiscalYearBounds } from '../../lib/fiscalCalendar';
+import { csvMoney, downloadCsv } from '../../lib/csvExport';
+import { computeTransactionsByReference, ReferenceRow } from '../../server/reports/referenceReport';
+
+/**
+ * Transactions by Reference (J-06): posted entries listed under their reference: a cheque or bank
+ * reference, or the invoice or bill number (src/server/reports/referenceReport.ts).
+ */
+export const TransactionsByReferenceView: React.FC<{ startDate?: string; endDate?: string }> = ({ startDate: pageStartDate, endDate: pageEndDate }) => {
+  const transactions = useLedgerStore(s => s.transactions);
+  const invoices = useLedgerStore(s => s.invoices);
+  const bills = useLedgerStore(s => s.bills);
+  useLedgerCollections('bills', 'invoices');
+  const openRecord = useUIStore(s => s.openRecord);
+  const periodKey = JSON.stringify([pageStartDate, pageEndDate]);
+  const [startDate, setStartDate] = usePageSyncedState(periodKey, pageStartDate || undefined, () => getFiscalYearBounds().startDate);
+  const [endDate, setEndDate] = usePageSyncedState(periodKey, pageEndDate || undefined, () => getFiscalYearBounds().endDate);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const report = useMemo(() => computeTransactionsByReference(transactions || [], { invoices, bills }, startDate, endDate),
+    [transactions, invoices, bills, startDate, endDate]);
+
+  const shown = useMemo(() => {
+    const term = searchTerm.trim().toLocaleLowerCase();
+    return term ? report.rows.filter(r => `${r.reference} ${r.description}`.toLocaleLowerCase().includes(term)) : report.rows;
+  }, [report.rows, searchTerm]);
+
+  const exportCsv = () => {
+    downloadCsv(`transactions_by_reference_${startDate}_${endDate}.csv`,
+      ['Reference', 'Date', 'Description', 'From', 'Amount'],
+      shown.map(r => [r.reference, r.date, r.description, r.source, csvMoney(r.amountCents)]));
+    toast.success('Transactions by Reference exported to CSV');
+  };
+
+  const columns: ColumnDef<ReferenceRow>[] = [
+    { key: 'reference', header: 'Reference', render: (r) => <span className="font-mono font-semibold">{r.reference}</span> },
+    { key: 'date', header: 'Date', render: (r) => r.date.slice(0, 10) },
+    {
+      key: 'description',
+      header: 'Description',
+      render: (r) => (
+        <button type="button" onClick={() => openRecord({ type: 'transaction', id: r.transactionId })} className="text-left hover:underline">
+          {r.description || '(no description)'}
+        </button>
+      ),
+    },
+    { key: 'source', header: 'From', render: (r) => <span className="text-[var(--muted)]">{r.source}</span> },
+    { key: 'amountCents', header: 'Amount', align: 'right', render: (r) => formatCurrency(r.amountCents) },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <PartyReportLayout
+        title="Transactions by Reference"
+        description="Posted entries listed under their cheque, bank, invoice or bill reference."
+        icon={Hash}
+        totalLabel="Total of the entries listed"
+        totalAmountCents={shown.reduce((sum, r) => sum + r.amountCents, 0)}
+        exportFilename="transactions_by_reference.csv"
+        onExportCSV={exportCsv}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search reference or description..."
+        startDate={startDate}
+        endDate={endDate}
+        onStartDateChange={setStartDate}
+        onEndDateChange={setEndDate}
+        columns={columns}
+        data={shown}
+        emptyMessage="No entries with a reference in this period."
+        sumKeys={['amountCents']}
+        getRowId={(r) => r.transactionId}
+      />
+      <p className="text-xs text-[var(--muted)]" role="status">
+        {report.referenceCount} reference(s).{report.withoutReference > 0 ? ` ${report.withoutReference} posted entr${report.withoutReference === 1 ? 'y has' : 'ies have'} no reference and are not listed.` : ''}
+      </p>
+    </div>
+  );
+};
+
+export default TransactionsByReferenceView;

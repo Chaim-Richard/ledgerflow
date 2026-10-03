@@ -1507,7 +1507,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] J-03 Contact Balance Summary (customers and vendors on one list, a business that is both on one row by email or name, net; tested)
 - [x] J-04 Transactions by Customer (drafts skipped, FX, credits, date range, tested)
 - [x] J-05 Transactions by Vendor (drafts skipped, FX, credits, date range, tested)
-- [ ] J-06 Transactions by Reference
+- [x] J-06 Transactions by Reference (entry reference, else the invoice/bill number; reversals marked; natural order; tested)
 - [x] J-07 Sales by Item: issued invoices, base currency, posted or estimated cost, tested
 - [ ] J-08 Purchases by Item — waits: bills have no item lines (only `splits`)
 - [x] J-09 Inventory Valuation Sheet (stock at cost, share, reorder flags, compared with the Inventory account in the books; tested)
