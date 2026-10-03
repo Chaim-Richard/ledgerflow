@@ -215,3 +215,78 @@ export function computeJournalSheet(transactions: Transaction[], accounts: Chart
 export function yearRange(year?: number): { startDate?: string; endDate?: string } {
   return year ? { startDate: `${year}-01-01`, endDate: `${year}-12-31` } : {};
 }
+
+export interface InventoryValuationRow {
+  itemId: string;
+  name: string;
+  sku: string;
+  category: string;
+  quantity: number;
+  unitCostCents: number;
+  /** quantity × unit cost (0 for negative stock, which is listed but has no value). */
+  valueCents: number;
+  /** Share of the total stock value, percent. */
+  sharePct: number;
+  belowReorder: boolean;
+}
+
+export interface InventoryValuation {
+  rows: InventoryValuationRow[];
+  totalValueCents: number;
+  /** Balance of the Inventory account(s) in the books, base currency, up to `asOfDate`. */
+  ledgerValueCents: number;
+  /** Stock list value minus the books: not 0 means a purchase, count or sale is missing on one side. */
+  differenceCents: number;
+  negativeStockItems: number;
+}
+
+/**
+ * Inventory Valuation (J-09): every item's quantity on hand at its cost, and the total compared with
+ * the Inventory account in the books (posted entries only, lineAmount). Quantities are as of now:
+ * items keep no movement history yet (W-02), so the books side follows `asOfDate` and the stock
+ * side is today's.
+ */
+export function computeInventoryValuation(
+  items: Pick<InventoryItem, 'id' | 'name' | 'sku' | 'unitCostCents' | 'quantityAtHand' | 'reorderPoint' | 'category'>[],
+  accounts: ChartAccount[],
+  transactions: Transaction[],
+  asOfDate?: string
+): InventoryValuation {
+  const valued = items.map(item => {
+    const quantity = Number(item.quantityAtHand) || 0;
+    const unitCostCents = Math.round(Number(item.unitCostCents) || 0);
+    return {
+      itemId: item.id,
+      name: item.name || item.id,
+      sku: item.sku || '',
+      category: item.category || '',
+      quantity,
+      unitCostCents,
+      valueCents: quantity > 0 ? Math.round(quantity * unitCostCents) : 0,
+      sharePct: 0,
+      belowReorder: quantity <= (Number(item.reorderPoint) || 0) && Number(item.reorderPoint) > 0,
+    };
+  });
+  const totalValueCents = valued.reduce((sum, r) => sum + r.valueCents, 0);
+  const rows = valued
+    .map(r => ({ ...r, sharePct: totalValueCents > 0 ? Math.round((r.valueCents / totalValueCents) * 1000) / 10 : 0 }))
+    .sort((a, b) => b.valueCents - a.valueCents || a.name.localeCompare(b.name));
+
+  const inventoryAccounts = new Set(accounts.filter(a => resolveAccountRole(a) === 'inventory').map(a => a.id));
+  let ledgerValueCents = 0;
+  for (const tx of transactions) {
+    if (!isPostable(tx) || (asOfDate && (tx.date || '') > asOfDate)) continue;
+    for (const line of tx.lines || []) {
+      if (inventoryAccounts.has(line.accountId)) ledgerValueCents += lineAmount(line, tx);
+    }
+  }
+  for (const a of accounts) if (inventoryAccounts.has(a.id)) ledgerValueCents += a.openingBalanceCents || 0;
+
+  return {
+    rows,
+    totalValueCents,
+    ledgerValueCents,
+    differenceCents: totalValueCents - ledgerValueCents,
+    negativeStockItems: rows.filter(r => r.quantity < 0).length,
+  };
+}

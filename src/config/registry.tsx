@@ -339,9 +339,11 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'TagBreakdownReportView': lazy(() => import('../components/reporting/TagBreakdownReportView')),
   'CustomerBalanceSummaryView': lazy(() => import('../components/reporting/CustomerBalanceSummaryView')),
   'VendorBalanceSummaryView': lazy(() => import('../components/reporting/VendorBalanceSummaryView')),
+  'ContactBalanceSummaryView': lazy(() => import('../components/reporting/ContactBalanceSummaryView')),
   'TransactionsByCustomerView': lazy(() => import('../components/reporting/TransactionsByCustomerView')),
   'TransactionsByVendorView': lazy(() => import('../components/reporting/TransactionsByVendorView')),
   'SalesByItemReportView': lazy(() => import('../components/reporting/SalesByItemReportView')),
+  'InventoryValuationReportView': lazy(() => import('../components/reporting/InventoryValuationReportView')),
   'JournalSheetReportView': lazy(() => import('../components/reporting/JournalSheetReportView')),
 };
 
@@ -359,9 +361,11 @@ export const REPORT_TABS_REGISTRY = [
   { id: 'cash-flow', label: { en: 'Cash Flow', he: 'תזרים' }, componentName: 'CashFlowView', icon: RefreshCw },
   { id: 'customer-balance-summary', label: { en: 'Customer Balance Summary', he: 'יתרות לקוחות' }, componentName: 'CustomerBalanceSummaryView', icon: Users },
   { id: 'vendor-balance-summary', label: { en: 'Vendor Balance Summary', he: 'יתרות ספקים' }, componentName: 'VendorBalanceSummaryView', icon: Building },
+  { id: 'contact-balance-summary', label: { en: 'Contact Balance Summary', he: 'יתרות אנשי קשר' }, componentName: 'ContactBalanceSummaryView', icon: Users },
   { id: 'transactions-by-customer', label: { en: 'Transactions by Customer', he: 'עסקאות לפי לקוח' }, componentName: 'TransactionsByCustomerView', icon: FileText },
   { id: 'transactions-by-vendor', label: { en: 'Transactions by Vendor', he: 'עסקאות לפי ספק' }, componentName: 'TransactionsByVendorView', icon: FileSpreadsheet },
   { id: 'sales-by-item', label: { en: 'Sales by Item', he: 'מכירות לפי פריט' }, componentName: 'SalesByItemReportView', icon: Package },
+  { id: 'inventory-valuation', label: { en: 'Inventory Valuation', he: 'שווי מלאי' }, componentName: 'InventoryValuationReportView', icon: Package },
   { id: 'journal-sheet', label: { en: 'Journal Sheet', he: 'גיליון יומן' }, componentName: 'JournalSheetReportView', icon: BookOpen },
   { id: 'expense-by-category', label: { en: 'Expense by Category', he: 'הוצאות לפי קטגוריה' }, componentName: 'ExpenseByCategoryReportView', icon: PieChart },
   { id: 'income-by-source', label: { en: 'Income by Source', he: 'הכנסות לפי מקור' }, componentName: 'IncomeBySourceReportView', icon: TrendingUp },

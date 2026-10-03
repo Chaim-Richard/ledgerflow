@@ -159,7 +159,8 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
 
     const tax = calculateDocumentTax(invoice);
     const report = computeTaxLiability([invoice], [], '2026-03-01', '2026-03-31');
-    assert.equal(tax, report.taxCollectedCents);
+    // the report is in the home currency: €18.00 at 1.1 (it used to add the euro figure, L-169)
+    assert.equal(report.taxCollectedCents, Math.round(tax * 1.1));
 
     const lines = TransactionTemplates.buildInvoiceLines({
       invoiceNumber: invoice.number || 'INV-EUR-200',
@@ -200,7 +201,7 @@ describe('Document Math & Tax Engine (§14 Findings AE, AF, AG, AH)', () => {
     assert.equal(tax, 1800);
 
     const report = computeTaxLiability([invoice], [], '2026-03-01', '2026-03-31');
-    assert.equal(report.taxCollectedCents, 1800);
+    assert.equal(report.taxCollectedCents, 1980); // €18.00 at 1.1 in the home currency (L-169)
 
     const lines = TransactionTemplates.buildInvoiceLines({
       invoiceNumber: invoice.number || 'INV-EUR-100',

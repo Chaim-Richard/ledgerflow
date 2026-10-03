@@ -4,10 +4,11 @@
  * registry and links each finding to its record (Z-32). Adding a check = adding one entry.
  * Money is compared in integer cents with lineAmount() on postable entries (AGENTS.md).
  */
-import type { Bill, ChartAccount, Invoice, RecurringTransaction, Transaction } from '../types';
+import type { BankStatementLine, Bill, ChartAccount, Invoice, RecurringTransaction, Transaction } from '../types';
 import { isPostable, lineAmount } from './txFilters';
 import { calculateAmountDue } from './documentMath';
 import { findTaxDifferences } from './taxRecompute';
+import { formatCurrency } from './utils';
 import type { RecordType } from './recordLinks';
 
 export { RECORD_TABS } from './recordLinks';
@@ -31,6 +32,7 @@ export interface CheckContext {
   bills: Bill[];
   recurring: RecurringTransaction[];
   inventory?: Array<{ id: string; name?: string; quantityAtHand?: number }>;
+  bankLines?: BankStatementLine[];
   /** The workspace's today (YYYY-MM-DD). */
   today: string;
   /** Home currency, for documents without one. */
@@ -68,11 +70,15 @@ export const DATA_CHECKS: DataCheck[] = [
     run: ({ transactions }) => transactions.filter(isPostable).flatMap(tx => {
       const lines = tx.lines || [];
       if (lines.length === 0) return [];
-      const sum = lines.reduce((s, l) => s + lineAmount(l, tx), 0);
-      return sum === 0 ? [] : [{
+      // balanced in the entry's own currency (the server's rule) or after each line's own rate.
+      // Only the converted sum used to count, and rounding each converted line makes balanced
+      // foreign entries look a cent off (+5.5 → 6, −5.5 → −5; see L-164).
+      const sum = lines.reduce((s, l) => s + (l.amountCents || 0), 0);
+      if (sum === 0 || lines.reduce((s, l) => s + lineAmount(l, tx), 0) === 0) return [];
+      return [{
         id: `unbalanced-${tx.id}`, checkId: 'unbalanced', severity: 'high' as const,
         title: `Entry ${tx.description || tx.id} does not balance`,
-        description: `Its lines add up to ${sum} cents instead of 0 (${tx.date || 'no date'}).`,
+        description: `Its debits exceed its credits by ${formatCurrency(sum, tx.currency)} (${tx.date || 'no date'}).`,
         record: { type: 'transaction' as const, id: tx.id },
       }];
     }),
@@ -111,7 +117,7 @@ export const DATA_CHECKS: DataCheck[] = [
       .map(group => ({
         id: `dup-bill-${group[0].vendorId}-${group[0].number}`, checkId: 'duplicate-bill', severity: 'high' as const,
         title: `Bill ${group[0].number} from ${group[0].vendorName || 'the same vendor'} is entered ${group.length} times`,
-        description: `Amounts: ${group.map(b => b.amountCents).join(', ')} cents. Paying both would pay the vendor twice.`,
+        description: `Amounts: ${group.map(b => formatCurrency(b.amountCents, b.currency)).join(', ')}. Paying both would pay the vendor twice.`,
         record: { type: 'bill' as const, id: group[1].id },
       })),
   },
@@ -159,7 +165,7 @@ export const DATA_CHECKS: DataCheck[] = [
     ].filter(({ d }) => (d.amountPaidCents || 0) > (d.amountCents || 0)).map(({ d, type }) => ({
       id: `overpaid-${type}-${d.id}`, checkId: 'overpaid', severity: 'medium' as const,
       title: `${type === 'invoice' ? 'Invoice' : 'Bill'} ${label(d)} is overpaid`,
-      description: `Paid ${d.amountPaidCents} cents on a total of ${d.amountCents} cents.`,
+      description: `Paid ${formatCurrency(d.amountPaidCents, d.currency)} on a total of ${formatCurrency(d.amountCents, d.currency)}.`,
       record: { type, id: d.id },
     })),
   },
@@ -208,7 +214,7 @@ export const DATA_CHECKS: DataCheck[] = [
       .map(i => ({
         id: `stale-${i.id}`, checkId: 'stale-receivable', severity: 'low' as const,
         title: `Invoice ${label(i)} is more than 180 days overdue`,
-        description: `Due ${i.dueDate.slice(0, 10)}; ${calculateAmountDue(i)} cents still due.`,
+        description: `Due ${i.dueDate.slice(0, 10)}; ${formatCurrency(calculateAmountDue(i), i.currency)} still due.`,
         record: { type: 'invoice' as const, id: i.id },
       })),
   },
@@ -216,14 +222,63 @@ export const DATA_CHECKS: DataCheck[] = [
     id: 'tax-posting',
     label: 'Tax in the ledger differs from the document',
     remedy: 'Repost the document (Month-end close → Postings), or have the owner run the tax recompute, which posts an adjusting entry.',
-    run: ({ invoices, bills, transactions }) => findTaxDifferences({ invoices, bills, transactions }).map(d => ({
+    run: ({ invoices, bills, transactions, baseCurrency }) => findTaxDifferences({ invoices, bills, transactions }).map(d => ({
       id: `tax-${d.id}`, checkId: 'tax-posting', severity: 'medium' as const,
-      title: `${d.kind === 'invoice' ? 'Invoice' : 'Bill'} ${d.number}: tax in the ledger is ${d.postedTaxCents} cents, the document says ${d.expectedTaxCents}`,
-      description: `${d.party ? `${d.party}. ` : ''}Difference ${d.differenceCents} cents (home currency).`,
+      title: `${d.kind === 'invoice' ? 'Invoice' : 'Bill'} ${d.number}: tax in the ledger is ${formatCurrency(d.postedTaxCents, baseCurrency)}, the document says ${formatCurrency(d.expectedTaxCents, baseCurrency)}`,
+      description: `${d.party ? `${d.party}. ` : ''}Difference ${formatCurrency(d.differenceCents, baseCurrency)} (home currency).`,
       record: { type: d.kind, id: d.id },
     })),
   },
+  {
+    id: 'suspense-balance',
+    label: 'Suspense, uncategorized or clearing accounts not at zero (Z-11)',
+    remedy: 'Move each entry in it to the right account; these accounts should end at zero.',
+    run: ({ accounts, transactions, baseCurrency }) => {
+      const holding = accounts.filter(a => SUSPENSE.test(`${a.name || ''} ${a.category || ''} ${a.subtype || ''}`));
+      if (holding.length === 0) return [];
+      const balance = new Map(holding.map(a => [a.id, { cents: 0, entries: 0 }]));
+      for (const tx of transactions) {
+        if (!isPostable(tx)) continue;
+        for (const l of tx.lines || []) {
+          const b = balance.get(l.accountId);
+          if (b) { b.cents += lineAmount(l, tx); b.entries += 1; }
+        }
+      }
+      return holding.flatMap(a => {
+        const b = balance.get(a.id)!;
+        return b.cents === 0 ? [] : [{
+          id: `suspense-${a.id}`, checkId: 'suspense-balance', severity: 'medium' as const,
+          title: `${a.name} holds ${formatCurrency(Math.abs(b.cents), baseCurrency)}`,
+          description: `${b.entries} line(s) are parked there (${b.cents > 0 ? 'debit' : 'credit'} balance); reports show them in the wrong place until they are moved.`,
+          record: { type: 'account' as const, id: a.id },
+        }];
+      });
+    },
+  },
+  {
+    id: 'stale-unreconciled',
+    label: 'Bank lines waiting more than 30 days to be matched (Z-13)',
+    remedy: 'Match each line to its entry in Reconcile, create the entry, or ignore the line if it is not yours.',
+    run: ({ bankLines, accounts, today }) => {
+      const cutoff = shiftDays(today, -30);
+      const waiting = (bankLines || []).filter(l => l.status === 'pending' && typeof l.date === 'string' && l.date.slice(0, 10) < cutoff);
+      const byAccount = new Map<string, BankStatementLine[]>();
+      for (const line of waiting) byAccount.set(line.accountId || '', [...(byAccount.get(line.accountId || '') || []), line]);
+      return [...byAccount.entries()].map(([accountId, lines]) => {
+        const oldest = lines.reduce((a, b) => (a.date <= b.date ? a : b));
+        const name = accounts.find(a => a.id === accountId)?.name || 'a bank account';
+        return {
+          id: `stale-bank-${accountId || 'none'}`, checkId: 'stale-unreconciled', severity: 'low' as const,
+          title: `${lines.length} bank line(s) in ${name} not matched for over 30 days`,
+          description: `The oldest is from ${oldest.date.slice(0, 10)}: ${oldest.description || 'no description'}. The bank balance and the books can't agree until they are matched.`,
+          record: { type: 'bankLine' as const, id: oldest.id },
+        };
+      });
+    },
+  },
 ];
+
+const SUSPENSE = /suspense|uncategori[sz]ed|ask my accountant|clearing/i;
 
 function shiftDays(ymd: string, days: number): string {
   const [y, m, d] = ymd.split('-').map(Number);

@@ -151,3 +151,39 @@ describe('Journal Sheet', () => {
     assert.deepEqual(sheet.unbalanced.map(e => [e.id, e.imbalanceCents]), [['t2', 100]]);
   });
 });
+
+describe('Inventory Valuation (J-09)', () => {
+  const item = (id: string, quantityAtHand: number, unitCostCents: number, extra: Record<string, unknown> = {}) =>
+    ({ id, name: id, sku: `SKU-${id}`, unitCostCents, quantityAtHand, reorderPoint: 0, category: 'Parts', ...extra });
+
+  test('stock at cost per item, share of the total, and the difference with the Inventory account', async () => {
+    const { computeInventoryValuation } = await import('../server/reports/itemReports');
+    const accounts = [
+      makeChartAccount({ id: 'inv', name: 'Inventory', type: 'asset', category: 'Inventory', openingBalanceCents: 5000 }),
+      makeChartAccount({ id: 'bank', name: 'Bank', type: 'asset', category: 'Cash' }),
+      makeChartAccount({ id: 'cogs', name: 'Cost of Goods Sold', type: 'cost_of_goods', category: 'COGS' }),
+    ];
+    const tx = (id: string, date: string, invCents: number, extra: Record<string, unknown> = {}) => makeTransaction({
+      id, date, lines: [{ accountId: 'inv', amountCents: invCents }, { accountId: invCents > 0 ? 'bank' : 'cogs', amountCents: -invCents }], ...extra,
+    });
+    const transactions = [
+      tx('buy', '2026-02-01', 40000),
+      tx('sale-cost', '2026-03-01', -12000),
+      tx('eur', '2026-03-05', 1000, { currency: 'EUR', exchangeRate: 1.2 }), // 12.00 in the books
+      tx('draft', '2026-03-06', 99900, { status: 'draft' }),
+      tx('later', '2026-05-01', 7000),
+    ];
+    const report = computeInventoryValuation(
+      [item('bolts', 100, 150), item('nuts', 2.5, 1000, { reorderPoint: 5 }), item('gone', -3, 500)],
+      accounts, transactions, '2026-03-31');
+    assert.deepEqual(report.rows.map(r => [r.itemId, r.valueCents, r.sharePct, r.belowReorder]), [
+      ['bolts', 15000, 85.7, false],   // 100 × 1.50
+      ['nuts', 2500, 14.3, true],      // 2.5 × 10.00, at or below its reorder point
+      ['gone', 0, 0, false],           // negative stock is listed but has no value
+    ]);
+    assert.equal(report.totalValueCents, 17500);
+    assert.equal(report.ledgerValueCents, 5000 + 40000 - 12000 + 1200); // opening + posted to the date
+    assert.equal(report.differenceCents, 17500 - 34200);
+    assert.equal(report.negativeStockItems, 1);
+  });
+});

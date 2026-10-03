@@ -181,8 +181,8 @@ export interface TaxReturn {
   documentCount: number;
 }
 
-const COUNTED_SALES = new Set(['sent', 'pending', 'approved', 'paid', 'partially_paid', 'overdue', 'issued', 'applied', 'partially_applied', 'open']);
-const COUNTED_PURCHASES = new Set(['pending', 'approved', 'paid', 'partially_paid', 'overdue', 'unpaid', 'issued', 'applied', 'partially_applied', 'open']);
+export const COUNTED_SALES = new Set(['sent', 'pending', 'approved', 'paid', 'partially_paid', 'overdue', 'issued', 'applied', 'partially_applied', 'open']);
+export const COUNTED_PURCHASES = new Set(['pending', 'approved', 'paid', 'partially_paid', 'overdue', 'unpaid', 'issued', 'applied', 'partially_applied', 'open']);
 
 const emptyTotals = (): Record<TaxTreatment, { netCents: number; taxCents: number }> => ({
   standard: { netCents: 0, taxCents: 0 }, zero_rated: { netCents: 0, taxCents: 0 }, exempt: { netCents: 0, taxCents: 0 },

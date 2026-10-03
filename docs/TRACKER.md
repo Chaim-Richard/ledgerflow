@@ -1504,15 +1504,15 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [x] J-01 Customer Balance Summary (as-of date, tested)
 - [x] J-02 Vendor Balance Summary (as-of date, tested)
-- [ ] J-03 Contact Balance Summary
+- [x] J-03 Contact Balance Summary (customers and vendors on one list, a business that is both on one row by email or name, net; tested)
 - [x] J-04 Transactions by Customer (drafts skipped, FX, credits, date range, tested)
 - [x] J-05 Transactions by Vendor (drafts skipped, FX, credits, date range, tested)
 - [ ] J-06 Transactions by Reference
 - [x] J-07 Sales by Item: issued invoices, base currency, posted or estimated cost, tested
 - [ ] J-08 Purchases by Item — waits: bills have no item lines (only `splits`)
-- [ ] J-09 Inventory Valuation Sheet
-- [ ] J-10 Inventory Item Details
-- [ ] J-11 Sales Tax Liability Summary
+- [x] J-09 Inventory Valuation Sheet (stock at cost, share, reorder flags, compared with the Inventory account in the books; tested)
+- [ ] J-10 Inventory Item Details — waits for W-02: only sales move stock today (bills have no item lines), so a movement history would be one-sided
+- [x] J-11 Sales Tax Liability Summary (Tax screen: tax by rate, collected and paid, in the home currency; adds up to the return boxes; tested)
 - [x] J-12 Journal Sheet: isPostable + lineAmount, unbalanced list, tested
 - [ ] J-13 Budget vs Actual with drill-down
 - [ ] J-14 Deferred-revenue waterfall
@@ -1728,6 +1728,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-166 Transactions screen totals: a customer's payment was counted as "Filtered Outflow" (any entry without an income or expense line went there, transfers too); now only money entering or leaving bank/cash accounts counts, and transfers count as neither. The search total and "sort by amount" used foreign amounts as if they were in the base currency. The statements' report hook recomputed an unused profit figure on every ledger change; it now only fetches, with the dates encoded. An unknown stored role now shows as Viewer, as the server treats it (tested)
 - [x] L-167 The Transactions list opened filtered by a saved view nobody chose ("Liquid Cash & Bank Funds" was switched on at every start and after each workspace switch), so most entries looked missing; no view is on until the person picks one. Switching workspace kept the old workspace's closed periods, lock exception, invites and "data truncated" banner until the new one loaded, and its hidden sidebar tabs for good. Income/expense totals stayed at zero when the entries loaded before the accounts, and each load rebuilt the account list once per entry (tested)
 - [x] L-168 Cash flow statement: the server version ("Load Full Server Report") counted only income, expense, receivable and payable lines of every entry, so tax paid, stock bought and other working-capital money were missing and the total didn't match the change in cash; the screen had its own different math. One function now (`computeCashFlow`, direct method: money in and out of bank, cash and undeposited-funds accounts, by what it was for; debt and equity financing, fixed assets investing). The General Ledger report got its first test (tested)
+- [x] L-169 The server's tax liability report (`/api/v1/reports/tax-liability`) added foreign invoices' and bills' tax in their own currency; now in the home currency. Data Health called balanced foreign entries "unbalanced" because of per-line rounding (same as L-164), and its findings showed raw cents ("1250 cents"); now money (tested)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
@@ -1996,9 +1997,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Z-08 Duplicate vendor bill ref check
 - [x] Z-09 Negative inventory check
 - [x] Z-10 Future-dated posting check
-- [ ] Z-11 Non-zero suspense check
+- [x] Z-11 Non-zero suspense check (suspense, uncategorized and clearing accounts not at zero; Data Health, tested)
 - [ ] Z-12 Missing dimension check
-- [ ] Z-13 Stale unreconciled check
+- [x] Z-13 Stale unreconciled check (bank lines unmatched over 30 days, one finding per bank account, opens Reconcile; tested)
 - [x] Z-14 Empty invoice / accountless line check
 - [x] Z-15 FX line with no rate check
 - [ ] Z-16 Parent/child entities
