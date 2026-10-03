@@ -1,5 +1,5 @@
 import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lineAmount, isTransactionInDateRange } from "../../lib/txFilters";
-import { resolveAccountRole } from "../../lib/accountUtils";
+import { isUndepositedFundsAccount, resolveAccountRole } from "../../lib/accountUtils";
 import { calculateDocumentTax, calculateDocumentNet } from "../../lib/documentMath";
 import type { Invoice, Bill, Payment, Customer, Vendor, Transaction, ChartAccount, TransactionLine, CreditNote, VendorCredit } from "../../types";
 
@@ -183,13 +183,38 @@ export function computeTrialBalance(accounts: ChartAccount[], transactions: Tran
   return { accounts: accountsArray, totalDebit, totalCredit, isBalanced: totalDebit === totalCredit };
 }
 
+/** Bank and cash accounts for the cash flow statement, including money received but not yet deposited. */
+export function isCashFlowCashAccount(acc: ChartAccount): boolean {
+  return resolveAccountRole(acc) === 'cash' || isUndepositedFundsAccount(acc) || (acc.type === 'asset' && Boolean(acc.code?.startsWith('10')));
+}
+
+const INVESTING_ASSET = /fixed|equipment|property|vehicle|machinery|furniture|building|land|investment|depreciation|intangible/;
+const FINANCING_LIABILITY = /long[- ]?term|loan|mortgage|note[s]? payable|bond|debt|lease liabilit/;
+
+/** Where the other side of a cash entry belongs: equity and long-term debt are financing, fixed
+ * assets and investments investing, everything else (income, costs, receivables, payables,
+ * inventory, tax, short-term balances) operating. */
+export function cashFlowSection(acc: ChartAccount): 'operating' | 'investing' | 'financing' {
+  const text = `${acc.category || ''} ${acc.subtype || ''} ${acc.name || ''}`.toLowerCase();
+  if (acc.type === 'equity') return 'financing';
+  if (acc.type === 'liability' && FINANCING_LIABILITY.test(text)) return 'financing';
+  if (acc.type === 'asset' && INVESTING_ASSET.test(text)) return 'investing';
+  return 'operating';
+}
+
+/**
+ * Cash flow statement, direct method: every posted entry that moves a bank/cash account, split by
+ * what the money was for (the entry's other lines, cashFlowSection), in the base currency. Net
+ * change is therefore the change in cash over the period; transfers between cash accounts and
+ * entries without cash (accruals, depreciation) don't count. One function for the server report and
+ * the Cash Flow screen: the server used to take only income, expense, receivables and payables
+ * lines from every entry, so tax, inventory and the like were missing and its total didn't match
+ * the cash at the bank.
+ */
 export function computeCashFlow(accounts: ChartAccount[], transactions: Transaction[], startDate?: string, endDate?: string) {
-  let filteredTx = transactions;
-  if (startDate || endDate) {
-    const start = startDate ? String(startDate) : "1970-01-01";
-    const end = endDate ? String(endDate) : "2099-12-31";
-    filteredTx = transactions.filter((tx) => isTransactionInDateRange(tx, start, end));
-  }
+  const start = startDate ? String(startDate) : "1970-01-01";
+  const end = endDate ? String(endDate) : "2099-12-31";
+  const byId = new Map(accounts.map((a) => [a.id, a]));
 
   const cashFlow = {
     operating: { total: 0, inflow: 0, outflow: 0, items: [] as { name: string; amount: number }[] },
@@ -198,31 +223,25 @@ export function computeCashFlow(accounts: ChartAccount[], transactions: Transact
     netChange: 0
   };
 
-  filteredTx.forEach((tx) => {
-    if (!isPostable(tx)) return;
-    tx.lines?.forEach((line: TransactionLine) => {
-      const acc = accounts.find((a) => a.id === line.accountId);
-      if (!acc) return;
-      const amount = lineAmount(line, tx);
-      const delta = -amount;
+  transactions.forEach((tx) => {
+    if (!isPostable(tx) || !isTransactionInDateRange(tx, start, end)) return;
+    const lines = tx.lines || [];
+    const isCash = (line: TransactionLine) => {
+      const acc = byId.get(line.accountId);
+      return Boolean(acc && isCashFlowCashAccount(acc));
+    };
+    if (!lines.some(isCash)) return;
 
-      if (acc.type === 'income' || acc.type === 'expense' || acc.type === 'cost_of_goods' ||
-          (acc.type === 'asset' && (acc.category === 'Receivables' || acc.category === 'Receivable' || acc.category === 'Accounts Receivable')) ||
-          (acc.type === 'liability' && (acc.category === 'Payables' || acc.category === 'Payable' || acc.category === 'Accounts Payable'))) {
-        cashFlow.operating.total += delta;
-        if (delta > 0) cashFlow.operating.inflow += delta;
-        else cashFlow.operating.outflow += Math.abs(delta);
-      } else if (acc.type === 'asset' && (acc.category === 'Fixed Assets' || acc.category === 'Fixed Asset')) {
-        cashFlow.investing.total += delta;
-        if (delta > 0) cashFlow.investing.inflow += delta;
-        else cashFlow.investing.outflow += Math.abs(delta);
-        cashFlow.investing.items.push({ name: tx.description, amount: delta });
-      } else if (acc.type === 'equity' || (acc.type === 'liability' && (acc.category === 'Long Term Liabilities' || acc.category === 'Long Term Liability'))) {
-        cashFlow.financing.total += delta;
-        if (delta > 0) cashFlow.financing.inflow += delta;
-        else cashFlow.financing.outflow += Math.abs(delta);
-        cashFlow.financing.items.push({ name: tx.description, amount: delta });
-      }
+    lines.forEach((line: TransactionLine) => {
+      const acc = byId.get(line.accountId);
+      if (!acc || isCashFlowCashAccount(acc)) return;
+      const delta = -lineAmount(line, tx); // a credit elsewhere is money in
+      if (delta === 0) return;
+      const section = cashFlow[cashFlowSection(acc)];
+      section.total += delta;
+      if (delta > 0) section.inflow += delta;
+      else section.outflow += -delta;
+      if (section !== cashFlow.operating) section.items.push({ name: tx.description, amount: delta });
     });
   });
 
