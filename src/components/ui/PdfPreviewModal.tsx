@@ -4,18 +4,21 @@ import { X, Download, ExternalLink, Loader2, AlertCircle, FileText } from 'lucid
 import { getIdToken } from '../../firebase';
 import { toast } from 'sonner';
 
+/** Every document the server can print (documentRoutes.ts PDF_TYPES; BA-08). */
+export type PdfDocumentKind = 'invoice' | 'estimate' | 'creditNote' | 'payment' | 'statement' | 'purchaseOrder' | 'bill' | 'vendorCredit';
+
 export interface PdfPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  documentType: 'invoice' | 'estimate' | 'creditNote' | 'payment' | 'statement';
+  documentType: PdfDocumentKind;
   documentId: string;
   workspaceId: string;
   filename?: string;
 }
 
 export async function fetchDocumentPdfBlob(
-  type: 'invoice' | 'estimate' | 'creditNote' | 'payment' | 'statement',
+  type: PdfDocumentKind,
   id: string,
   workspaceId: string
 ): Promise<Blob> {
@@ -41,7 +44,7 @@ export async function fetchDocumentPdfBlob(
 }
 
 export async function downloadDocumentPdf(
-  type: 'invoice' | 'estimate' | 'creditNote' | 'payment' | 'statement',
+  type: PdfDocumentKind,
   id: string,
   workspaceId: string,
   filename?: string

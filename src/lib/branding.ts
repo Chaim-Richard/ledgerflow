@@ -6,11 +6,11 @@ import { z } from 'zod';
  * Saved on the workspace (`branding`) by the server (PUT /api/v1/workspaces/:id/branding), read by
  * the PDF (src/server/services/pdfService.ts).
  */
-export const BRANDED_DOCUMENTS = ['invoice', 'estimate', 'creditNote', 'statement', 'payment'] as const;
+export const BRANDED_DOCUMENTS = ['invoice', 'estimate', 'creditNote', 'statement', 'payment', 'purchaseOrder'] as const;
 export type BrandedDocument = typeof BRANDED_DOCUMENTS[number];
 
 export const BRANDED_DOCUMENT_LABELS: Record<BrandedDocument, string> = {
-  invoice: 'Invoices', estimate: 'Estimates', creditNote: 'Credit notes', statement: 'Statements', payment: 'Payment receipts',
+  invoice: 'Invoices', estimate: 'Estimates', creditNote: 'Credit notes', statement: 'Statements', payment: 'Payment receipts', purchaseOrder: 'Purchase orders',
 };
 
 /** Largest logo kept (as a data URL): logos are small, and the workspace row is read often. */

@@ -1,6 +1,7 @@
 import { useDialog } from '../../hooks/useDialog';
 import React, { useId, useMemo, useState } from 'react';
-import { ShoppingCart, Plus, ShieldCheck, X, Check, CheckCircle2, FileText, Ban } from 'lucide-react';
+import { ShoppingCart, Plus, ShieldCheck, X, Check, CheckCircle2, FileText, Ban, Printer } from 'lucide-react';
+import PdfPreviewModal from '../ui/PdfPreviewModal';
 import type { Bill, GoodsReceipt, PurchaseOrder, PurchaseOrderItem, Vendor } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -50,6 +51,8 @@ export const PurchaseOrdersView: React.FC = () => {
   const [receivedCondition, setReceivedCondition] = useState<GoodsReceipt['items'][number]['condition']>('good');
   const [receivedQuantities, setReceivedQuantities] = useState<Record<string, number>>({});
   const [billingPO, setBillingPO] = useState<PurchaseOrder | null>(null);
+  const [previewPO, setPreviewPO] = useState<PurchaseOrder | null>(null);
+  const pdfWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [saving, setSaving] = useState(false);
   const billFromOrder = useMemo<Partial<Bill> | undefined>(() => (billingPO
     ? { vendorId: billingPO.vendorId, vendorName: billingPO.vendorName, currency: billingPO.currency, splits: billLinesFromOrder(billingPO), metadata: { poId: billingPO.id, poNumber: billingPO.poNumber } }
@@ -202,6 +205,7 @@ export const PurchaseOrdersView: React.FC = () => {
                       <button type="button" onClick={() => cancelPO(po)} className="p-1 text-[var(--muted)]" aria-label={`Cancel ${po.poNumber}`} title="Cancel"><Ban className="w-3.5 h-3.5" aria-hidden="true" /></button>
                     )}
                     {po.billId && <span className="text-[var(--muted)]">Billed</span>}
+                    <button type="button" onClick={() => setPreviewPO(po)} className="p-1 text-[var(--muted)]" aria-label={`PDF of ${po.poNumber}`} title="Preview / download PDF"><Printer className="w-3.5 h-3.5" aria-hidden="true" /></button>
                   </td>
                 </tr>
               ))}
@@ -368,6 +372,10 @@ export const PurchaseOrdersView: React.FC = () => {
         accounts={accounts}
         initialBill={billFromOrder}
       />
+      {previewPO && pdfWorkspaceId && (
+        <PdfPreviewModal isOpen onClose={() => setPreviewPO(null)} title={`Purchase order ${previewPO.poNumber}`}
+          documentType="purchaseOrder" documentId={previewPO.id} workspaceId={pdfWorkspaceId} filename={`purchase_order_${previewPO.poNumber}.pdf`} />
+      )}
     </div>
   );
 };

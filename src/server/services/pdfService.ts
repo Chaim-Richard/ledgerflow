@@ -16,7 +16,8 @@ import { drawLine, wrapText } from './pdfText';
  * written by hand: one page, only the first 15 lines, Latin letters only.
  * layoutDocumentPdf decides what is printed (pure, tested); generateDocumentPdf draws it.
  */
-export type PdfDocumentType = BrandedDocument;
+/** Branded documents (sent to customers and vendors) plus bills and vendor credits, printed as records (BA-08). */
+export type PdfDocumentType = BrandedDocument | 'bill' | 'vendorCredit';
 
 /** One printed row: invoice items, estimate lines or statement entries. */
 export interface PdfLine { description?: string; name?: string; quantity?: number; amountCents?: number | string }
@@ -70,9 +71,11 @@ export interface PdfLayout {
 
 const TITLES: Record<PdfDocumentType, string> = {
   invoice: 'INVOICE', estimate: 'ESTIMATE', creditNote: 'CREDIT NOTE', payment: 'PAYMENT RECEIPT', statement: 'STATEMENT',
+  purchaseOrder: 'PURCHASE ORDER', bill: 'BILL', vendorCredit: 'VENDOR CREDIT',
 };
 const RECIPIENT: Record<PdfDocumentType, string> = {
   invoice: 'BILLED TO', estimate: 'PREPARED FOR', creditNote: 'CREDITED TO', payment: 'RECEIVED FROM', statement: 'STATEMENT FOR',
+  purchaseOrder: 'ORDERED FROM', bill: 'FROM VENDOR', vendorCredit: 'FROM VENDOR',
 };
 const TERMS_LABEL: Record<string, string> = {
   due_on_receipt: 'Due on receipt', net_7: 'Net 7', net_10: 'Net 10', net_15: 'Net 15', net_30: 'Net 30', net_45: 'Net 45', net_60: 'Net 60', net_90: 'Net 90',
@@ -108,7 +111,9 @@ export function layoutDocumentPdf(
   const totalCents = Number(doc.amountCents) || 0;
 
   const meta: Array<[string, string]> = [['Number', clean(doc.number || doc.id || 'N/A', 60)], ['Date', clean(doc.date || getLocalDateISO(), 10)]];
-  if ((type === 'invoice' || type === 'estimate') && doc.dueDate) meta.push([type === 'estimate' ? 'Valid until' : 'Due', clean(doc.dueDate, 10)]);
+  if ((type === 'invoice' || type === 'estimate' || type === 'bill' || type === 'purchaseOrder') && doc.dueDate) {
+    meta.push([type === 'estimate' ? 'Valid until' : type === 'purchaseOrder' ? 'Deliver by' : 'Due', clean(doc.dueDate, 10)]);
+  }
   if (type === 'invoice' && doc.paymentTerms) meta.push(['Terms', TERMS_LABEL[doc.paymentTerms] || clean(doc.paymentTerms, 40)]);
 
   // invoices keep `items`, estimates `lines`, statements `transactions`; every one is printed
@@ -152,7 +157,7 @@ export function layoutDocumentPdf(
     recipient: clean(doc.customerName || doc.vendorName || doc.contactName || 'Valued Client', 120),
     rows,
     summary,
-    terms: clean(branding.terms?.[type], 2000) || undefined,
+    terms: clean((branding.terms as Partial<Record<PdfDocumentType, string>> | undefined)?.[type], 2000) || undefined,
     footer: clean(branding.footer, 300) || undefined,
     qrUrl: qrWanted ? options.paymentUrl : undefined,
     color: brandColor(branding.color),

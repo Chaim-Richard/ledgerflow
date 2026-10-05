@@ -17,8 +17,28 @@ const PDF_SOURCES = {
   estimate: { collection: 'estimates', label: 'Estimate' },
   creditNote: { collection: 'creditNotes', label: 'Credit Note' },
   payment: { collection: 'payments', label: 'Payment' },
+  purchaseOrder: { collection: 'purchaseOrders', label: 'Purchase order' },
+  bill: { collection: 'bills', label: 'Bill' },
+  vendorCredit: { collection: 'vendorCredits', label: 'Vendor credit' },
 } as const;
-const PDF_TYPES: readonly PdfDocumentType[] = ['invoice', 'estimate', 'creditNote', 'payment', 'statement'];
+const PDF_TYPES: readonly PdfDocumentType[] = ['invoice', 'estimate', 'creditNote', 'payment', 'statement', 'purchaseOrder', 'bill', 'vendorCredit'];
+
+/** A purchase order in the shape the PDF reads (its fields have their own names; BA-08). */
+function purchaseOrderForPdf(po: Record<string, unknown>): PdfDocument {
+  const items = Array.isArray(po.items) ? po.items as Array<Record<string, unknown>> : [];
+  return {
+    ...po,
+    number: String(po.poNumber || po.number || ''),
+    date: String(po.issueDate || po.date || ''),
+    dueDate: typeof po.expectedDeliveryDate === 'string' ? po.expectedDeliveryDate : undefined,
+    amountCents: Number(po.totalAmountCents) || 0,
+    items: items.map(i => ({
+      description: String(i.description || 'Item'),
+      quantity: Number(i.quantity) || 1,
+      amountCents: Number(i.totalCents ?? Math.round((Number(i.quantity) || 1) * (Number(i.unitPriceCents) || 0))),
+    })),
+  } as PdfDocument;
+}
 const isPdfType = (t: string): t is PdfDocumentType => (PDF_TYPES as readonly string[]).includes(t);
 
 export async function handlePdfRequest(req: express.Request, res: express.Response, dbOverride?: Firestore) {
@@ -53,7 +73,7 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
       if (!data || data.workspaceId !== workspaceId) {
         return res.status(404).json({ status: 'error', message: `${source.label} not found` });
       }
-      docData = data as PdfDocument;
+      docData = type === 'purchaseOrder' ? purchaseOrderForPdf(data) : data as PdfDocument;
       // a sent invoice has a payment page: its QR code goes on the PDF (Y-15)
       if (type === 'invoice' && typeof data.paymentToken === 'string' && data.paymentToken) {
         try { paymentUrl = `${getTrustedAppUrl(req).replace(/\/+$/, '')}/i/${data.paymentToken}`; } catch { paymentUrl = undefined; }

@@ -43,6 +43,11 @@ describe('Document PDF downloads', { skip: !url && 'LF_TEST_DATABASE_URL not set
       workspaceId: ws, customerId: id('c1'), number: 'EST-0003', date: '2026-06-02', status: 'sent', amountCents: 4000,
       lines: [{ description: 'Site survey', quantity: 2, unitPriceCents: 2000, amountCents: 4000 }],
     });
+    await db.collection('purchaseOrders').doc(id('po')).set({
+      workspaceId: ws, vendorId: 'v1', vendorName: 'Paper Supply Co', poNumber: 'PO-0042', issueDate: '2026-06-03', expectedDeliveryDate: '2026-06-20',
+      status: 'approved', totalAmountCents: 7500, items: [{ id: 'l1', description: 'A4 paper boxes', quantity: 3, unitPriceCents: 2500, totalCents: 7500 }],
+    });
+    await db.collection('bills').doc(id('bill')).set({ workspaceId: ws, vendorId: 'v1', vendorName: 'Paper Supply Co', number: 'B-77', date: '2026-06-21', dueDate: '2026-07-21', amountCents: 7500, status: 'open' });
     await db.collection('invoices').doc(`${other}_inv`).set({ workspaceId: other, customerId: 'x', number: 'X-1', date: '2026-06-01', status: 'sent', amountCents: 100 });
 
     const app = express();
@@ -55,7 +60,7 @@ describe('Document PDF downloads', { skip: !url && 'LF_TEST_DATABASE_URL not set
 
   after(async () => {
     server?.close();
-    for (const table of ['invoices', 'estimates', 'customers', 'workspaces']) {
+    for (const table of ['invoices', 'estimates', 'purchaseOrders', 'bills', 'customers', 'workspaces']) {
       await db.pool.query(`delete from public."${table}" where workspace_id = any($1) or id = any($1)`, [[ws, other]]);
     }
     await db.terminate();
@@ -85,6 +90,20 @@ describe('Document PDF downloads', { skip: !url && 'LF_TEST_DATABASE_URL not set
     assert.equal(res.status, 200);
     const pdf = pdfText(Buffer.from(await res.arrayBuffer()));
     assert.match(pdf, /2026-06-01 Invoice INV-0007/);
+  });
+
+  test('a purchase order prints for the vendor: number, delivery date, lines (BA-08)', async () => {
+    const res = await download('owner-1', 'purchaseOrder', id('po'));
+    assert.equal(res.status, 200, await res.clone().text());
+    const pdf = pdfText(Buffer.from(await res.arrayBuffer()));
+    for (const text of [/PURCHASE ORDER/, /PO-0042/, /ORDERED FROM/, /Paper Supply Co/, /Deliver by/, /2026-06-20/, /A4 paper boxes/, /USD 75\.00/]) assert.match(pdf, text);
+  });
+
+  test('a bill prints as a record', async () => {
+    const res = await download('view-1', 'bill', id('bill'));
+    assert.equal(res.status, 200);
+    const pdf = pdfText(Buffer.from(await res.arrayBuffer()));
+    for (const text of [/BILL/, /B-77/, /Due/, /2026-07-21/]) assert.match(pdf, text);
   });
 
   test("another workspace's document answers like a missing one; strangers are refused", async () => {

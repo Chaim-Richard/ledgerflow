@@ -5,7 +5,9 @@ import InlineAdd from '../ui/InlineAdd';
 import { suggestionsFrom } from '../../lib/inlineEdit';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
-import { ShoppingBag, Plus, Search, Trash2, CheckCircle, AlertCircle, DollarSign, Ban, Download, Pencil } from 'lucide-react';
+import { ShoppingBag, Plus, Search, Trash2, CheckCircle, AlertCircle, DollarSign, Ban, Download, Pencil, Printer } from 'lucide-react';
+import PdfPreviewModal from '../ui/PdfPreviewModal';
+import { useAuthStore } from '../../stores/useAuthStore';
 import type { Bill, Vendor } from '../../types';
 import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 import { formatCurrency, safeConfirm } from '../../lib/utils';
@@ -37,6 +39,8 @@ export default function Purchases() {
 
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<Partial<Bill> | undefined>(undefined);
+  const [previewBill, setPreviewBill] = useState<Bill | null>(null);
+  const pdfWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   // A record link (#purchases/bill/<id>, e.g. from Data Health) shows and highlights the bill
   const focusedBillId = useRecordFocus('bill', { ready: bills.length > 0, onFocus: () => { setActiveSubTab('bills'); setSelectedVendorId(null); setSearchTerm(''); } });
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
@@ -243,6 +247,10 @@ export default function Purchases() {
                         {formatCurrency(b.amountCents || 0)}
                       </td>
                       <td className="p-4 text-right flex items-center justify-end gap-2">
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewBill(b); }}
+                          className="p-1 text-[var(--muted)] hover:text-slate-800 rounded-lg" title="Preview / download PDF" aria-label={`PDF of bill ${b.number || ''}`.trim()}>
+                          <Printer className="w-4 h-4" aria-hidden="true" />
+                        </button>
                         {b.status !== 'void' && (
                           <button
                             type="button"
@@ -395,6 +403,10 @@ export default function Purchases() {
           defaultDocumentId={paymentDocumentId}
           defaultContactId={paymentContactId}
         />
+      )}
+      {previewBill && pdfWorkspaceId && (
+        <PdfPreviewModal isOpen onClose={() => setPreviewBill(null)} title={`Bill ${previewBill.number || previewBill.id}`}
+          documentType="bill" documentId={previewBill.id} workspaceId={pdfWorkspaceId} filename={`bill_${previewBill.number || previewBill.id}.pdf`} />
       )}
     </div>
   );

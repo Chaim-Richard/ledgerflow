@@ -293,6 +293,7 @@ export default function CreditNotesView() {
                           <div className="flex items-center justify-end gap-1.5">
                             <button type="button" onClick={() => setCreditAction({ kind: 'vendor', mode: 'apply', id: vc.id, number: vc.number, partyId: vc.vendorId, partyName: vc.vendorName, remainingCents: vc.remainingCents, currency: vc.currency })} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">Apply</button>
                             <button type="button" onClick={() => setCreditAction({ kind: 'vendor', mode: 'refund', id: vc.id, number: vc.number, partyId: vc.vendorId, partyName: vc.vendorName, remainingCents: vc.remainingCents, currency: vc.currency })} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">Refund</button>
+                            <button type="button" onClick={() => setPreviewCreditNote({ ...vc, pdfKind: 'vendorCredit' })} aria-label={`PDF of vendor credit ${vc.number || ''}`.trim()} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">PDF</button>
                           </div>
                         )}
                       </td>
@@ -414,11 +415,11 @@ export default function CreditNotesView() {
         <PdfPreviewModal
           isOpen={!!previewCreditNote}
           onClose={() => setPreviewCreditNote(null)}
-          title={`Credit Note ${previewCreditNote.number || previewCreditNote.id}`}
-          documentType="creditNote"
+          title={`${previewCreditNote.pdfKind === 'vendorCredit' ? 'Vendor Credit' : 'Credit Note'} ${previewCreditNote.number || previewCreditNote.id}`}
+          documentType={previewCreditNote.pdfKind === 'vendorCredit' ? 'vendorCredit' : 'creditNote'}
           documentId={previewCreditNote.id}
           workspaceId={currentWorkspaceId || 'default'}
-          filename={`credit_note_${previewCreditNote.number || previewCreditNote.id}.pdf`}
+          filename={`${previewCreditNote.pdfKind === 'vendorCredit' ? 'vendor_credit' : 'credit_note'}_${previewCreditNote.number || previewCreditNote.id}.pdf`}
         />
       )}
     </div>
