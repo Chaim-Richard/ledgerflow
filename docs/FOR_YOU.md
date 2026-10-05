@@ -113,6 +113,13 @@ Last updated: 2026-10-05.
     BE-04 (big invoices wait for approval) are on main, with the two fixes Claude made after
     reviewing it (L-191). BE-05 is left blocked with its reason; R-07 is its next item.
 
+22. **One database change to paste (5 Oct, L-191).** `supabase/migrations/20261008000000_invoice_approval_guard.sql`
+    timed out twice through the connector (creating a trigger on the invoices table waits for it to be
+    free). Paste the whole file into Supabase → SQL editor → Run; running it twice is safe. Until then,
+    the server already refuses approvals from bookkeepers on every normal save; only a direct database
+    write around the app is not yet blocked. The two other changes from today (delivery method,
+    approval rule) are applied.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of
