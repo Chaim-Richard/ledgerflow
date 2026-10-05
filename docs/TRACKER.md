@@ -24,7 +24,8 @@ then the checks: `npx tsc --noEmit -p tsconfig.json`, `LF_TEST_DATABASE_URL=... 
 # NOW — working straight on `main` (2026-09-24, late)
 
 **How we work now (your rule, in CLAUDE.md):** Claude commits and pushes directly to `main`.
-No feature branches, no pull requests. CI runs on every push to `main`. **Vercel deploys by
+No feature branches, no pull requests. GitHub CI runs weekly and by hand only (5 Oct: Actions
+minutes); Claude and Codex run all checks locally before pushing. **Vercel deploys by
 itself from GitHub about a minute after each push** (connected 2026-09-25) — Claude no longer
 deploys by hand; database migrations are still applied to Supabase by Claude.
 

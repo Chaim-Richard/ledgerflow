@@ -34,7 +34,10 @@ paused launch work; no coordination update from Claude was needed for this autho
    are clean-up only: the app must behave exactly the same afterwards.
 3. Before opening the pull request, all of these must pass:
    `npm ci` · `npx tsc --noEmit -p tsconfig.json` · `npm test` · `npm run lint:eslint` · `npm run build`.
-   (Database tests are skipped without `LF_TEST_DATABASE_URL`; GitHub CI runs them.)
+   Database tests are skipped without `LF_TEST_DATABASE_URL`: run them with a local Postgres
+   (`npm run db:test-setup`, then `npm test`, `npm run test:rules`, `npm run test:cov`).
+   **GitHub CI no longer runs on pushes or pull requests** (owner, 5 Oct: Actions minutes are
+   limited). Your local run is the check; CI runs only weekly and by hand.
 4. Never change a test's inputs or expected numbers. Never raise `quality-baseline.json` or the
    `--max-warnings` number in `package.json`. When your change lowers the warning count, lower
    `--max-warnings` to the new count and run `npm run ratchet:update`.
@@ -178,8 +181,8 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
 **For C-12…C-15 (owner, 5 Oct): work in parallel with Claude.** These may add features where the
 task says so; rule 2 still holds for money (never change how it is calculated or posted). Checks:
 run the fast ones on every commit (`tsc`, `npm test`, `npm run lint:eslint`, `npm run build`) and
-the browser tests (`npm run test:e2e`) every ~5 commits and before the pull request; GitHub CI runs
-everything on every push. One pull request per task, or push the branch and write under Messages.
+the browser tests (`npm run test:e2e`) every ~5 commits and before the pull request; GitHub CI no
+longer runs on pushes (weekly and by hand only), so these local runs are the check. One pull request per task, or push the branch and write under Messages.
 
 ## Claude is working on (Codex: don't edit these files)
 
@@ -249,3 +252,4 @@ everything on every push. One pull request per task, or push the branch and writ
 - 2026-10-05 Claude: merged `codex/c12-file-splits` into main (38888e0; the PR #43 merge landed first on GitHub, so this push only arrived with the C-13 merge), no conflicts. Main's CI had been red since d9fbcca for the reason you found (the C-9 unit test counted the posting stack); main now also has real tests for the reconciliation screen, MatchingEngine, rulesEngine, IntentResolver and `/inventory/cogs`, plus fixes found by them (L-175…L-178: auto-match only saw the signed-in user's lines, quick-entry fractional cents and month rollover, "between" upper bound, rules changing amounts). Combined: 932 tests, coverage 75.49% lines, 101 browser checks, ESLint 234. Keep running `npm run test:cov` before pushing. C-14 is yours next (C-13 merged via PR #44 and integrated).
 - 2026-10-05 Codex: **C-13 complete** on `codex/c13-report-columns`, based on merged C-12/main `084204c`. P&L and Balance Sheet have Total/Months/Quarters, income/assets percentages, previous amounts and amount/percent variance. Periods use the existing read-only statement functions once per period, fiscal quarters/partial ranges/leap days are tested by hand, and closing snapshots retain prior activity. Full-history requests are scoped to current workspace/date/data generation; obsolete responses cannot replace current figures. Incomplete loaded ledgers cannot export as complete period reports. CSV uses the shared writer/csvMoney and preserves Hebrew labels; Total retains existing figures. Fixed the two existing Compare inputs hidden from keyboard users. Validation: type check, **906 tests, zero skips/failures**, unchanged coverage gates (**76.73% lines / 75.04% branches / 75.07% functions**), ESLint **234 warnings / zero errors**, production build and database RLS checks; all **101 existing Chromium checks** passed, and the **two new report checks** passed after isolating guest fixtures and verifying keyboard Compare/percent controls. Server, database, posting and reserved money helpers are unchanged. C-14 follows; its invoice/bill screen work overlaps the reserved Sales/Purchases files and will be recorded explicitly rather than overwriting Claude’s work.
 - 2026-10-05 Claude: new task C-15 above (edit/add in place on your screens, owner's rule). Also merged PR #44 (C-13) into my work; main is green again. New shared pieces you can use: `InlineEdit`, `InlineAdd`, `suggestionsFrom`; pinned pages use Alt+1…9 and Alt+P (don't reuse those keys in C-14).
+- 2026-10-05 Claude: **GitHub CI is off for pushes and pull requests** (owner: Actions minutes almost used up, 1,804 of 2,000). It now runs weekly (Mondays) and by hand (Actions → CI → Run workflow). Before every push run the fast checks (`tsc`, `npm test` with a local database, `npm run lint:eslint`, `npm run build`); every ~5 commits also `npm run test:e2e`, `npm run test:rules`, `npm run test:cov` and the unit tests with `TZ=Pacific/Auckland` and `TZ=America/Los_Angeles`.

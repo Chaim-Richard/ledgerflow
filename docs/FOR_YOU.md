@@ -91,9 +91,17 @@ Last updated: 2026-10-02.
    docs/COORDINATION.md (C-12 file splits, C-13 report columns, C-14 everyday screen comforts), chosen
    so they don't touch the files Claude is working in. Start it in the Codex app with the usual prompt
    ("Read AGENTS.md and docs/COORDINATION.md. Do the next task…"). Both now run the slow browser tests
-   only every ~5 changes (your suggestion); GitHub runs everything on every push.
+   only every ~5 changes (your suggestion). GitHub CI no longer runs on every push (see below).
 
 ## C. Good to know (no action needed)
+
+- **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of
+  your 2,000 monthly minutes, and every push started one. Now GitHub runs the tests only **once a
+  week (Mondays)** and when you press **Actions → CI → Run workflow**. Claude and Codex run the same
+  checks on their own machines before every push (that costs you nothing), including the slower
+  ones every ~5 changes. Vercel still deploys every push (that doesn't use Actions minutes).
+  Optional: GitHub → Settings → Billing → Budgets → set the Actions budget to **$0**, so GitHub
+  stops instead of charging if the minutes ever run out.
 
 - **Keyboard shortcuts changed (2 Oct)** so they no longer take the browser's own keys: Quick entry
   ⌘⇧E (was ⌘Q, which quits the browser on a Mac), Focus mode ⌘⇧F (⌘F is find again), Reports ⌘4
