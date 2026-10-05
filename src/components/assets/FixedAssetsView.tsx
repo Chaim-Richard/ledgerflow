@@ -1,3 +1,4 @@
+import { AssetInlineDetails } from './AssetInlineDetails';
 import React, { useMemo, useState } from 'react';
 import { Building, Check, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -175,7 +176,7 @@ export const FixedAssetsView: React.FC = () => {
               {list.map(asset => (
                 <tr key={asset.id}>
                   <td className="py-3 px-4 font-semibold">
-                    {asset.name}
+                    <AssetInlineDetails asset={asset} />
                     <div className="text-[11px] text-[var(--muted)] font-normal">{asset.depreciationMethod === 'declining-balance' ? 'Declining balance' : 'Straight line'}{asset.status === 'disposed' ? ' · disposed' : ''}</div>
                   </td>
                   <td className="py-3 px-4 font-mono">{formatDate(asset.purchaseDate)}</td>

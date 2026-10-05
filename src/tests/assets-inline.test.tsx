@@ -1,0 +1,19 @@
+import './helpers/dom';
+import test, { afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { AssetInlineDetails } from '../components/assets/AssetInlineDetails';
+import { setComponentWorkspace } from './helpers/componentFixtures';
+import { useLedgerStore } from '../stores/useLedgerStore';
+import type { FixedAsset } from '../types';
+const asset: FixedAsset & { location: string; category: string } = { id: 'a', uid: 'test-user', workspaceId: 'component-workspace', name: 'ציוד', location: 'Office', category: 'Equipment', purchaseDate: '2026-01-01', purchasePriceCents: 500000, salvageValueCents: 0, usefulLifeYears: 5, depreciationMethod: 'straight-line', accumulatedDepreciationCents: 20000, status: 'active', createdAt: '2026-01-01' };
+afterEach(cleanup);
+test('asset metadata exposes direct edits and suggestions without editing its depreciation inputs', () => {
+  setComponentWorkspace(); useLedgerStore.setState({ assets: [asset] }); render(<AssetInlineDetails asset={asset} />);
+  for (const field of ['Name', 'Location', 'Category']) assert.ok(screen.getByRole('button', { name: `Edit ${field} of ציוד` }));
+  fireEvent.click(screen.getByRole('button', { name: 'Edit Location of ציוד' })); assert.ok(screen.getByLabelText('Location of ציוד').getAttribute('list'));
+  assert.equal(screen.queryByRole('button', { name: /Cost|Depreciation/ }), null);
+  assert.equal(useLedgerStore.getState().assets[0].purchasePriceCents, 500000);
+  cleanup(); setComponentWorkspace('viewer'); render(<AssetInlineDetails asset={asset} />); assert.equal(screen.queryByRole('button', { name: /^Edit/ }), null); assert.ok(screen.getByText('Office'));
+});
