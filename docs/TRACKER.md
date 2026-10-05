@@ -1414,7 +1414,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] F-10 `types.ts` split by domain: `src/model/` ledger, documents, workspace, operations; `src/types.ts` re-exports them, so `import ... from "../types"` is unchanged
 - [x] F-11 `LedgerPostService.ts` 1,097 → 27 lines: one file per document type in `src/services/ledgerPost/` (invoice, bill, credits, payment, delete) plus `postingKit.ts` (lookups, lock check, the one server call); `LedgerPostService.*` names unchanged
 - [x] F-12 `Reconciliation.tsx`
-- [ ] F-13 `BalanceSheetView.tsx`
+- [x] F-13 `BalanceSheetView.tsx` — report rendering extracted into `BalanceSheetReport.tsx`; calculations and controller statements preserved (Codex)
 - [ ] F-14 `TransactionEditModal.tsx`
 - [ ] F-15 `QBOMigrationWizard.tsx`
 - [ ] F-16 `Inventory.tsx`

@@ -20,9 +20,9 @@ test('data grid paginates, sorts and finds mixed-language rows', () => {
   fireEvent.click(view.getByRole('button', { name: 'Next page' }));
   assert.ok(view.getByText('Alpha'));
   fireEvent.click(view.getByRole('button', { name: 'First page' }));
-  fireEvent.click(view.getByRole('columnheader', { name: 'Amount' }));
+  fireEvent.click(view.getByRole('button', { name: 'Amount' }));
   assert.equal(view.getByRole('columnheader', { name: 'Amount' }).getAttribute('aria-sort'), 'descending');
-  fireEvent.click(view.getByRole('columnheader', { name: 'Amount' }));
+  fireEvent.click(view.getByRole('button', { name: 'Amount' }));
   assert.equal(view.getByRole('columnheader', { name: 'Amount' }).getAttribute('aria-sort'), 'ascending');
   fireEvent.change(view.getByRole('textbox', { name: 'Search records...' }), { target: { value: 'ירושלים' } });
   assert.ok(view.getByText('ירושלים Project'));
