@@ -55,7 +55,7 @@ describe('The expected bills panel', () => {
     stubFetchWithBodies(200, {});
     const recorded: string[] = [];
     const dismissed: string[] = [];
-    const late = bills.map(b => (b.vendorId === 'phone' ? { ...b, date: b.date.replace('2026-', '2025-') } : b));
+    const late = bills.map(b => (b.vendorId === 'phone' ? { ...b, date: (b.date || '').replace('2026-', '2025-') } : b));
     render(<ExpectedBills bills={late} vendors={vendors} schedules={[] as RecurringTransaction[]} canEdit
       onRecord={e => recorded.push(e.lastBillId)} onDismiss={e => dismissed.push(e.vendorId)} />);
     assert.ok(screen.getByRole('heading', { name: 'Expected bills' }));
@@ -69,7 +69,7 @@ describe('The expected bills panel', () => {
     const { container } = render(<ExpectedBills bills={[]} vendors={vendors} schedules={[]} canEdit onRecord={() => {}} onDismiss={() => {}} />);
     assert.equal(container.textContent, '');
     cleanup();
-    const late = bills.map(b => ({ ...b, date: b.date.replace('2026-', '2025-') }));
+    const late = bills.map(b => ({ ...b, date: (b.date || '').replace('2026-', '2025-') }));
     render(<ExpectedBills bills={late} vendors={vendors} schedules={[]} canEdit={false} onRecord={() => {}} onDismiss={() => {}} />);
     assert.ok(screen.getByText('Phone Co'));
     assert.equal(screen.queryByRole('button'), null);
