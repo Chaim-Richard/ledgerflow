@@ -2038,7 +2038,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BA-02 Vendor opening balance
 - [ ] BA-03 Allocate landed cost
 - [x] BA-04 Inventory adjustment form (= K-13)
-- [ ] BA-05 Item category management
+- [x] BA-05 Item category management: rename, merge or remove a category on all its items at once (Inventory → Manage categories; tested)
 - [ ] BA-06 Add-a-currency dialog
 - [ ] BA-07 Numbering dialog per document type
 - [ ] BA-08 PDF preview per document type
