@@ -1450,12 +1450,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] H-02 BillModal (component test: tax included/excluded, approval limit, edit keeps number)
 - [x] H-03 ReceivePaymentModal (component test: open documents only, oldest first, amounts sent, refusal)
 - [x] H-04 WriteOffModal (component test: amount still owed, bad debt account, refusal)
-- [x] H-05 CustomerDetailView (party-detail-views.test.tsx; found L-162); additional Codex mixed-language/component coverage
-- [x] H-06 VendorDetailView (party-detail-views.test.tsx); additional Codex mixed-language/component coverage
-- [x] H-07 TaxLiabilityView (tax-liability-view.test.tsx: boxes, who can file, the request, changes since filing); additional Codex mixed-language/component coverage
-- [x] H-08 StatementView (statement-view.test.tsx, statement-credits.test.ts; found L-160); additional Codex mixed-language/component coverage
-- [x] H-09 ARAgingReportView (aging-views.test.tsx; found L-159); additional Codex mixed-language/component coverage
-- [x] H-10 APAgingReportView (aging-views.test.tsx); additional Codex mixed-language/component coverage
+- [x] H-05 CustomerDetailView (party-detail-views.test.tsx; found L-162)
+- [x] H-06 VendorDetailView (party-detail-views.test.tsx)
+- [x] H-07 TaxLiabilityView (tax-liability-view.test.tsx: boxes, who can file, the request, changes since filing)
+- [x] H-08 StatementView (statement-view.test.tsx, statement-credits.test.ts; found L-160)
+- [x] H-09 ARAgingReportView (aging-views.test.tsx; found L-159)
+- [x] H-10 APAgingReportView (aging-views.test.tsx)
 - [x] H-11 ExpenseByCategoryReportView (report-views.test.tsx)
 - [x] H-12 IncomeBySourceReportView (report-views.test.tsx; found L-158)
 - [x] H-13 AverageMonthlyReportView (report-views.test.tsx)
@@ -1731,6 +1731,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-169 The server's tax liability report (`/api/v1/reports/tax-liability`) added foreign invoices' and bills' tax in their own currency; now in the home currency. Data Health called balanced foreign entries "unbalanced" because of per-line rounding (same as L-164), and its findings showed raw cents ("1250 cents"); now money (tested)
 - [x] L-170 Document PDFs printed only the first 15 lines (the total still covered all of them), on one page, and only Latin letters (Hebrew names came out as garbage). PDFs are now made with pdfkit and an embedded font (DejaVu Sans): every line over as many pages as needed, Hebrew and mixed Hebrew/English text in reading order, the due date and payment terms printed (tested, including the text read back from the PDF)
 - [x] L-171 Customers and vendors could not be edited at all (the forms only added), so a wrong email or name could not be fixed; one shared form now adds and edits (Edit on the contact page). Bills had no currency field, so a bill from a foreign supplier could only be entered in the home currency (tested)
+- [x] L-172 **SECURITY** `/api/v1/inventory/adjust` and `/cogs` only checked membership: a viewer could post stock entries and change quantities. Both now need owner, accountant or bookkeeper; `/adjust` also hung (no answer) when its database transaction failed, and both labelled entries USD in any workspace. Stock changes now go through one service: every line in one entry with the new quantities, in the workspace currency, never below zero (tested)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION

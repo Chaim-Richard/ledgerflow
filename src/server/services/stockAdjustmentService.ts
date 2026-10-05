@@ -1,0 +1,130 @@
+import Decimal from 'decimal.js';
+import { FieldValue } from '../db/firestore';
+import type { Firestore } from '../db/firestore';
+import { assertPeriodOpen, validateWorkspaceAccounts } from '../db/firestore';
+import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
+import type { ValidationContext } from '../../kernel/validation/TransactionValidator';
+
+type WorkspaceData = ValidationContext['wsData'] & { currency?: string };
+
+/**
+ * Changing stock with the books (K-13 BA-04 W-04 W-05): every change of an item's quantity on hand
+ * posts the same value to the Inventory account against an offset account (a variance / shrinkage
+ * expense for losses and counts, equity for opening stock, cash or payables for a purchase), and
+ * both are written in one database transaction. A stock count adjusts many items in one entry.
+ * Quantities never go below zero; values are in the workspace currency at each item's cost.
+ */
+
+export class StockAdjustmentError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = 'StockAdjustmentError';
+  }
+}
+
+export interface StockChange {
+  itemId: string;
+  /** Units added (positive) or removed (negative); for a count, computed from the counted quantity. */
+  quantityChange?: number;
+  /** Count only: the quantity found. */
+  counted?: number;
+  /** Cost per unit for added stock (a purchase); otherwise the item's own cost. */
+  unitCostCents?: number;
+}
+
+export interface StockAdjustmentInput {
+  workspaceId: string;
+  user: { uid: string; admin?: boolean };
+  wsData: WorkspaceData;
+  date: string;
+  inventoryAccountId: string;
+  offsetAccountId: string;
+  /** purchase recalculates the average cost; opening, adjustment and count keep it. */
+  kind: 'purchase' | 'opening' | 'adjustment' | 'count';
+  reason?: string;
+  changes: StockChange[];
+}
+
+export interface StockAdjustmentResult {
+  transactionId: string | null;
+  valueCents: number;
+  items: Array<{ itemId: string; name: string; before: number; after: number; valueCents: number; unitCostCents: number }>;
+}
+
+const KIND_LABEL = { purchase: 'Stock purchase', opening: 'Opening stock', adjustment: 'Stock adjustment', count: 'Stock count' } as const;
+
+export async function adjustStock(db: Firestore, input: StockAdjustmentInput): Promise<StockAdjustmentResult> {
+  const { workspaceId, date, kind } = input;
+  if (input.inventoryAccountId === input.offsetAccountId) throw new StockAdjustmentError(400, 'Choose an offset account other than the Inventory account');
+  await assertPeriodOpen(db, workspaceId, date, input.user.uid);
+  const accounts = await validateWorkspaceAccounts(db, workspaceId, [input.inventoryAccountId, input.offsetAccountId]);
+  const inventoryAcc = accounts.get(input.inventoryAccountId);
+  const offsetAcc = accounts.get(input.offsetAccountId);
+  if (!inventoryAcc || !offsetAcc) throw new StockAdjustmentError(400, 'Choose accounts from this workspace');
+  const currency = String(input.wsData?.currency || 'USD');
+
+  return db.runTransaction(async t => {
+    const refs = input.changes.map(c => db.collection('inventory').doc(c.itemId));
+    const snaps = await Promise.all(refs.map(r => t.get(r)));
+    const moves: StockAdjustmentResult['items'] = [];
+    const updates: Array<{ ref: typeof refs[number]; data: Record<string, unknown> }> = [];
+
+    input.changes.forEach((change, i) => {
+      const snap = snaps[i];
+      const item = snap.exists ? snap.data() || {} : null;
+      // another workspace's item answers like a missing one
+      if (!item || item.workspaceId !== workspaceId) throw new StockAdjustmentError(404, `Item ${change.itemId} not found`);
+      const before = new Decimal(Number(item.quantityAtHand) || 0);
+      const delta = kind === 'count' ? new Decimal(Number(change.counted)).minus(before) : new Decimal(Number(change.quantityChange) || 0);
+      if (delta.isZero()) return;
+      const after = before.plus(delta);
+      if (after.lt(0)) throw new StockAdjustmentError(400, `${item.name || change.itemId}: only ${before.toNumber()} on hand, cannot remove ${delta.abs().toNumber()}`);
+      const itemCost = new Decimal(Number(item.unitCostCents) || 0);
+      const unitCost = kind === 'purchase' && change.unitCostCents !== undefined ? new Decimal(change.unitCostCents) : itemCost;
+      if (unitCost.lte(0) && kind !== 'count') throw new StockAdjustmentError(400, `${item.name || change.itemId} has no cost; set its unit cost first`);
+      const valueCents = delta.mul(unitCost).round().toNumber();
+      const data: Record<string, unknown> = { quantityAtHand: after.toNumber(), updatedAt: FieldValue.serverTimestamp() };
+      if (kind === 'purchase' && delta.gt(0)) {
+        // weighted average cost of what is on hand after the purchase
+        const average = before.mul(itemCost).plus(delta.mul(unitCost)).div(after).round().toNumber();
+        data.unitCostCents = average;
+      }
+      moves.push({ itemId: change.itemId, name: String(item.name || change.itemId), before: before.toNumber(), after: after.toNumber(), valueCents, unitCostCents: unitCost.toNumber() });
+      updates.push({ ref: refs[i], data });
+    });
+
+    if (moves.length === 0) throw new StockAdjustmentError(400, 'Nothing to change: the quantities are already right');
+    const valueCents = moves.reduce((s, m) => s + m.valueCents, 0);
+    let transactionId: string | null = null;
+
+    if (moves.some(m => m.valueCents !== 0)) {
+      const label = KIND_LABEL[kind];
+      const lines = moves.filter(m => m.valueCents !== 0).map((m, n) => ({
+        id: `line-${n + 1}`,
+        accountId: inventoryAcc.id,
+        accountName: inventoryAcc.name,
+        amountCents: m.valueCents,
+        description: `${m.name}: ${m.before} → ${m.after}`,
+      }));
+      lines.push({ id: `line-${lines.length + 1}`, accountId: offsetAcc.id, accountName: offsetAcc.name, amountCents: -valueCents, description: input.reason ? `${label}: ${input.reason}` : label });
+      const tx = await TransactionValidator.validateAndPrepare({
+        id: db.collection('transactions').doc().id,
+        workspaceId,
+        uid: input.user.uid,
+        date,
+        description: moves.length === 1 ? `${label}: ${moves[0].name} (${moves[0].after - moves[0].before > 0 ? '+' : ''}${moves[0].after - moves[0].before})` : `${label}: ${moves.length} items`,
+        totalAmountCents: Math.abs(valueCents),
+        currency,
+        type: 'journal',
+        status: 'approved',
+        createdAt: new Date().toISOString(),
+        metadata: { type: `stock-${kind}`, reason: input.reason || null, items: moves.map(m => ({ itemId: m.itemId, before: m.before, after: m.after })) },
+        lines,
+      }, { workspaceId, user: input.user, wsData: input.wsData }, undefined, t);
+      transactionId = tx.id;
+      t.set(db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    }
+    for (const u of updates) t.update(u.ref, u.data);
+    return { transactionId, valueCents, items: moves };
+  });
+}

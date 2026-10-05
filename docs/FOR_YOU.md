@@ -86,9 +86,12 @@ Last updated: 2026-10-02.
    them one by one takes weeks. *Default: Claude finishes the QUALITY items, then builds the LATER
    items most small businesses use daily (data checks, everyday reports, invoice extras) and leaves
    the niche ones until a customer asks.* Say "do them all" or name the ones you want first.
-18. **Go faster: start Codex again** (its app, this repository). It has 6 tasks waiting in
-   docs/COORDINATION.md (C-6…C-11). *Default: Claude keeps going alone.* Optional: say "use helpers"
-   and Claude runs 2–3 extra workers in parallel (faster, but uses your Claude usage faster).
+18. **Go faster: run Codex alongside Claude (updated 5 Oct).** Codex's last branch (C-9 file splits,
+   C-10 tests, Hebrew data) is merged into main. Three new tasks are waiting for it in
+   docs/COORDINATION.md (C-12 file splits, C-13 report columns, C-14 everyday screen comforts), chosen
+   so they don't touch the files Claude is working in. Start it in the Codex app with the usual prompt
+   ("Read AGENTS.md and docs/COORDINATION.md. Do the next task…"). Both now run the slow browser tests
+   only every ~5 changes (your suggestion); GitHub runs everything on every push.
 
 ## C. Good to know (no action needed)
 

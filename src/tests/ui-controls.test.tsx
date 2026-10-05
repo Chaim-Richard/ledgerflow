@@ -2,7 +2,7 @@ import './helpers/dom';
 import test, { afterEach, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
-import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, waitFor, within } from '@testing-library/react';
 import { TanStackDataGrid } from '../components/ui/TanStackDataGrid';
 import AsyncButton from '../components/ui/AsyncButton';
 import { ConfirmButton } from '../components/ui/ConfirmButton';
@@ -20,9 +20,11 @@ test('data grid paginates, sorts and finds mixed-language rows', () => {
   fireEvent.click(view.getByRole('button', { name: 'Next page' }));
   assert.ok(view.getByText('Alpha'));
   fireEvent.click(view.getByRole('button', { name: 'First page' }));
-  fireEvent.click(view.getByRole('button', { name: 'Amount' }));
+  // sorting is the button inside the header (reachable with the keyboard)
+  const sortAmount = () => fireEvent.click(within(view.getByRole('columnheader', { name: 'Amount' })).getByRole('button'));
+  sortAmount();
   assert.equal(view.getByRole('columnheader', { name: 'Amount' }).getAttribute('aria-sort'), 'descending');
-  fireEvent.click(view.getByRole('button', { name: 'Amount' }));
+  sortAmount();
   assert.equal(view.getByRole('columnheader', { name: 'Amount' }).getAttribute('aria-sort'), 'ascending');
   fireEvent.change(view.getByRole('textbox', { name: 'Search records...' }), { target: { value: 'ירושלים' } });
   assert.ok(view.getByText('ירושלים Project'));
