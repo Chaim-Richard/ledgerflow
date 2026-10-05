@@ -1799,9 +1799,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [x] N-01 Compare previous period (calendar-aware; P&L, Balance Sheet, Cash Flow)
 - [x] N-02 Compare same period last year
-- [ ] N-03 Period columns
-- [ ] N-04 % of total
-- [ ] N-05 Variance column
+- [x] N-03 Period columns — P&L activity and balance-sheet closing snapshots, fiscal quarters/months and clipped ranges (C-13; hand-number/component/browser tests)
+- [x] N-04 % of total — income on P&L, total assets on balance sheet; zero denominator shown as undefined (C-13)
+- [x] N-05 Variance column — comparative amount and percentage, zero/negative previous amounts handled; shared CSV export (C-13)
 - [x] N-06 Print / Save as PDF on every report (only the report prints, with title + period)
 - [ ] N-07 Presentation currency
 - [ ] N-08 Cash vs accrual everywhere
