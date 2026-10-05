@@ -1,6 +1,7 @@
 import { useDialog } from '../../hooks/useDialog';
 import { useSuggestedRate } from '../../hooks/useSuggestedRate';
 import { documentCurrencies } from '../../lib/exchangeRates';
+import { latestDocumentFor } from '../../lib/repeatDocument';
 import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -109,6 +110,20 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   const pricesIncludeTax = bill.pricesIncludeTax ?? true;
   const totals = documentTotals(total, 0, taxCode, pricesIncludeTax);
   const billCurrency = bill.currency || workspaceCurrency;
+  // I-23: a new bill for a vendor can copy the lines of their latest bill (amounts included)
+  const lastForVendor = !editingExisting && bill.vendorId
+    ? latestDocumentFor(storeBills, b => b.vendorId === bill.vendorId, b => b.splits) : null;
+  // (picking the vendor may already fill the first line's account and description, not its amount)
+  const splitsEmpty = splits.every(sp => !sp.amountCents);
+  const repeatLast = () => {
+    if (!lastForVendor?.splits) return;
+    setSplits(lastForVendor.splits.map(sp => ({ id: crypto.randomUUID(), amountCents: sp.amountCents, accountId: sp.accountId || '', description: sp.description || '' })));
+    setBill(prev => ({
+      ...prev,
+      ...(lastForVendor.taxCodeId ? { taxCodeId: lastForVendor.taxCodeId } : {}),
+      ...(lastForVendor.pricesIncludeTax !== undefined ? { pricesIncludeTax: lastForVendor.pricesIncludeTax } : {}),
+    }));
+  };
   // the rate fills itself in for another currency until the person types one (BA-06, I-23)
   const [rateTyped, setRateTyped] = useState(false);
   const rateNote = useSuggestedRate({
@@ -406,6 +421,12 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="micro-label">Expense Allocation</h3>
+              {lastForVendor && splitsEmpty && (
+                <button type="button" onClick={repeatLast}
+                  className="ml-auto mr-2 px-3 py-2 rounded-xl text-[10px] font-semibold uppercase tracking-wider border border-[var(--line)] text-[var(--text)] hover:border-[var(--brass-line)]">
+                  Same as last bill ({lastForVendor.splits?.length} line{lastForVendor.splits?.length === 1 ? '' : 's'})
+                </button>
+              )}
               <button 
                 type="button"
                 aria-label="Add Split Expense"

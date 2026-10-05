@@ -1,6 +1,7 @@
 import { useDialog } from '../../hooks/useDialog';
 import { useSuggestedRate } from '../../hooks/useSuggestedRate';
 import { documentCurrencies } from '../../lib/exchangeRates';
+import { latestDocumentFor } from '../../lib/repeatDocument';
 import { calculateDueDate, isFixedTerm, termsForCustomer } from '../../lib/paymentTerms';
 import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
@@ -124,6 +125,21 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     currency, homeCurrency: workspaceCurrency, enabled: !editingExisting && !rateTyped, docs: pastInvoices,
     onRate: rate => setInvoice(prev => ({ ...prev, exchangeRate: rate })),
   });
+  // I-23: a new invoice for a customer can copy the lines of their latest invoice
+  const lastForCustomer = !editingExisting && invoice.customerId
+    ? latestDocumentFor(pastInvoices, d => d.customerId === invoice.customerId, d => d.items) : null;
+  const linesEmpty = items.every(i => !i.description.trim() && !i.amountCents && !i.itemId);
+  const repeatLast = () => {
+    if (!lastForCustomer?.items) return;
+    setItems(lastForCustomer.items.map(i => ({ ...i, id: crypto.randomUUID() })));
+    setInvoice(prev => ({
+      ...prev,
+      ...(lastForCustomer.taxCodeId ? { taxCodeId: lastForCustomer.taxCodeId } : {}),
+      ...(lastForCustomer.pricesIncludeTax !== undefined ? { pricesIncludeTax: lastForCustomer.pricesIncludeTax } : {}),
+      ...(lastForCustomer.discountCents ? { discountCents: lastForCustomer.discountCents } : {}),
+    }));
+    setDirty(true);
+  };
   const currencyChoices = useMemo(() => documentCurrencies(workspaceCurrency, currency, [...pastInvoices, ...safeCustomers]), [workspaceCurrency, currency, pastInvoices, safeCustomers]);
   const money = (cents: number) => formatCurrency(cents, currency);
 
@@ -459,6 +475,12 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="micro-label">Line Items</h3>
+              {lastForCustomer && linesEmpty && (
+                <button type="button" onClick={repeatLast}
+                  className="ml-auto mr-2 px-3 py-2 rounded-xl text-[10px] font-semibold uppercase tracking-wider border border-[var(--line)] text-[var(--text)] hover:border-[var(--brass-line)]">
+                  Same as last time ({lastForCustomer.number || 'last invoice'}, {lastForCustomer.items?.length} line{lastForCustomer.items?.length === 1 ? '' : 's'})
+                </button>
+              )}
               <button 
                 type="button"
                 onClick={() => setItems([...items, { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }])}
