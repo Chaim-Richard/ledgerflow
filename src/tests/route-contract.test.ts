@@ -70,7 +70,8 @@ describe('Route Contract Guard Suite (§0c Route Contract)', () => {
       '/api/v1/plaid',
       '/api/v1/math',
       '/api/v1/system',
-      '/api/v1/public/status'
+      '/api/v1/public/status',
+      '/api/v1/schedule' // Settings → Schedule (BB-06), mounted with the status router
     ];
 
     const missingRoutes: string[] = [];

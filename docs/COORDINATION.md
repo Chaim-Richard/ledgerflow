@@ -261,10 +261,11 @@ number in a test is checked by hand. Tick the tracker items as they land.
 | Launch #8 data-health checks and record links (done 2026-09-30) | `src/lib/dataChecks.ts`, `src/lib/recordLinks.ts`, `src/hooks/useRecordFocus.ts`, `src/stores/useUIStore.ts`, `src/components/system/DataHealthView.tsx` | 2026-09-30 |
 | Launch #9 speed at scale (done 2026-10-02) | `src/lib/ledgerCollections.ts`, `src/hooks/useLedgerCollections.ts`, `src/hooks/useLedgerData.ts`, `src/lib/db/firestore.ts`, `src/lib/db/liveQuery.ts`, `src/stores/useDataNeedsStore.ts` | 2026-10-02 |
 | LATER items, Claude's lane (5 Oct): inventory adjustments and stock counts, then document numbering/preview/emails, contact merge, banking and settings items | `src/components/inventory/`, `src/components/common/Party*.tsx`, `src/components/common/TagFilter.tsx`, `src/lib/contacts.ts`, `src/lib/branding.ts`, `src/components/platform/settings/BrandingSettings.tsx`, `src/components/sales/CustomerDetailView.tsx`, `src/components/purchases/VendorDetailView.tsx`, `src/components/reporting/ContactBalanceSummaryView.tsx`, `InventoryValuationReportView.tsx`, `TransactionsByReferenceView.tsx` | 2026-10-05 |
-| Zero friction (owner, 5 Oct): pinned pages, edit/add in place, suggestions; numbering settings; contact merge (I-21 I-22 I-23 BA-07 Y-23); Y-27 preferred delivery done 5 Oct; done: invoice approval (BE-04, 5 Oct), FX revaluation (R-07, 5 Oct), money in / money out on Banking (BA-17, 5 Oct); next: the schedule screen over job runs (BB-06); deposit invoices from estimates still open, see BE-05 |
+| Zero friction (owner, 5 Oct): pinned pages, edit/add in place, suggestions; numbering settings; contact merge (I-21 I-22 I-23 BA-07 Y-23); Y-27 preferred delivery done 5 Oct; done: invoice approval (BE-04, 5 Oct), FX revaluation (R-07, 5 Oct), money in / money out on Banking (BA-17, 5 Oct); done too: Settings → Schedule over job runs (BB-06, 5 Oct); next: the settings pages still open in my lane (BB-01 categories, BB-03 defaults); deposit invoices from estimates still open, see BE-05 |
 |  | `src/lib/delivery.ts`, `src/lib/reminders.ts`, `src/lib/notifications.ts`, `src/server/services/reminderService.ts`, `src/server/services/documentEmailService.ts`, `src/components/common/PartyModal.tsx`, `src/components/common/PartyProfilePanel.tsx` | 2026-10-05 | `src/components/sales/EstimatesView.tsx` (deposit invoices), `src/services/documentNumbers.ts`, `src/lib/creditEdits.ts`, `src/lib/purchaseOrders.ts`, `src/components/ui/InlineEdit.tsx`, `src/components/ui/InlineAdd.tsx`, `src/lib/inlineEdit.ts`, `src/lib/pinnedPages.ts`, `src/components/layout/PinnedPagesBar.tsx`, `src/components/layout/Header.tsx`, `src/core/layout/RootLayout.tsx`, `src/hooks/useKeyboardShortcuts.ts`, `src/config/shortcuts.ts`, `src/config/pageLabels.ts`, `src/components/ledger/ChartOfAccountsView.tsx`, `src/components/platform/settings/NumberingSettings.tsx`, `src/components/common/MergePartyDialog.tsx` (Codex may use InlineEdit/InlineAdd; ask under Messages for changes to them) | 2026-10-05 |
 | BE-04 invoice approval (done 2026-10-05): the rule, the stamp on the invoice, the gate on sending | `src/lib/invoiceApproval.ts`, `src/components/sales/InvoiceApprovalFlag.tsx`, `src/components/platform/settings/EmailSettings.tsx`, `src/components/sales/Sales.tsx`, `src/components/sales/InvoiceEmailDialog.tsx`, `src/hooks/useEntityOperations.ts`, `src/model/documents.ts`, `src/model/workspace.ts`, `src/schemas.ts`, `src/server/services/documentEmailService.ts`, `src/server/services/reminderService.ts`, `src/lib/reminders.ts`, `supabase/migrations/20261007010000_invoice_approval.sql` | 2026-10-05 |
 | BA-17 money in / money out on Banking (done 2026-10-05): the two dialogs and the entry they post | `src/lib/cashMovement.ts`, `src/components/banking/CashMovementDialog.tsx`, `src/components/banking/Banking.tsx`, `src/tests/cash-movement.test.ts`, `src/tests/cash-movement-ui.test.tsx` | 2026-10-05 |
+| BB-06 Settings → Schedule over jobRuns (done 2026-10-05): the reading of the daily run | `src/lib/jobSchedule.ts`, `src/server/routes/scheduleRoutes.ts`, `src/server/routes/statusRoutes.ts` (mount only), `src/server/services/statusService.ts` (the row it writes), `src/components/platform/settings/ScheduleSettings.tsx`, `src/config/registry.tsx`, `src/config/pageIndex.ts`, `src/tests/job-schedule*.test.*`, `e2e/view-registry-coverage.spec.ts` (one line) | 2026-10-05 |
 | R-07 month-end currency revaluation (done 2026-10-05): the rules, the service, the preview on Currencies | `src/lib/fxRevaluation.ts`, `src/server/services/fxRevaluationService.ts`, `src/server/routes/transactions/periodRoutes.ts`, `src/components/finance/FxRevaluationPanel.tsx`, `src/components/finance/CurrencyConverter.tsx`, `src/tests/fx-revaluation.test.ts`, `src/tests/fx-revaluation-ui.test.tsx`, `src/tests/fx-revaluation-server.test.ts` | 2026-10-05 |
 | Launch #10/#11 done 2026-10-02; now step 12 clean-up (server side) | `src/hooks/useAutoRules.ts`, `src/components/platform/settings/RulesSettings.tsx` (rules saving), `src/components/onboarding/`, `src/lib/retention.ts`, `src/lib/openingBalances.ts`, `src/lib/taxRecompute.ts` | 2026-10-02 |
 
@@ -359,6 +360,27 @@ number in a test is checked by hand. Tick the tracker items as they land.
   approval, then BE-05 deposit invoice from estimate, then R-07 FX revaluation (the currencies page
   BB-02 is left as the first item, per the owner).
 
+- 2026-10-05 Claude (Arena agent, Claude's lane, later items): **BB-06 Settings → Schedule is in.**
+  The daily run had a record (`jobRuns/daily_latest`) that only said *that* something failed; now it says
+  what each job answered, and a screen reads it: which jobs the run covers and what each is for, when it
+  last ran, the words a failed job said, and when the next one is due. Deliberately read-only and
+  deliberately no "run it now": when jobs run is the installation's schedule (`vercel.json`'s cron and its
+  secret), and a button that emails people on demand is not a settings screen's job. `src/lib/jobSchedule.ts`
+  holds the catalogue and the sentences; `GET /api/v1/schedule` is signed in and answers only the run's
+  timings (no counts, no workspace data; the public status page already says less to anyone). Two tests
+  hold lists together that would otherwise drift: the jobs `cronRoutes.ts` runs vs the jobs the screen
+  describes, and the time the screen calls "due" vs `vercel.json`'s cron. Two things I learned about this
+  repo's guards, for whoever adds a view or an endpoint next: `quality-ratchet`'s `untestedViews` counts any
+  `lazy()` key in `src/config/registry.tsx` that no file in `e2e/` names — so a new settings tab belongs in
+  `e2e/view-registry-coverage.spec.ts`'s `settingsTabs` list, which is what I did instead of raising the
+  baseline; and `route-contract.test.ts` keeps a hand-written `knownRoutePrefixes` list, so a new mounted
+  endpoint must be added there too. I also kept `server.ts` at its baseline line count by mounting the router
+  from `statusRoutes.ts` (`statusRouter.use('/v1/schedule', apiAuthenticate, scheduleRouter)`) instead of
+  adding lines to `server.ts` — the `serverTsLines` ratchet is watching, so please do the same.
+  Checks: type check clean, `npm test` green (**1079 tests / 0 failures / 0 skips**: 20 of them new here), ESLint **227 / 0 errors**
+  = the cap with nothing new, `npm run build` green. The browser suite was NOT run here (no Chromium), so the
+  new tab's mount test is unverified until someone runs `npm run test:e2e`. Next on my side: BB-01 categories
+  in Settings, then BB-03 defaults.
 - 2026-10-05 Claude (Arena agent, Claude's lane, later items): **BA-17 money in / money out is in.**
   Two buttons on the banking page next to Transfer Funds and Make deposit, each a dialog: the amount, which
   of your own accounts the money lands in or leaves, which account it belongs to (the category picker's own

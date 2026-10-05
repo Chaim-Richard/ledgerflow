@@ -1,6 +1,8 @@
 import express from 'express';
 import { getDb } from '../db/firestore';
+import { apiAuthenticate } from '../auth/apiAuthenticate';
 import { checkSystemStatus, type SystemStatus } from '../services/statusService';
+import { scheduleRouter } from './scheduleRoutes';
 
 /**
  * Public health and status (L-17), no sign-in: GET /api/health (is the server up) and
@@ -15,6 +17,9 @@ statusRouter.get('/health', (_req, res) => {
 
 let cached: { at: number; status: SystemStatus } | null = null;
 const CACHE_MS = 30_000;
+
+// Settings → Schedule (BB-06): the daily run's own record, for the people signed in to the app
+statusRouter.use('/v1/schedule', apiAuthenticate, scheduleRouter);
 
 statusRouter.get('/v1/public/status', async (_req, res) => {
   if (!cached || Date.now() - cached.at > CACHE_MS) {

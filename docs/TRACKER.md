@@ -2110,7 +2110,17 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BB-03 Defaults
 - [x] BB-04 Email (Settings → Emails & Reminders: templates, reminders, thank-you emails, monthly statements)
 - [ ] BB-05 Localisation
-- [ ] BB-06 Schedule (UI over jobRuns)
+- [x] BB-06 Schedule (UI over jobRuns): Settings → Schedule — anyone signed in may read it, and there is nothing to change — says what the
+  once-a-day run takes care of — the recurring drafts, the reminders and statements, the notices, the clearing away of logs past their
+  time — when it last ran, whether anything in it went wrong (with the words the job said), and when it is next due. The daily run now
+  records what each job answered, not only that one of them failed, and a run that was silent about a job is shown as "not reported"
+  rather than as all clear. Read-only on purpose: when jobs run is the installation's schedule (`vercel.json`'s cron + its secret), so a
+  switch here would promise something the app cannot do, and there is deliberately no "run it now" button — that would email people on
+  demand; the fix for a failed job is what it failed about, which is written next to its name. The rules and the sentences are in
+  `src/lib/jobSchedule.ts`, mounted at `GET /api/v1/schedule` (signed in; only the run's timings, no counts — the status page has less
+  for anyone). Two lists that must not drift are held together by tests: the jobs the cron route runs, and the jobs this screen
+  describes; and the time the screen calls "due" is read out of `vercel.json`. (tested: 15 on the rules, 5 on the tab, plus its
+  settings tab in the browser suite)
 - [ ] BB-07 Modules
 - [x] BB-08 Invoice settings (Settings → Branding & PDFs for logo, colours, footer and terms; Document Numbering; default terms per document type, Y-34)
 - [x] BB-09 Settings search: ⌘K finds every screen, report and settings tab, settings also by what they're about ("logo", "invoice number", "2fa"); opens at once (the palette's 0.4 s pause before every action removed) (tested)
