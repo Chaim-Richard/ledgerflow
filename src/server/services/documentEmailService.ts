@@ -245,3 +245,44 @@ export async function emailStatements(db: Firestore, input: { workspaceId: strin
   }
   return result;
 }
+
+/**
+ * Remittance advice (K-25): after paying a vendor, email them what was paid and for which bills,
+ * when the person paying asked for it. Best effort: returns what happened, never undoes the payment.
+ */
+export async function emailRemittance(db: Firestore, payment: DocumentData): Promise<string> {
+  if (payment.direction !== 'made' || !payment.workspaceId || !payment.contactId) return 'not a vendor payment';
+  const workspace = (await db.collection('workspaces').doc(String(payment.workspaceId)).get()).data();
+  if (!workspace) return 'no workspace';
+  const vendor = (await db.collection('vendors').doc(String(payment.contactId)).get()).data();
+  if (!vendor || vendor.workspaceId !== payment.workspaceId) return 'no vendor';
+  const to = String(vendor.email || '').trim().toLowerCase();
+  if (!EMAIL.test(to)) return 'no email';
+  if (await isSuppressed(db, to)) return 'suppressed';
+  if (!isMailConfigured()) return 'mail not set up';
+  const allocations = (Array.isArray(payment.allocations) ? payment.allocations : []) as Array<{ documentId: string; documentType: string; amountCents: number }>;
+  const labels: string[] = [];
+  for (const a of allocations.filter(x => x.documentType === 'bill')) {
+    const bill = (await db.collection('bills').doc(a.documentId).get()).data();
+    labels.push(`${bill?.number || 'bill'} (${formatCurrency(a.amountCents, String(bill?.currency || workspace.currency || 'USD'))})`);
+  }
+  const currency = String(payment.currency || workspace.currency || 'USD');
+  const values: TemplateValues = {
+    company: String(workspace.name || ''),
+    vendor: String(vendor.name || payment.contactName || ''),
+    customer: String(vendor.name || payment.contactName || ''),
+    amount: formatCurrency(Number(payment.amountCents) || 0, currency),
+    payment_date: String(payment.date || payment.paymentDate || '').slice(0, 10),
+    paid_bills: labels.join(', ') || 'your invoice',
+  };
+  const message = renderEmail(resolveTemplate('remittance', workspace.emailTemplates as EmailTemplates | undefined), values);
+  const logBase = { workspaceId: payment.workspaceId, documentType: 'payment', documentId: payment.id || '', template: 'remittance', subject: message.subject, recipient: to, sentBy: 'payment' };
+  try {
+    const sent = await sendMail({ to, subject: message.subject, html: message.html, text: message.text });
+    await logEmailEvent(db, { ...logBase, event: 'sent', provider: sent.provider, messageId: sent.messageId || null });
+    return 'sent';
+  } catch (err) {
+    await logEmailEvent(db, { ...logBase, event: 'failed', error: err instanceof Error ? err.message.slice(0, 300) : String(err) }).catch(() => undefined);
+    return 'failed';
+  }
+}

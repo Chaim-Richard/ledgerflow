@@ -112,10 +112,11 @@ describe('Paying many at once', () => {
     const calls = stubFetchWithBodies(200, { status: 'success' });
     render(<BulkPaymentDialog side="bill" documents={[{ id: 'b1', billNumber: 'V-77', status: 'open', vendorId: 'paper', vendorName: 'Paper Co', amountCents: 2500 }]} onClose={() => {}} onDone={() => {}} />);
     assert.ok(screen.getByLabelText('From bank account'));
+    fireEvent.click(screen.getByLabelText(/Email each vendor a remittance advice/));
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Record 1 payment' })); });
     await waitFor(() => assert.equal(calls.length, 1));
     const body = calls[0].body as Record<string, unknown>;
-    assert.deepEqual([body.vendorId, body.customerId, body.amountCents], ['paper', undefined, 2500]);
+    assert.deepEqual([body.vendorId, body.customerId, body.amountCents, body.sendRemittance], ['paper', undefined, 2500, true]);
     assert.deepEqual(body.allocations, [{ documentId: 'b1', documentType: 'bill', amountCents: 2500 }]);
   });
 });

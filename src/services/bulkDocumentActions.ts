@@ -18,14 +18,15 @@ async function post(path: string, body: unknown): Promise<Record<string, unknown
   return data;
 }
 
-export interface PaymentOptions { workspaceId: string; side: BulkSide; cashAccountId: string; date: string; method: string }
+export interface PaymentOptions { workspaceId: string; side: BulkSide; cashAccountId: string; date: string; method: string; sendRemittance?: boolean }
 
 export async function recordPayments(payments: PlannedPayment[], options: PaymentOptions) {
   const done: PlannedPayment[] = [];
   const failed: Array<{ payment: PlannedPayment; message: string }> = [];
+  let remittancesSent = 0;
   for (const payment of payments) {
     try {
-      await post('/api/v1/payments', {
+      const result = await post('/api/v1/payments', {
         workspaceId: options.workspaceId,
         paymentDate: options.date,
         amountCents: payment.amountCents,
@@ -36,13 +37,15 @@ export async function recordPayments(payments: PlannedPayment[], options: Paymen
         entityName: payment.partyName,
         cashAccountId: options.cashAccountId,
         allocations: payment.allocations.map(({ documentId, documentType, amountCents }) => ({ documentId, documentType, amountCents })),
+        ...(options.side === 'bill' && options.sendRemittance ? { sendRemittance: true } : {}),
       });
+      if ((result.data as { remittance?: string } | undefined)?.remittance === 'sent') remittancesSent++;
       done.push(payment);
     } catch (err) {
       failed.push({ payment, message: (err as Error).message });
     }
   }
-  return { done, failed };
+  return { done, failed, remittancesSent };
 }
 
 /** Emails each invoice to its customer's address (the server picks it), with the PDF attached. */

@@ -1,6 +1,6 @@
 import type { DocumentData, Firestore } from '../db/firestore';
 import { notifyPaymentReceived } from './notificationService';
-import { thankForPayment } from './documentEmailService';
+import { emailRemittance, thankForPayment } from './documentEmailService';
 import { logger } from '../utils/logger';
 
 /**
@@ -8,8 +8,17 @@ import { logger } from '../utils/logger';
  * bank line, an online payment): the in-app notification, and the customer's thank-you email when
  * the workspace turned it on (BE-02). Neither can undo or hold up the payment.
  */
-export async function afterPaymentRecorded(db: Firestore, payment: DocumentData, actorUid?: string): Promise<void> {
+export async function afterPaymentRecorded(db: Firestore, payment: DocumentData, actorUid?: string, options: { remittance?: boolean } = {}): Promise<string | void> {
   await notifyPaymentReceived(db, payment, actorUid);
+  // K-25: a vendor payment can email the vendor a remittance advice, when asked for
+  if (payment.direction === 'made' && options.remittance) {
+    try {
+      return await emailRemittance(db, payment);
+    } catch (err) {
+      logger.warn('remittance advice not sent', { workspaceId: payment.workspaceId, paymentId: payment.id, error: err instanceof Error ? err.message : String(err) });
+      return 'failed';
+    }
+  }
   if (payment.direction !== 'received' || !payment.workspaceId) return;
   try {
     await thankForPayment(db, { workspaceId: String(payment.workspaceId), allocations: Array.isArray(payment.allocations) ? payment.allocations : [] });

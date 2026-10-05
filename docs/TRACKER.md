@@ -1547,7 +1547,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] K-22 Expense claims
 - [ ] K-23 Purchase requisitions
 - [ ] K-24 Payment runs + bank file
-- [ ] K-25 Remittance advice
+- [x] K-25 Remittance advice: "Pay bills" can email each vendor what was paid, on which date, for which of their bills (new "Payment sent to a vendor" email, editable in Settings → Emails; logged; vendors without an address are skipped) (tested)
 - [x] K-26 Dunning: reminders on chosen days after the due date, per-customer opt-out (tested)
 - [ ] K-27 Customer portal
 - [ ] K-28 Scheduled reports

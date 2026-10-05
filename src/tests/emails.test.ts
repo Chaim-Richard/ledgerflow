@@ -116,7 +116,7 @@ describe('Emailing an invoice', { skip: !url && 'LF_TEST_DATABASE_URL not set' }
     setMailTransportForTests(null);
     server?.close();
     await db.pool.query(`delete from public."emailEvents" where data->>'recipient' like '%@acme.test'`);
-    for (const table of ['invoices', 'customers', 'emailEvents', 'workspaces']) {
+    for (const table of ['invoices', 'bills', 'customers', 'vendors', 'emailEvents', 'workspaces']) {
       await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
     }
     await db.terminate();
@@ -190,6 +190,27 @@ describe('Emailing an invoice', { skip: !url && 'LF_TEST_DATABASE_URL not set' }
 
     const one = await statements('owner-1', { customerIds: [id('c5')] }).then(r => r.json()) as { sent: Array<{ id: string }> };
     assert.deepEqual(one.sent.map(s => s.id), [id('c5')], 'an archived customer can still be chosen by hand');
+  });
+
+  test('remittance advice (K-25): the vendor gets what was paid and for which bills, only when asked', async () => {
+    const { emailRemittance } = await import('../server/services/documentEmailService');
+    const { afterPaymentRecorded } = await import('../server/services/afterPayment');
+    await db.collection('vendors').doc(id('v1')).set({ workspaceId: ws, name: 'Paper Co', email: 'Billing@Paper.test' });
+    await db.collection('vendors').doc(id('v2')).set({ workspaceId: ws, name: 'No Mail Co' });
+    await db.collection('bills').doc(id('b1')).set({ workspaceId: ws, vendorId: id('v1'), number: 'PC-77', amountCents: 2500, currency: 'EUR', status: 'paid' });
+    const payment = { id: id('pay-v1'), workspaceId: ws, direction: 'made', contactId: id('v1'), contactName: 'Paper Co', amountCents: 2500, currency: 'EUR', date: '2026-03-20',
+      allocations: [{ documentId: id('b1'), documentType: 'bill', amountCents: 2500 }] };
+    const before = outbox.length;
+    assert.equal(await afterPaymentRecorded(db, payment, 'owner-1'), undefined, 'not asked: nothing sent');
+    assert.equal(outbox.length, before);
+    assert.equal(await afterPaymentRecorded(db, payment, 'owner-1', { remittance: true }), 'sent');
+    const mail = outbox[outbox.length - 1];
+    assert.equal(mail.to, 'billing@paper.test');
+    assert.equal(mail.subject, 'Payment from Mail Co');
+    assert.match(String(mail.text), /Hello Paper Co,/);
+    assert.match(String(mail.text), /on 2026-03-20 for: PC-77/);
+    assert.equal(await emailRemittance(db, { ...payment, contactId: id('v2') }), 'no email');
+    assert.equal(await emailRemittance(db, { ...payment, direction: 'received' }), 'not a vendor payment');
   });
 
   test('monthly statements (Y-28): once a month for workspaces that turned them on; opted-out customers skipped', async () => {

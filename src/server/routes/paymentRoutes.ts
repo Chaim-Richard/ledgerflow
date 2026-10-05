@@ -30,7 +30,9 @@ const paymentInputSchema = z.object({
   vendorId: z.string().optional(),
   entityName: z.string().optional(),
   offsetAccountId: z.string().optional(),
-  allocations: z.array(paymentAllocationSchema).default([])
+  allocations: z.array(paymentAllocationSchema).default([]),
+  /** K-25: email the vendor a remittance advice afterwards (not stored on the payment). */
+  sendRemittance: z.boolean().optional(),
 });
 
 export async function handleCreatePayment(req: express.Request, res: express.Response, dbOverride?: Firestore) {
@@ -44,7 +46,7 @@ export async function handleCreatePayment(req: express.Request, res: express.Res
     if (!parsed.success) {
       return res.status(400).json({ status: 'error', message: 'Invalid payment payload', details: parsed.error.issues });
     }
-    const { workspaceId, ...payload } = parsed.data;
+    const { workspaceId, sendRemittance, ...payload } = parsed.data;
 
     const db = dbOverride || getDb();
     await validateWorkspaceMember(db, workspaceId, authReq.user);
@@ -61,9 +63,9 @@ export async function handleCreatePayment(req: express.Request, res: express.Res
       workspaceId,
       uid: authReq.user.uid
     });
-    await afterPaymentRecorded(db, result.payment, authReq.user.uid);
+    const remittance = await afterPaymentRecorded(db, { ...result.payment, id: result.paymentId }, authReq.user.uid, { remittance: sendRemittance });
 
-    res.json({ status: 'success', data: result });
+    res.json({ status: 'success', data: { ...result, ...(sendRemittance ? { remittance } : {}) } });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (message === 'FORBIDDEN' || message.includes('Forbidden') || message.includes('Unauthorized') || message.includes('Security Violation')) {
