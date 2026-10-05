@@ -93,6 +93,16 @@ Last updated: 2026-10-02.
    ("Read AGENTS.md and docs/COORDINATION.md. Do the next task…"). Both now run the slow browser tests
    only every ~5 changes (your suggestion). GitHub CI no longer runs on every push (see below).
 
+21. **The arena AI's work (5 Oct evening).** Its branch `arena/47706ec3-ledgerflow` has Y-27 (how each
+    contact wants documents) and BE-04 (big invoices wait for approval); it left BE-05 (deposits from
+    estimates) unbuilt with a good reason and did not reach R-07 (currency revaluation). Checked by
+    Claude: type check, 1149 unit tests, lint and build all pass; the code merges cleanly with main.
+    Two things to fix after merging: the approval mark is written by the browser, so the server should
+    record who approved (today a bookkeeper going around the app could mark their own invoice
+    approved); and a "send a paper copy" reminder repeats in the bell every day for the same invoice.
+    *Default: Claude merges it at the next check-in, after the browser tests, applies its two
+    database changes and fixes those two points.* Say "don't merge the arena work" to stop that.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of
