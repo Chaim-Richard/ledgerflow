@@ -3,6 +3,7 @@ import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { render, fireEvent, cleanup, screen } from '@testing-library/react';
+import { D3LedgerVisualizer } from '../components/intelligence/D3LedgerVisualizer';
 import AlgorithmChart from '../components/charts/AlgorithmChart';
 import ChartFrame, { ChartTooltip } from '../components/charts/ChartFrame';
 import { expenseChartLeaves, invoicePaymentPoints } from '../lib/chartExploration';
@@ -42,4 +43,30 @@ test('algorithm tables keep duplicate Hebrew categories and native values; legen
  assert.equal(screen.getAllByRole('rowheader',{name:'ספק A'}).length,2);
  fireEvent.click(screen.getByRole('button',{name:'Score'}));
  assert.ok(screen.getByRole('status'));
+});
+
+test('mixed chart units use workspace currency for major amounts and keep percentage scale', () => {
+ render(<ChartTooltip active currency="EUR" series={[{key:'profit',name:'Profit',unit:'majorMoney'},{key:'margin',name:'Margin',unit:'percent'},{key:'score',name:'Score',unit:'number'}]} payload={[{dataKey:'profit',name:'Profit',value:123.45},{dataKey:'margin',name:'Margin',value:25},{dataKey:'score',name:'Score',value:75}]} />);
+ assert.match(document.body.textContent || '', /€123.45/);
+ assert.match(document.body.textContent || '', /Margin: 25%/);
+ assert.match(document.body.textContent || '', /Score: 75/);
+});
+
+test('recent volume table retains the last 20 records, original order, full labels and absolute amounts', () => {
+ const records=Array.from({length:21},(_,index)=>makeTransaction({id:`tx-${index}`,date:'2026-01-01',description:`ספק ${index}`,totalAmountCents:index===20?-12345:100}));
+ render(<D3LedgerVisualizer data={records} />);
+ fireEvent.click(screen.getByRole('button',{name:/^Table$/}));
+ const headings=screen.getAllByRole('rowheader');
+ assert.equal(headings.length,20);
+ assert.match(headings[0].textContent || '', /ספק 1$/);
+ assert.match(headings[19].textContent || '', /ספק 20$/);
+ assert.match(screen.getByRole('table').textContent || '', /123.45/);
+});
+
+test('algorithm date brush zooms ordered ISO months without treating ordinary categories as dates', () => {
+ render(<AlgorithmChart chart={{data:[{month:'2026-01',score:10},{month:'2026-02',score:20}],config:{xKey:'month',yKeys:[{key:'score',name:'Score',color:'#123456'}]}}} />);
+ fireEvent.click(screen.getByRole('button',{name:/^Table$/}));
+ fireEvent.change(screen.getByLabelText('Operational Topology Projection brush start'),{target:{value:1}});
+ assert.doesNotMatch(screen.getByRole('table').textContent || '', /2026-01/);
+ assert.match(screen.getByRole('table').textContent || '', /2026-02/);
 });

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { formatCurrency } from '../../lib/utils';
 export interface ChartRow { id: string; label: string; [key: string]: string | number }
-export interface ChartSeries { key: string; name: string; color?: string; unit?: 'money' | 'days' | 'number' }
+export interface ChartSeries { key: string; name: string; color?: string; unit?: 'money' | 'majorMoney' | 'percent' | 'days' | 'number' }
 export interface ChartControls { rows: ChartRow[]; hidden: Set<string> }
 export function ChartTooltip({ active, payload, label, currency, series }: { series?: ChartSeries[]; active?: boolean; label?: string | number; currency?: string; payload?: readonly { name?: string | number; value?: number | string; dataKey?: string | number; payload?: ChartRow }[] }) {
   if (!active || !payload?.length) return null;
@@ -9,6 +9,8 @@ export function ChartTooltip({ active, payload, label, currency, series }: { ser
 }
 function formatChartValue(value: unknown, unit: ChartSeries['unit'], currency?: string) {
   if (value === undefined || value === null || value === '' || (typeof value === 'number' && !Number.isFinite(value))) return '—';
+  if (unit === 'majorMoney') return Number.isFinite(Number(value)) ? formatCurrency(Math.round(Number(value) * 100), currency) : '—';
+  if (unit === 'percent') return Number.isFinite(Number(value)) ? `${value}%` : '—';
   if (unit === 'number') return String(value);
   if (unit === 'days') return `${value} days`;
   return Number.isFinite(Number(value)) ? formatCurrency(Number(value), currency) : '—';

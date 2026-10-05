@@ -19,9 +19,10 @@ export default function AlgorithmChart({ chart }: { chart: AlgoResult['charts'][
     }));
     return { ...values, id, label };
   });
+  const time = rows.length > 1 && rows.every((row,index) => /^\d{4}-(0[1-9]|1[0-2])(?:-(0[1-9]|[12]\d|3[01]))?$/.test(row.label) && (!index || rows[index-1].label <= row.label));
   const series = chart.config.yKeys.map(item => ({ ...item, unit: 'number' as const }));
   // Algorithm outputs use varied native units. Never reinterpret them as currency cents.
-  return <ChartFrame title="Operational Topology Projection" rows={rows} series={series}>
+  return <ChartFrame title="Operational Topology Projection" rows={rows} series={series} time={time}>
     {({ rows: visible, hidden }) => <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={visible.map(row => originals.get(row.id))} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />

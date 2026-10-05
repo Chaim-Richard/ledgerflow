@@ -1,3 +1,5 @@
+import ChartFrame, { ChartTooltip } from '../charts/ChartFrame';
+import { useAuthStore } from '../../stores/useAuthStore';
 
 
 import { motion } from 'motion/react';
@@ -13,6 +15,8 @@ interface ProjectProfitMatrixProps {
 }
 
 export function ProjectProfitMatrix({ projectStats, onAction }: ProjectProfitMatrixProps) {
+ const currency = useAuthStore(state => state.getCurrentWorkspace()?.currency);
+ const rows = projectStats.map(row => ({...row,label:row.name}));
  return (<motion.div
                 key="roi"
                 initial={{ opacity: 0, y: 8 }}
@@ -21,57 +25,23 @@ export function ProjectProfitMatrix({ projectStats, onAction }: ProjectProfitMat
                 className="space-y-5"
               >
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                   <div className="p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] shadow-3xs flex flex-col h-[320px]">
-                      <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-3 pb-2 border-b border-[var(--line)]">Project Raw Revenue & Profit Matrix</h3>
-                      <div className="flex-1 min-h-[180px]">
-                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart 
-                              data={projectStats}
-                              onClick={(eventData) => {
-                                if (eventData && eventData.activePayload && eventData.activePayload[0] && onAction) {
-                                  onAction('filter_project', { projectId: eventData.activePayload[0].payload.id });
-                                }
-                              }}
-                              className="cursor-crosshair"
-                            >
-                               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                               <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 600, fill: '#64748b' }} />
-                               <YAxis tick={{ fontSize: 8, fill: '#64748b' }} />
-                               <Tooltip 
-                                 contentStyle={{ borderRadius: '0.5rem', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px -1px rgb(0 0 0 / 0.05)', fontSize: '10px' }}
-                                 formatter={(val) => [`$${val.toLocaleString()}`, 'Profit']}
-                               />
-                               <Bar dataKey="profit" fill="#6366f1" radius={[3, 3, 0, 0]} />
-                            </BarChart>
-                         </ResponsiveContainer>
-                      </div>
-                      <p className="text-[8px] font-mono text-[var(--muted)] uppercase text-center mt-3 tracking-wider">Click columns to filter transaction explorer down to project bounds</p>
+                   <div className="min-w-0">
+                     <ChartFrame title="Project Raw Revenue & Profit Matrix" rows={rows} currency={currency} series={[{key:'profit',name:'Profit',unit:'majorMoney'}]}>
+                       {({rows:visible,hidden}) => <ResponsiveContainer width="100%" height="100%"><BarChart data={visible} onClick={event => { const project = event?.activePayload?.[0]?.payload; if (project?.id) onAction('filter_project',{projectId:project.id}); }}>
+                         <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="label" /><YAxis />
+                         <Tooltip content={<ChartTooltip currency={currency} series={[{key:'profit',name:'Profit',unit:'majorMoney'}]} />} />
+                         <Bar dataKey="profit" name="Profit" fill="#6366f1" hide={hidden.has('profit')} />
+                       </BarChart></ResponsiveContainer>}
+                     </ChartFrame>
+                     <p className="text-sm text-[var(--muted)]">Click columns to filter transactions by project.</p>
                    </div>
-
-                   <div className="p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-[32px] shadow-3xs flex flex-col h-[320px]">
-                      <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-3 pb-2 border-b border-[var(--line)]">Relative Profit Margins</h3>
-                      <div className="flex-1 min-h-[180px]">
-                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={projectStats}>
-                               <defs>
-                                 <linearGradient id="marginColorGrad" x1="0" y1="0" x2="0" y2="100%">
-                                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.12}/>
-                                   <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                                 </linearGradient>
-                               </defs>
-                               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                               <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 600, fill: '#64748b' }} />
-                               <YAxis tick={{ fontSize: 8, fill: '#64748b' }} />
-                               <Tooltip 
-                                 contentStyle={{ fontSize: '10px', borderRadius: '0.5rem' }} 
-                                 formatter={(val) => [`${parseFloat(val as string).toFixed(1)}%`, 'Operational Margin']}
-                               />
-                               <Area type="monotone" dataKey="margin" stroke="#10b981" strokeWidth={1.8} fillOpacity={1} fill="url(#marginColorGrad)" />
-                            </AreaChart>
-                         </ResponsiveContainer>
-                      </div>
-                      <p className="text-[8px] font-mono text-[var(--muted)] uppercase text-center mt-3 tracking-wider">Dynamic mathematical ratio derived from live journal lines</p>
-                   </div>
+                   <ChartFrame title="Relative Profit Margins" rows={rows} series={[{key:'margin',name:'Operational Margin',unit:'percent'}]}>
+                     {({rows:visible,hidden}) => <ResponsiveContainer width="100%" height="100%"><AreaChart data={visible}>
+                       <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="label" /><YAxis tickFormatter={value => `${value}%`} />
+                       <Tooltip content={<ChartTooltip series={[{key:'margin',name:'Operational Margin',unit:'percent'}]} />} />
+                       <Area dataKey="margin" name="Operational Margin" stroke="#10b981" fill="#10b981" fillOpacity={0.12} hide={hidden.has('margin')} />
+                     </AreaChart></ResponsiveContainer>}
+                   </ChartFrame>
                 </div>
 
                 {/* Strategic Profitability List */}
