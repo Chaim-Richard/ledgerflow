@@ -1,4 +1,5 @@
 import { useDialog } from '../../hooks/useDialog';
+import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, Save, CreditCard, Sparkles } from 'lucide-react';
@@ -28,7 +29,8 @@ interface BillModalProps {
 
 export default function BillModal({ isOpen, onClose, onSave, vendors = [], accounts = [], initialBill }: BillModalProps) {
   // Ensure we have arrays even if props were passed as null
-  const safeVendors = Array.isArray(vendors) ? vendors : [];
+  // archived contacts aren't offered for new documents; one already on this document stays (I-22)
+  const safeVendors = (Array.isArray(vendors) ? vendors : []).filter(c => !isArchivedParty(c) || c.id === initialBill?.vendorId);
   const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'expense' || a?.type === 'cost_of_goods' || a?.type === 'asset') : [];
   
   const storeBills = useLedgerStore(s => s.bills) || [];

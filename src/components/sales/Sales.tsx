@@ -26,7 +26,8 @@ import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 import { EmptyState } from '../ui/EmptyState';
 import CustomerModal from './CustomerModal';
 import TagFilter from '../common/TagFilter';
-import { allTags, hasTag } from '../../lib/contacts';
+import { allTags, hasTag, isArchivedParty } from '../../lib/contacts';
+import PartyRowActions, { ArchivedBadge, ShowArchivedToggle } from '../common/PartyRowActions';
 import { PartyDetailView } from '../common/PartyDetailView';
 import WriteOffModal from './WriteOffModal';
 import InvoiceEmailDialog from './InvoiceEmailDialog';
@@ -131,7 +132,9 @@ export default function Sales() {
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [customerTag, setCustomerTag] = useState<string | null>(null);
   const customerTags = useMemo(() => allTags(customers), [customers]);
-  const shownCustomers = useMemo(() => customers.filter(c => hasTag(c, customerTag)), [customers, customerTag]);
+  const [showArchivedCustomers, setShowArchivedCustomers] = useState(false);
+  const archivedCustomers = useMemo(() => customers.filter(isArchivedParty).length, [customers]);
+  const shownCustomers = useMemo(() => customers.filter(c => hasTag(c, customerTag) && (showArchivedCustomers || !isArchivedParty(c))), [customers, customerTag, showArchivedCustomers]);
   const [paymentDocumentId, setPaymentDocumentId] = useState<string | null>(null);
   const [paymentContactId, setPaymentContactId] = useState<string | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -530,6 +533,7 @@ export default function Sales() {
       {activeSubTab === 'customers' && (
         <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
           <TagFilter tags={customerTags} value={customerTag} onChange={setCustomerTag} label="Show customers with the tag" />
+          <ShowArchivedToggle count={archivedCustomers} on={showArchivedCustomers} onChange={setShowArchivedCustomers} noun="customer" />
           <div className="overflow-x-auto">
             {canEditContacts && (
               <InlineAdd className="px-4 md:px-8 pt-4" label="New customer name" placeholder="Add a customer: type a name and press Enter"
@@ -562,6 +566,7 @@ export default function Sales() {
                               validate={v => String(v) ? null : 'A customer needs a name'}
                               onSave={v => updateEntity('customers', cust.id, { name: v }, 'Name saved')}
                               className="font-black text-[var(--text)] text-lg tracking-tight" />
+                            <ArchivedBadge party={cust} />
                             <button type="button"
                               onClick={(e) => { e.stopPropagation(); updateEntity('customers', cust.id, { noReminders: !cust.noReminders }, cust.noReminders ? `Automatic reminders on for ${cust.name}` : `No automatic reminders for ${cust.name}`); }}
                               className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest mt-1 ${cust.noReminders ? 'text-[var(--muted)]' : 'text-emerald-500'}`}
@@ -593,7 +598,7 @@ export default function Sales() {
                       <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all justify-end">
                         
                         <button onClick={(e)=> {e.stopPropagation(); setNewInvoiceFor({ customerId: cust.id, customerName: cust.name }); setIsInvoiceModalOpen(true); }} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Invoice"><Plus size={14}/></button>
-                        
+                        {canEditContacts && <PartyRowActions side="customer" party={cust} />}
                       </div>
                     </td>
                   </tr>

@@ -52,6 +52,11 @@ const SIDES: Record<PartySide, { party: string; label: string; refs: Reference[]
 };
 
 const ADMIN_ROLES = ['owner', 'accountant'];
+const WRITER_ROLES = ['owner', 'accountant', 'bookkeeper'];
+const NOUNS: Record<string, string> = {
+  invoices: 'invoice', estimates: 'estimate', creditNotes: 'credit note', payments: 'payment', transactions: 'ledger entry',
+  bills: 'bill', vendorCredits: 'vendor credit', purchaseOrders: 'purchase order', recurring: 'recurring schedule',
+};
 /** Kept as they are on the kept contact, never copied from the duplicate. */
 const OWN_FIELDS = new Set(['id', 'workspaceId', 'uid', 'createdAt', 'updatedAt', 'status', 'importBatchId', 'name', 'contacts', 'tags', 'noteLog']);
 
@@ -159,5 +164,51 @@ export async function mergeContacts(db: Firestore, input: MergeInput): Promise<{
       severity: 'info',
     }, { db, tx: t });
     return { kept: input.keepId, removed: input.mergeId, moved };
+  });
+}
+
+export interface DeleteInput { workspaceId: string; uid: string; email?: string; side: PartySide; id: string }
+
+/** "2 invoices and 1 payment" from counts per collection. */
+export function describeUsage(used: Record<string, number>): string {
+  const parts = Object.entries(used).filter(([, n]) => n > 0)
+    .map(([c, n]) => `${n} ${NOUNS[c] || c}${n === 1 ? '' : (NOUNS[c] || c).endsWith('y') ? '' : 's'}`.replace(/ledger entrys?$/, n === 1 ? 'ledger entry' : 'ledger entries'));
+  return parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
+/**
+ * Delete a customer or vendor from the list (I-22): only when nothing refers to it (documents,
+ * payments, ledger entries, schedules), checked in the database, not in what a screen has loaded.
+ * A contact in use is archived instead, so its records keep their name. Writers only; audited.
+ */
+export async function deleteContact(db: Firestore, input: DeleteInput): Promise<void> {
+  const side = SIDES[input.side];
+  await db.runTransaction(async t => {
+    const workspace = (await t.get(db.collection('workspaces').doc(input.workspaceId))).data();
+    if (!workspace) throw new ContactMergeError(404, 'Workspace not found');
+    if (!WRITER_ROLES.includes(workspaceRole(workspace, input.uid))) throw new ContactMergeError(403, 'Viewers cannot delete contacts');
+    const ref = db.collection(side.party).doc(input.id);
+    const party = (await t.get(ref)).data();
+    if (!party || party.workspaceId !== input.workspaceId) throw new ContactMergeError(404, `${side.label[0].toUpperCase()}${side.label.slice(1)} not found`);
+    const used: Record<string, Set<string>> = {};
+    for (const r of side.refs) {
+      const snap = await t.get(db.collection(r.collection).where('workspaceId', '==', input.workspaceId).where(r.path.join('.'), '==', input.id));
+      for (const d of snap.docs) (used[r.collection] ||= new Set()).add(d.id);
+    }
+    const schedules = await t.get(db.collection('recurring').where('workspaceId', '==', input.workspaceId));
+    for (const d of schedules.docs) {
+      if (side.recurring.some(path => readPath(d.data(), path) === input.id)) (used.recurring ||= new Set()).add(d.id);
+    }
+    const counts = Object.fromEntries(Object.entries(used).map(([c, ids]) => [c, ids.size]));
+    if (Object.keys(counts).length) {
+      throw new ContactMergeError(409, `"${String(party.name || input.id)}" is used by ${describeUsage(counts)}: archive it instead (those records keep it)`);
+    }
+    t.delete(ref);
+    await writeServerAuditLog({
+      workspaceId: input.workspaceId, uid: input.uid, email: input.email,
+      action: `${input.side.toUpperCase()}_DELETED`, entityType: side.party, entityId: input.id,
+      details: { description: `Deleted ${side.label} "${String(party.name || input.id)}"` },
+      severity: 'info',
+    }, { db, tx: t });
   });
 }

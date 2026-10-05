@@ -15,7 +15,8 @@ import { formatCurrency, safeConfirm } from '../../lib/utils';
 import BillModal from './BillModal';
 import VendorModal from './VendorModal';
 import TagFilter from '../common/TagFilter';
-import { allTags, hasTag } from '../../lib/contacts';
+import { allTags, hasTag, isArchivedParty } from '../../lib/contacts';
+import PartyRowActions, { ArchivedBadge, ShowArchivedToggle } from '../common/PartyRowActions';
 import VendorDetailView from './VendorDetailView';
 import ReceivePaymentModal from '../sales/ReceivePaymentModal';
 import { toast } from 'sonner';
@@ -65,12 +66,14 @@ export default function Purchases() {
   const [vendorTag, setVendorTag] = useState<string | null>(null);
   const vendorTags = useMemo(() => allTags(vendors), [vendors]);
   const vendorCategories = useMemo(() => suggestionsFrom(vendors, v => v.category), [vendors]);
+  const [showArchivedVendors, setShowArchivedVendors] = useState(false);
+  const archivedVendors = useMemo(() => vendors.filter(isArchivedParty).length, [vendors]);
   const filteredVendors = useMemo(() => {
     return vendors.filter(v => {
       const matchText = `${v.name} ${v.email || ''} ${v.phone || ''} ${v.category || ''} ${(v.tags || []).join(' ')}`.toLowerCase();
-      return matchText.includes(searchTerm.toLowerCase()) && hasTag(v, vendorTag);
+      return matchText.includes(searchTerm.toLowerCase()) && hasTag(v, vendorTag) && (showArchivedVendors || !isArchivedParty(v));
     });
-  }, [vendors, searchTerm, vendorTag]);
+  }, [vendors, searchTerm, vendorTag, showArchivedVendors]);
 
   const handleAddVendor = async (data: Partial<Vendor>) => {
     await addEntity('vendors', data, 'Vendor successfully created');
@@ -337,6 +340,7 @@ export default function Purchases() {
         ) : (
           <div className="overflow-x-auto">
             <TagFilter tags={vendorTags} value={vendorTag} onChange={setVendorTag} label="Show vendors with the tag" />
+            <ShowArchivedToggle count={archivedVendors} on={showArchivedVendors} onChange={setShowArchivedVendors} noun="vendor" />
             {canEditContacts && (
               <InlineAdd className="px-4 pt-4" label="New vendor name" placeholder="Add a vendor: type a name and press Enter"
                 existing={vendors.map(v => v.name)} onAdd={name => addEntity('vendors', { name }, `Vendor "${name}" added`)} />
@@ -350,6 +354,7 @@ export default function Purchases() {
                   <th scope="col" className="p-4">Email</th>
                   <th scope="col" className="p-4">Phone</th>
                   <th scope="col" className="p-4 text-right">Outstanding balance</th>
+                  {canEditContacts && <th scope="col" className="p-4 w-10"><span className="sr-only">Actions</span></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
@@ -363,6 +368,7 @@ export default function Purchases() {
                       <InlineEdit value={v.name} label={`Name of ${v.name}`} canEdit={canEditContacts}
                         validate={x => String(x) ? null : 'A vendor needs a name'}
                         onSave={x => updateEntity('vendors', v.id, { name: x }, 'Name saved')} />
+                      <ArchivedBadge party={v} />
                     </td>
                     <td className="p-4 text-slate-600 dark:text-slate-400">
                       <InlineEdit value={v.category} label={`Category of ${v.name}`} placeholder="Standard" canEdit={canEditContacts}
@@ -380,12 +386,13 @@ export default function Purchases() {
                     <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
                       {formatCurrency(v.balanceCents || 0)}
                     </td>
+                    {canEditContacts && <td className="p-4 text-right"><PartyRowActions side="vendor" party={v} /></td>}
                   </tr>
                 ))}
 
                 {filteredVendors.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
+                    <td colSpan={canEditContacts ? 6 : 5} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
                       No vendors listed yet.
                     </td>
                   </tr>

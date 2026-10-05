@@ -1,4 +1,5 @@
 import { useDialog } from '../../hooks/useDialog';
+import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, Save, Download, Eye } from 'lucide-react';
@@ -28,7 +29,8 @@ interface InvoiceModalProps {
 
 export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], accounts = [], initialInvoice }: InvoiceModalProps) {
   // Ensure we have arrays even if props were passed as null
-  const safeCustomers = Array.isArray(customers) ? customers : [];
+  // archived contacts aren't offered for new documents; one already on this document stays (I-22)
+  const safeCustomers = (Array.isArray(customers) ? customers : []).filter(c => !isArchivedParty(c) || c.id === initialInvoice?.customerId);
   const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'income') : [];
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';

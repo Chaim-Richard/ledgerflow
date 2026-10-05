@@ -142,7 +142,8 @@ workspaceRouter.use('/:workspaceId/tax-returns', requireWorkspaceRole(['owner', 
 workspaceRouter.use('/:workspaceId/branding', requireWorkspaceRole(['owner', 'accountant']), brandingRouter);
 // Bad debt write-off and its reversal (src/server/routes/badDebtRoutes.ts)
 workspaceRouter.use('/:workspaceId/invoices', requireWorkspaceRole(['owner', 'accountant']), badDebtRouter);
-workspaceRouter.use('/:workspaceId/contacts', requireWorkspaceRole(['owner', 'accountant']), contactMergeRouter);
+// merging is checked again for owner/accountant in the service; deleting is for every writer
+workspaceRouter.use('/:workspaceId/contacts', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), contactMergeRouter);
 workspaceRouter.use('/:workspaceId/numbering', requireWorkspaceRole(['owner', 'accountant']), numberingRouter);
 
 // Bulk import of customers, vendors, items or accounts from a spreadsheet (K-01; rules in

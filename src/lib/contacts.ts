@@ -61,3 +61,8 @@ export function allTags(parties: Array<{ tags?: string[] }>): string[] {
 /** True when the contact has the tag (any case); no tag chosen matches everyone. */
 export const hasTag = (party: { tags?: string[] }, tag: string | null) =>
   !tag || (party.tags || []).some(t => t.toLocaleLowerCase() === tag.toLocaleLowerCase());
+
+/** An archived customer or vendor (I-22): kept on its records, hidden from lists unless asked. */
+export function isArchivedParty(party: { status?: string }): boolean {
+  return party.status === 'inactive' || party.status === 'archived';
+}
