@@ -1997,7 +1997,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Y-25 Notes timeline per contact (newest first, who and when; viewers read)
 - [ ] Y-26 Portal access toggle
 - [ ] Y-27 Preferred delivery method
-- [ ] Y-28 Statement send preference
+- [x] Y-28 Statement send preference: Settings → Emails → "Email each customer their statement on the 1st of every month" (customers with something open; the daily job, once a month, a missed 1st made up the next day); each customer's page has "Monthly statement: email it" to leave them out (tested; database rule: customers.noStatements)
 - [ ] Y-29 Sending domain with SPF/DKIM
 - [ ] Y-30 2FA enforcement policy
 - [ ] Y-31 Password policy

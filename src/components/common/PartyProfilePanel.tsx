@@ -93,6 +93,18 @@ export default function PartyProfilePanel({ side, party }: { side: PartySide; pa
               onSave={v => updateEntity(path, party.id, { tags: parseTags(String(v)) }, 'Tags saved')} />
           </dd>
         </div>
+        {side === 'customer' && (
+          <div>
+            <dt className="text-[var(--muted)] font-semibold">Monthly statement</dt>
+            <dd className="text-slate-900 dark:text-white">
+              <label className="inline-flex items-center gap-1.5">
+                <input type="checkbox" disabled={!canEdit} checked={!(party as Customer).noStatements}
+                  onChange={e => updateEntity(path, party.id, { noStatements: !e.target.checked }, e.target.checked ? 'Monthly statement on' : 'No monthly statement')} />
+                Email it (when statements are on)
+              </label>
+            </dd>
+          </div>
+        )}
         <div>
           <dt className="text-[var(--muted)] font-semibold">Opening balance {side === 'customer' ? '(owed to you)' : '(you owed)'}</dt>
           <dd className="text-slate-900 dark:text-white"><PartyOpeningBalance side={side} party={party} /></dd>

@@ -191,4 +191,20 @@ describe('Emailing an invoice', { skip: !url && 'LF_TEST_DATABASE_URL not set' }
     const one = await statements('owner-1', { customerIds: [id('c5')] }).then(r => r.json()) as { sent: Array<{ id: string }> };
     assert.deepEqual(one.sent.map(s => s.id), [id('c5')], 'an archived customer can still be chosen by hand');
   });
+
+  test('monthly statements (Y-28): once a month for workspaces that turned them on; opted-out customers skipped', async () => {
+    const { runMonthlyStatements } = await import('../server/services/reminderService');
+    await db.collection('customers').doc(id('c6')).set({ workspaceId: ws, name: 'No Statements Ltd', email: 'ap@nostatements.test', noStatements: true });
+    await db.collection('invoices').doc(id('i6')).set({ workspaceId: ws, customerId: id('c6'), number: 'INV-60', amountCents: 700, status: 'sent', date: '2026-03-02' });
+    const before = outbox.length;
+    const off = await runMonthlyStatements(db, new Date('2026-11-01T09:00:00Z'));
+    assert.equal(off.workspaces, 0, 'not turned on yet');
+    await db.collection('workspaces').doc(ws).set({ reminderSettings: { enabled: false, daysAfterDue: [3], monthlyStatements: true } }, { merge: true });
+    const first = await runMonthlyStatements(db, new Date('2026-11-01T09:00:00Z'));
+    assert.deepEqual(first, { workspaces: 1, sent: 1, failed: 0 });
+    assert.deepEqual(outbox.slice(before).map(m => m.to), ['ap@owes.test'], 'the opted-out, bounced, archived and settled ones get nothing');
+    assert.equal((await db.collection('workspaces').doc(ws).get()).data()?.lastStatementsMonth, '2026-11');
+    assert.deepEqual(await runMonthlyStatements(db, new Date('2026-11-02T09:00:00Z')), { workspaces: 0, sent: 0, failed: 0 }, 'once a month');
+    assert.equal((await runMonthlyStatements(db, new Date('2026-12-01T09:00:00Z'))).sent, 1, 'next month again');
+  });
 });

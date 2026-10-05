@@ -117,3 +117,12 @@ test('terms for a customer: their own, else their latest invoice\'s, else none (
   assert.equal(isFixedTerm('custom'), false);
   assert.equal(isFixedTerm('net_15'), true);
 });
+
+test('monthly statements: due on the first run of a month, once (Y-28)', async () => {
+  const { statementMonthDue, normalizeReminderSettings } = await import('../lib/reminders');
+  assert.equal(statementMonthDue('2026-11-01', '2026-10'), '2026-11');
+  assert.equal(statementMonthDue('2026-11-02', null), '2026-11', 'a missed 1st is made up');
+  assert.equal(statementMonthDue('2026-11-15', '2026-11'), null);
+  assert.equal(normalizeReminderSettings({ monthlyStatements: true }).monthlyStatements, true);
+  assert.equal(normalizeReminderSettings(null).monthlyStatements, false);
+});

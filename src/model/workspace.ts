@@ -44,6 +44,8 @@ export interface Workspace {
   branding?: WorkspaceBranding;
   /** Automatic payment reminders (src/lib/reminders.ts). */
   reminderSettings?: ReminderSettings;
+  /** Set by the daily job: the month (YYYY-MM) monthly statements were last sent (Y-28). */
+  lastStatementsMonth?: string;
   strategicAdvice?: string[];
   analyticalTopology?: DashboardSchema;
   currency?: string;

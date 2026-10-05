@@ -207,16 +207,17 @@ export interface StatementBatchResult {
  * PDF with the "statement" email. Customers with nothing open, without an email address, archived
  * or bounced are skipped with the reason; one failure doesn't stop the rest. Writers only.
  */
-export async function emailStatements(db: Firestore, input: { workspaceId: string; uid: string; customerIds?: string[] }): Promise<StatementBatchResult> {
+export async function emailStatements(db: Firestore, input: { workspaceId: string; uid: string; customerIds?: string[]; system?: boolean }): Promise<StatementBatchResult> {
   const workspace = (await db.collection('workspaces').doc(input.workspaceId).get()).data();
   if (!workspace) throw new EmailSendError(404, 'Workspace not found');
-  if (!WRITER_ROLES.includes(workspaceRole(workspace, input.uid))) throw new EmailSendError(403, 'Viewers cannot send emails');
+  if (!input.system && !WRITER_ROLES.includes(workspaceRole(workspace, input.uid))) throw new EmailSendError(403, 'Viewers cannot send emails');
   if (!isMailConfigured()) throw new EmailSendError(503, 'Email sending is not set up yet (add an email provider key in the settings)');
 
   const ids = input.customerIds?.length
     ? input.customerIds
     : (await db.collection('customers').where('workspaceId', '==', input.workspaceId).get()).docs
-      .filter(d => !isArchivedParty(d.data() as { status?: string })).map(d => d.id);
+      // archived customers and those who asked for no statements (Y-28) are left out unless chosen by hand
+      .filter(d => !isArchivedParty(d.data() as { status?: string }) && !d.data().noStatements).map(d => d.id);
   const result: StatementBatchResult = { sent: [], skipped: [], failed: [] };
   const template = resolveTemplate('statement', workspace.emailTemplates as EmailTemplates | undefined);
   for (const id of ids) {
@@ -230,7 +231,7 @@ export async function emailStatements(db: Firestore, input: { workspaceId: strin
     if (await isSuppressed(db, to)) { result.skipped.push({ id, name, reason: `${to} bounced or reported spam` }); continue; }
     const balance = formatCurrency(statement.endingBalanceCents, currency);
     const message = renderEmail(template, { company: String(workspace.name || ''), customer: name, amount: balance, amount_due: balance, number: statement.pdf.number });
-    const logBase = { workspaceId: input.workspaceId, documentType: 'statement', documentId: id, template: 'statement', subject: message.subject, recipient: to, sentBy: input.uid };
+    const logBase = { workspaceId: input.workspaceId, documentType: 'statement', documentId: id, template: 'statement', subject: message.subject, recipient: to, sentBy: input.system ? 'schedule' : input.uid };
     try {
       const pdf = await generateDocumentPdf('statement', statement.pdf, workspace);
       const sent = await sendMail({ to, subject: message.subject, html: message.html, text: message.text, attachments: [{ filename: `statement_${name.replace(/[^\w.-]+/g, '_')}.pdf`, content: pdf, contentType: 'application/pdf' }] });

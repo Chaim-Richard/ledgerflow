@@ -4,7 +4,7 @@ import { runDailyMaintenance } from '../services/maintenanceService';
 import { processAllRecurring } from '../services/recurringService';
 import { processErrorDigest } from '../services/errorDigestService';
 import { runNotificationJobs } from '../services/notificationService';
-import { runDailyReminders } from '../services/reminderService';
+import { runDailyReminders, runDailyStatements } from '../services/reminderService';
 import { recordDailyJobRun } from '../services/statusService';
 import { runDailyRetention } from '../services/retentionService';
 import { getDb } from '../db/firestore';
@@ -29,6 +29,7 @@ const DAILY_JOBS: [string, () => Promise<unknown>][] = [
   ['errorDigest', () => processErrorDigest()],
   ['notifications', runNotificationJobs],
   ['reminders', runDailyReminders],
+  ['statements', runDailyStatements],
   ['retention', runDailyRetention],
 ];
 
