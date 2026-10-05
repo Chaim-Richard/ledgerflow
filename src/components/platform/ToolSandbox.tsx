@@ -4,8 +4,8 @@ import { NumericAlgorithmInput } from './NumericAlgorithmInput';
 import { AlgorithmHelp } from './AlgorithmHelp';
 import { algorithmPurpose } from '../../lib/algorithmPurpose';
 import { motion } from 'motion/react';
-import { X, Play, CheckCircle2, BarChart3, ListFilter, ArrowUpRight, Download, FileSpreadsheet, RotateCcw } from 'lucide-react';
-import { Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
+import { X, Play, CheckCircle2, ListFilter, ArrowUpRight, Download, FileSpreadsheet, RotateCcw } from 'lucide-react';
+import AlgorithmChart from '../charts/AlgorithmChart';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
@@ -305,29 +305,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
 
                {/* Engine Output Chart */}
                {withStableKeys(results.charts, c => JSON.stringify(c.config)).map(({ item: c, key }) => (
-                  <div key={key} className="p-6 bg-[var(--surface)] dark:bg-[#1b1c1d] border border-[var(--line)] rounded-[32px] shadow-sm h-96 flex flex-col">
-                     <div className="flex justify-between items-center mb-6">
-                         <h3 className="text-sm font-black uppercase tracking-wider text-[var(--text)] dark:text-white flex items-center gap-2">
-                            <BarChart3 aria-hidden="true" size={16} /> Operational Topology Projection
-                         </h3>
-                     </div>
-                     <div className="flex-1 min-h-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                           <ComposedChart data={c.data} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e5e5" />
-                              <XAxis dataKey={c.config.xKey} fontSize={10} tickLine={false} tickMargin={10} />
-                              <YAxis fontSize={10} tickLine={false} />
-                              <Tooltip contentStyle={{ background: '#111', color: '#fff', borderRadius: '8px', border: 'none' }} />
-                              <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 900 }} />
-                              {c.config.yKeys.map((y) => y.type === 'bar' ? (
-                                 <Bar key={y.key} dataKey={y.key} fill={y.color} name={y.name} radius={[4, 4, 0, 0]} />
-                              ) : (
-                                 <Line key={y.key} type="monotone" dataKey={y.key} stroke={y.color} strokeWidth={3} name={y.name} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                              ))}
-                           </ComposedChart>
-                        </ResponsiveContainer>
-                     </div>
-                  </div>
+                  <AlgorithmChart key={key} chart={c} />
                ))}
 
                {/* Insights Engine */}

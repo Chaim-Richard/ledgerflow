@@ -1830,13 +1830,13 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION O — VISUALISATION
 
-- [ ] O-01 Sunburst
-- [ ] O-02 Treemap
+- [x] O-01 Sunburst
+- [x] O-02 Treemap
 - [ ] O-03 Icicle
 - [ ] O-04 Brush selector
 - [ ] O-05 Chart switcher
 - [ ] O-06 Legend toggling
-- [ ] O-07 Scatter plot
+- [x] O-07 Scatter plot
 - [ ] O-08 Consistent tooltips
 
 # SECTION P — PLATFORM & ENTERPRISE
