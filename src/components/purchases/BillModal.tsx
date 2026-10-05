@@ -19,10 +19,13 @@ import { documentTotals, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCo
 import { formatCurrency, safeConfirm } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
+/** What the dialog saves: the bill, and for a new one whether it repeats (BE-08; never stored on the bill). */
+export type BillDraft = Partial<Bill> & { recurringInterval?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' };
+
 interface BillModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (bill: Partial<Bill>) => void;
+  onSave: (bill: BillDraft) => void;
   vendors: Vendor[];
   accounts: ChartAccount[];
   /** Pre-filled bill, e.g. from a purchase order (BE-11). */

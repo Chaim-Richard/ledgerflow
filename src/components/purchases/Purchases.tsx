@@ -17,6 +17,7 @@ import VendorModal from './VendorModal';
 import TagFilter from '../common/TagFilter';
 import DocumentTotalsFoot from '../ui/DocumentTotalsFoot';
 import { recurringBillSchedule } from '../../lib/recurringBills';
+import type { BillDraft } from './BillModal';
 import { allTags, hasTag, isArchivedParty } from '../../lib/contacts';
 import PartyRowActions, { ArchivedBadge, ShowArchivedToggle } from '../common/PartyRowActions';
 import VendorDetailView from './VendorDetailView';
@@ -83,7 +84,7 @@ export default function Purchases() {
     setIsVendorModalOpen(false);
   };
 
-  const handleAddBill = async (input: Partial<Bill>) => {
+  const handleAddBill = async (input: BillDraft) => {
     const { recurringInterval, ...data } = input;
     if (data.id) {
       const { id, ...updates } = data;

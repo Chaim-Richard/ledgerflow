@@ -8,7 +8,7 @@ import test, { afterEach, beforeEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import BillModal from '../components/purchases/BillModal';
+import BillModal, { type BillDraft } from '../components/purchases/BillModal';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import type { Bill, Workspace } from '../types';
@@ -19,7 +19,7 @@ const accounts = [makeChartAccount({ id: 'exp', name: 'Office supplies', type: '
 let fetched: string[] = [];
 
 function setup(initialBill?: Partial<Bill>) {
-  const saved: Partial<Bill>[] = [];
+  const saved: BillDraft[] = [];
   render(<BillModal isOpen onClose={() => {}} onSave={b => { saved.push(b); }} vendors={vendors} accounts={accounts} initialBill={initialBill} />);
   return saved;
 }
