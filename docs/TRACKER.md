@@ -1543,7 +1543,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] K-18 Retainers
 - [x] K-19 Bad debt with reversal (server, base currency, tested)
 - [x] K-20 Undeposited funds (Make deposit; tested)
-- [ ] K-21 Expected-bill tracking
+- [x] K-21 Expected-bill tracking: vendors that bill on a rhythm (weekly to quarterly, at least 3 regular bills) are learned from the bills already recorded; Purchases shows "Expected bills" (usual amount or range, how often, expected by / days late) with "Record bill" (the latest bill's lines copied, new dates) and "Not expected"; vendors on a recurring bill schedule are left out (tested)
 - [ ] K-22 Expense claims
 - [ ] K-23 Purchase requisitions
 - [ ] K-24 Payment runs + bank file

@@ -16,6 +16,8 @@ export interface Vendor {
   category: string;
   email?: string;
   phone?: string;
+  /** False after "Not expected" on an expected bill (K-21, src/lib/expectedBills.ts): the vendor's rhythm is no longer watched. */
+  billsExpected?: boolean;
   type?: string; // 'subcontractor', 'service_provider', 'supplier', etc.
   status?: 'active' | 'inactive' | 'blocked' | 'approved' | string;
   pipelineStage?: string;
