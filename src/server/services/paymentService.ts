@@ -4,6 +4,7 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import type { ChartAccount } from '../../types';
 import { assertPostingOpen } from '../../lib/periodLock';
 import { formatCurrency } from '../../lib/utils';
+import { allocateInTransaction } from './numberingService';
 
 export interface CreatePaymentPayload {
   workspaceId: string;
@@ -183,7 +184,8 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     // 4. Build Payment Document
     const paymentRef = db.collection('payments').doc();
     const paymentId = paymentRef.id;
-    const paymentNumber = `PMT-${Math.floor(1000 + Math.random() * 9000)}`;
+    // the next number of the payment series (Settings → Document numbering); it was PMT-<random 4 digits>, which repeated (L-189)
+    const paymentNumber = await allocateInTransaction(db, tx, workspaceId, 'payment');
     const isReceiptPayment = allocations.some(a => a.documentType === 'invoice') || Boolean(customerId);
     const paymentData = {
       id: paymentId,

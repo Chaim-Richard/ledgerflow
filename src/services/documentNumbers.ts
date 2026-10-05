@@ -1,6 +1,6 @@
 import { getIdToken } from '../firebase';
 
-export type NumberedDocument = 'invoice' | 'bill' | 'estimate' | 'creditNote' | 'vendorCredit';
+export type NumberedDocument = 'invoice' | 'bill' | 'estimate' | 'creditNote' | 'vendorCredit' | 'payment';
 
 /**
  * The next number of a document series (BA-07), allocated by the server in one database
