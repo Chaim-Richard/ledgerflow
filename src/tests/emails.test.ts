@@ -157,4 +157,38 @@ describe('Emailing an invoice', { skip: !url && 'LF_TEST_DATABASE_URL not set' }
     assert.equal(again.status, 409);
     assert.equal(outbox.length, 1);
   });
+
+  test('statements (BE-07): every active customer with something open and an address; the rest skipped with the reason', async () => {
+    await db.collection('customers').doc(id('c2')).set({ workspaceId: ws, name: 'No Mail Ltd' });
+    await db.collection('customers').doc(id('c3')).set({ workspaceId: ws, name: 'Settled Inc', email: 'ap@settled.test' });
+    await db.collection('customers').doc(id('c4')).set({ workspaceId: ws, name: 'Owes Co', email: 'AP@owes.test' });
+    await db.collection('customers').doc(id('c5')).set({ workspaceId: ws, name: 'Gone Ltd', email: 'x@gone.test', status: 'inactive' });
+    await db.collection('invoices').doc(id('i2')).set({ workspaceId: ws, customerId: id('c2'), number: 'INV-20', amountCents: 500, status: 'sent', date: '2026-03-01' });
+    await db.collection('invoices').doc(id('i4')).set({ workspaceId: ws, customerId: id('c4'), number: 'INV-40', amountCents: 2500, status: 'sent', date: '2026-03-02' });
+    await db.collection('invoices').doc(id('i5')).set({ workspaceId: ws, customerId: id('c5'), number: 'INV-50', amountCents: 900, status: 'sent', date: '2026-03-02' });
+    const statements = (uid: string, body: Record<string, unknown> = {}) =>
+      fetch(`${base}/api/v1/workspaces/${ws}/emails/statements`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': uid }, body: JSON.stringify(body) });
+
+    assert.equal((await statements('view-1')).status, 403);
+    const res = await statements('owner-1');
+    assert.equal(res.status, 200);
+    const body = await res.json() as { sent: Array<{ id: string; to: string }>; skipped: Array<{ id: string; reason: string }>; failed: unknown[] };
+    assert.deepEqual(body.sent.map(s => [s.id, s.to]), [[id('c4'), 'ap@owes.test']]);
+    assert.deepEqual(body.skipped.map(s => [s.id, s.reason]).sort(), [
+      [id('c1'), 'billing@acme.test bounced or reported spam'],
+      [id('c2'), 'no email address'],
+      [id('c3'), 'nothing is open'],
+    ]);
+    assert.deepEqual(body.failed, []);
+    const mail = outbox[outbox.length - 1];
+    assert.equal(mail.subject, 'Your statement from Mail Co');
+    assert.match(String(mail.text), /The balance is .*25\.00/);
+    assert.match(String(mail.attachments?.[0]?.filename), /^statement_Owes_Co\.pdf$/);
+    assert.equal((mail.attachments?.[0]?.content as Buffer).subarray(0, 4).toString(), '%PDF');
+    const log = await fetch(`${base}/api/v1/workspaces/${ws}/emails/log/${id('c4')}`, { headers: { 'x-test-uid': 'owner-1' } }).then(r => r.json()) as { events: Array<{ event: string }> };
+    assert.deepEqual(log.events.map(e => e.event), ['sent']);
+
+    const one = await statements('owner-1', { customerIds: [id('c5')] }).then(r => r.json()) as { sent: Array<{ id: string }> };
+    assert.deepEqual(one.sent.map(s => s.id), [id('c5')], 'an archived customer can still be chosen by hand');
+  });
 });

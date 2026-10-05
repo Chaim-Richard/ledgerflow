@@ -4,9 +4,7 @@ import { getDb, validateWorkspaceMember } from '../db/firestore';
 import type { Firestore } from '../db/firestore';
 import { generateDocumentPdf } from '../services/pdfService';
 import type { PdfDocument, PdfDocumentType, PdfWorkspace } from '../services/pdfService';
-import type { Bill, CreditNote, Customer, Invoice, Payment, VendorCredit } from '../../types';
-import { computeStatement } from '../reports/computeReports';
-import { getLocalDateISO } from '../../lib/utils';
+import { loadStatement } from '../services/statementService';
 import { getTrustedAppUrl } from '../utils/urlHelper';
 import { zipStore } from '../utils/zip';
 import { z } from 'zod';
@@ -128,42 +126,10 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
       if (!loaded) return res.status(404).json({ status: 'error', message: `${PDF_SOURCES[type].label} not found` });
       ({ docData, paymentUrl } = loaded);
     } else {
-      // id is customer/vendor contact ID
-      const customerSnap = await db.collection('customers').doc(id).get();
-      const vendorSnap = await db.collection('vendors').doc(id).get();
-      const customerInWs = customerSnap.exists && customerSnap.data()?.workspaceId === workspaceId;
-      const vendorInWs = vendorSnap.exists && vendorSnap.data()?.workspaceId === workspaceId;
-      if ((customerSnap.exists || vendorSnap.exists) && !customerInWs && !vendorInWs) {
-        return res.status(404).json({ status: 'error', message: 'Contact not found' });
-      }
-      const contactData = (customerSnap.exists ? { id, ...customerSnap.data() } : (vendorSnap.exists ? { id, ...vendorSnap.data() } : { id, name: 'Contact' })) as Customer & { address?: string };
-      const contactType = customerSnap.exists ? 'customer' : 'vendor';
-
-      const invoices = contactType === 'customer'
-        ? (await db.collection('invoices').where('workspaceId', '==', workspaceId).where('customerId', '==', id).get()).docs.map((d) => ({ id: d.id, ...d.data() }) as Invoice)
-        : [];
-      const bills = contactType === 'vendor'
-        ? (await db.collection('bills').where('workspaceId', '==', workspaceId).where('vendorId', '==', id).get()).docs.map((d) => ({ id: d.id, ...d.data() }) as Bill)
-        : [];
-      const paymentsSnap = await db.collection('payments').where('workspaceId', '==', workspaceId).get();
-      const payments = paymentsSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Payment);
-
-      const creditsSnap = await db.collection(contactType === 'customer' ? 'creditNotes' : 'vendorCredits')
-        .where('workspaceId', '==', workspaceId).where(contactType === 'customer' ? 'customerId' : 'vendorId', '==', id).get();
-      const credits = creditsSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as CreditNote | VendorCredit);
-
-      const stmt = computeStatement(contactData, invoices, bills, payments, '1970-01-01', '2099-12-31', contactType, credits);
-
-      docData = {
-        number: `STMT-${id.substring(0, 6).toUpperCase()}`,
-        date: getLocalDateISO(),
-        customerName: stmt.contactName,
-        amountCents: stmt.endingBalanceCents,
-        transactions: stmt.entries.map((item) => ({
-          description: `${item.date} ${item.type} ${item.reference || ''}`,
-          amountCents: item.amountCents || 0,
-        }))
-      };
+      // id is a customer or vendor
+      const statement = await loadStatement(db, workspaceId, id);
+      if (!statement) return res.status(404).json({ status: 'error', message: 'Contact not found' });
+      docData = statement.pdf;
     }
 
     const pdfBuffer = await generateDocumentPdf(type, docData, workspace, { paymentUrl });

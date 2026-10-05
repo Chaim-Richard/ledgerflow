@@ -9,6 +9,8 @@ import type { EmailTemplateKey, EmailTemplates, TemplateValues } from '../../lib
 import { isMailConfigured, sendMail } from './mailer';
 import { notify } from './notificationService';
 import { generateDocumentPdf } from './pdfService';
+import { loadStatement } from './statementService';
+import { isArchivedParty } from '../../lib/contacts';
 
 /**
  * Emailing an invoice or a payment reminder to the customer (S-01, BE-01, BL-03, BL-05, K-08).
@@ -192,4 +194,53 @@ export async function emailLog(db: Firestore, workspaceId: string, documentId: s
     .map(d => d.data())
     .map(e => ({ event: e.event, recipient: e.recipient, subject: e.subject || null, template: e.template || null, provider: e.provider || null, error: e.error || null, timestamp: e.timestamp }))
     .sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
+}
+
+export interface StatementBatchResult {
+  sent: Array<{ id: string; name: string; to: string }>;
+  skipped: Array<{ id: string; name: string; reason: string }>;
+  failed: Array<{ id: string; name: string; message: string }>;
+}
+
+/**
+ * Email statements (BE-07): each chosen customer (or every active customer) gets their statement
+ * PDF with the "statement" email. Customers with nothing open, without an email address, archived
+ * or bounced are skipped with the reason; one failure doesn't stop the rest. Writers only.
+ */
+export async function emailStatements(db: Firestore, input: { workspaceId: string; uid: string; customerIds?: string[] }): Promise<StatementBatchResult> {
+  const workspace = (await db.collection('workspaces').doc(input.workspaceId).get()).data();
+  if (!workspace) throw new EmailSendError(404, 'Workspace not found');
+  if (!WRITER_ROLES.includes(workspaceRole(workspace, input.uid))) throw new EmailSendError(403, 'Viewers cannot send emails');
+  if (!isMailConfigured()) throw new EmailSendError(503, 'Email sending is not set up yet (add an email provider key in the settings)');
+
+  const ids = input.customerIds?.length
+    ? input.customerIds
+    : (await db.collection('customers').where('workspaceId', '==', input.workspaceId).get()).docs
+      .filter(d => !isArchivedParty(d.data() as { status?: string })).map(d => d.id);
+  const result: StatementBatchResult = { sent: [], skipped: [], failed: [] };
+  const template = resolveTemplate('statement', workspace.emailTemplates as EmailTemplates | undefined);
+  for (const id of ids) {
+    const statement = await loadStatement(db, input.workspaceId, id);
+    if (!statement || statement.contactType !== 'customer') { result.skipped.push({ id, name: id, reason: 'not a customer here' }); continue; }
+    const name = String(statement.contact.name || id);
+    const to = String(statement.contact.email || '').trim().toLowerCase();
+    const currency = String(statement.contact.currency || workspace.currency || 'USD');
+    if (statement.endingBalanceCents <= 0) { result.skipped.push({ id, name, reason: 'nothing is open' }); continue; }
+    if (!EMAIL.test(to)) { result.skipped.push({ id, name, reason: 'no email address' }); continue; }
+    if (await isSuppressed(db, to)) { result.skipped.push({ id, name, reason: `${to} bounced or reported spam` }); continue; }
+    const balance = formatCurrency(statement.endingBalanceCents, currency);
+    const message = renderEmail(template, { company: String(workspace.name || ''), customer: name, amount: balance, amount_due: balance, number: statement.pdf.number });
+    const logBase = { workspaceId: input.workspaceId, documentType: 'statement', documentId: id, template: 'statement', subject: message.subject, recipient: to, sentBy: input.uid };
+    try {
+      const pdf = await generateDocumentPdf('statement', statement.pdf, workspace);
+      const sent = await sendMail({ to, subject: message.subject, html: message.html, text: message.text, attachments: [{ filename: `statement_${name.replace(/[^\w.-]+/g, '_')}.pdf`, content: pdf, contentType: 'application/pdf' }] });
+      await logEmailEvent(db, { ...logBase, event: 'sent', provider: sent.provider, messageId: sent.messageId || null });
+      result.sent.push({ id, name, to });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await logEmailEvent(db, { ...logBase, event: 'failed', error: msg.slice(0, 300) });
+      result.failed.push({ id, name, message: msg });
+    }
+  }
+  return result;
 }

@@ -28,6 +28,7 @@ import CustomerModal from './CustomerModal';
 import TagFilter from '../common/TagFilter';
 import { allTags, hasTag, isArchivedParty } from '../../lib/contacts';
 import PartyRowActions, { ArchivedBadge, ShowArchivedToggle } from '../common/PartyRowActions';
+import EmailStatementsButton from './EmailStatementsButton';
 import { PartyDetailView } from '../common/PartyDetailView';
 import WriteOffModal from './WriteOffModal';
 import InvoiceEmailDialog from './InvoiceEmailDialog';
@@ -533,7 +534,10 @@ export default function Sales() {
       {activeSubTab === 'customers' && (
         <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
           <TagFilter tags={customerTags} value={customerTag} onChange={setCustomerTag} label="Show customers with the tag" />
-          <ShowArchivedToggle count={archivedCustomers} on={showArchivedCustomers} onChange={setShowArchivedCustomers} noun="customer" />
+          <div className="flex flex-wrap items-center gap-2 px-4 md:px-8">
+            <EmailStatementsButton className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--line)] text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-50" />
+            <ShowArchivedToggle count={archivedCustomers} on={showArchivedCustomers} onChange={setShowArchivedCustomers} noun="customer" />
+          </div>
           <div className="overflow-x-auto">
             {canEditContacts && (
               <InlineAdd className="px-4 md:px-8 pt-4" label="New customer name" placeholder="Add a customer: type a name and press Enter"
