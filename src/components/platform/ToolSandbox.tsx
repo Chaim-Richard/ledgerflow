@@ -1,4 +1,8 @@
 import React, { useState, useMemo } from 'react';
+import { useDialog } from '../../hooks/useDialog';
+import { NumericAlgorithmInput } from './NumericAlgorithmInput';
+import { AlgorithmHelp } from './AlgorithmHelp';
+import { algorithmPurpose } from '../../lib/algorithmPurpose';
 import { motion } from 'motion/react';
 import { X, Play, CheckCircle2, BarChart3, ListFilter, ArrowUpRight, Download, FileSpreadsheet, RotateCcw } from 'lucide-react';
 import { Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
@@ -34,6 +38,8 @@ function withStableKeys<T>(items: T[], getContentKey: (item: T) => string) {
 }
 
 export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
+  const { dialogProps, titleId } = useDialog(onClose);
+  const truncated = useLedgerStore(state => state.truncatedCollections);
   const setActiveTab = useUIStore(state => state.setActiveTab);
   const transactions = useLedgerStore(state => state.transactions || []);
   const rawAccounts = useLedgerStore(state => state.accounts || []);
@@ -59,6 +65,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
   }, [toolId]);
   
   // Custom user inputs per algorithm
+  const [parameterReset, setParameterReset] = useState(0);
   const [prevAlgoId, setPrevAlgoId] = useState(algorithm.id);
   const [params, setParams] = useState<Record<string, ParameterValue>>(() => {
     const init: Record<string, ParameterValue> = {};
@@ -144,7 +151,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 bg-[#0c0d0e]/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 md:p-4 md:p-8"
     >
-      <motion.div 
+      <motion.div {...dialogProps}
         initial={{ scale: 0.95, y: 15 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 15 }}
         transition={{ type: "spring", damping: 25, stiffness: 180 }}
         className="bg-[#fafafa] dark:bg-[#161718] border border-[var(--line)] rounded-[32px] w-full max-w-6xl h-[85dvh] flex flex-col overflow-hidden shadow-2xl relative"
@@ -156,13 +163,13 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
              </div>
              <div>
                 <div className="flex items-center gap-2">
-                   <h2 className="text-xl font-black uppercase italic text-[var(--text)] dark:text-white tracking-tight leading-none">{algorithm.name}</h2>
+                   <h2 id={titleId} className="text-xl font-black uppercase italic text-[var(--text)] dark:text-white tracking-tight leading-none">{algorithm.name}</h2>
                    <span className="hidden sm:inline-block px-2 py-0.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[8px] font-medium uppercase tracking-wider rounded">
                      Real-Time Data Connected
                    </span>
                 </div>
                 <p className="text-[10px] uppercase font-bold tracking-widest text-[#8a8a8f] dark:text-neutral-400 mt-1">
-                   {algorithm.description}
+                   {algorithmPurpose(algorithm)}
                 </p>
              </div>
           </div>
@@ -186,6 +193,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                       const init: Record<string, ParameterValue> = {};
                       algorithm.inputs.forEach((i) => init[i.key] = i.defaultValue);
                       setParams(init);
+                      setParameterReset(version => version + 1);
                     }}
                     className="p-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--line)] text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
                  >
@@ -206,12 +214,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                          </div>
                          
                          {kind === 'number' && (
-                           <input aria-label={inp.label}
-                             type="range" min={(inp as NumberInput).min} max={(inp as NumberInput).max} step={(inp as NumberInput).step}
-                             value={params[inp.key] as string | number | undefined}
-                             onChange={e => setParams({...params, [inp.key]: Number(e.target.value)})}
-                             className="w-full accent-ledger-ink"
-                           />
+                           <NumericAlgorithmInput key={`${algorithm.id}:${inp.key}:${parameterReset}`} input={inp as NumberInput} value={params[inp.key] as number} onChange={value => setParams({...params, [inp.key]: value})} />
                          )}
 
                          {kind === 'boolean' && (
@@ -286,6 +289,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
 
            {/* Metrics & Visualization Workspace */}
            <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#fafafa] dark:bg-[#161718] p-4 md:p-8 space-y-8">
+               <AlgorithmHelp algorithm={algorithm} incomplete={Object.values(truncated).some(Boolean)} />
                {/* Metrics Row */}
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {withStableKeys(results.metrics, m => m.label).map(({ item: m, key }) => (

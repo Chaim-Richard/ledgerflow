@@ -1,0 +1,157 @@
+# Developer workflow guide
+
+This guide follows the running code, not the feature names in a menu. Read `AGENTS.md` and `docs/COORDINATION.md` first. Ownership there can change while you work; check the current remote before selecting files and again before pushing. This guide does not grant access to another agent's reserved files.
+
+## Trace a feature before changing it
+
+For any screen, identify these six points and put them in the task notes:
+
+1. Entry: registration in `src/config/registry.tsx`, parent props, URL/hash and workspace selection.
+2. Inputs: store selectors, lazy collection requests, filter state and whether the loaded collection is complete.
+3. Computation: the shared pure helper that owns the number; units, currency, date and account roles.
+4. Action: the hook/route responsible for saving; required role, workspace, confirmation and pending state.
+5. Persistence: database collection and migration/policy; atomic writes, retries, rollback and idempotency.
+6. Evidence: existing tests plus a meaningful test at the boundary affected by the change.
+
+A visible button, registry entry, successful local state update or toast is not evidence of a saved operation. Follow the promise through the server/database path. Reopen after saving or fetch the saved record in a test. A guest-mode browser test proves browser behavior, not authenticated production integration.
+
+## Documents and the ledger
+
+`src/hooks/useEntityOperations.ts` dispatches invoices, bills, credit notes and vendor credits to `LedgerPostService`. Its public facade in `src/services/LedgerPostService.ts` delegates to `src/services/ledgerPost/`. Documents and entries are sent together through the transaction API; do not create a parallel direct write of financial entries from a new component.
+
+When updating a document, retain the complete saved record. `savedRecord()` reads from the database when the lazy list has not loaded. Treat a missing UI list as unknown, not as an empty document. Keep stable IDs/reference metadata so related records and reversal logic can find each other.
+
+Resolve chart-account roles with `resolveAccountRole` and the shared account helpers. Refuse a posting with a useful error if its required account is absent; do not pick the first account. Preserve currency, exchange rate, document references, tax breakdown, dimensions and item IDs. Use existing document arithmetic in `src/lib/documentMath.ts` and posting logic; do not recompute invoice totals in JSX.
+
+Verify create, update and failure behavior with a balanced hand-calculated fixture. Include a locked period, a viewer request, a cross-workspace record, a repeated request and a failed server response when those boundaries are affected. Editing a posted document must preserve its audit/reversal contract rather than silently replacing ledger history.
+
+## Amounts, currency and status
+
+- `totalAmountCents` is an absolute transaction amount. Its sign does not describe income or expense. Direction comes from signed lines and account roles.
+- Use `isPostable` for actual financial reports; drafts, voids and simulation records have distinct status contracts. Do not invent an abbreviated status check in a new reporting route.
+- Use `lineAmount(line, transaction)` and existing base-currency helpers where conversion is required. Do not add raw mixed-currency line amounts.
+- Display money with `formatCurrency` and the appropriate document/workspace currency. Currency fraction digits vary. Do not divide an amount by 100 inside a view.
+- CSV must use `downloadCsv`, `csvMoney` and the shared writer. It quotes cells, protects spreadsheet formulas and preserves UTF-8. The existing CSV decimal helper currently follows a two-decimal contract: verify zero-/three-decimal currencies before extending exports; do not silently change that global contract.
+- Keep precise arithmetic and validation in the pure/shared domain functions. Monetary regression expectations are independent hand calculations; do not change established expected numbers to make an implementation pass.
+
+## Reporting and incomplete data
+
+The browser ledger is a workspace-scoped cache, not proof that every row in the database has loaded. `src/lib/ledgerCollections.ts` defines loading/cap behavior; a consumer of a lazy collection must call `useLedgerCollections`. Honor collection truncation and report-authoritative flags.
+
+`src/server/routes/reportRoutes.ts` obtains an authorized workspace's complete report context and calls `src/server/reports/computeReports.ts`. P&L is activity between inclusive dates. Balance sheet is a snapshot through the end date, including prior activity and opening balances. Splitting a balance sheet into months must not discard activity before each month's start.
+
+For period columns, use `src/lib/reportColumns.ts`, not new copies of the statement formulas. Calendar month bounds and fiscal quarter bounds are clipped to the selected range. Comparison periods belong to their own selected range. Test an April-start fiscal year, leap February, partial periods, previous zero/negative values, and account rows present only in another period.
+
+Server response ownership must include workspace, dates, kind and the source data generation. An old response must not overwrite a new selection. Cancel obsolete effects logically even if the shared fetch API does not expose `AbortSignal`. Mark local fallbacks and prevent exporting truncated data as a complete report. Sort/export/drill-down must use the same period and figures shown in the table.
+
+## Banking and matching
+
+Trace imports through format parsing, source fingerprinting, mapping/validation and saved bank lines. Do not alter existing import fingerprints just to improve search. Distinguish potential duplicates from proven duplicates.
+
+Matching is suggestion generation; durable reconciliation is the server endpoint's job. Check the full candidate set, one-to-one assignments and signed/base-currency amounts. Use the existing global matching implementation, not independent greedy guesses. A match proposal should not become a posted transaction without the intended user action. Preserve matched history and its reversal/unmatch boundaries.
+
+Test repeated imports, ambiguous candidates, a partial/multi-entry match, unmatched data, same amounts with different merchants, and workspace boundaries. See `global-match.test.ts`, `reconcile-endpoint.test.ts`, `banking.test.ts`, `ofx.test.ts` and browser banking suites.
+
+## Inventory
+
+Quantities are not editable financial cache values. `src/server/services/cogsStockService.ts` applies invoice-linked COGS stock movement and reversal in the same database transaction as the ledger entries. `stockAdjustmentService.ts` owns adjustments/counts. Preserve item IDs, quantity precision, quantity delta, item workspace and reversal-once rules.
+
+The quantity-protection migration prevents direct browser writes. Do not work around it by updating the item from a modal. A successful adjustment needs both stock and ledger evidence; a failed one needs neither change. Negative stock is currently a warning in some flows, so do not claim that every oversell is refused. Missing/deleted items have explicit warning behavior.
+
+Use `stock-adjustments.test.ts`, `stock-dialogs.test.tsx`, invoice COGS tests and RLS checks. Include duplicate reversal, foreign-workspace item, invalid quantity and server failure where applicable.
+
+## Tax, payments and credit allocation
+
+Use `taxCodes.ts` and `documentMath.ts` for tax codes, components, compounding, inclusive/exclusive prices and document totals. Tax return services own return construction/filed state. A displayed tax summary is not a statutory filing integration. Preserve archived return/audit behavior and locked periods.
+
+Payments, credits and deposits reduce what is still due, not merely the original invoice total. Use `calculateAmountDue`, existing allocation helpers and the server payment/credit/deposit services. Keep invoice currency separate from report base currency. A customer that also appears as a vendor must not have unrelated debts offset by a label match.
+
+Test partial payments, payment before/after report date, credit allocation, over-allocation refusal, idempotent retry, FX rounding and atomic server failure. Relevant evidence includes `payment-atomicity.test.ts`, `allocation.test.ts`, `credits.test.ts`, `deposits.test.ts`, `fx-posting.test.ts`, `aging.test.ts`, `statement-credits.test.ts` and route tests.
+
+## Search, labels and mixed Hebrew data
+
+Keep menus/options in English for the owner's requested scope. Support Hebrew and mixed-script data throughout parsing, labels, items, references, dimensions, imports and export. Treat the exact displayed/stored text as data.
+
+Use `normalizeSearchText` for comparison-only folding (Unicode NFC, Hebrew marks and direction controls). Never apply it to stable IDs, persisted text or import fingerprints. Do not use ASCII-only `\w`, `[a-z]` or punctuation replacement as a record identity. Quoted directives and nested dimension values need explicit parsing and resolution.
+
+Test distinct Hebrew-only names, mixed Hebrew/Latin labels, niqqud, punctuation, quoted values, nested dimensions, negative directives and CSV round trips. Also trace learned-pattern persistence: good Unicode matching in a pure algorithm does not prove that the save hook preserves distinct identities. `useEntityOperations.recordLearnedPattern` currently has an ASCII-only key transform; see the review findings before claiming complete coverage.
+
+## Pure algorithms and analytical tools
+
+Algorithms accept their inputs and ledger/account context; they must not fetch, read stores or post changes from `compute()`. Register them through `src/lib/algorithms/index.ts`; the sandbox supplies their control UI. Keep output models typed and document units, assumptions and insufficient-data behavior.
+
+Inspect the actual formula and its input source before describing a tool. Monte Carlo projections, anomaly scores, churn models and similarity scores are estimates, not verified balances or proof of fraud. Distinguish statistical simulations from operational integrations. Keep random generators' shared state/seed contract intact during file splits. A stochastic test should check invariants or use a deterministic seed rather than expect an unstable exact output.
+
+## UI, navigation and accessibility
+
+Use registered views and existing route/hash helpers. `openRecord` records a typed reference and selects its screen; a tab switch alone may not open the record. Preserve search/filter URL state and selected dates. Treat user/workspace changes as selection changes, including preferences and recent records.
+
+Use native buttons for commands; separate sorting from filter buttons; labels need per-instance IDs; dialog overlays use `useDialog` for naming/focus/Escape/focus restoration. Never invoke save actions from disabled role-gated children. Async actions must disable repeat activation until the existing promise resolves. Disabling the focused field or Save button can move native focus to body: keep focus in the active dialog while pending and restore the initiating control on confirmation/refusal without stealing focus from a newer dialog or workspace. Verify Escape after saving, not only immediately after opening.
+
+Virtualized list headers and cells must use the same visible columns, widths and order. Test actual Chromium alignment, scrolling and persistence after remount; jsdom has no layout. Keep phone touch targets at least 44 px, including checkbox labels, icon buttons and small filter chips, without obscuring rows or changing document arithmetic.
+
+## Server and database work
+
+Always check the live coordination ownership table before editing server or database code. A route needs authentication, membership, write role, parsed inputs and appropriate audit behavior; hiding a button is not authorization. A cached response also needs a defined membership-revocation/freshness policy.
+
+Data is in workspace-scoped top-level Supabase/Postgres collections behind the Firestore-style adapters. A new collection needs a migration, `lf_rules` entry, policies, lazy-loading specification where applicable and RLS evidence. Never reuse a nested Firestore-style path that the adapter does not support. Server transactions must keep reads/writes/locking in the supported adapter order.
+
+Apply new migrations to an existing test database deliberately; the whole setup script is not a general idempotent migration runner. Do not use production data for fixtures, print tokens or invent environment credentials. Mail, Plaid, Stripe and AI provider tests distinguish mocked contracts from configured external-service success.
+
+## Verification and collaboration
+
+For each task/commit, run the current required fast checks: type check, `npm test`, `npm run lint:eslint`, `npm run build`. Run browser checks around every five changes and before a review branch is final. Every approximately five commits, also run database/RLS, coverage, and unit tests under Pacific/Auckland and America/Los_Angeles as the current coordination requires. GitHub CI now runs weekly or manually, so local verification is necessary before pushing. Do not raise warning caps, coverage gates or quality baselines to get a green result.
+
+Keep test source input and expected money values unchanged during refactors. For rendering splits, compare executable declarations/JSX or emitted output; for behavior changes, add boundary tests. Run Chromium without concurrent heavy CPU tasks and without source edits that trigger hot reload.
+
+Fetch current main, inspect Claude's new messages/reservations and integrate through a normal merge. Preserve both agents' independent tests and improvements, resolve conflicting semantics explicitly, rerun the relevant combined checks and push normally. Never reset/force-push away another agent's changes. A branch push is not a merged PR or a production deployment; report the actual verified status.
+
+## Editing related records without leaving a form
+
+The owner prefers a side drawer. A selector for a customer, vendor, item, project or other related record should offer an explicit Edit details action beside the selection; add Create in context when the existing creation service supports it. Mount the drawer alongside the parent form. Keep its draft, scroll position and selected line intact. Closing the drawer must return focus to the triggering selector/button; Escape closes only the top drawer. Current invoice/bill dialogs use layer 600; the global related-record launcher uses 650 and its drawer 700 (backdrop 699), so the drawer actually remains reachable above a document form. Verify stacking in Chromium rather than assuming a named dialog is visible. Saving an address should update the shared record, not only a one-time copy in the current invoice.
+
+Use a narrow, typed field allowlist for ordinary metadata. Never generate an arbitrary JSON editor for financial documents or write amounts, allocations, balances, stock quantities, account roles, period locks or posting status from a generic drawer. Those changes must invoke the existing financial editor/service and retain its validation. Fetch the latest record when a collection is absent or truncated; verify workspace, current membership/role and selected record after every asynchronous read. Save only changed fields, and warn on observed conflicting edits. Disable repeated saves, show actual failures and retain the draft until success is confirmed. Do not interpret a helper that catches an error and returns void as a successful save.
+
+Switching account/workspace must clear drawer selection and drafts immediately. A request started in one workspace may not populate or submit into another. Test Hebrew addresses, mixed item names, multiline text, permission failure, stale records, rejected saves, nested-dialog Escape and retention of the parent document draft.
+
+## Pinned pages and direct access
+
+Page pins are preferences, never authority to access a record. Current main stores device-local page/subview references in useUIStore, with global Header pin control and PinnedPagesBar and Alt+P/Alt+1–9. Those files are reserved to Claude; use them rather than building a competing pin store. User/workspace scoping and date/filter capture are follow-up improvements, not current guarantees. Persist validated internal page references and report/settings subviews; avoid storing tokens, financial rows or arbitrary external URLs. Use existing navigation and record-opening helpers. Keep the pinned buttons available after navigating elsewhere, with an obvious unpin action and a compact phone layout. Document the actual shortcuts in the question-mark overlay. A navigation shortcut must not unexpectedly interrupt typing in a draft or bypass a dialog's focus boundary.
+
+## Algorithm explanations and typed values
+
+Every new analytical tool needs a readable account of its purpose, input data and scope, units, each parameter, assumptions, interpretation of results, a small example and insufficient-data/limitation behavior. Trace the implementation before writing help; do not repeat exaggerated registry marketing. For example, Monte Carlo uses the selected simulation count multiplied by 100, not always 10,000, and requires five distinct cash-movement days. Show an incomplete-data notice if the browser cache is truncated. Model output remains a scenario, not an automatic posting instruction.
+
+Provide typed numeric fields alongside sliders. Keep an editable draft while the user types; commit a valid finite value on Enter or blur. Respect declared range and step, announce invalid input and retain the previous calculation on refusal. Do not clamp each keystroke or silently replace a blank with zero. Reset and slider changes must keep typed controls synchronized. Test boundaries, empty/invalid values, keyboard entry and unchanged calculation outputs for identical valid parameters.
+
+## Trace examples for reviewing a change
+
+| Trigger | Trace to inspect | What establishes the behavior |
+|---|---|---|
+| Correct a vendor address while entering a bill | RelatedRecordEditButton or contextual launcher → record-details drawer → authoritative metadata read → field allowlist/role/workspace checks → confirmed partial write | The shared vendor address persists; the parent bill number, selected vendor and line draft stay intact; a refused write leaves the drawer draft visible |
+| Change a transaction's displayed amount | Existing transaction editor/action → current posting/validation route, not the generic drawer | Balanced line generation, period/role validation and server refusal; two-line behavior and source-document restrictions remain unchanged |
+| Compare fiscal-quarter statements | Reports page date contract → reportColumns periods → existing pure statement function per period → StatementColumns formatting/CSV | Independently checked fiscal/leap boundaries, closing history retained, zero denominators handled, old workspace responses refused |
+| Enter a new analytical parameter | NumericAlgorithmInput draft → declared parameter validation → existing algorithm context/compute → metrics/table/help | Typing does not clamp intermediate digits, invalid input leaves the previous result unchanged, and the same valid input gives the same deterministic calculation |
+| Navigate to a pinned page | Existing global Header pin control and PinnedPagesBar → useUIStore.goToPage → registered page/subview | A pin remains reachable from another page; Alt+P/Alt+1–9 and phone targets work. Current implementation does not promise stored date/filter context |
+| Edit an estimate reference on the list | Shared InlineEdit → confirmed scoped draft-only metadata update → latest record status guard | Viewers and non-drafts see text; an estimate converted before saving cannot be treated as an editable draft; no amount or ledger mutation is made |
+
+```mermaid
+flowchart LR
+  Screen[Current screen or form] --> Details[Related record drawer]
+  Details --> Read[Authoritative record read]
+  Read --> Check[Workspace, role, fields and observed conflicts]
+  Check --> Save[Confirmed partial metadata write]
+  Save --> Shared[Shared record for future screens]
+  Screen --> Financial[Existing financial editor]
+  Financial --> Service[Posting and validation service]
+  Service --> Ledger[Durable ledger and audit data]
+  Ledger --> Cache[Browser collections and report context]
+```
+
+The read/write conflict check detects changes observed before a save. It is not an atomic database compare-and-swap guarantee; new financial concurrency requirements must use an appropriate server transaction/version contract in the owning lane. Do not describe a browser read followed by an update as atomic.
+
+## Existing inline field recipe
+
+C-15 uses `RecordInlineField` with `inlineRecordFields` and the named database adapter. Choose a field from its allowlist, supply the rendered previous value, and await the confirmed write. The helper checks current role/workspace, authoritative record ownership, observed field conflicts, draft-only estimate status, text/date/email validation and planning-amount bounds. It never patches salary, tax components or posted values. The wrapper updates only the changed cache field, retains a retry value when the reserved shared InlineEdit closes on refusal, and refuses overlapping writes. Dimensions use composite document IDs and preserve prior labels as aliases; axis saves merge fresh workspace configuration and retain unfinished local node drafts. Project renames share a guard against observed legacy name links and unloaded, failed or incomplete history. These browser checks do not provide atomic server compare-and-swap; financial/reference migrations require the owning lane.
+
+After a confirmed partial detail save, refresh both the baseline and displayed draft from the returned record. Otherwise an unchanged field refreshed by another editor can become an unintended change on the next save. Failed saves retain the draft.

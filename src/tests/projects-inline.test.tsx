@@ -5,11 +5,11 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ProjectInlineDetails } from '../components/projects/ProjectInlineDetails';
 import { RecordInlineField } from '../components/ui/RecordInlineField';
-import { setComponentWorkspace } from './helpers/componentFixtures';
+import { setComponentWorkspace, markComponentCollectionsLoaded } from './helpers/componentFixtures';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import type { Project } from '../types';
 const project: Project = { id: 'p', uid: 'test-user', workspaceId: 'component-workspace', name: 'שלום', type: 'general', status: 'active', budgetCents: 1250, createdAt: '2026-01-01', dimensions: [] };
-beforeEach(() => { setComponentWorkspace(); useLedgerStore.setState({ projects: [project] }); });
+beforeEach(() => { setComponentWorkspace(); markComponentCollectionsLoaded('transactions'); useLedgerStore.setState({ projects: [project], transactions: [], truncatedCollections: {} }); });
 afterEach(cleanup);
 test('project client, budget and status can be edited; viewers read only', () => {
   render(<ProjectInlineDetails project={project} />);
@@ -36,4 +36,13 @@ test('a project linked by legacy names refuses a rename rather than dropping its
   fireEvent.click(screen.getByRole('button', { name: 'Edit Legacy project name' })); fireEvent.change(screen.getByLabelText('Legacy project name'), { target: { value: 'Changed' } });
   await act(async () => { fireEvent.keyDown(screen.getByLabelText('Legacy project name'), { key: 'Enter' }); });
   assert.match(screen.getByRole('alert').textContent || '', /Re-link/); assert.equal(writes, 0);
+});
+test('project names cannot save before their reference history has loaded', async () => {
+  const { useDataNeedsStore } = await import('../stores/useDataNeedsStore');
+  useDataNeedsStore.getState().resetLoaded(); let writes = 0;
+  const adapter = { session: () => ({ uid: 'test-user', workspaceId: 'component-workspace', writable: true }), read: async () => ({ ...project }), update: async () => { writes++; } };
+  render(<RecordInlineField collection="projects" record={project} field="name" label="Unloaded project name" adapter={adapter} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Edit Unloaded project name' })); fireEvent.change(screen.getByLabelText('Unloaded project name'), { target: { value: 'Changed' } });
+  await act(async () => { fireEvent.keyDown(screen.getByLabelText('Unloaded project name'), { key: 'Enter' }); });
+  assert.match(screen.getByRole('alert').textContent || '', /Load complete project history/); assert.equal(writes, 0);
 });

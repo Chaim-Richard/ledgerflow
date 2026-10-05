@@ -1,0 +1,190 @@
+# LedgerFlow: tool-by-tool review and comparison
+
+Reviewed against the implemented code and automated evidence, not the README or menu names. Baseline: main `5bce9cb`, including merged C-13, plus the Codex screen-comforts and contextual-workflow branches. This is an internal product/engineering review, not a claim that LedgerFlow beats every version of QuickBooks, Sage, Xero or an ERP. Established products often have mature equivalents. The comparison is with common older workflows: separately maintained spreadsheets, manual exports, desktop-only navigation, duplicate data entry and disconnected add-ons. A benefit applies when the user's current system requires those extra steps.
+
+**Evidence labels:** implemented = a concrete code path exists; tested = the named automated test covers part of that path; operational = needs a configured external service and live acceptance. A passing mocked test is not operational proof. Financial features still need jurisdiction/business-specific acceptance before relying on them.
+
+## 70 useful capabilities and where the advantage comes from
+
+Paths below are relative to the repository. Test filenames refer to `src/tests/` unless prefixed `e2e/`. Each row describes the actual capability and a practical comparison, not guaranteed superiority over a named vendor.
+
+| # | Actual capability | Practical benefit over the older/manual workflow | Implementation and evidence | Limit |
+|---|---|---|---|---|
+| 1 | Shared double-entry posting for financial documents | Avoids separately updating invoices and ledger entries | `src/services/LedgerPostService.ts`, `src/services/ledgerPost/`; `golden-path-ledger.test.ts`, `integration-ledger.test.ts` | Use this path; a new direct write can break the guarantee |
+| 2 | Server validation of balanced journal entries | Catches invalid entries before persistence | `src/server/routes/transactions/`; `validation-guard.test.ts`, `property-invariants.test.ts` | Validation is more than a UI success toast |
+| 3 | Role-based write restrictions | Browser users cannot gain write rights by revealing a button | `src/server/auth/`, transaction routes; `server-write-roles.test.ts`, `rbac-invites.test.ts` | Requires correct policies for every added collection/route |
+| 4 | Workspace-scoped database access | Separates companies without separate desktop files | `src/server/db/`, `supabase/migrations/`; `pg-firestore.test.ts`, RLS suite | Test cross-workspace records as well as queries |
+| 5 | Period locks and close checks | Reduces accidental edits to closed books | `periodCloseService.ts`, `periodRoutes.ts`; `period-close.test.ts` | New mutation paths must retain the lock guard |
+| 6 | Reverse-and-correct workflows | Keeps a trace of correction instead of silently replacing history | `src/server/routes/transactions/reverseRoutes.ts`; `reverse-and-correct.test.ts` | Reversals must remain idempotent |
+| 7 | Opening balances | Brings existing books into a new workspace | `openingBalanceService.ts`, `src/lib/openingBalances.ts`; `opening-balances.test.ts` | Import acceptance must check signed account nature |
+| 8 | FX-aware posting | Keeps document and base-currency treatment in the same workflow | `FxService.ts`, posting modules; `fx-posting.test.ts`, `fx-rounding.test.ts` | External rates/configuration and transaction date still matter |
+| 9 | Currency-specific display precision | Correctly displays currencies with different minor units | `src/lib/utils.ts`; `currency-decimal.test.ts`, `formatDecimal.test.ts` | CSV currently has a separate two-decimal contract; finding F3 below |
+| 10 | Shared postable filtering | Keeps drafts/voids out of actual reports | `src/lib/txFilters.ts`; `postable-adoption-guard.test.ts` | Legacy secondary endpoints need the same discipline |
+| 11 | Full-history server statements | Avoids treating a capped browser list as all company activity | `src/server/routes/reportRoutes.ts`; `report-routes.test.ts`, `truncation-guard.test.ts` | Server failure means a local fallback may be incomplete |
+| 12 | P&L period columns | Removes repeated monthly export/reassembly | `src/lib/reportColumns.ts`, `StatementColumns.tsx`; `report-columns.test.ts`, `e2e/report-columns.spec.ts` | Current selected range is clipped |
+| 13 | Balance-sheet closing-period columns | Shows snapshots without reusing P&L-style activity sums | Same helper plus pure `computeBalanceSheet`; hand-number tests | Opening and earlier activity must be retained |
+| 14 | Percentage of income/assets | Removes spreadsheet ratio formulas per report row | `statementFigures`, `percentageOfTotal`; component/pure tests | Zero denominator is undefined and displayed as a dash |
+| 15 | Comparative amount and percent variance | Shows changes beside current/previous amounts | `reportVariance`; hand-number/component/browser tests | Zero previous amount has no valid growth percentage |
+| 16 | Fiscal-year-aware quarter bounds | Handles April-start businesses without manual quarter regrouping | `src/lib/fiscalCalendar.ts`, `reportColumns.ts`; leap/fiscal tests | Verify workspace calendar configuration |
+| 17 | General ledger and account register | Connects balances to account activity in the same app | `computeReports.ts`, `AccountRegisterView.tsx`; `accountRegister.test.ts`, `account-register-view.test.tsx` | Drill-down can only show loaded detail unless fetched |
+| 18 | Customer/vendor outstanding balances | Measures what remains due after payment/credit | `src/lib/aging.ts`, `src/server/reports/partyReports.ts`; `aging.test.ts`, `contact-reports.test.tsx` | Needs correct as-of date and FX |
+| 19 | A/R and A/P aging | Avoids separate overdue spreadsheets | aging report views; `aging-views.test.tsx`, `e2e/accounting-lifecycle.spec.ts` | Business collection practice is not automated by the chart |
+| 20 | Customer statements with credits | Presents balances and activity together | `StatementView.tsx`, statement helper; `statement-view.test.tsx`, `statement-credits.test.ts` | Bulk statement delivery is a separate workflow |
+| 21 | Customer/vendor combined contact reports | Helps inspect both sides of a trading relationship | `ContactBalanceSummaryView.tsx`; `contact-balance-summary.test.tsx` | Matching/reporting does not authorize automatic debt offset |
+| 22 | Item/reference-based report views | Finds document/item activity without assembling exports | `src/server/reports/itemReports.ts`, `referenceReport.ts` and registered views | Inspect the route and fixture for the report actually used |
+| 23 | Safe shared CSV export | Preserves commas, hashes, quotes and Hebrew labels | `src/lib/csvExport.ts`; `csv-export.test.ts` | F3: currency exponent must be checked for exports |
+| 24 | Shareable report/list dates and filters | Shares a reproducible view instead of screenshots | `reportPermalink.ts`, `listPermalink.ts`; `list-permalink.test.ts`, report tests | URLs do not grant workspace access |
+| 25 | Page/report date synchronization | Avoids stale report requests after changing page dates | `usePageSyncedState.ts`; `report-date-sync.test.tsx` | New report components must use the synchronization contract |
+| 26 | Estimates and conversion | Moves a quote to an invoice without retyping | Estimates view and entity operations; `estimate-conversion.test.ts`, `estimates-view.test.tsx` | Confirm desired status and ledger timing |
+| 27 | Invoice item/SKU resolution | Links typed line items to catalogue data | `src/lib/invoiceLines.ts`; `invoice-lines.test.ts` | Free text remains an unlinked line |
+| 28 | Payments and allocations | Applies receipts to outstanding invoices in one flow | `paymentService.ts`, receive-payment modal; `allocation.test.ts`, `receive-payment-modal.test.tsx` | Repeated or over-allocated requests need server refusal |
+| 29 | Atomic payment persistence | Avoids a paid document with a failed/missing ledger entry | `paymentService.ts`; `payment-atomicity.test.ts` | Test real transaction adapter behavior too |
+| 30 | Credit notes/vendor credits | Retains credit allocation and posting history | credit posting/service modules; `credits.test.ts`, party-action tests | Not every refund/payment-run integration is established |
+| 31 | Customer deposits | Separates prepayments and application to invoices | `depositService.ts`; `deposits.test.ts`, `invoice-deposit.test.ts` | Requires the correct liability account |
+| 32 | Bad-debt write-off and reversal | Tracks a later recovery without manual ledger repair | `badDebtService.ts`, write-off modal; `period-close.test.ts`, `write-off-modal.test.tsx` | Accounting policy/jurisdiction acceptance remains necessary |
+| 33 | Purchase orders | Reduces retyping between purchasing documents | PurchaseOrders view and conversion helpers; `purchase-orders.test.ts` | Requisition/approval/three-way matching depth is separate |
+| 34 | Recurring jobs | Generates expected entries through a service path | `recurringService.ts`, cron routes; `recurring-job.test.ts` | Deployment scheduler/auth and retries need operational checks |
+| 35 | Document PDF generation | Avoids manually recreating invoice output | `pdfService.ts`, document routes; `pdf-generation.test.ts`, `document-pdf-route.test.ts` | Branding and script/font layout need representative outputs |
+| 36 | Invoice public page/payment entry | Makes a specific document reachable outside the workspace | public-invoice routes/page; `public-invoice-page.test.tsx`, Hebrew companion | Token rules are not a complete customer portal |
+| 37 | Mail/reminder service paths | Consolidates reminders with document data | `documentEmailService.ts`, `reminderService.ts`; `emails.test.ts`, `reminders-job.test.ts` | Operational mail requires configured credentials/provider |
+| 38 | Invoice-linked COGS stock movement | Connects sales ledger and quantity changes atomically | `cogsStockService.ts`, `src/services/invoiceCogs.ts`; COGS/stock tests | Missing items and negative stock have warning paths |
+| 39 | Stock adjustments and counts | Provides controlled quantity correction | `stockAdjustmentService.ts`, inventory dialogs; `stock-adjustments.test.ts`, `stock-dialogs.test.tsx` | Do not claim serial/lot/location tracking from this alone |
+| 40 | Direct stock-quantity protection | Prevents a browser item edit from bypassing the stock workflow | quantity-protection migration; RLS tests | All future endpoints must retain it |
+| 41 | Stock reversal once | Reduces duplicate restoration of quantity on retry | `prepareStockMoves`; invoice COGS/adjustment tests | Cross-workspace and repeated targets must be tested |
+| 42 | Fixed-asset/depreciation workflow | Avoids a disconnected depreciation schedule spreadsheet | `depreciationService.ts`, asset views; `period-close.test.ts` | Specific methods and statutory handling require acceptance |
+| 43 | Tax codes with parts/compounding | Reuses document rules instead of form-specific formulas | `src/lib/taxCodes.ts`, `documentMath.ts`; `tax-codes.test.ts`, `document-math-tax.test.ts` | Confirm actual tax jurisdiction definitions |
+| 44 | Inclusive/exclusive tax treatment | Prevents a line price and invoice total from disagreeing | same helpers; document/tax tests | Legacy input migration is separate from arithmetic |
+| 45 | Tax returns and reverse-charge boxes | Builds defined return figures from shared code | `taxReturnService.ts`; `tax-return.test.ts`, `tax-return-view.test.tsx` | Does not prove direct authority submission or every locale |
+| 46 | Bank statement formats/import | Reduces bank-row entry by hand | format/import helpers, bank screens; `ofx.test.ts`, `integrations-formats.test.ts` | Verify source dates, currency and duplicate fingerprints |
+| 47 | Record spreadsheet import previews | Reports row problems before saving customers/vendors/items/accounts | `src/lib/recordImport.ts`, `recordImportService.ts`; `record-import.test.ts` | Limits and transaction failure behavior matter |
+| 48 | Hebrew spreadsheet headings | Recognizes mixed-language column names without renaming data | `HEBREW_HEADERS` in `recordImport.ts`; `hebrew-data.test.ts` | Not proof of every possible header synonym |
+| 49 | Global optimal match suggestions | Avoids greedy matches stealing another row's better candidate | `algorithmInternals/optimization.ts`; `global-match.test.ts` | Suggestion still requires durable reconciliation action |
+| 50 | Reconciliation service/history | Keeps confirmed matches in a durable workflow | reconcile routes and screen; `reconcile-endpoint.test.ts`, browser banking tests | Test unusual statement/reversal combinations |
+| 51 | Persisted auto-rules | Saves matching rules and applies through API | `src/hooks/useAutoRules.ts`; `rules-saving.test.ts` | In-memory rule mutation alone is not enough |
+| 52 | Natural-language entry/query tools | Speeds supported instructions without separate forms | `algorithms/nl-parser.ts`, command palette; `algorithms.test.ts`, Hebrew data tests | Parsing requires preview/validation; not unlimited understanding |
+| 53 | Cross-dimension classification | Uses labels/classes/projects together | `cross-dimension-inference.ts`, dimension resolver; `deep-labeling.test.ts`, `dimension-identity.test.ts` | Preserve original identifiers and nested structure |
+| 54 | Mixed-script merchant matching | Reduces false matches caused by stripping Hebrew characters | similarity/merchant-identity modules; `hebrew-data.test.ts` | Persistence hook still has F1; pure matching is narrower evidence |
+| 55 | Query engine/directives | Filters complex conditions without a new export | `TransactionQueryEngine.ts`; `query-engine-matrix.test.ts` | UI interpretation summaries may have older ASCII patterns |
+| 56 | Saved views | Reuses a working search/filter setup | saved-view store/bar; transaction-templates.test.ts | Workspace sharing/permissions need explicit behavior |
+| 57 | Command palette across entities | Moves between related tools without menu hunting | `CommandPalette.tsx`; registry and browser navigation evidence | Loaded data search is not a full server search index |
+| 58 | Record links | Opens a typed record in its correct screen | `src/lib/recordLinks.ts`, `useRecordFocus.ts`; `data-checks.test.ts` | A plain tab navigation is not equivalent |
+| 59 | Data-health checks | Surfaces ledger/reference problems in one place | `src/lib/dataChecks.ts`, DataHealth view; `data-checks.test.ts`, forensic tests | Findings do not authorize silent financial repair |
+| 60 | Audit log UI/formatting | Makes changes inspectable without database access | audit viewer and audit service; `audit-log-viewer.test.tsx`, `audit-format.test.ts` | Audit presence alone is not external certification |
+| 61 | Anomaly/duplicate analytical tools | Adds investigative leads beyond a standard list | algorithm registry, anomaly/duplicate modules; `algorithms.test.ts`, `forensic-checks.test.ts` | Scores are not proof of error or fraud |
+| 62 | Cash runway/liquidity stress tools | Runs explicit scenarios inside the workspace | `cash-runway.ts`, `liquidity-stress.ts`; algorithm tests | Depends on assumptions and data completeness |
+| 63 | Monte Carlo forecast | Explores a distribution instead of one spreadsheet projection | `monte-carlo.ts`; algorithm tests | Model/seed/history quality matter; no guaranteed prediction |
+| 64 | Budget/actual and profitability tools | Reuses ledger dimensions for operating analysis | `budget-vs-actual.ts`, `profitability-heatmap.ts` | Budget versions/phasing and full ledger coverage need review |
+| 65 | Pure algorithm sandbox/registry | Adds a calculation with standardized controls and result shapes | `src/lib/algorithms/types.ts`, `index.ts`, ToolSandbox | Registration is not proof that a formula is correct |
+| 66 | Lazy workspace collections | Avoids loading every module's data on workspace entry | `ledgerCollections.ts`, `useLedgerCollections.ts`; guard/workspace tests | Callers must request what they read and handle truncation |
+| 67 | Native dialog/keyboard behavior | Supports keyboard navigation and predictable focus | `useDialog.ts`, native buttons; `use-dialog.test.tsx`, role/browser tests | Every new overlay/control still needs verification |
+| 68 | Disabled-role action capture | Prevents keyboard/direct activation of restricted children | `RequireRole.tsx`; UI/browser role checks | Server authorization remains the final boundary |
+| 69 | Quality, money and accessibility guards | Catches repeat mistakes before a change lands | ratchet, money-format, CSV, collection/dialog/key guards | Some guards are static heuristics, not full proofs |
+| 70 | Backup/restore/retention service paths | Keeps data-management workflows near the business data | restore/retention/purge services; `backup-restore.test.ts`, `workspace-restore.test.ts`, `retention.test.ts` | A backup is useful only after a tested restore and access review |
+
+## Concrete findings from reading the implementation
+
+### F1 — Hebrew learned-pattern persistence can collide (high; reproduction confirmed by the key expression)
+
+`src/hooks/useEntityOperations.ts`, `recordLearnedPattern`, uses `cleanDesc.replace(/[^a-z0-9]/g, '_')` for both `rulePatterns` and `learnedDeltas` document IDs. Different Hebrew-only labels of the same length collapse to the same underscore sequence: `שלום` and `תודה` both become `____`. The normalized search/classification algorithms are Unicode-aware, but this persistence boundary is not.
+
+A follow-up needs a stable collision-resistant identity from the complete original/normalized comparison text, a compatibility/migration decision for existing keys, and an integration test that saving both Hebrew descriptions preserves two records. Do not change bank import fingerprints or overwrite existing learned history as a shortcut. The second producer in `src/hooks/transactionActions/postingHelpers.ts` uses the same transform; update both producers together with compatibility coverage. The hooks are outside the pure Hebrew algorithm tests.
+
+### F2 — A secondary metrics endpoint diverges from the main report rules (high; code finding, targeted regression still needed)
+
+`src/server/routes/metricsAuditRoutes.ts`, `/api/v1/metrics/summary`, adds raw `line.amountCents`, skips only `void`, tests account type `revenue`, and builds assets without opening balances. Main statements use `isPostable`, `lineAmount`, `income`/COGS and opening-balance handling through `computeReports.ts`. Draft entries, modern income accounts, FX and opening balances can therefore produce different answers between tools.
+
+Claude owns server files. Reuse the approved shared functions in that lane, and add a hand fixture with cash opening balance 100.00, an `income` sale 20.00, a COGS expense 5.00 and a draft sale 99.00. Expected actual assets 115.00 and net income 15.00 before any other activity; add an FX case. Verify every metrics consumer's contract before changing field semantics.
+
+### F3 — CSV and displayed currency precision have different contracts (medium; code reproduction)
+
+`formatCurrency` uses the currency's fraction digits, while `csvMoney` delegates to `formatDecimal`, which divides by 100. For example `csvMoney(1234)` is `12.34`; the display treats 1234 minor units in a three-decimal currency as 1.234 and in a zero-decimal currency as 1234 whole units according to Intl. C-13 deliberately uses the required existing `csvMoney` contract rather than silently changing all exports.
+
+A separately reviewed change should define CSV units/currency explicitly and test zero-, two- and three-decimal currencies across all export consumers. Include negative values, formula-safe quoting and a round trip; preserve financial stored values.
+
+### F4 — Cached statement authorization/freshness needs an explicit policy (review question; do not infer a proven exploit)
+
+In `reportRoutes.ts`, a cache hit is returned before `getReportContext()` revalidates workspace membership. Cache keys include requesting user and request query; TTL is 60 seconds. This does not imply cross-user cache sharing, but membership revocation can have a different freshness policy on a hit than on a miss. There is also a potential stale-report window after posting.
+
+Decide the intended revocation/invalidation policy in the server lane. Add a cache-hit test after revoking membership and after a ledger write. Do not describe the report as immediately current until that policy is proven.
+
+### F5 — The old generated status document is stale (confirmed)
+
+`docs/STATUS.md` still marks period close, credit notes, bad debt, deposits, customer details and other features as missing or engine-only despite their current services/screens/tests. It is useful historical output, not the current readiness source. This review and `docs/TRACKER.md` should be reconciled by actual code evidence; future status generation needs a timestamp/commit and a reliable rule for end-to-end status.
+
+### F6 — Command-palette search and record opening have distinct contracts (C-14 work)
+
+Data-result actions previously used `switch-tab` payloads rather than a typed `openRecord` reference. C-14 now opens transactions, accounts, invoices and bills through typed links, scopes recent history by user/workspace, groups results and uses Unicode comparison. Its browser check also exposed two simultaneously mounted palettes; the duplicate is removed and the remaining palette is a named dialog. Recent records should subscribe to `focusRecord`/workspace transitions without editing Claude's reserved `useUIStore`/record-link implementation. Search grouping must not interfere with the natural-language execution path. Search remains based on loaded browser collections; it should not be marketed as complete history search.
+
+### F7 — Report totals and period snapshots have legacy compatibility differences (C-13 boundary)
+
+The existing balance-sheet view and shared server calculation differ in legacy opening-credit handling. C-13 preserves the existing Total figures and uses the assigned shared pure server functions for period snapshots. Do not silently alter Total bookkeeping while adding display features. Reconcile the legacy contract with independent hand-number fixtures in the accounting lane.
+
+## 25 follow-up opportunities, ordered by usefulness
+
+These are review suggestions, not claims that every item is absent from every path. Inspect the owning implementation/coordination before scheduling work.
+
+1. Fix F1 learned-pattern identity without losing existing learned records.
+2. Converge F2 secondary metrics with authoritative statement functions.
+3. Define/export all currency exponents consistently (F3).
+4. Define cache invalidation and membership-revocation behavior (F4).
+5. Replace stale/generated status claims with commit-linked evidence (F5).
+6. C-14 covers typed transaction/account/invoice/bill results; extend remaining result types and trace every result to the intended record, not only its tab.
+7. C-14 adds last-ten recent records scoped to person and workspace; discard stale/deleted references safely.
+8. C-14 groups search results and tests mixed-language queries across records and commands.
+9. C-14 completes persisted transaction widths/order/visibility; extend the same contract to other lists where useful.
+10. Finish invoice/bill sticky headers and filtered totals in Claude's reserved screen lane.
+11. C-14 verifies individual/zero-amount filter chips; extend coverage to nested labels, amount/date criteria and column filters.
+12. C-14 checks 44 px targets on phones for icon buttons, checkboxes and chips, not only main buttons.
+13. Add full-ledger/server search with visible completeness and pagination if large-workspace search is required.
+14. Test an authenticated, realistic multi-company production acceptance path beyond guest/stubbed screens.
+15. Run live Plaid sandbox connect/sync/webhook/retry acceptance with configured credentials.
+16. Run Stripe sandbox payment/webhook/idempotency acceptance and settle invoice/ledger together.
+17. Run actual mail-provider delivery, failure, retry and template rendering acceptance.
+18. Document statutory tax-country coverage; distinguish preparing return figures from filing them.
+19. Document payroll country/method/output coverage; a payroll model is not an entire payroll service.
+20. Define inventory costing/negative-stock policy, lots/serials/locations and adjustment audit expectations.
+21. Review purchase requisitions, approval thresholds and goods-receipt/three-way matching requirements.
+22. Review consolidated/intercompany elimination and multi-currency acceptance for real company structures.
+23. Measure large-workspace performance: initial load, period-report fan-out, virtualization, server queries and cache behavior.
+24. Add restoration drills, recovery-time expectations and least-privilege operational runbooks.
+25. Produce user workflow instructions with representative Hebrew/mixed labels, document items and nested dimensions while retaining English menus.
+
+## Positioning that the evidence supports
+
+The strongest product story is a connected accounting workspace: controlled posting, related documents, full-history statement endpoints, deep labels, imports, investigation tools and an extensible algorithm/UI registry. The emerging benefit over disconnected spreadsheet workflows is less repeated entry and easier tracing from an operational record to ledger/report evidence.
+
+Avoid claims of universal ERP superiority, guaranteed AI accuracy, fraud detection certification, tax compliance everywhere, complete production integrations or lossless migration from every legacy application. Read the exact tool's formula, route, persistence and evidence. The developer workflow guide explains how to do that for new work.
+
+## New contextual workflow work
+
+Claude’s main supplies persistent page buttons with Alt+P and Alt+1–9, shared inline editing and inline creation, document bulk actions, automatic credit application and statement emailing. The accompanying branch adds side-drawer metadata editing for vendors, customers, projects and items, plus typed numeric algorithm controls with explanatory help. See docs/DEVELOPER_WORKFLOWS.md for the integration standard. Financial document amounts, stock quantities and posting status continue through their existing services. Contact merging on main is a separate owner/accountant workflow (`contactMergeService.ts`, `MergePartyDialog.tsx`; `contact-merge.test.ts`, `merge-party-dialog.test.tsx`). Drawer metadata saving does not replace merge authorization or financial validation.
+
+### F8 — Shared inline editing closes before persistence is confirmed
+
+`src/components/ui/InlineEdit.tsx` sets editing false before awaiting onSave, and its display button remains activatable while saving. A refused write produces a toast but does not retain the typed draft in the editor; repeat activation can start another edit. The component is reserved to Claude. C-15 callers should supply a rejecting confirmed-write promise and prevent overlapping field saves; the shared draft/pending interaction needs a follow-up in its owning lane. The drawer’s form separately retains drafts on refusal and disables repeats. Existing main pins are device-local main/subview references; they do not yet capture report dates or isolate preferences by workspace. These are enhancement boundaries, not missing page-pin functionality.
+
+### F9 — Legacy project references can use the display name
+
+`Projects.tsx` and `ProjectPipeline.tsx` still match some entries by `project.name`, alongside stable project IDs. A rename through the older modal could drop those legacy entries from that project's figures. The new inline path refuses a rename when the loaded history contains those name links or its transaction history is unloaded, failed or capped; it does not rewrite posted entries. The drawer uses the same protection. A complete migration/alias policy belongs with the accounting/reference contract. Client-side observation is not a server transaction guarantee.
+
+### F10 — The payroll screen's pay-run action is currently cache-only
+
+`PayrollView.tsx`, `handlePostPayRunToLedger`, calls `setTransactions` and `setPayRuns`; it does not call durable posting/document services. The pure payroll engine's tests establish calculation behavior, not persistent pay-run processing. Do not market this action as a completed payroll service or assume the success message survives reload. Employee creation now confirms a database save and retains its draft/identity on retry; that does not fix pay-run posting. Preserve its current calculation during metadata work; schedule a server-backed, balanced/idempotent pay-run workflow with period locks, role checks and a reload test in the accounting lane.
+
+### F11 — Shared inline creation needs a handled failure contract
+
+`InlineAdd.tsx` starts `void submit()` from its key handler. A rejecting `onAdd` retains the typed text but rejects without a local catch/error message. Callers that swallow errors instead make the component clear the text as if creation succeeded. The owning lane should catch refusal, retain the name and display a retryable error. Creation that requires accounts, salary, target/period or document lines should retain its existing in-page form instead of inventing financial defaults from a name.
+
+### F12 — Current coverage is based on the executed import graph
+
+Node test coverage reports modules loaded by tests; the package include pattern does not by itself instrument every source file. A presentation test that unnecessarily imported the whole algorithm registry exposed 71.98% line coverage, despite all 1,071 tests passing. The help test now imports the actual Monte Carlo definition directly because it checks that tool’s explanation, not every calculation. Gates remain unchanged. This means the normal passing percentage must not be advertised as whole-catalog mathematical coverage. A separate coverage inventory should name untested registered calculations and add independent fixtures for them; do not count registration or help rendering as formula tests.
+
+## A finish line for a first release
+
+The tracker combines defects, launch work and later product ideas. Counting every unchecked item as a release blocker makes the finish line grow. Choose and validate a bounded workflow before treating the entire roadmap as required.
+
+For an accounting release, prioritize saved and correct records, authorization, currency/tax handling, reconciliation, period locks, audit and recoverability. Validate an authenticated company flow with representative Hebrew/mixed data: create an invoice and bill, receive/pay partially, verify balanced ledger entries and remaining amounts, reconcile bank activity, compare statements, close a period and confirm refused writes. Repeat meaningful cross-workspace/retry/reload boundaries. Existing mocked/guest tests establish narrower contracts; configured provider and production acceptance remain separate evidence.
+
+Resolve relevant F1/F2/F3/F7 findings or explicitly constrain the affected release contract. Do not advertise durable pay-run posting while F10 remains cache-only; finish its server service or defer that workflow. Define F4 authorization freshness. These decisions affect trust in saved data and displayed figures. Cosmetic adjustments, more analytical models, optional templates, full server search, three-way purchasing depth and consolidated ERP features can follow a release when they are not part of its agreed workflows.
+
+Keep focused checks during development and the coordination-required combined checks at review/push checkpoints. Existing owner requirements still govern the current commits; changing their frequency needs an explicit coordination update. Avoid repeated full runs after a successful, unchanged tree. Parallel preparation in isolated worktrees reduces waiting without modifying a running test's source. Do not trade away money, permission or persistence verification to shorten a cosmetic change.
