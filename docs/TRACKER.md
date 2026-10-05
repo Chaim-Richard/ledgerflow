@@ -1462,16 +1462,16 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] H-14 TopExpensesIncomeReportView (report-views.test.tsx)
 - [x] H-15 TagBreakdownReportView (report-views.test.tsx)
 - [x] H-16 ForensicAuditor (forensic-checks.test.ts; found L-164)
-- [x] H-17 TanStackDataGrid (ui-primitives.test.tsx; sort headers are buttons now); additional Codex mixed-language/component coverage
-- [x] H-18 RadixModal — no longer exists (dialogs use useDialog, tested); additional Codex mixed-language/component coverage
-- [x] H-19 RequireRole (ui-primitives.test.tsx; found L-161); additional Codex mixed-language/component coverage
-- [x] H-20 AsyncButton (ui-primitives.test.tsx; found L-161); additional Codex mixed-language/component coverage
-- [x] H-21 ConfirmButton (ui-primitives.test.tsx); additional Codex mixed-language/component coverage
-- [x] H-22 EmptyState (ui-primitives.test.tsx); additional Codex mixed-language/component coverage
-- [x] H-23 PublicInvoicePage (public-invoice-page.test.tsx; loading/error states readable by screen readers); additional Codex mixed-language/component coverage
-- [x] H-24 EstimatesView (estimate-conversion.test.ts; found L-163); additional Codex mixed-language/component coverage
-- [x] H-25 CustomerModal (customer-modal.test.tsx; names and emails are trimmed, blank names refused); additional Codex mixed-language/component coverage
-- [x] H-26 AuditLogViewer (audit-log-viewer.test.tsx, codex); additional Codex mixed-language/component coverage
+- [x] H-17 TanStackDataGrid (ui-primitives.test.tsx; sort headers are buttons now)
+- [x] H-18 RadixModal — no longer exists (dialogs use useDialog, tested)
+- [x] H-19 RequireRole (ui-primitives.test.tsx; found L-161)
+- [x] H-20 AsyncButton (ui-primitives.test.tsx; found L-161)
+- [x] H-21 ConfirmButton (ui-primitives.test.tsx)
+- [x] H-22 EmptyState (ui-primitives.test.tsx)
+- [x] H-23 PublicInvoicePage (public-invoice-page.test.tsx; loading/error states readable by screen readers)
+- [x] H-24 EstimatesView (estimate-conversion.test.ts; found L-163)
+- [x] H-25 CustomerModal (customer-modal.test.tsx; names and emails are trimmed, blank names refused)
+- [x] H-26 AuditLogViewer (audit-log-viewer.test.tsx, codex)
 - [x] H-27 `src/components/finance` (account register, payments list; found L-165)
 - [x] H-28 `src/hooks` (hooks.test.tsx renders the hooks: ledger totals, reports, role, timers, shortcuts; found L-166)
 - [x] H-29 `src/stores` (stores-workspace.test.ts: totals, workspace switch, saved views, data loading, record links; found L-167)
