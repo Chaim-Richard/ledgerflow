@@ -3,11 +3,11 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Transaction, AnalyticalMetrics } from '../../types';
 
 import { toast } from 'sonner';
-import { withNewAmount } from '../../lib/transactionEdits';
+import { amountChange, isDocumentEntry, isHandEntered } from '../../lib/transactionEdits';
+import { recategorizeLines, soleCategoryLine } from '../../lib/accountChoices';
 
 import { resolveAccountName } from '../../lib/utils';
 
-import { isCashAccount } from '../../lib/txFilters';
 import { ListChildComponentProps } from 'react-window';
 
 import TransactionRow from '../transactions/TransactionRow';
@@ -210,10 +210,12 @@ export const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) =
                 value={tx.totalAmountCents / 100}
                 type="number"
                 onSave={(v) => {
-                  // the server works the total out from the lines: change both lines (L-147)
-                  const next = withNewAmount(tx, TruthEngine.parseAmountToCents(v || '0'));
+                  // the server works the total out from the lines: change both lines (L-147); only
+                  // entries typed in by hand (I-22), the same rule as editing in the row
+                  const next = amountChange(tx, TruthEngine.parseAmountToCents(v || '0'));
                   if (next) data.onUpdate?.(tx.id, next);
-                  else toast.info('This entry has several lines: open it to change the amounts.');
+                  else if (!isHandEntered(tx)) toast.info('This entry comes from an invoice, bill, payment or bank line: change it there.');
+                  else toast.info('Enter an amount above 0. An entry with several lines is changed in the entry itself.');
                   data.setEditingCell(null);
                 }}
                 onClose={() => data.setEditingCell(null)}
@@ -224,19 +226,17 @@ export const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) =
             <div style={{ left: data.isTabletGrid ? 'auto' : '55%', right: data.isTabletGrid ? 220 : 'auto', width: 160 }} className="absolute inset-y-0 z-[70] pointer-events-auto">
               <GridEditor
                 label="Transaction account"
-                value={resolveAccountName(accounts, tx.lines?.[0]?.accountId, tx.lines?.[0]?.accountName)}
+                value={resolveAccountName(accounts, (soleCategoryLine(tx, accounts) || tx.lines?.[0])?.accountId, (soleCategoryLine(tx, accounts) || tx.lines?.[0])?.accountName)}
                 type="category"
                 onSave={(v) => {
-                  const targetAcc = accounts.find(a => a.name === v || a.id === v) || { id: tx.lines?.[0]?.accountId || '', name: v as string };
-                  const bankAcc = accounts.find(a => isCashAccount(a)) || accounts[0];
-                  const updatedLines = tx.lines && tx.lines.length >= 2 ? [
-                    { ...tx.lines[0], accountId: targetAcc.id, accountName: targetAcc.name },
-                    ...tx.lines.slice(1)
-                  ] : [
-                    { accountId: targetAcc.id, accountName: targetAcc.name, amountCents: Math.abs(tx.totalAmountCents) },
-                    { accountId: bankAcc?.id || accounts[0]?.id || '', accountName: bankAcc?.name || 'Main Checking', amountCents: -Math.abs(tx.totalAmountCents) }
-                  ];
-                  data.onUpdate?.(tx.id, { lines: updatedLines });
+                  // only the category side changes; the bank line never does (it changed "line 0",
+                  // which could be the bank line; L-182)
+                  const target = accounts.find(a => a.name === v || a.id === v);
+                  const lines = target && !isDocumentEntry(tx) ? recategorizeLines(tx.lines || [], accounts, { accountId: target.id, accountName: target.name }) : null;
+                  if (lines) data.onUpdate?.(tx.id, { lines });
+                  else toast.info(!target ? 'Pick an account from the list.' : isDocumentEntry(tx)
+                    ? 'This entry comes from an invoice, bill or payment: change it there.'
+                    : 'This entry has no single category (a transfer or journal entry): open it to change the accounts.');
                   data.setEditingCell(null);
                 }}
                 onClose={() => data.setEditingCell(null)}

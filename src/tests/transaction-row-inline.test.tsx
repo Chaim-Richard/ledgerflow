@@ -9,7 +9,9 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import TransactionRow from '../components/transactions/TransactionRow';
 import SelectionBar from '../components/transactions/SelectionBar';
-import { categoryChoices, recategorizeLines, soleCategoryLine } from '../lib/accountChoices';
+import { VirtualRow, type VirtualRowProps } from '../components/ledger/TransactionGridShared';
+import { categoryChoices, descriptionSuggestions, recategorizeLines, soleCategoryLine } from '../lib/accountChoices';
+import { amountChange, isDocumentEntry, isHandEntered } from '../lib/transactionEdits';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import type { Transaction } from '../types';
 import { makeChartAccount, makeTransaction } from './fixtures';
@@ -63,7 +65,124 @@ describe('Transaction list: edit in place', () => {
     cleanup();
     useLedgerStore.setState({ lockDate: '2026-12-31' });
     row(plain, (_id, u) => updates.push(u));
-    assert.equal(screen.queryByRole('button', { name: /^Edit (Category|Class|Location) of GitHub/ }), null);
+    assert.equal(screen.queryByRole('button', { name: /^Edit (Category|Class|Location|Date|Amount|Description) of GitHub/ }), null);
+  });
+});
+
+describe('Transaction list: date, description and amount in place', () => {
+  const income = makeTransaction({ id: 't3', date: '2026-05-03', description: 'Client deposit', totalAmountCents: 9000, status: 'completed',
+    lines: [{ id: 'a', accountId: 'bank', amountCents: 9000 }, { id: 'b', accountId: 'soft', amountCents: -9000 }] });
+  const invoicePayment = makeTransaction({ ...plain, id: 't4', description: 'Payment INV-7', metadata: { invoiceId: 'inv-7', paymentId: 'p1' } });
+  beforeEach(() => useLedgerStore.setState({ accounts, transactions: [plain, split, income, invoicePayment], lockDate: null, lockException: null }));
+  afterEach(() => cleanup());
+
+  test('a new amount keeps the entry balanced and an expense an expense, an income an income', () => {
+    assert.deepEqual(amountChange(plain, 3050), { lines: [{ ...plain.lines[0], amountCents: 3050 }, { ...plain.lines[1], amountCents: -3050 }], totalAmountCents: 3050 });
+    assert.deepEqual(amountChange(income, 100)?.lines.map(l => l.amountCents), [100, -100]);
+    assert.deepEqual(amountChange({ ...income, lines: [income.lines[1], income.lines[0]] }, 100)?.lines.map(l => [l.accountId, l.amountCents]), [['soft', -100], ['bank', 100]]);
+  });
+
+  test('refused: a split, an entry behind an invoice, payment or bank line, another currency, a transfer, zero or a fraction of a cent', () => {
+    assert.equal(amountChange(split, 100), null);
+    assert.equal(amountChange(invoicePayment, 100), null);
+    assert.equal(amountChange({ ...plain, originalCurrency: 'EUR', exchangeRate: 1.1 }, 100), null);
+    assert.equal(amountChange({ ...plain, isTransfer: true }, 100), null);
+    assert.equal(amountChange({ ...plain, metadata: { bankLineId: 'bl1' } }, 100), null, 'the bank statement says how much');
+    assert.equal(amountChange(plain, 0), null);
+    assert.equal(amountChange(plain, 10.5), null);
+    assert.equal(isHandEntered(plain), true);
+    assert.equal(isHandEntered({ ...plain, metadata: { importBatchId: 'b1' } }), true, 'an imported entry is still typed in');
+    assert.equal(isHandEntered(invoicePayment), false);
+    assert.equal(isDocumentEntry(invoicePayment), true);
+    assert.equal(isDocumentEntry({ metadata: { bankLineId: 'bl1' } }), false, 'a bank line alone: the category can still change');
+    assert.equal(isDocumentEntry({ metadata: { type: 'depreciation' } }), true);
+    assert.equal(isDocumentEntry({ metadata: { isReversal: true } }), true);
+    assert.equal(isDocumentEntry({ metadata: { cogsPending: false, notes: 'x' } }), false);
+  });
+
+  test('description suggestions: the workspace\'s own, the most used first, one list for every row', () => {
+    const txs = [plain, { ...plain, id: 'x' }, split, { ...split, id: 'y', description: ' github ' }, { ...split, id: 'z', description: '' }];
+    assert.deepEqual(descriptionSuggestions(txs), ['GitHub', 'Mixed']);
+    assert.equal(descriptionSuggestions(txs), descriptionSuggestions(txs));
+  });
+
+  test('type a new amount, date or description on a typed-in entry', async () => {
+    const updates: Array<Partial<Transaction>> = [];
+    row(plain, (_id, u) => updates.push(u));
+    const edit = async (name: string, value: string) => {
+      fireEvent.click(screen.getByRole('button', { name: `Edit ${name} of GitHub` }));
+      fireEvent.change(screen.getByLabelText(`${name} of GitHub`), { target: { value } });
+      await act(async () => { fireEvent.keyDown(screen.getByLabelText(`${name} of GitHub`), { key: 'Enter' }); });
+    };
+    await edit('Amount', '30.50');
+    assert.deepEqual([updates[0].totalAmountCents, updates[0].lines?.map(l => [l.accountId, l.amountCents])], [3050, [['soft', 3050], ['bank', -3050]]]);
+    await edit('Date', '2026-05-09');
+    assert.deepEqual(updates[1], { date: '2026-05-09' });
+    await edit('Description', 'GitHub Copilot');
+    assert.deepEqual(updates[2], { description: 'GitHub Copilot' });
+    await edit('Amount', '0');
+    assert.equal(updates.length, 3, 'zero is refused');
+    assert.ok(screen.getByText('Enter an amount above 0'));
+  });
+
+  test('an entry behind an invoice payment: description only; a bank-line entry: category but not amount; a split: date but no amount', () => {
+    row(invoicePayment, () => {});
+    assert.equal(screen.queryByRole('button', { name: 'Edit Amount of Payment INV-7' }), null);
+    assert.equal(screen.queryByRole('button', { name: 'Edit Date of Payment INV-7' }), null);
+    assert.equal(screen.queryByRole('button', { name: 'Edit Category of Payment INV-7' }), null, 'its receivable side stays');
+    assert.ok(screen.getByRole('button', { name: 'Edit Description of Payment INV-7' }));
+    cleanup();
+    row({ ...plain, metadata: { bankLineId: 'bl1' } }, () => {});
+    assert.ok(screen.getByRole('button', { name: 'Edit Category of GitHub' }));
+    assert.equal(screen.queryByRole('button', { name: 'Edit Amount of GitHub' }), null);
+    cleanup();
+    row(split, () => {});
+    assert.equal(screen.queryByRole('button', { name: 'Edit Amount of Mixed' }), null);
+    assert.ok(screen.getByRole('button', { name: 'Edit Date of Mixed' }));
+  });
+});
+
+describe('Keyboard editors in the list (Enter on a cell)', () => {
+  afterEach(() => cleanup());
+  const grid = (tx: Transaction, field: string, onUpdate: (id: string, u: Partial<Transaction>) => void) => {
+    const data = {
+      transactions: [{ ...tx, balanceCents: 0 }], selectedIds: new Set<string>(), focusedCell: null, editingCell: { id: tx.id, field },
+      anomalyMap: new Map(), deterministicConflicts: new Map(), onToggleSelection: () => {}, onVoid: () => {}, onUpdate, onCreateRule: () => {},
+      onProjectClick: () => {}, setSplittingTxId: () => {}, setFocusedCell: () => {}, setEditingCell: () => {}, isProMode: false, isCompactMode: false,
+      isMobileGrid: false, isTabletGrid: false, onToggleFlag: () => {}, onDuplicate: () => {}, dateFormat: 'YYYY-MM-DD', formatCurrency: (c: number) => String(c),
+      gridCols: '1fr', hiddenColumns: new Set<string>(), searchTerm: '',
+    } as unknown as VirtualRowProps['data'];
+    return render(<VirtualRow index={0} style={{}} data={data} />);
+  };
+  const type = async (label: string, value: string) => {
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    await act(async () => { fireEvent.keyDown(screen.getByLabelText(label), { key: 'Enter' }); });
+  };
+
+  test('a new account changes the category side, never the bank line, even when the bank line is stored first (L-182)', async () => {
+    useLedgerStore.setState({ accounts, transactions: [] });
+    const bankFirst = makeTransaction({ ...plain, lines: [plain.lines[1], plain.lines[0]] });
+    const updates: Array<Partial<Transaction>> = [];
+    grid(bankFirst, 'category', (_id, u) => updates.push(u));
+    assert.equal((screen.getByLabelText('Transaction account') as HTMLInputElement).value, 'Software', 'starts from the category, not the bank');
+    await type('Transaction account', 'Rent');
+    assert.deepEqual(updates[0].lines?.map(l => [l.accountId, l.amountCents]), [['bank', -2500], ['rent', 2500]]);
+  });
+
+  test('an entry from an invoice payment keeps its accounts and amount; a typed-in one gets the new amount', async () => {
+    useLedgerStore.setState({ accounts, transactions: [] });
+    const updates: Array<Partial<Transaction>> = [];
+    const payment = makeTransaction({ ...plain, id: 'p', metadata: { invoiceId: 'inv-7' } });
+    grid(payment, 'category', (_id, u) => updates.push(u));
+    await type('Transaction account', 'Rent');
+    cleanup();
+    grid(payment, 'amountCents', (_id, u) => updates.push(u));
+    await type('Transaction amount', '99');
+    assert.equal(updates.length, 0);
+    cleanup();
+    grid(plain, 'amountCents', (_id, u) => updates.push(u));
+    await type('Transaction amount', '40');
+    assert.deepEqual(updates[0].lines?.map(l => l.amountCents), [4000, -4000]);
   });
 });
 

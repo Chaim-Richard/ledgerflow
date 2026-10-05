@@ -55,3 +55,22 @@ export function recategorizeLines<L extends { accountId: string; accountName?: s
     return next;
   });
 }
+
+const descriptionCache = new WeakMap<Transaction[], string[]>();
+
+/** Descriptions offered while typing one (I-23): the workspace's own, the most used first. */
+export function descriptionSuggestions(transactions: Transaction[]): string[] {
+  const hit = descriptionCache.get(transactions);
+  if (hit) return hit;
+  const counts = new Map<string, { value: string; n: number }>();
+  for (const tx of transactions) {
+    const value = (tx.description || '').trim();
+    if (!value) continue;
+    const key = value.toLocaleLowerCase();
+    const seen = counts.get(key);
+    if (seen) seen.n++; else counts.set(key, { value, n: 1 });
+  }
+  const list = [...counts.values()].sort((a, b) => b.n - a.n || a.value.localeCompare(b.value)).slice(0, 50).map(c => c.value);
+  descriptionCache.set(transactions, list);
+  return list;
+}

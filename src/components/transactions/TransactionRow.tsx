@@ -1,6 +1,7 @@
 import React from 'react';
 import InlineEdit from '../ui/InlineEdit';
-import { categoryChoices, soleCategoryLine } from '../../lib/accountChoices';
+import { categoryChoices, soleCategoryLine, descriptionSuggestions } from '../../lib/accountChoices';
+import { amountChange, isDocumentEntry, isHandEntered } from '../../lib/transactionEdits';
 import { Transaction } from '../../types';
 
 import { 
@@ -22,7 +23,6 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import AsyncButton from '../ui/AsyncButton';
 import CategoryWhyPopover from '../common/CategoryWhyPopover';
 import { isLockedDate } from '../../lib/periodLock';
-import { focusOnMount } from '../../lib/focusOnMount';
 
 function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => string) {
   const occurrences = new Map<string, number>();
@@ -123,7 +123,8 @@ const TransactionRow = React.memo(({
   // edit in place (I-22): the category of a plain entry, and class / location on every line
   const choices = useLedgerStore(state => categoryChoices(state.accounts, state.transactions));
   const canEditLines = !isLocked && !!onUpdate && tx.status !== 'void' && tx.status !== 'reconciled';
-  const categoryLine = canEditLines ? soleCategoryLine(tx, accounts) : undefined;
+  // an entry from an invoice, bill or payment keeps its accounts (changed through that record)
+  const categoryLine = canEditLines && !isDocumentEntry(tx) ? soleCategoryLine(tx, accounts) : undefined;
   const setCategory = (accountId: string | number) => {
     const account = accounts.find(a => a.id === accountId);
     if (!account || !categoryLine) return;
@@ -132,18 +133,14 @@ const TransactionRow = React.memo(({
   const setOnLines = (field: 'class' | 'location', value: string | number) =>
     onUpdate?.(tx.id, { lines: (tx.lines || []).map(l => ({ ...l, [field]: String(value) || undefined })) });
 
-  const [isEditingDesc, setIsEditingDesc] = React.useState(false);
-  const [editDraft, setEditDraft] = React.useState<string | null>(null);
-  const descValue = editDraft !== null ? editDraft : displayTx.description;
-
-  const handleDescSubmit = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    e?.stopPropagation();
-    setIsEditingDesc(false);
-    if (editDraft !== null && editDraft !== displayTx.description && !isLocked && onUpdate) {
-      onUpdate(tx.id, { description: editDraft });
-    }
-    setEditDraft(null);
+  // date and amount only on entries typed in by hand (a generated one changes with its invoice,
+  // bill, payment or bank line); the amount only with two lines, both change so it stays balanced
+  const canEditDate = canEditLines && isHandEntered(tx);
+  const canEditAmount = canEditDate && (tx.lines || []).length === 2;
+  const descriptions = useLedgerStore(state => descriptionSuggestions(state.transactions));
+  const setAmount = (cents: string | number) => {
+    const next = amountChange(tx, Number(cents));
+    if (next) onUpdate?.(tx.id, next);
   };
 
   return (
@@ -182,15 +179,11 @@ const TransactionRow = React.memo(({
           isCompactMode && "px-1 text-[9px]",
           isFocused && focusedField === 'date' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
         )}>
-          {displayTx.date ? formatDate(displayTx.date) : 'N/A'}
+          <InlineEdit kind="date" value={displayTx.date} label={`Date of ${displayTx.description || 'this entry'}`} canEdit={canEditDate}
+            display={displayTx.date ? formatDate(displayTx.date) : 'N/A'} onSave={v => onUpdate?.(tx.id, { date: String(v) })}
+            validate={v => (v ? null : 'Enter a date')} />
         </div>
         <div 
-          onDoubleClick={(e) => {
-            if (!isLocked) {
-              e.stopPropagation();
-              setIsEditingDesc(true);
-            }
-          }}
           className={cn(
             "px-4 font-bold text-[var(--text)] transition-colors text-xs h-full flex flex-col justify-center relative border-r border-[var(--line)]/50 group-hover/active:text-white", 
             isProMode && "px-2 text-[10px]",
@@ -199,27 +192,13 @@ const TransactionRow = React.memo(({
           )} 
           dir="auto"
         >
-          {isEditingDesc ? (
-            <input aria-label="Transaction description"
-              type="text"
-              ref={focusOnMount}
-              value={descValue}
-              onChange={(e) => setEditDraft(e.target.value)}
-              onBlur={() => handleDescSubmit()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleDescSubmit();
-                if (e.key === 'Escape') {
-                  setEditDraft(null);
-                  setIsEditingDesc(false);
-                }
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full bg-white text-slate-900 px-2 py-1 text-xs font-semibold rounded border border-indigo-500 shadow-xs outline-none"
-            />
-          ) : (
-            <>
-              <button type="button" className="text-left truncate w-full font-sans tracking-tight flex items-center gap-1.5 flex-wrap">
-                <HighlightMatch text={displayTx.description} match={searchTerm} />
+          <>
+              <div className="text-left truncate w-full font-sans tracking-tight flex items-center gap-1.5 flex-wrap">
+                <InlineEdit value={displayTx.description} label={`Description of ${displayTx.description || 'this entry'}`}
+                  canEdit={!isLocked && !!onUpdate && tx.status !== 'void'} suggestions={descriptions}
+                  display={<HighlightMatch text={displayTx.description} match={searchTerm} />}
+                  validate={v => (String(v).trim() ? null : 'Enter a description')}
+                  onSave={v => onUpdate?.(tx.id, { description: String(v) })} className="truncate" />
                 {displayTx.fileUrls && displayTx.fileUrls.length > 0 && (
                   <span 
                     data-testid="attachment-badge"
@@ -236,15 +215,14 @@ const TransactionRow = React.memo(({
                     <Lock aria-hidden="true" className="text-amber-500 inline shrink-0 animate-pulse" size={11} />
                   </span>
                 )}
-              </button>
+              </div>
               {!isCompactMode && tx.verification?.hash && (
                 <span className="text-[9px] text-slate-500 font-mono flex items-center gap-1 transition-colors group-hover/active:text-white/40">
                   <Zap aria-hidden="true" size={9} className={isLocked ? "text-amber-400" : "text-emerald-500"} />
                   {tx.verification.hash.slice(0, 8)} {isLocked && <span className="text-[7px] font-black tracking-widest uppercase bg-amber-400/10 text-amber-500 dark:text-amber-400 px-1.5 py-0.5 border border-amber-400/20 rounded font-sans scale-90 origin-left">SEALED</span>}
                 </span>
               )}
-            </>
-          )}
+          </>
         </div>
         {!isMobileGrid && show('category') && (
           <div className={cn(
@@ -368,7 +346,9 @@ const TransactionRow = React.memo(({
         >
           <span data-testid="tx-amount" className={cn("relative z-10 tabular-nums tracking-tighter truncate whitespace-nowrap", isPrivacyMode && "blur-[6px] select-none pointer-events-none opacity-20 transition-all")}>
             {/* sign as well as colour (E-26): money in +, money out − */}
-            {formatSignedAmount(displayTx.totalAmountCents, isInflow(tx, accounts) ? 'in' : 'out')}
+            <InlineEdit kind="money" value={displayTx.totalAmountCents} label={`Amount of ${displayTx.description || 'this entry'}`} canEdit={canEditAmount}
+              display={formatSignedAmount(displayTx.totalAmountCents, isInflow(tx, accounts) ? 'in' : 'out')}
+              validate={v => (Number(v) > 0 ? null : 'Enter an amount above 0')} onSave={setAmount} inputClassName="text-right w-28" />
           </span>
           {tx.originalCurrency && tx.exchangeRate && (
             <span className={cn("text-[9px] font-sans font-bold uppercase tracking-wider text-[var(--muted)] mt-0.5 truncate whitespace-nowrap", isPrivacyMode && "blur-[6px] select-none pointer-events-none opacity-20 transition-all")}>
