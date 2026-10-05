@@ -1,3 +1,4 @@
+import { EmployeeInlineDetails } from './EmployeeInlineDetails';
 import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useMemo } from 'react';
 import { Employee, PayRun, Transaction, TransactionLine } from '../../types';
@@ -363,11 +364,10 @@ export const PayrollView: React.FC = () => {
                   return (
                     <tr key={emp.id} className="hover:bg-neutral-50/80 transition-colors">
                       <td className="py-3 px-4 font-semibold text-neutral-900">
-                        <div>{emp.name}</div>
-                        {emp.email && <div className="text-[11px] text-neutral-400 font-normal">{emp.email}</div>}
+                        <EmployeeInlineDetails employee={emp} />
                       </td>
                       <td className="py-3 px-4 text-neutral-700">
-                        <div>{emp.role || 'Team Member'}</div>
+                        <span className="sr-only">Role is editable beside the employee name</span>
                         <div className="text-[11px] text-neutral-400">{emp.state || 'CA'} &bull; {emp.filingStatus || 'Single'}</div>
                       </td>
                       <td className="py-3 px-4 text-neutral-600">

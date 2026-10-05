@@ -1,3 +1,5 @@
+import { RecordInlineField } from '../ui/RecordInlineField';
+import { ProjectInlineDetails } from './ProjectInlineDetails';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import React,
@@ -176,7 +178,8 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1">{project.type}</p>
-                        <h3 className="font-black text-[var(--text)] leading-tight">{project.name}</h3>
+                        <h3 className="font-black text-[var(--text)] leading-tight"><RecordInlineField collection="projects" record={project} field="name" label={`Name of ${project.name}`} /></h3>
+                        <ProjectInlineDetails project={project} />
                       </div>
                       <GripVertical size={14} className="text-slate-300 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
                     </div>

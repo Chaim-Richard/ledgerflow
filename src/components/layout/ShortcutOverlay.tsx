@@ -3,6 +3,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Command, Search, Activity, Zap, FileDown, Database, LayoutDashboard, List, Keyboard } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
+import { ScreenShortcutHelp } from './ScreenShortcutHelp';
 import { SHORTCUTS, isMacPlatform, shortcutLabel, type ShortcutId } from '../../config/shortcuts';
 import { useDialog } from '../../hooks/useDialog';
 import type { LucideIcon } from 'lucide-react';
@@ -95,6 +96,8 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
                   ))}
                 </div>
               </div>
+
+              <ScreenShortcutHelp mac={mac} />
 
               {hasSpeedDials && (
                 <div>

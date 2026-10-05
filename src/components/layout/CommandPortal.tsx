@@ -4,7 +4,6 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 // Highly Optimized Lazy Loading of heavy overlay system modals
-const CommandPalette = lazy(() => import('./CommandPalette'));
 const MagicEntry = lazy(() => import('../ledger/MagicEntry'));
 const QBOMigrationWizard = lazy(() => import('../migration/QBOMigrationWizard'));
 const StatementImporter = lazy(() => import('../ledger/StatementImporter'));
@@ -76,14 +75,6 @@ export default function CommandPortal({ modals, handlers }: CommandPortalProps) 
   
   return (
     <Suspense fallback={null}>
-      {modals.commandPalette && (
-        <CommandPalette 
-          isOpen={modals.commandPalette}
-          onClose={handlers.closeCommandPalette}
-          onQuery={handlers.handleAIQuery}
-          recentQueries={[]}
-        />
-      )}
       {modals.quickEntry && (
         <MagicEntry 
           isOpen={modals.quickEntry} 

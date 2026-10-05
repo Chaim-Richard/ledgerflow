@@ -11,6 +11,7 @@ import { useNotificationFeed } from '../../hooks/useNotificationFeed';
 import NotificationDrawer from './NotificationDrawer';
 import { useCollaborators } from '../../hooks/useCollaborators';
 
+import { useRecentRecordTracking } from '../../hooks/useRecentRecordTracking';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 
 interface HeaderProps {
@@ -32,6 +33,7 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
   const setDrawerOpen = useNotificationStore(s => s.setDrawerOpen);
   const unread = useNotificationStore(s => unreadCount(s.notifications));
   useNotificationFeed();
+  useRecentRecordTracking();
   
   const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 

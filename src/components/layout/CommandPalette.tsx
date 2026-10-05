@@ -1,4 +1,9 @@
-interface PaletteResult { id: string; type: string; label: string; category: string; actionId?: string; payload?: unknown; icon?: React.ReactNode }
+import { groupPaletteResults } from '../../lib/paletteGroups';
+import { normalizeSearchText } from '../../lib/textNormalization';
+import type { RecordRef } from '../../lib/recordLinks';
+import { useRecentRecordsStore } from '../../stores/useRecentRecordsStore';
+import { recentRecordLabel } from '../../lib/recentRecordLabel';
+interface PaletteResult { record?: RecordRef; id: string; type: string; label: string; category: string; actionId?: string; payload?: unknown; icon?: React.ReactNode }
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Loader2, ArrowRight, FileText, User, Building, FolderKanban, Tags, DollarSign, Zap, FolderPlus } from 'lucide-react';
@@ -16,6 +21,7 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
 import { useTimeout } from '../../hooks/useTimeout';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { useDialog } from '../../hooks/useDialog';
 import { focusOnMount } from '../../lib/focusOnMount';
 import { pageIndex, searchPages } from '../../config/pageIndex';
 import { pageKey, type PinnedPage } from '../../lib/pinnedPages';
@@ -29,6 +35,7 @@ interface CommandPaletteProps {
 }
 
 export default function CommandPalette({ isOpen, onClose, onAction }: CommandPaletteProps) {
+  const { dialogProps, titleId } = useDialog(onClose, isOpen);
   const [query, setQuery] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const { setSafeTimeout } = useTimeout();
@@ -40,9 +47,13 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
     vendors: state.vendors,
     accounts: state.accounts,
     invoices: state.invoices,
-    bills: state.bills
+    bills: state.bills,
+    recurring: state.recurring,
+    inventory: state.inventory,
+    bankLines: state.bankLines
   })));
-  useLedgerCollections('bills', 'customers', 'invoices', 'vendors');
+  useLedgerCollections('bills', 'customers', 'invoices', 'vendors', 'recurring', 'inventory', 'bankLines');
+  const recentRecords = useRecentRecordsStore(state => state.records);
   const { handleQuickAdd } = useTransactionActions();
   const { addEntity } = useEntityOperations();
 
@@ -141,14 +152,14 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
   const dataResults = useMemo(() => {
     if (!query || query.length < 2) return [];
     
-    const lowerQ = query.toLowerCase();
+    const lowerQ = normalizeSearchText(query);
     const results: PaletteResult[] = [];
     const searchTerms = lowerQ.split(' ').filter(t => t.length > 0);
 
     // Helper to check if all search terms match a string
     const match = (str?: string) => {
       if (!str) return false;
-      const lower = str.toLowerCase();
+      const lower = normalizeSearchText(str);
       return searchTerms.every(term => lower.includes(term));
     };
 
@@ -179,7 +190,8 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           label: `${t.description || 'Transaction'} - ${formatCurrency(absAmount, t.currency)}`,
           category: `Transaction • ${t.date} ${t.tags ? '• ' + t.tags.join(', ') : ''}`,
           actionId: 'switch-tab',
-          payload: { tab: 'transactions', id: t.id },
+          record: { type: 'transaction', id: t.id },
+              payload: { tab: 'transactions', id: t.id },
           icon: <DollarSign aria-hidden="true" size={16} className="text-emerald-500 shrink-0" />
         });
       } else {
@@ -195,6 +207,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
               label: `${line.description || t.description} (in ${accName})`,
               category: `Transaction Line • ${formatCurrency(Math.abs(amount), t.currency || 'USD')} ${line.tags ? '• ' + line.tags.join(', ') : ''}`,
               actionId: 'switch-tab',
+              record: { type: 'transaction', id: t.id },
               payload: { tab: 'transactions', id: t.id },
               icon: <FileText aria-hidden="true" size={16} className="text-blue-500 shrink-0" />
             });
@@ -213,7 +226,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           label: `${node.id.toUpperCase()}: ${node.description}`,
           category: `Dimension Node • ${node.dimensionId}`,
           actionId: 'switch-tab',
-          payload: { tab: 'intelligence-center' },
+          payload: { tab: 'intelligence' },
           icon: <FolderPlus aria-hidden="true" size={16} className="text-purple-500 shrink-0" />
         });
       }
@@ -258,7 +271,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           label: v.name,
           category: `Vendor ${(v as typeof v & { group?: string }).group ? '• ' + (v as typeof v & { group?: string }).group : ''}`,
           actionId: 'switch-tab',
-          payload: { tab: 'expenses', id: v.id },
+          payload: { tab: 'purchases', id: v.id },
           icon: <Building aria-hidden="true" size={16} className="text-rose-500 shrink-0" />
         });
       }
@@ -273,6 +286,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           label: `${a.code ? a.code + ' - ' : ''}${a.name}`,
           category: `Account • ${a.type} ${a.category ? '• ' + a.category : ''}`,
           actionId: 'switch-tab',
+          record: { type: 'account', id: a.id },
           payload: { tab: 'ledger', accountId: a.id },
           icon: <Tags aria-hidden="true" size={16} className="text-blue-500 shrink-0" />
         });
@@ -288,6 +302,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           label: `Invoice ${i.number || 'Draft'} - ${formatCurrency(i.amountCents, i.currency)}`,
           category: `Invoice • ${i.customerName} • ${i.number}`,
           actionId: 'switch-tab',
+          record: { type: 'invoice', id: i.id },
           payload: { tab: 'sales', id: i.id },
           icon: <FileText aria-hidden="true" size={16} className="text-emerald-500 shrink-0" />
         });
@@ -303,6 +318,7 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
           label: `Bill ${b.number || 'Draft'} - ${formatCurrency(b.amountCents, b.currency)}`,
           category: `Bill • ${b.vendorName} • ${b.number}`,
           actionId: 'switch-tab',
+          record: { type: 'bill', id: b.id },
           payload: { tab: 'purchases', id: b.id },
           icon: <FileText aria-hidden="true" size={16} className="text-rose-500 shrink-0" />
         });
@@ -341,15 +357,18 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
 
   const filteredCommands = query
     ? localizedCommands.filter((command) =>
-        command.label.toLowerCase().includes(query.toLowerCase())
+        normalizeSearchText(command.label).includes(normalizeSearchText(query))
       )
     : localizedCommands;
 
-  const pageResults: PaletteResult[] = useMemo(() => (query.trim().length < 2 ? [] : searchPages(pages, query).slice(0, 8).map(p => ({
+  const recentResults: PaletteResult[] = query.trim() ? [] : recentRecords.map(record => ({ id: `recent-${record.type}-${record.id}`, type: 'recent', label: recentRecordLabel(record, ledger), category: 'Recent items', record, icon: <FileText aria-hidden="true" size={16} /> }));
+
+const pageResults: PaletteResult[] = useMemo(() => (query.trim().length < 2 ? [] : searchPages(pages, query).slice(0, 8).map(p => ({
     id: `page-${pageKey(p.page)}`, type: 'page', label: `Go to ${p.label}`, category: 'Pages', payload: p.page, icon: <ArrowRight aria-hidden="true" size={16} />,
   }))), [pages, query]);
 
-  const combinedResults = [...pageResults, ...dataResults, ...filteredCommands];
+  const combinedResults = [...recentResults, ...pageResults, ...dataResults, ...filteredCommands];
+  const groupedResults = groupPaletteResults(combinedResults);
 
   const handleSelect = async (item: PaletteResult) => {
     // go to any page, report or settings tab (BB-09); no artificial wait before acting
@@ -362,7 +381,9 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
     setIsExecuting(true);
 
     // Core Application Action Mappings
-    if (onAction && item.actionId) {
+    if (item.record) {
+      useUIStore.getState().openRecord(item.record);
+    } else if (onAction && item.actionId) {
       onAction(item.actionId, item.payload);
     }
     toast.success(`${item.label} opened`);
@@ -382,11 +403,13 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
             onClick={onClose}
           />
           <motion.div
+            {...dialogProps}
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             className="fixed z-[201] top-[10%] left-1/2 -translate-x-1/2 w-full max-w-3xl bg-[var(--surface)] rounded-[32px] shadow-2xl overflow-hidden border border-gray-200"
           >
+            <h2 id={titleId} className="sr-only">Command palette</h2>
             <div className="flex items-center px-6 py-5 border-b border-gray-100">
               <Search aria-hidden="true" className="text-indigo-600 mr-4" size={24} />
               <input aria-label="Search commands or enter a transaction"
@@ -439,7 +462,10 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
                 </div>
               ) : combinedResults.length > 0 ? (
                 <div className="p-3 space-y-1">
-                  {combinedResults.map((item, _index) => (
+                  {groupedResults.map(group => (
+                    <section key={group.label} aria-label={group.label}>
+                      <h3 className="px-5 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">{group.label}</h3>
+                      {group.items.map(item => (
                     <button
                       key={item.id}
                       onClick={() => handleSelect(item)}
@@ -459,6 +485,8 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
                          <ArrowRight aria-hidden="true" size={16} className="text-indigo-600 inline-block -translate-x-2 group-hover:translate-x-0 transition-all shrink-0" />
                       </div>
                     </button>
+                      ))}
+                    </section>
                   ))}
                 </div>
               ) : query.length > 0 ? (

@@ -1,3 +1,5 @@
+import { RecordInlineField } from '../ui/RecordInlineField';
+import { ProjectInlineDetails } from './ProjectInlineDetails';
 import { BrainCircuit, Pencil, Plus, Search, FolderKanban, Trash2, Target, Users, BookOpen, DollarSign, BarChart3, Calendar, LayoutDashboard, List } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, parseAmountToCents, formatCurrency } from '../../lib/utils';
@@ -119,7 +121,8 @@ export function ProjectsView({ withOccurrenceKeys, isProjectTx, formId, projects
                         <FolderKanban aria-hidden="true" size={18} className={selectedProjectId === project.id ? "text-orange-300" : "text-slate-600"} />
                       </div>
                       <div dir="auto">
-                        <h2 className="font-bold text-sm tracking-tight">{project.name}</h2>
+                        <ProjectInlineDetails project={project} />
+                        <h2 className="font-bold text-sm tracking-tight"><RecordInlineField collection="projects" record={project} field="name" label={`Name of ${project.name}`} /></h2>
                         <div className="flex items-center gap-1.5 mt-1">
                           <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider", selectedProjectId === project.id ? "bg-[var(--surface)]/10 text-white" : "bg-slate-100 text-slate-600")}>
                             {project.type}

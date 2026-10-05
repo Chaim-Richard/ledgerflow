@@ -5,9 +5,9 @@ import { Transaction, FilterCriteria } from '../../types';
 
 import { toast } from 'sonner';
 
-import { gridTemplate, readHiddenColumns } from '../../lib/transactionColumns';
+import { gridTemplate, gridTracks, orderedGridTracks } from '../../lib/transactionColumns';
 import { listStateFromParams, listStateToParams, replaceSearchParams } from '../../lib/listPermalink';
-import { useAuthStore } from '../../stores/useAuthStore';
+import { useTransactionColumnLayout } from '../../hooks/useTransactionColumnLayout';
 import { resolveAccountName, formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { csvMoney, downloadCsv } from '../../lib/csvExport';
 import { isCashAccount, isInflow, isPostable, lineAmount } from '../../lib/txFilters';
@@ -180,18 +180,8 @@ function useTransactionGridModel() {
 
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
   const [columnSearchTerms, setColumnSearchTerms] = useState<Record<string, string>>({});
-  // Columns switched off in the Columns menu, remembered per person on this device (I-13)
-  const columnsKey = `lf_tx_hidden_columns_${useAuthStore(s => s.user?.uid) || 'guest'}`;
-  const [hiddenColumns, setHiddenColumns] = useState<ReadonlySet<string>>(() => readHiddenColumns(columnsKey));
+  const { layout: columnLayout, hiddenColumns, toggleColumnVisibility, setColumnWidth, moveColumn, resetColumnLayout } = useTransactionColumnLayout();
   const show = (column: string) => !hiddenColumns.has(column);
-
-  const toggleColumnVisibility = (col: string) => {
-    const next = new Set(hiddenColumns);
-    if (next.has(col)) next.delete(col);
-    else next.add(col);
-    setHiddenColumns(next);
-    try { localStorage.setItem(columnsKey, JSON.stringify([...next])); } catch { /* storage blocked: kept for this visit */ }
-  };
 
   const columnFilterValues = useMemo(() => {
     const categoriesSet = new Set<string>();
@@ -262,6 +252,28 @@ function useTransactionGridModel() {
     return interpretation.length > 0 ? interpretation.join(' • ') : 'Keyword Search';
   }, [searchTerm]);
 
+  const [isMobileGrid, setIsMobileGrid] = useState(false);
+  const [isTabletGrid, setIsTabletGrid] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileGrid(window.innerWidth < 768);
+      setIsTabletGrid(window.innerWidth >= 768 && window.innerWidth < 1024);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const rowHeight = isCompactMode ? (isMobileGrid ? 44 : 32) : isProMode ? 44 : 72;
+  // one width per cell the rows draw (desktop rows also have a running balance and actions)
+  const gridCols = gridTemplate({ mobile: isMobileGrid, tablet: isTabletGrid, compact: isProMode || isCompactMode }, hiddenColumns, columnLayout);
+
+  const trackLayout = { mobile: isMobileGrid, tablet: isTabletGrid, compact: isProMode || isCompactMode };
+  const naturalColumnOrder = gridTracks(trackLayout, hiddenColumns).map(([id]) => id);
+  const columnOrder = orderedGridTracks(trackLayout, hiddenColumns, columnLayout).map(([id]) => id);
+  const navigationKey = columnOrder.filter(id => ['date', 'description', 'category', 'project', 'amount', 'status'].includes(id)).join(',');
+
   // Keyboard Navigation Logic
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -270,7 +282,7 @@ function useTransactionGridModel() {
       if (editingCell) return;
       if (!focusedCell) return;
 
-      const fields = ['date', 'description', 'category', 'project', 'amountCents', 'status'];
+      const fields = navigationKey.split(',').map(id => id === 'amount' ? 'amountCents' : id);
       const fieldIndex = fields.indexOf(focusedCell.field);
 
       if (e.key === 'ArrowDown') {
@@ -317,7 +329,7 @@ function useTransactionGridModel() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusedCell, editingCell, transactionsWithBalance]);
+  }, [focusedCell, editingCell, transactionsWithBalance, navigationKey]);
 
   const toggleSelection = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -340,23 +352,6 @@ function useTransactionGridModel() {
     });
     return Object.entries(groups).map(([name, data]) => ({ name, value: data.total, count: data.count })).sort((a, b) => b.value - a.value);
   }, [smartFilteredTransactions, accounts]);
-
-  const [isMobileGrid, setIsMobileGrid] = useState(false);
-  const [isTabletGrid, setIsTabletGrid] = useState(false);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobileGrid(window.innerWidth < 768);
-      setIsTabletGrid(window.innerWidth >= 768 && window.innerWidth < 1024);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const rowHeight = isCompactMode ? 32 : isProMode ? 44 : 72;
-  // one width per cell the rows draw (desktop rows also have a running balance and actions)
-  const gridCols = gridTemplate({ mobile: isMobileGrid, tablet: isTabletGrid, compact: isProMode || isCompactMode }, hiddenColumns);
 
   const selectedTransactions = useMemo(() =>
     transactions.filter(t => selectedIds.has(t.id)),
@@ -485,6 +480,7 @@ function useTransactionGridModel() {
     formatCurrency,
     gridCols,
     hiddenColumns,
+    columnLayout,
     searchTerm,
     onDuplicate: handleDuplicateTransaction
   }), [
@@ -511,14 +507,15 @@ function useTransactionGridModel() {
     dateFormat,
     formatCurrency,
     gridCols,
-    hiddenColumns
+    hiddenColumns,
+    columnLayout
   ]);
 
   const itemKey = useCallback((index: number, data: VirtualRowProps['data']) => {
     return data.transactions[index]?.id || `idx-${index}`;
   }, []);
 
-  return { formId, filterCriteria, onFilterApplied, onAction, txActions, onUpdate, onNewEntry, isProMode, isCompactMode, setProMode, setCompactMode, searchTerm, setSearchTerm, viewMode, setViewMode, editingDetailsTx, setEditingDetailsTx, isReverseModeModal, setIsReverseModeModal, lockDate, selectedIds, setSelectedIds, toggleSelectAll, parsingQueue, setParsingQueue, splittingTxId, setSplittingTxId, accounts, projects, dragActive, sortConfig, handleSort, splittingTransaction, activeView, transactionsWithBalance, stats, totalBalancedSum, selectedMetricsResult, activeFilterColumn, setActiveFilterColumn, columnSearchTerms, setColumnSearchTerms, hiddenColumns, show, toggleColumnVisibility, columnFilterValues, toggleColumnFilter, pivotData, isMobileGrid, isTabletGrid, rowHeight, gridCols, selectedTransactions, signedCents, handleExportCSV, handleBulkUpdate, handleBulkSweep, handleDrag, handleDrop, itemData, itemKey };
+  return { columnLayout, naturalColumnOrder, columnOrder, setColumnWidth, moveColumn, resetColumnLayout, formId, filterCriteria, onFilterApplied, onAction, txActions, onUpdate, onNewEntry, isProMode, isCompactMode, setProMode, setCompactMode, searchTerm, setSearchTerm, viewMode, setViewMode, editingDetailsTx, setEditingDetailsTx, isReverseModeModal, setIsReverseModeModal, lockDate, selectedIds, setSelectedIds, toggleSelectAll, parsingQueue, setParsingQueue, splittingTxId, setSplittingTxId, accounts, projects, dragActive, sortConfig, handleSort, splittingTransaction, activeView, transactionsWithBalance, stats, totalBalancedSum, selectedMetricsResult, activeFilterColumn, setActiveFilterColumn, columnSearchTerms, setColumnSearchTerms, hiddenColumns, show, toggleColumnVisibility, columnFilterValues, toggleColumnFilter, pivotData, isMobileGrid, isTabletGrid, rowHeight, gridCols, selectedTransactions, signedCents, handleExportCSV, handleBulkUpdate, handleBulkSweep, handleDrag, handleDrop, itemData, itemKey };
 }
 
 export type TransactionGridModel = ReturnType<typeof useTransactionGridModel>;

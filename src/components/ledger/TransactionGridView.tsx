@@ -1,6 +1,6 @@
 
 
-import { FilterCriteria } from '../../types';
+import { ActiveFilterChips } from './ActiveFilterChips';
 import { Plus, Loader2, ShieldCheck, AlertCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
@@ -103,38 +103,7 @@ export function TransactionGridView(model: TransactionGridModel) {
 
       <TransactionGridToolbar model={model} />
 
-      {/* Active Filter Chips */}
-      {filterCriteria && Object.keys(filterCriteria).length > 0 && (
-        <div className="px-8 pb-4 flex flex-wrap gap-2">
-           <span className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest self-center mr-2">Active Filters:</span>
-           {Object.entries(filterCriteria).map(([key, value]) => {
-             if (!value) return null;
-             return (
-               <div key={key} className="flex items-center gap-2 bg-[var(--ink)] border border-[var(--line)] px-3 py-1 rounded-full text-[10px] font-bold text-[var(--text)] group/chip hover:border-indigo-600 transition-all">
-                 <span className="text-[var(--muted)] uppercase tracking-widest text-[9px]">{key}:</span>
-                 <span>{String(value)}</span>
-                 <button
-                   aria-label={`Remove ${key} filter`}
-                   onClick={() => {
-                     const next = { ...filterCriteria };
-                     delete next[key as keyof FilterCriteria];
-                     onFilterApplied(next);
-                   }}
-                   className="hover:text-rose-600 transition-colors ml-1"
-                 >
-                   <Plus aria-hidden="true" className="rotate-45" size={14} />
-                 </button>
-               </div>
-             );
-           })}
-           <button
-              onClick={() => onFilterApplied({})}
-              className="text-[10px] font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest hover:underline px-2"
-           >
-             Clear All
-           </button>
-        </div>
-      )}
+      <ActiveFilterChips filters={filterCriteria} search={model.searchTerm} onFilters={onFilterApplied} onSearch={model.setSearchTerm} />
 
       {/* the table scrolls sideways inside its box when the window is narrower than its columns */}
       <TransactionGridBody model={model} />

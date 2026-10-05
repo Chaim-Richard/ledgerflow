@@ -4,6 +4,7 @@ import { Plus, Table as TableIcon, Sparkles, Check, Layers, ArrowDownRight, X } 
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
 
+import { TransactionColumnLayoutControls } from './TransactionColumnLayoutControls';
 import { OPTIONAL_COLUMNS } from '../../lib/transactionColumns';
 
 import { cn, resolveAccountName, formatCurrency, getLocalDateISO } from '../../lib/utils';
@@ -14,7 +15,7 @@ import DeepSearchBar from '../ui/DeepSearchBar';
 
 import type { TransactionGridModel } from './TransactionGrid';
 export function TransactionGridToolbar({ model }: { model: TransactionGridModel }) {
- const { formId, onAction, onNewEntry, isProMode, isCompactMode, setProMode, setCompactMode, searchTerm, setSearchTerm, viewMode, setViewMode, selectedIds, setSelectedIds, toggleSelectAll, accounts, activeView, transactionsWithBalance, stats, activeFilterColumn, setActiveFilterColumn, hiddenColumns, toggleColumnVisibility, signedCents, handleExportCSV, handleBulkUpdate, handleBulkSweep } = model;
+ const { columnLayout, setColumnWidth, moveColumn, resetColumnLayout, formId, onAction, onNewEntry, isProMode, isCompactMode, setProMode, setCompactMode, searchTerm, setSearchTerm, viewMode, setViewMode, selectedIds, setSelectedIds, toggleSelectAll, accounts, activeView, transactionsWithBalance, stats, activeFilterColumn, setActiveFilterColumn, hiddenColumns, toggleColumnVisibility, signedCents, handleExportCSV, handleBulkUpdate, handleBulkSweep } = model;
  return (<div className="p-5 border-b border-[var(--line)] space-y-4 bg-[var(--surface)]/95 backdrop-blur-md sticky top-0 z-30 shadow-xs">
         <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -145,7 +146,7 @@ export function TransactionGridToolbar({ model }: { model: TransactionGridModel 
                   </button>
 
                   {activeFilterColumn === 'visibility' && (
-                    <div className="absolute top-10 right-0 z-[150] w-56 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg p-3 normal-case font-medium text-[var(--text)]">
+                    <div className="absolute top-10 right-0 z-[150] w-[min(26rem,90vw)] max-h-[70vh] overflow-y-auto bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-lg p-3 normal-case font-medium text-[var(--text)]">
                       <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-widest mb-2">Visible Columns</p>
                       <div className="space-y-1">
                         {OPTIONAL_COLUMNS.map(([col, label]) => (
@@ -161,6 +162,7 @@ export function TransactionGridToolbar({ model }: { model: TransactionGridModel 
                           </label>
                         ))}
                       </div>
+                      <TransactionColumnLayoutControls layout={columnLayout} setWidth={setColumnWidth} move={moveColumn} reset={resetColumnLayout} />
                     </div>
                   )}
 
