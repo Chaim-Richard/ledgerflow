@@ -96,6 +96,13 @@ Last updated: 2026-10-02.
   ⌘⇧E (was ⌘Q, which quits the browser on a Mac), Focus mode ⌘⇧F (⌘F is find again), Reports ⌘4
   (⌘P prints again). Press **?** to see them all.
 
+- **New (3 Oct): Settings → Branding & PDFs.** Add your logo, colour, address, a footer (bank
+  details) and the terms printed on invoices, estimates and receipts; "Preview PDF" shows a sample.
+  Invoice PDFs now print every line (they stopped at 15), run over several pages with page numbers,
+  show Hebrew names correctly, and carry a QR code to the payment page once the invoice is sent.
+- **New reports (3 Oct):** Contact Balance Summary, Inventory Valuation, Transactions by Reference,
+  and "Tax by rate" on the Sales Tax screen. Data Health also flags money left in suspense or
+  clearing accounts and bank lines unmatched for over 30 days.
 - Vercel deploys by itself about a minute after each push to `main`.
 - Database changes are applied to Supabase by Claude and tested on a local copy first.
 - Progress and the full list: [TRACKER.md](TRACKER.md).

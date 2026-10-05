@@ -67,8 +67,8 @@ jobs:
       - name: Database security rules tests
         run: npm run test:rules
 
-      - name: Run Accounting & Security Test Suites
-        run: npm test
+      - name: Run Accounting & Security Test Suites (with the coverage gate; it only goes up)
+        run: npm run test:cov
 
       - name: Unit tests in two other time zones
         run: |

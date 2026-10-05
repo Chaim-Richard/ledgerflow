@@ -6,7 +6,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { getIdToken } from '../../firebase';
 import { formatCurrency, getLocalDateISO, workspaceYearMonth } from '../../lib/utils';
-import { buildTaxReturn, returnChanges } from '../../lib/taxReturnDocs';
+import { buildTaxReturn, returnChanges, taxByRate } from '../../lib/taxReturnDocs';
 import type { TaxableDocument } from '../../lib/taxReturnDocs';
 import { TAX_TREATMENTS } from '../../lib/taxCodes';
 import type { TaxReturnBox, TaxTreatment } from '../../lib/taxCodes';
@@ -44,6 +44,14 @@ export default function TaxLiabilityView({ startDate: pageStartDate, endDate: pa
   useEffect(() => { if (pageStartDate) setStartDate(pageStartDate); if (pageEndDate) setEndDate(pageEndDate); }, [pageStartDate, pageEndDate]);
 
   const taxReturn = useMemo(() => buildTaxReturn({
+    invoices: (invoices || []) as unknown as TaxableDocument[],
+    bills: (bills || []) as unknown as TaxableDocument[],
+    creditNotes: (creditNotes || []) as unknown as TaxableDocument[],
+    vendorCredits: (vendorCredits || []) as unknown as TaxableDocument[],
+    startDate, endDate,
+  }), [invoices, bills, creditNotes, vendorCredits, startDate, endDate]);
+
+  const byRate = useMemo(() => taxByRate({
     invoices: (invoices || []) as unknown as TaxableDocument[],
     bills: (bills || []) as unknown as TaxableDocument[],
     creditNotes: (creditNotes || []) as unknown as TaxableDocument[],
@@ -156,6 +164,33 @@ export default function TaxLiabilityView({ startDate: pageStartDate, endDate: pa
           </table>
         ))}
       </div>
+      {byRate.length > 0 && (
+        <table className="w-full text-xs border border-[var(--line)] rounded-xl overflow-hidden">
+          <caption className="text-left font-semibold p-2">Tax by rate (collected minus paid)</caption>
+          <thead className="text-[var(--muted)] border-b border-[var(--line)]">
+            <tr>
+              <th scope="col" className="text-left p-2">Tax</th>
+              <th scope="col" className="text-right p-2">Taxable sales</th>
+              <th scope="col" className="text-right p-2">Collected</th>
+              <th scope="col" className="text-right p-2">Taxable purchases</th>
+              <th scope="col" className="text-right p-2">Paid</th>
+              <th scope="col" className="text-right p-2">Net</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--line)]">
+            {byRate.map(r => (
+              <tr key={`${r.name}|${r.rate}`}>
+                <td className="p-2">{r.name} {r.rate}%</td>
+                <td className="p-2 text-right font-mono tabular-nums">{money(r.salesNetCents)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{money(r.salesTaxCents)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{money(r.purchasesNetCents)}</td>
+                <td className="p-2 text-right font-mono tabular-nums">{money(r.purchasesTaxCents)}</td>
+                <td className="p-2 text-right font-mono tabular-nums font-semibold">{money(r.netTaxCents)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
       {taxReturn.sales.out_of_scope.netCents !== 0 && (
         <p className="text-xs text-[var(--muted)]">Sales of {money(taxReturn.sales.out_of_scope.netCents)} have no tax code and are not in the boxes. If they are taxable, zero-rated or exempt, set a tax code on those invoices.</p>
       )}

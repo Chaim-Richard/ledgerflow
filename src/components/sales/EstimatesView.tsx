@@ -10,10 +10,13 @@ import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
 import { Labelled } from '../ui/Labelled';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { convertEstimateToInvoice } from '../../lib/estimateConverter';
 
 export default function EstimatesView() {
   const user = useAuthStore(s => s.user);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const { addEntity } = useEntityOperations();
 
   const estimates = useLedgerStore(s => s.estimates);
   const customers = useLedgerStore(s => s.customers);
@@ -90,11 +93,14 @@ export default function EstimatesView() {
     }
   };
 
+  // L-163: the invoice goes through the posting path (useEntityOperations), as a draft to review
+  // and send, with the estimate's lines; it was written straight to the database as "sent" with
+  // no ledger posting (so no receivable or revenue), a dropped totalCents field and no lines.
   const handleConvertToInvoice = async (est: import("../../types").Estimate & { currency?: string; description?: string }) => {
     if (!currentWorkspaceId || !user || est.status === 'converted') return;
 
     try {
-      let allocatedInvNumber = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
+      let invoiceNumber: string | undefined;
       try {
         const token = await getIdToken().catch(() => '');
         const res = await fetch(`/api/v1/workspaces/${currentWorkspaceId}/next-number`, {
@@ -105,41 +111,35 @@ export default function EstimatesView() {
           },
           body: JSON.stringify({ type: 'invoice' })
         });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.number) allocatedInvNumber = data.number;
-        }
+        if (res.ok) invoiceNumber = (await res.json()).number;
       } catch (e) {
         console.error('Failed to fetch next invoice number', e);
       }
+      // no made-up number (a random one could repeat an existing invoice's)
+      if (!invoiceNumber) {
+        toast.error('Could not get the next invoice number. Please try again.');
+        return;
+      }
 
+      // the draft invoice (src/lib/estimateConverter.ts, tested); addEntity sets id, uid and workspace
+      const { id: _id, uid: _uid, workspaceId: _workspaceId, ...draft } = convertEstimateToInvoice(est);
       const invData = {
-        uid: user.uid,
-        workspaceId: currentWorkspaceId,
-        number: allocatedInvNumber,
-        customerId: est.customerId,
-        customerName: est.customerName,
-        date: getLocalDateISO(),
-        dueDate: getLocalDateISO(),
-        amountCents: est.amountCents,
-        totalCents: est.amountCents,
-        amountPaidCents: 0,
+        ...draft,
+        number: invoiceNumber,
         currency: est.currency || 'USD',
-        status: 'sent' as const,
-        description: `Converted from Estimate #${est.number}: ${est.description || ''}`,
-        createdAt: new Date().toISOString()
+        metadata: { convertedFromEstimateId: est.id, convertedFromEstimateNumber: est.number || est.id },
       };
 
-      const invRef = await addDoc(collection(db, 'invoices'), invData);
+      const invRef = await addEntity('invoices', invData);
+      if (!invRef) return; // addEntity already showed what went wrong
 
-      // Update estimate
       await updateDoc(doc(db, 'estimates', est.id), {
         status: 'converted',
         convertedInvoiceId: invRef.id,
         updatedAt: new Date().toISOString()
       });
 
-      toast.success(`Estimate converted to Invoice #${invData.number}!`);
+      toast.success(`Estimate converted to draft invoice ${invoiceNumber}. Review it in Sales, then send it.`);
     } catch (err) {
       toast.error((err as Error).message || 'Failed to convert estimate');
     }

@@ -111,6 +111,7 @@ describe('Credits: apply and refund', { skip: !url && 'LF_TEST_DATABASE_URL not 
     const cn = await get('creditNotes', 'cn');
     assert.equal(cn.remainingCents, 0);
     assert.equal(cn.status, 'applied');
+    assert.equal(cn.refundedCents, 4000); // statements and balance summaries count the credit less this (L-160)
     assert.equal((await call('owner-1', 'refund', { kind: 'customer', creditId: id('cn'), amountCents: 1, cashAccountId: id('cash'), date: '2026-05-02' })).status, 409);
   });
 

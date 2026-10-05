@@ -33,6 +33,7 @@ export const RequireRole: React.FC<RequireRoleProps> = ({
       <div
         className="relative group inline-block cursor-not-allowed opacity-50 pointer-events-none"
         title={defaultTooltip}
+        inert
         aria-disabled="true"
         onClickCapture={event => { event.preventDefault(); event.stopPropagation(); }}
         onKeyDownCapture={event => {

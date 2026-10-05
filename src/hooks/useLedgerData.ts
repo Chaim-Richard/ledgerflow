@@ -23,6 +23,7 @@ import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
 
 import { safeAsync } from "../lib/utils";
 import { useDataNeedsStore } from "../stores/useDataNeedsStore";
+import { useUIStore } from "../stores/useUIStore";
 import { LEDGER_COLLECTIONS, keysToStart } from "../lib/ledgerCollections";
 import type { LedgerCollectionSpec, LedgerKey } from "../lib/ledgerCollections";
 import { effectiveLockDate } from '../lib/periodLock';
@@ -164,6 +165,7 @@ export function useLedgerData() {
 
     // Clear data immediately to prevent ghosting between workspaces
     useDataNeedsStore.getState().resetLoaded();
+    useUIStore.getState().loadHiddenTabs(currentWorkspaceId);
     useLedgerStore.setState({
       ...Object.fromEntries(Object.keys(LEDGER_COLLECTIONS).filter(k => k !== 'scenarios').map(k => [k, []])),
       truncatedCollections: {},

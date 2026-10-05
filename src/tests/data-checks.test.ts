@@ -80,3 +80,53 @@ describe('Data-health checks', () => {
     assert.deepEqual(parseRecordHash(''), { tab: '' });
   });
 });
+
+describe('Data-health checks added later', () => {
+  test('a balanced foreign entry is not called unbalanced because of rounding (L-164)', () => {
+    const ctx = base();
+    // €0.05 and −€0.05 at 1.1: each line rounds on its own (6 and −5), the entry still balances
+    ctx.transactions = [makeTransaction({ id: 'eur', date: '2026-09-01', currency: 'EUR', exchangeRate: 1.1, lines: [{ accountId: 'cash', amountCents: 5 }, { accountId: 'rev', amountCents: -5 }] })];
+    assert.deepEqual(ids(ctx, 'unbalanced'), []);
+    const finding = runDataChecks({ ...base(), transactions: [makeTransaction({ id: 'off', date: '2026-09-01', lines: [{ accountId: 'cash', amountCents: 1250 }, { accountId: 'rev', amountCents: -1000 }] })] })[0];
+    assert.match(finding.description, /\$2\.50/);
+  });
+
+  test('suspense, uncategorized and clearing accounts that are not at zero (Z-11)', () => {
+    const ctx = base();
+    ctx.accounts.push(
+      makeChartAccount({ id: 'susp', name: 'Suspense', type: 'asset' }),
+      makeChartAccount({ id: 'uncat', name: 'Uncategorized Expense', type: 'expense' }),
+      makeChartAccount({ id: 'clear', name: 'Payroll Clearing', type: 'liability' }),
+    );
+    ctx.transactions = [
+      makeTransaction({ id: 'a', date: '2026-09-01', lines: [{ accountId: 'susp', amountCents: 4200 }, { accountId: 'cash', amountCents: -4200 }] }),
+      makeTransaction({ id: 'b', date: '2026-09-02', lines: [{ accountId: 'clear', amountCents: -900 }, { accountId: 'cash', amountCents: 900 }] }),
+      makeTransaction({ id: 'c', date: '2026-09-03', lines: [{ accountId: 'clear', amountCents: 900 }, { accountId: 'cash', amountCents: -900 }] }), // cleared again
+      makeTransaction({ id: 'd', date: '2026-09-04', status: 'draft', lines: [{ accountId: 'uncat', amountCents: 300 }, { accountId: 'cash', amountCents: -300 }] }),
+    ];
+    const found = runDataChecks(ctx).filter(f => f.checkId === 'suspense-balance');
+    assert.deepEqual(found.map(f => f.record), [{ type: 'account', id: 'susp' }]);
+    assert.match(found[0].title, /Suspense holds \$42\.00/);
+    assert.match(found[0].description, /1 line\(s\).*debit balance/);
+  });
+
+  test('bank lines waiting more than 30 days, one finding per bank account, linked to the oldest (Z-13)', () => {
+    const ctx = base();
+    ctx.accounts.push(makeChartAccount({ id: 'chk', name: 'Checking' }), makeChartAccount({ id: 'sav', name: 'Savings' }));
+    const line = (id: string, accountId: string, date: string, status: 'pending' | 'matched' | 'ignored' = 'pending') =>
+      ({ id, uid: 'u', workspaceId: 'w', accountId, date, description: `line ${id}`, amountCents: 100, status });
+    ctx.bankLines = [
+      line('old', 'chk', '2026-07-01'),
+      line('older', 'chk', '2026-06-15'),
+      line('recent', 'chk', '2026-09-20'),       // under 30 days
+      line('edge', 'sav', '2026-08-29'),         // exactly 30 days: not yet
+      line('done', 'sav', '2026-01-01', 'matched'),
+      line('skip', 'sav', '2026-01-01', 'ignored'),
+    ];
+    const found = runDataChecks(ctx).filter(f => f.checkId === 'stale-unreconciled');
+    assert.equal(found.length, 1);
+    assert.deepEqual(found[0].record, { type: 'bankLine', id: 'older' });
+    assert.match(found[0].title, /2 bank line\(s\) in Checking/);
+    assert.equal(RECORD_TABS.bankLine, 'reconciliation');
+  });
+});

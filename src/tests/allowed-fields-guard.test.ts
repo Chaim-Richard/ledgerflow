@@ -42,10 +42,10 @@ const TABLES: Record<string, [string, string[]]> = {
   projects: ['Project', []],
   supportTickets: ['SupportTicket', []],
   // credit notes and vendor credits are saved through POST /api/v1/transactions/bulk
-  creditNotes: ['CreditNote', ['exchangeRate', 'tags', 'metadata', 'taxAmountCents', 'taxInclusive', 'taxVersion', 'taxTreatment']],
-  vendorCredits: ['VendorCredit', ['exchangeRate', 'tags', 'metadata', 'taxAmountCents', 'taxInclusive', 'taxVersion', 'taxTreatment']],
+  creditNotes: ['CreditNote', ['exchangeRate', 'tags', 'metadata', 'taxAmountCents', 'taxInclusive', 'taxVersion', 'taxTreatment', 'refundedCents']],
+  vendorCredits: ['VendorCredit', ['exchangeRate', 'tags', 'metadata', 'taxAmountCents', 'taxInclusive', 'taxVersion', 'taxTreatment', 'refundedCents']],
   // numberingSeries lives in its own collection; the field on the model is a legacy read path
-  workspaces: ['Workspace', ['numberingSeries', 'retention', 'setupCompletedAt', 'openingBalanceDate']],
+  workspaces: ['Workspace', ['numberingSeries', 'retention', 'setupCompletedAt', 'openingBalanceDate', 'branding']],
   notifications: ['AppNotification', []],
   purchaseOrders: ['PurchaseOrder', []],
 };
@@ -56,8 +56,8 @@ const TABLES: Record<string, [string, string[]]> = {
 const SCHEMA_MODELS: Array<[string, () => Promise<Record<string, unknown>>, string[]]> = [
   ['Invoice', async () => (await import('../schemas')).InvoiceSchema.shape, ['writtenOffCents', 'writeOffTransactionId', 'writeOffReason', 'writtenOffAt', 'writeOffReversalTransactionId', 'createdAt', 'updatedAt']],
   ['Bill', async () => (await import('../schemas')).BillSchema.shape, ['createdAt', 'updatedAt']],
-  ['CreditNote', async () => (await import('../schemas')).CreditNoteSchema.shape, ['createdAt', 'updatedAt']],
-  ['VendorCredit', async () => (await import('../schemas')).VendorCreditSchema.shape, ['createdAt', 'updatedAt']],
+  ['CreditNote', async () => (await import('../schemas')).CreditNoteSchema.shape, ['createdAt', 'updatedAt', 'refundedCents']],
+  ['VendorCredit', async () => (await import('../schemas')).VendorCreditSchema.shape, ['createdAt', 'updatedAt', 'refundedCents']],
 ];
 
 describe('Server schemas keep every field the app saves', () => {

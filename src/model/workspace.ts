@@ -1,5 +1,6 @@
 import type { LockException } from '../lib/periodLock';
 import type { EmailTemplates } from '../lib/emailTemplates';
+import type { WorkspaceBranding } from '../lib/branding';
 import type { ReminderSettings } from '../lib/reminders';
 import type { NotificationType } from '../lib/notifications';
 import type { EntityMetadata, DimensionDefinition, Transaction } from './ledger';
@@ -39,6 +40,8 @@ export interface Workspace {
   lockException?: LockException | null;
   /** Workspace email texts (src/lib/emailTemplates.ts); missing ones use the defaults. */
   emailTemplates?: EmailTemplates;
+  /** Logo, colour, address, footer and terms on document PDFs (src/lib/branding.ts); set by the server. */
+  branding?: WorkspaceBranding;
   /** Automatic payment reminders (src/lib/reminders.ts). */
   reminderSettings?: ReminderSettings;
   strategicAdvice?: string[];

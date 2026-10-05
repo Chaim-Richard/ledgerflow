@@ -28,15 +28,16 @@ export default function DataHealthView() {
   const bills = useLedgerStore(s => s.bills);
   const recurring = useLedgerStore(s => s.recurring);
   const inventory = useLedgerStore(s => s.inventory);
-  const { loading } = useLedgerCollections('bills', 'inventory', 'invoices', 'recurring');
+  const bankLines = useLedgerStore(s => s.bankLines);
+  const { loading } = useLedgerCollections('bankLines', 'bills', 'inventory', 'invoices', 'recurring');
   const baseCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const openRecord = useUIStore(s => s.openRecord);
   const [only, setOnly] = useState<string>('all');
 
   const findings = useMemo(() => runDataChecks({
     transactions: transactions || [], accounts: accounts || [], invoices: invoices || [], bills: bills || [],
-    recurring: recurring || [], inventory: inventory || [], today: getLocalDateISO(), baseCurrency,
-  }), [transactions, accounts, invoices, bills, recurring, inventory, baseCurrency]);
+    recurring: recurring || [], inventory: inventory || [], bankLines: bankLines || [], today: getLocalDateISO(), baseCurrency,
+  }), [transactions, accounts, invoices, bills, recurring, inventory, bankLines, baseCurrency]);
 
   const byCheck = useMemo(() => DATA_CHECKS.map(check => ({ check, findings: findings.filter(f => f.checkId === check.id) })), [findings]);
   const shown = byCheck.filter(g => g.findings.length > 0 && (only === 'all' || g.check.id === only));

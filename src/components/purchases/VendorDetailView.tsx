@@ -1,8 +1,11 @@
 import React, { useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { daysOverdue, outstandingBaseCents, partyStats } from '../../lib/aging';
+import { calculateAmountDue } from '../../lib/documentMath';
 import { ArrowLeft, DollarSign, FileText, User } from 'lucide-react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import PartyProfilePanel from '../common/PartyProfilePanel';
 
 interface VendorDetailViewProps {
   vendorId: string;
@@ -25,37 +28,12 @@ export default function VendorDetailView({ vendorId, onBack }: VendorDetailViewP
     return payments.filter(p => p.contactId === vendorId && p.direction === 'made' && p.status !== 'void');
   }, [payments, vendorId]);
 
+  // still owed, overdue, lifetime and payments in the base currency (src/lib/aging.ts, tested)
+  const today = getLocalDateISO();
   const stats = useMemo(() => {
-    let outstanding = 0;
-    let overdue = 0;
-    let lifetimePurchases = 0;
-    let totalPayments = 0;
-
-    vendorBills.forEach(b => {
-      const status = (b.status || '').toLowerCase();
-      if (status !== 'void' && status !== 'draft') {
-        const total = b.amountCents || 0;
-        lifetimePurchases += total;
-
-        if (status !== 'paid') {
-          const paid = b.amountPaidCents || 0;
-          const openAmount = Math.max(0, total - paid);
-          outstanding += openAmount;
-
-          const isOverdue = b.dueDate && new Date(b.dueDate) < new Date();
-          if (isOverdue) {
-            overdue += openAmount;
-          }
-        }
-      }
-    });
-
-    vendorPayments.forEach(p => {
-      totalPayments += p.amountCents || 0;
-    });
-
-    return { outstanding, overdue, lifetimePurchases, totalPayments };
-  }, [vendorBills, vendorPayments]);
+    const t = partyStats(vendorBills, vendorPayments, 'vendor', today);
+    return { outstanding: t.outstandingCents, overdue: t.overdueCents, lifetimePurchases: t.lifetimeCents, totalPayments: t.paymentsCents };
+  }, [vendorBills, vendorPayments, today]);
 
   if (!vendor) {
     return (
@@ -92,6 +70,8 @@ export default function VendorDetailView({ vendorId, onBack }: VendorDetailViewP
           </div>
         </div>
       </div>
+
+      <PartyProfilePanel side="vendor" party={vendor} />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -133,8 +113,8 @@ export default function VendorDetailView({ vendorId, onBack }: VendorDetailViewP
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-y-auto max-h-[380px]">
             {vendorBills.map(b => {
-              const isOverdue = b.dueDate && new Date(b.dueDate) < new Date() && b.status !== 'paid' && b.status !== 'void';
-              const outstanding = Math.max(0, (b.amountCents || 0) - (b.amountPaidCents || 0));
+              const isOverdue = outstandingBaseCents(b, 'vendor') > 0 && daysOverdue(b, today) > 0;
+              const outstanding = outstandingBaseCents(b, 'vendor') > 0 ? calculateAmountDue(b) : 0; // in the document's currency
               return (
                 <div key={b.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors flex items-center justify-between">
                   <div>
@@ -158,10 +138,10 @@ export default function VendorDetailView({ vendorId, onBack }: VendorDetailViewP
                   </div>
                   <div className="text-right">
                     <div className="font-mono font-bold text-slate-900 dark:text-white text-sm">
-                      {formatCurrency(b.amountCents || 0)}
+                      {formatCurrency(b.amountCents || 0, b.currency)}
                     </div>
                     <div className="text-xs text-[var(--muted)] mt-0.5">
-                      Open: {formatCurrency(outstanding)}
+                      Open: {formatCurrency(outstanding, b.currency)}
                     </div>
                   </div>
                 </div>
@@ -196,7 +176,7 @@ export default function VendorDetailView({ vendorId, onBack }: VendorDetailViewP
                 </div>
                 <div className="text-right">
                   <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                    -{formatCurrency(p.amountCents || 0)}
+                    -{formatCurrency(p.amountCents || 0, p.currency)}
                   </div>
                 </div>
               </div>

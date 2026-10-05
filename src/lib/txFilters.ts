@@ -352,6 +352,17 @@ export function getAbsoluteTotal(tx: Transaction): number {
 }
 
 /**
+ * An entry's size in the base currency: its debit lines converted with lineAmount, or its total
+ * times its rate when it has no lines (totalAmountCents is in the entry's own currency).
+ */
+export function baseAbsoluteTotal(tx: Transaction): number {
+  if (!tx) return 0;
+  return Array.isArray(tx.lines) && tx.lines.length > 0
+    ? getAbsoluteTotal(tx)
+    : Math.round(Math.abs(tx.totalAmountCents || 0) * (tx.exchangeRate ?? 1));
+}
+
+/**
  * Computes filtered inflow and outflow totals across a set of transactions.
  * Excludes void, draft, and soft-deleted transactions via isPostable,
  * and applies multi-currency exchange rates via lineAmount.
@@ -373,7 +384,7 @@ export function calculateFilteredTotals(
     const t = transactions[i];
     if (!isPostable(t)) continue;
     postableCount++;
-    totalExposure += Math.abs(t.totalAmountCents || 0);
+    totalExposure += baseAbsoluteTotal(t);
 
     if (t.type === 'income' || isInflow(t, accountMap)) {
       const amt = t.lines && t.lines.length > 0
@@ -398,9 +409,16 @@ export function calculateFilteredTotals(
           handled = true;
         }
       }
-      if (!handled) {
-        const posSum = t.lines.filter(l => (l.amountCents || 0) > 0).reduce((s, l) => s + lineAmount(l, t), 0);
-        outflowCents += posSum;
+      // No income or expense line (a payment received or made, a transfer, a balance-sheet journal):
+      // count only the money that entered or left the bank/cash accounts. It used to add every such
+      // entry to the outflow, so a customer's payment showed as money going out.
+      if (!handled && !isTransferTransaction(t)) {
+        let cashNet = 0;
+        for (const l of t.lines) {
+          if (isCashAccount(accountMap?.get(l.accountId))) cashNet += lineAmount(l, t);
+        }
+        if (cashNet > 0) inflowCents += cashNet;
+        else if (cashNet < 0) outflowCents += -cashNet;
       }
     } else {
       const amt = Math.round(Math.abs(t.totalAmountCents || 0) * (t.exchangeRate ?? 1));

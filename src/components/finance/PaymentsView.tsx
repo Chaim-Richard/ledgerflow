@@ -22,7 +22,14 @@ export default function PaymentsView() {
   const payments = useLedgerStore(s => s.payments);
   useLedgerStore(s => s.customers);
   useLedgerStore(s => s.vendors);
-  const { loading } = useLedgerCollections('customers', 'payments', 'vendors');
+  const invoices = useLedgerStore(s => s.invoices);
+  const bills = useLedgerStore(s => s.bills);
+  const { loading } = useLedgerCollections('bills', 'customers', 'invoices', 'payments', 'vendors');
+  // the paid document's number (the id's second half was shown: 'undefined' for most ids)
+  const documentLabel = (alloc: { documentId: string; documentType: string }) => {
+    const docs: Array<{ id: string; number?: string }> = alloc.documentType === 'bill' ? bills : invoices;
+    return docs.find(d => d.id === alloc.documentId)?.number || `#${alloc.documentId.slice(0, 8)}`;
+  };
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [previewPayment, setPreviewPayment] = useState<import("../../types").Payment | null>(null);
   
@@ -101,14 +108,14 @@ export default function PaymentsView() {
                     <span className={cn(
                       payment.direction === 'received' ? "text-emerald-500" : "text-rose-500"
                     )}>
-                      {payment.direction === 'received' ? '+' : '-'}{formatCurrency(payment.amountCents || 0)}
+                      {payment.direction === 'received' ? '+' : '-'}{formatCurrency(payment.amountCents || 0, payment.currency)}
                     </span>
                   </td>
                   <td className="p-4 md:p-8">
                     <div className="flex flex-col gap-1">
                       {payment.allocations && withOccurrenceKeys(payment.allocations, alloc => JSON.stringify([alloc.documentType, alloc.documentId, alloc.amountCents])).map(({ item: alloc, key }) => (
                         <span key={key} className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest bg-[var(--surface)] px-2 py-1 rounded-md border border-[var(--line)]">
-                          {alloc.documentType}: {alloc.documentId.split('-')[1]} ({formatCurrency(alloc.amountCents)})
+                          {alloc.documentType}: {documentLabel(alloc)} ({formatCurrency(alloc.amountCents, payment.currency)})
                         </span>
                       ))}
                     </div>

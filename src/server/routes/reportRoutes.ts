@@ -17,7 +17,7 @@ import {
   computeStatement,
   computeTaxLiability
 } from "../reports/computeReports";
-import type { Bill, Budget, ChartAccount, Customer, Invoice, Payment, Transaction as LedgerTransaction } from "../../types";
+import type { Bill, Budget, ChartAccount, CreditNote, Customer, Invoice, Payment, Transaction as LedgerTransaction, VendorCredit } from "../../types";
 import { agingBucket, daysOverdue, outstandingBaseCents } from '../../lib/aging';
 
 export const reportRouter = express.Router();
@@ -326,10 +326,11 @@ reportRouter.get("/statement", async (req, res) => {
     const contactSnap = await db.collection(contactCollection).doc(contactId).get();
     if (!contactSnap.exists) return sendError(res, "Contact not found", 404);
 
-    const [invSnap, billSnap, paySnap] = await Promise.all([
+    const [invSnap, billSnap, paySnap, creditSnap] = await Promise.all([
       db.collection("invoices").where("workspaceId", "==", workspaceId).get(),
       db.collection("bills").where("workspaceId", "==", workspaceId).get(),
-      db.collection("payments").where("workspaceId", "==", workspaceId).get()
+      db.collection("payments").where("workspaceId", "==", workspaceId).get(),
+      db.collection(type === 'customer' ? "creditNotes" : "vendorCredits").where("workspaceId", "==", workspaceId).get()
     ]);
 
     const invoices = invSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Invoice);
@@ -343,7 +344,8 @@ reportRouter.get("/statement", async (req, res) => {
       payments,
       startDate,
       endDate,
-      type
+      type,
+      creditSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as CreditNote | VendorCredit)
     );
 
     res.json(statement);

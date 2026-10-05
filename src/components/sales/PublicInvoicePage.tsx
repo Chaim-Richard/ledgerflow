@@ -63,15 +63,15 @@ export default function PublicInvoicePage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full" /></div>;
+    return <div className="min-h-screen flex items-center justify-center bg-gray-50" role="status" aria-label="Loading the invoice"><div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full" aria-hidden="true" /></div>;
   }
 
   if (error || !invoice) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
         <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Unable to Load Invoice</h2>
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" aria-hidden="true" />
+          <h1 className="text-2xl font-bold mb-2">Unable to Load Invoice</h1>
           <p className="text-gray-600 mb-6">{error}</p>
         </div>
       </div>

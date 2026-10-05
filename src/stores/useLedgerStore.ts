@@ -51,6 +51,37 @@ type StoredAuditLog = Omit<AuditLog, 'uid'> & { uid?: string; targetId?: string 
 type StoredPartner = Pick<Partner, 'id'> & Partial<Partner>;
 type StoredReconciliation = ReconciliationSession & { accountId?: string; accountName?: string };
 
+/**
+ * Income, expenses and their difference over the posted entries (isPostable, lineAmount, by
+ * account type), plus per-project and per-line-category figures. Needs the accounts: without them
+ * no line is income or expense, so it is recomputed when either list changes.
+ */
+export function summarizeLedger(transactions: Transaction[], accounts: ChartAccount[]): LedgerState['runningBalances'] {
+  const summary: LedgerState['runningBalances'] = { totalIncome: 0, totalExpense: 0, totalBalance: 0, projectMetrics: {}, categoryMetrics: {} };
+  const accountMap = new Map(accounts.map(a => [a.id, a]));
+  for (const tx of transactions) {
+    if (!tx || typeof tx !== 'object' || !isPostable(tx)) continue;
+    const impact = calculateTransactionImpact(tx, accountMap);
+    if (impact > 0) summary.totalIncome += impact;
+    else if (impact < 0) summary.totalExpense += Math.abs(impact);
+    summary.totalBalance += impact;
+
+    if (Array.isArray(tx.lines)) {
+      for (const l of tx.lines) {
+        if (!l || typeof l !== 'object') continue;
+        const cat = (typeof l.category === 'string' && l.category) ? l.category : 'General';
+        summary.categoryMetrics[cat] = (summary.categoryMetrics[cat] || 0) + lineAmount(l, tx);
+      }
+    }
+    if (tx.projectId && typeof tx.projectId === 'string') {
+      const project = summary.projectMetrics[tx.projectId] ||= { income: 0, expense: 0 };
+      if (impact > 0) project.income += impact;
+      else if (impact < 0) project.expense += Math.abs(impact);
+    }
+  }
+  return summary;
+}
+
 export interface LedgerState {
   _version: number;
   _lastSync: number;
@@ -346,48 +377,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
     
     set({ integrityStatus: { ...get().integrityStatus, isVerifying: true } });
 
-    const accountMap = new Map(accounts.map(a => [a.id, a]));
-
-    const integrity = {
-      totalIncome: 0,
-      totalExpense: 0,
-      totalBalance: 0,
-      projectMetrics: {} as Record<string, { income: number, expense: number }>,
-      categoryMetrics: {} as Record<string, number>
-    };
-
-    if (Array.isArray(transactions)) {
-      transactions.forEach(tx => {
-        if (!tx || typeof tx !== 'object' || !isPostable(tx)) return;
-        
-        const impact = calculateTransactionImpact(tx, accountMap);
-        
-        if (impact > 0) {
-          integrity.totalIncome += impact;
-        } else if (impact < 0) {
-          integrity.totalExpense += Math.abs(impact);
-        }
-        
-        integrity.totalBalance += impact;
-
-        if (Array.isArray(tx.lines)) {
-          tx.lines.forEach(l => {
-            if (!l || typeof l !== 'object') return;
-            const amt = lineAmount(l, tx);
-            const cat = (typeof l.category === 'string' && l.category) ? l.category : 'General';
-            integrity.categoryMetrics[cat] = (integrity.categoryMetrics[cat] || 0) + amt;
-          });
-        }
-
-        if (tx.projectId && typeof tx.projectId === 'string') {
-          if (!integrity.projectMetrics[tx.projectId]) {
-            integrity.projectMetrics[tx.projectId] = { income: 0, expense: 0 };
-          }
-          if (impact > 0) integrity.projectMetrics[tx.projectId].income += impact;
-          else if (impact < 0) integrity.projectMetrics[tx.projectId].expense += Math.abs(impact);
-        }
-      });
-    }
+    const integrity = summarizeLedger(Array.isArray(transactions) ? transactions : [], accounts);
 
     const isConsistent = 
       integrity.totalBalance === runningBalances.totalBalance &&
@@ -461,46 +451,8 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       return 0;
     });
 
-    // Initial Baseline computation (O(N) during load, O(1) thereafter)
-    const runningBalances = {
-      totalIncome: 0,
-      totalExpense: 0,
-      totalBalance: 0,
-      projectMetrics: {} as Record<string, { income: number, expense: number }>,
-      categoryMetrics: {} as Record<string, number>
-    };
-
-    allTxs.forEach(tx => {
-      if (!isPostable(tx)) return;
-
-      const accountMap = new Map(get().accounts.map(a => [a.id, a]));
-      const impact = calculateTransactionImpact(tx, accountMap);
-
-      if (impact > 0) {
-        runningBalances.totalIncome += impact;
-      } else if (impact < 0) {
-        runningBalances.totalExpense += Math.abs(impact);
-      }
-      
-      runningBalances.totalBalance += impact;
-
-      if (Array.isArray(tx.lines)) {
-        tx.lines.forEach(l => {
-          if (!l || typeof l !== 'object') return;
-          const amt = lineAmount(l, tx);
-          const cat = (typeof l.category === 'string' && l.category) ? l.category : 'General';
-          runningBalances.categoryMetrics[cat] = (runningBalances.categoryMetrics[cat] || 0) + amt;
-        });
-      }
-
-      if (tx.projectId && typeof tx.projectId === 'string') {
-        if (!runningBalances.projectMetrics[tx.projectId]) {
-          runningBalances.projectMetrics[tx.projectId] = { income: 0, expense: 0 };
-        }
-        if (impact > 0) runningBalances.projectMetrics[tx.projectId].income += impact;
-        else if (impact < 0) runningBalances.projectMetrics[tx.projectId].expense += Math.abs(impact);
-      }
-    });
+    // the account map used to be rebuilt for every entry (entries × accounts work on each load)
+    const runningBalances = summarizeLedger(allTxs, get().accounts);
 
     set({ transactions: allTxs, runningBalances });
     recomputeBalances();
@@ -511,7 +463,9 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   
 
   setAccounts: (accounts) => {
-    set({ accounts });
+    // the totals depend on which accounts are income or expense: entries loaded before the
+    // accounts used to keep all-zero totals until the next change to the entries
+    set({ accounts, runningBalances: summarizeLedger(get().transactions, accounts) });
     get().recomputeBalances();
   },
   
@@ -612,8 +566,21 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       });
     }
   },
+  /** A workspace switch or sign-out: every record of the old workspace goes (only the person's
+   * preferences stay: privacy mode, matching threshold, base currency until the new one loads).
+   * Closed periods, the lock exception, invites and the truncation flags used to stay, so the new
+   * workspace was checked against the old one's closed months until its own loaded. */
   resetStore: () => {
     set({
+      periods: [],
+      invites: [],
+      workspaceShards: [],
+      billingLedgerTraces: [],
+      supportTickets: [],
+      supportMessages: [],
+      lockException: null,
+      isDataTruncated: false,
+      truncatedCollections: {},
       transactions: [],
       optimisticIds: new Set(),
       accounts: [],

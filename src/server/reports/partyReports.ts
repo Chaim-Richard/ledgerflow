@@ -51,8 +51,9 @@ export function computeCustomerBalanceSummary(
       return true;
     });
 
+    // a credit counts less what was paid back in cash (L-160)
     const totalCreditNotesCents = custCreditNotes.reduce((sum, cn) => {
-      return sum + toBaseCents(cn.amountCents || 0, cn.exchangeRate);
+      return sum + toBaseCents((cn.amountCents || 0) - (cn.refundedCents || 0), cn.exchangeRate);
     }, 0);
 
     const custPayments = payments.filter(p => {
@@ -132,7 +133,7 @@ export function computeVendorBalanceSummary(
     });
 
     const totalVendorCreditsCents = custVendorCredits.reduce((sum, vc) => {
-      return sum + toBaseCents(vc.amountCents || 0, vc.exchangeRate);
+      return sum + toBaseCents((vc.amountCents || 0) - (vc.refundedCents || 0), vc.exchangeRate);
     }, 0);
 
     const vendorPayments = payments.filter(p => {
@@ -307,4 +308,52 @@ export function computeTransactionsByVendor(
   }
 
   return list.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export interface ContactBalanceSummaryRow {
+  key: string;
+  name: string;
+  email?: string;
+  customerId?: string;
+  vendorId?: string;
+  /** What the contact owes us (customer balance), base currency. */
+  receivableCents: number;
+  /** What we owe the contact (vendor balance), base currency. */
+  payableCents: number;
+  /** receivable − payable: positive, they owe us on balance; negative, we owe them. */
+  netCents: number;
+}
+
+const emailKey = (email?: string) => (email || '').trim().toLowerCase();
+const nameKey = (name: string) => name.normalize('NFKC').toLocaleLowerCase().replace(/\s+/g, ' ').trim();
+
+/**
+ * Contact Balance Summary (J-03): customers and vendors in one list. A business that is both is one
+ * row with both balances and the net: matched by email, or by name (case and spacing ignored, any
+ * script) when one of the two has no email. Built from the two balance summaries, so it follows
+ * their rules (issued documents, credits, payments, as-of date, base currency).
+ */
+export function computeContactBalanceSummary(
+  customerRows: CustomerBalanceSummaryRow[],
+  vendorRows: VendorBalanceSummaryRow[]
+): ContactBalanceSummaryRow[] {
+  const rows: ContactBalanceSummaryRow[] = customerRows.map(c => ({
+    key: `customer:${c.customerId}`, name: c.name, email: c.email, customerId: c.customerId,
+    receivableCents: c.balanceCents, payableCents: 0, netCents: 0,
+  }));
+  for (const v of vendorRows) {
+    const open = rows.filter(r => r.customerId && !r.vendorId);
+    const match = (emailKey(v.email) && open.find(r => emailKey(r.email) === emailKey(v.email)))
+      || open.find(r => nameKey(r.name) === nameKey(v.name) && (!emailKey(r.email) || !emailKey(v.email)));
+    if (match) {
+      match.vendorId = v.vendorId;
+      match.payableCents = v.balanceCents;
+      match.email = match.email || v.email;
+    } else {
+      rows.push({ key: `vendor:${v.vendorId}`, name: v.name, email: v.email, vendorId: v.vendorId, receivableCents: 0, payableCents: v.balanceCents, netCents: 0 });
+    }
+  }
+  return rows
+    .map(r => ({ ...r, netCents: r.receivableCents - r.payableCents }))
+    .sort((a, b) => Math.abs(b.netCents) - Math.abs(a.netCents) || a.name.localeCompare(b.name));
 }

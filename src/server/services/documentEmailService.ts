@@ -97,7 +97,7 @@ export async function emailInvoice(db: Firestore, input: EmailInvoiceInput) {
 
   let attachments;
   try {
-    const pdf = await generateDocumentPdf('invoice', { ...invoice, id: input.invoiceId }, workspace);
+    const pdf = await generateDocumentPdf('invoice', { ...invoice, id: input.invoiceId }, workspace, { paymentUrl: values.link });
     attachments = [{ filename: `invoice_${values.number}.pdf`, content: pdf, contentType: 'application/pdf' }];
   } catch {
     attachments = undefined;

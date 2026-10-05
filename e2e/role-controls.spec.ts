@@ -25,9 +25,10 @@ test('disabled role controls refuse native Enter, Space and direct clicks', asyn
       React.createElement(RequireRole, { role: 'viewer' }, React.createElement('button', { onClick: action }, 'Allowed action')),
     ));
   });
-  const restricted = page.getByRole('button', { name: 'Restricted action' });
+  const restricted = page.getByText('Restricted action', { exact: true });
   await expect(restricted).toBeAttached();
-  await restricted.focus();
+  await restricted.evaluate(el => (el as HTMLButtonElement).focus());
+  await expect(restricted).not.toBeFocused();
   await page.keyboard.press('Enter');
   await page.keyboard.press('Space');
   await restricted.evaluate(el => (el as HTMLButtonElement).click());

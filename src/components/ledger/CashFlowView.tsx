@@ -1,11 +1,10 @@
 import { usePageSyncedState } from '../../hooks/usePageSyncedState';
-import { resolveAccountRole } from '../../lib/accountUtils';
 import React, { useId, useState, useMemo, useCallback, useEffect } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { getComparePeriod } from '../../lib/fiscalCalendar';
 import { formatCurrency, cn, getLocalDateISO, monthBoundsISO } from '../../lib/utils';
 import { exportToExcel } from '../../lib/excelExport';
-import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
+import { computeCashFlow } from '../../server/reports/computeReports';
 import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useFinancialReporting, ServerCashFlowData } from '../../hooks/useFinancialReporting';
@@ -123,66 +122,11 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
   }, [businessType]);
 
   const localCalculation = useMemo(() => {
+    // the same statement the server builds (src/server/reports/computeReports.ts, tested)
     const calcPeriod = (start: string, end: string) => {
-      const data = {
-        operating: { total: 0, inflow: 0, outflow: 0 },
-        investing: { total: 0, inflow: 0, outflow: 0 },
-        financing: { total: 0, inflow: 0, outflow: 0 },
-        netChange: 0,
-      };
-
-      const periodTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, start, end));
-      const cashAccounts = accounts.filter(a => resolveAccountRole(a) === 'cash' || (a.type === 'asset' && a.code?.startsWith('10')));
-
-      periodTxs.forEach(tx => {
-        const isCashTx = tx.lines?.some(l => cashAccounts.find(ca => ca.id === l.accountId));
-        if (!isCashTx) return;
-
-        // Simplify: all income/expense into Operating. Equity/Loans into Financing. Assets into Investing
-        tx.lines?.forEach(line => {
-          const acc = accounts.find(a => a.id === line.accountId);
-          if (!acc || cashAccounts.find(ca => ca.id === acc.id)) return;
-
-          const cents = lineAmount(line, tx);
-          const absoluteAmount = Math.abs(cents);
-          // If transaction increases cash, the offsetting line is negative (credit). If credit is income, it's inflow.
-          const isCashInflow = cents < 0; 
-          const moneyFlow = isCashInflow ? absoluteAmount : -absoluteAmount;
-
-          const role = resolveAccountRole(acc);
-          const isWorkingCapital = 
-            role === 'ar' || acc.category === 'Receivables' || acc.category === 'Receivable' ||
-            role === 'ap' || acc.category === 'Payables' || acc.category === 'Payable' ||
-            role === 'inventory' || acc.category === 'Inventory' ||
-            acc.category === 'Tax' || acc.category === 'Deposits';
-
-          if ((acc.type === 'income' || acc.type === 'revenue') || (acc.type === 'expense' || acc.type === 'cost_of_goods') || isWorkingCapital) {
-            data.operating.total += moneyFlow;
-            if (isCashInflow) {
-              data.operating.inflow += absoluteAmount;
-            } else {
-              data.operating.outflow += absoluteAmount;
-            }
-          } else if (acc.type === 'asset') {
-            data.investing.total += moneyFlow;
-            if (isCashInflow) {
-              data.investing.inflow += absoluteAmount;
-            } else {
-              data.investing.outflow += absoluteAmount;
-            }
-          } else if (acc.type === 'liability' || acc.type === 'equity') {
-            data.financing.total += moneyFlow;
-            if (isCashInflow) {
-              data.financing.inflow += absoluteAmount;
-            } else {
-              data.financing.outflow += absoluteAmount;
-            }
-          }
-        });
-      });
-
-      data.netChange = data.operating.total + data.investing.total + data.financing.total;
-      return data;
+      const { operating, investing, financing, netChange } = computeCashFlow(accounts, transactions, start, end);
+      const section = (s: typeof operating) => ({ total: s.total, inflow: s.inflow, outflow: s.outflow });
+      return { operating: section(operating), investing: section(investing), financing: section(financing), netChange };
     };
 
     const currentData = calcPeriod(dateRange.start, dateRange.end);

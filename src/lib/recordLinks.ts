@@ -3,12 +3,13 @@
  * `#sales/invoice/abc123`. Opening such a link shows the screen and highlights the record there
  * (useUIStore.focusRecord). Data Health, notifications and search results use these links.
  */
-export type RecordType = 'transaction' | 'invoice' | 'bill' | 'recurring' | 'account' | 'item';
+export type RecordType = 'transaction' | 'invoice' | 'bill' | 'recurring' | 'account' | 'item' | 'bankLine';
 export interface RecordRef { type: RecordType; id: string }
 
 /** Where a record opens: the screen, and the record id to highlight there. */
 export const RECORD_TABS: Record<RecordType, string> = {
   transaction: 'transactions', invoice: 'sales', bill: 'purchases', recurring: 'recurring', account: 'ledger', item: 'inventory',
+  bankLine: 'reconciliation',
 };
 
 const TYPES = new Set<string>(Object.keys(RECORD_TABS));

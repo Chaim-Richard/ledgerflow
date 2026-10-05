@@ -17,7 +17,7 @@
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=build/server.cjs",
     "lint": "npm run lint:types; npm run lint:eslint",
     "lint:types": "tsc --noEmit",
-    "lint:eslint": "eslint . --max-warnings 243",
+    "lint:eslint": "eslint . --max-warnings 241",
     "test": "NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic tsx --test src/tests/*.test.ts src/tests/*.test.tsx src/lib/*.test.ts",
     "test:rules": "tsx scripts/db-test.ts rls",
     "test:e2e": "playwright test",
@@ -26,7 +26,7 @@
     "start": "node build/server.cjs",
     "prepare": "if [ \"$HUSKY\" != \"0\" ]; then husky; fi || true",
     "ratchet:update": "tsx scripts/update-ratchet.ts",
-    "test:cov": "NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic tsx --test --experimental-test-coverage --test-coverage-lines=75 --test-coverage-branches=65 src/tests/*.test.ts"
+    "test:cov": "NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic tsx --test --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-exclude='src/tests/**' --test-coverage-exclude='src/**/*.test.ts' --test-coverage-lines=75 --test-coverage-branches=72 --test-coverage-functions=73 src/tests/*.test.ts src/tests/*.test.tsx src/lib/*.test.ts"
   },
   "dependencies": {
     "@google/genai": "^1.51.0",
@@ -42,6 +42,7 @@
     "@tanstack/react-table": "^8.20.6",
     "@vitejs/plugin-react": "^5.0.4",
     "axios": "^1.20.0",
+    "bidi-js": "^1.0.3",
     "clsx": "^2.1.1",
     "compression": "^1.8.1",
     "cors": "^2.8.6",
@@ -62,6 +63,7 @@
     "pdfkit": "^0.20.2",
     "pg": "^8.23.0",
     "plaid": "^42.2.0",
+    "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.8",
@@ -93,6 +95,7 @@
     "@types/node": "^22.14.0",
     "@types/pdfkit": "^0.17.6",
     "@types/pg": "^8.23.1",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@types/react-virtualized-auto-sizer": "^1.0.4",

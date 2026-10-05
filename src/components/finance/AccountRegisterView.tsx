@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { Transaction } from '../../types';
-import { isPostable, lineAmount } from '../../lib/txFilters';
+import { isExpenseAccount, isPostable, lineAmount } from '../../lib/txFilters';
 import { formatDecimal, formatCurrency, cn } from '../../lib/utils';
 import { calculateAccountRegisterBalances, visibleAccountRegisterEntries } from '../../lib/accountRegister';
 import { BookOpen, Search, CheckCircle2, Circle, Filter, Building2 } from 'lucide-react';
@@ -30,7 +30,8 @@ export const AccountRegisterView: React.FC = () => {
       return { entries: [], registerCalculation: { endingBalanceMinor: 0, runningNewestFirst: [] } };
     }
 
-    const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(selectedAccount.type);
+    // debit-nature: assets and every kind of expense (expense, cost_of_goods, cogs: isExpenseAccount)
+    const isDebitNature = selectedAccount.type === 'asset' || isExpenseAccount(selectedAccount);
     const openingBalance = selectedAccount.openingBalanceCents || 0;
 
     const rawEntries: Array<{

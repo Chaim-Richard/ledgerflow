@@ -1,8 +1,8 @@
 /** One aging rule for the screens and the API (L-159). */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { agingBucket, computePartyAging, daysOverdue, outstandingBaseCents } from '../lib/aging';
-import { makeBill, makeCustomer, makeInvoice } from './fixtures';
+import { agingBucket, computePartyAging, daysOverdue, outstandingBaseCents, partyStats } from '../lib/aging';
+import { makeBill, makeCustomer, makeInvoice, makePayment } from './fixtures';
 
 const today = '2026-06-30';
 
@@ -49,5 +49,22 @@ describe('aging', () => {
   test('vendors and bills work the same way', () => {
     const rows = computePartyAging([{ id: 'v', name: 'Power Co' }], [makeBill({ vendorId: 'v', amountCents: 30000, dueDate: '2026-06-15', status: 'approved' })], 'vendor', today);
     assert.deepEqual(rows[0].buckets, { current: 0, d1_30: 30000, d31_60: 0, d61_90: 0, d90plus: 0 });
+  });
+
+  test('party page cards: still owed, overdue, lifetime and payments in the base currency', () => {
+    const invoices = [
+      makeInvoice({ amountCents: 50000, depositCents: 10000, dueDate: '2026-07-10', status: 'sent' }),                  // owes 400, not due
+      makeInvoice({ amountCents: 10000, exchangeRate: 1.1, currency: 'EUR', dueDate: '2026-06-01', status: 'overdue' }), // owes 110, overdue
+      makeInvoice({ amountCents: 20000, amountPaidCents: 20000, status: 'paid' }),
+      makeInvoice({ amountCents: 77700, status: 'cancelled' }),
+      makeInvoice({ amountCents: 88800, status: 'draft' }),
+    ];
+    const payments = [
+      makePayment({ direction: 'received', status: 'posted', amountCents: 20000 }),
+      makePayment({ direction: 'received', status: 'posted', amountCents: 10000, exchangeRate: 1.1 }),
+      makePayment({ direction: 'received', status: 'void', amountCents: 99900 }),
+      makePayment({ direction: 'made', status: 'posted', amountCents: 5000 }),
+    ];
+    assert.deepEqual(partyStats(invoices, payments, 'customer', today), { outstandingCents: 51000, overdueCents: 11000, lifetimeCents: 81000, paymentsCents: 31000 });
   });
 });

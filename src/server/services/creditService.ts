@@ -157,7 +157,8 @@ export async function refundCredit(db: Firestore, input: RefundCreditInput) {
 
     const newRemaining = remaining - amountCents;
     t.create(db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-    t.update(creditRef, { remainingCents: newRemaining, status: creditStatus(newRemaining), updatedAt: new Date().toISOString() });
+    // refundedCents: statements and balance summaries count a credit less what was paid back (L-160)
+    t.update(creditRef, { remainingCents: newRemaining, refundedCents: (credit.refundedCents || 0) + amountCents, status: creditStatus(newRemaining), updatedAt: new Date().toISOString() });
     return { transactionId: ledgerTx.id, creditRemainingCents: newRemaining };
   });
 }

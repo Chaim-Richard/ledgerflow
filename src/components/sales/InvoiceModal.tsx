@@ -223,7 +223,10 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                   value={invoice.customerName || invoice.customerId || ''}
                   onChange={(e) => {
                     const cust = safeCustomers.find(c => c.name === e.target.value || c.id === e.target.value);
-                    setInvoice({ ...invoice, customerId: cust ? cust.id : `new-${crypto.randomUUID()}`, customerName: cust ? cust.name : e.target.value });
+                    // a new invoice starts in the customer's currency (Y-22); an existing one keeps its own
+                    const custCurrency = cust && !editingExisting ? (cust.currency || workspaceCurrency) : null;
+                    const currencyChange = custCurrency && custCurrency !== currency ? { currency: custCurrency, exchangeRate: 1 } : {};
+                    setInvoice({ ...invoice, customerId: cust ? cust.id : `new-${crypto.randomUUID()}`, customerName: cust ? cust.name : e.target.value, ...currencyChange });
                   }}
                   placeholder="Type or select customer"
                   className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"

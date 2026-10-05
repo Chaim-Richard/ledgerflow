@@ -1,11 +1,22 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import PDFDocument from 'pdfkit';
+import QRCode from 'qrcode';
 import { getLocalDateISO } from '../../lib/utils';
 import { depositAppliedCents } from '../../lib/documentMath';
+import { brandColor, LOGO_DATA_URL, MAX_LOGO_BYTES } from '../../lib/branding';
+import type { BrandedDocument, WorkspaceBranding } from '../../lib/branding';
+import { drawLine, wrapText } from './pdfText';
 
 /**
- * Enterprise PDF Document Generator Service (Zero-Dependency PDF 1.4 Engine)
- * Generates standards-compliant PDF binary buffers for Invoices, Estimates, Credit Notes, Payments, and Statements.
+ * Document PDFs (invoices, estimates, credit notes, payment receipts, statements) with pdfkit:
+ * every line on as many pages as needed with "Page x of y" (Y-17), the workspace's logo, colour,
+ * address, footer and default terms (Y-12…Y-14, Y-33, Y-34), a QR code to the invoice's payment
+ * page (Y-15), and text in any script, Hebrew included (DejaVu Sans, embedded). The old PDF was
+ * written by hand: one page, only the first 15 lines, Latin letters only.
+ * layoutDocumentPdf decides what is printed (pure, tested); generateDocumentPdf draws it.
  */
-export type PdfDocumentType = 'invoice' | 'estimate' | 'creditNote' | 'payment' | 'statement';
+export type PdfDocumentType = BrandedDocument;
 
 /** One printed row: invoice items, estimate lines or statement entries. */
 export interface PdfLine { description?: string; name?: string; quantity?: number; amountCents?: number | string }
@@ -15,6 +26,8 @@ export interface PdfDocument {
   id?: string;
   number?: string;
   date?: string;
+  dueDate?: string;
+  paymentTerms?: string;
   customerName?: string;
   vendorName?: string;
   contactName?: string;
@@ -32,123 +45,258 @@ export interface PdfDocument {
   depositCents?: number;
 }
 
-export interface PdfWorkspace { name?: string; companyName?: string; currency?: string }
+export interface PdfWorkspace { name?: string; companyName?: string; currency?: string; branding?: WorkspaceBranding }
+
+export interface PdfOptions {
+  /** The invoice's public payment page; printed as a QR code on invoices. */
+  paymentUrl?: string;
+}
+
+export interface PdfLayout {
+  title: string;
+  company: { name: string; addressLines: string[] };
+  meta: Array<[string, string]>;
+  recipientLabel: string;
+  recipient: string;
+  rows: Array<{ description: string; quantity: string; amount: string }>;
+  summary: Array<{ label: string; value: string; strong?: boolean }>;
+  terms?: string;
+  footer?: string;
+  qrUrl?: string;
+  /** #RRGGBB */
+  color: string;
+  logo?: Buffer;
+}
+
+const TITLES: Record<PdfDocumentType, string> = {
+  invoice: 'INVOICE', estimate: 'ESTIMATE', creditNote: 'CREDIT NOTE', payment: 'PAYMENT RECEIPT', statement: 'STATEMENT',
+};
+const RECIPIENT: Record<PdfDocumentType, string> = {
+  invoice: 'BILLED TO', estimate: 'PREPARED FOR', creditNote: 'CREDITED TO', payment: 'RECEIVED FROM', statement: 'STATEMENT FOR',
+};
+const TERMS_LABEL: Record<string, string> = {
+  due_on_receipt: 'Due on receipt', net_7: 'Net 7', net_10: 'Net 10', net_15: 'Net 15', net_30: 'Net 30', net_45: 'Net 45', net_60: 'Net 60', net_90: 'Net 90',
+};
+
+/** Text without control characters (tabs and new lines kept), trimmed and cut to `max`. */
+const clean = (value: unknown, max = 200) => [...String(value ?? '')].map(ch => {
+  const code = ch.charCodeAt(0);
+  return (code < 32 && ch !== '\n' && ch !== '\t') || code === 127 ? ' ' : ch;
+}).join('').trim().slice(0, max);
+
+/** The image bytes of a valid logo, else undefined. */
+function logoBytes(dataUrl?: string): Buffer | undefined {
+  if (!dataUrl || !LOGO_DATA_URL.test(dataUrl)) return undefined;
+  const bytes = Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64');
+  return bytes.length > 0 && bytes.length <= MAX_LOGO_BYTES ? bytes : undefined;
+}
+
+export function layoutDocumentPdf(
+  type: PdfDocumentType,
+  docData: PdfDocument | null | undefined,
+  workspace: PdfWorkspace | null | undefined,
+  options: PdfOptions = {}
+): PdfLayout {
+  const doc = docData || {};
+  const branding = workspace?.branding || {};
+  // amounts in the document's own currency, as a code (unambiguous on paper)
+  const currency = String(doc.currency || workspace?.currency || 'USD').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'USD';
+  const money = (cents: number) => {
+    const text = `${currency} ${(Math.abs(Math.round(cents)) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return cents < 0 ? `-${text}` : text;
+  };
+  const totalCents = Number(doc.amountCents) || 0;
+
+  const meta: Array<[string, string]> = [['Number', clean(doc.number || doc.id || 'N/A', 60)], ['Date', clean(doc.date || getLocalDateISO(), 10)]];
+  if ((type === 'invoice' || type === 'estimate') && doc.dueDate) meta.push([type === 'estimate' ? 'Valid until' : 'Due', clean(doc.dueDate, 10)]);
+  if (type === 'invoice' && doc.paymentTerms) meta.push(['Terms', TERMS_LABEL[doc.paymentTerms] || clean(doc.paymentTerms, 40)]);
+
+  // invoices keep `items`, estimates `lines`, statements `transactions`; every one is printed
+  const items = doc.items || doc.lines || doc.transactions || [];
+  const rows = (Array.isArray(items) && items.length > 0 ? items : [{ description: `${TITLES[type][0]}${TITLES[type].slice(1).toLowerCase()} ${clean(doc.number || '', 60)}`.trim(), quantity: 1, amountCents: totalCents }])
+    .map(item => ({
+      description: clean(item.description || item.name || 'Item', 500),
+      quantity: type === 'statement' ? '' : String(item.quantity ?? 1),
+      amount: money(Number(item.amountCents) || 0),
+    }));
+
+  // subtotal, discount and each tax part above the total (documents saved with the tax-code forms)
+  const summary: PdfLayout['summary'] = [];
+  const taxCents = Number(doc.taxAmountCents) || 0;
+  const discountCents = Number(doc.discountCents) || 0;
+  if (taxCents > 0 || discountCents > 0) {
+    if (typeof doc.lineSumCents === 'number') summary.push({ label: 'Subtotal', value: money(doc.lineSumCents) });
+    if (discountCents > 0) summary.push({ label: 'Discount', value: money(-discountCents) });
+    const parts = Array.isArray(doc.taxBreakdown) && doc.taxBreakdown.length ? doc.taxBreakdown : [{ name: 'Tax', rate: doc.taxRate, taxCents }];
+    for (const p of parts) {
+      summary.push({ label: `${clean(p.name || 'Tax', 30)}${p.rate ? ` ${p.rate}%` : ''}${doc.pricesIncludeTax ? ' incl.' : ''}`, value: money(Number(p.taxCents) || 0) });
+    }
+  }
+  summary.push({ label: type === 'statement' ? 'BALANCE' : 'TOTAL', value: money(totalCents), strong: true });
+  // a deposit is a payment in advance: the total keeps its tax, the deposit lowers what is due (AF-03)
+  const depositCents = type === 'invoice' ? depositAppliedCents(doc) : 0;
+  if (depositCents > 0) {
+    summary.push({ label: 'Deposit received', value: money(-depositCents) });
+    summary.push({ label: 'AMOUNT DUE', value: money(totalCents - depositCents), strong: true });
+  }
+
+  const qrWanted = type === 'invoice' && branding.showPaymentQr !== false && /^https?:\/\//.test(options.paymentUrl || '') && totalCents - depositCents > 0;
+  return {
+    title: TITLES[type],
+    company: {
+      name: clean(workspace?.name || workspace?.companyName || 'LedgerFlow Workspace', 120),
+      addressLines: clean(branding.address, 300).split(/\s*\n\s*/).filter(Boolean).slice(0, 5),
+    },
+    meta,
+    recipientLabel: RECIPIENT[type],
+    recipient: clean(doc.customerName || doc.vendorName || doc.contactName || 'Valued Client', 120),
+    rows,
+    summary,
+    terms: clean(branding.terms?.[type], 2000) || undefined,
+    footer: clean(branding.footer, 300) || undefined,
+    qrUrl: qrWanted ? options.paymentUrl : undefined,
+    color: brandColor(branding.color),
+    logo: logoBytes(branding.logoDataUrl),
+  };
+}
+
+const FONT_DIR = path.join(process.cwd(), 'src/server/assets/fonts');
+const PAGE = { width: 595.28, height: 841.89, margin: 50 };
+const RIGHT = PAGE.width - PAGE.margin;
+const FOOTER_SPACE = 36;
+
+function fonts(): { body: string; bold: string } | null {
+  const body = path.join(FONT_DIR, 'DejaVuSans.ttf');
+  const bold = path.join(FONT_DIR, 'DejaVuSans-Bold.ttf');
+  return fs.existsSync(body) && fs.existsSync(bold) ? { body, bold } : null;
+}
 
 export async function generateDocumentPdf(
   type: PdfDocumentType,
   docData: PdfDocument | null | undefined,
-  workspace: PdfWorkspace | null | undefined
+  workspace: PdfWorkspace | null | undefined,
+  options: PdfOptions = {}
 ): Promise<Buffer> {
-  const wsName = (workspace?.name || workspace?.companyName || 'LedgerFlow Workspace').replace(/[()\\]/g, ' ');
-  const docTitle = type.toUpperCase().replace(/([A-Z])/g, ' $1').trim();
-  const docNum = String(docData?.number || docData?.id || 'N/A').replace(/[()\\]/g, ' ');
-  const date = String(docData?.date || getLocalDateISO()).replace(/[()\\]/g, ' ');
-  const recipient = String(docData?.customerName || docData?.vendorName || docData?.contactName || 'Valued Client').replace(/[()\\]/g, ' ');
-  const totalCents = docData?.amountCents || 0;
-  // Amounts in the document's own currency, as a code (the built-in PDF fonts have no € or ₪)
-  const currency = String(docData?.currency || workspace?.currency || 'USD').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'USD';
-  const money = (cents: number) => `${currency} ${(Math.round(cents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const totalFormatted = money(totalCents);
-
-  // invoices keep `items`, estimates `lines`, statements `transactions`
-  const items = docData?.items || docData?.lines || docData?.transactions || [];
-  let itemLines = '';
-  let y = 600;
-
-  if (Array.isArray(items) && items.length > 0) {
-    items.slice(0, 15).forEach((item) => {
-      const desc = String(item.description || item.name || 'Item').replace(/[()\\]/g, ' ').slice(0, 45);
-      const qty = item.quantity !== undefined ? item.quantity : 1;
-      const amt = money(Number(item.amountCents) || 0);
-      itemLines += `BT /F1 10 Tf 50 ${y} Td (${desc}) Tj ET\n`;
-      itemLines += `BT /F1 10 Tf 350 ${y} Td (${qty}) Tj ET\n`;
-      itemLines += `BT /F1 10 Tf 450 ${y} Td (${amt}) Tj ET\n`;
-      y -= 20;
-    });
-  } else {
-    itemLines += `BT /F1 10 Tf 50 ${y} Td (Standard Ledger Transaction) Tj ET\n`;
-    itemLines += `BT /F1 10 Tf 350 ${y} Td (1) Tj ET\n`;
-    itemLines += `BT /F1 10 Tf 450 ${y} Td (${totalFormatted}) Tj ET\n`;
-    y -= 20;
-  }
-
-  // Subtotal, discount and tax above the total (documents saved with the tax-code forms)
-  const taxCents = Number(docData?.taxAmountCents) || 0;
-  const discountCents = Number(docData?.discountCents) || 0;
-  const summary: Array<[string, string]> = [];
-  if (taxCents > 0 || discountCents > 0) {
-    if (typeof docData?.lineSumCents === 'number') summary.push(['Subtotal', money(docData.lineSumCents)]);
-    if (discountCents > 0) summary.push(['Discount', `-${money(discountCents)}`]);
-    const parts = Array.isArray(docData?.taxBreakdown) && docData.taxBreakdown.length ? docData.taxBreakdown : [{ name: 'Tax', rate: docData?.taxRate, taxCents }];
-    for (const p of parts) {
-      const label = `${String(p.name || 'Tax').replace(/[()\\]/g, ' ').slice(0, 30)}${p.rate ? ` ${p.rate}%` : ''}${docData?.pricesIncludeTax ? ' incl.' : ''}`;
-      summary.push([label, money(Number(p.taxCents) || 0)]);
-    }
-  }
-  y -= 5;
-  for (const [label, value] of summary) {
-    y -= 18;
-    itemLines += `BT /F1 10 Tf 330 ${y} Td (${label}) Tj ET\n`;
-    itemLines += `BT /F1 10 Tf 450 ${y} Td (${value}) Tj ET\n`;
-  }
-
-  // A deposit is a payment in advance: the total keeps its tax, the deposit lowers what is due (AF-03)
-  const depositCents = type === 'invoice' ? depositAppliedCents(docData || {}) : 0;
-  const depositLines = depositCents > 0
-    ? `BT /F1 10 Tf 330 ${y - 43} Td (Deposit received: -${money(depositCents)}) Tj ET\nBT /F2 12 Tf 330 ${y - 61} Td (AMOUNT DUE: ${money(totalCents - depositCents)}) Tj ET\n`
-    : '';
-
-  const streamContent = `
-q
-0.1 0.1 0.1 rg
-BT /F2 20 Tf 50 740 Td (${wsName}) Tj ET
-BT /F2 22 Tf 400 740 Td (${docTitle}) Tj ET
-BT /F1 10 Tf 400 720 Td (Doc #: ${docNum}) Tj ET
-BT /F1 10 Tf 400 705 Td (Date: ${date}) Tj ET
-0.8 0.8 0.8 RG 1 w 50 690 m 550 690 l S
-BT /F1 9 Tf 50 670 Td (BILLED TO:) Tj ET
-BT /F2 12 Tf 50 655 Td (${recipient}) Tj ET
-0.8 0.8 0.8 RG 1 w 50 630 m 550 630 l S
-BT /F2 10 Tf 50 615 Td (DESCRIPTION) Tj ET
-BT /F2 10 Tf 350 615 Td (QTY) Tj ET
-BT /F2 10 Tf 480 615 Td (AMOUNT) Tj ET
-${itemLines}
-0.8 0.8 0.8 RG 1 w 50 ${y - 5} m 550 ${y - 5} l S
-BT /F2 12 Tf 330 ${y - 25} Td (TOTAL: ${totalFormatted}) Tj ET
-${depositLines}Q
-`.trim();
-
-  const streamBytes = Buffer.from(streamContent, 'utf-8');
-  const streamLen = streamBytes.length;
-
-  const objects = [
-    `%PDF-1.4\n`,
-    `1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`,
-    `2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n`,
-    `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>\nendobj\n`,
-    `4 0 obj\n<< /Length ${streamLen} >>\nstream\n${streamContent}\nendstream\nendobj\n`,
-    `5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n`,
-    `6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n`
-  ];
-
-  const offsets: number[] = [];
-  let pdfStr = objects[0];
-  let offset = Buffer.byteLength(pdfStr, 'utf-8');
-
-  for (let i = 1; i < objects.length; i++) {
-    offsets.push(offset);
-    pdfStr += objects[i];
-    offset = Buffer.byteLength(pdfStr, 'utf-8');
-  }
-
-  const startxref = offset;
-  let xref = `xref\n0 7\n0000000000 65535 f \n`;
-  offsets.forEach((off) => {
-    xref += String(off).padStart(10, '0') + ` 00000 n \n`;
+  const layout = layoutDocumentPdf(type, docData, workspace, options);
+  const files = fonts();
+  // without the embedded fonts (should not happen) the built-in one prints Latin letters only
+  const pdf = new PDFDocument({ size: 'A4', margin: PAGE.margin, bufferPages: true, font: files?.body || 'Helvetica', info: { Title: `${layout.title} ${layout.meta[0][1]}`, Author: layout.company.name } });
+  if (files) { pdf.registerFont('body', files.body); pdf.registerFont('bold', files.bold); }
+  const body = files ? 'body' : 'Helvetica';
+  const bold = files ? 'bold' : 'Helvetica-Bold';
+  const latin = (s: string) => (files ? s : s.replace(/[^\x20-\xFF]/g, '?'));
+  const text = (s: string, x: number, y: number, width: number, align: 'left' | 'right' | 'center' = 'left') => drawLine(pdf, latin(s), x, y, width, align);
+  const muted = () => pdf.fillColor('#6B7280');
+  const ink = () => pdf.fillColor('#111827');
+  const brand = () => pdf.fillColor(layout.color);
+  const done = new Promise<Buffer>((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    pdf.on('data', (c: Buffer) => chunks.push(c));
+    pdf.on('end', () => resolve(Buffer.concat(chunks)));
+    pdf.on('error', reject);
   });
 
-  const trailer = `trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n${startxref}\n%%EOF\n`;
-  const finalPdf = pdfStr + xref + trailer;
+  // --- header: logo, company and address on the left; title and document details on the right
+  let left = 40;
+  if (layout.logo) {
+    try { pdf.image(layout.logo, PAGE.margin, left, { fit: [150, 60] }); left += 68; } catch { /* unreadable image: no logo */ }
+  }
+  pdf.font(bold).fontSize(16); ink();
+  for (const line of wrapText(pdf, latin(layout.company.name), 260)) { text(line, PAGE.margin, left, 260); left += 20; }
+  pdf.font(body).fontSize(9); muted();
+  for (const line of layout.company.addressLines) { text(line, PAGE.margin, left, 260); left += 12; }
 
-  return Buffer.from(finalPdf, 'utf-8');
+  let right = 40;
+  pdf.font(bold).fontSize(20); brand();
+  text(layout.title, 320, right, RIGHT - 320, 'right'); right += 28;
+  pdf.font(body).fontSize(9); ink();
+  for (const [label, value] of layout.meta) { text(`${label}: ${value}`, 320, right, RIGHT - 320, 'right'); right += 13; }
+
+  let y = Math.max(left, right) + 12;
+  pdf.moveTo(PAGE.margin, y).lineTo(RIGHT, y).lineWidth(1).strokeColor(layout.color).stroke();
+  y += 12;
+  pdf.font(body).fontSize(8); muted(); text(layout.recipientLabel, PAGE.margin, y, 300); y += 12;
+  pdf.font(bold).fontSize(12); ink(); text(layout.recipient, PAGE.margin, y, 400); y += 26;
+
+  // --- the lines, over as many pages as needed
+  const bottom = PAGE.height - PAGE.margin - FOOTER_SPACE;
+  const descWidth = 300;
+  const tableHeader = () => {
+    pdf.rect(PAGE.margin, y, RIGHT - PAGE.margin, 20).fill(layout.color);
+    pdf.font(bold).fontSize(9).fillColor('#FFFFFF');
+    text('DESCRIPTION', PAGE.margin + 8, y + 6, descWidth);
+    if (type !== 'statement') text('QTY', 360, y + 6, 50, 'right');
+    text('AMOUNT', 420, y + 6, RIGHT - 428, 'right');
+    y += 26;
+  };
+  const newPage = () => { pdf.addPage(); y = PAGE.margin; };
+  tableHeader();
+  pdf.font(body).fontSize(10);
+  for (const row of layout.rows) {
+    pdf.font(body).fontSize(10);
+    const lines = wrapText(pdf, latin(row.description), descWidth);
+    const height = lines.length * 13 + 6;
+    if (y + height > bottom) { newPage(); tableHeader(); pdf.font(body).fontSize(10); }
+    ink();
+    lines.forEach((line, i) => text(line, PAGE.margin + 8, y + i * 13, descWidth));
+    if (row.quantity) text(row.quantity, 360, y, 50, 'right');
+    text(row.amount, 420, y, RIGHT - 428, 'right');
+    y += height;
+    pdf.moveTo(PAGE.margin, y - 3).lineTo(RIGHT, y - 3).lineWidth(0.5).strokeColor('#E5E7EB').stroke();
+  }
+
+  // --- totals on the right, the payment QR code beside them
+  const summaryHeight = layout.summary.length * 18 + 10;
+  const qrSize = 84;
+  const blockHeight = Math.max(summaryHeight, layout.qrUrl ? qrSize + 18 : 0);
+  if (y + blockHeight > bottom) newPage();
+  const blockTop = y + 8;
+  y = blockTop;
+  for (const line of layout.summary) {
+    pdf.font(line.strong ? bold : body).fontSize(line.strong ? 11 : 10);
+    if (line.strong) brand(); else ink();
+    text(line.label, 330, y, 110);
+    text(line.value, 440, y, RIGHT - 440, 'right');
+    y += 18;
+  }
+  if (layout.qrUrl) {
+    const qr = QRCode.create(layout.qrUrl, { errorCorrectionLevel: 'M' });
+    const cells = qr.modules.size;
+    const cell = qrSize / cells;
+    pdf.fillColor('#000000');
+    for (let r = 0; r < cells; r++) {
+      for (let c = 0; c < cells; c++) {
+        if (qr.modules.get(r, c)) pdf.rect(PAGE.margin + c * cell, blockTop + r * cell, cell, cell).fill();
+      }
+    }
+    pdf.font(body).fontSize(8); muted();
+    text('Scan to view and pay', PAGE.margin, blockTop + qrSize + 4, 160);
+  }
+  y = blockTop + blockHeight + 10;
+
+  // --- terms
+  if (layout.terms) {
+    pdf.font(body).fontSize(9);
+    const lines = wrapText(pdf, latin(layout.terms), RIGHT - PAGE.margin);
+    if (y + 26 > bottom) newPage();
+    pdf.font(bold).fontSize(9); ink(); text('Terms', PAGE.margin, y, 200); y += 14;
+    pdf.font(body).fontSize(9); muted();
+    for (const line of lines) {
+      if (y + 12 > bottom) { newPage(); pdf.font(body).fontSize(9); muted(); }
+      text(line, PAGE.margin, y, RIGHT - PAGE.margin); y += 12;
+    }
+  }
+
+  // --- footer and page numbers on every page
+  const range = pdf.bufferedPageRange();
+  for (let i = range.start; i < range.start + range.count; i++) {
+    pdf.switchToPage(i);
+    pdf.page.margins.bottom = 0;
+    const fy = PAGE.height - PAGE.margin + 10;
+    pdf.font(body).fontSize(8); muted();
+    if (layout.footer) text(layout.footer, PAGE.margin, fy, 380);
+    text(`Page ${i - range.start + 1} of ${range.count}`, RIGHT - 100, fy, 100, 'right');
+  }
+  pdf.end();
+  return done;
 }

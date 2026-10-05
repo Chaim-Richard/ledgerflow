@@ -2,11 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { ShoppingBag, Plus, Search, Trash2, CheckCircle, AlertCircle, DollarSign, Ban, Download, Pencil } from 'lucide-react';
-import type { Bill } from '../../types';
+import type { Bill, Vendor } from '../../types';
 import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 import { formatCurrency, safeConfirm } from '../../lib/utils';
 import BillModal from './BillModal';
 import VendorModal from './VendorModal';
+import TagFilter from '../common/TagFilter';
+import { allTags, hasTag } from '../../lib/contacts';
 import VendorDetailView from './VendorDetailView';
 import ReceivePaymentModal from '../sales/ReceivePaymentModal';
 import { toast } from 'sonner';
@@ -14,9 +16,12 @@ import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
 import { csvMoney, downloadCsv } from '../../lib/csvExport';
 
+const NO_VENDORS: Vendor[] = [];
+const NO_BILLS: Bill[] = [];
+
 export default function Purchases() {
-  const vendors = useLedgerStore(s => s.vendors) || [];
-  const bills = useLedgerStore(s => s.bills) || [];
+  const vendors = useLedgerStore(s => s.vendors) ?? NO_VENDORS;
+  const bills = useLedgerStore(s => s.bills) ?? NO_BILLS;
   const accounts = useLedgerStore(s => s.accounts) || [];
   const { loading } = useLedgerCollections('bills', 'vendors');
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
@@ -46,19 +51,21 @@ export default function Purchases() {
   }, [bills, searchTerm]);
 
   // Filter vendors based on search term
+  const [vendorTag, setVendorTag] = useState<string | null>(null);
+  const vendorTags = useMemo(() => allTags(vendors), [vendors]);
   const filteredVendors = useMemo(() => {
     return vendors.filter(v => {
-      const matchText = `${v.name} ${v.email || ''} ${v.phone || ''} ${v.category || ''}`.toLowerCase();
-      return matchText.includes(searchTerm.toLowerCase());
+      const matchText = `${v.name} ${v.email || ''} ${v.phone || ''} ${v.category || ''} ${(v.tags || []).join(' ')}`.toLowerCase();
+      return matchText.includes(searchTerm.toLowerCase()) && hasTag(v, vendorTag);
     });
-  }, [vendors, searchTerm]);
+  }, [vendors, searchTerm, vendorTag]);
 
-  const handleAddVendor = async (data: any) => {
+  const handleAddVendor = async (data: Partial<Vendor>) => {
     await addEntity('vendors', data, 'Vendor successfully created');
     setIsVendorModalOpen(false);
   };
 
-  const handleAddBill = async (data: any) => {
+  const handleAddBill = async (data: Partial<Bill>) => {
     if (data.id) {
       const { id, ...updates } = data;
       await updateEntity('bills', id, updates, 'Bill updated');
@@ -295,6 +302,7 @@ export default function Purchases() {
           </div>
         ) : (
           <div className="overflow-x-auto">
+            <TagFilter tags={vendorTags} value={vendorTag} onChange={setVendorTag} label="Show vendors with the tag" />
             <table className="w-full text-left border-collapse">
               <caption className="sr-only">Vendors</caption>
               <thead>

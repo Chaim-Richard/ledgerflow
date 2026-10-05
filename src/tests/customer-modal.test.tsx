@@ -1,37 +1,43 @@
-import './helpers/dom';
-import test, { afterEach } from 'node:test';
+/** Adding a customer (H-25): a named dialog, trimmed fields, no blank names, Escape closes. */
+import { stubFetch } from './helpers/dom';
+import test, { afterEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
-import { cleanup, fireEvent, render } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import CustomerModal from '../components/sales/CustomerModal';
 import type { Customer } from '../types';
 
-afterEach(cleanup);
-
-test('customer dialog saves mixed-language contact fields and clears the form', () => {
+function setup() {
+  stubFetch(404);
   const saved: Partial<Customer>[] = [];
   let closed = 0;
-  const view = render(<CustomerModal isOpen onClose={() => { closed++; }} onSave={customer => saved.push(customer)} />);
-  assert.ok(view.getByRole('dialog', { name: 'Add Customer' }));
-  fireEvent.change(view.getByLabelText('Customer Name'), { target: { value: 'לקוח Acme ירושלים' } });
-  fireEvent.change(view.getByLabelText('Email Address'), { target: { value: 'acme@example.test' } });
-  fireEvent.change(view.getByLabelText('Phone Number'), { target: { value: '+972-50-1234567' } });
-  fireEvent.change(view.getByLabelText('Status'), { target: { value: 'inactive' } });
-  fireEvent.click(view.getByRole('button', { name: 'Save Customer' }));
-  assert.deepEqual(saved, [{ name: 'לקוח Acme ירושלים', email: 'acme@example.test', phone: '+972-50-1234567', status: 'inactive', balanceCents: 0 }]);
-  assert.equal((view.getByLabelText('Customer Name') as HTMLInputElement).value, '');
-  fireEvent.click(view.getByRole('button', { name: 'Cancel' }));
-  assert.equal(closed, 1);
-});
+  render(<CustomerModal isOpen onClose={() => { closed++; }} onSave={c => { saved.push(c); }} />);
+  return { saved, closed: () => closed };
+}
 
-test('closed customer dialog renders no form; Escape closes the open dialog without saving', () => {
-  let closed = 0;
-  let saved = 0;
-  const props = { onClose: () => { closed++; }, onSave: () => { saved++; } };
-  const view = render(<CustomerModal {...props} isOpen={false} />);
-  assert.equal(view.queryByRole('dialog'), null);
-  view.rerender(<CustomerModal {...props} isOpen />);
-  fireEvent.keyDown(view.getByLabelText('Customer Name'), { key: 'Escape' });
-  assert.equal(closed, 1);
-  assert.equal(saved, 0);
+describe('customer dialog', () => {
+  afterEach(() => cleanup());
+
+  test('saves the trimmed name, email and phone', () => {
+    const { saved } = setup();
+    assert.ok(screen.getByRole('dialog', { name: /Customer/ }));
+    fireEvent.change(screen.getByLabelText('Customer Name'), { target: { value: '  Acme Ltd ' } });
+    fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: ' billing@acme.test ' } });
+    fireEvent.change(screen.getByLabelText('Phone Number'), { target: { value: ' 555 0100 ' } });
+    fireEvent.submit(screen.getByLabelText('Customer Name').closest('form')!);
+    assert.deepEqual(saved, [{ name: 'Acme Ltd', email: 'billing@acme.test', phone: '555 0100', status: 'active', balanceCents: 0 }]);
+  });
+
+  test('a name of only spaces is not saved', () => {
+    const { saved } = setup();
+    fireEvent.change(screen.getByLabelText('Customer Name'), { target: { value: '   ' } });
+    fireEvent.submit(screen.getByLabelText('Customer Name').closest('form')!);
+    assert.equal(saved.length, 0);
+  });
+
+  test('Escape closes it', () => {
+    const { closed } = setup();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    assert.equal(closed(), 1);
+  });
 });

@@ -90,11 +90,12 @@ describe('Invoice PDF', () => {
     const pdf = (await generateDocumentPdf('invoice', {
       number: 'INV-7', currency: 'EUR', items: [{ description: 'Work', quantity: 1, amountCents: 10000 }],
       amountCents: t.amountCents, lineSumCents: t.subtotalCents, discountCents: t.discountCents, taxAmountCents: t.taxCents, taxBreakdown: t.components,
-    }, { name: 'Shop' })).toString('utf-8');
-    for (const text of ['(Subtotal)', '(EUR 100.00)', '(-EUR 10.00)', '(VAT 20%)', '(EUR 18.00)', '(TOTAL: EUR 108.00)']) {
-      assert.ok(pdf.includes(text), `PDF shows ${text}`);
+    }, { name: 'Shop' }));
+    const text = (await import('./helpers/pdfText')).pdfText(pdf);
+    for (const shown of ['Subtotal EUR 100.00', 'Discount -EUR 10.00', 'VAT 20% EUR 18.00', 'TOTAL EUR 108.00']) {
+      assert.ok(text.includes(shown), `PDF shows ${shown}`);
     }
-    assert.ok(!pdf.includes('$'), 'no dollar sign on a euro invoice');
+    assert.ok(!text.includes('$'), 'no dollar sign on a euro invoice');
   });
 });
 

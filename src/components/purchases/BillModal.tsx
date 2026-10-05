@@ -100,11 +100,17 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   const taxCode = purchaseCodes.find(c => c.id === bill.taxCodeId) || null;
   const pricesIncludeTax = bill.pricesIncludeTax ?? true;
   const totals = documentTotals(total, 0, taxCode, pricesIncludeTax);
-  const money = (cents: number) => formatCurrency(cents, bill.currency || workspaceCurrency);
+  const billCurrency = bill.currency || workspaceCurrency;
+  const money = (cents: number) => formatCurrency(cents, billCurrency);
 
   const handleVendorSelect = (vendorId: string) => {
     const vend = safeVendors.find(v => v.id === vendorId);
-    setBill(prev => ({ ...prev, vendorId, vendorName: vend?.name }));
+    // a new bill starts in the vendor's currency (Y-22); an existing one keeps its own
+    setBill(prev => {
+      const vendorCurrency = vend && !editingExisting ? (vend.currency || workspaceCurrency) : null;
+      const currencyChange = vendorCurrency && vendorCurrency !== (prev.currency || workspaceCurrency) ? { currency: vendorCurrency, exchangeRate: 1 } : {};
+      return { ...prev, vendorId, vendorName: vend?.name, ...currencyChange };
+    });
     setAutofillNotice(null);
 
     if (!vendorId) return;
@@ -186,6 +192,8 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
 
     await onSave({
       ...bill,
+      currency: billCurrency,
+      exchangeRate: billCurrency === workspaceCurrency ? 1 : (bill.exchangeRate || 1),
       status: finalStatus as any,
       // the total owed (tax included) and the tax, explicitly (taxCodes.ts)
       amountCents: totals.amountCents,
@@ -329,6 +337,25 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
+              <label htmlFor="bill-currency" className="micro-label">Currency</label>
+              <select id="bill-currency" value={billCurrency}
+                onChange={(e) => setBill({ ...bill, currency: e.target.value, exchangeRate: e.target.value === workspaceCurrency ? 1 : bill.exchangeRate })}
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] outline-none font-bold">
+                {[...new Set([workspaceCurrency, billCurrency, 'USD', 'EUR', 'GBP'])].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            {billCurrency !== workspaceCurrency && (
+              <div className="space-y-2">
+                <label htmlFor="bill-exchange-rate" className="micro-label">1 {billCurrency} = ? {workspaceCurrency}</label>
+                <input id="bill-exchange-rate" type="number" step="0.0001" min="0.0001" value={bill.exchangeRate || 1}
+                  onChange={(e) => setBill({ ...bill, exchangeRate: parseFloat(e.target.value || '1') })}
+                  className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] outline-none font-bold" />
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-2">
               <label htmlFor="bill-tax-code" className="micro-label">Tax</label>
               <select id="bill-tax-code" value={bill.taxCodeId || ''} onChange={(e) => setBill({ ...bill, taxCodeId: e.target.value || undefined })}
                 className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] outline-none font-bold">
@@ -394,7 +421,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                     </select>
                   </div>
                   <div className="col-span-3 space-y-1">
-                    <label htmlFor={`bill-split-amount-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Amount ({bill.currency || workspaceCurrency})</label>
+                    <label htmlFor={`bill-split-amount-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Amount ({billCurrency})</label>
                     <input 
                       id={`bill-split-amount-${idx}`}
                       type="number"

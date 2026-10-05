@@ -15,6 +15,7 @@ import { periodRouter } from './periodRoutes';
 import { badDebtRouter } from './badDebtRoutes';
 import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
+import { brandingRouter } from './brandingRoutes';
 import { retentionFor, RetentionSettingsSchema, scheduledPurgeAt as purgeDate } from '../../lib/retention';
 import { RetentionError, updateRetention } from '../services/retentionService';
 import { completeSetup, recordOpeningBalances, SetupError } from '../services/openingBalanceService';
@@ -201,6 +202,7 @@ workspaceRouter.use('/:workspaceId/periods', requireWorkspaceRole(['owner', 'acc
 workspaceRouter.use('/:workspaceId/emails', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), emailRouter);
 // Tax returns: members see them; filing checks owner/accountant in taxReturnService.ts
 workspaceRouter.use('/:workspaceId/tax-returns', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), taxRouter);
+workspaceRouter.use('/:workspaceId/branding', requireWorkspaceRole(['owner', 'accountant']), brandingRouter);
 // Bad debt write-off and its reversal (src/server/routes/badDebtRoutes.ts)
 workspaceRouter.use('/:workspaceId/invoices', requireWorkspaceRole(['owner', 'accountant']), badDebtRouter);
 

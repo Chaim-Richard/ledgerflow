@@ -1450,32 +1450,32 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] H-02 BillModal (component test: tax included/excluded, approval limit, edit keeps number)
 - [x] H-03 ReceivePaymentModal (component test: open documents only, oldest first, amounts sent, refusal)
 - [x] H-04 WriteOffModal (component test: amount still owed, bad debt account, refusal)
-- [x] H-05 CustomerDetailView (Codex component tests)
-- [x] H-06 VendorDetailView (Codex component tests)
-- [x] H-07 TaxLiabilityView (Codex component tests)
-- [x] H-08 StatementView (Codex component tests)
-- [x] H-09 ARAgingReportView (aging-views.test.tsx; found L-159); additional Codex mixed-language/drill-down coverage
-- [x] H-10 APAgingReportView (aging-views.test.tsx); additional Codex mixed-language/drill-down coverage
+- [x] H-05 CustomerDetailView (party-detail-views.test.tsx; found L-162); additional Codex mixed-language/component coverage
+- [x] H-06 VendorDetailView (party-detail-views.test.tsx); additional Codex mixed-language/component coverage
+- [x] H-07 TaxLiabilityView (tax-liability-view.test.tsx: boxes, who can file, the request, changes since filing); additional Codex mixed-language/component coverage
+- [x] H-08 StatementView (statement-view.test.tsx, statement-credits.test.ts; found L-160); additional Codex mixed-language/component coverage
+- [x] H-09 ARAgingReportView (aging-views.test.tsx; found L-159); additional Codex mixed-language/component coverage
+- [x] H-10 APAgingReportView (aging-views.test.tsx); additional Codex mixed-language/component coverage
 - [x] H-11 ExpenseByCategoryReportView (report-views.test.tsx)
 - [x] H-12 IncomeBySourceReportView (report-views.test.tsx; found L-158)
 - [x] H-13 AverageMonthlyReportView (report-views.test.tsx)
 - [x] H-14 TopExpensesIncomeReportView (report-views.test.tsx)
 - [x] H-15 TagBreakdownReportView (report-views.test.tsx)
-- [ ] H-16 ForensicAuditor
-- [x] H-17 TanStackDataGrid (Codex component tests)
-- [x] H-18 native useDialog replacement (RadixModal retired) (Codex component tests)
-- [x] H-19 RequireRole (Codex component tests)
-- [x] H-20 AsyncButton (Codex component tests)
-- [x] H-21 ConfirmButton (Codex component tests)
-- [x] H-22 EmptyState (Codex component tests)
-- [x] H-23 PublicInvoicePage (Codex component tests)
-- [x] H-24 EstimatesView (Codex component tests)
-- [x] H-25 CustomerModal (Codex component tests)
-- [x] H-26 AuditLogViewer (Codex component tests)
-- [ ] H-27 `src/components/finance`
-- [ ] H-28 `src/hooks`
-- [ ] H-29 `src/stores`
-- [~] H-30 Property tests (added) + raise the `test:cov` gate (not done)
+- [x] H-16 ForensicAuditor (forensic-checks.test.ts; found L-164)
+- [x] H-17 TanStackDataGrid (ui-primitives.test.tsx; sort headers are buttons now); additional Codex mixed-language/component coverage
+- [x] H-18 RadixModal — no longer exists (dialogs use useDialog, tested); additional Codex mixed-language/component coverage
+- [x] H-19 RequireRole (ui-primitives.test.tsx; found L-161); additional Codex mixed-language/component coverage
+- [x] H-20 AsyncButton (ui-primitives.test.tsx; found L-161); additional Codex mixed-language/component coverage
+- [x] H-21 ConfirmButton (ui-primitives.test.tsx); additional Codex mixed-language/component coverage
+- [x] H-22 EmptyState (ui-primitives.test.tsx); additional Codex mixed-language/component coverage
+- [x] H-23 PublicInvoicePage (public-invoice-page.test.tsx; loading/error states readable by screen readers); additional Codex mixed-language/component coverage
+- [x] H-24 EstimatesView (estimate-conversion.test.ts; found L-163); additional Codex mixed-language/component coverage
+- [x] H-25 CustomerModal (customer-modal.test.tsx; names and emails are trimmed, blank names refused); additional Codex mixed-language/component coverage
+- [x] H-26 AuditLogViewer (audit-log-viewer.test.tsx, codex); additional Codex mixed-language/component coverage
+- [x] H-27 `src/components/finance` (account register, payments list; found L-165)
+- [x] H-28 `src/hooks` (hooks.test.tsx renders the hooks: ledger totals, reports, role, timers, shortcuts; found L-166)
+- [x] H-29 `src/stores` (stores-workspace.test.ts: totals, workspace switch, saved views, data loading, record links; found L-167)
+- [x] H-30 Property tests (added) + `test:cov` gate: covers every test file and runs in CI instead of plain `npm test`; fails below 75% lines / 72% branches / 73% functions (measured 76.4 / 72.9–73.0 / 73.6); raise as tests are added
 
 # SECTION I — UX COMPLETENESS
 
@@ -1504,15 +1504,15 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [x] J-01 Customer Balance Summary (as-of date, tested)
 - [x] J-02 Vendor Balance Summary (as-of date, tested)
-- [ ] J-03 Contact Balance Summary
+- [x] J-03 Contact Balance Summary (customers and vendors on one list, a business that is both on one row by email or name, net; tested)
 - [x] J-04 Transactions by Customer (drafts skipped, FX, credits, date range, tested)
 - [x] J-05 Transactions by Vendor (drafts skipped, FX, credits, date range, tested)
-- [ ] J-06 Transactions by Reference
+- [x] J-06 Transactions by Reference (entry reference, else the invoice/bill number; reversals marked; natural order; tested)
 - [x] J-07 Sales by Item: issued invoices, base currency, posted or estimated cost, tested
 - [ ] J-08 Purchases by Item — waits: bills have no item lines (only `splits`)
-- [ ] J-09 Inventory Valuation Sheet
-- [ ] J-10 Inventory Item Details
-- [ ] J-11 Sales Tax Liability Summary
+- [x] J-09 Inventory Valuation Sheet (stock at cost, share, reorder flags, compared with the Inventory account in the books; tested)
+- [ ] J-10 Inventory Item Details — waits for W-02: only sales move stock today (bills have no item lines), so a movement history would be one-sided
+- [x] J-11 Sales Tax Liability Summary (Tax screen: tax by rate, collected and paid, in the home currency; adds up to the return boxes; tested)
 - [x] J-12 Journal Sheet: isPostable + lineAmount, unbalanced list, tested
 - [ ] J-13 Budget vs Actual with drill-down
 - [ ] J-14 Deferred-revenue waterfall
@@ -1719,6 +1719,18 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-157 Expense by Category, Income by Source, Monthly Averages, Top Line Items and Tag Breakdown counted only the positive half of expense lines / negative half of revenue lines: a reversed entry still showed in full (its reversal was skipped) and refunds or credits back to customers never reduced the totals, so these reports disagreed with the P&L. Now every line counts with its sign; top-item lists leave out reversed pairs (reportGenerators.ts, tested)
 - [x] L-158 Income by Source report crashed on opening ("Maximum update depth exceeded"): its store selector filtered the transactions, making a new array on every read. Fixed; guard test bans `.filter/.map/...` inside store selectors
 - [x] L-159 A/R and A/P aging screens: counted total − paid (deposits and applied credits ignored) in each document's own currency (a EUR invoice added as dollars) and aged by the document date, while the /aging API used what is still owed in the base currency by due date — two different agings. Now one rule, `src/lib/aging.ts` (tested), used by both: Current / 1–30 / 31–60 / 61–90 / over 90 days past due; the drawer says "N days overdue"; rows open from a real button
+- [x] L-160 Account statements left out credit notes and vendor credits, so a customer with a credit showed a higher balance than the Customer Balance Summary; refunds of credits were invisible to both (a refunded credit still showed as owed back). Credits now appear on statements (screen, PDF and API); the server records `refundedCents` when a credit is refunded, and statements and balance summaries count a credit less what was refunded (tested; the closing balance equals the summary)
+- [x] L-161 Buttons: a quick double click on any AsyncButton (payments, saves, filings) ran the action twice (the "busy" flag only took effect after a re-render; now a ref guards it, test fails on the old code); RequireRole's greyed-out mode only blocked the mouse, Tab + Enter still pressed the button (now `inert`); the data grid's sort headers were mouse-only (now buttons)
+- [x] L-162 Customer and vendor pages: "Outstanding" was total − paid (deposits ignored) added across currencies, cancelled invoices counted, and "overdue" compared a due date read as UTC midnight with the current time (a day off in the Americas). Now `partyStats` / the aging rule (still owed, base currency, days past due, tested); each document shows its open amount in its own currency
+- [x] L-163 Converting an estimate to an invoice wrote the invoice straight to the database as "sent": no ledger posting (no receivable, no revenue: P&L and balance sheet missed it while Sales and aging showed it), a dropped `totalCents` field, no lines, and a random invoice number when numbering failed. Now a draft invoice with the estimate's lines through the posting path (useEntityOperations), no made-up number or account; guard test: no screen writes invoices, bills, credits, payments or transactions to the database directly
+- [x] L-164 Forensic Auditor called balanced foreign-currency entries unbalanced: it converted and rounded each line separately (+5.5 → 6, −5.5 → −5) before adding them up. It now checks the lines in the entry's own currency, like the server's validator (`src/lib/forensicChecks.ts`, tested)
+- [x] L-165 Finance screens: the payments list showed foreign payments in the base currency and every allocation as "invoice: undefined"; it now shows the payment's currency and the invoice/bill number. Credit notes and vendor credits showed amounts without their currency. The account register treated cost-of-goods-sold accounts as credit accounts, so their running balance had the wrong sign (tested)
+- [x] L-166 Transactions screen totals: a customer's payment was counted as "Filtered Outflow" (any entry without an income or expense line went there, transfers too); now only money entering or leaving bank/cash accounts counts, and transfers count as neither. The search total and "sort by amount" used foreign amounts as if they were in the base currency. The statements' report hook recomputed an unused profit figure on every ledger change; it now only fetches, with the dates encoded. An unknown stored role now shows as Viewer, as the server treats it (tested)
+- [x] L-167 The Transactions list opened filtered by a saved view nobody chose ("Liquid Cash & Bank Funds" was switched on at every start and after each workspace switch), so most entries looked missing; no view is on until the person picks one. Switching workspace kept the old workspace's closed periods, lock exception, invites and "data truncated" banner until the new one loaded, and its hidden sidebar tabs for good. Income/expense totals stayed at zero when the entries loaded before the accounts, and each load rebuilt the account list once per entry (tested)
+- [x] L-168 Cash flow statement: the server version ("Load Full Server Report") counted only income, expense, receivable and payable lines of every entry, so tax paid, stock bought and other working-capital money were missing and the total didn't match the change in cash; the screen had its own different math. One function now (`computeCashFlow`, direct method: money in and out of bank, cash and undeposited-funds accounts, by what it was for; debt and equity financing, fixed assets investing). The General Ledger report got its first test (tested)
+- [x] L-169 The server's tax liability report (`/api/v1/reports/tax-liability`) added foreign invoices' and bills' tax in their own currency; now in the home currency. Data Health called balanced foreign entries "unbalanced" because of per-line rounding (same as L-164), and its findings showed raw cents ("1250 cents"); now money (tested)
+- [x] L-170 Document PDFs printed only the first 15 lines (the total still covered all of them), on one page, and only Latin letters (Hebrew names came out as garbage). PDFs are now made with pdfkit and an embedded font (DejaVu Sans): every line over as many pages as needed, Hebrew and mixed Hebrew/English text in reading order, the due date and payment terms printed (tested, including the text read back from the PDF)
+- [x] L-171 Customers and vendors could not be edited at all (the forms only added), so a wrong email or name could not be fixed; one shared form now adds and edits (Edit on the contact page). Bills had no currency field, so a bill from a foreign supplier could only be entered in the home currency (tested)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
@@ -1950,20 +1962,20 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Y-09 Split one bank line (tested)
 - [x] Y-10 Match one bank line to many invoices/bills → payment record (tested)
 - [ ] Y-11 PDF template designer
-- [ ] Y-12 Logo upload
-- [ ] Y-13 Brand colour on documents
-- [ ] Y-14 Custom footer / terms
-- [ ] Y-15 QR code on invoices
+- [x] Y-12 Logo upload (Settings → Branding & PDFs; PNG/JPEG up to 200 KB, checked by the server)
+- [x] Y-13 Brand colour on documents (title, rule and table header)
+- [x] Y-14 Custom footer / terms (footer on every page, terms at the end, address under the name)
+- [x] Y-15 QR code on invoices (to the invoice's payment page once sent; can be switched off)
 - [ ] Y-16 Watermark
-- [ ] Y-17 Page numbers
+- [x] Y-17 Page numbers ("Page x of y"; long documents run over pages with the table header repeated)
 - [ ] Y-18 Batch PDF zip
 - [ ] Y-19 Print stylesheet
 - [ ] Y-20 Digital signature
-- [ ] Y-21 Multiple contacts per company
-- [ ] Y-22 Default currency per contact
+- [x] Y-21 Multiple contacts per company (people with role, email, phone on the customer/vendor form and page)
+- [x] Y-22 Default currency per contact (new invoices and bills start in it; bills got a currency and rate field)
 - [ ] Y-23 Merge duplicate contacts
-- [ ] Y-24 Contact tags
-- [ ] Y-25 Notes timeline per contact
+- [x] Y-24 Contact tags (on the form, shown on the page, filter chips on the customer and vendor lists)
+- [x] Y-25 Notes timeline per contact (newest first, who and when; viewers read)
 - [ ] Y-26 Portal access toggle
 - [ ] Y-27 Preferred delivery method
 - [ ] Y-28 Statement send preference
@@ -1971,8 +1983,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] Y-30 2FA enforcement policy
 - [ ] Y-31 Password policy
 - [ ] Y-32 Data region selection
-- [ ] Y-33 Branding settings page
-- [ ] Y-34 Default terms per document type
+- [x] Y-33 Branding settings page (with "Preview PDF" of unsaved choices; owners and accountants)
+- [x] Y-34 Default terms per document type (invoices, estimates, credit notes, statements, receipts)
 - [ ] Y-35 Rounding policy setting
 
 # SECTION Z — API · DATA QUALITY · MULTI-ENTITY · INTEGRATIONS
@@ -1987,9 +1999,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Z-08 Duplicate vendor bill ref check
 - [x] Z-09 Negative inventory check
 - [x] Z-10 Future-dated posting check
-- [ ] Z-11 Non-zero suspense check
+- [x] Z-11 Non-zero suspense check (suspense, uncategorized and clearing accounts not at zero; Data Health, tested)
 - [ ] Z-12 Missing dimension check
-- [ ] Z-13 Stale unreconciled check
+- [x] Z-13 Stale unreconciled check (bank lines unmatched over 30 days, one finding per bank account, opens Reconcile; tested)
 - [x] Z-14 Empty invoice / accountless line check
 - [x] Z-15 FX line with no rate check
 - [ ] Z-16 Parent/child entities
@@ -2033,7 +2045,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BA-16 Branch activate / deactivate
 - [ ] BA-17 Money-In / Money-Out dialogs
 - [ ] BA-18 Import uncategorised transactions
-- [ ] BA-19 Branding templates screen
+- [x] BA-19 Branding templates screen (= Y-33)
 - [ ] BA-20 Export dialog
 
 # SECTION BB — SETTINGS PAGES

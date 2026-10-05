@@ -77,6 +77,9 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
   const reportTabs = [
     { label: 'Sales by Item', componentName: 'SalesByItemReportView' },
     { label: 'Journal Sheet', componentName: 'JournalSheetReportView' },
+    { label: 'Contact Balance Summary', componentName: 'ContactBalanceSummaryView' },
+    { label: 'Inventory Valuation', componentName: 'InventoryValuationReportView' },
+    { label: 'Transactions by Reference', componentName: 'TransactionsByReferenceView' },
   ];
 
   for (const report of reportTabs) {
@@ -97,6 +100,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
   const settingsTabs = [
     { label: 'Import Data', componentName: 'ImportDataView' },
     { label: 'Emails & Reminders', componentName: 'EmailSettingsView' },
+    { label: 'Branding & PDFs', componentName: 'BrandingSettingsView' },
   ];
 
   for (const tab of settingsTabs) {
