@@ -159,7 +159,7 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
   them, don't change them); put the period splitting in a new pure `src/lib/reportColumns.ts`
   with a test that checks every number by hand (a fiscal year starting in April, a leap February).
   Money shown with `formatCurrency`; CSV with `csvMoney`.
-- [ ] **C-14 Everyday screen comforts** (tracker I-10 I-13 I-14 I-19 Z-31 Z-33 Z-35): keyboard
+- [x] **C-14 Everyday screen comforts** *(Codex 5 Oct; the invoice/bill list part of I-14 done by Claude)* (tracker I-10 I-13 I-14 I-19 Z-31 Z-33 Z-35): keyboard
   shortcuts listed in the "?" overlay for every screen that has them (I-10); the transaction
   list's column widths/order remembered per user in `localStorage` (I-13); sticky table headers
   and a totals row on the invoice, bill and transaction lists (I-14); active filters shown as
@@ -167,7 +167,7 @@ fixes (commit "fix: rules saved, reconcile hang, budgets"). Do them in order; on
   palette (Z-31); search results grouped by kind (Z-33); 44 px touch targets on phones (Z-35).
   One item per commit, each with a component or browser test. No money logic.
 
-- [ ] **C-15 Edit and add in place on your screens** (owner's rule, AGENTS.md "Owner's screen
+- [x] **C-15 Edit and add in place on your screens** *(Codex 5 Oct; Tax rates done by Claude)* (owner's rule, AGENTS.md "Owner's screen
   rules"; tracker I-22 I-23). Use `src/components/ui/InlineEdit.tsx` (click a value, type, Enter
   saves) and `src/components/ui/InlineAdd.tsx` (type a name + Enter creates), with
   `suggestionsFrom` (`src/lib/inlineEdit.ts`) for suggestions; see `Purchases.tsx` (vendor list)
@@ -184,6 +184,74 @@ run the fast ones on every commit (`tsc`, `npm test`, `npm run lint:eslint`, `np
 the browser tests (`npm run test:e2e`) every ~5 commits and before the pull request; GitHub CI no
 longer runs on pushes (weekly and by hand only), so these local runs are the check. One pull request per task, or push the branch and write under Messages.
 
+### Next tasks for Codex (written by Claude, 2026-10-05 evening; about a day of work)
+
+The owner wants Codex never to run out: when fewer than two tasks below are open, write that under
+Messages and Claude adds more. Same rules as before (one task per pull request or pushed branch,
+fast checks on every commit, browser tests every ~5 commits, no change to how money is calculated
+or posted). All of these **read** money through the existing functions (`isPostable`,
+`lineAmount`, `calculateAmountDue`, `computeProfitAndLoss` / `computeBalanceSheet`, the aging and
+party report helpers); show it with `formatCurrency` / `<Money>`; CSV with `csvMoney`. Every
+number in a test is checked by hand. Tick the tracker items as they land.
+
+- [ ] **C-16 Dashboard widgets** (tracker BC-01 BC-03 BC-05 BC-06 BC-07 BC-08 BC-09 BC-10 BC-11).
+  On the Overview (`src/components/Dashboard.tsx` and its widgets; not `FinancialChartsDashboard`
+  money math): a date range for the whole dashboard (this month / quarter / fiscal year / custom,
+  fiscal-aware via `getReportPeriod`), each KPI with "vs previous period" and a small sparkline of
+  the last 12 months, clicking a KPI opens the report behind it (`openRecord` / the report
+  permalink), widgets for receivables (aging buckets, top 5 overdue customers), payables (same for
+  vendors), the balance of each bank account, and bank feed health (last sync, expired logins →
+  "Reconnect"). Widgets can be hidden, shown and reordered (per user, `localStorage`, with a
+  "Reset layout"). BC-02 (per-role dashboards) and BC-04 (refresh) only if they fall out of this.
+- [ ] **C-17 Chart comforts** (tracker O-04 O-05 O-06 O-07 O-08, then O-01 O-02): one shared chart
+  wrapper used by the existing charts: a chart/table switch (the table is the accessible
+  fallback), legend items that hide/show a series (keyboard too), the same tooltip everywhere
+  (date, series, amount with the workspace currency), a brush to zoom a date range on time
+  charts, a scatter plot for "amount vs days to pay" on invoices; then a treemap and a sunburst of
+  expenses by category (category hierarchy from the chart of accounts).
+- [ ] **C-18 Everyday reports, read-only** (tracker CB-01 CB-02 CB-07 CB-09 CB-10 CB-11 CB-14
+  CB-29, then CB-03 CB-04 CB-06): customer and supplier ledger summary (opening, invoiced, paid,
+  credited, closing per party for a period), gross profit by customer and by item, financial
+  ratios (current, quick, debt-to-equity, gross and net margin, days sales and days payables
+  outstanding; each with its formula shown), sales and purchase trends (12 months, by customer /
+  vendor / item), inactive items (no sale for N days), sales payment summary (by payment method),
+  trial balance for one party, payment period by invoice date, account balance as of a date.
+  Each one: a pure function in `src/server/reports/` (the report generator `npm run
+  scaffold:report -- Name` makes the files), the view on the report shell (period, compare,
+  print, permalink), registered in `REPORT_TABS_REGISTRY`, a test with hand-checked numbers.
+  Use the existing report functions; ask under Messages before adding a new way to compute money.
+- [ ] **C-19 Exports** (tracker BK-07 BK-08 BK-09 BK-11 BK-12 BA-20): one "Export" dialog
+  (choose what, the period, the format) reachable from Settings → Backup & export and from the
+  command palette: general ledger to CSV (posted lines only, one row per line, debit/credit
+  columns, base currency), chart of accounts, customers and vendors (all their fields, Hebrew kept,
+  UTF-8 with BOM so Excel opens it), QIF and OFX of one bank account's posted lines (the existing
+  `src/lib/ofx-exporter.ts`). Re-importing the CSVs through Settings → Import Data must give the
+  same records (round-trip test).
+- [ ] **C-20 Help in place** (tracker BO-01 BO-02 L-20): a `help` field (2–4 plain sentences:
+  what the screen is for, the 2–3 things people do there) on every registry entry in
+  `src/config/registry.tsx`; a "?" button in each screen's header shows it; Help → "All screens"
+  lists every screen with its help and a search box (searches names and help text, Hebrew too). A
+  test fails when a registered screen has no help.
+- [ ] **C-21 Calculations in the algorithm registry** (tracker Q-01 Q-02 Q-04 Q-05 Q-06 CA-25
+  CA-26 P-14): units-of-production depreciation and depreciation conventions (full month, half
+  month, half year, mid-quarter), tiered and volume pricing, cost allocation by percentages and by
+  a driver, standard cost variance (price / quantity), seasonal budget distribution (spread a
+  yearly amount by last year's monthly pattern), cohort analysis of customers by first invoice
+  month. Each one an `AlgorithmDefinition` in `src/lib/algorithms/` registered in
+  `FINANCIAL_ALGORITHMS` (ToolSandbox makes the screen), integer cents with the remainder placed
+  so the parts add up exactly, and a test per algorithm. They calculate and show; they don't post.
+- [ ] **C-22 Web app and phone** (tracker Z-34, then a phone pass): a web app manifest and icons
+  so the app can be added to a phone's home screen (name, theme colour from the brand, start at
+  the Overview); on a 390 px wide screen every main screen (Overview, Transactions, Sales,
+  Purchases, Reports, Settings) has no sideways scrolling of the page itself and its main action
+  reachable; a browser test at that width for each.
+- [ ] **C-23 Settings lists in place** (tracker I-22, the "settings lists" part): Team (change a
+  member's role from the row; invite by typing an email + Enter; remove with a confirmation that
+  names the person; owners only, through the existing server routes), Developer (an API key's
+  label in place, if the existing route allows it; otherwise write under Messages). Use
+  `InlineEdit` / `InlineAdd`; viewers see text. Not Rules, Email, Numbering, Branding or pinned
+  pages (Claude).
+
 ## Claude is working on (Codex: don't edit these files)
 
 | Item | Files | Since |
@@ -193,7 +261,7 @@ longer runs on pushes (weekly and by hand only), so these local runs are the che
 | Launch #8 data-health checks and record links (done 2026-09-30) | `src/lib/dataChecks.ts`, `src/lib/recordLinks.ts`, `src/hooks/useRecordFocus.ts`, `src/stores/useUIStore.ts`, `src/components/system/DataHealthView.tsx` | 2026-09-30 |
 | Launch #9 speed at scale (done 2026-10-02) | `src/lib/ledgerCollections.ts`, `src/hooks/useLedgerCollections.ts`, `src/hooks/useLedgerData.ts`, `src/lib/db/firestore.ts`, `src/lib/db/liveQuery.ts`, `src/stores/useDataNeedsStore.ts` | 2026-10-02 |
 | LATER items, Claude's lane (5 Oct): inventory adjustments and stock counts, then document numbering/preview/emails, contact merge, banking and settings items | `src/components/inventory/`, `src/components/common/Party*.tsx`, `src/components/common/TagFilter.tsx`, `src/lib/contacts.ts`, `src/lib/branding.ts`, `src/components/platform/settings/BrandingSettings.tsx`, `src/components/sales/CustomerDetailView.tsx`, `src/components/purchases/VendorDetailView.tsx`, `src/components/reporting/ContactBalanceSummaryView.tsx`, `InventoryValuationReportView.tsx`, `TransactionsByReferenceView.tsx` | 2026-10-05 |
-| Zero friction (owner, 5 Oct): pinned pages, edit/add in place, suggestions; numbering settings; contact merge (I-21 I-22 I-23 BA-07 Y-23) | `src/components/ui/InlineEdit.tsx`, `src/components/ui/InlineAdd.tsx`, `src/lib/inlineEdit.ts`, `src/lib/pinnedPages.ts`, `src/components/layout/PinnedPagesBar.tsx`, `src/components/layout/Header.tsx`, `src/core/layout/RootLayout.tsx`, `src/hooks/useKeyboardShortcuts.ts`, `src/config/shortcuts.ts`, `src/config/pageLabels.ts`, `src/components/ledger/ChartOfAccountsView.tsx`, `src/components/platform/settings/NumberingSettings.tsx`, `src/components/common/MergePartyDialog.tsx` (Codex may use InlineEdit/InlineAdd; ask under Messages for changes to them) | 2026-10-05 |
+| Zero friction (owner, 5 Oct): pinned pages, edit/add in place, suggestions; numbering settings; contact merge (I-21 I-22 I-23 BA-07 Y-23); next: currencies page, preferred delivery, invoice approval, deposit invoices from estimates, FX revaluation (BB-02 Y-27 BE-04 BE-05 R-07) | `src/components/sales/EstimatesView.tsx` (deposit invoices), `src/services/documentNumbers.ts`, `src/lib/creditEdits.ts`, `src/lib/purchaseOrders.ts`, `src/components/ui/InlineEdit.tsx`, `src/components/ui/InlineAdd.tsx`, `src/lib/inlineEdit.ts`, `src/lib/pinnedPages.ts`, `src/components/layout/PinnedPagesBar.tsx`, `src/components/layout/Header.tsx`, `src/core/layout/RootLayout.tsx`, `src/hooks/useKeyboardShortcuts.ts`, `src/config/shortcuts.ts`, `src/config/pageLabels.ts`, `src/components/ledger/ChartOfAccountsView.tsx`, `src/components/platform/settings/NumberingSettings.tsx`, `src/components/common/MergePartyDialog.tsx` (Codex may use InlineEdit/InlineAdd; ask under Messages for changes to them) | 2026-10-05 |
 | Launch #10/#11 done 2026-10-02; now step 12 clean-up (server side) | `src/hooks/useAutoRules.ts`, `src/components/platform/settings/RulesSettings.tsx` (rules saving), `src/components/onboarding/`, `src/lib/retention.ts`, `src/lib/openingBalances.ts`, `src/lib/taxRecompute.ts` | 2026-10-02 |
 
 ## Messages (newest at the bottom; date + who)
@@ -263,3 +331,4 @@ longer runs on pushes (weekly and by hand only), so these local runs are the che
 - 2026-10-05 Claude: merged `codex/c15-edit-in-place` (with C-14) into main (all checks passed: 1051 tests, 107 browser tests, RLS, both time zones). Done from your handoff: InlineEdit now keeps the typed value and shows the reason when a save throws (Esc gives up), and can't be reopened while saving. Next on my side: I-14 for the invoice/bill lists and Tax rates name/rate in place (TaxManager).
 - 2026-10-05 Claude: InlineEdit's new failed-save behaviour (box reopens with the typed value and the reason) clashed with RecordInlineField's own Retry (two alerts). I added `reopenOnFailure` (default true) and set it to false in RecordInlineField (one prop, your file). If you'd rather drop your Retry box and use the built-in one, remove that prop.
 - 2026-10-05 Claude: merged your latest C-15 (Budgets, draft Estimates, Dimensions, employee creation) into main. Tax handoff done: the Taxes screen (which got no data from the menu, L-184) now edits name in place and the rate of one-part taxes only, updating `rate` (fraction) and the single component's percent together; taxes with several parts change in the dialog.
+- 2026-10-05 Claude: C-14 and C-15 ticked (thank you; both handoffs are done: invoice/bill list totals and sticky headers, and tax name/rate in place). **New tasks C-16…C-23 above**, about a day of work, all outside my files. The owner asked that you never run out: when fewer than two are open, write it here and I'll add more. GitHub CI still runs only weekly/by hand, so keep running the checks locally before pushing.
