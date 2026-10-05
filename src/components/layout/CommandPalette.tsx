@@ -1,4 +1,7 @@
-interface PaletteResult { id: string; type: string; label: string; category: string; actionId?: string; payload?: unknown; icon?: React.ReactNode }
+import type { RecordRef } from '../../lib/recordLinks';
+import { useRecentRecordsStore } from '../../stores/useRecentRecordsStore';
+import { recentRecordLabel } from '../../lib/recentRecordLabel';
+interface PaletteResult { record?: RecordRef; id: string; type: string; label: string; category: string; actionId?: string; payload?: unknown; icon?: React.ReactNode }
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Loader2, ArrowRight, FileText, User, Building, FolderKanban, Tags, DollarSign, Zap, FolderPlus } from 'lucide-react';
@@ -16,6 +19,7 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
 import { useTimeout } from '../../hooks/useTimeout';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { useDialog } from '../../hooks/useDialog';
 import { focusOnMount } from '../../lib/focusOnMount';
 
 interface CommandPaletteProps {
@@ -27,6 +31,7 @@ interface CommandPaletteProps {
 }
 
 export default function CommandPalette({ isOpen, onClose, onAction }: CommandPaletteProps) {
+  const { dialogProps, titleId } = useDialog(onClose, isOpen);
   const [query, setQuery] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const { setSafeTimeout } = useTimeout();
@@ -38,9 +43,13 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
     vendors: state.vendors,
     accounts: state.accounts,
     invoices: state.invoices,
-    bills: state.bills
+    bills: state.bills,
+    recurring: state.recurring,
+    inventory: state.inventory,
+    bankLines: state.bankLines
   })));
-  useLedgerCollections('bills', 'customers', 'invoices', 'vendors');
+  useLedgerCollections('bills', 'customers', 'invoices', 'vendors', 'recurring', 'inventory', 'bankLines');
+  const recentRecords = useRecentRecordsStore(state => state.records);
   const { handleQuickAdd } = useTransactionActions();
   const { addEntity } = useEntityOperations();
 
@@ -340,14 +349,17 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
       )
     : localizedCommands;
 
-  const combinedResults = [...dataResults, ...filteredCommands];
+  const recentResults: PaletteResult[] = query.trim() ? [] : recentRecords.map(record => ({ id: `recent-${record.type}-${record.id}`, type: 'recent', label: recentRecordLabel(record, ledger), category: 'Recent items', record, icon: <FileText aria-hidden="true" size={16} /> }));
+  const combinedResults = [...recentResults, ...dataResults, ...filteredCommands];
 
   const handleSelect = async (item: PaletteResult) => {
     setIsExecuting(true);
     await new Promise(r => setTimeout(r, 400));
     
     // Core Application Action Mappings
-    if (onAction && item.actionId) {
+    if (item.record) {
+      useUIStore.getState().openRecord(item.record);
+    } else if (onAction && item.actionId) {
       onAction(item.actionId, item.payload);
     }
     toast.success(`${item.label} opened`);
@@ -367,11 +379,13 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
             onClick={onClose}
           />
           <motion.div
+            {...dialogProps}
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             className="fixed z-[201] top-[10%] left-1/2 -translate-x-1/2 w-full max-w-3xl bg-[var(--surface)] rounded-[32px] shadow-2xl overflow-hidden border border-gray-200"
           >
+            <h2 id={titleId} className="sr-only">Command palette</h2>
             <div className="flex items-center px-6 py-5 border-b border-gray-100">
               <Search aria-hidden="true" className="text-indigo-600 mr-4" size={24} />
               <input aria-label="Search commands or enter a transaction"
