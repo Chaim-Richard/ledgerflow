@@ -342,16 +342,17 @@ export default function Sales() {
                        </div>
                     </td>
                     <td className="p-4 md:p-8">
-                       <span className="font-bold text-[var(--text)]">{inv.date ? formatDate(inv.date) : 'N/A'}</span>
+                       <InlineEdit kind="date" value={inv.date?.slice(0, 10)} display={inv.date ? formatDate(inv.date) : 'N/A'}
+                         label={`Date of invoice ${inv.number || ''}`.trim()} canEdit={canEditContacts && inv.status === 'draft'}
+                         onSave={v => updateEntity('invoices', inv.id, { date: String(v) }, 'Date saved')} className="font-bold text-[var(--text)]" />
                     </td>
                     <td className="p-4 md:p-8">
                       <div className="flex flex-col">
-                        <span className={cn(
-                          "font-bold text-[var(--text)]",
-                          inv.status === 'overdue' && "text-rose-600"
-                        )}>
-                          {inv.dueDate ? formatDate(inv.dueDate) : 'N/A'}
-                        </span>
+                        <InlineEdit kind="date" value={inv.dueDate?.slice(0, 10)} display={inv.dueDate ? formatDate(inv.dueDate) : 'N/A'}
+                          label={`Due date of invoice ${inv.number || ''}`.trim()} canEdit={canEditContacts && !['paid', 'void', 'written_off'].includes(String(inv.status))}
+                          validate={v => inv.date && String(v) < inv.date.slice(0, 10) ? 'The due date is before the invoice date' : null}
+                          onSave={v => updateEntity('invoices', inv.id, { dueDate: String(v) }, 'Due date saved')}
+                          className={cn("font-bold text-[var(--text)]", inv.status === 'overdue' && "text-rose-600")} />
                         {inv.status === 'pending' && (
                           <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mt-1 opacity-50">
                             {differenceInDays(parseLocalDate(inv.dueDate), new Date())} T-Days Left

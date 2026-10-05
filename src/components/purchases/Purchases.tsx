@@ -223,13 +223,17 @@ export default function Purchases() {
                         {b.vendorName || 'Unknown Vendor'}
                       </td>
                       <td className="p-4 text-slate-600 dark:text-slate-400 font-mono text-xs">
-                        {b.number || b.id.slice(0, 8).toUpperCase()}
+                        <InlineEdit value={b.number} display={b.number || b.id.slice(0, 8).toUpperCase()} label={`Number of bill from ${b.vendorName || 'vendor'}`}
+                          canEdit={canEditContacts && b.status !== 'void'} onSave={x => updateEntity('bills', b.id, { number: String(x) }, 'Bill number saved')} />
                       </td>
                       <td className="p-4 text-[var(--muted)] dark:text-slate-400">
-                        {b.date?.slice(0, 10)}
+                        <InlineEdit kind="date" value={b.date?.slice(0, 10)} label={`Date of bill ${b.number || ''}`.trim()} canEdit={canEditContacts && b.status === 'draft'}
+                          onSave={x => updateEntity('bills', b.id, { date: String(x) }, 'Date saved')} />
                       </td>
                       <td className="p-4 text-[var(--muted)] dark:text-slate-400">
-                        {b.dueDate?.slice(0, 10)}
+                        <InlineEdit kind="date" value={b.dueDate?.slice(0, 10)} label={`Due date of bill ${b.number || ''}`.trim()} canEdit={canEditContacts && b.status !== 'paid' && b.status !== 'void'}
+                          validate={x => b.date && String(x) < b.date.slice(0, 10) ? 'The due date is before the bill date' : null}
+                          onSave={x => updateEntity('bills', b.id, { dueDate: String(x) }, 'Due date saved')} />
                       </td>
                       <td className="p-4">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
