@@ -1420,7 +1420,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] F-16 `Inventory.tsx`
 - [x] F-17 `RulesSettings.tsx` — rules controller and sibling view; rule saving/testing/applying callbacks and JSX preserved (Codex)
 - [x] F-18 `PivotSheet.tsx` — pivot controller and sibling view; grouping/matrix calculations and JSX preserved (Codex)
-- [ ] F-19 `businessTemplates.ts`
+- [x] F-19 `businessTemplates.ts` — three sibling template data modules; all 23 definitions/order and public exports preserved (Codex)
 - [ ] F-20 `Projects.tsx`
 - [~] F-21 800-line limit (eslint `max-lines` warning on; 11 files over)
 - [x] F-22 Shared report shell: period presets, compare, permalink and print on the Reports page (Prompt R); one table layout with sticky header and totals (`PartyReportLayout`); one CSV writer for every export (`src/lib/csvExport.ts`, 15 screens moved, guard test)
