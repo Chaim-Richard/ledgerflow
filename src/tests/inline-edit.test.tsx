@@ -115,13 +115,33 @@ describe('Edit in place: on screen', () => {
     assert.deepEqual(saved, ['line one']);
   });
 
-  test('a failed save tells the user and shows the old value again', async () => {
-    render(<InlineEdit value="Acme" label="Name" onSave={() => { throw new Error('This period is locked'); }} />);
+  test('a failed save keeps what was typed, open, with the reason; Esc then shows the old value', async () => {
+    let tries = 0;
+    render(<InlineEdit value="Acme" label="Name" onSave={() => { tries++; throw new Error('This period is locked'); }} />);
     edit('Name');
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Acme 2' } });
     await act(async () => { fireEvent.keyDown(screen.getByLabelText('Name'), { key: 'Enter' }); });
+    assert.equal((screen.getByLabelText('Name') as HTMLInputElement).value, 'Acme 2', 'the typed value is kept');
+    assert.match(screen.getByRole('alert').textContent || '', /This period is locked/);
+    await act(async () => { fireEvent.keyDown(screen.getByLabelText('Name'), { key: 'Enter' }); });
+    assert.equal(tries, 2, 'Enter tries again');
+    fireEvent.keyDown(screen.getByLabelText('Name'), { key: 'Escape' });
     assert.ok(screen.getByRole('button', { name: 'Edit Name' }));
     assert.ok(screen.getByText('Acme'));
+  });
+
+  test('while saving, the value cannot be opened again', async () => {
+    let release: () => void = () => {};
+    render(<InlineEdit value="Acme" label="Name" onSave={() => new Promise<void>(r => { release = r; })} />);
+    edit('Name');
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Acme 2' } });
+    await act(async () => { fireEvent.keyDown(screen.getByLabelText('Name'), { key: 'Enter' }); });
+    const button = screen.getByRole('button', { name: 'Edit Name' }) as HTMLButtonElement;
+    assert.equal(button.disabled, true);
+    fireEvent.click(button);
+    assert.equal(screen.queryByRole('textbox'), null);
+    await act(async () => { release(); });
+    assert.equal((screen.getByRole('button', { name: 'Edit Name' }) as HTMLButtonElement).disabled, false);
   });
 });
 

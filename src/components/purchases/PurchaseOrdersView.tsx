@@ -1,6 +1,7 @@
 import { useDialog } from '../../hooks/useDialog';
 import React, { useId, useMemo, useState } from 'react';
-import { ShoppingCart, Plus, ShieldCheck, X, Check, CheckCircle2, FileText, Ban, Printer } from 'lucide-react';
+import { ShoppingCart, Plus, ShieldCheck, X, Check, CheckCircle2, FileText, Ban, Printer, Trash2, ChevronRight, ChevronDown, Copy } from 'lucide-react';
+import InlineEdit from '../ui/InlineEdit';
 import PdfPreviewModal from '../ui/PdfPreviewModal';
 import type { Bill, GoodsReceipt, PurchaseOrder, PurchaseOrderItem, Vendor } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -9,7 +10,9 @@ import { useCollection } from '../../hooks/useCollection';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { performThreeWayMatch } from '../../lib/threeWayMatchEngine';
-import { billLinesFromOrder, nextPoNumber } from '../../lib/purchaseOrders';
+import { addOrderItem, billLinesFromOrder, canChangeOrder, canDeleteOrder, canMoveDelivery, changeOrderItem, lastOrderLines, nextPoNumber, removeOrderItem, vendorsByOrders } from '../../lib/purchaseOrders';
+import { suggestionsFrom } from '../../lib/inlineEdit';
+import { isArchivedParty } from '../../lib/contacts';
 import { formatCurrency, formatDate, formatTzDate } from '../../lib/utils';
 import BillModal from './BillModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
@@ -35,7 +38,7 @@ export const PurchaseOrdersView: React.FC = () => {
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const role = useCurrentRole();
   const canEdit = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
-  const { addEntity, updateEntity } = useEntityOperations();
+  const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
   const { data: purchaseOrders, loading } = useCollection<PurchaseOrder>('purchaseOrders', { orderByField: 'createdAt', orderDirection: 'desc', limit: 500 });
   const goodsReceipts = useMemo(() => purchaseOrders.flatMap(po => po.receipts || []), [purchaseOrders]);
   const matchSummary = useMemo(() => performThreeWayMatch(purchaseOrders, goodsReceipts, bills), [purchaseOrders, goodsReceipts, bills]);
@@ -54,6 +57,11 @@ export const PurchaseOrdersView: React.FC = () => {
   const [previewPO, setPreviewPO] = useState<PurchaseOrder | null>(null);
   const pdfWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [saving, setSaving] = useState(false);
+  const [openOrders, setOpenOrders] = useState<Set<string>>(() => new Set());
+  const vendorChoices = useMemo(() => vendorsByOrders(vendors.filter(v => !isArchivedParty(v)), purchaseOrders), [vendors, purchaseOrders]);
+  const itemSuggestions = useMemo(() => suggestionsFrom(purchaseOrders.flatMap(po => po.items), i => i.description), [purchaseOrders]);
+  const lastOrder = useMemo(() => (poVendorId ? lastOrderLines(purchaseOrders, poVendorId) : null), [purchaseOrders, poVendorId]);
+  const linesEmpty = poItems.every(l => !l.desc.trim() && !l.unitPrice);
   const billFromOrder = useMemo<Partial<Bill> | undefined>(() => (billingPO
     ? { vendorId: billingPO.vendorId, vendorName: billingPO.vendorName, currency: billingPO.currency, splits: billLinesFromOrder(billingPO), metadata: { poId: billingPO.id, poNumber: billingPO.poNumber } }
     : undefined), [billingPO]);
@@ -127,6 +135,14 @@ export const PurchaseOrdersView: React.FC = () => {
     setBillingPO(null);
   };
 
+  // edit in place (I-22): vendor, delivery date and lines while nothing was received or billed
+  const saveOrder = (po: PurchaseOrder, changes: Partial<PurchaseOrder>, message: string) => updateEntity('purchaseOrders', po.id, changes, message);
+  const toggleOrder = (id: string) => setOpenOrders(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const deletePO = (po: PurchaseOrder) => {
+    if (!window.confirm(`Delete purchase order ${po.poNumber}? This can't be undone.`)) return;
+    deleteEntity('purchaseOrders', po.id, `${po.poNumber} deleted`);
+  };
+
   const cancelPO = (po: PurchaseOrder) => {
     if (!window.confirm(`Cancel purchase order ${po.poNumber}?`)) return;
     updateEntity('purchaseOrders', po.id, { status: 'cancelled' }, `${po.poNumber} cancelled`);
@@ -185,11 +201,27 @@ export const PurchaseOrdersView: React.FC = () => {
                 <tr><td colSpan={7} className="py-10 px-4 text-center text-[var(--muted)]">No purchase orders yet.{canEdit ? ' Choose "New purchase order" to create one.' : ''}</td></tr>
               )}
               {purchaseOrders.map(po => (
-                <tr key={po.id}>
-                  <td className="py-3 px-4 font-mono font-bold">{po.poNumber}</td>
-                  <td className="py-3 px-4">{po.vendorName}</td>
+                <React.Fragment key={po.id}>
+                <tr>
+                  <td className="py-3 px-4 font-mono font-bold">
+                    <button type="button" onClick={() => toggleOrder(po.id)} aria-expanded={openOrders.has(po.id)} aria-label={`Lines of ${po.poNumber}`}
+                      className="inline-flex items-center gap-1">
+                      {openOrders.has(po.id) ? <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />}
+                      {po.poNumber}
+                    </button>
+                  </td>
+                  <td className="py-3 px-4">
+                    <InlineEdit kind="select" value={po.vendorId} display={po.vendorName} label={`Vendor of ${po.poNumber}`}
+                      options={vendorChoices.map(v => ({ value: v.id, label: v.name }))} canEdit={canEdit && canChangeOrder(po)}
+                      onSave={x => { const v = vendors.find(vendor => vendor.id === x); return v ? saveOrder(po, { vendorId: v.id, vendorName: v.name }, 'Vendor changed') : undefined; }} />
+                  </td>
                   <td className="py-3 px-4 font-mono">{formatDate(po.issueDate)}</td>
-                  <td className="py-3 px-4 font-mono">{po.expectedDeliveryDate ? formatDate(po.expectedDeliveryDate) : '—'}</td>
+                  <td className="py-3 px-4 font-mono">
+                    <InlineEdit kind="date" value={po.expectedDeliveryDate?.slice(0, 10)} display={po.expectedDeliveryDate ? formatDate(po.expectedDeliveryDate) : undefined}
+                      label={`Expected delivery of ${po.poNumber}`} placeholder="Add date" canEdit={canEdit && canMoveDelivery(po)}
+                      validate={x => (po.issueDate && String(x) < po.issueDate.slice(0, 10) ? 'Delivery can\'t be before the order date' : null)}
+                      onSave={x => saveOrder(po, { expectedDeliveryDate: String(x) }, 'Expected delivery saved')} />
+                  </td>
                   <td className="py-3 px-4 text-right font-mono font-bold">{formatCurrency(po.totalAmountCents, po.currency)}</td>
                   <td className="py-3 px-4 text-center"><span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusClass(po.status)}`}>{po.status.replace('_', ' ')}</span></td>
                   <td className="py-3 px-4 text-right whitespace-nowrap space-x-2">
@@ -206,8 +238,19 @@ export const PurchaseOrdersView: React.FC = () => {
                     )}
                     {po.billId && <span className="text-[var(--muted)]">Billed</span>}
                     <button type="button" onClick={() => setPreviewPO(po)} className="p-1 text-[var(--muted)]" aria-label={`PDF of ${po.poNumber}`} title="Preview / download PDF"><Printer className="w-3.5 h-3.5" aria-hidden="true" /></button>
+                    {canEdit && canDeleteOrder(po) && (
+                      <button type="button" onClick={() => deletePO(po)} className="p-1 text-[var(--muted)] hover:text-[var(--neg)]" aria-label={`Delete ${po.poNumber}`} title="Delete"><Trash2 className="w-3.5 h-3.5" aria-hidden="true" /></button>
+                    )}
                   </td>
                 </tr>
+                {openOrders.has(po.id) && (
+                  <tr>
+                    <td colSpan={7} className="px-4 pb-4 bg-[var(--panel)]">
+                      <OrderLines po={po} canEdit={canEdit && canChangeOrder(po)} suggestions={itemSuggestions} onSave={saveOrder} />
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -295,7 +338,7 @@ export const PurchaseOrdersView: React.FC = () => {
                   <label htmlFor={`${ids}-vendor`} className="block font-semibold mb-1">Vendor</label>
                   <select id={`${ids}-vendor`} value={poVendorId} onChange={e => setPoVendorId(e.target.value)} className={inputClass}>
                     <option value="">Choose a vendor…</option>
-                    {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                    {vendorChoices.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                   </select>
                   {vendors.length === 0 && <p className="mt-1 text-[var(--muted)]">Add the vendor in Purchases first.</p>}
                 </div>
@@ -306,6 +349,12 @@ export const PurchaseOrdersView: React.FC = () => {
               </div>
               <fieldset className="space-y-2">
                 <legend className="font-semibold">Items</legend>
+                {lastOrder && linesEmpty && (
+                  <button type="button" onClick={() => setPoItems(lastOrder.lines.map(l => ({ ...l, key: crypto.randomUUID() })))}
+                    className="flex items-center gap-1 font-semibold text-[var(--text)] underline-offset-2 hover:underline">
+                    <Copy className="w-3.5 h-3.5" aria-hidden="true" /> Same as last order ({lastOrder.poNumber}, {lastOrder.lines.length} line{lastOrder.lines.length === 1 ? '' : 's'})
+                  </button>
+                )}
                 {poItems.map((line, n) => (
                   <div key={line.key} className="grid grid-cols-6 gap-2">
                     <input aria-label={`Item ${n + 1} description`} placeholder="Description" value={line.desc} onChange={e => setLine(line.key, 'desc', e.target.value)} className={`${inputClass} col-span-3`} />
@@ -379,5 +428,84 @@ export const PurchaseOrdersView: React.FC = () => {
     </div>
   );
 };
+
+/** An order's lines, editable in place while nothing was received or billed (I-22). */
+function OrderLines({ po, canEdit, suggestions, onSave }: {
+  po: PurchaseOrder;
+  canEdit: boolean;
+  suggestions: string[];
+  onSave: (po: PurchaseOrder, changes: Partial<PurchaseOrder>, message: string) => Promise<unknown>;
+}) {
+  const ids = useId();
+  const [desc, setDesc] = useState('');
+  const [qty, setQty] = useState('1');
+  const [price, setPrice] = useState('');
+  const positive = (x: string | number) => (Number(x) > 0 ? null : 'Enter more than 0');
+  const add = async () => {
+    const quantity = Number(qty);
+    const unitPriceCents = Math.round(Number(price) * 100);
+    if (!desc.trim() || !(quantity > 0) || !(unitPriceCents > 0)) return;
+    await onSave(po, addOrderItem(po, { id: crypto.randomUUID(), description: desc.trim(), quantity, unitPriceCents, receivedQuantity: 0 }), 'Line added');
+    setDesc(''); setQty('1'); setPrice('');
+  };
+  const cell = 'py-1.5 px-2';
+  return (
+    <table className="w-full text-left text-xs mt-2">
+      <caption className="sr-only">Lines of {po.poNumber}</caption>
+      <thead className="text-[var(--muted)]">
+        <tr>
+          <th scope="col" className={cell}>Item</th><th scope="col" className={`${cell} text-right`}>Quantity</th>
+          <th scope="col" className={`${cell} text-right`}>Unit price</th><th scope="col" className={`${cell} text-right`}>Received</th>
+          <th scope="col" className={`${cell} text-right`}>Total</th><th scope="col" className={cell}><span className="sr-only">Remove</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {po.items.map(item => (
+          <tr key={item.id}>
+            <td className={cell}>
+              <InlineEdit value={item.description} label={`Item on ${po.poNumber}`} canEdit={canEdit} suggestions={suggestions}
+                validate={x => (String(x).trim() ? null : 'Describe the item')}
+                onSave={x => onSave(po, changeOrderItem(po, item.id, { description: String(x) }), 'Line saved')} />
+            </td>
+            <td className={`${cell} text-right font-mono`}>
+              <InlineEdit kind="number" value={item.quantity} label={`Quantity of ${item.description}`} canEdit={canEdit} validate={positive}
+                onSave={x => onSave(po, changeOrderItem(po, item.id, { quantity: Number(x) }), 'Quantity saved')} />
+            </td>
+            <td className={`${cell} text-right font-mono`}>
+              <InlineEdit kind="money" value={item.unitPriceCents} display={formatCurrency(item.unitPriceCents, po.currency)} label={`Unit price of ${item.description}`} canEdit={canEdit} validate={positive}
+                onSave={x => onSave(po, changeOrderItem(po, item.id, { unitPriceCents: Number(x) }), 'Price saved')} />
+            </td>
+            <td className={`${cell} text-right font-mono`}>{item.receivedQuantity || 0}</td>
+            <td className={`${cell} text-right font-mono font-bold`}>{formatCurrency(item.totalCents, po.currency)}</td>
+            <td className={`${cell} text-right`}>
+              {canEdit && po.items.length > 1 && (
+                <button type="button" onClick={() => onSave(po, removeOrderItem(po, item.id), 'Line removed')} className="p-1 text-[var(--muted)] hover:text-[var(--neg)]"
+                  aria-label={`Remove ${item.description}`}><X className="w-3.5 h-3.5" aria-hidden="true" /></button>
+              )}
+            </td>
+          </tr>
+        ))}
+        {canEdit && (
+          <tr onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void add(); } }}>
+            <td className={cell}>
+              <input aria-label={`New line on ${po.poNumber}`} placeholder="Add a line…" value={desc} onChange={e => setDesc(e.target.value)} list={`${ids}-items`}
+                className="w-full p-1 bg-[var(--surface)] border border-[var(--line)] rounded-md" />
+              <datalist id={`${ids}-items`}>{suggestions.map(x => <option key={x} value={x} />)}</datalist>
+            </td>
+            <td className={cell}>
+              <input aria-label={`Quantity of the new line on ${po.poNumber}`} type="number" min="0" step="any" value={qty} onChange={e => setQty(e.target.value)}
+                className="w-full p-1 bg-[var(--surface)] border border-[var(--line)] rounded-md text-right" />
+            </td>
+            <td className={cell}>
+              <input aria-label={`Unit price of the new line on ${po.poNumber}`} type="number" min="0" step="0.01" placeholder="0.00" value={price} onChange={e => setPrice(e.target.value)}
+                className="w-full p-1 bg-[var(--surface)] border border-[var(--line)] rounded-md text-right font-mono" />
+            </td>
+            <td colSpan={3} className={`${cell} text-[var(--muted)]`}>Enter adds the line</td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  );
+}
 
 export default PurchaseOrdersView;

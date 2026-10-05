@@ -12,8 +12,7 @@ export class FxService {
 
   /**
    * Fetches the latest exchange rate for a given currency pair.
-   * In a real environment, this would call a reliable API like fixer.io or openexchangerates.org.
-   * For this implementation, we use a fallback to ensure system stability if API is unavailable.
+   * Throws when the rate service can't be reached (never a guessed rate).
    */
   static async getRate(from: string, to: string): Promise<number> {
     if (from === to) return 1.0;
@@ -38,18 +37,13 @@ export class FxService {
         };
         return rate;
       }
-    } catch (error) {
-      console.warn(`FX Service: Failed to fetch live rate for ${from}->${to}. Falling back to defaults.`);
+    } catch {
+      // fall through to the error below
     }
 
-    // Static fallbacks if API fails
-    const fallbacks: Record<string, Record<string, number>> = {
-      'USD': { 'EUR': 0.92, 'GBP': 0.79, 'ILS': 3.75, 'JPY': 151.2, 'CAD': 1.36, 'AUD': 1.54 },
-      'EUR': { 'USD': 1.09, 'GBP': 0.86, 'ILS': 4.08 },
-      'GBP': { 'USD': 1.27, 'EUR': 1.16, 'ILS': 4.75 }
-    };
-
-    return fallbacks[from]?.[to] || 1.0;
+    // no made-up rates when the rate service can't be reached: an invented rate would end up in
+    // the books (L-187)
+    throw new Error(`The exchange rate ${from} → ${to} is not available right now`);
   }
 
   /**
@@ -59,9 +53,8 @@ export class FxService {
     try {
       const response = await axios.get(`https://api.exchangerate-api.com/v4/latest/${base}`);
       return response.data.rates;
-    } catch (error) {
-      console.warn(`FX Service: Batch fetch failed for ${base}.`);
-      return { [base]: 1.0 };
+    } catch {
+      throw new Error(`Exchange rates for ${base} are not available right now`);
     }
   }
 }

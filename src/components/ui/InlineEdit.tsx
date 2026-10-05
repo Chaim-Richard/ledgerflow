@@ -25,6 +25,8 @@ export interface InlineEditProps {
   validate?: (next: string | number) => string | null;
   className?: string;
   inputClassName?: string;
+  /** False when the caller shows its own retry after a failed save (the box then just closes). */
+  reopenOnFailure?: boolean;
 }
 
 /**
@@ -33,7 +35,7 @@ export interface InlineEditProps {
  * Suggestions from the workspace's own data appear while typing (I-23).
  */
 export default function InlineEdit({
-  value, label, onSave, kind = 'text', options, suggestions, placeholder, canEdit = true, display, validate, className, inputClassName,
+  value, label, onSave, kind = 'text', options, suggestions, placeholder, canEdit = true, display, validate, className, inputClassName, reopenOnFailure = true,
 }: InlineEditProps) {
   const listId = useId();
   const [editing, setEditing] = useState(false);
@@ -46,6 +48,7 @@ export default function InlineEdit({
   if (!canEdit) return <span className={className}>{shown ?? <span className="text-[var(--faint)]">—</span>}</span>;
 
   const start = () => {
+    if (saving) return; // the last value is still being saved
     done.current = false;
     setDraft(inlineEditText(kind, value));
     setError('');
@@ -63,12 +66,21 @@ export default function InlineEdit({
     done.current = true;
     setSaving(true);
     setEditing(false);
+    let failure: string | null = null;
     try {
       await onSave(parsed);
     } catch (err) {
-      toast.error(`${label} not saved`, { description: err instanceof Error ? err.message : String(err) });
+      failure = err instanceof Error ? err.message : String(err);
     } finally {
       setSaving(false);
+    }
+    if (failure !== null) {
+      toast.error(`${label} not saved`, { description: failure });
+      if (!reopenOnFailure) return;
+      // what was typed isn't lost: the box opens again with it and the reason (Esc gives up)
+      done.current = false;
+      setError(failure);
+      setEditing(true);
     }
   };
 
@@ -110,6 +122,7 @@ export default function InlineEdit({
 
   return (
     <button type="button" onClick={e => { e.stopPropagation(); start(); }} aria-label={`Edit ${label}`} title={`Click to edit ${label.toLowerCase()}`}
+      disabled={saving} aria-busy={saving || undefined}
       className={cn('group text-left max-w-full rounded px-0.5 -mx-0.5 border border-transparent hover:border-dashed hover:border-[var(--line)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brass)] cursor-text', saving && 'opacity-60', className)}>
       {shown ?? <span className="text-[var(--faint)] italic">{placeholder || 'Add'}</span>}
       {saving && <Loader2 aria-hidden="true" className="inline w-3 h-3 ml-1 animate-spin" />}

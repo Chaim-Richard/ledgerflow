@@ -1,4 +1,7 @@
 import { useDialog } from '../../hooks/useDialog';
+import { useSuggestedRate } from '../../hooks/useSuggestedRate';
+import { documentCurrencies } from '../../lib/exchangeRates';
+import { latestDocumentFor } from '../../lib/repeatDocument';
 import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -17,10 +20,13 @@ import { documentTotals, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCo
 import { formatCurrency, safeConfirm } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
+/** What the dialog saves: the bill, and for a new one whether it repeats (BE-08; never stored on the bill). */
+export type BillDraft = Partial<Bill> & { recurringInterval?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' };
+
 interface BillModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (bill: Partial<Bill>) => void;
+  onSave: (bill: BillDraft) => void;
   vendors: Vendor[];
   accounts: ChartAccount[];
   /** Pre-filled bill, e.g. from a purchase order (BE-11). */
@@ -47,6 +53,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   }));
 
   const editingExisting = Boolean(initialBill?.id);
+  const [repeat, setRepeat] = useState<'' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'>('');
   useEffect(() => {
     // an existing bill keeps its number; only a new one gets the next number in the series
     if (isOpen && !editingExisting) {
@@ -103,6 +110,26 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   const pricesIncludeTax = bill.pricesIncludeTax ?? true;
   const totals = documentTotals(total, 0, taxCode, pricesIncludeTax);
   const billCurrency = bill.currency || workspaceCurrency;
+  // I-23: a new bill for a vendor can copy the lines of their latest bill (amounts included)
+  const lastForVendor = !editingExisting && bill.vendorId
+    ? latestDocumentFor(storeBills, b => b.vendorId === bill.vendorId, b => b.splits) : null;
+  // (picking the vendor may already fill the first line's account and description, not its amount)
+  const splitsEmpty = splits.every(sp => !sp.amountCents);
+  const repeatLast = () => {
+    if (!lastForVendor?.splits) return;
+    setSplits(lastForVendor.splits.map(sp => ({ id: crypto.randomUUID(), amountCents: sp.amountCents, accountId: sp.accountId || '', description: sp.description || '' })));
+    setBill(prev => ({
+      ...prev,
+      ...(lastForVendor.taxCodeId ? { taxCodeId: lastForVendor.taxCodeId } : {}),
+      ...(lastForVendor.pricesIncludeTax !== undefined ? { pricesIncludeTax: lastForVendor.pricesIncludeTax } : {}),
+    }));
+  };
+  // the rate fills itself in for another currency until the person types one (BA-06, I-23)
+  const [rateTyped, setRateTyped] = useState(false);
+  const rateNote = useSuggestedRate({
+    currency: billCurrency, homeCurrency: workspaceCurrency, enabled: !editingExisting && !rateTyped, docs: storeBills,
+    onRate: rate => setBill(prev => ({ ...prev, exchangeRate: rate })),
+  });
   const money = (cents: number) => formatCurrency(cents, billCurrency);
 
   const handleVendorSelect = (vendorId: string) => {
@@ -194,6 +221,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
 
     await onSave({
       ...bill,
+      ...(repeat ? { recurringInterval: repeat } : {}),
       currency: billCurrency,
       exchangeRate: billCurrency === workspaceCurrency ? 1 : (bill.exchangeRate || 1),
       status: finalStatus as any,
@@ -337,21 +365,37 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
             </div>
           </div>
 
+          {!editingExisting && (
+            <div className="space-y-2 max-w-xs">
+              <label htmlFor="bill-repeat" className="micro-label">Repeat</label>
+              {/* BE-08: a draft copy of this bill is made on each date, to check and save */}
+              <select id="bill-repeat" value={repeat} onChange={e => setRepeat(e.target.value as typeof repeat)}
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold">
+                <option value="">Doesn't repeat</option>
+                <option value="weekly">Every week</option>
+                <option value="monthly">Every month</option>
+                <option value="quarterly">Every quarter</option>
+                <option value="yearly">Every year</option>
+              </select>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
               <label htmlFor="bill-currency" className="micro-label">Currency</label>
               <select id="bill-currency" value={billCurrency}
                 onChange={(e) => setBill({ ...bill, currency: e.target.value, exchangeRate: e.target.value === workspaceCurrency ? 1 : bill.exchangeRate })}
                 className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] outline-none font-bold">
-                {[...new Set([workspaceCurrency, billCurrency, 'USD', 'EUR', 'GBP'])].map(c => <option key={c} value={c}>{c}</option>)}
+                {documentCurrencies(workspaceCurrency, billCurrency, [...storeBills, ...safeVendors]).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             {billCurrency !== workspaceCurrency && (
               <div className="space-y-2">
                 <label htmlFor="bill-exchange-rate" className="micro-label">1 {billCurrency} = ? {workspaceCurrency}</label>
                 <input id="bill-exchange-rate" type="number" step="0.0001" min="0.0001" value={bill.exchangeRate || 1}
-                  onChange={(e) => setBill({ ...bill, exchangeRate: parseFloat(e.target.value || '1') })}
+                  onChange={(e) => { setRateTyped(true); setBill({ ...bill, exchangeRate: parseFloat(e.target.value || '1') }); }}
                   className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] outline-none font-bold" />
+                {rateNote && <p role="status" className="text-[11px] text-[var(--muted)] px-2">{rateNote}</p>}
               </div>
             )}
           </div>
@@ -377,6 +421,12 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="micro-label">Expense Allocation</h3>
+              {lastForVendor && splitsEmpty && (
+                <button type="button" onClick={repeatLast}
+                  className="ml-auto mr-2 px-3 py-2 rounded-xl text-[10px] font-semibold uppercase tracking-wider border border-[var(--line)] text-[var(--text)] hover:border-[var(--brass-line)]">
+                  Same as last bill ({lastForVendor.splits?.length} line{lastForVendor.splits?.length === 1 ? '' : 's'})
+                </button>
+              )}
               <button 
                 type="button"
                 aria-label="Add Split Expense"

@@ -18,7 +18,7 @@ import { taxRouter } from './taxRoutes';
 import { brandingRouter } from './brandingRoutes';
 import { contactMergeRouter } from './contactMergeRoutes';
 import { numberingRouter } from './numberingRoutes';
-import { allocateNextNumber } from '../services/numberingService';
+import { allocateNextNumber, NUMBERED_TYPES, type NumberedType } from '../services/numberingService';
 import { retentionFor, RetentionSettingsSchema, scheduledPurgeAt as purgeDate } from '../../lib/retention';
 import { RetentionError, updateRetention } from '../services/retentionService';
 import { completeSetup, recordOpeningBalances, SetupError } from '../services/openingBalanceService';
@@ -188,9 +188,9 @@ workspaceRouter.post('/:workspaceId/next-number', requireWorkspaceRole(['owner',
   const { workspaceId } = req.params as Record<string, string>;
   const rawType = req.body?.type;
 
-  const schema = z.enum(['invoice', 'bill', 'estimate']);
+  const schema = z.enum(NUMBERED_TYPES as unknown as [NumberedType, ...NumberedType[]]);
   const parsed = schema.safeParse(rawType);
-  if (!parsed.success) return sendError(res, 'Invalid request parameters. "type" (invoice, bill, estimate) is required in request body.', 400, parsed.error.issues);
+  if (!parsed.success) return sendError(res, `Invalid request parameters. "type" (${NUMBERED_TYPES.join(', ')}) is required in request body.`, 400, parsed.error.issues);
   const type = parsed.data;
 
   try {

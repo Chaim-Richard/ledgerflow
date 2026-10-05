@@ -13,6 +13,8 @@ export interface ReminderSettings {
   daysAfterDue: number[];
   /** BE-02: email the customer the "Payment received (thank you)" template when a payment is recorded. */
   thankYou?: boolean;
+  /** Y-28: each month (first daily run, normally the 1st) email every customer with something open their statement. */
+  monthlyStatements?: boolean;
 }
 
 export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = { enabled: false, daysAfterDue: [3, 14, 30] };
@@ -20,7 +22,17 @@ export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = { enabled: false, day
 export function normalizeReminderSettings(input: Partial<ReminderSettings> | null | undefined): ReminderSettings {
   const days = Array.isArray(input?.daysAfterDue) ? input.daysAfterDue : DEFAULT_REMINDER_SETTINGS.daysAfterDue;
   const clean = [...new Set(days.map(Number).filter(d => Number.isInteger(d) && d >= 1 && d <= 365))].sort((a, b) => a - b).slice(0, 6);
-  return { enabled: Boolean(input?.enabled), daysAfterDue: clean.length ? clean : DEFAULT_REMINDER_SETTINGS.daysAfterDue, thankYou: Boolean(input?.thankYou) };
+  return { enabled: Boolean(input?.enabled), daysAfterDue: clean.length ? clean : DEFAULT_REMINDER_SETTINGS.daysAfterDue, thankYou: Boolean(input?.thankYou), monthlyStatements: Boolean(input?.monthlyStatements) };
+}
+
+/**
+ * Monthly statements (Y-28): the month ("YYYY-MM") to send for on `today` (the workspace's date),
+ * or null when this month's were already sent. The first daily run of a month sends them, so a
+ * missed 1st is made up the next day.
+ */
+export function statementMonthDue(today: string, lastSentMonth?: string | null): string | null {
+  const month = today.slice(0, 7);
+  return /^\d{4}-\d{2}$/.test(month) && month !== lastSentMonth ? month : null;
 }
 
 const OPEN = new Set(['sent', 'pending', 'approved', 'partially_paid', 'overdue']);

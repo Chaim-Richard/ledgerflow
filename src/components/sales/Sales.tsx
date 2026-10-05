@@ -29,6 +29,7 @@ import TagFilter from '../common/TagFilter';
 import { allTags, hasTag, isArchivedParty } from '../../lib/contacts';
 import PartyRowActions, { ArchivedBadge, ShowArchivedToggle } from '../common/PartyRowActions';
 import EmailStatementsButton from './EmailStatementsButton';
+import DocumentTotalsFoot from '../ui/DocumentTotalsFoot';
 import { PartyDetailView } from '../common/PartyDetailView';
 import WriteOffModal from './WriteOffModal';
 import InvoiceEmailDialog from './InvoiceEmailDialog';
@@ -144,6 +145,7 @@ export default function Sales() {
   const [previewPdfInvoice, setPreviewPdfInvoice] = useState<Invoice | null>(null);
   const [emailInvoice, setEmailInvoice] = useState<Invoice | null>(null);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const homeCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const [searchTerm, setSearchTerm] = useState('');
   // A record link (#sales/invoice/<id>, e.g. from Data Health) shows and highlights the invoice
   const focusedInvoiceId = useRecordFocus('invoice', { ready: invoices.length > 0, onFocus: () => { setActiveSubTab('invoices'); setSearchTerm(''); } });
@@ -328,10 +330,11 @@ export default function Sales() {
               documents={filteredInvoices.filter(i => pickedInvoices.has(i.id))}
               workspaceId={currentWorkspaceId} onClear={() => setPickedInvoices(new Set())} />
           )}
-          <div className="overflow-x-auto">
+          {/* the header and the totals stay in view while the list scrolls (I-14) */}
+          <div className="overflow-auto max-h-[70vh]">
             <table className="w-full border-collapse min-w-[700px]">
               <caption className="sr-only">Invoices</caption>
-              <thead>
+              <thead className="sticky top-0 z-10 bg-[var(--surface)]">
                 <tr className="text-left border-b border-[var(--line)]/50">
                   <th scope="col" className="pl-4 md:pl-8 w-8">
                     <input type="checkbox" aria-label="Select all invoices shown"
@@ -526,6 +529,7 @@ export default function Sales() {
                   </tr>
                 )}
               </tbody>
+              <DocumentTotalsFoot docs={filteredInvoices} homeCurrency={homeCurrency} colSpan={8} noun="invoice" />
             </table>
           </div>
         </div>

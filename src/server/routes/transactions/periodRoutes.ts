@@ -21,6 +21,13 @@ export function registerPeriodRoutes(transactionRouter: express.Router): void {
   // MONTH-END REVALUATION API
   // ==========================================
   transactionRouter.post('/revaluation/run', async (req, res) => {
+    // L-187: this run applied one exchange rate to every asset and liability account (home-currency
+    // ones too), on made-up rates when the rate service was down, for any member. Foreign
+    // documents are stored in the home currency, so it can't be done from the ledger this way.
+    // Off until R-07 revalues open foreign invoices and bills properly; nothing is posted.
+    if (process.env.LF_ENABLE_LEGACY_REVALUATION !== '1') {
+      return res.status(409).json({ error: 'Currency revaluation is not available yet. Nothing was posted.' });
+    }
     try {
       const { workspaceId, targetCurrency } = req.body;
       const user = requestUser(req);

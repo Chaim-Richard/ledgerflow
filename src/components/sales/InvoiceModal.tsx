@@ -1,4 +1,8 @@
 import { useDialog } from '../../hooks/useDialog';
+import { useSuggestedRate } from '../../hooks/useSuggestedRate';
+import { documentCurrencies } from '../../lib/exchangeRates';
+import { latestDocumentFor } from '../../lib/repeatDocument';
+import { calculateDueDate, isFixedTerm, termsForCustomer } from '../../lib/paymentTerms';
 import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -35,7 +39,8 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const inventoryItems = useLedgerStore(s => s.inventory || []);
-  useLedgerCollections('inventory');
+  useLedgerCollections('inventory', 'invoices');
+  const pastInvoices = useLedgerStore(s => s.invoices);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
 
   const [invoice, setInvoice] = useState<Partial<Invoice>>(() => initialInvoice || ({
@@ -114,7 +119,28 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const totals = documentTotals(total, invoice.discountCents || 0, taxCode, pricesIncludeTax);
   const depositCents = depositAppliedCents({ amountCents: totals.amountCents, depositCents: invoice.depositCents });
   const currency = invoice.currency || workspaceCurrency;
-  const currencyChoices = [...new Set([workspaceCurrency, currency, 'USD', 'EUR', 'GBP'])];
+  // the rate fills itself in for another currency until the person types one (BA-06, I-23)
+  const [rateTyped, setRateTyped] = useState(false);
+  const rateNote = useSuggestedRate({
+    currency, homeCurrency: workspaceCurrency, enabled: !editingExisting && !rateTyped, docs: pastInvoices,
+    onRate: rate => setInvoice(prev => ({ ...prev, exchangeRate: rate })),
+  });
+  // I-23: a new invoice for a customer can copy the lines of their latest invoice
+  const lastForCustomer = !editingExisting && invoice.customerId
+    ? latestDocumentFor(pastInvoices, d => d.customerId === invoice.customerId, d => d.items) : null;
+  const linesEmpty = items.every(i => !i.description.trim() && !i.amountCents && !i.itemId);
+  const repeatLast = () => {
+    if (!lastForCustomer?.items) return;
+    setItems(lastForCustomer.items.map(i => ({ ...i, id: crypto.randomUUID() })));
+    setInvoice(prev => ({
+      ...prev,
+      ...(lastForCustomer.taxCodeId ? { taxCodeId: lastForCustomer.taxCodeId } : {}),
+      ...(lastForCustomer.pricesIncludeTax !== undefined ? { pricesIncludeTax: lastForCustomer.pricesIncludeTax } : {}),
+      ...(lastForCustomer.discountCents ? { discountCents: lastForCustomer.discountCents } : {}),
+    }));
+    setDirty(true);
+  };
+  const currencyChoices = useMemo(() => documentCurrencies(workspaceCurrency, currency, [...pastInvoices, ...safeCustomers]), [workspaceCurrency, currency, pastInvoices, safeCustomers]);
   const money = (cents: number) => formatCurrency(cents, currency);
 
   const handleAction = async (e: React.FormEvent, actionStatus: string) => {
@@ -228,7 +254,10 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                     // a new invoice starts in the customer's currency (Y-22); an existing one keeps its own
                     const custCurrency = cust && !editingExisting ? (cust.currency || workspaceCurrency) : null;
                     const currencyChange = custCurrency && custCurrency !== currency ? { currency: custCurrency, exchangeRate: 1 } : {};
-                    setInvoice({ ...invoice, customerId: cust ? cust.id : `new-${crypto.randomUUID()}`, customerName: cust ? cust.name : e.target.value, ...currencyChange });
+                    // a new invoice takes the customer's usual terms, and the due date follows (I-23)
+                    const terms = !editingExisting ? termsForCustomer(cust as { id: string; paymentTerms?: string } | undefined, pastInvoices) : null;
+                    const termsChange = terms ? { paymentTerms: terms, dueDate: calculateDueDate(invoice.date || '', terms) } : {};
+                    setInvoice({ ...invoice, customerId: cust ? cust.id : `new-${crypto.randomUUID()}`, customerName: cust ? cust.name : e.target.value, ...currencyChange, ...termsChange });
                   }}
                   placeholder="Type or select customer"
                   className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
@@ -285,7 +314,8 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               <select 
                 id="inv-payment-terms"
                 value={invoice.paymentTerms || 'due_on_receipt'}
-                onChange={(e) => setInvoice({ ...invoice, paymentTerms: e.target.value })}
+                // the due date follows the terms (it stayed on the invoice date before; L-186)
+                onChange={(e) => setInvoice({ ...invoice, paymentTerms: e.target.value, ...(isFixedTerm(e.target.value) ? { dueDate: calculateDueDate(invoice.date || '', e.target.value) } : {}) })}
                 className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="due_on_receipt">Due on Receipt</option>
@@ -335,7 +365,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                 type="date"
                 required
                 value={invoice.date}
-                onChange={(e) => setInvoice({ ...invoice, date: e.target.value })}
+                onChange={(e) => setInvoice({ ...invoice, date: e.target.value, ...(isFixedTerm(invoice.paymentTerms) && e.target.value ? { dueDate: calculateDueDate(e.target.value, invoice.paymentTerms) } : {}) })}
                 className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               />
             </div>
@@ -435,15 +465,22 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  <input 
                    id="inv-exchange-rate"
                    type="number" step="0.0001" min="0.0001" value={invoice.exchangeRate || 1}
-                   onChange={(e) => setInvoice({ ...invoice, exchangeRate: parseFloat(e.target.value || '1') })}
+                   onChange={(e) => { setRateTyped(true); setInvoice({ ...invoice, exchangeRate: parseFloat(e.target.value || '1') }); }}
                    className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                  />
+                 {rateNote && <p role="status" className="text-[11px] text-[var(--muted)] px-2">{rateNote}</p>}
              </div>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="micro-label">Line Items</h3>
+              {lastForCustomer && linesEmpty && (
+                <button type="button" onClick={repeatLast}
+                  className="ml-auto mr-2 px-3 py-2 rounded-xl text-[10px] font-semibold uppercase tracking-wider border border-[var(--line)] text-[var(--text)] hover:border-[var(--brass-line)]">
+                  Same as last time ({lastForCustomer.number || 'last invoice'}, {lastForCustomer.items?.length} line{lastForCustomer.items?.length === 1 ? '' : 's'})
+                </button>
+              )}
               <button 
                 type="button"
                 onClick={() => setItems([...items, { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }])}

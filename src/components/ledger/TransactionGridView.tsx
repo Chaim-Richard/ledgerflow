@@ -1,6 +1,7 @@
 
 
 import { ActiveFilterChips } from './ActiveFilterChips';
+import InlineEntryRow from '../transactions/InlineEntryRow';
 import { Plus, Loader2, ShieldCheck, AlertCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
@@ -104,6 +105,8 @@ export function TransactionGridView(model: TransactionGridModel) {
       <TransactionGridToolbar model={model} />
 
       <ActiveFilterChips filters={filterCriteria} search={model.searchTerm} onFilters={onFilterApplied} onSearch={model.setSearchTerm} />
+      {/* add an entry right here: description, amount, Enter (I-22, I-23) */}
+      <InlineEntryRow />
 
       {/* the table scrolls sideways inside its box when the window is narrower than its columns */}
       <TransactionGridBody model={model} />

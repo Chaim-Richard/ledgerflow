@@ -15,6 +15,9 @@ import { formatCurrency, safeConfirm } from '../../lib/utils';
 import BillModal from './BillModal';
 import VendorModal from './VendorModal';
 import TagFilter from '../common/TagFilter';
+import DocumentTotalsFoot from '../ui/DocumentTotalsFoot';
+import { recurringBillSchedule } from '../../lib/recurringBills';
+import type { BillDraft } from './BillModal';
 import { allTags, hasTag, isArchivedParty } from '../../lib/contacts';
 import PartyRowActions, { ArchivedBadge, ShowArchivedToggle } from '../common/PartyRowActions';
 import VendorDetailView from './VendorDetailView';
@@ -44,6 +47,7 @@ export default function Purchases() {
   const [previewBill, setPreviewBill] = useState<Bill | null>(null);
   const [pickedBills, setPickedBills] = useState<Set<string>>(() => new Set());
   const pdfWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const homeCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   // A record link (#purchases/bill/<id>, e.g. from Data Health) shows and highlights the bill
   const focusedBillId = useRecordFocus('bill', { ready: bills.length > 0, onFocus: () => { setActiveSubTab('bills'); setSelectedVendorId(null); setSearchTerm(''); } });
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
@@ -80,12 +84,14 @@ export default function Purchases() {
     setIsVendorModalOpen(false);
   };
 
-  const handleAddBill = async (data: Partial<Bill>) => {
+  const handleAddBill = async (input: BillDraft) => {
+    const { recurringInterval, ...data } = input;
     if (data.id) {
       const { id, ...updates } = data;
       await updateEntity('bills', id, updates, 'Bill updated');
     } else {
       await addEntity('bills', data, 'Bill successfully recorded');
+      if (recurringInterval) await addEntity('recurring', recurringBillSchedule(data, recurringInterval), 'Recurring bill scheduled');
     }
     setIsBillModalOpen(false);
     setEditingBill(undefined);
@@ -204,7 +210,8 @@ export default function Purchases() {
       {/* Main Tables Container */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {activeSubTab === 'bills' ? (
-          <div className="overflow-x-auto">
+          // the header and the totals stay in view while the list scrolls (I-14)
+          <div className="overflow-auto max-h-[70vh]">
             {pdfWorkspaceId && (
               <DocumentBulkBar type="bill" noun="bill" ids={[...pickedBills].filter(id => filteredBills.some(b => b.id === id))}
                 documents={filteredBills.filter(b => pickedBills.has(b.id))}
@@ -212,7 +219,7 @@ export default function Purchases() {
             )}
             <table className="w-full text-left border-collapse">
               <caption className="sr-only">Bills</caption>
-              <thead>
+              <thead className="sticky top-0 z-10 bg-white dark:bg-slate-900">
                 <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
                   <th scope="col" className="pl-4 w-8">
                     <input type="checkbox" aria-label="Select all bills shown"
@@ -335,6 +342,7 @@ export default function Purchases() {
                   </tr>
                 )}
               </tbody>
+              <DocumentTotalsFoot docs={filteredBills} homeCurrency={homeCurrency} colSpan={8} noun="bill" />
             </table>
           </div>
         ) : (

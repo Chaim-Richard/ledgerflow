@@ -29,6 +29,7 @@ export default function BulkPaymentDialog({ side, documents, onClose, onDone }: 
   const [cashAccountId, setCashAccountId] = useState(bankAccounts[0]?.id || '');
   const [date, setDate] = useState(getLocalDateISO());
   const [method, setMethod] = useState('bank_transfer');
+  const [remittance, setRemittance] = useState(false);
   const [saving, setSaving] = useState(false);
   const { dialogProps, titleId } = useDialog(onClose, true);
   const { payments, skipped } = useMemo(() => paymentPlan(documents, side, currency), [documents, side, currency]);
@@ -40,9 +41,10 @@ export default function BulkPaymentDialog({ side, documents, onClose, onDone }: 
     if (!cashAccountId || payments.length === 0) return;
     setSaving(true);
     try {
-      const { done, failed } = await recordPayments(payments, { workspaceId, side, cashAccountId, date, method });
+      const { done, failed, remittancesSent } = await recordPayments(payments, { workspaceId, side, cashAccountId, date, method, sendRemittance: remittance });
       const paidIds = done.flatMap(p => p.allocations.map(a => a.documentId));
       if (done.length) toast.success(`${paidIds.length} ${noun}${paidIds.length === 1 ? '' : 's'} paid (${formatCurrency(done.reduce((s, p) => s + p.amountCents, 0), currency)})`);
+      if (remittance && side === 'bill') toast.info(`${remittancesSent} remittance advice email${remittancesSent === 1 ? '' : 's'} sent (vendors without an email address get none)`);
       for (const f of failed) toast.error(`${f.payment.partyName}: ${f.message}`);
       onDone(paidIds);
       if (!failed.length) onClose();
@@ -83,6 +85,12 @@ export default function BulkPaymentDialog({ side, documents, onClose, onDone }: 
               </select>
             </div>
           </div>
+          {side === 'bill' && (
+            <label className="flex items-center gap-2 text-[var(--text)]">
+              <input type="checkbox" checked={remittance} onChange={e => setRemittance(e.target.checked)} />
+              Email each vendor a remittance advice (what was paid, for which bills)
+            </label>
+          )}
           <ul aria-label="Payments" className="divide-y divide-[var(--line)] border border-[var(--line)] rounded-lg">
             {payments.map(p => (
               <li key={p.partyId} className="flex items-center justify-between gap-3 px-3 py-2">

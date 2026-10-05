@@ -17,12 +17,17 @@ import { creditTaxFrom } from '../../lib/taxCodes';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
 import { Labelled } from '../ui/Labelled';
+import InlineEdit from '../ui/InlineEdit';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { nextDocumentNumber } from '../../services/documentNumbers';
+import { suggestionsFrom } from '../../lib/inlineEdit';
+import { creditDateEditable, duplicateNumber } from '../../lib/creditEdits';
 
 export default function CreditNotesView() {
   const [activeTab, setActiveTab] = useState<'customer' | 'vendor'>('customer');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
-  const [previewCreditNote, setPreviewCreditNote] = useState<any | null>(null);
+  const [previewCreditNote, setPreviewCreditNote] = useState<((CreditNote | VendorCredit) & { pdfKind?: 'vendorCredit' }) | null>(null);
 
   const customers = useLedgerStore(s => s.customers);
   const vendors = useLedgerStore(s => s.vendors);
@@ -33,7 +38,19 @@ export default function CreditNotesView() {
   const { loading } = useLedgerCollections('bills', 'creditNotes', 'customers', 'invoices', 'vendorCredits', 'vendors');
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
 
-  const { addEntity } = useEntityOperations();
+  const { addEntity, updateEntity } = useEntityOperations();
+  const role = useCurrentRole();
+  const canEdit = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
+  const reasonSuggestions = suggestionsFrom([...creditNotes, ...vendorCredits], c => c.reason);
+  // the next number of the series, from the server (they were random 4-digit numbers that could repeat)
+  const allocate = async (type: 'creditNote' | 'vendorCredit') => {
+    try {
+      return await nextDocumentNumber(currentWorkspaceId || '', type);
+    } catch (err) {
+      toast.error('Not saved: no document number', { description: err instanceof Error ? err.message : String(err) });
+      return null;
+    }
+  };
   const [creditAction, setCreditAction] = useState<CreditActionTarget | null>(null);
   const usable = (c: CreditNote | VendorCredit) => (c.status === 'open' || c.status === 'partially_applied') && (c.remainingCents ?? c.amountCents) > 0;
 
@@ -45,6 +62,14 @@ export default function CreditNotesView() {
   const [amountStr, setAmountStr] = useState('');
   const [reason, setReason] = useState('');
   const [dateStr, setDateStr] = useState(getLocalDateISO(new Date()));
+  const [saving, setSaving] = useState(false);
+  // one save at a time (a double click made two credit notes)
+  const once = (save: (e: React.FormEvent) => Promise<void>) => async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    try { await save(e); } catch { /* already reported; the form stays open */ } finally { setSaving(false); }
+  };
 
   const handleCreateCustomerCreditNote = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,13 +83,15 @@ export default function CreditNotesView() {
       return;
     }
 
+    const number = await allocate('creditNote');
+    if (!number) return;
     const customer = customers.find(c => c.id === customerId);
     // A credit for an invoice is in its currency and reverses its share of the tax (L-118)
     const invoice = invoiceId ? invoices.find(i => i.id === invoiceId) : undefined;
     const newCreditNote: Partial<CreditNote> = {
       customerId,
       customerName: customer?.name || 'Customer',
-      number: `CN-${Math.floor(1000 + Math.random() * 9000)}`,
+      number,
       invoiceId: invoiceId || undefined,
       amountCents,
       remainingCents: amountCents,
@@ -92,12 +119,14 @@ export default function CreditNotesView() {
       return;
     }
 
+    const number = await allocate('vendorCredit');
+    if (!number) return;
     const vendor = vendors.find(v => v.id === vendorId);
     const bill = billId ? bills.find(b => b.id === billId) : undefined;
     const newVendorCredit: Partial<VendorCredit> = {
       vendorId,
       vendorName: vendor?.name || 'Vendor',
-      number: `VC-${Math.floor(1000 + Math.random() * 9000)}`,
+      number,
       billId: billId || undefined,
       amountCents,
       remainingCents: amountCents,
@@ -140,13 +169,13 @@ export default function CreditNotesView() {
         </div>
         <div className="flex items-center gap-2">
           <ApplyCreditsButton kind={activeTab} />
-          <button
+          {canEdit && <button type="button"
             onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium text-sm rounded-lg hover:bg-indigo-700 transition shadow-sm"
           >
             <Plus className="w-4 h-4" />
             {activeTab === 'customer' ? 'New Credit Note' : 'New Vendor Credit'}
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -211,10 +240,20 @@ export default function CreditNotesView() {
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                   {creditNotes.map((cn) => (
                     <tr key={cn.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <td className="p-3 font-mono font-medium text-indigo-600 dark:text-indigo-400">{cn.number}</td>
+                      <td className="p-3 font-mono font-medium text-indigo-600 dark:text-indigo-400">
+                        <InlineEdit value={cn.number} label={`Number of credit note ${cn.number || ''}`.trim()} canEdit={canEdit}
+                          validate={x => duplicateNumber(creditNotes, cn.id, String(x))}
+                          onSave={x => updateEntity('creditNotes', cn.id, { number: String(x) }, 'Credit note number saved')} />
+                      </td>
                       <td className="p-3 font-medium text-gray-900 dark:text-white">{cn.customerName}</td>
-                      <td className="p-3 text-gray-600 dark:text-gray-400">{cn.date}</td>
-                      <td className="p-3 text-gray-600 dark:text-gray-400">{cn.reason}</td>
+                      <td className="p-3 text-gray-600 dark:text-gray-400">
+                        <InlineEdit kind="date" value={cn.date?.slice(0, 10)} label={`Date of credit note ${cn.number}`} canEdit={canEdit && creditDateEditable(cn)}
+                          onSave={x => updateEntity('creditNotes', cn.id, { date: String(x) }, 'Date saved')} />
+                      </td>
+                      <td className="p-3 text-gray-600 dark:text-gray-400">
+                        <InlineEdit value={cn.reason} label={`Reason for credit note ${cn.number}`} placeholder="Add a reason" canEdit={canEdit} suggestions={reasonSuggestions}
+                          onSave={x => updateEntity('creditNotes', cn.id, { reason: String(x) }, 'Reason saved')} />
+                      </td>
                       <td className="p-3 text-right font-semibold text-gray-900 dark:text-white"><Money cents={cn.amountCents} currency={cn.currency} colored /></td>
                       <td className="p-3 text-right font-medium text-indigo-600 dark:text-indigo-400"><Money cents={cn.remainingCents} currency={cn.currency} colored /></td>
                       <td className="p-3 text-center">
@@ -230,14 +269,14 @@ export default function CreditNotesView() {
                               <button type="button" onClick={() => setCreditAction({ kind: 'customer', mode: 'refund', id: cn.id, number: cn.number, partyId: cn.customerId, partyName: cn.customerName, remainingCents: cn.remainingCents, currency: cn.currency })} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">Refund</button>
                             </>
                           )}
-                          <button
+                          <button type="button" aria-label={`Preview PDF of credit note ${cn.number || ''}`.trim()}
                             onClick={() => setPreviewCreditNote(cn)}
                             className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
                             title="Preview PDF"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
+                          <button type="button" aria-label={`Download PDF of credit note ${cn.number || ''}`.trim()}
                             onClick={() => downloadDocumentPdf('creditNote', cn.id, currentWorkspaceId || 'default', `credit_note_${cn.number || cn.id}.pdf`)}
                             className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
                             title="Download PDF"
@@ -281,10 +320,20 @@ export default function CreditNotesView() {
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                   {vendorCredits.map((vc) => (
                     <tr key={vc.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <td className="p-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">{vc.number}</td>
+                      <td className="p-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                        <InlineEdit value={vc.number} label={`Number of vendor credit ${vc.number || ''}`.trim()} canEdit={canEdit}
+                          validate={x => duplicateNumber(vendorCredits, vc.id, String(x))}
+                          onSave={x => updateEntity('vendorCredits', vc.id, { number: String(x) }, 'Vendor credit number saved')} />
+                      </td>
                       <td className="p-3 font-medium text-gray-900 dark:text-white">{vc.vendorName}</td>
-                      <td className="p-3 text-gray-600 dark:text-gray-400">{vc.date}</td>
-                      <td className="p-3 text-gray-600 dark:text-gray-400">{vc.reason}</td>
+                      <td className="p-3 text-gray-600 dark:text-gray-400">
+                        <InlineEdit kind="date" value={vc.date?.slice(0, 10)} label={`Date of vendor credit ${vc.number}`} canEdit={canEdit && creditDateEditable(vc)}
+                          onSave={x => updateEntity('vendorCredits', vc.id, { date: String(x) }, 'Date saved')} />
+                      </td>
+                      <td className="p-3 text-gray-600 dark:text-gray-400">
+                        <InlineEdit value={vc.reason} label={`Reason for vendor credit ${vc.number}`} placeholder="Add a reason" canEdit={canEdit} suggestions={reasonSuggestions}
+                          onSave={x => updateEntity('vendorCredits', vc.id, { reason: String(x) }, 'Reason saved')} />
+                      </td>
                       <td className="p-3 text-right font-semibold text-gray-900 dark:text-white"><Money cents={vc.amountCents} currency={vc.currency} colored /></td>
                       <td className="p-3 text-right font-medium text-emerald-600 dark:text-emerald-400"><Money cents={vc.remainingCents} currency={vc.currency} colored /></td>
                       <td className="p-3 text-center">
@@ -293,13 +342,13 @@ export default function CreditNotesView() {
                         </span>
                       </td>
                       <td className="p-3 text-right">
-                        {usable(vc) && (
-                          <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {usable(vc) && (<>
                             <button type="button" onClick={() => setCreditAction({ kind: 'vendor', mode: 'apply', id: vc.id, number: vc.number, partyId: vc.vendorId, partyName: vc.vendorName, remainingCents: vc.remainingCents, currency: vc.currency })} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">Apply</button>
                             <button type="button" onClick={() => setCreditAction({ kind: 'vendor', mode: 'refund', id: vc.id, number: vc.number, partyId: vc.vendorId, partyName: vc.vendorName, remainingCents: vc.remainingCents, currency: vc.currency })} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">Refund</button>
-                            <button type="button" onClick={() => setPreviewCreditNote({ ...vc, pdfKind: 'vendorCredit' })} aria-label={`PDF of vendor credit ${vc.number || ''}`.trim()} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">PDF</button>
-                          </div>
-                        )}
+                          </>)}
+                          <button type="button" onClick={() => setPreviewCreditNote({ ...vc, pdfKind: 'vendorCredit' })} aria-label={`PDF of vendor credit ${vc.number || ''}`.trim()} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">PDF</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -321,7 +370,7 @@ export default function CreditNotesView() {
               {activeTab === 'customer' ? 'Issue Customer Credit Note' : 'Record Vendor Credit'}
             </h2>
 
-            <form onSubmit={activeTab === 'customer' ? handleCreateCustomerCreditNote : handleCreateVendorCredit} className="space-y-4">
+            <form onSubmit={once(activeTab === 'customer' ? handleCreateCustomerCreditNote : handleCreateVendorCredit)} className="space-y-4">
               {activeTab === 'customer' ? (
                 <div>
                   <Labelled labelClassName="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" label="Select Customer">
@@ -358,7 +407,7 @@ export default function CreditNotesView() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Labelled labelClassName="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" label="Amount ($)">
+                  <Labelled labelClassName="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" label={`Amount (${workspaceCurrency})`}>
                     <input
                       type="number"
                       step="0.01"
@@ -404,10 +453,10 @@ export default function CreditNotesView() {
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white font-medium text-sm rounded-lg hover:bg-indigo-700 transition"
+                  type="submit" disabled={saving}
+                  className="px-4 py-2 bg-indigo-600 text-white font-medium text-sm rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
                 >
-                  Save & Post
+                  {saving ? 'Saving…' : 'Save & Post'}
                 </button>
               </div>
             </form>

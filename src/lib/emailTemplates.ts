@@ -6,7 +6,7 @@
  * (BL-08). Used by the server to send and by the settings screen to preview.
  */
 
-export const EMAIL_TEMPLATE_KEYS = ['invoice', 'reminder', 'receipt', 'statement'] as const;
+export const EMAIL_TEMPLATE_KEYS = ['invoice', 'reminder', 'receipt', 'statement', 'remittance'] as const;
 export type EmailTemplateKey = typeof EMAIL_TEMPLATE_KEYS[number];
 
 export interface EmailTemplate {
@@ -16,7 +16,7 @@ export interface EmailTemplate {
 
 export type EmailTemplates = Partial<Record<EmailTemplateKey, Partial<EmailTemplate>>>;
 
-export const PLACEHOLDERS = ['company', 'customer', 'number', 'amount', 'amount_due', 'due_date', 'days_overdue', 'link'] as const;
+export const PLACEHOLDERS = ['company', 'customer', 'number', 'amount', 'amount_due', 'due_date', 'days_overdue', 'link', 'vendor', 'paid_bills', 'payment_date'] as const;
 export type Placeholder = typeof PLACEHOLDERS[number];
 export type TemplateValues = Partial<Record<Placeholder, string>>;
 
@@ -25,6 +25,7 @@ export const TEMPLATE_LABELS: Record<EmailTemplateKey, string> = {
   reminder: 'Payment reminder',
   receipt: 'Payment received (thank you)',
   statement: 'Customer statement',
+  remittance: 'Payment sent to a vendor (remittance advice)',
 };
 
 export const DEFAULT_TEMPLATES: Record<EmailTemplateKey, EmailTemplate> = {
@@ -43,6 +44,10 @@ export const DEFAULT_TEMPLATES: Record<EmailTemplateKey, EmailTemplate> = {
   statement: {
     subject: 'Your statement from {{company}}',
     body: 'Hello {{customer}},\n\nPlease find your account statement attached. The balance is {{amount_due}}.\n\nIf anything looks wrong, just reply to this email.\n\nThank you,\n{{company}}',
+  },
+  remittance: {
+    subject: 'Payment from {{company}}',
+    body: 'Hello {{vendor}},\n\nWe sent you a payment of {{amount}} on {{payment_date}} for: {{paid_bills}}.\n\nThank you,\n{{company}}',
   },
 };
 

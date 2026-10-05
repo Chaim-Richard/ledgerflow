@@ -298,6 +298,8 @@ export interface Customer {
   noteLog?: ContactNote[];
   /** No automatic payment reminders for this customer (Settings → Emails & Reminders). */
   noReminders?: boolean;
+  /** Y-28: left out of the monthly statement emails. */
+  noStatements?: boolean;
   /** Set when the customer came from a spreadsheet import; lets the import be undone. */
   importBatchId?: string;
 }

@@ -66,10 +66,10 @@ export default function EmailSettings() {
 
   const saveReminders = () => {
     const days = daysText.split(/[,\s]+/).filter(Boolean).map(Number);
-    const settings = normalizeReminderSettings({ enabled: reminders.enabled, daysAfterDue: days, thankYou: reminders.thankYou });
+    const settings = normalizeReminderSettings({ enabled: reminders.enabled, daysAfterDue: days, thankYou: reminders.thankYou, monthlyStatements: reminders.monthlyStatements });
     setReminders(settings);
     setDaysText(settings.daysAfterDue.join(', '));
-    save({ reminderSettings: settings }, `${settings.enabled ? `Reminders on: ${settings.daysAfterDue.join(', ')} days after the due date.` : 'Automatic reminders are off.'} ${settings.thankYou ? 'Thank-you emails on.' : 'No thank-you emails.'}`);
+    save({ reminderSettings: settings }, `${settings.enabled ? `Reminders on: ${settings.daysAfterDue.join(', ')} days after the due date.` : 'Automatic reminders are off.'} ${settings.thankYou ? 'Thank-you emails on.' : 'No thank-you emails.'} ${settings.monthlyStatements ? 'Monthly statements on.' : ''}`.trim());
   };
 
   return (
@@ -145,6 +145,13 @@ export default function EmailSettings() {
           <span>
             Email a thank-you when a customer pays
             <span className="block text-xs text-[var(--muted)]">Uses the &quot;Payment received (thank you)&quot; email above, for payments recorded by hand, from a bank line or online.</span>
+          </span>
+        </label>
+        <label htmlFor={`${formId}-statements`} className="flex items-start gap-2 text-sm text-[var(--text)]">
+          <input id={`${formId}-statements`} type="checkbox" className="mt-1" disabled={!canEdit} checked={Boolean(reminders.monthlyStatements)} onChange={e => setReminders({ ...reminders, monthlyStatements: e.target.checked })} />
+          <span>
+            Email each customer their statement on the 1st of every month
+            <span className="block text-xs text-[var(--muted)]">Customers with something open, using the &quot;Customer statement&quot; email above. A customer can be left out on their page.</span>
           </span>
         </label>
         {canEdit && (

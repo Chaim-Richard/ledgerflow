@@ -20,6 +20,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { parseLocalDate, cn, formatCurrency, workspaceYearMonth } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
+import InlineEdit from '../ui/InlineEdit';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { safeConfirm } from '../../lib/utils';
 import { effectiveRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import type { TaxComponent, TaxTreatment } from '../../lib/taxCodes';
 
@@ -132,13 +136,34 @@ interface TaxManagerProps {
 export default function TaxManager({ 
   user, 
   workspaceId = 'default', 
-  accounts = [],
-  taxRates = [],
-  onAddTaxRate,
-  onUpdateTaxRate,
-  onDeleteTaxRate
+  accounts: accountsProp,
+  taxRates: taxRatesProp,
+  onAddTaxRate: onAddProp,
+  onUpdateTaxRate: onUpdateProp,
+  onDeleteTaxRate: onDeleteProp
 }: TaxManagerProps = {}) {
   const transactions = useLedgerStore(state => state.transactions || []);
+  // The screen is opened from the menu with no props: it reads the workspace's own tax codes and
+  // accounts and saves through the normal path (it showed no codes and Add/Edit/Delete did
+  // nothing before; L-184)
+  const storeAccounts = useLedgerStore(state => state.accounts);
+  const storeTaxRates = useLedgerStore(state => state.taxRates);
+  const accounts = accountsProp ?? storeAccounts;
+  const taxRates = taxRatesProp ?? storeTaxRates;
+  const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
+  const canEdit = useCurrentRole() !== 'viewer';
+  const onAddTaxRate = onAddProp ?? (async (data: Partial<TaxRate>) => { await addEntity('taxRates', data, `Tax "${data.name}" added`); });
+  const onUpdateTaxRate = onUpdateProp ?? (async (id: string, data: Partial<TaxRate>) => { await updateEntity('taxRates', id, data, 'Tax saved'); });
+  const onDeleteTaxRate = onDeleteProp ?? (async (id: string) => {
+    const rate = taxRates.find(r => r.id === id);
+    if (!safeConfirm(`Delete the tax "${rate?.name || ''}"? Invoices and bills that used it keep their amounts.`)) return;
+    await deleteEntity('taxRates', id, 'Tax deleted');
+  });
+  /** A one-part tax's percentage, edited in place (documents already saved keep their tax). */
+  const saveRatePercent = (rate: TaxRate, percent: number) => {
+    const components = rate.components?.length === 1 ? [{ ...rate.components[0], rate: percent }] : rate.components;
+    return onUpdateTaxRate(rate.id, { rate: Math.round(percent * 1000) / 100000, ...(components ? { components } : {}) });
+  };
   
   const [selectedYear, setSelectedYear] = useState(workspaceYearMonth().year);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -309,15 +334,15 @@ export default function TaxManager({
         <div className="lg:col-span-4 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-black text-[var(--text)] tracking-tight uppercase font-display">Rate Protocols</h2>
-            <button 
+            {canEdit && <button type="button" aria-label="New tax"
               onClick={() => {
                 setEditingRate(null);
                 setIsModalOpen(true);
               }}
               className="w-10 h-10 bg-slate-900 text-white rounded-[32px] flex items-center justify-center hover:bg-slate-800 transition-all shadow-md active:scale-95"
             >
-              <Plus size={18} />
-            </button>
+              <Plus aria-hidden="true" size={18} />
+            </button>}
           </div>
 
           <div className="space-y-4">
@@ -330,16 +355,24 @@ export default function TaxManager({
                 <div className="absolute technical-grid inset-0 opacity-[0.02] pointer-events-none" />
                 <div className="flex items-center justify-between relative z-10">
                   <div className="space-y-1">
-                    <p className="text-sm font-black text-[var(--text)] leading-none uppercase tracking-tight">{rate.name}</p>
+                    <InlineEdit value={rate.name} label={`Name of tax ${rate.name}`} canEdit={canEdit}
+                      validate={v => (String(v).trim() ? null : 'A tax needs a name')} onSave={v => onUpdateTaxRate(rate.id, { name: String(v) })}
+                      className="text-sm font-black text-[var(--text)] leading-none uppercase tracking-tight" />
                     <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">{rate.type} Classification</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-black font-mono text-[var(--text)] tracking-tighter">{(rate.rate * 100).toFixed(rate.components?.some(c => !Number.isInteger(c.rate)) ? 3 : 1)}%</p>
+                    {/* one-part taxes: type a new percentage; taxes with several parts change in the dialog */}
+                    <InlineEdit kind="number" value={Math.round(rate.rate * 100000) / 1000} label={`Rate of tax ${rate.name} (%)`}
+                      canEdit={canEdit && (rate.components?.length ?? 0) <= 1}
+                      display={`${(rate.rate * 100).toFixed(rate.components?.some(c => !Number.isInteger(c.rate)) ? 3 : 1)}%`}
+                      validate={v => (Number(v) >= 0 && Number(v) <= 100 ? null : 'Between 0 and 100')}
+                      onSave={v => saveRatePercent(rate, Number(v))}
+                      className="text-2xl font-black font-mono text-[var(--text)] tracking-tighter" />
                     {rate.components && rate.components.length > 1 && <p className="text-[10px] text-[var(--muted)]">{rate.components.map(c => `${c.name} ${c.rate}%${c.compound ? ' (on top)' : ''}`).join(' + ')}</p>}
                     {rate.treatment && rate.treatment !== 'standard' && <p className="text-[10px] text-[var(--muted)]">{TAX_TREATMENTS[rate.treatment]}</p>}
                     <div className="flex items-center justify-end gap-3 mt-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setEditingRate(rate); setIsModalOpen(true); }} className="text-[var(--muted)] hover:text-[var(--text)] transition-colors"><Edit2 size={14} /></button>
-                      <button onClick={() => onDeleteTaxRate?.(rate.id)} className="text-[var(--muted)] hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
+                      {canEdit && <button type="button" aria-label={`Edit tax ${rate.name}`} onClick={() => { setEditingRate(rate); setIsModalOpen(true); }} className="text-[var(--muted)] hover:text-[var(--text)] transition-colors"><Edit2 aria-hidden="true" size={14} /></button>}
+                      {canEdit && <button type="button" aria-label={`Delete tax ${rate.name}`} onClick={() => { void onDeleteTaxRate(rate.id); }} className="text-[var(--muted)] hover:text-rose-500 transition-colors"><Trash2 aria-hidden="true" size={14} /></button>}
                     </div>
                   </div>
                 </div>
@@ -455,8 +488,8 @@ export default function TaxManager({
                 initial={editingRate}
                 onCancel={() => setIsModalOpen(false)}
                 onSave={async (data) => {
-                  if (editingRate) await onUpdateTaxRate?.(editingRate.id, data);
-                  else await onAddTaxRate?.(data);
+                  if (editingRate) await onUpdateTaxRate(editingRate.id, data);
+                  else await onAddTaxRate(data);
                   setIsModalOpen(false);
                 }}
               />

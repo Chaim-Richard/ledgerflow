@@ -8,7 +8,7 @@ import test, { afterEach, beforeEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import BillModal from '../components/purchases/BillModal';
+import BillModal, { type BillDraft } from '../components/purchases/BillModal';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import type { Bill, Workspace } from '../types';
@@ -19,7 +19,7 @@ const accounts = [makeChartAccount({ id: 'exp', name: 'Office supplies', type: '
 let fetched: string[] = [];
 
 function setup(initialBill?: Partial<Bill>) {
-  const saved: Partial<Bill>[] = [];
+  const saved: BillDraft[] = [];
   render(<BillModal isOpen onClose={() => {}} onSave={b => { saved.push(b); }} vendors={vendors} accounts={accounts} initialBill={initialBill} />);
   return saved;
 }
@@ -62,6 +62,18 @@ describe('Bill dialog', () => {
     assert.equal(bill.taxVersion, 2);
     assert.equal(bill.pricesIncludeTax, true);
     assert.deepEqual(bill.splits?.map(s => [s.accountId, s.amountCents]), [['exp', 10000], ['exp2', 5000]]);
+  });
+
+  test('Repeat (BE-08): the chosen frequency goes with the save; editing a bill offers no Repeat', async () => {
+    const saved = setup();
+    fillTwoLines();
+    fireEvent.change(screen.getByLabelText('Repeat'), { target: { value: 'monthly' } });
+    await click('Save & Close');
+    await waitFor(() => assert.equal(saved.length, 1));
+    assert.equal(saved[0].recurringInterval, 'monthly');
+    cleanup();
+    setup({ id: 'b1', vendorId: 'v1', number: 'V-1', amountCents: 100, dueDate: '2026-02-01', status: 'pending' });
+    assert.equal(screen.queryByLabelText('Repeat'), null);
   });
 
   test('amounts before tax: owed 165.00, tax 15.00', async () => {

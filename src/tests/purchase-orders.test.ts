@@ -3,7 +3,7 @@
  */
 import test, { describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { billLinesFromOrder, nextPoNumber } from '../lib/purchaseOrders';
+import { addOrderItem, billLinesFromOrder, canChangeOrder, canDeleteOrder, canMoveDelivery, changeOrderItem, lastOrderLines, nextPoNumber, removeOrderItem, vendorsByOrders } from '../lib/purchaseOrders';
 import { performThreeWayMatch } from '../lib/threeWayMatchEngine';
 import type { Bill, PurchaseOrder } from '../types';
 
@@ -43,5 +43,38 @@ describe('Purchase orders', () => {
     const bill = { id: 'b1', uid: 'u', workspaceId: 'w', vendorId: 'v1', amountCents: 2000, dueDate: '2026-10-01', status: 'pending', splits: billLinesFromOrder(po), metadata: { poId: 'po1' } } as Bill;
     const summary = performThreeWayMatch([po], [receipt], [bill]);
     assert.equal(summary.results[0].status, 'matched', JSON.stringify(summary.results[0]));
+  });
+});
+
+describe('Changing an order in place (I-22)', () => {
+  const desks = { id: 'a', description: 'Desks', quantity: 5, unitPriceCents: 45000, totalCents: 225000 };
+  const chairs = { id: 'b', description: 'Chairs', quantity: 2, unitPriceCents: 12050, totalCents: 24100 };
+
+  test('a line change recomputes the line and the order total', () => {
+    const po = order([desks, chairs]);
+    assert.deepEqual(changeOrderItem(po, 'b', { quantity: 3 }), { items: [desks, { ...chairs, quantity: 3, totalCents: 36150 }], totalAmountCents: 261150 });
+    assert.equal(changeOrderItem(po, 'a', { unitPriceCents: 40001 }).totalAmountCents, 200005 + 24100);
+    assert.equal(addOrderItem(po, { id: 'c', description: 'Lamp', quantity: 1.5, unitPriceCents: 999 }).totalAmountCents, 249100 + 1499);
+    assert.deepEqual(removeOrderItem(po, 'a'), { items: [chairs], totalAmountCents: 24100 });
+  });
+
+  test('what can change: vendor and lines until something arrives; delivery until received; delete only with nothing against it', () => {
+    const open = order([desks]);
+    const partly = { ...order([{ ...desks, receivedQuantity: 2 }]), status: 'partially_received' as const, receipts: [{ id: 'r' } as never] };
+    const billed = { ...order([desks]), status: 'billed' as const, billId: 'b1' };
+    assert.deepEqual([canChangeOrder(open), canMoveDelivery(open), canDeleteOrder(open)], [true, true, true]);
+    assert.deepEqual([canChangeOrder(partly), canMoveDelivery(partly), canDeleteOrder(partly)], [false, true, false]);
+    assert.deepEqual([canChangeOrder(billed), canMoveDelivery(billed), canDeleteOrder(billed)], [false, false, false]);
+    assert.deepEqual([canChangeOrder({ ...open, status: 'cancelled' }), canDeleteOrder({ ...open, status: 'cancelled' })], [false, true]);
+  });
+
+  test('"Same as last order" takes the vendor\'s newest order; vendors ordered from most come first', () => {
+    const older = { ...order([desks]), id: 'o1', poNumber: 'PO-2026-001', issueDate: '2026-08-01' };
+    const newer = { ...order([chairs]), id: 'o2', poNumber: 'PO-2026-002', issueDate: '2026-09-02' };
+    const other = { ...order([desks]), id: 'o3', vendorId: 'v2', issueDate: '2026-10-01' };
+    assert.deepEqual(lastOrderLines([older, newer, other], 'v1'), { poNumber: 'PO-2026-002', lines: [{ desc: 'Chairs', qty: '2', unitPrice: '120.50' }] });
+    assert.equal(lastOrderLines([older], 'nobody'), null);
+    const vendors = [{ id: 'v0', name: 'Alpha' }, { id: 'v2', name: 'Zed' }, { id: 'v1', name: 'Mid' }];
+    assert.deepEqual(vendorsByOrders(vendors, [older, newer, other]).map(v => v.id), ['v1', 'v2', 'v0']);
   });
 });

@@ -1,11 +1,9 @@
 import { recategorizeLines } from '../../lib/accountChoices';
-import { collection, doc, writeBatch } from '../../lib/db/firestore';
-import { db } from '../../firebase';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { Transaction, TransactionLine } from '../../types';
 import { toast } from 'sonner';
-import { safeAsync, getLocalDateISO, workspaceYearMonth } from '../../lib/utils';
+import { safeAsync, getLocalDateISO } from '../../lib/utils';
 import { OperationType } from '../../lib/firebaseUtils';
 import { useBillingStore } from '../../modules/billing/BillingService';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
@@ -147,47 +145,8 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
       return;
     }
 
-    // --- Autonomous Yearly Tax Law Provisioner ---
-    const txYearNum = data.date ? parseInt(data.date.split('-')[0]) : workspaceYearMonth().year;
-    const allTxs = useLedgerStore.getState().transactions;
-    const existingYears = new Set(allTxs.map(t => {
-      const yearStr = t.date ? t.date.split('-')[0] : '';
-      return yearStr ? parseInt(yearStr) : null;
-    }).filter(Boolean));
-
-    const isFirstTimeForNewYear = existingYears.size > 0 && !existingYears.has(txYearNum);
-
-    if (isFirstTimeForNewYear) {
-      queueMicrotask(async () => {
-        try {
-          const batch = writeBatch(db);
-          const defaultRates = [
-            { name: `FEDERAL COMPLIANCE: ${txYearNum}`, rate: 0.22, type: 'Income' },
-            { name: `STATE STATUTORY (SIT): ${txYearNum}`, rate: 0.05, type: 'Income' },
-            { name: `METROPOLITAN CITY LEVY: ${txYearNum}`, rate: 0.015, type: 'Sales' },
-            { name: `LOCAL COUNTY TRANSIT: ${txYearNum}`, rate: 0.005, type: 'Sales' }
-          ];
-
-          defaultRates.forEach(rate => {
-            const docRef = doc(collection(db, 'taxRates'));
-            batch.set(docRef, {
-              ...rate,
-              uid: user.uid,
-              workspaceId: currentWorkspaceId,
-              createdAt: new Date().toISOString()
-            });
-          });
-
-          await batch.commit();
-          toast.success(`Fiscal Horizon ${txYearNum} Active!`, {
-            description: `Auto-search locked in. Registered standard progressive bounds, state levies, and city/county margins.`,
-            duration: 8000
-          });
-        } catch (e) {
-          console.warn("Autonomous fiscal setup deferred", e);
-        }
-      });
-    }
+    // (A block here used to add four made-up tax rates — "Federal 22%", "State 5%"… — to the
+    // workspace the first time an entry fell in a new year; they then showed up as tax codes. L-185)
 
     // Deferred to ledger integrity stream
     setIsSyncing(true);

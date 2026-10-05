@@ -18,6 +18,7 @@ test('series in effect: stored, then the workspace field, then older fields, the
   assert.deepEqual(resolveSeries('bill', undefined, { numberingSeries: { bill: { prefix: 'B/', nextNumber: 3 } } }, '2026-10-05'), { prefix: 'B/', nextNumber: 3, padding: 4 });
   assert.deepEqual(resolveSeries('estimate', undefined, { numberingSeries: { estimatePrefix: 'Q', estimateNextNumber: 9 } }, '2026-10-05'), { prefix: 'Q', nextNumber: 9, padding: 4 });
   assert.deepEqual(resolveSeries('invoice', undefined, {}, '2026-10-05'), { prefix: 'INV-2026-', nextNumber: 1, padding: 4 });
+  assert.deepEqual(['creditNote', 'vendorCredit'].map(t => resolveSeries(t as 'creditNote', undefined, {}, '2026-10-05').prefix), ['CN-2026-', 'VC-2026-']);
   assert.equal(formatDocumentNumber({ prefix: 'INV-', nextNumber: 42, padding: 5 }), 'INV-00042');
   assert.equal(highestUsed(['INV-0007', 'INV-0012', 'INV-12a', 'X-0099', 7, null, 'INV-'], 'INV-'), 12);
 });
@@ -65,6 +66,8 @@ describe('Numbering settings (database)', { skip: !url && 'LF_TEST_DATABASE_URL 
     const invoice = series.find((s: { type: string }) => s.type === 'invoice');
     assert.deepEqual([invoice.next, invoice.highestUsed], ['INV-2026-0010', 9]);
     assert.equal(series.find((s: { type: string }) => s.type === 'bill').next, 'BIL-2026-0001');
+    assert.deepEqual(series.map((s: { type: string }) => s.type), ['invoice', 'bill', 'estimate', 'creditNote', 'vendorCredit']);
+    assert.equal(series.find((s: { type: string }) => s.type === 'creditNote').next, 'CN-2026-0001');
   });
 
   test('a number already used is refused; a new prefix starts fresh; a bookkeeper cannot change it', async () => {
@@ -80,6 +83,8 @@ describe('Numbering settings (database)', { skip: !url && 'LF_TEST_DATABASE_URL 
     const { allocateNextNumber } = await import('../server/services/numberingService');
     assert.equal(await allocateNextNumber(db as never, ws, 'invoice'), 'F2027/001');
     assert.equal(await allocateNextNumber(db as never, ws, 'invoice'), 'F2027/002');
+    assert.equal(await allocateNextNumber(db as never, ws, 'vendorCredit', '2026-10-05'), 'VC-2026-0001');
+    assert.equal(await allocateNextNumber(db as never, ws, 'vendorCredit', '2026-10-05'), 'VC-2026-0002');
     const audit = await db.collection('auditLogs').where('workspaceId', '==', ws).get();
     assert.ok(audit.docs.some(d => d.data().action === 'NUMBERING_CHANGED'));
   });
