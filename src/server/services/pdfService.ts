@@ -27,6 +27,8 @@ export interface PdfDocument {
   id?: string;
   number?: string;
   date?: string;
+  /** draft / void / paid … decides the watermark (Y-16) */
+  status?: string;
   dueDate?: string;
   paymentTerms?: string;
   customerName?: string;
@@ -66,6 +68,8 @@ export interface PdfLayout {
   qrUrl?: string;
   /** #RRGGBB */
   color: string;
+  /** Y-16: DRAFT, PAID or VOID across every page, so a draft or a cancelled document isn't mistaken for a live one. */
+  watermark?: string;
   logo?: Buffer;
 }
 
@@ -92,6 +96,18 @@ function logoBytes(dataUrl?: string): Buffer | undefined {
   if (!dataUrl || !LOGO_DATA_URL.test(dataUrl)) return undefined;
   const bytes = Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64');
   return bytes.length > 0 && bytes.length <= MAX_LOGO_BYTES ? bytes : undefined;
+}
+
+const STAMPED: ReadonlySet<PdfDocumentType> = new Set(['invoice', 'estimate', 'creditNote', 'purchaseOrder', 'bill', 'vendorCredit']);
+
+/** The word stamped across a document by its status (statements and receipts are never stamped). */
+export function watermarkFor(type: PdfDocumentType, status: unknown): string | undefined {
+  if (!STAMPED.has(type)) return undefined;
+  const s = String(status || '').toLowerCase();
+  if (s === 'draft') return 'DRAFT';
+  if (s === 'void' || s === 'cancelled') return 'VOID';
+  if (s === 'paid' && (type === 'invoice' || type === 'bill')) return 'PAID';
+  return undefined;
 }
 
 export function layoutDocumentPdf(
@@ -160,6 +176,7 @@ export function layoutDocumentPdf(
     terms: clean((branding.terms as Partial<Record<PdfDocumentType, string>> | undefined)?.[type], 2000) || undefined,
     footer: clean(branding.footer, 300) || undefined,
     qrUrl: qrWanted ? options.paymentUrl : undefined,
+    watermark: watermarkFor(type, doc.status),
     color: brandColor(branding.color),
     logo: logoBytes(branding.logoDataUrl),
   };
@@ -301,6 +318,13 @@ export async function generateDocumentPdf(
     pdf.font(body).fontSize(8); muted();
     if (layout.footer) text(layout.footer, PAGE.margin, fy, 380);
     text(`Page ${i - range.start + 1} of ${range.count}`, RIGHT - 100, fy, 100, 'right');
+    if (layout.watermark) {
+      pdf.save();
+      pdf.rotate(-30, { origin: [PAGE.width / 2, PAGE.height / 2] });
+      pdf.font(bold).fontSize(110).fillColor(layout.watermark === 'PAID' ? '#047857' : '#B91C1C').fillOpacity(0.1);
+      pdf.text(layout.watermark, 0, PAGE.height / 2 - 60, { width: PAGE.width, align: 'center', lineBreak: false });
+      pdf.restore();
+    }
   }
   pdf.end();
   return done;

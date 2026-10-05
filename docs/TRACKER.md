@@ -1978,7 +1978,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Y-13 Brand colour on documents (title, rule and table header)
 - [x] Y-14 Custom footer / terms (footer on every page, terms at the end, address under the name)
 - [x] Y-15 QR code on invoices (to the invoice's payment page once sent; can be switched off)
-- [ ] Y-16 Watermark
+- [x] Y-16 Watermark: DRAFT, VOID (void/cancelled) and PAID (invoices, bills) stamped across every page of document PDFs; statements and receipts never (tested)
 - [x] Y-17 Page numbers ("Page x of y"; long documents run over pages with the table header repeated)
 - [ ] Y-18 Batch PDF zip
 - [ ] Y-19 Print stylesheet
