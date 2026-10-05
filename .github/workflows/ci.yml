@@ -10,7 +10,7 @@ jobs:
   validate:
     name: Lint, Typecheck, and Test
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
 
     # A plain Postgres with the Supabase migrations applied: the database security rules
     # tests and the server data-layer tests run against it.
@@ -70,13 +70,61 @@ jobs:
       - name: Run Accounting & Security Test Suites (with the coverage gate; it only goes up)
         run: npm run test:cov
 
-      - name: Unit tests in two other time zones
-        run: |
-          TZ=Pacific/Auckland npm test
-          TZ=America/Los_Angeles npm test
-
       - name: Security audit
         run: npm audit --audit-level=high
+
+  # The whole unit suite again in a time zone ahead of and one behind UTC, in parallel with the
+  # job above (run one after the other they took the job past its time limit).
+  timezones:
+    name: Unit tests in ${{ matrix.tz }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        tz: [Pacific/Auckland, America/Los_Angeles]
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lf_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      LF_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/lf_test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_ENV: development
+          npm_config_production: false
+          HUSKY: 0
+
+      - name: Prepare the test database (Supabase migrations)
+        run: npm run db:test-setup
+
+      - name: Unit tests
+        run: npm test
+        env:
+          TZ: ${{ matrix.tz }}
 
   e2e:
     name: Playwright E2E Smoke Suite
