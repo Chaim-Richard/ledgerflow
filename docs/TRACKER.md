@@ -1530,8 +1530,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] K-09 Credit note refunds (DR A/R, CR cash; tested)
 - [x] K-10 Vendor credit refunds (DR cash, CR A/P; tested)
 - [x] K-11 Payment links: emailed link → pay online → payment recorded, invoice paid, team notified (tested; needs Stripe keys live)
-- [ ] K-12 Item categories
-- [ ] K-13 Inventory adjustments
+- [x] K-12 Item categories: filter chips on Inventory, existing categories suggested in the item form (renaming a category across items: BA-05)
+- [x] K-13 Inventory adjustments: Adjust stock per item (correction, stock received with average cost, opening stock), posted at cost with the quantity in one database transaction (tested)
 - [ ] K-14 Account groups
 - [ ] K-15 Tags as an entity
 - [ ] K-16 Revenue recognition schedules
@@ -1732,6 +1732,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-170 Document PDFs printed only the first 15 lines (the total still covered all of them), on one page, and only Latin letters (Hebrew names came out as garbage). PDFs are now made with pdfkit and an embedded font (DejaVu Sans): every line over as many pages as needed, Hebrew and mixed Hebrew/English text in reading order, the due date and payment terms printed (tested, including the text read back from the PDF)
 - [x] L-171 Customers and vendors could not be edited at all (the forms only added), so a wrong email or name could not be fixed; one shared form now adds and edits (Edit on the contact page). Bills had no currency field, so a bill from a foreign supplier could only be entered in the home currency (tested)
 - [x] L-172 **SECURITY** `/api/v1/inventory/adjust` and `/cogs` only checked membership: a viewer could post stock entries and change quantities. Both now need owner, accountant or bookkeeper; `/adjust` also hung (no answer) when its database transaction failed, and both labelled entries USD in any workspace. Stock changes now go through one service: every line in one entry with the new quantities, in the workspace currency, never below zero (tested)
+- [x] L-173 Stock quantity could be typed into the item form: it changed what is on hand without any entry, so Inventory on the balance sheet and the stock list drifted apart (the record-a-sale dialog also lowered the stock a second time, and fell back to a made-up $50 cost and to any asset or expense account). Quantity now changes only through the server (database rule + tested); new items' opening stock is posted to Opening Balance Equity
+- [x] L-174 Inventory showed each person only the items they created; teammates now see all the workspace's items
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
@@ -1784,7 +1786,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] M-11 Price lists
 - [ ] M-12 Delivery notes
 - [ ] M-13 Commodities
-- [ ] M-14 Item categories
+- [x] M-14 Item categories (= K-12)
 - [ ] M-15 Warehouses (deferred)
 - [ ] M-16 Purchase requisitions
 - [ ] M-17 Bulk action bar
@@ -1931,8 +1933,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] W-01 Stock per location
 - [ ] W-02 Stock-moves ledger
 - [x] W-03 COGS posting on sale + stock moves with the ledger (tested)
-- [ ] W-04 Stock count
-- [ ] W-05 Count variance account
+- [x] W-04 Stock count: enter counted quantities for any items; one entry for all differences (tested)
+- [x] W-05 Count variance account: chosen per count (default: an expense named shrinkage/adjustment/variance, else Cost of Goods Sold)
 - [ ] W-06 Negative-stock policy
 - [ ] W-07 Assembly / kitting
 - [ ] W-08 Backorder + drop-ship
@@ -2031,7 +2033,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BA-01 Merge duplicate contacts dialog
 - [ ] BA-02 Vendor opening balance
 - [ ] BA-03 Allocate landed cost
-- [ ] BA-04 Inventory adjustment form
+- [x] BA-04 Inventory adjustment form (= K-13)
 - [ ] BA-05 Item category management
 - [ ] BA-06 Add-a-currency dialog
 - [ ] BA-07 Numbering dialog per document type

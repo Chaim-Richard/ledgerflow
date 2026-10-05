@@ -164,6 +164,14 @@ select pg_temp.expect_ok('customer with people, tags, currency, address and note
 select pg_temp.expect_ok('template account with a role (FX rounding)', 'u-acct',
   $$insert into "chartAccounts"(id,data) values ('a-fx', '{"workspaceId":"ws1","name":"FX Rounding","type":"expense","category":"Rounding Differences","subtype":"rounding","role":"fx_rounding","code":"8999"}')$$);
 
+-- stock quantities change only through the server (L-173)
+select pg_temp.expect_ok('item with a name and cost', 'u-book',
+  $$insert into inventory(id,data) values ('i1', '{"workspaceId":"ws1","name":"Widget","sku":"W1","unitCostCents":400,"quantityAtHand":0}')$$);
+select pg_temp.expect_ok('edit an item''s price', 'u-book',
+  $$select lf_update('inventory','i1','{"unitPriceCents":900}'::jsonb)$$);
+select pg_temp.expect_denied('change an item''s quantity in the browser', 'u-book',
+  $$select lf_update('inventory','i1','{"quantityAtHand":50}'::jsonb)$$);
+
 -- imported records (server-created with importBatchId) stay editable; the batch id is fixed
 do $$ begin
   perform set_config('request.jwt.claims', '', true);

@@ -25,7 +25,9 @@ import {
   ShieldAlert,
   TrendingUp,
   TrendingDown,
-  ShoppingCart
+  ShoppingCart,
+  SlidersHorizontal,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTimeout } from '../../hooks/useTimeout';
@@ -43,8 +45,12 @@ import { db } from '../../firebase';
 import { InventoryItem } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isPostable } from '../../lib/txFilters';
-import { resolveAccountRole } from '../../lib/accountUtils';
-import { Labelled } from '../ui/Labelled';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { defaultOffsetAccount, inventoryAccountsOf } from '../../lib/inventoryAccounts';
+import { adjustStockRequest } from '../../services/stockRequests';
+import CogsDialog from './CogsDialog';
+import StockAdjustDialog from './StockAdjustDialog';
+import StockCountDialog from './StockCountDialog';
 
 export default function Inventory() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -57,8 +63,11 @@ export default function Inventory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showRuleIntel, setShowRuleIntel] = useState(false);
   const [cogsItem, setCogsItem] = useState<InventoryItem | null>(null);
-  const [cogsQty, setCogsQty] = useState<number>(1);
-  const [isPostingCogs, setIsPostingCogs] = useState(false);
+  const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
+  const [isCounting, setIsCounting] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const baseCurrency = useLedgerStore(s => s.baseCurrency) || 'USD';
+  const canChangeStock = useCurrentRole() !== 'viewer';
   const { setSafeTimeout } = useTimeout();
 
   useEffect(() => {
@@ -67,10 +76,10 @@ export default function Inventory() {
       return;
     }
 
+    // every member sees the workspace's items, not only the ones they created (L-174)
     const q = query(
       collection(db, 'inventory'),
-      where('workspaceId', '==', workspaceId),
-      where('uid', '==', uid)
+      where('workspaceId', '==', workspaceId)
     );
 
     const unsubInventory = onSnapshot(q, (snapshot) => {
@@ -94,62 +103,6 @@ export default function Inventory() {
 
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
-  const handleRecognizeCogs = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!cogsItem || !workspaceId || cogsQty <= 0) return;
-    if (cogsQty > cogsItem.quantityAtHand) {
-      toast.error(`Cannot sell ${cogsQty} units: only ${cogsItem.quantityAtHand} on hand.`);
-      return;
-    }
-
-    const inventoryAcc = accounts.find(a => resolveAccountRole(a) === 'inventory' || a.category === 'Inventory') || accounts.find(a => a.type === 'asset');
-    const cogsAcc = accounts.find(a => resolveAccountRole(a) === 'cogs' || a.category === 'COGS' || a.category === 'Direct Costs') || accounts.find(a => a.type === 'cost_of_goods' || a.type === 'expense');
-
-    if (!inventoryAcc || !cogsAcc) {
-      toast.error('Could not locate Inventory asset and COGS expense accounts in Chart of Accounts.');
-      return;
-    }
-
-    setIsPostingCogs(true);
-    try {
-      const user = useAuthStore.getState().user;
-      const token = user ? await user.getIdToken() : '';
-      const res = await fetch('/api/v1/inventory/cogs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          workspaceId,
-          itemId: cogsItem.id,
-          quantitySold: cogsQty,
-          inventoryAccountId: inventoryAcc.id,
-          cogsAccountId: cogsAcc.id
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'Failed to record COGS');
-      }
-
-      // Update local inventory quantity
-      const newQty = Math.max(0, cogsItem.quantityAtHand - cogsQty);
-      await updateDoc(doc(db, 'inventory', cogsItem.id), {
-        quantityAtHand: newQty,
-        updatedAt: new Date().toISOString()
-      });
-
-      toast.success(`Recognized COGS for ${cogsQty} units (${formatCurrency(data.totalCogsCents)})`);
-      setCogsItem(null);
-    } catch (err) {
-      toast.error((err as Error).message || 'Failed to recognize COGS');
-    } finally {
-      setIsPostingCogs(false);
-    }
-  };
-
   const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingItem) return;
@@ -161,7 +114,7 @@ export default function Inventory() {
       description: formData.get('description') as string,
       unitPriceCents: TruthEngine.parseAmountToCents(formData.get('unitPrice') as string),
       unitCostCents: TruthEngine.parseAmountToCents(formData.get('unitCost') as string),
-      quantityAtHand: parseInt(formData.get('quantity') as string, 10) || 0,
+      // the quantity changes only through Adjust stock, a count or a sale, which post to the books
       reorderPoint: parseInt(formData.get('reorderPoint') as string, 10) || 0,
       measurementUnit: formData.get('measurementUnit') as string || undefined,
       unitsPerPackage: formData.get('unitsPerPackage') ? parseInt(formData.get('unitsPerPackage') as string, 10) || 1 : undefined,
@@ -189,7 +142,7 @@ export default function Inventory() {
       description: formData.get('description') as string,
       unitPriceCents: TruthEngine.parseAmountToCents(formData.get('unitPrice') as string),
       unitCostCents: TruthEngine.parseAmountToCents(formData.get('unitCost') as string),
-      quantityAtHand: parseInt(formData.get('quantity') as string, 10) || 0,
+      quantityAtHand: 0,
       reorderPoint: parseInt(formData.get('reorderPoint') as string, 10) || 0,
       measurementUnit: formData.get('measurementUnit') as string || undefined,
       unitsPerPackage: formData.get('unitsPerPackage') ? parseInt(formData.get('unitsPerPackage') as string, 10) || 1 : undefined,
@@ -197,12 +150,30 @@ export default function Inventory() {
       createdAt: new Date().toISOString()
     };
 
+    const openingQty = Number(formData.get('quantity')) || 0;
     try {
-      await addDoc(collection(db, 'inventory'), newItem);
+      const ref = await addDoc(collection(db, 'inventory'), newItem);
       setIsAdding(false);
-      toast.success('Inventory item added');
+      if (openingQty > 0) await recordOpeningStock(ref.id, newItem.name, openingQty);
+      else toast.success('Inventory item added');
     } catch {
       toast.error('Failed to add item');
+    }
+  };
+
+  /** Opening stock of a new item: DR Inventory, CR Opening Balance Equity, at the item's cost. */
+  const recordOpeningStock = async (itemId: string, name: string, quantity: number) => {
+    const inventoryAcc = inventoryAccountsOf(accounts)[0];
+    const equityAcc = defaultOffsetAccount(accounts, 'opening');
+    if (!workspaceId || !inventoryAcc || !equityAcc) {
+      toast.warning(`${name} added with no stock`, { description: 'To record opening stock, add an Inventory and an Opening Balance Equity account, then use Adjust stock.' });
+      return;
+    }
+    try {
+      await adjustStockRequest({ workspaceId, itemId, quantityChange: quantity, type: 'opening', inventoryAccountId: inventoryAcc.id, offsetAccountId: equityAcc.id });
+      toast.success(`${name} added with ${quantity} in stock`);
+    } catch (err) {
+      toast.warning(`${name} added with no stock`, { description: `Opening stock not recorded: ${(err as Error).message}. Use Adjust stock.` });
     }
   };
 
@@ -226,20 +197,17 @@ export default function Inventory() {
     }
   };
 
-  const filteredItems = items.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const categories = useMemo(() => [...new Set(items.map(i => (i.category || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [items]);
+  const matches = (item: InventoryItem) =>
+    (!categoryFilter || (item.category || '').trim() === categoryFilter) &&
+    (item.name.toLowerCase().includes(searchTerm.toLowerCase()) || (item.sku || '').toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredItems = items.filter(matches);
 
-  const displayItems = showRuleIntel ? economicItems.filter((i) =>
-    i.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    i.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  ) : filteredItems as ReturnType<typeof StrategicEngine.analyzeUnitEconomics>;
+  const displayItems = showRuleIntel ? economicItems.filter(matches) : filteredItems as ReturnType<typeof StrategicEngine.analyzeUnitEconomics>;
 
 
   const closeItemDialog = () => { setIsAdding(false); setEditingItem(null); };
   const { dialogProps: itemDialogProps, titleId: itemTitleId } = useDialog(closeItemDialog, isAdding || !!editingItem);
-  const { dialogProps: cogsDialogProps, titleId: cogsTitleId } = useDialog(() => setCogsItem(null), !!cogsItem);
 
   return (
     <div className="space-y-8">
@@ -287,6 +255,17 @@ export default function Inventory() {
            </button>
 
            <div className="h-12 w-px bg-slate-200 opacity-20 hidden xl:block" />
+
+           {canChangeStock && items.length > 0 && (
+             <button
+               type="button"
+               onClick={() => setIsCounting(true)}
+               className="px-8 py-4 rounded-[32px] font-black text-xs uppercase tracking-widest border-2 bg-[var(--surface)] text-[var(--text)] border-[var(--line)] hover:border-slate-800 flex items-center gap-3"
+             >
+               <ClipboardList aria-hidden="true" size={18} />
+               Stock count
+             </button>
+           )}
 
            <button 
              onClick={() => setIsAdding(true)}
@@ -373,6 +352,18 @@ export default function Inventory() {
            </div>
         </div>
       </div>
+
+      {categories.length > 0 && (
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by category">
+          {['', ...categories].map(c => (
+            <button key={c || 'all'} type="button" aria-pressed={categoryFilter === c} onClick={() => setCategoryFilter(c)}
+              className={cn('px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors',
+                categoryFilter === c ? 'bg-[var(--text)] text-[var(--surface)] border-[var(--text)]' : 'bg-[var(--surface)] text-[var(--text)] border-[var(--line)]')}>
+              {c || 'All categories'}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="bg-[var(--surface)] rounded-[40px] border border-[var(--line)] overflow-hidden shadow-sm">
         <table className="w-full text-left border-collapse">
@@ -534,15 +525,20 @@ export default function Inventory() {
                   <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     {item.quantityAtHand > 0 && (
                       <button 
-                        onClick={() => {
-                          setCogsItem(item);
-                          setCogsQty(1);
-                        }}
+                        onClick={() => setCogsItem(item)}
                         title="Recognize COGS / Record Sale"
                         className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg border border-emerald-200 text-xs font-semibold flex items-center gap-1.5 transition-all"
                       >
                         <ShoppingCart aria-hidden="true" size={12} />
                         <span className="hidden lg:inline">COGS</span>
+                      </button>
+                    )}
+                    {canChangeStock && (
+                      <button type="button" aria-label={`Adjust stock of ${item.name}`} title="Adjust stock"
+                        onClick={() => setAdjustItem(item)}
+                        className="p-2 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
+                      >
+                        <SlidersHorizontal aria-hidden="true" size={14} className="text-[var(--muted)]" />
                       </button>
                     )}
                     <button aria-label={`Edit item ${item.name}`}
@@ -631,10 +627,14 @@ export default function Inventory() {
                   <input 
                     id="inv-category"
                     name="category" 
+                    list="inv-category-options"
                     defaultValue={editingItem?.category}
                     className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
+                <datalist id="inv-category-options">
+                  {categories.map(c => <option key={c} value={c} />)}
+                </datalist>
                 <div className="space-y-2">
                   <label htmlFor="inv-unit-cost" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Unit Cost ($)</label>
                   <input 
@@ -659,17 +659,34 @@ export default function Inventory() {
                     className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
-                <div className="space-y-2">
-                  <label htmlFor="inv-quantity" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Quantity at Hand</label>
-                  <input 
-                    id="inv-quantity"
-                    name="quantity" 
-                    type="number" 
-                    defaultValue={editingItem?.quantityAtHand}
-                    required 
-                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
-                  />
-                </div>
+                {editingItem ? (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Quantity at Hand</p>
+                    <div className="flex items-center justify-between px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] font-bold">
+                      <span className="tabular-nums">{editingItem.quantityAtHand}</span>
+                      {canChangeStock && (
+                        <button type="button" onClick={() => { const it = editingItem; setEditingItem(null); setAdjustItem(it); }} className="text-xs font-semibold text-emerald-700 hover:underline">
+                          Adjust stock
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label htmlFor="inv-quantity" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Opening stock</label>
+                    <input
+                      id="inv-quantity"
+                      name="quantity"
+                      type="number"
+                      min="0"
+                      step="any"
+                      defaultValue={0}
+                      aria-describedby="inv-quantity-help"
+                      className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold"
+                    />
+                    <p id="inv-quantity-help" className="text-[10px] text-[var(--muted)]">Recorded at the unit cost against Opening Balance Equity.</p>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <label htmlFor="inv-reorder-point" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Reorder Point</label>
                   <input 
@@ -718,81 +735,17 @@ export default function Inventory() {
           </div>
         )}
 
-        {cogsItem && (
-          <div {...cogsDialogProps} className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setCogsItem(null)}
-              className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-[var(--surface)] rounded-[32px] shadow-2xl border border-[var(--line)] overflow-hidden"
-            >
-              <div className="p-6 border-b border-[var(--line)] flex items-center justify-between">
-                <div>
-                  <h2 id={cogsTitleId} className="text-lg font-black text-[var(--text)] tracking-tight">
-                    Recognize COGS / Record Sale
-                  </h2>
-                  <p className="text-xs text-[var(--muted)] font-mono mt-0.5">{cogsItem.name} ({cogsItem.sku})</p>
-                </div>
-                <button aria-label="Close cost of goods sold dialog"
-                  onClick={() => setCogsItem(null)} 
-                  className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
-                >
-                  <X aria-hidden="true" size={18} className="text-zinc-400" />
-                </button>
-              </div>
-              <form onSubmit={handleRecognizeCogs} className="p-6 space-y-4">
-                <div className="p-4 bg-[var(--ink)] rounded-2xl border border-[var(--line)] text-xs space-y-1.5">
-                  <div className="flex justify-between">
-                    <span className="text-[var(--muted)]">Available Stock:</span>
-                    <span className="font-bold text-[var(--text)]">{cogsItem.quantityAtHand} units</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--muted)]">Blended Unit Cost:</span>
-                    <span className="font-bold text-[var(--text)] tabular-nums">{formatCurrency(cogsItem.unitCostCents || 5000)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--muted)]">Estimated Total COGS:</span>
-                    <span className="font-bold text-emerald-600 font-mono tabular-nums">
-                      {formatCurrency(cogsQty * (cogsItem.unitCostCents || 5000))}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Labelled labelClassName="text-[10px] font-bold text-zinc-400 uppercase tracking-widest" label="Units Sold / Dispatched">
-                    <input 
-                      type="number" 
-                      min="1" 
-                      max={cogsItem.quantityAtHand}
-                      value={cogsQty} 
-                      onChange={(e) => setCogsQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                      required 
-                      className="w-full px-5 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900 font-bold" 
-                    />
-                  </Labelled>
-                </div>
-
-                <div className="pt-2">
-                  <button 
-                    type="submit" 
-                    disabled={isPostingCogs}
-                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-900/20 disabled:opacity-50"
-                  >
-                    {isPostingCogs ? 'Posting to Ledger...' : `Post ${cogsQty} Units COGS to Ledger`}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
       </AnimatePresence>
+
+      {cogsItem && workspaceId && (
+        <CogsDialog item={cogsItem} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setCogsItem(null)} />
+      )}
+      {adjustItem && workspaceId && (
+        <StockAdjustDialog item={adjustItem} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setAdjustItem(null)} />
+      )}
+      {isCounting && workspaceId && (
+        <StockCountDialog items={items} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setIsCounting(false)} />
+      )}
     </div>
   );
 }
