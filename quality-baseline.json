@@ -5,7 +5,7 @@
   "blankNoOpener": 0,
   "consoleLog": 0,
   "serverTsLines": 189,
-  "filesOver800": 1,
+  "filesOver800": 0,
   "orphanFiles": 0,
   "eslintWarnings": 3,
   "untestedViews": 44,
