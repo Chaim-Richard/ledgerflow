@@ -2083,17 +2083,17 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION BC — DASHBOARD WIDGETS
 
-- [ ] BC-01 Configurable widget grid
+- [x] BC-01 Configurable widget grid
 - [ ] BC-02 Per-role dashboards
-- [ ] BC-03 Dashboard date range
+- [x] BC-03 Dashboard date range
 - [ ] BC-04 Widget refresh
-- [ ] BC-05 Prior-period comparison
-- [ ] BC-06 KPI sparklines
-- [ ] BC-07 KPI drill-through
-- [ ] BC-08 Receivables widget
-- [ ] BC-09 Payables widget
-- [ ] BC-10 Account balance widget
-- [ ] BC-11 Bank feed health widget
+- [x] BC-05 Prior-period comparison
+- [x] BC-06 KPI sparklines
+- [x] BC-07 KPI drill-through
+- [x] BC-08 Receivables widget
+- [x] BC-09 Payables widget
+- [x] BC-10 Account balance widget
+- [~] BC-11 Bank feed health widget — C-16 status/reconnect UI ready; last successful sync timestamp requires the reserved server route/storage contract (no invented timestamp).
 
 # SECTION BD — ACCOUNTANT PERSONA
 
