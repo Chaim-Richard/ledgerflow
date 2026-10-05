@@ -25,6 +25,8 @@ export interface InlineEditProps {
   validate?: (next: string | number) => string | null;
   className?: string;
   inputClassName?: string;
+  /** False when the caller shows its own retry after a failed save (the box then just closes). */
+  reopenOnFailure?: boolean;
 }
 
 /**
@@ -33,7 +35,7 @@ export interface InlineEditProps {
  * Suggestions from the workspace's own data appear while typing (I-23).
  */
 export default function InlineEdit({
-  value, label, onSave, kind = 'text', options, suggestions, placeholder, canEdit = true, display, validate, className, inputClassName,
+  value, label, onSave, kind = 'text', options, suggestions, placeholder, canEdit = true, display, validate, className, inputClassName, reopenOnFailure = true,
 }: InlineEditProps) {
   const listId = useId();
   const [editing, setEditing] = useState(false);
@@ -74,6 +76,7 @@ export default function InlineEdit({
     }
     if (failure !== null) {
       toast.error(`${label} not saved`, { description: failure });
+      if (!reopenOnFailure) return;
       // what was typed isn't lost: the box opens again with it and the reason (Esc gives up)
       done.current = false;
       setError(failure);
