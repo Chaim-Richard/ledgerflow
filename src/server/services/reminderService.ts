@@ -51,11 +51,14 @@ export async function runReminders(db: Firestore, now = new Date(), baseUrl?: st
     const { email: toEmail, paper: toDeliver } = separatePaperReminders(due, paper);
     for (const reminder of toDeliver) {
       const invoice = invoiceById.get(reminder.invoiceId);
+      // the counters only move when an email goes, so the step comes from how late it is: one note per
+      // reminder day (3 days late, 14 days late…), not a new one every day (L-191)
+      const step = Math.max(reminder.step, settings.daysAfterDue.filter(d => reminder.daysOverdue >= d).length);
       await notify(db, {
         workspaceId: wsDoc.id, workspace, kind: 'invoice.paper_copy',
         title: `Reminder to deliver for invoice ${invoice?.number || reminder.invoiceId}`,
-        message: `${invoice?.customerName || 'The customer'} is owed ${formatCurrency(calculateAmountDue(invoice || {}), currencyOf(invoice, workspace))} and gets paper copies, not emails — print or post reminder ${reminder.step}.`,
-        eventKey: `invoice.paper_copy:${reminder.invoiceId}:${today}`, recordId: reminder.invoiceId,
+        message: `${invoice?.customerName || 'The customer'} is owed ${formatCurrency(calculateAmountDue(invoice || {}), currencyOf(invoice, workspace))} and gets paper copies, not emails — print or post reminder ${step}.`,
+        eventKey: `invoice.paper_copy:${reminder.invoiceId}:${step}`, recordId: reminder.invoiceId,
       });
     }
     for (const reminder of toEmail) {
