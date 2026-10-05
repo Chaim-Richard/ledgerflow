@@ -53,8 +53,8 @@ describe('The spread plan', () => {
       makeChartAccount({ id: 'ins', name: 'Prepaid insurance (liability by mistake)', type: 'liability', category: 'Current Liabilities' }),
     ];
     assert.equal(prepaidAccount(accounts)?.id, 'pe');
-    assert.equal(prepaidAccount(accounts, { prepaidExpenses: 'vp' })?.id, 'vp', 'the Settings mapping wins');
-    assert.equal(prepaidAccount(accounts, { prepaidExpenses: 'ins' })?.id, 'pe', 'a mapped account that is not an asset is ignored');
+    assert.equal(prepaidAccount(accounts, { 'prepaid expenses': 'vp' })?.id, 'vp', 'the Settings mapping wins');
+    assert.equal(prepaidAccount(accounts, { 'prepaid expenses': 'ins' })?.id, 'pe', 'a mapped account that is not an asset is ignored');
     assert.equal(prepaidAccount(accounts.slice(0, 1)), undefined);
   });
 });

@@ -17,7 +17,7 @@ export function advanceAccount(
   mappings?: Record<string, string | undefined>,
 ): ChartAccount | undefined {
   const usable = accounts.filter(a => !a.isArchived && a.isActive !== false);
-  const mapped = usable.find(a => a.id === (direction === 'received' ? mappings?.customerDeposits : mappings?.vendorPrepayments));
+  const mapped = usable.find(a => a.id === (direction === 'received' ? mappings?.['customer deposits'] : mappings?.['vendor prepayments']));
   if (mapped) return mapped;
   if (direction === 'received') {
     return usable.find(a => resolveAccountRole(a) === 'liability' && /deposit|advance|unearned|retainer/i.test(a.name || ''));

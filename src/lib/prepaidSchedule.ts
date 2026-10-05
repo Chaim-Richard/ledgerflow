@@ -57,10 +57,10 @@ export function spreadPlan(input: SpreadInput): Array<{ date: string; amountCent
   return splitEvenly(input.amountCents, input.months).map((amountCents, i) => ({ date: monthEnd(addMonths(input.startMonth, i)), amountCents, installment: i + 1 }));
 }
 
-/** The Prepaid Expenses asset (the Settings mapping, else an asset account named "prepaid"), or undefined. */
+/** The Prepaid Expenses asset (Settings → Defaults, else an asset account named "prepaid"), or undefined. */
 export function prepaidAccount(accounts: ChartAccount[], mappings?: Record<string, string | undefined>): ChartAccount | undefined {
   const usable = accounts.filter(a => !a.isArchived && a.isActive !== false);
-  return usable.find(a => a.id === mappings?.prepaidExpenses && resolveAccountRole(a) === 'asset')
+  return usable.find(a => a.id === mappings?.['prepaid expenses'] && resolveAccountRole(a) === 'asset')
     || usable.find(a => resolveAccountRole(a) === 'asset' && /prepaid|prepayment/i.test(a.name || '') && !/vendor/i.test(a.name || ''));
 }
 
@@ -83,10 +83,12 @@ export function billExpenseLine(bill: BillLines, accounts: ChartAccount[]): { ac
   return best ? { accountId: best[0], baseCents: Math.min(Math.round(best[1] * rate), Math.round((Number(bill.amountCents) || 0) * rate)) } : undefined;
 }
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 /** "Spread over 12 months from Sep 2026 · 2 of 12 taken", as of `today`. */
 export function spreadProgress(schedule: { months: number; startMonth: string }, today: string): string {
   const [y, m] = schedule.startMonth.split('-').map(Number);
-  const name = new Date(Date.UTC(y, m - 1, 1)).toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+  const name = `${MONTH_NAMES[m - 1]} ${y}`;
   const taken = Array.from({ length: schedule.months }, (_, i) => monthEnd(addMonths(schedule.startMonth, i))).filter(d => d <= today).length;
   return `Spread over ${schedule.months} months from ${name} · ${taken} of ${schedule.months} taken`;
 }
