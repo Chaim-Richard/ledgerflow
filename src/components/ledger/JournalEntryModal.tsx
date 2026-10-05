@@ -23,6 +23,7 @@ import { MatchingEngine } from '../../lib/MatchingEngine';
 import { SpellChecker } from '../../lib/algorithms';
 import { useSuggestedRate } from '../../hooks/useSuggestedRate';
 import { documentCurrencies } from '../../lib/exchangeRates';
+import { firstOfNextMonth, reversalDateProblem, withReversal } from '../../lib/autoReversal';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { resolveAccountRole } from '../../lib/accountUtils';
@@ -40,6 +41,10 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(getLocalDateISO());
   const [reference, setReference] = useState('');
+  // R-05: an accrual that undoes itself (on the 1st of the next month unless another date is chosen)
+  const [autoReverse, setAutoReverse] = useState(false);
+  const [reverseOnTyped, setReverseOnTyped] = useState('');
+  const reverseOn = reverseOnTyped || (date ? firstOfNextMonth(date) : '');
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [showDimensions, setShowDimensions] = useState(false);
   
@@ -260,24 +265,37 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
       };
 
       const token = await getIdToken();
-      const res = await fetch('/api/v1/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'x-operation-id': payload.id
-        },
-        body: JSON.stringify({ transaction: payload })
-      });
+      if (autoReverse) {
+        const problem = reversalDateProblem(date, reverseOn);
+        if (problem) { toast.error(problem); return; }
+      }
+      // with a reversal: both entries in one request, so there is never one without the other (R-05)
+      const res = autoReverse
+        ? await fetch('/api/v1/transactions/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Idempotency-Key': payload.id },
+          body: JSON.stringify({ transactions: withReversal(payload, reverseOn), workspaceId }),
+        })
+        : await fetch('/api/v1/transactions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'x-operation-id': payload.id
+          },
+          body: JSON.stringify({ transaction: payload })
+        });
 
       if (!res.ok) {
         const errObj = await res.json().catch(() => ({}));
         throw new Error(errObj.error || `HTTP error ${res.status}`);
       }
 
-      toast.success('Journal entry recorded');
+      toast.success(autoReverse ? `Journal entry recorded; it reverses on ${reverseOn}` : 'Journal entry recorded');
       onClose();
       // Reset form
+      setAutoReverse(false);
+      setReverseOnTyped('');
       setDescription('');
       setReference('');
       setLines([
@@ -429,6 +447,20 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                      />
                      {rateNote && <p className="text-[11px] text-[var(--muted)]">{rateNote}</p>}
                    </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--text)]">
+                <label htmlFor="je-auto-reverse" className="flex items-center gap-2 cursor-pointer">
+                  <input id="je-auto-reverse" type="checkbox" checked={autoReverse} onChange={e => setAutoReverse(e.target.checked)} />
+                  Reverse automatically (an accrual)
+                </label>
+                {autoReverse && (
+                  <label htmlFor="je-reverse-on" className="flex items-center gap-2">
+                    <span className="text-[var(--muted)]">on</span>
+                    <input id="je-reverse-on" type="date" value={reverseOn} min={date || undefined} onChange={e => setReverseOnTyped(e.target.value)}
+                      className="px-3 py-1.5 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-[var(--text)]" />
+                  </label>
                 )}
               </div>
 
