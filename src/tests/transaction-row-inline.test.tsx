@@ -8,7 +8,8 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import TransactionRow from '../components/transactions/TransactionRow';
-import { categoryChoices, soleCategoryLine } from '../lib/accountChoices';
+import SelectionBar from '../components/transactions/SelectionBar';
+import { categoryChoices, recategorizeLines, soleCategoryLine } from '../lib/accountChoices';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import type { Transaction } from '../types';
 import { makeChartAccount, makeTransaction } from './fixtures';
@@ -63,5 +64,44 @@ describe('Transaction list: edit in place', () => {
     useLedgerStore.setState({ lockDate: '2026-12-31' });
     row(plain, (_id, u) => updates.push(u));
     assert.equal(screen.queryByRole('button', { name: /^Edit (Category|Class|Location) of GitHub/ }), null);
+  });
+});
+
+describe('Bulk categorize (K-06)', () => {
+  test('only the category line changes, whichever order the lines are in; the bank line never does', () => {
+    const bankFirst = [{ id: 'b', accountId: 'bank', accountName: 'Checking', amountCents: -2500 }, { id: 'a', accountId: 'soft', accountName: 'Software', amountCents: 2500 }];
+    const out = recategorizeLines(bankFirst, accounts, { accountId: 'rent', accountName: 'Rent' });
+    assert.deepEqual(out?.map(l => [l.accountId, l.amountCents]), [['bank', -2500], ['rent', 2500]]);
+    const splitOut = recategorizeLines(split.lines, accounts, { accountId: 'rent' });
+    assert.deepEqual(splitOut?.map(l => l.accountId), ['rent', 'rent', 'bank'], 'a split becomes one category; the bank line stays');
+  });
+
+  test('transfers and journal entries are skipped for a new account; a project goes on every line', () => {
+    const transfer = [{ accountId: 'bank', amountCents: -100 }, { accountId: 'bank2', amountCents: 100 }];
+    const withSavings = [...accounts, makeChartAccount({ id: 'bank2', name: 'Savings', type: 'asset', category: 'Cash' })];
+    assert.equal(recategorizeLines(transfer, withSavings, { accountId: 'rent' }), null);
+    const journal: Array<{ accountId: string; amountCents: number; project?: string }> = [{ accountId: 'soft', amountCents: 100 }, { accountId: 'rent', amountCents: -100 }];
+    assert.equal(recategorizeLines(journal, accounts, { accountId: 'rent' }), null);
+    assert.deepEqual(recategorizeLines(journal, accounts, { project: 'Apollo' })?.map(l => [l.accountId, l.project]), [['soft', 'Apollo'], ['rent', 'Apollo']]);
+  });
+});
+
+describe('Bulk bar', () => {
+  afterEach(() => cleanup());
+  test('nothing is applied while typing; Enter or Apply applies the chosen category', async () => {
+    useLedgerStore.setState({ accounts, transactions: [plain, split] });
+    const applied: unknown[] = [];
+    render(<SelectionBar selectedCount={2} totalAmount={5500} avgAmount={2750} onCopy={() => {}} onClear={() => {}}
+      onBulkUpdate={u => { applied.push(u); }} accounts={accounts} formatCurrency={c => String(c)} />);
+    const box = screen.getByLabelText('Bulk Categorize');
+    fireEvent.change(box, { target: { value: 'Rent' } });
+    assert.equal(applied.length, 0, 'typing a full name does not apply yet');
+    await act(async () => { fireEvent.keyDown(box, { key: 'Enter' }); });
+    assert.deepEqual(applied, [{ accountId: 'rent' }]);
+    fireEvent.change(box, { target: { value: '6200 · Software' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Apply' })); });
+    assert.deepEqual(applied[1], { accountId: 'soft' });
+    fireEvent.change(box, { target: { value: 'Checking' } });
+    assert.equal((screen.getByRole('button', { name: 'Apply' }) as HTMLButtonElement).disabled, true, 'a bank account is not a category');
   });
 });

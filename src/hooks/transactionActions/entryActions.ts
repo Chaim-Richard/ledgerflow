@@ -1,4 +1,4 @@
-import { resolveAccountRole } from '../../lib/accountUtils';
+import { recategorizeLines } from '../../lib/accountChoices';
 import { collection, doc, writeBatch } from '../../lib/db/firestore';
 import { db } from '../../firebase';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -252,6 +252,7 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
       const oldStates = new Map<string, Transaction>();
       const currentTransactions = useLedgerStore.getState().transactions;
       const updatesMap = new Map<string, TransactionUpdates>();
+      const skipped: string[] = [];
 
       const targetAccount = accounts.find(a => 
         (updates.accountId && a.id === updates.accountId) || 
@@ -278,29 +279,16 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
             updateData.projectId = projId;
           }
 
-          // Handle lines preservation: NEVER drop lines or destroy amounts
+          // Lines: bank/cash lines keep their account; transfers and journal entries are skipped (K-06)
           if (accId !== undefined || accName !== undefined || projId !== undefined) {
             const existingLines = tx.lines && tx.lines.length > 0 ? tx.lines : [];
             if (existingLines.length > 0) {
-              const newLines = existingLines.map((l: TransactionLine, idx: number) => {
-                const acc = accounts.find(a => a.id === l.accountId);
-                const role = resolveAccountRole(acc);
-                const isOffsetOrCash = role === 'cash' || (acc?.type === 'asset' && existingLines.length === 2 && idx === 1);
-                
-                // Modify the primary category / expense / revenue line, or line 0
-                if (!isOffsetOrCash || idx === 0) {
-                  return {
-                    ...l,
-                    ...(accId !== undefined ? { accountId: accId } : {}),
-                    ...(accName !== undefined ? { accountName: accName } : {}),
-                    ...(projId !== undefined ? { project: projId || undefined } : {})
-                  };
-                }
-                if (projId !== undefined) {
-                  return { ...l, project: projId || undefined };
-                }
-                return l;
+              const newLines = recategorizeLines(existingLines, accounts, {
+                ...(accId !== undefined ? { accountId: accId } : {}),
+                ...(accName !== undefined ? { accountName: accName } : {}),
+                ...(projId !== undefined ? { project: projId } : {}),
               });
+              if (!newLines) { skipped.push(tx.description || id); oldStates.delete(id); continue; }
               updateData.lines = newLines;
             } else if (tx.totalAmountCents) {
               // Balance from scratch if previously unlined
@@ -356,7 +344,7 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
         })
       }));
       
-      toast.success(`Updated ${ids.length} transactions with atomic finality.`, { 
+      toast.success(`Updated ${updatesMap.size} transaction${updatesMap.size === 1 ? '' : 's'}${skipped.length ? `; ${skipped.length} transfer or journal entr${skipped.length === 1 ? 'y' : 'ies'} left as they were (change those one by one)` : ''}.`, { 
         id: loader,
         action: {
           label: 'Undo',

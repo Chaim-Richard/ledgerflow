@@ -1527,7 +1527,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] K-03 Sale receipts
 - [ ] K-04 Sales orders
 - [ ] K-05 Manual journals entity
-- [ ] K-06 Bulk action bar
+- [~] K-06 Bulk action bar: transaction list (categorize safely, Enter/Apply, accounts used most first; L-180). Other lists: later
 - [ ] K-07 Attachments on every entity
 - [x] K-08 Email templates (invoice, reminder, receipt; preview)
 - [x] K-09 Credit note refunds (DR A/R, CR cash; tested)
@@ -1742,6 +1742,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-177 An automatic rule with a "set amount" action rewrote an entry's total without its lines, so the entry and the ledger disagreed; rules never change amounts now (tested)
 - [x] L-178 CI was red for 3 pushes: the coverage floor (75%) failed after Codex's split files were counted with few tests; tests added for the reconciliation screen, the category engine, the rules engine, the quick-entry parser and recording a sale (coverage back above 75%)
 - [x] L-179 Deactivating an account that has history always failed: it wrote a `status` field the database doesn't allow on accounts; it now sets isArchived (found while adding edit-in-place to the chart of accounts)
+- [x] L-180 **Money:** bulk categorize on the transaction list changed "line 0" even when it was the bank line, so entries stored bank-line-first lost their bank side (gone from the bank balance), and transfers/journal entries were rewritten too; it also applied while typing ("Software" before "Software Licenses" was finished) and offered bank accounts as categories. Now: bank/cash lines never change, transfers and journal entries are skipped with a message, Enter or Apply only, categories only (tested)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION

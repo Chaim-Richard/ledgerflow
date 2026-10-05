@@ -32,3 +32,26 @@ export function soleCategoryLine(tx: Transaction, accounts: ChartAccount[]) {
   const cash = lines.filter(l => isCash(l.accountId));
   return cash.length === 1 ? lines.find(l => !isCash(l.accountId)) : undefined;
 }
+
+/**
+ * Bulk categorize (K-06): the lines of an entry with a new category account and/or project.
+ * Bank and cash lines never change account. Only plain entries (exactly one bank/cash line) get a
+ * new account, on every other line; transfers and journal entries return null (skip them: which
+ * line is "the category" is unknown). A project alone is set on every line.
+ */
+export function recategorizeLines<L extends { accountId: string; accountName?: string; project?: string }>(
+  lines: L[], accounts: ChartAccount[], change: { accountId?: string; accountName?: string; project?: string },
+): L[] | null {
+  const wantsAccount = change.accountId !== undefined || change.accountName !== undefined;
+  const isCash = (accountId: string) => resolveAccountRole(accounts.find(a => a.id === accountId)) === 'cash';
+  if (wantsAccount && lines.filter(l => isCash(l.accountId)).length !== 1) return null;
+  return lines.map(l => {
+    const next = { ...l };
+    if (wantsAccount && !isCash(l.accountId)) {
+      if (change.accountId !== undefined) next.accountId = change.accountId;
+      if (change.accountName !== undefined) next.accountName = change.accountName;
+    }
+    if (change.project !== undefined) next.project = change.project || undefined;
+    return next;
+  });
+}
