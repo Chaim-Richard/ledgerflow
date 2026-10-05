@@ -236,3 +236,15 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Phone controls keep a real 44px pointer target, including selection controls. */
+@media (max-width: 767px) {
+  button, [role="button"], summary, select, textarea, input:not([type="hidden"]) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  input[type="checkbox"], input[type="radio"] { width: 44px; height: 44px; flex-shrink: 0; }
+  label:has(input[type="checkbox"]), label:has(input[type="radio"]) { min-height: 44px; }
+  [data-testid="tx-header"] > [data-column] { padding: 4px; gap: 0; }
+  [data-column="select"] { padding-inline: 0; overflow: visible; }
+}

@@ -265,7 +265,7 @@ function useTransactionGridModel() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const rowHeight = isCompactMode ? 32 : isProMode ? 44 : 72;
+  const rowHeight = isCompactMode ? (isMobileGrid ? 44 : 32) : isProMode ? 44 : 72;
   // one width per cell the rows draw (desktop rows also have a running balance and actions)
   const gridCols = gridTemplate({ mobile: isMobileGrid, tablet: isTabletGrid, compact: isProMode || isCompactMode }, hiddenColumns, columnLayout);
 
