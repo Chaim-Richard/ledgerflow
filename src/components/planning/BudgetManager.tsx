@@ -1,3 +1,4 @@
+import { RecordInlineField } from '../ui/RecordInlineField';
 import { useDialog } from '../../hooks/useDialog';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import type { Budget } from '../../types';
@@ -203,7 +204,7 @@ export default function BudgetManager() {
               </div>
 
               <div className="space-y-2 relative z-10">
-                 <h2 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase italic truncate">{b.targetId}</h2>
+                 <h2 className="text-2xl font-black text-[var(--text)] tracking-tight uppercase italic truncate"><RecordInlineField collection="budgets" record={b} field="name" label={`Name of budget ${b.targetId}`} placeholder={b.targetId} /></h2>
                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] opacity-40">{b.period} Allocation</p>
               </div>
 
@@ -215,7 +216,7 @@ export default function BudgetManager() {
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest opacity-50 mb-1">Cap Magnitude</span>
-                    <span className="text-sm font-bold text-[var(--muted)] font-mono tabular-nums">{formatCurrency(b.amountCents)}</span>
+                    <span className="text-sm font-bold text-[var(--muted)] font-mono tabular-nums"><RecordInlineField collection="budgets" record={b} field="amountCents" kind="money" display={formatCurrency(b.amountCents)} label={`Amount of budget ${b.targetId}`} /></span>
                   </div>
                 </div>
 

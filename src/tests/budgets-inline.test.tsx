@@ -1,0 +1,22 @@
+import './helpers/dom';
+import test, { afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import BudgetManager from '../components/planning/BudgetManager';
+import { setComponentWorkspace, markComponentCollectionsLoaded } from './helpers/componentFixtures';
+import { useLedgerStore } from '../stores/useLedgerStore';
+import { getSupabase } from '../lib/db/client';
+afterEach(async () => { cleanup(); await getSupabase().auth.dispose(); });
+test('budget cards edit the name and planning amount through a confirmed partial save', async () => {
+ const budget = { id: 'b', uid: 'test-user', workspaceId: 'component-workspace', targetId: 'cash', targetType: 'account' as const, amountCents: 10000, period: 'monthly', createdAt: '2026-01-01' };
+ setComponentWorkspace(); markComponentCollectionsLoaded('budgets'); useLedgerStore.setState({ budgets: [budget], transactions: [], accounts: [] });
+ const writes: Record<string, unknown>[] = [];
+ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => { if (String(input).includes('/rpc/lf_update')) writes.push(JSON.parse(String(init?.body))); return new Response(JSON.stringify(String(input).includes('/rpc/') ? null : { id: 'b', data: budget }), { status: 200, headers: { 'Content-Type': 'application/json' } }); }) as typeof fetch;
+ render(<BudgetManager />);
+ assert.ok(screen.getByRole('button', { name: 'Edit Name of budget cash' }));
+ fireEvent.click(screen.getByRole('button', { name: 'Edit Amount of budget cash' })); fireEvent.change(screen.getByLabelText('Amount of budget cash'), { target: { value: '250.25' } });
+ await act(async () => { fireEvent.keyDown(screen.getByLabelText('Amount of budget cash'), { key: 'Enter' }); });
+ const fields = writes[0].p_set as Record<string, unknown>; assert.equal(fields.amountCents, 25025); assert.equal('targetId' in fields, false); assert.equal('period' in fields, false);
+ cleanup(); setComponentWorkspace('viewer'); render(<BudgetManager />); assert.equal(screen.queryByRole('button', { name: /^Edit (Name|Amount) of budget/ }), null);
+});
