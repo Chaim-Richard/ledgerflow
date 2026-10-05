@@ -1,4 +1,6 @@
 import React from 'react';
+import InlineEdit from '../ui/InlineEdit';
+import { categoryChoices, soleCategoryLine } from '../../lib/accountChoices';
 import { Transaction } from '../../types';
 
 import { 
@@ -118,6 +120,17 @@ const TransactionRow = React.memo(({
   const lockException = useLedgerStore(state => state.lockException);
   const isLocked = (!!tx.date && isLockedDate(tx.date, lockDate, lockException)) || !!tx.isLocked;
   const displayTx = tx;
+  // edit in place (I-22): the category of a plain entry, and class / location on every line
+  const choices = useLedgerStore(state => categoryChoices(state.accounts, state.transactions));
+  const canEditLines = !isLocked && !!onUpdate && tx.status !== 'void' && tx.status !== 'reconciled';
+  const categoryLine = canEditLines ? soleCategoryLine(tx, accounts) : undefined;
+  const setCategory = (accountId: string | number) => {
+    const account = accounts.find(a => a.id === accountId);
+    if (!account || !categoryLine) return;
+    onUpdate?.(tx.id, { lines: (tx.lines || []).map(l => (l === categoryLine ? { ...l, accountId: account.id, accountName: account.name } : l)) });
+  };
+  const setOnLines = (field: 'class' | 'location', value: string | number) =>
+    onUpdate?.(tx.id, { lines: (tx.lines || []).map(l => ({ ...l, [field]: String(value) || undefined })) });
 
   const [isEditingDesc, setIsEditingDesc] = React.useState(false);
   const [editDraft, setEditDraft] = React.useState<string | null>(null);
@@ -250,7 +263,14 @@ const TransactionRow = React.memo(({
                       line.amountCents > 0 ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20 group-hover/active:bg-emerald-500 group-hover/active:text-white group-hover/active:border-white/20" : "bg-[var(--ink)] text-slate-500 border-[var(--line)] group-hover/active:bg-[var(--surface)]/10 group-hover/active:text-white/80 group-hover/active:border-white/20",
                     )}
                   >
-                    <HighlightMatch text={resolveAccountName(accounts, line.accountId, line.accountName)} match={searchTerm} />
+                    {line === categoryLine ? (
+                      <InlineEdit kind="select" value={line.accountId} label={`Category of ${displayTx.description || 'this entry'}`}
+                        options={choices.some(c => c.value === line.accountId) ? choices : [{ value: line.accountId, label: resolveAccountName(accounts, line.accountId, line.accountName) }, ...choices]}
+                        display={<HighlightMatch text={resolveAccountName(accounts, line.accountId, line.accountName)} match={searchTerm} />}
+                        onSave={setCategory} className="uppercase" />
+                    ) : (
+                      <HighlightMatch text={resolveAccountName(accounts, line.accountId, line.accountName)} match={searchTerm} />
+                    )}
                     {line.isAnalyticalTagged && (
                       <div className="absolute -top-2 -right-2 z-20 group/spark">
                         <Sparkles aria-hidden="true" size={10} className="text-amber-500 animate-[pulse_2s_infinite]" />
@@ -310,11 +330,13 @@ const TransactionRow = React.memo(({
             isFocused && focusedField === 'class' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}>
             <div className="flex flex-wrap gap-1 w-full">
-              {tx.lines?.find(l => l.class)?.class && (
-                <span className="px-2 py-0.5 bg-[var(--ink)] text-slate-500 rounded text-[9px] font-bold border border-[var(--line)] truncate uppercase group-hover/active:text-white group-hover/active:border-white/20 group-hover/active:bg-[var(--surface)]/10">
-                  <HighlightMatch text={tx.lines!.find(l => l.class)!.class!} match={searchTerm} />
-                </span>
-              )}
+              <InlineEdit value={tx.lines?.find(l => l.class)?.class} label={`Class of ${displayTx.description || 'this entry'}`} canEdit={canEditLines}
+                placeholder="—" onSave={v => setOnLines('class', v)}
+                display={tx.lines?.find(l => l.class)?.class ? (
+                  <span className="px-2 py-0.5 bg-[var(--ink)] text-slate-500 rounded text-[9px] font-bold border border-[var(--line)] truncate uppercase group-hover/active:text-white group-hover/active:border-white/20 group-hover/active:bg-[var(--surface)]/10">
+                    <HighlightMatch text={tx.lines!.find(l => l.class)!.class!} match={searchTerm} />
+                  </span>
+                ) : null} />
             </div>
           </div>
         )}
@@ -325,11 +347,13 @@ const TransactionRow = React.memo(({
             isFocused && focusedField === 'location' && "ring-2 ring-inset ring-indigo-600 bg-indigo-600/5"
           )}>
             <div className="flex flex-wrap gap-1 w-full">
-              {tx.lines?.find(l => l.location)?.location && (
-                <span className="px-2 py-0.5 bg-[var(--ink)] text-slate-500 rounded text-[9px] font-bold border border-[var(--line)] truncate uppercase group-hover/active:text-white group-hover/active:border-white/20 group-hover/active:bg-[var(--surface)]/10">
-                  <HighlightMatch text={tx.lines!.find(l => l.location)!.location!} match={searchTerm} />
-                </span>
-              )}
+              <InlineEdit value={tx.lines?.find(l => l.location)?.location} label={`Location of ${displayTx.description || 'this entry'}`} canEdit={canEditLines}
+                placeholder="—" onSave={v => setOnLines('location', v)}
+                display={tx.lines?.find(l => l.location)?.location ? (
+                  <span className="px-2 py-0.5 bg-[var(--ink)] text-slate-500 rounded text-[9px] font-bold border border-[var(--line)] truncate uppercase group-hover/active:text-white group-hover/active:border-white/20 group-hover/active:bg-[var(--surface)]/10">
+                    <HighlightMatch text={tx.lines!.find(l => l.location)!.location!} match={searchTerm} />
+                  </span>
+                ) : null} />
             </div>
           </div>
         )}
