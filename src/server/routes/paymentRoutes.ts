@@ -2,7 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import type { Firestore } from '../db/firestore';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
-import { createPaymentAtomic } from '../services/paymentService';
+import { applyUnappliedPayment, createPaymentAtomic, PaymentApplyError } from '../services/paymentService';
 import { getLocalDateISO } from '../../lib/utils';
 import { getWorkspaceUserRole, AuthenticatedRequest, requireWorkspaceRole } from './workspaceRoutes';
 import { applyCredit, autoApplyCredits, CreditError, refundCredit } from '../services/creditService';
@@ -184,5 +184,35 @@ paymentRouter.post('/deposits', ledgerWriters, async (req, res) => {
     if (err instanceof z.ZodError) return res.status(400).json({ status: 'error', message: 'Invalid request', details: err.issues });
     if (err instanceof DepositError) return res.status(err.status).json({ status: 'error', message: err.message });
     res.status(400).json({ status: 'error', message: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// registered last: '/:paymentId/apply' must not catch '/credits/apply'
+const applySchema = z.object({
+  workspaceId: z.string().min(1),
+  allocations: z.array(paymentAllocationSchema).min(1).max(100),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+}).strict();
+
+/** BE-12, K-18: apply a payment's unapplied part (a deposit or prepayment) to invoices or bills. */
+paymentRouter.post('/:paymentId/apply', async (req, res) => {
+  const authReq = req as unknown as Partial<AuthenticatedRequest>;
+  if (!authReq.user?.uid) return res.status(401).json({ status: 'error', message: 'Sign in required' });
+  const parsed = applySchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ status: 'error', message: 'Invalid request', details: parsed.error.issues });
+  try {
+    const db = getDb();
+    await validateWorkspaceMember(db, parsed.data.workspaceId, authReq.user);
+    const result = await applyUnappliedPayment(db, {
+      workspaceId: parsed.data.workspaceId, uid: authReq.user.uid, paymentId: String((req.params as Record<string, string>).paymentId),
+      allocations: parsed.data.allocations, date: parsed.data.date || getLocalDateISO(),
+    });
+    res.json({ status: 'success', data: result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (err instanceof PaymentApplyError) return res.status(err.status).json({ status: 'error', message });
+    if (/Period Locked/i.test(message)) return res.status(409).json({ status: 'error', message });
+    if (/not a member|Forbidden|Unauthorized/i.test(message)) return res.status(403).json({ status: 'error', message });
+    res.status(400).json({ status: 'error', message });
   }
 });

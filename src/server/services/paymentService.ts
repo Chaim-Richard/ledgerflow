@@ -2,9 +2,11 @@ import { calculateAmountDue, settledStatus } from '../../lib/documentMath';
 import { writeServerAuditLog } from './auditLogService';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import type { ChartAccount } from '../../types';
-import { assertPostingOpen } from '../../lib/periodLock';
+import { assertPostingOpen, workspaceRole } from '../../lib/periodLock';
 import { formatCurrency } from '../../lib/utils';
 import { allocateInTransaction } from './numberingService';
+import { advanceAccount } from '../../lib/advancePayments';
+import type { DocumentReference, Firestore } from '../db/firestore';
 
 export interface CreatePaymentPayload {
   workspaceId: string;
@@ -156,13 +158,26 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       }
     }
 
+    // the workspace's chart, read once when needed (every read must come before the writes)
+    let chartCache: ChartAccount[] | null = null;
+    const chartAccounts = async (): Promise<ChartAccount[]> => {
+      if (!chartCache) {
+        const chart = await tx.get(db.collection('chartAccounts').where('workspaceId', '==', workspaceId));
+        chartCache = chart.docs.map((d: { id: string; data: () => ChartAccount }) => ({ ...d.data(), id: d.id }));
+      }
+      return chartCache as ChartAccount[];
+    };
+
     // No mapping: the chart's receivables (customer payment) or payables (vendor payment) account
     const receipt = allocations.some(a => a.documentType === 'invoice') || Boolean(customerId);
     if (!resolvedOffsetAccountId) {
-      const chart = await tx.get(db.collection('chartAccounts').where('workspaceId', '==', workspaceId));
       const role = receipt ? 'ar' : 'ap';
-      resolvedOffsetAccountId = chart.docs.find((d: { id: string; data: () => ChartAccount }) => resolveAccountRole({ ...d.data(), id: d.id }) === role)?.id;
+      resolvedOffsetAccountId = (await chartAccounts()).find(a => resolveAccountRole(a) === role)?.id;
     }
+
+    // BE-12: the part not matched to documents waits in Customer Deposits / Vendor Prepayments
+    const unmatchedCents = amountCents - totalAllocatedCents;
+    const advance = unmatchedCents > 0 ? advanceAccount(await chartAccounts(), receipt ? 'received' : 'made', wsData.defaultAccountMappings) : undefined;
 
     if (totalAllocatedCents > amountCents) {
       throw new Error(`Total allocated amount (${totalAllocatedCents} cents) exceeds payment amount (${amountCents} cents)`);
@@ -203,6 +218,8 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       reference: referenceNumber,
       depositAccountId: cashAccountId,
       unappliedCents: amountCents - totalAllocatedCents,
+      // where the unapplied part is held (BE-12): the deposits/prepayments account, else A/R or A/P
+      advanceAccountId: advance?.id || resolvedOffsetAccountId,
       currency: paymentCurrency || baseCurrency,
       exchangeRate: paymentRate,
       status: 'posted',
@@ -232,10 +249,12 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     const foreignPayment = paymentCurrency !== null && paymentCurrency !== baseCurrency;
     const cashBaseCents = foreignPayment && typeof dayRate === 'number' && dayRate > 0 ? Math.round(amountCents * dayRate) : baseAmountCents;
     const realizedFxCents = cashBaseCents - baseAmountCents;
+    // the unmatched part goes to the deposits/prepayments account when there is one (BE-12)
+    const advanceBaseCents = advance ? baseAmountCents - Math.round(totalAllocatedCents * paymentRate) : 0;
+    const offsetBaseCents = baseAmountCents - advanceBaseCents;
     let fxAccount: { id: string; name?: string } | undefined;
     if (realizedFxCents !== 0) {
-      const chart = await tx.get(db.collection('chartAccounts').where('workspaceId', '==', workspaceId));
-      fxAccount = chart.docs.map((d: { id: string; data: () => ChartAccount }) => ({ ...d.data(), id: d.id }))
+      fxAccount = (await chartAccounts())
         .find((a: ChartAccount) => !a.isArchived && (resolveAccountRole(a) === 'fx_rounding' || /exchange|fx/i.test(String(a.name || ''))) && ['income', 'expense', 'revenue'].includes(String(a.type).toLowerCase()));
       if (!fxAccount) throw new Error('Add an exchange gain/loss account (category "Rounding Differences") before recording a payment at a different rate');
     }
@@ -264,11 +283,17 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
           amountCents: isReceipt ? cashBaseCents : -cashBaseCents,
           description: `Cash ${isReceipt ? 'Debit' : 'Credit'} for Payment ${paymentId}`
         },
-        {
+        // (no line when all of it waits as a deposit/prepayment)
+        ...(offsetBaseCents !== 0 || !advance ? [{
           accountId: resolvedOffsetAccountId,
-          amountCents: isReceipt ? -baseAmountCents : baseAmountCents,
+          amountCents: isReceipt ? -offsetBaseCents : offsetBaseCents,
           description: `Offset ${isReceipt ? 'Credit' : 'Debit'} for Payment ${paymentId}`
-        },
+        }] : []),
+        ...(advance && advanceBaseCents > 0 ? [{
+          accountId: advance.id,
+          amountCents: isReceipt ? -advanceBaseCents : advanceBaseCents,
+          description: `${isReceipt ? 'Customer deposit' : 'Vendor prepayment'} held for Payment ${paymentId}`
+        }] : []),
         // more home currency received than booked is a gain (credit); more paid out is a loss (debit)
         ...(fxAccount ? [{
           accountId: fxAccount.id,
@@ -305,4 +330,109 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
 
     return { paymentId, transactionId: ledgerTxRef.id, payment: paymentData, ledgerTransaction: ledgerTxData };
   }
+}
+
+export class PaymentApplyError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = 'PaymentApplyError';
+  }
+}
+
+/**
+ * Apply the unapplied part of a payment to invoices or bills later (BE-12, K-18): a customer's
+ * deposit to the invoice it was for, a vendor prepayment to its bill. The documents are settled like
+ * a payment would settle them, the payment's unapplied amount goes down, and when the money waited in
+ * Customer Deposits / Vendor Prepayments one entry moves it to A/R or A/P, dated the day it is
+ * applied. All in one database transaction; writers only; a closed period refuses.
+ */
+export async function applyUnappliedPayment(db: Firestore, input: {
+  workspaceId: string;
+  uid: string;
+  paymentId: string;
+  allocations: Array<{ documentId: string; documentType: 'invoice' | 'bill'; amountCents: number }>;
+  date: string;
+}) {
+  return db.runTransaction(async (tx) => {
+    const { workspaceId, uid, paymentId, allocations, date } = input;
+    const wsSnap = await tx.get(db.collection('workspaces').doc(workspaceId));
+    if (!wsSnap.exists) throw new PaymentApplyError(404, 'Workspace not found');
+    const wsData = wsSnap.data() || {};
+    if (!['owner', 'accountant', 'bookkeeper'].includes(workspaceRole(wsData, uid))) throw new PaymentApplyError(403, 'Only owners, accountants and bookkeepers apply payments');
+    try {
+      assertPostingOpen(date, wsData, uid);
+    } catch (err) {
+      throw new PaymentApplyError(409, err instanceof Error ? err.message : String(err));
+    }
+    const paymentRef = db.collection('payments').doc(paymentId);
+    const payment = (await tx.get(paymentRef)).data();
+    if (!payment || payment.workspaceId !== workspaceId) throw new PaymentApplyError(404, 'Payment not found');
+    if (payment.status === 'void') throw new PaymentApplyError(409, 'The payment is void');
+    const unapplied = Number(payment.unappliedCents) || 0;
+    const total = allocations.reduce((sum, a) => sum + a.amountCents, 0);
+    if (total <= 0) throw new PaymentApplyError(400, 'Choose what to apply it to');
+    if (total > unapplied) throw new PaymentApplyError(409, `Only ${formatCurrency(unapplied, payment.currency)} of this payment is still unapplied`);
+    const received = payment.direction === 'received';
+    const wanted = received ? 'invoice' : 'bill';
+    const partyId = received ? payment.customerId : payment.vendorId;
+    const keys = allocations.map(a => a.documentId);
+    if (new Set(keys).size !== keys.length) throw new PaymentApplyError(400, 'Each invoice or bill may appear only once');
+
+    const baseCurrency = String(wsData.currency || 'USD');
+    const paymentCurrency = String(payment.currency || baseCurrency);
+    const rate = typeof payment.exchangeRate === 'number' && payment.exchangeRate > 0 ? payment.exchangeRate : 1;
+    const docUpdates: Array<{ ref: DocumentReference; updates: Record<string, unknown> }> = [];
+    for (const alloc of allocations) {
+      if (alloc.documentType !== wanted) throw new PaymentApplyError(400, `A payment ${received ? 'received' : 'made'} is applied to ${wanted}s`);
+      const ref = db.collection(received ? 'invoices' : 'bills').doc(alloc.documentId);
+      const doc = (await tx.get(ref)).data();
+      if (!doc || doc.workspaceId !== workspaceId) throw new PaymentApplyError(404, `Document ${alloc.documentId} not found`);
+      if (doc.status === 'void' || doc.status === 'draft') throw new PaymentApplyError(409, `Cannot apply a payment to a ${doc.status} document`);
+      if (partyId && (received ? doc.customerId : doc.vendorId) !== partyId) throw new PaymentApplyError(400, `${doc.number || alloc.documentId} belongs to another ${received ? 'customer' : 'vendor'}`);
+      if (String(doc.currency || baseCurrency) !== paymentCurrency) throw new PaymentApplyError(400, `${doc.number || alloc.documentId} is in another currency than the payment`);
+      const due = calculateAmountDue(doc);
+      if (alloc.amountCents > due) throw new PaymentApplyError(409, `${doc.number || alloc.documentId} has only ${formatCurrency(due, paymentCurrency)} left to pay`);
+      const paid = (Number(doc.amountPaidCents) || 0) + alloc.amountCents;
+      docUpdates.push({ ref, updates: {
+        amountPaidCents: paid,
+        settledByRecordsCents: (Number(doc.settledByRecordsCents) || 0) + alloc.amountCents,
+        status: settledStatus(doc, paid),
+        updatedAt: new Date().toISOString(),
+      } });
+    }
+
+    // the money waited in Customer Deposits / Vendor Prepayments: move it to A/R or A/P now
+    const heldIn = String(payment.advanceAccountId || payment.offsetAccountId || '');
+    const offset = String(payment.offsetAccountId || '');
+    let ledgerTx: Record<string, unknown> | null = null;
+    if (heldIn && offset && heldIn !== offset) {
+      const baseCents = Math.round(total * rate);
+      const description = `Payment ${payment.number || paymentId} applied (${received ? 'customer deposit' : 'vendor prepayment'})`;
+      const { TransactionValidator } = await import('../../kernel/validation/TransactionValidator');
+      ledgerTx = await TransactionValidator.validateAndPrepare(
+        {
+          id: db.collection('transactions').doc().id, workspaceId, uid, date, description, currency: baseCurrency, exchangeRate: 1,
+          status: 'completed', type: 'actual', totalAmountCents: baseCents,
+          metadata: { type: 'payment-application', paymentId, documents: allocations.map(a => a.documentId) },
+          lines: received
+            ? [{ accountId: heldIn, amountCents: baseCents, description }, { accountId: offset, amountCents: -baseCents, description }]
+            : [{ accountId: offset, amountCents: baseCents, description }, { accountId: heldIn, amountCents: -baseCents, description }],
+        },
+        { workspaceId, user: { uid }, wsData }, undefined, tx,
+      ) as unknown as Record<string, unknown>;
+    }
+
+    for (const u of docUpdates) tx.update(u.ref, u.updates);
+    tx.update(paymentRef, {
+      allocations: [...(payment.allocations || []), ...allocations],
+      unappliedCents: unapplied - total,
+      updatedAt: new Date().toISOString(),
+    });
+    if (ledgerTx) tx.create(db.collection('transactions').doc(String(ledgerTx.id)), { ...ledgerTx, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    await writeServerAuditLog({
+      workspaceId, uid, action: 'PAYMENT_APPLIED', entityType: 'payment', entityId: paymentId,
+      details: { description: `Payment ${payment.number || paymentId}: ${formatCurrency(total, paymentCurrency)} applied to ${allocations.length} ${wanted}${allocations.length === 1 ? '' : 's'}`, amountCents: total, transactionId: ledgerTx?.id || null },
+    }, { db, tx });
+    return { paymentId, appliedCents: total, unappliedCents: unapplied - total, transactionId: ledgerTx?.id || null };
+  });
 }
