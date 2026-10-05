@@ -1,3 +1,4 @@
+import { normalizeSearchText } from '../textNormalization';
 import { Transaction } from '../../types';
 import { AlgorithmDefinition } from './types';
 
@@ -12,9 +13,9 @@ export function computeTFIDFWeights(transactions: readonly Transaction[]): Map<s
     
     // Calculate Document Frequency
     transactions.forEach(t => {
-        const desc = t.description?.toLowerCase() || '';
+        const desc = normalizeSearchText(t.description);
         // Simple tokenization
-        const tokens = new Set(desc.match(/\b[a-z0-9]+\b/g) || []);
+        const tokens = new Set(desc.match(/[\p{L}\p{M}\p{N}]+/gu) || []);
         
         tokens.forEach(token => {
             if (token.length < 2) return; // ignore 1-char noise
@@ -34,8 +35,8 @@ export function computeTFIDFWeights(transactions: readonly Transaction[]): Map<s
 }
 
 export function similarityWithTFIDF(desc1: string, desc2: string, idf: Map<string, number>): number {
-    const tokens1 = desc1.toLowerCase().match(/\b[a-z0-9]+\b/g) || [];
-    const tokens2 = desc2.toLowerCase().match(/\b[a-z0-9]+\b/g) || [];
+    const tokens1 = normalizeSearchText(desc1).match(/[\p{L}\p{M}\p{N}]+/gu) || [];
+    const tokens2 = normalizeSearchText(desc2).match(/[\p{L}\p{M}\p{N}]+/gu) || [];
     
     let intersectionWeight = 0;
     let unionWeight1 = 0;
@@ -87,7 +88,7 @@ export const TF_IDF_MATCHER: AlgorithmDefinition = {
     const sample = transactions[idx]?.description || 'PAYPAL *UBER TRIP';
     
     // Evaluate tokens in sample
-    const sampleTokens = sample.toLowerCase().match(/\b[a-z0-9]+\b/g) || [];
+    const sampleTokens = normalizeSearchText(sample).match(/[\p{L}\p{M}\p{N}]+/gu) || [];
     const sampleWeights = sampleTokens.map(t => ({ token: t, weight: idf.get(t) || 0 }));
 
     return {

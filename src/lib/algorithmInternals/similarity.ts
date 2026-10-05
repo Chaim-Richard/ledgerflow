@@ -1,3 +1,4 @@
+import { normalizeSearchText } from '../textNormalization';
 
 
 /**
@@ -106,9 +107,9 @@ export function findGlobalOptimalMatch(
  * @param hashSalt - A user-specific entropy string to decentralize the algorithm.
  */
 export function optimizedTransactionSimilarity(s1: string | undefined | null, s2: string | undefined | null): number {
-  const sanitize = (s: string | undefined | null) => (s || '').toLowerCase()
-    .replace(/\b(inc|ltd|corp|co|llc|plc|gmbh|sa|bv|nv|ag|sas|pvt|the|and|of|for|pay|payment|debit|credit|card|pos|atm)\b/g, '')
-    .replace(/[^a-z0-9]/g, ' ')
+  const sanitize = (s: string | undefined | null) => normalizeSearchText(s)
+    .replace(/(?<![\p{L}\p{M}\p{N}_])(inc|ltd|corp|co|llc|plc|gmbh|sa|bv|nv|ag|sas|pvt|the|and|of|for|pay|payment|debit|credit|card|pos|atm)(?![\p{L}\p{M}\p{N}_])/gu, '')
+    .replace(/[^\p{L}\p{M}\p{N}]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -158,9 +159,9 @@ export function optimizedTransactionSimilarity(s1: string | undefined | null, s2
 
 
 export function jaroWinklerSimilarity(s1: string | undefined | null, s2: string | undefined | null, hashSalt?: string, preSanitizedS2?: string): number {
-  const sanitize = (s: string | undefined | null) => (s || '').toLowerCase()
-    .replace(/\b(inc|ltd|corp|co|llc|plc|gmbh|sa|bv|nv|ag|sas|pvt|the|and|of|for|pay|payment|debit|credit|card|pos|atm)\b/g, '')
-    .replace(/[^a-z0-9]/g, ' ')
+  const sanitize = (s: string | undefined | null) => normalizeSearchText(s)
+    .replace(/(?<![\p{L}\p{M}\p{N}_])(inc|ltd|corp|co|llc|plc|gmbh|sa|bv|nv|ag|sas|pvt|the|and|of|for|pay|payment|debit|credit|card|pos|atm)(?![\p{L}\p{M}\p{N}_])/gu, '')
+    .replace(/[^\p{L}\p{M}\p{N}]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -235,8 +236,8 @@ export function jaroWinklerSimilarity(s1: string | undefined | null, s2: string 
  * @param hashSalt - A user-specific entropy string to decentralize the algorithm.
  */
 export function lexicalSimilarity(s1: string | undefined | null, s2: string | undefined | null, hashSalt?: string): number {
-  const a = (s1 || '').toLowerCase().trim();
-  const b = (s2 || '').toLowerCase().trim();
+  const a = normalizeSearchText(s1).trim();
+  const b = normalizeSearchText(s2).trim();
 
   if (a.length === 0) return 0;
   if (b.length === 0) return 0;
@@ -296,7 +297,7 @@ export class AhoCorasick {
     // Build Trie
     for (const { pattern, ruleId } of patterns) {
       let node = 0;
-      for (const char of pattern.toLowerCase()) {
+      for (const char of normalizeSearchText(pattern)) {
         if (!this.trie[node].next[char]) {
           this.trie[node].next[char] = this.trie.length;
           this.trie.push({ next: {}, fail: 0, output: [] });
@@ -330,7 +331,7 @@ export class AhoCorasick {
   search(text: string): string[] {
     let node = 0;
     const results = new Set<string>();
-    for (const char of text.toLowerCase()) {
+    for (const char of normalizeSearchText(text)) {
       while (node > 0 && !this.trie[node].next[char]) {
         node = this.trie[node].fail;
       }

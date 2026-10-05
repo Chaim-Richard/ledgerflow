@@ -1,3 +1,4 @@
+import { normalizeSearchText } from '../textNormalization';
 import { Transaction } from '../../types';
 import { AlgorithmDefinition } from './types';
 
@@ -15,8 +16,8 @@ export function induceRules(transactions: readonly Transaction[], minSupport: nu
             if (!accName || accName === 'Uncategorized') return;
             
             // Extract the vendor or description prefix
-            const desc = (line.description || t.description || '').toLowerCase();
-            const words = desc.replace(/[^a-z0-9 ]/g, '').split(' ').filter(w => w.length > 2);
+            const desc = normalizeSearchText(line.description || t.description);
+            const words = desc.replace(/[^\p{L}\p{M}\p{N} ]/gu, '').split(' ').filter(w => w.length > 2 || (w.length >= 2 && /\p{Script=Hebrew}/u.test(w)));
             
             // Generate 1-gram and 2-gram patterns
             const patterns = [];

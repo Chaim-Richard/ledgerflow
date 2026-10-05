@@ -1,3 +1,4 @@
+import { normalizeSearchText } from './textNormalization';
 /**
  * Bulk import of records from a spreadsheet (K-01): customers, vendors, items and accounts.
  * One set of rules used by the import screen (preview with per-row problems) and by the server
@@ -30,8 +31,21 @@ export interface ImportKindDefinition {
   fields: ImportField[];
 }
 
+// Spreadsheet data may use Hebrew headings; UI labels and enum choices stay English.
+const HEBREW_HEADERS: Record<string, string[]> = {
+  name: ['שם', 'שם לקוח', 'שם ספק', 'שם חברה', 'שם פריט', 'שם מוצר', 'שם חשבון'],
+  email: ['דואל', 'דואר אלקטרוני', 'אימייל'], phone: ['טלפון', 'נייד'],
+  taxId: ['מספר מס', 'חפ', 'עוסק מורשה'], address: ['כתובת'], website: ['אתר'],
+  currency: ['מטבע'], paymentTerms: ['תנאי תשלום'], notes: ['הערות'], status: ['סטטוס'],
+  category: ['קטגוריה'], sku: ['מקט', 'קוד פריט', 'ברקוד'], description: ['תיאור'],
+  unitPriceCents: ['מחיר מכירה', 'מחיר יחידה', 'מחיר'], unitCostCents: ['עלות', 'מחיר קניה', 'מחיר רכישה'],
+  quantityAtHand: ['כמות', 'כמות במלאי', 'מלאי'], reorderPoint: ['נקודת הזמנה', 'מלאי מינימום'],
+  measurementUnit: ['יחידה', 'יחידת מידה'], code: ['קוד', 'קוד חשבון', 'מספר חשבון'],
+  type: ['סוג', 'סוג חשבון'], subtype: ['תת סוג'],
+};
+
 const f = (key: string, label: string, type: FieldType, aliases: string[], required = false): ImportField =>
-  ({ key, label, type, aliases: [key, label, ...aliases], required });
+  ({ key, label, type, aliases: [key, label, ...aliases, ...(HEBREW_HEADERS[key] || [])], required });
 
 const CONTACT_FIELDS = [
   f('email', 'Email', 'email', ['e-mail', 'email address', 'mail']),
@@ -101,7 +115,7 @@ export const IMPORT_DEFINITIONS: Record<ImportKind, ImportKindDefinition> = {
 
 // ----- reading values -----
 
-const normalizeHeader = (h: string) => h.toLowerCase().replace(/[^a-z0-9]/g, '');
+const normalizeHeader = (h: string) => normalizeSearchText(h).replace(/[^\p{L}\p{M}\p{N}]/gu, '');
 
 /** Money text → integer cents, or null when it isn't a number. "1,234.50", "$12", "(5.00)",
  *  "1.234,50" and "12,5" are read the usual way; "1,250" is one thousand two hundred fifty. */

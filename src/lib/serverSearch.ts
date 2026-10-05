@@ -1,3 +1,4 @@
+import { normalizeSearchText } from './textNormalization';
 import { Transaction } from '../types';
 
 /**
@@ -8,7 +9,7 @@ export function generateSearchTokens(...texts: (string | undefined | null)[]): s
 
   for (const text of texts) {
     if (!text) continue;
-    const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/);
+    const words = normalizeSearchText(text).replace(/[^\p{L}\p{M}\p{N}\s]/gu, '').split(/\s+/);
     for (const word of words) {
       if (word.length >= 2) {
         tokenSet.add(word);
@@ -28,14 +29,14 @@ export function generateSearchTokens(...texts: (string | undefined | null)[]): s
  */
 export function searchTransactions(transactions: Transaction[], query: string): Transaction[] {
   if (!query || !query.trim()) return transactions;
-  const qLower = query.toLowerCase().trim();
+  const qLower = normalizeSearchText(query).trim();
 
   return transactions.filter(tx => {
-    if (tx.description?.toLowerCase().includes(qLower)) return true;
-    if (tx.payee?.toLowerCase().includes(qLower)) return true;
-    if (tx.id.toLowerCase().includes(qLower)) return true;
+    if (normalizeSearchText(tx.description).includes(qLower)) return true;
+    if (normalizeSearchText(tx.payee).includes(qLower)) return true;
+    if (normalizeSearchText(tx.id).includes(qLower)) return true;
     if (tx.totalAmountCents.toString().includes(qLower)) return true;
-    if (tx.lines?.some(l => l.accountName?.toLowerCase().includes(qLower) || l.description?.toLowerCase().includes(qLower))) return true;
+    if (tx.lines?.some(l => normalizeSearchText(l.accountName).includes(qLower) || normalizeSearchText(l.description).includes(qLower))) return true;
     return false;
   });
 }

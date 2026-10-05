@@ -1,0 +1,177 @@
+
+
+import { FilterCriteria } from '../../types';
+import { Plus, Loader2, ShieldCheck, AlertCircle } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { toast } from 'sonner';
+
+import { cn, formatCurrency } from '../../lib/utils';
+
+import SelectionBar from '../transactions/SelectionBar';
+
+import SplitEditor from '../transactions/SplitEditor';
+import TransactionEditModal from '../transactions/TransactionEditModal';
+
+import { TransactionGridToolbar } from './TransactionGridToolbar';
+import { TransactionGridBody } from './TransactionGridBody';
+import type { TransactionGridModel } from './TransactionGrid';
+export function TransactionGridView(model: TransactionGridModel) {
+ const { filterCriteria, onFilterApplied, txActions, onUpdate, isCompactMode, editingDetailsTx, setEditingDetailsTx, isReverseModeModal, setIsReverseModeModal, lockDate, selectedIds, setSelectedIds, parsingQueue, setParsingQueue, splittingTxId, setSplittingTxId, accounts, projects, dragActive, splittingTransaction, selectedTransactions, handleBulkUpdate, handleDrag, handleDrop } = model;
+ return (
+    <div
+      onDragEnter={handleDrag}
+      onDragLeave={handleDrag}
+      onDragOver={handleDrag}
+      onDrop={handleDrop}
+      className={cn(
+        "ledger-card flex flex-col min-h-full transition-all bg-[var(--surface)] border border-[var(--line)] shadow-sm relative",
+        isCompactMode && "rounded-none border-none",
+        dragActive && "ring-4 ring-indigo-600 ring-inset"
+      )}
+    >
+      {dragActive && (
+        <div className="absolute inset-0 z-[100] bg-indigo-600/10 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+          <div className="p-4 md:p-8 bg-[var(--surface)] rounded-[32px] shadow-2xl border-2 border-indigo-600 flex flex-col items-center gap-4 animate-in fade-in zoom-in slide-in-from-bottom-4">
+             <div className="w-16 h-16 rounded-full bg-indigo-600/10 flex items-center justify-center text-indigo-600">
+                <Plus aria-hidden="true" size={32} />
+             </div>
+             <div className="text-center">
+                <p className="text-xl font-bold text-[var(--text)] uppercase tracking-tight">Drop receipts here</p>
+                <p className="text-sm text-[var(--muted)]">AI will auto-categorize and balance them</p>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Parsing Queue Overlay */}
+      <AnimatePresence>
+        {parsingQueue.length > 0 && (
+          <div className="absolute top-4 right-4 z-[80] flex flex-col gap-2 w-72 pointer-events-none">
+            {parsingQueue.map(item => (
+              <motion.div
+                key={item.id}
+                initial={{ x: 300, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 300, opacity: 0 }}
+                className="p-3 bg-slate-900 rounded-xl shadow-2xl border border-white/10 flex items-center gap-3 pointer-events-auto"
+              >
+                <div className="w-8 h-8 rounded-lg bg-[var(--surface)]/5 flex items-center justify-center">
+                  {item.status === 'done' ? (
+                    <ShieldCheck aria-hidden="true" size={16} className="text-emerald-500" />
+                  ) : item.status === 'error' ? (
+                    <AlertCircle aria-hidden="true" size={16} className="text-rose-500" />
+                  ) : (
+                    <Loader2 aria-hidden="true" size={16} className="text-indigo-600 animate-spin" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest leading-none mb-1">AI Processor</p>
+                  <p className="text-[11px] font-medium text-white truncate">{item.name}</p>
+                </div>
+                {item.status === 'error' && (
+                  <button
+                    aria-label={`Dismiss import error for ${item.name}`}
+                    onClick={() => setParsingQueue(parsingQueue.filter(i => i.id !== item.id))}
+                    className="p-1 hover:bg-[var(--surface)]/10 rounded"
+                  >
+                    <Plus aria-hidden="true" size={10} className="text-white rotate-45" />
+                  </button>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {splittingTransaction && (
+          <SplitEditor
+            transaction={splittingTransaction}
+            accounts={accounts}
+            projects={projects}
+            onSave={(lines) => {
+              if (splittingTxId) {
+                onUpdate?.(splittingTxId, { lines });
+                setSplittingTxId(null);
+                toast.success('Transaction split applied');
+              }
+            }}
+            onClose={() => setSplittingTxId(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <TransactionGridToolbar model={model} />
+
+      {/* Active Filter Chips */}
+      {filterCriteria && Object.keys(filterCriteria).length > 0 && (
+        <div className="px-8 pb-4 flex flex-wrap gap-2">
+           <span className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest self-center mr-2">Active Filters:</span>
+           {Object.entries(filterCriteria).map(([key, value]) => {
+             if (!value) return null;
+             return (
+               <div key={key} className="flex items-center gap-2 bg-[var(--ink)] border border-[var(--line)] px-3 py-1 rounded-full text-[10px] font-bold text-[var(--text)] group/chip hover:border-indigo-600 transition-all">
+                 <span className="text-[var(--muted)] uppercase tracking-widest text-[9px]">{key}:</span>
+                 <span>{String(value)}</span>
+                 <button
+                   aria-label={`Remove ${key} filter`}
+                   onClick={() => {
+                     const next = { ...filterCriteria };
+                     delete next[key as keyof FilterCriteria];
+                     onFilterApplied(next);
+                   }}
+                   className="hover:text-rose-600 transition-colors ml-1"
+                 >
+                   <Plus aria-hidden="true" className="rotate-45" size={14} />
+                 </button>
+               </div>
+             );
+           })}
+           <button
+              onClick={() => onFilterApplied({})}
+              className="text-[10px] font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest hover:underline px-2"
+           >
+             Clear All
+           </button>
+        </div>
+      )}
+
+      {/* the table scrolls sideways inside its box when the window is narrower than its columns */}
+      <TransactionGridBody model={model} />
+
+      <AnimatePresence>
+        {selectedIds.size > 0 && (
+          <SelectionBar
+            selectedCount={selectedIds.size}
+            totalAmount={selectedTransactions.reduce((sum, t) => sum + t.totalAmountCents, 0)}
+            avgAmount={selectedIds.size > 0 ? selectedTransactions.reduce((sum, t) => sum + t.totalAmountCents, 0) / selectedIds.size : 0}
+            onCopy={() => {
+              if (selectedIds.size > 0) {
+                const copyText = selectedTransactions.map(t => `${t.date} | ${t.description} | ${formatCurrency(t.totalAmountCents)}`).join('\n');
+                navigator.clipboard.writeText(copyText);
+                toast.success(`Copied payload strings for ${selectedIds.size} lines to clipboard`);
+              }
+            }}
+            onClear={() => setSelectedIds(new Set())}
+            onBulkUpdate={handleBulkUpdate}
+            accounts={accounts}
+            formatCurrency={formatCurrency}
+          />
+        )}
+      </AnimatePresence>
+
+      {editingDetailsTx && (
+        <TransactionEditModal
+          isOpen={!!editingDetailsTx}
+          transaction={editingDetailsTx}
+          accounts={accounts}
+          lockDate={lockDate}
+          isReverseAndCorrectMode={isReverseModeModal}
+          onClose={() => { setEditingDetailsTx(null); setIsReverseModeModal(false); }}
+          onUpdate={onUpdate || (() => {})}
+          onReverseAndCorrect={txActions.handleReverseTransaction}
+        />
+      )}
+    </div>
+  );
+}

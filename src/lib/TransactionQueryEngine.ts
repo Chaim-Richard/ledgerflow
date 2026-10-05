@@ -1,3 +1,4 @@
+import { normalizeSearchText, unquoteSearchValue } from './textNormalization';
 import { FilterCriteria, ChartAccount, Transaction, TransactionLine, DimensionNode } from '../types';
 import type { SavedView } from '../stores/useSavedViewsStore';
 import { LedgerEngine } from '../kernel/ledger/LedgerEngine';
@@ -21,13 +22,13 @@ export const PATTERNS = {
   DATE_RANGE: /(\d{4}-\d{2}-\d{2})\s*(?:to|and)\s*(\d{4}-\d{2}-\d{2})/,
   SINCE_DATE: /\b(since|after)\s*(\d{4}-\d{2}-\d{2})\b/,
   BEFORE_DATE: /\b(before|until)\s*(\d{4}-\d{2}-\d{2})\b/,
-  CATEGORY: /(category|type|account):\s*([a-zA-Z\s]+)/,
-  PROJECT: /(project|initiative|tag):\s*([a-zA-Z\s]+)/,
-  CLASS: /(class|segment):\s*([a-zA-Z\s]+)/,
-  LOCATION: /(location|office|site):\s*([a-zA-Z\s]+)/,
-  STARTS_WITH: /starts\s+with\s+([a-zA-Z0-9\s]+)/,
-  ENDS_WITH: /ends\s+with\s+([a-zA-Z0-9\s]+)/,
-  CONTAINS: /contains\s+([a-zA-Z0-9\s]+)/,
+  CATEGORY: /(category|type|account):\s*([\p{L}\p{M}\p{N}\s]+)/u,
+  PROJECT: /(project|initiative|tag):\s*([\p{L}\p{M}\p{N}\s]+)/u,
+  CLASS: /(class|segment):\s*([\p{L}\p{M}\p{N}\s]+)/u,
+  LOCATION: /(location|office|site):\s*([\p{L}\p{M}\p{N}\s]+)/u,
+  STARTS_WITH: /starts\s+with\s+("[^"]*"|'[^']*'|[\p{L}\p{M}\p{N}\s]+)/u,
+  ENDS_WITH: /ends\s+with\s+("[^"]*"|'[^']*'|[\p{L}\p{M}\p{N}\s]+)/u,
+  CONTAINS: /contains\s+("[^"]*"|'[^']*'|[\p{L}\p{M}\p{N}\s]+)/u,
   ERROR: /\b(error|mismatch|conflict|audit|review|unbalanced)\b/,
   AVERAGE: /\b(above|below)\s+average\b/,
 };
@@ -84,9 +85,9 @@ export class TransactionQueryEngine {
       return allowSimulations ? normalized : normalized.filter(t => !isSimulationTransaction(t as Transaction));
     }
 
-    const lowerSearch = effectiveSearchTerm.toLowerCase().trim();
+    const lowerSearch = normalizeSearchText(effectiveSearchTerm).trim();
     // Fast path N-gram token search for single word queries
-    if (lowerSearch && !lowerSearch.includes(':') && !PATTERNS.OP.test(lowerSearch)) {
+    if (lowerSearch && !lowerSearch.includes(':') && !Object.values(PATTERNS).some(pattern => pattern.test(lowerSearch)) && !/(?:^|\s)(?:-|not\s)/i.test(lowerSearch)) {
       const fastMatches = searchTransactions(normalized as Transaction[], lowerSearch);
       if (fastMatches.length > 0 && !hasFilter) {
         return fastMatches as T[];
@@ -98,11 +99,11 @@ export class TransactionQueryEngine {
     let queryText = lowerSearch;
     
     // Extract key:value filters (e.g., category:Meals, account:Checking, type:expense, status:pending, payee:Apple, is:pending, min:100, max:500)
-    const kvRegex = /\b(category|account|project|type|status|class|location|payee|vendor|customer|tag|code|id|min|max|is):\s*([a-zA-Z0-9_.-]+)/gi;
+    const kvRegex = /\b(category|account|project|type|status|class|location|payee|vendor|customer|tag|code|id|min|max|is):\s*("[^"]*"|'[^']*'|[\p{L}\p{M}\p{N}_./-]+)/giu;
     let kvMatch;
     while ((kvMatch = kvRegex.exec(lowerSearch)) !== null) {
-      const key = kvMatch[1].toLowerCase();
-      const val = kvMatch[2].toLowerCase();
+      const key = normalizeSearchText(kvMatch[1]);
+      const val = normalizeSearchText(unquoteSearchValue(kvMatch[2]));
       keyValues[key] = val;
     }
     queryText = queryText.replace(kvRegex, ' ');
@@ -172,21 +173,20 @@ export class TransactionQueryEngine {
 
     // 4. Negative Terms (-term or NOT term)
     const negativeTerms: string[] = [];
-    const negRegex = /(?:^|\s)-(?:[a-zA-Z0-9_.-]+)|(?:^|\s)NOT\s+([a-zA-Z0-9_.-]+)/gi;
+    const negRegex = /(?:^|\s)-(?:"[^"]*"|'[^']*'|[\p{L}\p{M}\p{N}_.-]+)|(?:^|\s)NOT\s+("[^"]*"|'[^']*'|[\p{L}\p{M}\p{N}_.-]+)/giu;
     let negMatch;
     while ((negMatch = negRegex.exec(queryText)) !== null) {
       const rawMatch = negMatch[0].trim();
       if (rawMatch.startsWith('-')) {
-        negativeTerms.push(rawMatch.substring(1).toLowerCase());
+        negativeTerms.push(normalizeSearchText(unquoteSearchValue(rawMatch.substring(1))));
       } else if (negMatch[1]) {
-        negativeTerms.push(negMatch[1].toLowerCase());
+        negativeTerms.push(normalizeSearchText(unquoteSearchValue(negMatch[1])));
       }
     }
     queryText = queryText.replace(negRegex, ' ');
 
     // 5. Remaining Free-Text Words
-    const freeTextKeywords = queryText
-      .toLowerCase()
+    const freeTextKeywords = normalizeSearchText(queryText)
       .split(/\s+/)
       .map((w: string) => w.trim())
       .filter((w: string) => w.length > 0 && w !== 'and' && w !== 'or');
@@ -194,8 +194,8 @@ export class TransactionQueryEngine {
     // 6. Entity Intent Resolver (Heuristic categorization without prefixes)
     const possibleEntityMatch = freeTextKeywords.length > 0 && !Object.values(PATTERNS).some(p => lowerSearch.match(p));
     const recognizedAccountNames = possibleEntityMatch ? accounts.filter((a) =>
-      freeTextKeywords.some((kw: string) => (a.name || '').toLowerCase().includes(kw) || (a.category || '').toLowerCase().includes(kw)) ||
-      freeTextKeywords.some((kw: string) => jaroWinklerSimilarity(kw, (a.name || '').toLowerCase()) > 0.88)
+      freeTextKeywords.some((kw: string) => normalizeSearchText((a.name || '')).includes(kw) || normalizeSearchText((a.category || '')).includes(kw)) ||
+      freeTextKeywords.some((kw: string) => jaroWinklerSimilarity(kw, normalizeSearchText((a.name || ''))) > 0.88)
     ).map((a) => a.name) : [];
     
     // Convert to Set for O(1) lookup inside the 100k hot-loop
@@ -204,9 +204,9 @@ export class TransactionQueryEngine {
     
     // Dimension Node Intent Resolver
     const recognizedDimensionNodeIds = possibleEntityMatch ? dimensionNodes.filter((n) =>
-      freeTextKeywords.some((kw: string) => (n.id || '').toLowerCase() === kw || (n.description || '').toLowerCase().includes(kw)) ||
-      freeTextKeywords.some((kw: string) => n.aliases?.some((a: string) => a.toLowerCase().includes(kw))) ||
-      freeTextKeywords.some((kw: string) => jaroWinklerSimilarity(kw, (n.description || '').toLowerCase()) > 0.88)
+      freeTextKeywords.some((kw: string) => normalizeSearchText((n.id || '')) === kw || normalizeSearchText((n.description || '')).includes(kw)) ||
+      freeTextKeywords.some((kw: string) => n.aliases?.some((a: string) => normalizeSearchText(a).includes(kw))) ||
+      freeTextKeywords.some((kw: string) => jaroWinklerSimilarity(kw, normalizeSearchText((n.description || ''))) > 0.88)
     ).map((n) => n.id) : [];
     
     // Pull directly from O(1) reverse index for dimension matches to avoid scanning dimensions in loop
@@ -221,23 +221,23 @@ export class TransactionQueryEngine {
     // Helper function to test keyword presence across all searchable transaction fields
     const checkKeywordMatch = (t: NormalizedTransaction, kw: string): boolean => {
       if (!kw) return true;
-      if ((t.description || '').toLowerCase().includes(kw)) return true;
-      if (t._normalized?.sanitizedDescription?.toLowerCase().includes(kw)) return true;
-      if ((t.payee || '').toLowerCase().includes(kw)) return true;
-      if ((t.project || '').toLowerCase().includes(kw)) return true;
-      if ((t.id || '').toLowerCase().includes(kw)) return true;
-      if ((t.type || '').toLowerCase().includes(kw)) return true;
-      if ((t.status || '').toLowerCase().includes(kw)) return true;
-      if (t.tags && t.tags.some((tag: string) => tag.toLowerCase().includes(kw))) return true;
+      if (normalizeSearchText((t.description || '')).includes(kw)) return true;
+      if (normalizeSearchText(t._normalized?.sanitizedDescription).includes(kw)) return true;
+      if (normalizeSearchText((t.payee || '')).includes(kw)) return true;
+      if (normalizeSearchText((t.project || '')).includes(kw)) return true;
+      if (normalizeSearchText((t.id || '')).includes(kw)) return true;
+      if (normalizeSearchText((t.type || '')).includes(kw)) return true;
+      if (normalizeSearchText((t.status || '')).includes(kw)) return true;
+      if (t.tags && t.tags.some((tag: string) => normalizeSearchText(tag).includes(kw))) return true;
 
       if (t.lines) {
         for (const l of t.lines) {
-          if ((l.description || '').toLowerCase().includes(kw)) return true;
-          if ((l.accountName || '').toLowerCase().includes(kw)) return true;
-          if ((l.memo || '').toLowerCase().includes(kw)) return true;
-          if ((l.class || '').toLowerCase().includes(kw)) return true;
-          if ((l.location || '').toLowerCase().includes(kw)) return true;
-          if (l.tags && l.tags.some((tg: string) => tg.toLowerCase().includes(kw))) return true;
+          if (normalizeSearchText((l.description || '')).includes(kw)) return true;
+          if (normalizeSearchText((l.accountName || '')).includes(kw)) return true;
+          if (normalizeSearchText((l.memo || '')).includes(kw)) return true;
+          if (normalizeSearchText((l.class || '')).includes(kw)) return true;
+          if (normalizeSearchText((l.location || '')).includes(kw)) return true;
+          if (l.tags && l.tags.some((tg: string) => normalizeSearchText(tg).includes(kw))) return true;
         }
       }
 
@@ -245,9 +245,9 @@ export class TransactionQueryEngine {
       if (firstAccountId) {
         const acc = accounts.find(a => a.id === firstAccountId);
         if (acc) {
-          if ((acc.name || '').toLowerCase().includes(kw)) return true;
-          if ((acc.code || '').toLowerCase().includes(kw)) return true;
-          if ((acc.category || '').toLowerCase().includes(kw)) return true;
+          if (normalizeSearchText((acc.name || '')).includes(kw)) return true;
+          if (normalizeSearchText((acc.code || '')).includes(kw)) return true;
+          if (normalizeSearchText((acc.category || '')).includes(kw)) return true;
         }
       }
 
@@ -256,7 +256,7 @@ export class TransactionQueryEngine {
       }
 
       if (kw.length >= 3) {
-        const similarity = jaroWinklerSimilarity(kw, (t.description || '').toLowerCase(), userUid, t._normalized?.sanitizedDescription);
+        const similarity = jaroWinklerSimilarity(kw, normalizeSearchText((t.description || '')), userUid, t._normalized?.sanitizedDescription);
         if (similarity >= 0.85) return true;
       }
 
@@ -284,12 +284,12 @@ export class TransactionQueryEngine {
     const parsedMonthIdx = (() => {
       if (!monthMatch) return -1;
       const mNames = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december", "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-      return mNames.indexOf(monthMatch[1].toLowerCase()) % 12;
+      return mNames.indexOf(normalizeSearchText(monthMatch[1])) % 12;
     })();
     const parsedMonthStr = parsedMonthIdx !== -1 ? (parsedMonthIdx + 1).toString().padStart(2, '0') : '';
 
     // Precalculate Relative Date thresholds and state variables
-    const parsedRelativeRel = relativeTimeMatch ? relativeTimeMatch[1].toLowerCase() : '';
+    const parsedRelativeRel = relativeTimeMatch ? normalizeSearchText(relativeTimeMatch[1]) : '';
     const parsedNow = new Date();
     const parsedNowMonth = parsedNow.getMonth();
     const parsedNowYear = parsedNow.getFullYear();
@@ -297,9 +297,9 @@ export class TransactionQueryEngine {
     const parsedTodayStr = format(parsedNow, 'yyyy-MM-dd');
 
     // Precalculate prefix filter parameters
-    const queryStartsWith = startsWithMatch ? startsWithMatch[1].trim().toLowerCase() : '';
-    const queryEndsWith = endsWithMatch ? endsWithMatch[1].trim().toLowerCase() : '';
-    const queryContains = containsMatch ? containsMatch[1].trim().toLowerCase() : '';
+    const queryStartsWith = startsWithMatch ? normalizeSearchText(unquoteSearchValue(startsWithMatch[1]).trim()) : '';
+    const queryEndsWith = endsWithMatch ? normalizeSearchText(unquoteSearchValue(endsWithMatch[1]).trim()) : '';
+    const queryContains = containsMatch ? normalizeSearchText(unquoteSearchValue(containsMatch[1]).trim()) : '';
 
     return normalized.filter(t => {
       // Identity Consistency Guard
@@ -332,7 +332,7 @@ export class TransactionQueryEngine {
 
         // View-based OR search matching any word in view's searchTerm
         if (vFilter.searchTerm) {
-          const viewWords = vFilter.searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+          const viewWords = normalizeSearchText(vFilter.searchTerm).split(/\s+/).filter(Boolean);
           if (viewWords.length > 0) {
             const matchesAnyViewWord = viewWords.some((w: string) => checkKeywordMatch(t, w));
             if (!matchesAnyViewWord) return false;
@@ -387,63 +387,63 @@ export class TransactionQueryEngine {
         // A. Key-Value & Directive Filters (category, account, project, type, status, class, location, payee, vendor, tag, min, max, is)
         if (keyValues['category'] || keyValues['account']) {
           const target = keyValues['category'] || keyValues['account'];
-          const catName = resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName).toLowerCase();
+          const catName = normalizeSearchText(resolveAccountName(accounts, t.lines?.[0]?.accountId, t.lines?.[0]?.accountName));
           const mainLineAcc = accounts.find(a => a.id === t.lines?.[0]?.accountId);
-          const accName = (mainLineAcc?.name || '').toLowerCase();
-          const accCode = (mainLineAcc?.code || '').toLowerCase();
+          const accName = normalizeSearchText((mainLineAcc?.name || ''));
+          const accCode = normalizeSearchText((mainLineAcc?.code || ''));
           if (!catName.includes(target) && !accName.includes(target) && !accCode.includes(target)) {
             isMatch = false;
           }
         }
 
         if (isMatch && keyValues['project']) {
-          const proj = (t.project || '').toLowerCase();
+          const proj = normalizeSearchText((t.project || ''));
           if (!proj.includes(keyValues['project'])) isMatch = false;
         }
 
         if (isMatch && keyValues['type']) {
-          const tType = (t.type || '').toLowerCase();
+          const tType = normalizeSearchText((t.type || ''));
           if (tType !== keyValues['type']) isMatch = false;
         }
 
         if (isMatch && keyValues['status']) {
-          const tStatus = (t.status || '').toLowerCase();
+          const tStatus = normalizeSearchText((t.status || ''));
           if (tStatus !== keyValues['status']) isMatch = false;
         }
 
         if (isMatch && keyValues['class']) {
-          const hasClass = t.lines?.some((l) => (l.class || '').toLowerCase().includes(keyValues['class']));
+          const hasClass = t.lines?.some((l) => normalizeSearchText((l.class || '')).includes(keyValues['class']));
           if (!hasClass) isMatch = false;
         }
 
         if (isMatch && keyValues['location']) {
-          const hasLoc = t.lines?.some((l) => (l.location || '').toLowerCase().includes(keyValues['location']));
+          const hasLoc = t.lines?.some((l) => normalizeSearchText((l.location || '')).includes(keyValues['location']));
           if (!hasLoc) isMatch = false;
         }
 
         if (isMatch && (keyValues['payee'] || keyValues['vendor'] || keyValues['customer'])) {
           const targetPayee = keyValues['payee'] || keyValues['vendor'] || keyValues['customer'];
-          const p = (t.payee || '').toLowerCase();
+          const p = normalizeSearchText((t.payee || ''));
           if (!p.includes(targetPayee)) isMatch = false;
         }
 
         if (isMatch && keyValues['tag']) {
           const targetTag = keyValues['tag'];
-          const hasTag = (t.tags && t.tags.some((tg: string) => tg.toLowerCase().includes(targetTag))) ||
-            t.lines?.some((l) => l.tags && l.tags.some((tg: string) => tg.toLowerCase().includes(targetTag)));
+          const hasTag = (t.tags && t.tags.some((tg: string) => normalizeSearchText(tg).includes(targetTag))) ||
+            t.lines?.some((l) => l.tags && l.tags.some((tg: string) => normalizeSearchText(tg).includes(targetTag)));
           if (!hasTag) isMatch = false;
         }
 
         if (isMatch && keyValues['code']) {
           const targetCode = keyValues['code'];
           const mainLineAcc = accounts.find(a => a.id === t.lines?.[0]?.accountId);
-          if (mainLineAcc?.code?.toLowerCase() !== targetCode && !(t.lines || []).some((l) => l.accountId?.toLowerCase().includes(targetCode))) {
+          if (normalizeSearchText(mainLineAcc?.code) !== targetCode && !(t.lines || []).some((l) => normalizeSearchText(l.accountId).includes(targetCode))) {
             isMatch = false;
           }
         }
 
         if (isMatch && keyValues['id']) {
-          if (!t.id.toLowerCase().includes(keyValues['id'])) isMatch = false;
+          if (!normalizeSearchText(t.id).includes(keyValues['id'])) isMatch = false;
         }
 
         if (isMatch && keyValues['min']) {
@@ -464,7 +464,7 @@ export class TransactionQueryEngine {
           else if (isDirective === 'cleared' && !t.isCleared) isMatch = false;
           else if (isDirective === 'reconciled' && t.status !== 'reconciled' && !t.isCleared) isMatch = false;
           else if (isDirective === 'unbalanced') {
-            const isUnbalanced = LedgerEngine.auditTransaction(t as Transaction, accountMap).some((err: string) => err.toLowerCase().includes('unbalanced') || err.toLowerCase().includes('imbalance'));
+            const isUnbalanced = LedgerEngine.auditTransaction(t as Transaction, accountMap).some((err: string) => normalizeSearchText(err).includes('unbalanced') || normalizeSearchText(err).includes('imbalance'));
             if (!isUnbalanced) isMatch = false;
           }
           else if (isDirective === 'error') {
@@ -503,12 +503,12 @@ export class TransactionQueryEngine {
 
         // C. Statistical Anchors
         if (isMatch && averageMatch) {
-          const rel = averageMatch[1].toLowerCase();
+          const rel = normalizeSearchText(averageMatch[1]);
           if (rel === 'above' && t._normalized.absAmount <= thresholds.avg) isMatch = false;
           if (rel === 'below' && t._normalized.absAmount >= thresholds.avg) isMatch = false;
         }
         if (isMatch && percentileMatch) {
-          const side = percentileMatch[1].toLowerCase();
+          const side = normalizeSearchText(percentileMatch[1]);
           const pct = percentileMatch[2];
           const amt = t._normalized.absAmount;
           if (side === 'top') {
@@ -582,7 +582,7 @@ export class TransactionQueryEngine {
           }
         }
         if (isMatch && quarterMatch) {
-          const q = quarterMatch[1].toLowerCase();
+          const q = normalizeSearchText(quarterMatch[1]);
           const tDateStr = t.date || '';
           const tMonth = parseInt(tDateStr.substring(5, 7), 10) - 1;
           if (q === 'q1' && tMonth > 2) isMatch = false;
@@ -606,13 +606,13 @@ export class TransactionQueryEngine {
 
         // E. String Directives
         if (isMatch && startsWithMatch) {
-            if (!(t.description || '').toLowerCase().startsWith(queryStartsWith)) isMatch = false;
+            if (!normalizeSearchText((t.description || '')).startsWith(queryStartsWith)) isMatch = false;
         }
         if (isMatch && endsWithMatch) {
-            if (!(t.description || '').toLowerCase().endsWith(queryEndsWith)) isMatch = false;
+            if (!normalizeSearchText((t.description || '')).endsWith(queryEndsWith)) isMatch = false;
         }
         if (isMatch && containsMatch) {
-            if (!(t.description || '').toLowerCase().includes(queryContains)) isMatch = false;
+            if (!normalizeSearchText((t.description || '')).includes(queryContains)) isMatch = false;
         }
         if (isMatch && errorMatch) {
            const auditErrors = LedgerEngine.auditTransaction(t as Transaction, accountMap);

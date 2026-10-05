@@ -1,3 +1,4 @@
+import { normalizeSearchText } from '../textNormalization';
 import { KNOWN_CANONICAL_BRANDS } from './merchantIdentity';
 
 
@@ -363,11 +364,11 @@ export class BayesianClassifier {
    * Also incorporates canonical brand token expansion for robust merchant matching.
    */
   private tokenizeAndExtractFeatures(text: string): string[] {
-    const rawWords = text.toLowerCase()
-      .replace(/[^a-z0-9]+/g, ' ')
+    const rawWords = normalizeSearchText(text)
+      .replace(/[^\p{L}\p{M}\p{N}]+/gu, ' ')
       .split(/\s+/)
       .map(w => w.replace(/\d{2,}$/, ''))
-      .filter(w => w.length > 2 && !BayesianClassifier.FINANCIAL_STOPWORDS.has(w));
+      .filter(w => (w.length > 2 || (w.length >= 2 && /\p{Script=Hebrew}/u.test(w))) && !BayesianClassifier.FINANCIAL_STOPWORDS.has(w));
 
     // Unigrams
     const features: string[] = [...rawWords];
