@@ -26,6 +26,8 @@ import { toast } from 'sonner';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
 import { csvMoney, downloadCsv } from '../../lib/csvExport';
+import ExpectedBills from './ExpectedBills';
+import type { ExpectedBill } from '../../lib/expectedBills';
 
 const NO_VENDORS: Vendor[] = [];
 const NO_BILLS: Bill[] = [];
@@ -35,6 +37,8 @@ export default function Purchases() {
   const bills = useLedgerStore(s => s.bills) ?? NO_BILLS;
   const accounts = useLedgerStore(s => s.accounts) || [];
   const { loading } = useLedgerCollections('bills', 'vendors');
+  const schedules = useLedgerStore(s => s.recurring) || [];
+  useLedgerCollections('recurring');
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
   const canEditContacts = useCurrentRole() !== 'viewer';
 
@@ -96,6 +100,17 @@ export default function Purchases() {
     setIsBillModalOpen(false);
     setEditingBill(undefined);
   };
+
+  // K-21: a bill that should have come is recorded from the vendor's latest one (lines and amounts, new dates)
+  const recordExpected = (e: ExpectedBill) => {
+    const last = bills.find(b => b.id === e.lastBillId);
+    const { id: _id, number: _number, date: _date, dueDate: _due, status: _status, amountPaidCents: _paid, settledByRecordsCents: _settled,
+      createdAt: _created, updatedAt: _updated, metadata: _metadata, ...copy } = (last || {}) as Bill;
+    setEditingBill({ ...copy, vendorId: e.vendorId, vendorName: e.vendorName });
+    setIsBillModalOpen(true);
+  };
+  const stopExpecting = (e: ExpectedBill) =>
+    updateEntity('vendors', e.vendorId, { billsExpected: false }, `Bills from ${e.vendorName} are no longer expected`);
 
   const describeBill = (b: Bill) => `bill ${b.number || ''} from ${b.vendorName || 'this vendor'} (${formatCurrency(b.amountCents || 0, b.currency)})`.replace('bill  from', 'bill from');
 
@@ -192,6 +207,10 @@ export default function Purchases() {
           Vendors ({vendors.length})
         </button>
       </div>
+
+      {activeSubTab === 'bills' && (
+        <ExpectedBills bills={bills} vendors={vendors} schedules={schedules} canEdit={canEditContacts} onRecord={recordExpected} onDismiss={stopExpecting} />
+      )}
 
       {/* Search Input Bar */}
       <div className="relative max-w-xs">
