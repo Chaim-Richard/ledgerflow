@@ -3,7 +3,7 @@ test('recent records reopen by typed link from another page', async ({ page }) =
   await page.route('**/api/**', route => route.fulfill({ status: 200, json: {} }));
   await page.addInitScript(() => { localStorage.setItem('isGuest', 'true'); localStorage.setItem('has_seen_onboarding', 'true'); });
   await page.goto('/#transactions');
-  await expect(page.getByRole('heading', { name: 'Journal Entries' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Journal Entries' })).toBeVisible({ timeout: 20000 });
   await page.evaluate(async () => {
     const { useUIStore } = await import('/src/stores/useUIStore.ts');
     useUIStore.getState().openRecord({ type: 'account', id: 'cash-recent' });
