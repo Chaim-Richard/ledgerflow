@@ -17,6 +17,8 @@ import { isCashAccount, isPostable, lineAmount } from '../../lib/txFilters';
 import { useTimeout } from '../../hooks/useTimeout';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { focusOnMount } from '../../lib/focusOnMount';
+import { pageIndex, searchPages } from '../../config/pageIndex';
+import { pageKey, type PinnedPage } from '../../lib/pinnedPages';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -106,6 +108,9 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
       onClose();
     }
   };
+
+  const developerMode = useUIStore(state => state.developerMode);
+  const pages = useMemo(() => pageIndex(language, { developerMode }), [language, developerMode]);
 
   // Map commands to the currently active UI language
   const localizedCommands = React.useMemo(() => {
@@ -340,12 +345,22 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
       )
     : localizedCommands;
 
-  const combinedResults = [...dataResults, ...filteredCommands];
+  const pageResults: PaletteResult[] = useMemo(() => (query.trim().length < 2 ? [] : searchPages(pages, query).slice(0, 8).map(p => ({
+    id: `page-${pageKey(p.page)}`, type: 'page', label: `Go to ${p.label}`, category: 'Pages', payload: p.page, icon: <ArrowRight aria-hidden="true" size={16} />,
+  }))), [pages, query]);
+
+  const combinedResults = [...pageResults, ...dataResults, ...filteredCommands];
 
   const handleSelect = async (item: PaletteResult) => {
+    // go to any page, report or settings tab (BB-09); no artificial wait before acting
+    if (item.type === 'page') {
+      useUIStore.getState().goToPage(item.payload as PinnedPage);
+      setQuery('');
+      onClose();
+      return;
+    }
     setIsExecuting(true);
-    await new Promise(r => setTimeout(r, 400));
-    
+
     // Core Application Action Mappings
     if (onAction && item.actionId) {
       onAction(item.actionId, item.payload);

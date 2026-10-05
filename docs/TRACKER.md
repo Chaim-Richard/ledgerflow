@@ -2070,7 +2070,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BB-06 Schedule (UI over jobRuns)
 - [ ] BB-07 Modules
 - [ ] BB-08 Invoice settings
-- [ ] BB-09 Settings search
+- [x] BB-09 Settings search: ⌘K finds every screen, report and settings tab, settings also by what they're about ("logo", "invoice number", "2fa"); opens at once (the palette's 0.4 s pause before every action removed) (tested)
 
 # SECTION BC — DASHBOARD WIDGETS
 
