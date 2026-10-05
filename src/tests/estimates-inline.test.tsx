@@ -1,0 +1,24 @@
+import './helpers/dom';
+import test, { afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import EstimatesView from '../components/sales/EstimatesView';
+import { setComponentWorkspace, markComponentCollectionsLoaded } from './helpers/componentFixtures';
+import { useLedgerStore } from '../stores/useLedgerStore';
+import { getSupabase } from '../lib/db/client';
+import type { Estimate } from '../types';
+const draft: Estimate = { id: 'e', uid: 'test-user', workspaceId: 'component-workspace', number: 'EST-1', customerId: 'c', customerName: 'לקוח', amountCents: 15000, date: '2026-10-01', status: 'draft', createdAt: '2026-10-01', notes: 'Original', lines: [] };
+afterEach(async () => { cleanup(); await getSupabase().auth.dispose(); });
+test('only draft estimate reference/dates/notes are editable; the latest status is checked before saving', async () => {
+ setComponentWorkspace(); markComponentCollectionsLoaded('estimates', 'customers'); useLedgerStore.setState({ estimates: [draft, { ...draft, id: 'sent', number: 'EST-2', status: 'sent' }], customers: [] });
+ let writes = 0;
+ globalThis.fetch = (async (input: RequestInfo | URL) => { if (String(input).includes('/rpc/lf_update')) writes++; return new Response(JSON.stringify({ id: 'e', data: { ...draft, status: 'converted' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }); }) as typeof fetch;
+ render(<EstimatesView />);
+ for (const field of ['Reference', 'Date', 'Expiry', 'Notes']) assert.ok(screen.getByRole('button', { name: `Edit ${field} of estimate EST-1` }));
+ assert.equal(screen.queryByRole('button', { name: 'Edit Reference of estimate EST-2' }), null);
+ fireEvent.click(screen.getByRole('button', { name: 'Edit Reference of estimate EST-1' })); fireEvent.change(screen.getByLabelText('Reference of estimate EST-1'), { target: { value: 'EST-3' } });
+ await act(async () => { fireEvent.keyDown(screen.getByLabelText('Reference of estimate EST-1'), { key: 'Enter' }); });
+ assert.match(screen.getByRole('alert').textContent || '', /Only draft/); assert.equal(writes, 0); assert.equal(useLedgerStore.getState().estimates[0].amountCents, 15000);
+ cleanup(); setComponentWorkspace('viewer'); render(<EstimatesView />); assert.equal(screen.queryByRole('button', { name: /^Edit .* of estimate/ }), null);
+});
