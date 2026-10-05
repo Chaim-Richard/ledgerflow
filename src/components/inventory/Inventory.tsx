@@ -51,6 +51,8 @@ import { adjustStockRequest } from '../../services/stockRequests';
 import CogsDialog from './CogsDialog';
 import StockAdjustDialog from './StockAdjustDialog';
 import StockCountDialog from './StockCountDialog';
+import CategoryManagerDialog from './CategoryManagerDialog';
+import { categoryCounts } from '../../lib/itemCategories';
 
 export default function Inventory() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -66,6 +68,7 @@ export default function Inventory() {
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
   const [isCounting, setIsCounting] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [isManagingCategories, setIsManagingCategories] = useState(false);
   const baseCurrency = useLedgerStore(s => s.baseCurrency) || 'USD';
   const canChangeStock = useCurrentRole() !== 'viewer';
   const { setSafeTimeout } = useTimeout();
@@ -197,7 +200,7 @@ export default function Inventory() {
     }
   };
 
-  const categories = useMemo(() => [...new Set(items.map(i => (i.category || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [items]);
+  const categories = useMemo(() => categoryCounts(items).map(c => c.name), [items]);
   const matches = (item: InventoryItem) =>
     (!categoryFilter || (item.category || '').trim() === categoryFilter) &&
     (item.name.toLowerCase().includes(searchTerm.toLowerCase()) || (item.sku || '').toLowerCase().includes(searchTerm.toLowerCase()));
@@ -362,6 +365,11 @@ export default function Inventory() {
               {c || 'All categories'}
             </button>
           ))}
+          {canChangeStock && (
+            <button type="button" onClick={() => setIsManagingCategories(true)} className="px-3 py-1.5 rounded-full text-xs font-semibold text-emerald-700 hover:underline">
+              Manage categories
+            </button>
+          )}
         </div>
       )}
 
@@ -742,6 +750,9 @@ export default function Inventory() {
       )}
       {adjustItem && workspaceId && (
         <StockAdjustDialog item={adjustItem} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setAdjustItem(null)} />
+      )}
+      {isManagingCategories && (
+        <CategoryManagerDialog items={items} onClose={() => setIsManagingCategories(false)} />
       )}
       {isCounting && workspaceId && (
         <StockCountDialog items={items} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setIsCounting(false)} />

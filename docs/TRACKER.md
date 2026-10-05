@@ -1734,6 +1734,10 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-172 **SECURITY** `/api/v1/inventory/adjust` and `/cogs` only checked membership: a viewer could post stock entries and change quantities. Both now need owner, accountant or bookkeeper; `/adjust` also hung (no answer) when its database transaction failed, and both labelled entries USD in any workspace. Stock changes now go through one service: every line in one entry with the new quantities, in the workspace currency, never below zero (tested)
 - [x] L-173 Stock quantity could be typed into the item form: it changed what is on hand without any entry, so Inventory on the balance sheet and the stock list drifted apart (the record-a-sale dialog also lowered the stock a second time, and fell back to a made-up $50 cost and to any asset or expense account). Quantity now changes only through the server (database rule + tested); new items' opening stock is posted to Opening Balance Equity
 - [x] L-174 Inventory showed each person only the items they created; teammates now see all the workspace's items
+- [x] L-175 Bank reconciliation "Auto Align All" reloaded bank lines and entries filtered to the signed-in person's own records, so lines imported by the server or a teammate were never matched, and it ignored the account filter. It now matches what the screen shows (tested, with a screen test of matching, ignoring, undoing and the filters)
+- [x] L-176 Quick entry and search phrases: amounts came out as fractions of a cent ("28.99" → 2898.9999…), "between 100 and 250.75" used 0.75 as the upper bound ("between 100 and 250" failed), "hosting 0.29" was read as 0.20, and a typed date on the 31st ("3rd feb") rolled into March (tested)
+- [x] L-177 An automatic rule with a "set amount" action rewrote an entry's total without its lines, so the entry and the ledger disagreed; rules never change amounts now (tested)
+- [x] L-178 CI was red for 3 pushes: the coverage floor (75%) failed after Codex's split files were counted with few tests; tests added for the reconciliation screen, the category engine, the rules engine, the quick-entry parser and recording a sale (coverage back above 75%)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
@@ -2034,7 +2038,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BA-02 Vendor opening balance
 - [ ] BA-03 Allocate landed cost
 - [x] BA-04 Inventory adjustment form (= K-13)
-- [ ] BA-05 Item category management
+- [x] BA-05 Item category management: rename, merge or remove a category on all its items at once (Inventory → Manage categories; tested)
 - [ ] BA-06 Add-a-currency dialog
 - [ ] BA-07 Numbering dialog per document type
 - [ ] BA-08 PDF preview per document type
