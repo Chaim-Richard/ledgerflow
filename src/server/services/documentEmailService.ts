@@ -12,6 +12,7 @@ import { generateDocumentPdf } from './pdfService';
 import { loadStatement } from './statementService';
 import { isArchivedParty } from '../../lib/contacts';
 import { againstPreference, sendsByEmail } from '../../lib/delivery';
+import { approvalDecision, approvalStatus, holdsSending, isApproverRole } from '../../lib/invoiceApproval';
 
 /**
  * Emailing an invoice or a payment reminder to the customer (S-01, BE-01, BL-03, BL-05, K-08).
@@ -23,6 +24,10 @@ import { againstPreference, sendsByEmail } from '../../lib/delivery';
  * - a contact who asked for paper instead of email (Y-27) is still emailed when a person presses
  *   Email, but the log says so (againstPreference) — only sends that happen by themselves skip them.
  *   A scheduled send (input.system) is never against their wish: the job doesn't email them at all.
+ * - an invoice over the workspace's approval limit (BE-04, src/lib/invoiceApproval.ts) waits for a
+ *   signature from an owner or an accountant, and for those two sending one *is* the signature: the
+ *   invoice is approved as it goes out. The daily reminder job asks nobody to wait — an invoice still
+ *   held back is filtered out before a reminder is considered (reminderService.ts).
  */
 
 export class EmailSendError extends Error {
@@ -82,6 +87,18 @@ export async function emailInvoice(db: Firestore, input: EmailInvoiceInput) {
   if (await isSuppressed(db, to)) throw new EmailSendError(409, `${to} bounced or reported an earlier email as spam; update the customer's email address`);
   if (!isMailConfigured()) throw new EmailSendError(503, 'Email sending is not set up yet (add an email provider key in the settings)');
 
+  // BE-04: over the approval limit, a person who cannot sign gets refused; a person who can signs.
+  const settings = workspace.invoiceApproval;
+  const held = holdsSending(invoice, settings);
+  const approver = isApproverRole(workspaceRole(workspace, input.uid));
+  if (held && !input.system) {
+    if (!approver) {
+      throw new EmailSendError(409, approvalStatus(invoice, settings) === 'rejected'
+        ? 'An owner or an accountant sent this invoice back — fix what they wrote before it goes to the customer'
+        : 'This invoice is over the approval limit: an owner or an accountant must approve it first (Settings → Emails & Reminders)');
+    }
+  }
+
   let token = typeof invoice.paymentToken === 'string' ? invoice.paymentToken : '';
   if (!token) token = `pay_${crypto.randomBytes(32).toString('hex')}`;
 
@@ -130,6 +147,10 @@ export async function emailInvoice(db: Firestore, input: EmailInvoiceInput) {
     paymentToken: token,
     // pending/approved → sent (all are issued, already in the books); other statuses stay
     ...(invoice.status === 'pending' || invoice.status === 'approved' ? { status: 'sent' } : {}),
+    // an approver sending a held invoice signs it off on the spot (BE-04)
+    ...(held && approver && !input.system
+      ? { approval: approvalDecision(settings, 'approved', { uid: input.uid, now }) }
+      : {}),
     metadata,
     updatedAt: now,
   });

@@ -7,6 +7,8 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { getIdToken } from '../../firebase';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { deliveryLabel, deliveryPhrase, preferredDelivery } from '../../lib/delivery';
+import { approvalDetail, approvalStatus, isApproverRole } from '../../lib/invoiceApproval';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
 
 /**
  * Email an invoice or a payment reminder to the customer, and see every email sent for it
@@ -32,6 +34,12 @@ export default function InvoiceEmailDialog({ invoice, onClose }: { invoice: Invo
   // Y-27: the customer's own choice of how documents reach them; sending by hand still works, it just
   // says so up front and in the log.
   const paperCopy = preferredDelivery(customer) !== 'email';
+  // BE-04: over the approval limit the invoice may not go out on its own; the dialog says why, and
+  // for someone allowed to sign, sending it *is* the approval.
+  const workspace = useAuthStore(s => s.getCurrentWorkspace());
+  const approvalState = approvalStatus(invoice, workspace?.invoiceApproval);
+  const held = approvalState === 'awaiting' || approvalState === 'rejected';
+  const canSign = isApproverRole(useCurrentRole());
   const [to, setTo] = useState(() => String(invoice.metadata?.sentTo || customer?.email || ''));
   const [template, setTemplate] = useState<'invoice' | 'reminder'>(overdue && invoice.status !== 'pending' ? 'reminder' : 'invoice');
   const [events, setEvents] = useState<LogEvent[] | null>(null);
@@ -88,9 +96,17 @@ export default function InvoiceEmailDialog({ invoice, onClose }: { invoice: Invo
               Pressing send emails it anyway, and the log below says it went against their choice.
             </p>
           )}
+          {held && (
+            <p className="text-xs text-[var(--neg)]">
+              {approvalDetail(approvalState, workspace?.invoiceApproval, invoice.approval, workspace?.currency)}
+              {canSign
+                ? ' Pressing send emails it and records your approval.'
+                : ' An owner or an accountant approves it from the invoice list; until then it stays here.'}
+            </p>
+          )}
           <button type="button" disabled={busy || !to.includes('@') || invoice.status === 'draft'} onClick={send}
             className="rounded-lg bg-[var(--brass)] px-4 py-2 text-sm font-bold text-black disabled:opacity-50">
-            {busy ? 'Sending…' : paperCopy ? 'Email anyway' : 'Send'}
+            {busy ? 'Sending…' : held && canSign ? 'Approve and send' : paperCopy ? 'Email anyway' : 'Send'}
           </button>
           {invoice.status === 'draft' && <p className="text-xs text-[var(--muted)]">Save the invoice as final before emailing it.</p>}
 

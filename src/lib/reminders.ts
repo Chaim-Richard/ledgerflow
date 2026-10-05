@@ -48,6 +48,8 @@ export interface ReminderInvoice {
   number?: string;
   customerName?: string;
   currency?: string;
+  /** read by the daily job to leave a signed-off-later invoice alone (BE-04); no amounts are changed */
+  approval?: import('./invoiceApproval').InvoiceApprovalRecord;
   metadata?: { remindersSent?: number; lastReminderAt?: string; noReminders?: boolean } & Record<string, unknown>;
 }
 

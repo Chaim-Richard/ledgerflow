@@ -66,6 +66,14 @@ Last updated: 2026-10-05.
     Arena sandbox, so it is checked in but not applied. Paste the file in Supabase → SQL editor,
     or say so and the next Claude session runs it through the connector.
 
+20. **A second database change to apply** (from BE-04, 5 Oct): `supabase/migrations/
+    20261007010000_invoice_approval.sql`. It lets a workspace keep the new `invoiceApproval` rule —
+    the amount an invoice must exceed before an owner or an accountant has to approve it before it is
+    emailed. Until it is applied, saving that rule in Settings → Emails & Reminders is refused by the
+    database guard and every invoice goes out as it always did; nothing else is affected, and no
+    invoice field needs a migration (the approval itself is stored with the invoice). Same as item 19:
+    paste it in Supabase → SQL editor, or say so and the next session runs it through the connector.
+
 ## B. Decisions (Claude uses the default until you say otherwise)
 
 10. **Hebrew data — decided by owner (2 Oct).** Keep menus and options in English. The system and algorithms must handle Hebrew and mixed Hebrew/English names, labels, item descriptions and other record text throughout search/matching, imports/exports and documents. This is data-language support, not a request to translate the interface. Codex is auditing it after C-6…C-11; existing financial rules must stay intact.
@@ -146,6 +154,14 @@ Last updated: 2026-10-05.
   monthly statement batch, and emailing an invoice when you save it as Sent. Someone who gets paper
   instead gets the reminder in the bell for your team. Pressing **Email** on an invoice always sends;
   the send log then says it went against their choice.
+- **New (5 Oct): big invoices wait for you.** Settings → Emails & Reminders → "Approval before an
+  invoice goes out": switch it on and name an amount, and no invoice above it is emailed until an
+  owner or an accountant approves it. The invoice itself is booked as usual — the accounts and the
+  reports stay complete — only the customer receiving it waits, and its payment reminders wait with
+  it. In the invoice list a held invoice says "Waiting for approval", and an owner or accountant sees
+  **Approve** and **Send back** (with a note the bookkeeper then reads). Approving or sending also
+  releases its reminders. Turning this on changes nothing about invoices that already went out.
+  Default: off, until you name an amount.
 - **New (5 Oct): thank-you emails.** Settings → Emails & Reminders → "Email a thank-you when a
   customer pays" (off until you turn it on). Default used: off, so no customer gets a surprise email.
 - Vercel deploys by itself about a minute after each push to `main`.

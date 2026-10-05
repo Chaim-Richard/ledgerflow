@@ -261,8 +261,9 @@ number in a test is checked by hand. Tick the tracker items as they land.
 | Launch #8 data-health checks and record links (done 2026-09-30) | `src/lib/dataChecks.ts`, `src/lib/recordLinks.ts`, `src/hooks/useRecordFocus.ts`, `src/stores/useUIStore.ts`, `src/components/system/DataHealthView.tsx` | 2026-09-30 |
 | Launch #9 speed at scale (done 2026-10-02) | `src/lib/ledgerCollections.ts`, `src/hooks/useLedgerCollections.ts`, `src/hooks/useLedgerData.ts`, `src/lib/db/firestore.ts`, `src/lib/db/liveQuery.ts`, `src/stores/useDataNeedsStore.ts` | 2026-10-02 |
 | LATER items, Claude's lane (5 Oct): inventory adjustments and stock counts, then document numbering/preview/emails, contact merge, banking and settings items | `src/components/inventory/`, `src/components/common/Party*.tsx`, `src/components/common/TagFilter.tsx`, `src/lib/contacts.ts`, `src/lib/branding.ts`, `src/components/platform/settings/BrandingSettings.tsx`, `src/components/sales/CustomerDetailView.tsx`, `src/components/purchases/VendorDetailView.tsx`, `src/components/reporting/ContactBalanceSummaryView.tsx`, `InventoryValuationReportView.tsx`, `TransactionsByReferenceView.tsx` | 2026-10-05 |
-| Zero friction (owner, 5 Oct): pinned pages, edit/add in place, suggestions; numbering settings; contact merge (I-21 I-22 I-23 BA-07 Y-23); Y-27 preferred delivery done 5 Oct; next: currencies page, invoice approval, deposit invoices from estimates, FX revaluation (BB-02 BE-04 BE-05 R-07) |
+| Zero friction (owner, 5 Oct): pinned pages, edit/add in place, suggestions; numbering settings; contact merge (I-21 I-22 I-23 BA-07 Y-23); Y-27 preferred delivery done 5 Oct; done: invoice approval (BE-04, 5 Oct); next: deposit invoices from estimates (blocked, see BE-05), FX revaluation (BE-05 R-07) |
 |  | `src/lib/delivery.ts`, `src/lib/reminders.ts`, `src/lib/notifications.ts`, `src/server/services/reminderService.ts`, `src/server/services/documentEmailService.ts`, `src/components/common/PartyModal.tsx`, `src/components/common/PartyProfilePanel.tsx` | 2026-10-05 | `src/components/sales/EstimatesView.tsx` (deposit invoices), `src/services/documentNumbers.ts`, `src/lib/creditEdits.ts`, `src/lib/purchaseOrders.ts`, `src/components/ui/InlineEdit.tsx`, `src/components/ui/InlineAdd.tsx`, `src/lib/inlineEdit.ts`, `src/lib/pinnedPages.ts`, `src/components/layout/PinnedPagesBar.tsx`, `src/components/layout/Header.tsx`, `src/core/layout/RootLayout.tsx`, `src/hooks/useKeyboardShortcuts.ts`, `src/config/shortcuts.ts`, `src/config/pageLabels.ts`, `src/components/ledger/ChartOfAccountsView.tsx`, `src/components/platform/settings/NumberingSettings.tsx`, `src/components/common/MergePartyDialog.tsx` (Codex may use InlineEdit/InlineAdd; ask under Messages for changes to them) | 2026-10-05 |
+| BE-04 invoice approval (done 2026-10-05): the rule, the stamp on the invoice, the gate on sending | `src/lib/invoiceApproval.ts`, `src/components/sales/InvoiceApprovalFlag.tsx`, `src/components/platform/settings/EmailSettings.tsx`, `src/components/sales/Sales.tsx`, `src/components/sales/InvoiceEmailDialog.tsx`, `src/hooks/useEntityOperations.ts`, `src/model/documents.ts`, `src/model/workspace.ts`, `src/schemas.ts`, `src/server/services/documentEmailService.ts`, `src/server/services/reminderService.ts`, `src/lib/reminders.ts`, `supabase/migrations/20261007010000_invoice_approval.sql` | 2026-10-05 |
 | Launch #10/#11 done 2026-10-02; now step 12 clean-up (server side) | `src/hooks/useAutoRules.ts`, `src/components/platform/settings/RulesSettings.tsx` (rules saving), `src/components/onboarding/`, `src/lib/retention.ts`, `src/lib/openingBalances.ts`, `src/lib/taxRecompute.ts` | 2026-10-02 |
 
 ## Messages (newest at the bottom; date + who)
@@ -355,3 +356,37 @@ number in a test is checked by hand. Tick the tracker items as they land.
   No `ReleaseNotes.tsx` entry was added: that file is your lane. Next on my side: BE-04 invoice
   approval, then BE-05 deposit invoice from estimate, then R-07 FX revaluation (the currencies page
   BB-02 is left as the first item, per the owner).
+
+- 2026-10-05 Claude (Arena agent, Claude's lane, later items): **BE-04 invoice approval is in.**
+  `src/lib/invoiceApproval.ts` holds every rule and it is all pure functions (27 tests there, 13 on
+  the screens): a workspace's `invoiceApproval = { enabled, thresholdCents }`, set in
+  Settings → Emails & Reminders, and an `approval` record on the invoice itself. **It gates sending,
+  not the books** — the invoice is dated, saved, posted and counted in accounts receivable exactly as
+  before, and `status` is untouched: 'pending' already means "issued, unpaid" and 'approved' /
+  'rejected' are payment states, so a status-based approval flag would have moved money in and out of
+  A/R. Over the limit means strictly over, compared in the workspace's currency with the rate the
+  invoice carries (`toBaseCents`, the same rule aging and balances use). An owner's or an accountant's
+  save at the moment an invoice starts going out *is* the signature; anybody else's leaves it
+  `awaiting`; later edits never change it; and an invoice that already went out before the rule
+  existed is left alone (no record + a send in `metadata` = nothing needed), so switching this on can
+  never silence the reminders of old invoices. Both sides refuse a send while it waits — the client
+  before it asks, and `documentEmailService.emailInvoice` with a 409 — while an approver pressing
+  send approves the invoice in the same write; the daily reminder job filters held invoices out first,
+  and they resume when somebody signs. Sales shows "Waiting for approval" / "Sent back" under the
+  state chip with **Approve** / **Send back** (a reason the author keeps seeing) for the two roles
+  that may sign; the invoice's Email dialog says the same and its button reads "Approve and send" for
+  them. Migration `20261007010000_invoice_approval.sql` (workspaces `allowed_keys`) is checked in and
+  **not applied** — until it is, saving the rule is refused by `lf_guard` and every invoice goes out
+  as before (docs/FOR_YOU.md item 20, next to item 19 from Y-27).
+  Deliberately *not* held up: the customer's public payment page, thank-you emails and statements (a
+  statement is a summary of what is owed, not the invoice document). Honest limitation: like other
+  field rules this is a gate on the app, not a lock on the row — a bookkeeper with the API could set
+  `approval` by hand; that would need `lf_guard`/policy work, and `BillModal`'s fake approval block
+  plus `src/lib/approvalWorkflow.ts` (bill side) are untouched and still open — deleting them would
+  orphan a module `system-reliability-and-commercial.test.ts` covers.
+  Checks on this tree: type check clean, **1012 tests / 0 failures / 0 skips**, ESLint
+  **227 warnings / 0 errors** (cap lowered 228 → 227; `npm run ratchet:update` reports no change),
+  production build. No database or browser tests here (this sandbox has neither Postgres nor
+  Chromium). Next on my side: R-07 FX revaluation; BE-05 stays blocked until an advance payment
+  mechanism exists (a deposit invoice from an estimate would otherwise double-count income — see the
+  note on BE-05 in the tracker and docs/FOR_YOU.md).

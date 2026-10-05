@@ -19,6 +19,7 @@ import type { ReminderInvoice } from '../../lib/reminders';
 import { formatTzDate, formatCurrency } from '../../lib/utils';
 import { PAPER_DELIVERY_METHODS } from '../../lib/delivery';
 import { calculateAmountDue } from '../../lib/documentMath';
+import { holdsSending } from '../../lib/invoiceApproval';
 import { notify } from './notificationService';
 
 /** The currency to show a reminder amount in: the invoice's own, else the workspace's. */
@@ -37,8 +38,11 @@ export async function runReminders(db: Firestore, now = new Date(), baseUrl?: st
     const settings = normalizeReminderSettings(workspace.reminderSettings);
     if (!settings.enabled) continue;
     const today = formatTzDate(now, typeof workspace.timezone === 'string' ? workspace.timezone : 'UTC');
-    const invoices = (await db.collection('invoices').where('workspaceId', '==', wsDoc.id).where('dueDate', '<', today).get())
+    const loaded = (await db.collection('invoices').where('workspaceId', '==', wsDoc.id).where('dueDate', '<', today).get())
       .docs.map(d => ({ ...d.data(), id: d.id }) as ReminderInvoice);
+    // BE-04: an invoice over the approval limit that nobody has signed off yet never reached the
+    // customer, so chasing them for it would be wrong; it waits for the signature like the email does
+    const invoices = loaded.filter(inv => !holdsSending(inv, workspace.invoiceApproval));
     const quiet = new Set((await db.collection('customers').where('workspaceId', '==', wsDoc.id).where('noReminders', '==', true).get()).docs.map(d => d.id));
     // Y-27: these customers get a printed or posted reminder instead of an email
     const paper = new Set((await db.collection('customers').where('workspaceId', '==', wsDoc.id).where('deliveryMethod', 'in', [...PAPER_DELIVERY_METHODS]).get()).docs.map(d => d.id));
