@@ -1,6 +1,15 @@
-/** Help for the existing local handlers, not new keyboard bindings. */
+/** Help for the local screen and contextual handlers. */
 export interface ScreenShortcutGroup { id: string; title: string; shortcuts: { keys: string; label: string }[] }
 export const SCREEN_SHORTCUTS: ScreenShortcutGroup[] = [
+  { id: 'related-record-details', title: 'Related record details', shortcuts: [
+    { keys: 'mod+Alt+E', label: 'Edit the selected related record in a side drawer, or choose a record' },
+    { keys: 'mod+Enter', label: 'Save details while focused inside the drawer' },
+    { keys: 'Escape', label: 'Close the drawer and return to the current form' },
+  ] },
+  { id: 'algorithm-parameters', title: 'Analytical tool parameters', shortcuts: [
+    { keys: 'Enter / blur', label: 'Apply a valid typed numeric value' },
+    { keys: 'Escape', label: 'Restore the last applied numeric value while typing' },
+  ] },
   { id: 'transactions', title: 'Transactions — focused grid cells', shortcuts: [
     { keys: '↑ / ↓', label: 'Move to the previous / next transaction' },
     { keys: '← / →', label: 'Move between cells' },

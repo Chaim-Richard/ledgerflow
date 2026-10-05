@@ -52,13 +52,14 @@ const Reports = React.memo(() => {
     });
   });
   const [timeframe, setTimeframe] = useState<'month' | 'quarter' | 'year'>(linked.timeframe);
+  const [customPeriod, setCustomPeriod] = useState(() => linked.startDate && linked.endDate ? { startDate: linked.startDate, endDate: linked.endDate } : undefined);
   const [compareMode, setCompareMode] = useState<CompareMode>(linked.compare);
   const [drillDownAccount, setDrillDownAccount] = useState<string | null>(null);
   const language = useUIStore(state => state.language);
 
   const availableYears = useMemo(() => {
-    if (!transactions || transactions.length === 0) return [workspaceYearMonth().year];
-    const yearsSet = new Set<number>();
+    if (!transactions || transactions.length === 0) return [...new Set([workspaceYearMonth().year, ...(linked.year ? [linked.year] : [])])].sort((a, b) => b - a);
+    const yearsSet = new Set<number>(linked.year ? [linked.year] : []);
     for (let i = 0; i < transactions.length; i++) {
       const d = transactions[i].date;
       if (d && d.length >= 4) {
@@ -66,7 +67,7 @@ const Reports = React.memo(() => {
       }
     }
     return Array.from(yearsSet).sort((a, b) => b - a);
-  }, [transactions]);
+  }, [transactions, linked.year]);
 
   const [selectedYear, setSelectedYear] = useState<number>(() => {
     if (linked.year) return linked.year;
@@ -115,8 +116,8 @@ const Reports = React.memo(() => {
 
   // The dates every report uses (fiscal-year aware) and the comparison period
   const period = useMemo(
-    () => getReportPeriod(timeframe, selectedYear, selectedQuarter, selectedMonth, fiscalYearStartMonth),
-    [timeframe, selectedYear, selectedQuarter, selectedMonth, fiscalYearStartMonth]
+    () => customPeriod || getReportPeriod(timeframe, selectedYear, selectedQuarter, selectedMonth, fiscalYearStartMonth),
+    [customPeriod, timeframe, selectedYear, selectedQuarter, selectedMonth, fiscalYearStartMonth]
   );
   const comparePeriod = useMemo(() => getComparePeriod(period.startDate, period.endDate, compareMode), [period, compareMode]);
 
@@ -129,10 +130,10 @@ const Reports = React.memo(() => {
   }, [linked.report, activeTab, setActiveTab]);
   useEffect(() => {
     const url = new URL(window.location.href);
-    const params = reportStateToParams({ report: activeTab, year: selectedYear, timeframe, quarter: selectedQuarter, month: selectedMonth, compare: compareMode }, url.searchParams);
+    const params = reportStateToParams({ report: activeTab, year: selectedYear, timeframe, quarter: selectedQuarter, month: selectedMonth, compare: compareMode, ...customPeriod }, url.searchParams);
     const next = `${url.pathname}?${params.toString()}${url.hash}`;
     if (next !== `${url.pathname}${url.search}${url.hash}`) window.history.replaceState(window.history.state, '', next);
-  }, [activeTab, selectedYear, timeframe, selectedQuarter, selectedMonth, compareMode]);
+  }, [activeTab, selectedYear, timeframe, selectedQuarter, selectedMonth, compareMode, customPeriod]);
 
   // Keep state synchronized when transactions stream in from Firestore
   useEffect(() => {
@@ -182,11 +183,12 @@ const Reports = React.memo(() => {
   }, [transactions, period]);
 
   const periodLabel = useMemo(() => {
+    if (customPeriod) return `Custom range: ${customPeriod.startDate} to ${customPeriod.endDate}`;
     const fy = fiscalYearStartMonth === 1 ? String(selectedYear) : `FY${selectedYear}`;
     if (timeframe === 'month') return `${monthNames[selectedMonth]} ${period.startDate.slice(0, 4)}`;
     if (timeframe === 'quarter') return `${quarterNames[selectedQuarter]} ${fy}`;
     return fiscalYearStartMonth === 1 ? `FY ${selectedYear}` : fy;
-  }, [timeframe, selectedMonth, selectedYear, selectedQuarter, fiscalYearStartMonth, period.startDate]);
+  }, [customPeriod, timeframe, selectedMonth, selectedYear, selectedQuarter, fiscalYearStartMonth, period.startDate]);
 
   const drillDownTransactions = useMemo(() => {
     if (!drillDownAccount || !transactions) return [];
@@ -207,7 +209,7 @@ const Reports = React.memo(() => {
       {/* Printed / PDF heading: the report and its period */}
       <div className="hidden print:block">
         <h1 className="text-xl font-bold">{(REPORT_TABS_REGISTRY.find(t => t.id === activeTab)?.label as Record<string, string> | undefined)?.en || 'Report'}</h1>
-        <p className="text-sm">{periodLabel} · {period.startDate} to {period.endDate}{comparePeriod ? ` · compared with ${comparePeriod.startDate} to ${comparePeriod.endDate}` : ''}</p>
+        <p className="text-sm">{customPeriod ? "Custom range" : periodLabel} · {period.startDate} to {period.endDate}{comparePeriod ? ` · compared with ${comparePeriod.startDate} to ${comparePeriod.endDate}` : ''}</p>
       </div>
       {/* Header banner with brand gold backdrop */}
       <div data-print-hide className="relative overflow-hidden bg-gradient-to-r from-[var(--brass-soft)] via-[var(--surface)]/40 to-[var(--panel)] p-6 rounded-2xl border border-[var(--brass-line)]/50 shadow-sm">
@@ -219,6 +221,7 @@ const Reports = React.memo(() => {
               FINANCIAL INTELLIGENCE HUB
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text)] tracking-tight">Financial Reports & Statements</h1>
+            <p className="text-sm text-[var(--muted)]">{periodLabel}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 bg-[var(--surface)]/80 p-2 rounded-xl border border-[var(--line)] shadow-inner backdrop-blur-sm">
@@ -230,7 +233,7 @@ const Reports = React.memo(() => {
               {(['month', 'quarter', 'year'] as const).map((t) => (
                 <button
                   key={t}
-                  onClick={() => setTimeframe(t)}
+                  onClick={() => { setCustomPeriod(undefined); setTimeframe(t); }}
                   className={cn(
                     "px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer",
                     timeframe === t 
@@ -248,7 +251,7 @@ const Reports = React.memo(() => {
             {/* Dynamic Year Selector */}
             <select
               value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              onChange={(e) => { setCustomPeriod(undefined); setSelectedYear(Number(e.target.value)); }}
               aria-label="Select Year"
               className="px-2.5 py-1 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-[10px] font-bold text-[var(--text)] hover:border-[var(--brass-line)] focus:outline-none focus:ring-1 focus:ring-[var(--brass)] cursor-pointer"
             >
@@ -261,7 +264,7 @@ const Reports = React.memo(() => {
             {timeframe === 'month' && (
               <select
                 value={selectedMonth}
-                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                onChange={(e) => { setCustomPeriod(undefined); setSelectedMonth(Number(e.target.value)); }}
                 aria-label="Select Month"
                 className="px-2.5 py-1 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-[10px] font-bold text-[var(--text)] hover:border-[var(--brass-line)] focus:outline-none focus:ring-1 focus:ring-[var(--brass)] cursor-pointer animate-fade-in"
               >
@@ -274,7 +277,7 @@ const Reports = React.memo(() => {
             {timeframe === 'quarter' && (
               <select
                 value={selectedQuarter}
-                onChange={(e) => setSelectedQuarter(Number(e.target.value))}
+                onChange={(e) => { setCustomPeriod(undefined); setSelectedQuarter(Number(e.target.value)); }}
                 aria-label="Select Quarter"
                 className="px-2.5 py-1 bg-[var(--surface)] border border-[var(--line)] rounded-lg text-[10px] font-bold text-[var(--text)] hover:border-[var(--brass-line)] focus:outline-none focus:ring-1 focus:ring-[var(--brass)] cursor-pointer animate-fade-in"
               >

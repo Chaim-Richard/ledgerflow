@@ -1,4 +1,5 @@
 import type { CompareMode, ReportTimeframe } from './fiscalCalendar';
+import { validCustomReportPeriod } from './reportCustomPeriod';
 
 /** What the Reports page keeps in the address bar so a link reopens the same report. */
 export interface ReportUrlState {
@@ -8,6 +9,8 @@ export interface ReportUrlState {
   quarter: number;
   month: number;
   compare: CompareMode;
+  startDate?: string;
+  endDate?: string;
 }
 
 const TIMEFRAMES: ReportTimeframe[] = ['month', 'quarter', 'year'];
@@ -24,6 +27,7 @@ export function reportStateFromParams(params: URLSearchParams, defaults: ReportU
   const report = params.get('report');
   const t = params.get('t') as ReportTimeframe | null;
   const cmp = params.get('cmp');
+  const custom = { startDate: params.get('start') || '', endDate: params.get('end') || '' };
   return {
     report: report && /^[a-z0-9-]{1,60}$/.test(report) ? report : defaults.report,
     year: intIn(params.get('y'), 1900, 2999) ?? defaults.year,
@@ -31,6 +35,7 @@ export function reportStateFromParams(params: URLSearchParams, defaults: ReportU
     quarter: (intIn(params.get('q'), 1, 4) ?? defaults.quarter + 1) - 1,
     month: (intIn(params.get('m'), 1, 12) ?? defaults.month + 1) - 1,
     compare: cmp ? COMPARES[cmp] ?? 'none' : defaults.compare,
+    ...(validCustomReportPeriod(custom) ? custom : {}),
   };
 }
 
@@ -46,5 +51,8 @@ export function reportStateToParams(state: ReportUrlState, params: URLSearchPara
   if (state.timeframe === 'month') out.set('m', String(state.month + 1));
   if (state.compare === 'none') out.delete('cmp');
   else out.set('cmp', state.compare === 'previous' ? 'prev' : 'ly');
+  if (state.startDate && state.endDate && validCustomReportPeriod({ startDate: state.startDate, endDate: state.endDate })) {
+    out.set('start', state.startDate); out.set('end', state.endDate);
+  } else { out.delete('start'); out.delete('end'); }
   return out;
 }

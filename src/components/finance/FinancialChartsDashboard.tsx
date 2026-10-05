@@ -2,13 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
 import { computeChartsData } from '../../lib/chartsData';
-import { 
-  ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
-  XAxis, YAxis, Tooltip, Legend, CartesianGrid 
-} from 'recharts';
-import { TrendingUp, Flame, Clock, PieChart as PieIcon, BarChart2, DollarSign } from 'lucide-react';
-
-const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+import ChartExploration from '../charts/ChartExploration';
+import FinancialChartPanels from '../charts/FinancialChartPanels';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { TrendingUp, Flame, Clock } from 'lucide-react';
 
 export default function FinancialChartsDashboard() {
   const transactions = useLedgerStore(s => s.transactions);
@@ -18,10 +15,7 @@ export default function FinancialChartsDashboard() {
   // Compute monthly revenue, expenses, burn rate, and profit
   // all amounts in cents of the base currency (src/lib/chartsData.ts, tested; L-155)
   const data = useMemo(() => computeChartsData(transactions, accounts, timeRange === '6m' ? 6 : 12), [transactions, accounts, timeRange]);
-  const monthlyData = data.months.map(m => ({ month: m.month, revenue: m.revenueCents, expense: m.expenseCents }));
-  const money = (v: number | string | readonly (number | string)[]) => formatCurrency(Number(v));
-  const empty = (text: string) => <p className="text-sm text-[var(--muted)] text-center px-6">{text}</p>;
-
+  const currency = useAuthStore(state => state.getCurrentWorkspace()?.currency);
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto">
       {/* Top Header */}
@@ -92,93 +86,8 @@ export default function FinancialChartsDashboard() {
         </div>
       </div>
 
-      {/* Main Bar/Area Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Monthly Revenue vs Expense */}
-        <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <BarChart2 size={16} className="text-indigo-600" />
-            <span>Monthly Profitability & Mix</span>
-          </h2>
-          <div className="h-72 w-full">
-            {monthlyData.length > 0 ? (<ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="month" tickLine={false} tick={{ fontSize: 11 }} />
-                <YAxis tickLine={false} tick={{ fontSize: 11 }} tickFormatter={v => formatCurrency(Number(v)).replace(/\.00$/, '')} width={80} />
-                <Tooltip formatter={money} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="revenue" fill="#4f46e5" name="Revenue" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" fill="#ef4444" name="Expense" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>) : empty('No posted income or expenses in this period yet.')}
-          </div>
-        </div>
-
-        {/* Burn Rate Trend Area Chart */}
-        <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <Flame size={16} className="text-rose-600" />
-            <span>Operating Expense Burn Rate</span>
-          </h2>
-          <div className="h-72 w-full">
-            {monthlyData.length > 0 ? (<ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="month" tickLine={false} tick={{ fontSize: 11 }} />
-                <YAxis tickLine={false} tick={{ fontSize: 11 }} tickFormatter={v => formatCurrency(Number(v)).replace(/\.00$/, '')} width={80} />
-                <Tooltip formatter={money} />
-                <Area type="monotone" dataKey="expense" fill="#fee2e2" stroke="#ef4444" strokeWidth={2} name="Monthly Burn" />
-              </AreaChart>
-            </ResponsiveContainer>) : empty('No posted expenses in this period yet.')}
-          </div>
-        </div>
-      </div>
-
-      {/* Donut Distribution Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Cash Distribution Donut */}
-        <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <DollarSign size={16} className="text-emerald-600" />
-            <span>Cash Balance Allocation</span>
-          </h2>
-          <div className="h-64 w-full flex items-center justify-center">
-            {data.cash.length > 0 ? (<ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={data.cash} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="cents" nameKey="name">
-                  {data.cash.map((entry, index) => (
-                    <Cell key={entry.id} fill={COLORS[index % COLORS.length]} aria-label={`${entry.name}: ${formatCurrency(entry.cents)}`} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={money} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-              </PieChart>
-            </ResponsiveContainer>) : empty('No cash or bank account has a positive balance yet.')}
-          </div>
-        </div>
-
-        {/* Category Expense Donut */}
-        <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
-          <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <PieIcon size={16} className="text-amber-600" />
-            <span>Expense Category Mix</span>
-          </h2>
-          <div className="h-64 w-full flex items-center justify-center">
-            {data.expenses.length > 0 ? (<ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={data.expenses} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="cents" nameKey="name">
-                  {data.expenses.map((entry, index) => (
-                    <Cell key={entry.name} fill={COLORS[index % COLORS.length]} aria-label={`${entry.name}: ${formatCurrency(entry.cents)}`} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={money} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-              </PieChart>
-            </ResponsiveContainer>) : empty('No posted expenses in this period yet.')}
-          </div>
-        </div>
-      </div>
+      <ChartExploration months={data.months.map(month => month.month)} currency={currency} />
+      <FinancialChartPanels key={timeRange} data={data} currency={currency} />
     </div>
   );
 }

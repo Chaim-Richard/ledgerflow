@@ -1,0 +1,22 @@
+import './helpers/dom';
+import test, { afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { RecordDetailsLauncher } from '../components/common/RecordDetailsLauncher';
+import { setComponentWorkspace } from './helpers/componentFixtures';
+import { useAuthStore } from '../stores/useAuthStore';
+import { useLedgerStore } from '../stores/useLedgerStore';
+import { useRecordDetailsStore } from '../stores/useRecordDetailsStore';
+import { getSupabase } from '../lib/db/client';
+afterEach(async () => { cleanup(); useRecordDetailsStore.getState().close(); await getSupabase().auth.dispose(); });
+test('the global shortcut opens selected vendor details while retaining the parent draft and clears on workspace switch', async () => {
+ const workspace = setComponentWorkspace(); const vendor = { id: 'vendor', uid: 'test-user', workspaceId: workspace.id, name: 'ספק Supply', address: 'Old', category: 'Supplier' }; useLedgerStore.setState({ vendors: [vendor] });
+ globalThis.fetch = (async () => new Response(JSON.stringify({ id: vendor.id, data: vendor }), { status: 200, headers: { 'Content-Type': 'application/json' } })) as typeof fetch;
+ render(<><input aria-label="Parent bill number" defaultValue="Draft 17" /><label>Vendor<select defaultValue="vendor"><option value="vendor">ספק Supply</option></select></label><RecordDetailsLauncher /></>);
+ const select = screen.getByRole('combobox', { name: 'Vendor' }); fireEvent.focusIn(select); fireEvent.keyDown(select, { ctrlKey: true, altKey: true, code: 'KeyE' });
+ await waitFor(() => assert.ok(screen.getByLabelText('Address'))); assert.equal(useRecordDetailsStore.getState().target?.id, 'vendor');
+ assert.equal((screen.getByLabelText('Parent bill number') as HTMLInputElement).value, 'Draft 17');
+ await act(async () => { useAuthStore.setState({ currentWorkspaceId: 'next', workspaces: [{ ...workspace, id: 'next' }] }); });
+ assert.equal(screen.queryByRole('dialog', { name: 'Edit record details' }), null); assert.equal(useRecordDetailsStore.getState().target, undefined); assert.equal((screen.getByLabelText('Parent bill number') as HTMLInputElement).value, 'Draft 17');
+});

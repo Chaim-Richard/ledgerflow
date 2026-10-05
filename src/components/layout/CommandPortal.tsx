@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { toast } from 'sonner';
+import { RecordDetailsLauncher } from '../common/RecordDetailsLauncher';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 
@@ -74,6 +75,8 @@ export default function CommandPortal({ modals, handlers }: CommandPortalProps) 
   const categories = Array.from(new Set(accounts.filter((a) => a.type === 'income' || a.type === 'expense').map((a) => a.name)));
   
   return (
+    <>
+    <RecordDetailsLauncher />
     <Suspense fallback={null}>
       {modals.quickEntry && (
         <MagicEntry 
@@ -163,5 +166,6 @@ export default function CommandPortal({ modals, handlers }: CommandPortalProps) 
         />
       )}
     </Suspense>
+    </>
   );
 }

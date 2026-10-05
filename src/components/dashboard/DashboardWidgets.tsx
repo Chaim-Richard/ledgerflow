@@ -1,0 +1,105 @@
+import React, { useMemo, useState } from 'react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useUIStore } from '../../stores/useUIStore';
+import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { dashboardReportHref, dashboardComparison, dashboardPeriod, dashboardLayout, dashboardAging, validDashboardPeriod, DASHBOARD_WIDGETS } from '../../lib/dashboardOverview';
+import type { DashboardRange, DashboardWidget, DashboardLayout } from '../../lib/dashboardOverview';
+import { AGING_BUCKETS } from '../../lib/aging';
+import { reportVariance, reportPercent } from '../../lib/reportColumns';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { isPostable, isTransactionInDateRange } from '../../lib/txFilters';
+import { useScenarioStore } from '../../lib/scenarioStore';
+import BankFeedHealth from './BankFeedHealth';
+
+const LABELS: Record<DashboardWidget, string> = { revenue: 'Revenue', expenses: 'Expenses', profit: 'Net income', networth: 'Net worth', scenario: 'Scenario preview', summary: 'Account summary', cash: 'Cash balance', receivables: 'Receivables', payables: 'Payables', banks: 'Bank and cash accounts', feeds: 'Bank feed health', recent: 'Recent transactions', integrity: 'Books balance' };
+const KPIS = ['networth', 'revenue', 'expenses', 'profit', 'cash'] as const;
+function readLayout(key: string): DashboardLayout { try { return dashboardLayout(JSON.parse(localStorage.getItem(key) || 'null')); } catch { return dashboardLayout(); } }
+function Sparkline({ values, label }: { values: number[]; label: string }) {
+  const min = Math.min(...values), span = Math.max(...values) - min;
+  const points = values.map((value, index) => `${index * 100 / 11},${span ? 30 - (value - min) * 28 / span : 16}`).join(' ');
+  return <svg viewBox="0 0 100 32" role="img" aria-label={`${label}, last 12 months; values available below`} className="w-full h-12 text-[var(--brass)]"><polyline points={points} fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>;
+}
+export default function DashboardWidgets() {
+  const uid = useAuthStore(state => state.user?.uid), workspaceId = useAuthStore(state => state.currentWorkspaceId);
+  return <ScopedDashboardWidgets key={`${uid || 'guest'}:${workspaceId}`} />;
+}
+function ScopedDashboardWidgets() {
+  const uid = useAuthStore(state => state.user?.uid), workspaceId = useAuthStore(state => state.currentWorkspaceId);
+  const workspace = useAuthStore(state => state.getCurrentWorkspace());
+  const accounts = useLedgerStore(state => state.accounts), transactions = useLedgerStore(state => state.transactions);
+  const invoices = useLedgerStore(state => state.invoices), bills = useLedgerStore(state => state.bills);
+  const customers = useLedgerStore(state => state.customers), vendors = useLedgerStore(state => state.vendors);
+  const truncated = useLedgerStore(state => state.truncatedCollections), failed = useDataNeedsStore(state => state.failed);
+  const { loading } = useLedgerCollections('transactions', 'accounts', 'invoices', 'bills', 'customers', 'vendors');
+  const scenarios = useScenarioStore(state => state.scenarios), activeScenarioId = useScenarioStore(state => state.activeScenarioId);
+  const { loading: scenarioLoading } = useLedgerCollections('scenarios');
+  const fiscalStart = workspace?.fiscalYearStartMonth || 1, currency = workspace?.currency;
+  const today = getLocalDateISO();
+  const [range, setRange] = useState<DashboardRange>('month');
+  const [custom, setCustom] = useState(() => dashboardPeriod('month', today, fiscalStart));
+  const period = useMemo(() => range === 'custom' ? custom : dashboardPeriod(range, today, fiscalStart), [range, custom, today, fiscalStart]);
+  const valid = validDashboardPeriod(period);
+  const preferenceKey = `lf_dashboard_layout_v1:${uid || 'guest'}:${workspaceId || 'none'}`;
+  const [layout, setLayout] = useState(() => readLayout(preferenceKey));
+  const [storageError, setStorageError] = useState(false);
+  const changeLayout = (next: DashboardLayout) => { setLayout(next); try { localStorage.setItem(preferenceKey, JSON.stringify(next)); setStorageError(false); } catch { setStorageError(true); } };
+  const move = (id: DashboardWidget, direction: number) => {
+    const order = [...layout.order], index = order.indexOf(id), target = index + direction;
+    if (target < 0 || target >= order.length) return;
+    [order[index], order[target]] = [order[target], order[index]]; changeLayout({ ...layout, order });
+  };
+  const scoped = useMemo(() => {
+    const belongs = (record: { workspaceId?: string }) => !workspaceId || record.workspaceId === workspaceId;
+    return { accounts: accounts.filter(belongs), transactions: transactions.filter(belongs), invoices: invoices.filter(belongs), bills: bills.filter(belongs), customers: customers.filter(belongs), vendors: vendors.filter(belongs) };
+  }, [workspaceId, accounts, transactions, invoices, bills, customers, vendors]);
+  const data = useMemo(() => valid ? dashboardComparison(scoped.accounts, scoped.transactions, period) : null, [valid, scoped, period]);
+  const ar = useMemo(() => valid ? dashboardAging(scoped.customers, scoped.invoices, 'customer', period.endDate) : { rows: [], top: [] }, [scoped, valid, period.endDate]);
+  const ap = useMemo(() => valid ? dashboardAging(scoped.vendors, scoped.bills, 'vendor', period.endDate) : { rows: [], top: [] }, [scoped, valid, period.endDate]);
+  const recent = scoped.transactions.filter(tx => isPostable(tx) && isTransactionInDateRange(tx, period.startDate, period.endDate)).sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id)).slice(0, 5);
+  const partial = (['transactions', 'accounts', 'invoices', 'bills', 'customers', 'vendors'] as const).filter(key => truncated[key] || failed[key]);
+  const reportLink = (report: string) => dashboardReportHref(report, period.startDate, period.endDate, fiscalStart);
+  const aging = (value: typeof ar, side: 'customer' | 'vendor') => <>
+    <p className="text-sm text-[var(--muted)]">Current unpaid amounts aged at {period.endDate}; documents dated later are excluded. Past payments are not rewound.</p>
+    <dl className="space-y-1 mt-3">{AGING_BUCKETS.map(bucket => <div key={bucket.key} className="flex justify-between gap-2"><dt>{bucket.label}</dt><dd>{formatCurrency(value.rows.reduce((sum, row) => sum + row.buckets[bucket.key], 0), currency)}</dd></div>)}</dl>
+    <h3 className="font-semibold mt-4">Top 5 overdue {side === 'customer' ? 'customers' : 'vendors'}</h3>
+    {value.top.length === 0 ? <p>No overdue balances in the loaded documents.</p> : <ul>{value.top.map(row => <li key={row.partyId} className="flex justify-between gap-2 py-1"><bdi className="min-w-0 break-words">{row.partyName}</bdi><span className="tabular-nums shrink-0">{formatCurrency(row.overdue, currency)}</span></li>)}</ul>}
+    <a className="inline-flex min-h-11 items-center underline" href={reportLink(side === 'customer' ? 'ar-aging' : 'ap-aging')}>Open aging report</a>
+  </>;
+  const renderWidget = (id: DashboardWidget) => {
+    if (!data) return null;
+    if (KPIS.includes(id as typeof KPIS[number])) {
+      const metric = id as typeof KPIS[number], delta = reportVariance(data.current[metric], data.previous[metric]);
+      return <><a href={reportLink(['cash', 'networth'].includes(metric) ? 'balance-sheet' : 'pnl')} className="min-h-11 flex items-center text-2xl font-bold tabular-nums">{formatCurrency(data.current[metric], currency)}<span className="sr-only"> Open {LABELS[id]} report</span></a>
+        <p className="text-sm">{['cash', 'networth'].includes(metric) ? `As of ${period.endDate}` : 'Selected period activity'}</p><p className="text-sm">Vs previous period: {formatCurrency(delta.amount, currency)} ({reportPercent(delta.percent)})</p>
+        <Sparkline values={data.months.map(month => month[metric])} label={LABELS[id]} /><details><summary className="cursor-pointer min-h-11 flex items-center">Monthly values</summary><table className="w-full text-sm"><caption className="sr-only">{LABELS[id]} last 12 months, last month through {period.endDate}</caption><thead><tr><th scope="col" className="text-left">Month</th><th scope="col" className="text-right">Amount</th></tr></thead><tbody>{data.months.map(month => <tr key={month.label}><th scope="row" className="text-left font-normal">{month.label}</th><td className="text-right tabular-nums">{formatCurrency(month[metric], currency)}</td></tr>)}</tbody></table></details></>;
+    }
+    if (id === 'receivables') return aging(ar, 'customer');
+    if (id === 'payables') return aging(ap, 'vendor');
+    if (id === 'scenario') {
+      if (scenarioLoading) return <p role="status">Loading scenario preview…</p>;
+      const scenario = scenarios.find(item => item.id === activeScenarioId);
+      const ghosts = scenario?.ghosts.filter(ghost => ghost.isActive && ghost.date >= period.startDate && ghost.date <= period.endDate) || [];
+      return <><p className="text-sm">Forecast preview only; excluded from posted figures. {scenario?.name}</p><ul>{ghosts.map(ghost => <li key={ghost.id} className="py-2"><bdi>{ghost.description}</bdi><span className="block text-sm">{ghost.date} · {ghost.type} · {formatCurrency(Math.abs(ghost.amountCents), 'USD')}</span></li>)}</ul>{ghosts.length === 0 && <p>No active scenario entries in this range.</p>}</>;
+    }
+    if (id === 'feeds') return <BankFeedHealth />;
+    if (id === 'banks') return <><p className="text-sm">Posted ledger balances including opening balances, as of {period.endDate}, in base currency.</p><ul>{data.current.banks.map(bank => <li key={bank.id}><button type="button" onClick={() => useUIStore.getState().openRecord({ type: 'account', id: bank.id })} className="min-h-11 flex justify-between gap-3 w-full text-start"><bdi className="min-w-0 break-words">{bank.name}</bdi><span className="shrink-0 tabular-nums">{formatCurrency(bank.cents, currency)}</span></button></li>)}</ul>{data.current.banks.length === 0 && <p>No cash-role accounts.</p>}</>;
+    if (id === 'summary') return <dl>{data.current.summary.map(row => <div key={row.label} className="flex justify-between gap-2 py-2"><dt>{row.label}<span className="block text-xs text-[var(--muted)]">{row.scope}</span></dt><dd className="tabular-nums">{formatCurrency(row.cents, currency)}</dd></div>)}</dl>;
+    if (id === 'recent') return <ul>{recent.map(tx => <li key={tx.id}><button type="button" onClick={() => useUIStore.getState().openRecord({ type: 'transaction', id: tx.id })} className="min-h-11 w-full text-start py-2"><bdi className="break-words">{tx.description || 'Transaction'}</bdi><span className="block text-sm text-[var(--muted)]">{tx.date} · {formatCurrency(tx.totalAmountCents, tx.currency)}</span></button></li>)}{recent.length === 0 && <li>No posted transactions in this range.</li>}</ul>;
+    return <><p>{data.current.balanced && !data.current.orphanCount ? 'Balanced' : 'Review needed'}</p><p className="text-sm">Statement balance at {period.endDate}. {data.current.orphanCount} orphaned account lines.</p><a href={reportLink('trial-balance')} className="min-h-11 inline-flex items-center underline">Open trial balance</a></>;
+  };
+  return <section aria-label="Dashboard widgets" className="space-y-4">
+    <div className="flex flex-wrap gap-3 items-end"><label>Dashboard date range<select aria-label="Dashboard date range" value={range} onChange={event => setRange(event.target.value as DashboardRange)} className="block min-h-11 border border-[var(--line)] bg-[var(--panel)] rounded-lg px-3"><option value="month">This month</option><option value="quarter">This fiscal quarter</option><option value="year">This fiscal year</option><option value="custom">Custom range</option></select></label>
+      {range === 'custom' && <><label>From<input aria-label="Dashboard from" type="date" value={custom.startDate} onChange={event => setCustom({ ...custom, startDate: event.target.value })} className="block min-h-11 bg-[var(--panel)] border rounded px-2" /></label><label>To<input aria-label="Dashboard to" type="date" value={custom.endDate} onChange={event => setCustom({ ...custom, endDate: event.target.value })} className="block min-h-11 bg-[var(--panel)] border rounded px-2" /></label></>}
+    </div>
+    {!valid && <p role="alert">Choose valid dates with From on or before To.</p>}
+    {valid && <p>{period.startDate} to {period.endDate}. Previous period: {data?.previousPeriod.startDate} to {data?.previousPeriod.endDate}. Sparklines show 12 calendar months ending at the selected date.</p>}
+    {loading && <p role="status">Loading dashboard collections…</p>}
+    {partial && partial.length > 0 && <p role="alert">Incomplete data: {partial.join(', ')}. These loaded-data figures may omit history; use authoritative reports before relying on totals.</p>}
+    <details><summary className="cursor-pointer min-h-11 flex items-center">Customize widgets</summary><div className="space-y-1">{layout.order.map((id, index) => <div key={id} className="flex flex-wrap items-center gap-2"><label className="min-h-11 flex items-center gap-2 flex-1"><input type="checkbox" checked={!layout.hidden.includes(id)} onChange={event => changeLayout({ ...layout, hidden: event.target.checked ? layout.hidden.filter(key => key !== id) : [...layout.hidden, id] })} />{LABELS[id]}</label><button type="button" aria-label={`Move ${LABELS[id]} up`} disabled={index === 0} onClick={() => move(id, -1)} className="min-h-11 min-w-11 underline disabled:opacity-40">Up</button><button type="button" aria-label={`Move ${LABELS[id]} down`} disabled={index === layout.order.length - 1} onClick={() => move(id, 1)} className="min-h-11 min-w-11 underline disabled:opacity-40">Down</button></div>)}</div><button type="button" onClick={() => changeLayout(dashboardLayout())} className="min-h-11 underline">Reset layout</button></details>
+    {storageError && <p role="status">Layout changed for this visit; this browser could not save it.</p>}
+    {valid && !loading && <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">{layout.order.filter(id => !layout.hidden.includes(id)).map(id => <article key={id} aria-label={LABELS[id]} className="min-w-0 border border-[var(--line)] rounded-xl bg-[var(--panel)] p-4"><h2 className="font-semibold mb-3">{LABELS[id]}</h2>{renderWidget(id)}</article>)}</div>}
+    {layout.hidden.length === DASHBOARD_WIDGETS.length && <p>All widgets are hidden. Use Customize widgets or Reset layout to show them.</p>}
+  </section>;
+}

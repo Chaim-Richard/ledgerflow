@@ -9,9 +9,9 @@ This project is an advanced Enterprise Resource Planning (ERP) and Financial Led
 ## 2. The Tool Ecosystem & Data Flow
 To ensure complexity does not grow over time, all "tools" are separated into three strict layers. You can view a live visualization of this by clicking **Architecture Map** in the app sidebar.
 
-### Layer 1: Data Source of Truth (Zustand)
-- All financial data is stored in `useLedgerStore` (`src/stores/useLedgerStore.ts`).
-- The canonical sources of truth are the arrays: `transactions: Transaction[]` and `accounts: ChartAccount[]`.
+### Layer 1: Durable data and browser context
+- Durable records live in workspace-scoped Supabase/Postgres collections; financial writes use the existing server/posting services.
+- `useLedgerStore` (`src/stores/useLedgerStore.ts`) holds the loaded browser cache and computed context. Its `transactions` and `accounts` arrays can be incomplete; they are not a replacement for authoritative history or server write validation.
 
 - **Loading data:** only the ledger, chart of accounts, projects, journal entries, tax rates and rules load when a workspace opens. Any other collection (invoices, bills, customers, payments, bank lines, …) loads the first time a screen asks for it: a component that reads one from `useLedgerStore` must call `useLedgerCollections('invoices', ...)` (`src/hooks/useLedgerCollections.ts`; the list is `src/lib/ledgerCollections.ts`). `ledger-collections-guard.test.ts` fails otherwise. Code that edits a document must not assume its list is loaded (see `savedRecord` in `useEntityOperations.ts`).
 
@@ -32,11 +32,12 @@ To ensure complexity does not grow over time, all "tools" are separated into thr
 
 ### Owner's screen rules (5 Oct, apply to every screen, old and new)
 - **Edit in place.** A field a user can see on a list or detail page can be changed right there by typing, with the shared `InlineEdit` component (`src/components/ui/InlineEdit.tsx`): Enter or leaving the field saves, Esc cancels, viewers see plain text. No "open another page to change the address". Money and posted amounts still change only through their documents.
+- **Related records.** Use the side drawer and typed `RelatedRecordEditButton` beside selectors. Keep the current form mounted and retain its draft; save shared metadata for future use with confirmed, allowlisted writes. Existing native labeled selectors can use Ctrl/Command+Alt+E. Financial fields still use their financial editor/service. See [`docs/DEVELOPER_WORKFLOWS.md`](docs/DEVELOPER_WORKFLOWS.md).
 - **Help while typing.** Text fields offer suggestions from the workspace's own data (`suggestions` on `InlineEdit`, or a `datalist`).
-- **Pinned pages.** Every page can be pinned; pinned pages show as buttons on every page with keyboard shortcuts (`usePinnedPages`). Don't build per-page shortcuts instead.
+- **Pinned pages.** Every page can be pinned; pinned pages show as buttons on every page with keyboard shortcuts (global Header pin control and `PinnedPagesBar`, Alt+P and Alt+1–9). Reuse those controls and registered navigation.
 
 ## 4. Modifying Types & Schemas
-- `src/types.ts` is the single source of truth for interfaces (e.g., `Transaction`, `ChartAccount`).
+- Import public domain types from `src/types.ts`; it re-exports the definitions in `src/model/` (ledger, documents, workspace and operations). Extend the owning model module rather than duplicating interfaces in a screen.
 
 ## 5. Collection Architecture & Conventions (Supabase Postgres)
 - Data lives in Supabase Postgres: one table per collection (`id`, `data` jsonb, `workspace_id`), defined in `supabase/migrations/`. Code keeps a Firestore-style API: `src/lib/db/` (browser, row level security applies) and `src/server/db/pgFirestore.ts` (server, via `getDb()`).
@@ -53,3 +54,7 @@ To ensure complexity does not grow over time, all "tools" are separated into thr
 - **Postable Filtering**: Every financial report or computation MUST filter transactions with `isPostable()` from `src/lib/txFilters.ts`.
 
 By following this exact pattern, we avoid piling complex logic into React components, and maintain a highly modular, plug-and-play toolkit.
+
+## 7. Detailed instructions and implementation evidence
+
+Read [Developer workflows](docs/DEVELOPER_WORKFLOWS.md) for persistence, inline editing, related-record drawers, page pins, algorithms, mixed Hebrew data and verification recipes. [Tool review](docs/TOOL_REVIEW.md) traces 70 implemented capabilities and concrete limitations to code/tests. Scoped `src/**/AGENTS.md` files provide the applicable implementation contracts. Read the current coordination reservations before changing shared or financial files.

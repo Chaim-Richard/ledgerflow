@@ -1,0 +1,58 @@
+import './helpers/dom';
+import test, { afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import { act, cleanup, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
+import DashboardWidgets from '../components/dashboard/DashboardWidgets';
+import { readBankStatuses } from '../lib/bankFeedStatus';
+import { setComponentWorkspace, markComponentCollectionsLoaded } from './helpers/componentFixtures';
+import { useAuthStore } from '../stores/useAuthStore';
+import { useLedgerStore } from '../stores/useLedgerStore';
+import { getSupabase } from '../lib/db/client';
+afterEach(async () => { cleanup(); await getSupabase().auth.dispose(); });
+test('dashboard layout persists by user/workspace, resets, and hides misleading values for invalid dates', async () => {
+  const workspace = setComponentWorkspace();
+  markComponentCollectionsLoaded('transactions', 'accounts', 'invoices', 'bills', 'customers', 'vendors');
+  useLedgerStore.setState({ accounts: [], transactions: [], invoices: [], bills: [], customers: [], vendors: [], truncatedCollections: { transactions: true } });
+  localStorage.clear(); globalThis.fetch = (async () => new Response(JSON.stringify({ banks: [] }), { status: 200 })) as typeof fetch;
+  const view = render(<DashboardWidgets />);
+  assert.match(screen.getByRole('alert').textContent || '', /Incomplete data: transactions/);
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Revenue' }));
+  assert.equal(screen.queryByRole('article', { name: 'Revenue' }), null);
+  fireEvent.click(screen.getByRole('button', { name: 'Move Cash balance up' }));
+  view.unmount(); render(<DashboardWidgets />);
+  assert.equal(screen.queryByRole('article', { name: 'Revenue' }), null);
+  assert.equal(screen.getAllByRole('article')[2].getAttribute('aria-label'), 'Cash balance');
+  fireEvent.change(screen.getByLabelText('Dashboard date range'), { target: { value: 'custom' } });
+  fireEvent.change(screen.getByLabelText('Dashboard from'), { target: { value: '2024-03-02' } }); fireEvent.change(screen.getByLabelText('Dashboard to'), { target: { value: '2024-03-01' } });
+  assert.match(screen.getAllByRole('alert')[0].textContent || '', /valid dates/); assert.equal(screen.queryAllByRole('article').length, 0);
+  await act(async () => { useAuthStore.setState({ currentWorkspaceId: 'other', workspaces: [{ ...workspace, id: 'other' }] }); });
+  assert.ok(screen.getByRole('article', { name: 'Revenue' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Revenue' })); fireEvent.click(screen.getByRole('button', { name: 'Reset layout' })); assert.ok(screen.getByRole('article', { name: 'Revenue' }));
+});
+test('bank status exposes expired login without treating an unknown timestamp as a successful sync', async () => {
+  setComponentWorkspace('viewer'); markComponentCollectionsLoaded('transactions', 'accounts', 'invoices', 'bills', 'customers', 'vendors');
+  globalThis.fetch = (async () => new Response(JSON.stringify({ banks: [{ id: 'bank', institutionName: 'בנק Bank', status: 'login_required' }] }), { status: 200 })) as typeof fetch;
+  render(<DashboardWidgets />);
+  const feed = within(screen.getByRole('article', { name: 'Bank feed health' }));
+  await waitFor(() => assert.ok(feed.getByText('Login expired')));
+  assert.match(feed.getByText(/Last successful sync/).textContent || '', /not provided/); assert.equal(feed.queryByRole('button', { name: 'Reconnect' }), null);
+  assert.throws(() => readBankStatuses({}), /did not return/); assert.throws(() => readBankStatuses({ banks: [{ id: 1 }] }), /Invalid/);
+});
+test('a late bank status response cannot populate another workspace', async () => {
+  const workspace = setComponentWorkspace(); markComponentCollectionsLoaded('transactions', 'accounts', 'invoices', 'bills', 'customers', 'vendors');
+  let release!: (response: Response) => void;
+  const requests: string[] = [];
+  globalThis.fetch = (async (url: string | URL | Request) => {
+    requests.push(String(url));
+    if (requests.length === 1) return await new Promise<Response>(resolve => { release = resolve; });
+    return new Response(JSON.stringify({ banks: [] }), { status: 200 });
+  }) as typeof fetch;
+  render(<DashboardWidgets />);
+  await waitFor(() => assert.equal(requests.length, 1));
+  await act(async () => { useAuthStore.setState({ currentWorkspaceId: 'new-workspace', workspaces: [{ ...workspace, id: 'new-workspace' }] }); });
+  await waitFor(() => assert.ok(screen.getByText('No connected banks.')));
+  await act(async () => { release(new Response(JSON.stringify({ banks: [{ id: 'old-bank', institutionName: 'Old private bank', status: 'active' }] }), { status: 200 })); });
+  assert.equal(screen.queryByText('Old private bank'), null);
+  assert.match(requests[0], /workspaceId=component-workspace/); assert.match(requests[1], /workspaceId=new-workspace/);
+});
