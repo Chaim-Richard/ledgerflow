@@ -1,11 +1,12 @@
 import React, { useId, useState } from 'react';
-import { Mail, Pencil, Phone, StickyNote, Tag, UserRound } from 'lucide-react';
+import { Combine, Mail, Pencil, Phone, StickyNote, Tag, UserRound } from 'lucide-react';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { addNote, MAX_NOTE_LENGTH } from '../../lib/contacts';
 import { formatDate } from '../../lib/utils';
 import PartyModal from './PartyModal';
+import MergePartyDialog from './MergePartyDialog';
 import type { PartySide } from './PartyModal';
 import type { Customer, Vendor } from '../../types';
 
@@ -19,8 +20,11 @@ export default function PartyProfilePanel({ side, party }: { side: PartySide; pa
   const { updateEntity } = useEntityOperations();
   const user = useAuthStore(s => s.user);
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
-  const canEdit = useCurrentRole() !== 'viewer';
+  const role = useCurrentRole();
+  const canEdit = role !== 'viewer';
+  const canMerge = role === 'owner' || role === 'accountant';
   const [editing, setEditing] = useState(false);
+  const [merging, setMerging] = useState(false);
   const [note, setNote] = useState('');
   const path = side === 'customer' ? 'customers' : 'vendors';
   const notes = party.noteLog || [];
@@ -36,11 +40,18 @@ export default function PartyProfilePanel({ side, party }: { side: PartySide; pa
     <section aria-labelledby={`${id}-title`} className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
       <div className="flex items-center justify-between">
         <h2 id={`${id}-title`} className="font-bold text-slate-900 dark:text-white text-sm">Details</h2>
-        {canEdit && (
-          <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-            <Pencil aria-hidden="true" className="w-3.5 h-3.5" /> Edit {side}
-          </button>
-        )}
+        <div className="flex items-center gap-4">
+          {canMerge && (
+            <button type="button" onClick={() => setMerging(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+              <Combine aria-hidden="true" className="w-3.5 h-3.5" /> Merge a duplicate
+            </button>
+          )}
+          {canEdit && (
+            <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+              <Pencil aria-hidden="true" className="w-3.5 h-3.5" /> Edit {side}
+            </button>
+          )}
+        </div>
       </div>
 
       <dl className="grid gap-3 sm:grid-cols-3 text-xs">
@@ -110,6 +121,7 @@ export default function PartyProfilePanel({ side, party }: { side: PartySide; pa
           await updateEntity(path, partyId || party.id, changes, `${side === 'customer' ? 'Customer' : 'Vendor'} updated`);
         }}
       />
+      {merging && <MergePartyDialog side={side} party={party} onClose={() => setMerging(false)} />}
     </section>
   );
 }

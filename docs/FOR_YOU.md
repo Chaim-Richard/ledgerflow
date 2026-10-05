@@ -113,6 +113,11 @@ Last updated: 2026-10-02.
   with no entry, so the balance sheet and the stock list drifted apart. New items' opening stock is
   posted against Opening Balance Equity. Category chips filter the list, and teammates now see all
   items (each person saw only their own).
+- **New (5 Oct): merge duplicate customers or vendors.** On the contact's page → "Merge a
+  duplicate": everything of the duplicate (invoices or bills, payments, credits, estimates,
+  schedules) moves to this contact and the duplicate is deleted; amounts don't change. Owners and
+  accountants only. Default used: documents in closed months move too (it's the same customer).
+  Also new: Inventory → "Manage categories" renames or merges a category on all items.
 - Vercel deploys by itself about a minute after each push to `main`.
 - Database changes are applied to Supabase by Claude and tested on a local copy first.
 - Progress and the full list: [TRACKER.md](TRACKER.md).

@@ -1980,7 +1980,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] Y-20 Digital signature
 - [x] Y-21 Multiple contacts per company (people with role, email, phone on the customer/vendor form and page)
 - [x] Y-22 Default currency per contact (new invoices and bills start in it; bills got a currency and rate field)
-- [ ] Y-23 Merge duplicate contacts
+- [x] Y-23 Merge duplicate contacts: "Merge a duplicate" on a customer's or vendor's page (owners/accountants); likely duplicates listed first; the server moves invoices/bills, estimates, credits, payments, schedules and ledger references in one step, no amount changes, details combined, audited (tested)
 - [x] Y-24 Contact tags (on the form, shown on the page, filter chips on the customer and vendor lists)
 - [x] Y-25 Notes timeline per contact (newest first, who and when; viewers read)
 - [ ] Y-26 Portal access toggle
@@ -2034,7 +2034,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION BA — DISCRETE USER ACTIONS
 
-- [ ] BA-01 Merge duplicate contacts dialog
+- [x] BA-01 Merge duplicate contacts dialog (= Y-23)
 - [ ] BA-02 Vendor opening balance
 - [ ] BA-03 Allocate landed cost
 - [x] BA-04 Inventory adjustment form (= K-13)
