@@ -1,6 +1,10 @@
 /**
  * A browser-like document for component tests (jsdom). Import this first in a *.test.tsx file.
  * The app's database layer is never reached: tests stub fetch and the stores.
+ *
+ * "first" is not a style point: @testing-library/dom reads `document` off the global when it loads, so
+ * importing it (or @testing-library/react) before this file leaves every `screen` query reporting that
+ * there is no document — while `render` goes on working, which makes it look like something else.
  */
 import 'global-jsdom/register';
 
