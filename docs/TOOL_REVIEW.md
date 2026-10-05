@@ -1,6 +1,6 @@
 # LedgerFlow: tool-by-tool review and comparison
 
-Reviewed against the implemented code and automated evidence, not the README or menu names. Baseline: main `5bce9cb`, including merged C-13, plus the Codex screen-comforts and contextual-workflow branches. This is an internal product/engineering review, not a claim that LedgerFlow beats every version of QuickBooks, Sage, Xero or an ERP. Established products often have mature equivalents. The comparison is with common older workflows: separately maintained spreadsheets, manual exports, desktop-only navigation, duplicate data entry and disconnected add-ons. A benefit applies when the user's current system requires those extra steps.
+Reviewed against the implemented code and automated evidence, not the README or menu names. Initial baseline: main `5bce9cb`, including merged C-13, plus the Codex screen-comforts and contextual-workflow branches. Integration update: main `9f464ad` includes Claude’s completed tax/sticky-total handoffs and shared InlineEdit refusal fix; historical findings below identify that resolution explicitly. This is an internal product/engineering review, not a claim that LedgerFlow beats every version of QuickBooks, Sage, Xero or an ERP. Established products often have mature equivalents. The comparison is with common older workflows: separately maintained spreadsheets, manual exports, desktop-only navigation, duplicate data entry and disconnected add-ons. A benefit applies when the user's current system requires those extra steps.
 
 **Evidence labels:** implemented = a concrete code path exists; tested = the named automated test covers part of that path; operational = needs a configured external service and live acceptance. A passing mocked test is not operational proof. Financial features still need jurisdiction/business-specific acceptance before relying on them.
 
@@ -132,7 +132,7 @@ These are review suggestions, not claims that every item is absent from every pa
 7. C-14 adds last-ten recent records scoped to person and workspace; discard stale/deleted references safely.
 8. C-14 groups search results and tests mixed-language queries across records and commands.
 9. C-14 completes persisted transaction widths/order/visibility; extend the same contract to other lists where useful.
-10. Finish invoice/bill sticky headers and filtered totals in Claude's reserved screen lane.
+10. Verify invoice/bill sticky headers and filtered totals as layouts evolve; Claude completed this handoff on main `9f464ad`.
 11. C-14 verifies individual/zero-amount filter chips; extend coverage to nested labels, amount/date criteria and column filters.
 12. C-14 checks 44 px targets on phones for icon buttons, checkboxes and chips, not only main buttons.
 13. Add full-ledger/server search with visible completeness and pagination if large-workspace search is required.
@@ -159,9 +159,11 @@ Avoid claims of universal ERP superiority, guaranteed AI accuracy, fraud detecti
 
 Claude’s main supplies persistent page buttons with Alt+P and Alt+1–9, shared inline editing and inline creation, document bulk actions, automatic credit application and statement emailing. The accompanying branch adds side-drawer metadata editing for vendors, customers, projects and items, plus typed numeric algorithm controls with explanatory help. See docs/DEVELOPER_WORKFLOWS.md for the integration standard. Financial document amounts, stock quantities and posting status continue through their existing services. Contact merging on main is a separate owner/accountant workflow (`contactMergeService.ts`, `MergePartyDialog.tsx`; `contact-merge.test.ts`, `merge-party-dialog.test.tsx`). Drawer metadata saving does not replace merge authorization or financial validation.
 
-### F8 — Shared inline editing closes before persistence is confirmed
+### F8 — Shared inline refusal handling was incomplete (resolved on integrated main)
 
-`src/components/ui/InlineEdit.tsx` sets editing false before awaiting onSave, and its display button remains activatable while saving. A refused write produces a toast but does not retain the typed draft in the editor; repeat activation can start another edit. The component is reserved to Claude. C-15 callers should supply a rejecting confirmed-write promise and prevent overlapping field saves; the shared draft/pending interaction needs a follow-up in its owning lane. The drawer’s form separately retains drafts on refusal and disables repeats. Existing main pins are device-local main/subview references; they do not yet capture report dates or isolate preferences by workspace. These are enhancement boundaries, not missing page-pin functionality.
+The original review found that `InlineEdit.tsx` closed before awaiting persistence and allowed reopening while saving. Claude fixed the shared component on main: rejected saves retain the typed value and reason, and pending saves cannot reopen. Its new `reopenOnFailure` option is false for RecordInlineField, which already provides a retained-value Retry, preventing duplicate alerts. The integrated branch preserves that fix. The drawer independently retains refused drafts, blocks repeats and refreshes unedited fields after confirmed partial saves so a later save does not undo another editor's changes.
+
+Existing main pins are device-local main/subview references; they do not yet capture report dates or isolate preferences by workspace. These remain enhancement boundaries.
 
 ### F9 — Legacy project references can use the display name
 
