@@ -5,6 +5,7 @@ export const INLINE_RECORD_FIELDS = {
   assets: ['name', 'location', 'category'],
   budgets: ['name', 'amountCents'],
   estimates: ['number', 'date', 'expiryDate', 'notes'],
+  dimensionNodes: ['description'],
 } as const;
 export type InlineRecordCollection = keyof typeof INLINE_RECORD_FIELDS;
 export interface InlineRecordTarget { collection: InlineRecordCollection; id: string }
@@ -12,7 +13,7 @@ export interface InlineRecordSession { uid: string; workspaceId: string; writabl
 export interface InlineRecordAdapter {
   session(): InlineRecordSession | null;
   read(target: InlineRecordTarget): Promise<Record<string, unknown> | undefined>;
-  update(target: InlineRecordTarget, fields: Record<string, string | number>): Promise<void>;
+  update(target: InlineRecordTarget, fields: Record<string, string | number | string[]>): Promise<void>;
 }
 export function inlineFieldValue(record: Record<string, unknown>, field: string): unknown {
   let value: unknown = record;
@@ -24,14 +25,14 @@ function validate(target: InlineRecordTarget, field: string, value: string | num
   if (field === 'amountCents' || field === 'budgetCents') { if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) throw new Error('Enter a non-negative planning amount.'); }
   else {
     if (typeof value !== 'string' || value.length > 10000) throw new Error('Enter valid text.');
-    if (field === 'name' && !value.trim()) throw new Error('Name is required.');
+    if ((field === 'name' || target.collection === 'dimensionNodes' && field === 'description') && !value.trim()) throw new Error('Name is required.');
     if (field === 'status' && !['active', 'completed', 'archived'].includes(value)) throw new Error('Choose a project status.');
     if (field === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) throw new Error('Enter an email address.');
     if (['date', 'expiryDate'].includes(field)) { const date = new Date(`${value}T00:00:00Z`); if (field === 'date' && !value || value && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value)) throw new Error('Enter a valid date.'); }
   }
 }
 /** Refuses an observed conflict; does not pretend this browser read/write is atomic. */
-export async function saveInlineRecordField(adapter: InlineRecordAdapter, target: InlineRecordTarget, field: string, before: unknown, value: string | number): Promise<void> {
+export async function saveInlineRecordField(adapter: InlineRecordAdapter, target: InlineRecordTarget, field: string, before: unknown, value: string | number): Promise<Record<string, string | number | string[]>> {
   validate(target, field, value);
   const session = adapter.session();
   if (!session?.writable) throw new Error('Your workspace role cannot edit this record.');
@@ -43,5 +44,12 @@ export async function saveInlineRecordField(adapter: InlineRecordAdapter, target
   const actual = inlineFieldValue(record, field);
   const matches = field === 'amountCents' || field === 'budgetCents' ? Number(actual ?? 0) === Number(before ?? 0) : String(actual ?? '') === String(before ?? '');
   if (!matches) throw new Error('Someone changed this field. Reload its current value before saving.');
-  await adapter.update(target, { [field]: value });
+  const fields: Record<string, string | number | string[]> = { [field]: value };
+  if (target.collection === 'dimensionNodes' && field === 'description') {
+    const aliases = Array.isArray(record.aliases) ? record.aliases.filter((alias): alias is string => typeof alias === 'string') : [];
+    const old = String(actual ?? '').trim();
+    fields.aliases = old && !aliases.some(alias => alias.toLocaleLowerCase() === old.toLocaleLowerCase()) ? [...aliases, old] : aliases;
+  }
+  await adapter.update(target, fields);
+  return fields;
 }
