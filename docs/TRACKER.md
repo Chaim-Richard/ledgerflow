@@ -1414,15 +1414,15 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] F-10 `types.ts` split by domain: `src/model/` ledger, documents, workspace, operations; `src/types.ts` re-exports them, so `import ... from "../types"` is unchanged
 - [x] F-11 `LedgerPostService.ts` 1,097 → 27 lines: one file per document type in `src/services/ledgerPost/` (invoice, bill, credits, payment, delete) plus `postingKit.ts` (lookups, lock check, the one server call); `LedgerPostService.*` names unchanged
 - [x] F-12 `Reconciliation.tsx`
-- [ ] F-13 `BalanceSheetView.tsx`
-- [ ] F-14 `TransactionEditModal.tsx`
-- [ ] F-15 `QBOMigrationWizard.tsx`
+- [x] F-13 `BalanceSheetView.tsx` — report rendering extracted into `BalanceSheetReport.tsx`; calculations and controller statements preserved (Codex)
+- [x] F-14 `TransactionEditModal.tsx` — controller and sibling view; save/reversal/locking callbacks and JSX preserved (Codex)
+- [x] F-15 `QBOMigrationWizard.tsx` — migration controller and sibling view; parsing/mapping/commit logic and JSX preserved (Codex)
 - [ ] F-16 `Inventory.tsx`
-- [ ] F-17 `RulesSettings.tsx`
-- [ ] F-18 `PivotSheet.tsx`
-- [ ] F-19 `businessTemplates.ts`
-- [ ] F-20 `Projects.tsx`
-- [~] F-21 800-line limit (eslint `max-lines` warning on; 11 files over)
+- [x] F-17 `RulesSettings.tsx` — rules controller and sibling view; rule saving/testing/applying callbacks and JSX preserved (Codex)
+- [x] F-18 `PivotSheet.tsx` — pivot controller and sibling view; grouping/matrix calculations and JSX preserved (Codex)
+- [x] F-19 `businessTemplates.ts` — three sibling template data modules; all 23 definitions/order and public exports preserved (Codex)
+- [x] F-20 `Projects.tsx` — projects controller and sibling view; mutations, project calculations and JSX preserved (Codex)
+- [x] F-21 800-line limit — no `max-lines` warnings and filesOver800 0; no baseline raised (Codex)
 - [x] F-22 Shared report shell: period presets, compare, permalink and print on the Reports page (Prompt R); one table layout with sticky header and totals (`PartyReportLayout`); one CSV writer for every export (`src/lib/csvExport.ts`, 15 screens moved, guard test)
 
 # SECTION G — REACT CORRECTNESS
