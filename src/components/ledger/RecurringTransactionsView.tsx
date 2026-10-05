@@ -10,8 +10,10 @@ import {
   Trash2,
   AlertCircle,
   FileText,
-  DollarSign
+  DollarSign,
+  Receipt
 } from 'lucide-react';
+import InlineEdit from '../ui/InlineEdit';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { RecurringTransaction } from '../../types';
 import { formatCurrency } from '../../lib/utils';
@@ -28,6 +30,8 @@ import { LoadingState } from '../ui/LoadingState';
  * the active ones: an invoice becomes a draft to review and send; an entry is posted. Pause
  * stops a schedule until it is resumed (BE-03).
  */
+const FREQUENCIES: RecurringTransaction['frequency'][] = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'];
+
 export default function RecurringTransactionsView() {
   const recurring = useLedgerStore(s => s.recurring);
   const [searchTerm, setSearchTerm] = useState('');
@@ -152,10 +156,14 @@ export default function RecurringTransactionsView() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-lg bg-zinc-500/10 text-zinc-500 flex items-center justify-center shrink-0">
-                        {(rule.type === 'invoice' || rule.invoiceTemplate || rule.template?.tags?.includes('invoice')) ? <FileText aria-hidden="true" size={16} aria-label="Invoice" /> : <DollarSign aria-hidden="true" size={16} aria-label="Entry" />}
+                        {(rule.type === 'invoice' || rule.invoiceTemplate || rule.template?.tags?.includes('invoice')) ? <FileText aria-hidden="true" size={16} aria-label="Invoice" />
+                          : rule.type === 'bill' ? <Receipt aria-hidden="true" size={16} aria-label="Bill" /> : <DollarSign aria-hidden="true" size={16} aria-label="Entry" />}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-[var(--text)]">{rule.description}</p>
+                        <InlineEdit value={rule.description} label={`Name of schedule ${rule.description}`} canEdit={canEdit}
+                          validate={v => (String(v).trim() ? null : 'A schedule needs a name')}
+                          onSave={v => updateEntity('recurring', rule.id, { description: String(v) }, 'Name saved')}
+                          className="text-sm font-semibold text-[var(--text)]" />
                         <p className="text-xs text-zinc-500">{rule.payee || 'Internal Transfer'}</p>
                       </div>
                     </div>
@@ -163,7 +171,9 @@ export default function RecurringTransactionsView() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm text-[var(--text)]">
                       <Clock aria-hidden="true" size={14} className="text-zinc-400" />
-                      {getFrequencyLabel(rule.frequency)}
+                      <InlineEdit kind="select" value={rule.frequency} label={`How often ${rule.description} runs`} canEdit={canEdit}
+                        options={FREQUENCIES.map(f => ({ value: f, label: getFrequencyLabel(f) }))} display={getFrequencyLabel(rule.frequency)}
+                        onSave={v => updateEntity('recurring', rule.id, { frequency: String(v) as RecurringTransaction['frequency'] }, 'Saved')} />
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -174,7 +184,11 @@ export default function RecurringTransactionsView() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm font-medium text-indigo-500">
                       <Calendar aria-hidden="true" size={14} />
-                      {rule.nextOccurrence ? format(parseISO(rule.nextOccurrence), 'MMM dd, yyyy') : 'Not scheduled'}
+                      {/* the next date also sets the day of the month it keeps to */}
+                      <InlineEdit kind="date" value={rule.nextOccurrence} label={`Next date of ${rule.description}`} canEdit={canEdit}
+                        display={rule.nextOccurrence ? format(parseISO(rule.nextOccurrence), 'MMM dd, yyyy') : 'Not scheduled'}
+                        validate={v => (!v ? 'Enter a date' : rule.lastOccurrence && String(v) <= rule.lastOccurrence ? `After the last run (${rule.lastOccurrence})` : null)}
+                        onSave={v => updateEntity('recurring', rule.id, { nextOccurrence: String(v), anchorDay: Number(String(v).slice(8, 10)) }, 'Next date saved')} />
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">
