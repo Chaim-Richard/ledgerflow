@@ -4,7 +4,7 @@ import { TransactionValidator } from '../../kernel/validation/TransactionValidat
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { formatCurrency, formatTzDate } from '../../lib/utils';
 import {
-  planFxRevaluation, reversalLines, REVALUATION_SIDES, revaluationReversalDate, revaluationSummary,
+  planFxRevaluation, revaluationDateProblem, reversalLines, REVALUATION_SIDES, revaluationReversalDate, revaluationSummary,
   type RevaluableDocument, type RevaluationDetail, type RevaluationLine, type RevaluationPlan, type RevaluationSkip,
 } from '../../lib/fxRevaluation';
 import { writeServerAuditLog } from './auditLogService';
@@ -21,8 +21,9 @@ import type { ChartAccount } from '../../types';
  *
  * The rules it is built on (all of them are the reason the old run was switched off, L-187):
  * - only owners and accountants run it, and nothing is posted in a closed or locked period;
- * - rates come from the exchange service and are never invented: a currency whose rate cannot be had
- *   stops the whole run, because a revaluation that leaves one currency out is simply wrong;
+ * - today's rates come from the exchange service and are never invented; for a past month-end the
+ *   caller must supply a positive rate for every open foreign currency, so today's rate is never
+ *   mistaken for yesterday's; a missing rate stops the run;
  * - only the open balance of a document in a foreign currency is touched, with the same two rules the
  *   aging uses (`calculateAmountDue` and `toBaseCents`), so this entry and the A/R report agree;
  * - no account is created here. The gain/loss account must exist in the chart of accounts;
@@ -46,7 +47,7 @@ const FX_ACCOUNT_NAME = /unrealized.*fx|fx.*(gain|loss)|foreign exchange|exchang
 export interface RevaluationInput {
   workspaceId: string;
   user: { uid: string; email?: string; admin?: boolean };
-  /** the day to value the balances at; today, and only today, because that is the rate available */
+  /** today uses live rates; a past month-end uses only rates the caller enters for that day */
   date?: string;
   /** show what would be posted and post nothing */
   dryRun?: boolean;
@@ -166,14 +167,14 @@ async function postEntry(
   }
 }
 
-function result(date: string, reversalDate: string, base: string, plan: RevaluationPlan, posted: boolean, transactionId: string | null, reversalTransactionId: string | null): RevaluationResult {
+function result(date: string, reversalDate: string, base: string, plan: RevaluationPlan, posted: boolean, transactionId: string | null, reversalTransactionId: string | null, rateDate?: string): RevaluationResult {
   const money = (cents: number) => formatCurrency(cents, base);
   return {
     date, reversalDate, baseCurrency: base, posted, transactionId, reversalTransactionId,
     netGainCents: plan.netGainCents, debitTotalCents: plan.debitTotalCents,
     documentCount: plan.documentCount, currencies: plan.currencies,
     lines: plan.lines, details: plan.details, skipped: plan.skipped, unpriced: plan.unpriced,
-    summary: revaluationSummary(plan, money),
+    summary: revaluationSummary(plan, money, rateDate),
   };
 }
 
@@ -188,10 +189,10 @@ export async function revaluateForeignBalances(db: Firestore, input: Revaluation
     const base = String(workspace.currency || 'USD').toUpperCase();
     const today = formatTzDate(new Date(), typeof workspace.timezone === 'string' ? workspace.timezone : 'UTC');
     const date = input.date || today;
-    if (!DAY.test(date)) throw new FxRevaluationError(400, 'Date must be YYYY-MM-DD');
-    if (date !== today) {
-      throw new FxRevaluationError(400, `Revaluation uses today's rate from the exchange service, so it can only be run for ${today}. For another date, post a journal entry by hand with that day's rate.`);
-    }
+    const dateProblem = revaluationDateProblem(date, today);
+    if (dateProblem) throw new FxRevaluationError(400, dateProblem);
+    const historical = date < today;
+    const rateDate = historical ? date : undefined;
     const reversalDate = revaluationReversalDate(date);
 
     const accounts = (await t.get(db.collection('chartAccounts').where('workspaceId', '==', input.workspaceId)))
@@ -219,14 +220,24 @@ export async function revaluateForeignBalances(db: Firestore, input: Revaluation
     }
 
     const currencies = [...new Set(open.map(d => String(d.currency || '').toUpperCase()).filter(c => c && c !== base))].sort();
-    const rates = await ratesFor(currencies, base, input.rates);
-    const plan = planFxRevaluation(docs, currency => rates[String(currency).toUpperCase()], { id: gainLoss.id, name: String(gainLoss.name) }, base);
+    const rates: Record<string, number | undefined> = historical
+      ? Object.fromEntries(currencies.map(currency => {
+        const rate = input.rates?.[currency];
+        return [currency, typeof rate === 'number' && Number.isFinite(rate) && rate > 0 ? rate : undefined];
+      }))
+      : await ratesFor(currencies, base, input.rates);
+    const plan = planFxRevaluation(docs, currency => rates[String(currency).toUpperCase()], { id: gainLoss.id, name: String(gainLoss.name) }, base, rateDate);
 
     if (plan.unpriced.length > 0) {
+      if (historical && input.dryRun) return result(date, reversalDate, base, plan, false, null, null, rateDate);
+      if (historical) {
+        const list = plan.unpriced.join(' and ');
+        throw new FxRevaluationError(400, `Enter the ${list} rate${plan.unpriced.length === 1 ? '' : 's'} for ${date}. Nothing was posted.`);
+      }
       const list = plan.unpriced.join(' and ');
       throw new FxRevaluationError(503, `The ${list} rate is not available from the exchange service right now, and a revaluation cannot leave a currency out. Nothing was posted — try again in a little while.`);
     }
-    if (plan.lines.length === 0) return result(date, reversalDate, base, plan, false, null, null);
+    if (plan.lines.length === 0) return result(date, reversalDate, base, plan, false, null, null, rateDate);
 
     const sameDay = (await t.get(db.collection('transactions')
       .where('workspaceId', '==', input.workspaceId)
@@ -235,7 +246,7 @@ export async function revaluateForeignBalances(db: Firestore, input: Revaluation
     if (sameDay.some(tx => tx.metadata?.type === 'fx-revaluation' && tx.metadata?.revaluationDate === date)) {
       throw new FxRevaluationError(409, `A revaluation for ${date} is already in the books and reverses on ${reversalDate}. Undo it first if you mean to run ${date} again.`);
     }
-    if (input.dryRun) return result(date, reversalDate, base, plan, false, null, null);
+    if (input.dryRun) return result(date, reversalDate, base, plan, false, null, null, rateDate);
 
     const description = `Currency revaluation at ${date} (${plan.currencies.join(', ')})`;
     // Both ids first: the entry is to be pointed at by its reversal and the reversal at it, and the
@@ -281,13 +292,13 @@ export async function revaluateForeignBalances(db: Firestore, input: Revaluation
       },
     }, { db, tx: t });
 
-    return result(date, reversalDate, base, plan, true, String(entry.id), String(reversal.id));
+    return result(date, reversalDate, base, plan, true, String(entry.id), String(reversal.id), rateDate);
   });
 }
 
 /**
- * Undo a revaluation the day before it would have reversed (the same entry, posted now, dated today).
- * Refuses when it is already reversed or when its own reversal has been posted already.
+ * Undo a revaluation by posting its mirror today and voiding the paired next-day reversal in the
+ * same transaction. Refuses unless both entries still agree and it has not already been undone.
  */
 export async function undoRevaluation(db: Firestore, input: { workspaceId: string; user: RevaluationInput['user']; date: string }): Promise<{ transactionId: string; reversesTxId: string }> {
   const date = String(input.date || '');
@@ -305,9 +316,17 @@ export async function undoRevaluation(db: Firestore, input: { workspaceId: strin
       .find(tx => tx.metadata?.type === 'fx-revaluation' && String(tx.metadata?.revaluationDate || '') === date);
     if (!found) throw new FxRevaluationError(404, `No revaluation for ${date} was found`);
     if (found.reversalEventId) throw new FxRevaluationError(409, `The revaluation for ${date} is already reversed`);
-    const scheduled = found.metadata?.reversalTransactionId
-      ? db.collection('transactions').doc(String(found.metadata.reversalTransactionId))
-      : null;
+    const scheduledId = String(found.metadata?.reversalTransactionId || '');
+    if (!scheduledId) throw new FxRevaluationError(409, `The revaluation for ${date} has no scheduled reversal, so it cannot be safely undone.`);
+    const scheduled = db.collection('transactions').doc(scheduledId);
+    const scheduledData = (await t.get(scheduled)).data();
+    if (!scheduledData
+      || scheduledData.workspaceId !== input.workspaceId
+      || scheduledData.metadata?.type !== 'fx-revaluation-reversal'
+      || String(scheduledData.metadata?.reversesTxId || '') !== String(found.id)
+      || scheduledData.status !== 'completed') {
+      throw new FxRevaluationError(409, `The scheduled reversal for ${date} is missing or no longer active, so nothing was undone.`);
+    }
 
     const today = formatTzDate(new Date(), typeof workspace.timezone === 'string' ? workspace.timezone : 'UTC');
     const lines = reversalLines(((found.lines as Array<{ accountId: string; accountName?: string; amountCents: number; description?: string }>) || []).map(l => ({
@@ -326,9 +345,9 @@ export async function undoRevaluation(db: Firestore, input: { workspaceId: strin
     const now = new Date().toISOString();
     t.create(db.collection('transactions').doc(String(reversal.id)), { ...reversal, createdAt: FieldValue.serverTimestamp(), updatedAt: now });
     t.update(db.collection('transactions').doc(String(found.id)), { reversalEventId: reversal.id, updatedAt: now });
-    // the entry that was going to reverse this tomorrow is voided, not deleted: the audit trail keeps
-    // it, and every report drops it through `isPostable`, which is exactly the effect wanted.
-    if (scheduled) t.update(scheduled, { status: 'void', voidedReason: `Undone early, with an entry dated ${today}`, updatedAt: now });
+    // The active scheduled entry was checked above and is voided in the same transaction as this
+    // mirror. It stays in the audit trail; isPostable drops it so it cannot reverse the entry twice.
+    t.update(scheduled, { status: 'void', voidedReason: `Undone early, with an entry dated ${today}`, updatedAt: now });
     await writeServerAuditLog({
       workspaceId: input.workspaceId, uid: input.user.uid, email: input.user.email,
       action: 'FX_REVALUATION_UNDONE', entityType: 'workspace', entityId: input.workspaceId,

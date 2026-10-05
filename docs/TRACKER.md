@@ -1877,29 +1877,33 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] R-04 Year-end retained-earnings roll (`/close-year` + `ClosingEntryEngine`, tested)
 - [x] R-05 Auto-reversing accruals: a journal entry can be marked "Reverse automatically"; its mirror (every line negated, linked both ways) is posted on the 1st of the next month, or a chosen later date, in the same request, so there is never an accrual without its reversal; a closed month refuses both (tested against the database). The server now accepts a reversal of an entry in the same request
 - [x] R-06 Depreciation run (server, one entry per month, catch-up, tested)
-- [x] R-07 FX revaluation run (the old run was switched off, L-187: build it from open foreign-currency invoices and bills, owner/accountant, with a reversal on the next day) — **done 2026-10-05**:
-  the rules live in `src/lib/fxRevaluation.ts`, away from the page and the database: only what is
-  still open at a stored rate is revalued, foreign-currency only (a home-currency document is never
-  mentioned, because moving it would be the mistake L-187 was), and anything skipped is said out loud
-  with the reason and what to do — no rate on the document, no receivable/payable account for it, no
-  unrealized gain/loss account in the chart (never created by the run), the difference already zero,
-  a currency whose live rate cannot be fetched (then nothing is posted, rather than a half run).
-  Receivables and payables both move with the currency, and the gain/loss account absorbs the whole
-  difference in one line; every line is whole cents and the entry balances to exactly zero, so it
-  passes `DoubleEntryValidator`. The reversal is the exact negation dated the day after, which is why
-  a month-end date is allowed and any other date is refused, and why undoing it early voids the entry
-  that was going to reverse it and writes the mirror today (tested: `src/tests/fx-revaluation.test.ts`,
-  19 cases). `src/server/services/fxRevaluationService.ts` reads the documents and the rates, wants
-  `close`-level rights, will not run for another day, will not run twice for the same one, posts both
-  entries in one transaction through the ordinary validators — so a closed period stops it — and writes
-  `FX_REVALUATION_POSTED` / `FX_REVALUATION_UNDONE` to the audit log. The Currencies page previews the
-  entry before anything is posted, says what it gains or loses and when it reverses, and offers Undo
-  (`src/components/finance/FxRevaluationPanel.tsx`, tested in jsdom, `src/tests/fx-revaluation-ui.test.tsx`,
-  7 cases). `POST /api/v1/transactions/revaluation/preview|run|undo`; `LF_ENABLE_LEGACY_REVALUATION`
-  and the code behind it are gone. `src/tests/fx-revaluation-server.test.ts` checks the same rules
-  against the real database and skips itself when there is none (`npm run db:test-setup`). It is NOT
-  gated on the `multi_currency_revaluation` Pro flag: that flag is otherwise unused in the app, and
-  which pages a plan gets is the owner's commercial call, not something to slip in here.
+- [~] R-07 FX revaluation run (the old run was switched off, L-187: open foreign-currency invoices and bills, owner/accountant, reversal next day) — implementation and local checks done 2026-10-05; **waiting for the owner's real-database recheck before merge**:
+  `src/lib/fxRevaluation.ts` holds the arithmetic and skip rules; nothing invents an FX account or a
+  rate. Today uses the live exchange rate. A past date must be a real month-end, cannot be in the
+  future, and must use rates typed for that date — a missing historical rate is named by the preview
+  and cannot be used to post a partial entry or silently fall back to today's rate. Impossible dates,
+  non-month-end historical dates and future dates are refused. The Currencies panel asks for the
+  valuation date and, after its preview identifies the open foreign currencies, each rate as base
+  currency per unit; its rows and descriptions name the historical rate date. Home-currency documents
+  are never listed; paid/draft/void/closed documents, zero open amounts, missing booked rates, missing
+  receivable/payable accounts and accounts already kept in that foreign currency are skipped with a
+  reason. A missing live rate stops the entire current-date run. Receivables and payables move by the
+  difference from their own booked rate; the unrealized gain/loss account takes the other side, every
+  line is whole cents, and the entry sums to zero.
+
+  The service requires owner/accountant rights, keeps the ordinary closed-period guard, writes the
+  revaluation and exact next-day reversal together, prevents a duplicate date, and audits both posting
+  and undo. Undo now reads and validates the linked scheduled reversal, then posts its mirror today,
+  marks the original reversed and voids the active scheduled row in the same transaction. Review found
+  that the DB test had fetched `before0` before Undo and then asserted those stale objects had changed;
+  the assertion now checks fresh `after0` rows. The UI also handles an Undo response that has no plan
+  arrays without trying to render it as a plan. Tests: 21 pure rules/date cases, 8 panel cases; the
+  DB-backed `src/tests/fx-revaluation-server.test.ts` includes the fresh Undo read and a typed
+  historical month-end but self-skips here without `LF_TEST_DATABASE_URL`. Local merged-main checks:
+  typecheck, **1147 tests passed**, ESLint 227 warnings / 0 errors (the existing cap), production
+  build. Ask the owner to rerun the DB suite before marking fully done. This is not gated on the
+  `multi_currency_revaluation` Pro flag: that flag is otherwise unused, and which pages a plan gets is
+  the owner's commercial call.
 - [x] R-08 Unposted-drafts review (drafts in the period block the close, listed)
 - [ ] R-09 Close comparison
 - [x] R-10 Lock by role (close/reopen owner+accountant; hard reopen owner; soft close by role)

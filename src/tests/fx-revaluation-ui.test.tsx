@@ -10,26 +10,37 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import FxRevaluationPanel from '../components/finance/FxRevaluationPanel';
 import { setComponentWorkspace } from './helpers/componentFixtures';
+import { addDaysYMD } from '../lib/fiscalCalendar';
+import { dayBefore } from '../lib/periodLock';
+import { getLocalDateISO } from '../lib/utils';
 
 interface Call { path: string; body: Record<string, unknown> }
 
 /** fetch that answers each path with its own status and body, and records what was asked. */
-function stubRoutes(responses: Record<string, { status?: number; body: unknown }>): Call[] {
+function stubRoutes(responses: Record<string, { status?: number; body: unknown } | Array<{ status?: number; body: unknown }>>): Call[] {
   const calls: Call[] = [];
+  const counts = new Map<string, number>();
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = String(input);
     calls.push({ path, body: typeof init?.body === 'string' ? JSON.parse(init.body) as Record<string, unknown> : {} });
     const found = Object.entries(responses).find(([key]) => path.includes(key));
-    const answer = found?.[1] ?? { status: 500, body: { message: 'unexpected path in the test: ' + path } };
+    const configured = found?.[1];
+    const sequence = Array.isArray(configured) ? configured : configured ? [configured] : [];
+    const index = found ? counts.get(found[0]) || 0 : 0;
+    const answer = sequence[Math.min(index, sequence.length - 1)] ?? { status: 500, body: { message: 'unexpected path in the test: ' + path } };
+    if (found) counts.set(found[0], index + 1);
     return new Response(JSON.stringify(answer.body), { status: answer.status ?? 200, headers: { 'Content-Type': 'application/json' } });
   }) as typeof fetch;
   return calls;
 }
 
+const TODAY = getLocalDateISO();
+const TOMORROW = addDaysYMD(TODAY, 1);
+
 const PLAN = {
   status: 'ok',
-  date: '2026-10-05',
-  reversalDate: '2026-10-06',
+  date: TODAY,
+  reversalDate: TOMORROW,
   baseCurrency: 'USD',
   posted: false,
   transactionId: null,
@@ -87,11 +98,11 @@ describe('the revaluation panel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show what would move' }));
     await waitFor(() => assert.equal(calls.length, 1));
     assert.match(calls[0].path, /\/revaluation\/preview$/);
-    assert.deepEqual(calls[0].body, { workspaceId: 'component-workspace' }, 'the preview asks for this workspace and invents no date');
+    assert.deepEqual(calls[0].body, { workspaceId: 'component-workspace', date: TODAY }, 'the preview explicitly values this workspace at the date shown in the panel');
     fireEvent.click(screen.getByRole('button', { name: 'Post it' }));
     await waitFor(() => assert.equal(calls.length, 2));
     assert.match(calls[1].path, /\/revaluation\/run$/);
-    assert.deepEqual(calls[1].body, { workspaceId: 'component-workspace' });
+    assert.deepEqual(calls[1].body, { workspaceId: 'component-workspace', date: TODAY });
   });
 
   test('after it is posted, the panel says when it reverses and offers to undo it', async () => {
@@ -104,11 +115,42 @@ describe('the revaluation panel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show what would move' }));
     await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Post it' })));
     fireEvent.click(screen.getByRole('button', { name: 'Post it' }));
-    await waitFor(() => assert.ok(screen.getByText(/reversing on 2026-10-06/)));
+    await waitFor(() => assert.ok(screen.getByText(new RegExp(`reversing on ${TOMORROW}`))));
     assert.ok(screen.queryByRole('button', { name: 'Post it' }) === null, 'a second press is not offered');
     fireEvent.click(screen.getByRole('button', { name: 'Undo it' }));
     await waitFor(() => assert.equal(calls.length, 3));
-    assert.deepEqual(calls[2].body, { workspaceId: 'component-workspace', date: '2026-10-05' }, 'undo names the day it undoes');
+    assert.deepEqual(calls[2].body, { workspaceId: 'component-workspace', date: TODAY }, 'undo names the day it undoes');
+    await waitFor(() => assert.ok(screen.getByText('The revaluation is reversed.')));
+    assert.ok(screen.queryByRole('button', { name: 'Undo it' }) === null, 'the bare undo response clears the posted plan instead of crashing or offering undo again');
+  });
+
+  test('historical month-end asks for that day’s rates and tolerates an incomplete preview payload', async () => {
+    const date = dayBefore(`${TODAY.slice(0, 7)}-01`);
+    const reversalDate = addDaysYMD(date, 1);
+    const calls = stubRoutes({
+      '/revaluation/preview': [
+        { body: {
+          status: 'ok', date, reversalDate, baseCurrency: 'USD', posted: false,
+          summary: `Type the EUR and GBP rates for ${date} to complete the preview. Nothing was posted.`,
+          unpriced: ['EUR', 'GBP'],
+        } },
+        { body: { ...PLAN, date, reversalDate, unpriced: [], currencies: ['EUR', 'GBP'] } },
+      ],
+    });
+    render(<FxRevaluationPanel />);
+    fireEvent.change(screen.getByLabelText('Date to value balances at'), { target: { value: date } });
+    fireEvent.click(screen.getByRole('button', { name: 'Show what would move' }));
+    await waitFor(() => assert.ok(screen.getByLabelText(`1 EUR in USD on ${date}`)));
+    assert.ok(screen.getByText(/no partial entry can be posted/i));
+    fireEvent.change(screen.getByLabelText(`1 EUR in USD on ${date}`), { target: { value: '1.2' } });
+    fireEvent.change(screen.getByLabelText(`1 GBP in USD on ${date}`), { target: { value: '1.5' } });
+    assert.ok(screen.queryByRole('button', { name: 'Post it' }) === null, 'rates must be checked again after an edit');
+    fireEvent.click(screen.getByRole('button', { name: 'Show what would move' }));
+    await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Post it' })));
+    assert.deepEqual(calls.map(call => call.body), [
+      { workspaceId: 'component-workspace', date, rates: {} },
+      { workspaceId: 'component-workspace', date, rates: { EUR: 1.2, GBP: 1.5 } },
+    ], 'a past date sends only the rates the person actually entered');
   });
 
   test('somebody who may not post a period entry can still see what it would do', async () => {

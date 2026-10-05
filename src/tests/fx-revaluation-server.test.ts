@@ -10,12 +10,14 @@ import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import { addDaysYMD } from '../lib/fiscalCalendar';
+import { dayBefore } from '../lib/periodLock';
 import type { Firestore } from '../server/db/pgFirestore';
 
 const url = process.env.LF_TEST_DATABASE_URL;
 /** the workspace's time zone is not set, which the service reads as UTC, so this is its "today" */
 const today = new Date().toISOString().slice(0, 10);
 const tomorrow = addDaysYMD(today, 1);
+const previousMonthEnd = dayBefore(`${today.slice(0, 7)}-01`);
 
 describe('Month-end currency revaluation', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
   const ws = `ws_fx_${crypto.randomBytes(4).toString('hex')}`;
@@ -141,13 +143,18 @@ describe('Month-end currency revaluation', { skip: !url && 'LF_TEST_DATABASE_URL
     const after0 = await rows();
     assert.equal(after0.length, before0.length + 1, 'one more entry: the reversal, dated today');
     const original = before0.find(r => r.id === undone.reversesTxId);
+    const originalAfter = after0.find(r => r.id === undone.reversesTxId);
     const early = after0.find(r => r.id === undone.transactionId);
-    assert.ok(original && early);
+    assert.ok(original && originalAfter && early);
     assert.equal(early!.date, today);
     assert.deepEqual(linesOf(early!).map(l => l.amountCents), linesOf(original!).map(l => -l.amountCents), 'the same lines, the other way');
-    const scheduled = before0.find(r => r.id === ((original!.metadata as Record<string, unknown>).reversalTransactionId as string));
-    assert.equal(scheduled?.status, 'void', 'the entry that was going to reverse it tomorrow is voided, not deleted');
-    assert.equal(original!.reversalEventId, undone.transactionId, 'and the entry now reads as reversed');
+    const scheduledId = (original!.metadata as Record<string, unknown>).reversalTransactionId as string;
+    const scheduledBefore = before0.find(r => r.id === scheduledId);
+    const scheduledAfter = after0.find(r => r.id === scheduledId);
+    assert.equal(scheduledBefore?.status, 'completed', 'the scheduled reversal was active before Undo');
+    assert.equal(scheduledAfter?.status, 'void', 'freshly read after Undo, the next-day entry is no longer postable');
+    assert.equal(original!.reversalEventId, undefined, 'the before snapshot has not been mutated');
+    assert.equal(originalAfter!.reversalEventId, undone.transactionId, 'the entry now reads as reversed');
     const twice = await failure(() => undo(db, { workspaceId: ws, user: owner, date: today }));
     assert.match(String(twice?.message), /already reversed/, 'there is nothing to undo a second time');
   });
@@ -172,10 +179,34 @@ describe('Month-end currency revaluation', { skip: !url && 'LF_TEST_DATABASE_URL
     assert.match(still.summary, /already stands at today's rate/);
   });
 
-  test('only today can be revalued, because today is the rate there is', async () => {
-    const past = await failure(() => revaluate(db, { workspaceId: ws, user: owner, rates, date: '2026-01-05' }));
-    assert.equal(past?.status, 400);
-    assert.match(String(past?.message), /can only be run for/);
-    assert.match(String((await failure(() => revaluate(db, { workspaceId: ws, user: owner, rates, date: '5/10/2026' })))?.message), /YYYY-MM-DD/);
+  test('a past month-end previews missing rates, requires typed rates to post, and dates the pair correctly', async () => {
+    const date = previousMonthEnd;
+    const historicalRows = async () => (await rows()).filter(r => (r.metadata as Record<string, unknown> | undefined)?.revaluationDate === date);
+    const missingPreview = await revaluate(db, { workspaceId: ws, user: owner, date, dryRun: true });
+    assert.equal(missingPreview.posted, false);
+    assert.deepEqual(missingPreview.unpriced, ['EUR', 'GBP'], 'the preview names every foreign currency needing a historical rate');
+    assert.match(missingPreview.summary, new RegExp(`Type the EUR and GBP rates for ${date}`));
+    assert.equal((await historicalRows()).length, 0, 'the rate request posted nothing');
+
+    const missingRun = await failure(() => revaluate(db, { workspaceId: ws, user: owner, date, rates: { EUR: rates.EUR } }));
+    assert.equal(missingRun?.status, 400);
+    assert.match(String(missingRun?.message), /Enter the GBP rate/);
+    assert.equal((await historicalRows()).length, 0, 'a missing rate cannot post a partial revaluation');
+
+    const posted = await revaluate(db, { workspaceId: ws, user: owner, date, rates });
+    assert.equal(posted.posted, true);
+    assert.equal(posted.date, date);
+    assert.equal(posted.reversalDate, addDaysYMD(date, 1));
+    assert.equal((await historicalRows()).length, 2, 'both dated entries are posted together');
+
+    const notMonthEnd = await failure(() => revaluate(db, { workspaceId: ws, user: owner, rates, date: dayBefore(date) }));
+    assert.equal(notMonthEnd?.status, 400);
+    assert.match(String(notMonthEnd?.message), /last day of a month/);
+    const malformed = await failure(() => revaluate(db, { workspaceId: ws, user: owner, rates, date: '2026-02-30' }));
+    assert.equal(malformed?.status, 400);
+    assert.match(String(malformed?.message), /real calendar date/);
+    const future = await failure(() => revaluate(db, { workspaceId: ws, user: owner, rates, date: addDaysYMD(today, 1) }));
+    assert.equal(future?.status, 400);
+    assert.match(String(future?.message), /cannot be after/);
   });
 });

@@ -14,7 +14,7 @@
 import test, { describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  planFxRevaluation, revaluationReversalDate, revaluationSummary, reversalLines,
+  planFxRevaluation, revaluationDateProblem, revaluationReversalDate, revaluationSummary, reversalLines,
   type RevaluableDocument,
 } from '../lib/fxRevaluation';
 
@@ -210,5 +210,25 @@ describe('the reversal', () => {
     assert.equal(revaluationReversalDate('2026-12-31'), '2027-01-01');
     assert.equal(revaluationReversalDate('2028-02-28'), '2028-02-29');
     assert.equal(revaluationReversalDate('2026-02-28'), '2026-03-01');
+  });
+
+  test('today or a real past month-end is allowed; other and impossible dates are refused', () => {
+    assert.equal(revaluationDateProblem('2026-10-05', '2026-10-05'), null);
+    assert.equal(revaluationDateProblem('2026-09-30', '2026-10-05'), null);
+    assert.match(revaluationDateProblem('2026-09-15', '2026-10-05') || '', /last day of a month/);
+    assert.match(revaluationDateProblem('2026-02-30', '2026-10-05') || '', /real calendar date/);
+    assert.match(revaluationDateProblem('2026-10-06', '2026-10-05') || '', /cannot be after/);
+    assert.match(revaluationDateProblem('5/10/2026', '2026-10-05') || '', /YYYY-MM-DD/);
+  });
+
+  test('a historical plan names its date, its typed rates, and its next-day reversal', () => {
+    const pastDate = '2026-09-30';
+    const result = planFxRevaluation([doc()], currency => currency === 'EUR' ? 1.2 : undefined, FX, 'USD', pastDate);
+    assert.equal(result.lines[0].description, 'Accounts Receivable at the 2026-09-30 rate: 1 invoice (INV-1, Acme)');
+    assert.equal(result.lines[1].description, 'Unrealized FX gain at 2026-09-30 rates');
+    assert.match(revaluationSummary(result, money, pastDate), /movement in the accounts at 2026-09-30/);
+    assert.match(revaluationSummary(result, money, pastDate), /reverses on 2026-10-01/);
+    const awaitingRates = planFxRevaluation([doc()], () => undefined, FX, 'USD', pastDate);
+    assert.match(revaluationSummary(awaitingRates, money, pastDate), /Type the EUR rate for 2026-09-30/);
   });
 });

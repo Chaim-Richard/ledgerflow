@@ -23,6 +23,7 @@
  */
 import { toBaseCents } from '../server/reports/partyReports';
 import { addDaysYMD } from './fiscalCalendar';
+import { monthEnd } from './periodLock';
 import { calculateAmountDue } from './documentMath';
 import { isOpenBill, isOpenInvoice } from './txFilters';
 
@@ -110,24 +111,46 @@ const usableRate = (value: unknown): number | undefined =>
   (typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined);
 const label = (doc: { number?: string; id: string }): string => String(doc.number || doc.id);
 
+function isCalendarDate(date: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const [year, month, day] = date.split('-').map(Number);
+  if (year < 1 || month < 1 || month > 12 || day < 1) return false;
+  const lastDay = Number(monthEnd(`${year}-${String(month).padStart(2, '0')}`).slice(-2));
+  return day <= lastDay;
+}
+
+/** A past valuation must be an actual month-end and must use rates entered for that date. */
+export function revaluationDateProblem(date: string, today: string): string | null {
+  if (!isCalendarDate(date)) return 'Date must be a real calendar date in YYYY-MM-DD format';
+  if (date > today) return `A revaluation date cannot be after ${today}.`;
+  if (date < today && date !== monthEnd(date.slice(0, 7))) {
+    return 'For a past revaluation, choose the last day of a month and enter that day’s rates.';
+  }
+  return null;
+}
+
 /** The date the entry reverses on: the day after the one it is valued at. */
 export const revaluationReversalDate = (date: string): string => addDaysYMD(date, 1);
 
 /**
- * The entry for one date, from the workspace's open documents and today's rates.
+ * The entry for one date, from the workspace's open documents and the rate for that date. The
+ * optional date keeps the original "today" wording for current-rate previews; historical plans name
+ * the date whose typed rates they use.
  *
  * A document is left out (with the reason, so the accountant can see what was not valued) when it is
  * closed or fully paid, when it is not in a foreign currency, when it carries no rate to compare
  * against, when its account is itself in that currency (then the account is already in that money and
- * there is nothing to convert), or when today's rate gives the same value as the booked one.
+ * there is nothing to convert), or when the chosen date's rate gives the same value as the booked one.
  */
 export function planFxRevaluation(
   docs: RevaluableDocument[],
   rateFor: RateFor,
   gainLossAccount: RevaluedAccount,
   baseCurrency: string,
+  rateDate?: string,
 ): RevaluationPlan {
   const base = upper(baseCurrency) || 'USD';
+  const rateLabel = (currency: string) => rateDate ? `${rateDate} ${currency} rate` : `today's ${currency} rate`;
   const details: RevaluationDetail[] = [];
   const skipped: RevaluationSkip[] = [];
   const unpriced = new Set<string>();
@@ -173,7 +196,7 @@ export function planFxRevaluation(
     const todayBaseCents = Math.round(openCents * todayRate);
     const deltaCents = todayBaseCents - bookedBaseCents;
     if (deltaCents === 0) {
-      skipped.push({ ...short, reason: `already at today's ${currency} rate` });
+      skipped.push({ ...short, reason: `already at ${rateLabel(currency)}` });
       continue;
     }
 
@@ -200,7 +223,7 @@ export function planFxRevaluation(
       accountId: account.id,
       accountName: account.name,
       amountCents: cents,
-      description: revaluationLineDescription(account.name, moved),
+      description: revaluationLineDescription(account.name, moved, rateDate),
     });
   }
 
@@ -212,7 +235,7 @@ export function planFxRevaluation(
       accountId: gainLossAccount.id,
       accountName: gainLossAccount.name,
       amountCents: -netGainCents,
-      description: `Unrealized FX ${netGainCents > 0 ? 'gain' : 'loss'} at today's rates`,
+      description: `Unrealized FX ${netGainCents > 0 ? 'gain' : 'loss'} at ${rateDate ? `${rateDate} rates` : "today's rates"}`,
     });
   }
 
@@ -223,7 +246,7 @@ export function planFxRevaluation(
   };
 }
 
-function revaluationLineDescription(accountName: string, docs: RevaluationDetail[]): string {
+function revaluationLineDescription(accountName: string, docs: RevaluationDetail[], rateDate?: string): string {
   const kinds = new Map<RevaluationSide, number>();
   for (const d of docs) kinds.set(d.side, (kinds.get(d.side) || 0) + 1);
   const what = (['customer', 'vendor'] as RevaluationSide[])
@@ -231,7 +254,7 @@ function revaluationLineDescription(accountName: string, docs: RevaluationDetail
     .map(side => `${kinds.get(side)} ${REVALUATION_SIDES[side].label}${kinds.get(side) === 1 ? '' : 's'}`)
     .join(' and ');
   const where = docs.length === 1 ? ` (${docs[0].number}${docs[0].partyName ? `, ${docs[0].partyName}` : ''})` : '';
-  return `${accountName} at today's rate: ${what}${where}`;
+  return `${accountName} at ${rateDate ? `the ${rateDate} rate` : "today's rate"}: ${what}${where}`;
 }
 
 /** The same lines the other way round — the entry that undoes the revaluation. */
@@ -244,17 +267,23 @@ export function reversalLines(lines: RevaluationLine[]): RevaluationLine[] {
  * nothing moved, why not. `money` is the workspace's currency formatter, so the amounts read like
  * they do everywhere else in the app.
  */
-export function revaluationSummary(plan: RevaluationPlan, money: (cents: number) => string): string {
+export function revaluationSummary(plan: RevaluationPlan, money: (cents: number) => string, rateDate?: string): string {
+  const datedRateLabel = rateDate ? `the ${rateDate} rate` : "today's rate";
   if (plan.unpriced.length > 0) {
+    if (rateDate) {
+      return `Type the ${plan.unpriced.join(' and ')} rate${plan.unpriced.length === 1 ? '' : 's'} for ${rateDate} to complete the preview. Nothing was posted.`;
+    }
     return `Nothing was posted: the ${plan.unpriced.join(' and ')} rate${plan.unpriced.length === 1 ? ' is' : 's are'} not available from the exchange service right now, and a revaluation cannot leave a currency out.`;
   }
   if (plan.lines.length === 0) {
     return plan.skipped.length > 0
-      ? `Nothing to post: ${plan.skipped.length} ${plan.skipped.length === 1 ? 'document' : 'documents'} looked at, and every open foreign one already stands at today's rate.`
+      ? `Nothing to post: ${plan.skipped.length} ${plan.skipped.length === 1 ? 'document' : 'documents'} looked at, and every open foreign one already stands at ${datedRateLabel}.`
       : 'Nothing to post: this workspace has no open invoice or bill in another currency.';
   }
   const gain = plan.netGainCents === 0
     ? 'the receivables and payables move by the same amount, so there is no gain or loss'
     : `${plan.netGainCents > 0 ? 'an unrealized gain' : 'an unrealized loss'} of ${money(Math.abs(plan.netGainCents))}`;
-  return `${plan.documentCount} ${plan.documentCount === 1 ? 'document' : 'documents'} in ${plan.currencies.join(', ')}: ${money(plan.debitTotalCents)} of movement in the accounts, ${gain}. It reverses the next day, so the documents keep their own rates.`;
+  const reversal = rateDate ? `It reverses on ${revaluationReversalDate(rateDate)}` : 'It reverses the next day';
+  const asOf = rateDate ? `at ${rateDate}` : 'at today’s rates';
+  return `${plan.documentCount} ${plan.documentCount === 1 ? 'document' : 'documents'} in ${plan.currencies.join(', ')}: ${money(plan.debitTotalCents)} of movement in the accounts ${asOf}, ${gain}. ${reversal}, so the documents keep their own rates.`;
 }

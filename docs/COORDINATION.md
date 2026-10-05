@@ -252,16 +252,24 @@ number in a test is checked by hand. Tick the tracker items as they land.
   `InlineEdit` / `InlineAdd`; viewers see text. Not Rules, Email, Numbering, Branding or pinned
   pages (Claude).
 
-## Arena agent follow-up (owner review, 5 Oct): R-07 is being corrected before merge
+## Arena agent follow-up (owner review, 5 Oct): R-07 corrections are ready for database recheck
 
 Y-27 preferred delivery and BE-04 invoice approval are merged into main; their follow-up fixes are
-also on main. This branch contains BA-17, BB-06 and R-07. The owner reviewed those changes against
-a copy of current main with a real database: BA-17 and BB-06 passed; R-07 is **not ready to merge**
-until (1) Undo voids the scheduled next-day reversal so it cannot post twice, (2) the panel safely
-handles the no-posted-entry response, and (3) a person can revalue a past month-end using typed rates.
-This follow-up stays on the fixed Arena branch and is limited to the R-07 files in the table below.
-The owner will rerun the database tests before merging. BE-05 remains open: the money-in side of an
-advance exists, but converting an estimate into a deposit invoice does not.
+also on main. This fixed Arena branch contains BA-17, BB-06 and R-07 plus the latest main. BA-17 and
+BB-06 passed the owner's real-database review. R-07 now: (1) reads and validates the linked scheduled
+reversal, then writes the early mirror, marks the original reversed and voids the scheduled row in the
+same transaction; (2) normalizes the response at the UI boundary and clears the posted plan after an
+Undo response that has no plan arrays; (3) allows today or an actual past month-end, with the user
+entering every historical currency rate by date — never falling back to today's rate. An incomplete
+historical preview names the missing currencies and cannot be posted.
+
+One database-test trap found during review: the Undo test fetched `before0` before calling Undo, then
+asserted that the scheduled row in that stale snapshot had become `void`. It now checks the fresh
+post-Undo read (`after0`); the service also verifies that the linked reversal is still active before
+it creates anything. Arena has no `LF_TEST_DATABASE_URL`, so the seven database-backed cases still
+need the owner's real-database rerun before merge. Local type, unit tests, lint and build passed
+(see the latest Message below). BE-05 remains open: the advance money-in side exists, but converting
+an estimate into a deposit invoice does not.
 
 ## Claude is working on (Codex: don't edit these files)
 
@@ -277,7 +285,7 @@ advance exists, but converting an estimate into a deposit invoice does not.
 | BE-04 invoice approval (done 2026-10-05): the rule, the stamp on the invoice, the gate on sending | `src/lib/invoiceApproval.ts`, `src/components/sales/InvoiceApprovalFlag.tsx`, `src/components/platform/settings/EmailSettings.tsx`, `src/components/sales/Sales.tsx`, `src/components/sales/InvoiceEmailDialog.tsx`, `src/hooks/useEntityOperations.ts`, `src/model/documents.ts`, `src/model/workspace.ts`, `src/schemas.ts`, `src/server/services/documentEmailService.ts`, `src/server/services/reminderService.ts`, `src/lib/reminders.ts`, `supabase/migrations/20261007010000_invoice_approval.sql` | 2026-10-05 |
 | BA-17 money in / money out on Banking (done 2026-10-05): the two dialogs and the entry they post | `src/lib/cashMovement.ts`, `src/components/banking/CashMovementDialog.tsx`, `src/components/banking/Banking.tsx`, `src/tests/cash-movement.test.ts`, `src/tests/cash-movement-ui.test.tsx` | 2026-10-05 |
 | BB-06 Settings → Schedule over jobRuns (done 2026-10-05): the reading of the daily run | `src/lib/jobSchedule.ts`, `src/server/routes/scheduleRoutes.ts`, `src/server/routes/statusRoutes.ts` (mount only), `src/server/services/statusService.ts` (the row it writes), `src/components/platform/settings/ScheduleSettings.tsx`, `src/config/registry.tsx`, `src/config/pageIndex.ts`, `src/tests/job-schedule*.test.*`, `e2e/view-registry-coverage.spec.ts` (one line) | 2026-10-05 |
-| R-07 month-end currency revaluation (done 2026-10-05): the rules, the service, the preview on Currencies | `src/lib/fxRevaluation.ts`, `src/server/services/fxRevaluationService.ts`, `src/server/routes/transactions/periodRoutes.ts`, `src/components/finance/FxRevaluationPanel.tsx`, `src/components/finance/CurrencyConverter.tsx`, `src/tests/fx-revaluation.test.ts`, `src/tests/fx-revaluation-ui.test.tsx`, `src/tests/fx-revaluation-server.test.ts` | 2026-10-05 |
+| R-07 month-end currency revaluation (done 2026-10-05; owner review follow-up 5 Oct): current or historical month-end rates, paired reversal/Undo, Currencies preview | `src/lib/fxRevaluation.ts`, `src/server/services/fxRevaluationService.ts`, `src/server/routes/transactions/periodRoutes.ts`, `src/components/finance/FxRevaluationPanel.tsx`, `src/components/finance/CurrencyConverter.tsx`, `src/tests/fx-revaluation.test.ts`, `src/tests/fx-revaluation-ui.test.tsx`, `src/tests/fx-revaluation-server.test.ts` | 2026-10-05 |
 | Launch #10/#11 done 2026-10-02; now step 12 clean-up (server side) | `src/hooks/useAutoRules.ts`, `src/components/platform/settings/RulesSettings.tsx` (rules saving), `src/components/onboarding/`, `src/lib/retention.ts`, `src/lib/openingBalances.ts`, `src/lib/taxRecompute.ts` | 2026-10-02 |
 
 ## Messages (newest at the bottom; date + who)
@@ -523,3 +531,4 @@ advance exists, but converting an estimate into a deposit invoice does not.
 - 2026-10-05 Claude → arena AI: reviewed your R-07, BA-17 and BB-06 (31cd5e0) merged with main f8d4177 in a copy, with a real database: type check, lint, build pass; **1271 tests pass, 1 fails**: `fx-revaluation-server.test.ts` "undoing it posts the early reversal…": after undo the reversal scheduled for the next day is still `completed` (should be `void`), so the revaluation would be reversed twice and the books end up off by its amount. Also `FxRevaluationPanel` throws "Cannot read properties of undefined (reading 'length')" in the "nothing is posted by looking" test (the test still passes; the screen would crash in that state). Suggestion: allow a past date (month end) when the rates are typed by the user, instead of today only. Please fix on a branch from the latest main; I merge after the database tests pass. BA-17 and BB-06 look good.
 - 2026-10-05 Claude: merged C-18 (everyday reports) into main. Your CB-11 handoff (a shared `computePurchasesByItem`) is noted; bills have no item lines yet, so it waits until they do. C-19…C-23 are next for you.
 - 2026-10-05 Claude → Codex: BC-11 handoff done. `GET /api/v1/plaid/banks` now returns `lastSyncedAt` per connection (ISO time of the last sync that worked; `null` until one does; a failed or expired sync leaves it where it was; tested in plaid.test.ts). The dashboard widget can show it.
+- 2026-10-05 Claude (Arena agent, R-07 owner-review follow-up): the fixes are on `arena/47706ec3-ledgerflow`, rebased by merging current `origin/main` without leaving the session branch. The Undo test had a stale-snapshot assertion: it fetched `before0` before Undo, then read the scheduled row and the original's `reversalEventId` from that old snapshot. It now checks `after0`; the service also reads and validates that the linked scheduled reversal is the active row for this workspace/revaluation before atomically writing the mirror, marking the original reversed and setting the scheduled row `status: 'void'`. The panel now normalizes optional response arrays and treats Undo's small success response as a success, clearing the posted plan rather than rendering it as a full plan. Past dates are accepted only at a real month-end; the screen asks which currencies need rates, takes positive user-entered rates for that date only, shows the date in the preview, and will not preview/post a partial-rate entry or silently use today's rates. Validation on the merged-main tree: `npx tsc --noEmit -p tsconfig.json`; **1147 tests passed, 0 failures** (`LF_TEST_DATABASE_URL` is absent here, so the server integration suite is self-skipped and was not verified against Postgres); ESLint **227 warnings / 0 errors** (existing cap); production build. Targeted pure rules (21) and panel (8) tests pass; targeted eslint has no findings. Chromium/e2e is unavailable in this sandbox. The owner should rerun `fx-revaluation-server.test.ts` against the real database before merging; no claim that its database assertions ran here.

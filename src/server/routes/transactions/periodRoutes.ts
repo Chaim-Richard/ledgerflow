@@ -13,7 +13,7 @@ import { formatTzDate } from './helpers';
 const revaluationBodySchema = z.object({
   workspaceId: z.string().min(1).max(200),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  /** rates the caller already has; a currency not in here is fetched from the exchange service */
+  /** today's rates may be fetched when missing; historical month-ends require each rate to be supplied */
   rates: z.record(z.string(), z.number().positive()).optional(),
 }).strict();
 
