@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import InlineEdit from '../components/ui/InlineEdit';
+import InlineAdd from '../components/ui/InlineAdd';
 import { inlineEditText, parseInlineValue, sameInlineValue, suggestionsFrom } from '../lib/inlineEdit';
 
 describe('Edit in place: values', () => {
@@ -121,5 +122,28 @@ describe('Edit in place: on screen', () => {
     await act(async () => { fireEvent.keyDown(screen.getByLabelText('Name'), { key: 'Enter' }); });
     assert.ok(screen.getByRole('button', { name: 'Edit Name' }));
     assert.ok(screen.getByText('Acme'));
+  });
+});
+
+describe('Add in place', () => {
+  afterEach(() => cleanup());
+
+  test('type a name and press Enter; a name already used is pointed out first; Esc clears', async () => {
+    const added: string[] = [];
+    render(<InlineAdd label="New customer name" placeholder="Add a customer" existing={['Acme Ltd']} onAdd={n => { added.push(n); }} />);
+    const box = screen.getByLabelText('New customer name') as HTMLInputElement;
+    fireEvent.change(box, { target: { value: '  Beta Co ' } });
+    await act(async () => { fireEvent.keyDown(box, { key: 'Enter' }); });
+    assert.deepEqual(added, ['Beta Co']);
+    assert.equal(box.value, '', 'ready for the next one');
+    fireEvent.change(box, { target: { value: 'acme ltd' } });
+    await act(async () => { fireEvent.keyDown(box, { key: 'Enter' }); });
+    assert.match(screen.getByRole('status').textContent || '', /already exists/);
+    assert.equal(added.length, 1);
+    await act(async () => { fireEvent.keyDown(box, { key: 'Enter' }); });
+    assert.deepEqual(added, ['Beta Co', 'acme ltd'], 'a second Enter adds it anyway');
+    fireEvent.change(box, { target: { value: 'oops' } });
+    fireEvent.keyDown(box, { key: 'Escape' });
+    assert.equal(box.value, '');
   });
 });

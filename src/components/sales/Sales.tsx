@@ -39,6 +39,7 @@ import { computeCustomerBalanceSummary, toBaseCents } from '../../server/reports
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import InlineEdit from '../ui/InlineEdit';
+import InlineAdd from '../ui/InlineAdd';
 import { printInvoice } from '../../lib/printInvoice';
 import { convertEstimateToInvoice } from '../../lib/estimateConverter';
 import { detectDuplicateContacts } from '../../lib/contactUtils';
@@ -513,6 +514,10 @@ export default function Sales() {
         <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
           <TagFilter tags={customerTags} value={customerTag} onChange={setCustomerTag} label="Show customers with the tag" />
           <div className="overflow-x-auto">
+            {canEditContacts && (
+              <InlineAdd className="px-4 md:px-8 pt-4" label="New customer name" placeholder="Add a customer: type a name and press Enter"
+                existing={customers.map(c => c.name)} onAdd={name => addEntity('customers', { name, status: 'active' }, `Customer "${name}" added`)} />
+            )}
             <table className="w-full border-collapse min-w-[700px]">
               <caption className="sr-only">Customers</caption>
               <thead>

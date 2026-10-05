@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import InlineEdit from '../ui/InlineEdit';
+import InlineAdd from '../ui/InlineAdd';
 import { suggestionsFrom } from '../../lib/inlineEdit';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
@@ -308,6 +309,10 @@ export default function Purchases() {
         ) : (
           <div className="overflow-x-auto">
             <TagFilter tags={vendorTags} value={vendorTag} onChange={setVendorTag} label="Show vendors with the tag" />
+            {canEditContacts && (
+              <InlineAdd className="px-4 pt-4" label="New vendor name" placeholder="Add a vendor: type a name and press Enter"
+                existing={vendors.map(v => v.name)} onAdd={name => addEntity('vendors', { name }, `Vendor "${name}" added`)} />
+            )}
             <table className="w-full text-left border-collapse">
               <caption className="sr-only">Vendors</caption>
               <thead>
