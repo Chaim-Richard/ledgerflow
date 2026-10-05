@@ -138,6 +138,53 @@ export async function emailInvoice(db: Firestore, input: EmailInvoiceInput) {
   return { to, subject: message.subject, provider: result.provider, messageId: result.messageId || null, invoiceUrl: values.link };
 }
 
+/**
+ * Thank-you email after a payment (BE-02): when the workspace turned it on (Settings → Emails &
+ * Reminders), the customer gets the "Payment received (thank you)" template for each invoice the
+ * payment settled part of. Best effort: never throws, so a payment is never held up by an email;
+ * every send or failure is in the invoice's send log. Returns what happened per invoice.
+ */
+export async function thankForPayment(db: Firestore, input: { workspaceId: string; allocations: Array<{ documentId: string; documentType: string; amountCents: number }> }): Promise<Array<{ invoiceId: string; result: string }>> {
+  const out: Array<{ invoiceId: string; result: string }> = [];
+  const invoices = (input.allocations || []).filter(a => a.documentType === 'invoice' && a.amountCents > 0);
+  if (invoices.length === 0) return out;
+  const workspace = (await db.collection('workspaces').doc(input.workspaceId).get()).data();
+  if (!workspace?.reminderSettings?.thankYou) return invoices.map(a => ({ invoiceId: a.documentId, result: 'off' }));
+  for (const allocation of invoices) {
+    let result: string;
+    try {
+      result = await sendReceipt(db, workspace, input.workspaceId, allocation.documentId, allocation.amountCents);
+    } catch (err) {
+      result = 'failed';
+      await logEmailEvent(db, { workspaceId: input.workspaceId, documentType: 'invoice', documentId: allocation.documentId, invoiceId: allocation.documentId, template: 'receipt', event: 'failed', error: err instanceof Error ? err.message.slice(0, 300) : String(err), sentBy: 'payment' }).catch(() => undefined);
+    }
+    out.push({ invoiceId: allocation.documentId, result });
+  }
+  return out;
+}
+
+async function sendReceipt(db: Firestore, workspace: DocumentData, workspaceId: string, invoiceId: string, amountCents: number): Promise<string> {
+  const invoice = (await db.collection('invoices').doc(invoiceId).get()).data();
+  if (!invoice || invoice.workspaceId !== workspaceId) return 'no invoice';
+  const customer = invoice.customerId ? (await db.collection('customers').doc(String(invoice.customerId)).get()).data() : undefined;
+  const to = String(customer?.email || '').trim().toLowerCase();
+  if (!EMAIL.test(to)) return 'no email';
+  if (await isSuppressed(db, to)) return 'suppressed';
+  if (!isMailConfigured()) return 'mail not set up';
+  const currency = String(invoice.currency || workspace.currency || 'USD');
+  const values: TemplateValues = {
+    company: String(workspace.name || ''),
+    customer: String(invoice.customerName || customer?.name || ''),
+    number: String(invoice.number || invoiceId),
+    amount: formatCurrency(amountCents, currency),
+    amount_due: formatCurrency(calculateAmountDue(invoice), currency),
+  };
+  const message = renderEmail(resolveTemplate('receipt', workspace.emailTemplates as EmailTemplates | undefined), values);
+  const sent = await sendMail({ to, subject: message.subject, html: message.html, text: message.text });
+  await logEmailEvent(db, { workspaceId, documentType: 'invoice', documentId: invoiceId, invoiceId, template: 'receipt', subject: message.subject, recipient: to, sentBy: 'payment', event: 'sent', provider: sent.provider, messageId: sent.messageId || null });
+  return 'sent';
+}
+
 /** The send log of a document (newest first): sends, failures, bounces, complaints. */
 export async function emailLog(db: Firestore, workspaceId: string, documentId: string) {
   const snap = await db.collection('emailEvents').where('workspaceId', '==', workspaceId).where('documentId', '==', documentId).limit(200).get();

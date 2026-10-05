@@ -8,7 +8,7 @@ import { getWorkspaceUserRole, AuthenticatedRequest, requireWorkspaceRole } from
 import { applyCredit, CreditError, refundCredit } from '../services/creditService';
 import { createDeposit, DepositError } from '../services/depositService';
 import { writeServerAuditLog } from '../services/auditLogService';
-import { notifyPaymentReceived } from '../services/notificationService';
+import { afterPaymentRecorded } from '../services/afterPayment';
 
 export const paymentRouter = express.Router();
 
@@ -61,7 +61,7 @@ export async function handleCreatePayment(req: express.Request, res: express.Res
       workspaceId,
       uid: authReq.user.uid
     });
-    await notifyPaymentReceived(db, result.payment, authReq.user.uid);
+    await afterPaymentRecorded(db, result.payment, authReq.user.uid);
 
     res.json({ status: 'success', data: result });
   } catch (err) {

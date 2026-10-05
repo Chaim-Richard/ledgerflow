@@ -124,6 +124,8 @@ Last updated: 2026-10-02.
   contact's address/currency/tags, and Inventory; more screens follow one by one, and it's now the
   rule for every screen. (3) **Suggestions while typing** from your own data. (4) Settings →
   Document Numbering: change invoice/bill/estimate numbers safely.
+- **New (5 Oct): thank-you emails.** Settings → Emails & Reminders → "Email a thank-you when a
+  customer pays" (off until you turn it on). Default used: off, so no customer gets a surprise email.
 - Vercel deploys by itself about a minute after each push to `main`.
 - Database changes are applied to Supabase by Claude and tested on a local copy first.
 - Progress and the full list: [TRACKER.md](TRACKER.md).

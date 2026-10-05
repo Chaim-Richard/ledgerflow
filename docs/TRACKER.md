@@ -2101,7 +2101,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 # SECTION BE — DOCUMENT WORKFLOW
 
 - [x] BE-01 Reminder schedule (daily job; tested)
-- [ ] BE-02 Thank-you email after payment
+- [x] BE-02 Thank-you email after payment: Settings → Emails & Reminders switch (off by default); payments recorded by hand, from a bank line or online send the "Payment received (thank you)" email, logged, skipped for bounced addresses; never holds up the payment (tested)
 - [x] BE-03 Recurring pause/resume/delete (and recurring invoices now create draft invoices; tested)
 - [ ] BE-04 Invoice approval
 - [ ] BE-05 Deposit invoice from estimate

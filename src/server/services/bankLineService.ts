@@ -3,7 +3,7 @@ import type { DocumentData, Firestore } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import type { ChartAccount } from '../../types';
-import { notifyPaymentReceived } from './notificationService';
+import { afterPaymentRecorded } from './afterPayment';
 import { createPaymentInTransaction } from './paymentService';
 
 /**
@@ -86,7 +86,7 @@ export async function payFromBankLine(db: Firestore, input: PayFromBankLineInput
     t.update(ref, { status: 'matched', matchedTransactionId: payment.transactionId, matchedPaymentId: payment.paymentId, accountId: bank.id, updatedAt: new Date().toISOString() });
     return { paymentId: payment.paymentId, transactionId: payment.transactionId, unappliedCents: Math.abs(amountCents) - allocated, record: payment.payment };
   });
-  await notifyPaymentReceived(db, record, input.uid);
+  await afterPaymentRecorded(db, record, input.uid);
   return result;
 }
 
