@@ -1,3 +1,6 @@
+import { TransactionColumnGrid } from '../ledger/TransactionColumnGrid';
+import { gridTracks, orderedGridTracks } from '../../lib/transactionColumns';
+import type { ColumnLayout } from '../../lib/columnLayout';
 import React from 'react';
 import { Transaction } from '../../types';
 
@@ -76,6 +79,7 @@ interface TransactionRowProps {
   gridColumns: string;
   /** columns switched off in the Columns menu (category, project, class, location, balance, status) */
   hiddenColumns?: ReadonlySet<string>;
+  columnLayout?: ColumnLayout;
   anomaly?: { score: number, reason: string };
   internalConflict?: { type: string, message: string };
   searchTerm?: string;
@@ -107,11 +111,15 @@ const TransactionRow = React.memo(({
   isTabletGrid = false,
   gridColumns,
   hiddenColumns,
+  columnLayout,
   anomaly,
   internalConflict,
   searchTerm
 }: TransactionRowProps) => {
   const show = (column: string) => !hiddenColumns?.has(column);
+  const layout = { mobile: isMobileGrid, tablet: isTabletGrid, compact: Boolean(isProMode || isCompactMode) };
+  const naturalOrder = gridTracks(layout, hiddenColumns || new Set()).map(([id]) => id);
+  const order = orderedGridTracks(layout, hiddenColumns || new Set(), columnLayout).map(([id]) => id);
   const isPrivacyMode = useLedgerStore(state => state.isPrivacyMode);
   const accounts = useLedgerStore(state => state.accounts);
   const lockDate = useLedgerStore(state => state.lockDate);
@@ -135,7 +143,7 @@ const TransactionRow = React.memo(({
 
   return (
     <div className="flex flex-col w-full h-full relative group/row">
-      <div role="presentation"
+      <TransactionColumnGrid naturalOrder={naturalOrder} order={order} role="presentation"
         onClick={() => onSelect?.(tx.id)}
         className={cn(
           "grid w-full h-full items-center transition-all border-b border-[var(--line)] cursor-pointer relative",
@@ -466,7 +474,7 @@ const TransactionRow = React.memo(({
             )}
           </div>
         )}
-      </div>
+      </TransactionColumnGrid>
       
       {/* Anomaly Resolution Panel */}
       {anomaly && (

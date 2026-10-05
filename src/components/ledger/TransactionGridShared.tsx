@@ -1,3 +1,5 @@
+import type { ColumnLayout } from '../../lib/columnLayout';
+import { orderedGridTracks } from '../../lib/transactionColumns';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Transaction, AnalyticalMetrics } from '../../types';
@@ -138,6 +140,7 @@ export interface VirtualRowProps extends ListChildComponentProps {
     formatCurrency: (cents: number) => string;
     gridCols: string;
     hiddenColumns: ReadonlySet<string>;
+    columnLayout: ColumnLayout;
     searchTerm: string;
   };
 }
@@ -150,6 +153,8 @@ export const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) =
 
   const isEditing = data.editingCell?.id === tx.id;
   const isFocused = data.focusedCell?.id === tx.id;
+  const order = orderedGridTracks({ mobile: data.isMobileGrid, tablet: data.isTabletGrid, compact: data.isProMode || data.isCompactMode }, data.hiddenColumns, data.columnLayout).map(([id]) => id);
+  const editorStyle = (id: string) => ({ gridColumn: order.indexOf(id) + 1, gridRow: 1 });
 
   return (
     <div role="presentation"
@@ -184,14 +189,15 @@ export const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) =
         dateFormat={data.dateFormat}
         gridColumns={data.gridCols}
         hiddenColumns={data.hiddenColumns}
+        columnLayout={data.columnLayout}
         anomaly={data.anomalyMap.get(tx.id)}
         internalConflict={data.deterministicConflicts.get(tx.id)}
         searchTerm={data.searchTerm}
       />
       {isEditing && data.editingCell && (
-        <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 pointer-events-none grid" style={{ gridTemplateColumns: data.gridCols }}>
           {data.editingCell.field === 'description' && (
-            <div style={{ left: 140, right: data.isMobileGrid ? 100 : (data.isTabletGrid ? 400 : 700) }} className="absolute inset-y-0 z-[70] pointer-events-auto">
+            <div data-editor-column="description" style={editorStyle('description')} className="relative z-[70] pointer-events-auto">
               <GridEditor
                 label="Transaction description"
                 value={tx.description}
@@ -204,7 +210,7 @@ export const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) =
             </div>
           )}
           {data.editingCell.field === 'amountCents' && (
-            <div style={{ right: data.isMobileGrid ? 0 : 280, width: data.isMobileGrid ? 100 : 140 }} className="absolute inset-y-0 z-[70] pointer-events-auto">
+            <div data-editor-column="amount" style={editorStyle('amount')} className="relative z-[70] pointer-events-auto">
               <GridEditor
                 label="Transaction amount"
                 value={tx.totalAmountCents / 100}
@@ -221,7 +227,7 @@ export const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) =
             </div>
           )}
           {data.editingCell.field === 'category' && !data.isMobileGrid && (
-            <div style={{ left: data.isTabletGrid ? 'auto' : '55%', right: data.isTabletGrid ? 220 : 'auto', width: 160 }} className="absolute inset-y-0 z-[70] pointer-events-auto">
+            <div data-editor-column="category" style={editorStyle('category')} className="relative z-[70] pointer-events-auto">
               <GridEditor
                 label="Transaction account"
                 value={resolveAccountName(accounts, tx.lines?.[0]?.accountId, tx.lines?.[0]?.accountName)}
@@ -244,7 +250,7 @@ export const VirtualRow = React.memo(({ index, style, data }: VirtualRowProps) =
             </div>
           )}
           {data.editingCell.field === 'project' && !data.isMobileGrid && !data.isTabletGrid && (
-            <div style={{ left: '68%', width: 140 }} className="absolute inset-y-0 z-[70] pointer-events-auto">
+            <div data-editor-column="project" style={editorStyle('project')} className="relative z-[70] pointer-events-auto">
               <GridEditor
                 label="Transaction project"
                 value={tx.project || ''}

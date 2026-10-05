@@ -1,3 +1,4 @@
+import type { ColumnLayout } from './columnLayout';
 /**
  * Columns of the transaction list (TransactionGrid header + TransactionRow cells). The grid needs
  * exactly one width per cell the rows draw; the default desktop layout was one width short, so
@@ -13,9 +14,9 @@ export const OPTIONAL_COLUMNS: ReadonlyArray<readonly [string, string]> = [
   ['status', 'Status'],
 ];
 
-type Track = readonly [id: string, width: string];
+export type Track = readonly [id: string, width: string];
 
-export function gridTemplate(layout: { mobile: boolean; tablet: boolean; compact: boolean }, hidden: ReadonlySet<string>): string {
+export function gridTracks(layout: { mobile: boolean; tablet: boolean; compact: boolean }, hidden: ReadonlySet<string>): Track[] {
   const { mobile, tablet, compact } = layout;
   const tracks: Track[] = mobile
     ? [['select', '40px'], ['date', '100px'], ['description', '1fr'], ['amount', '100px']]
@@ -27,7 +28,17 @@ export function gridTemplate(layout: { mobile: boolean; tablet: boolean; compact
         ['amount', compact ? '120px' : '140px'], ['balance', '120px'], ['status', compact ? '80px' : '120px'], ['actions', '80px'],
       ];
   // the small layouts always show what they have room for
-  return tracks.filter(([id]) => mobile || !hidden.has(id)).map(([, width]) => width).join(' ');
+  return tracks.filter(([id]) => mobile || !hidden.has(id));
+}
+
+export function orderedGridTracks(layout: { mobile: boolean; tablet: boolean; compact: boolean }, hidden: ReadonlySet<string>, preferences?: ColumnLayout): Track[] {
+  const tracks = gridTracks(layout, hidden);
+  if (layout.mobile || !preferences) return tracks;
+  return [...tracks].sort(([a], [b]) => preferences.order.indexOf(a) - preferences.order.indexOf(b))
+    .map(([id, width]) => [id, preferences.widths[id] ? `${preferences.widths[id]}px` : width] as const);
+}
+export function gridTemplate(layout: { mobile: boolean; tablet: boolean; compact: boolean }, hidden: ReadonlySet<string>, preferences?: ColumnLayout): string {
+  return orderedGridTracks(layout, hidden, preferences).map(([, width]) => width).join(' ');
 }
 
 export function readHiddenColumns(key: string): ReadonlySet<string> {

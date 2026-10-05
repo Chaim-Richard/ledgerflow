@@ -3,6 +3,7 @@
 import { Search, Sparkles, Filter, TrendingUp, ArrowUpRight, ArrowDownRight, TrendingDown } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
+import { TransactionColumnGrid } from './TransactionColumnGrid';
 import { gridMinWidth } from '../../lib/transactionColumns';
 
 import { cn, formatCurrency } from '../../lib/utils';
@@ -17,11 +18,11 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { VirtualRow } from './TransactionGridShared';
 import type { TransactionGridModel } from './TransactionGrid';
 export function TransactionGridBody({ model }: { model: TransactionGridModel }) {
- const { formId, filterCriteria, onFilterApplied, setSearchTerm, viewMode, selectedIds, setSelectedIds, sortConfig, handleSort, transactionsWithBalance, totalBalancedSum, selectedMetricsResult, activeFilterColumn, setActiveFilterColumn, columnSearchTerms, setColumnSearchTerms, show, columnFilterValues, toggleColumnFilter, pivotData, isMobileGrid, isTabletGrid, rowHeight, gridCols, itemData, itemKey } = model;
+ const { naturalColumnOrder, columnOrder, formId, filterCriteria, onFilterApplied, setSearchTerm, viewMode, selectedIds, setSelectedIds, sortConfig, handleSort, transactionsWithBalance, totalBalancedSum, selectedMetricsResult, activeFilterColumn, setActiveFilterColumn, columnSearchTerms, setColumnSearchTerms, show, columnFilterValues, toggleColumnFilter, pivotData, isMobileGrid, isTabletGrid, rowHeight, gridCols, itemData, itemKey } = model;
  return (<div className="flex-1 overflow-x-auto overflow-y-hidden relative bg-[var(--surface)]" dir="auto">
         {viewMode === 'grid' ? (
           <div className="h-full flex flex-col" style={{ minWidth: gridMinWidth(gridCols) }}>
-            <div data-testid="tx-header" className="grid sticky top-0 bg-slate-900 text-white/75 z-20" style={{ gridTemplateColumns: gridCols }}>
+            <TransactionColumnGrid naturalOrder={naturalColumnOrder} order={columnOrder} data-testid="tx-header" className="grid sticky top-0 bg-slate-900 text-white/75 z-20" style={{ gridTemplateColumns: gridCols }}>
               <div className="p-4 border-r border-white/10 font-black text-[9px] uppercase tracking-widest truncate flex items-center justify-center">
                 <input type="checkbox" aria-label="Select all transactions" checked={selectedIds.size === transactionsWithBalance.length && transactionsWithBalance.length > 0} onChange={(e) => setSelectedIds(e.target.checked ? new Set(transactionsWithBalance.map(t => t.id)) : new Set())} className="w-4 h-4 rounded border-white/20 bg-transparent accent-emerald-500" />
               </div>
@@ -419,7 +420,7 @@ export function TransactionGridBody({ model }: { model: TransactionGridModel }) 
                   Actions
                 </div>
               )}
-            </div>
+            </TransactionColumnGrid>
             <div className="px-4 md:px-8 py-4 lg:py-0 bg-[#090A0C] border-t border-white/5 flex flex-col md:flex-row md:items-center justify-between text-white/40 overflow-hidden relative gap-4">
               <div className="absolute inset-0 technical-grid opacity-[0.03] pointer-events-none" />
               <div className="flex flex-wrap items-center gap-4 lg:gap-10 relative z-10 w-full overflow-x-auto no-scrollbar pb-2 md:pb-0">
