@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { calculateAmountDue } from '../../lib/documentMath';
 import { describeError } from '../../lib/errorRemedies';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { useSuggestedRate } from '../../hooks/useSuggestedRate';
 
 const cn = (...classes: (string | false | null | undefined)[]) => classes.filter(Boolean).join(' ');
 
@@ -46,6 +47,10 @@ export default function ReceivePaymentModal({
   const [depositAccountId, setDepositAccountId] = useState<string>('');
   const [allocationsMap, setAllocationsMap] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const homeCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
+  // L-192: the rate on the payment day for a foreign document (what really reached the bank)
+  const [dayRate, setDayRate] = useState<number | null>(null);
+  const [rateTyped, setRateTyped] = useState(false);
 
   // Filter bank/cash accounts
   const cashAccounts = useMemo(() => {
@@ -85,6 +90,8 @@ export default function ReceivePaymentModal({
         totalCents: inv.amountCents || 0,
         paidCents: inv.amountPaidCents || 0,
         remainingCents: calculateAmountDue(inv),
+        currency: (inv.currency || homeCurrency).toUpperCase(),
+        rate: inv.exchangeRate && inv.exchangeRate > 0 ? inv.exchangeRate : 1,
         type: 'invoice' as const
       })));
     } else {
@@ -98,10 +105,12 @@ export default function ReceivePaymentModal({
         totalCents: b.amountCents || 0,
         paidCents: b.amountPaidCents || 0,
         remainingCents: calculateAmountDue(b),
+        currency: (b.currency || homeCurrency).toUpperCase(),
+        rate: b.exchangeRate && b.exchangeRate > 0 ? b.exchangeRate : 1,
         type: 'bill' as const
       })));
     }
-  }, [direction, contactId, invoices, bills]);
+  }, [direction, contactId, invoices, bills, homeCurrency]);
 
   // Pre-fill default document allocation
   useEffect(() => {
@@ -127,6 +136,18 @@ export default function ReceivePaymentModal({
   }, [allocationsMap]);
 
   const unappliedCents = Math.max(0, paymentAmountCents - totalAllocatedCents);
+
+  // the currency of what is being paid: the documents chosen (one payment is one currency)
+  const payDoc = openDocs.find(d => parseFloat(allocationsMap[d.id] || '') > 0) || openDocs.find(d => d.id === defaultDocumentId);
+  const payCurrency = payDoc?.currency || homeCurrency;
+  const isForeign = payCurrency !== homeCurrency;
+  const rateNote = useSuggestedRate({
+    currency: payCurrency, homeCurrency, enabled: isForeign && !rateTyped,
+    docs: [...(invoices || []), ...(bills || [])], onRate: rate => setDayRate(rate),
+  });
+  const bookedCents = payDoc ? Math.round(paymentAmountCents * payDoc.rate) : 0;
+  const arrivedCents = dayRate ? Math.round(paymentAmountCents * dayRate) : bookedCents;
+  const fxCents = (direction === 'received' ? 1 : -1) * (arrivedCents - bookedCents);
 
   const handleAutoAllocate = () => {
     let remainingToDistribute = paymentAmountCents;
@@ -204,6 +225,7 @@ export default function ReceivePaymentModal({
           vendorId: contactType === 'vendor' ? contactId : undefined,
           entityName: contactName,
           cashAccountId: depositAccountId,
+          ...(isForeign && dayRate ? { paymentExchangeRate: dayRate } : {}),
           allocations: allocations.map(a => ({
             documentId: a.documentId,
             documentType: a.documentType,
@@ -217,7 +239,7 @@ export default function ReceivePaymentModal({
         throw new Error(errJson.message || 'Payment processing failed');
       }
 
-      toast.success(`Payment of ${formatCurrency(paymentAmountCents)} recorded successfully!`);
+      toast.success(`Payment of ${formatCurrency(paymentAmountCents, payCurrency)} recorded successfully!`);
       onClose();
     } catch (err) {
       console.error('Failed to post payment:', err);
@@ -323,7 +345,7 @@ export default function ReceivePaymentModal({
             {/* Total Payment Amount */}
             <div>
               <label htmlFor="pay-amount" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Payment Amount ($) *
+                Payment Amount ({payCurrency}) *
               </label>
               <input
                 id="pay-amount"
@@ -337,6 +359,23 @@ export default function ReceivePaymentModal({
                 className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono"
               />
             </div>
+
+            {isForeign && (
+              <div>
+                <label htmlFor="pay-day-rate" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  {homeCurrency} for 1 {payCurrency} on the payment day
+                </label>
+                <input id="pay-day-rate" type="number" step="0.000001" min="0" placeholder={String(payDoc?.rate || '')}
+                  value={dayRate ?? ''} onChange={e => { setRateTyped(true); const n = parseFloat(e.target.value); setDayRate(Number.isFinite(n) && n > 0 ? n : null); }}
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono" />
+                <p className="mt-1 text-[11px] text-[var(--muted)]" role="status">
+                  {dayRate
+                    ? `${direction === 'received' ? 'Arrives as' : 'Leaves as'} ${formatCurrency(arrivedCents, homeCurrency)}; ${fxCents === 0 ? 'no exchange difference' : `exchange ${fxCents > 0 ? 'gain' : 'loss'} ${formatCurrency(Math.abs(fxCents), homeCurrency)}`} against the document's rate (${payDoc?.rate})`
+                    : `Without it, the payment is booked at the document's rate (${payDoc?.rate})`}
+                  {rateNote ? ` · ${rateNote}` : ''}
+                </p>
+              </div>
+            )}
 
             {/* Date */}
             <div>
@@ -438,7 +477,7 @@ export default function ReceivePaymentModal({
                       {docItem.date}
                     </div>
                     <div className="col-span-3 font-mono text-slate-700 dark:text-slate-300">
-                      Remaining: {formatCurrency(docItem.remainingCents)}
+                      Remaining: {formatCurrency(docItem.remainingCents, docItem.currency)}
                     </div>
                     <div className="col-span-3">
                       <input
@@ -467,16 +506,16 @@ export default function ReceivePaymentModal({
           <div className="flex flex-wrap items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-800 text-xs gap-4">
             <div>
               <span className="text-[var(--muted)]">Total Payment:</span>{' '}
-              <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(paymentAmountCents)}</strong>
+              <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(paymentAmountCents, payCurrency)}</strong>
             </div>
             <div>
               <span className="text-[var(--muted)]">Total Applied:</span>{' '}
-              <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(totalAllocatedCents)}</strong>
+              <strong className="font-mono text-slate-900 dark:text-white">{formatCurrency(totalAllocatedCents, payCurrency)}</strong>
             </div>
             <div>
               <span className="text-[var(--muted)]">Unapplied Balance:</span>{' '}
               <strong className={cn("font-mono", unappliedCents > 0 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-slate-900 dark:text-white")}>
-                {formatCurrency(unappliedCents)}
+                {formatCurrency(unappliedCents, payCurrency)}
               </strong>
             </div>
           </div>

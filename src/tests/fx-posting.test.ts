@@ -236,7 +236,7 @@ describe('Foreign-currency payments recorded by the server', { skip: !dbUrl && '
   });
 
   after(async () => {
-    for (const table of ['transactions', 'payments', 'invoices', 'chartAccounts', 'auditLogs', 'workspaces']) {
+    for (const table of ['transactions', 'payments', 'invoices', 'bills', 'chartAccounts', 'auditLogs', 'numberingSeries', 'workspaces']) {
       await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
     }
     await db.terminate();
@@ -255,6 +255,34 @@ describe('Foreign-currency payments recorded by the server', { skip: !dbUrl && '
     assert.equal(tx.currency, 'USD');
     assert.deepEqual(tx.lines.map((l: { amountCents: number }) => l.amountCents), [11000, -11000]);
     assert.equal((await db.collection('invoices').doc(id('eur')).get()).data()?.status, 'paid');
+  });
+
+  test('L-192: paid at the day\'s rate, the bank gets what arrived and the difference is realized gain or loss', async () => {
+    await db.collection('invoices').doc(id('eur3')).set({ workspaceId: ws, customerId: 'c', number: 'E3', amountCents: 10000, currency: 'EUR', exchangeRate: 1.1, status: 'sent', date: '2026-03-01' });
+    const payAt = (documentId: string, rate: number) => createPaymentAtomic(db, {
+      workspaceId: ws, uid: 'o', paymentDate: '2026-03-20', amountCents: 10000, customerId: 'c', cashAccountId: id('cash'), paymentExchangeRate: rate,
+      allocations: [{ documentId, documentType: 'invoice', amountCents: 10000 }],
+    });
+    await assert.rejects(payAt(id('eur3'), 1.15), /exchange gain\/loss account/, 'no account to put the difference in: refused, nothing saved');
+    assert.equal((await db.collection('invoices').doc(id('eur3')).get()).data()?.status, 'sent');
+
+    await db.collection('chartAccounts').doc(id('fx')).set({ workspaceId: ws, name: 'Foreign Exchange Gain/Loss & Rounding', type: 'expense', category: 'Rounding Differences', code: '8999' });
+    const gain = await payAt(id('eur3'), 1.15);
+    // EUR 100 booked at 1.10 = 110.00 owed; 115.00 arrived: bank +115.00, receivable -110.00, gain 5.00 (credit)
+    assert.deepEqual(gain.ledgerTransaction.lines.map((l: { accountId: string; amountCents: number }) => [l.accountId, l.amountCents]),
+      [[id('cash'), 11500], [id('ar'), -11000], [id('fx'), -500]]);
+    assert.deepEqual([gain.payment.realizedFxCents, gain.payment.paymentExchangeRate], [500, 1.15]);
+    assert.equal((await db.collection('invoices').doc(id('eur3')).get()).data()?.status, 'paid');
+
+    await db.collection('chartAccounts').doc(id('ap')).set({ workspaceId: ws, name: 'Accounts Payable', type: 'liability', category: 'Payables', code: '2000' });
+    await db.collection('bills').doc(id('bill-eur')).set({ workspaceId: ws, vendorId: 'v', number: 'B1', amountCents: 10000, currency: 'EUR', exchangeRate: 1.1, status: 'open', date: '2026-03-01' });
+    const loss = await createPaymentAtomic(db, {
+      workspaceId: ws, uid: 'o', paymentDate: '2026-03-20', amountCents: 10000, vendorId: 'v', cashAccountId: id('cash'), paymentExchangeRate: 1.12,
+      allocations: [{ documentId: id('bill-eur'), documentType: 'bill', amountCents: 10000 }],
+    });
+    // owed 110.00, paid 112.00 out of the bank: payable +110.00, bank -112.00, loss 2.00 (debit)
+    assert.deepEqual(loss.ledgerTransaction.lines.map((l: { accountId: string; amountCents: number }) => [l.accountId, l.amountCents]),
+      [[id('cash'), -11200], [id('ap'), 11000], [id('fx'), 200]]);
   });
 
   test('documents in two currencies can\'t share one payment', async () => {
