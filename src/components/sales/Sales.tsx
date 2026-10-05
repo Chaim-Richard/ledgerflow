@@ -37,6 +37,8 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { computeCustomerBalanceSummary, toBaseCents } from '../../server/reports/partyReports';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import InlineEdit from '../ui/InlineEdit';
 import { printInvoice } from '../../lib/printInvoice';
 import { convertEstimateToInvoice } from '../../lib/estimateConverter';
 import { detectDuplicateContacts } from '../../lib/contactUtils';
@@ -54,6 +56,7 @@ export default function Sales() {
   const accounts = useLedgerStore(s => s.accounts);
   const { loading } = useLedgerCollections('creditNotes', 'customers', 'invoices', 'payments');
   const { addEntity, updateEntity } = useEntityOperations();
+  const canEditContacts = useCurrentRole() !== 'viewer';
 
   const transactions = useLedgerStore(s => s.transactions);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -533,7 +536,10 @@ export default function Sales() {
                              {(cust.name || 'VE').slice(0, 2).toUpperCase()}
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-black text-[var(--text)] text-lg tracking-tight">{cust.name}</span>
+                            <InlineEdit value={cust.name} label={`Name of ${cust.name}`} canEdit={canEditContacts}
+                              validate={v => String(v) ? null : 'A customer needs a name'}
+                              onSave={v => updateEntity('customers', cust.id, { name: v }, 'Name saved')}
+                              className="font-black text-[var(--text)] text-lg tracking-tight" />
                             <button type="button"
                               onClick={(e) => { e.stopPropagation(); updateEntity('customers', cust.id, { noReminders: !cust.noReminders }, cust.noReminders ? `Automatic reminders on for ${cust.name}` : `No automatic reminders for ${cust.name}`); }}
                               className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest mt-1 ${cust.noReminders ? 'text-[var(--muted)]' : 'text-emerald-500'}`}
@@ -548,7 +554,14 @@ export default function Sales() {
                     <td className="p-4 md:p-8">
                        <div className="flex items-center gap-2 group/email">
                           <Users size={16} className="text-[var(--muted)] opacity-40" />
-                          <span className="font-bold text-[var(--text)] group-hover/email:text-indigo-600 transition-colors">{cust.email}</span>
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <InlineEdit kind="email" value={cust.email} label={`Email of ${cust.name}`} placeholder="Add email" canEdit={canEditContacts}
+                              onSave={v => updateEntity('customers', cust.id, { email: v }, 'Email saved')}
+                              className="font-bold text-[var(--text)]" />
+                            <InlineEdit kind="tel" value={cust.phone} label={`Phone of ${cust.name}`} placeholder="Add phone" canEdit={canEditContacts}
+                              onSave={v => updateEntity('customers', cust.id, { phone: v }, 'Phone saved')}
+                              className="text-sm text-[var(--muted)]" />
+                          </div>
                        </div>
                     </td>
                     <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-xl tracking-tighter tabular-nums">

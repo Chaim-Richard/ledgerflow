@@ -8,7 +8,7 @@
  */
 export type ShortcutId =
   | 'palette' | 'quickEntry' | 'overview' | 'transactions' | 'ledger' | 'reports' | 'export'
-  | 'import' | 'theme' | 'focus' | 'diagnostics' | 'architecture' | 'shortcuts';
+  | 'import' | 'theme' | 'focus' | 'diagnostics' | 'architecture' | 'shortcuts' | 'pinPage';
 
 export interface Shortcut {
   id: ShortcutId;
@@ -31,6 +31,7 @@ export const SHORTCUTS: Shortcut[] = [
   { id: 'diagnostics', keys: ['mod+shift+k'], label: 'Diagnostic console' },
   { id: 'architecture', keys: ['mod+shift+a'], label: 'System architecture' },
   { id: 'shortcuts', keys: ['?', 'mod+/'], label: 'Keyboard shortcuts' },
+  { id: 'pinPage', keys: ['alt+p'], label: 'Pin or unpin this page (pinned pages: Alt+1 … Alt+9)' },
 ];
 
 /** True on a Mac (⌘, ⇧ labels); Ctrl / Shift elsewhere. */

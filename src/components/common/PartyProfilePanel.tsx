@@ -3,7 +3,10 @@ import { Combine, Mail, Pencil, Phone, StickyNote, Tag, UserRound } from 'lucide
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
-import { addNote, MAX_NOTE_LENGTH } from '../../lib/contacts';
+import { addNote, MAX_NOTE_LENGTH, parseTags } from '../../lib/contacts';
+import InlineEdit from '../ui/InlineEdit';
+
+const COMMON_CURRENCIES = ['USD', 'EUR', 'GBP', 'ILS', 'CAD', 'AUD', 'JPY', 'CHF'];
 import { formatDate } from '../../lib/utils';
 import PartyModal from './PartyModal';
 import MergePartyDialog from './MergePartyDialog';
@@ -57,20 +60,34 @@ export default function PartyProfilePanel({ side, party }: { side: PartySide; pa
       <dl className="grid gap-3 sm:grid-cols-3 text-xs">
         <div>
           <dt className="text-[var(--muted)] font-semibold">Address</dt>
-          <dd className="whitespace-pre-line text-slate-900 dark:text-white">{party.address || '—'}</dd>
+          <dd className="whitespace-pre-line text-slate-900 dark:text-white">
+            <InlineEdit kind="textarea" value={party.address} label={`Address of ${party.name}`} placeholder="Add address" canEdit={canEdit}
+              onSave={v => updateEntity(path, party.id, { address: v }, 'Address saved')} className="whitespace-pre-line" />
+          </dd>
         </div>
         <div>
           <dt className="text-[var(--muted)] font-semibold">New {side === 'customer' ? 'invoices' : 'bills'} in</dt>
-          <dd className="text-slate-900 dark:text-white">{party.currency || `${workspaceCurrency} (home)`}</dd>
+          <dd className="text-slate-900 dark:text-white">
+            <InlineEdit value={party.currency} label={`Currency of ${party.name}`} canEdit={canEdit}
+              display={party.currency || `${workspaceCurrency} (home)`} suggestions={[workspaceCurrency, ...COMMON_CURRENCIES.filter(c => c !== workspaceCurrency)]}
+              validate={v => !v || /^[A-Za-z]{3}$/.test(String(v)) ? null : 'Use a 3-letter code, e.g. EUR'}
+              onSave={v => updateEntity(path, party.id, { currency: String(v).toUpperCase() === workspaceCurrency ? '' : String(v).toUpperCase() }, 'Currency saved')} />
+          </dd>
         </div>
         <div>
           <dt className="text-[var(--muted)] font-semibold">Tags</dt>
-          <dd className="flex flex-wrap gap-1">
-            {(party.tags || []).length === 0 ? '—' : (party.tags || []).map(t => (
-              <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                <Tag aria-hidden="true" className="w-3 h-3" />{t}
-              </span>
-            ))}
+          <dd>
+            <InlineEdit value={(party.tags || []).join(', ')} label={`Tags of ${party.name}`} placeholder="Add tags" canEdit={canEdit}
+              display={(party.tags || []).length === 0 ? null : (
+                <span className="flex flex-wrap gap-1">
+                  {(party.tags || []).map(t => (
+                    <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                      <Tag aria-hidden="true" className="w-3 h-3" />{t}
+                    </span>
+                  ))}
+                </span>
+              )}
+              onSave={v => updateEntity(path, party.id, { tags: parseTags(String(v)) }, 'Tags saved')} />
           </dd>
         </div>
       </dl>

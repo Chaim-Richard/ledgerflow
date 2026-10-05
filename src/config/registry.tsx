@@ -24,7 +24,9 @@ import {
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
-const pluginModules = import.meta.glob<{ default: ComponentType }>('../plugins/*.tsx');
+// Vite replaces the call at build time; outside Vite (unit tests) there are simply no plugins.
+let pluginModules: Record<string, () => Promise<{ default: ComponentType }>> = {};
+try { pluginModules = import.meta.glob<{ default: ComponentType }>('../plugins/*.tsx'); } catch { /* not running under Vite */ }
 const dynamicTabs: AppTabDefinition[] = [];
 const dynamicComponents: Record<string, ElementType> = {};
 for (const path in pluginModules) {

@@ -47,7 +47,8 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isPostable } from '../../lib/txFilters';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { defaultOffsetAccount, inventoryAccountsOf } from '../../lib/inventoryAccounts';
-import { adjustStockRequest } from '../../services/stockRequests';
+import { adjustStockRequest, countStockRequest } from '../../services/stockRequests';
+import InlineEdit from '../ui/InlineEdit';
 import CogsDialog from './CogsDialog';
 import StockAdjustDialog from './StockAdjustDialog';
 import StockCountDialog from './StockCountDialog';
@@ -178,6 +179,21 @@ export default function Inventory() {
     } catch (err) {
       toast.warning(`${name} added with no stock`, { description: `Opening stock not recorded: ${(err as Error).message}. Use Adjust stock.` });
     }
+  };
+
+  /** Edit in place (I-22): one field of an item. */
+  const saveItemField = async (item: InventoryItem, field: 'name' | 'sku' | 'category' | 'unitPriceCents' | 'unitCostCents', value: string | number) => {
+    await updateDoc(doc(db, 'inventory', item.id), { [field]: value, updatedAt: new Date().toISOString() });
+    toast.success('Saved');
+  };
+
+  /** Typing a new quantity in the list records a stock count, so the books follow (difference to the variance account). */
+  const countItem = async (item: InventoryItem, counted: number) => {
+    const inventoryAcc = inventoryAccountsOf(accounts)[0];
+    const varianceAcc = defaultOffsetAccount(accounts, 'count');
+    if (!workspaceId || !inventoryAcc || !varianceAcc) throw new Error('Add an Inventory account and a variance (or Cost of Goods Sold) account first');
+    const result = await countStockRequest({ workspaceId, inventoryAccountId: inventoryAcc.id, offsetAccountId: varianceAcc.id, reason: 'Corrected in the inventory list', counts: [{ itemId: item.id, counted }] });
+    toast.success(`${item.name}: ${counted} in stock`, { description: `Difference ${formatCurrency(result.valueCents, baseCurrency)} recorded to ${varianceAcc.name}` });
   };
 
   const handleDelete = async (id: string) => {
@@ -391,23 +407,23 @@ export default function Inventory() {
               <tr key={item.id} className="hover:bg-[var(--ink)]/50 transition-colors group">
                 <td className="px-8 py-5">
                   <div>
-                    <p className="text-sm font-black text-[var(--text)]">{item.name}</p>
-                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{item.sku}</p>
+                    <InlineEdit value={item.name} label={`Name of ${item.name}`} canEdit={canChangeStock}
+                      validate={v => String(v) ? null : 'An item needs a name'} onSave={v => saveItemField(item, 'name', v)}
+                      className="text-sm font-black text-[var(--text)] block" />
+                    <InlineEdit value={item.sku} label={`SKU of ${item.name}`} placeholder="Add SKU" canEdit={canChangeStock}
+                      onSave={v => saveItemField(item, 'sku', v)} className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest block" />
                   </div>
                 </td>
                 <td className="px-8 py-5">
-                  <span className="px-2 py-1 bg-zinc-100 rounded text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-                    {item.category || 'General'}
-                  </span>
+                  <InlineEdit value={item.category} label={`Category of ${item.name}`} placeholder="General" canEdit={canChangeStock}
+                    suggestions={categories} onSave={v => saveItemField(item, 'category', v)}
+                    className="px-2 py-1 bg-zinc-100 rounded text-[10px] font-medium uppercase tracking-wider text-zinc-500" />
                 </td>
                 <td className="px-8 py-5">
                   <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "text-sm font-black font-mono",
-                      item.quantityAtHand <= item.reorderPoint ? "text-rose-600" : "text-[var(--text)]"
-                    )}>
-                      {item.quantityAtHand}
-                    </span>
+                    <InlineEdit kind="number" value={item.quantityAtHand} label={`Quantity of ${item.name} (recorded as a stock count)`} canEdit={canChangeStock}
+                      validate={v => Number(v) >= 0 ? null : 'Stock cannot be below zero'} onSave={v => countItem(item, Number(v))}
+                      className={cn("text-sm font-black font-mono", item.quantityAtHand <= item.reorderPoint ? "text-rose-600" : "text-[var(--text)]")} />
                     {item.quantityAtHand <= item.reorderPoint && (
                       <AlertTriangle aria-hidden="true" size={14} className="text-rose-500 animate-pulse" />
                     )}
@@ -447,7 +463,8 @@ export default function Inventory() {
                     </div>
                   ) : (
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-zinc-500 font-mono tabular-nums">{formatCurrency(item.unitCostCents)}</span>
+                      <InlineEdit kind="money" value={item.unitCostCents} display={formatCurrency(item.unitCostCents)} label={`Unit cost of ${item.name}`} canEdit={canChangeStock}
+                        onSave={v => saveItemField(item, 'unitCostCents', v)} className="text-sm font-bold text-zinc-500 font-mono tabular-nums" />
                       {item.unitsPerPackage && item.unitsPerPackage > 1 && (
                         <span className="text-[10px] font-black text-emerald-600 tracking-widest mt-0.5 uppercase tabular-nums">
                           {formatCurrency(Math.round(item.unitCostCents / item.unitsPerPackage))} / {item.measurementUnit || 'unit'}
@@ -520,7 +537,8 @@ export default function Inventory() {
                     </div>
                   ) : (
                     <div className="flex flex-col">
-                      <span className="text-sm font-black text-emerald-600 font-mono tabular-nums">{formatCurrency(item.unitPriceCents)}</span>
+                      <InlineEdit kind="money" value={item.unitPriceCents} display={formatCurrency(item.unitPriceCents)} label={`Price of ${item.name}`} canEdit={canChangeStock}
+                        onSave={v => saveItemField(item, 'unitPriceCents', v)} className="text-sm font-black text-emerald-600 font-mono tabular-nums" />
                       {item.unitsPerPackage && item.unitsPerPackage > 1 && (
                         <span className="text-[10px] font-bold text-amber-600 tracking-widest mt-0.5 uppercase tabular-nums">
                           {formatCurrency(Math.round(item.unitPriceCents / item.unitsPerPackage))} / {item.measurementUnit || 'unit'}

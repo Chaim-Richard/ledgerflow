@@ -1,3 +1,4 @@
+import { parsePinned, togglePinned, type PinnedPage } from '../lib/pinnedPages';
 import { create } from 'zustand';
 import type { AppTab, FilterCriteria } from '../types';
 import { parseRecordHash, recordHash } from '../lib/recordLinks';
@@ -144,6 +145,10 @@ interface UIState {
   speedDials: Record<string, string>;
   setSpeedDial: (key: string, tabId: string) => void;
   removeSpeedDial: (key: string) => void;
+  /** Pinned pages (I-21): buttons on every page, Alt+1 … Alt+9. Saved on this device. */
+  pinnedPages: PinnedPage[];
+  togglePinnedPage: (page: PinnedPage) => void;
+  goToPage: (page: PinnedPage) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -207,6 +212,23 @@ export const useUIStore = create<UIState>((set) => ({
   })(),
   hiddenTabs: storedHiddenTabs(typeof window !== 'undefined' ? localStorage.getItem('ledgerflow_current_workspace') : null),
   loadHiddenTabs: (workspaceId) => set({ hiddenTabs: storedHiddenTabs(workspaceId) }),
+  pinnedPages: (() => {
+    try { return parsePinned(typeof window !== 'undefined' ? localStorage.getItem('lf_pinned_pages') : null); } catch { return []; }
+  })(),
+  togglePinnedPage: (page) => set((state) => {
+    const pinnedPages = togglePinned(state.pinnedPages, page);
+    try { localStorage.setItem('lf_pinned_pages', JSON.stringify(pinnedPages)); } catch { /* ignore storage error */ }
+    return { pinnedPages };
+  }),
+  goToPage: (page) => {
+    if (typeof window !== 'undefined' && window.location.hash !== `#${page.tab}`) window.location.hash = page.tab;
+    set({
+      activeTab: page.tab as AppTab,
+      focusRecord: null,
+      ...(page.tab === 'reports' && page.sub ? { activeReportTab: page.sub } : {}),
+      ...(page.tab === 'settings' && page.sub ? { activeSettingsTab: page.sub } : {}),
+    });
+  },
   speedDials: (() => {
     try {
       const saved = typeof window !== 'undefined' ? localStorage.getItem('lf_speed_dials') : null;

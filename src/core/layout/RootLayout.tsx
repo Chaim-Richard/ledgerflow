@@ -1,3 +1,4 @@
+import PinnedPagesBar from '../../components/layout/PinnedPagesBar';
 import type { FilterCriteria } from '../../types';
 import React, { Suspense } from 'react';
 import { cn } from '../../lib/utils';
@@ -157,6 +158,7 @@ export function RootLayout() {
         <PendingDeletionBanner />
         <DataStatusBar />
         {!isFocusMode && <Header onLogout={handleLogout} onLoginPrompt={handleLoginPrompt} />}
+        {!isFocusMode && <PinnedPagesBar />}
         {!isFocusMode && <ModuleSubNav activeTab={activeTab as unknown as string} onTabChange={setActiveTab as unknown as (tabId: string) => void} />}
         
         {/* Main Content Area */}

@@ -3,6 +3,7 @@ import { t as _t } from '../../locales/i18n';
 import React from 'react';
 import { Menu, Search, Sun, Moon, Compass, ShieldCheck, HelpCircle, Bell, Users } from 'lucide-react';
 import QuickCreateMenu from './QuickCreateMenu';
+import { PinPageButton } from './PinnedPagesBar';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { unreadCount, useNotificationStore } from '../../stores/useNotificationStore';
@@ -138,6 +139,8 @@ const Header = React.memo(function Header({ onLogout, onLoginPrompt }: HeaderPro
             </span>
           )}
         </button>
+
+        <PinPageButton />
 
         {/* Theme Toggle */}
         <button

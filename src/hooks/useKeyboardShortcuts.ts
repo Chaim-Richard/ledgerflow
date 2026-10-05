@@ -31,7 +31,9 @@ export function useKeyboardShortcuts(shortcuts: ShortcutMap) {
       const isMod = event.metaKey || event.ctrlKey;
       const isAlt = event.altKey;
       const isShift = event.shiftKey;
-      const key = event.key.toLowerCase();
+      // With Alt, a Mac types a symbol (Alt+1 is "¡", Alt+P is "π"): use the key's place instead
+      const physical = /^(?:Digit|Key)([0-9A-Z])$/.exec(event.code || '')?.[1];
+      const key = (isAlt && physical ? physical : event.key).toLowerCase();
 
       // We normalize the key string format
       let shortcutKey = '';

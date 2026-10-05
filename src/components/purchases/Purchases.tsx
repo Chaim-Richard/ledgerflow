@@ -1,4 +1,7 @@
 import React, { useState, useMemo } from 'react';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import InlineEdit from '../ui/InlineEdit';
+import { suggestionsFrom } from '../../lib/inlineEdit';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { ShoppingBag, Plus, Search, Trash2, CheckCircle, AlertCircle, DollarSign, Ban, Download, Pencil } from 'lucide-react';
@@ -25,6 +28,7 @@ export default function Purchases() {
   const accounts = useLedgerStore(s => s.accounts) || [];
   const { loading } = useLedgerCollections('bills', 'vendors');
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
+  const canEditContacts = useCurrentRole() !== 'viewer';
 
   const [activeSubTab, setActiveSubTab] = useState<'bills' | 'vendors'>('bills');
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
@@ -53,6 +57,7 @@ export default function Purchases() {
   // Filter vendors based on search term
   const [vendorTag, setVendorTag] = useState<string | null>(null);
   const vendorTags = useMemo(() => allTags(vendors), [vendors]);
+  const vendorCategories = useMemo(() => suggestionsFrom(vendors, v => v.category), [vendors]);
   const filteredVendors = useMemo(() => {
     return vendors.filter(v => {
       const matchText = `${v.name} ${v.email || ''} ${v.phone || ''} ${v.category || ''} ${(v.tags || []).join(' ')}`.toLowerCase();
@@ -322,16 +327,22 @@ export default function Purchases() {
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
                   >
                     <td className="p-4 font-semibold text-slate-900 dark:text-white">
-                      {v.name}
+                      <InlineEdit value={v.name} label={`Name of ${v.name}`} canEdit={canEditContacts}
+                        validate={x => String(x) ? null : 'A vendor needs a name'}
+                        onSave={x => updateEntity('vendors', v.id, { name: x }, 'Name saved')} />
                     </td>
                     <td className="p-4 text-slate-600 dark:text-slate-400">
-                      {v.category || 'Standard'}
+                      <InlineEdit value={v.category} label={`Category of ${v.name}`} placeholder="Standard" canEdit={canEditContacts}
+                        suggestions={vendorCategories}
+                        onSave={x => updateEntity('vendors', v.id, { category: x }, 'Category saved')} />
                     </td>
                     <td className="p-4 text-[var(--muted)] dark:text-slate-400">
-                      {v.email || 'N/A'}
+                      <InlineEdit kind="email" value={v.email} label={`Email of ${v.name}`} placeholder="Add email" canEdit={canEditContacts}
+                        onSave={x => updateEntity('vendors', v.id, { email: x }, 'Email saved')} />
                     </td>
                     <td className="p-4 text-[var(--muted)] dark:text-slate-400">
-                      {v.phone || 'N/A'}
+                      <InlineEdit kind="tel" value={v.phone} label={`Phone of ${v.name}`} placeholder="Add phone" canEdit={canEditContacts}
+                        onSave={x => updateEntity('vendors', v.id, { phone: x }, 'Phone saved')} />
                     </td>
                     <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
                       {formatCurrency(v.balanceCents || 0)}
