@@ -8,6 +8,8 @@ import type { Bill, CreditNote, Customer, Invoice, Payment, VendorCredit } from 
 import { computeStatement } from '../reports/computeReports';
 import { getLocalDateISO } from '../../lib/utils';
 import { getTrustedAppUrl } from '../utils/urlHelper';
+import { zipStore } from '../utils/zip';
+import { z } from 'zod';
 
 export const documentRouter = express.Router();
 
@@ -41,6 +43,61 @@ function purchaseOrderForPdf(po: Record<string, unknown>): PdfDocument {
 }
 const isPdfType = (t: string): t is PdfDocumentType => (PDF_TYPES as readonly string[]).includes(t);
 
+type DocType = keyof typeof PDF_SOURCES;
+
+/** A document of this workspace ready for the PDF (null when missing or another workspace's). */
+async function loadDocumentForPdf(db: Firestore, type: DocType, id: string, workspaceId: string, req: express.Request): Promise<{ docData: PdfDocument; paymentUrl?: string } | null> {
+  const snap = await db.collection(PDF_SOURCES[type].collection).doc(id).get();
+  const data = snap.exists ? snap.data() : undefined;
+  if (!data || data.workspaceId !== workspaceId) return null;
+  let paymentUrl: string | undefined;
+  // a sent invoice has a payment page: its QR code goes on the PDF (Y-15)
+  if (type === 'invoice' && typeof data.paymentToken === 'string' && data.paymentToken) {
+    try { paymentUrl = `${getTrustedAppUrl(req).replace(/\/+$/, '')}/i/${data.paymentToken}`; } catch { paymentUrl = undefined; }
+  }
+  return { docData: type === 'purchaseOrder' ? purchaseOrderForPdf(data) : data as PdfDocument, paymentUrl };
+}
+
+const ZipSchema = z.object({
+  workspaceId: z.string().min(1).max(200),
+  type: z.enum(Object.keys(PDF_SOURCES) as [DocType, ...DocType[]]),
+  ids: z.array(z.string().min(1).max(200)).min(1).max(100),
+}).strict();
+
+/**
+ * Several documents of one kind as PDFs in one zip file (Y-18), e.g. the invoices chosen in the
+ * list. Members only; documents of other workspaces or missing ones are left out.
+ */
+export async function handleZipRequest(req: express.Request, res: express.Response, dbOverride?: Firestore) {
+  try {
+    const user = requestUser(req);
+    const body = ZipSchema.parse(req.body);
+    const db = dbOverride || getDb();
+    await validateWorkspaceMember(db, body.workspaceId, user);
+    const wsSnap = await db.collection('workspaces').doc(body.workspaceId).get();
+    const workspace: PdfWorkspace = wsSnap.exists ? (wsSnap.data() as PdfWorkspace) : { name: 'LedgerFlow Workspace' };
+    const files: Array<{ name: string; data: Buffer }> = [];
+    const used = new Set<string>();
+    for (const id of [...new Set(body.ids)]) {
+      const loaded = await loadDocumentForPdf(db, body.type, id, body.workspaceId, req);
+      if (!loaded) continue;
+      const base = `${body.type}_${String(loaded.docData.number || id).replace(/[^\p{L}\p{N}._-]+/gu, '-')}`;
+      let name = `${base}.pdf`;
+      for (let n = 2; used.has(name); n++) name = `${base}_${n}.pdf`;
+      used.add(name);
+      files.push({ name, data: await generateDocumentPdf(body.type, loaded.docData, workspace, { paymentUrl: loaded.paymentUrl }) });
+    }
+    if (files.length === 0) return res.status(404).json({ status: 'error', message: 'None of these documents were found' });
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${body.type}s_${files.length}.zip"`);
+    return res.send(zipStore(files));
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ status: 'error', message: err.issues[0]?.message || 'Invalid request' });
+    if (errorMessage(err) === 'FORBIDDEN' || /not a member/i.test(errorMessage(err))) return res.status(403).json({ status: 'error', message: 'Forbidden' });
+    return res.status(500).json({ status: 'error', message: errorMessage(err) || 'Failed to build the zip' });
+  }
+}
+
 export async function handlePdfRequest(req: express.Request, res: express.Response, dbOverride?: Firestore) {
   try {
     const user = requestUser(req);
@@ -66,18 +123,10 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
     let paymentUrl: string | undefined;
 
     if (type !== 'statement') {
-      const source = PDF_SOURCES[type];
-      const snap = await db.collection(source.collection).doc(id).get();
-      const data = snap.exists ? snap.data() : undefined;
+      const loaded = await loadDocumentForPdf(db, type, id, workspaceId, req);
       // another workspace's document answers like a missing one
-      if (!data || data.workspaceId !== workspaceId) {
-        return res.status(404).json({ status: 'error', message: `${source.label} not found` });
-      }
-      docData = type === 'purchaseOrder' ? purchaseOrderForPdf(data) : data as PdfDocument;
-      // a sent invoice has a payment page: its QR code goes on the PDF (Y-15)
-      if (type === 'invoice' && typeof data.paymentToken === 'string' && data.paymentToken) {
-        try { paymentUrl = `${getTrustedAppUrl(req).replace(/\/+$/, '')}/i/${data.paymentToken}`; } catch { paymentUrl = undefined; }
-      }
+      if (!loaded) return res.status(404).json({ status: 'error', message: `${PDF_SOURCES[type].label} not found` });
+      ({ docData, paymentUrl } = loaded);
     } else {
       // id is customer/vendor contact ID
       const customerSnap = await db.collection('customers').doc(id).get();
@@ -140,5 +189,6 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
 }
 
 // Express passes `next` third: never let it stand in for the database (every download failed so)
+documentRouter.post('/zip', (req, res) => handleZipRequest(req, res));
 documentRouter.post('/:type/:id/pdf', (req, res) => handlePdfRequest(req, res));
 documentRouter.get('/:type/:id/pdf', (req, res) => handlePdfRequest(req, res));

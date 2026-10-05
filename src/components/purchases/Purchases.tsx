@@ -7,6 +7,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { ShoppingBag, Plus, Search, Trash2, CheckCircle, AlertCircle, DollarSign, Ban, Download, Pencil, Printer } from 'lucide-react';
 import PdfPreviewModal from '../ui/PdfPreviewModal';
+import DocumentBulkBar from '../ui/DocumentBulkBar';
 import { useAuthStore } from '../../stores/useAuthStore';
 import type { Bill, Vendor } from '../../types';
 import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
@@ -40,6 +41,7 @@ export default function Purchases() {
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<Partial<Bill> | undefined>(undefined);
   const [previewBill, setPreviewBill] = useState<Bill | null>(null);
+  const [pickedBills, setPickedBills] = useState<Set<string>>(() => new Set());
   const pdfWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   // A record link (#purchases/bill/<id>, e.g. from Data Health) shows and highlights the bill
   const focusedBillId = useRecordFocus('bill', { ready: bills.length > 0, onFocus: () => { setActiveSubTab('bills'); setSelectedVendorId(null); setSearchTerm(''); } });
@@ -200,10 +202,19 @@ export default function Purchases() {
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {activeSubTab === 'bills' ? (
           <div className="overflow-x-auto">
+            {pdfWorkspaceId && (
+              <DocumentBulkBar type="bill" noun="bill" ids={[...pickedBills].filter(id => filteredBills.some(b => b.id === id))}
+                workspaceId={pdfWorkspaceId} onClear={() => setPickedBills(new Set())} />
+            )}
             <table className="w-full text-left border-collapse">
               <caption className="sr-only">Bills</caption>
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
+                  <th scope="col" className="pl-4 w-8">
+                    <input type="checkbox" aria-label="Select all bills shown"
+                      checked={filteredBills.length > 0 && filteredBills.every(b => pickedBills.has(b.id))}
+                      onChange={e => setPickedBills(e.target.checked ? new Set(filteredBills.map(b => b.id)) : new Set())} />
+                  </th>
                   <th scope="col" className="p-4">Vendor</th>
                   <th scope="col" className="p-4">Bill #</th>
                   <th scope="col" className="p-4">Date</th>
@@ -219,6 +230,10 @@ export default function Purchases() {
                   return (
                     <tr key={b.id} id={recordElementId('bill', b.id)} aria-current={focusedBillId === b.id ? 'true' : undefined}
                       className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${focusedBillId === b.id ? 'ring-2 ring-inset ring-[var(--brass)]' : ''}`}>
+                      <td className="pl-4">
+                        <input type="checkbox" aria-label={`Select bill ${b.number || ''}`.trim()} checked={pickedBills.has(b.id)}
+                          onChange={() => setPickedBills(prev => { const next = new Set(prev); if (next.has(b.id)) next.delete(b.id); else next.add(b.id); return next; })} />
+                      </td>
                       <td className="p-4 font-semibold text-slate-900 dark:text-white">
                         {b.vendorName || 'Unknown Vendor'}
                       </td>
@@ -310,7 +325,7 @@ export default function Purchases() {
 
                 {filteredBills.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
+                    <td colSpan={8} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
                       {loading ? <LoadingState what="bills" /> : searchTerm ? 'No bills match your search.' : 'No bills recorded yet.'}
                     </td>
                   </tr>

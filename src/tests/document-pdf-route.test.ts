@@ -106,6 +106,31 @@ describe('Document PDF downloads', { skip: !url && 'LF_TEST_DATABASE_URL not set
     for (const text of [/BILL/, /B-77/, /Due/, /2026-07-21/]) assert.match(pdf, text);
   });
 
+  test('several invoices in one zip (Y-18): only this workspace\'s, each a PDF', async () => {
+    await db.collection('invoices').doc(id('inv2')).set({ workspaceId: ws, customerId: id('c1'), customerName: 'Acme Ltd', number: 'INV-0008', date: '2026-06-05', status: 'paid', amountCents: 900 });
+    const zip = (uid: string, body: unknown) => fetch(`${base}/api/v1/documents/zip`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-test-uid': uid }, body: JSON.stringify(body) });
+    const res = await zip('view-1', { workspaceId: ws, type: 'invoice', ids: [id('inv'), id('inv2'), `${other}_inv`, id('missing'), id('inv')] });
+    assert.equal(res.status, 200, await res.clone().text());
+    assert.equal(res.headers.get('content-type'), 'application/zip');
+    const bytes = Buffer.from(await res.arrayBuffer());
+    const end = bytes.length - 22;
+    assert.equal(bytes.readUInt32LE(end), 0x06054b50);
+    assert.equal(bytes.readUInt16LE(end + 10), 2, 'two invoices: the other workspace\'s and the missing one are left out, a repeat counted once');
+    let at = bytes.readUInt32LE(end + 16);
+    const names: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      const len = bytes.readUInt16LE(at + 28);
+      names.push(bytes.subarray(at + 46, at + 46 + len).toString('utf8'));
+      at += 46 + len + bytes.readUInt16LE(at + 30) + bytes.readUInt16LE(at + 32);
+    }
+    assert.deepEqual(names, ['invoice_INV-0007.pdf', 'invoice_INV-0008.pdf']);
+    assert.ok(bytes.indexOf('%PDF-') > 0);
+    assert.equal((await zip('stranger', { workspaceId: ws, type: 'invoice', ids: [id('inv')] })).status, 403);
+    assert.equal((await zip('owner-1', { workspaceId: ws, type: 'invoice', ids: [] })).status, 400);
+    assert.equal((await zip('owner-1', { workspaceId: ws, type: 'statement', ids: [id('c1')] })).status, 400);
+    assert.equal((await zip('owner-1', { workspaceId: ws, type: 'invoice', ids: [`${other}_inv`] })).status, 404);
+  });
+
   test("another workspace's document answers like a missing one; strangers are refused", async () => {
     assert.equal((await download('owner-1', 'invoice', `${other}_inv`)).status, 404);
     assert.equal((await download('owner-1', 'invoice', id('nope'))).status, 404);

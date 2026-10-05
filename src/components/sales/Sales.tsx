@@ -40,6 +40,7 @@ import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import InlineEdit from '../ui/InlineEdit';
 import InlineAdd from '../ui/InlineAdd';
+import DocumentBulkBar from '../ui/DocumentBulkBar';
 import { printInvoice } from '../../lib/printInvoice';
 import { convertEstimateToInvoice } from '../../lib/estimateConverter';
 import { detectDuplicateContacts } from '../../lib/contactUtils';
@@ -58,6 +59,7 @@ export default function Sales() {
   const { loading } = useLedgerCollections('creditNotes', 'customers', 'invoices', 'payments');
   const { addEntity, updateEntity } = useEntityOperations();
   const canEditContacts = useCurrentRole() !== 'viewer';
+  const [pickedInvoices, setPickedInvoices] = useState<Set<string>>(() => new Set());
 
   const transactions = useLedgerStore(s => s.transactions);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -317,11 +319,20 @@ export default function Sales() {
 
       {activeSubTab === 'invoices' && (
         <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
+          {currentWorkspaceId && (
+            <DocumentBulkBar type="invoice" noun="invoice" ids={[...pickedInvoices].filter(id => filteredInvoices.some(i => i.id === id))}
+              workspaceId={currentWorkspaceId} onClear={() => setPickedInvoices(new Set())} />
+          )}
           <div className="overflow-x-auto">
             <table className="w-full border-collapse min-w-[700px]">
               <caption className="sr-only">Invoices</caption>
               <thead>
                 <tr className="text-left border-b border-[var(--line)]/50">
+                  <th scope="col" className="pl-4 md:pl-8 w-8">
+                    <input type="checkbox" aria-label="Select all invoices shown"
+                      checked={filteredInvoices.length > 0 && filteredInvoices.every(i => pickedInvoices.has(i.id))}
+                      onChange={e => setPickedInvoices(e.target.checked ? new Set(filteredInvoices.map(i => i.id)) : new Set())} />
+                  </th>
                   <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Number</th>
                   <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Customer</th>
                   <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Date</th>
@@ -335,6 +346,10 @@ export default function Sales() {
                 {filteredInvoices.map((inv) => (
                   <tr key={inv.id} id={recordElementId('invoice', inv.id)} aria-current={focusedInvoiceId === inv.id ? 'true' : undefined}
                     className={cn("group hover:bg-[var(--ink)]/30 transition-all", focusedInvoiceId === inv.id && "ring-2 ring-inset ring-[var(--brass)]")}>
+                    <td className="pl-4 md:pl-8">
+                      <input type="checkbox" aria-label={`Select invoice ${inv.number || ''}`.trim()} checked={pickedInvoices.has(inv.id)}
+                        onChange={() => setPickedInvoices(prev => { const next = new Set(prev); if (next.has(inv.id)) next.delete(inv.id); else next.add(inv.id); return next; })} />
+                    </td>
                     <td className="p-4 md:p-8 font-mono font-bold text-[var(--muted)] group-hover:text-[var(--text)] transition-colors">{inv.number}</td>
                     <td className="p-4 md:p-8">
                        <div className="flex flex-col">
@@ -493,7 +508,7 @@ export default function Sales() {
                 ))}
                 {filteredInvoices.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-12">
+                    <td colSpan={8} className="p-12">
                       {loading ? <LoadingState what="invoices" /> : (
                         <EmptyState
                           title={searchTerm ? 'No invoices match your search' : 'No invoices yet'}

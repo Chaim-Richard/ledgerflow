@@ -1527,7 +1527,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] K-03 Sale receipts
 - [ ] K-04 Sales orders
 - [ ] K-05 Manual journals entity
-- [~] K-06 Bulk action bar: transaction list (categorize safely, Enter/Apply, accounts used most first; L-180). Other lists: later
+- [~] K-06 Bulk action bar: transaction list (categorize safely, Enter/Apply, accounts used most first; L-180); invoice and bill lists (select, download PDFs as a zip). More bulk actions (send, mark paid): later
 - [ ] K-07 Attachments on every entity
 - [x] K-08 Email templates (invoice, reminder, receipt; preview)
 - [x] K-09 Credit note refunds (DR A/R, CR cash; tested)
@@ -1980,7 +1980,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Y-15 QR code on invoices (to the invoice's payment page once sent; can be switched off)
 - [x] Y-16 Watermark: DRAFT, VOID (void/cancelled) and PAID (invoices, bills) stamped across every page of document PDFs; statements and receipts never (tested)
 - [x] Y-17 Page numbers ("Page x of y"; long documents run over pages with the table header repeated)
-- [ ] Y-18 Batch PDF zip
+- [x] Y-18 Batch PDF zip: tick invoices or bills in their lists → "Download PDFs (zip)"; up to 100 per zip, only this workspace's documents (tested)
 - [ ] Y-19 Print stylesheet
 - [ ] Y-20 Digital signature
 - [x] Y-21 Multiple contacts per company (people with role, email, phone on the customer/vendor form and page)
