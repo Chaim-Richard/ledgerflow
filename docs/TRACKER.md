@@ -1540,7 +1540,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] K-15 Tags as an entity
 - [ ] K-16 Revenue recognition schedules
 - [ ] K-17 Prepaids + auto-reversing accruals
-- [ ] K-18 Retainers
+- [x] K-18 Retainers — **done 5 Oct (with BE-12)**: money received before an invoice (a customer deposit) or paid before a bill waits in Customer Deposits / Vendor Prepayments (found by Settings mapping or name; without one it stays on A/R or A/P as before), and the customer or vendor page lists it as "Unapplied: $X" with "Apply to invoices/bills": the open ones in the same currency are filled oldest first, amounts can be changed, more than is left or open is refused, and `POST /api/v1/payments/:id/apply` settles them and moves the money to A/R or A/P in one database transaction (writers only, closed period refused, audited). Tests: `advance-payments.test.ts` (database), `unapplied-payments.test.tsx`
 - [x] K-19 Bad debt with reversal (server, base currency, tested)
 - [x] K-20 Undeposited funds (Make deposit; tested)
 - [x] K-21 Expected-bill tracking: vendors that bill on a rhythm (weekly to quarterly, at least 3 regular bills) are learned from the bills already recorded; Purchases shows "Expected bills" (usual amount or range, how often, expected by / days late) with "Record bill" (the latest bill's lines copied, new dates) and "Not expected"; vendors on a recurring bill schedule are left out (tested)
@@ -2173,7 +2173,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BE-09 Mileage
 - [ ] BE-10 Per-diem
 - [x] BE-11 PO → bill conversion (purchase orders saved, goods received, "Create bill"; tested)
-- [ ] BE-12 Vendor prepayment
+- [x] BE-12 Vendor prepayment — **done 5 Oct (with K-18)**: see K-18
 - [ ] BE-13 Cheque printing
 
 # SECTION BF — ITEMS · PRICING · STOCK

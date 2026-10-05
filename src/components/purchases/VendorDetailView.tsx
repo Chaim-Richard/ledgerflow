@@ -6,6 +6,7 @@ import { calculateAmountDue } from '../../lib/documentMath';
 import { ArrowLeft, DollarSign, FileText, User } from 'lucide-react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import PartyProfilePanel from '../common/PartyProfilePanel';
+import UnappliedPayments from '../common/UnappliedPayments';
 
 interface VendorDetailViewProps {
   vendorId: string;
@@ -72,6 +73,7 @@ export default function VendorDetailView({ vendorId, onBack }: VendorDetailViewP
       </div>
 
       <PartyProfilePanel side="vendor" party={vendor} />
+      <UnappliedPayments side="vendor" partyId={vendorId} />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
