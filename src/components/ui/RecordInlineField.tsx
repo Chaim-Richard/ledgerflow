@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import InlineEdit, { type InlineEditProps } from './InlineEdit';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { inlineRecordAdapter } from '../../lib/inlineRecordAdapter';
@@ -13,6 +14,7 @@ function ScopedRecordInlineField({ collection, record, field, label, kind, optio
   collection: InlineRecordCollection; record: object & { id: string }; field: string; adapter?: InlineRecordAdapter;
 } & Pick<InlineEditProps, 'label' | 'kind' | 'options' | 'display' | 'placeholder' | 'canEdit'>) {
   const role = useCurrentRole();
+  useLedgerCollections(collection);
   const records = useLedgerStore(state => state[collection]);
   const [retry, setRetry] = useState<{ value: string | number; message: string }>();
   const [saving, setSaving] = useState(false);
@@ -23,6 +25,12 @@ function ScopedRecordInlineField({ collection, record, field, label, kind, optio
     if (pending.has(key)) throw new Error('This field is already saving.');
     pending.add(key); setSaving(true);
     try {
+    if (collection === 'projects' && field === 'name') {
+      const state = useLedgerStore.getState();
+      if (state.truncatedCollections.transactions) throw new Error('Load complete project history before renaming a project.');
+      const oldName = String(before ?? '');
+      if (oldName && state.transactions.some(tx => tx.project === oldName || tx.lines?.some(line => line.project === oldName || line.dimensions?.project === oldName))) throw new Error('Older entries use this project name. Re-link them by project ID before renaming.');
+    }
       await saveInlineRecordField(adapter, { collection, id: record.id }, field, before, value);
       const current = adapter.session();
       if (!current || current.uid !== session?.uid || current.workspaceId !== session?.workspaceId) throw new Error('Workspace changed. Reopen the saved record.');

@@ -27,3 +27,13 @@ test('Enter confirms a partial update and preserves a failed Hebrew draft for re
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Retry Project name' })); });
   assert.deepEqual(writes, [{ name: 'חדש Supply' }]); assert.equal(useLedgerStore.getState().projects[0].name, 'חדש Supply');
 });
+test('a project linked by legacy names refuses a rename rather than dropping its entries', async () => {
+  const { makeTransaction } = await import('./fixtures');
+  useLedgerStore.setState({ transactions: [makeTransaction({ project: project.name })], truncatedCollections: {} });
+  let writes = 0;
+  const adapter = { session: () => ({ uid: 'test-user', workspaceId: 'component-workspace', writable: true }), read: async () => ({ ...project }), update: async () => { writes++; } };
+  render(<RecordInlineField collection="projects" record={project} field="name" label="Legacy project name" adapter={adapter} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Edit Legacy project name' })); fireEvent.change(screen.getByLabelText('Legacy project name'), { target: { value: 'Changed' } });
+  await act(async () => { fireEvent.keyDown(screen.getByLabelText('Legacy project name'), { key: 'Enter' }); });
+  assert.match(screen.getByRole('alert').textContent || '', /Re-link/); assert.equal(writes, 0);
+});
