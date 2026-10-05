@@ -1,10 +1,11 @@
+import ChartFrame, { ChartTooltip } from '../charts/ChartFrame';
 import { D3LedgerVisualizer } from './D3LedgerVisualizer';
 import { CHANNELS } from './intelligenceChannels';
 import { ProjectProfitMatrix } from './ProjectProfitMatrix';
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis } from 'recharts';
+import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, Tooltip } from 'recharts';
 import { ShieldCheck, Target, Download, Maximize2, Minimize2, BrainCircuit, Info, ChevronRight, Sparkles, Menu, X, Search, Calendar, Flame, Loader2 } from 'lucide-react';
 import { cn, formatCurrency } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -436,13 +437,15 @@ export default function AnalyticalCenter() {
                         </div>
                      </div>
                      
-                     <div className="flex-1 flex items-center justify-center min-h-[220px] py-4">
+                     <ChartFrame title="Metric distribution data" rows={radarData.map(row => ({id:row.subject,label:row.subject,A:row.A}))} series={[{key:'A',name:'Metrics View',unit:'number'}]}>
+                       {({rows,hidden}) =>
                         <ResponsiveContainer width="100%" height={230}>
-                          <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
+                          <RadarChart cx="50%" cy="50%" outerRadius="75%" data={rows}>
+                            <Tooltip content={<ChartTooltip series={[{key:'A',name:'Metrics View',unit:'number'}]} />} />
                             <PolarGrid stroke="#f1f5f9" />
-                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fontWeight: 700, fontFamily: 'Inter', fill: '#64748b' }} />
+                            <PolarAngleAxis dataKey="label" tick={{ fontSize: 9, fontWeight: 700, fontFamily: 'Inter', fill: '#64748b' }} />
                             <Radar
-                              name="Metrics View"
+                              hide={hidden.has('A')} name="Metrics View"
                               dataKey="A"
                               stroke="#6366f1"
                               fill="#6366f1"
@@ -450,7 +453,8 @@ export default function AnalyticalCenter() {
                             />
                           </RadarChart>
                         </ResponsiveContainer>
-                     </div>
+                       }
+                     </ChartFrame>
 
                      <div className="pt-3 border-t border-[var(--line)] grid grid-cols-3 gap-2 text-center bg-[var(--ink)]/50 -mx-5 -mb-5 rounded-b-2xl p-3">
                         <div>

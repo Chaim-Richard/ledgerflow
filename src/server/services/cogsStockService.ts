@@ -71,7 +71,15 @@ export async function prepareStockMoves(
     targets.push(target);
   }
   if (targets.length > 0) {
-    const originals = await t.getAll(...targets.map(id => db.collection('transactions').doc(id)));
+    // an entry posted together with its own reversal (R-05: an accrual reversing next month) is in this
+    // request, not in the database yet; its stock move comes back the same way
+    const inRequest = new Map(entries.filter(e => e.id).map(e => [String(e.id), e]));
+    for (const target of targets.filter(id => inRequest.has(id))) {
+      const move = cogsMove(inRequest.get(target)!);
+      if (move) add(move.itemId, move.quantity);
+    }
+    const stored = targets.filter(id => !inRequest.has(id));
+    const originals = stored.length ? await t.getAll(...stored.map(id => db.collection('transactions').doc(id))) : [];
     for (const snap of originals) {
       const data = snap.data();
       if (!snap.exists || !data) throw new LedgerPostingError(400, `Transaction ${snap.id} to reverse does not exist.`);

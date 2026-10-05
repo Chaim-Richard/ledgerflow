@@ -1,4 +1,4 @@
-import type { DocumentData, Firestore } from '../db/firestore';
+import type { DocumentData, Firestore, Transaction } from '../db/firestore';
 import { formatTzDate } from '../../lib/utils';
 import { workspaceRole } from '../../lib/periodLock';
 import { writeServerAuditLog } from './auditLogService';
@@ -9,14 +9,15 @@ import { writeServerAuditLog } from './auditLogService';
  * the next number must be above every number already used with that prefix.
  */
 
-export type NumberedType = 'invoice' | 'bill' | 'estimate' | 'creditNote' | 'vendorCredit';
-export const NUMBERED_TYPES: readonly NumberedType[] = ['invoice', 'bill', 'estimate', 'creditNote', 'vendorCredit'];
-const COLLECTION: Record<NumberedType, string> = { invoice: 'invoices', bill: 'bills', estimate: 'estimates', creditNote: 'creditNotes', vendorCredit: 'vendorCredits' };
+export type NumberedType = 'invoice' | 'bill' | 'estimate' | 'creditNote' | 'vendorCredit' | 'payment';
+export const NUMBERED_TYPES: readonly NumberedType[] = ['invoice', 'bill', 'estimate', 'creditNote', 'vendorCredit', 'payment'];
+const COLLECTION: Record<NumberedType, string> = { invoice: 'invoices', bill: 'bills', estimate: 'estimates', creditNote: 'creditNotes', vendorCredit: 'vendorCredits', payment: 'payments' };
 const LEGACY: Record<NumberedType, [string, string]> = {
   invoice: ['invoicePrefix', 'invoiceNextNumber'], bill: ['billPrefix', 'billNextNumber'], estimate: ['estimatePrefix', 'estimateNextNumber'],
   creditNote: ['creditNotePrefix', 'creditNoteNextNumber'], vendorCredit: ['vendorCreditPrefix', 'vendorCreditNextNumber'],
+  payment: ['paymentPrefix', 'paymentNextNumber'],
 };
-const PREFIX: Record<NumberedType, string> = { invoice: 'INV', bill: 'BIL', estimate: 'EST', creditNote: 'CN', vendorCredit: 'VC' };
+const PREFIX: Record<NumberedType, string> = { invoice: 'INV', bill: 'BIL', estimate: 'EST', creditNote: 'CN', vendorCredit: 'VC', payment: 'PMT' };
 
 export interface Series { prefix: string; nextNumber: number; padding: number }
 
@@ -46,20 +47,23 @@ export function resolveSeries(type: NumberedType, stored: DocumentData | undefin
 
 /** Next number of a series, in one database transaction. */
 export async function allocateNextNumber(db: Firestore, workspaceId: string, type: NumberedType, today: string = formatTzDate(new Date())): Promise<string> {
+  return db.runTransaction(tx => allocateInTransaction(db, tx, workspaceId, type, today));
+}
+
+/** Next number of a series inside a transaction the caller already runs (a payment takes its number with it). */
+export async function allocateInTransaction(db: Firestore, tx: Transaction, workspaceId: string, type: NumberedType, today: string = formatTzDate(new Date())): Promise<string> {
   const nsDocRef = db.collection('numberingSeries').doc(`${workspaceId}_${type}`);
-  return db.runTransaction(async (tx) => {
-    const nsSnap = await tx.get(nsDocRef);
-    const now = new Date().toISOString();
-    if (nsSnap.exists) {
-      const series = resolveSeries(type, nsSnap.data() || {}, undefined, today);
-      tx.update(nsDocRef, { nextNumber: series.nextNumber + 1, updatedAt: now });
-      return formatDocumentNumber(series);
-    }
-    const wsSnap = await tx.get(db.collection('workspaces').doc(workspaceId));
-    const series = resolveSeries(type, undefined, wsSnap.exists ? wsSnap.data() || {} : {}, today);
-    tx.set(nsDocRef, { workspaceId, type, ...series, nextNumber: series.nextNumber + 1, createdAt: now, updatedAt: now });
+  const nsSnap = await tx.get(nsDocRef);
+  const now = new Date().toISOString();
+  if (nsSnap.exists) {
+    const series = resolveSeries(type, nsSnap.data() || {}, undefined, today);
+    tx.update(nsDocRef, { nextNumber: series.nextNumber + 1, updatedAt: now });
     return formatDocumentNumber(series);
-  });
+  }
+  const wsSnap = await tx.get(db.collection('workspaces').doc(workspaceId));
+  const series = resolveSeries(type, undefined, wsSnap.exists ? wsSnap.data() || {} : {}, today);
+  tx.set(nsDocRef, { workspaceId, type, ...series, nextNumber: series.nextNumber + 1, createdAt: now, updatedAt: now });
+  return formatDocumentNumber(series);
 }
 
 /** The highest number already used with this prefix (0 when none), from the documents themselves. */

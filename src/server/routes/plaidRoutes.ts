@@ -129,7 +129,7 @@ plaidRouter.get("/banks", async (req, res) => {
     const db = getDb();
     await validateWorkspaceMember(db, workspaceId, (req as AuthedRequest).user);
     const snap = await db.collection("banks").where("workspaceId", "==", workspaceId).get();
-    res.json({ banks: snap.docs.map(d => ({ id: d.id, institutionName: d.data().institutionName || '', accountId: d.data().accountId || null, status: d.data().status || 'active', createdAt: d.data().createdAt })) });
+    res.json({ banks: snap.docs.map(d => ({ id: d.id, institutionName: d.data().institutionName || '', accountId: d.data().accountId || null, status: d.data().status || 'active', createdAt: d.data().createdAt, lastSyncedAt: d.data().lastSyncedAt || null })) });
   } catch (error) {
     sendError(res, error instanceof Error ? error.message : "Could not list bank connections", 403);
   }
@@ -166,7 +166,10 @@ plaidRouter.post("/sync", async (req, res) => {
           end_date: getLocalDateISO(today),
         });
         transactions.push(...response.data.transactions);
-        if (bank.status === 'login_required') await doc.ref.update({ status: 'active', updatedAt: new Date().toISOString() });
+        // the last time this connection answered (BC-11: the dashboard's bank feed health); a failed or
+        // expired sync leaves it where it was
+        const syncedAt = new Date().toISOString();
+        await doc.ref.update({ status: 'active', lastSyncedAt: syncedAt, updatedAt: syncedAt });
       } catch (err) {
         if (plaidErrorCode(err) !== 'ITEM_LOGIN_REQUIRED') throw err;
         needsReconnect.push({ bankId: doc.id, institutionName: bank.institutionName || '' });

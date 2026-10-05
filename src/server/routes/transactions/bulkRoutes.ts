@@ -1,3 +1,4 @@
+import { ApprovalRefused, serverApproval } from '../../services/invoiceApprovalGuard';
 import express from 'express';
 import { FieldValue } from '../../db/firestore';
 import { DoubleEntryValidator } from '../../../kernel/validation/DoubleEntryValidator';
@@ -89,8 +90,10 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
       await db.runTransaction(async (t) => {
         // Reads first
         const entityRef = entityMutation ? db.collection(entityMutation.collection).doc(entityMutation.docId) : null;
+        let existingEntity: Record<string, unknown> | undefined;
         if (entityRef) {
           const existingDoc = await t.get(entityRef);
+          existingEntity = existingDoc.exists ? existingDoc.data() : undefined;
           if (existingDoc.exists && existingDoc.data()?.workspaceId !== wsId) {
             throw new LedgerPostingError(403, `Forbidden: Entity ${entityMutation.docId} does not belong to authorized workspace.`);
           }
@@ -125,6 +128,15 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
           const sent = { ...(entityMutation.data || {}), workspaceId: wsId };
           const parsed = (entityMutation.action === 'update' ? schema.partial() : schema).parse(sent);
           const validatedData = entityMutation.action === 'update' ? Object.fromEntries(Object.entries(parsed).filter(([k]) => k in sent)) : parsed;
+          // who approved an invoice is decided here, not by the request (BE-04, L-191)
+          if (entityMutation.collection === 'invoices') {
+            try {
+              Object.assign(validatedData, serverApproval(existingEntity, validatedData, wsData || {}, user.uid, new Date().toISOString()));
+            } catch (err) {
+              if (err instanceof ApprovalRefused) throw new LedgerPostingError(403, err.message);
+              throw err;
+            }
+          }
           t.set(entityRef, { ...validatedData, uid: user.uid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
         } else if (entityRef && entityMutation.action === 'delete') {
           t.delete(entityRef);

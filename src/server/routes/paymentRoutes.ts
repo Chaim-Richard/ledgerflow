@@ -33,6 +33,8 @@ const paymentInputSchema = z.object({
   allocations: z.array(paymentAllocationSchema).default([]),
   /** K-25: email the vendor a remittance advice afterwards (not stored on the payment). */
   sendRemittance: z.boolean().optional(),
+  /** Home-currency units for one unit of a foreign document's currency on the payment day (L-192). */
+  paymentExchangeRate: z.number().positive().max(1e6).optional(),
 });
 
 export async function handleCreatePayment(req: express.Request, res: express.Response, dbOverride?: Firestore) {

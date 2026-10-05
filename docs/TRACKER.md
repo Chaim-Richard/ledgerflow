@@ -1501,8 +1501,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] I-19 Active filters as chips — the transaction list shows each active filter as a chip with a remove button and "Clear All"; the command palette's search now shows there too (L-143) C-14 chips remove individual multi-select values, retain zero-amount filters and clear local/page search independently; Hebrew/zero/empty-filter component tests.
 - [x] I-20 "What changed since I last looked" — the Overview opens with "Since your last visit (date): 3 new transactions · 1 invoice paid…" per person and workspace on this device (tested)
 - [x] I-21 **Owner request (5 Oct): pin pages.** Done: pin button in the top bar (Alt+P), pinned pages as buttons under the top bar on every page with their report/settings tab, Alt+1 … Alt+9 (also on Mac keyboards, where Alt shortcuts never worked before), kept on the device (tested). A pin button on every page; pinned pages stay as buttons on every other page; keyboard shortcuts to jump to them (zero friction)
-- [~] I-22 **Owner request (5 Oct): edit in place everywhere.** Shared `InlineEdit` done (tested). Screens done: customer list (name, email, phone), vendor list (name, category, email, phone), contact page (address, currency, tags), Inventory (name, SKU, category, cost, price; typing a quantity records a stock count), chart of accounts (name, code, description, category; system codes fixed; duplicate codes refused), transactions (description by one click with the workspace's own descriptions suggested; date and amount of entries typed in by hand, both lines change together; category of a plain entry with accounts used most first; class and location on every line; entries from an invoice, bill, payment or bank line keep their amount and date, and document entries their accounts; locked periods read-only), invoice list (due date while open; date while draft), bill list (vendor's number, due date while unpaid, date while draft). **Add in place** (type a name + Enter): customers, vendors, inventory items; entries at the top of the transaction list (description, amount, Enter; the category is suggested from past entries with a similar description, money in/out follows it, bank account and date stay for the next one). **Archive / delete in place**: customer and vendor lists (archive hides it from lists and new invoices/bills, records keep it, "Show archived" brings it back; delete only when nothing refers to it, checked by the server, which names what uses it); recurring schedules: name, how often and next date in place (not before the last run); tax codes: name and rate in place; chart of accounts: Archive / Restore / Delete in each row's menu, archived accounts hidden behind "Show archived accounts", an account with entries is archived instead of deleted). Purchase orders: vendor, expected delivery and the lines (item, quantity, unit price; type a new line + Enter; remove a line) change in place while nothing was received or billed, the total follows; expected delivery can still move after a partial delivery; an order with nothing received or billed can be deleted from its row. Credit notes and vendor credits: number and reason in place (reasons used before are suggested; a number already used is refused), the date while none of the credit was used; viewers no longer see "New credit note". Next: documents (drafts), projects, settings lists, bank lines; then add/delete/rename from the same places. Any field you can see (a vendor's address in the vendor list, an item's price, a customer's email) can be changed right there by typing, without opening another page; one shared component, applied to every list and detail page, and the rule for every new screen (AGENTS.md) C-15 also covers Projects (name/client/planning budget/status, list and pipeline), Employees (name/email/job role), Assets (name/location/category), Budgets (name/planning amount), draft Estimates (reference/date/expiry/notes) and Dimensions (node/axis labels, previous label aliases and unfinished local edits preserved). Each has component coverage and confirmed scoped saves with refusal/retry. New employee creation is now persisted, not only cached.
-- [~] I-23 **Owner request (5 Oct): help while typing.** Started: suggestions from the workspace's own data, most used first (vendor and item categories, currencies, transaction descriptions, categories); a new invoice takes the customer's usual payment terms; a new bill the vendor's usual account; "Same as last time" copies the lines of the customer's latest invoice (or the vendor's latest bill, amounts included) in one click, and a new purchase order the vendor's latest order (vendors you order from most are listed first); foreign currency rates fill in. Fields suggest values from the workspace's own data as you type (names, addresses, categories, accounts), ranked by the matching algorithms already in the app
+- [~] I-22 **Owner request (5 Oct): edit in place everywhere.** Shared `InlineEdit` done (tested). Screens done: customer list (name, email, phone), vendor list (name, category, email, phone), contact page (address, currency, tags), Inventory (name, SKU, category, cost, price; typing a quantity records a stock count), chart of accounts (name, code, description, category; system codes fixed; duplicate codes refused), transactions (description by one click with the workspace's own descriptions suggested; date and amount of entries typed in by hand, both lines change together; category of a plain entry with accounts used most first; class and location on every line; entries from an invoice, bill, payment or bank line keep their amount and date, and document entries their accounts; locked periods read-only), invoice list (due date while open; date while draft), bill list (vendor's number, due date while unpaid, date while draft). **Add in place** (type a name + Enter): customers, vendors, inventory items; entries at the top of the transaction list (description, amount, Enter; the category is suggested from past entries with a similar description, money in/out follows it, bank account and date stay for the next one). **Archive / delete in place**: customer and vendor lists (archive hides it from lists and new invoices/bills, records keep it, "Show archived" brings it back; delete only when nothing refers to it, checked by the server, which names what uses it); recurring schedules: name, how often and next date in place (not before the last run); tax codes: name and rate in place; chart of accounts: Archive / Restore / Delete in each row's menu, archived accounts hidden behind "Show archived accounts", an account with entries is archived instead of deleted). Purchase orders: vendor, expected delivery and the lines (item, quantity, unit price; type a new line + Enter; remove a line) change in place while nothing was received or billed, the total follows; expected delivery can still move after a partial delivery; an order with nothing received or billed can be deleted from its row. Credit notes and vendor credits: number and reason in place (reasons used before are suggested; a number already used is refused), the date while none of the credit was used; viewers no longer see "New credit note". Next: documents (drafts), projects, settings lists, bank lines; then add/delete/rename from the same places. The contextual side drawer also edits shared customer/vendor/project/item metadata while keeping the current form mounted, with confirmed scoped saves and retained refusal drafts. Any field you can see (a vendor's address in the vendor list, an item's price, a customer's email) can be changed right there by typing, without opening another page; one shared component, applied to every list and detail page, and the rule for every new screen (AGENTS.md) C-15 also covers Projects (name/client/planning budget/status, list and pipeline), Employees (name/email/job role), Assets (name/location/category), Budgets (name/planning amount), draft Estimates (reference/date/expiry/notes) and Dimensions (node/axis labels, previous label aliases and unfinished local edits preserved). Each has component coverage and confirmed scoped saves with refusal/retry. New employee creation is now persisted, not only cached.
+- [~] I-23 **Owner request (5 Oct): help while typing.** Started: suggestions from the workspace's own data, most used first (vendor and item categories, currencies, transaction descriptions, categories); a new invoice takes the customer's usual payment terms; a new bill the vendor's usual account; "Same as last time" copies the lines of the customer's latest invoice (or the vendor's latest bill, amounts included) in one click, and a new purchase order the vendor's latest order (vendors you order from most are listed first); foreign currency rates fill in. The contextual drawer also offers scoped metadata suggestions including reusable multiline addresses. Fields suggest values from the workspace's own data as you type (names, addresses, categories, accounts), ranked by the matching algorithms already in the app
 
 # SECTION J — MISSING REPORTS
 
@@ -1543,7 +1543,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] K-18 Retainers
 - [x] K-19 Bad debt with reversal (server, base currency, tested)
 - [x] K-20 Undeposited funds (Make deposit; tested)
-- [ ] K-21 Expected-bill tracking
+- [x] K-21 Expected-bill tracking: vendors that bill on a rhythm (weekly to quarterly, at least 3 regular bills) are learned from the bills already recorded; Purchases shows "Expected bills" (usual amount or range, how often, expected by / days late) with "Record bill" (the latest bill's lines copied, new dates) and "Not expected"; vendors on a recurring bill schedule are left out (tested)
 - [ ] K-22 Expense claims
 - [ ] K-23 Purchase requisitions
 - [ ] K-24 Payment runs + bank file
@@ -1752,6 +1752,10 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-186 Choosing payment terms on an invoice (Net 15/30/60) didn't change its due date: it stayed on the invoice date, so every invoice looked due at once and reminders went out early. The due date now follows the terms and moves with the invoice date; a new invoice for a customer takes the terms of their latest invoice (I-23) (tested)
 - [x] L-187 **Money:** "Run month-end revaluation" (currency tool) posted one entry that applied a single exchange rate to every asset and liability account, home-currency ones included, for any member, and the rate service fell back to made-up rates (USD→EUR 0.92…) when it couldn't be reached. Rates are now never invented (an error instead; the converter shows no amount and says why) and the run posts nothing until R-07 is built (it must revalue open foreign invoices and bills, since foreign documents are stored in the home currency) (tested)
 - [x] L-188 Credit notes and vendor credits got random numbers (CN-1234, VC-5678) that could repeat and didn't follow any series; a double click on Save made two. They now take the next number of their own series (Settings → Document numbering: credit notes CN-2026-0001…, vendor credits VC-2026-0001…, allocated by the server so two people never get the same one), Save works once, and the amount label shows the workspace currency instead of "$" (tested)
+- [x] L-189 Payments were numbered PMT-<random 4 digits> too, so two payments could share a number. They now take the next number of their own series (PMT-2026-0001…, Settings → Document numbering), allocated in the same database step that saves the payment, so a refused payment uses no number. New estimates no longer fall back to a random EST-1234 either: without a number from the series nothing is saved (tested)
+- [x] L-190 **Money:** the journal entry form filled foreign-currency rates from a made-up table (EUR 0.92 × 1.1 for 2026, ILS 3.65 × 1.1…), and those were even the wrong way round (euros per dollar, used as dollars per euro), so €100 posted as about $101 instead of about $108; clearing the rate box silently used 1. It now fills the last rate used for that currency, then today's rate from the rate service, and posts nothing until a rate is there; the currency list includes the workspace's own currency (a workspace in AUD couldn't choose it) and the ones already used (tested)
+- [x] L-191 Invoice approval (BE-04, merged from the arena AI) trusted the browser: the server stored whatever `approval` a save carried, so a bookkeeper going around the app could mark their own invoice approved, or leave the field out on an invoice saved as sent. Now the server decides on every invoice it saves (only owners and accountants approve or send back, and the record names them with the server's time; an invoice going out over the limit without a record gets one), and a database guard refuses the same from a direct write. Also: a customer who gets paper got the same "send a paper copy" note in the bell every day; now once per reminder day (tested, incl. database rules)
+- [x] L-192 **Money:** a payment on a foreign-currency invoice or bill was booked at the document's own rate, so the bank account in the books got a different amount than the real bank (EUR 100 invoiced at 1.10 and received at 1.15: $110 booked, $115 arrived) and no exchange gain or loss was ever recorded. The payment dialog now shows amounts in the document's currency and asks for the rate on the payment day (filled from the rate service or the last one used); the server books the bank at that rate, clears the receivable/payable at the document's rate and posts the difference as realized exchange gain or loss (refused if there is no such account). Without a rate it stays as before (tested against the database)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
@@ -1830,13 +1834,13 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION O — VISUALISATION
 
-- [ ] O-01 Sunburst
-- [ ] O-02 Treemap
+- [x] O-01 Sunburst
+- [x] O-02 Treemap
 - [ ] O-03 Icicle
 - [ ] O-04 Brush selector
 - [ ] O-05 Chart switcher
 - [ ] O-06 Legend toggling
-- [ ] O-07 Scatter plot
+- [x] O-07 Scatter plot
 - [ ] O-08 Consistent tooltips
 
 # SECTION P — PLATFORM & ENTERPRISE
@@ -1871,7 +1875,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] R-02 Sign-off per item (who, when, note; final once hard-closed)
 - [x] R-03 Soft vs hard close (soft: only owners/accountants post)
 - [x] R-04 Year-end retained-earnings roll (`/close-year` + `ClosingEntryEngine`, tested)
-- [ ] R-05 Auto-reversing accruals
+- [x] R-05 Auto-reversing accruals: a journal entry can be marked "Reverse automatically"; its mirror (every line negated, linked both ways) is posted on the 1st of the next month, or a chosen later date, in the same request, so there is never an accrual without its reversal; a closed month refuses both (tested against the database). The server now accepts a reversal of an entry in the same request
 - [x] R-06 Depreciation run (server, one entry per month, catch-up, tested)
 - [x] R-07 FX revaluation run (the old run was switched off, L-187: build it from open foreign-currency invoices and bills, owner/accountant, with a reversal on the next day) — **done 2026-10-05**:
   the rules live in `src/lib/fxRevaluation.ts`, away from the page and the database: only what is
@@ -2127,17 +2131,17 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION BC — DASHBOARD WIDGETS
 
-- [ ] BC-01 Configurable widget grid
+- [x] BC-01 Configurable widget grid
 - [ ] BC-02 Per-role dashboards
-- [ ] BC-03 Dashboard date range
+- [x] BC-03 Dashboard date range
 - [ ] BC-04 Widget refresh
-- [ ] BC-05 Prior-period comparison
-- [ ] BC-06 KPI sparklines
-- [ ] BC-07 KPI drill-through
-- [ ] BC-08 Receivables widget
-- [ ] BC-09 Payables widget
-- [ ] BC-10 Account balance widget
-- [ ] BC-11 Bank feed health widget
+- [x] BC-05 Prior-period comparison
+- [x] BC-06 KPI sparklines
+- [x] BC-07 KPI drill-through
+- [x] BC-08 Receivables widget
+- [x] BC-09 Payables widget
+- [x] BC-10 Account balance widget
+- [~] BC-11 Bank feed health widget — C-16 status/reconnect UI ready; last successful sync timestamp requires the reserved server route/storage contract (no invented timestamp).
 
 # SECTION BD — ACCOUNTANT PERSONA
 
@@ -2311,20 +2315,20 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CA-34 Bisect accounting statements
 - [ ] CA-35 Invalid ledger entries
 - [ ] CA-36 Process deferred accounting
-- [ ] CB-01 Customer ledger summary
-- [ ] CB-02 Supplier ledger summary
-- [ ] CB-03 Trial balance for party
-- [ ] CB-04 Payment period by invoice date
+- [x] CB-01 Customer ledger summary
+- [x] CB-02 Supplier ledger summary
+- [x] CB-03 Trial balance for party
+- [x] CB-04 Payment period by invoice date
 - [ ] CB-05 Voucher-wise balance
-- [ ] CB-06 Account balance
-- [ ] CB-07 Gross profit
+- [x] CB-06 Account balance
+- [x] CB-07 Gross profit
 - [ ] CB-08 Profitability analysis
-- [ ] CB-09 Financial ratios
-- [ ] CB-10 Sales trends
-- [ ] CB-11 Purchase trends
+- [x] CB-09 Financial ratios
+- [x] CB-10 Sales trends
+- [ ] CB-11 Purchase trends (vendor totals complete; item allocation needs shared accounting helper, C-18 handoff)
 - [ ] CB-12 Item-wise sales register
 - [ ] CB-13 Item-wise purchase register
-- [ ] CB-14 Inactive items
+- [x] CB-14 Inactive items
 - [ ] CB-15 Partner commission
 - [ ] CB-16 Deferred revenue & expense
 - [ ] CB-17 Billed not received
@@ -2339,7 +2343,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CB-26 Consolidated TB
 - [ ] CB-27 Asset depreciation ledger
 - [ ] CB-28 POS register
-- [ ] CB-29 Sales payment summary
+- [x] CB-29 Sales payment summary
 - [ ] CC-01 Per-recipient invitation links + view tracking
 - [ ] CC-02 Design templates
 - [ ] CC-03 Proposals

@@ -6,6 +6,7 @@ import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { Plus, ArrowRight, FileText, Eye, Download } from 'lucide-react';
 import { collection, addDoc, doc, updateDoc } from '../../lib/db/firestore';
 import { db, getIdToken } from '../../firebase';
+import { nextDocumentNumber } from '../../services/documentNumbers';
 import { toast } from 'sonner';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
@@ -47,23 +48,13 @@ export default function EstimatesView() {
     setIsSubmitting(true);
     try {
       const customerObj = customers.find(c => c.id === customerId);
-      let allocatedEstNumber = `EST-${Math.floor(1000 + Math.random() * 9000)}`;
+      // the next number of the estimate series; never a random one, which could repeat (L-189)
+      let allocatedEstNumber: string;
       try {
-        const token = await getIdToken().catch(() => '');
-        const res = await fetch(`/api/v1/workspaces/${currentWorkspaceId}/next-number`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          },
-          body: JSON.stringify({ type: 'estimate' })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.number) allocatedEstNumber = data.number;
-        }
+        allocatedEstNumber = await nextDocumentNumber(currentWorkspaceId, 'estimate');
       } catch (e) {
-        console.error('Failed to fetch next estimate number', e);
+        toast.error('Not saved: no estimate number', { description: e instanceof Error ? e.message : String(e) });
+        return;
       }
 
       const estData = {

@@ -1,8 +1,10 @@
+import ChartFrame, { ChartTooltip } from '../charts/ChartFrame';
+import { useAuthStore } from '../../stores/useAuthStore';
 import React, { useState } from 'react';
 import { Transaction } from '../../types';
 import { TrendingUp, Filter, Maximize2, Download, Zap, Compass, Activity, BrainCircuit } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
+import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 interface ProjectProfitabilityViewProps {
@@ -11,6 +13,7 @@ interface ProjectProfitabilityViewProps {
 }
 
 export default function ProjectProfitabilityView({ transactions, formatCurrency }: ProjectProfitabilityViewProps) {
+  const currency = useAuthStore(state => state.getCurrentWorkspace()?.currency);
   const [filterMode, setFilterMode] = useState<'all' | 'high-yield' | 'loss'>('all');
   const [showAllChart, setShowAllChart] = useState(false);
 
@@ -61,6 +64,8 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
   const totalNet = totalIncome - totalExpense;
 
   const chartData = projectProfitability.map(p => ({
+    id: p.name,
+    label: p.name,
     name: p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name,
     income: p.income / 100,
     expense: p.expense / 100,
@@ -132,9 +137,10 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
              </div>
            </div>
            
-           <div className="h-[400px] w-full">
+           <ChartFrame title="Project profitability data" rows={chartData} currency={currency} series={[{key:'income',name:'Income',unit:'majorMoney'},{key:'expense',name:'Expense',unit:'majorMoney'},{key:'margin',name:'Margin',unit:'percent'}]}>
+             {({rows,hidden}) =>
              <ResponsiveContainer width="100%" height="100%">
-               <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+               <ComposedChart data={rows} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                  <XAxis 
                    dataKey="name" 
@@ -148,7 +154,7 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
                    axisLine={false}
                    tickLine={false}
                    tick={{ fontSize: 10, fill: '#64748b', fontFamily: 'monospace' }}
-                   tickFormatter={(value) => `$${value.toLocaleString()}`}
+                   tickFormatter={(value) => formatCurrency(Math.round(Number(value) * 100))}
                  />
                  <YAxis 
                    yAxisId="right"
@@ -158,23 +164,13 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
                    tick={{ fontSize: 10, fill: '#64748b', fontFamily: 'monospace' }}
                    tickFormatter={(value) => `${value}%`}
                  />
-                 <Tooltip 
-                   cursor={{ fill: '#f8fafc' }}
-                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', padding: '16px' }}
-                   itemStyle={{ fontSize: '12px', fontWeight: 600, fontFamily: 'monospace' }}
-                   labelStyle={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', color: '#0f172a', marginBottom: '8px' }}
-                   formatter={(value: number, name: string) => [
-                     name === 'margin' ? `${value.toFixed(1)}%` : `$${value.toLocaleString()}`, 
-                     name.toUpperCase()
-                   ]}
-                 />
-                 <Legend wrapperStyle={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase' }} />
-                 <Bar yAxisId="left" dataKey="income" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} name="Flux Income" />
-                 <Bar yAxisId="left" dataKey="expense" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} name="Energy Expense" />
-                 <Line yAxisId="right" type="monotone" dataKey="margin" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff' }} name="Margin Resonance %" />
+                 <Tooltip content={<ChartTooltip currency={currency} series={[{key:'income',name:'Income',unit:'majorMoney'},{key:'expense',name:'Expense',unit:'majorMoney'},{key:'margin',name:'Margin',unit:'percent'}]} />} />
+                 <Bar hide={hidden.has('income')} yAxisId="left" dataKey="income" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} name="Flux Income" />
+                 <Bar hide={hidden.has('expense')} yAxisId="left" dataKey="expense" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} name="Energy Expense" />
+                 <Line hide={hidden.has('margin')} yAxisId="right" type="monotone" dataKey="margin" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff' }} name="Margin Resonance %" />
                </ComposedChart>
-             </ResponsiveContainer>
-           </div>
+             </ResponsiveContainer>}
+           </ChartFrame>
         </div>
       )}
 

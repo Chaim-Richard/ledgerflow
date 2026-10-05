@@ -4,6 +4,7 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import type { ChartAccount } from '../../types';
 import { assertPostingOpen } from '../../lib/periodLock';
 import { formatCurrency } from '../../lib/utils';
+import { allocateInTransaction } from './numberingService';
 
 export interface CreatePaymentPayload {
   workspaceId: string;
@@ -18,6 +19,8 @@ export interface CreatePaymentPayload {
   entityName?: string;
   cashAccountId: string;
   offsetAccountId?: string;
+  /** The rate on the payment day for a foreign document (home units per 1); the difference from its own rate is a realized exchange gain or loss (L-192). */
+  paymentExchangeRate?: number;
   allocations: Array<{
     documentId: string;
     documentType: 'invoice' | 'bill';
@@ -183,7 +186,9 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     // 4. Build Payment Document
     const paymentRef = db.collection('payments').doc();
     const paymentId = paymentRef.id;
-    const paymentNumber = `PMT-${Math.floor(1000 + Math.random() * 9000)}`;
+    // the next number of the payment series (Settings → Document numbering); it was PMT-<random 4 digits>, which repeated (L-189)
+    // the number is taken last, just before the writes (taking it writes the series, and every read must come first)
+    let paymentNumber = '';
     const isReceiptPayment = allocations.some(a => a.documentType === 'invoice') || Boolean(customerId);
     const paymentData = {
       id: paymentId,
@@ -220,6 +225,20 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     const isReceipt = isReceiptPayment;
     const ledgerTxRef = db.collection('transactions').doc();
     const baseAmountCents = Math.round(amountCents * paymentRate);
+    // L-192: a foreign document paid at another day's rate: the bank gets what really arrived (or left),
+    // the receivable/payable is cleared at the document's own rate, and the difference is realized
+    // exchange gain or loss. Without a payment-day rate, both sides stay at the document's rate.
+    const dayRate = payload.paymentExchangeRate;
+    const foreignPayment = paymentCurrency !== null && paymentCurrency !== baseCurrency;
+    const cashBaseCents = foreignPayment && typeof dayRate === 'number' && dayRate > 0 ? Math.round(amountCents * dayRate) : baseAmountCents;
+    const realizedFxCents = cashBaseCents - baseAmountCents;
+    let fxAccount: { id: string; name?: string } | undefined;
+    if (realizedFxCents !== 0) {
+      const chart = await tx.get(db.collection('chartAccounts').where('workspaceId', '==', workspaceId));
+      fxAccount = chart.docs.map((d: { id: string; data: () => ChartAccount }) => ({ ...d.data(), id: d.id }))
+        .find((a: ChartAccount) => !a.isArchived && (resolveAccountRole(a) === 'fx_rounding' || /exchange|fx/i.test(String(a.name || ''))) && ['income', 'expense', 'revenue'].includes(String(a.type).toLowerCase()));
+      if (!fxAccount) throw new Error('Add an exchange gain/loss account (category "Rounding Differences") before recording a payment at a different rate');
+    }
 
     const ledgerTxData = {
       id: ledgerTxRef.id,
@@ -227,7 +246,7 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       workspaceId,
       date: paymentDate,
       description: `Payment ${paymentId} (${paymentMethod}) - ${entityName || memo || 'Payment'}`,
-      totalAmountCents: baseAmountCents,
+      totalAmountCents: Math.max(baseAmountCents, cashBaseCents),
       currency: baseCurrency,
       exchangeRate: 1,
       status: 'completed',
@@ -236,21 +255,32 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       metadata: {
         paymentId,
         type: 'payment-posting',
-        ...(paymentRate !== 1 ? { documentCurrency: paymentCurrency, documentAmountCents: amountCents, documentExchangeRate: paymentRate } : {})
+        ...(paymentRate !== 1 ? { documentCurrency: paymentCurrency, documentAmountCents: amountCents, documentExchangeRate: paymentRate } : {}),
+        ...(realizedFxCents !== 0 ? { paymentExchangeRate: dayRate, realizedFxCents } : {})
       },
       lines: [
         {
           accountId: cashAccountId,
-          amountCents: isReceipt ? baseAmountCents : -baseAmountCents,
+          amountCents: isReceipt ? cashBaseCents : -cashBaseCents,
           description: `Cash ${isReceipt ? 'Debit' : 'Credit'} for Payment ${paymentId}`
         },
         {
           accountId: resolvedOffsetAccountId,
           amountCents: isReceipt ? -baseAmountCents : baseAmountCents,
           description: `Offset ${isReceipt ? 'Credit' : 'Debit'} for Payment ${paymentId}`
-        }
+        },
+        // more home currency received than booked is a gain (credit); more paid out is a loss (debit)
+        ...(fxAccount ? [{
+          accountId: fxAccount.id,
+          amountCents: isReceipt ? -realizedFxCents : realizedFxCents,
+          description: `Realized exchange ${(isReceipt ? realizedFxCents > 0 : realizedFxCents < 0) ? 'gain' : 'loss'} for Payment ${paymentId}`
+        }] : [])
       ]
     };
+
+    if (realizedFxCents !== 0) Object.assign(paymentData, { paymentExchangeRate: dayRate, realizedFxCents });
+    paymentNumber = await allocateInTransaction(db, tx, workspaceId, 'payment');
+    paymentData.number = paymentNumber;
 
     // 6. Stage writes
     for (const update of docUpdates) {

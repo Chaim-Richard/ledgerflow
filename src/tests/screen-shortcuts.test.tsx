@@ -14,7 +14,7 @@ test('the shortcut overlay explains existing screen and focused-field handlers',
       for (const shortcut of group.shortcuts) assert.ok(within(section).getByText(shortcut.label));
     }
     assert.ok(view.getByText(/Save the transaction/));
-    assert.ok(view.getByText(/Ctrl.*Enter|⌘.*Enter/));
+    assert.ok(within(view.getByRole('region', { name: 'Transaction editor' })).getByText(/Ctrl.*Enter|⌘.*Enter/));
     assert.ok(view.getByText(/native controls keep their normal Tab/));
   } finally { cleanup(); }
 });

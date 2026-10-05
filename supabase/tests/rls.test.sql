@@ -172,6 +172,18 @@ select pg_temp.expect_ok('edit an item''s price', 'u-book',
 select pg_temp.expect_denied('change an item''s quantity in the browser', 'u-book',
   $$select lf_update('inventory','i1','{"quantityAtHand":50}'::jsonb)$$);
 
+-- only owners and accountants approve or send back an invoice (BE-04, L-191)
+select pg_temp.expect_ok('bookkeeper saves an invoice waiting for approval', 'u-book',
+  $$insert into invoices(id,data) values ('inv-appr', '{"workspaceId":"ws1","customerId":"c2","amountCents":150000,"status":"pending","date":"2026-10-05","approval":{"state":"awaiting","thresholdCents":100000}}')$$);
+select pg_temp.expect_denied('bookkeeper approves it', 'u-book',
+  $$select lf_update('invoices','inv-appr','{"approval":{"state":"approved","thresholdCents":100000}}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper creates an invoice already approved', 'u-book',
+  $$insert into invoices(id,data) values ('inv-appr2', '{"workspaceId":"ws1","customerId":"c2","amountCents":150000,"status":"pending","date":"2026-10-05","approval":{"state":"approved","thresholdCents":100000}}')$$);
+select pg_temp.expect_ok('bookkeeper edits the invoice, leaving the approval alone', 'u-book',
+  $$select lf_update('invoices','inv-appr','{"notes":"PO 77"}'::jsonb)$$);
+select pg_temp.expect_ok('accountant approves it', 'u-acct',
+  $$select lf_update('invoices','inv-appr','{"approval":{"state":"approved","thresholdCents":100000}}'::jsonb)$$);
+
 -- imported records (server-created with importBatchId) stay editable; the batch id is fixed
 do $$ begin
   perform set_config('request.jwt.claims', '', true);

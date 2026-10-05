@@ -6,10 +6,10 @@ import { useCurrentRole } from '../../../hooks/useCurrentRole';
 import { getIdToken } from '../../../firebase';
 import { previewNumber } from '../../../lib/documentNumbers';
 
-type NumberedType = 'invoice' | 'bill' | 'estimate' | 'creditNote' | 'vendorCredit';
+type NumberedType = 'invoice' | 'bill' | 'estimate' | 'creditNote' | 'vendorCredit' | 'payment';
 interface SeriesView { type: NumberedType; prefix: string; nextNumber: number; padding: number; next: string; highestUsed: number }
 
-const LABELS: Record<NumberedType, string> = { invoice: 'Invoices', bill: 'Bills', estimate: 'Estimates', creditNote: 'Credit notes', vendorCredit: 'Vendor credits' };
+const LABELS: Record<NumberedType, string> = { invoice: 'Invoices', bill: 'Bills', estimate: 'Estimates', creditNote: 'Credit notes', vendorCredit: 'Vendor credits', payment: 'Payments' };
 
 async function api(workspaceId: string, path: string, init?: RequestInit) {
   const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}/numbering${path}`, {
@@ -76,7 +76,7 @@ function SeriesRow({ series, workspaceId, onSaved }: { series: SeriesView; works
 
 /**
  * Settings → Document numbering (BA-07): prefix, next number and digits for invoices, bills,
- * estimates, credit notes and vendor credits. The server refuses a next number that is already used,
+ * estimates, credit notes, vendor credits and payments. The server refuses a next number that is already used,
  * so numbers never repeat.
  */
 export default function NumberingSettings() {
@@ -103,7 +103,7 @@ export default function NumberingSettings() {
         <Hash aria-hidden="true" className="w-5 h-5 text-[var(--muted)]" />
         <h2 id="numbering-title" className="text-lg font-bold text-[var(--text)]">Document numbering</h2>
       </div>
-      <p className="text-sm text-[var(--muted)]">Each new invoice, bill, estimate, credit note and vendor credit gets the next number of its series. Change the prefix (for example a new year) or where numbering continues.</p>
+      <p className="text-sm text-[var(--muted)]">Each new invoice, bill, estimate, credit note, vendor credit and payment gets the next number of its series. Change the prefix (for example a new year) or where numbering continues.</p>
       {!canChange && <p className="text-sm text-[var(--muted)]">Only owners and accountants change document numbers.</p>}
       {error && (
         <p role="alert" className="text-sm text-[var(--neg)]">

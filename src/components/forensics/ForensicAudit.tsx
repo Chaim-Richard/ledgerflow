@@ -1,3 +1,4 @@
+import ChartFrame, { ChartTooltip } from '../charts/ChartFrame';
 import React, { useMemo, useState, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -158,9 +159,10 @@ const ForensicAudit = React.memo(() => {
                  </div>
               </div>
 
-              <div className="flex-1 h-[350px]">
+              <div className="flex-1 min-w-0"><ChartFrame title="First-digit distribution" rows={benfordAnalysis.map(row => ({...row,id:String(row.digit),label:String(row.digit)}))} series={[{key:'ideal',name:'Ideal Pattern',unit:'percent'},{key:'actual',name:'Your Ledger',unit:'percent'}]}>
+                 {({rows,hidden}) =>
                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={benfordAnalysis}>
+                    <BarChart data={rows}>
                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                        <XAxis 
                          dataKey="digit" 
@@ -174,14 +176,12 @@ const ForensicAudit = React.memo(() => {
                          tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700 }}
                          tickFormatter={(val) => `${val}%`}
                        />
-                       <Tooltip 
-                         cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                         contentStyle={{ backgroundColor: '#111', border: 'none', borderRadius: '12px' }}
-                       />
-                       <Bar dataKey="ideal" name="Ideal Pattern" fill="rgba(255,255,255,0.1)" radius={[4, 4, 0, 0]} />
-                       <Bar dataKey="actual" name="Your Ledger" fill="#A8C7FA" radius={[4, 4, 0, 0]} />
+                       <Tooltip content={<ChartTooltip series={[{key:'ideal',name:'Ideal Pattern',unit:'percent'},{key:'actual',name:'Your Ledger',unit:'percent'}]} />} />
+                       <Bar hide={hidden.has('ideal')} dataKey="ideal" name="Ideal Pattern" fill="rgba(255,255,255,0.1)" radius={[4, 4, 0, 0]} />
+                       <Bar hide={hidden.has('actual')} dataKey="actual" name="Your Ledger" fill="#A8C7FA" radius={[4, 4, 0, 0]} />
                     </BarChart>
-                 </ResponsiveContainer>
+                 </ResponsiveContainer>}
+                 </ChartFrame>
               </div>
            </div>
            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 blur-[100px] rounded-full" />

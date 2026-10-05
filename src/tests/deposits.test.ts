@@ -73,10 +73,16 @@ describe('Make deposit', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () =>
 
   after(async () => {
     server?.close();
-    for (const table of ['transactions', 'payments', 'invoices', 'chartAccounts', 'auditLogs', 'workspaces']) {
+    for (const table of ['transactions', 'payments', 'invoices', 'chartAccounts', 'auditLogs', 'numberingSeries', 'workspaces']) {
       await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
     }
     await db.terminate();
+  });
+
+  test('payments are numbered from their own series, one after another (they were random and could repeat; L-189)', async () => {
+    const numbers = await Promise.all(paymentIds.map(async pid => (await db.collection('payments').doc(pid).get()).data()?.number));
+    const year = new Date().toISOString().slice(0, 4);
+    assert.deepEqual(numbers, [`PMT-${year}-0001`, `PMT-${year}-0002`, `PMT-${year}-0003`]);
   });
 
   test('a viewer cannot make deposits', async () => {

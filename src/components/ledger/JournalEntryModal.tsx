@@ -21,24 +21,13 @@ import { isPostable } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
 import { MatchingEngine } from '../../lib/MatchingEngine';
 import { SpellChecker } from '../../lib/algorithms';
-import { TemporalValidity } from '../../types';
+import { useSuggestedRate } from '../../hooks/useSuggestedRate';
+import { documentCurrencies } from '../../lib/exchangeRates';
+import { firstOfNextMonth, reversalDateProblem, withReversal } from '../../lib/autoReversal';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
-import { useTimeout } from '../../hooks/useTimeout';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isLockedDate } from '../../lib/periodLock';
-
-// Temporal series for various currencies (to ensure we use 'rate of date of change' as requested)
-const getTemporalRatesFor = (currency: string): TemporalValidity[] => {
-  const baseRate = currency === 'EUR' ? 0.92 : currency === 'GBP' ? 0.79 : currency === 'JPY' ? 151.42 : currency === 'ILS' ? 3.65 : currency === 'CAD' ? 1.35 : 1.0;
-  return [
-    { validFrom: '0000-01-01', validTo: '2022-12-31', value: baseRate * 0.90 },
-    { validFrom: '2023-01-01', validTo: '2023-12-31', value: baseRate * 0.95 },
-    { validFrom: '2024-01-01', validTo: '2024-12-31', value: baseRate },
-    { validFrom: '2025-01-01', validTo: '2025-12-31', value: baseRate * 1.05 },
-    { validFrom: '2026-01-01', validTo: '9999-12-31', value: baseRate * 1.1 },
-  ];
-};
 
 interface JournalEntryModalProps {
   isOpen: boolean;
@@ -52,6 +41,10 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(getLocalDateISO());
   const [reference, setReference] = useState('');
+  // R-05: an accrual that undoes itself (on the 1st of the next month unless another date is chosen)
+  const [autoReverse, setAutoReverse] = useState(false);
+  const [reverseOnTyped, setReverseOnTyped] = useState('');
+  const reverseOn = reverseOnTyped || (date ? firstOfNextMonth(date) : '');
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [showDimensions, setShowDimensions] = useState(false);
   
@@ -62,8 +55,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   const activeDimensions = (workspace?.dimensions || DEFAULT_WORKSPACE_DIMENSIONS).filter(d => d.id !== 'category');
   
   const [transactionCurrency, setTransactionCurrency] = useState(baseCurrency || 'USD');
-  const [exchangeRate, setExchangeRate] = useState<number>(1.0);
-  const { setSafeTimeout } = useTimeout();
+  // the rate the person confirms (filled from the last one used or today's; never a made-up one, L-190)
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [rateTyped, setRateTyped] = useState(false);
   
   const isLocked = !!date && isLockedDate(date, lockDate, lockException);
 
@@ -89,22 +83,16 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
 
   const { dialogProps, titleId } = useDialog(onClose, isOpen);
 
-  React.useEffect(() => {
-    if (transactionCurrency !== baseCurrency) {
-      try {
-        const series = getTemporalRatesFor(transactionCurrency);
-        const rate = TruthEngine.resolveEffectiveValue(series, date);
-        const fixedRate = Number(rate.toFixed(6));
-        setSafeTimeout(() => setExchangeRate(fixedRate), 0);
-      } catch {
-        setSafeTimeout(() => setExchangeRate(1.0), 0);
-      }
-    } else {
-      setSafeTimeout(() => setExchangeRate(1.0), 0);
-    }
-  }, [transactionCurrency, date, baseCurrency, setSafeTimeout]);
-
   const transactions = useLedgerStore(s => s.transactions);
+  const usedRates = useMemo(() => transactions
+    .filter(t => t.originalCurrency && typeof t.exchangeRate === 'number')
+    .map(t => ({ currency: t.originalCurrency, exchangeRate: t.exchangeRate, date: t.date })), [transactions]);
+  const rateNote = useSuggestedRate({
+    currency: transactionCurrency, homeCurrency: baseCurrency || 'USD', enabled: !rateTyped, docs: usedRates,
+    onRate: rate => setExchangeRate(rate),
+  });
+  const currencyChoices = useMemo(() => documentCurrencies(baseCurrency || 'USD', transactionCurrency, usedRates), [baseCurrency, transactionCurrency, usedRates]);
+  const chooseCurrency = (code: string) => { setTransactionCurrency(code); setExchangeRate(null); setRateTyped(false); };
   const analyticalPatternCache = useLedgerStore(s => s.analyticalPatternCache);
   const autoRules = useLedgerStore(s => s.autoRules);
   const matchingThreshold = useLedgerStore(s => s.matchingThreshold);
@@ -202,7 +190,11 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
 
     try {
       const isForeignCurrency = transactionCurrency !== baseCurrency;
-      const appliedRate = isForeignCurrency ? exchangeRate : 1.0;
+      if (isForeignCurrency && !(exchangeRate && exchangeRate > 0)) {
+        toast.error(`Enter the exchange rate: how much 1 ${transactionCurrency} is in ${baseCurrency}`);
+        return;
+      }
+      const appliedRate = isForeignCurrency ? exchangeRate as number : 1.0;
       
       const filteredLines = lines.filter(l => l.accountId && ((l.debit || 0) > 0 || (l.credit || 0) > 0));
       if (filteredLines.length < 2) {
@@ -273,24 +265,37 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
       };
 
       const token = await getIdToken();
-      const res = await fetch('/api/v1/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'x-operation-id': payload.id
-        },
-        body: JSON.stringify({ transaction: payload })
-      });
+      if (autoReverse) {
+        const problem = reversalDateProblem(date, reverseOn);
+        if (problem) { toast.error(problem); return; }
+      }
+      // with a reversal: both entries in one request, so there is never one without the other (R-05)
+      const res = autoReverse
+        ? await fetch('/api/v1/transactions/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Idempotency-Key': payload.id },
+          body: JSON.stringify({ transactions: withReversal(payload, reverseOn), workspaceId }),
+        })
+        : await fetch('/api/v1/transactions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'x-operation-id': payload.id
+          },
+          body: JSON.stringify({ transaction: payload })
+        });
 
       if (!res.ok) {
         const errObj = await res.json().catch(() => ({}));
         throw new Error(errObj.error || `HTTP error ${res.status}`);
       }
 
-      toast.success('Journal entry recorded');
+      toast.success(autoReverse ? `Journal entry recorded; it reverses on ${reverseOn}` : 'Journal entry recorded');
       onClose();
       // Reset form
+      setAutoReverse(false);
+      setReverseOnTyped('');
       setDescription('');
       setReference('');
       setLines([
@@ -415,10 +420,10 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                    <select 
                      id="je-currency"
                      value={transactionCurrency}
-                     onChange={(e) => setTransactionCurrency(e.target.value)}
+                     onChange={(e) => chooseCurrency(e.target.value)}
                      className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:border-[var(--brass-line)] focus:bg-[var(--surface)] transition-all font-bold appearance-none text-[var(--text)] cursor-pointer"
                    >
-                     {['USD', 'EUR', 'GBP', 'ILS', 'JPY', 'CAD'].map(cur => (
+                     {currencyChoices.map(cur => (
                        <option key={cur} value={cur}>{cur}</option>
                      ))}
                    </select>
@@ -427,19 +432,35 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                 {transactionCurrency !== baseCurrency && (
                    <div className="space-y-2">
                      <label htmlFor="je-fx-rate" className="block text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">
-                       Exchange Rate ({transactionCurrency} → {baseCurrency})
+                       {baseCurrency} for 1 {transactionCurrency}
                      </label>
                      <input 
                        id="je-fx-rate"
                        type="number" 
                        step="0.000001"
-                       value={exchangeRate}
-                       onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
-                       placeholder="e.g. 1.08"
+                       min="0"
+                       value={exchangeRate ?? ''}
+                       onChange={(e) => { setRateTyped(true); const n = parseFloat(e.target.value); setExchangeRate(Number.isFinite(n) && n > 0 ? n : null); }}
+                       placeholder="Type the rate"
                        required
                        className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:outline-none focus:border-[var(--brass-line)] focus:bg-[var(--surface)] transition-all font-mono font-bold text-[var(--text)]"
                      />
+                     {rateNote && <p className="text-[11px] text-[var(--muted)]">{rateNote}</p>}
                    </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--text)]">
+                <label htmlFor="je-auto-reverse" className="flex items-center gap-2 cursor-pointer">
+                  <input id="je-auto-reverse" type="checkbox" checked={autoReverse} onChange={e => setAutoReverse(e.target.checked)} />
+                  Reverse automatically (an accrual)
+                </label>
+                {autoReverse && (
+                  <label htmlFor="je-reverse-on" className="flex items-center gap-2">
+                    <span className="text-[var(--muted)]">on</span>
+                    <input id="je-reverse-on" type="date" value={reverseOn} min={date || undefined} onChange={e => setReverseOnTyped(e.target.value)}
+                      className="px-3 py-1.5 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-[var(--text)]" />
+                  </label>
                 )}
               </div>
 
