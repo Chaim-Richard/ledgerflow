@@ -1419,7 +1419,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] F-15 `QBOMigrationWizard.tsx` — migration controller and sibling view; parsing/mapping/commit logic and JSX preserved (Codex)
 - [ ] F-16 `Inventory.tsx`
 - [x] F-17 `RulesSettings.tsx` — rules controller and sibling view; rule saving/testing/applying callbacks and JSX preserved (Codex)
-- [ ] F-18 `PivotSheet.tsx`
+- [x] F-18 `PivotSheet.tsx` — pivot controller and sibling view; grouping/matrix calculations and JSX preserved (Codex)
 - [ ] F-19 `businessTemplates.ts`
 - [ ] F-20 `Projects.tsx`
 - [~] F-21 800-line limit (eslint `max-lines` warning on; 11 files over)
