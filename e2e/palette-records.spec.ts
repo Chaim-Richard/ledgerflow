@@ -13,6 +13,15 @@ test('recent records reopen by typed link from another page', async ({ page }) =
   const input = page.getByRole('textbox', { name: 'Search commands or enter a transaction' });
   await expect(input).toBeFocused();
   await expect(page.getByRole('dialog', { name: 'Command palette' })).toHaveCount(1);
+  await expect(page.getByRole('heading', { name: 'Recent items', exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Account cash-recent/ }).click();
   await expect(page).toHaveURL(/#ledger\/account\/cash-recent$/);
+  await page.evaluate(async () => {
+    const { useLedgerStore } = await import('/src/stores/useLedgerStore.ts');
+    useLedgerStore.setState({ vendors: [{ id: 'vendor-he', uid: '', workspaceId: '', name: 'שלום Supply', category: 'Supplier' }], customers: [{ id: 'customer-he', uid: '', workspaceId: '', name: 'שלום Customer' }] });
+  });
+  await page.keyboard.press('Control+k'); await input.fill('שָׁלוֹם');
+  await expect(page.getByRole('heading', { name: 'Customers', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Vendors', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
 });
