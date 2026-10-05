@@ -1,6 +1,10 @@
+import { inlineRecordAdapter } from '../../lib/inlineRecordAdapter';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { doc, setDoc } from '../../lib/db/firestore';
+import { db } from '../../firebase';
 import { EmployeeInlineDetails } from './EmployeeInlineDetails';
 import { useDialog } from '../../hooks/useDialog';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Employee, PayRun, Transaction, TransactionLine } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -20,9 +24,8 @@ import {
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { Labelled } from '../ui/Labelled';
 
-export const PayrollView: React.FC = () => {
+const PayrollViewContent: React.FC = () => {
   const employees = useLedgerStore(s => (s.employees || []) as Employee[]);
-  const setEmployees = useLedgerStore(s => s.setEmployees);
   const payRuns = useLedgerStore(s => (s.payRuns || []) as PayRun[]);
   const setPayRuns = useLedgerStore(s => s.setPayRuns);
   const accounts = useLedgerStore(s => s.accounts);
@@ -35,11 +38,17 @@ export const PayrollView: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'runs' | 'employees'>('runs');
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
-  const { dialogProps: overlay1DialogProps, titleId: overlay1TitleId } = useDialog(() => setIsAddingEmployee(false), isAddingEmployee);
+  const { dialogProps: overlay1DialogProps, titleId: overlay1TitleId } = useDialog(() => { if (!employeeSaving) setIsAddingEmployee(false); }, isAddingEmployee);
   const [isGeneratingRun, setIsGeneratingRun] = useState(false);
   const { dialogProps: overlay2DialogProps, titleId: overlay2TitleId } = useDialog(() => setIsGeneratingRun(false), isGeneratingRun);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { setSafeTimeout } = useTimeout();
+
+  const canWrite = useCurrentRole() !== 'viewer';
+  const [employeeSaving, setEmployeeSaving] = useState(false);
+  const [employeeError, setEmployeeError] = useState('');
+  const employeeBusy = useRef(false);
+  const employeeDraftIdentity = useRef<{ id: string; createdAt: string } | null>(null);
 
   // New employee form
   const [empName, setEmpName] = useState('');
@@ -86,14 +95,19 @@ export const PayrollView: React.FC = () => {
     };
   }, [employees]);
 
-  const handleSaveEmployee = () => {
-    if (!empName || !empSalary) return;
+  const handleSaveEmployee = async () => {
+    if (!empName || !empSalary || employeeBusy.current) return;
+    const session = inlineRecordAdapter.session();
+    if (!session?.writable) { setEmployeeError('Your workspace role cannot add employees.'); return; }
 
     const salaryCents = Math.round(parseFloat(empSalary) * 100);
+    if (!Number.isSafeInteger(salaryCents) || salaryCents < 0) { setEmployeeError('Enter a valid annual salary.'); return; }
+    if (empEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(empEmail)) { setEmployeeError('Enter a valid email address.'); return; }
+    const identity = employeeDraftIdentity.current ??= { id: `emp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, createdAt: new Date().toISOString() };
     const newEmp: Employee = {
-      id: `emp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      uid: user?.uid || 'system',
-      workspaceId: currentWorkspace?.id || 'default',
+      id: identity.id,
+      uid: session.uid,
+      workspaceId: session.workspaceId,
       name: empName,
       email: empEmail || undefined,
       role: empRole || 'Team Member',
@@ -102,17 +116,22 @@ export const PayrollView: React.FC = () => {
       filingStatus: empStatus,
       state: empState,
       status: 'Active',
-      createdAt: new Date().toISOString()
+      createdAt: identity.createdAt
     };
 
-    setEmployees([...employees, newEmp]);
-    setIsAddingEmployee(false);
-    setEmpName('');
-    setEmpEmail('');
-    setEmpRole('');
-    setEmpSalary('');
-    setSuccessMessage(`Added employee "${empName}" to roster.`);
-    setSafeTimeout(() => setSuccessMessage(null), 4000);
+    employeeBusy.current = true; setEmployeeSaving(true); setEmployeeError('');
+    try {
+      await setDoc(doc(db, 'employees', newEmp.id), newEmp);
+      const current = inlineRecordAdapter.session();
+      if (!current?.writable || current.uid !== session.uid || current.workspaceId !== session.workspaceId) throw new Error('Workspace changed. Reopen the roster.');
+      useLedgerStore.setState(state => ({ employees: [...state.employees.filter(employee => employee.id !== newEmp.id), newEmp] }));
+      employeeDraftIdentity.current = null;
+      setIsAddingEmployee(false);
+      setEmpName(''); setEmpEmail(''); setEmpRole(''); setEmpSalary('');
+      setSuccessMessage(`Added employee "${newEmp.name}" to roster.`);
+      setSafeTimeout(() => setSuccessMessage(null), 4000);
+    } catch (error) { setEmployeeError(error instanceof Error ? error.message : 'Could not save the employee. Your draft is retained.'); }
+    finally { employeeBusy.current = false; setEmployeeSaving(false); }
   };
 
   const handlePostPayRunToLedger = () => {
@@ -213,7 +232,8 @@ export const PayrollView: React.FC = () => {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setIsAddingEmployee(true)}
+            disabled={!canWrite}
+            onClick={() => { setEmployeeError(''); setIsAddingEmployee(true); }}
             className="px-3.5 py-2 text-xs font-semibold bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg flex items-center gap-1.5 transition-colors border border-neutral-300 cursor-pointer"
             id="add-employee-btn"
           >
@@ -336,7 +356,8 @@ export const PayrollView: React.FC = () => {
               Add team members to calculate recurring payroll obligations, tax withholdings, and pay stubs.
             </p>
             <button
-              onClick={() => setIsAddingEmployee(true)}
+              disabled={!canWrite}
+            onClick={() => { setEmployeeError(''); setIsAddingEmployee(true); }}
               className="mt-4 px-4 py-2 text-xs font-semibold bg-neutral-900 text-white rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
             >
               <Plus aria-hidden="true" className="w-3.5 h-3.5" />
@@ -399,16 +420,16 @@ export const PayrollView: React.FC = () => {
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden border border-neutral-200">
             <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-neutral-50">
               <h2 id={overlay1TitleId} className="text-sm font-bold text-neutral-900">Add Employee to Roster</h2>
-              <button aria-label="Close employee dialog" onClick={() => setIsAddingEmployee(false)} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
+              <button disabled={employeeSaving} aria-label="Close employee dialog" onClick={() => setIsAddingEmployee(false)} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md">
                 <X aria-hidden="true" className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-5 space-y-4 text-xs">
+            <fieldset disabled={employeeSaving || !canWrite} className="p-5 space-y-4 text-xs">
               <div>
                 <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Full Name">
                   <input
-                    type="text"
+                    type="text" dir="auto"
                     placeholder="e.g. Alex Morgan"
                     value={empName}
                     onChange={e => setEmpName(e.target.value)}
@@ -432,7 +453,7 @@ export const PayrollView: React.FC = () => {
                 <div>
                   <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Job Role / Title">
                     <input
-                      type="text"
+                      type="text" dir="auto"
                       placeholder="Senior Engineer"
                       value={empRole}
                       onChange={e => setEmpRole(e.target.value)}
@@ -486,7 +507,7 @@ export const PayrollView: React.FC = () => {
                 <div>
                   <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="State Tax Code">
                     <input
-                      type="text"
+                      type="text" dir="auto"
                       maxLength={2}
                       placeholder="CA / NY / TX"
                       value={empState}
@@ -497,10 +518,12 @@ export const PayrollView: React.FC = () => {
                 </div>
               </div>
 
+              {employeeError && <p role="alert" className="text-sm text-red-700">{employeeError}</p>}
               <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsAddingEmployee(false)}
+                  disabled={employeeSaving}
                   className="px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
                 >
                   Cancel
@@ -508,14 +531,14 @@ export const PayrollView: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleSaveEmployee}
-                  disabled={!empName || !empSalary}
+                  disabled={!empName || !empSalary || employeeSaving || !canWrite}
                   className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   <Check aria-hidden="true" className="w-3.5 h-3.5" />
-                  Save Employee
+                  {employeeSaving ? 'Saving employee…' : 'Save Employee'}
                 </button>
               </div>
-            </div>
+            </fieldset>
           </div>
         </div>
       )}
@@ -600,7 +623,7 @@ export const PayrollView: React.FC = () => {
                   <tbody className="divide-y divide-neutral-100">
                     {calculatedPayRun.items.map((item) => (
                       <tr key={item.employee.id}>
-                        <td className="py-2 px-3 font-medium text-neutral-900">{item.employee.name}</td>
+                        <td className="py-2 px-3 font-medium text-neutral-900"><EmployeeInlineDetails employee={item.employee} /></td>
                         <td className="py-2 px-3 text-right font-mono">{formatCurrency(item.calc.grossPayCents)}</td>
                         <td className="py-2 px-3 text-right font-mono text-neutral-600">
                           {formatCurrency(item.calc.employeeFederalTaxCents + item.calc.employeeStateTaxCents)}
@@ -638,6 +661,12 @@ export const PayrollView: React.FC = () => {
       )}
     </div>
   );
+};
+
+
+export const PayrollView: React.FC = () => {
+  const uid = useAuthStore(state => state.user?.uid), workspace = useAuthStore(state => state.currentWorkspaceId);
+  return <PayrollViewContent key={`${uid}:${workspace}`} />;
 };
 
 export default PayrollView;
