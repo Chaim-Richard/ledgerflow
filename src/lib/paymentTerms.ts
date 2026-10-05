@@ -68,3 +68,26 @@ export function calculateLateFee(
     lateFeeCents: totalLateFeeCents
   };
 }
+
+const TERMS: readonly PaymentTerm[] = ['due_on_receipt', 'net_15', 'net_30', 'net_45', 'net_60'];
+
+/** A known term with a fixed number of days ('custom' and unknown values are not). */
+export function isFixedTerm(term: unknown): term is Exclude<PaymentTerm, 'custom'> {
+  return typeof term === 'string' && (TERMS as readonly string[]).includes(term);
+}
+
+/**
+ * Terms for a customer's new invoice (I-23): the customer's own, else the terms on their most
+ * recent invoice, else none (the form keeps its default).
+ */
+export function termsForCustomer(
+  customer: { id: string; paymentTerms?: string } | undefined,
+  invoices: Array<{ customerId?: string; paymentTerms?: string; date?: string; status?: string }>,
+): Exclude<PaymentTerm, 'custom'> | null {
+  if (!customer) return null;
+  if (isFixedTerm(customer.paymentTerms)) return customer.paymentTerms;
+  const last = invoices
+    .filter(i => i.customerId === customer.id && i.status !== 'void' && isFixedTerm(i.paymentTerms))
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))[0];
+  return last && isFixedTerm(last.paymentTerms) ? last.paymentTerms : null;
+}

@@ -1,4 +1,5 @@
 import { useDialog } from '../../hooks/useDialog';
+import { calculateDueDate, isFixedTerm, termsForCustomer } from '../../lib/paymentTerms';
 import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -35,7 +36,8 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const inventoryItems = useLedgerStore(s => s.inventory || []);
-  useLedgerCollections('inventory');
+  useLedgerCollections('inventory', 'invoices');
+  const pastInvoices = useLedgerStore(s => s.invoices);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
 
   const [invoice, setInvoice] = useState<Partial<Invoice>>(() => initialInvoice || ({
@@ -228,7 +230,10 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                     // a new invoice starts in the customer's currency (Y-22); an existing one keeps its own
                     const custCurrency = cust && !editingExisting ? (cust.currency || workspaceCurrency) : null;
                     const currencyChange = custCurrency && custCurrency !== currency ? { currency: custCurrency, exchangeRate: 1 } : {};
-                    setInvoice({ ...invoice, customerId: cust ? cust.id : `new-${crypto.randomUUID()}`, customerName: cust ? cust.name : e.target.value, ...currencyChange });
+                    // a new invoice takes the customer's usual terms, and the due date follows (I-23)
+                    const terms = !editingExisting ? termsForCustomer(cust as { id: string; paymentTerms?: string } | undefined, pastInvoices) : null;
+                    const termsChange = terms ? { paymentTerms: terms, dueDate: calculateDueDate(invoice.date || '', terms) } : {};
+                    setInvoice({ ...invoice, customerId: cust ? cust.id : `new-${crypto.randomUUID()}`, customerName: cust ? cust.name : e.target.value, ...currencyChange, ...termsChange });
                   }}
                   placeholder="Type or select customer"
                   className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
@@ -285,7 +290,8 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               <select 
                 id="inv-payment-terms"
                 value={invoice.paymentTerms || 'due_on_receipt'}
-                onChange={(e) => setInvoice({ ...invoice, paymentTerms: e.target.value })}
+                // the due date follows the terms (it stayed on the invoice date before; L-186)
+                onChange={(e) => setInvoice({ ...invoice, paymentTerms: e.target.value, ...(isFixedTerm(e.target.value) ? { dueDate: calculateDueDate(invoice.date || '', e.target.value) } : {}) })}
                 className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="due_on_receipt">Due on Receipt</option>
@@ -335,7 +341,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                 type="date"
                 required
                 value={invoice.date}
-                onChange={(e) => setInvoice({ ...invoice, date: e.target.value })}
+                onChange={(e) => setInvoice({ ...invoice, date: e.target.value, ...(isFixedTerm(invoice.paymentTerms) && e.target.value ? { dueDate: calculateDueDate(e.target.value, invoice.paymentTerms) } : {}) })}
                 className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               />
             </div>

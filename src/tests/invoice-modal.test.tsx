@@ -110,6 +110,22 @@ describe('Invoice dialog', () => {
     assert.equal(saved.length, 0);
   });
 
+  test('the due date follows the terms and the invoice date; a customer brings their usual terms (L-186, I-23)', () => {
+    useLedgerStore.setState({ invoices: [
+      { id: 'old', customerId: 'c1', date: '2026-01-10', paymentTerms: 'net_15', status: 'paid', amountCents: 100 } as Invoice,
+      { id: 'newer', customerId: 'c1', date: '2026-03-10', paymentTerms: 'net_60', status: 'sent', amountCents: 100 } as Invoice,
+    ] });
+    setup();
+    type(input('Invoice Date'), '2026-05-01');
+    type(screen.getByLabelText('Payment Terms'), 'net_30');
+    assert.equal(input('Due Date').value, '2026-05-31');
+    type(input('Invoice Date'), '2026-06-01');
+    assert.equal(input('Due Date').value, '2026-07-01', 'moves with the date');
+    type(input('Customer'), 'Acme Ltd');
+    assert.equal((screen.getByLabelText('Payment Terms') as HTMLSelectElement).value, 'net_60', 'the terms of their latest invoice');
+    assert.equal(input('Due Date').value, '2026-07-31');
+  });
+
   test('closing with unsaved changes asks first; untouched, it just closes (I-07)', () => {
     let closed = 0;
     const asked: string[] = [];

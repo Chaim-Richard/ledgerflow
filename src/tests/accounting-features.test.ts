@@ -101,3 +101,19 @@ describe('Accounting Features & Engines Suite (Items 118 - 130)', () => {
     });
   });
 });
+
+test('terms for a customer: their own, else their latest invoice\'s, else none (I-23)', async () => {
+  const { termsForCustomer, isFixedTerm } = await import('../lib/paymentTerms');
+  const invoices = [
+    { customerId: 'c1', date: '2026-01-01', paymentTerms: 'net_15' },
+    { customerId: 'c1', date: '2026-02-01', paymentTerms: 'net_45' },
+    { customerId: 'c1', date: '2026-03-01', paymentTerms: 'net_60', status: 'void' },
+    { customerId: 'c2', date: '2026-04-01', paymentTerms: 'net_30' },
+  ];
+  assert.equal(termsForCustomer({ id: 'c1' }, invoices), 'net_45');
+  assert.equal(termsForCustomer({ id: 'c1', paymentTerms: 'net_30' }, invoices), 'net_30');
+  assert.equal(termsForCustomer({ id: 'c3' }, invoices), null);
+  assert.equal(termsForCustomer(undefined, invoices), null);
+  assert.equal(isFixedTerm('custom'), false);
+  assert.equal(isFixedTerm('net_15'), true);
+});
