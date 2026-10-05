@@ -5,8 +5,9 @@ import { motion } from 'motion/react';
 import MonthNavigator from '../ui/MonthNavigator';
 import DrillDownModal from '../layout/DrillDownModal';
 import type { BalanceSheetModel } from './BalanceSheetView';
+import { StatementColumns } from './StatementColumns';
 
-export function BalanceSheetReport({ accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, isDataTruncated, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct }: BalanceSheetModel) {
+export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, isDataTruncated, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct }: BalanceSheetModel) {
   return (
     <div className="space-y-6">
       {/* Authoritative / Truncation Status Banner */}
@@ -69,11 +70,11 @@ export function BalanceSheetReport({ accounts, formatCurrency, formId, transacti
           <div className="hidden sm:block w-px h-8 bg-slate-200" />
 
           {/* Comparative mode selector */}
-          <label htmlFor={`${formId}-comparative`} aria-label="Comparative Year-on-Year" className="flex items-center gap-2 cursor-pointer group/toggle">
+          <label htmlFor={`${formId}-comparative`} aria-label="Comparative Year-on-Year" className="flex min-h-11 items-center gap-2 cursor-pointer group/toggle rounded focus-within:outline focus-within:outline-2 focus-within:outline-indigo-500">
             <input 
                id={`${formId}-comparative`}
                type="checkbox" 
-               className="hidden" 
+               className="sr-only"
                checked={isComparative} 
                onChange={(e) => setIsComparative(e.target.checked)} 
             />
@@ -201,6 +202,14 @@ export function BalanceSheetReport({ accounts, formatCurrency, formId, transacti
         </div>
       )}
 
+      <StatementColumns kind="bs" title="Balance Sheet" accounts={accounts} transactions={transactions}
+        startDate={columnStartDate} endDate={asOfDate} compare={isComparative}
+        compareStartDate={columnCompareStartDate} compareEndDate={priorDate}
+        mode={columnMode} onModeChange={setColumnMode} showPercent={showPercent} onPercentChange={setShowPercent}
+        totalData={currentData} previousTotalData={prevData} totalAuthoritative={isServerAuthoritative}
+        formatMoney={formatCurrency} sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}
+        onDrillDown={(accountName, selectedTransactions) => setDrillDownTarget({ accountName, transactions: selectedTransactions })} />
+      {columnMode === 'total' && !showPercent && !isComparative && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Assets Column */}
         <motion.div 
@@ -497,7 +506,10 @@ export function BalanceSheetReport({ accounts, formatCurrency, formId, transacti
         </motion.div>
       </div>
 
+      )}
+
       {/* Drill-Down Modal */}
+
       {drillDownTarget && (
         <DrillDownModal
           isOpen={!!drillDownTarget}

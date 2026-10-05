@@ -8,6 +8,8 @@ import { isPostable, isTransactionInDateRange, lineAmount, calculateNetIncome } 
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useFinancialReporting, ServerBalanceSheetData } from '../../hooks/useFinancialReporting';
 import { BalanceSheetReport } from './BalanceSheetReport';
+import type { ReportColumnMode } from '../../lib/reportColumns';
+import { getFiscalYearBounds } from '../../lib/fiscalCalendar';
 
 interface BalanceSheetViewProps {
   accounts: ChartAccount[];
@@ -15,10 +17,14 @@ interface BalanceSheetViewProps {
   /** As-of date and comparison chosen on the Reports page; the view follows them when given. */
   asOfDate?: string;
   compareEndDate?: string;
+  startDate?: string;
+  compareStartDate?: string;
 }
 
-function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsOfDate, compareEndDate }: BalanceSheetViewProps) {
+function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsOfDate, compareEndDate, startDate: pageStartDate, compareStartDate }: BalanceSheetViewProps) {
   const formId = useId();
+  const [columnMode, setColumnMode] = useState<ReportColumnMode>('total');
+  const [showPercent, setShowPercent] = useState(false);
   const transactions = useLedgerStore(state => state.transactions || []);
   
   const [asOfDate, setAsOfDate] = usePageSyncedState(pageAsOfDate || '', pageAsOfDate || undefined, getLocalDateISO);
@@ -72,6 +78,10 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
   const businessType = currentWorkspace?.businessType || 'generic';
+  const fiscalStart = currentWorkspace?.fiscalYearStartMonth || 1;
+  const columnStartDate = pageStartDate && pageStartDate <= asOfDate ? pageStartDate : getFiscalYearBounds(asOfDate, fiscalStart).startDate;
+  const columnCompareStartDate = compareStartDate && compareStartDate <= priorDate ? compareStartDate : getFiscalYearBounds(priorDate, fiscalStart).startDate;
+
 
   const labels = useMemo(() => {
     if (businessType === 'personal') {
@@ -321,7 +331,7 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
     return { diff, pct };
   };
 
-  return { accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, isDataTruncated, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct };
+  return { columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, isDataTruncated, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct };
 }
 
 export type BalanceSheetModel = ReturnType<typeof useBalanceSheetModel>;

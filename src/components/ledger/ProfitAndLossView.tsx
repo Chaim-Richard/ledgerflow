@@ -12,6 +12,8 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useFinancialReporting } from '../../hooks/useFinancialReporting';
 import { getComparePeriod } from '../../lib/fiscalCalendar';
 import MonthNavigator from '../ui/MonthNavigator';
+import { StatementColumns } from './StatementColumns';
+import type { ReportColumnMode } from '../../lib/reportColumns';
 import DrillDownModal from '../layout/DrillDownModal';
 
 interface PLAccount { name: string; code?: string; balance: number }
@@ -36,6 +38,8 @@ interface ProfitAndLossViewProps {
 
 const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDate, compareStartDate, compareEndDate }) => {
   const formId = useId();
+  const [columnMode, setColumnMode] = useState<ReportColumnMode>('total');
+  const [showPercent, setShowPercent] = useState(false);
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   const [dateRange, setDateRange] = usePageSyncedState(
@@ -47,6 +51,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   }));
   const [isComparative, setIsComparative] = usePageSyncedState(
     JSON.stringify([startDate, compareStartDate]), startDate ? Boolean(compareStartDate) : undefined, false);
+  const columnsActive = columnMode !== 'total' || showPercent || isComparative;
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('balance');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[] } | null>(null);
@@ -373,11 +378,11 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             </div>
           </div>
           <div className="hidden sm:block w-px h-8 bg-slate-200" />
-          <label htmlFor={`${formId}-comparative`} aria-label="Comparative Mode" className="flex items-center gap-2 cursor-pointer group/toggle">
+          <label htmlFor={`${formId}-comparative`} aria-label="Comparative Mode" className="flex min-h-11 items-center gap-2 cursor-pointer group/toggle rounded focus-within:outline focus-within:outline-2 focus-within:outline-indigo-500">
             <input 
                id={`${formId}-comparative`}
                type="checkbox" 
-               className="hidden" 
+               className="sr-only"
                checked={isComparative} 
                onChange={(e) => setIsComparative(e.target.checked)} 
             />
@@ -500,7 +505,15 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
         </motion.div>
       </div>
 
+      <StatementColumns kind="pl" title={labels.title} accounts={accounts} transactions={transactions}
+        startDate={dateRange.start} endDate={dateRange.end} compare={isComparative}
+        compareStartDate={prevRange.start} compareEndDate={prevRange.end}
+        mode={columnMode} onModeChange={setColumnMode} showPercent={showPercent} onPercentChange={setShowPercent}
+        totalData={data} previousTotalData={prevData} totalAuthoritative={isServerAuthoritative}
+        formatMoney={formatCurrency} sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}
+        onDrillDown={(accountName, selectedTransactions) => setDrillDownTarget({ accountName, transactions: selectedTransactions })} />
       {/* Detail Core */}
+      {!columnsActive && (
       <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative">
         <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
         <div className="p-4 border-b border-slate-150 bg-[var(--ink)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -722,7 +735,10 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
         </div>
       </div>
 
+      )}
+
       {/* Drill-Down Modal */}
+
       {drillDownTarget && (
         <DrillDownModal
           isOpen={!!drillDownTarget}
