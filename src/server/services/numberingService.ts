@@ -9,12 +9,14 @@ import { writeServerAuditLog } from './auditLogService';
  * the next number must be above every number already used with that prefix.
  */
 
-export type NumberedType = 'invoice' | 'bill' | 'estimate';
-export const NUMBERED_TYPES: readonly NumberedType[] = ['invoice', 'bill', 'estimate'];
-const COLLECTION: Record<NumberedType, string> = { invoice: 'invoices', bill: 'bills', estimate: 'estimates' };
+export type NumberedType = 'invoice' | 'bill' | 'estimate' | 'creditNote' | 'vendorCredit';
+export const NUMBERED_TYPES: readonly NumberedType[] = ['invoice', 'bill', 'estimate', 'creditNote', 'vendorCredit'];
+const COLLECTION: Record<NumberedType, string> = { invoice: 'invoices', bill: 'bills', estimate: 'estimates', creditNote: 'creditNotes', vendorCredit: 'vendorCredits' };
 const LEGACY: Record<NumberedType, [string, string]> = {
   invoice: ['invoicePrefix', 'invoiceNextNumber'], bill: ['billPrefix', 'billNextNumber'], estimate: ['estimatePrefix', 'estimateNextNumber'],
+  creditNote: ['creditNotePrefix', 'creditNoteNextNumber'], vendorCredit: ['vendorCreditPrefix', 'vendorCreditNextNumber'],
 };
+const PREFIX: Record<NumberedType, string> = { invoice: 'INV', bill: 'BIL', estimate: 'EST', creditNote: 'CN', vendorCredit: 'VC' };
 
 export interface Series { prefix: string; nextNumber: number; padding: number }
 
@@ -25,7 +27,7 @@ export class NumberingError extends Error {
   }
 }
 
-export const defaultPrefix = (type: NumberedType, today: string) => `${type === 'invoice' ? 'INV' : type === 'bill' ? 'BIL' : 'EST'}-${today.slice(0, 4)}-`;
+export const defaultPrefix = (type: NumberedType, today: string) => `${PREFIX[type]}-${today.slice(0, 4)}-`;
 
 export const formatDocumentNumber = (s: Series, n = s.nextNumber) => `${s.prefix}${String(n).padStart(s.padding, '0')}`;
 
