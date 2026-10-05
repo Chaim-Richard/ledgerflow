@@ -1998,7 +1998,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Y-24 Contact tags (on the form, shown on the page, filter chips on the customer and vendor lists)
 - [x] Y-25 Notes timeline per contact (newest first, who and when; viewers read)
 - [ ] Y-26 Portal access toggle
-- [ ] Y-27 Preferred delivery method
+- [x] Y-27 Preferred delivery method: each customer and vendor says how their documents reach them — Email (the default, and what happened before anyone could choose), Print, Post, or Nothing automatic. Set it in the contact form or on the contact's page (viewers read). Only what the app does by itself obeys it: the daily payment reminder, the monthly statement batch and emailing an invoice when it is saved as "sent" — a customer who gets paper is left out of the statements and their reminder is put in the bell for someone to print or post instead. Pressing Email still sends (it is a person deciding) and the send log says "against their choice" (tested)
 - [x] Y-28 Statement send preference: Settings → Emails → "Email each customer their statement on the 1st of every month" (customers with something open; the daily job, once a month, a missed 1st made up the next day); each customer's page has "Monthly statement: email it" to leave them out (tested; database rule: customers.noStatements)
 - [ ] Y-29 Sending domain with SPF/DKIM
 - [ ] Y-30 2FA enforcement policy

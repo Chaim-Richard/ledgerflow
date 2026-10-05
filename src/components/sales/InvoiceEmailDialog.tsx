@@ -6,13 +6,14 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { getIdToken } from '../../firebase';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { deliveryLabel, deliveryPhrase, preferredDelivery } from '../../lib/delivery';
 
 /**
  * Email an invoice or a payment reminder to the customer, and see every email sent for it
  * (send log with bounces and complaints, BL-05). Server: src/server/routes/emailRoutes.ts.
  */
 
-interface LogEvent { event: string; recipient: string; subject: string | null; template: string | null; error: string | null; timestamp: string }
+interface LogEvent { event: string; recipient: string; subject: string | null; template: string | null; error: string | null; againstPreference: string | null; timestamp: string }
 
 const EVENT_LABEL: Record<string, string> = { sent: 'Sent', failed: 'Failed', bounced: 'Bounced', complaint: 'Marked as spam', delivered: 'Delivered' };
 
@@ -28,6 +29,9 @@ export default function InvoiceEmailDialog({ invoice, onClose }: { invoice: Invo
   const customer = useLedgerStore(s => s.customers).find(c => c.id === invoice.customerId);
   useLedgerCollections('customers');
   const overdue = !!invoice.dueDate && invoice.status !== 'paid' && invoice.status !== 'draft';
+  // Y-27: the customer's own choice of how documents reach them; sending by hand still works, it just
+  // says so up front and in the log.
+  const paperCopy = preferredDelivery(customer) !== 'email';
   const [to, setTo] = useState(() => String(invoice.metadata?.sentTo || customer?.email || ''));
   const [template, setTemplate] = useState<'invoice' | 'reminder'>(overdue && invoice.status !== 'pending' ? 'reminder' : 'invoice');
   const [events, setEvents] = useState<LogEvent[] | null>(null);
@@ -78,9 +82,15 @@ export default function InvoiceEmailDialog({ invoice, onClose }: { invoice: Invo
             </select>
             <p className="mt-1 text-[11px] text-[var(--muted)]">The text comes from Settings → Emails & Reminders. The PDF is attached.</p>
           </div>
+          {paperCopy && (
+            <p className="text-xs text-[var(--neg)]">
+              This customer asked for {deliveryPhrase(preferredDelivery(customer))} (Settings → {customer?.name || 'the customer'} → Documents go out by).
+              Pressing send emails it anyway, and the log below says it went against their choice.
+            </p>
+          )}
           <button type="button" disabled={busy || !to.includes('@') || invoice.status === 'draft'} onClick={send}
             className="rounded-lg bg-[var(--brass)] px-4 py-2 text-sm font-bold text-black disabled:opacity-50">
-            {busy ? 'Sending…' : 'Send'}
+            {busy ? 'Sending…' : paperCopy ? 'Email anyway' : 'Send'}
           </button>
           {invoice.status === 'draft' && <p className="text-xs text-[var(--muted)]">Save the invoice as final before emailing it.</p>}
 
@@ -94,6 +104,7 @@ export default function InvoiceEmailDialog({ invoice, onClose }: { invoice: Invo
                     <li key={`${e.timestamp}:${e.event}:${e.recipient}`} className="flex justify-between gap-3">
                       <span className={e.event === 'sent' || e.event === 'delivered' ? 'text-[var(--text)]' : 'text-[var(--neg)]'}>
                         {EVENT_LABEL[e.event] || e.event}{e.template === 'reminder' ? ' (reminder)' : ''} · {e.recipient}{e.error ? ` · ${e.error}` : ''}
+                        {e.againstPreference ? <span className="text-[var(--neg)]"> · against their choice ({deliveryLabel(e.againstPreference)})</span> : null}
                       </span>
                       <span className="shrink-0 text-[var(--muted)]">{e.timestamp.slice(0, 16).replace('T', ' ')}</span>
                     </li>

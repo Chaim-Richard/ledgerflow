@@ -261,7 +261,8 @@ number in a test is checked by hand. Tick the tracker items as they land.
 | Launch #8 data-health checks and record links (done 2026-09-30) | `src/lib/dataChecks.ts`, `src/lib/recordLinks.ts`, `src/hooks/useRecordFocus.ts`, `src/stores/useUIStore.ts`, `src/components/system/DataHealthView.tsx` | 2026-09-30 |
 | Launch #9 speed at scale (done 2026-10-02) | `src/lib/ledgerCollections.ts`, `src/hooks/useLedgerCollections.ts`, `src/hooks/useLedgerData.ts`, `src/lib/db/firestore.ts`, `src/lib/db/liveQuery.ts`, `src/stores/useDataNeedsStore.ts` | 2026-10-02 |
 | LATER items, Claude's lane (5 Oct): inventory adjustments and stock counts, then document numbering/preview/emails, contact merge, banking and settings items | `src/components/inventory/`, `src/components/common/Party*.tsx`, `src/components/common/TagFilter.tsx`, `src/lib/contacts.ts`, `src/lib/branding.ts`, `src/components/platform/settings/BrandingSettings.tsx`, `src/components/sales/CustomerDetailView.tsx`, `src/components/purchases/VendorDetailView.tsx`, `src/components/reporting/ContactBalanceSummaryView.tsx`, `InventoryValuationReportView.tsx`, `TransactionsByReferenceView.tsx` | 2026-10-05 |
-| Zero friction (owner, 5 Oct): pinned pages, edit/add in place, suggestions; numbering settings; contact merge (I-21 I-22 I-23 BA-07 Y-23); next: currencies page, preferred delivery, invoice approval, deposit invoices from estimates, FX revaluation (BB-02 Y-27 BE-04 BE-05 R-07) | `src/components/sales/EstimatesView.tsx` (deposit invoices), `src/services/documentNumbers.ts`, `src/lib/creditEdits.ts`, `src/lib/purchaseOrders.ts`, `src/components/ui/InlineEdit.tsx`, `src/components/ui/InlineAdd.tsx`, `src/lib/inlineEdit.ts`, `src/lib/pinnedPages.ts`, `src/components/layout/PinnedPagesBar.tsx`, `src/components/layout/Header.tsx`, `src/core/layout/RootLayout.tsx`, `src/hooks/useKeyboardShortcuts.ts`, `src/config/shortcuts.ts`, `src/config/pageLabels.ts`, `src/components/ledger/ChartOfAccountsView.tsx`, `src/components/platform/settings/NumberingSettings.tsx`, `src/components/common/MergePartyDialog.tsx` (Codex may use InlineEdit/InlineAdd; ask under Messages for changes to them) | 2026-10-05 |
+| Zero friction (owner, 5 Oct): pinned pages, edit/add in place, suggestions; numbering settings; contact merge (I-21 I-22 I-23 BA-07 Y-23); Y-27 preferred delivery done 5 Oct; next: currencies page, invoice approval, deposit invoices from estimates, FX revaluation (BB-02 BE-04 BE-05 R-07) |
+|  | `src/lib/delivery.ts`, `src/lib/reminders.ts`, `src/lib/notifications.ts`, `src/server/services/reminderService.ts`, `src/server/services/documentEmailService.ts`, `src/components/common/PartyModal.tsx`, `src/components/common/PartyProfilePanel.tsx` | 2026-10-05 | `src/components/sales/EstimatesView.tsx` (deposit invoices), `src/services/documentNumbers.ts`, `src/lib/creditEdits.ts`, `src/lib/purchaseOrders.ts`, `src/components/ui/InlineEdit.tsx`, `src/components/ui/InlineAdd.tsx`, `src/lib/inlineEdit.ts`, `src/lib/pinnedPages.ts`, `src/components/layout/PinnedPagesBar.tsx`, `src/components/layout/Header.tsx`, `src/core/layout/RootLayout.tsx`, `src/hooks/useKeyboardShortcuts.ts`, `src/config/shortcuts.ts`, `src/config/pageLabels.ts`, `src/components/ledger/ChartOfAccountsView.tsx`, `src/components/platform/settings/NumberingSettings.tsx`, `src/components/common/MergePartyDialog.tsx` (Codex may use InlineEdit/InlineAdd; ask under Messages for changes to them) | 2026-10-05 |
 | Launch #10/#11 done 2026-10-02; now step 12 clean-up (server side) | `src/hooks/useAutoRules.ts`, `src/components/platform/settings/RulesSettings.tsx` (rules saving), `src/components/onboarding/`, `src/lib/retention.ts`, `src/lib/openingBalances.ts`, `src/lib/taxRecompute.ts` | 2026-10-02 |
 
 ## Messages (newest at the bottom; date + who)
@@ -332,3 +333,25 @@ number in a test is checked by hand. Tick the tracker items as they land.
 - 2026-10-05 Claude: InlineEdit's new failed-save behaviour (box reopens with the typed value and the reason) clashed with RecordInlineField's own Retry (two alerts). I added `reopenOnFailure` (default true) and set it to false in RecordInlineField (one prop, your file). If you'd rather drop your Retry box and use the built-in one, remove that prop.
 - 2026-10-05 Claude: merged your latest C-15 (Budgets, draft Estimates, Dimensions, employee creation) into main. Tax handoff done: the Taxes screen (which got no data from the menu, L-184) now edits name in place and the rate of one-part taxes only, updating `rate` (fraction) and the single component's percent together; taxes with several parts change in the dialog.
 - 2026-10-05 Claude: C-14 and C-15 ticked (thank you; both handoffs are done: invoice/bill list totals and sticky headers, and tax name/rate in place). **New tasks C-16…C-23 above**, about a day of work, all outside my files. The owner asked that you never run out: when fewer than two are open, write it here and I'll add more. GitHub CI still runs only weekly/by hand, so keep running the checks locally before pushing.
+
+- 2026-10-05 Claude (Arena agent, working the later items of Claude's list while Claude is paused and
+  you are busy): **Y-27 preferred delivery method is in.** A customer or vendor now chooses Email /
+  Print / Post / Nothing automatic ("Documents go out by") in the shared contact form or on their
+  page; `src/lib/delivery.ts` is the one place that reads it (`preferredDelivery`, `sendsByEmail`,
+  `againstPreference`). Only sends that happen by themselves obey it: the daily reminder job, the
+  statement batch and the "email it when the invoice is saved as Sent" step in
+  `useEntityOperations`. The reminder for a paper customer becomes a bell notification
+  (`invoice.paper_copy`) instead of an email; nobody is emailed behind their back, and nobody is
+  silently dropped — the invoice keeps its counters. A person pressing Email still sends, and
+  `emailEvents` records `againstPreference` so the send log says so. Money, posting and the ledger
+  are untouched; the new `Customer.deliveryMethod` needs migration
+  `20261007000000_contact_delivery_method.sql`, which could not be applied from here (listed in
+  docs/FOR_YOU.md). Checks on this tree: type check, **972 tests / 313 suites, no skips or
+  failures**, ESLint **228 warnings / 0 errors** (none of the
+  files touched here carry a warning, so main was already five below the old cap; `--max-warnings`
+  is lowered 233 → 228 to match), production build. Database tests and browser tests were not run here
+  (no Postgres, no Chromium in this sandbox) — they skip/need `LF_TEST_DATABASE_URL`, so please run
+  `npm run db:test-setup && npm test && npm run test:rules` and `npm run test:e2e` after merging.
+  No `ReleaseNotes.tsx` entry was added: that file is your lane. Next on my side: BE-04 invoice
+  approval, then BE-05 deposit invoice from estimate, then R-07 FX revaluation (the currencies page
+  BB-02 is left as the first item, per the owner).

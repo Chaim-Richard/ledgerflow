@@ -5,7 +5,7 @@ is needed, it takes the default written below and moves on. When you have time, 
 as you like in one message, e.g. **"1 done, 4 yes, 11 hide, 10 keep Hebrew"**. Answered items are
 removed from this list.
 
-Last updated: 2026-10-02.
+Last updated: 2026-10-05.
 
 ## A. Settings only you can change (a few minutes each)
 
@@ -57,6 +57,14 @@ Last updated: 2026-10-02.
    address and privacy email into `docs/privacy/ROPA.md` and `docs/privacy/DPA_TEMPLATE.md`
    (Claude wrote everything else from the code), then have someone who knows the law where you
    operate read them.
+
+19. **One database change to apply** (from Y-27, 5 Oct): `supabase/migrations/
+    20261007000000_contact_delivery_method.sql`. It lets a customer record keep the new
+    `deliveryMethod` field (how they want documents: Email / Print / Post / Nothing automatic).
+    Until it is applied, saving that choice on a *customer* is refused by the database guard and
+    everything else works as before; vendors need nothing. Claude cannot reach Supabase from the
+    Arena sandbox, so it is checked in but not applied. Paste the file in Supabase → SQL editor,
+    or say so and the next Claude session runs it through the connector.
 
 ## B. Decisions (Claude uses the default until you say otherwise)
 
@@ -132,6 +140,12 @@ Last updated: 2026-10-02.
   contact's address/currency/tags, and Inventory; more screens follow one by one, and it's now the
   rule for every screen. (3) **Suggestions while typing** from your own data. (4) Settings →
   Document Numbering: change invoice/bill/estimate numbers safely.
+- **New (5 Oct): how each customer wants their documents.** On a customer's or vendor's page (and
+  in their form) there is "Documents go out by": Email (the default, as before), Print, Post, or
+  Nothing automatic. Only what the app does by itself listens to it — the daily payment reminder, the
+  monthly statement batch, and emailing an invoice when you save it as Sent. Someone who gets paper
+  instead gets the reminder in the bell for your team. Pressing **Email** on an invoice always sends;
+  the send log then says it went against their choice.
 - **New (5 Oct): thank-you emails.** Settings → Emails & Reminders → "Email a thank-you when a
   customer pays" (off until you turn it on). Default used: off, so no customer gets a surprise email.
 - Vercel deploys by itself about a minute after each push to `main`.

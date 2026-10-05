@@ -8,6 +8,7 @@ import { LedgerPostService } from '../services/LedgerPostService';
 
 import { isOpenInvoice, isOpenBill } from '../lib/txFilters';
 import { calculateAmountDue } from '../lib/documentMath';
+import { deliveryPhrase, preferredDelivery, sendsByEmail } from '../lib/delivery';
 import { toBaseCents } from '../server/reports/partyReports';
 import type { Bill, CreditNote, Customer, Invoice, VendorCredit } from '../types';
 
@@ -171,6 +172,12 @@ export function useEntityOperations() {
   const sendInvoiceEmail = async (id: string, invoiceData: { customerId?: string; metadata?: Record<string, unknown> }) => {
     if (!currentWorkspaceId) return false;
     const customer = invoiceData.customerId ? await savedRecord<Customer>('customers', invoiceData.customerId) : undefined;
+    // Y-27: sending this because the invoice was saved as "sent" is the app acting on its own, so it
+    // respects how the customer wants documents; pressing Email on the invoice is a person deciding.
+    if (!sendsByEmail(customer)) {
+      toast.info(`The invoice was saved. It was not emailed: ${customer?.name || 'this customer'} gets ${deliveryPhrase(preferredDelivery(customer))}.`);
+      return false;
+    }
     const to = String(invoiceData.metadata?.sentTo || customer?.email || '').trim();
     if (!to) {
       toast.error('The invoice was not emailed: the customer has no email address.');
