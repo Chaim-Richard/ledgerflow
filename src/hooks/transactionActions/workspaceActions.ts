@@ -125,9 +125,10 @@ export function createWorkspaceActions(ctx: ActionContext) {
         }
 
         // Safely archive account to preserve accounting integrity and prevent security rule violations
+        // isArchived (not "status", which accounts don't have: the database refused it, L-179)
         await updateDoc(doc(db, 'chartAccounts', id), {
           isActive: false,
-          status: 'archived',
+          isArchived: true,
           updatedAt: new Date().toISOString()
         });
 

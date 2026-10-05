@@ -12,6 +12,7 @@ import { useUIStore } from './stores/useUIStore';
 import type { AppTab } from './types';
 import { errorMessage } from './lib/errorRemedies';
 import { shortcutKeyMap } from './config/shortcuts';
+import { currentPage, MAX_PINNED } from './lib/pinnedPages';
 import { useLedgerData } from './hooks/useLedgerData';
 import { useAIActions } from './hooks/useAIActions';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -209,7 +210,11 @@ const shortcutMap = useMemo(() => {
       diagnostics: () => setDiagnosticConsoleOpen(!isDiagnosticConsoleOpen),
       architecture: () => setArchitectureOpen(!isArchitectureOpen),
       shortcuts: () => setShortcutOverlayOpen(!isShortcutOverlayOpen),
+      pinPage: () => { const ui = useUIStore.getState(); ui.togglePinnedPage(currentPage(ui)); },
     });
+    for (let n = 1; n <= MAX_PINNED; n++) {
+      base[`alt+${n}`] = () => { const ui = useUIStore.getState(); const page = ui.pinnedPages[n - 1]; if (page) ui.goToPage(page); };
+    }
     Object.entries(speedDials || {}).forEach(([key, tabId]) => {
       base[`alt+${key.toLowerCase()}`] = () => navigateTool(tabId);
     });

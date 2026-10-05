@@ -1,5 +1,7 @@
 import type { Transaction, ChartAccount } from '../../types';
-import React from 'react';
+import React, { useState } from 'react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { categoryChoices } from '../../lib/accountChoices';
 import { motion } from 'motion/react';
 import { Clipboard, X } from 'lucide-react';
 
@@ -23,6 +25,14 @@ export default function SelectionBar({
   accounts,
   formatCurrency
 }: SelectionBarProps) {
+  // categories only (no bank accounts), the most used first; applied on Enter or Apply, never while typing
+  const choices = useLedgerStore(state => categoryChoices(accounts, state.transactions));
+  const [text, setText] = useState('');
+  const typed = text.trim().toLowerCase();
+  const pick = choices.find(c => c.label.toLowerCase() === typed || c.value === text)
+    || choices.find(c => accounts.find(a => a.id === c.value)?.name.toLowerCase() === typed);
+  const match = pick ? accounts.find(a => a.id === pick.value) : undefined;
+  const apply = () => { if (match) { onBulkUpdate({ accountId: match.id }); setText(''); } };
   return (
     <motion.div 
       initial={{ y: 100 }}
@@ -48,18 +58,21 @@ export default function SelectionBar({
           <input aria-label="Bulk Categorize"
             list="selection-bulk-account"
             placeholder="Bulk Categorize..."
-            onChange={(e) => {
-              const acc = accounts.find(a => a.name === e.target.value || a.id === e.target.value);
-              if (acc) onBulkUpdate({ accountId: acc.id });
-            }}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); apply(); } }}
             className="w-48 bg-zinc-800 text-[10px] font-medium uppercase tracking-wider px-4 py-2.5 rounded-xl border-none outline-none text-zinc-400 hover:text-white transition-all focus:ring-1 focus:ring-indigo-500 placeholder:text-zinc-600"
           />
           <datalist id="selection-bulk-account">
-            {accounts.map(acc => (
-              <option key={acc.id} value={acc.name} />
+            {choices.map(c => (
+              <option key={c.value} value={c.label} />
             ))}
           </datalist>
         </div>
+        <button type="button" onClick={apply} disabled={!match}
+          className="px-3 py-2 rounded-xl bg-indigo-600 text-[10px] font-bold uppercase tracking-wider disabled:opacity-30">
+          Apply
+        </button>
         
         <button type="button" aria-label="Copy Text" onClick={onCopy} className="p-2.5 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors" title="Copy Text">
           <Clipboard aria-hidden="true" size={16} />

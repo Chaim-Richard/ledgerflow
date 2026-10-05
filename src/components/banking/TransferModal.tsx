@@ -1,6 +1,5 @@
 import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useMemo, useId } from 'react';
-import { Transaction } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { createAccountTransfer, detectPotentialTransfers, TransferMatchCandidate } from '../../lib/transferEngine';
@@ -8,6 +7,9 @@ import { getLocalDateISO, formatCurrency } from '../../lib/utils';
 import { isCashAccount } from '../../lib/txFilters';
 import { useTimeout } from '../../hooks/useTimeout';
 import { ArrowRightLeft, Check, X, Sparkles, HelpCircle, DollarSign } from 'lucide-react';
+import { useTransactionActions } from '../../hooks/useTransactionActions';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import { Labelled } from '../ui/Labelled';
 
 interface TransferModalProps {
@@ -25,8 +27,8 @@ export const TransferModal: React.FC<TransferModalProps> = ({
   const amountId = useId();
   const accounts = useLedgerStore(s => s.accounts);
   const transactions = useLedgerStore(s => s.transactions);
-  const setTransactions = useLedgerStore(s => s.setTransactions);
-  const updateTransaction = useLedgerStore(s => s.updateTransaction);
+  const txActions = useTransactionActions();
+  const { addEntity } = useEntityOperations();
   const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
   const user = useAuthStore(s => s.user);
   const currentWorkspace = getCurrentWorkspace();
@@ -54,7 +56,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleCreateTransfer = () => {
+  const handleCreateTransfer = async () => {
     if (!fromAccountId || !toAccountId || !amount || parseFloat(amount) <= 0) {
       return;
     }
@@ -69,7 +71,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
 
     if (!fromAcc || !toAcc) return;
 
-    const amountCents = Math.round(parseFloat(amount) * 100);
+    const amountCents = TruthEngine.parseAmountToCents(amount);
 
     const transferTx = createAccountTransfer({
       workspaceId: currentWorkspace?.id || 'default',
@@ -83,40 +85,39 @@ export const TransferModal: React.FC<TransferModalProps> = ({
       description: description || undefined
     });
 
-    const fullTx: Transaction = {
-      ...transferTx as Transaction,
-      id: `tx_transfer_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
-    };
-
-    setTransactions([...transactions, fullTx]);
-    setSuccessMessage(`Transferred $${amount} from ${fromAcc.name} to ${toAcc.name}`);
+    // saved through the normal posting path (server-checked, survives a reload); it only changed
+    // the list on screen before, so the transfer was gone after a reload (L-181)
+    await txActions.handleQuickAdd({ ...transferTx, currency: currentWorkspace?.currency || transferTx.currency });
+    setSuccessMessage(`Transferred ${formatCurrency(amountCents, currentWorkspace?.currency)} from ${fromAcc.name} to ${toAcc.name}`);
     setSafeTimeout(() => {
       setSuccessMessage(null);
       onClose();
     }, 1500);
   };
 
-  const handleMergeCandidate = (candidate: TransferMatchCandidate) => {
-    // Unify the two disparate transactions into a single clean inter-account transfer
-    const updatedOutflow: Transaction = {
-      ...candidate.outflowTx,
-      isTransfer: true,
-      transferDetails: {
-        fromAccountId: candidate.fromAccount.id,
-        toAccountId: candidate.toAccount.id
-      }
-    };
-    const updatedInflow: Transaction = {
-      ...candidate.inflowTx,
-      isTransfer: true,
-      transferDetails: {
-        fromAccountId: candidate.fromAccount.id,
-        toAccountId: candidate.toAccount.id
-      }
-    };
+  /**
+   * Two entries that are one transfer (money out of one bank account, the same amount into
+   * another): both keep their bank line, and their other side moves to Transfer Clearing, which
+   * nets to zero, so the expense and the income they were booked to disappear. Saved through the
+   * server (it only changed the screen before, and left the expense and income in place; L-181).
+   */
+  const handleMergeCandidate = async (candidate: TransferMatchCandidate) => {
+    const clearing = await transferClearingAccount();
+    if (!clearing) return;
+    const transferDetails = { fromAccountId: candidate.fromAccount.id, toAccountId: candidate.toAccount.id };
+    for (const tx of [candidate.outflowTx, candidate.inflowTx]) {
+      const lines = (tx.lines || []).map(l => (isCashAccount(accounts.find(a => a.id === l.accountId)) ? l : { ...l, accountId: clearing.id, accountName: clearing.name }));
+      await txActions.handleUpdateTransaction(tx.id, { lines, isTransfer: true, transferDetails });
+    }
+  };
 
-    updateTransaction(updatedOutflow.id, updatedOutflow);
-    updateTransaction(updatedInflow.id, updatedInflow);
+  const transferClearingAccount = async (): Promise<{ id: string; name: string } | null> => {
+    const existing = accounts.find(a => !a.isArchived && /transfer clearing|transfers in transit|inter-?account transfer/i.test(a.name));
+    if (existing) return existing;
+    const codes = new Set(accounts.map(a => a.code));
+    const code = ['1095', '1096', '1097', '1098', '1099'].find(c => !codes.has(c)) || '';
+    const ref = await addEntity('chartAccounts', { name: 'Transfer Clearing', type: 'asset', category: 'Current Assets', code, description: 'Money moving between your own bank accounts; nets to zero' }, 'Account "Transfer Clearing" added');
+    return ref ? { id: ref.id, name: 'Transfer Clearing' } : null;
   };
 
   return (

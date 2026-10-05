@@ -11,7 +11,7 @@ import crypto from 'crypto';
 import zlib from 'node:zlib';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
-import { generateDocumentPdf, layoutDocumentPdf } from '../server/services/pdfService';
+import { generateDocumentPdf, layoutDocumentPdf, watermarkFor } from '../server/services/pdfService';
 import { displayWords } from '../server/services/pdfText';
 import { BrandingSchema, brandColor } from '../lib/branding';
 import { pdfPageCount, pdfText } from './helpers/pdfText';
@@ -166,5 +166,26 @@ describe('Branding routes', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, ()
     assert.equal(res.headers.get('content-type'), 'application/pdf');
     const text = pdfText(Buffer.from(await res.arrayBuffer()));
     for (const shown of ['Brand Co', 'Sample Customer Ltd', 'Preview footer', 'Preview terms', 'GBP 1,250.00', 'Scan to view and pay']) assert.ok(text.includes(shown), shown);
+  });
+});
+
+describe('Status watermark (Y-16)', () => {
+  test('draft, void and paid documents are stamped; open ones, statements and receipts are not', () => {
+    assert.equal(watermarkFor('invoice', 'draft'), 'DRAFT');
+    assert.equal(watermarkFor('bill', 'void'), 'VOID');
+    assert.equal(watermarkFor('purchaseOrder', 'cancelled'), 'VOID');
+    assert.equal(watermarkFor('invoice', 'paid'), 'PAID');
+    assert.equal(watermarkFor('estimate', 'paid'), undefined);
+    assert.equal(watermarkFor('invoice', 'sent'), undefined);
+    assert.equal(watermarkFor('statement', 'draft'), undefined);
+    assert.equal(watermarkFor('payment', 'void'), undefined);
+    assert.equal(layoutDocumentPdf('invoice', { number: 'INV-1', status: 'draft', amountCents: 100 }, { name: 'Co' }).watermark, 'DRAFT');
+  });
+
+  test('a draft invoice PDF carries DRAFT; a sent one does not', async () => {
+    const draft = pdfText(await generateDocumentPdf('invoice', { number: 'INV-9', status: 'draft', amountCents: 1000, date: '2026-10-05' }, { name: 'Co' }));
+    assert.match(draft, /DRAFT/);
+    const sent = pdfText(await generateDocumentPdf('invoice', { number: 'INV-9', status: 'sent', amountCents: 1000, date: '2026-10-05' }, { name: 'Co' }));
+    assert.doesNotMatch(sent, /DRAFT|PAID|VOID/);
   });
 });

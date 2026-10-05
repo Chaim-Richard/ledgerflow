@@ -92,6 +92,80 @@ export async function applyCredit(db: Firestore, input: ApplyCreditInput) {
   });
 }
 
+export interface CreditApplication { creditId: string; documentId: string; amountCents: number }
+type Row = DocumentData & {
+  id: string; status?: string; currency?: string; date?: string; dueDate?: string; createdAt?: string;
+  amountCents?: number; amountPaidCents?: number; depositCents?: number; settledByRecordsCents?: number;
+};
+
+const byOldest = (dateOf: (r: Row) => unknown) => (a: Row, b: Row) =>
+  String(dateOf(a) || '').localeCompare(String(dateOf(b) || '')) || a.id.localeCompare(b.id);
+
+/**
+ * Apply credits automatically (BE-06), pure: each open credit, oldest first, goes to the open
+ * invoices (bills) of the same customer (vendor) and currency, the one due first first, until the
+ * credit or what is due runs out. Drafts, voided and paid documents get nothing.
+ */
+export function planCreditApplications(kind: CreditKind, credits: Row[], documents: Row[]): CreditApplication[] {
+  const party = SIDES[kind].party;
+  const open = documents.filter(d => !CLOSED_DOCUMENT.has(String(d.status)) && calculateAmountDue(d) > 0).sort(byOldest(d => d.dueDate || d.date));
+  const dueLeft = new Map(open.map(d => [d.id, calculateAmountDue(d)]));
+  const out: CreditApplication[] = [];
+  for (const credit of credits.filter(c => USABLE_CREDIT.has(String(c.status)) && remainingOf(c) > 0).sort(byOldest(c => c.date || c.createdAt))) {
+    let left = remainingOf(credit);
+    for (const doc of open) {
+      if (left === 0) break;
+      const due = dueLeft.get(doc.id) || 0;
+      if (due === 0 || !credit[party] || doc[party] !== credit[party] || (doc.currency || 'USD') !== (credit.currency || 'USD')) continue;
+      const amountCents = Math.min(left, due);
+      out.push({ creditId: credit.id, documentId: doc.id, amountCents });
+      left -= amountCents;
+      dueLeft.set(doc.id, due - amountCents);
+    }
+  }
+  return out;
+}
+
+/** Applies every open credit it can (of one customer/vendor, or all), in one database transaction. */
+export async function autoApplyCredits(db: Firestore, input: { workspaceId: string; kind: CreditKind; partyId?: string }) {
+  const side = SIDES[input.kind];
+  return db.runTransaction(async (t) => {
+    let creditQuery = db.collection(side.credits).where('workspaceId', '==', input.workspaceId);
+    if (input.partyId) creditQuery = creditQuery.where(side.party, '==', input.partyId);
+    const credits: Row[] = (await t.get(creditQuery)).docs.map(d => ({ ...d.data(), id: d.id }) as Row)
+      .filter(c => USABLE_CREDIT.has(String(c.status)) && remainingOf(c) > 0);
+    const parties = [...new Set(credits.map(c => String(c[side.party] || '')).filter(Boolean))];
+    const documents: Row[] = [];
+    for (const partyId of parties) {
+      const snap = await t.get(db.collection(side.documents).where('workspaceId', '==', input.workspaceId).where(side.party, '==', partyId));
+      documents.push(...snap.docs.map(d => ({ ...d.data(), id: d.id }) as Row));
+    }
+    const applications = planCreditApplications(input.kind, credits, documents);
+    const now = new Date().toISOString();
+    const creditUsed = new Map<string, number>();
+    const documentPaid = new Map<string, number>();
+    for (const a of applications) {
+      creditUsed.set(a.creditId, (creditUsed.get(a.creditId) || 0) + a.amountCents);
+      documentPaid.set(a.documentId, (documentPaid.get(a.documentId) || 0) + a.amountCents);
+    }
+    for (const [id, used] of creditUsed) {
+      const remaining = remainingOf(credits.find(c => c.id === id)!) - used;
+      t.update(db.collection(side.credits).doc(id), { remainingCents: remaining, status: creditStatus(remaining), updatedAt: now });
+    }
+    for (const [id, paid] of documentPaid) {
+      const document = documents.find(d => d.id === id)!;
+      const newPaid = (document.amountPaidCents || 0) + paid;
+      t.update(db.collection(side.documents).doc(id), {
+        amountPaidCents: newPaid,
+        settledByRecordsCents: (document.settledByRecordsCents || 0) + paid,
+        status: settledStatus(document, newPaid),
+        updatedAt: now,
+      });
+    }
+    return { applications, totalCents: applications.reduce((sum, a) => sum + a.amountCents, 0) };
+  });
+}
+
 export interface RefundCreditInput {
   workspaceId: string;
   uid: string;

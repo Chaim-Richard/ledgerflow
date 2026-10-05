@@ -16,7 +16,8 @@ import { drawLine, wrapText } from './pdfText';
  * written by hand: one page, only the first 15 lines, Latin letters only.
  * layoutDocumentPdf decides what is printed (pure, tested); generateDocumentPdf draws it.
  */
-export type PdfDocumentType = BrandedDocument;
+/** Branded documents (sent to customers and vendors) plus bills and vendor credits, printed as records (BA-08). */
+export type PdfDocumentType = BrandedDocument | 'bill' | 'vendorCredit';
 
 /** One printed row: invoice items, estimate lines or statement entries. */
 export interface PdfLine { description?: string; name?: string; quantity?: number; amountCents?: number | string }
@@ -26,6 +27,8 @@ export interface PdfDocument {
   id?: string;
   number?: string;
   date?: string;
+  /** draft / void / paid … decides the watermark (Y-16) */
+  status?: string;
   dueDate?: string;
   paymentTerms?: string;
   customerName?: string;
@@ -65,14 +68,18 @@ export interface PdfLayout {
   qrUrl?: string;
   /** #RRGGBB */
   color: string;
+  /** Y-16: DRAFT, PAID or VOID across every page, so a draft or a cancelled document isn't mistaken for a live one. */
+  watermark?: string;
   logo?: Buffer;
 }
 
 const TITLES: Record<PdfDocumentType, string> = {
   invoice: 'INVOICE', estimate: 'ESTIMATE', creditNote: 'CREDIT NOTE', payment: 'PAYMENT RECEIPT', statement: 'STATEMENT',
+  purchaseOrder: 'PURCHASE ORDER', bill: 'BILL', vendorCredit: 'VENDOR CREDIT',
 };
 const RECIPIENT: Record<PdfDocumentType, string> = {
   invoice: 'BILLED TO', estimate: 'PREPARED FOR', creditNote: 'CREDITED TO', payment: 'RECEIVED FROM', statement: 'STATEMENT FOR',
+  purchaseOrder: 'ORDERED FROM', bill: 'FROM VENDOR', vendorCredit: 'FROM VENDOR',
 };
 const TERMS_LABEL: Record<string, string> = {
   due_on_receipt: 'Due on receipt', net_7: 'Net 7', net_10: 'Net 10', net_15: 'Net 15', net_30: 'Net 30', net_45: 'Net 45', net_60: 'Net 60', net_90: 'Net 90',
@@ -89,6 +96,18 @@ function logoBytes(dataUrl?: string): Buffer | undefined {
   if (!dataUrl || !LOGO_DATA_URL.test(dataUrl)) return undefined;
   const bytes = Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64');
   return bytes.length > 0 && bytes.length <= MAX_LOGO_BYTES ? bytes : undefined;
+}
+
+const STAMPED: ReadonlySet<PdfDocumentType> = new Set(['invoice', 'estimate', 'creditNote', 'purchaseOrder', 'bill', 'vendorCredit']);
+
+/** The word stamped across a document by its status (statements and receipts are never stamped). */
+export function watermarkFor(type: PdfDocumentType, status: unknown): string | undefined {
+  if (!STAMPED.has(type)) return undefined;
+  const s = String(status || '').toLowerCase();
+  if (s === 'draft') return 'DRAFT';
+  if (s === 'void' || s === 'cancelled') return 'VOID';
+  if (s === 'paid' && (type === 'invoice' || type === 'bill')) return 'PAID';
+  return undefined;
 }
 
 export function layoutDocumentPdf(
@@ -108,7 +127,9 @@ export function layoutDocumentPdf(
   const totalCents = Number(doc.amountCents) || 0;
 
   const meta: Array<[string, string]> = [['Number', clean(doc.number || doc.id || 'N/A', 60)], ['Date', clean(doc.date || getLocalDateISO(), 10)]];
-  if ((type === 'invoice' || type === 'estimate') && doc.dueDate) meta.push([type === 'estimate' ? 'Valid until' : 'Due', clean(doc.dueDate, 10)]);
+  if ((type === 'invoice' || type === 'estimate' || type === 'bill' || type === 'purchaseOrder') && doc.dueDate) {
+    meta.push([type === 'estimate' ? 'Valid until' : type === 'purchaseOrder' ? 'Deliver by' : 'Due', clean(doc.dueDate, 10)]);
+  }
   if (type === 'invoice' && doc.paymentTerms) meta.push(['Terms', TERMS_LABEL[doc.paymentTerms] || clean(doc.paymentTerms, 40)]);
 
   // invoices keep `items`, estimates `lines`, statements `transactions`; every one is printed
@@ -152,9 +173,10 @@ export function layoutDocumentPdf(
     recipient: clean(doc.customerName || doc.vendorName || doc.contactName || 'Valued Client', 120),
     rows,
     summary,
-    terms: clean(branding.terms?.[type], 2000) || undefined,
+    terms: clean((branding.terms as Partial<Record<PdfDocumentType, string>> | undefined)?.[type], 2000) || undefined,
     footer: clean(branding.footer, 300) || undefined,
     qrUrl: qrWanted ? options.paymentUrl : undefined,
+    watermark: watermarkFor(type, doc.status),
     color: brandColor(branding.color),
     logo: logoBytes(branding.logoDataUrl),
   };
@@ -296,6 +318,13 @@ export async function generateDocumentPdf(
     pdf.font(body).fontSize(8); muted();
     if (layout.footer) text(layout.footer, PAGE.margin, fy, 380);
     text(`Page ${i - range.start + 1} of ${range.count}`, RIGHT - 100, fy, 100, 'right');
+    if (layout.watermark) {
+      pdf.save();
+      pdf.rotate(-30, { origin: [PAGE.width / 2, PAGE.height / 2] });
+      pdf.font(bold).fontSize(110).fillColor(layout.watermark === 'PAID' ? '#047857' : '#B91C1C').fillOpacity(0.1);
+      pdf.text(layout.watermark, 0, PAGE.height / 2 - 60, { width: PAGE.width, align: 'center', lineBreak: false });
+      pdf.restore();
+    }
   }
   pdf.end();
   return done;

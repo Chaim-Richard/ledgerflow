@@ -17,6 +17,8 @@ import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
 import { brandingRouter } from './brandingRoutes';
 import { contactMergeRouter } from './contactMergeRoutes';
+import { numberingRouter } from './numberingRoutes';
+import { allocateNextNumber } from '../services/numberingService';
 import { retentionFor, RetentionSettingsSchema, scheduledPurgeAt as purgeDate } from '../../lib/retention';
 import { RetentionError, updateRetention } from '../services/retentionService';
 import { completeSetup, recordOpeningBalances, SetupError } from '../services/openingBalanceService';
@@ -76,73 +78,7 @@ export function requireWorkspaceRole(allowedRoles: string[]) {
   };
 }
 
-/**
- * Next number of a workspace's invoice/bill/estimate series, in one database transaction (no gaps,
- * no duplicates). A new series starts with this year in its prefix (INV-<year>-0001).
- */
-export async function allocateNextNumber(db: Firestore, workspaceId: string, type: 'invoice' | 'bill' | 'estimate', today: string = formatTzDate(new Date())): Promise<string> {
-  const defaultPrefix = `${type === 'invoice' ? 'INV' : type === 'bill' ? 'BIL' : 'EST'}-${today.slice(0, 4)}-`;
-  const nsDocRef = db.collection('numberingSeries').doc(`${workspaceId}_${type}`);
-  const wsRef = db.collection('workspaces').doc(workspaceId);
-
-  return await db.runTransaction(async (tx) => {
-    const nsSnap = await tx.get(nsDocRef);
-    
-    let prefix: string;
-    let nextNum: number;
-    let padding = 4;
-
-    if (nsSnap.exists) {
-      const data = nsSnap.data() || {};
-      prefix = data.prefix ?? defaultPrefix;
-      nextNum = data.nextNumber ?? 1;
-      padding = data.padding ?? 4;
-
-      tx.update(nsDocRef, {
-        nextNumber: nextNum + 1,
-        updatedAt: new Date().toISOString()
-      });
-    } else {
-      // Read-through fallback: try to load numberingSeries from the Workspace document
-      const wsSnap = await tx.get(wsRef);
-      const wsData = wsSnap.exists ? (wsSnap.data() || {}) : {};
-      const ns = wsData.numberingSeries || {};
-
-      if (ns[type] && typeof ns[type] === 'object') {
-        prefix = ns[type].prefix ?? defaultPrefix;
-        nextNum = ns[type].nextNumber ?? 1;
-        padding = ns[type].padding ?? 4;
-      } else {
-        // Fallback for legacy simple fields
-        if (type === 'invoice') {
-          prefix = ns.invoicePrefix || defaultPrefix;
-          nextNum = ns.invoiceNextNumber || 1;
-        } else if (type === 'bill') {
-          prefix = ns.billPrefix || defaultPrefix;
-          nextNum = ns.billNextNumber || 1;
-        } else if (type === 'estimate') {
-          prefix = ns.estimatePrefix || defaultPrefix;
-          nextNum = ns.estimateNextNumber || 1;
-        } else {
-          prefix = defaultPrefix;
-          nextNum = 1;
-        }
-      }
-
-      tx.set(nsDocRef, {
-        workspaceId,
-        type,
-        prefix,
-        nextNumber: nextNum + 1,
-        padding,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-    }
-
-    return `${prefix}${String(nextNum).padStart(padding, '0')}`;
-  });
-}
+export { allocateNextNumber } from '../services/numberingService';
 
 /**
  * Task 5: Allocate next document number atomically within Firestore transaction.
@@ -206,7 +142,9 @@ workspaceRouter.use('/:workspaceId/tax-returns', requireWorkspaceRole(['owner', 
 workspaceRouter.use('/:workspaceId/branding', requireWorkspaceRole(['owner', 'accountant']), brandingRouter);
 // Bad debt write-off and its reversal (src/server/routes/badDebtRoutes.ts)
 workspaceRouter.use('/:workspaceId/invoices', requireWorkspaceRole(['owner', 'accountant']), badDebtRouter);
-workspaceRouter.use('/:workspaceId/contacts', requireWorkspaceRole(['owner', 'accountant']), contactMergeRouter);
+// merging is checked again for owner/accountant in the service; deleting is for every writer
+workspaceRouter.use('/:workspaceId/contacts', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), contactMergeRouter);
+workspaceRouter.use('/:workspaceId/numbering', requireWorkspaceRole(['owner', 'accountant']), numberingRouter);
 
 // Bulk import of customers, vendors, items or accounts from a spreadsheet (K-01; rules in
 // src/lib/recordImport.ts). Writers may import; the chart of accounts is owner/accountant only.

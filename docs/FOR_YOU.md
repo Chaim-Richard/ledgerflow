@@ -118,6 +118,14 @@ Last updated: 2026-10-02.
   schedules) moves to this contact and the duplicate is deleted; amounts don't change. Owners and
   accountants only. Default used: documents in closed months move too (it's the same customer).
   Also new: Inventory → "Manage categories" renames or merges a category on all items.
+- **New (5 Oct), your zero-friction requests:** (1) **Pin any page**: the pin in the top bar (or
+  Alt+P); pinned pages stay as buttons on every page, Alt+1 … Alt+9 jumps to them. (2) **Edit in
+  place**: click a value and type (Enter saves, Esc cancels) on the customer and vendor lists, a
+  contact's address/currency/tags, and Inventory; more screens follow one by one, and it's now the
+  rule for every screen. (3) **Suggestions while typing** from your own data. (4) Settings →
+  Document Numbering: change invoice/bill/estimate numbers safely.
+- **New (5 Oct): thank-you emails.** Settings → Emails & Reminders → "Email a thank-you when a
+  customer pays" (off until you turn it on). Default used: off, so no customer gets a surprise email.
 - Vercel deploys by itself about a minute after each push to `main`.
 - Database changes are applied to Supabase by Claude and tested on a local copy first.
 - Progress and the full list: [TRACKER.md](TRACKER.md).

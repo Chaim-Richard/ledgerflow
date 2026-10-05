@@ -1,14 +1,22 @@
 import React, { useState, useMemo } from 'react';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import InlineEdit from '../ui/InlineEdit';
+import InlineAdd from '../ui/InlineAdd';
+import { suggestionsFrom } from '../../lib/inlineEdit';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
-import { ShoppingBag, Plus, Search, Trash2, CheckCircle, AlertCircle, DollarSign, Ban, Download, Pencil } from 'lucide-react';
+import { ShoppingBag, Plus, Search, Trash2, CheckCircle, AlertCircle, DollarSign, Ban, Download, Pencil, Printer } from 'lucide-react';
+import PdfPreviewModal from '../ui/PdfPreviewModal';
+import DocumentBulkBar from '../ui/DocumentBulkBar';
+import { useAuthStore } from '../../stores/useAuthStore';
 import type { Bill, Vendor } from '../../types';
 import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 import { formatCurrency, safeConfirm } from '../../lib/utils';
 import BillModal from './BillModal';
 import VendorModal from './VendorModal';
 import TagFilter from '../common/TagFilter';
-import { allTags, hasTag } from '../../lib/contacts';
+import { allTags, hasTag, isArchivedParty } from '../../lib/contacts';
+import PartyRowActions, { ArchivedBadge, ShowArchivedToggle } from '../common/PartyRowActions';
 import VendorDetailView from './VendorDetailView';
 import ReceivePaymentModal from '../sales/ReceivePaymentModal';
 import { toast } from 'sonner';
@@ -25,6 +33,7 @@ export default function Purchases() {
   const accounts = useLedgerStore(s => s.accounts) || [];
   const { loading } = useLedgerCollections('bills', 'vendors');
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
+  const canEditContacts = useCurrentRole() !== 'viewer';
 
   const [activeSubTab, setActiveSubTab] = useState<'bills' | 'vendors'>('bills');
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
@@ -32,6 +41,9 @@ export default function Purchases() {
 
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<Partial<Bill> | undefined>(undefined);
+  const [previewBill, setPreviewBill] = useState<Bill | null>(null);
+  const [pickedBills, setPickedBills] = useState<Set<string>>(() => new Set());
+  const pdfWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   // A record link (#purchases/bill/<id>, e.g. from Data Health) shows and highlights the bill
   const focusedBillId = useRecordFocus('bill', { ready: bills.length > 0, onFocus: () => { setActiveSubTab('bills'); setSelectedVendorId(null); setSearchTerm(''); } });
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
@@ -53,12 +65,15 @@ export default function Purchases() {
   // Filter vendors based on search term
   const [vendorTag, setVendorTag] = useState<string | null>(null);
   const vendorTags = useMemo(() => allTags(vendors), [vendors]);
+  const vendorCategories = useMemo(() => suggestionsFrom(vendors, v => v.category), [vendors]);
+  const [showArchivedVendors, setShowArchivedVendors] = useState(false);
+  const archivedVendors = useMemo(() => vendors.filter(isArchivedParty).length, [vendors]);
   const filteredVendors = useMemo(() => {
     return vendors.filter(v => {
       const matchText = `${v.name} ${v.email || ''} ${v.phone || ''} ${v.category || ''} ${(v.tags || []).join(' ')}`.toLowerCase();
-      return matchText.includes(searchTerm.toLowerCase()) && hasTag(v, vendorTag);
+      return matchText.includes(searchTerm.toLowerCase()) && hasTag(v, vendorTag) && (showArchivedVendors || !isArchivedParty(v));
     });
-  }, [vendors, searchTerm, vendorTag]);
+  }, [vendors, searchTerm, vendorTag, showArchivedVendors]);
 
   const handleAddVendor = async (data: Partial<Vendor>) => {
     await addEntity('vendors', data, 'Vendor successfully created');
@@ -190,10 +205,20 @@ export default function Purchases() {
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {activeSubTab === 'bills' ? (
           <div className="overflow-x-auto">
+            {pdfWorkspaceId && (
+              <DocumentBulkBar type="bill" noun="bill" ids={[...pickedBills].filter(id => filteredBills.some(b => b.id === id))}
+                documents={filteredBills.filter(b => pickedBills.has(b.id))}
+                workspaceId={pdfWorkspaceId} onClear={() => setPickedBills(new Set())} />
+            )}
             <table className="w-full text-left border-collapse">
               <caption className="sr-only">Bills</caption>
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
+                  <th scope="col" className="pl-4 w-8">
+                    <input type="checkbox" aria-label="Select all bills shown"
+                      checked={filteredBills.length > 0 && filteredBills.every(b => pickedBills.has(b.id))}
+                      onChange={e => setPickedBills(e.target.checked ? new Set(filteredBills.map(b => b.id)) : new Set())} />
+                  </th>
                   <th scope="col" className="p-4">Vendor</th>
                   <th scope="col" className="p-4">Bill #</th>
                   <th scope="col" className="p-4">Date</th>
@@ -209,17 +234,25 @@ export default function Purchases() {
                   return (
                     <tr key={b.id} id={recordElementId('bill', b.id)} aria-current={focusedBillId === b.id ? 'true' : undefined}
                       className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${focusedBillId === b.id ? 'ring-2 ring-inset ring-[var(--brass)]' : ''}`}>
+                      <td className="pl-4">
+                        <input type="checkbox" aria-label={`Select bill ${b.number || ''}`.trim()} checked={pickedBills.has(b.id)}
+                          onChange={() => setPickedBills(prev => { const next = new Set(prev); if (next.has(b.id)) next.delete(b.id); else next.add(b.id); return next; })} />
+                      </td>
                       <td className="p-4 font-semibold text-slate-900 dark:text-white">
                         {b.vendorName || 'Unknown Vendor'}
                       </td>
                       <td className="p-4 text-slate-600 dark:text-slate-400 font-mono text-xs">
-                        {b.number || b.id.slice(0, 8).toUpperCase()}
+                        <InlineEdit value={b.number} display={b.number || b.id.slice(0, 8).toUpperCase()} label={`Number of bill from ${b.vendorName || 'vendor'}`}
+                          canEdit={canEditContacts && b.status !== 'void'} onSave={x => updateEntity('bills', b.id, { number: String(x) }, 'Bill number saved')} />
                       </td>
                       <td className="p-4 text-[var(--muted)] dark:text-slate-400">
-                        {b.date?.slice(0, 10)}
+                        <InlineEdit kind="date" value={b.date?.slice(0, 10)} label={`Date of bill ${b.number || ''}`.trim()} canEdit={canEditContacts && b.status === 'draft'}
+                          onSave={x => updateEntity('bills', b.id, { date: String(x) }, 'Date saved')} />
                       </td>
                       <td className="p-4 text-[var(--muted)] dark:text-slate-400">
-                        {b.dueDate?.slice(0, 10)}
+                        <InlineEdit kind="date" value={b.dueDate?.slice(0, 10)} label={`Due date of bill ${b.number || ''}`.trim()} canEdit={canEditContacts && b.status !== 'paid' && b.status !== 'void'}
+                          validate={x => b.date && String(x) < b.date.slice(0, 10) ? 'The due date is before the bill date' : null}
+                          onSave={x => updateEntity('bills', b.id, { dueDate: String(x) }, 'Due date saved')} />
                       </td>
                       <td className="p-4">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
@@ -237,6 +270,10 @@ export default function Purchases() {
                         {formatCurrency(b.amountCents || 0)}
                       </td>
                       <td className="p-4 text-right flex items-center justify-end gap-2">
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewBill(b); }}
+                          className="p-1 text-[var(--muted)] hover:text-slate-800 rounded-lg" title="Preview / download PDF" aria-label={`PDF of bill ${b.number || ''}`.trim()}>
+                          <Printer className="w-4 h-4" aria-hidden="true" />
+                        </button>
                         {b.status !== 'void' && (
                           <button
                             type="button"
@@ -292,7 +329,7 @@ export default function Purchases() {
 
                 {filteredBills.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
+                    <td colSpan={8} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
                       {loading ? <LoadingState what="bills" /> : searchTerm ? 'No bills match your search.' : 'No bills recorded yet.'}
                     </td>
                   </tr>
@@ -303,6 +340,11 @@ export default function Purchases() {
         ) : (
           <div className="overflow-x-auto">
             <TagFilter tags={vendorTags} value={vendorTag} onChange={setVendorTag} label="Show vendors with the tag" />
+            <ShowArchivedToggle count={archivedVendors} on={showArchivedVendors} onChange={setShowArchivedVendors} noun="vendor" />
+            {canEditContacts && (
+              <InlineAdd className="px-4 pt-4" label="New vendor name" placeholder="Add a vendor: type a name and press Enter"
+                existing={vendors.map(v => v.name)} onAdd={name => addEntity('vendors', { name }, `Vendor "${name}" added`)} />
+            )}
             <table className="w-full text-left border-collapse">
               <caption className="sr-only">Vendors</caption>
               <thead>
@@ -312,6 +354,7 @@ export default function Purchases() {
                   <th scope="col" className="p-4">Email</th>
                   <th scope="col" className="p-4">Phone</th>
                   <th scope="col" className="p-4 text-right">Outstanding balance</th>
+                  {canEditContacts && <th scope="col" className="p-4 w-10"><span className="sr-only">Actions</span></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
@@ -322,26 +365,34 @@ export default function Purchases() {
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
                   >
                     <td className="p-4 font-semibold text-slate-900 dark:text-white">
-                      {v.name}
+                      <InlineEdit value={v.name} label={`Name of ${v.name}`} canEdit={canEditContacts}
+                        validate={x => String(x) ? null : 'A vendor needs a name'}
+                        onSave={x => updateEntity('vendors', v.id, { name: x }, 'Name saved')} />
+                      <ArchivedBadge party={v} />
                     </td>
                     <td className="p-4 text-slate-600 dark:text-slate-400">
-                      {v.category || 'Standard'}
+                      <InlineEdit value={v.category} label={`Category of ${v.name}`} placeholder="Standard" canEdit={canEditContacts}
+                        suggestions={vendorCategories}
+                        onSave={x => updateEntity('vendors', v.id, { category: x }, 'Category saved')} />
                     </td>
                     <td className="p-4 text-[var(--muted)] dark:text-slate-400">
-                      {v.email || 'N/A'}
+                      <InlineEdit kind="email" value={v.email} label={`Email of ${v.name}`} placeholder="Add email" canEdit={canEditContacts}
+                        onSave={x => updateEntity('vendors', v.id, { email: x }, 'Email saved')} />
                     </td>
                     <td className="p-4 text-[var(--muted)] dark:text-slate-400">
-                      {v.phone || 'N/A'}
+                      <InlineEdit kind="tel" value={v.phone} label={`Phone of ${v.name}`} placeholder="Add phone" canEdit={canEditContacts}
+                        onSave={x => updateEntity('vendors', v.id, { phone: x }, 'Phone saved')} />
                     </td>
                     <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
                       {formatCurrency(v.balanceCents || 0)}
                     </td>
+                    {canEditContacts && <td className="p-4 text-right"><PartyRowActions side="vendor" party={v} /></td>}
                   </tr>
                 ))}
 
                 {filteredVendors.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
+                    <td colSpan={canEditContacts ? 6 : 5} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
                       No vendors listed yet.
                     </td>
                   </tr>
@@ -379,6 +430,10 @@ export default function Purchases() {
           defaultDocumentId={paymentDocumentId}
           defaultContactId={paymentContactId}
         />
+      )}
+      {previewBill && pdfWorkspaceId && (
+        <PdfPreviewModal isOpen onClose={() => setPreviewBill(null)} title={`Bill ${previewBill.number || previewBill.id}`}
+          documentType="bill" documentId={previewBill.id} workspaceId={pdfWorkspaceId} filename={`bill_${previewBill.number || previewBill.id}.pdf`} />
       )}
     </div>
   );

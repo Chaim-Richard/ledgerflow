@@ -1417,7 +1417,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] F-13 `BalanceSheetView.tsx` — report rendering extracted into `BalanceSheetReport.tsx`; calculations and controller statements preserved (Codex)
 - [x] F-14 `TransactionEditModal.tsx` — controller and sibling view; save/reversal/locking callbacks and JSX preserved (Codex)
 - [x] F-15 `QBOMigrationWizard.tsx` — migration controller and sibling view; parsing/mapping/commit logic and JSX preserved (Codex)
-- [ ] F-16 `Inventory.tsx`
+- [x] F-16 `Inventory.tsx` (798 → 629 lines: item form, stock dialogs, category manager and record-a-sale dialog in their own files)
 - [x] F-17 `RulesSettings.tsx` — rules controller and sibling view; rule saving/testing/applying callbacks and JSX preserved (Codex)
 - [x] F-18 `PivotSheet.tsx` — pivot controller and sibling view; grouping/matrix calculations and JSX preserved (Codex)
 - [x] F-19 `businessTemplates.ts` — three sibling template data modules; all 23 definitions/order and public exports preserved (Codex)
@@ -1499,6 +1499,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] I-18 Print stylesheet (Reports page)
 - [x] I-19 Active filters as chips — the transaction list shows each active filter as a chip with a remove button and "Clear All"; the command palette's search now shows there too (L-143)
 - [x] I-20 "What changed since I last looked" — the Overview opens with "Since your last visit (date): 3 new transactions · 1 invoice paid…" per person and workspace on this device (tested)
+- [x] I-21 **Owner request (5 Oct): pin pages.** Done: pin button in the top bar (Alt+P), pinned pages as buttons under the top bar on every page with their report/settings tab, Alt+1 … Alt+9 (also on Mac keyboards, where Alt shortcuts never worked before), kept on the device (tested). A pin button on every page; pinned pages stay as buttons on every other page; keyboard shortcuts to jump to them (zero friction)
+- [~] I-22 **Owner request (5 Oct): edit in place everywhere.** Shared `InlineEdit` done (tested). Screens done: customer list (name, email, phone), vendor list (name, category, email, phone), contact page (address, currency, tags), Inventory (name, SKU, category, cost, price; typing a quantity records a stock count), chart of accounts (name, code, description, category; system codes fixed; duplicate codes refused), transactions (description by one click with the workspace's own descriptions suggested; date and amount of entries typed in by hand, both lines change together; category of a plain entry with accounts used most first; class and location on every line; entries from an invoice, bill, payment or bank line keep their amount and date, and document entries their accounts; locked periods read-only), invoice list (due date while open; date while draft), bill list (vendor's number, due date while unpaid, date while draft). **Add in place** (type a name + Enter): customers, vendors, inventory items. **Archive / delete in place**: customer and vendor lists (archive hides it from lists and new invoices/bills, records keep it, "Show archived" brings it back; delete only when nothing refers to it, checked by the server, which names what uses it); chart of accounts: Archive / Restore / Delete in each row's menu, archived accounts hidden behind "Show archived accounts", an account with entries is archived instead of deleted). Next: documents (drafts), projects, settings lists, bank lines; then add/delete/rename from the same places. Any field you can see (a vendor's address in the vendor list, an item's price, a customer's email) can be changed right there by typing, without opening another page; one shared component, applied to every list and detail page, and the rule for every new screen (AGENTS.md)
+- [~] I-23 **Owner request (5 Oct): help while typing.** Started: suggestions from the workspace's own data, most used first (vendor and item categories, currencies, transaction descriptions, categories). Fields suggest values from the workspace's own data as you type (names, addresses, categories, accounts), ranked by the matching algorithms already in the app
 
 # SECTION J — MISSING REPORTS
 
@@ -1524,7 +1527,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] K-03 Sale receipts
 - [ ] K-04 Sales orders
 - [ ] K-05 Manual journals entity
-- [ ] K-06 Bulk action bar
+- [x] K-06 Bulk action bar: transaction list (categorize safely, Enter/Apply, accounts used most first; L-180); invoice and bill lists: tick several, then download the PDFs as a zip, email the invoices to their customers (drafts and voided ones left out, each failure named), or pay them in full at once ("Record payment" / "Pay bills": one payment per customer or vendor into or out of the chosen bank account; drafts, paid and other-currency documents left out with the reason; a refused payment doesn't stop the others; not for viewers) (tested)
 - [ ] K-07 Attachments on every entity
 - [x] K-08 Email templates (invoice, reminder, receipt; preview)
 - [x] K-09 Credit note refunds (DR A/R, CR cash; tested)
@@ -1738,6 +1741,10 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-176 Quick entry and search phrases: amounts came out as fractions of a cent ("28.99" → 2898.9999…), "between 100 and 250.75" used 0.75 as the upper bound ("between 100 and 250" failed), "hosting 0.29" was read as 0.20, and a typed date on the 31st ("3rd feb") rolled into March (tested)
 - [x] L-177 An automatic rule with a "set amount" action rewrote an entry's total without its lines, so the entry and the ledger disagreed; rules never change amounts now (tested)
 - [x] L-178 CI was red for 3 pushes: the coverage floor (75%) failed after Codex's split files were counted with few tests; tests added for the reconciliation screen, the category engine, the rules engine, the quick-entry parser and recording a sale (coverage back above 75%)
+- [x] L-179 Deactivating an account that has history always failed: it wrote a `status` field the database doesn't allow on accounts; it now sets isArchived (found while adding edit-in-place to the chart of accounts)
+- [x] L-180 **Money:** bulk categorize on the transaction list changed "line 0" even when it was the bank line, so entries stored bank-line-first lost their bank side (gone from the bank balance), and transfers/journal entries were rewritten too; it also applied while typing ("Software" before "Software Licenses" was finished) and offered bank accounts as categories. Now: bank/cash lines never change, transfers and journal entries are skipped with a message, Enter or Apply only, categories only (tested)
+- [x] L-181 **Money:** "Transfer between accounts" only changed the list on screen: the transfer was gone after a reload and never reached the books. "Link as Transfer" (two entries that are one transfer) only set a flag on screen and left the expense and the income in place. Now the transfer is saved through the server as one balanced entry in the workspace currency, and linking moves both entries' other side to a Transfer Clearing account (added once, reused), so the made-up expense and income disappear (tested)
+- [x] L-182 **Money:** the keyboard category editor in the transaction list (Enter on the category cell) changed "line 0", which is the bank line when an entry is stored bank-first, so the entry lost its bank side; it also changed the accounts of entries made by invoices, bills and payments, and the amount editor changed amounts of those too. Now the same rules as clicking in the row: only the category side changes, transfers and journal entries and document entries say where to change them instead (tested)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
@@ -1793,7 +1800,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] M-14 Item categories (= K-12)
 - [ ] M-15 Warehouses (deferred)
 - [ ] M-16 Purchase requisitions
-- [ ] M-17 Bulk action bar
+- [x] M-17 Bulk action bar (= K-06)
 - [x] M-18 Bulk import wizard (= K-01)
 - [ ] M-19 Customer portal
 - [ ] M-20 Available budget
@@ -1973,9 +1980,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Y-13 Brand colour on documents (title, rule and table header)
 - [x] Y-14 Custom footer / terms (footer on every page, terms at the end, address under the name)
 - [x] Y-15 QR code on invoices (to the invoice's payment page once sent; can be switched off)
-- [ ] Y-16 Watermark
+- [x] Y-16 Watermark: DRAFT, VOID (void/cancelled) and PAID (invoices, bills) stamped across every page of document PDFs; statements and receipts never (tested)
 - [x] Y-17 Page numbers ("Page x of y"; long documents run over pages with the table header repeated)
-- [ ] Y-18 Batch PDF zip
+- [x] Y-18 Batch PDF zip: tick invoices or bills in their lists → "Download PDFs (zip)"; up to 100 per zip, only this workspace's documents (tested)
 - [ ] Y-19 Print stylesheet
 - [ ] Y-20 Digital signature
 - [x] Y-21 Multiple contacts per company (people with role, email, phone on the customer/vendor form and page)
@@ -2040,8 +2047,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] BA-04 Inventory adjustment form (= K-13)
 - [x] BA-05 Item category management: rename, merge or remove a category on all its items at once (Inventory → Manage categories; tested)
 - [ ] BA-06 Add-a-currency dialog
-- [ ] BA-07 Numbering dialog per document type
-- [ ] BA-08 PDF preview per document type
+- [x] BA-07 Numbering per document type: Settings → Document Numbering (prefix, next number, digits, live preview) for invoices, bills, estimates; a number already used is refused, so numbers never repeat; owners/accountants; audited (tested)
+- [x] BA-08 PDF preview per document type: purchase orders (branded, with terms from Branding), bills and vendor credits join invoices, estimates, credit notes, receipts and statements; Preview/Download on each list (tested)
 - [x] BA-09 Quick payment from a list row (invoice and bill rows open the payment dialog)
 - [x] BA-10 Allocate a credit note to an open invoice (tested)
 - [x] BA-11 Allocate a vendor credit to an open bill (tested)
@@ -2065,7 +2072,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BB-06 Schedule (UI over jobRuns)
 - [ ] BB-07 Modules
 - [ ] BB-08 Invoice settings
-- [ ] BB-09 Settings search
+- [x] BB-09 Settings search: ⌘K finds every screen, report and settings tab, settings also by what they're about ("logo", "invoice number", "2fa"); opens at once (the palette's 0.4 s pause before every action removed) (tested)
 
 # SECTION BC — DASHBOARD WIDGETS
 
@@ -2097,12 +2104,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 # SECTION BE — DOCUMENT WORKFLOW
 
 - [x] BE-01 Reminder schedule (daily job; tested)
-- [ ] BE-02 Thank-you email after payment
+- [x] BE-02 Thank-you email after payment: Settings → Emails & Reminders switch (off by default); payments recorded by hand, from a bank line or online send the "Payment received (thank you)" email, logged, skipped for bounced addresses; never holds up the payment (tested)
 - [x] BE-03 Recurring pause/resume/delete (and recurring invoices now create draft invoices; tested)
 - [ ] BE-04 Invoice approval
 - [ ] BE-05 Deposit invoice from estimate
-- [ ] BE-06 Auto-apply credits
-- [ ] BE-07 Batch statement send
+- [x] BE-06 Auto-apply credits: "Apply open credits" on the credit notes screen (all customers or all vendors) and on each customer's or vendor's page: every open credit, oldest first, goes to that contact's open invoices (bills) in the same currency, the one due first first; drafts, voided and paid ones get nothing; one database transaction on the server, audited; no ledger entry (issuing the credit already lowered what is owed) (tested)
+- [x] BE-07 Batch statement send: "Email statements" on the customer list: every active customer with something open gets their statement PDF with the new "Customer statement" email (editable in Settings → Emails); no address, nothing open, archived or bounced customers are skipped and listed with the reason; logged per customer; writers only. Also: the statement PDF now reads only that contact's payments, not the whole workspace's (tested)
 - [ ] BE-08 Recurring expense
 - [ ] BE-09 Mileage
 - [ ] BE-10 Per-diem

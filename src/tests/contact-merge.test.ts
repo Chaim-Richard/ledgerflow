@@ -10,7 +10,7 @@ import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import type { Firestore } from '../server/db/pgFirestore';
-import { mergedPartyFields } from '../server/services/contactMergeService';
+import { describeUsage, mergedPartyFields } from '../server/services/contactMergeService';
 
 const url = process.env.LF_TEST_DATABASE_URL;
 
@@ -27,6 +27,12 @@ test('the kept contact keeps its details, fills blanks from the duplicate, combi
   assert.deepEqual(merged.tags, ['VIP', 'wholesale']);
   assert.deepEqual(merged.contacts, [{ name: 'Dana', email: 'dana@acme.test' }, { name: 'Lee' }]);
   assert.deepEqual(merged.noteLog.map((n: { id: string }) => n.id), ['m', 'n2', 'n1']);
+});
+
+test('what a contact is used by, in words', () => {
+  assert.equal(describeUsage({ invoices: 2 }), '2 invoices');
+  assert.equal(describeUsage({ invoices: 1, payments: 1, transactions: 3 }), '1 invoice, 1 payment and 3 ledger entries');
+  assert.equal(describeUsage({ transactions: 1, recurring: 2 }), '1 ledger entry and 2 recurring schedules');
 });
 
 describe('Merging contacts (database)', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
@@ -120,5 +126,33 @@ describe('Merging contacts (database)', { skip: !url && 'LF_TEST_DATABASE_URL no
     const bill = await get('bills', 'bill1');
     assert.deepEqual([bill?.vendorId, bill?.vendorName, bill?.amountCents], [id('vkeep'), 'Paper Co', 700]);
     assert.equal((await get('vendors', 'vkeep'))?.address, '9 Mill Rd');
+  });
+
+  test('delete: only a contact nothing refers to; a bookkeeper may; a viewer or another workspace may not', async () => {
+    await db.collection('workspaces').doc(ws).set({ roles: { book: 'bookkeeper', acct: 'accountant', view: 'viewer' }, members: ['owner', 'book', 'acct', 'view'] }, { merge: true });
+    await db.collection('customers').doc(id('unused')).set({ workspaceId: ws, name: 'Typo Ltd' });
+    await db.collection('vendors').doc(id('scheduled')).set({ workspaceId: ws, name: 'Rent Co' });
+    await db.collection('recurring').doc(id('rec2')).set({ workspaceId: ws, isActive: true, billTemplate: { vendorId: id('scheduled'), amountCents: 100 } });
+    const del = (uid: string, side: string, contactId: string, workspaceId = ws) =>
+      fetch(`${base}/api/v1/workspaces/${workspaceId}/contacts/${side}/${contactId}`, { method: 'DELETE', headers: { 'x-test-uid': uid } });
+
+    const inUse = await del('owner', 'customer', id('keep'));
+    assert.equal(inUse.status, 409);
+    assert.equal((await inUse.json()).message, '"Acme Ltd" is used by 1 invoice, 1 estimate, 1 credit note, 1 payment, 1 ledger entry and 1 recurring schedule: archive it instead (those records keep it)');
+    const scheduled = await del('owner', 'vendor', id('scheduled'));
+    assert.equal(scheduled.status, 409);
+    assert.match((await scheduled.json()).message, /1 recurring schedule/);
+    assert.equal((await del('view', 'customer', id('unused'))).status, 403);
+    assert.equal((await del('owner', 'customer', `${other}_c`)).status, 404);
+    assert.equal((await del('owner', 'customer', id('unused'), other)).status, 403, 'not a writer there');
+    assert.equal((await del('owner', 'nobody', id('unused'))).status, 400);
+    assert.ok(await get('customers', 'unused'), 'nothing deleted yet');
+
+    const ok = await del('book', 'customer', id('unused'));
+    assert.equal(ok.status, 200, await ok.clone().text());
+    assert.equal(await get('customers', 'unused'), undefined);
+    assert.ok(await get('customers', 'keep'));
+    const audit = await db.collection('auditLogs').where('workspaceId', '==', ws).get();
+    assert.ok(audit.docs.some(d => d.data().action === 'CUSTOMER_DELETED' && d.data().uid === 'book'));
   });
 });

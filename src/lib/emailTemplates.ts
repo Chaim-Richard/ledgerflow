@@ -6,7 +6,7 @@
  * (BL-08). Used by the server to send and by the settings screen to preview.
  */
 
-export const EMAIL_TEMPLATE_KEYS = ['invoice', 'reminder', 'receipt'] as const;
+export const EMAIL_TEMPLATE_KEYS = ['invoice', 'reminder', 'receipt', 'statement'] as const;
 export type EmailTemplateKey = typeof EMAIL_TEMPLATE_KEYS[number];
 
 export interface EmailTemplate {
@@ -24,6 +24,7 @@ export const TEMPLATE_LABELS: Record<EmailTemplateKey, string> = {
   invoice: 'Sending an invoice',
   reminder: 'Payment reminder',
   receipt: 'Payment received (thank you)',
+  statement: 'Customer statement',
 };
 
 export const DEFAULT_TEMPLATES: Record<EmailTemplateKey, EmailTemplate> = {
@@ -38,6 +39,10 @@ export const DEFAULT_TEMPLATES: Record<EmailTemplateKey, EmailTemplate> = {
   receipt: {
     subject: 'Thank you for your payment',
     body: 'Hello {{customer}},\n\nWe received your payment of {{amount}} for invoice {{number}}. Thank you!\n\n{{company}}',
+  },
+  statement: {
+    subject: 'Your statement from {{company}}',
+    body: 'Hello {{customer}},\n\nPlease find your account statement attached. The balance is {{amount_due}}.\n\nIf anything looks wrong, just reply to this email.\n\nThank you,\n{{company}}',
   },
 };
 

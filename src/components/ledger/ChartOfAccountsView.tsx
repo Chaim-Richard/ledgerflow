@@ -3,9 +3,27 @@ import { Field as _Field } from '../common/Field';
 import { SchemaForm as _SchemaForm } from '../common/SchemaForm';
 import React, { useState } from 'react';
 import { ChartAccount } from '../../types';
-import { BookOpen, MoreVertical, ChevronRight, ChevronDown, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, BookOpen, MoreVertical, ChevronRight, ChevronDown, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
+import { db } from '../../firebase';
+import { doc, updateDoc } from '../../lib/db/firestore';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { suggestionsFrom } from '../../lib/inlineEdit';
+import InlineEdit from '../ui/InlineEdit';
+
+/** Edit in place (I-22): one field of an account. System accounts keep their code (the database refuses it). */
+async function saveAccountField(account: ChartAccount, field: 'name' | 'code' | 'description' | 'category', value: string | number) {
+  await updateDoc(doc(db, 'chartAccounts', account.id), { [field]: value, updatedAt: new Date().toISOString() });
+  toast.success('Saved');
+}
+
+/** Archive (hidden from pickers and this list; history kept) or bring an account back (I-22). */
+async function setAccountArchived(account: ChartAccount, archived: boolean) {
+  await updateDoc(doc(db, 'chartAccounts', account.id), { isArchived: archived, isActive: !archived, updatedAt: new Date().toISOString() });
+  toast.success(archived ? `"${account.name}" archived` : `"${account.name}" restored`);
+}
 
 interface AccountTreeNode extends ChartAccount { children: AccountTreeNode[] }
 
@@ -20,6 +38,12 @@ interface ChartOfAccountsViewProps {
 export default function ChartOfAccountsView({ accounts, searchTerm, formatCurrency, onDrillDown, onDeleteAccount }: ChartOfAccountsViewProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [showOptionsId, setShowOptionsId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedCount = accounts.filter(a => a.isArchived).length;
+  const listed = React.useMemo(() => (showArchived ? accounts : accounts.filter(a => !a.isArchived)), [accounts, showArchived]);
+  const canEdit = useCurrentRole() !== 'viewer';
+  const categories = React.useMemo(() => suggestionsFrom(accounts, a => a.category), [accounts]);
+  const codes = React.useMemo(() => new Map(accounts.map(a => [a.code, a.id])), [accounts]);
 
   const toggleExpand = (id: string) => {
     const next = new Set(expandedIds);
@@ -30,7 +54,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
 
   const tree = React.useMemo(() => {
     const buildTree = (parentId: string | null = null): AccountTreeNode[] => {
-      return accounts
+      return listed
         .filter(a => (a.parentId || null) === parentId)
         .sort((a, b) => a.code.localeCompare(b.code))
         .map(account => ({
@@ -39,7 +63,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
         }));
     };
     return buildTree(null);
-  }, [accounts]);
+  }, [listed]);
 
   const renderRow = (account: AccountTreeNode, depth: number = 0) => {
     const hasChildren = account.children.length > 0;
@@ -68,12 +92,18 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
               ) : (
                 <div className="w-5" />
               )}
-              {account.code}
+              <InlineEdit value={account.code} label={`Code of ${account.name}`} canEdit={canEdit && !account.isSystem}
+                validate={v => !String(v) ? 'An account needs a code' : codes.has(String(v)) && codes.get(String(v)) !== account.id ? `${v} is already used` : null}
+                onSave={v => saveAccountField(account, 'code', v)} />
             </div>
           </td>
           <td className="p-4" onClick={() => onDrillDown(account.name)}>
-            <div className="font-bold text-[var(--text)] uppercase tracking-tight text-xs">{account.name}</div>
-            {account.description && <div className="text-[10px] text-[var(--muted)] mt-0.5 truncate max-w-md">{account.description}</div>}
+            <InlineEdit value={account.name} label={`Name of ${account.name}`} canEdit={canEdit}
+              validate={v => String(v) ? null : 'An account needs a name'} onSave={v => saveAccountField(account, 'name', v)}
+              className="font-bold text-[var(--text)] uppercase tracking-tight text-xs block" />
+            {account.isArchived && <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-[var(--ink)] text-[var(--muted)] border border-[var(--line)]">Archived</span>}
+            <InlineEdit value={account.description} label={`Description of ${account.name}`} placeholder={canEdit ? 'Add description' : undefined} canEdit={canEdit}
+              onSave={v => saveAccountField(account, 'description', v)} className="text-[10px] text-[var(--muted)] mt-0.5 truncate max-w-md block" />
           </td>
           <td className="p-4">
             <span className={cn(
@@ -86,7 +116,10 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
               {account.type}
             </span>
           </td>
-          <td className="p-4 text-[var(--muted)] text-[10px] font-medium">{account.category || 'Uncategorized'}</td>
+          <td className="p-4 text-[var(--muted)] text-[10px] font-medium">
+            <InlineEdit value={account.category} label={`Category of ${account.name}`} placeholder="Uncategorized" canEdit={canEdit}
+              suggestions={categories} onSave={v => saveAccountField(account, 'category', v)} />
+          </td>
           <td className={cn(
             "p-4 text-right font-bold font-mono text-xs tabular-nums",
             account.balanceCents < 0 ? "text-rose-600" : "text-[var(--text)]"
@@ -94,7 +127,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
             {formatCurrency(account.balanceCents)}
           </td>
           <td className="p-4 text-right relative">
-            <button aria-label={`Account options for ${account.name}`}
+            {canEdit && <button aria-label={`Account options for ${account.name}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setShowOptionsId(showOptionsId === account.id ? null : account.id);
@@ -102,7 +135,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
               className="p-1.5 text-[var(--muted)] hover:text-[var(--text)] transition-colors rounded hover:bg-slate-100"
             >
               <MoreVertical aria-hidden="true" size={14} />
-            </button>
+            </button>}
             <AnimatePresence>
               {showOptionsId === account.id && (
                 <>
@@ -113,7 +146,15 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
                     exit={{ opacity: 0, scale: 0.95, y: -5 }}
                     className="absolute right-4 top-10 w-44 bg-[var(--surface)] border border-[var(--line)] rounded-lg shadow-md z-[110] overflow-hidden p-1"
                   >
-                    <button 
+                    <button type="button"
+                      onClick={() => { void setAccountArchived(account, !account.isArchived); setShowOptionsId(null); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-[var(--text)] hover:bg-[var(--ink)] rounded transition-all text-[9.5px] font-bold uppercase tracking-wider"
+                    >
+                      {account.isArchived ? <ArchiveRestore aria-hidden="true" size={12} /> : <Archive aria-hidden="true" size={12} />}
+                      {account.isArchived ? 'Restore' : 'Archive'}
+                    </button>
+                    {/* an account with entries is archived instead (its history stays); one without is deleted */}
+                    <button type="button"
                       onClick={() => {
                         onDeleteAccount(account.id);
                         setShowOptionsId(null);
@@ -121,7 +162,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
                       className="w-full flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 rounded transition-all text-[9.5px] font-bold uppercase tracking-wider"
                     >
                       <Trash2 aria-hidden="true" size={12} />
-                      Decommission Node
+                      Delete
                     </button>
                   </motion.div>
                 </>
@@ -134,13 +175,19 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
     );
   };
 
-  const filteredFlat = accounts.filter(a => 
+  const filteredFlat = listed.filter(a => 
     a.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     a.code.includes(searchTerm)
   ).sort((a, b) => a.code.localeCompare(b.code));
 
   return (
     <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/85 shadow-3xs overflow-hidden">
+      {archivedCount > 0 && (
+        <button type="button" aria-pressed={showArchived} onClick={() => setShowArchived(v => !v)}
+          className="m-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--line)] text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)]">
+          <Archive aria-hidden="true" size={13} /> {showArchived ? 'Hide archived accounts' : `Show archived accounts (${archivedCount})`}
+        </button>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-xs min-w-[750px]">
           <caption className="sr-only">Chart of accounts</caption>

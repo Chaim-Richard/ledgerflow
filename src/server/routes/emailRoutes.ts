@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { getDb } from '../db/firestore';
 import { getTrustedAppUrl } from '../utils/urlHelper';
 import { notify } from '../services/notificationService';
-import { EmailSendError, emailInvoice, emailLog, logEmailEvent } from '../services/documentEmailService';
+import { EmailSendError, emailInvoice, emailLog, emailStatements, logEmailEvent } from '../services/documentEmailService';
 
 /**
  * Emails to customers, mounted at /api/v1/workspaces/:workspaceId/emails (workspaceRoutes.ts,
@@ -31,6 +31,22 @@ emailRouter.post('/invoices/:invoiceId', async (req, res) => {
     if (err instanceof z.ZodError) return res.status(400).json({ status: 'error', message: 'Invalid request', details: err.issues });
     if (err instanceof EmailSendError) return res.status(err.status).json({ status: 'error', message: err.message });
     res.status(500).json({ status: 'error', message: 'The email could not be sent', details: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+// BE-07: statements to many customers at once (all active ones when no ids are given)
+const statementsSchema = z.object({ customerIds: z.array(z.string().min(1).max(200)).max(1000).optional() }).strict();
+
+emailRouter.post('/statements', async (req, res) => {
+  const { workspaceId } = req.params as Record<string, string>;
+  try {
+    const body = statementsSchema.parse(req.body);
+    const result = await emailStatements(getDb(), { workspaceId, uid: (req as unknown as AuthedRequest).user.uid, ...body });
+    res.json({ status: 'success', ...result });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ status: 'error', message: 'Invalid request', details: err.issues });
+    if (err instanceof EmailSendError) return res.status(err.status).json({ status: 'error', message: err.message });
+    res.status(500).json({ status: 'error', message: 'The statements could not be sent', details: err instanceof Error ? err.message : String(err) });
   }
 });
 

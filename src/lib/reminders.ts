@@ -11,6 +11,8 @@ export interface ReminderSettings {
   enabled: boolean;
   /** Days after the due date, one reminder each (sorted, 1–365, at most 6). */
   daysAfterDue: number[];
+  /** BE-02: email the customer the "Payment received (thank you)" template when a payment is recorded. */
+  thankYou?: boolean;
 }
 
 export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = { enabled: false, daysAfterDue: [3, 14, 30] };
@@ -18,7 +20,7 @@ export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = { enabled: false, day
 export function normalizeReminderSettings(input: Partial<ReminderSettings> | null | undefined): ReminderSettings {
   const days = Array.isArray(input?.daysAfterDue) ? input.daysAfterDue : DEFAULT_REMINDER_SETTINGS.daysAfterDue;
   const clean = [...new Set(days.map(Number).filter(d => Number.isInteger(d) && d >= 1 && d <= 365))].sort((a, b) => a - b).slice(0, 6);
-  return { enabled: Boolean(input?.enabled), daysAfterDue: clean.length ? clean : DEFAULT_REMINDER_SETTINGS.daysAfterDue };
+  return { enabled: Boolean(input?.enabled), daysAfterDue: clean.length ? clean : DEFAULT_REMINDER_SETTINGS.daysAfterDue, thankYou: Boolean(input?.thankYou) };
 }
 
 const OPEN = new Set(['sent', 'pending', 'approved', 'partially_paid', 'overdue']);

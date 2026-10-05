@@ -26,7 +26,9 @@ import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 import { EmptyState } from '../ui/EmptyState';
 import CustomerModal from './CustomerModal';
 import TagFilter from '../common/TagFilter';
-import { allTags, hasTag } from '../../lib/contacts';
+import { allTags, hasTag, isArchivedParty } from '../../lib/contacts';
+import PartyRowActions, { ArchivedBadge, ShowArchivedToggle } from '../common/PartyRowActions';
+import EmailStatementsButton from './EmailStatementsButton';
 import { PartyDetailView } from '../common/PartyDetailView';
 import WriteOffModal from './WriteOffModal';
 import InvoiceEmailDialog from './InvoiceEmailDialog';
@@ -37,6 +39,10 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { computeCustomerBalanceSummary, toBaseCents } from '../../server/reports/partyReports';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import InlineEdit from '../ui/InlineEdit';
+import InlineAdd from '../ui/InlineAdd';
+import DocumentBulkBar from '../ui/DocumentBulkBar';
 import { printInvoice } from '../../lib/printInvoice';
 import { convertEstimateToInvoice } from '../../lib/estimateConverter';
 import { detectDuplicateContacts } from '../../lib/contactUtils';
@@ -54,6 +60,8 @@ export default function Sales() {
   const accounts = useLedgerStore(s => s.accounts);
   const { loading } = useLedgerCollections('creditNotes', 'customers', 'invoices', 'payments');
   const { addEntity, updateEntity } = useEntityOperations();
+  const canEditContacts = useCurrentRole() !== 'viewer';
+  const [pickedInvoices, setPickedInvoices] = useState<Set<string>>(() => new Set());
 
   const transactions = useLedgerStore(s => s.transactions);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -125,7 +133,9 @@ export default function Sales() {
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [customerTag, setCustomerTag] = useState<string | null>(null);
   const customerTags = useMemo(() => allTags(customers), [customers]);
-  const shownCustomers = useMemo(() => customers.filter(c => hasTag(c, customerTag)), [customers, customerTag]);
+  const [showArchivedCustomers, setShowArchivedCustomers] = useState(false);
+  const archivedCustomers = useMemo(() => customers.filter(isArchivedParty).length, [customers]);
+  const shownCustomers = useMemo(() => customers.filter(c => hasTag(c, customerTag) && (showArchivedCustomers || !isArchivedParty(c))), [customers, customerTag, showArchivedCustomers]);
   const [paymentDocumentId, setPaymentDocumentId] = useState<string | null>(null);
   const [paymentContactId, setPaymentContactId] = useState<string | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -313,11 +323,21 @@ export default function Sales() {
 
       {activeSubTab === 'invoices' && (
         <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
+          {currentWorkspaceId && (
+            <DocumentBulkBar type="invoice" noun="invoice" ids={[...pickedInvoices].filter(id => filteredInvoices.some(i => i.id === id))}
+              documents={filteredInvoices.filter(i => pickedInvoices.has(i.id))}
+              workspaceId={currentWorkspaceId} onClear={() => setPickedInvoices(new Set())} />
+          )}
           <div className="overflow-x-auto">
             <table className="w-full border-collapse min-w-[700px]">
               <caption className="sr-only">Invoices</caption>
               <thead>
                 <tr className="text-left border-b border-[var(--line)]/50">
+                  <th scope="col" className="pl-4 md:pl-8 w-8">
+                    <input type="checkbox" aria-label="Select all invoices shown"
+                      checked={filteredInvoices.length > 0 && filteredInvoices.every(i => pickedInvoices.has(i.id))}
+                      onChange={e => setPickedInvoices(e.target.checked ? new Set(filteredInvoices.map(i => i.id)) : new Set())} />
+                  </th>
                   <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Number</th>
                   <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Customer</th>
                   <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Date</th>
@@ -331,6 +351,10 @@ export default function Sales() {
                 {filteredInvoices.map((inv) => (
                   <tr key={inv.id} id={recordElementId('invoice', inv.id)} aria-current={focusedInvoiceId === inv.id ? 'true' : undefined}
                     className={cn("group hover:bg-[var(--ink)]/30 transition-all", focusedInvoiceId === inv.id && "ring-2 ring-inset ring-[var(--brass)]")}>
+                    <td className="pl-4 md:pl-8">
+                      <input type="checkbox" aria-label={`Select invoice ${inv.number || ''}`.trim()} checked={pickedInvoices.has(inv.id)}
+                        onChange={() => setPickedInvoices(prev => { const next = new Set(prev); if (next.has(inv.id)) next.delete(inv.id); else next.add(inv.id); return next; })} />
+                    </td>
                     <td className="p-4 md:p-8 font-mono font-bold text-[var(--muted)] group-hover:text-[var(--text)] transition-colors">{inv.number}</td>
                     <td className="p-4 md:p-8">
                        <div className="flex flex-col">
@@ -338,16 +362,17 @@ export default function Sales() {
                        </div>
                     </td>
                     <td className="p-4 md:p-8">
-                       <span className="font-bold text-[var(--text)]">{inv.date ? formatDate(inv.date) : 'N/A'}</span>
+                       <InlineEdit kind="date" value={inv.date?.slice(0, 10)} display={inv.date ? formatDate(inv.date) : 'N/A'}
+                         label={`Date of invoice ${inv.number || ''}`.trim()} canEdit={canEditContacts && inv.status === 'draft'}
+                         onSave={v => updateEntity('invoices', inv.id, { date: String(v) }, 'Date saved')} className="font-bold text-[var(--text)]" />
                     </td>
                     <td className="p-4 md:p-8">
                       <div className="flex flex-col">
-                        <span className={cn(
-                          "font-bold text-[var(--text)]",
-                          inv.status === 'overdue' && "text-rose-600"
-                        )}>
-                          {inv.dueDate ? formatDate(inv.dueDate) : 'N/A'}
-                        </span>
+                        <InlineEdit kind="date" value={inv.dueDate?.slice(0, 10)} display={inv.dueDate ? formatDate(inv.dueDate) : 'N/A'}
+                          label={`Due date of invoice ${inv.number || ''}`.trim()} canEdit={canEditContacts && !['paid', 'void', 'written_off'].includes(String(inv.status))}
+                          validate={v => inv.date && String(v) < inv.date.slice(0, 10) ? 'The due date is before the invoice date' : null}
+                          onSave={v => updateEntity('invoices', inv.id, { dueDate: String(v) }, 'Due date saved')}
+                          className={cn("font-bold text-[var(--text)]", inv.status === 'overdue' && "text-rose-600")} />
                         {inv.status === 'pending' && (
                           <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mt-1 opacity-50">
                             {differenceInDays(parseLocalDate(inv.dueDate), new Date())} T-Days Left
@@ -488,7 +513,7 @@ export default function Sales() {
                 ))}
                 {filteredInvoices.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-12">
+                    <td colSpan={8} className="p-12">
                       {loading ? <LoadingState what="invoices" /> : (
                         <EmptyState
                           title={searchTerm ? 'No invoices match your search' : 'No invoices yet'}
@@ -509,7 +534,15 @@ export default function Sales() {
       {activeSubTab === 'customers' && (
         <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
           <TagFilter tags={customerTags} value={customerTag} onChange={setCustomerTag} label="Show customers with the tag" />
+          <div className="flex flex-wrap items-center gap-2 px-4 md:px-8">
+            <EmailStatementsButton className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--line)] text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-50" />
+            <ShowArchivedToggle count={archivedCustomers} on={showArchivedCustomers} onChange={setShowArchivedCustomers} noun="customer" />
+          </div>
           <div className="overflow-x-auto">
+            {canEditContacts && (
+              <InlineAdd className="px-4 md:px-8 pt-4" label="New customer name" placeholder="Add a customer: type a name and press Enter"
+                existing={customers.map(c => c.name)} onAdd={name => addEntity('customers', { name, status: 'active' }, `Customer "${name}" added`)} />
+            )}
             <table className="w-full border-collapse min-w-[700px]">
               <caption className="sr-only">Customers</caption>
               <thead>
@@ -533,7 +566,11 @@ export default function Sales() {
                              {(cust.name || 'VE').slice(0, 2).toUpperCase()}
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-black text-[var(--text)] text-lg tracking-tight">{cust.name}</span>
+                            <InlineEdit value={cust.name} label={`Name of ${cust.name}`} canEdit={canEditContacts}
+                              validate={v => String(v) ? null : 'A customer needs a name'}
+                              onSave={v => updateEntity('customers', cust.id, { name: v }, 'Name saved')}
+                              className="font-black text-[var(--text)] text-lg tracking-tight" />
+                            <ArchivedBadge party={cust} />
                             <button type="button"
                               onClick={(e) => { e.stopPropagation(); updateEntity('customers', cust.id, { noReminders: !cust.noReminders }, cust.noReminders ? `Automatic reminders on for ${cust.name}` : `No automatic reminders for ${cust.name}`); }}
                               className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest mt-1 ${cust.noReminders ? 'text-[var(--muted)]' : 'text-emerald-500'}`}
@@ -548,7 +585,14 @@ export default function Sales() {
                     <td className="p-4 md:p-8">
                        <div className="flex items-center gap-2 group/email">
                           <Users size={16} className="text-[var(--muted)] opacity-40" />
-                          <span className="font-bold text-[var(--text)] group-hover/email:text-indigo-600 transition-colors">{cust.email}</span>
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <InlineEdit kind="email" value={cust.email} label={`Email of ${cust.name}`} placeholder="Add email" canEdit={canEditContacts}
+                              onSave={v => updateEntity('customers', cust.id, { email: v }, 'Email saved')}
+                              className="font-bold text-[var(--text)]" />
+                            <InlineEdit kind="tel" value={cust.phone} label={`Phone of ${cust.name}`} placeholder="Add phone" canEdit={canEditContacts}
+                              onSave={v => updateEntity('customers', cust.id, { phone: v }, 'Phone saved')}
+                              className="text-sm text-[var(--muted)]" />
+                          </div>
                        </div>
                     </td>
                     <td className="p-4 md:p-8 text-right font-black font-mono text-[var(--text)] text-xl tracking-tighter tabular-nums">
@@ -558,7 +602,7 @@ export default function Sales() {
                       <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all justify-end">
                         
                         <button onClick={(e)=> {e.stopPropagation(); setNewInvoiceFor({ customerId: cust.id, customerName: cust.name }); setIsInvoiceModalOpen(true); }} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded" title="Enter Invoice"><Plus size={14}/></button>
-                        
+                        {canEditContacts && <PartyRowActions side="customer" party={cust} />}
                       </div>
                     </td>
                   </tr>

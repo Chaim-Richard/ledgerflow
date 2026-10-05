@@ -8,7 +8,7 @@
  */
 import type { DocumentData, Firestore } from '../db/firestore';
 import { createPaymentInTransaction } from './paymentService';
-import { notifyPaymentReceived } from './notificationService';
+import { afterPaymentRecorded } from './afterPayment';
 import { logger } from '../utils/logger';
 import { calculateAmountDue } from '../../lib/documentMath';
 import { formatTzDate } from '../../lib/utils';
@@ -104,6 +104,6 @@ export async function recordStripeInvoicePayment(db: Firestore, eventId: string,
     return payment;
   });
   if (!result) return { status: 'already_processed' };
-  await notifyPaymentReceived(db, result.payment);
+  await afterPaymentRecorded(db, result.payment);
   return { status: 'recorded', paymentId: result.paymentId };
 }

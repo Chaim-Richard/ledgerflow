@@ -20,11 +20,13 @@ import {
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag, ArrowLeftRight
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette } from 'lucide-react';
+, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash } from 'lucide-react';
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
-const pluginModules = import.meta.glob<{ default: ComponentType }>('../plugins/*.tsx');
+// Vite replaces the call at build time; outside Vite (unit tests) there are simply no plugins.
+let pluginModules: Record<string, () => Promise<{ default: ComponentType }>> = {};
+try { pluginModules = import.meta.glob<{ default: ComponentType }>('../plugins/*.tsx'); } catch { /* not running under Vite */ }
 const dynamicTabs: AppTabDefinition[] = [];
 const dynamicComponents: Record<string, ElementType> = {};
 for (const path in pluginModules) {
@@ -394,6 +396,7 @@ export const SETTINGS_TABS_REGISTRY = [
   { id: 'import', label: { en: 'Import Data', he: 'ייבוא נתונים' }, componentName: 'ImportDataView', icon: Upload },
   { id: 'emails', label: { en: 'Emails & Reminders', he: 'מיילים ותזכורות' }, componentName: 'EmailSettingsView', icon: Mail },
   { id: 'branding', label: { en: 'Branding & PDFs', he: 'מיתוג ומסמכים' }, componentName: 'BrandingSettingsView', icon: Palette },
+  { id: 'numbering', label: { en: 'Document Numbering', he: 'מספור מסמכים' }, componentName: 'NumberingSettingsView', icon: Hash },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ];
@@ -411,6 +414,7 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'ImportDataView': lazy(() => import('../components/platform/settings/ImportSettings')),
   'EmailSettingsView': lazy(() => import('../components/platform/settings/EmailSettings')),
   'BrandingSettingsView': lazy(() => import('../components/platform/settings/BrandingSettings')),
+  'NumberingSettingsView': lazy(() => import('../components/platform/settings/NumberingSettings')),
   'ExportView': lazy(() => import('../components/platform/settings/BackupExportSettings')),
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };

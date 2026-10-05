@@ -2,6 +2,7 @@ import type { RecordRef } from './recordLinks';
 export interface SearchResultIdentity { id: string; type: string; record?: RecordRef }
 export function paletteGroup(result: SearchResultIdentity): string {
   if (result.type === 'recent') return 'Recent items';
+  if (result.type === 'page') return 'Pages';
   if (result.type === 'command') return 'Commands';
   const prefix = result.id.split('-')[0];
   return ({ tx: 'Transactions', dim: 'Dimensions', proj: 'Projects', cust: 'Customers', vend: 'Vendors', acc: 'Accounts', inv: 'Invoices', bill: 'Bills' } as Record<string, string>)[prefix] || 'Records';

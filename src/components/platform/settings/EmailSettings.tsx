@@ -66,10 +66,10 @@ export default function EmailSettings() {
 
   const saveReminders = () => {
     const days = daysText.split(/[,\s]+/).filter(Boolean).map(Number);
-    const settings = normalizeReminderSettings({ enabled: reminders.enabled, daysAfterDue: days });
+    const settings = normalizeReminderSettings({ enabled: reminders.enabled, daysAfterDue: days, thankYou: reminders.thankYou });
     setReminders(settings);
     setDaysText(settings.daysAfterDue.join(', '));
-    save({ reminderSettings: settings }, settings.enabled ? `Reminders on: ${settings.daysAfterDue.join(', ')} days after the due date.` : 'Automatic reminders are off.');
+    save({ reminderSettings: settings }, `${settings.enabled ? `Reminders on: ${settings.daysAfterDue.join(', ')} days after the due date.` : 'Automatic reminders are off.'} ${settings.thankYou ? 'Thank-you emails on.' : 'No thank-you emails.'}`);
   };
 
   return (
@@ -140,8 +140,15 @@ export default function EmailSettings() {
           <label htmlFor={`${formId}-reminder-days`} className="block text-xs font-semibold text-[var(--text)] mb-1">Days after the due date</label>
           <input id={`${formId}-reminder-days`} disabled={!canEdit} value={daysText} onChange={e => setDaysText(e.target.value)} placeholder="3, 14, 30" className={inputClass} />
         </div>
+        <label htmlFor={`${formId}-thanks`} className="flex items-start gap-2 text-sm text-[var(--text)] pt-2 border-t border-[var(--line)]">
+          <input id={`${formId}-thanks`} type="checkbox" className="mt-1" disabled={!canEdit} checked={Boolean(reminders.thankYou)} onChange={e => setReminders({ ...reminders, thankYou: e.target.checked })} />
+          <span>
+            Email a thank-you when a customer pays
+            <span className="block text-xs text-[var(--muted)]">Uses the &quot;Payment received (thank you)&quot; email above, for payments recorded by hand, from a bank line or online.</span>
+          </span>
+        </label>
         {canEdit && (
-          <button type="button" disabled={saving} onClick={saveReminders} className="px-4 py-2 rounded-lg bg-[var(--brass)] text-[var(--ink)] text-sm font-bold disabled:opacity-50">Save reminders</button>
+          <button type="button" disabled={saving} onClick={saveReminders} className="px-4 py-2 rounded-lg bg-[var(--brass)] text-[var(--ink)] text-sm font-bold disabled:opacity-50">Save automatic emails</button>
         )}
         {!canEdit && <p className="text-xs text-[var(--muted)]">Owners and accountants change these settings.</p>}
       </section>

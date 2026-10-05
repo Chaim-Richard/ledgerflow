@@ -1,13 +1,11 @@
-import { useDialog } from '../../hooks/useDialog';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, safeConfirm } from '../../lib/utils';
 import { ConfirmButton } from '../ui/ConfirmButton';
-import AsyncButton from '../ui/AsyncButton';
 import { toast } from 'sonner';
 import { StrategicEngine } from '../../services/strategicEngine';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { 
   Package, 
   Plus, 
@@ -15,7 +13,6 @@ import {
   Search, 
   AlertTriangle,
   Edit2,
-  X,
   BarChart3,
   ShieldCheck,
   Info,
@@ -47,8 +44,11 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isPostable } from '../../lib/txFilters';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { defaultOffsetAccount, inventoryAccountsOf } from '../../lib/inventoryAccounts';
-import { adjustStockRequest } from '../../services/stockRequests';
+import { adjustStockRequest, countStockRequest } from '../../services/stockRequests';
+import InlineEdit from '../ui/InlineEdit';
+import InlineAdd from '../ui/InlineAdd';
 import CogsDialog from './CogsDialog';
+import InventoryItemDialog from './InventoryItemDialog';
 import StockAdjustDialog from './StockAdjustDialog';
 import StockCountDialog from './StockCountDialog';
 import CategoryManagerDialog from './CategoryManagerDialog';
@@ -180,6 +180,30 @@ export default function Inventory() {
     }
   };
 
+  /** Add in place (I-22): a new item by name; price, cost and the rest are filled in the list. */
+  const quickAddItem = async (name: string) => {
+    await addDoc(collection(db, 'inventory'), {
+      uid: uid || '', workspaceId: workspaceId || '', name, sku: '', unitPriceCents: 0, unitCostCents: 0,
+      quantityAtHand: 0, reorderPoint: 0, ...(categoryFilter ? { category: categoryFilter } : {}), createdAt: new Date().toISOString(),
+    });
+    toast.success(`"${name}" added`);
+  };
+
+  /** Edit in place (I-22): one field of an item. */
+  const saveItemField = async (item: InventoryItem, field: 'name' | 'sku' | 'category' | 'unitPriceCents' | 'unitCostCents', value: string | number) => {
+    await updateDoc(doc(db, 'inventory', item.id), { [field]: value, updatedAt: new Date().toISOString() });
+    toast.success('Saved');
+  };
+
+  /** Typing a new quantity in the list records a stock count, so the books follow (difference to the variance account). */
+  const countItem = async (item: InventoryItem, counted: number) => {
+    const inventoryAcc = inventoryAccountsOf(accounts)[0];
+    const varianceAcc = defaultOffsetAccount(accounts, 'count');
+    if (!workspaceId || !inventoryAcc || !varianceAcc) throw new Error('Add an Inventory account and a variance (or Cost of Goods Sold) account first');
+    const result = await countStockRequest({ workspaceId, inventoryAccountId: inventoryAcc.id, offsetAccountId: varianceAcc.id, reason: 'Corrected in the inventory list', counts: [{ itemId: item.id, counted }] });
+    toast.success(`${item.name}: ${counted} in stock`, { description: `Difference ${formatCurrency(result.valueCents, baseCurrency)} recorded to ${varianceAcc.name}` });
+  };
+
   const handleDelete = async (id: string) => {
     const item = items.find(i => i.id === id);
     if (item && item.quantityAtHand > 0) {
@@ -210,7 +234,6 @@ export default function Inventory() {
 
 
   const closeItemDialog = () => { setIsAdding(false); setEditingItem(null); };
-  const { dialogProps: itemDialogProps, titleId: itemTitleId } = useDialog(closeItemDialog, isAdding || !!editingItem);
 
   return (
     <div className="space-y-8">
@@ -373,6 +396,10 @@ export default function Inventory() {
         </div>
       )}
 
+      {canChangeStock && (
+        <InlineAdd label="New item name" placeholder="Add an item: type a name and press Enter, then fill in price and cost in the list"
+          existing={items.map(i => i.name)} onAdd={quickAddItem} />
+      )}
       <div className="bg-[var(--surface)] rounded-[40px] border border-[var(--line)] overflow-hidden shadow-sm">
         <table className="w-full text-left border-collapse">
           <caption className="sr-only">Inventory items</caption>
@@ -391,23 +418,23 @@ export default function Inventory() {
               <tr key={item.id} className="hover:bg-[var(--ink)]/50 transition-colors group">
                 <td className="px-8 py-5">
                   <div>
-                    <p className="text-sm font-black text-[var(--text)]">{item.name}</p>
-                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{item.sku}</p>
+                    <InlineEdit value={item.name} label={`Name of ${item.name}`} canEdit={canChangeStock}
+                      validate={v => String(v) ? null : 'An item needs a name'} onSave={v => saveItemField(item, 'name', v)}
+                      className="text-sm font-black text-[var(--text)] block" />
+                    <InlineEdit value={item.sku} label={`SKU of ${item.name}`} placeholder="Add SKU" canEdit={canChangeStock}
+                      onSave={v => saveItemField(item, 'sku', v)} className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest block" />
                   </div>
                 </td>
                 <td className="px-8 py-5">
-                  <span className="px-2 py-1 bg-zinc-100 rounded text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-                    {item.category || 'General'}
-                  </span>
+                  <InlineEdit value={item.category} label={`Category of ${item.name}`} placeholder="General" canEdit={canChangeStock}
+                    suggestions={categories} onSave={v => saveItemField(item, 'category', v)}
+                    className="px-2 py-1 bg-zinc-100 rounded text-[10px] font-medium uppercase tracking-wider text-zinc-500" />
                 </td>
                 <td className="px-8 py-5">
                   <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "text-sm font-black font-mono",
-                      item.quantityAtHand <= item.reorderPoint ? "text-rose-600" : "text-[var(--text)]"
-                    )}>
-                      {item.quantityAtHand}
-                    </span>
+                    <InlineEdit kind="number" value={item.quantityAtHand} label={`Quantity of ${item.name} (recorded as a stock count)`} canEdit={canChangeStock}
+                      validate={v => Number(v) >= 0 ? null : 'Stock cannot be below zero'} onSave={v => countItem(item, Number(v))}
+                      className={cn("text-sm font-black font-mono", item.quantityAtHand <= item.reorderPoint ? "text-rose-600" : "text-[var(--text)]")} />
                     {item.quantityAtHand <= item.reorderPoint && (
                       <AlertTriangle aria-hidden="true" size={14} className="text-rose-500 animate-pulse" />
                     )}
@@ -447,7 +474,8 @@ export default function Inventory() {
                     </div>
                   ) : (
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-zinc-500 font-mono tabular-nums">{formatCurrency(item.unitCostCents)}</span>
+                      <InlineEdit kind="money" value={item.unitCostCents} display={formatCurrency(item.unitCostCents)} label={`Unit cost of ${item.name}`} canEdit={canChangeStock}
+                        onSave={v => saveItemField(item, 'unitCostCents', v)} className="text-sm font-bold text-zinc-500 font-mono tabular-nums" />
                       {item.unitsPerPackage && item.unitsPerPackage > 1 && (
                         <span className="text-[10px] font-black text-emerald-600 tracking-widest mt-0.5 uppercase tabular-nums">
                           {formatCurrency(Math.round(item.unitCostCents / item.unitsPerPackage))} / {item.measurementUnit || 'unit'}
@@ -520,7 +548,8 @@ export default function Inventory() {
                     </div>
                   ) : (
                     <div className="flex flex-col">
-                      <span className="text-sm font-black text-emerald-600 font-mono tabular-nums">{formatCurrency(item.unitPriceCents)}</span>
+                      <InlineEdit kind="money" value={item.unitPriceCents} display={formatCurrency(item.unitPriceCents)} label={`Price of ${item.name}`} canEdit={canChangeStock}
+                        onSave={v => saveItemField(item, 'unitPriceCents', v)} className="text-sm font-black text-emerald-600 font-mono tabular-nums" />
                       {item.unitsPerPackage && item.unitsPerPackage > 1 && (
                         <span className="text-[10px] font-bold text-amber-600 tracking-widest mt-0.5 uppercase tabular-nums">
                           {formatCurrency(Math.round(item.unitPriceCents / item.unitsPerPackage))} / {item.measurementUnit || 'unit'}
@@ -576,174 +605,9 @@ export default function Inventory() {
         )}
       </div>
 
-      <AnimatePresence>
-        {(isAdding || editingItem) && (
-          <div {...itemDialogProps} className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                setIsAdding(false);
-                setEditingItem(null);
-              }}
-              className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden"
-            >
-              <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between">
-                <h2 id={itemTitleId} className="text-xl font-black text-[var(--text)] tracking-tighter">
-                  {editingItem ? 'Edit Inventory Item' : 'New Inventory Item'}
-                </h2>
-                <button aria-label="Close item dialog"
-                  onClick={() => {
-                    setIsAdding(false);
-                    setEditingItem(null);
-                  }} 
-                  className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
-                >
-                  <X aria-hidden="true" size={20} className="text-zinc-400" />
-                </button>
-              </div>
-              <form onSubmit={editingItem ? handleUpdate : handleAdd} className="p-4 md:p-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="col-span-2 space-y-2">
-                  <label htmlFor="inv-item-name" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Item Name</label>
-                  <input 
-                    id="inv-item-name"
-                    name="name" 
-                    defaultValue={editingItem?.name}
-                    required 
-                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="inv-sku" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">SKU</label>
-                  <input 
-                    id="inv-sku"
-                    name="sku" 
-                    defaultValue={editingItem?.sku}
-                    required 
-                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="inv-category" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Category</label>
-                  <input 
-                    id="inv-category"
-                    name="category" 
-                    list="inv-category-options"
-                    defaultValue={editingItem?.category}
-                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
-                  />
-                </div>
-                <datalist id="inv-category-options">
-                  {categories.map(c => <option key={c} value={c} />)}
-                </datalist>
-                <div className="space-y-2">
-                  <label htmlFor="inv-unit-cost" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Unit Cost ($)</label>
-                  <input 
-                    id="inv-unit-cost"
-                    name="unitCost" 
-                    type="number" 
-                    step="0.01" 
-                    defaultValue={editingItem ? editingItem.unitCostCents / 100 : undefined}
-                    required 
-                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="inv-unit-price" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Unit Price ($)</label>
-                  <input 
-                    id="inv-unit-price"
-                    name="unitPrice" 
-                    type="number" 
-                    step="0.01" 
-                    defaultValue={editingItem ? editingItem.unitPriceCents / 100 : undefined}
-                    required 
-                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
-                  />
-                </div>
-                {editingItem ? (
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Quantity at Hand</p>
-                    <div className="flex items-center justify-between px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] font-bold">
-                      <span className="tabular-nums">{editingItem.quantityAtHand}</span>
-                      {canChangeStock && (
-                        <button type="button" onClick={() => { const it = editingItem; setEditingItem(null); setAdjustItem(it); }} className="text-xs font-semibold text-emerald-700 hover:underline">
-                          Adjust stock
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <label htmlFor="inv-quantity" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Opening stock</label>
-                    <input
-                      id="inv-quantity"
-                      name="quantity"
-                      type="number"
-                      min="0"
-                      step="any"
-                      defaultValue={0}
-                      aria-describedby="inv-quantity-help"
-                      className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold"
-                    />
-                    <p id="inv-quantity-help" className="text-[10px] text-[var(--muted)]">Recorded at the unit cost against Opening Balance Equity.</p>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <label htmlFor="inv-reorder-point" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Reorder Point</label>
-                  <input 
-                    id="inv-reorder-point"
-                    name="reorderPoint" 
-                    type="number" 
-                    defaultValue={editingItem?.reorderPoint}
-                    required 
-                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="inv-uom" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">UOM (e.g. pack, kg)</label>
-                  <input 
-                    id="inv-uom"
-                    name="measurementUnit" 
-                    type="text" 
-                    defaultValue={editingItem?.measurementUnit}
-                    placeholder="Optional"
-                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="inv-units-per-pkg" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Units per Package</label>
-                  <input 
-                    id="inv-units-per-pkg"
-                    name="unitsPerPackage" 
-                    type="number" 
-                    defaultValue={editingItem?.unitsPerPackage}
-                    placeholder="1"
-                    min="1"
-                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
-                  />
-                </div>
-                <div className="col-span-2 pt-4">
-                  <AsyncButton 
-                    type="submit" 
-                    loadingText={editingItem ? 'Updating...' : 'Adding...'}
-                    className="w-full py-5 bg-zinc-900 text-white rounded-[32px] font-black hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20"
-                  >
-                    {editingItem ? 'Update Item' : 'Add to Inventory'}
-                  </AsyncButton>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-
-      </AnimatePresence>
+      <InventoryItemDialog open={isAdding || !!editingItem} editingItem={editingItem} categories={categories} canChangeStock={canChangeStock}
+        onClose={closeItemDialog} onSubmit={editingItem ? handleUpdate : handleAdd}
+        onAdjust={it => { setEditingItem(null); setAdjustItem(it); }} />
 
       {cogsItem && workspaceId && (
         <CogsDialog item={cogsItem} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setCogsItem(null)} />
