@@ -2269,20 +2269,20 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CA-34 Bisect accounting statements
 - [ ] CA-35 Invalid ledger entries
 - [ ] CA-36 Process deferred accounting
-- [ ] CB-01 Customer ledger summary
-- [ ] CB-02 Supplier ledger summary
+- [x] CB-01 Customer ledger summary
+- [x] CB-02 Supplier ledger summary
 - [ ] CB-03 Trial balance for party
-- [ ] CB-04 Payment period by invoice date
+- [x] CB-04 Payment period by invoice date
 - [ ] CB-05 Voucher-wise balance
-- [ ] CB-06 Account balance
-- [ ] CB-07 Gross profit
+- [x] CB-06 Account balance
+- [x] CB-07 Gross profit
 - [ ] CB-08 Profitability analysis
 - [ ] CB-09 Financial ratios
 - [ ] CB-10 Sales trends
 - [ ] CB-11 Purchase trends
 - [ ] CB-12 Item-wise sales register
 - [ ] CB-13 Item-wise purchase register
-- [ ] CB-14 Inactive items
+- [x] CB-14 Inactive items
 - [ ] CB-15 Partner commission
 - [ ] CB-16 Deferred revenue & expense
 - [ ] CB-17 Billed not received

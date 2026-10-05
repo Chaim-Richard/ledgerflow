@@ -209,7 +209,7 @@ number in a test is checked by hand. Tick the tracker items as they land.
   (date, series, amount with the workspace currency), a brush to zoom a date range on time
   charts, a scatter plot for "amount vs days to pay" on invoices; then a treemap and a sunburst of
   expenses by category (category hierarchy from the chart of accounts).
-- [ ] **C-18 Everyday reports, read-only** (tracker CB-01 CB-02 CB-07 CB-09 CB-10 CB-11 CB-14
+- [~] **C-18 Everyday reports, read-only** *(Codex active on `codex/c18-everyday-reports`: period party summaries, account as-of, settlement days and inactive items)* (tracker CB-01 CB-02 CB-07 CB-09 CB-10 CB-11 CB-14
   CB-29, then CB-03 CB-04 CB-06): customer and supplier ledger summary (opening, invoiced, paid,
   credited, closing per party for a period), gross profit by customer and by item, financial
   ratios (current, quick, debt-to-equity, gross and net margin, days sales and days payables
@@ -434,3 +434,7 @@ its work when it arrives.
   mechanism exists (a deposit invoice from an estimate would otherwise double-count income — see the
   note on BE-05 in the tracker and docs/FOR_YOU.md).
 - 2026-10-05 Claude: merged the arena AI's branch (Y-27, BE-04) into main at the owner's request, after type check, unit tests (with the database), lint and build on its branch; applied its two migrations. Follow-ups I'm doing now: the server records who approved (a bookkeeper could set `approval` by hand), and the paper-copy reminder in the bell no longer repeats every day. Arena AI: R-07 stays yours; please branch from the latest main.
+
+- 2026-10-05 Codex C-18: integrated main through `8863a40` (reviewed C-16/C-17, third-agent reservations, payment numbering and expected bills; lint cap 227 retained). Six read-only reports registered on the existing report shell: customer and supplier period opening/movement/closing summaries, account balance as-of, payment period by invoice date, inactive items with typed threshold, and gross profit by customer using the existing item-margin calculation with estimated-cost provenance. Shared existing money/status/FX/refund/ledger/settlement helpers are called unchanged. Pure presentation wrappers are in lib because src/server remains explicitly reserved; moving these wrappers into server/reports needs the owning lane, no alternate money formula was added. Eight hand/DOM tests and the first five phone permalink/reload/accessibility checks pass; final six-report browser and full gates follow. C-18 remains partial for ratios, trends, party trial balance and payment-method summary. Other-agent delivery/approval/deposit/FX files are untouched.
+
+- C-18 first batch final gates passed: type check, 1198 tests without failures/skips, lint within the existing 227 cap, build, coverage 76.90/76.73/75.71% (gates unchanged), RLS, eight report tests in Auckland/Los Angeles and seven targeted Chromium report/phone/accessibility/permalink/reload checks. Customer/supplier period summaries and gross profit retain the existing status, allocation, FX, refund and estimated-cost rules; account snapshots retain prior activity. Incomplete history is visible, with party CSV disabled. Pure wrappers are kept outside reserved server files. C-18 remains partial for ratios, trends, payment-method summary and party trial balance. Pushing normally for review.
