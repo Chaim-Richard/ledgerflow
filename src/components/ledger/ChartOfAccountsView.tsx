@@ -6,6 +6,18 @@ import { ChartAccount } from '../../types';
 import { BookOpen, MoreVertical, ChevronRight, ChevronDown, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
+import { db } from '../../firebase';
+import { doc, updateDoc } from '../../lib/db/firestore';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { suggestionsFrom } from '../../lib/inlineEdit';
+import InlineEdit from '../ui/InlineEdit';
+
+/** Edit in place (I-22): one field of an account. System accounts keep their code (the database refuses it). */
+async function saveAccountField(account: ChartAccount, field: 'name' | 'code' | 'description' | 'category', value: string | number) {
+  await updateDoc(doc(db, 'chartAccounts', account.id), { [field]: value, updatedAt: new Date().toISOString() });
+  toast.success('Saved');
+}
 
 interface AccountTreeNode extends ChartAccount { children: AccountTreeNode[] }
 
@@ -20,6 +32,9 @@ interface ChartOfAccountsViewProps {
 export default function ChartOfAccountsView({ accounts, searchTerm, formatCurrency, onDrillDown, onDeleteAccount }: ChartOfAccountsViewProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [showOptionsId, setShowOptionsId] = useState<string | null>(null);
+  const canEdit = useCurrentRole() !== 'viewer';
+  const categories = React.useMemo(() => suggestionsFrom(accounts, a => a.category), [accounts]);
+  const codes = React.useMemo(() => new Map(accounts.map(a => [a.code, a.id])), [accounts]);
 
   const toggleExpand = (id: string) => {
     const next = new Set(expandedIds);
@@ -68,12 +83,17 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
               ) : (
                 <div className="w-5" />
               )}
-              {account.code}
+              <InlineEdit value={account.code} label={`Code of ${account.name}`} canEdit={canEdit && !account.isSystem}
+                validate={v => !String(v) ? 'An account needs a code' : codes.has(String(v)) && codes.get(String(v)) !== account.id ? `${v} is already used` : null}
+                onSave={v => saveAccountField(account, 'code', v)} />
             </div>
           </td>
           <td className="p-4" onClick={() => onDrillDown(account.name)}>
-            <div className="font-bold text-[var(--text)] uppercase tracking-tight text-xs">{account.name}</div>
-            {account.description && <div className="text-[10px] text-[var(--muted)] mt-0.5 truncate max-w-md">{account.description}</div>}
+            <InlineEdit value={account.name} label={`Name of ${account.name}`} canEdit={canEdit}
+              validate={v => String(v) ? null : 'An account needs a name'} onSave={v => saveAccountField(account, 'name', v)}
+              className="font-bold text-[var(--text)] uppercase tracking-tight text-xs block" />
+            <InlineEdit value={account.description} label={`Description of ${account.name}`} placeholder={canEdit ? 'Add description' : undefined} canEdit={canEdit}
+              onSave={v => saveAccountField(account, 'description', v)} className="text-[10px] text-[var(--muted)] mt-0.5 truncate max-w-md block" />
           </td>
           <td className="p-4">
             <span className={cn(
@@ -86,7 +106,10 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
               {account.type}
             </span>
           </td>
-          <td className="p-4 text-[var(--muted)] text-[10px] font-medium">{account.category || 'Uncategorized'}</td>
+          <td className="p-4 text-[var(--muted)] text-[10px] font-medium">
+            <InlineEdit value={account.category} label={`Category of ${account.name}`} placeholder="Uncategorized" canEdit={canEdit}
+              suggestions={categories} onSave={v => saveAccountField(account, 'category', v)} />
+          </td>
           <td className={cn(
             "p-4 text-right font-bold font-mono text-xs tabular-nums",
             account.balanceCents < 0 ? "text-rose-600" : "text-[var(--text)]"
