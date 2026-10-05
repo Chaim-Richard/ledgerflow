@@ -30,6 +30,11 @@ To ensure complexity does not grow over time, all "tools" are separated into thr
 - **Want to add a new full-screen dashboard or module?** Add a React component to `src/components/`, then add it to `VIEW_COMPONENTS` and `APP_TABS` inside `src/config/registry.tsx`.
 - **Want to add a minor widget to the Intelligence Center?** Add a React component to `src/components/finance/`, then register it in `ANALYTICAL_LENSES_REGISTRY` in `src/config/registry.tsx`.
 
+### Owner's screen rules (5 Oct, apply to every screen, old and new)
+- **Edit in place.** A field a user can see on a list or detail page can be changed right there by typing, with the shared `InlineEdit` component (`src/components/ui/InlineEdit.tsx`): Enter or leaving the field saves, Esc cancels, viewers see plain text. No "open another page to change the address". Money and posted amounts still change only through their documents.
+- **Help while typing.** Text fields offer suggestions from the workspace's own data (`suggestions` on `InlineEdit`, or a `datalist`).
+- **Pinned pages.** Every page can be pinned; pinned pages show as buttons on every page with keyboard shortcuts (`usePinnedPages`). Don't build per-page shortcuts instead.
+
 ## 4. Modifying Types & Schemas
 - `src/types.ts` is the single source of truth for interfaces (e.g., `Transaction`, `ChartAccount`).
 

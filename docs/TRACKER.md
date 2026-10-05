@@ -1499,6 +1499,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] I-18 Print stylesheet (Reports page)
 - [x] I-19 Active filters as chips — the transaction list shows each active filter as a chip with a remove button and "Clear All"; the command palette's search now shows there too (L-143)
 - [x] I-20 "What changed since I last looked" — the Overview opens with "Since your last visit (date): 3 new transactions · 1 invoice paid…" per person and workspace on this device (tested)
+- [ ] I-21 **Owner request (5 Oct): pin pages.** A pin button on every page; pinned pages stay as buttons on every other page; keyboard shortcuts to jump to them (zero friction)
+- [ ] I-22 **Owner request (5 Oct): edit in place everywhere.** Any field you can see (a vendor's address in the vendor list, an item's price, a customer's email) can be changed right there by typing, without opening another page; one shared component, applied to every list and detail page, and the rule for every new screen (AGENTS.md)
+- [ ] I-23 **Owner request (5 Oct): help while typing.** Fields suggest values from the workspace's own data as you type (names, addresses, categories, accounts), ranked by the matching algorithms already in the app
 
 # SECTION J — MISSING REPORTS
 
@@ -2040,7 +2043,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] BA-04 Inventory adjustment form (= K-13)
 - [x] BA-05 Item category management: rename, merge or remove a category on all its items at once (Inventory → Manage categories; tested)
 - [ ] BA-06 Add-a-currency dialog
-- [ ] BA-07 Numbering dialog per document type
+- [x] BA-07 Numbering per document type: Settings → Document Numbering (prefix, next number, digits, live preview) for invoices, bills, estimates; a number already used is refused, so numbers never repeat; owners/accountants; audited (tested)
 - [ ] BA-08 PDF preview per document type
 - [x] BA-09 Quick payment from a list row (invoice and bill rows open the payment dialog)
 - [x] BA-10 Allocate a credit note to an open invoice (tested)
