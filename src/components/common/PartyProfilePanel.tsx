@@ -11,6 +11,7 @@ import { formatDate } from '../../lib/utils';
 import PartyModal from './PartyModal';
 import MergePartyDialog from './MergePartyDialog';
 import ApplyCreditsButton from '../finance/ApplyCreditsButton';
+import PartyOpeningBalance from './PartyOpeningBalance';
 import type { PartySide } from './PartyModal';
 import type { Customer, Vendor } from '../../types';
 
@@ -91,6 +92,10 @@ export default function PartyProfilePanel({ side, party }: { side: PartySide; pa
               )}
               onSave={v => updateEntity(path, party.id, { tags: parseTags(String(v)) }, 'Tags saved')} />
           </dd>
+        </div>
+        <div>
+          <dt className="text-[var(--muted)] font-semibold">Opening balance {side === 'customer' ? '(owed to you)' : '(you owed)'}</dt>
+          <dd className="text-slate-900 dark:text-white"><PartyOpeningBalance side={side} party={party} /></dd>
         </div>
       </dl>
 

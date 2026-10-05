@@ -1746,6 +1746,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-180 **Money:** bulk categorize on the transaction list changed "line 0" even when it was the bank line, so entries stored bank-line-first lost their bank side (gone from the bank balance), and transfers/journal entries were rewritten too; it also applied while typing ("Software" before "Software Licenses" was finished) and offered bank accounts as categories. Now: bank/cash lines never change, transfers and journal entries are skipped with a message, Enter or Apply only, categories only (tested)
 - [x] L-181 **Money:** "Transfer between accounts" only changed the list on screen: the transfer was gone after a reload and never reached the books. "Link as Transfer" (two entries that are one transfer) only set a flag on screen and left the expense and the income in place. Now the transfer is saved through the server as one balanced entry in the workspace currency, and linking moves both entries' other side to a Transfer Clearing account (added once, reused), so the made-up expense and income disappear (tested)
 - [x] L-182 **Money:** the keyboard category editor in the transaction list (Enter on the category cell) changed "line 0", which is the bank line when an entry is stored bank-first, so the entry lost its bank side; it also changed the accounts of entries made by invoices, bills and payments, and the amount editor changed amounts of those too. Now the same rules as clicking in the row: only the category side changes, transfers and journal entries and document entries say where to change them instead (tested)
+- [x] L-183 **Money:** a bill could not be saved at all in a workspace without a tax account ("Missing Tax Paid account"), even with no tax on it. A tax account is now needed only when the bill has tax (tested)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
@@ -2043,7 +2044,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 # SECTION BA — DISCRETE USER ACTIONS
 
 - [x] BA-01 Merge duplicate contacts dialog (= Y-23)
-- [ ] BA-02 Vendor opening balance
+- [x] BA-02 Vendor opening balance (customers too): on a vendor's or customer's page, type what was owed on the day the books start and press Enter. It becomes one open bill (invoice) booked against Opening Balance Equity (added if missing), so aging, statements and balances include it and it is paid like any other; not counted as sales or expenses (Sales by Item leaves it out); entered once, then shown (tested)
 - [ ] BA-03 Allocate landed cost
 - [x] BA-04 Inventory adjustment form (= K-13)
 - [x] BA-05 Item category management: rename, merge or remove a category on all its items at once (Inventory → Manage categories; tested)
