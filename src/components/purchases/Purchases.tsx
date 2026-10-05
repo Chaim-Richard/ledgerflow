@@ -133,6 +133,8 @@ export default function Purchases() {
     }).catch(() => null);
     const data = await res?.json().catch(() => ({}));
     if (!res?.ok) { toast.error(data?.message || 'The spread could not be undone'); return false; }
+    // at once on screen too (re-posting the bill reads it from here before the live update arrives)
+    useLedgerStore.setState(st => ({ bills: (st.bills || []).map(x => (x.id === b.id ? { ...x, prepaidSchedule: undefined } : x)) }));
     return true;
   };
 

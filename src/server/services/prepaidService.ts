@@ -88,7 +88,8 @@ export async function spreadBillExpense(db: Firestore, input: BillInput & {
       const description = `Prepaid: ${label}, spread over ${input.months} months`;
       entries.push(await TransactionValidator.validateAndPrepare({
         ...base, id: db.collection('transactions').doc().id, date, description, totalAmountCents: input.amountCents,
-        metadata: { type: 'prepaid-spread', billId: input.billId, prepaidScheduleId: scheduleId },
+        // not `billId`: re-posting the bill reverses every entry carrying that, and these are not the bill's own
+        metadata: { type: 'prepaid-spread', spreadOfBillId: input.billId, prepaidScheduleId: scheduleId },
         lines: move(input.amountCents, description, true),
       }, context, undefined, t));
       for (const p of plan) {
@@ -96,7 +97,7 @@ export async function spreadBillExpense(db: Firestore, input: BillInput & {
         entries.push(await TransactionValidator.validateAndPrepare({
           ...base, id: db.collection('transactions').doc().id, date: p.date, description: share, totalAmountCents: p.amountCents,
           // scheduled: dated ahead on purpose (the data check doesn't flag it)
-          metadata: { type: 'prepaid-recognition', billId: input.billId, prepaidScheduleId: scheduleId, installment: p.installment, installments: input.months, scheduled: true },
+          metadata: { type: 'prepaid-recognition', spreadOfBillId: input.billId, prepaidScheduleId: scheduleId, installment: p.installment, installments: input.months, scheduled: true },
           lines: move(p.amountCents, share, false),
         }, context, undefined, t));
       }

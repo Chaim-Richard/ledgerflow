@@ -122,3 +122,43 @@ describe('The bills list', () => {
     assert.equal(screen.queryByRole('button', { name: /Spread bill/ }), null);
   });
 });
+
+describe('Re-posting a spread bill', () => {
+  const sent: Array<Array<{ metadata?: Record<string, unknown> }>> = [];
+  const realFetch = globalThis.fetch;
+  afterEach(() => { globalThis.fetch = realFetch; });
+  const context = (transactions: unknown[]) => ({
+    lockDate: null, inventory: [], transactions,
+    workspaces: [{ id: 'w1', uid: 'u1', name: 'W', currency: 'USD' }],
+    accounts: [...accounts, makeChartAccount({ id: 'bank', name: 'Checking', type: 'asset', category: 'Cash' })],
+  });
+  const capture = () => {
+    sent.length = 0;
+    globalThis.fetch = (async (_url: unknown, init?: { body?: string }) => {
+      sent.push(JSON.parse(String(init?.body || '{}')).transactions || []);
+      return new Response(JSON.stringify({ status: 'ok' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+  };
+  const schedule = { id: 's', amountCents: 1200, months: 12, startMonth: '2026-09', expenseAccountId: 'ins', prepaidAccountId: 'pre', transactionIds: ['sp0', 'sp1'], createdAt: '' };
+  const own = { id: 'own', date: '2026-09-15', status: 'completed', type: 'actual', totalAmountCents: 1200, metadata: { billId: 'b1' }, lines: [{ accountId: 'ins', amountCents: 1200 }, { accountId: 'ap', amountCents: -1200 }] };
+  const spreadEntry = { id: 'sp1', date: '2027-08-31', status: 'completed', type: 'actual', totalAmountCents: 100, metadata: { spreadOfBillId: 'b1', prepaidScheduleId: 's', scheduled: true }, lines: [{ accountId: 'ins', amountCents: 100 }, { accountId: 'pre', amountCents: -100 }] };
+
+  test('an edit reverses only the bill’s own entry, not its monthly spread', async () => {
+    capture();
+    const { LedgerPostService } = await import('../services/LedgerPostService');
+    await LedgerPostService.postBillLedger('b1', { ...bill, amountCents: 1200, splits: [{ accountId: 'ins', amountCents: 1200 }], prepaidSchedule: schedule }, 'w1', 'u1', undefined, context([own, spreadEntry]) as never);
+    const reversed = sent.flat().filter(t => t.metadata?.isReversal).map(t => t.metadata?.reversesTxId);
+    assert.deepEqual(reversed, ['own']);
+  });
+
+  test('voiding or drafting it is refused until the spread is undone', async () => {
+    capture();
+    const { LedgerPostService } = await import('../services/LedgerPostService');
+    for (const status of ['void', 'draft'] as const) {
+      await assert.rejects(LedgerPostService.postBillLedger('b1', { ...bill, status, prepaidSchedule: schedule }, 'w1', 'u1', undefined, context([own, spreadEntry]) as never), /undo the spread first/);
+    }
+    assert.equal(sent.length, 0, 'nothing was posted');
+    await LedgerPostService.postBillLedger('b1', { ...bill, status: 'void' }, 'w1', 'u1', undefined, context([own]) as never);
+    assert.deepEqual(sent.flat().map(t => t.metadata?.reversesTxId), ['own'], 'without a spread it voids as before');
+  });
+});

@@ -21,6 +21,12 @@ export async function postBillLedger(
 ) {
   if (!workspaceId || !billId) return;
 
+  // a bill spread over months (K-17) keeps its monthly entries: undo the spread before un-posting it
+  const unposting = ['draft', 'rejected', 'void', 'cancelled'].includes(String(billData.status || 'pending'));
+  if (unposting && billData.prepaidSchedule?.id) {
+    throw new Error('This bill is spread over months: undo the spread first (Purchases → Undo spread)');
+  }
+
   const billDate = billData.date || getLocalDateISO();
   verifyLockDate(billDate, context);
 

@@ -134,6 +134,7 @@ describe('Spreading a bill (database)', { skip: !url && 'LF_TEST_DATABASE_URL no
     assert.deepEqual(entries[0].lines.map((l: { accountId: string; amountCents: number }) => [l.accountId, l.amountCents]), [[id('pre'), 120011], [id('ins'), -120011]]);
     assert.deepEqual(entries.slice(1).map(e => e.date), ['2026-09-30', '2026-10-31', '2026-11-30', '2026-12-31', '2027-01-31', '2027-02-28', '2027-03-31', '2027-04-30', '2027-05-31', '2027-06-30', '2027-07-31', '2027-08-31']);
     assert.deepEqual([entries[1].metadata.scheduled, entries[1].metadata.installment, entries[12].metadata.installment], [true, 1, 12]);
+    assert.deepEqual([...new Set(entries.map(e => [e.metadata.spreadOfBillId, e.metadata.billId].join('|')))], [`${id('bill')}|`], 'not tagged billId: re-posting the bill must not reverse them');
     assert.deepEqual([entries[1].lines[0].amountCents, entries[12].lines[0].amountCents], [10000, 10011], 'the remainder in the last month');
     assert.equal(balance(entries, id('pre')), 0, 'Prepaid is empty after the last month');
     assert.equal(balance(entries.slice(0, 2), id('ins')), -110011, 'September carries one month of it');
