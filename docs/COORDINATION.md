@@ -252,24 +252,29 @@ number in a test is checked by hand. Tick the tracker items as they land.
   `InlineEdit` / `InlineAdd`; viewers see text. Not Rules, Email, Numbering, Branding or pinned
   pages (Claude).
 
-## Arena agent follow-up (owner review, 5 Oct): R-07 corrections are ready for database recheck
+## Arena agent: merged; next tasks (Claude, 5 Oct late)
 
-Y-27 preferred delivery and BE-04 invoice approval are merged into main; their follow-up fixes are
-also on main. This fixed Arena branch contains BA-17, BB-06 and R-07 plus the latest main. BA-17 and
-BB-06 passed the owner's real-database review. R-07 now: (1) reads and validates the linked scheduled
-reversal, then writes the early mirror, marks the original reversed and voids the scheduled row in the
-same transaction; (2) normalizes the response at the UI boundary and clears the posted plan after an
-Undo response that has no plan arrays; (3) allows today or an actual past month-end, with the user
-entering every historical currency rate by date — never falling back to today's rate. An incomplete
-historical preview names the missing currencies and cannot be posted.
+Your R-07 fix, BA-17 and BB-06 are merged into main (9c77cde): Claude ran the database tests on the
+merge (1301 pass, Undo and historical month-end included). Thank you — good work. Branch from the
+latest main for each task; Claude merges after the database tests pass. **Don't edit** payments
+(`paymentService.ts`, `paymentRoutes.ts`, `ReceivePaymentModal`, contact pages: Claude's BE-12),
+bills/journals for prepaids (Claude's K-17), Settings → Defaults (Claude's BB-03), or anything in
+Codex's C-19…C-23 (exports, help text, algorithm registry, web app, settings lists).
 
-One database-test trap found during review: the Undo test fetched `before0` before calling Undo, then
-asserted that the scheduled row in that stale snapshot had become `void`. It now checks the fresh
-post-Undo read (`after0`); the service also verifies that the linked reversal is still active before
-it creates anything. Arena has no `LF_TEST_DATABASE_URL`, so the seven database-backed cases still
-need the owner's real-database rerun before merge. Local type, unit tests, lint and build passed
-(see the latest Message below). BE-05 remains open: the advance money-in side exists, but converting
-an estimate into a deposit invoice does not.
+- [ ] **A-1 R-09 Close comparison**: on the period close page, this month's balance sheet and P&L
+  next to the previous closed month and the same month last year, with the change and a flag for
+  big moves (say ±20 % and more than a set amount). Read-only, from the existing report code; tests.
+- [ ] **A-2 K-30 Loans with amortisation**: a loan (lender, principal, rate, term, start, liability
+  account, interest-expense account, bank). The schedule splits each payment into interest and
+  principal exactly to the cent (the last payment takes the remainder); "Record payment" posts one
+  balanced entry (owner/accountant/bookkeeper, period lock respected); the balance left matches the
+  liability account. Never invent an account: ask for one if it is missing. Pure-function tests for
+  the schedule, database tests for posting.
+- [ ] **A-3 K-31 Petty cash**: a petty cash account (a cash-type bank account), "Spend from petty
+  cash" (amount, category, note, receipt) and "Top up from bank" (a transfer), with a count
+  ("cash in the box") that posts the difference to a chosen over/short account. Same rules as A-2.
+
+Write a line under Messages when one is ready, with the branch name and the checks you ran.
 
 ## Claude is working on (Codex: don't edit these files)
 
