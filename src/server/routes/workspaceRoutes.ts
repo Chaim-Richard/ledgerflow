@@ -13,6 +13,7 @@ import { importRecords, undoImport, ImportError } from '../services/recordImport
 import { IMPORT_KINDS, MAX_IMPORT_ROWS } from '../../lib/recordImport';
 import { periodRouter } from './periodRoutes';
 import { badDebtRouter } from './badDebtRoutes';
+import { prepaidRouter } from './prepaidRoutes';
 import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
 import { brandingRouter } from './brandingRoutes';
@@ -142,6 +143,8 @@ workspaceRouter.use('/:workspaceId/tax-returns', requireWorkspaceRole(['owner', 
 workspaceRouter.use('/:workspaceId/branding', requireWorkspaceRole(['owner', 'accountant']), brandingRouter);
 // Bad debt write-off and its reversal (src/server/routes/badDebtRoutes.ts)
 workspaceRouter.use('/:workspaceId/invoices', requireWorkspaceRole(['owner', 'accountant']), badDebtRouter);
+// Spread a bill's expense over months, and undo it (src/server/routes/prepaidRoutes.ts, K-17)
+workspaceRouter.use('/:workspaceId/bills', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), prepaidRouter);
 // merging is checked again for owner/accountant in the service; deleting is for every writer
 workspaceRouter.use('/:workspaceId/contacts', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), contactMergeRouter);
 workspaceRouter.use('/:workspaceId/numbering', requireWorkspaceRole(['owner', 'accountant']), numberingRouter);
