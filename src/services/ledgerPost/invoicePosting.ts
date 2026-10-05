@@ -7,6 +7,7 @@ import { TransactionTemplates } from '../../kernel/templates/TransactionTemplate
 import { planInvoiceCogs } from '../invoiceCogs';
 import { getAccounts, getTransactions, getWorkspaces, loadInventory, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi } from './postingKit';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
+import { isOpeningBalanceEquity } from '../../lib/openingBalances';
 
 /**
  * Post standard double-entry journal entries for an invoice.
@@ -146,7 +147,8 @@ export async function postInvoiceLedger(
     exchangeRate: rate,
     arAccount,
     revenueAccount,
-    lineAccounts: lineAccounts(invoiceData.items, accounts, revenueAccount, a => a.type === 'income'),
+    // income accounts; Opening Balance Equity only for a customer's opening balance (BA-02)
+    lineAccounts: lineAccounts(invoiceData.items, accounts, revenueAccount, a => a.type === 'income' || isOpeningBalanceEquity(a)),
     taxAccount,
     discountAccount,
     retainageAccount

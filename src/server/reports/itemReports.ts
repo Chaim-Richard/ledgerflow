@@ -3,6 +3,7 @@ import { isPostable, isTransactionInDateRange, lineAmount } from '../../lib/txFi
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { INVOICE_IS_ISSUED } from './computeReports';
 import { toBaseCents } from './partyReports';
+import { isOpeningBalanceDocument } from '../../lib/partyOpeningBalance';
 
 /** Invoice lines that have no inventory item are grouped under this key. */
 export const NO_ITEM_KEY = '__no_item__';
@@ -88,6 +89,8 @@ export function computeSalesByItem(input: SalesByItemInput): SalesByItemReport {
   for (const inv of invoices) {
     if (!INVOICE_IS_ISSUED.has(inv.status)) continue;
     if (!inDocumentRange(inv.date, startDate, endDate)) continue;
+    // a customer's opening balance (BA-02) is money owed from before, not a sale
+    if (isOpeningBalanceDocument(inv)) continue;
 
     for (const line of inv.items || []) {
       const item = line.itemId ? itemById.get(line.itemId) : undefined;

@@ -106,16 +106,18 @@ export async function postBillLedger(
   const billNum = billData.number || billId;
   const vendor = billData.vendorName || 'Vendor';
 
-  const taxAccount = resolveAccount(
+  // 2. Transaction 1: Accrual Posting
+  const taxAmount = roundCents(calculateDocumentTax(billData) * rate);
+  const selfAssessed = roundCents((billData.selfAssessedTaxCents || 0) * rate);
+
+  // only a bill with tax needs a tax account (a workspace without one could record no bill at all; L-183)
+  const taxAccount = taxAmount > 0 || selfAssessed > 0 ? resolveAccount(
     accounts,
     mappings,
     ['tax paid', 'input tax', 'tax asset', 'tax', 'tax expense'],
     a => (a.type === 'asset' || a.type === 'expense' || a.type === 'liability') && a.name.toLowerCase().includes('tax'),
     'Tax Paid'
-  );
-
-  // 2. Transaction 1: Accrual Posting
-  const taxAmount = roundCents(calculateDocumentTax(billData) * rate);
+  ) : null;
 
   const accrualLines = TransactionTemplates.buildBillLines({
     billNumber: String(billNum),
@@ -131,8 +133,7 @@ export async function postBillLedger(
 
   // Reverse charge (T-03): the vendor charged no tax; the business owes it and reclaims it,
   // so the same amount goes to input tax (reclaimable) and to tax payable (due)
-  const selfAssessed = roundCents((billData.selfAssessedTaxCents || 0) * rate);
-  if (selfAssessed > 0) {
+  if (selfAssessed > 0 && taxAccount) {
     const outputTaxAccount = findAccount(
       accounts,
       mappings,
