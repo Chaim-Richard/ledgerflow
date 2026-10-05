@@ -1,3 +1,4 @@
+import { TransactionTotalsRow } from './TransactionTotalsRow';
 
 
 import { Search, Sparkles, Filter, TrendingUp, ArrowUpRight, ArrowDownRight, TrendingDown } from 'lucide-react';
@@ -18,7 +19,8 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { VirtualRow } from './TransactionGridShared';
 import type { TransactionGridModel } from './TransactionGrid';
 export function TransactionGridBody({ model }: { model: TransactionGridModel }) {
- const { naturalColumnOrder, columnOrder, formId, filterCriteria, onFilterApplied, setSearchTerm, viewMode, selectedIds, setSelectedIds, sortConfig, handleSort, transactionsWithBalance, totalBalancedSum, selectedMetricsResult, activeFilterColumn, setActiveFilterColumn, columnSearchTerms, setColumnSearchTerms, show, columnFilterValues, toggleColumnFilter, pivotData, isMobileGrid, isTabletGrid, rowHeight, gridCols, itemData, itemKey } = model;
+ const incomplete = useLedgerStore(state => state.isDataTruncated);
+ const { naturalColumnOrder, columnOrder, stats, formId, filterCriteria, onFilterApplied, setSearchTerm, viewMode, selectedIds, setSelectedIds, sortConfig, handleSort, transactionsWithBalance, totalBalancedSum, selectedMetricsResult, activeFilterColumn, setActiveFilterColumn, columnSearchTerms, setColumnSearchTerms, show, columnFilterValues, toggleColumnFilter, pivotData, isMobileGrid, isTabletGrid, rowHeight, gridCols, itemData, itemKey } = model;
  return (<div className="flex-1 overflow-x-auto overflow-y-hidden relative bg-[var(--surface)]" dir="auto">
         {viewMode === 'grid' ? (
           <div className="h-full flex flex-col" style={{ minWidth: gridMinWidth(gridCols) }}>
@@ -508,6 +510,7 @@ export function TransactionGridBody({ model }: { model: TransactionGridModel }) 
                 )}
               </AutoSizer>
             </div>
+            <TransactionTotalsRow inflowCents={stats.inflowCents} outflowCents={stats.outflowCents} count={stats.count} incomplete={incomplete} />
           </div>
         ) : (
           <PivotView pivotData={pivotData} formatCurrency={formatCurrency} />
