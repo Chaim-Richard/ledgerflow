@@ -2052,7 +2052,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BA-03 Allocate landed cost
 - [x] BA-04 Inventory adjustment form (= K-13)
 - [x] BA-05 Item category management: rename, merge or remove a category on all its items at once (Inventory → Manage categories; tested)
-- [ ] BA-06 Add-a-currency dialog
+- [x] BA-06 Add-a-currency dialog: invoices and bills offer the home currency, the ones the workspace uses and 35 common world currencies; switching to one fills the exchange rate (the last rate used for it at once, then today's rate from the rate service; never a guessed number; a typed rate is kept) and says where it came from (tested). A Currencies settings page (BB-02) is still open
 - [x] BA-07 Numbering per document type: Settings → Document Numbering (prefix, next number, digits, live preview) for invoices, bills, estimates; a number already used is refused, so numbers never repeat; owners/accountants; audited (tested)
 - [x] BA-08 PDF preview per document type: purchase orders (branded, with terms from Branding), bills and vendor credits join invoices, estimates, credit notes, receipts and statements; Preview/Download on each list (tested)
 - [x] BA-09 Quick payment from a list row (invoice and bill rows open the payment dialog)

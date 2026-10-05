@@ -1,4 +1,6 @@
 import { useDialog } from '../../hooks/useDialog';
+import { useSuggestedRate } from '../../hooks/useSuggestedRate';
+import { documentCurrencies } from '../../lib/exchangeRates';
 import { calculateDueDate, isFixedTerm, termsForCustomer } from '../../lib/paymentTerms';
 import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
@@ -116,7 +118,13 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const totals = documentTotals(total, invoice.discountCents || 0, taxCode, pricesIncludeTax);
   const depositCents = depositAppliedCents({ amountCents: totals.amountCents, depositCents: invoice.depositCents });
   const currency = invoice.currency || workspaceCurrency;
-  const currencyChoices = [...new Set([workspaceCurrency, currency, 'USD', 'EUR', 'GBP'])];
+  // the rate fills itself in for another currency until the person types one (BA-06, I-23)
+  const [rateTyped, setRateTyped] = useState(false);
+  const rateNote = useSuggestedRate({
+    currency, homeCurrency: workspaceCurrency, enabled: !editingExisting && !rateTyped, docs: pastInvoices,
+    onRate: rate => setInvoice(prev => ({ ...prev, exchangeRate: rate })),
+  });
+  const currencyChoices = useMemo(() => documentCurrencies(workspaceCurrency, currency, [...pastInvoices, ...safeCustomers]), [workspaceCurrency, currency, pastInvoices, safeCustomers]);
   const money = (cents: number) => formatCurrency(cents, currency);
 
   const handleAction = async (e: React.FormEvent, actionStatus: string) => {
@@ -441,9 +449,10 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  <input 
                    id="inv-exchange-rate"
                    type="number" step="0.0001" min="0.0001" value={invoice.exchangeRate || 1}
-                   onChange={(e) => setInvoice({ ...invoice, exchangeRate: parseFloat(e.target.value || '1') })}
+                   onChange={(e) => { setRateTyped(true); setInvoice({ ...invoice, exchangeRate: parseFloat(e.target.value || '1') }); }}
                    className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                  />
+                 {rateNote && <p role="status" className="text-[11px] text-[var(--muted)] px-2">{rateNote}</p>}
              </div>
           </div>
 

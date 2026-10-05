@@ -1,4 +1,6 @@
 import { useDialog } from '../../hooks/useDialog';
+import { useSuggestedRate } from '../../hooks/useSuggestedRate';
+import { documentCurrencies } from '../../lib/exchangeRates';
 import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -104,6 +106,12 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   const pricesIncludeTax = bill.pricesIncludeTax ?? true;
   const totals = documentTotals(total, 0, taxCode, pricesIncludeTax);
   const billCurrency = bill.currency || workspaceCurrency;
+  // the rate fills itself in for another currency until the person types one (BA-06, I-23)
+  const [rateTyped, setRateTyped] = useState(false);
+  const rateNote = useSuggestedRate({
+    currency: billCurrency, homeCurrency: workspaceCurrency, enabled: !editingExisting && !rateTyped, docs: storeBills,
+    onRate: rate => setBill(prev => ({ ...prev, exchangeRate: rate })),
+  });
   const money = (cents: number) => formatCurrency(cents, billCurrency);
 
   const handleVendorSelect = (vendorId: string) => {
@@ -360,15 +368,16 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               <select id="bill-currency" value={billCurrency}
                 onChange={(e) => setBill({ ...bill, currency: e.target.value, exchangeRate: e.target.value === workspaceCurrency ? 1 : bill.exchangeRate })}
                 className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] outline-none font-bold">
-                {[...new Set([workspaceCurrency, billCurrency, 'USD', 'EUR', 'GBP'])].map(c => <option key={c} value={c}>{c}</option>)}
+                {documentCurrencies(workspaceCurrency, billCurrency, [...storeBills, ...safeVendors]).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             {billCurrency !== workspaceCurrency && (
               <div className="space-y-2">
                 <label htmlFor="bill-exchange-rate" className="micro-label">1 {billCurrency} = ? {workspaceCurrency}</label>
                 <input id="bill-exchange-rate" type="number" step="0.0001" min="0.0001" value={bill.exchangeRate || 1}
-                  onChange={(e) => setBill({ ...bill, exchangeRate: parseFloat(e.target.value || '1') })}
+                  onChange={(e) => { setRateTyped(true); setBill({ ...bill, exchangeRate: parseFloat(e.target.value || '1') }); }}
                   className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] outline-none font-bold" />
+                {rateNote && <p role="status" className="text-[11px] text-[var(--muted)] px-2">{rateNote}</p>}
               </div>
             )}
           </div>
