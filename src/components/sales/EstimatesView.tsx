@@ -1,3 +1,4 @@
+import { RecordInlineField } from '../ui/RecordInlineField';
 import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -264,9 +265,9 @@ export default function EstimatesView() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {estimates.map(est => (
                 <tr key={est.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                  <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white">#{est.number}</td>
+                  <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white"><RecordInlineField collection="estimates" record={est} field="number" label={`Reference of estimate ${est.number}`} display={`#${est.number}`} canEdit={est.status === 'draft'} /><div><RecordInlineField collection="estimates" record={est} field="notes" kind="textarea" label={`Notes of estimate ${est.number}`} canEdit={est.status === 'draft'} placeholder="Add notes" /></div></td>
                   <td className="py-3 px-4 text-slate-800 dark:text-slate-200 font-medium">{est.customerName}</td>
-                  <td className="py-3 px-4 text-[var(--muted)]">{est.date}</td>
+                  <td className="py-3 px-4 text-[var(--muted)]"><RecordInlineField collection="estimates" record={est} field="date" kind="date" label={`Date of estimate ${est.number}`} canEdit={est.status === 'draft'} /><div>Expires: <RecordInlineField collection="estimates" record={est} field="expiryDate" kind="date" label={`Expiry of estimate ${est.number}`} canEdit={est.status === 'draft'} placeholder="Add expiry" /></div></td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${est.status === 'converted' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'}`}>
                       {est.status}

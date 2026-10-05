@@ -1,0 +1,25 @@
+import './helpers/dom';
+import test, { afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import DimensionsSettings from '../components/platform/settings/DimensionsSettings';
+import { setComponentWorkspace } from './helpers/componentFixtures';
+import { useLedgerStore } from '../stores/useLedgerStore';
+import { useAuthStore } from '../stores/useAuthStore';
+import { getSupabase } from '../lib/db/client';
+const node = { id: 'P1', dimensionId: 'project', description: 'ישן', aliases: ['Original'], status: 'active' as const };
+afterEach(async () => { cleanup(); await getSupabase().auth.dispose(); });
+test('dimension labels persist with their stable ID and old-name alias, while viewers read text', async () => {
+ const workspace = setComponentWorkspace(); workspace.dimensions = [{ id: 'project', name: 'Projects' }]; useAuthStore.setState({ workspaces: [workspace] });
+ useLedgerStore.setState({ dimensionNodes: [node], transactions: [] });
+ const writes: Record<string, unknown>[] = [];
+ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => { if (String(input).includes('/rpc/lf_update')) writes.push(JSON.parse(String(init?.body))); return new Response(JSON.stringify(String(input).includes('/rpc/') ? null : { id: 'component-workspace_project_P1', data: { ...node, workspaceId: workspace.id } }), { status: 200, headers: { 'Content-Type': 'application/json' } }); }) as typeof fetch;
+ render(<DimensionsSettings />);
+ fireEvent.click(screen.getByRole('button', { name: 'Edit Label project P1' })); fireEvent.change(screen.getByLabelText('Label project P1'), { target: { value: 'שלום New' } });
+ await act(async () => { fireEvent.keyDown(screen.getByLabelText('Label project P1'), { key: 'Enter' }); });
+ assert.equal(writes[0].p_id, 'component-workspace_project_P1'); const fields = writes[0].p_set as Record<string, unknown>; assert.equal(fields.description, 'שלום New'); assert.deepEqual(fields.aliases, ['Original', 'ישן']); assert.equal('id' in fields, false);
+ assert.equal(useLedgerStore.getState().dimensionNodes[0].description, 'שלום New');
+ cleanup(); const viewer = setComponentWorkspace('viewer'); viewer.dimensions = workspace.dimensions; useAuthStore.setState({ workspaces: [viewer] }); render(<DimensionsSettings />);
+ assert.equal(screen.queryByRole('button', { name: /^Edit (Label|Dimension name)/ }), null);
+});

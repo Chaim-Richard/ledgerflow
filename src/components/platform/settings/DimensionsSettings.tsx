@@ -1,4 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { mergeDimensionDrafts } from '../../../lib/dimensionDrafts';
+import { RecordInlineField } from '../../ui/RecordInlineField';
+import { WorkspaceDimensionName } from './WorkspaceDimensionName';
+import { useCurrentRole } from '../../../hooks/useCurrentRole';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Archive, Check, Database, Layers, RefreshCw, ShieldCheck, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { doc, updateDoc, writeBatch } from '../../../lib/db/firestore';
@@ -17,44 +21,6 @@ import {
 } from '../../../lib/dimensionUtils';
 import AsyncButton from '../../ui/AsyncButton';
 import { Labelled } from '../../ui/Labelled';
-
-function EditableNodeDescription({
-  initialValue,
-  onCommit
-}: {
-  initialValue: string;
-  onCommit: (newVal: string) => void;
-}) {
-  const [val, setVal] = useState(initialValue);
-  const [prevInitial, setPrevInitial] = useState(initialValue);
-
-  if (initialValue !== prevInitial) {
-    setPrevInitial(initialValue);
-    setVal(initialValue);
-  }
-
-  return (
-    <input aria-label="Dimension node description"
-      type="text"
-      value={val}
-      onChange={e => setVal(e.target.value)}
-      onBlur={() => {
-        const trimmed = val.trim();
-        if (trimmed && trimmed !== initialValue.trim()) {
-          onCommit(trimmed);
-        } else if (!trimmed) {
-          setVal(initialValue);
-        }
-      }}
-      onKeyDown={e => {
-        if (e.key === 'Enter') {
-          (e.target as HTMLInputElement).blur();
-        }
-      }}
-      className="w-full bg-[var(--surface)] border border-[var(--line)] focus:border-indigo-500 rounded-lg px-2.5 py-1 text-xs text-[var(--text)] outline-none font-medium"
-    />
-  );
-}
 
 function EditableNodeAliases({
   initialValue,
@@ -92,7 +58,8 @@ function EditableNodeAliases({
   );
 }
 
-export default function DimensionsSettings() {
+function DimensionsSettingsContent() {
+  const canWrite = useCurrentRole() !== 'viewer';
   const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const setWorkspaces = useAuthStore(s => s.setWorkspaces);
@@ -107,10 +74,11 @@ export default function DimensionsSettings() {
 
   const [dimensionNodes, setDimensionNodes] = useState<DimensionNode[]>(storeDimensionNodes);
 
+  const previousSource = useRef(storeDimensionNodes);
   useEffect(() => {
-    if (storeDimensionNodes && storeDimensionNodes.length > 0) {
-      setDimensionNodes(storeDimensionNodes);
-    }
+    const previous = previousSource.current;
+    previousSource.current = storeDimensionNodes;
+    setDimensionNodes(draft => mergeDimensionDrafts(storeDimensionNodes, draft, previous));
   }, [storeDimensionNodes]);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -158,20 +126,6 @@ export default function DimensionsSettings() {
     setDimensionNodes(prev => [...prev, newNode]);
     setNewNodeInputs(prev => ({ ...prev, [dimId]: { description: '', aliases: '' } }));
     toast.success(`Created label node ${nextId} ("${newNode.description}")`);
-  };
-
-  const handleUpdateNodeDescription = (nodeId: string, dimId: string, newDescription: string) => {
-    setDimensionNodes(prev => prev.map(n => {
-      if (n.id === nodeId && n.dimensionId === dimId) {
-        const prevDesc = n.description?.trim();
-        const aliases = [...(n.aliases || [])];
-        if (prevDesc && prevDesc !== newDescription.trim() && !aliases.some(a => a.toLowerCase() === prevDesc.toLowerCase())) {
-          aliases.push(prevDesc);
-        }
-        return { ...n, description: newDescription, aliases };
-      }
-      return n;
-    }));
   };
 
   const handleUpdateNodeAliases = (nodeId: string, dimId: string, aliasesStr: string) => {
@@ -548,12 +502,7 @@ export default function DimensionsSettings() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--line)]">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <input aria-label="Dimension name"
-                      type="text"
-                      value={dim.name}
-                      onChange={e => handleUpdateAxisName(dim.id, e.target.value)}
-                      className="text-base font-black text-[var(--text)] bg-transparent border-b border-transparent hover:border-slate-400 focus:border-indigo-500 outline-none transition-all px-1"
-                    />
+                    <WorkspaceDimensionName axis={dim} onSaved={value => handleUpdateAxisName(dim.id, value)} />
                     <span className="px-2 py-0.5 bg-slate-800 text-indigo-300 font-mono text-[10px] rounded-lg font-bold">
                       {dim.id}
                     </span>
@@ -595,16 +544,10 @@ export default function DimensionsSettings() {
                             {node.id}
                           </td>
                           <td className="py-2.5 px-3">
-                            <EditableNodeDescription
-                              initialValue={node.description}
-                              onCommit={newVal => handleUpdateNodeDescription(node.id, dim.id, newVal)}
-                            />
+                            <RecordInlineField collection="dimensionNodes" record={node} documentId={`${currentWorkspaceId}_${dim.id}_${node.id}`} field="description" label={`Label ${dim.id} ${node.id}`} canEdit={canWrite} />
                           </td>
                           <td className="py-2.5 px-3">
-                            <EditableNodeAliases
-                              initialValue={(node.aliases || []).join(', ')}
-                              onCommit={newVal => handleUpdateNodeAliases(node.id, dim.id, newVal)}
-                            />
+                            {canWrite ? <EditableNodeAliases initialValue={(node.aliases || []).join(', ')} onCommit={newVal => handleUpdateNodeAliases(node.id, dim.id, newVal)} /> : <span>{(node.aliases || []).join(', ')}</span>}
                           </td>
                           <td className="py-2.5 px-3">
                             {node.status === 'archived' ? (
@@ -698,4 +641,9 @@ export default function DimensionsSettings() {
       </div>
     </div>
   );
+}
+
+export default function DimensionsSettings() {
+  const uid = useAuthStore(state => state.user?.uid), workspace = useAuthStore(state => state.currentWorkspaceId);
+  return <DimensionsSettingsContent key={`${uid}:${workspace}`} />;
 }

@@ -10,18 +10,18 @@ import { suggestionsFrom } from '../../lib/inlineEdit';
 
 const pending = new Set<string>();
 /** Confirmed metadata/planning update. Retain a retry value when the shared editor closes on failure. */
-function ScopedRecordInlineField({ collection, record, field, label, kind, options, display, placeholder, canEdit = true, adapter = inlineRecordAdapter }: {
-  collection: InlineRecordCollection; record: object & { id: string }; field: string; adapter?: InlineRecordAdapter;
+function ScopedRecordInlineField({ collection, record, documentId, field, label, kind, options, display, placeholder, canEdit = true, adapter = inlineRecordAdapter }: {
+  collection: InlineRecordCollection; record: object & { id: string }; documentId?: string; field: string; adapter?: InlineRecordAdapter;
 } & Pick<InlineEditProps, 'label' | 'kind' | 'options' | 'display' | 'placeholder' | 'canEdit'>) {
   const role = useCurrentRole();
-  useLedgerCollections(collection);
+  useLedgerCollections(...(collection === 'dimensionNodes' ? [] : [collection]));
   const records = useLedgerStore(state => state[collection]);
   const [retry, setRetry] = useState<{ value: string | number; message: string }>();
   const [saving, setSaving] = useState(false);
   const [mountedScope] = useState(() => adapter.session());
   const before = inlineFieldValue(record as Record<string, unknown>, field);
   const save = async (value: string | number) => {
-    const session = adapter.session(), key = `${session?.uid}:${session?.workspaceId}:${collection}:${record.id}:${field}`;
+    const session = adapter.session(), key = `${session?.uid}:${session?.workspaceId}:${collection}:${documentId || record.id}:${field}`;
     if (pending.has(key)) throw new Error('This field is already saving.');
     pending.add(key); setSaving(true);
     try {
@@ -31,14 +31,14 @@ function ScopedRecordInlineField({ collection, record, field, label, kind, optio
       const oldName = String(before ?? '');
       if (oldName && state.transactions.some(tx => tx.project === oldName || tx.lines?.some(line => line.project === oldName || line.dimensions?.project === oldName))) throw new Error('Older entries use this project name. Re-link them by project ID before renaming.');
     }
-      await saveInlineRecordField(adapter, { collection, id: record.id }, field, before, value);
+      const changes = await saveInlineRecordField(adapter, { collection, id: documentId || record.id }, field, before, value);
       const current = adapter.session();
       if (!current || current.uid !== session?.uid || current.workspaceId !== session?.workspaceId) throw new Error('Workspace changed. Reopen the saved record.');
       // Patch only the changed cache field; never replace a newer record with the rendered snapshot.
       useLedgerStore.setState(state => ({ [collection]: state[collection].map(item => {
-        if (item.id !== record.id) return item;
+        if (item.id !== record.id || collection === 'dimensionNodes' && 'dimensionId' in item && 'dimensionId' in record && item.dimensionId !== record.dimensionId) return item;
         if (field === 'metadata.client') return { ...item, metadata: { ...('metadata' in item ? item.metadata as object : {}), client: value } };
-        return { ...item, [field]: value };
+        return { ...item, ...changes };
       }) }));
       setRetry(undefined);
     } catch (error) { setRetry({ value, message: error instanceof Error ? error.message : String(error) }); throw error; }
@@ -54,5 +54,5 @@ function ScopedRecordInlineField({ collection, record, field, label, kind, optio
 
 export function RecordInlineField(props: React.ComponentProps<typeof ScopedRecordInlineField>) {
   const uid = useAuthStore(state => state.user?.uid), workspaceId = useAuthStore(state => state.currentWorkspaceId);
-  return <ScopedRecordInlineField key={`${uid}:${workspaceId}:${props.collection}:${props.record.id}:${props.field}`} {...props} />;
+  return <ScopedRecordInlineField key={`${uid}:${workspaceId}:${props.collection}:${props.documentId || props.record.id}:${props.field}`} {...props} />;
 }
