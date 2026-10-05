@@ -204,6 +204,7 @@ export default function Purchases() {
           <div className="overflow-x-auto">
             {pdfWorkspaceId && (
               <DocumentBulkBar type="bill" noun="bill" ids={[...pickedBills].filter(id => filteredBills.some(b => b.id === id))}
+                documents={filteredBills.filter(b => pickedBills.has(b.id))}
                 workspaceId={pdfWorkspaceId} onClear={() => setPickedBills(new Set())} />
             )}
             <table className="w-full text-left border-collapse">

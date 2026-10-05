@@ -321,6 +321,7 @@ export default function Sales() {
         <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
           {currentWorkspaceId && (
             <DocumentBulkBar type="invoice" noun="invoice" ids={[...pickedInvoices].filter(id => filteredInvoices.some(i => i.id === id))}
+              documents={filteredInvoices.filter(i => pickedInvoices.has(i.id))}
               workspaceId={currentWorkspaceId} onClear={() => setPickedInvoices(new Set())} />
           )}
           <div className="overflow-x-auto">

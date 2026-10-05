@@ -1527,7 +1527,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] K-03 Sale receipts
 - [ ] K-04 Sales orders
 - [ ] K-05 Manual journals entity
-- [~] K-06 Bulk action bar: transaction list (categorize safely, Enter/Apply, accounts used most first; L-180); invoice and bill lists (select, download PDFs as a zip). More bulk actions (send, mark paid): later
+- [x] K-06 Bulk action bar: transaction list (categorize safely, Enter/Apply, accounts used most first; L-180); invoice and bill lists: tick several, then download the PDFs as a zip, email the invoices to their customers (drafts and voided ones left out, each failure named), or pay them in full at once ("Record payment" / "Pay bills": one payment per customer or vendor into or out of the chosen bank account; drafts, paid and other-currency documents left out with the reason; a refused payment doesn't stop the others; not for viewers) (tested)
 - [ ] K-07 Attachments on every entity
 - [x] K-08 Email templates (invoice, reminder, receipt; preview)
 - [x] K-09 Credit note refunds (DR A/R, CR cash; tested)
@@ -1800,7 +1800,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] M-14 Item categories (= K-12)
 - [ ] M-15 Warehouses (deferred)
 - [ ] M-16 Purchase requisitions
-- [ ] M-17 Bulk action bar
+- [x] M-17 Bulk action bar (= K-06)
 - [x] M-18 Bulk import wizard (= K-01)
 - [ ] M-19 Customer portal
 - [ ] M-20 Available budget
