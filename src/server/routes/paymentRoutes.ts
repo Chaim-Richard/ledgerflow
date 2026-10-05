@@ -5,7 +5,7 @@ import { getDb, validateWorkspaceMember } from '../db/firestore';
 import { createPaymentAtomic } from '../services/paymentService';
 import { getLocalDateISO } from '../../lib/utils';
 import { getWorkspaceUserRole, AuthenticatedRequest, requireWorkspaceRole } from './workspaceRoutes';
-import { applyCredit, CreditError, refundCredit } from '../services/creditService';
+import { applyCredit, autoApplyCredits, CreditError, refundCredit } from '../services/creditService';
 import { createDeposit, DepositError } from '../services/depositService';
 import { writeServerAuditLog } from '../services/auditLogService';
 import { afterPaymentRecorded } from '../services/afterPayment';
@@ -127,6 +127,33 @@ async function handleCredit(req: express.Request, res: express.Response, action:
 const ledgerWriters = requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']);
 paymentRouter.post('/credits/apply', ledgerWriters, (req, res) => handleCredit(req, res, 'apply'));
 paymentRouter.post('/credits/refund', ledgerWriters, (req, res) => handleCredit(req, res, 'refund'));
+
+// BE-06: every open credit (of one customer/vendor, or all) to their open invoices/bills, oldest first
+const autoApplySchema = z.object({
+  workspaceId: z.string().min(1),
+  kind: z.enum(['customer', 'vendor']),
+  partyId: z.string().min(1).max(200).optional(),
+});
+paymentRouter.post('/credits/auto-apply', ledgerWriters, async (req, res) => {
+  try {
+    const input = autoApplySchema.parse(req.body);
+    const user = (req as AuthenticatedRequest).user;
+    const db = getDb();
+    const result = await autoApplyCredits(db, input);
+    if (result.applications.length) {
+      await writeServerAuditLog({
+        workspaceId: input.workspaceId, uid: user.uid, email: user.email || '', action: 'CREDITS_AUTO_APPLIED',
+        entityType: input.kind === 'vendor' ? 'vendorCredit' : 'creditNote', entityId: input.partyId || 'all',
+        details: { applications: result.applications, description: `Applied ${result.totalCents} cents of open credits to ${result.applications.length} ${input.kind === 'vendor' ? 'bill' : 'invoice'} line(s)` },
+      }, { db });
+    }
+    res.json({ status: 'success', data: result });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ status: 'error', message: 'Invalid request', details: err.issues });
+    if (err instanceof CreditError) return res.status(err.status).json({ status: 'error', message: err.message });
+    res.status(500).json({ status: 'error', message: 'The credits could not be applied', details: err instanceof Error ? err.message : String(err) });
+  }
+});
 
 // Make deposit: payments waiting in Undeposited Funds go to the bank in one entry
 const depositSchema = z.object({

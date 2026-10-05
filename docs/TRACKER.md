@@ -2108,7 +2108,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] BE-03 Recurring pause/resume/delete (and recurring invoices now create draft invoices; tested)
 - [ ] BE-04 Invoice approval
 - [ ] BE-05 Deposit invoice from estimate
-- [ ] BE-06 Auto-apply credits
+- [x] BE-06 Auto-apply credits: "Apply open credits" on the credit notes screen (all customers or all vendors) and on each customer's or vendor's page: every open credit, oldest first, goes to that contact's open invoices (bills) in the same currency, the one due first first; drafts, voided and paid ones get nothing; one database transaction on the server, audited; no ledger entry (issuing the credit already lowered what is owed) (tested)
 - [ ] BE-07 Batch statement send
 - [ ] BE-08 Recurring expense
 - [ ] BE-09 Mileage

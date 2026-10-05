@@ -10,6 +10,7 @@ const COMMON_CURRENCIES = ['USD', 'EUR', 'GBP', 'ILS', 'CAD', 'AUD', 'JPY', 'CHF
 import { formatDate } from '../../lib/utils';
 import PartyModal from './PartyModal';
 import MergePartyDialog from './MergePartyDialog';
+import ApplyCreditsButton from '../finance/ApplyCreditsButton';
 import type { PartySide } from './PartyModal';
 import type { Customer, Vendor } from '../../types';
 
@@ -44,6 +45,7 @@ export default function PartyProfilePanel({ side, party }: { side: PartySide; pa
       <div className="flex items-center justify-between">
         <h2 id={`${id}-title`} className="font-bold text-slate-900 dark:text-white text-sm">Details</h2>
         <div className="flex items-center gap-4">
+          <ApplyCreditsButton kind={side} partyId={party.id} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 disabled:opacity-50" />
           {canMerge && (
             <button type="button" onClick={() => setMerging(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
               <Combine aria-hidden="true" className="w-3.5 h-3.5" /> Merge a duplicate

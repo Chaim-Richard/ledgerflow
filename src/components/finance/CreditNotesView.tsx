@@ -4,6 +4,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { CreditNote, VendorCredit } from '../../types';
 import CreditActionDialog from './CreditActionDialog';
+import ApplyCreditsButton from './ApplyCreditsButton';
 import type { CreditActionTarget } from './CreditActionDialog';
 import { EmptyState } from '../ui/EmptyState';
 import { Money } from '../ui/Money';
@@ -137,13 +138,16 @@ export default function CreditNotesView() {
             Issue customer refunds and record supplier rebates without corrupting A/R and A/P aging buckets.
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium text-sm rounded-lg hover:bg-indigo-700 transition shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          {activeTab === 'customer' ? 'New Credit Note' : 'New Vendor Credit'}
-        </button>
+        <div className="flex items-center gap-2">
+          <ApplyCreditsButton kind={activeTab} />
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium text-sm rounded-lg hover:bg-indigo-700 transition shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            {activeTab === 'customer' ? 'New Credit Note' : 'New Vendor Credit'}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
