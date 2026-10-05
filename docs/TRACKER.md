@@ -2272,15 +2272,15 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CA-36 Process deferred accounting
 - [x] CB-01 Customer ledger summary
 - [x] CB-02 Supplier ledger summary
-- [ ] CB-03 Trial balance for party
+- [x] CB-03 Trial balance for party
 - [x] CB-04 Payment period by invoice date
 - [ ] CB-05 Voucher-wise balance
 - [x] CB-06 Account balance
 - [x] CB-07 Gross profit
 - [ ] CB-08 Profitability analysis
-- [ ] CB-09 Financial ratios
-- [ ] CB-10 Sales trends
-- [ ] CB-11 Purchase trends
+- [x] CB-09 Financial ratios
+- [x] CB-10 Sales trends
+- [ ] CB-11 Purchase trends (vendor totals complete; item allocation needs shared accounting helper, C-18 handoff)
 - [ ] CB-12 Item-wise sales register
 - [ ] CB-13 Item-wise purchase register
 - [x] CB-14 Inactive items
@@ -2298,7 +2298,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CB-26 Consolidated TB
 - [ ] CB-27 Asset depreciation ledger
 - [ ] CB-28 POS register
-- [ ] CB-29 Sales payment summary
+- [x] CB-29 Sales payment summary
 - [ ] CC-01 Per-recipient invitation links + view tracking
 - [ ] CC-02 Design templates
 - [ ] CC-03 Proposals
