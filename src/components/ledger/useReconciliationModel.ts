@@ -195,7 +195,7 @@ export function useReconciliationModel() {
   const handleAutoReconcile = async () => {
     setIsAutoReconciling(true);
     try {
-       await onAutoReconcile();
+       await onAutoReconcile({ bankLines: unmatchedBankLines, transactions: unclearedLedgerTransactions });
        toast.success("Autonomous batch matching complete!");
     } catch (e) {
         toast.error("Could not complete batch alignment.", {

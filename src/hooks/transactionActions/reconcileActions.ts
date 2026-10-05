@@ -1,6 +1,7 @@
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
-import { collection, doc, getDocs, query, where } from '../../lib/db/firestore';
+import { collection, doc } from '../../lib/db/firestore';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import { db } from '../../firebase';
 import { Transaction, BankStatementLine } from '../../types';
 import { toast } from 'sonner';
@@ -126,28 +127,21 @@ export function createReconcileActions(ctx: ActionContext, posting: PostingHelpe
     }
   };
 
-  const handleAutoReconcile = async () => {
+  /**
+   * Matches pending bank lines to open entries with confident scores. It works on the lines and
+   * entries shown on the screen (the account filter applies); without them, on everything loaded.
+   * It used to reload both from the database filtered to the signed-in person's own records, so
+   * lines imported by the server or a teammate were never matched (L-175).
+   */
+  const handleAutoReconcile = async (scope?: { bankLines: BankStatementLine[]; transactions: Transaction[] }) => {
     if (!user || !currentWorkspaceId) return;
     setIsSyncing(true);
     const loader = toast.loading('Initiating auto-reconciliation...');
     
     try {
-      const qBank = query(
-        collection(db, 'bankLines'), 
-        where('workspaceId', '==', currentWorkspaceId), 
-        where('uid', '==', user.uid),
-        where('status', '==', 'pending')
-      );
-      const qTx = query(
-        collection(db, 'transactions'), 
-        where('workspaceId', '==', currentWorkspaceId), 
-        where('uid', '==', user.uid)
-      );
-      
-      const [bankSnap, txSnap] = await Promise.all([getDocs(qBank), getDocs(qTx)]);
-      const bankLines = bankSnap.docs.map(d => ({ id: d.id, ...d.data() } as BankStatementLine));
-      const transactions = txSnap.docs
-        .map(d => ({ id: d.id, ...d.data() } as Transaction))
+      const loaded = useLedgerStore.getState();
+      const bankLines = (scope?.bankLines ?? loaded.bankLines ?? []).filter(l => l.status === 'pending');
+      const transactions = (scope?.transactions ?? loaded.transactions ?? [])
         .filter(t => t.status !== 'reconciled' && t.status !== 'void');
       
       const minHash = new MinHash(64, user?.uid);

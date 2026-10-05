@@ -41,6 +41,7 @@ describe('Stock adjustments and counts', { skip: !url && 'LF_TEST_DATABASE_URL n
     await item('bolts', { quantityAtHand: 10, unitCostCents: 400 });
     await item('nuts', { quantityAtHand: 5, unitCostCents: 250 });
     await item('washers', { quantityAtHand: 20, unitCostCents: 10 });
+    await item('free', { quantityAtHand: 4, unitCostCents: 0 });
     await db.collection('inventory').doc(`${other}_item`).set({ workspaceId: other, name: 'theirs', quantityAtHand: 3, unitCostCents: 100 });
     const app = express();
     app.use(express.json());
@@ -52,7 +53,7 @@ describe('Stock adjustments and counts', { skip: !url && 'LF_TEST_DATABASE_URL n
 
   after(async () => {
     server?.close();
-    for (const table of ['transactions', 'inventory', 'chartAccounts', 'workspaces']) {
+    for (const table of ['transactions', 'inventory', 'chartAccounts', 'idempotencyKeys', 'workspaces']) {
       await db.pool.query(`delete from public."${table}" where workspace_id = any($1) or id = any($1)`, [[ws, other]]);
     }
     await db.terminate();
@@ -106,5 +107,34 @@ describe('Stock adjustments and counts', { skip: !url && 'LF_TEST_DATABASE_URL n
     const same = await post('owner', 'count', { counts: [{ itemId: id('washers'), counted: 20 }] });
     assert.equal(same.status, 400);
     assert.equal((await post('owner', 'adjust', { itemId: id('nuts'), quantityChange: 1, offsetAccountId: id('inv') })).status, 400);
+  });
+
+  test('recording a sale (/cogs): cost of 2 washers at 0.10 → COGS +0.20, inventory −0.20, 20 → 18; the same key twice posts once', async () => {
+    const sell = (uid: string, body: Record<string, unknown>, key?: string) => fetch(`${base}/api/v1/inventory/cogs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-test-uid': uid, ...(key ? { 'Idempotency-Key': key } : {}) },
+      body: JSON.stringify({ workspaceId: ws, inventoryAccountId: id('inv'), cogsAccountId: id('shrink'), date: '2026-07-11', ...body }),
+    });
+    const res = await sell('book', { itemId: id('washers'), quantitySold: 2 }, 'sale-1');
+    assert.equal(res.status, 200, await res.clone().text());
+    const body = await res.json();
+    assert.equal(body.totalCogsCents, 20);
+    assert.equal((await qty('washers'))?.quantityAtHand, 18);
+    const tx = await entry(body.transactionId);
+    assert.equal(tx?.currency, 'EUR');
+    assert.equal(tx?.date, '2026-07-11');
+    assert.deepEqual(tx?.lines.map((l: { accountId: string; amountCents: number }) => [l.accountId, l.amountCents]), [[id('shrink'), 20], [id('inv'), -20]]);
+    const again = await sell('book', { itemId: id('washers'), quantitySold: 2 }, 'sale-1');
+    assert.equal((await again.json()).transactionId, body.transactionId, 'the same request answers with the first result');
+    assert.equal((await qty('washers'))?.quantityAtHand, 18, 'stock lowered once');
+
+    assert.equal((await sell('book', { itemId: id('washers'), quantitySold: 19 })).status, 400, 'more than on hand');
+    assert.equal((await qty('washers'))?.quantityAtHand, 18);
+    assert.equal((await sell('view', { itemId: id('washers'), quantitySold: 1 })).status, 403, 'viewer');
+    assert.equal((await sell('book', { itemId: id('washers'), quantitySold: 1.5 })).status, 400, 'whole units only');
+    assert.equal((await sell('book', { itemId: id('washers') })).status, 400, 'quantity missing');
+    assert.equal((await sell('book', { itemId: id('free'), quantitySold: 1 })).status, 400, 'no cost set');
+    assert.equal((await sell('book', { itemId: `${ws}_missing`, quantitySold: 1 })).status, 404);
+    assert.equal((await sell('owner', { itemId: `${other}_item`, quantitySold: 1 })).status, 403, "another workspace's item");
   });
 });

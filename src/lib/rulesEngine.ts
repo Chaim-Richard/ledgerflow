@@ -194,10 +194,8 @@ export function applyRuleAction(rule: AutoRule, tx: Transaction): { modifiedTx: 
     changes.push(`Categorized to "${act.targetCategory}"`);
   }
 
-  if (act.setAmountCents !== undefined && act.setAmountCents > 0) {
-    modifiedTx.totalAmountCents = act.setAmountCents;
-    changes.push(`Updated amount to $${(act.setAmountCents / 100).toFixed(2)}`);
-  }
+  // setAmountCents is ignored: a rule never changes money. It rewrote the stated total without
+  // the posted lines, so the entry and the ledger disagreed (L-177; the AI builder already dropped it).
 
   return { modifiedTx, changes };
 }

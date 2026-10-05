@@ -41,6 +41,13 @@ export interface ResolvedIntent {
   isAuditQuery?: boolean;
 }
 
+/** "1,250.50" → 125050; "2k" → 200000; "1.5m" → 150000000. Whole cents, no floating-point round trip (L-176). */
+function amountWithSuffixToCents(text: string): number {
+  const suffix = /[km]$/i.exec(text)?.[0]?.toLowerCase();
+  const cents = TruthEngine.parseAmountToCents(text.replace(/[km]$/i, ''));
+  return suffix === 'k' ? cents * 1000 : suffix === 'm' ? cents * 1000000 : cents;
+}
+
 export class IntentResolver {
   static resolve(query: string, categories: string[] = [], projects: string[] = []): ResolvedIntent {
     const lowerQuery = query.normalize('NFC').toLowerCase().trim();
@@ -70,10 +77,10 @@ export class IntentResolver {
 
     // 3. Precision Pattern Extraction
     const parseAmt = (valStr: string) => {
-        let val = TruthEngine.parseAmountToCents(valStr) / 100;
-        if (lowerQuery.includes('grand') || lowerQuery.includes('thousand') || lowerQuery.includes(' k ')) val *= 1000;
-        if (lowerQuery.includes('mil') || lowerQuery.includes('million') || lowerQuery.includes(' m ')) val *= 1000000;
-        return val * 100;
+        let cents = TruthEngine.parseAmountToCents(valStr);
+        if (lowerQuery.includes('grand') || lowerQuery.includes('thousand') || lowerQuery.includes(' k ')) cents *= 1000;
+        if (lowerQuery.includes('mil') || lowerQuery.includes('million') || lowerQuery.includes(' m ')) cents *= 1000000;
+        return cents;
     };
 
     const opMatch = lowerQuery.match(/([><=])\s*([\d,]+(\.\d+)?)/);
@@ -91,7 +98,7 @@ export class IntentResolver {
         else if (/less|under|below|at most/.test(phrase)) result.maxAmountCents = val;
     } else if (rangeMatch) {
         result.minAmountCents = parseAmt(rangeMatch[1]);
-        result.maxAmountCents = parseAmt(rangeMatch[4]);
+        result.maxAmountCents = parseAmt(rangeMatch[3]); // [4] is the second number's decimals (L-176)
     }
 
     // 4. Enhanced Temporal Logic
@@ -179,22 +186,14 @@ export class IntentResolver {
             const totalAmtStr = splitMatch[2];
             const itemsStr = splitMatch[3];
             
-            const cleanedAmtStr = totalAmtStr.replace(/[km]/i, '');
-            let totalAmt = TruthEngine.parseAmountToCents(cleanedAmtStr) / 100;
-            if (totalAmtStr.endsWith('k')) totalAmt *= 1000;
-            if (totalAmtStr.endsWith('m')) totalAmt *= 1000000;
-            totalAmt *= 100;
+            const totalAmt = amountWithSuffixToCents(totalAmtStr);
 
             const splitLines = itemsStr.split(',').map(item => {
                 const itemMatch = item.trim().match(/\$?([\d,]+(?:\.\d+)?[km]?)\s*([\p{L}\p{M}\p{N}\s]+)/iu);
                 if (itemMatch) {
-                    const cleanedItemAmtStr = itemMatch[1].replace(/[km]/i, '');
-                    let itemAmt = TruthEngine.parseAmountToCents(cleanedItemAmtStr) / 100;
-                    if (itemMatch[1].endsWith('k')) itemAmt *= 1000;
-                    if (itemMatch[1].endsWith('m')) itemAmt *= 1000000;
                     return {
                         accountName: itemMatch[2].trim().charAt(0).toUpperCase() + itemMatch[2].trim().slice(1),
-                        amountCents: Math.round(itemAmt * 100)
+                        amountCents: amountWithSuffixToCents(itemMatch[1])
                     };
                 }
                 return null;
@@ -220,8 +219,9 @@ export class IntentResolver {
         }
 
         // 2. Standard Pattern Matching
-        const amountRegex = /(?:spent|paid|received|deposited)?\s*\$?([\d,]+(?:\.\d+)?[km]?)\s*(?:for|on|at|from)?\s*([\p{L}\p{M}\p{N}\s.]+)/iu;
-        const amountSuffixRegex = /([\p{L}\p{M}\p{N}\s.]+)\s*\$?([\d,]+(?:\.\d+)?[km]?)/iu;
+        // the description starts with a letter, so "hosting 0.29" is not read as 0.2 + "9"
+        const amountRegex = /(?:spent|paid|received|deposited)?\s*\$?([\d,]+(?:\.\d+)?[km]?)\s*(?:for|on|at|from)?\s*(\p{L}[\p{L}\p{M}\p{N}\s.]*)/iu;
+        const amountSuffixRegex = /^([\p{L}\p{M}\p{N}\s.]+?)\s*\$?([\d,]+(?:\.\d+)?[km]?)\s*$/iu;
 
         let match = lowerInput.match(amountRegex);
         let desc = '';
@@ -240,11 +240,7 @@ export class IntentResolver {
         }
 
         if (amtStr && desc) {
-            const cleanedAmtStr = amtStr.replace(/[km]/i, '');
-            let amt = TruthEngine.parseAmountToCents(cleanedAmtStr) / 100;
-            if (amtStr.endsWith('k')) amt *= 1000;
-            if (amtStr.endsWith('m')) amt *= 1000000;
-            amt *= 100; // to cents
+            const amt = amountWithSuffixToCents(amtStr);
 
             // Deterministic Category Mapping (Hardware logic)
             let category = learnedCategory || "Uncategorized";
@@ -285,10 +281,8 @@ export class IntentResolver {
                 const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
                 const monthIdx = months.indexOf(monthName);
                 if (monthIdx !== -1) {
-                    const d = new Date();
-                    d.setMonth(monthIdx);
-                    d.setDate(day);
-                    txDate = format(d, 'yyyy-MM-dd');
+                    // built in one step: setMonth on the 31st rolled "3 feb" into March (L-176)
+                    txDate = format(new Date(new Date().getFullYear(), monthIdx, day), 'yyyy-MM-dd');
                 }
             }
 
