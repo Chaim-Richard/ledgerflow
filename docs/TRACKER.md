@@ -1750,6 +1750,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-184 The Taxes screen (opened from the menu) got no data: it listed no tax codes, "New tax", Edit and Delete did nothing, and the tax estimate used no accounts. It now reads the workspace's tax codes and accounts and saves through the normal path; delete asks first; name and rate (one-part taxes) change in place; viewers only read (tested)
 - [x] L-185 The first entry dated in a new year quietly added four made-up tax rates ("Federal compliance 22%", "State 5%", city and county levies) to the workspace, which then showed up as tax codes. Removed
 - [x] L-186 Choosing payment terms on an invoice (Net 15/30/60) didn't change its due date: it stayed on the invoice date, so every invoice looked due at once and reminders went out early. The due date now follows the terms and moves with the invoice date; a new invoice for a customer takes the terms of their latest invoice (I-23) (tested)
+- [x] L-187 **Money:** "Run month-end revaluation" (currency tool) posted one entry that applied a single exchange rate to every asset and liability account, home-currency ones included, for any member, and the rate service fell back to made-up rates (USD→EUR 0.92…) when it couldn't be reached. Rates are now never invented (an error instead; the converter shows no amount and says why) and the run posts nothing until R-07 is built (it must revalue open foreign invoices and bills, since foreign documents are stored in the home currency) (tested)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
@@ -1871,7 +1872,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] R-04 Year-end retained-earnings roll (`/close-year` + `ClosingEntryEngine`, tested)
 - [ ] R-05 Auto-reversing accruals
 - [x] R-06 Depreciation run (server, one entry per month, catch-up, tested)
-- [ ] R-07 FX revaluation run
+- [ ] R-07 FX revaluation run (the old run was switched off, L-187: build it from open foreign-currency invoices and bills, owner/accountant, with a reversal on the next day)
 - [x] R-08 Unposted-drafts review (drafts in the period block the close, listed)
 - [ ] R-09 Close comparison
 - [x] R-10 Lock by role (close/reopen owner+accountant; hard reopen owner; soft close by role)

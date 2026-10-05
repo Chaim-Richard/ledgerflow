@@ -15,54 +15,17 @@ interface CurrencyConverterProps {
 export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverterProps) {
   const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => onClose?.(), !!isOpen);
   const formId = useId();
-  const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
-  const activeWorkspace = getCurrentWorkspace();
-  const [isRevaluing, setIsRevaluing] = useState(false);
-  const [revalResult, setRevalResult] = useState('');
-
-  const runRevaluation = async () => {
-    if (!activeWorkspace) return;
-    setIsRevaluing(true);
-    setRevalResult('');
-    try {
-      const user = useAuthStore.getState().user;
-      const token = user ? await user.getIdToken() : '';
-      const response = await fetch(`/api/v1/transactions/revaluation/run`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          workspaceId: activeWorkspace.id,
-          targetCurrency: toCurrency
-        })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to run revaluation');
-      setRevalResult(data.message);
-    } catch (e) {
-      setRevalResult('Error: ' + (e as Error).message);
-    } finally {
-      setIsRevaluing(false);
-    }
-  };
 
   const language = useUIStore(s => s.language);
   const [amount, setAmount] = useState<number>(100);
   const [fromCurrency, setFromCurrency] = useState<string>('USD');
   const [toCurrency, setToCurrency] = useState<string>('EUR');
-  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({
-    'USD': 1.0,
-    'EUR': 0.92,
-    'GBP': 0.79,
-    'ILS': 3.75,
-    'JPY': 151.2,
-    'AUD': 1.54,
-    'CAD': 1.36
-  });
+  // live rates only (they were preset to made-up numbers, which also ignored the "from" currency; L-187)
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const [ratesError, setRatesError] = useState('');
 
   React.useEffect(() => {
+    let cancelled = false;
     const fetchRates = async () => {
       try {
         const user = useAuthStore.getState().user;
@@ -70,19 +33,21 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
         const response = await fetch(`/api/v1/fx/rates/${fromCurrency}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (response.ok) {
-          const data = await response.json();
-          setExchangeRates(data.rates);
-        }
-      } catch (e) {
-        console.error('Failed to fetch live rates:', e);
+        const data = await response.json().catch(() => ({}));
+        if (cancelled) return;
+        if (response.ok && data.rates) { setExchangeRates(data.rates); setRatesError(''); }
+        else { setExchangeRates({}); setRatesError(data.error || 'Exchange rates are not available right now'); }
+      } catch {
+        if (!cancelled) { setExchangeRates({}); setRatesError('Exchange rates are not available right now'); }
       }
     };
     fetchRates();
+    return () => { cancelled = true; };
   }, [fromCurrency]);
 
   const calculateConversion = () => {
-    return (amount * (exchangeRates[toCurrency] || 1)).toFixed(2);
+    const rate = fromCurrency === toCurrency ? 1 : exchangeRates[toCurrency];
+    return rate ? (amount * rate).toFixed(2) : '—';
   };
 
   const innerContent = (
@@ -146,21 +111,9 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
           <div className="text-3xl font-medium text-[var(--text)]">
             {calculateConversion()} {toCurrency}
           </div>
+          {ratesError && <p role="status" className="mt-2 text-xs text-[var(--muted)]">{ratesError}</p>}
         </div>
-        <div className="pt-4 border-t border-[var(--line)] mt-6">
-          <button 
-            onClick={runRevaluation} 
-            disabled={isRevaluing || !activeWorkspace}
-            className="w-full px-4 py-2 bg-[var(--brass)] hover:opacity-90 text-black rounded-lg text-sm font-bold transition-colors cursor-pointer"
-          >
-            {isRevaluing ? 'Processing...' : (language === 'he' ? 'הפעל שערוך סוף חודש (API)' : 'Run Month-End Revaluation (API)')}
-          </button>
-          {revalResult && (
-            <div className="mt-3 text-sm text-[var(--text)] p-3 bg-[var(--ink)] rounded border border-[var(--line)]">
-              {revalResult}
-            </div>
-          )}
-        </div>
+        {/* month-end revaluation is off until R-07 (it posted wrong entries; L-187) */}
 
       </div>
     </div>

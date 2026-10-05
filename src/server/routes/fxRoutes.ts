@@ -11,7 +11,7 @@ fxRouter.get('/rate', async (req, res) => {
     const rate = await FxService.getRate(from, to);
     res.json({ from, to, rate, timestamp: new Date().toISOString() });
   } catch (error) {
-    res.status(500).json({ error: errorMessage(error) });
+    res.status(503).json({ error: errorMessage(error) });
   }
 });
 
@@ -21,6 +21,6 @@ fxRouter.get('/rates/:base', async (req, res) => {
     const rates = await FxService.getRatesForBase(base);
     res.json({ base, rates, timestamp: new Date().toISOString() });
   } catch (error) {
-    res.status(500).json({ error: errorMessage(error) });
+    res.status(503).json({ error: errorMessage(error) });
   }
 });
