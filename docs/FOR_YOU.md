@@ -106,6 +106,13 @@ Last updated: 2026-10-02.
 - **New reports (3 Oct):** Contact Balance Summary, Inventory Valuation, Transactions by Reference,
   and "Tax by rate" on the Sales Tax screen. Data Health also flags money left in suspense or
   clearing accounts and bank lines unmatched for over 30 days.
+- **New (5 Oct): stock changes go through the books.** On Inventory, each item has **Adjust stock**
+  (damaged/lost/found, stock received with its cost, opening stock) and the header has **Stock
+  count** (type what is on the shelf; differences go to a shrinkage/variance account in one entry).
+  The quantity in the item form is now read-only: typing a number there used to change the stock
+  with no entry, so the balance sheet and the stock list drifted apart. New items' opening stock is
+  posted against Opening Balance Equity. Category chips filter the list, and teammates now see all
+  items (each person saw only their own).
 - Vercel deploys by itself about a minute after each push to `main`.
 - Database changes are applied to Supabase by Claude and tested on a local copy first.
 - Progress and the full list: [TRACKER.md](TRACKER.md).
