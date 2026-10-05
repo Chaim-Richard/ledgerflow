@@ -16,6 +16,7 @@ import BillModal from './BillModal';
 import VendorModal from './VendorModal';
 import TagFilter from '../common/TagFilter';
 import DocumentTotalsFoot from '../ui/DocumentTotalsFoot';
+import { recurringBillSchedule } from '../../lib/recurringBills';
 import { allTags, hasTag, isArchivedParty } from '../../lib/contacts';
 import PartyRowActions, { ArchivedBadge, ShowArchivedToggle } from '../common/PartyRowActions';
 import VendorDetailView from './VendorDetailView';
@@ -82,12 +83,14 @@ export default function Purchases() {
     setIsVendorModalOpen(false);
   };
 
-  const handleAddBill = async (data: Partial<Bill>) => {
+  const handleAddBill = async (input: Partial<Bill>) => {
+    const { recurringInterval, ...data } = input;
     if (data.id) {
       const { id, ...updates } = data;
       await updateEntity('bills', id, updates, 'Bill updated');
     } else {
       await addEntity('bills', data, 'Bill successfully recorded');
+      if (recurringInterval) await addEntity('recurring', recurringBillSchedule(data, recurringInterval), 'Recurring bill scheduled');
     }
     setIsBillModalOpen(false);
     setEditingBill(undefined);

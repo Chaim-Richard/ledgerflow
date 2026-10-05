@@ -64,6 +64,18 @@ describe('Bill dialog', () => {
     assert.deepEqual(bill.splits?.map(s => [s.accountId, s.amountCents]), [['exp', 10000], ['exp2', 5000]]);
   });
 
+  test('Repeat (BE-08): the chosen frequency goes with the save; editing a bill offers no Repeat', async () => {
+    const saved = setup();
+    fillTwoLines();
+    fireEvent.change(screen.getByLabelText('Repeat'), { target: { value: 'monthly' } });
+    await click('Save & Close');
+    await waitFor(() => assert.equal(saved.length, 1));
+    assert.equal(saved[0].recurringInterval, 'monthly');
+    cleanup();
+    setup({ id: 'b1', vendorId: 'v1', number: 'V-1', amountCents: 100, dueDate: '2026-02-01', status: 'pending' });
+    assert.equal(screen.queryByLabelText('Repeat'), null);
+  });
+
   test('amounts before tax: owed 165.00, tax 15.00', async () => {
     const saved = setup();
     fillTwoLines();

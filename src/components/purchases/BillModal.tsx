@@ -47,6 +47,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   }));
 
   const editingExisting = Boolean(initialBill?.id);
+  const [repeat, setRepeat] = useState<'' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'>('');
   useEffect(() => {
     // an existing bill keeps its number; only a new one gets the next number in the series
     if (isOpen && !editingExisting) {
@@ -194,6 +195,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
 
     await onSave({
       ...bill,
+      ...(repeat ? { recurringInterval: repeat } : {}),
       currency: billCurrency,
       exchangeRate: billCurrency === workspaceCurrency ? 1 : (bill.exchangeRate || 1),
       status: finalStatus as any,
@@ -336,6 +338,21 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               />
             </div>
           </div>
+
+          {!editingExisting && (
+            <div className="space-y-2 max-w-xs">
+              <label htmlFor="bill-repeat" className="micro-label">Repeat</label>
+              {/* BE-08: a draft copy of this bill is made on each date, to check and save */}
+              <select id="bill-repeat" value={repeat} onChange={e => setRepeat(e.target.value as typeof repeat)}
+                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold">
+                <option value="">Doesn't repeat</option>
+                <option value="weekly">Every week</option>
+                <option value="monthly">Every month</option>
+                <option value="quarterly">Every quarter</option>
+                <option value="yearly">Every year</option>
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">

@@ -8,7 +8,8 @@
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
-import { invalidEntryReason, isInvoiceSchedule } from '../server/services/recurringService';
+import { invalidEntryReason, isBillSchedule, isInvoiceSchedule } from '../server/services/recurringService';
+import { recurringBillSchedule } from '../lib/recurringBills';
 import type { Firestore } from '../server/db/pgFirestore';
 
 describe('Recurring schedules: checks', () => {
@@ -16,6 +17,17 @@ describe('Recurring schedules: checks', () => {
     assert.equal(isInvoiceSchedule({ type: 'invoice' }), true);
     assert.equal(isInvoiceSchedule({ template: { tags: ['recurring', 'invoice'] } }), true, 'saved before this change');
     assert.equal(isInvoiceSchedule({ template: { lines: [] } }), false);
+    assert.equal(isBillSchedule({ type: 'bill' }), true);
+    assert.equal(isBillSchedule({ type: 'invoice' }), false);
+  });
+
+  test('a repeating bill\'s schedule copies the vendor, lines and tax, not its number, dates or payments', () => {
+    const schedule = recurringBillSchedule({ id: 'b1', number: 'V-9', vendorId: 'v1', vendorName: 'Landlord', date: '2026-01-31', dueDate: '2026-02-14',
+      amountCents: 5000, status: 'pending', amountPaidCents: 100, splits: [{ accountId: 'rent', amountCents: 5000 }], metadata: { memo: 'x' } }, 'monthly');
+    assert.equal(schedule.type, 'bill');
+    assert.equal(schedule.nextOccurrence, '2026-02-28', 'the 31st becomes the last day of February');
+    assert.deepEqual(Object.keys(schedule.billTemplate).sort(), ['amountCents', 'dueDays', 'splits', 'vendorId', 'vendorName']);
+    assert.equal(schedule.billTemplate.dueDays, 14);
   });
 
   test('an entry needs two lines, real accounts, whole cents, and must balance', () => {
@@ -57,10 +69,15 @@ describe('The daily recurring job', { skip: !url && 'LF_TEST_DATABASE_URL not se
     await rule('rent', { template: { lines: [{ accountId: id('rent'), amountCents: 100000 }, { accountId: id('bank'), amountCents: -100000 }] } });
     await rule('broken', { template: {} });
     await rule('paused', { type: 'invoice', isActive: false, invoiceTemplate: { customerId: 'c3', amountCents: 1 } });
+    await rule('bill', {
+      type: 'bill', payee: 'Landlord', nextOccurrence: '2026-09-02', anchorDay: 2,
+      billTemplate: { vendorId: 'v1', vendorName: 'Landlord', currency: 'EUR', amountCents: 120000, dueDays: 10, taxVersion: 2,
+        splits: [{ accountId: id('rent'), amountCents: 120000, description: 'Office rent' }] },
+    });
   });
 
   after(async () => {
-    for (const table of ['recurring', 'invoices', 'transactions', 'chartAccounts', 'notifications', 'numberingSeries', 'workspaces']) {
+    for (const table of ['recurring', 'invoices', 'bills', 'transactions', 'chartAccounts', 'notifications', 'numberingSeries', 'workspaces']) {
       await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
     }
     await db.terminate();
@@ -101,5 +118,21 @@ describe('The daily recurring job', { skip: !url && 'LF_TEST_DATABASE_URL not se
     const again = await processRecurring(db, '2026-09-01');
     assert.equal(again.processedCount, 0);
     assert.equal((await db.collection('invoices').where('workspaceId', '==', ws).get()).docs.length, 2);
+  });
+
+  test('a recurring bill (BE-08) becomes a draft bill for its date, once; nothing is posted until it is saved', async () => {
+    const result = await processRecurring(db, '2026-09-02');
+    assert.equal(result.processedCount, 1, JSON.stringify(result.details));
+    const bills = (await db.collection('bills').where('workspaceId', '==', ws).get()).docs.map(d => d.data());
+    assert.equal(bills.length, 1);
+    assert.deepEqual([bills[0].status, bills[0].date, bills[0].dueDate, bills[0].vendorName, bills[0].amountCents, bills[0].number],
+      ['draft', '2026-09-02', '2026-09-12', 'Landlord', 120000, '']);
+    assert.equal(bills[0].splits[0].description, 'Office rent');
+    assert.equal(bills[0].dueDays, undefined);
+    assert.equal((await db.collection('transactions').where('workspaceId', '==', ws).get()).docs.length, 1, 'still only the rent entry from before');
+    assert.equal((await db.collection('recurring').doc(id('bill')).get()).data()?.nextOccurrence, '2026-10-02');
+    const notes = (await db.collection('notifications').where('workspaceId', '==', ws).get()).docs.map(d => d.data());
+    assert.ok(notes.some(n => n.kind === 'bill.draft_ready'));
+    assert.equal((await processRecurring(db, '2026-09-02')).processedCount, 0, 'once per date');
   });
 });

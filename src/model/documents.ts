@@ -86,6 +86,8 @@ export interface Bill {
   /** Reverse charge: the tax the business accounts for itself (due and reclaimable). */
   selfAssessedTaxCents?: number;
   posted?: boolean;
+  /** Form only (BE-08): repeat this bill as a schedule; never stored on the bill. */
+  recurringInterval?: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
   /** set when saved (database row times) */
   createdAt?: string;
   updatedAt?: string;
