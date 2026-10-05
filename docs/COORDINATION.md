@@ -261,9 +261,10 @@ number in a test is checked by hand. Tick the tracker items as they land.
 | Launch #8 data-health checks and record links (done 2026-09-30) | `src/lib/dataChecks.ts`, `src/lib/recordLinks.ts`, `src/hooks/useRecordFocus.ts`, `src/stores/useUIStore.ts`, `src/components/system/DataHealthView.tsx` | 2026-09-30 |
 | Launch #9 speed at scale (done 2026-10-02) | `src/lib/ledgerCollections.ts`, `src/hooks/useLedgerCollections.ts`, `src/hooks/useLedgerData.ts`, `src/lib/db/firestore.ts`, `src/lib/db/liveQuery.ts`, `src/stores/useDataNeedsStore.ts` | 2026-10-02 |
 | LATER items, Claude's lane (5 Oct): inventory adjustments and stock counts, then document numbering/preview/emails, contact merge, banking and settings items | `src/components/inventory/`, `src/components/common/Party*.tsx`, `src/components/common/TagFilter.tsx`, `src/lib/contacts.ts`, `src/lib/branding.ts`, `src/components/platform/settings/BrandingSettings.tsx`, `src/components/sales/CustomerDetailView.tsx`, `src/components/purchases/VendorDetailView.tsx`, `src/components/reporting/ContactBalanceSummaryView.tsx`, `InventoryValuationReportView.tsx`, `TransactionsByReferenceView.tsx` | 2026-10-05 |
-| Zero friction (owner, 5 Oct): pinned pages, edit/add in place, suggestions; numbering settings; contact merge (I-21 I-22 I-23 BA-07 Y-23); Y-27 preferred delivery done 5 Oct; done: invoice approval (BE-04, 5 Oct); next: deposit invoices from estimates (blocked, see BE-05), FX revaluation (BE-05 R-07) |
+| Zero friction (owner, 5 Oct): pinned pages, edit/add in place, suggestions; numbering settings; contact merge (I-21 I-22 I-23 BA-07 Y-23); Y-27 preferred delivery done 5 Oct; done: invoice approval (BE-04, 5 Oct), FX revaluation (R-07, 5 Oct); next: money in / money out on Banking (BA-17, BA-04); deposit invoices from estimates stays blocked, see BE-05 |
 |  | `src/lib/delivery.ts`, `src/lib/reminders.ts`, `src/lib/notifications.ts`, `src/server/services/reminderService.ts`, `src/server/services/documentEmailService.ts`, `src/components/common/PartyModal.tsx`, `src/components/common/PartyProfilePanel.tsx` | 2026-10-05 | `src/components/sales/EstimatesView.tsx` (deposit invoices), `src/services/documentNumbers.ts`, `src/lib/creditEdits.ts`, `src/lib/purchaseOrders.ts`, `src/components/ui/InlineEdit.tsx`, `src/components/ui/InlineAdd.tsx`, `src/lib/inlineEdit.ts`, `src/lib/pinnedPages.ts`, `src/components/layout/PinnedPagesBar.tsx`, `src/components/layout/Header.tsx`, `src/core/layout/RootLayout.tsx`, `src/hooks/useKeyboardShortcuts.ts`, `src/config/shortcuts.ts`, `src/config/pageLabels.ts`, `src/components/ledger/ChartOfAccountsView.tsx`, `src/components/platform/settings/NumberingSettings.tsx`, `src/components/common/MergePartyDialog.tsx` (Codex may use InlineEdit/InlineAdd; ask under Messages for changes to them) | 2026-10-05 |
 | BE-04 invoice approval (done 2026-10-05): the rule, the stamp on the invoice, the gate on sending | `src/lib/invoiceApproval.ts`, `src/components/sales/InvoiceApprovalFlag.tsx`, `src/components/platform/settings/EmailSettings.tsx`, `src/components/sales/Sales.tsx`, `src/components/sales/InvoiceEmailDialog.tsx`, `src/hooks/useEntityOperations.ts`, `src/model/documents.ts`, `src/model/workspace.ts`, `src/schemas.ts`, `src/server/services/documentEmailService.ts`, `src/server/services/reminderService.ts`, `src/lib/reminders.ts`, `supabase/migrations/20261007010000_invoice_approval.sql` | 2026-10-05 |
+| R-07 month-end currency revaluation (done 2026-10-05): the rules, the service, the preview on Currencies | `src/lib/fxRevaluation.ts`, `src/server/services/fxRevaluationService.ts`, `src/server/routes/transactions/periodRoutes.ts`, `src/components/finance/FxRevaluationPanel.tsx`, `src/components/finance/CurrencyConverter.tsx`, `src/tests/fx-revaluation.test.ts`, `src/tests/fx-revaluation-ui.test.tsx`, `src/tests/fx-revaluation-server.test.ts` | 2026-10-05 |
 | Launch #10/#11 done 2026-10-02; now step 12 clean-up (server side) | `src/hooks/useAutoRules.ts`, `src/components/platform/settings/RulesSettings.tsx` (rules saving), `src/components/onboarding/`, `src/lib/retention.ts`, `src/lib/openingBalances.ts`, `src/lib/taxRecompute.ts` | 2026-10-02 |
 
 ## Messages (newest at the bottom; date + who)
@@ -356,6 +357,36 @@ number in a test is checked by hand. Tick the tracker items as they land.
   No `ReleaseNotes.tsx` entry was added: that file is your lane. Next on my side: BE-04 invoice
   approval, then BE-05 deposit invoice from estimate, then R-07 FX revaluation (the currencies page
   BB-02 is left as the first item, per the owner).
+
+- 2026-10-05 Claude (Arena agent, Claude's lane, later items): **R-07 month-end currency revaluation is in.**
+  The run that L-187 switched off is rebuilt from what the documents actually hold: every open foreign
+  invoice and bill, valued at today's rate against the rate it was booked at, the whole difference on
+  one unrealized gain/loss line, and the exact negation posted for the next day so the documents keep
+  their own rates. `src/lib/fxRevaluation.ts` holds the rules (nothing else decides them): home-currency
+  documents are never offered — that was the old bug — a document with no rate, no receivable/payable
+  account, or already at today's rate is named with the reason, and a currency whose live rate cannot be
+  fetched stops the run instead of posting it half. Lines are whole cents and sum to zero, so the
+  ordinary double-entry validator rules on it; the date may only be the workspace's today, and the
+  posting goes through `TransactionValidator` + `assertPostingOpen`, so a closed period refuses it. An
+  FX account is never created for you. Rights: `close` level (owner/accountant), preview open to all —
+  nobody is shown an amount they are not allowed to post. `POST /api/v1/transactions/revaluation/
+  preview|run|undo`, and `undo` writes the mirror dated today, marks the entry reversed and voids the
+  entry that was scheduled for tomorrow, all in one write, with `FX_REVALUATION_POSTED` /
+  `FX_REVALUATION_UNDONE` in the audit log. The Currencies page shows the preview table, then says
+  where the entry went, when it reverses, and offers Undo (`src/components/finance/FxRevaluationPanel.tsx`).
+  `LF_ENABLE_LEGACY_REVALUATION` and the account-balances code behind it are deleted. Checks on this
+  tree: type check clean, **1038 tests / 0 failures / 0 skips** (19 on the rules, 7 on the panel),
+  ESLint **227 / 0 errors** = the cap, nothing new added, so no ratchet change; production build green.
+  `src/tests/fx-revaluation-server.test.ts` checks the service against the real database and skips
+  itself when there is none — this sandbox has no Postgres, so those seven cases have not been run;
+  `npm run db:test-setup` then `npm run test:rules` does. No migration. One trap worth knowing before
+  you write a component test: an assert that compares a DOM element to null makes node print the whole
+  jsdom document and the test process dies out of memory — assert `el === null` instead (noted in that
+  test file too). Not done on purpose: the panel is not gated on the `multi_currency_revaluation` Pro
+  flag (that flag is otherwise unused in the app — whether the page is a paid feature is the owner's
+  call, written under the item). Next on my side: BA-17 money in / money out on Banking, then the items
+  under it. `src/lib/fxRevaluation.ts`, `src/components/finance/FxRevaluationPanel.tsx` and
+  `CurrencyConverter.tsx` are in my row above; `periodRoutes.ts` and `src/server/` are mine anyway.
 
 - 2026-10-05 Claude (Arena agent, Claude's lane, later items): **BE-04 invoice approval is in.**
   `src/lib/invoiceApproval.ts` holds every rule and it is all pure functions (27 tests there, 13 on

@@ -1,0 +1,160 @@
+/**
+ * The revaluation panel a person actually presses (R-07), in the currency tool. The numbers
+ * themselves are the lib's business (src/tests/fx-revaluation.test.ts); here it is about what the
+ * panel shows, what it asks for, and what it refuses to do for somebody who may not post entries.
+ */
+import './helpers/dom';
+import test, { afterEach, beforeEach, describe } from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import FxRevaluationPanel from '../components/finance/FxRevaluationPanel';
+import { setComponentWorkspace } from './helpers/componentFixtures';
+
+interface Call { path: string; body: Record<string, unknown> }
+
+/** fetch that answers each path with its own status and body, and records what was asked. */
+function stubRoutes(responses: Record<string, { status?: number; body: unknown }>): Call[] {
+  const calls: Call[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(input);
+    calls.push({ path, body: typeof init?.body === 'string' ? JSON.parse(init.body) as Record<string, unknown> : {} });
+    const found = Object.entries(responses).find(([key]) => path.includes(key));
+    const answer = found?.[1] ?? { status: 500, body: { message: 'unexpected path in the test: ' + path } };
+    return new Response(JSON.stringify(answer.body), { status: answer.status ?? 200, headers: { 'Content-Type': 'application/json' } });
+  }) as typeof fetch;
+  return calls;
+}
+
+const PLAN = {
+  status: 'ok',
+  date: '2026-10-05',
+  reversalDate: '2026-10-06',
+  baseCurrency: 'USD',
+  posted: false,
+  transactionId: null,
+  netGainCents: 12000,
+  debitTotalCents: 12000,
+  documentCount: 1,
+  currencies: ['EUR'],
+  unpriced: [],
+  summary: "1 document in EUR: $120.00 of movement in the accounts, an unrealized gain of $120.00. It reverses the next day, so the documents keep their own rates.",
+  lines: [
+    { accountId: 'ar', accountName: 'Accounts Receivable', amountCents: 12000, description: "Accounts Receivable at today's rate: 1 invoice (INV-1, Acme)" },
+    { accountId: 'fx', accountName: 'Unrealized FX Gain/Loss', amountCents: -12000, description: "Unrealized FX gain at today's rates" },
+  ],
+  details: [{
+    id: 'i1', side: 'customer', number: 'INV-1', partyName: 'Acme', currency: 'EUR',
+    openCents: 100000, bookedRate: 1.08, todayRate: 1.2, bookedBaseCents: 108000, todayBaseCents: 120000, deltaCents: 12000,
+  }],
+  skipped: [],
+};
+
+describe('the revaluation panel', () => {
+  beforeEach(() => { setComponentWorkspace('owner'); });
+  // the panel talks to the API with plain fetch, which this test stubs; no database client is
+  // created here, so nothing has to be disposed — the panel is only ever rendered and clicked.
+  afterEach(() => cleanup());
+
+  test('the preview says what moves, in money and in the rates behind it', async () => {
+    stubRoutes({ '/revaluation/preview': { body: PLAN } });
+    render(<FxRevaluationPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show what would move' }));
+    await waitFor(() => assert.ok(screen.getByText(/1 document in EUR/)));
+    assert.ok(screen.getByText('INV-1'));
+    assert.ok(screen.getByText('Acme'));
+    assert.ok(screen.getByText('1.0800'), 'the rate the invoice was booked at is shown, not hidden');
+    assert.ok(screen.getByText('1.2000'));
+    assert.match(screen.getByText('INV-1').closest('tr')?.textContent || '', /1,000\.00/, 'the open amount in the invoice currency, formatted');
+    assert.match(screen.getByText('INV-1').closest('tr')?.textContent || '', /1,080\.00.*1,200\.00/, 'what is in the books, and what today gives');
+    // one line per account the entry touches, and the sum of it in money
+    assert.ok(screen.getByText('Accounts Receivable'));
+    assert.ok(screen.getByText('Unrealized FX Gain/Loss'));
+    assert.ok(screen.getByText("Unrealized FX gain at today's rates"));
+    assert.match(screen.getByText('Accounts Receivable').closest('li')?.textContent || '', /\+?\$120\.00/);
+    assert.match(screen.getByText('Unrealized FX Gain/Loss').closest('li')?.textContent || '', /-\$120\.00/, 'the other side of the entry, in the other direction');
+  });
+
+  test('nothing is posted by looking: the run is asked for only when the button is pressed', async () => {
+    const calls = stubRoutes({
+      '/revaluation/preview': { body: PLAN },
+      '/revaluation/run': { body: { ...PLAN, posted: true, transactionId: 'tx-abcdef12' } },
+    });
+    render(<FxRevaluationPanel />);
+    // booleans, never the element itself: node's assert inspects a failing DOM node, and a jsdom
+    // element drags the whole document into the message until the process runs out of memory.
+    assert.ok(screen.queryByText('Post it') === null, 'nothing is offered for posting before there is a plan to look at');
+    fireEvent.click(screen.getByRole('button', { name: 'Show what would move' }));
+    await waitFor(() => assert.equal(calls.length, 1));
+    assert.match(calls[0].path, /\/revaluation\/preview$/);
+    assert.deepEqual(calls[0].body, { workspaceId: 'component-workspace' }, 'the preview asks for this workspace and invents no date');
+    fireEvent.click(screen.getByRole('button', { name: 'Post it' }));
+    await waitFor(() => assert.equal(calls.length, 2));
+    assert.match(calls[1].path, /\/revaluation\/run$/);
+    assert.deepEqual(calls[1].body, { workspaceId: 'component-workspace' });
+  });
+
+  test('after it is posted, the panel says when it reverses and offers to undo it', async () => {
+    const calls = stubRoutes({
+      '/revaluation/run': { body: { ...PLAN, posted: true, transactionId: 'tx-abcdef12' } },
+      '/revaluation/undo': { body: { status: 'ok', transactionId: 'tx-reversal' } },
+      '/revaluation/preview': { body: PLAN },
+    });
+    render(<FxRevaluationPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show what would move' }));
+    await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Post it' })));
+    fireEvent.click(screen.getByRole('button', { name: 'Post it' }));
+    await waitFor(() => assert.ok(screen.getByText(/reversing on 2026-10-06/)));
+    assert.ok(screen.queryByRole('button', { name: 'Post it' }) === null, 'a second press is not offered');
+    fireEvent.click(screen.getByRole('button', { name: 'Undo it' }));
+    await waitFor(() => assert.equal(calls.length, 3));
+    assert.deepEqual(calls[2].body, { workspaceId: 'component-workspace', date: '2026-10-05' }, 'undo names the day it undoes');
+  });
+
+  test('somebody who may not post a period entry can still see what it would do', async () => {
+    setComponentWorkspace('viewer');
+    stubRoutes({ '/revaluation/preview': { body: PLAN } });
+    render(<FxRevaluationPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show what would move' }));
+    await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Post it' })));
+    assert.equal((screen.getByRole('button', { name: 'Post it' }) as HTMLButtonElement).disabled, true, 'the button is there and says no');
+    assert.ok(screen.getByText(/An owner or an accountant can post this/));
+  });
+
+  test('when there is nothing to move, it says so and the button is not offered as a yes', async () => {
+    const empty = { ...PLAN, lines: [], details: [], posted: false, documentCount: 0, debitTotalCents: 0, netGainCents: 0, currencies: [], summary: "Nothing to post: 3 documents looked at, and every open foreign one already stands at today's rate." };
+    stubRoutes({ '/revaluation/preview': { body: empty } });
+    render(<FxRevaluationPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show what would move' }));
+    await waitFor(() => assert.ok(screen.getByText(/Nothing to post/)));
+    assert.equal((screen.getByRole('button', { name: 'Post it' }) as HTMLButtonElement).disabled, true);
+    assert.ok(screen.queryByText('INV-1') === null, 'no table of nothing');
+  });
+
+  test('a rate that cannot be had is said in the service\'s own words, and nothing is claimed', async () => {
+    stubRoutes({
+      '/revaluation/preview': {
+        status: 503,
+        body: { status: 'error', message: 'The GBP rate is not available from the exchange service right now, and a revaluation cannot leave a currency out. Nothing was posted — try again in a little while.' },
+      },
+    });
+    render(<FxRevaluationPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show what would move' }));
+    await waitFor(() => assert.ok(screen.getByText(/The GBP rate is not available/)));
+    assert.ok(screen.queryByRole('button', { name: 'Post it' }) === null, 'no plan, so nothing to post');
+  });
+
+  test('the documents left out are listed with the reason, when somebody opens that', async () => {
+    stubRoutes({
+      '/revaluation/preview': {
+        body: { ...PLAN, skipped: [{ id: 'i2', number: 'INV-2', reason: 'already at today\'s EUR rate' }, { id: 'b1', number: 'BILL-1', reason: 'the bill is paid, so nothing is owed on it' }] },
+      },
+    });
+    render(<FxRevaluationPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show what would move' }));
+    await waitFor(() => assert.ok(screen.getByText('2 documents left out, and why')));
+    fireEvent.click(screen.getByText('2 documents left out, and why'));
+    assert.ok(screen.getByText('INV-2: already at today\'s EUR rate'));
+    assert.ok(screen.getByText('BILL-1: the bill is paid, so nothing is owed on it'));
+  });
+});

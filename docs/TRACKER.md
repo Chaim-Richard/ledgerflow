@@ -1873,7 +1873,29 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] R-04 Year-end retained-earnings roll (`/close-year` + `ClosingEntryEngine`, tested)
 - [ ] R-05 Auto-reversing accruals
 - [x] R-06 Depreciation run (server, one entry per month, catch-up, tested)
-- [ ] R-07 FX revaluation run (the old run was switched off, L-187: build it from open foreign-currency invoices and bills, owner/accountant, with a reversal on the next day)
+- [x] R-07 FX revaluation run (the old run was switched off, L-187: build it from open foreign-currency invoices and bills, owner/accountant, with a reversal on the next day) — **done 2026-10-05**:
+  the rules live in `src/lib/fxRevaluation.ts`, away from the page and the database: only what is
+  still open at a stored rate is revalued, foreign-currency only (a home-currency document is never
+  mentioned, because moving it would be the mistake L-187 was), and anything skipped is said out loud
+  with the reason and what to do — no rate on the document, no receivable/payable account for it, no
+  unrealized gain/loss account in the chart (never created by the run), the difference already zero,
+  a currency whose live rate cannot be fetched (then nothing is posted, rather than a half run).
+  Receivables and payables both move with the currency, and the gain/loss account absorbs the whole
+  difference in one line; every line is whole cents and the entry balances to exactly zero, so it
+  passes `DoubleEntryValidator`. The reversal is the exact negation dated the day after, which is why
+  a month-end date is allowed and any other date is refused, and why undoing it early voids the entry
+  that was going to reverse it and writes the mirror today (tested: `src/tests/fx-revaluation.test.ts`,
+  19 cases). `src/server/services/fxRevaluationService.ts` reads the documents and the rates, wants
+  `close`-level rights, will not run for another day, will not run twice for the same one, posts both
+  entries in one transaction through the ordinary validators — so a closed period stops it — and writes
+  `FX_REVALUATION_POSTED` / `FX_REVALUATION_UNDONE` to the audit log. The Currencies page previews the
+  entry before anything is posted, says what it gains or loses and when it reverses, and offers Undo
+  (`src/components/finance/FxRevaluationPanel.tsx`, tested in jsdom, `src/tests/fx-revaluation-ui.test.tsx`,
+  7 cases). `POST /api/v1/transactions/revaluation/preview|run|undo`; `LF_ENABLE_LEGACY_REVALUATION`
+  and the code behind it are gone. `src/tests/fx-revaluation-server.test.ts` checks the same rules
+  against the real database and skips itself when there is none (`npm run db:test-setup`). It is NOT
+  gated on the `multi_currency_revaluation` Pro flag: that flag is otherwise unused in the app, and
+  which pages a plan gets is the owner's commercial call, not something to slip in here.
 - [x] R-08 Unposted-drafts review (drafts in the period block the close, listed)
 - [ ] R-09 Close comparison
 - [x] R-10 Lock by role (close/reopen owner+accountant; hard reopen owner; soft close by role)

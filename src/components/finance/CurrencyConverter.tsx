@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { X } from 'lucide-react';
 import React, { useState, useId } from 'react';
 import { useUIStore } from '../../stores/useUIStore';
+import FxRevaluationPanel from './FxRevaluationPanel';
 
 import { useAuthStore } from '../../stores/useAuthStore';
 
@@ -113,7 +114,7 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
           </div>
           {ratesError && <p role="status" className="mt-2 text-xs text-[var(--muted)]">{ratesError}</p>}
         </div>
-        {/* month-end revaluation is off until R-07 (it posted wrong entries; L-187) */}
+        <FxRevaluationPanel />
 
       </div>
     </div>
