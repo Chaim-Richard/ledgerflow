@@ -1,186 +1,78 @@
 import express from 'express';
-import { FieldValue } from '../../db/firestore';
-import { TransactionValidator } from '../../../kernel/validation/TransactionValidator';
+import { z } from 'zod';
 import { ClosingEntryEngine } from '../../../kernel/ledger/ClosingEntryEngine';
 import { TransactionSchema } from '../../../schemas';
-import type { ChartAccount, Transaction, TransactionLine } from '../../../types';
-import { getLocalDateISO } from '../../../lib/utils';
+import type { ChartAccount, Transaction } from '../../../types';
 import { getDb } from '../../db/firestore';
-import type { DocumentData } from '../../db/firestore';
-import { isPostable } from '../../../lib/txFilters';
 import { writeServerAuditLog } from '../../services/auditLogService';
-import { lockMessage, postingLock } from '../../../lib/periodLock';
 import { closePeriod, PeriodCloseError } from '../../services/periodCloseService';
 import { errorMessage, requestUser } from '../../auth/requestUser';
-import { FxService } from '../../services/FxService';
+import { FxRevaluationError, revaluateForeignBalances, undoRevaluation } from '../../services/fxRevaluationService';
 import { formatTzDate } from './helpers';
+
+const revaluationBodySchema = z.object({
+  workspaceId: z.string().min(1).max(200),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  /** today's rates may be fetched when missing; historical month-ends require each rate to be supplied */
+  rates: z.record(z.string(), z.number().positive()).optional(),
+}).strict();
+
+/** What an error costs the caller: the service's own status and the plain sentence to show. */
+function revaluationError(res: express.Response, err: unknown): void {
+  if (err instanceof z.ZodError) {
+    res.status(400).json({ status: 'error', message: 'This needs the workspace to revalue, and a date as YYYY-MM-DD if you name one.' });
+    return;
+  }
+  if (err instanceof FxRevaluationError) {
+    res.status(err.status).json({ status: 'error', message: err.message });
+    return;
+  }
+  res.status(500).json({ status: 'error', message: 'The revaluation could not be run.', details: errorMessage(err) });
+}
+
+function revaluationRoute(dryRun: boolean) {
+  return async (req: express.Request, res: express.Response) => {
+    try {
+      const parsed = revaluationBodySchema.parse(req.body);
+      const user = requestUser(req);
+      const result = await revaluateForeignBalances(getDb(), {
+        workspaceId: parsed.workspaceId,
+        user: { uid: user.uid, email: user.email, admin: user.admin },
+        date: parsed.date,
+        rates: parsed.rates,
+        dryRun,
+      });
+      res.json({ status: 'ok', ...result });
+    } catch (err) {
+      revaluationError(res, err);
+    }
+  };
+}
 
 /** Period work: currency revaluation, year-end and month-end close, workspace reset. Part of /api/v1/transactions (F-06), registered in the original order. */
 export function registerPeriodRoutes(transactionRouter: express.Router): void {
   // ==========================================
-  // MONTH-END REVALUATION API
+  // MONTH-END CURRENCY REVALUATION (R-07)
   // ==========================================
-  transactionRouter.post('/revaluation/run', async (req, res) => {
-    // L-187: this run applied one exchange rate to every asset and liability account (home-currency
-    // ones too), on made-up rates when the rate service was down, for any member. Foreign
-    // documents are stored in the home currency, so it can't be done from the ledger this way.
-    // Off until R-07 revalues open foreign invoices and bills properly; nothing is posted.
-    if (process.env.LF_ENABLE_LEGACY_REVALUATION !== '1') {
-      return res.status(409).json({ error: 'Currency revaluation is not available yet. Nothing was posted.' });
-    }
+  // The entry a period end needs: the open foreign invoices and bills valued at today's rate, the
+  // difference against an unrealized FX gain/loss account, and its reversal the next day so the
+  // documents keep their own rates. preview posts nothing; run posts both. Every rule — which
+  // documents, which accounts, when nothing is posted at all — is in the service and in
+  // src/lib/fxRevaluation.ts, where it is tested.
+  //
+  // What used to be here (behind LF_ENABLE_LEGACY_REVALUATION) applied one rate to every asset and
+  // liability account, home-currency ones included, on invented rates when the rate service was down
+  // (L-187). It is gone: the flag no longer means anything.
+  transactionRouter.post('/revaluation/preview', revaluationRoute(true));
+  transactionRouter.post('/revaluation/run', revaluationRoute(false));
+  transactionRouter.post('/revaluation/undo', async (req, res) => {
     try {
-      const { workspaceId, targetCurrency } = req.body;
+      const { workspaceId, date } = revaluationBodySchema.parse(req.body);
       const user = requestUser(req);
-      const db = getDb();
-      const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
-      if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
-
-      const wsData = wsDoc.data();
-      const baseCurrency = wsData?.currency || 'USD';
-      const targetCurr = (targetCurrency || baseCurrency).toUpperCase();
-
-      const today = getLocalDateISO();
-      const lock = postingLock(today, wsData, user.uid);
-      if (lock) return res.status(400).json({ error: lockMessage(today, lock) });
-
-      // --- LIVE FX FETCH ---
-      const liveRates = await FxService.getRatesForBase(baseCurrency);
-      const marketRate = liveRates[targetCurr] || 1.0;
-
-      // Ensure real chartAccounts exist for Unrealized FX and Foreign Clearing
-      const accSnap = await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get();
-      let fxGainLossAcc: { id: string; data: () => DocumentData } | undefined = accSnap.docs.find(d => (d.data().name || '').toLowerCase().includes('fx gain') || (d.data().name || '').toLowerCase().includes('unrealized'));
-      let fxClearingAcc: { id: string; data: () => DocumentData } | undefined = accSnap.docs.find(d => (d.data().name || '').toLowerCase().includes('fx clearing') || (d.data().name || '').toLowerCase().includes('foreign'));
-
-      const batchSetup = db.batch();
-      if (!fxGainLossAcc) {
-        const newRef = db.collection('chartAccounts').doc();
-        const accData = {
-          id: newRef.id,
-          workspaceId,
-          uid: user.uid,
-          name: 'Unrealized FX Gain/Loss',
-          code: '8090',
-          type: 'expense',
-          subtype: 'other_expense',
-          balanceCents: 0,
-          createdAt: new Date().toISOString()
-        };
-        batchSetup.set(newRef, accData);
-        fxGainLossAcc = { id: newRef.id, data: () => accData };
-      }
-      if (!fxClearingAcc) {
-        const newRef = db.collection('chartAccounts').doc();
-        const accData = {
-          id: newRef.id,
-          workspaceId,
-          uid: user.uid,
-          name: 'Foreign Exchange Clearing',
-          code: '1090',
-          type: 'asset',
-          subtype: 'cash',
-          balanceCents: 0,
-          createdAt: new Date().toISOString()
-        };
-        batchSetup.set(newRef, accData);
-        fxClearingAcc = { id: newRef.id, data: () => accData };
-      }
-      await batchSetup.commit();
-
-      // --- REAL REVALUATION CALCULATION ---
-      // 1. Fetch all transactions to compute current functional balances vs expected market value
-      const txSnap = await db.collection('transactions').where('workspaceId', '==', workspaceId).get();
-      const transactions = txSnap.docs.map(d => d.data() as Transaction);
-    
-      const revalLines: TransactionLine[] = [];
-      let totalAdjustmentCents = 0;
-
-      // Group lines by account
-      const accountBalances = new Map<string, { foreignCents: number, functionalCents: number, name: string }>();
-    
-      transactions.forEach((tx) => {
-        if (!isPostable(tx)) return;
-        (tx.lines || []).forEach((l: TransactionLine) => {
-          if (!l.accountId) return;
-          const rate = l.exchangeRate || tx.exchangeRate || 1;
-          const stats = accountBalances.get(l.accountId) || { foreignCents: 0, functionalCents: 0, name: l.accountName || l.accountId };
-          stats.foreignCents += l.amountCents;
-          stats.functionalCents += Math.round(l.amountCents * rate);
-          accountBalances.set(l.accountId, stats);
-        });
-      });
-
-      for (const [accountId, stats] of accountBalances.entries()) {
-        // We only revalue Asset/Liability accounts that have a non-zero balance
-        const acc = accSnap.docs.find(d => d.id === accountId)?.data();
-        if (!acc || (acc.type !== 'asset' && acc.type !== 'liability')) continue;
-        if (stats.foreignCents === 0) continue;
-
-        // Expected functional balance at current market rates
-        const expectedFunctionalCents = Math.round(stats.foreignCents * marketRate);
-        const adjustment = expectedFunctionalCents - stats.functionalCents;
-
-        if (adjustment !== 0) {
-          revalLines.push({
-            id: `reval-${accountId}`,
-            accountId: accountId,
-            accountName: stats.name,
-            amountCents: adjustment,
-            description: `FX Revaluation adjustment (${baseCurrency} vs ${targetCurr})`
-          });
-          totalAdjustmentCents += adjustment;
-        }
-      }
-
-      if (revalLines.length === 0) {
-        return res.json({ status: "ok", message: "No revaluation needed. Functional balances match market rates." });
-      }
-
-      const fxGainLossAccId = fxGainLossAcc?.id || 'fx-gain-loss-default';
-      const fxGainLossAccName = fxGainLossAcc?.data()?.name || 'Unrealized FX Gain/Loss';
-
-      const revalTx = {
-        id: db.collection("transactions").doc().id,
-        workspaceId,
-        uid: user.uid,
-        date: today,
-        description: `Month-End FX Revaluation to ${targetCurr}`,
-        totalAmountCents: Math.abs(totalAdjustmentCents),
-        currency: baseCurrency,
-        type: 'journal' as const,
-        status: 'approved' as const,
-        isCleared: true,
-        createdAt: new Date().toISOString(),
-        lines: [
-          ...revalLines,
-          {
-            id: `offset-fx`,
-            accountId: fxGainLossAccId,
-            accountName: fxGainLossAccName,
-            amountCents: -totalAdjustmentCents, // Offset to P&L
-            description: 'Net Unrealized FX Gain/Loss'
-          }
-        ]
-      };
-
-      const validatedRevalTx = await TransactionValidator.validateAndPrepare(revalTx, {
-        workspaceId,
-        user: { uid: user.uid, admin: user.admin },
-        wsData
-      });
-
-      await db.runTransaction(async (t) => {
-        const txRef = db.collection('transactions').doc(validatedRevalTx.id);
-        t.set(txRef, { ...validatedRevalTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-      });
-
-      res.json({
-        status: 'ok',
-        message: `Month-end revaluation completed. Posted ${revalLines.length + 1} lines adjusting for ${totalAdjustmentCents} cents net.`,
-        transactionId: revalTx.id
-      });
-    } catch (e) {
-      res.status(500).json({ error: errorMessage(e) });
+      const result = await undoRevaluation(getDb(), { workspaceId: String(workspaceId), user: { uid: user.uid, email: user.email, admin: user.admin }, date: String(date || '') });
+      res.json({ status: 'ok', ...result });
+    } catch (err) {
+      return revaluationError(res, err);
     }
   });
 

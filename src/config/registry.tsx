@@ -13,7 +13,8 @@
 import { lazy } from 'react';
 import type { ComponentType, ElementType } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { 
+import {
+  CalendarClock,
   LayoutGrid, BarChart3, Activity, FileText, Database, Layers, 
   ArrowDownRight, ArrowUpRight, FolderKanban, Users, RefreshCw, 
   ShieldCheck, Terminal as TerminalIcon, Settings, Building, Cpu as CpuIcon,
@@ -419,6 +420,7 @@ export const SETTINGS_TABS_REGISTRY = [
   { id: 'emails', label: { en: 'Emails & Reminders', he: 'מיילים ותזכורות' }, componentName: 'EmailSettingsView', icon: Mail },
   { id: 'branding', label: { en: 'Branding & PDFs', he: 'מיתוג ומסמכים' }, componentName: 'BrandingSettingsView', icon: Palette },
   { id: 'numbering', label: { en: 'Document Numbering', he: 'מספור מסמכים' }, componentName: 'NumberingSettingsView', icon: Hash },
+  { id: 'schedule', label: { en: 'Schedule', he: 'לוח זמנים' }, componentName: 'ScheduleSettingsView', icon: CalendarClock },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ];
@@ -438,6 +440,7 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'BrandingSettingsView': lazy(() => import('../components/platform/settings/BrandingSettings')),
   'NumberingSettingsView': lazy(() => import('../components/platform/settings/NumberingSettings')),
   'ExportView': lazy(() => import('../components/platform/settings/BackupExportSettings')),
+  'ScheduleSettingsView': lazy(() => import('../components/platform/settings/ScheduleSettings')),
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };
 
