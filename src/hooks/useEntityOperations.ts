@@ -8,7 +8,11 @@ import { LedgerPostService } from '../services/LedgerPostService';
 
 import { isOpenInvoice, isOpenBill } from '../lib/txFilters';
 import { calculateAmountDue } from '../lib/documentMath';
+import { deliveryPhrase, preferredDelivery, sendsByEmail } from '../lib/delivery';
 import { toBaseCents } from '../server/reports/partyReports';
+import { approvalForSave, holdsSending, isIssuedForApproval, normalizeInvoiceApproval } from '../lib/invoiceApproval';
+import { useCurrentRole } from '../hooks/useCurrentRole';
+import type { InvoiceApprovalRecord } from '../lib/invoiceApproval';
 import type { Bill, CreditNote, Customer, Invoice, VendorCredit } from '../types';
 
 interface EntityInput {
@@ -17,6 +21,16 @@ interface EntityInput {
 }
 
 type StoredDocumentPath = 'invoices' | 'bills' | 'creditNotes' | 'vendorCredits' | 'customers';
+
+/** What the auto-email after a save looks at: the customer, the text, and the two gates (Y-27, BE-04). */
+interface InvoiceForEmail {
+  customerId?: string;
+  metadata?: Record<string, unknown>;
+  amountCents?: number;
+  exchangeRate?: number;
+  status?: string;
+  approval?: InvoiceApprovalRecord;
+}
 
 /**
  * The saved copy of a record: the loaded one, else read from the database. Collections load only
@@ -33,6 +47,7 @@ async function savedRecord<T>(path: StoredDocumentPath, id: string): Promise<T |
 export function useEntityOperations() {
   const user = useAuthStore(s => s.user);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const role = useCurrentRole();
   const analyticalPatternCache = useLedgerStore(s => s.analyticalPatternCache);
 
   /**
@@ -111,6 +126,21 @@ export function useEntityOperations() {
     }
   };
 
+  /**
+   * Invoice approval (BE-04): the workspace's rule, stamped onto an invoice at the one moment it
+   * starts going out — it is created issued, or a draft is moved to issued. A later edit never
+   * touches it, so an invoice already with the customer keeps its reminders and its place in the
+   * accounts, and a save that carries an approval of its own (Approve / Send back in the invoice
+   * list) is left exactly as it is. Returns the field to write, or nothing at all.
+   */
+  const approvalStamp = (merged: Invoice, wasIssued: boolean): { approval?: InvoiceApprovalRecord } => {
+    const settings = normalizeInvoiceApproval(useAuthStore.getState().getCurrentWorkspace()?.invoiceApproval);
+    if (!settings.enabled) return {};
+    if (wasIssued || 'approval' in merged) return {};
+    const stamp = approvalForSave(merged, settings, { role, uid: user?.uid, now: new Date().toISOString() });
+    return stamp ? { approval: stamp } : {};
+  };
+
   const addEntity = async <T extends object>(path: string, data: T & EntityInput, successMsg?: string) => {
     if (!user || !currentWorkspaceId) return;
     try {
@@ -120,7 +150,9 @@ export function useEntityOperations() {
         id: docId,
         uid: user.uid,
         workspaceId: currentWorkspaceId,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        // BE-04: an invoice that goes straight out over the limit waits for a signature first
+        ...(path === 'invoices' ? approvalStamp(data as unknown as Invoice, false) : {})
       };
 
       if (path === 'invoices') {
@@ -168,9 +200,20 @@ export function useEntityOperations() {
 
   // Emails the invoice to the customer (server: documentEmailService.ts). Called after the invoice
   // is posted, so the server sees an issued invoice; the send is logged there.
-  const sendInvoiceEmail = async (id: string, invoiceData: { customerId?: string; metadata?: Record<string, unknown> }) => {
+  const sendInvoiceEmail = async (id: string, invoiceData: InvoiceForEmail) => {
     if (!currentWorkspaceId) return false;
+    // BE-04: an invoice nobody has signed off yet stays inside, whoever saved it
+    if (holdsSending(invoiceData, useAuthStore.getState().getCurrentWorkspace()?.invoiceApproval)) {
+      toast.info('The invoice was saved. It is not emailed yet: it is over the approval limit (Settings → Emails & Reminders), so it waits for an owner or an accountant to approve it in the invoice list.');
+      return false;
+    }
     const customer = invoiceData.customerId ? await savedRecord<Customer>('customers', invoiceData.customerId) : undefined;
+    // Y-27: sending this because the invoice was saved as "sent" is the app acting on its own, so it
+    // respects how the customer wants documents; pressing Email on the invoice is a person deciding.
+    if (!sendsByEmail(customer)) {
+      toast.info(`The invoice was saved. It was not emailed: ${customer?.name || 'this customer'} gets ${deliveryPhrase(preferredDelivery(customer))}.`);
+      return false;
+    }
     const to = String(invoiceData.metadata?.sentTo || customer?.email || '').trim();
     if (!to) {
       toast.error('The invoice was not emailed: the customer has no email address.');
@@ -210,6 +253,10 @@ export function useEntityOperations() {
 
       // Email the invoice when it becomes "sent" (after it is posted below)
       const previousInvoice = path === 'invoices' ? await savedRecord<Invoice>('invoices', id) : undefined;
+      if (path === 'invoices' && previousInvoice) {
+        const stamped = approvalStamp({ ...previousInvoice, ...finalData } as Invoice, isIssuedForApproval(previousInvoice.status));
+        if (stamped.approval) Object.assign(finalData, stamped);
+      }
       const emailAfterSave = path === 'invoices' && finalData.status === 'sent' && (previousInvoice?.status !== 'sent' || Boolean(forceSend));
 
       if (path === 'invoices' && user && currentWorkspaceId) {

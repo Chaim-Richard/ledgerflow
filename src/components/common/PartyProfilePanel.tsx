@@ -4,6 +4,7 @@ import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { addNote, MAX_NOTE_LENGTH, parseTags } from '../../lib/contacts';
+import { DELIVERY_METHODS, deliveryLabel, preferredDelivery } from '../../lib/delivery';
 import InlineEdit from '../ui/InlineEdit';
 
 const COMMON_CURRENCIES = ['USD', 'EUR', 'GBP', 'ILS', 'CAD', 'AUD', 'JPY', 'CHF'];
@@ -16,9 +17,9 @@ import type { PartySide } from './PartyModal';
 import type { Customer, Vendor } from '../../types';
 
 /**
- * On a customer's or vendor's page: address, default currency, tags and the people to contact,
- * an Edit button (the shared contact form), and a notes timeline (Y-21 Y-22 Y-24 Y-25). Viewers
- * read; other roles edit and add notes.
+ * On a customer's or vendor's page: address, default currency, how documents are delivered, tags
+ * and the people to contact, an Edit button (the shared contact form), and a notes timeline
+ * (Y-21 Y-22 Y-24 Y-25 Y-27). Viewers read; other roles edit and add notes.
  */
 export default function PartyProfilePanel({ side, party }: { side: PartySide; party: Customer | Vendor }) {
   const id = useId();
@@ -76,6 +77,22 @@ export default function PartyProfilePanel({ side, party }: { side: PartySide; pa
               validate={v => !v || /^[A-Za-z]{3}$/.test(String(v)) ? null : 'Use a 3-letter code, e.g. EUR'}
               onSave={v => updateEntity(path, party.id, { currency: String(v).toUpperCase() === workspaceCurrency ? '' : String(v).toUpperCase() }, 'Currency saved')} />
           </dd>
+        </div>
+        <div>
+          <dt className="text-[var(--muted)] font-semibold">Documents go out by</dt>
+          <dd className="text-slate-900 dark:text-white">
+            {canEdit ? (
+              <select aria-label={`Preferred delivery of ${party.name}`} value={preferredDelivery(party)}
+                onChange={e => updateEntity(path, party.id, { deliveryMethod: e.target.value }, 'Preferred delivery saved')}
+                className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2 py-1 text-xs text-slate-900 dark:text-white">
+                {DELIVERY_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+            ) : deliveryLabel(party.deliveryMethod)}
+          </dd>
+          <p className="text-[11px] text-[var(--muted)]">
+            {DELIVERY_METHODS.find(m => m.value === preferredDelivery(party))?.note}
+            {preferredDelivery(party) === 'email' ? '' : ' — emails still go when someone presses Email.'}
+          </p>
         </div>
         <div>
           <dt className="text-[var(--muted)] font-semibold">Tags</dt>

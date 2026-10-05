@@ -11,6 +11,8 @@ import { notify } from './notificationService';
 import { generateDocumentPdf } from './pdfService';
 import { loadStatement } from './statementService';
 import { isArchivedParty } from '../../lib/contacts';
+import { againstPreference, sendsByEmail } from '../../lib/delivery';
+import { approvalDecision, approvalStatus, holdsSending, isApproverRole } from '../../lib/invoiceApproval';
 
 /**
  * Emailing an invoice or a payment reminder to the customer (S-01, BE-01, BL-03, BL-05, K-08).
@@ -18,7 +20,14 @@ import { isArchivedParty } from '../../lib/contacts';
  * - addresses that bounced or complained are skipped (suppression list, BL-03);
  * - text from the workspace's templates (or the defaults), HTML + plain text, PDF attached;
  * - every attempt is logged in emailEvents (send log per document, BL-05), and the provider's
- *   bounce/complaint reports are added to the same log (emailWebhookRoutes.ts).
+ *   bounce/complaint reports are added to the same log (emailWebhookRoutes.ts);
+ * - a contact who asked for paper instead of email (Y-27) is still emailed when a person presses
+ *   Email, but the log says so (againstPreference) — only sends that happen by themselves skip them.
+ *   A scheduled send (input.system) is never against their wish: the job doesn't email them at all.
+ * - an invoice over the workspace's approval limit (BE-04, src/lib/invoiceApproval.ts) waits for a
+ *   signature from an owner or an accountant, and for those two sending one *is* the signature: the
+ *   invoice is approved as it goes out. The daily reminder job asks nobody to wait — an invoice still
+ *   held back is filtered out before a reminder is considered (reminderService.ts).
  */
 
 export class EmailSendError extends Error {
@@ -78,6 +87,18 @@ export async function emailInvoice(db: Firestore, input: EmailInvoiceInput) {
   if (await isSuppressed(db, to)) throw new EmailSendError(409, `${to} bounced or reported an earlier email as spam; update the customer's email address`);
   if (!isMailConfigured()) throw new EmailSendError(503, 'Email sending is not set up yet (add an email provider key in the settings)');
 
+  // BE-04: over the approval limit, a person who cannot sign gets refused; a person who can signs.
+  const settings = workspace.invoiceApproval;
+  const held = holdsSending(invoice, settings);
+  const approver = isApproverRole(workspaceRole(workspace, input.uid));
+  if (held && !input.system) {
+    if (!approver) {
+      throw new EmailSendError(409, approvalStatus(invoice, settings) === 'rejected'
+        ? 'An owner or an accountant sent this invoice back — fix what they wrote before it goes to the customer'
+        : 'This invoice is over the approval limit: an owner or an accountant must approve it first (Settings → Emails & Reminders)');
+    }
+  }
+
   let token = typeof invoice.paymentToken === 'string' ? invoice.paymentToken : '';
   if (!token) token = `pay_${crypto.randomBytes(32).toString('hex')}`;
 
@@ -105,7 +126,8 @@ export async function emailInvoice(db: Firestore, input: EmailInvoiceInput) {
     attachments = undefined;
   }
 
-  const logBase = { workspaceId: input.workspaceId, documentType: 'invoice', documentId: input.invoiceId, invoiceId: input.invoiceId, template: input.template, subject: message.subject, recipient: to, sentBy: input.system ? 'schedule' : input.uid };
+  const paper = againstPreference(customer);
+  const logBase = { workspaceId: input.workspaceId, documentType: 'invoice', documentId: input.invoiceId, invoiceId: input.invoiceId, template: input.template, subject: message.subject, recipient: to, sentBy: input.system ? 'schedule' : input.uid, ...(paper ? { againstPreference: paper } : {}) };
   let result;
   try {
     result = await sendMail({ to, subject: message.subject, html: message.html, text: message.text, attachments });
@@ -125,6 +147,10 @@ export async function emailInvoice(db: Firestore, input: EmailInvoiceInput) {
     paymentToken: token,
     // pending/approved → sent (all are issued, already in the books); other statuses stay
     ...(invoice.status === 'pending' || invoice.status === 'approved' ? { status: 'sent' } : {}),
+    // an approver sending a held invoice signs it off on the spot (BE-04)
+    ...(held && approver && !input.system
+      ? { approval: approvalDecision(settings, 'approved', { uid: input.uid, now }) }
+      : {}),
     metadata,
     updatedAt: now,
   });
@@ -192,7 +218,7 @@ export async function emailLog(db: Firestore, workspaceId: string, documentId: s
   const snap = await db.collection('emailEvents').where('workspaceId', '==', workspaceId).where('documentId', '==', documentId).limit(200).get();
   return snap.docs
     .map(d => d.data())
-    .map(e => ({ event: e.event, recipient: e.recipient, subject: e.subject || null, template: e.template || null, provider: e.provider || null, error: e.error || null, timestamp: e.timestamp }))
+    .map(e => ({ event: e.event, recipient: e.recipient, subject: e.subject || null, template: e.template || null, provider: e.provider || null, error: e.error || null, againstPreference: e.againstPreference || null, timestamp: e.timestamp }))
     .sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
 }
 
@@ -216,8 +242,9 @@ export async function emailStatements(db: Firestore, input: { workspaceId: strin
   const ids = input.customerIds?.length
     ? input.customerIds
     : (await db.collection('customers').where('workspaceId', '==', input.workspaceId).get()).docs
-      // archived customers and those who asked for no statements (Y-28) are left out unless chosen by hand
-      .filter(d => !isArchivedParty(d.data() as { status?: string }) && !d.data().noStatements).map(d => d.id);
+      // archived customers, those who asked for no statements (Y-28) and those who get paper (Y-27)
+      // are left out unless chosen by hand
+      .filter(d => !isArchivedParty(d.data() as { status?: string }) && !d.data().noStatements && sendsByEmail(d.data())).map(d => d.id);
   const result: StatementBatchResult = { sent: [], skipped: [], failed: [] };
   const template = resolveTemplate('statement', workspace.emailTemplates as EmailTemplates | undefined);
   for (const id of ids) {
@@ -231,7 +258,8 @@ export async function emailStatements(db: Firestore, input: { workspaceId: strin
     if (await isSuppressed(db, to)) { result.skipped.push({ id, name, reason: `${to} bounced or reported spam` }); continue; }
     const balance = formatCurrency(statement.endingBalanceCents, currency);
     const message = renderEmail(template, { company: String(workspace.name || ''), customer: name, amount: balance, amount_due: balance, number: statement.pdf.number });
-    const logBase = { workspaceId: input.workspaceId, documentType: 'statement', documentId: id, template: 'statement', subject: message.subject, recipient: to, sentBy: input.system ? 'schedule' : input.uid };
+    const paper = againstPreference(statement.contact);
+    const logBase = { workspaceId: input.workspaceId, documentType: 'statement', documentId: id, template: 'statement', subject: message.subject, recipient: to, sentBy: input.system ? 'schedule' : input.uid, ...(paper ? { againstPreference: paper } : {}) };
     try {
       const pdf = await generateDocumentPdf('statement', statement.pdf, workspace);
       const sent = await sendMail({ to, subject: message.subject, html: message.html, text: message.text, attachments: [{ filename: `statement_${name.replace(/[^\w.-]+/g, '_')}.pdf`, content: pdf, contentType: 'application/pdf' }] });
@@ -276,7 +304,8 @@ export async function emailRemittance(db: Firestore, payment: DocumentData): Pro
     paid_bills: labels.join(', ') || 'your invoice',
   };
   const message = renderEmail(resolveTemplate('remittance', workspace.emailTemplates as EmailTemplates | undefined), values);
-  const logBase = { workspaceId: payment.workspaceId, documentType: 'payment', documentId: payment.id || '', template: 'remittance', subject: message.subject, recipient: to, sentBy: 'payment' };
+  const paper = againstPreference(vendor);
+  const logBase = { workspaceId: payment.workspaceId, documentType: 'payment', documentId: payment.id || '', template: 'remittance', subject: message.subject, recipient: to, sentBy: 'payment', ...(paper ? { againstPreference: paper } : {}) };
   try {
     const sent = await sendMail({ to, subject: message.subject, html: message.html, text: message.text });
     await logEmailEvent(db, { ...logBase, event: 'sent', provider: sent.provider, messageId: sent.messageId || null });

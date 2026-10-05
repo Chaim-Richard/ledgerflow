@@ -44,6 +44,12 @@ export interface ReminderInvoice {
   amountCents?: number;
   amountPaidCents?: number;
   customerId?: string;
+  /** read by the daily job to name the invoice it tells the team about (Y-27); no amounts are changed */
+  number?: string;
+  customerName?: string;
+  currency?: string;
+  /** read by the daily job to leave a signed-off-later invoice alone (BE-04); no amounts are changed */
+  approval?: import('./invoiceApproval').InvoiceApprovalRecord;
   metadata?: { remindersSent?: number; lastReminderAt?: string; noReminders?: boolean } & Record<string, unknown>;
 }
 
@@ -73,4 +79,20 @@ export function remindersDue(
     out.push({ invoiceId: inv.id, step: sent + 1, daysOverdue });
   }
   return out;
+}
+
+/**
+ * The reminders the daily job may email, and the ones it must not because the customer asked for
+ * paper (Y-27): `paperCustomers` holds those customer ids. A reminder with no customer on it (a
+ * one-off invoice typed without choosing one) stays with the emails, as it was before anyone could
+ * choose. Nothing here looks at amounts: the invoice keeps its counters either way.
+ */
+export function separatePaperReminders<T extends { customerId?: string }>(
+  due: T[],
+  paperCustomers: Set<string>,
+): { email: T[]; paper: T[] } {
+  const email: T[] = [];
+  const paper: T[] = [];
+  for (const item of due) (item.customerId && paperCustomers.has(item.customerId) ? paper : email).push(item);
+  return { email, paper };
 }
