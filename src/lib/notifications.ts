@@ -13,6 +13,7 @@ export const NOTIFICATION_TYPES = {
   'invoice.sent': { label: 'An invoice was emailed to a customer', roles: BOOKS, tab: 'sales' },
   'invoice.overdue': { label: 'An invoice became overdue', roles: BOOKS, tab: 'sales' },
   'invoice.draft_ready': { label: 'A recurring invoice is ready to review and send', roles: BOOKS, tab: 'sales' },
+  'invoice.paper_copy': { label: 'A reminder is due for a customer who gets paper copies', roles: BOOKS, tab: 'sales' },
   'bill.draft_ready': { label: 'A recurring bill is ready to review', roles: BOOKS, tab: 'purchases' },
   'payment.received': { label: 'A customer payment was received', roles: BOOKS, tab: 'payments' },
   'email.bounced': { label: 'An email to a customer bounced or was marked as spam', roles: BOOKS, tab: 'sales' },

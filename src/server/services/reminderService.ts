@@ -3,15 +3,29 @@
  * Emails & Reminders), each open overdue invoice gets the next reminder it is due for, by the
  * workspace's own date. Customers marked "no automatic reminders" are skipped. The email itself,
  * the send log and the per-invoice counters are documentEmailService.emailInvoice's job.
+ *
+ * A customer who asked for paper instead of email (Y-27: Print or Post) is not emailed either —
+ * nobody is emailed behind their back — but the team is told once a day which reminder is due, so
+ * a copy can go out that way. The invoice stays untouched: the reminder counters only move when an
+ * email actually goes.
  */
 import type { Firestore } from '../db/firestore';
 import { emailInvoice, emailStatements } from './documentEmailService';
 import { isMailConfigured } from './mailer';
 import { logger } from '../utils/logger';
 import { getTrustedAppUrl } from '../utils/urlHelper';
-import { normalizeReminderSettings, remindersDue, statementMonthDue } from '../../lib/reminders';
+import { normalizeReminderSettings, remindersDue, separatePaperReminders, statementMonthDue } from '../../lib/reminders';
 import type { ReminderInvoice } from '../../lib/reminders';
-import { formatTzDate } from '../../lib/utils';
+import { formatTzDate, formatCurrency } from '../../lib/utils';
+import { PAPER_DELIVERY_METHODS } from '../../lib/delivery';
+import { calculateAmountDue } from '../../lib/documentMath';
+import { holdsSending } from '../../lib/invoiceApproval';
+import { notify } from './notificationService';
+
+/** The currency to show a reminder amount in: the invoice's own, else the workspace's. */
+function currencyOf(invoice: { currency?: string } | undefined, workspace: { currency?: string }): string {
+  return String(invoice?.currency || workspace?.currency || 'USD');
+}
 
 export async function runReminders(db: Firestore, now = new Date(), baseUrl?: string): Promise<{ sent: number; failed: number }> {
   let sent = 0;
@@ -24,16 +38,33 @@ export async function runReminders(db: Firestore, now = new Date(), baseUrl?: st
     const settings = normalizeReminderSettings(workspace.reminderSettings);
     if (!settings.enabled) continue;
     const today = formatTzDate(now, typeof workspace.timezone === 'string' ? workspace.timezone : 'UTC');
-    const invoices = (await db.collection('invoices').where('workspaceId', '==', wsDoc.id).where('dueDate', '<', today).get())
+    const loaded = (await db.collection('invoices').where('workspaceId', '==', wsDoc.id).where('dueDate', '<', today).get())
       .docs.map(d => ({ ...d.data(), id: d.id }) as ReminderInvoice);
+    // BE-04: an invoice over the approval limit that nobody has signed off yet never reached the
+    // customer, so chasing them for it would be wrong; it waits for the signature like the email does
+    const invoices = loaded.filter(inv => !holdsSending(inv, workspace.invoiceApproval));
     const quiet = new Set((await db.collection('customers').where('workspaceId', '==', wsDoc.id).where('noReminders', '==', true).get()).docs.map(d => d.id));
-    for (const due of remindersDue(invoices, settings, today, quiet)) {
+    // Y-27: these customers get a printed or posted reminder instead of an email
+    const paper = new Set((await db.collection('customers').where('workspaceId', '==', wsDoc.id).where('deliveryMethod', 'in', [...PAPER_DELIVERY_METHODS]).get()).docs.map(d => d.id));
+    const invoiceById = new Map(invoices.map(inv => [inv.id, inv] as const));
+    const due = remindersDue(invoices, settings, today, quiet).map(d => ({ ...d, customerId: invoiceById.get(d.invoiceId)?.customerId }));
+    const { email: toEmail, paper: toDeliver } = separatePaperReminders(due, paper);
+    for (const reminder of toDeliver) {
+      const invoice = invoiceById.get(reminder.invoiceId);
+      await notify(db, {
+        workspaceId: wsDoc.id, workspace, kind: 'invoice.paper_copy',
+        title: `Reminder to deliver for invoice ${invoice?.number || reminder.invoiceId}`,
+        message: `${invoice?.customerName || 'The customer'} is owed ${formatCurrency(calculateAmountDue(invoice || {}), currencyOf(invoice, workspace))} and gets paper copies, not emails — print or post reminder ${reminder.step}.`,
+        eventKey: `invoice.paper_copy:${reminder.invoiceId}:${today}`, recordId: reminder.invoiceId,
+      });
+    }
+    for (const reminder of toEmail) {
       try {
-        await emailInvoice(db, { workspaceId: wsDoc.id, invoiceId: due.invoiceId, uid: 'system', system: true, template: 'reminder', baseUrl: url });
+        await emailInvoice(db, { workspaceId: wsDoc.id, invoiceId: reminder.invoiceId, uid: 'system', system: true, template: 'reminder', baseUrl: url });
         sent++;
       } catch (err) {
         failed++;
-        logger.warn('payment reminder not sent', { workspaceId: wsDoc.id, invoiceId: due.invoiceId, error: err instanceof Error ? err.message : String(err) });
+        logger.warn('payment reminder not sent', { workspaceId: wsDoc.id, invoiceId: reminder.invoiceId, error: err instanceof Error ? err.message : String(err) });
       }
     }
   }

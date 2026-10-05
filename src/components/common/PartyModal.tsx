@@ -4,13 +4,15 @@ import { useDialog } from '../../hooks/useDialog';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { Labelled } from '../ui/Labelled';
 import { cleanContacts, parseTags } from '../../lib/contacts';
+import { DELIVERY_METHODS, preferredDelivery } from '../../lib/delivery';
+import type { DeliveryMethod } from '../../lib/delivery';
 import type { ContactPerson } from '../../lib/contacts';
 
 /**
  * Add or edit a customer or vendor (one form for both sides): name, email, phone, address, status,
- * the vendor's category, the default currency for new invoices/bills (Y-22), tags (Y-24) and the
- * people to deal with (Y-21). On a new contact, empty extras are left out; when editing, clearing
- * one saves it cleared.
+ * the vendor's category, the default currency for new invoices/bills (Y-22), how documents go out
+ * on their own (Y-27), tags (Y-24) and the people to deal with (Y-21). On a new contact, empty
+ * extras are left out; when editing, clearing one saves it cleared.
  */
 export type PartySide = 'customer' | 'vendor';
 
@@ -24,6 +26,8 @@ export interface PartyFields {
   status?: string;
   category?: string;
   currency?: string;
+  /** How documents go out on their own (Y-27); 'email' is left out of a new contact, it is the default. */
+  deliveryMethod?: DeliveryMethod;
   tags?: string[];
   contacts?: ContactPerson[];
   balanceCents?: number;
@@ -51,6 +55,7 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
     name: initial?.name || '', email: initial?.email || '', phone: initial?.phone || '', address: initial?.address || '',
     status: (initial?.status === 'inactive' ? 'inactive' : 'active') as 'active' | 'inactive',
     category: initial?.category || 'Standard', currency: initial?.currency || '', tags: (initial?.tags || []).join(', '),
+    deliveryMethod: preferredDelivery(initial),
     // each row keeps a key of its own while it is edited (cleanContacts drops it on save)
     contacts: (initial?.contacts || []).map(p => ({ ...p, rowKey: crypto.randomUUID() })) as Array<ContactPerson & { rowKey: string }>,
   });
@@ -79,6 +84,8 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
     const address = form.address.trim();
     if (address || (editing && initial?.address)) party.address = address;
     if (form.currency || (editing && initial?.currency)) party.currency = form.currency;
+    // Email is what happened before anyone could choose, so it is only written when it was set before
+    if (form.deliveryMethod !== 'email' || (editing && initial?.deliveryMethod)) party.deliveryMethod = form.deliveryMethod;
     if (tags.length || (editing && initial?.tags?.length)) party.tags = tags;
     if (contacts.length || (editing && initial?.contacts?.length)) party.contacts = contacts;
     onSave(editing ? { ...party, id: initial!.id } : party);
@@ -144,6 +151,13 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
                 </select>
               </Labelled>
             </div>
+          </div>
+          <div>
+            <Labelled labelClassName={labelClass} label={`Preferred delivery for ${side === 'customer' ? 'invoices and statements' : 'bills and remittances'}`}>
+              <select value={form.deliveryMethod} onChange={e => set({ deliveryMethod: e.target.value as DeliveryMethod })} className={field}>
+                {DELIVERY_METHODS.map(m => <option key={m.value} value={m.value}>{m.label} — {m.note}</option>)}
+              </select>
+            </Labelled>
           </div>
           <div>
             <Labelled labelClassName={labelClass} label="Tags (separated by commas)">

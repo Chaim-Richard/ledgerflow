@@ -1,5 +1,7 @@
 import type { TaxTreatment } from '../lib/taxCodes';
 import type { ContactNote, ContactPerson } from '../lib/contacts';
+import type { DeliveryMethod } from '../lib/delivery';
+import type { InvoiceApprovalRecord } from '../lib/invoiceApproval';
 import type { EntityMetadata } from './ledger';
 import type { DashboardSchema } from './workspace';
 
@@ -30,6 +32,8 @@ export interface Vendor {
   address?: string;
   /** Currency new bills from this vendor start in (Y-22). */
   currency?: string;
+  /** How this vendor wants documents (bills, remittances); unset means Email (Y-27). */
+  deliveryMethod?: DeliveryMethod;
   /** People to deal with at the vendor (Y-21). */
   contacts?: ContactPerson[];
   /** Notes timeline, newest first (Y-25). */
@@ -137,6 +141,11 @@ export interface Invoice {
     metadata?: EntityMetadata;
   }>;
   progressPercentage?: number;
+  /**
+   * Invoice approval (BE-04, src/lib/invoiceApproval.ts): who signed an over-limit invoice off, or
+   * why it came back. It is not `status`: that word holds the payment state of the invoice.
+   */
+  approval?: InvoiceApprovalRecord;
   discountCents?: number;
   retainageCents?: number;
   depositCents?: number;
@@ -294,6 +303,8 @@ export interface Customer {
   address?: string;
   /** Currency new invoices for this customer start in (Y-22). */
   currency?: string;
+  /** How this customer wants documents (invoices, statements); unset means Email (Y-27). */
+  deliveryMethod?: DeliveryMethod;
   /** People to deal with at the customer (Y-21). */
   contacts?: ContactPerson[];
   /** Notes timeline, newest first (Y-25). */

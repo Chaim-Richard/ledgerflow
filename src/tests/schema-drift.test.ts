@@ -31,7 +31,9 @@ describe('Schema drift & index consistency guard (database rules)', () => {
       // email templates and reminder settings (migration 20260925040000_email_settings)
       'emailTemplates', 'reminderSettings',
       // monthly statements, set by the daily job (migration 20261006000000_customer_no_statements)
-      'lastStatementsMonth'
+      'lastStatementsMonth',
+      // invoice approval (BE-04, migration 20261007010000_invoice_approval)
+      'invoiceApproval'
     ];
     for (const key of expectedWorkspaceKeys) {
       assert.ok(allowed.includes(key), `workspaces allowed fields missing '${key}'`);

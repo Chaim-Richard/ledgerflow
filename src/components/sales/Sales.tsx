@@ -51,6 +51,8 @@ import { getDefaultTaxConfig, generateDefaultTaxRates } from '../../lib/taxRateD
 import { calculateNextOccurrence } from '../../lib/recurringEngine';
 
 import CustomerDetailView from './CustomerDetailView';
+import InvoiceApprovalFlag from './InvoiceApprovalFlag';
+import { approvalDecision, isApproverRole } from '../../lib/invoiceApproval';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
 
@@ -146,6 +148,9 @@ export default function Sales() {
   const [emailInvoice, setEmailInvoice] = useState<Invoice | null>(null);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const homeCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
+  // BE-04: the approval rule of this workspace, and whether the signed-in person may sign off.
+  const approvalSettings = useAuthStore(s => s.getCurrentWorkspace()?.invoiceApproval);
+  const canDecideApproval = isApproverRole(useCurrentRole());
   const [searchTerm, setSearchTerm] = useState('');
   // A record link (#sales/invoice/<id>, e.g. from Data Health) shows and highlights the invoice
   const focusedInvoiceId = useRecordFocus('invoice', { ready: invoices.length > 0, onFocus: () => { setActiveSubTab('invoices'); setSearchTerm(''); } });
@@ -192,6 +197,23 @@ export default function Sales() {
       return searchStr.includes(term);
     });
   }, [invoices, customers, searchTerm]);
+
+  /**
+   * Sign an invoice off or send it back (BE-04). This is the only place a decision is made from the
+   * list, so it writes the record itself rather than going through the stamping a save does: a save
+   * of an invoice that is already out must never change somebody's approval.
+   */
+  const decideApproval = (inv: Invoice, decision: 'approved' | 'rejected') => {
+    let note: string | undefined;
+    if (decision === 'rejected') {
+      const asked = window.prompt(`What should be changed on invoice ${inv.number || ''}? (optional)`);
+      if (asked === null) return; // the person backed out of the dialog; nothing is recorded
+      note = asked;
+    }
+    updateEntity('invoices', inv.id, {
+      approval: approvalDecision(approvalSettings, decision, { uid: user?.uid, note }),
+    }, decision === 'approved' ? 'Approved — the invoice can be emailed now.' : 'Sent back for changes.');
+  };
 
   const getStatusColor = (status: Invoice['status']) => {
     switch (status) {
@@ -398,6 +420,8 @@ export default function Sales() {
                           <span className="text-[10px] text-amber-600 font-bold" title={inv.writeOffReason || undefined}>written off {formatCurrency(inv.writtenOffCents || 0)}</span>
                         )}
                       </div>
+                      <InvoiceApprovalFlag invoice={inv} settings={approvalSettings} currency={homeCurrency}
+                        canDecide={canDecideApproval} onDecide={d => decideApproval(inv, d)} />
                       {inv.metadata?.cogsPending && (
                         <div className="mt-2 flex items-center justify-center gap-2 text-[10px] text-[var(--neg)]">
                           <span title="The cost of the items sold was not recorded: add an Inventory and a Cost of Goods Sold account, then retry.">Cost not recorded</span>

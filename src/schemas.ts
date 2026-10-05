@@ -268,6 +268,16 @@ export const InvoiceSchema = z.object({
   paymentDate: z.string().optional(),
   paidAt: z.string().optional(),
   posted: z.boolean().optional(),
+  /** Invoice approval (BE-04): the signature or the note that sent it back (src/lib/invoiceApproval.ts). */
+  approval: z.object({
+    state: z.enum(['awaiting', 'approved', 'rejected']),
+    thresholdCents: z.number().int().nonnegative(),
+    requestedAt: z.string().max(60).optional(),
+    requestedBy: z.string().max(200).optional(),
+    decidedAt: z.string().max(60).optional(),
+    decidedBy: z.string().max(200).optional(),
+    note: z.string().max(500).optional(),
+  }).strict().optional(),
   ...documentTaxFields,
 });
 

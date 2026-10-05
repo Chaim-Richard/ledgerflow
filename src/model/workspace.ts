@@ -2,6 +2,7 @@ import type { LockException } from '../lib/periodLock';
 import type { EmailTemplates } from '../lib/emailTemplates';
 import type { WorkspaceBranding } from '../lib/branding';
 import type { ReminderSettings } from '../lib/reminders';
+import type { InvoiceApprovalSettings } from '../lib/invoiceApproval';
 import type { NotificationType } from '../lib/notifications';
 import type { EntityMetadata, DimensionDefinition, Transaction } from './ledger';
 
@@ -44,6 +45,8 @@ export interface Workspace {
   branding?: WorkspaceBranding;
   /** Automatic payment reminders (src/lib/reminders.ts). */
   reminderSettings?: ReminderSettings;
+  /** Invoice approval (BE-04, src/lib/invoiceApproval.ts): invoices over the limit wait for a signature. */
+  invoiceApproval?: InvoiceApprovalSettings;
   /** Set by the daily job: the month (YYYY-MM) monthly statements were last sent (Y-28). */
   lastStatementsMonth?: string;
   strategicAdvice?: string[];
