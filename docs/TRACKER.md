@@ -1906,7 +1906,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
   `multi_currency_revaluation` Pro flag: that flag is otherwise unused, and which pages a plan gets is
   the owner's commercial call.
 - [x] R-08 Unposted-drafts review (drafts in the period block the close, listed)
-- [ ] R-09 Close comparison
+- [x] R-09 Close comparison (AI #3: the Month-End Close "Compare <month>" panel shows this month's P&L and balance sheet beside the previous month and the same month last year with big-move flags; see COORDINATION Messages)
 - [x] R-10 Lock by role (close/reopen owner+accountant; hard reopen owner; soft close by role)
 - [ ] R-11 Close package export
 
