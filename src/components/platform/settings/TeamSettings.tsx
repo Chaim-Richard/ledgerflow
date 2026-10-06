@@ -1,14 +1,21 @@
 import { useDialog } from '../../../hooks/useDialog';
-import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Trash2, Mail, ShieldCheck, Check, RefreshCw, Copy, Shield, Activity, Clock, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Users, UserPlus, Trash2, ShieldCheck, Check, RefreshCw, Copy, Shield, Activity, Clock, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { auth } from '../../../firebase';
 import { useAuthStore } from '../../../stores/useAuthStore';
-import { WorkspaceRole, ROLE_DESCRIPTIONS } from '../../../hooks/useCurrentRole';
+import { WorkspaceRole, ROLE_DESCRIPTIONS, useCurrentRole } from '../../../hooks/useCurrentRole';
 import { WorkspaceInvite, AuditLog } from '../../../types';
 import { RequireRole } from '../../ui/RequireRole';
+import InlineEdit from '../../ui/InlineEdit';
+import { useTeamRequests } from '../../../hooks/useTeamRequests';
 
 export default function TeamSettings() {
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const uid = useAuthStore(s => s.user?.uid);
+  return <ScopedTeamSettings key={`${workspaceId}:${uid}`} />;
+}
+
+function ScopedTeamSettings() {
   const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());
   const workspaceId = currentWorkspace?.id || 'default_workspace';
   const maxSeats = currentWorkspace?.maxSeats || 5;
@@ -19,9 +26,13 @@ export default function TeamSettings() {
   const [ownerUid, setOwnerUid] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   
-  const [inviteInput, setInviteInput] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<WorkspaceRole>('viewer');
-  const [submitting, setSubmitting] = useState<boolean>(false);
+  const role = useCurrentRole();
+  const canManage = role === 'owner';
+  const { request, saving, isCurrent } = useTeamRequests(workspaceId);
+  const [removeTarget, setRemoveTarget] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState('');
+  const { dialogProps: removeDialogProps, titleId: removeTitleId } = useDialog(() => { if (!saving) setRemoveTarget(null); }, !!removeTarget);
 
   // Member activity drawer state
   const [selectedMemberForLogs, setSelectedMemberForLogs] = useState<{ uid: string; email?: string } | null>(null);
@@ -29,26 +40,14 @@ export default function TeamSettings() {
   const [memberLogs, setMemberLogs] = useState<AuditLog[]>([]);
   const [logsLoading, setLogsLoading] = useState<boolean>(false);
 
-  const fetchTeamData = async () => {
+  const fetchTeamData = useCallback(async () => {
     try {
       setLoading(true);
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) return;
-
-      const headers = { 'Authorization': `Bearer ${token}` };
-
-      const [membersRes, rolesRes, invitesRes] = await Promise.all([
-        fetch(`/api/v1/workspaces/${workspaceId}/members`, { headers }),
-        fetch(`/api/v1/workspaces/${workspaceId}/roles`, { headers }),
-        fetch(`/api/v1/workspaces/${workspaceId}/invites`, { headers })
-      ]);
-
       const [membersData, rolesData, invitesData] = await Promise.all([
-        membersRes.json(),
-        rolesRes.json(),
-        invitesRes.json()
+        request(`/api/v1/workspaces/${workspaceId}/members`),
+        request(`/api/v1/workspaces/${workspaceId}/roles`),
+        canManage || role === 'accountant' ? request(`/api/v1/workspaces/${workspaceId}/invites`) : Promise.resolve({ invites: [] }),
       ]);
-
       if (membersData.status === 'success') {
         setMembers(membersData.members || []);
         if (membersData.ownerUid) setOwnerUid(membersData.ownerUid);
@@ -58,146 +57,65 @@ export default function TeamSettings() {
         setRoles(rolesData.roles);
       }
 
-      if (invitesData.status === 'success' && Array.isArray(invitesData.invites)) {
+      if (Array.isArray(invitesData.invites)) {
         setInvites(invitesData.invites.filter((i: WorkspaceInvite) => i.status === 'pending'));
       }
     } catch (err) {
-      toast.error('Failed to load team settings', { description: (err as Error).message });
+      if (isCurrent()) toast.error('Failed to load team settings', { description: (err as Error).message });
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  };
+  }, [request, workspaceId, canManage, role, isCurrent]);
 
   useEffect(() => {
-    fetchTeamData();
-  }, [workspaceId]);
+    const scheduled = setTimeout(() => { void fetchTeamData(); }, 0);
+    return () => clearTimeout(scheduled);
+  }, [fetchTeamData]);
 
   const activeSeatCount = members.length + 1; // plus primary owner
   const seatsRemaining = Math.max(0, maxSeats - activeSeatCount);
   const isSeatLimitReached = activeSeatCount >= maxSeats;
 
-  const handleSendInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteInput.trim()) return;
-
-    if (isSeatLimitReached) {
-      toast.error('Workspace seat limit reached', {
-        description: `Your workspace plan permits ${maxSeats} seats. Upgrade plan to invite additional team members.`
-      });
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) return;
-
-      const res = await fetch(`/api/v1/workspaces/${workspaceId}/invites`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: inviteInput.trim(),
-          role: selectedRole
-        })
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.status === 'success') {
-        toast.success(`Invitation created for ${inviteInput.trim()}`);
-        setInviteInput('');
-        fetchTeamData();
-
-        // Copy invite link if available
-        if (data.invite?.token) {
-          const inviteUrl = `${window.location.origin}/invite/${data.invite.token}`;
-          navigator.clipboard?.writeText(inviteUrl);
-          toast.info('Invitation link copied to clipboard!', { description: inviteUrl });
-        }
-      } else {
-        toast.error('Failed to send invitation', { description: data.message || data.error || 'Unknown error' });
-      }
-    } catch (err) {
-      toast.error('Error creating invitation', { description: (err as Error).message });
-    } finally {
-      setSubmitting(false);
-    }
+  const handleSendInvite = async (next: string | number) => {
+    const email = String(next).trim();
+    if (isSeatLimitReached) throw new Error(`Workspace seat limit reached (${maxSeats} seats).`);
+    await request(`/api/v1/workspaces/${workspaceId}/invites`, {
+      method: 'POST', body: JSON.stringify({ email, role: selectedRole }),
+    }, true);
+    toast.success(`Invitation created for ${email}`);
+    void fetchTeamData();
   };
 
-  const handleRoleChange = async (targetUid: string, newRole: WorkspaceRole) => {
-    try {
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) return;
-
-      const res = await fetch(`/api/v1/workspaces/${workspaceId}/roles/${targetUid}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ role: newRole })
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.status === 'success') {
-        toast.success(`Role updated to ${newRole.toUpperCase()}`);
-        setRoles(prev => ({ ...prev, [targetUid]: newRole }));
-      } else {
-        toast.error('Failed to update role', { description: data.message || data.error || 'Could not change role' });
-        fetchTeamData(); // revert UI state
-      }
-    } catch (err) {
-      toast.error('Error updating role', { description: (err as Error).message });
-      fetchTeamData();
-    }
+  const handleRoleChange = async (targetUid: string, next: string | number) => {
+    const newRole = String(next) as WorkspaceRole;
+    await request(`/api/v1/workspaces/${workspaceId}/roles/${encodeURIComponent(targetUid)}`, {
+      method: 'PATCH', body: JSON.stringify({ role: newRole }),
+    }, true);
+    setRoles(prev => ({ ...prev, [targetUid]: newRole }));
+    useAuthStore.setState(state => ({ workspaces: state.workspaces.map(workspace => workspace.id === workspaceId
+      ? { ...workspace, roles: { ...workspace.roles, [targetUid]: newRole } } : workspace) }));
+    toast.success(`Role updated to ${newRole.toUpperCase()}`);
   };
 
-  const handleRemoveMember = async (memberUid: string) => {
+  const handleRemoveMember = async () => {
+    if (!removeTarget) return;
     try {
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) return;
-
-      const res = await fetch(`/api/v1/workspaces/${workspaceId}/members/${memberUid}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-
-      if (res.ok && data.status === 'success') {
-        toast.success('Member removed from workspace.');
-        setMembers(data.members || []);
-        fetchTeamData();
-      } else {
-        toast.error('Failed to remove member', { description: data.message || data.error || 'Unknown error' });
-      }
-    } catch (err) {
-      toast.error('Error removing member', { description: (err as Error).message });
+      await request(`/api/v1/workspaces/${workspaceId}/members/${encodeURIComponent(removeTarget)}`, { method: 'DELETE' }, true);
+      setMembers(prev => prev.filter(uid => uid !== removeTarget));
+      setRemoveTarget(null);
+      toast.success('Member removed from workspace.');
+    } catch (error) {
+      if (isCurrent()) setRemoveError((error as Error).message);
     }
   };
 
   const handleRevokeInvite = async (inviteId: string) => {
     try {
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) return;
-
-      const res = await fetch(`/api/v1/workspaces/${workspaceId}/invites/${inviteId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-
-      if (res.ok && data.status === 'success') {
-        toast.success('Invite revoked successfully.');
-        setInvites(prev => prev.filter(i => (i.id || i.inviteId) !== inviteId));
-      } else {
-        toast.error('Failed to revoke invite', { description: data.message || 'Error revoking invite' });
-      }
+      await request(`/api/v1/workspaces/${workspaceId}/invites/${encodeURIComponent(inviteId)}`, { method: 'DELETE' }, true);
+      setInvites(prev => prev.filter(i => (i.id || i.inviteId) !== inviteId));
+      toast.success('Invite revoked successfully.');
     } catch (err) {
-      toast.error('Error revoking invite', { description: (err as Error).message });
+      if (isCurrent()) toast.error('Error revoking invite', { description: (err as Error).message });
     }
   };
 
@@ -211,25 +129,28 @@ export default function TeamSettings() {
     setSelectedMemberForLogs({ uid, email });
     setLogsLoading(true);
     try {
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) return;
-
-      const res = await fetch(`/api/v1/reports/audit-logs?workspaceId=${workspaceId}&uid=${uid}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const data = await request(`/api/v1/reports/audit-logs?workspaceId=${encodeURIComponent(workspaceId)}&uid=${encodeURIComponent(uid)}`);
       if (data.status === 'success' || Array.isArray(data.logs)) {
         setMemberLogs(data.logs || data.auditLogs || []);
       }
     } catch {
-      toast.error('Failed to load member activity history');
+      if (isCurrent()) toast.error('Failed to load member activity history');
     } finally {
-      setLogsLoading(false);
+      if (isCurrent()) setLogsLoading(false);
     }
   };
 
   return (
     <div className="space-y-8 max-w-5xl">
+      {removeTarget && <div {...removeDialogProps} className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-xl bg-[var(--surface)] p-6 space-y-4">
+          <h2 id={removeTitleId} className="[unicode-bidi:plaintext]">{`Remove ${removeTarget}?`}</h2>
+          <p>This person will lose access to this workspace. Their recorded work remains.</p>
+          {removeError && <p role="alert">{removeError}</p>}
+          <button type="button" disabled={saving} onClick={() => setRemoveTarget(null)}>Cancel</button>
+          <button type="button" disabled={saving} onClick={() => void handleRemoveMember()}>Remove member</button>
+        </div>
+      </div>}
       {/* Header & Seat Gauge */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px]">
         <div className="space-y-1">
@@ -264,26 +185,20 @@ export default function TeamSettings() {
 
       {/* Invite Form */}
       <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can invite new members">
-        <form onSubmit={handleSendInvite} className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-5">
+        <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[24px] space-y-5">
           <div className="text-xs font-black uppercase tracking-wider text-[var(--muted)] flex items-center gap-1.5">
             <UserPlus aria-hidden="true" size={15} className="text-indigo-500" /> Invite Team Member or Accountant
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
             <div className="relative sm:col-span-6">
-              <Mail aria-hidden="true" size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-              <input aria-label="Invite team member email"
-                type="email"
-                required
-                value={inviteInput}
-                onChange={(e) => setInviteInput(e.target.value)}
-                placeholder="colleague@company.com"
-                className="w-full pl-10 pr-4 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-semibold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <InlineEdit value="" kind="email" label="Invite team member email"
+                placeholder="Type an email and press Enter to invite" canEdit={canManage && !saving && !isSeatLimitReached}
+                onSave={handleSendInvite} />
             </div>
 
             <div className="sm:col-span-4">
-              <select aria-label="Role for invited team member"
+              <select disabled={!canManage || saving} aria-label="Role for invited team member"
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value as WorkspaceRole)}
                 className="w-full px-3 py-2.5 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-indigo-500 capitalize"
@@ -295,14 +210,7 @@ export default function TeamSettings() {
               </select>
             </div>
 
-            <button
-              type="submit"
-              disabled={submitting || !inviteInput.trim() || isSeatLimitReached}
-              className="sm:col-span-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
-            >
-              {submitting ? <RefreshCw aria-hidden="true" size={14} className="animate-spin" /> : <UserPlus aria-hidden="true" size={14} />}
-              <span>Invite</span>
-            </button>
+
           </div>
 
           {/* Selected Role Powers Explainer */}
@@ -322,7 +230,7 @@ export default function TeamSettings() {
               ))}
             </div>
           </div>
-        </form>
+        </div>
       </RequireRole>
 
       {/* Pending Invites Section */}
@@ -358,7 +266,7 @@ export default function TeamSettings() {
                   </button>
                   <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can revoke invites">
                     <button
-                      onClick={() => handleRevokeInvite(inv.id || inv.inviteId || '')}
+                      disabled={saving} onClick={() => handleRevokeInvite(inv.id || inv.inviteId || '')}
                       className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-xs font-bold flex items-center gap-1"
                       title="Revoke invitation"
                     >
@@ -400,7 +308,7 @@ export default function TeamSettings() {
                 </div>
                 <div>
                   <div className="text-xs font-bold text-[var(--text)] font-mono flex items-center gap-2">
-                    {ownerUid || auth.currentUser?.uid || 'Primary Owner'}
+                    {ownerUid || currentWorkspace?.uid || 'Primary Owner'}
                     <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                       Primary
                     </span>
@@ -413,7 +321,7 @@ export default function TeamSettings() {
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleOpenMemberActivity(ownerUid || auth.currentUser?.uid || '')}
+                  onClick={() => handleOpenMemberActivity(ownerUid || currentWorkspace?.uid || '')}
                   className="px-2.5 py-1 bg-[var(--surface)] border border-[var(--line)] hover:border-indigo-500 text-slate-300 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all"
                 >
                   <Activity aria-hidden="true" size={12} /> Activity Log
@@ -451,25 +359,16 @@ export default function TeamSettings() {
                       <Activity aria-hidden="true" size={12} /> Activity
                     </button>
 
-                    {/* Role Picker Dropdown */}
-                    <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can change roles">
-                      <select aria-label="Team member role"
-                        value={currentRole}
-                        onChange={(e) => handleRoleChange(mUid, e.target.value as WorkspaceRole)}
-                        disabled={isOwner}
-                        className="px-2.5 py-1 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-xs font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-indigo-500 capitalize disabled:opacity-50"
-                      >
-                        <option value="owner">Owner</option>
-                        <option value="accountant">Accountant</option>
-                        <option value="bookkeeper">Bookkeeper</option>
-                        <option value="viewer">Viewer</option>
-                      </select>
-                    </RequireRole>
+                    <InlineEdit value={currentRole} kind="select" label={`Role of ${mUid}`}
+                      canEdit={canManage && !isOwner && !saving}
+                      options={Object.entries(ROLE_DESCRIPTIONS).map(([value, info]) => ({ value, label: info.title }))}
+                      display={ROLE_DESCRIPTIONS[currentRole]?.title || 'Viewer'}
+                      onSave={next => handleRoleChange(mUid, next)} />
 
                     {!isOwner && (
                       <RequireRole requiredRole="owner" disableOnly tooltip="Only the workspace owner can remove members">
                         <button
-                          onClick={() => handleRemoveMember(mUid)}
+                          disabled={saving} onClick={() => { setRemoveError(''); setRemoveTarget(mUid); }}
                           className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-xs font-bold flex items-center gap-1"
                           title="Revoke workspace access"
                         >

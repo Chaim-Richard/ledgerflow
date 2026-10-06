@@ -34,7 +34,7 @@ function ConnectionStatus() {
   if (!workspaceId || activeWorkspaceId !== workspaceId) return <p>Select a workspace to see its bank connections.</p>;
   if (result.error) return <p role="alert">{result.error}</p>;
   if (!result.banks) return <p role="status">Loading connection status…</p>;
-  return <><p className="text-sm text-[var(--muted)]">Last successful sync: not provided by the current server. Connection status alone does not prove a fresh feed.</p>
-    {result.banks.length === 0 ? <p>No connected banks.</p> : <ul className="space-y-3">{result.banks.map(bank => <li key={bank.id} className="flex flex-wrap items-center justify-between gap-2"><bdi>{bank.institutionName}</bdi><span>{bank.status === 'login_required' ? 'Login expired' : bank.status === 'active' ? 'Active connection' : bank.status}</span>{bank.status === 'login_required' && role !== 'viewer' && <PlaidConnectButton bankId={bank.id} label="Reconnect" />}</li>)}</ul>}
+  return <><p className="text-sm text-[var(--muted)]">Connection status alone does not prove a fresh feed.</p>
+    {result.banks.length === 0 ? <p>No connected banks.</p> : <ul className="space-y-3">{result.banks.map(bank => <li key={bank.id} className="flex flex-wrap items-center justify-between gap-2"><bdi>{bank.institutionName}</bdi><span>{bank.status === 'login_required' ? 'Login expired' : bank.status === 'active' ? 'Active connection' : bank.status}</span><span>Last successful sync: {bank.lastSyncedAt === undefined ? 'not provided by the current server.' : bank.lastSyncedAt === null ? 'Never successfully synced.' : <time dateTime={bank.lastSyncedAt}>{new Date(bank.lastSyncedAt).toLocaleString('en-US', { timeZoneName: 'short' })}</time>}</span>{bank.status === 'login_required' && role !== 'viewer' && <PlaidConnectButton bankId={bank.id} label="Reconnect" />}</li>)}</ul>}
   </>;
 }
