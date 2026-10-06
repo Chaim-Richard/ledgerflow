@@ -2,7 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { Transaction } from '../../types';
 import { isExpenseAccount, isPostable, lineAmount } from '../../lib/txFilters';
-import { formatDecimal, formatCurrency, cn } from '../../lib/utils';
+import { formatDecimal, formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { setCleared } from '../../services/clearanceActions';
+import { toast } from 'sonner';
 import { calculateAccountRegisterBalances, visibleAccountRegisterEntries } from '../../lib/accountRegister';
 import { BookOpen, Search, CheckCircle2, Circle, Filter, Building2 } from 'lucide-react';
 
@@ -10,6 +14,12 @@ export const AccountRegisterView: React.FC = () => {
   const accounts = useLedgerStore(s => s.accounts);
   const transactions = useLedgerStore(s => s.transactions);
   const updateTransaction = useLedgerStore(s => s.updateTransaction);
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
+  const role = useCurrentRole();
+  const canClear = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
+  // the entry being marked cleared, and the day the bank cleared it (CA-04)
+  const [clearing, setClearing] = useState<string | null>(null);
+  const [clearOn, setClearOn] = useState('');
 
   // Default to first cash or asset account
   const defaultAccount = useMemo(() => {
@@ -46,6 +56,7 @@ export const AccountRegisterView: React.FC = () => {
       debitMinor: number;
       creditMinor: number;
       isCleared: boolean;
+      clearanceDate: string;
       originalTx: Transaction;
     }> = [];
 
@@ -75,7 +86,10 @@ export const AccountRegisterView: React.FC = () => {
             deltaMinor: delta,
             debitMinor: amt > 0 ? amt : 0,
             creditMinor: amt < 0 ? Math.abs(amt) : 0,
-            isCleared: (line as typeof line & { isCleared?: boolean }).isCleared === true || (tx as typeof tx & { reference?: string; checkNumber?: string; entity?: string; isReconciled?: boolean }).isReconciled === true,
+            // cleared by reconciliation (isCleared) or marked here; it used to read only isReconciled, so
+            // entries cleared by reconciliation showed as not cleared
+            isCleared: tx.isCleared === true || (line as typeof line & { isCleared?: boolean }).isCleared === true || (tx as typeof tx & { reference?: string; checkNumber?: string; entity?: string; isReconciled?: boolean }).isReconciled === true,
+            clearanceDate: tx.clearanceDate || (typeof tx.clearedAt === 'string' ? tx.clearedAt.slice(0, 10) : ''),
             originalTx: tx
           });
         }
@@ -125,13 +139,35 @@ export const AccountRegisterView: React.FC = () => {
     return list;
   }, [entries, registerCalculation, unclearedOnly, searchQuery]);
 
-  const handleToggleCleared = (txId: string, currentCleared: boolean) => {
+  // Cleared / not cleared is saved through the server (CA-04); it used to change only this screen
+  // and was gone after a reload. Marking cleared asks for the day the bank cleared it.
+  const handleToggleCleared = async (txId: string, currentCleared: boolean) => {
     const tx = transactions.find(t => t.id === txId);
-    if (!tx) return;
-    updateTransaction(txId, {
-      ...tx,
-      isReconciled: !currentCleared
-    } as unknown as Partial<Transaction>);
+    if (!tx || !canClear) return;
+    if (!currentCleared) {
+      const today = getLocalDateISO();
+      setClearOn(String(tx.date || '').slice(0, 10) > today ? String(tx.date).slice(0, 10) : today);
+      setClearing(txId);
+      return;
+    }
+    try {
+      await setCleared(workspaceId, [txId], { cleared: false });
+      updateTransaction(txId, { isCleared: false, isReconciled: false, clearanceDate: undefined, clearedAt: undefined } as Partial<Transaction>);
+      toast.success('Marked as not cleared');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const confirmCleared = async (txId: string) => {
+    try {
+      await setCleared(workspaceId, [txId], { cleared: true, clearanceDate: clearOn });
+      updateTransaction(txId, { isCleared: true, clearanceDate: clearOn } as Partial<Transaction>);
+      setClearing(null);
+      toast.success(`Cleared on ${clearOn}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
   };
 
   return (
@@ -251,8 +287,8 @@ export const AccountRegisterView: React.FC = () => {
               </tr>
             ) : (
               displayedEntries.map(entry => (
-                <tr 
-                  key={entry.id}
+                <React.Fragment key={entry.id}>
+                <tr
                   className={cn(
                     "hover:bg-[var(--surface-sunken)]/60 transition-colors",
                     entry.isCleared && "bg-emerald-500/[0.02]"
@@ -260,9 +296,10 @@ export const AccountRegisterView: React.FC = () => {
                 >
                   <td className="py-2.5 px-3 text-center">
                     <button aria-label={entry.isCleared ? "Mark transaction as uncleared" : "Mark transaction as cleared"}
-                      onClick={() => handleToggleCleared(entry.txId, entry.isCleared)}
-                      title={entry.isCleared ? "Cleared (Click to unmark)" : "Uncleared (Click to clear)"}
-                      className="text-[var(--text-muted)] hover:text-emerald-400 transition"
+                      onClick={() => void handleToggleCleared(entry.txId, entry.isCleared)}
+                      disabled={!canClear}
+                      title={entry.isCleared ? `Cleared${entry.clearanceDate ? ` on ${entry.clearanceDate}` : ''}${canClear ? ' (click to unmark)' : ''}` : canClear ? 'Not cleared (click to mark cleared)' : 'Not cleared'}
+                      className="text-[var(--text-muted)] hover:text-emerald-400 transition disabled:cursor-default"
                     >
                       {entry.isCleared ? (
                         <CheckCircle2 aria-hidden="true" className="w-4 h-4 text-emerald-400" />
@@ -271,7 +308,10 @@ export const AccountRegisterView: React.FC = () => {
                       )}
                     </button>
                   </td>
-                  <td className="py-2.5 px-3 font-mono text-xs">{entry.date}</td>
+                  <td className="py-2.5 px-3 font-mono text-xs">
+                    {entry.date}
+                    {entry.isCleared && entry.clearanceDate && <div className="text-[10px] text-emerald-600">cleared {entry.clearanceDate}</div>}
+                  </td>
                   <td className="py-2.5 px-3 font-mono text-xs text-[var(--text-muted)] truncate max-w-[96px]">
                     {entry.reference || '—'}
                   </td>
@@ -291,6 +331,22 @@ export const AccountRegisterView: React.FC = () => {
                     {formatDecimal(entry.runningBalanceMinor)}
                   </td>
                 </tr>
+                {clearing === entry.txId && (
+                  <tr>
+                    <td colSpan={8} className="py-2 px-3">
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <label className="flex items-center gap-1.5">Cleared the bank on
+                          <input type="date" value={clearOn} min={String(entry.date).slice(0, 10)} onChange={e => setClearOn(e.target.value)}
+                            className="px-2 py-1 border border-[var(--border)] rounded bg-[var(--surface)]" />
+                        </label>
+                        <button type="button" disabled={!clearOn || clearOn < String(entry.date).slice(0, 10)} onClick={() => void confirmCleared(entry.txId)}
+                          className="px-2 py-1 rounded bg-emerald-600 text-white font-semibold disabled:opacity-50">Mark cleared</button>
+                        <button type="button" onClick={() => setClearing(null)} className="text-[var(--text-muted)] hover:underline">Cancel</button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))
             )}
           </tbody>

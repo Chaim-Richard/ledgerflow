@@ -2287,7 +2287,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] CA-01 Payment reconciliation: bank deposit → payment allocated to invoices, line matched
 - [x] CA-02 Unreconcile — exists, now role-checked, lock-checked, audited
 - [x] CA-03 Repost accounting ledger (check + repost; tested)
-- [ ] CA-04 Bank clearance date
+- [x] CA-04 Bank clearance date — **done 6 Oct**: in the Account Register, marking an entry cleared asks for the day the bank cleared it (today by default, never before the entry's own date) and shows "cleared 2026-05-04" under its date; unmarking undoes it. Saved through the server (owners, accountants, bookkeepers; the period lock applies; viewers can't). Fixed on the way: the register's cleared tick changed only the screen and was gone after a reload, and entries cleared by bank reconciliation showed as not cleared there (`src/services/clearanceActions.ts`, `POST /api/v1/transactions/reconciliation/clear`; tests `account-register-view.test.tsx`, `clearance-date.test.ts` with the database)
 - [ ] CA-05 Finance books
 - [ ] CA-06 Closing balance snapshots
 - [ ] CA-07 Period closing voucher
