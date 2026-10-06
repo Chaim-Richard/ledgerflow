@@ -1,5 +1,5 @@
 /**
- * In-app notifications (S-01 S-03 S-04 S-06 S-14) and each person's choice of which ones they
+ * In-app notifications (S-01 S-03 S-04 S-06 S-12 S-14) and each person's choice of which ones they
  * get (S-19). The server creates one row per person in the `notifications` table
  * (src/server/services/notificationService.ts); the bell in the header shows the signed-in
  * person's rows and marks them read (NotificationDrawer.tsx).
@@ -15,6 +15,7 @@ export const NOTIFICATION_TYPES = {
   'invoice.draft_ready': { label: 'A recurring invoice is ready to review and send', roles: BOOKS, tab: 'sales' },
   'invoice.paper_copy': { label: 'A reminder is due for a customer who gets paper copies', roles: BOOKS, tab: 'sales' },
   'bill.draft_ready': { label: 'A recurring bill is ready to review', roles: BOOKS, tab: 'purchases' },
+  'recurring.failed': { label: 'A recurring invoice, bill or entry could not be created', roles: BOOKS, tab: 'recurring' },
   'payment.received': { label: 'A customer payment was received', roles: BOOKS, tab: 'payments' },
   'email.bounced': { label: 'An email to a customer bounced or was marked as spam', roles: BOOKS, tab: 'sales' },
   'bank.disconnected': { label: 'A bank connection needs to be reconnected', roles: BOOKS, tab: 'banking' },
