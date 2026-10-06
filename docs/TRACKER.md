@@ -2158,7 +2158,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BD-06 Client report pack
 - [ ] BD-07 Client queries
 - [ ] BD-08 Asset register export
-- [ ] BD-09 Journal entry templates
+- [x] BD-09 Journal entry templates: in the journal entry form, "Save as template" keeps the lines (accounts, sides, dimensions, and amounts if typed) under a name, and "Start from a template" fills a new entry from one. A template balances or holds no amounts; saving under a used name replaces it. Templates are shared by the workspace: writers save and remove them, and every change is in the audit trail. Nothing is posted from a template (`journal-templates.test.tsx`; same as CA-27)
 - [ ] BD-10 Checklist per client
 
 # SECTION BE — DOCUMENT WORKFLOW
@@ -2310,7 +2310,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CA-24 Shipping rules
 - [x] CA-25 Seasonal budget distribution — posted prior-year monthly expense pattern preview; C-21
 - [x] CA-26 Cost centre allocation % — three-recipient exact-cent preview; no posting; C-21
-- [ ] CA-27 JE templates
+- [x] CA-27 JE templates — done as BD-09
 - [ ] CA-28 Mode of payment
 - [ ] CA-29 Party link
 - [ ] CA-30 Payment request
