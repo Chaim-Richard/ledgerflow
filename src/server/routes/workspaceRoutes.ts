@@ -18,6 +18,7 @@ import { attachmentRouter } from './attachmentRoutes';
 import { incomingEventRouter } from './incomingEventRoutes';
 import { tagRouter } from './tagRoutes';
 import { journalTemplateRouter } from './journalTemplateRoutes';
+import { ScheduledReportError, sendScheduleNow } from '../services/scheduledReportService';
 import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
 import { brandingRouter } from './brandingRoutes';
@@ -160,6 +161,17 @@ workspaceRouter.use('/:workspaceId/attachments', requireWorkspaceRole(['owner', 
 workspaceRouter.use('/:workspaceId/incoming-events', requireWorkspaceRole(['owner', 'accountant']), incomingEventRouter);
 // Tags for the whole workspace (K-15): members read; writers rename, merge and remove (checked in the route)
 workspaceRouter.use('/:workspaceId/tags', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), tagRouter);
+// Scheduled reports (K-28): send one now (owners and accountants); the daily job sends the rest
+workspaceRouter.post('/:workspaceId/report-schedules/:scheduleId/send-now', requireWorkspaceRole(['owner', 'accountant']), async (req, res) => {
+  try {
+    const { workspaceId, scheduleId } = req.params as Record<string, string>;
+    const result = await sendScheduleNow(getDb(), { workspaceId, scheduleId });
+    res.json({ status: 'success', ...result });
+  } catch (err) {
+    if (err instanceof ScheduledReportError) return res.status(err.status).json({ status: 'error', message: err.message });
+    res.status(500).json({ status: 'error', message: 'The report could not be sent', details: err instanceof Error ? err.message : String(err) });
+  }
+});
 // Journal entry templates (BD-09 / CA-27): members read; writers save and remove (checked in the route)
 workspaceRouter.use('/:workspaceId/journal-templates', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), journalTemplateRouter);
 

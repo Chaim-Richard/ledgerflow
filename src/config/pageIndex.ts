@@ -20,6 +20,7 @@ const SETTINGS_KEYWORDS: Record<string, string> = {
   schedule: 'cron jobs daily run reminders statements recurring when next time',
   'incoming-events': 'webhooks stripe online payment card email bounced delivered spam events log',
   tags: 'labels tag rename merge remove categories groups',
+  'scheduled-reports': 'email reports schedule weekly monthly automatic send profit loss balance sheet aging',
   export: 'backup download restore data archive',
   shortcuts: 'keyboard keys speed dial hotkeys',
 };

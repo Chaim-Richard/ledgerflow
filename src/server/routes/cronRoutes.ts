@@ -7,6 +7,7 @@ import { runNotificationJobs } from '../services/notificationService';
 import { runDailyReminders, runDailyStatements } from '../services/reminderService';
 import { recordDailyJobRun } from '../services/statusService';
 import { runDailyRetention } from '../services/retentionService';
+import { runDailyScheduledReports } from '../services/scheduledReportService';
 import { getDb } from '../db/firestore';
 
 /**
@@ -30,6 +31,7 @@ const DAILY_JOBS: [string, () => Promise<unknown>][] = [
   ['notifications', runNotificationJobs],
   ['reminders', runDailyReminders],
   ['statements', runDailyStatements],
+  ['scheduledReports', runDailyScheduledReports],
   ['retention', runDailyRetention],
 ];
 
