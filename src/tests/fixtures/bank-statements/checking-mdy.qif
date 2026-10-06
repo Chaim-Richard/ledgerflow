@@ -1,0 +1,17 @@
+!Type:Bank
+D10/05/2026
+T-1,250.50
+U-1,250.50
+Pשכירות Office
+MOctober rent
+N1042
+LRent
+^
+D10/06'26
+T250.10
+PCustomer deposit
+SConsulting
+$200.00
+SExpenses reimbursed
+$50.10
+^

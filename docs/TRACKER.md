@@ -2003,8 +2003,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION Y — BANKING · DOCUMENTS · CONTACTS · SETTINGS
 
-- [ ] Y-01 QIF import
-- [ ] Y-02 BAI2 import
+- [x] Y-01 QIF import (AI #4, PR #45; merged 6 Oct)
+- [x] Y-02 BAI2 import (AI #4, PR #45; merged 6 Oct)
 - [x] Y-03 Saved CSV column map per bank (by header; tested)
 - [ ] Y-04 TrueLayer
 - [ ] Y-05 GoCardless

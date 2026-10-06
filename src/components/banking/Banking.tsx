@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useUIStore } from '../../stores/useUIStore';
+import { useCurrentRole, hasRoleAtLeast } from '../../hooks/useCurrentRole';
 import { Building, CheckCircle2, RefreshCw, Landmark, ArrowRightLeft, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { toast } from 'sonner';
 import { getIdToken } from '../../firebase';
@@ -14,6 +16,7 @@ import MakeDepositDialog from './MakeDepositDialog';
 import CashMovementDialog from './CashMovementDialog';
 
 export default function Banking() {
+  const canImport = hasRoleAtLeast(useCurrentRole(), 'bookkeeper');
   const accounts = useLedgerStore(s => s.accounts).filter(a => 
     (a.type === 'asset' && a.subtype === 'bank') ||
     a.name.toLowerCase().includes('bank') ||
@@ -77,7 +80,10 @@ export default function Banking() {
               Manage your connected financial institutions, live feeds, and reconciliation pipelines.
             </p>
           </div>
-          <div className="shrink-0 flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" disabled={!canImport} onClick={() => { if (canImport) useUIStore.getState().setImporterOpen(true); }} className="min-h-11 px-4 py-2 bg-white text-neutral-800 text-xs font-bold rounded-xl border border-neutral-200 disabled:opacity-50">
+              Import statement
+            </button>
             {/* money that arrives or leaves with no document behind it (BA-17) */}
             <button
               onClick={() => setCashMovement('in')}
