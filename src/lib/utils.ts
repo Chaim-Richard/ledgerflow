@@ -1,3 +1,4 @@
+import { moneyText, type MoneyDisplaySettings } from './moneyFormat';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { toast } from 'sonner';
@@ -65,6 +66,12 @@ export function getCurrencyDivisor(currency?: string): number {
   return Math.pow(10, digits);
 }
 
+/** Numeric chart value in the same major units as formatCurrency; never parse display text. */
+export function currencyChartValue(cents: number): number {
+  const currency = typeof window !== 'undefined' ? window.__ledgerBaseCurrency || 'USD' : 'USD';
+  return cents / getCurrencyDivisor(currency);
+}
+
 /**
  * Safe currency formatter with fallback
  */
@@ -87,20 +94,10 @@ export function formatCurrency(cents: number | undefined | null, currency?: stri
     }
   }
 
-  const safeCents = (cents === undefined || cents === null || isNaN(cents)) ? 0 : cents;
-  const digits = getCurrencyFractionDigits(targetCurrency);
-  const divisor = Math.pow(10, digits);
+  const state = useAuthStore.getState();
+  const workspace = state.workspaces.find(w => w.id === state.currentWorkspaceId) as (typeof state.workspaces[number] & { moneyDisplay?: MoneyDisplaySettings }) | undefined;
+  return moneyText(cents, targetCurrency, getCurrencyFractionDigits(targetCurrency), workspace?.moneyDisplay);
 
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: targetCurrency,
-      minimumFractionDigits: digits,
-      maximumFractionDigits: digits,
-    }).format(safeCents / divisor);
-  } catch {
-    return `${targetCurrency} ${(safeCents / divisor).toFixed(digits)}`;
-  }
 }
 
 /**

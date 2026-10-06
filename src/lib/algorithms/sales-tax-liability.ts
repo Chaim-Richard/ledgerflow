@@ -1,6 +1,6 @@
 import type { AlgoResultRow } from './types';
 import { AlgorithmDefinition, AlgoResult } from './types';
-import { formatCurrency, parseLocalDate } from '../../lib/utils';
+import { currencyChartValue, formatCurrency, parseLocalDate } from '../../lib/utils';
 import { lineAmount } from '../../lib/txFilters';
 import { calculateDocumentTax, calculateDocumentNet } from '../documentMath';
 
@@ -102,6 +102,7 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
       });
     }
 
+    const chartData: { jurisdiction: string; tax: number }[] = [];
     const rows: (AlgoResultRow & { taxDue: string })[] = [];
     const sourceTransactionIds = new Set<string>();
 
@@ -183,6 +184,7 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
 
     Object.entries(jurisdictionTotals).forEach(([jur, totals]) => {
       if (totals.sales === 0) return;
+      chartData.push({ jurisdiction: jur, tax: currencyChartValue(totals.tax) });
       rows.push({
         id: jur,
         jurisdiction: jur,
@@ -207,10 +209,7 @@ export const SALES_TAX_LIABILITY_ALGO: AlgorithmDefinition = {
               { key: 'tax', name: 'Tax Due', color: '#f43f5e', type: 'bar' }
             ]
           },
-          data: rows.map(r => ({
-            jurisdiction: r.jurisdiction,
-            tax: parseFloat(r.taxDue.replace(/[^0-9.-]+/g,""))
-          }))
+          data: chartData
         }
       ],
       insights: [
