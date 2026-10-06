@@ -1518,7 +1518,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] J-10 Inventory Item Details — waits for W-02: only sales move stock today (bills have no item lines), so a movement history would be one-sided
 - [x] J-11 Sales Tax Liability Summary (Tax screen: tax by rate, collected and paid, in the home currency; adds up to the return boxes; tested)
 - [x] J-12 Journal Sheet: isPostable + lineAmount, unbalanced list, tested
-- [ ] J-13 Budget vs Actual with drill-down
+- [x] J-13 Budget vs Actual with drill-down (AI #2, `codex/c24-budget-actual`; existing general-ledger math, inclusive dates, monthly caps, full-history read and account-impact drill-down)
 - [x] J-14 Deferred-revenue waterfall — **done 6 Oct**: Reports → Deferred Revenue Waterfall: each invoice spread over months (K-16) with what is earned in each month of the report period, earned by its end and still deferred after it, with totals; "Show: Expenses (bills)" gives the same for prepaid expenses (K-17). Read from the monthly entries (`src/lib/spreadWaterfall.ts`), so a voided share isn't counted; says so when the loaded ledger is incomplete. Tests: `spread-waterfall.test.tsx`; browser: in `e2e/everyday-reports.spec.ts`
 
 # SECTION K — MISSING FEATURES
@@ -2251,11 +2251,11 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BL-06 Resend
 - [ ] BL-07 Open / click tracking
 - [x] BL-08 Plain-text fallback (every email)
-- [ ] BM-01 Symbol placement per locale
-- [ ] BM-02 Separators per locale
-- [ ] BM-03 Accounting negatives
+- [ ] BM-01 Symbol placement per locale (partial: AI #2 formatter/read contract ready; workspace settings model/rules handoff to AI #1)
+- [ ] BM-02 Separators per locale (partial: AI #2 en-US/de-DE/he-IL/ja-JP tested; durable locale selection awaits AI #1)
+- [ ] BM-03 Accounting negatives (partial: AI #2 formatting option tested; durable workspace option awaits AI #1)
 - [ ] BM-04 Per-currency rounding
-- [ ] BM-05 RTL number alignment
+- [ ] BM-05 RTL number alignment (partial: AI #2 Money isolation/native directional marks and Chromium minus-position check verified; C-25 settings integration pending)
 - [ ] BM-06 `rateUsedId` per line
 - [x] BM-07 `<Money>` component wired
 - [ ] BN-01 Structured JSON logging
@@ -2269,10 +2269,10 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] BO-02 Searchable docs
 - [x] BO-03 First-run wizard (= L-19)
 - [ ] BO-04 Video walkthroughs
-- [ ] BO-05 Feedback widget
+- [ ] BO-05 Feedback widget (partial: AI #2 any-screen text ticket + screen/version complete; screenshot attachment target/viewer extension awaits AI #1)
 - [x] BO-06 Status page link in Help ("Something not working? System status")
 - [x] BO-07 Errors name a remedy (describeError: central reporter, payment and write-off dialogs; tested)
-- [ ] BO-08 Undo for destructive actions
+- [ ] BO-08 Undo for destructive actions (partial: AI #2 exact-ID project Undo complete; contact/item/draft paths and guarded server restoration await AI #1)
 - [ ] BP-01 Docker compose
 - [ ] BP-02 Emulator setup docs
 - [ ] BP-03 ADRs
