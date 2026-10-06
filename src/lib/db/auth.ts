@@ -281,9 +281,22 @@ export interface TotpSecret {
 
 export interface MultiFactorAssertion { readonly factorId: string; readonly code: string }
 
+async function requireMfaUser(userId: string): Promise<void> {
+  const { data, error } = await getSupabase().auth.getUser();
+  if (error) fail(error, 'mfa-user-check-failed');
+  if (!data.user || data.user.id !== userId) throw new AuthError('auth/user-changed', 'Your sign-in changed. Reload Security settings.');
+}
+
+function requireTotpCode(code: string): string {
+  const trimmed = code.trim();
+  if (!/^\d{6}$/.test(trimmed)) throw new AuthError('auth/invalid-verification-code', 'Enter the current 6-digit authenticator code.');
+  return trimmed;
+}
+
 export const TotpMultiFactorGenerator = {
   FACTOR_ID: 'totp',
-  async generateSecret(_session: unknown): Promise<TotpSecret> {
+  async generateSecret(session: { userId: string }): Promise<TotpSecret> {
+    await requireMfaUser(session.userId);
     const { data, error } = await getSupabase().auth.mfa.enroll({
       factorType: 'totp',
       friendlyName: `Authenticator ${new Date().toISOString().slice(0, 16)}`,
@@ -305,25 +318,51 @@ export const TotpMultiFactorGenerator = {
   },
 };
 
-export function multiFactor(_user: User) {
+export function multiFactor(user: User) {
+  const getFactors = async () => {
+    await requireMfaUser(user.uid);
+    const { data, error } = await getSupabase().auth.mfa.listFactors();
+    if (error || !data) fail(error, 'mfa-list-failed');
+    return data.all.filter(f => f.factor_type === 'totp');
+  };
   return {
-    async getSession(): Promise<null> {
-      return null;
+    async getSession(): Promise<{ userId: string }> {
+      await requireMfaUser(user.uid);
+      return { userId: user.uid };
     },
     async enroll(assertion: MultiFactorAssertion, _displayName?: string): Promise<void> {
       const supabase = getSupabase();
+      const code = requireTotpCode(assertion.code);
+      await requireMfaUser(user.uid);
       const challenge = await supabase.auth.mfa.challenge({ factorId: assertion.factorId });
       if (challenge.error || !challenge.data) fail(challenge.error, 'mfa-challenge-failed');
+      await requireMfaUser(user.uid);
       const verify = await supabase.auth.mfa.verify({
         factorId: assertion.factorId,
         challengeId: challenge.data.id,
-        code: assertion.code,
+        code,
       });
       if (verify.error) fail(verify.error, 'invalid-verification-code');
     },
     async getEnrolledFactors() {
-      const { data } = await getSupabase().auth.mfa.listFactors();
-      return (data?.totp || []).filter(f => f.status === 'verified');
+      return (await getFactors()).filter(f => f.status === 'verified');
+    },
+    getFactors,
+    async remove(factorId: string, code: string): Promise<void> {
+      const currentCode = requireTotpCode(code);
+      if (!(await getFactors()).some(f => f.id === factorId && f.status === 'verified')) throw new AuthError('auth/mfa-factor-not-found', 'This authenticator is no longer enrolled. Reload Security settings.');
+      await requireMfaUser(user.uid);
+      const { error: verificationError } = await getSupabase().auth.mfa.challengeAndVerify({ factorId, code: currentCode });
+      if (verificationError) fail(verificationError, 'invalid-verification-code');
+      await requireMfaUser(user.uid);
+      const { error } = await getSupabase().auth.mfa.unenroll({ factorId });
+      if (error) fail(error, 'mfa-remove-failed');
+    },
+    async cancelEnrollment(factorId: string): Promise<void> {
+      if (!(await getFactors()).some(f => f.id === factorId && f.status === 'unverified')) throw new AuthError('auth/mfa-factor-not-pending', 'Only an unfinished authenticator setup can be canceled.');
+      await requireMfaUser(user.uid);
+      const { error } = await getSupabase().auth.mfa.unenroll({ factorId });
+      if (error) fail(error, 'mfa-cancel-failed');
     },
   };
 }
