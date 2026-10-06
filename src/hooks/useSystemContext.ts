@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { useAuthStore } from '../stores/useAuthStore';
-import { useLedgerStore } from '../stores/useLedgerStore';
 import { useUIStore } from '../stores/useUIStore';
 import { useEntityOperations } from './useEntityOperations';
 import { useTransactionActions } from './useTransactionActions';
@@ -45,7 +44,13 @@ export function useCommandDispatcher() {
           toast.info('Fixing imbalances');
         }
       },
-      'export': () => txActions.handleExport(useLedgerStore.getState().transactions),
+      'export': () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('exportDialog', '1');
+        window.history.replaceState(null, '', url);
+        useUIStore.getState().goToPage({ tab: 'settings', sub: 'export' });
+        window.dispatchEvent(new Event('ledgerflow:open-export'));
+      },
       'reset-workspace': () => txActions.handleResetWorkspace(),
       'analyze-trends': () => aiActions.handleAnalyzeTrends(),
       'select-architecture': () => setTemplateSelectorOpen(true),

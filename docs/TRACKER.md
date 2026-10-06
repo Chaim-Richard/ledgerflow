@@ -1526,7 +1526,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] K-01 Bulk import wizard (customers, vendors, items, accounts; undo; tested)
 - [x] K-02 Items on invoice lines: pick by name/SKU, fills price + cost, free text unlinks, tested
 - [x] K-03 Sale receipts — **done 6 Oct**: Sales → "Sale receipt" (writers) opens the invoice form in receipt mode: "Paid into" (Undeposited Funds first, so Make deposit takes it to the bank, or a bank account) and the method, one "Save receipt". It saves an issued invoice due on receipt, marked as a receipt ("Receipt" in the list, "SALES RECEIPT" on the PDF, no pay-now code), and records its payment at once through the server's payments (`src/services/receiptActions.ts`); if the payment is refused the invoice stays open and the message says to record it. Tests: `sale-receipt.test.tsx`
-- [ ] K-04 Sales orders
+- [x] K-04 Sales orders — **done 6 Oct**: on Sales → Estimates a writer marks a quote "Order" when the customer says yes (with the customer's own reference, e.g. their PO number) or "Declined". An order is invoiced in one go or in parts: "Invoice" asks for all that is left, a percentage of the order, or an amount, shows what is already invoiced (with the invoice numbers) and the lines of the draft invoice first, and makes a draft invoice to review and send. Each part gives every order line its share in whole cents, so once everything is invoiced each line was invoiced exactly; a line invoiced whole keeps its quantity and price. What is invoiced is read from the invoices made from the order (voided ones don't count, so voiding one reopens the rest); the order is closed when nothing is left. The list filters All · Quotes · Orders to invoice · Invoiced or closed, and an order's PDF is titled SALES ORDER with the customer's reference. No database change (`src/lib/salesOrders.ts`; tests `sales-orders.test.tsx`)
 - [x] K-05 Manual journals entity — **done 6 Oct**: Ledger → General journal is now a working list: entries typed in by hand only (or all), newest first, search by description/reference/account, each opens to its debit/credit lines, badges for "a reversal", "reversed" and "reverses on …". Writers can Reverse a manual entry on a chosen day with a reason (the server's reverse route: a mirror entry, never twice) or Duplicate it into the journal form with the same lines. The old "Cryptographic Log / Full Audit" buttons, which claimed a verification that never ran, are gone. Tests: `journal-view.test.tsx`
 - [x] K-06 Bulk action bar: transaction list (categorize safely, Enter/Apply, accounts used most first; L-180); invoice and bill lists: tick several, then download the PDFs as a zip, email the invoices to their customers (drafts and voided ones left out, each failure named), or pay them in full at once ("Record payment" / "Pay bills": one payment per customer or vendor into or out of the chosen bank account; drafts, paid and other-currency documents left out with the reason; a refused payment doesn't stop the others; not for viewers) (tested)
 - [ ] K-07 Attachments on every entity
@@ -1585,7 +1585,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-17 Status page: public /status (no sign-in) from GET /api/v1/public/status — app, database, daily job (recorded by the cron, late/failed = problems), sign-in, email, card payments, bank feeds (set up or not); 30 s cache (tested + browser test)
 - [ ] L-18 i18n: finish or remove
 - [x] L-19 Setup wizard for new workspaces: business basics, chart template, opening balances posted as one entry that balances by construction (difference → Opening Balance Equity; receivables/payables come from invoices/bills), or start from zero; owners/accountants; server-side, audited (tested). The old welcome screen's "Explore with sample data" button only showed a toast; removed
-- [ ] L-20 Docs page for all 74 views
+- [x] L-20 Docs page for all 74 views
 - [x] L-21 Lockfile-platforms guard test
 - [x] L-22 Type check as its own CI step
 - [x] L-23 `/api/ai/process` restored: real AI, login, workspace, credits, no invented data
@@ -1756,6 +1756,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-190 **Money:** the journal entry form filled foreign-currency rates from a made-up table (EUR 0.92 × 1.1 for 2026, ILS 3.65 × 1.1…), and those were even the wrong way round (euros per dollar, used as dollars per euro), so €100 posted as about $101 instead of about $108; clearing the rate box silently used 1. It now fills the last rate used for that currency, then today's rate from the rate service, and posts nothing until a rate is there; the currency list includes the workspace's own currency (a workspace in AUD couldn't choose it) and the ones already used (tested)
 - [x] L-191 Invoice approval (BE-04, merged from the arena AI) trusted the browser: the server stored whatever `approval` a save carried, so a bookkeeper going around the app could mark their own invoice approved, or leave the field out on an invoice saved as sent. Now the server decides on every invoice it saves (only owners and accountants approve or send back, and the record names them with the server's time; an invoice going out over the limit without a record gets one), and a database guard refuses the same from a direct write. Also: a customer who gets paper got the same "send a paper copy" note in the bell every day; now once per reminder day (tested, incl. database rules)
 - [x] L-192 **Money:** a payment on a foreign-currency invoice or bill was booked at the document's own rate, so the bank account in the books got a different amount than the real bank (EUR 100 invoiced at 1.10 and received at 1.15: $110 booked, $115 arrived) and no exchange gain or loss was ever recorded. The payment dialog now shows amounts in the document's currency and asks for the rate on the payment day (filled from the rate service or the last one used); the server books the bank at that rate, clears the receivable/payable at the document's rate and posts the difference as realized exchange gain or loss (refused if there is no such account). Without a rate it stays as before (tested against the database)
+- [x] L-193 **Lost work:** a new invoice or bill saved as a draft ("Save Draft", the draft invoice made from an estimate, an expense claim waiting for approval) was never saved: a draft posts nothing to the books, and the posting step returned before sending the document itself, so the draft simply wasn't there afterwards (edits to a draft, and rejecting an expense claim, were lost the same way). The document is now sent to the server with no entries; a draft that had entries still reverses them in the same request (`draft-documents-saved.test.ts`; found 6 Oct while building K-04)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
@@ -1796,7 +1797,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 # SECTION M — ENTITIES
 
 - [ ] M-01 Items / products catalogue
-- [ ] M-02 Sales orders
+- [x] M-02 Sales orders — done as K-04 (an order is an accepted estimate; no separate table)
 - [x] M-03 Sale receipts — see K-03 (done 6 Oct)
 - [x] M-04 Manual journals — see K-05 (done 6 Oct)
 - [x] M-05 Email templates (= K-08)
@@ -2109,7 +2110,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
   BE-05). (tested: 14 on the rules, 7 on the dialogs)
 - [ ] BA-18 Import uncategorised transactions
 - [x] BA-19 Branding templates screen (= Y-33)
-- [ ] BA-20 Export dialog
+- [x] BA-20 Export dialog
 
 # SECTION BB — SETTINGS PAGES
 
@@ -2236,12 +2237,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BK-04 FreshBooks import
 - [x] BK-05 Per-row import errors (row number + problem)
 - [x] BK-06 Import rollback (undo; records in use are kept)
-- [ ] BK-07 GL to CSV
-- [ ] BK-08 Chart of accounts export
-- [ ] BK-09 Contacts export
+- [x] BK-07 GL to CSV
+- [x] BK-08 Chart of accounts export
+- [x] BK-09 Contacts export
 - [ ] BK-10 Full workspace archive
-- [ ] BK-11 QIF export
-- [ ] BK-12 OFX export
+- [x] BK-11 QIF export (posted base-currency bank accounts)
+- [x] BK-12 OFX export (posted base-currency bank accounts)
 - [x] BL-01 Bounce handling (provider reports → log + suppression)
 - [ ] BL-02 Spam complaints
 - [x] BL-03 Suppression list (bounced/complained addresses skipped)
@@ -2264,8 +2265,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BN-05 Synthetic uptime
 - [ ] BN-06 Alert routing
 - [ ] BN-07 Runbooks
-- [ ] BO-01 Contextual help per view
-- [ ] BO-02 Searchable docs
+- [x] BO-01 Contextual help per view
+- [x] BO-02 Searchable docs
 - [x] BO-03 First-run wizard (= L-19)
 - [ ] BO-04 Video walkthroughs
 - [ ] BO-05 Feedback widget

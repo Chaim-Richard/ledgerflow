@@ -1,14 +1,28 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Download, Database, FileSpreadsheet, Archive, AlertCircle, Upload } from 'lucide-react';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { toast } from 'sonner';
-import { resolveAccountName, getLocalDateISO } from '../../../lib/utils';
+import { getLocalDateISO } from '../../../lib/utils';
 import { recordBackupCompleted } from '../../../lib/ledgerBackupHealth';
 import { isPostable } from '../../../lib/txFilters';
-import { csvMoney, downloadCsv } from '../../../lib/csvExport';
+import WorkspaceExportDialog from './WorkspaceExportDialog';
 
 export default function BackupExportSettings() {
+  const [exportOpen, setExportOpen] = useState(false);
+  useEffect(() => {
+    const open = () => {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('exportDialog') === '1') {
+        url.searchParams.delete('exportDialog');
+        window.history.replaceState(null, '', url);
+        setExportOpen(true);
+      }
+    };
+    open();
+    window.addEventListener('ledgerflow:open-export', open);
+    return () => window.removeEventListener('ledgerflow:open-export', open);
+  }, []);
   const [isExporting, setIsExporting] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -104,65 +118,6 @@ export default function BackupExportSettings() {
     }
   };
 
-  const exportCSV = async () => {
-    setIsExporting(true);
-    try {
-      const authState = useAuthStore.getState();
-      const workspaceId = authState.currentWorkspaceId;
-      let downloadedViaServer = false;
-
-      if (workspaceId) {
-        try {
-          const token = await authState.user?.getIdToken();
-          const headers: Record<string, string> = {};
-          if (token) headers['Authorization'] = `Bearer ${token}`;
-
-          const res = await fetch(`/api/v1/workspaces/${workspaceId}/export?format=csv`, { headers });
-          if (res.ok) {
-            const csvBlob = await res.blob();
-            const url = URL.createObjectURL(csvBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `ledgerflow-transactions-${workspaceId}-${getLocalDateISO()}.csv`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            downloadedViaServer = true;
-          }
-        } catch (csvErr) {
-          console.warn("Server CSV export failed, falling back to local:", csvErr);
-        }
-      }
-
-      if (!downloadedViaServer) {
-        const { transactions, accounts } = useLedgerStore.getState();
-        type ExportTx = (typeof transactions)[number] & { reference?: string };
-        downloadCsv(`ledgerflow-transactions-${getLocalDateISO()}.csv`,
-          ['Date', 'Amount', 'Description', 'Category', 'Type', 'Status', 'Reference'],
-          transactions.filter(isPostable).map((t: ExportTx) => [
-            t.date,
-            csvMoney(t.totalAmountCents || 0),
-            t.description || '',
-            t.lines && t.lines.length > 0 ? resolveAccountName(accounts, t.lines[0].accountId, t.lines[0].accountName) : 'Uncategorized',
-            t.type || 'actual',
-            t.status || 'posted',
-            t.reference || '',
-          ]));
-      }
-
-      if (workspaceId) {
-        recordBackupCompleted(workspaceId);
-      }
-      toast.success('Transactions CSV exported successfully');
-    } catch (e) {
-      console.error(e);
-      toast.error('Failed to export CSV: ' + ((e as Error).message || 'Unknown error'));
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -231,6 +186,7 @@ export default function BackupExportSettings() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {exportOpen && <WorkspaceExportDialog onClose={() => setExportOpen(false)} />}
       <div className="flex items-center gap-4 border-b border-[var(--line)] pb-6">
         <div className="h-12 w-12 bg-indigo-500/10 text-indigo-500 rounded-xl flex items-center justify-center">
           <Database aria-hidden="true" size={24} />
@@ -263,18 +219,18 @@ export default function BackupExportSettings() {
         <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <FileSpreadsheet aria-hidden="true" className="text-green-500" size={24} />
-            <h3 className="font-bold text-[var(--text)]">Transactions (CSV)</h3>
+            <h3 className="font-bold text-[var(--text)]">Data exports</h3>
           </div>
           <p className="text-sm text-zinc-500 mb-6 min-h-[40px]">
-            Export all your ledger transactions into a standardized CSV format for accountants or Excel.
+            Choose posted ledger lines, complete record fields or one bank account, with period and format controls.
           </p>
           <button 
-            onClick={exportCSV}
+            onClick={() => setExportOpen(true)}
             disabled={isExporting}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors"
           >
             <Download aria-hidden="true" size={16} />
-            Export CSV
+            Choose export
           </button>
         </div>
 

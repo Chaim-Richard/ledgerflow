@@ -247,6 +247,11 @@ export interface Estimate {
   expiryDate?: string;
   status: 'draft' | 'sent' | 'accepted' | 'declined' | 'expired' | 'converted';
   convertedInvoiceId?: string;
+  /** K-04: the customer said yes and it became a sales order, invoiced in one go or in parts */
+  orderedAt?: string;
+  orderedBy?: string;
+  /** the customer's own reference for the order (their purchase order number) */
+  customerReference?: string;
   lines: Array<{
     description: string;
     quantity: number;

@@ -18,6 +18,7 @@ import {
 import { motion } from "motion/react";
 import { useUIStore } from "../../stores/useUIStore";
 import ReleaseNotes from "./ReleaseNotes";
+import AllScreensHelp from "./AllScreensHelp";
 
 interface SectionDoc {
   id: string;
@@ -175,6 +176,7 @@ const GUIDE_SECTIONS: SectionDoc[] = [
 ];
 
 export default function HelpGuideView() {
+  const [mode, setMode] = useState<"workflows" | "screens">("workflows");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedSection, setSelectedSection] = useState(GUIDE_SECTIONS[0]);
@@ -208,7 +210,7 @@ export default function HelpGuideView() {
             </div>
           </div>
 
-          <div className="relative w-full md:w-80">
+          {mode === "workflows" && <div className="relative w-full md:w-80">
             <Search aria-hidden="true" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} />
             <input aria-label="Search guide and workflows"
               type="text"
@@ -217,11 +219,16 @@ export default function HelpGuideView() {
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-[var(--panel)] border border-[var(--line)] rounded-xl text-sm font-medium outline-none focus:border-[var(--brass)] transition-colors placeholder:text-[var(--faint)]"
             />
-          </div>
+          </div>}
         </div>
 
         <ReleaseNotes />
+        <div className="max-w-7xl mx-auto flex gap-2 mt-4">
+          <button type="button" aria-pressed={mode === 'workflows'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('workflows')}>Workflows</button>
+          <button type="button" aria-pressed={mode === 'screens'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('screens')}>All screens</button>
+        </div>
 
+        {mode === 'workflows' && (
         <div className="max-w-7xl mx-auto flex items-center gap-2 mt-6 overflow-x-auto pb-1 custom-scrollbar">
           {categories.map(cat => (
             <button
@@ -237,9 +244,11 @@ export default function HelpGuideView() {
             </button>
           ))}
         </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-hidden flex flex-col md:flex-row max-w-7xl mx-auto w-full">
+        {mode === 'screens' ? <AllScreensHelp /> : <>
         <div className="w-full md:w-80 border-r border-[var(--line)] overflow-y-auto p-4 space-y-2 shrink-0 custom-scrollbar">
           {filteredSections.map(section => {
             const Icon = section.icon;
@@ -331,6 +340,7 @@ export default function HelpGuideView() {
             </div>
           </motion.div>
         </div>
+        </>}
       </div>
     </div>
   );

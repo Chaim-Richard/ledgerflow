@@ -27,8 +27,10 @@ test.describe('Layout at 1280 x 800', () => {
       await page.goto(`/#${screen}`);
       const main = page.locator('#main-content');
       await main.waitFor({ timeout: 15000 });
-      // wait for the lazy screen to draw (heavy screens take longer under load), then its entrance animation
+      // wait for the lazy screen to draw (heavy screens take longer under load), then its entrance animation;
+      // its heading, not just any text: the help bar above every screen (C-20) has text of its own
       await expect.poll(() => main.evaluate(el => el.innerText.trim().length), { timeout: 15000 }).toBeGreaterThan(20);
+      await expect.poll(() => page.locator('h1:visible').count(), { timeout: 15000 }).toBeGreaterThan(0);
       await page.waitForTimeout(600);
       const { overflow, text } = await main.evaluate(el => ({ overflow: el.scrollWidth - el.clientWidth, text: el.innerText.trim().length }));
       expect(overflow, `${screen} is ${overflow}px wider than the window`).toBeLessThanOrEqual(1);

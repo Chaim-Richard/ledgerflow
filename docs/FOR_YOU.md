@@ -58,7 +58,7 @@ Last updated: 2026-10-05.
    (Claude wrote everything else from the code), then have someone who knows the law where you
    operate read them.
 
-19. **One database change to apply** (from Y-27, 5 Oct): `supabase/migrations/
+19. ~~**One database change to apply**~~ **Done: applied 5 Oct.** (from Y-27, 5 Oct): `supabase/migrations/
     20261007000000_contact_delivery_method.sql`. It lets a customer record keep the new
     `deliveryMethod` field (how they want documents: Email / Print / Post / Nothing automatic).
     Until it is applied, saving that choice on a *customer* is refused by the database guard and
@@ -66,7 +66,7 @@ Last updated: 2026-10-05.
     Arena sandbox, so it is checked in but not applied. Paste the file in Supabase → SQL editor,
     or say so and the next Claude session runs it through the connector.
 
-20. **A second database change to apply** (from BE-04, 5 Oct): `supabase/migrations/
+20. ~~**A second database change to apply**~~ **Done: applied 5 Oct.** (from BE-04, 5 Oct): `supabase/migrations/
     20261007010000_invoice_approval.sql`. It lets a workspace keep the new `invoiceApproval` rule —
     the amount an invoice must exceed before an owner or an accountant has to approve it before it is
     emailed. Until it is applied, saving that rule in Settings → Emails & Reminders is refused by the
