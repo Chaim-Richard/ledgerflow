@@ -11,6 +11,7 @@
  */
 
 import { lazy } from 'react';
+import { withScreenHelp } from './screenHelp';
 import type { ComponentType, ElementType } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -46,7 +47,8 @@ for (const path in pluginModules) {
       id: fileName,
       label: { en: formattedName, he: formattedName },
       icon: Layers,
-      groupId: 'plugins'
+      groupId: 'plugins',
+      help: 'This screen provides an installed extension. Use its controls for the workflow described by the extension. Its data sources and actions depend on the installed plugin; review its own documentation before making changes.'
     });
   }
 }
@@ -105,6 +107,7 @@ export const VIEW_COMPONENTS: Record<string, ElementType> = {
 };
 
 export interface AppTabDefinition {
+  help: string;
   id: string;
   label: Record<string, string>;
   icon: LucideIcon;
@@ -117,7 +120,7 @@ export interface AppTabDefinition {
 
 export { isTabVisible } from './tabVisibility';
 
-export const APP_TABS: AppTabDefinition[] = [
+export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition, 'help'>>([
   { id: 'dashboard', label: { en: 'Overview', he: 'סקירה' }, icon: Home, groupId: 'dashboard' },
   { id: 'inbox', label: { en: 'To Review', he: 'לסקירה' }, icon: Inbox, groupId: 'dashboard' },
   { id: 'copilot', label: { en: 'AI Co-pilot', he: 'טייס משנה' }, icon: Sparkles, groupId: 'dashboard' },
@@ -158,7 +161,7 @@ export const APP_TABS: AppTabDefinition[] = [
   { id: 'pricing', label: { en: 'Pricing & Plans', he: 'תמחור ומסלולים' }, icon: Zap, groupId: 'settings' },
   { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'settings' },
   { id: 'system-command-center', label: { en: 'Admin Panel', he: 'ניהול' }, icon: Building, groupId: 'settings', requiresOwner: true, developerOnly: true }
-];
+], 'main');
 
 export const NAV_GROUPS: Record<string, Record<string, string>> = {
   dashboard: { en: 'Dashboard', he: 'לוח בקרה' },
@@ -364,15 +367,15 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'JournalSheetReportView': lazy(() => import('../components/reporting/JournalSheetReportView')),
 };
 
-export const ANALYTICAL_LENSES_REGISTRY = [
+export const ANALYTICAL_LENSES_REGISTRY = withScreenHelp([
   { id: 'forensics_1', label: { en: 'Forensic Anomaly Detection', he: 'זיהוי חריגות פיננסיות' }, componentName: 'ToolSandbox' },
   { id: 'forensics_2', label: { en: 'Categorization Consistency Checker', he: 'בדיקת עקביות סיווגים' }, componentName: 'ToolSandbox' }
-];
+], 'lenses');
 
 export const LENS_COMPONENTS: Record<string, ElementType> = {
   'ToolSandbox': lazy(() => import('../components/platform/ToolsCatalog'))
 };
-export const REPORT_TABS_REGISTRY = [
+export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'pnl', label: { en: 'Profit & Loss', he: 'רווח והפסד' }, componentName: 'PNLView', icon: Activity },
   { id: 'balance-sheet', label: { en: 'Balance Sheet', he: 'מאזן' }, componentName: 'BalanceSheetReportView', icon: Layers },
   { id: 'cash-flow', label: { en: 'Cash Flow', he: 'תזרים' }, componentName: 'CashFlowView', icon: RefreshCw },
@@ -407,9 +410,9 @@ export const REPORT_TABS_REGISTRY = [
   { id: 'general-ledger', label: { en: 'General Ledger', he: 'ספר ראשי' }, componentName: 'GeneralLedgerView', icon: BookOpen },
   { id: 'statement', label: { en: 'Account Statement', he: 'דף חשבון' }, componentName: 'StatementView', icon: FileText },
   { id: 'tax-liability', label: { en: 'Sales Tax Liability', he: 'חבות מס קניה' }, componentName: 'TaxLiabilityView', icon: Receipt },
-];
+], 'reports');
 
-export const SETTINGS_TABS_REGISTRY = [
+export const SETTINGS_TABS_REGISTRY = withScreenHelp([
   { id: 'rules', label: { en: 'Rules & Automation', he: 'חוקים ואוטומציה' }, componentName: 'RulesSettingsView', icon: SlidersHorizontal },
   { id: 'dimensions', label: { en: 'Dimensions & Labels', he: 'ממדים ותגיות' }, componentName: 'DimensionsView', icon: Tag },
   { id: 'appearance', label: { en: 'Appearance & Display', he: 'מראה ותצוגה' }, componentName: 'AppearanceSettingsView', icon: Sliders },
@@ -427,7 +430,7 @@ export const SETTINGS_TABS_REGISTRY = [
   { id: 'schedule', label: { en: 'Schedule', he: 'לוח זמנים' }, componentName: 'ScheduleSettingsView', icon: CalendarClock },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
-];
+], 'settings');
 
 export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'RulesSettingsView': lazy(() => import('../components/platform/settings/RulesSettings')),
@@ -449,6 +452,26 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };
 
-export const INTELLIGENCE_TABS_REGISTRY = [
+export const INTELLIGENCE_TABS_REGISTRY = withScreenHelp([
   { id: 'intelligence', label: { en: 'Intelligence', he: 'מודיעין' }, componentName: 'UnifiedIntelligenceCore' }
+], 'intelligence');
+
+/** All route screens, including routes outside the sidebar. */
+export const SCREEN_TABS_REGISTRY = [
+  ...APP_TABS,
+  ...withScreenHelp([
+    { id: 'inventory', label: { en: 'Inventory', he: 'מלאי' } },
+    { id: 'projects', label: { en: 'Projects', he: 'פרויקטים' } },
+    { id: 'architecture', label: { en: 'Architecture Map', he: 'מפת ארכיטקטורה' } },
+    { id: 'audit', label: { en: 'Forensic Audit', he: 'ביקורת' } },
+    { id: 'budgets', label: { en: 'Budgets', he: 'תקציבים' } },
+    { id: 'time-machine', label: { en: 'Time Machine', he: 'מכונת זמן' } },
+    { id: 'ask', label: { en: 'Ask Ledger', he: 'שאלות' } },
+    { id: 'magic', label: { en: 'Assisted Entry', he: 'הזנה חכמה' } },
+    { id: 'taxes', label: { en: 'Tax Manager', he: 'מסים' } },
+    { id: 'consolidation', label: { en: 'Consolidation', he: 'איחוד' } },
+    { id: 'accept-invite', label: { en: 'Accept Invitation', he: 'קבלת הזמנה' } },
+  ], 'extra'),
+  ...REPORT_TABS_REGISTRY.filter(entry => VIEW_COMPONENTS[entry.id] && !APP_TABS.some(tab => tab.id === entry.id)),
+  ...dynamicTabs
 ];

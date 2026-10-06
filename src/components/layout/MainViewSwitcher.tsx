@@ -1,4 +1,5 @@
 import React, { Suspense } from 'react';
+import ScreenHelpHeader from '../support/ScreenHelpHeader';
 import { motion } from 'motion/react';
 import { Loader2 } from 'lucide-react';
 import { VIEW_COMPONENTS } from '../../config/registry';
@@ -15,6 +16,7 @@ const MainViewSwitcher = React.memo(({ activeTab }: MainViewSwitcherProps) => {
   
   return (
     <div className="relative flex-1 flex flex-col w-full min-h-full">
+      <ScreenHelpHeader activeTab={activeTab} />
       <ViewErrorBoundary key={activeTab} viewName={activeTab}>
         <Suspense fallback={
           <div className="min-h-full flex flex-col items-center justify-center space-y-6 flex-1">

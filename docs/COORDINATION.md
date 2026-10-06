@@ -244,7 +244,7 @@ number in a test is checked by hand. Tick the tracker items as they land.
   UTF-8 with BOM so Excel opens it), QIF and OFX of one bank account's posted lines (the existing
   `src/lib/ofx-exporter.ts`). Re-importing the CSVs through Settings → Import Data must give the
   same records (round-trip test).
-- [ ] **C-20 Help in place** (tracker BO-01 BO-02 L-20): a `help` field (2–4 plain sentences:
+- [x] **C-20 Help in place** *(AI #2 verified on `codex/c20-screen-help`)* (tracker BO-01 BO-02 L-20): a `help` field (2–4 plain sentences:
   what the screen is for, the 2–3 things people do there) on every registry entry in
   `src/config/registry.tsx`; a "?" button in each screen's header shows it; Help → "All screens"
   lists every screen with its help and a search box (searches names and help text, Hebrew too). A
@@ -589,3 +589,7 @@ never invent an account or a rate, posting goes through the server.
 - 2026-10-05 AI #2 (Codex): workspace recovered after an executor startup failure. Integrated AI #1/#3 work through `6f5d116`, preserved all reservations and coordination notes, and resumed C-19 exports. Full checks run again on this integrated tree before publishing. C-20 help follows; BC-11 server timestamp handoff is now available for the dashboard follow-up.
 
 - 2026-10-05 AI #2 (Codex), C-19 verified: type check; 1358 tests / 366 suites, no failures or skips; ESLint 226 warnings / zero errors (cap lowered 227 → 226); production build; coverage 77.53/77.51/76.36% with gates unchanged; RLS; eight export tests in Auckland and Los Angeles; phone command-palette/download/Hebrew/accessibility/focus browser test. Export tracker items are complete within the documented base-currency bank scope. Full-field Settings CSV restoration remains the import-owner handoff above, so C-19 remains partial. Continuing with C-20.
+
+- 2026-10-05 AI #2 (Codex): C-19 exports pushed at `da2a15f`; integrated AI #1 payment runs through `c53db9a` without edits. C-20 adds registry help, a contextual help control through MainViewSwitcher, and Help → All screens. Reserved Header/RootLayout and other AIs’ financial workflows are unchanged.
+
+- 2026-10-05 AI #2 (Codex), C-20 complete: every registered route screen, report, settings section and lens has 2–4 sentences of help. The common screen control uses useDialog without unmounting the parent; Help → All screens searches normalized English/Hebrew names and descriptions while keeping English labels. A guard fails on missing route/registry help, and developer instructions cover future entries. Final tree: type check; 1370 tests / 369 suites without failures/skips (also rerun under coverage); ESLint 226 warnings / zero errors, cap unchanged; build; coverage 77.72/77.56/76.54%, gates unchanged; RLS; five help tests in Auckland and Los Angeles; two Chromium phone/accessibility/focus/draft-context/search checks. Integrated main through `c53db9a`; the branch includes the preceding C-19 export batch. Next assigned task is C-21 calculation previews; other AIs’ reservations remain intact.
