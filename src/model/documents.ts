@@ -54,6 +54,18 @@ export interface PrepaidSchedule {
   createdAt: string;
 }
 
+/** An invoice's income spread over months (K-16): the first entry moves it to Deferred Revenue. */
+export interface RevenueSchedule {
+  id: string;
+  amountCents: number;
+  months: number;
+  startMonth: string;
+  revenueAccountId: string;
+  deferredAccountId: string;
+  transactionIds: string[];
+  createdAt: string;
+}
+
 export interface Bill {
   id: string;
   uid: string;
@@ -128,6 +140,8 @@ export interface Invoice {
   writeOffReason?: string | null;
   writtenOffAt?: string;
   writeOffReversalTransactionId?: string;
+  /** Income spread over months (K-16, src/server/services/prepaidService.ts); written by the server. */
+  revenueSchedule?: RevenueSchedule;
   exchangeRate?: number;
   taxAmountCents?: number;
   taxRate?: number;

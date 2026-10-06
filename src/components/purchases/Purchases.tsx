@@ -12,7 +12,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import type { Bill, Vendor } from '../../types';
 import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 import { formatCurrency, getLocalDateISO, safeConfirm } from '../../lib/utils';
-import { getIdToken } from '../../firebase';
+import { undoSpreadRequest } from '../../services/spreadActions';
 import { spreadProgress } from '../../lib/prepaidSchedule';
 import SpreadBillDialog from './SpreadBillDialog';
 import BillModal from './BillModal';
@@ -126,17 +126,7 @@ export default function Purchases() {
   };
 
   // K-17: the spread's entries are voided by the server (refused once one of its months is closed)
-  const undoSpread = async (b: Bill): Promise<boolean> => {
-    const token = await getIdToken().catch(() => null);
-    const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(b.workspaceId)}/bills/${encodeURIComponent(b.id)}/spread/undo`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: '{}',
-    }).catch(() => null);
-    const data = await res?.json().catch(() => ({}));
-    if (!res?.ok) { toast.error(data?.message || 'The spread could not be undone'); return false; }
-    // at once on screen too (re-posting the bill reads it from here before the live update arrives)
-    useLedgerStore.setState(st => ({ bills: (st.bills || []).map(x => (x.id === b.id ? { ...x, prepaidSchedule: undefined } : x)) }));
-    return true;
-  };
+  const undoSpread = (b: Bill) => undoSpreadRequest('bill', b.workspaceId, b.id);
 
   const handleUndoSpread = async (b: Bill) => {
     if (safeConfirm(`Undo the spread of ${describeBill(b)}? Its monthly entries are voided and the whole cost is back in the bill's month.`) && await undoSpread(b)) {

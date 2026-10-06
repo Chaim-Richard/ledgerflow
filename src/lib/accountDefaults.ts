@@ -6,7 +6,7 @@
  */
 import { resolveAccountRole } from './accountUtils';
 import { advanceAccount } from './advancePayments';
-import { prepaidAccount } from './prepaidSchedule';
+import { deferredRevenueAccount, prepaidAccount } from './prepaidSchedule';
 import type { ChartAccount } from '../types';
 
 export interface DefaultAccountSlot {
@@ -72,6 +72,11 @@ export const DEFAULT_ACCOUNT_SLOTS: DefaultAccountSlot[] = [
     key: 'prepaid expenses', label: 'Prepaid expenses', hint: 'Bills spread over the months they cover',
     fits: a => a.type === 'asset' && role(a) !== 'cash' && role(a) !== 'ar',
     automatic: accounts => prepaidAccount(accounts),
+  },
+  {
+    key: 'deferred revenue', label: 'Deferred revenue', hint: 'Invoices spread over the months they are earned in',
+    fits: a => a.type === 'liability' && role(a) !== 'ap',
+    automatic: accounts => deferredRevenueAccount(accounts),
   },
 ];
 

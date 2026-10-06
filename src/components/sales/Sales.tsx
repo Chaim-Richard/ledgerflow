@@ -32,6 +32,9 @@ import EmailStatementsButton from './EmailStatementsButton';
 import DocumentTotalsFoot from '../ui/DocumentTotalsFoot';
 import { PartyDetailView } from '../common/PartyDetailView';
 import WriteOffModal from './WriteOffModal';
+import SpreadDialog from '../common/SpreadDialog';
+import { spreadProgress } from '../../lib/prepaidSchedule';
+import { undoSpreadRequest } from '../../services/spreadActions';
 import InvoiceEmailDialog from './InvoiceEmailDialog';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import ReceivePaymentModal from './ReceivePaymentModal';
@@ -64,6 +67,7 @@ export default function Sales() {
   const { loading } = useLedgerCollections('creditNotes', 'customers', 'invoices', 'payments');
   const { addEntity, updateEntity } = useEntityOperations();
   const canEditContacts = useCurrentRole() !== 'viewer';
+  const [spreadingInvoice, setSpreadingInvoice] = useState<Invoice | null>(null);
   const [pickedInvoices, setPickedInvoices] = useState<Set<string>>(() => new Set());
 
   const transactions = useLedgerStore(s => s.transactions);
@@ -420,6 +424,7 @@ export default function Sales() {
                           <span className="text-[10px] text-amber-600 font-bold" title={inv.writeOffReason || undefined}>written off {formatCurrency(inv.writtenOffCents || 0)}</span>
                         )}
                       </div>
+                      {inv.revenueSchedule && <div className="mt-1 text-center text-[10px] text-[var(--muted)]">{spreadProgress(inv.revenueSchedule, getLocalDateISO())}</div>}
                       <InvoiceApprovalFlag invoice={inv} settings={approvalSettings} currency={homeCurrency}
                         canDecide={canDecideApproval} onDecide={d => decideApproval(inv, d)} />
                       {inv.metadata?.cogsPending && (
@@ -459,6 +464,27 @@ export default function Sales() {
                             <DollarSign size={16} />
                           </button>
                         )}
+                        {canEditContacts && !['draft', 'void', 'rejected', 'cancelled'].includes(String(inv.status)) && (inv.revenueSchedule ? (
+                          <button type="button"
+                            onClick={async () => {
+                              if (safeConfirm(`Undo the spread of invoice ${inv.number || ''}? Its monthly entries are voided and the whole income is back in the invoice's month.`)
+                                && await undoSpreadRequest('invoice', currentWorkspaceId || '', inv.id)) toast.success('Spread undone');
+                            }}
+                            className="px-3 py-2 text-xs text-[var(--muted)] hover:text-[var(--text)] rounded-xl"
+                            aria-label={`Undo the spread of invoice ${inv.number || ''}`.trim()}
+                          >
+                            Undo spread
+                          </button>
+                        ) : (
+                          <button type="button"
+                            onClick={() => setSpreadingInvoice(inv)}
+                            className="px-3 py-2 text-xs text-indigo-700 dark:text-indigo-300 hover:underline rounded-xl"
+                            title="Income earned over time (a subscription, a retainer): spread it over the months it covers"
+                            aria-label={`Spread invoice ${inv.number || ''} over months`.replace('  ', ' ')}
+                          >
+                            Spread
+                          </button>
+                        ))}
                         {(inv.writtenOffCents || 0) > 0 && (
                           <button
                             onClick={() => reverseWriteOff(inv)}
@@ -523,8 +549,10 @@ export default function Sales() {
                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         </button>
                         <button 
-                          onClick={() => {
-                            if (safeConfirm(`Void invoice ${inv.number || ''} for ${inv.customerName || 'this customer'} (${formatCurrency(inv.amountCents || 0, inv.currency)})? It stays on record as void and its entries are reversed.`)) {
+                          onClick={async () => {
+                            const spread = inv.revenueSchedule ? ' Its spread over months is undone too.' : '';
+                            if (safeConfirm(`Void invoice ${inv.number || ''} for ${inv.customerName || 'this customer'} (${formatCurrency(inv.amountCents || 0, inv.currency)})? It stays on record as void and its entries are reversed.${spread}`)) {
+                              if (inv.revenueSchedule && !(await undoSpreadRequest('invoice', currentWorkspaceId || '', inv.id))) return;
                               onAddInvoice({ id: inv.id, status: 'void' });
                             }
                           }}
@@ -686,6 +714,7 @@ export default function Sales() {
         />
       )}
       {emailInvoice && <InvoiceEmailDialog invoice={emailInvoice} onClose={() => setEmailInvoice(null)} />}
+      {spreadingInvoice && <SpreadDialog kind="invoice" document={spreadingInvoice} onClose={() => setSpreadingInvoice(null)} />}
       {isWriteOffOpen && selectedInvoiceForWriteOff && (
         <WriteOffModal
           isOpen={isWriteOffOpen}

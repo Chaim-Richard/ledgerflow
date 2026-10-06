@@ -35,7 +35,7 @@ describe('Which account each posting uses', () => {
   test('automatic follows the posting rules; a chosen one wins while it exists', () => {
     assert.deepEqual(DEFAULT_ACCOUNT_SLOTS.map(s => [s.key, s.automatic(accounts)?.id]), [
       ['ar', 'ar'], ['ap', 'ap'], ['revenue', 'sales'], ['expense', 'rent'], ['cash', 'bank'],
-      ['tax payable', undefined], ['tax paid', undefined], ['customer deposits', 'dep'], ['vendor prepayments', 'pre'], ['prepaid expenses', 'pre'],
+      ['tax payable', undefined], ['tax paid', undefined], ['customer deposits', 'dep'], ['vendor prepayments', 'pre'], ['prepaid expenses', 'pre'], ['deferred revenue', undefined],
     ]);
     assert.deepEqual(accountInUse(slot('ar'), accounts, { ar: 'ar2' }), { account: accounts[2], chosen: true });
     assert.deepEqual(accountInUse(slot('ar'), accounts, { ar: 'deleted' }), { account: accounts[1], chosen: false }, 'a chosen account that is gone falls back');
@@ -79,7 +79,7 @@ describe('The Defaults page', () => {
     assert.equal(ar.value, '');
     assert.equal(ar.options[0].textContent, 'Automatic (1100 – Accounts Receivable)');
     assert.equal((screen.getByLabelText('Sales tax payable') as HTMLSelectElement).options[0].textContent, 'Automatic (none found)');
-    assert.equal(screen.getAllByText(/None in your chart yet/).length, 2, 'both tax rows warn');
+    assert.equal(screen.getAllByText(/None in your chart yet/).length, 3, 'both tax rows and deferred revenue warn');
     await act(async () => { fireEvent.change(ar, { target: { value: 'ar2' } }); });
     await waitFor(() => assert.equal(writes.length, 1));
     const saved = JSON.stringify(writes[0].body);
