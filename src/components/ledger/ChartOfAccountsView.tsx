@@ -3,7 +3,7 @@ import { Field as _Field } from '../common/Field';
 import { SchemaForm as _SchemaForm } from '../common/SchemaForm';
 import React, { useState } from 'react';
 import { ChartAccount } from '../../types';
-import { Archive, ArchiveRestore, BookOpen, MoreVertical, ChevronRight, ChevronDown, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, BookOpen, GitMerge, MoreVertical, ChevronRight, ChevronDown, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -12,6 +12,7 @@ import { doc, updateDoc } from '../../lib/db/firestore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { suggestionsFrom } from '../../lib/inlineEdit';
 import InlineEdit from '../ui/InlineEdit';
+import MergeAccountDialog from './MergeAccountDialog';
 
 /** Edit in place (I-22): one field of an account. System accounts keep their code (the database refuses it). */
 async function saveAccountField(account: ChartAccount, field: 'name' | 'code' | 'description' | 'category', value: string | number) {
@@ -41,7 +42,11 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
   const [showArchived, setShowArchived] = useState(false);
   const archivedCount = accounts.filter(a => a.isArchived).length;
   const listed = React.useMemo(() => (showArchived ? accounts : accounts.filter(a => !a.isArchived)), [accounts, showArchived]);
-  const canEdit = useCurrentRole() !== 'viewer';
+  const role = useCurrentRole();
+  const canEdit = role !== 'viewer';
+  // merging moves every entry of an account to another (CA-33): owners and accountants
+  const canMerge = role === 'owner' || role === 'accountant';
+  const [merging, setMerging] = useState<ChartAccount | null>(null);
   const categories = React.useMemo(() => suggestionsFrom(accounts, a => a.category), [accounts]);
   const codes = React.useMemo(() => new Map(accounts.map(a => [a.code, a.id])), [accounts]);
 
@@ -153,6 +158,15 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
                       {account.isArchived ? <ArchiveRestore aria-hidden="true" size={12} /> : <Archive aria-hidden="true" size={12} />}
                       {account.isArchived ? 'Restore' : 'Archive'}
                     </button>
+                    {canMerge && !account.isSystem && !account.role && (
+                      <button type="button"
+                        onClick={() => { setMerging(account); setShowOptionsId(null); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-[var(--text)] hover:bg-[var(--ink)] rounded transition-all text-[9.5px] font-bold uppercase tracking-wider"
+                      >
+                        <GitMerge aria-hidden="true" size={12} />
+                        Merge into…
+                      </button>
+                    )}
                     {/* an account with entries is archived instead (its history stays); one without is deleted */}
                     <button type="button"
                       onClick={() => {
@@ -221,6 +235,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
           </tbody>
         </table>
       </div>
+      {merging && <MergeAccountDialog account={merging} accounts={accounts} onClose={() => setMerging(null)} />}
     </div>
   );
 }
