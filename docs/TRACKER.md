@@ -2146,7 +2146,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] BC-08 Receivables widget
 - [x] BC-09 Payables widget
 - [x] BC-10 Account balance widget
-- [~] BC-11 Bank feed health widget — C-16 status/reconnect UI ready; last successful sync timestamp requires the reserved server route/storage contract (no invented timestamp).
+- [x] BC-11 Bank feed health widget — stored last successful sync shown; null/legacy missing distinguished, expired status retained; client parser/DOM and existing cancellation tests verified (AI #2, C-16 follow-up).
 
 # SECTION BD — ACCOUNTANT PERSONA
 

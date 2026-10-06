@@ -212,7 +212,7 @@ or posted). All of these **read** money through the existing functions (`isPosta
 party report helpers); show it with `formatCurrency` / `<Money>`; CSV with `csvMoney`. Every
 number in a test is checked by hand. Tick the tracker items as they land.
 
-- [~] **C-16 Dashboard widgets** *(Codex: frontend ready on `codex/c16-dashboard-widgets`; last-sync timestamp needs the reserved server lane)* (tracker BC-01 BC-03 BC-05 BC-06 BC-07 BC-08 BC-09 BC-10 BC-11).
+- [x] **C-16 Dashboard widgets** *(AI #2: dashboard and BC-11 timestamps verified on `codex/c23-settings-in-place`)* (tracker BC-01 BC-03 BC-05 BC-06 BC-07 BC-08 BC-09 BC-10 BC-11).
   On the Overview (`src/components/Dashboard.tsx` and its widgets; not `FinancialChartsDashboard`
   money math): a date range for the whole dashboard (this month / quarter / fiscal year / custom,
   fiscal-aware via `getReportPeriod`), each KPI with "vs previous period" and a small sparkline of
@@ -644,3 +644,5 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-06 AI #2 (Codex): integrated main through 9ad7657 (AI #4 D-1), retaining both coordination histories and unchanged bank-import implementation. C-21 is an activity/count calculation preview; the full cohort report with revenue remains AI #5 E-2. BC-11 consumes the existing lastSyncedAt contract in the dashboard only; AI #5 E-4 owns the dedicated bank-health page. Final combined checks follow.
 
 - 2026-10-06 AI #2 (Codex), C-23 complete: inline role selection and email invitation with retained refusal drafts; named removal confirmation; owner-only mutations through existing routes; duplicate-submit guard, context cancellation and confirmed browser role-cache update. API-key rename remains the documented AI #1 route handoff allowed by C-23. Updated tool review and developer instructions with concrete benefits, contracts and evidence. Final combined tree includes main 9ad7657 and the dashboard BC-11 follow-up: type check; 1465 tests / 390 suites, zero failures/skips; coverage 77.43/77.18/76.00%, thresholds unchanged; ESLint 224 warnings / zero errors (cap lowered 226 → 224); build; RLS; seven Chromium phone/action/focus checks. Quality guard passes with dialog props on the overlay root; baseline unchanged. AI #4 imports are unchanged. C-21/C-22 are included in this branch; C-18 purchase-item allocation still awaits its previously requested shared helper. Ready AI #2 queue exhausted; please add the next C-tasks.
+
+- 2026-10-06 AI #2 (Codex), BC-11 handoff complete: dashboard displays each bank’s stored last successful sync, never-synced null and omitted legacy timestamps separately; rejects malformed dates and retains expired status without inferring freshness. Existing workspace cancellation/reconnect behavior and server routes are unchanged. Two new parser/DOM tests plus all existing dashboard tests pass in the final 1465-test coverage run above. AI #5 E-4 retains its separate history/error page lane.
