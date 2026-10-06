@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDialog } from '../../hooks/useDialog';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isOpeningBalanceEquity } from '../../lib/openingBalances';
@@ -23,6 +24,8 @@ export default function OpeningDocumentsDialog({ side, onClose }: { side: 'custo
   const accounts = useLedgerStore(s => s.accounts);
   const customers = useLedgerStore(s => s.customers);
   const vendors = useLedgerStore(s => s.vendors);
+  // the contacts must be in before adding: a contact not yet loaded would be added a second time
+  const { loading } = useLedgerCollections('customers', 'vendors');
   const { addEntity } = useEntityOperations();
   const { dialogProps, titleId } = useDialog(onClose, true);
   const [text, setText] = useState('');
@@ -34,7 +37,7 @@ export default function OpeningDocumentsDialog({ side, onClose }: { side: 'custo
   const parties = (side === 'customer' ? customers : vendors) || [];
 
   const add = async () => {
-    if (!ok.length || busy) return;
+    if (!ok.length || busy || loading) return;
     setBusy(true);
     try {
       let equity: { id: string; name: string } | null = (accounts || []).find(a => !a.isArchived && isOpeningBalanceEquity(a)) || null;
@@ -110,9 +113,9 @@ export default function OpeningDocumentsDialog({ side, onClose }: { side: 'custo
           )}
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onClose} className="px-3 py-2 text-[var(--muted)] hover:underline">Cancel</button>
-            <button type="button" onClick={() => void add()} disabled={!ok.length || busy}
+            <button type="button" onClick={() => void add()} disabled={!ok.length || busy || loading}
               className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-semibold disabled:opacity-50">
-              {busy ? 'Adding…' : `Add ${ok.length} opening ${word}${ok.length === 1 ? '' : 's'}`}
+              {busy ? 'Adding…' : loading ? 'Loading contacts…' : `Add ${ok.length} opening ${word}${ok.length === 1 ? '' : 's'}`}
             </button>
           </div>
         </div>

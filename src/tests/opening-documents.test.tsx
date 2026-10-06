@@ -60,7 +60,7 @@ describe('The dialog', () => {
 
   test('preview, then each line added as an opening invoice; a new customer is added first', async () => {
     setComponentWorkspace('bookkeeper');
-    markComponentCollectionsLoaded('customers');
+    markComponentCollectionsLoaded();
     useLedgerStore.setState({
       customers: [makeCustomer({ id: 'c1', name: 'Acme Ltd' })],
       accounts: [
@@ -79,6 +79,9 @@ describe('The dialog', () => {
     }) as typeof fetch;
     render(<OpeningDocumentsDialog side="customer" onClose={() => {}} />);
     fireEvent.change(screen.getByLabelText('Paste the invoices'), { target: { value: 'Acme Ltd\tINV-0912\t2026-08-14\t2026-09-13\t1250\nNew Client\tINV-0920\t2026-08-30\t400\nBad line\tX\t30/08/2026\t5' } });
+    // until the contacts are in, nothing can be added (a contact not yet loaded would be added twice)
+    assert.equal((screen.getByRole('button', { name: 'Loading contacts…' }) as HTMLButtonElement).disabled, true);
+    act(() => markComponentCollectionsLoaded('customers', 'vendors'));
     assert.match(screen.getByRole('table').textContent || '', /Preview: 2 to add · \$1,650\.00/);
     assert.match(screen.getByRole('table').textContent || '', /New Client \(new\)/);
     assert.match(screen.getByRole('table').textContent || '', /The date must be written YYYY-MM-DD/);
