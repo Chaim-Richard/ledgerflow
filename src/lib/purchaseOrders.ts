@@ -84,3 +84,36 @@ export function vendorsByOrders<V extends { id: string; name: string }>(vendors:
   for (const o of orders) uses.set(o.vendorId, (uses.get(o.vendorId) || 0) + 1);
   return [...vendors].sort((a, b) => (uses.get(b.id) || 0) - (uses.get(a.id) || 0) || a.name.localeCompare(b.name));
 }
+
+/**
+ * Purchase requisitions (K-23): an order a bookkeeper creates is a request that waits
+ * ('pending_approval') until an owner or accountant approves it (a normal approved order) or declines
+ * it (cancelled, with the reason in its notes). Nobody approves their own request except the owner.
+ * Nothing is received or billed while it waits.
+ */
+export function orderNeedsApproval(role: string): boolean {
+  return role === 'bookkeeper';
+}
+
+export function awaitingApproval(po: Pick<PurchaseOrder, 'status'>): boolean {
+  return po.status === 'pending_approval';
+}
+
+/** Why this person can't approve or decline the request, or null. */
+export function orderDecisionProblem(po: Pick<PurchaseOrder, 'status' | 'uid'>, role: string, uid: string): string | null {
+  if (!awaitingApproval(po)) return 'Not waiting for approval';
+  if (role !== 'owner' && role !== 'accountant') return 'Waiting for an owner or accountant';
+  if (po.uid === uid && role !== 'owner') return 'Someone else must approve your own request';
+  return null;
+}
+
+/** The changes that approve or decline a requested order. */
+export function orderDecision(approve: boolean, by: string, now: string, reason?: string): Partial<PurchaseOrder> {
+  return {
+    status: approve ? 'approved' : 'cancelled',
+    approvalStatus: approve ? 'approved' : 'rejected',
+    approvedBy: by,
+    approvedAt: now,
+    ...(!approve && reason ? { notes: `Declined: ${reason}` } : {}),
+  };
+}
