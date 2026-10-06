@@ -55,6 +55,7 @@ const url = process.env.LF_TEST_DATABASE_URL;
 describe('Closing a year through the route (database)', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
   const ws = `ws_yec_${crypto.randomBytes(4).toString('hex')}`;
   const id = (name: string) => `${ws}_${name}`;
+  const other = `${ws}x`;
   let server: Server;
   let base = '';
   let db: Firestore;
@@ -72,6 +73,9 @@ describe('Closing a year through the route (database)', { skip: !url && 'LF_TEST
     await db.collection('workspaces').doc(ws).set({ uid: 'owner-1', name: 'YEC', currency: 'USD', members: ['owner-1', 'acc-1'], roles: { 'acc-1': 'accountant' } });
     for (const a of accounts) await db.collection('chartAccounts').doc(id(a.id)).set({ ...a, id: id(a.id), workspaceId: ws });
     for (const t of year) await db.collection('transactions').doc(id(t.id)).set({ ...t, id: id(t.id), workspaceId: ws, lines: t.lines.map(l => ({ ...l, accountId: id(l.accountId) })) });
+    // another workspace's sale in the same year must not count in this one's profit
+    await db.collection('chartAccounts').doc(`${other}_sales`).set({ ...accounts[1], id: `${other}_sales`, workspaceId: other });
+    await db.collection('transactions').doc(`${other}_s`).set({ ...year[0], id: `${other}_s`, workspaceId: other, lines: [{ accountId: `${other}_sales`, accountName: 'Sales', amountCents: -999999 }, { accountId: `${other}_sales`, accountName: 'Sales', amountCents: 999999 }] });
     const app = express();
     app.use(express.json());
     app.use((req, _res, next) => { (req as unknown as { user: { uid: string } }).user = { uid: String(req.header('x-test-uid')) }; next(); });
@@ -82,11 +86,11 @@ describe('Closing a year through the route (database)', { skip: !url && 'LF_TEST
 
   after(async () => {
     server?.close();
-    for (const table of ['transactions', 'chartAccounts', 'auditLogs', 'workspaces']) await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
+    for (const table of ['transactions', 'chartAccounts', 'auditLogs', 'workspaces']) await db.pool.query(`delete from public."${table}" where workspace_id = any($1) or id = any($1)`, [[ws, other]]);
     await db.terminate();
   });
 
-  test('records the year\'s profit and locks it; posts no entry', async () => {
+  test('records the year\'s profit (this workspace only) and locks it; posts no entry', async () => {
     assert.equal((await close('acc-1', { closingDate: '2026-06-30' })).status, 403, 'the owner closes a year');
     const res = await close('owner-1', { closingDate: '2026-06-30', lockPeriod: true });
     assert.equal(res.status, 200, JSON.stringify(res.body));

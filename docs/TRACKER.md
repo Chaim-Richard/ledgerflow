@@ -1875,7 +1875,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] R-01 Close checklist (tested; blockers + items to sign off)
 - [x] R-02 Sign-off per item (who, when, note; final once hard-closed)
 - [x] R-03 Soft vs hard close (soft: only owners/accountants post)
-- [x] R-04 Year-end retained-earnings roll (`/close-year` + `ClosingEntryEngine`, tested)
+- [x] R-04 Year-end retained-earnings roll (`/close-year`; since CA-07 no closing entry is posted: the balance sheet carries past profit in retained earnings, and the unused `ClosingEntryEngine` was removed)
 - [x] R-05 Auto-reversing accruals: a journal entry can be marked "Reverse automatically"; its mirror (every line negated, linked both ways) is posted on the 1st of the next month, or a chosen later date, in the same request, so there is never an accrual without its reversal; a closed month refuses both (tested against the database). The server now accepts a reversal of an entry in the same request
 - [x] R-06 Depreciation run (server, one entry per month, catch-up, tested)
 - [x] R-07 FX revaluation run (the old run was switched off, L-187: open foreign-currency invoices and bills, owner/accountant, reversal next day) — implementation and local checks done 2026-10-05; **merged 5 Oct after Claude ran the database tests (`fx-revaluation-server.test.ts`, Undo and historical month-end included): they pass**:
