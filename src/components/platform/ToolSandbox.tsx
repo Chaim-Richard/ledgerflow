@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useDialog } from '../../hooks/useDialog';
 import { NumericAlgorithmInput } from './NumericAlgorithmInput';
 import { AlgorithmHelp } from './AlgorithmHelp';
@@ -39,6 +39,7 @@ function withStableKeys<T>(items: T[], getContentKey: (item: T) => string) {
 
 export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
   const { dialogProps, titleId } = useDialog(onClose);
+  const scrollResultsRef = useRef<HTMLDivElement>(null);
   const truncated = useLedgerStore(state => state.truncatedCollections);
   const setActiveTab = useUIStore(state => state.setActiveTab);
   const transactions = useLedgerStore(state => state.transactions || []);
@@ -365,7 +366,11 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                      </div>
                    </div>
 
-                   <div className="overflow-x-auto">
+                   <div ref={scrollResultsRef} role="region" aria-label="Scrollable tool results" className="overflow-x-auto">
+                     <div className="sticky left-0 flex gap-2 w-fit pb-2">
+                       <button type="button" aria-label="Move results left" className="min-h-11 min-w-11 px-3 border border-white/20 rounded text-slate-200" onClick={() => scrollResultsRef.current?.scrollBy({left: -240, behavior: 'smooth'})}>←</button>
+                       <button type="button" aria-label="Move results right" className="min-h-11 min-w-11 px-3 border border-white/20 rounded text-slate-200" onClick={() => scrollResultsRef.current?.scrollBy({left: 240, behavior: 'smooth'})}>→</button>
+                     </div>
                      <table className="w-full text-left text-xs text-slate-300">
                        <caption className="sr-only">Tool results</caption>
                        <thead className="border-b border-white/10 text-[10px] uppercase font-bold text-[var(--muted)]">

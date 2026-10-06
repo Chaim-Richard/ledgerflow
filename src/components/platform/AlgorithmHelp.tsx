@@ -11,13 +11,13 @@ const NOTES: Record<string, { method: string; example: string; limits: string }>
   subset_sum_recon: { method: 'Looks for combinations of candidate entries matching a target amount within the declared tolerance. Review each suggested match against the actual bank/document evidence.', example: 'Two candidate payments may add up to one bank deposit. Matching their sum is evidence to inspect, not permission to post.', limits: 'Several combinations can share the same total. Currency, dates and counterparties still need review; incomplete candidate data can hide the correct match.' },
 };
 export function AlgorithmHelp({ algorithm, incomplete }: { algorithm: AlgorithmDefinition; incomplete: boolean }) {
-  const note = NOTES[algorithm.id];
+  const note = algorithm.help || NOTES[algorithm.id];
   return <details className="border border-[var(--line)] rounded-xl p-4 text-sm text-[var(--text)]">
     <summary className="cursor-pointer font-semibold">How this tool works</summary>
     <div className="space-y-3 pt-3">
       <p>{algorithmPurpose(algorithm)}</p>
-      <p><strong>Data and scope:</strong> The currently loaded workspace ledger and account context, plus the supporting collections requested by this tool. Date/as-of parameters determine the context supplied to the calculation. Draft and void transactions are excluded by the shared context builder.</p>
-      {incomplete && <p role="status" className="text-amber-700 dark:text-amber-400">The loaded data is incomplete. Treat these results as partial; use a full-history report for complete statement figures.</p>}
+      <p><strong>Data and scope:</strong> {algorithm.help?.scope || "The currently loaded workspace ledger and account context, plus the supporting collections requested by this tool. Date/as-of parameters determine the context supplied to the calculation. Draft and void transactions are excluded by the shared context builder."}</p>
+      {incomplete && algorithm.requires?.length !== 0 && <p role="status" className="text-amber-700 dark:text-amber-400">The loaded data is incomplete. Treat these results as partial; use a full-history report for complete statement figures.</p>}
       <p><strong>Inputs:</strong> Change parameters to explore a scenario. Number fields accept typing; press Enter or leave the field to apply a valid value. Escape restores the last applied value. Reset restores the algorithm defaults.</p>
       <ul className="list-disc pl-5">{algorithm.inputs.map(input => <li key={input.key}><strong>{input.label}:</strong> {input.kind === 'number' || !input.kind ? `range ${input.min}–${input.max}; step ${input.step ?? 1}; default ${String(input.defaultValue)}.` : input.kind === 'select' ? `choose one of ${input.options.map(option => option.label).join('; ')}.` : input.kind === 'dateRange' ? 'start and end dates for the supplied reporting period.' : input.kind === 'account' ? 'select a ledger account or use the unfiltered option.' : 'enable or disable this assumption.'}</li>)}</ul>
       {note && <><p><strong>Method:</strong> {note.method}</p><p><strong>Example:</strong> {note.example}</p><p><strong>Limits:</strong> {note.limits}</p></>}
