@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Transaction, ChartAccount, AutoRule } from '../../types';
 import { aiService } from '../../services/aiService';
 import { IntentResolver } from '../../lib/intentResolver';
-import { cn, getLocalDateISO, formatDate, formatCurrency } from '../../lib/utils';
+import { cn, getLocalDateISO, formatDate, formatCurrency, getCurrencyDivisor } from '../../lib/utils';
 
 import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
@@ -155,9 +155,11 @@ export default function StatementImporter({
         const content = await file.text();
         if (workspaceId !== useAuthStore.getState().currentWorkspaceId || userId !== useAuthStore.getState().user?.uid) throw new Error('Workspace or user changed. Upload the statement again in the current workspace.');
         if (fileName.endsWith('.qif') && !qifDateOrder) throw new Error('Choose the QIF date order before uploading the statement.');
+        const currency = useAuthStore.getState().getCurrentWorkspace()?.currency || 'USD';
+        if (fileName.endsWith('.qif') && getCurrencyDivisor(currency) !== 100) throw new Error('QIF import supports two-decimal workspace currencies only. No amount was imported.');
         const bankLines = fileName.endsWith('.qif')
           ? parseQIFStatement(content, qifDateOrder as QIFDateOrder)
-          : parseBAI2Statement(content, useAuthStore.getState().getCurrentWorkspace()?.currency || 'USD');
+          : parseBAI2Statement(content, currency);
         processResults(bankLines);
         toast.success(`Loaded ${bankLines.length} statement entries from ${file.name}. Review before importing.`, { id: loader });
       } else if (fileType.startsWith('image/')) {
@@ -498,7 +500,7 @@ export default function StatementImporter({
                       <option value="dmy">Day / month / year</option>
                     </select>
                   </Labelled>
-                  <p className="text-xs text-[var(--muted)]">QIF: Bank, Cash or CCard, one account per file. BAI2: one account in the workspace currency, with complete trailers. Entries are reviewed before import.</p>
+                  <p className="text-xs text-[var(--muted)]">QIF: Bank, Cash or CCard, one account per file. BAI2: one account in the workspace currency, with complete trailers. Both formats require a two-decimal workspace currency. Entries are reviewed before import.</p>
                   {fileError && <p role="alert" className="text-sm text-rose-600">{fileError}</p>}
                   <textarea
                     id={`${formId}-statement-text`}
