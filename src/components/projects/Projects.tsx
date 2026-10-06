@@ -1,3 +1,4 @@
+import { deleteProjectWithUndo } from '../../lib/projectUndo';
 import { useDialog } from '../../hooks/useDialog';
 import { useState, useMemo, useId } from 'react';
 import { Project, Transaction } from '../../types';
@@ -49,10 +50,10 @@ function useProjectsModel() {
   const vendors = useLedgerStore(s => s.vendors);
   const { loading } = useLedgerCollections('bills', 'budgets', 'vendors');
   useCommandDispatcher();
-  const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
+  const { addEntity, updateEntity } = useEntityOperations();
   const onAdd = (data: Partial<Project>) => addEntity('projects', data);
   const onUpdate = (id: string, data: Partial<Project>) => updateEntity('projects', id, data);
-  const onDelete = (id: string) => deleteEntity('projects', id);
+  const onDelete = (id: string) => deleteProjectWithUndo(id);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'pipeline' | 'list'>('pipeline');
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
@@ -126,7 +127,6 @@ function useProjectsModel() {
     try {
       await onDelete(id);
       if (selectedProjectId === id) setSelectedProjectId(null);
-      toast.success('Project deleted successfully');
     } catch {
       toast.error('Deletion failed');
     }
