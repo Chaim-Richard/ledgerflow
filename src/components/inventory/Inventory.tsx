@@ -53,7 +53,7 @@ import StockAdjustDialog from './StockAdjustDialog';
 import StockCountDialog from './StockCountDialog';
 import CategoryManagerDialog from './CategoryManagerDialog';
 import { categoryCounts } from '../../lib/itemCategories';
-import { deleteWithUndo } from '../../lib/undoableDelete';
+import { deleteWithUndo, isDeletePending } from '../../lib/undoableDelete';
 
 export default function Inventory() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -88,7 +88,8 @@ export default function Inventory() {
 
     const unsubInventory = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
-      setItems(data);
+      // an item waiting out its Undo stays hidden when the live list refreshes (BO-08)
+      setItems(data.filter(i => !isDeletePending(`inventory/${i.id}`)));
       setLoading(false);
     }, () => setLoading(false));
 
@@ -210,15 +211,15 @@ export default function Inventory() {
     if (!item) return;
     // stock on hand is asset value: that still needs a clear yes; otherwise Undo is enough (BO-08)
     if (item.quantityAtHand > 0 && !safeConfirm(`"${item.name}" has ${item.quantityAtHand} units on hand representing asset value. Delete this item anyway?`)) return;
-    const at = useLedgerStore.getState().inventory.findIndex(i => i.id === id);
+    const at = items.findIndex(i => i.id === id);
     deleteWithUndo({
       key: `inventory/${id}`,
       label: `Item "${item.name}"`,
-      hide: () => useLedgerStore.setState(s => ({ inventory: s.inventory.filter(i => i.id !== id) })),
-      restore: () => useLedgerStore.setState(s => {
-        const rows = s.inventory.filter(i => i.id !== id);
+      hide: () => setItems(prev => prev.filter(i => i.id !== id)),
+      restore: () => setItems(prev => {
+        const rows = prev.filter(i => i.id !== id);
         rows.splice(at < 0 ? rows.length : Math.min(at, rows.length), 0, item);
-        return { inventory: rows };
+        return rows;
       }),
       commit: () => deleteDoc(doc(db, 'inventory', id)),
     });
