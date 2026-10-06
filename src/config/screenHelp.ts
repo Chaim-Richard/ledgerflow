@@ -45,6 +45,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Prepare and track purchase orders. Inspect ordered items and use the existing receiving and bill workflows. A purchase order is not a posted bill.",
     loans:
       "Maintain loans the workspace owes: the lender, the principal, the rate, the term and the repayment schedule to the cent. Recording the money arriving or a payment posts one balanced entry through the ordinary posting path, so the period lock applies; a closed period refuses it. The screen never invents an account: it asks for the liability, interest and bank accounts it already has.",
+    "petty-cash":
+      "Run the petty cash box: one of the workspace's own cash-type accounts, with its balance read straight from the ledger. Spend from the box against an expense category, top it up from a bank account, or count the cash and post the difference to a chosen over/short account. Every movement is one balanced entry through the ordinary posting path, so the period lock applies; the screen never invents an account.",
     payroll:
       "Maintain employee information and inspect pay runs. Edit supported metadata and review the existing payroll workflow. A displayed calculation does not prove that a pay run was posted.",
     reports:
