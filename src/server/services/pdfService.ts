@@ -48,6 +48,9 @@ export interface PdfDocument {
   depositCents?: number;
   /** `saleReceipt` (K-03): an invoice paid on the spot, titled as a receipt */
   metadata?: { saleReceipt?: boolean };
+  /** K-04: an estimate the customer accepted prints as a sales order, with their reference */
+  orderedAt?: string;
+  customerReference?: string;
 }
 
 export interface PdfWorkspace { name?: string; companyName?: string; currency?: string; branding?: WorkspaceBranding }
@@ -133,6 +136,8 @@ export function layoutDocumentPdf(
     meta.push([type === 'estimate' ? 'Valid until' : type === 'purchaseOrder' ? 'Deliver by' : 'Due', clean(doc.dueDate, 10)]);
   }
   if (type === 'invoice' && doc.paymentTerms) meta.push(['Terms', TERMS_LABEL[doc.paymentTerms] || clean(doc.paymentTerms, 40)]);
+  const salesOrder = type === 'estimate' && Boolean(doc.orderedAt);
+  if (salesOrder && doc.customerReference) meta.push(['Your reference', clean(doc.customerReference, 60)]);
 
   // invoices keep `items`, estimates `lines`, statements `transactions`; every one is printed
   const items = doc.items || doc.lines || doc.transactions || [];
@@ -167,7 +172,7 @@ export function layoutDocumentPdf(
   const saleReceipt = type === 'invoice' && Boolean(doc.metadata?.saleReceipt);
   const qrWanted = type === 'invoice' && !saleReceipt && branding.showPaymentQr !== false && /^https?:\/\//.test(options.paymentUrl || '') && totalCents - depositCents > 0;
   return {
-    title: saleReceipt ? 'SALES RECEIPT' : TITLES[type],
+    title: saleReceipt ? 'SALES RECEIPT' : salesOrder ? 'SALES ORDER' : TITLES[type],
     company: {
       name: clean(workspace?.name || workspace?.companyName || 'LedgerFlow Workspace', 120),
       addressLines: clean(branding.address, 300).split(/\s*\n\s*/).filter(Boolean).slice(0, 5),

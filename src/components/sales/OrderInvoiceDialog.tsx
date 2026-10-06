@@ -1,0 +1,111 @@
+import React, { useState } from 'react';
+import { X } from 'lucide-react';
+import { useDialog } from '../../hooks/useDialog';
+import { formatCurrency, parseAmountToCents } from '../../lib/utils';
+import { type OrderPart, type OrderProgress, orderPartInvoice, partCents, partLabel, partProblem } from '../../lib/salesOrders';
+import type { Estimate } from '../../types';
+
+const field = 'w-full px-3 py-2 text-sm bg-[var(--ink)] border border-[var(--line)] rounded-lg text-[var(--text)]';
+type Mode = OrderPart['mode'];
+
+/**
+ * Invoice part of a sales order (K-04): the rest, a percentage of the order, or an amount. Shows
+ * what is already invoiced and the lines the draft invoice will have before it is made.
+ */
+export default function OrderInvoiceDialog({ estimate, progress, currency, onCreate, onClose }: {
+  estimate: Estimate;
+  progress: OrderProgress;
+  currency: string;
+  onCreate: (part: OrderPart) => Promise<unknown>;
+  onClose: () => void;
+}) {
+  const [mode, setMode] = useState<Mode>('rest');
+  const [percent, setPercent] = useState('50');
+  const [amount, setAmount] = useState('');
+  const [saving, setSaving] = useState(false);
+  const { dialogProps, titleId } = useDialog(onClose, true);
+  const part: OrderPart = mode === 'rest' ? { mode } : mode === 'percent' ? { mode, percent: Number(percent) } : { mode, cents: parseAmountToCents(amount) };
+  const problem = partProblem(part, progress);
+  const cents = problem ? 0 : partCents(part, progress);
+  const preview = problem ? [] : orderPartInvoice(estimate, progress, cents, partLabel(part, estimate, progress)).items || [];
+  const money = (c: number) => formatCurrency(c, currency);
+
+  const create = async () => {
+    if (problem || saving) return;
+    setSaving(true);
+    try {
+      await onCreate(part);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const choice = (value: Mode, text: string) => (
+    <label className="flex items-center gap-2 cursor-pointer">
+      <input type="radio" name="order-part" checked={mode === value} onChange={() => setMode(value)} />
+      {text}
+    </label>
+  );
+
+  return (
+    <div {...dialogProps} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-[var(--surface)] rounded-xl shadow-xl max-w-md w-full border border-[var(--line)]">
+        <div className="flex items-center justify-between p-5 border-b border-[var(--line)]">
+          <h2 id={titleId} className="text-lg font-bold text-[var(--text)]">Invoice order {estimate.number || ''}</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="p-1 rounded-lg text-[var(--muted)] hover:text-[var(--text)]">
+            <X aria-hidden="true" className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-5 space-y-4 text-sm">
+          <p className="text-xs text-[var(--muted)]">
+            {estimate.customerName || 'Customer'} · order of {money(progress.totalCents)} · invoiced {money(progress.invoicedCents)}
+            {progress.invoices.length > 0 && ` (${progress.invoices.map(inv => inv.number || inv.id).join(', ')})`} · <strong className="text-[var(--text)]">left {money(progress.leftCents)}</strong>
+          </p>
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-semibold text-[var(--muted)] mb-1">How much to invoice now</legend>
+            {choice('rest', `All that is left (${money(progress.leftCents)})`)}
+            <div className="flex items-center gap-2">
+              {choice('percent', 'A percentage of the order')}
+              {mode === 'percent' && (
+                <input aria-label="Percentage of the order" inputMode="decimal" value={percent} onChange={e => setPercent(e.target.value)} className={`${field} w-20 font-mono text-right`} />
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {choice('amount', 'An amount')}
+              {mode === 'amount' && (
+                <input aria-label={`Amount to invoice (${currency})`} inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} className={`${field} w-28 font-mono text-right`} />
+              )}
+            </div>
+          </fieldset>
+          {preview.length > 0 && (
+            <table className="w-full text-xs">
+              <caption className="text-left text-xs font-semibold text-[var(--muted)] mb-1">The draft invoice</caption>
+              <tbody>
+                {preview.map(item => (
+                  <tr key={item.id}>
+                    <td className="py-0.5 pr-2">{item.description}</td>
+                    <td className="py-0.5 text-right font-mono">{money(item.amountCents)}</td>
+                  </tr>
+                ))}
+                <tr className="border-t border-[var(--line)] font-semibold">
+                  <td className="py-0.5">Total</td>
+                  <td className="py-0.5 text-right font-mono">{money(cents)}</td>
+                </tr>
+              </tbody>
+            </table>
+          )}
+          {problem && <p role="alert" className="text-xs text-rose-600">{problem}</p>}
+          <p className="text-xs text-[var(--muted)]">It is saved as a draft: review it in Sales, then send it.</p>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="px-3 py-2 text-[var(--muted)] hover:underline">Cancel</button>
+            <button type="button" onClick={() => void create()} disabled={Boolean(problem) || saving}
+              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold disabled:opacity-50">
+              {saving ? 'Creating…' : `Create ${money(cents)} invoice`}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
