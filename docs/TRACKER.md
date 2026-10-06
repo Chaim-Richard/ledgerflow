@@ -2154,7 +2154,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BD-02 Client switcher
 - [x] BD-03 Adjusting-entry flag — **done 6 Oct**: the journal form has "Adjusting entry" (an accountant's year-end, audit or correcting adjustment), saved with the entry; Ledger → General journal marks them "adjusting" and lists them alone with "Adjusting entries only"; Duplicate keeps the mark (tests `journal-view.test.tsx`). An adjusted/unadjusted trial balance can build on the mark
 - [ ] BD-04 Workpapers
-- [ ] BD-05 TB export for tax software
+- [x] BD-05 TB export for tax software: Settings → Export → "Trial balance — for tax software": the trial balance on a date from the complete workspace, one row per account with a balance (account number, name, type, the tax line it is mapped to), debit/credit columns or one balance column, no totals row; a trial balance that does not balance is still downloaded but says by how much (`workspace-exports.test.tsx`)
 - [ ] BD-06 Client report pack
 - [ ] BD-07 Client queries
 - [ ] BD-08 Asset register export

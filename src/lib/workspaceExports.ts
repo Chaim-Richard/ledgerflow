@@ -3,7 +3,9 @@ import {isPostable,lineAmount,isCashAccount} from './txFilters';
 import {csvMoney,type CsvValue} from './csvExport';
 import {parseCsv} from './csv';
 import {validCustomReportPeriod,type CustomReportPeriod} from './reportCustomPeriod';
-export type ExportKind='ledger'|'accounts'|'customers'|'vendors'|'bank';
+import {balancesAsOf} from './closingSnapshot';
+export type ExportKind='ledger'|'accounts'|'customers'|'vendors'|'bank'|'trial-balance';
+export type TrialBalanceLayout='debit-credit'|'balance';
 export interface ExportTable {headers:string[];rows:CsvValue[][]}
 /** Read-only view of the existing posting/FX helper: one row per posted line, including unknown accounts. */
 export function ledgerExportTable(transactions:Transaction[],accounts:ChartAccount[],period:CustomReportPeriod,currency:string):ExportTable{
@@ -13,6 +15,28 @@ export function ledgerExportTable(transactions:Transaction[],accounts:ChartAccou
   const amount=lineAmount(line,tx),account=names.get(line.accountId);
   return [tx.date,tx.id,index+1,tx.description,tx.reference||'',line.accountId,account?.code||'',account?.name||line.accountName||'Unknown account',csvMoney(amount>0?amount:0),csvMoney(amount<0?-amount:0),currency,tx.status,line.description||''];
  }))};
+}
+/**
+ * BD-05: the trial balance on a date, in the shape tax software imports (account number, name,
+ * type, the tax line the account is mapped to, then debit/credit columns or one balance column with
+ * debits positive). One row per account that is not at zero, by account number; no totals row
+ * (importers read it as an account). Balances follow the closing-snapshot rule: opening balance
+ * plus every counted line up to the date. Lines on a removed account are kept, named as such.
+ */
+export function trialBalanceExportTable(transactions:Transaction[],accounts:ChartAccount[],asOfDate:string,layout:TrialBalanceLayout):ExportTable&{debitCents:number;creditCents:number}{
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(asOfDate))throw new Error('Choose the date of the trial balance.');
+ const {balances}=balancesAsOf(accounts,transactions,asOfDate);
+ const byId=new Map(accounts.map(account=>[account.id,account]));
+ const lines=Object.entries(balances).map(([id,cents])=>{
+  const account=byId.get(id);
+  return {code:account?.code||'',name:account?.name||`Unknown account (${id})`,type:account?.type||'',taxLine:account?.taxCategory||'',cents};
+ }).sort((a,b)=>a.code.localeCompare(b.code,undefined,{numeric:true})||a.name.localeCompare(b.name));
+ const debitCents=lines.reduce((sum,line)=>sum+(line.cents>0?line.cents:0),0);
+ const creditCents=lines.reduce((sum,line)=>sum+(line.cents<0?-line.cents:0),0);
+ const head=['Account Number','Account Name','Account Type','Tax Line'];
+ return layout==='balance'
+  ?{headers:[...head,'Balance'],rows:lines.map(line=>[line.code,line.name,line.type,line.taxLine,csvMoney(line.cents)]),debitCents,creditCents}
+  :{headers:[...head,'Debit','Credit'],rows:lines.map(line=>[line.code,line.name,line.type,line.taxLine,csvMoney(line.cents>0?line.cents:0),csvMoney(line.cents<0?-line.cents:0)]),debitCents,creditCents};
 }
 /** Display columns remain spreadsheet-safe; Record JSON preserves types, whitespace and nested fields exactly. */
 export function recordExportTable(records:object[]):ExportTable{
