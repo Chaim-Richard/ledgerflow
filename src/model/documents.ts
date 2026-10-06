@@ -42,6 +42,30 @@ export interface Vendor {
   importBatchId?: string;
 }
 
+/** A bill's expense spread over months (K-17): the entries are in `transactionIds`, the first one moves it to Prepaid. */
+export interface PrepaidSchedule {
+  id: string;
+  amountCents: number;
+  months: number;
+  startMonth: string;
+  expenseAccountId: string;
+  prepaidAccountId: string;
+  transactionIds: string[];
+  createdAt: string;
+}
+
+/** An invoice's income spread over months (K-16): the first entry moves it to Deferred Revenue. */
+export interface RevenueSchedule {
+  id: string;
+  amountCents: number;
+  months: number;
+  startMonth: string;
+  revenueAccountId: string;
+  deferredAccountId: string;
+  transactionIds: string[];
+  createdAt: string;
+}
+
 export interface Bill {
   id: string;
   uid: string;
@@ -78,6 +102,8 @@ export interface Bill {
   paymentDate?: string;
   paidAt?: string;
   reversalEventId?: string;
+  /** Spread over months as a prepaid expense (K-17, src/server/services/prepaidService.ts). */
+  prepaidSchedule?: PrepaidSchedule;
   isLocked?: boolean;
   lockedAt?: string;
   paymentToken?: string;
@@ -114,6 +140,8 @@ export interface Invoice {
   writeOffReason?: string | null;
   writtenOffAt?: string;
   writeOffReversalTransactionId?: string;
+  /** Income spread over months (K-16, src/server/services/prepaidService.ts); written by the server. */
+  revenueSchedule?: RevenueSchedule;
   exchangeRate?: number;
   taxAmountCents?: number;
   taxRate?: number;

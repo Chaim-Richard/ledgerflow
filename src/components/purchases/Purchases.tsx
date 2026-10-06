@@ -11,7 +11,10 @@ import DocumentBulkBar from '../ui/DocumentBulkBar';
 import { useAuthStore } from '../../stores/useAuthStore';
 import type { Bill, Vendor } from '../../types';
 import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
-import { formatCurrency, safeConfirm } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO, safeConfirm } from '../../lib/utils';
+import { undoSpreadRequest } from '../../services/spreadActions';
+import { spreadProgress } from '../../lib/prepaidSchedule';
+import SpreadBillDialog from './SpreadBillDialog';
 import BillModal from './BillModal';
 import VendorModal from './VendorModal';
 import TagFilter from '../common/TagFilter';
@@ -49,6 +52,7 @@ export default function Purchases() {
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<Partial<Bill> | undefined>(undefined);
   const [previewBill, setPreviewBill] = useState<Bill | null>(null);
+  const [spreadingBill, setSpreadingBill] = useState<Bill | null>(null);
   const [pickedBills, setPickedBills] = useState<Set<string>>(() => new Set());
   const pdfWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const homeCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
@@ -121,8 +125,19 @@ export default function Purchases() {
     }
   };
 
+  // K-17: the spread's entries are voided by the server (refused once one of its months is closed)
+  const undoSpread = (b: Bill) => undoSpreadRequest('bill', b.workspaceId, b.id);
+
+  const handleUndoSpread = async (b: Bill) => {
+    if (safeConfirm(`Undo the spread of ${describeBill(b)}? Its monthly entries are voided and the whole cost is back in the bill's month.`) && await undoSpread(b)) {
+      toast.success('Spread undone');
+    }
+  };
+
   const handleVoidBill = async (b: Bill) => {
-    if (safeConfirm(`Void ${describeBill(b)}? It stays on record as void and its entries are reversed.`)) {
+    const spread = b.prepaidSchedule ? ' Its spread over months is undone too.' : '';
+    if (safeConfirm(`Void ${describeBill(b)}? It stays on record as void and its entries are reversed.${spread}`)) {
+      if (b.prepaidSchedule && !(await undoSpread(b))) return;
       await updateEntity('bills', b.id, { status: 'void' }, 'Bill voided');
     }
   };
@@ -291,6 +306,7 @@ export default function Purchases() {
                           {b.status === 'paid' ? <CheckCircle size={10} /> : <AlertCircle size={10} />}
                           {b.status || 'Unpaid'}
                         </span>
+                        {b.prepaidSchedule && <div className="mt-1 text-[10px] text-[var(--muted)]">{spreadProgress(b.prepaidSchedule, getLocalDateISO())}</div>}
                       </td>
                       <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
                         {formatCurrency(b.amountCents || 0)}
@@ -311,6 +327,18 @@ export default function Purchases() {
                             <Pencil className="w-4 h-4" />
                           </button>
                         )}
+                        {canEditContacts && b.status !== 'draft' && b.status !== 'void' && (b.prepaidSchedule ? (
+                          <button type="button" onClick={(e) => { e.stopPropagation(); void handleUndoSpread(b); }}
+                            className="px-2 py-1 text-xs text-[var(--muted)] hover:text-slate-800 rounded-md" aria-label={`Undo the spread of bill ${b.number || ''}`.trim()}>
+                            Undo spread
+                          </button>
+                        ) : (
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setSpreadingBill(b); }}
+                            className="px-2 py-1 text-xs text-indigo-700 dark:text-indigo-300 hover:underline rounded-md" title="A prepaid expense: spread the cost over the months it covers"
+                            aria-label={`Spread bill ${b.number || ''} over months`.replace('  ', ' ')}>
+                            Spread
+                          </button>
+                        ))}
                         {b.status !== 'paid' && b.status !== 'void' && (
                           <>
                             <button
@@ -449,6 +477,7 @@ export default function Purchases() {
         onSave={handleAddVendor}
       />
 
+      {spreadingBill && <SpreadBillDialog bill={spreadingBill} onClose={() => setSpreadingBill(null)} />}
       {isPaymentModalOpen && paymentDocumentId && paymentContactId && (
         <ReceivePaymentModal
           isOpen={isPaymentModalOpen}

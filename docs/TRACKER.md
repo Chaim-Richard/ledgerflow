@@ -1519,7 +1519,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] J-11 Sales Tax Liability Summary (Tax screen: tax by rate, collected and paid, in the home currency; adds up to the return boxes; tested)
 - [x] J-12 Journal Sheet: isPostable + lineAmount, unbalanced list, tested
 - [ ] J-13 Budget vs Actual with drill-down
-- [ ] J-14 Deferred-revenue waterfall
+- [x] J-14 Deferred-revenue waterfall — **done 6 Oct**: Reports → Deferred Revenue Waterfall: each invoice spread over months (K-16) with what is earned in each month of the report period, earned by its end and still deferred after it, with totals; "Show: Expenses (bills)" gives the same for prepaid expenses (K-17). Read from the monthly entries (`src/lib/spreadWaterfall.ts`), so a voided share isn't counted; says so when the loaded ledger is incomplete. Tests: `spread-waterfall.test.tsx`; browser: in `e2e/everyday-reports.spec.ts`
 
 # SECTION K — MISSING FEATURES
 
@@ -1538,9 +1538,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] K-13 Inventory adjustments: Adjust stock per item (correction, stock received with average cost, opening stock), posted at cost with the quantity in one database transaction (tested)
 - [ ] K-14 Account groups
 - [ ] K-15 Tags as an entity
-- [ ] K-16 Revenue recognition schedules
-- [ ] K-17 Prepaids + auto-reversing accruals
-- [ ] K-18 Retainers
+- [x] K-16 Revenue recognition schedules — **done 6 Oct**: the invoice list has "Spread" on a posted invoice (writers): income account (the biggest income line, lines without an account counting for the default one; tax is not income), Deferred Revenue account (Settings → Defaults, else a liability named "deferred/unearned revenue"; never invented), 2–60 months from the invoice's month or later, with the monthly share shown first. The server (the same service as K-17, `prepaidService.ts`) posts in one database transaction the move to Deferred Revenue on the invoice date and one share earned at each month end (whole cents, remainder last), records the schedule on the invoice (spread once) and audits it. The list shows the progress with "Undo spread" (voids the schedule; refused once one of its months is closed); Void undoes the spread first. Entries are tagged `spreadOfInvoiceId`, so editing the invoice re-posts only its own entry, and un-posting a spread invoice elsewhere is refused until the spread is undone. Tests: `revenue-spread.test.ts` (database, through the real workspace routes), `revenue-spread-ui.test.tsx`
+- [x] K-17 Prepaids + auto-reversing accruals — **done 5 Oct**: accruals that reverse themselves are R-05. Prepaids: a posted bill has "Spread" in the bills list (writers): amount (the biggest expense line, in the home currency), expense account, Prepaid Expenses account (Settings → Defaults, else an asset named "prepaid"; never invented), 2–60 months from the bill's month or later, with the monthly share shown first. The server posts, in one database transaction, the move to Prepaid on the bill date and one share back to the expense at each month end (whole cents, the remainder last; marked `scheduled` so the future-date check doesn't flag them), records the schedule on the bill (spread once), and audits it. The list shows "Spread over 12 months from Sep 2026 · 2 of 12 taken" with "Undo spread" (voids every entry of it; refused once one of its months is closed); voiding the bill undoes the spread first. The bill's own posting is not touched: the spread's entries are tagged `spreadOfBillId` (not `billId`), so editing the bill re-posts only its own entry, and turning a spread bill back to draft or void from anywhere else is refused until the spread is undone. Tests: `prepaid-spread.test.ts` (database), `spread-bill.test.tsx`
+- [x] K-18 Retainers — **done 5 Oct (with BE-12)**: money received before an invoice (a customer deposit) or paid before a bill waits in Customer Deposits / Vendor Prepayments (found by Settings mapping or name; without one it stays on A/R or A/P as before), and the customer or vendor page lists it as "Unapplied: $X" with "Apply to invoices/bills": the open ones in the same currency are filled oldest first, amounts can be changed, more than is left or open is refused, and `POST /api/v1/payments/:id/apply` settles them and moves the money to A/R or A/P in one database transaction (writers only, closed period refused, audited). Tests: `advance-payments.test.ts` (database), `unapplied-payments.test.tsx`
 - [x] K-19 Bad debt with reversal (server, base currency, tested)
 - [x] K-20 Undeposited funds (Make deposit; tested)
 - [x] K-21 Expected-bill tracking: vendors that bill on a rhythm (weekly to quarterly, at least 3 regular bills) are learned from the bills already recorded; Purchases shows "Expected bills" (usual amount or range, how often, expected by / days late) with "Record bill" (the latest bill's lines copied, new dates) and "Not expected"; vendors on a recurring bill schedule are left out (tested)
@@ -1752,9 +1752,10 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-186 Choosing payment terms on an invoice (Net 15/30/60) didn't change its due date: it stayed on the invoice date, so every invoice looked due at once and reminders went out early. The due date now follows the terms and moves with the invoice date; a new invoice for a customer takes the terms of their latest invoice (I-23) (tested)
 - [x] L-187 **Money:** "Run month-end revaluation" (currency tool) posted one entry that applied a single exchange rate to every asset and liability account, home-currency ones included, for any member, and the rate service fell back to made-up rates (USD→EUR 0.92…) when it couldn't be reached. Rates are now never invented (an error instead; the converter shows no amount and says why) and the run posts nothing until R-07 is built (it must revalue open foreign invoices and bills, since foreign documents are stored in the home currency) (tested)
 - [x] L-188 Credit notes and vendor credits got random numbers (CN-1234, VC-5678) that could repeat and didn't follow any series; a double click on Save made two. They now take the next number of their own series (Settings → Document numbering: credit notes CN-2026-0001…, vendor credits VC-2026-0001…, allocated by the server so two people never get the same one), Save works once, and the amount label shows the workspace currency instead of "$" (tested)
-- [x] L-189 Payments were numbered PMT-<random 4 digits> too, so two payments could share a number. They now take the next number of their own series (PMT-2026-0001…, Settings → Document numbering), allocated in the same database step that saves the payment, so a refused payment uses no number. Still random: new estimates' fallback number (EST-1234) when the server can't give one; left for after the estimate deposit work by the other AI (tested)
+- [x] L-189 Payments were numbered PMT-<random 4 digits> too, so two payments could share a number. They now take the next number of their own series (PMT-2026-0001…, Settings → Document numbering), allocated in the same database step that saves the payment, so a refused payment uses no number. New estimates no longer fall back to a random EST-1234 either: without a number from the series nothing is saved (tested)
 - [x] L-190 **Money:** the journal entry form filled foreign-currency rates from a made-up table (EUR 0.92 × 1.1 for 2026, ILS 3.65 × 1.1…), and those were even the wrong way round (euros per dollar, used as dollars per euro), so €100 posted as about $101 instead of about $108; clearing the rate box silently used 1. It now fills the last rate used for that currency, then today's rate from the rate service, and posts nothing until a rate is there; the currency list includes the workspace's own currency (a workspace in AUD couldn't choose it) and the ones already used (tested)
 - [x] L-191 Invoice approval (BE-04, merged from the arena AI) trusted the browser: the server stored whatever `approval` a save carried, so a bookkeeper going around the app could mark their own invoice approved, or leave the field out on an invoice saved as sent. Now the server decides on every invoice it saves (only owners and accountants approve or send back, and the record names them with the server's time; an invoice going out over the limit without a record gets one), and a database guard refuses the same from a direct write. Also: a customer who gets paper got the same "send a paper copy" note in the bell every day; now once per reminder day (tested, incl. database rules)
+- [x] L-192 **Money:** a payment on a foreign-currency invoice or bill was booked at the document's own rate, so the bank account in the books got a different amount than the real bank (EUR 100 invoiced at 1.10 and received at 1.15: $110 booked, $115 arrived) and no exchange gain or loss was ever recorded. The payment dialog now shows amounts in the document's currency and asks for the rate on the payment day (filled from the rate service or the last one used); the server books the bank at that rate, clears the receivable/payable at the document's rate and posts the difference as realized exchange gain or loss (refused if there is no such account). Without a rate it stays as before (tested against the database)
 - [x] L-51 Ratchet: all metrics real, fast, warnings via `--max-warnings`
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION
@@ -1874,9 +1875,35 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] R-02 Sign-off per item (who, when, note; final once hard-closed)
 - [x] R-03 Soft vs hard close (soft: only owners/accountants post)
 - [x] R-04 Year-end retained-earnings roll (`/close-year` + `ClosingEntryEngine`, tested)
-- [ ] R-05 Auto-reversing accruals
+- [x] R-05 Auto-reversing accruals: a journal entry can be marked "Reverse automatically"; its mirror (every line negated, linked both ways) is posted on the 1st of the next month, or a chosen later date, in the same request, so there is never an accrual without its reversal; a closed month refuses both (tested against the database). The server now accepts a reversal of an entry in the same request
 - [x] R-06 Depreciation run (server, one entry per month, catch-up, tested)
-- [ ] R-07 FX revaluation run (the old run was switched off, L-187: build it from open foreign-currency invoices and bills, owner/accountant, with a reversal on the next day)
+- [x] R-07 FX revaluation run (the old run was switched off, L-187: open foreign-currency invoices and bills, owner/accountant, reversal next day) — implementation and local checks done 2026-10-05; **merged 5 Oct after Claude ran the database tests (`fx-revaluation-server.test.ts`, Undo and historical month-end included): they pass**:
+  `src/lib/fxRevaluation.ts` holds the arithmetic and skip rules; nothing invents an FX account or a
+  rate. Today uses the live exchange rate. A past date must be a real month-end, cannot be in the
+  future, and must use rates typed for that date — a missing historical rate is named by the preview
+  and cannot be used to post a partial entry or silently fall back to today's rate. Impossible dates,
+  non-month-end historical dates and future dates are refused. The Currencies panel asks for the
+  valuation date and, after its preview identifies the open foreign currencies, each rate as base
+  currency per unit; its rows and descriptions name the historical rate date. Home-currency documents
+  are never listed; paid/draft/void/closed documents, zero open amounts, missing booked rates, missing
+  receivable/payable accounts and accounts already kept in that foreign currency are skipped with a
+  reason. A missing live rate stops the entire current-date run. Receivables and payables move by the
+  difference from their own booked rate; the unrealized gain/loss account takes the other side, every
+  line is whole cents, and the entry sums to zero.
+
+  The service requires owner/accountant rights, keeps the ordinary closed-period guard, writes the
+  revaluation and exact next-day reversal together, prevents a duplicate date, and audits both posting
+  and undo. Undo now reads and validates the linked scheduled reversal, then posts its mirror today,
+  marks the original reversed and voids the active scheduled row in the same transaction. Review found
+  that the DB test had fetched `before0` before Undo and then asserted those stale objects had changed;
+  the assertion now checks fresh `after0` rows. The UI also handles an Undo response that has no plan
+  arrays without trying to render it as a plan. Tests: 21 pure rules/date cases, 8 panel cases; the
+  DB-backed `src/tests/fx-revaluation-server.test.ts` includes the fresh Undo read and a typed
+  historical month-end but self-skips here without `LF_TEST_DATABASE_URL`. Local merged-main checks:
+  typecheck, **1147 tests passed**, ESLint 227 warnings / 0 errors (the existing cap), production
+  build. (The DB suite was rerun on the merge: 1301 tests pass.) This is not gated on the
+  `multi_currency_revaluation` Pro flag: that flag is otherwise unused, and which pages a plan gets is
+  the owner's commercial call.
 - [x] R-08 Unposted-drafts review (drafts in the period block the close, listed)
 - [ ] R-09 Close comparison
 - [x] R-10 Lock by role (close/reopen owner+accountant; hard reopen owner; soft close by role)
@@ -2067,7 +2094,19 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BA-14 Notify via SMS
 - [x] BA-15 Partial period unlock (date range, reason, close again)
 - [ ] BA-16 Branch activate / deactivate
-- [ ] BA-17 Money-In / Money-Out dialogs
+- [x] BA-17 Money-In / Money-Out dialogs — **done 2026-10-05**: "Money in" and "Money out" on the banking page
+  (`src/components/banking/CashMovementDialog.tsx`, the rules in `src/lib/cashMovement.ts`): how much, which of
+  your accounts it lands in or leaves, which account it belongs to, and a name and a reference if there is one.
+  It posts **one balanced entry** through the ordinary save path — server-checked, survives a reload — never a
+  side list. Three things are refused, each with the reason said out loud: another of your own accounts (that is
+  a transfer, and the transfer dialog is what keeps it out of income and expense), a receivable or payable account
+  (money that settles an invoice or a bill goes on that document, otherwise the document keeps reading as owed),
+  and an amount that is not a positive whole number of cents. Words the workspace has used before are suggested,
+  and the account used most is offered first; the bank line carries no description on purpose, so what the
+  workspace learns from the entry points at the account the money is for and not at the bank. Someone who only
+  reads sees the dialog and its words, with no button. This is also the first half of an advance payment: money in
+  booked against the customer deposits account is what a later deposit invoice draws down (see the note on
+  BE-05). (tested: 14 on the rules, 7 on the dialogs)
 - [ ] BA-18 Import uncategorised transactions
 - [x] BA-19 Branding templates screen (= Y-33)
 - [ ] BA-20 Export dialog
@@ -2076,10 +2115,20 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [ ] BB-01 Categories
 - [ ] BB-02 Currencies
-- [ ] BB-03 Defaults
+- [x] BB-03 Defaults — **done 5 Oct**: Settings → Defaults lists each kind of posting (A/R, A/P, sales, expenses, bank, sales tax payable, tax paid on purchases, customer deposits, vendor prepayments, prepaid expenses) with the account it uses now: the chosen one, or "Automatic (…)" by the posting's own rule (`src/lib/accountDefaults.ts`), or a warning when the chart has none. Choosing saves at once (owner/accountant; others read), keeping other mappings. The keys are the ones the postings read (`customer deposits`, `vendor prepayments`, `prepaid expenses` now match the invoice posting's spelling). Not here: default payment terms (they come from the customer or their last invoice, I-23; a workspace-wide default needs a new workspace field and so a database migration, left for later) and the default tax code (marked on the tax code itself). Tests: `defaults-settings.test.tsx`; the tab is in the browser view-coverage test
 - [x] BB-04 Email (Settings → Emails & Reminders: templates, reminders, thank-you emails, monthly statements)
 - [ ] BB-05 Localisation
-- [ ] BB-06 Schedule (UI over jobRuns)
+- [x] BB-06 Schedule (UI over jobRuns): Settings → Schedule — anyone signed in may read it, and there is nothing to change — says what the
+  once-a-day run takes care of — the recurring drafts, the reminders and statements, the notices, the clearing away of logs past their
+  time — when it last ran, whether anything in it went wrong (with the words the job said), and when it is next due. The daily run now
+  records what each job answered, not only that one of them failed, and a run that was silent about a job is shown as "not reported"
+  rather than as all clear. Read-only on purpose: when jobs run is the installation's schedule (`vercel.json`'s cron + its secret), so a
+  switch here would promise something the app cannot do, and there is deliberately no "run it now" button — that would email people on
+  demand; the fix for a failed job is what it failed about, which is written next to its name. The rules and the sentences are in
+  `src/lib/jobSchedule.ts`, mounted at `GET /api/v1/schedule` (signed in; only the run's timings, no counts — the status page has less
+  for anyone). Two lists that must not drift are held together by tests: the jobs the cron route runs, and the jobs this screen
+  describes; and the time the screen calls "due" is read out of `vercel.json`. (tested: 15 on the rules, 5 on the tab, plus its
+  settings tab in the browser suite)
 - [ ] BB-07 Modules
 - [x] BB-08 Invoice settings (Settings → Branding & PDFs for logo, colours, footer and terms; Document Numbering; default terms per document type, Y-34)
 - [x] BB-09 Settings search: ⌘K finds every screen, report and settings tab, settings also by what they're about ("logo", "invoice number", "2fa"); opens at once (the palette's 0.4 s pause before every action removed) (tested)
@@ -2117,14 +2166,14 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] BE-02 Thank-you email after payment: Settings → Emails & Reminders switch (off by default); payments recorded by hand, from a bank line or online send the "Payment received (thank you)" email, logged, skipped for bounced addresses; never holds up the payment (tested)
 - [x] BE-03 Recurring pause/resume/delete (and recurring invoices now create draft invoices; tested)
 - [x] BE-04 Invoice approval: Settings → Emails & Reminders can say that no invoice over a chosen amount may reach the customer until an owner or an accountant signs it off. It holds the **sending**, not the books: the invoice is dated, saved, posted and counted in accounts receivable exactly as before — only the customer receiving it waits. An owner's or accountant's save of an invoice that is going out *is* the signature; anybody else's leaves it waiting, shown under the invoice's state in the list (the amount and the limit in the tooltip), where an approver can Approve it or Send it back with a reason the author then sees. While it waits it is not emailed, not saved as Sent, and not reminded about; approving it puts the reminders back on. An invoice that already went out before the rule existed is left alone, so switching this on never silences reminders for old invoices. The amount is compared in the workspace's currency, using the exchange rate on the invoice, and an invoice of exactly the limit goes out on its own. The gate sits in the app and in the email endpoint, not in the row: it is a rule about documents, not a lock on the data (tested)
-- [ ] BE-05 Deposit invoice from estimate — *not built, and this is why (Claude, 5 Oct): an invoice can already carry `depositCents`, and posting it moves that amount out of the Customer Deposits liability against accounts receivable (`src/services/ledgerPost/invoicePosting.ts`, the AF-03 rule) on the assumption the money was booked there when it arrived. Nothing in the app does that first half: recording money that comes in before an invoice exists would have to be a payment, and a payment settles the invoice it points at. So a deposit invoice made from an estimate would count the same money as income twice. What is missing is an advance payment (a Money-In that credits a liability, BA-17's dialogs being the natural home); until then `convertEstimateToInvoice` stays as it is — one draft invoice for the full amount, net-30, declined estimates refused.*
+- [ ] BE-05 Deposit invoice from estimate — *not built, and this is why (Claude, 5 Oct): an invoice can already carry `depositCents`, and posting it moves that amount out of the Customer Deposits liability against accounts receivable (`src/services/ledgerPost/invoicePosting.ts`, the AF-03 rule) on the assumption the money was booked there when it arrived. Nothing in the app does that first half: recording money that comes in before an invoice exists would have to be a payment, and a payment settles the invoice it points at. So a deposit invoice made from an estimate would count the same money as income twice. The advance payment half has since been built (BA-17, 5 Oct: Money In on the banking page, booked against the customer deposits account, is exactly the credit the posting draws down), so an advance no longer has to double-count — but nothing turns an estimate into a deposit invoice: `convertEstimateToInvoice` stays as it is (one draft invoice for the full amount, net-30, declined estimates refused), and an estimate carries no field saying how much of it is a deposit. Both are still to be decided and built, so the item stays open.*
 - [x] BE-06 Auto-apply credits: "Apply open credits" on the credit notes screen (all customers or all vendors) and on each customer's or vendor's page: every open credit, oldest first, goes to that contact's open invoices (bills) in the same currency, the one due first first; drafts, voided and paid ones get nothing; one database transaction on the server, audited; no ledger entry (issuing the credit already lowered what is owed) (tested)
 - [x] BE-07 Batch statement send: "Email statements" on the customer list: every active customer with something open gets their statement PDF with the new "Customer statement" email (editable in Settings → Emails); no address, nothing open, archived or bounced customers are skipped and listed with the reason; logged per customer; writers only. Also: the statement PDF now reads only that contact's payments, not the whole workspace's (tested)
 - [x] BE-08 Recurring expense: a new bill can be set to repeat (every week, month, quarter or year). The daily job makes a draft copy on each date (vendor, lines, tax and currency; not the number or payments), tells the team, and it is posted only when someone checks it and saves it; paused like other schedules on the Recurring screen; once per date (tested)
 - [ ] BE-09 Mileage
 - [ ] BE-10 Per-diem
 - [x] BE-11 PO → bill conversion (purchase orders saved, goods received, "Create bill"; tested)
-- [ ] BE-12 Vendor prepayment
+- [x] BE-12 Vendor prepayment — **done 5 Oct (with K-18)**: see K-18
 - [ ] BE-13 Cheque printing
 
 # SECTION BF — ITEMS · PRICING · STOCK

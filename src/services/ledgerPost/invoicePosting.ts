@@ -23,6 +23,12 @@ export async function postInvoiceLedger(
 ): Promise<{ cogsPendingReason?: string }> {
   if (!workspaceId || !invoiceId) return {};
 
+  // an invoice spread over months (K-16) keeps its monthly entries: undo the spread before un-posting it
+  const unposting = ['draft', 'rejected', 'void', 'cancelled'].includes(String(invoiceData.status || 'pending'));
+  if (unposting && invoiceData.revenueSchedule?.id) {
+    throw new Error('This invoice is spread over months: undo the spread first (Sales → Undo spread)');
+  }
+
   const invoiceDate = invoiceData.date || getLocalDateISO();
   verifyLockDate(invoiceDate, context);
 

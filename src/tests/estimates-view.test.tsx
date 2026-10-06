@@ -49,3 +49,15 @@ test('estimate validation and Cancel send no create request', () => {
   assert.equal(view.queryByRole('button', { name: 'Save Estimate' }), null);
   assert.equal(calls.length, 0);
 });
+
+test('without a number from the series nothing is saved (no random EST-1234 that could repeat; L-189)', async () => {
+  const calls = stubFetchWithBodies(503, { message: 'unavailable' });
+  const view = render(<EstimatesView />);
+  fireEvent.click(view.getByRole('button', { name: 'New Estimate' }));
+  fireEvent.change(view.getByLabelText('Customer *'), { target: { value: 'cust-1' } });
+  fireEvent.change(view.getByLabelText('Amount ($) *'), { target: { value: '10' } });
+  fireEvent.click(view.getByRole('button', { name: 'Save Estimate' }));
+  await waitFor(() => assert.ok(calls.some(c => c.url.endsWith('/next-number'))));
+  await waitFor(() => assert.ok(view.getByRole('button', { name: 'Save Estimate' })));
+  assert.equal(calls.some(c => c.url.includes('/rpc/lf_set')), false, 'nothing written');
+});

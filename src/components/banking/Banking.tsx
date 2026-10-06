@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { Building, CheckCircle2, RefreshCw, Landmark, ArrowRightLeft } from 'lucide-react';
+import { Building, CheckCircle2, RefreshCw, Landmark, ArrowRightLeft, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { toast } from 'sonner';
 import { getIdToken } from '../../firebase';
 import { cn } from '../../lib/utils';
@@ -11,6 +11,7 @@ import { parseCamt053Statement as _parseCamt053Statement } from '../../lib/camt0
 import { scoreReceiptMatches as _scoreReceiptMatches } from '../../lib/receiptMatcher';
 import { TransferModal } from './TransferModal';
 import MakeDepositDialog from './MakeDepositDialog';
+import CashMovementDialog from './CashMovementDialog';
 
 export default function Banking() {
   const accounts = useLedgerStore(s => s.accounts).filter(a => 
@@ -27,6 +28,7 @@ export default function Banking() {
   const [needsReconnect, setNeedsReconnect] = useState<{ bankId: string; institutionName: string }[]>([]);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
+  const [cashMovement, setCashMovement] = useState<null | 'in' | 'out'>(null);
 
   const handleSyncNow = async (accountName: string, accountId: string) => {
     setSyncingAccountId(accountId);
@@ -76,6 +78,21 @@ export default function Banking() {
             </p>
           </div>
           <div className="shrink-0 flex items-center gap-2">
+            {/* money that arrives or leaves with no document behind it (BA-17) */}
+            <button
+              onClick={() => setCashMovement('in')}
+              className="px-4 py-2 bg-white hover:bg-neutral-50 text-neutral-800 text-xs font-bold rounded-xl border border-neutral-200 transition-all flex items-center gap-2 shadow-xs cursor-pointer"
+            >
+              <ArrowDownToLine className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+              <span>Money in</span>
+            </button>
+            <button
+              onClick={() => setCashMovement('out')}
+              className="px-4 py-2 bg-white hover:bg-neutral-50 text-neutral-800 text-xs font-bold rounded-xl border border-neutral-200 transition-all flex items-center gap-2 shadow-xs cursor-pointer"
+            >
+              <ArrowUpFromLine className="h-4 w-4 text-rose-600" aria-hidden="true" />
+              <span>Money out</span>
+            </button>
             <button
               onClick={() => setIsTransferModalOpen(true)}
               className="px-4 py-2 bg-white hover:bg-neutral-50 text-neutral-800 text-xs font-bold rounded-xl border border-neutral-200 transition-all flex items-center gap-2 shadow-xs cursor-pointer"
@@ -151,6 +168,13 @@ export default function Banking() {
         </div>
       </div>
       <TransferModal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} />
+      {cashMovement && (
+        <CashMovementDialog
+          isOpen
+          direction={cashMovement}
+          onClose={() => setCashMovement(null)}
+        />
+      )}
       {isDepositOpen && <MakeDepositDialog onClose={() => setIsDepositOpen(false)} />}
     </div>
   );

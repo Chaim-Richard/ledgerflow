@@ -87,3 +87,36 @@ describe('Payment dialog', () => {
     assert.equal(closed, 0);
   });
 });
+
+describe('Paying a foreign-currency invoice (L-192)', () => {
+  beforeEach(() => {
+    seed();
+    useLedgerStore.setState({ invoices: [makeInvoice({ id: 'e1', number: 'EUR-1', customerId: 'c1', status: 'sent', amountCents: 10000, currency: 'EUR', exchangeRate: 1.1, date: '2026-09-01' })] });
+  });
+  afterEach(() => cleanup());
+
+  test('amounts in the invoice\'s currency, the day\'s rate filled from the rate service, the difference shown and sent', async () => {
+    const calls: { url: string; body: Record<string, unknown> }[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      calls.push({ url, body: JSON.parse(String(init?.body || '{}')) });
+      if (url.includes('/fx/rate')) return new Response(JSON.stringify({ rate: 1.15 }), { status: 200 });
+      return new Response(JSON.stringify({ status: 'success' }), { status: 200 });
+    }) as typeof fetch;
+    let closed = 0;
+    render(<ReceivePaymentModal isOpen onClose={() => { closed++; }} defaultContactId="c1" defaultDocumentId="e1" />);
+    await waitFor(() => assert.ok(screen.getByLabelText('Payment Amount (EUR) *')));
+    await waitFor(() => assert.equal((screen.getByLabelText('USD for 1 EUR on the payment day') as HTMLInputElement).value, '1.15'));
+    assert.match(screen.getByText(/Arrives as/).textContent || '', /Arrives as \$115\.00; exchange gain \$5\.00 against the document's rate \(1\.1\)/);
+    await click('Record & Post Payment');
+    await waitFor(() => assert.equal(closed, 1));
+    const body = calls.find(c => c.url === '/api/v1/payments')!.body;
+    assert.deepEqual([body.amountCents, body.paymentExchangeRate], [10000, 1.15]);
+  });
+
+  test('without a rate it is booked at the invoice\'s rate, and says so', async () => {
+    stubFetchWithBodies(503, {});
+    render(<ReceivePaymentModal isOpen onClose={() => {}} defaultContactId="c1" defaultDocumentId="e1" />);
+    await waitFor(() => assert.ok(screen.getByText(/Without it, the payment is booked at the document's rate \(1\.1\)/)));
+  });
+});

@@ -13,7 +13,8 @@
 import { lazy } from 'react';
 import type { ComponentType, ElementType } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { 
+import {
+  CalendarClock,
   LayoutGrid, BarChart3, Activity, FileText, Database, Layers, 
   ArrowDownRight, ArrowUpRight, FolderKanban, Users, RefreshCw, 
   ShieldCheck, Terminal as TerminalIcon, Settings, Building, Cpu as CpuIcon,
@@ -343,6 +344,7 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'SalesTrendsView': lazy(() => import('../components/reporting/DocumentTrendsView').then(module => ({default:module.SalesTrendsView}))),
   'PurchaseTrendsView': lazy(() => import('../components/reporting/DocumentTrendsView').then(module => ({default:module.PurchaseTrendsView}))),
   'PaymentMethodSummaryView': lazy(() => import('../components/reporting/PaymentMethodSummaryView')),
+  'SpreadWaterfallView': lazy(() => import('../components/reporting/SpreadWaterfallView')),
   'FinancialRatiosReportView': lazy(() => import('../components/reporting/FinancialRatiosReportView')),
   'CustomerGrossProfitView': lazy(() => import('../components/reporting/CustomerGrossProfitView')),
   'InactiveItemsReportView': lazy(() => import('../components/reporting/InactiveItemsReportView')),
@@ -377,6 +379,7 @@ export const REPORT_TABS_REGISTRY = [
   { id: 'sales-trends', label: { en: 'Sales Trends', he: 'מגמות מכירה' }, componentName: 'SalesTrendsView', icon: TrendingUp },
   { id: 'purchase-trends', label: { en: 'Purchase Trends by Vendor', he: 'מגמות רכישה לפי ספק' }, componentName: 'PurchaseTrendsView', icon: ShoppingCart },
   { id: 'sales-payment-summary', label: { en: 'Sales Payment Summary', he: 'תקבולים לפי אמצעי תשלום' }, componentName: 'PaymentMethodSummaryView', icon: CreditCard },
+  { id: 'deferred-revenue-waterfall', label: { en: 'Deferred Revenue Waterfall', he: 'מפל הכנסות נדחות' }, componentName: 'SpreadWaterfallView', icon: Calendar },
   { id: 'financial-ratios', label: { en: 'Financial Ratios', he: 'יחסים פיננסיים' }, componentName: 'FinancialRatiosReportView', icon: Activity },
   { id: 'gross-profit-by-customer', label: { en: 'Gross Profit by Customer', he: 'רווח גולמי לפי לקוח' }, componentName: 'CustomerGrossProfitView', icon: TrendingUp },
   { id: 'inactive-items', label: { en: 'Inactive Items', he: 'פריטים ללא מכירה' }, componentName: 'InactiveItemsReportView', icon: Package },
@@ -419,6 +422,8 @@ export const SETTINGS_TABS_REGISTRY = [
   { id: 'emails', label: { en: 'Emails & Reminders', he: 'מיילים ותזכורות' }, componentName: 'EmailSettingsView', icon: Mail },
   { id: 'branding', label: { en: 'Branding & PDFs', he: 'מיתוג ומסמכים' }, componentName: 'BrandingSettingsView', icon: Palette },
   { id: 'numbering', label: { en: 'Document Numbering', he: 'מספור מסמכים' }, componentName: 'NumberingSettingsView', icon: Hash },
+  { id: 'defaults', label: { en: 'Defaults', he: 'ברירות מחדל' }, componentName: 'DefaultsSettingsView', icon: Scale },
+  { id: 'schedule', label: { en: 'Schedule', he: 'לוח זמנים' }, componentName: 'ScheduleSettingsView', icon: CalendarClock },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ];
@@ -437,7 +442,9 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'EmailSettingsView': lazy(() => import('../components/platform/settings/EmailSettings')),
   'BrandingSettingsView': lazy(() => import('../components/platform/settings/BrandingSettings')),
   'NumberingSettingsView': lazy(() => import('../components/platform/settings/NumberingSettings')),
+  'DefaultsSettingsView': lazy(() => import('../components/platform/settings/DefaultsSettings')),
   'ExportView': lazy(() => import('../components/platform/settings/BackupExportSettings')),
+  'ScheduleSettingsView': lazy(() => import('../components/platform/settings/ScheduleSettings')),
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };
 

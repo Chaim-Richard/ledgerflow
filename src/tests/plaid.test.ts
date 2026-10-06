@@ -94,6 +94,9 @@ describe('Plaid bank connections', { skip: !url && 'LF_TEST_DATABASE_URL not set
     assert.deepEqual((res.body.transactions as { transaction_id: string }[]).map(t => t.transaction_id), ['tx-access-good']);
     assert.deepEqual(res.body.needsReconnect, [{ bankId: expiredBankId, institutionName: 'Old Bank' }]);
     assert.equal((await db.collection('banks').doc(expiredBankId).get()).data()?.status, 'login_required');
+    // BC-11: the time of the last sync that worked; an expired login doesn't move it
+    assert.match(String((await db.collection('banks').doc(goodBankId).get()).data()?.lastSyncedAt), /^\d{4}-\d{2}-\d{2}T/);
+    assert.equal((await db.collection('banks').doc(expiredBankId).get()).data()?.lastSyncedAt, undefined);
     assert.equal((await call('owner-2', 'POST', 'sync', { workspaceId: ws })).status, 403);
     assert.equal((await call('owner-1', 'POST', 'sync', {})).status, 400);
   });
@@ -114,6 +117,7 @@ describe('Plaid bank connections', { skip: !url && 'LF_TEST_DATABASE_URL not set
     const banks = res.body.banks as Record<string, unknown>[];
     assert.equal(banks.length, 2);
     assert.ok(banks.every(b => !('access_token' in b)));
+    assert.deepEqual(banks.map(b => typeof b.lastSyncedAt).sort(), ['object', 'string'], 'last successful sync shown (null for the expired one)');
     assert.equal(goodBankId.length > 0, true);
   });
 });

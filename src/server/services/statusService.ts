@@ -29,6 +29,12 @@ export interface DailyJobRun {
   finishedAt: string;
   status: 'ok' | 'failed';
   failedJobs: string[];
+  /**
+   * What each job answered — 'ok', or 'failed: why' (Settings → Schedule, BB-06, reads it to name the
+   * job that went wrong instead of only saying that something did). Rows written before it existed have
+   * no field, and the schedule screen says so rather than calling an unreported run a clean one.
+   */
+  results?: Record<string, string>;
 }
 
 const DAILY_RUN_ID = 'daily_latest';
@@ -37,7 +43,7 @@ const DAILY_LATE_HOURS = 36;
 
 export async function recordDailyJobRun(db: Firestore, startedAt: string, results: Record<string, string>, now = new Date()): Promise<void> {
   const failedJobs = Object.entries(results).filter(([, r]) => r !== 'ok').map(([name]) => name);
-  const run: DailyJobRun = { job: 'daily', startedAt, finishedAt: now.toISOString(), status: failedJobs.length ? 'failed' : 'ok', failedJobs };
+  const run: DailyJobRun = { job: 'daily', startedAt, finishedAt: now.toISOString(), status: failedJobs.length ? 'failed' : 'ok', failedJobs, results: { ...results } };
   await db.collection('jobRuns').doc(DAILY_RUN_ID).set(run);
 }
 
