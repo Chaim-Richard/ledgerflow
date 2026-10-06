@@ -2074,7 +2074,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Z-31 Recent items Last ten distinct openRecord references, scoped by user/workspace, persisted locally and reopened through typed links; store and Chromium tests.
 - [x] Z-32 Deep links to any record
 - [x] Z-33 Grouped search results Search results grouped by kind; transactions/accounts/invoices/bills open typed records. Unicode comparison matches vocalized Hebrew; Chromium and grouping tests. Removed duplicate palette mounting and made the remaining palette a named dialog.
-- [ ] Z-34 Web app manifest
+- [x] Z-34 Web app manifest — Overview launch, brand PNG/Apple icons; six-screen 390px keyboard/layout checks (AI #2, C-22).
 - [x] Z-35 44px touch targets Phone buttons, fields and checkbox/radio targets have 44px minimums; compact virtual transaction rows remain at least 44px on phones. Chromium verifies controls, selection, navigation and no page overflow.
 
 # SECTION BA — DISCRETE USER ACTIONS

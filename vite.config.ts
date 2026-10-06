@@ -14,9 +14,11 @@ export default defineConfig({
   },
   plugins: [react(), tailwindcss(), VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "robots.txt", "apple-touch-icon.png", "**/*.svg"],
+      includeAssets: ["robots.txt", "apple-touch-icon.png", "**/*.svg"],
       manifest: {
         id: "com.ledgerflow.app",
+        start_url: "/#dashboard",
+        scope: "/",
         name: "LedgerFlow",
         short_name: "LedgerFlow",
         description: "Professional cloud financial management and smart double-entry auditing.",
@@ -27,14 +29,14 @@ export default defineConfig({
         categories: ["finance", "business", "productivity"],
         icons: [
           {
-            src: "/pwa-192x192.svg",
+            src: "/pwa-192x192.png",
             sizes: "192x192",
-            type: "image/svg+xml"
+            type: "image/png"
           },
           {
-            src: "/pwa-512x512.svg",
+            src: "/pwa-512x512.png",
             sizes: "512x512",
-            type: "image/svg+xml",
+            type: "image/png",
             purpose: "any maskable"
           }
         ],
@@ -44,14 +46,14 @@ export default defineConfig({
             short_name: "New Entry",
             description: "Create a new journal entry",
             url: "/?action=new-journal",
-            icons: [{ src: "/pwa-192x192.svg", sizes: "192x192" }]
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }]
           },
           {
             name: "Dashboard",
             short_name: "Dashboard",
             description: "View financial dashboard",
             url: "/",
-            icons: [{ src: "/pwa-192x192.svg", sizes: "192x192" }]
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }]
           }
         ]
       },

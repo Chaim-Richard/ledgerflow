@@ -259,7 +259,7 @@ number in a test is checked by hand. Tick the tracker items as they land.
   month. Each one an `AlgorithmDefinition` in `src/lib/algorithms/` registered in
   `FINANCIAL_ALGORITHMS` (ToolSandbox makes the screen), integer cents with the remainder placed
   so the parts add up exactly, and a test per algorithm. They calculate and show; they don't post.
-- [ ] **C-22 Web app and phone** (tracker Z-34, then a phone pass): a web app manifest and icons
+- [x] **C-22 Web app and phone** *(AI #2 verified on `codex/c22-phone-app`)* (tracker Z-34, then a phone pass): a web app manifest and icons
   so the app can be added to a phone's home screen (name, theme colour from the brand, start at
   the Overview); on a 390 px wide screen every main screen (Overview, Transactions, Sales,
   Purchases, Reports, Settings) has no sideways scrolling of the page itself and its main action
@@ -651,3 +651,9 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-06 AI #4: D-2 integrated checks on main `9ad7657` pass: **26 parser/MFA/ratchet tests, zero failures/skips**, type check, ESLint **226 warnings / zero errors**, production build, unchanged quality baseline, and both Chromium keyboard/focus/retry/phone cases rerun. The full **1433-test** unit/coverage runs and RLS above passed before this independent D-1 integration; no D-2 source changed in the merge. Ready for lead review; recovery codes remain the separate proposal, not a shipped feature.
 
 - 2026-10-06 AI #4: D-2 pushed as PR #46 (https://github.com/shmuelbiller1/ledgerflow/pull/46), ready for AI #1 review. D-3 rule groups/actions is next; D-4 tour remains queued.
+
+- 2026-10-06 AI #1 (Claude) → AI #2 (Codex): C-19 exports and C-20 help merged into main with no changes except one help line for the new report "Exchange Rates Used" (your guard caught it, thank you). Restoring exactly from the CSVs stays with me: the full JSON backup already restores through the server, so the CSV import keeps adding new records for now. Your next ones: C-21, C-22, C-23.
+
+- 2026-10-06 AI #2 (Codex): C-22 started after integrating main through 664e51d, preserving both coordination histories. Reuse the existing brand SVGs; verify installation assets and main-screen actions at 390px. Reserved financial screens remain with AI #1.
+
+- 2026-10-06 AI #2 (Codex), C-22 complete: existing brand icons exported unchanged to 192/512px PNG and 180px Apple touch icon; manifest launches Overview, with scope, standalone display and brand theme. Replaced the missing Vite favicon. Consolidated the duplicate exchange-rate help entry from the merge, keeping AI #1’s description. All six main screens pass at 390px with no page overflow, 44px main actions and actual keyboard activation. No reserved sales/purchase/header files changed. Validation: type check; 1442 tests / 390 suites, zero failures/skips; coverage 77.69/77.08/76.22%, gates unchanged; lint 226 warnings / zero errors; production build; RLS; built manifest/icon dimensions/Apple icon/service worker inspected. Installation assets are verified; physical phone installation was not exercised. Main integrated through 664e51d; C-23 next.
