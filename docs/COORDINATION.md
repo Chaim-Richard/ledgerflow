@@ -10,7 +10,7 @@ queue filled, and keeps `docs/TRACKER.md`.
 | **#1** | Claude (this session, lead) | money, server, database, posting; merges and reviews; writes the queues | `main` directly | `docs/TRACKER.md` |
 | **#2** | Codex | screens, reports, settings lists, help, clean-up (no change to how money is calculated) | `codex/…` | "Tasks for Codex — AI #2" (C-…) |
 | **#3** | Arena agent | whole features in its own area (close comparison, loans, petty cash) | `arena/…` | "AI #3 (Arena): tasks" (A-…) |
-| **#4** | Codex (owner assigned) | D-1 statement imports; then its own queue | `ai4/…` | "AI #4: tasks" (D-…) |
+| **#4** | Codex (owner assigned) | D-1…D-4 (own queue) | `ai4/…` | "AI #4: tasks" (D-…) |
 | #5, #6… | more (e.g. a second Codex) | the owner gives it the next free number; Claude writes its queue (E-…, F-…) at the next check-in | `ai5/…`, `ai6/…` | added here |
 
 **Starting a new AI (owner):** give it the next free number (now **#4**) and this prompt:
