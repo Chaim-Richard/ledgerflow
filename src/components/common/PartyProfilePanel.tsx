@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { addNote, MAX_NOTE_LENGTH, parseTags } from '../../lib/contacts';
 import { DELIVERY_METHODS, deliveryLabel, preferredDelivery } from '../../lib/delivery';
+import { accountNumberProblem, maskAccount, normalizeAccountNumber } from '../../lib/paymentRun';
 import InlineEdit from '../ui/InlineEdit';
 
 const COMMON_CURRENCIES = ['USD', 'EUR', 'GBP', 'ILS', 'CAD', 'AUD', 'JPY', 'CHF'];
@@ -122,6 +123,29 @@ export default function PartyProfilePanel({ side, party }: { side: PartySide; pa
             </dd>
           </div>
         )}
+        {side === 'vendor' && (() => {
+          const bank = (party as Vendor).bankDetails || {};
+          const saveBank = (field: 'accountName' | 'accountNumber' | 'routingCode', v: unknown) => {
+            const value = field === 'accountName' ? String(v || '').trim() : normalizeAccountNumber(String(v || ''));
+            return updateEntity(path, party.id, { bankDetails: { ...bank, [field]: value } }, 'Bank details saved');
+          };
+          return (
+            <div>
+              <dt className="text-[var(--muted)] font-semibold">Pay to (bank, for payment runs)</dt>
+              <dd className="text-slate-900 dark:text-white space-y-0.5">
+                <InlineEdit value={bank.accountName} label={`Bank account name of ${party.name}`} placeholder="Account name" canEdit={canEdit}
+                  onSave={v => saveBank('accountName', v)} />
+                <InlineEdit value={bank.accountNumber} label={`Account number or IBAN of ${party.name}`} placeholder="Account number / IBAN" canEdit={canEdit}
+                  display={bank.accountNumber ? (canEdit ? bank.accountNumber : maskAccount(bank.accountNumber)) : null}
+                  validate={v => accountNumberProblem(String(v || ''))}
+                  onSave={v => saveBank('accountNumber', v)} />
+                <InlineEdit value={bank.routingCode} label={`Routing number, sort code or BIC of ${party.name}`} placeholder="Routing / sort code / BIC" canEdit={canEdit}
+                  validate={v => !v || /^[A-Za-z0-9 -]{4,15}$/.test(String(v)) ? null : 'Use letters and digits (4 to 15)'}
+                  onSave={v => saveBank('routingCode', v)} />
+              </dd>
+            </div>
+          );
+        })()}
         <div>
           <dt className="text-[var(--muted)] font-semibold">Opening balance {side === 'customer' ? '(owed to you)' : '(you owed)'}</dt>
           <dd className="text-slate-900 dark:text-white"><PartyOpeningBalance side={side} party={party} /></dd>

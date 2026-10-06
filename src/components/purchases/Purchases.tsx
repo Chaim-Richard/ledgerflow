@@ -15,6 +15,7 @@ import { formatCurrency, getLocalDateISO, safeConfirm } from '../../lib/utils';
 import { undoSpreadRequest } from '../../services/spreadActions';
 import { spreadProgress } from '../../lib/prepaidSchedule';
 import SpreadBillDialog from './SpreadBillDialog';
+import PaymentRunDialog from './PaymentRunDialog';
 import BillModal from './BillModal';
 import VendorModal from './VendorModal';
 import TagFilter from '../common/TagFilter';
@@ -53,6 +54,7 @@ export default function Purchases() {
   const [editingBill, setEditingBill] = useState<Partial<Bill> | undefined>(undefined);
   const [previewBill, setPreviewBill] = useState<Bill | null>(null);
   const [spreadingBill, setSpreadingBill] = useState<Bill | null>(null);
+  const [paymentRunOpen, setPaymentRunOpen] = useState(false);
   const [pickedBills, setPickedBills] = useState<Set<string>>(() => new Set());
   const pdfWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const homeCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
@@ -173,6 +175,14 @@ export default function Purchases() {
         </div>
 
         <div className="flex items-center gap-3">
+          {activeSubTab === 'bills' && canEditContacts && (
+            <button type="button" onClick={() => setPaymentRunOpen(true)}
+              title="Pay every bill due by a date and download the bank file"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg flex items-center gap-2 text-sm shadow-sm transition-colors border border-slate-200 dark:border-slate-800">
+              <DollarSign className="w-4 h-4" aria-hidden="true" />
+              Payment run
+            </button>
+          )}
           {activeSubTab === 'bills' && (
             <button
               onClick={exportBillsToCSV}
@@ -478,6 +488,7 @@ export default function Purchases() {
       />
 
       {spreadingBill && <SpreadBillDialog bill={spreadingBill} onClose={() => setSpreadingBill(null)} />}
+      {paymentRunOpen && <PaymentRunDialog bills={bills} vendors={vendors} onClose={() => setPaymentRunOpen(false)} />}
       {isPaymentModalOpen && paymentDocumentId && paymentContactId && (
         <ReceivePaymentModal
           isOpen={isPaymentModalOpen}
