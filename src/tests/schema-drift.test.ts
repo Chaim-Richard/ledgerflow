@@ -33,7 +33,9 @@ describe('Schema drift & index consistency guard (database rules)', () => {
       // monthly statements, set by the daily job (migration 20261006000000_customer_no_statements)
       'lastStatementsMonth',
       // invoice approval (BE-04, migration 20261007010000_invoice_approval)
-      'invoiceApproval'
+      'invoiceApproval',
+      // how money is shown (C-25, migration 20261010000000_workspace_money_display)
+      'moneyDisplay'
     ];
     for (const key of expectedWorkspaceKeys) {
       assert.ok(allowed.includes(key), `workspaces allowed fields missing '${key}'`);

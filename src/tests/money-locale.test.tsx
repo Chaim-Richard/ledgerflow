@@ -28,7 +28,7 @@ test('Hebrew money retains native RTL marks; accounting negatives and isolated M
  assert.match(text,/1,234\.56/);assert.ok(text.includes('₪'));
  assert.equal(moneyText(-123456,'ILS',2,{locale:'he-IL',negativeStyle:'accounting'}),`(${text})`);
  const workspace=setComponentWorkspace();
- const formatted={...workspace,moneyDisplay:{locale:'de-DE',negativeStyle:'accounting'}};
+ const formatted={...workspace,moneyDisplay:{locale:'de-DE',negativeStyle:'accounting' as const}};
  act(()=>useAuthStore.setState({workspaces:[formatted]}));
  assert.equal(formatCurrency(-123456,'EUR'),'(1.234,56 €)');
  render(<div dir="rtl">סכום <Money cents={-123456} currency="EUR" /></div>);

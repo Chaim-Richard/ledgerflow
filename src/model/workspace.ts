@@ -3,6 +3,7 @@ import type { EmailTemplates } from '../lib/emailTemplates';
 import type { WorkspaceBranding } from '../lib/branding';
 import type { ReminderSettings } from '../lib/reminders';
 import type { InvoiceApprovalSettings } from '../lib/invoiceApproval';
+import type { MoneyDisplaySettings } from '../lib/moneyFormat';
 import type { NotificationType } from '../lib/notifications';
 import type { EntityMetadata, DimensionDefinition, Transaction } from './ledger';
 
@@ -47,6 +48,8 @@ export interface Workspace {
   reminderSettings?: ReminderSettings;
   /** Invoice approval (BE-04, src/lib/invoiceApproval.ts): invoices over the limit wait for a signature. */
   invoiceApproval?: InvoiceApprovalSettings;
+  /** How money is shown (C-25, src/lib/moneyFormat.ts): display only, never changes an amount. */
+  moneyDisplay?: MoneyDisplaySettings;
   /** Set by the daily job: the month (YYYY-MM) monthly statements were last sent (Y-28). */
   lastStatementsMonth?: string;
   strategicAdvice?: string[];
