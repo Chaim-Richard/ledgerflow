@@ -1,0 +1,32 @@
+import {test,expect} from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+import {readFile} from 'node:fs/promises';
+import {readExportedRecords} from '../src/lib/workspaceExports';
+test('one export dialog opens from the command palette and keeps Hebrew full-field CSV on a phone',async({page})=>{
+ await page.setViewportSize({width:390,height:850});
+ await page.addInitScript(()=>{localStorage.setItem('isGuest','true');localStorage.setItem('has_seen_onboarding','true');});
+ await page.goto('/#settings');
+ const dismiss=page.getByRole('button',{name:'Dismiss cookie banner'});if(await dismiss.isVisible())await dismiss.click();
+ await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible();
+ await page.keyboard.press('Control+k');
+ const palette=page.getByRole('dialog',{name:'Command palette'});await expect(palette).toHaveCount(1);
+ await palette.getByRole('textbox',{name:'Search commands or enter a transaction'}).fill('Export workspace data');
+ await palette.getByRole('button',{name:'Export workspace data',exact:false}).click();
+ const dialog=page.getByRole('dialog',{name:'Export workspace data',exact:true});await expect(dialog).toHaveCount(1);await expect(dialog).toBeVisible();await expect(palette).toHaveCount(0);
+ await dialog.getByLabel('From',{exact:false}).fill('2024-03-01');await dialog.getByLabel('Through',{exact:false}).fill('2024-02-29');await expect(dialog.getByRole('button',{name:'Download export'})).toBeDisabled();
+ await dialog.getByLabel('What to export').selectOption('customers');
+ await page.evaluate(async()=>{
+  const ledgerPath='/src/stores/useLedgerStore.ts',authPath='/src/stores/useAuthStore.ts';
+  const {useLedgerStore}=await import(/* @vite-ignore */ ledgerPath),{useAuthStore}=await import(/* @vite-ignore */ authPath);
+  const workspaceId=useAuthStore.getState().currentWorkspaceId;
+  useLedgerStore.setState({customers:[{id:'hebrew',uid:'guest',workspaceId,name:'לָקוֹח A',address:'ירושלים #12',notes:'=SUM(1,2)',status:'active',metadata:{labels:['עברית','A']}}]});
+ });
+ const waiting=page.waitForEvent('download');await dialog.getByRole('button',{name:'Download export'}).click();const download=await waiting;
+ expect(download.suggestedFilename()).toContain('customers');const path=await download.path();expect(path).not.toBeNull();
+ const bytes=await readFile(path!);expect([...bytes.subarray(0,3)]).toEqual([239,187,191]);
+ const records=readExportedRecords(bytes.toString('utf8'));expect(records[0]).toMatchObject({name:'לָקוֹח A',address:'ירושלים #12',notes:'=SUM(1,2)',metadata:{labels:['עברית','A']}});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ const axe=await new AxeBuilder({page}).include('[role="dialog"]').disableRules(['color-contrast']).analyze();expect(axe.violations.map(value=>value.id)).toEqual([]);
+ await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
+ const open=page.getByRole('button',{name:'Choose export',exact:true});await open.click();await expect(dialog).toHaveCount(1);await page.keyboard.press('Escape');await expect(open).toBeFocused();
+});

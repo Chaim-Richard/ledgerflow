@@ -1585,7 +1585,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-17 Status page: public /status (no sign-in) from GET /api/v1/public/status — app, database, daily job (recorded by the cron, late/failed = problems), sign-in, email, card payments, bank feeds (set up or not); 30 s cache (tested + browser test)
 - [ ] L-18 i18n: finish or remove
 - [x] L-19 Setup wizard for new workspaces: business basics, chart template, opening balances posted as one entry that balances by construction (difference → Opening Balance Equity; receivables/payables come from invoices/bills), or start from zero; owners/accountants; server-side, audited (tested). The old welcome screen's "Explore with sample data" button only showed a toast; removed
-- [ ] L-20 Docs page for all 74 views
+- [x] L-20 Docs page for all 74 views
 - [x] L-21 Lockfile-platforms guard test
 - [x] L-22 Type check as its own CI step
 - [x] L-23 `/api/ai/process` restored: real AI, login, workspace, credits, no invented data
@@ -2109,7 +2109,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
   BE-05). (tested: 14 on the rules, 7 on the dialogs)
 - [ ] BA-18 Import uncategorised transactions
 - [x] BA-19 Branding templates screen (= Y-33)
-- [ ] BA-20 Export dialog
+- [x] BA-20 Export dialog
 
 # SECTION BB — SETTINGS PAGES
 
@@ -2236,12 +2236,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BK-04 FreshBooks import
 - [x] BK-05 Per-row import errors (row number + problem)
 - [x] BK-06 Import rollback (undo; records in use are kept)
-- [ ] BK-07 GL to CSV
-- [ ] BK-08 Chart of accounts export
-- [ ] BK-09 Contacts export
+- [x] BK-07 GL to CSV
+- [x] BK-08 Chart of accounts export
+- [x] BK-09 Contacts export
 - [ ] BK-10 Full workspace archive
-- [ ] BK-11 QIF export
-- [ ] BK-12 OFX export
+- [x] BK-11 QIF export (posted base-currency bank accounts)
+- [x] BK-12 OFX export (posted base-currency bank accounts)
 - [x] BL-01 Bounce handling (provider reports → log + suppression)
 - [ ] BL-02 Spam complaints
 - [x] BL-03 Suppression list (bounced/complained addresses skipped)
@@ -2264,8 +2264,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BN-05 Synthetic uptime
 - [ ] BN-06 Alert routing
 - [ ] BN-07 Runbooks
-- [ ] BO-01 Contextual help per view
-- [ ] BO-02 Searchable docs
+- [x] BO-01 Contextual help per view
+- [x] BO-02 Searchable docs
 - [x] BO-03 First-run wizard (= L-19)
 - [ ] BO-04 Video walkthroughs
 - [ ] BO-05 Feedback widget

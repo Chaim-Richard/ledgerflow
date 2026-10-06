@@ -169,3 +169,9 @@ BankFeedHealth reads the existing authorized token-free banks GET, cancels obsol
 ## Shared financial charts
 
 ChartFrame supplies chart/table state, native pressed legend buttons, typed money/day/number table columns and a keyboard-accessible date brush. FinancialChartPanels retains the four existing computeChartsData datasets. ChartExploration uses the existing statement and FX helpers: paid invoices need a valid recorded settlement date (not an inferred/weighted cash receipt), and expense hierarchy keeps stable account IDs and finite parent paths. Signed net values remain in tables; area diagrams draw positive net amounts only, with that limitation visible. Declare units before adopting the wrapper in algorithm charts; algorithm outputs may be dollars, ratios or counts rather than integer minor units. The current migration covers the financial chart family, not every unrelated visualization.
+
+## Screen help contract
+
+Register each screen with its actual purpose, available actions and relevant limits in `src/config/screenHelp.ts`. The registry attaches a required `help` field to sidebar screens, reports, settings, intelligence sections and analytical lenses. Non-sidebar routes also belong in `SCREEN_TABS_REGISTRY`; the coverage test fails when a route has no description. New registered entries need two to four plain sentences rather than a generic placeholder.
+
+`ScreenHelpHeader` resolves the current report or settings section through existing navigation state. Its `useDialog` overlay keeps the parent screen mounted, restores focus and resets when the context changes. Do not make viewing help reset a form or navigate to another page. Help → All screens uses normalized English/Hebrew search while retaining English labels and original stored text. Help is documentation, so describe estimates, incomplete browser history and provider prerequisites accurately.
