@@ -5,7 +5,7 @@ import { getIdToken } from '../../firebase';
 import { toast } from 'sonner';
 
 /** Every document the server can print (documentRoutes.ts PDF_TYPES; BA-08). */
-export type PdfDocumentKind = 'invoice' | 'estimate' | 'creditNote' | 'payment' | 'statement' | 'purchaseOrder' | 'bill' | 'vendorCredit';
+export type PdfDocumentKind = 'invoice' | 'estimate' | 'creditNote' | 'payment' | 'statement' | 'purchaseOrder' | 'bill' | 'vendorCredit' | 'cheque';
 
 export interface PdfPreviewModalProps {
   isOpen: boolean;

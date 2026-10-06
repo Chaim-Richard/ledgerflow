@@ -3,7 +3,8 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, parseLocalDate, cn, formatDate } from '../../lib/utils';
 
-import { DollarSign, Search, Eye, Download } from 'lucide-react';
+import { DollarSign, Search, Eye, Download, Printer } from 'lucide-react';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
@@ -19,6 +20,9 @@ function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
 }
 
 export default function PaymentsView() {
+  const role = useCurrentRole();
+  // cheques (BE-13) are printed by the people who can pay bills
+  const canPrintCheques = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
   const payments = useLedgerStore(s => s.payments);
   useLedgerStore(s => s.customers);
   useLedgerStore(s => s.vendors);
@@ -136,6 +140,14 @@ export default function PaymentsView() {
                       >
                         <Download aria-hidden="true" size={16} />
                       </button>
+                      {canPrintCheques && payment.direction === 'made' && payment.status !== 'void' && (
+                        <button type="button" aria-label={`Print cheque for ${payment.contactName || 'the vendor'}`}
+                          onClick={() => downloadDocumentPdf('cheque', payment.id, currentWorkspaceId || 'default', `cheque_${payment.reference || payment.number || payment.id}.pdf`)}
+                          className="p-2 text-[var(--muted)] hover:text-indigo-600 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
+                          title="Print cheque (US Letter, cheque on top)">
+                          <Printer aria-hidden="true" size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -2175,7 +2175,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] BE-10 Per-diem — **done 6 Oct**, in expense claims: a "Per diem" line is days (half days allowed) × the daily rate, worked out in whole cents, with the working in the line's description; the last daily rate comes back next time (tested with BE-09)
 - [x] BE-11 PO → bill conversion (purchase orders saved, goods received, "Create bill"; tested)
 - [x] BE-12 Vendor prepayment — **done 5 Oct (with K-18)**: see K-18
-- [ ] BE-13 Cheque printing
+- [x] BE-13 Cheque printing — **done 6 Oct**: Payments → the printer button on a payment made to a vendor (owners, accountants, bookkeepers) prints it as a cheque on US Letter cheque stock, cheque on top and two vouchers (vendor copy, for your records): payee, date, cheque number (the payment's reference), the amount in figures behind asterisks and written out in words ("One thousand two hundred thirty-four and 56/100", filled to the end of the line), DOLLARS or the currency code, memo, signature line; the vouchers list the bills it pays by number and any part paid in advance. Nothing is posted (the payment already is); a money-in or voided payment is refused, as is another workspace's (`src/lib/amountInWords.ts`, `src/server/services/chequePdf.ts`, through `GET /api/v1/documents/cheque/:paymentId/pdf`; tests `cheque-printing.test.ts` with the database). Printing positions for a specific bank's pre-printed stock (MICR line, offsets) can follow when someone needs them
 
 # SECTION BF — ITEMS · PRICING · STOCK
 

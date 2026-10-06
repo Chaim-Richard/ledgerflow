@@ -196,7 +196,7 @@ const PAGE = { width: 595.28, height: 841.89, margin: 50 };
 const RIGHT = PAGE.width - PAGE.margin;
 const FOOTER_SPACE = 36;
 
-function fonts(): { body: string; bold: string } | null {
+export function fonts(): { body: string; bold: string } | null {
   const body = path.join(FONT_DIR, 'DejaVuSans.ttf');
   const bold = path.join(FONT_DIR, 'DejaVuSans-Bold.ttf');
   return fs.existsSync(body) && fs.existsSync(bold) ? { body, bold } : null;
