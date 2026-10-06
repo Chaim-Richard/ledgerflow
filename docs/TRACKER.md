@@ -1525,9 +1525,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [x] K-01 Bulk import wizard (customers, vendors, items, accounts; undo; tested)
 - [x] K-02 Items on invoice lines: pick by name/SKU, fills price + cost, free text unlinks, tested
-- [ ] K-03 Sale receipts
+- [x] K-03 Sale receipts — **done 6 Oct**: Sales → "Sale receipt" (writers) opens the invoice form in receipt mode: "Paid into" (Undeposited Funds first, so Make deposit takes it to the bank, or a bank account) and the method, one "Save receipt". It saves an issued invoice due on receipt, marked as a receipt ("Receipt" in the list, "SALES RECEIPT" on the PDF, no pay-now code), and records its payment at once through the server's payments (`src/services/receiptActions.ts`); if the payment is refused the invoice stays open and the message says to record it. Tests: `sale-receipt.test.tsx`
 - [ ] K-04 Sales orders
-- [ ] K-05 Manual journals entity
+- [x] K-05 Manual journals entity — **done 6 Oct**: Ledger → General journal is now a working list: entries typed in by hand only (or all), newest first, search by description/reference/account, each opens to its debit/credit lines, badges for "a reversal", "reversed" and "reverses on …". Writers can Reverse a manual entry on a chosen day with a reason (the server's reverse route: a mirror entry, never twice) or Duplicate it into the journal form with the same lines. The old "Cryptographic Log / Full Audit" buttons, which claimed a verification that never ran, are gone. Tests: `journal-view.test.tsx`
 - [x] K-06 Bulk action bar: transaction list (categorize safely, Enter/Apply, accounts used most first; L-180); invoice and bill lists: tick several, then download the PDFs as a zip, email the invoices to their customers (drafts and voided ones left out, each failure named), or pay them in full at once ("Record payment" / "Pay bills": one payment per customer or vendor into or out of the chosen bank account; drafts, paid and other-currency documents left out with the reason; a refused payment doesn't stop the others; not for viewers) (tested)
 - [ ] K-07 Attachments on every entity
 - [x] K-08 Email templates (invoice, reminder, receipt; preview)
@@ -1544,21 +1544,21 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] K-19 Bad debt with reversal (server, base currency, tested)
 - [x] K-20 Undeposited funds (Make deposit; tested)
 - [x] K-21 Expected-bill tracking: vendors that bill on a rhythm (weekly to quarterly, at least 3 regular bills) are learned from the bills already recorded; Purchases shows "Expected bills" (usual amount or range, how often, expected by / days late) with "Record bill" (the latest bill's lines copied, new dates) and "Not expected"; vendors on a recurring bill schedule are left out (tested)
-- [ ] K-22 Expense claims
-- [ ] K-23 Purchase requisitions
+- [x] K-22 Expense claims — **done 6 Oct**: Purchases → "New expense claim" (anyone who can write): who paid, the date, one line per expense (what, category from the chart, amount), a note. It is saved as a draft bill owed to that person (a vendor of type "employee", added if new), so nothing is in the books yet. The Expense claims panel lists the waiting ones; owners and accountants Approve (it becomes an approved bill: posted, and paid like any bill or in a payment run with the person's bank details) or Reject with a reason (stays out of the books). Nobody approves their own claim except the owner. (`src/lib/expenseClaims.ts`; tests `expense-claims.test.tsx`.) Follow-up: the approval rule is checked on the screen; a database guard like the invoice approval one (L-191) needs a migration
+- [x] K-23 Purchase requisitions — **done 6 Oct**, as purchase orders that wait: a bookkeeper's new purchase order is a request ("Send for approval": status pending approval); an owner or accountant Approves it (a normal order) or Declines it with a reason (cancelled, the reason in its notes); nobody approves their own request except the owner; nothing is received or billed while it waits. Uses the order's existing approval fields, so no database change (`src/lib/purchaseOrders.ts`; tests `purchase-requisitions.test.tsx`)
 - [x] K-24 Payment runs + bank file — **done 6 Oct**: Purchases → "Payment run" (writers): every open bill due by a date (default a week ahead) ticked, untick any; one payment per vendor out of the chosen bank account on the chosen day (the same server payments as K-06 "Pay bills"; other-currency bills left out with the reason), and a bank file (CSV: payee, account name, account number/IBAN, routing/sort code/BIC, amount, currency, date, the bills it pays) downloaded with it or alone. Vendors keep their bank details on their page, edited in place: an IBAN must pass its check digits, spaces are taken out, viewers see only the last four; the run warns about vendors without details. (`src/lib/paymentRun.ts`; tests `payment-run.test.tsx`.) Bank-specific formats (NACHA, SEPA XML) can follow when someone needs one
 - [x] K-25 Remittance advice: "Pay bills" can email each vendor what was paid, on which date, for which of their bills (new "Payment sent to a vendor" email, editable in Settings → Emails; logged; vendors without an address are skipped) (tested)
 - [x] K-26 Dunning: reminders on chosen days after the due date, per-customer opt-out (tested)
 - [ ] K-27 Customer portal
 - [ ] K-28 Scheduled reports
-- [ ] K-29 Exchange-rate history at posting
+- [x] K-29 Exchange-rate history at posting — **done 6 Oct**, read from the documents themselves (no second copy that could disagree): `rateHistory` / `rateOn` in `src/lib/exchangeRates.ts` give, per currency, the rates the books were posted at by day. A back-dated invoice, bill, payment or journal entry now gets the rate used on (or the closest day before) its date, with a note saying which, instead of today's live rate (which would be wrong for a past day); with none recorded it asks for that day's rate. Reports → Exchange Rates Used lists them for the period (journals included), with lowest/highest/latest. Tests: `rate-history.test.tsx`; browser: `e2e/everyday-reports.spec.ts`
 - [ ] K-30 Loans with amortisation
 - [ ] K-31 Petty cash
-- [ ] K-32 Notification preferences
+- [x] K-32 Notification preferences — done as S-19: each person chooses which notices they get (`src/lib/notifications.ts` `wantsNotification`, the bell's settings)
 - [ ] K-33 Categories management UI
 - [ ] K-34 Workspace switcher
 - [ ] K-35 Per-workspace inbox address
-- [ ] K-36 Transaction enrichment
+- [x] K-36 Transaction enrichment — **done 6 Oct** (names): bank lines show a readable payee ("SQ *JOES COFFEE 4421 SEATTLE WA" → "Joes Coffee", "AMZN Mktp US*2K4L91TQ0" → "Amazon") with the bank's own text underneath and on hover, on the reconciliation screen. Card-processor prefixes, card numbers, dates, store numbers and codes are removed, well-known merchants named, Hebrew and other non-Latin text kept as written; `lineKind` tells fees, interest, refunds, transfers and payroll apart for hints. Display only: the stored line and the matching keep the bank's text (`src/lib/merchantNames.ts`, `src/components/ui/BankLineName.tsx`; tests `merchant-names.test.tsx`). Logos and learned names can follow
 - [ ] K-37 Webhook delivery tracking
 - [ ] K-38 Rule-group UI
 - [ ] K-39 Rule actions: accounts + type conversion
@@ -1797,8 +1797,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [ ] M-01 Items / products catalogue
 - [ ] M-02 Sales orders
-- [ ] M-03 Sale receipts
-- [ ] M-04 Manual journals
+- [x] M-03 Sale receipts — see K-03 (done 6 Oct)
+- [x] M-04 Manual journals — see K-05 (done 6 Oct)
 - [x] M-05 Email templates (= K-08)
 - [ ] M-06 Exchange-rate entity
 - [ ] M-07 Expected bills
@@ -1810,7 +1810,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] M-13 Commodities
 - [x] M-14 Item categories (= K-12)
 - [ ] M-15 Warehouses (deferred)
-- [ ] M-16 Purchase requisitions
+- [x] M-16 Purchase requisitions — see K-23 (done 6 Oct)
 - [x] M-17 Bulk action bar (= K-06)
 - [x] M-18 Bulk import wizard (= K-01)
 - [ ] M-19 Customer portal
@@ -1922,7 +1922,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] S-09 approval events
 - [ ] S-10 budget.exceeded
 - [ ] S-11 cash.low
-- [ ] S-12 job.failed
+- [x] S-12 job.failed — **done 6 Oct** for what a workspace can act on: a recurring invoice, bill or entry that could not be created (a missing account, a closed month…) now tells the people who keep the books, once per occurrence, with the reason and a link to Recurring Items (`recurring.failed`, can be turned off like the others). The installation-wide daily run's own failures stay on the status page and Settings → Schedule (BB-06), not in every customer's bell
 - [ ] S-13 export.ready
 - [x] S-14 user.invited / joined
 - [ ] S-15 permission.changed
@@ -2002,8 +2002,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION Y — BANKING · DOCUMENTS · CONTACTS · SETTINGS
 
-- [ ] Y-01 QIF import
-- [ ] Y-02 BAI2 import
+- [x] Y-01 QIF import (AI #4, PR #45; pending lead review)
+- [x] Y-02 BAI2 import (AI #4, PR #45; pending lead review)
 - [x] Y-03 Saved CSV column map per bank (by header; tested)
 - [ ] Y-04 TrueLayer
 - [ ] Y-05 GoCardless
@@ -2166,7 +2166,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] BE-02 Thank-you email after payment: Settings → Emails & Reminders switch (off by default); payments recorded by hand, from a bank line or online send the "Payment received (thank you)" email, logged, skipped for bounced addresses; never holds up the payment (tested)
 - [x] BE-03 Recurring pause/resume/delete (and recurring invoices now create draft invoices; tested)
 - [x] BE-04 Invoice approval: Settings → Emails & Reminders can say that no invoice over a chosen amount may reach the customer until an owner or an accountant signs it off. It holds the **sending**, not the books: the invoice is dated, saved, posted and counted in accounts receivable exactly as before — only the customer receiving it waits. An owner's or accountant's save of an invoice that is going out *is* the signature; anybody else's leaves it waiting, shown under the invoice's state in the list (the amount and the limit in the tooltip), where an approver can Approve it or Send it back with a reason the author then sees. While it waits it is not emailed, not saved as Sent, and not reminded about; approving it puts the reminders back on. An invoice that already went out before the rule existed is left alone, so switching this on never silences reminders for old invoices. The amount is compared in the workspace's currency, using the exchange rate on the invoice, and an invoice of exactly the limit goes out on its own. The gate sits in the app and in the email endpoint, not in the row: it is a rule about documents, not a lock on the data (tested)
-- [ ] BE-05 Deposit invoice from estimate — *not built, and this is why (Claude, 5 Oct): an invoice can already carry `depositCents`, and posting it moves that amount out of the Customer Deposits liability against accounts receivable (`src/services/ledgerPost/invoicePosting.ts`, the AF-03 rule) on the assumption the money was booked there when it arrived. Nothing in the app does that first half: recording money that comes in before an invoice exists would have to be a payment, and a payment settles the invoice it points at. So a deposit invoice made from an estimate would count the same money as income twice. The advance payment half has since been built (BA-17, 5 Oct: Money In on the banking page, booked against the customer deposits account, is exactly the credit the posting draws down), so an advance no longer has to double-count — but nothing turns an estimate into a deposit invoice: `convertEstimateToInvoice` stays as it is (one draft invoice for the full amount, net-30, declined estimates refused), and an estimate carries no field saying how much of it is a deposit. Both are still to be decided and built, so the item stays open.*
+- [x] BE-05 Deposit invoice from estimate — **done 6 Oct**, on the advance payments (BE-12) instead of a separate deposit invoice, so the same money can't count as income twice: "Deposit" on an open estimate (writers) records a payment from the estimate's customer linked to it (`estimateId`) and applied to nothing (half by default, 25% / 50% / all of it), so it waits in Customer Deposits; the server refuses another customer, a converted/declined/expired estimate, or allocations. The estimate shows "Deposit received $X"; converting it says the deposit waits; the invoice made from it, once issued, shows "Apply deposit $X" (up to what it owes), which applies the waiting deposits oldest first and moves the money from deposits to receivables (`src/lib/advancePayments.ts`, `src/services/depositActions.ts`). Tests: `estimate-deposit.test.ts` (database), `estimate-deposit-ui.test.tsx`
 - [x] BE-06 Auto-apply credits: "Apply open credits" on the credit notes screen (all customers or all vendors) and on each customer's or vendor's page: every open credit, oldest first, goes to that contact's open invoices (bills) in the same currency, the one due first first; drafts, voided and paid ones get nothing; one database transaction on the server, audited; no ledger entry (issuing the credit already lowered what is owed) (tested)
 - [x] BE-07 Batch statement send: "Email statements" on the customer list: every active customer with something open gets their statement PDF with the new "Customer statement" email (editable in Settings → Emails); no address, nothing open, archived or bounced customers are skipped and listed with the reason; logged per customer; writers only. Also: the statement PDF now reads only that contact's payments, not the whole workspace's (tested)
 - [x] BE-08 Recurring expense: a new bill can be set to repeat (every week, month, quarter or year). The daily job makes a draft copy on each date (vendor, lines, tax and currency; not the number or payments), tells the team, and it is posted only when someone checks it and saves it; paused like other schedules on the Recurring screen; once per date (tested)
