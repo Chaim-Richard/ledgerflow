@@ -54,8 +54,6 @@ import InlineEdit from '../ui/InlineEdit';
 import InlineAdd from '../ui/InlineAdd';
 import DocumentBulkBar from '../ui/DocumentBulkBar';
 import { printInvoice } from '../../lib/printInvoice';
-import { convertEstimateToInvoice } from '../../lib/estimateConverter';
-import { detectDuplicateContacts } from '../../lib/contactUtils';
 import { getDefaultTaxConfig, generateDefaultTaxRates } from '../../lib/taxRateDefaults';
 import { calculateNextOccurrence } from '../../lib/recurringEngine';
 
@@ -76,7 +74,6 @@ export default function Sales() {
   const [spreadingInvoice, setSpreadingInvoice] = useState<Invoice | null>(null);
   const [pickedInvoices, setPickedInvoices] = useState<Set<string>>(() => new Set());
 
-  const transactions = useLedgerStore(s => s.transactions);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   // What each customer owes: the same calculation as the Customer Balance Summary report (open
