@@ -151,7 +151,7 @@ workspaceRouter.use('/:workspaceId/bills', requireWorkspaceRole(['owner', 'accou
 // merging is checked again for owner/accountant in the service; deleting is for every writer
 workspaceRouter.use('/:workspaceId/contacts', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), contactMergeRouter);
 workspaceRouter.use('/:workspaceId/numbering', requireWorkspaceRole(['owner', 'accountant']), numberingRouter);
-// Remove a file kept with a record (K-07): any member reaches it; who may remove which file is checked in the route
+// Remove a file kept with a record (K-07). Every member reaches it; who may remove which file is checked in the route
 workspaceRouter.use('/:workspaceId/attachments', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), attachmentRouter);
 
 // Bulk import of customers, vendors, items or accounts from a spreadsheet (K-01; rules in

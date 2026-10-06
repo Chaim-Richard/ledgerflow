@@ -83,6 +83,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review twelve months of issued-bill totals by supplier. Inspect monthly activity and compare ending dates. This report groups bills by supplier, not by purchased item.",
     "sales-payment-summary":
       "Review customer receipts grouped by stored payment method. Compare periods and inspect undated receipt counts. Unapplied receipts are not automatically sales revenue.",
+    "exchange-rates-used":
+      "Review exchange rates stored on workspace documents and entries. Choose dates and inspect the rates actually used. Historical rates on records are distinct from current market quotes.",
     "deferred-revenue-waterfall":
       "Review scheduled revenue earned by month and still deferred at the period end. Inspect each schedule and its recorded earned amounts. Future scheduled amounts remain distinct from posted earned revenue.",
     "financial-ratios":
