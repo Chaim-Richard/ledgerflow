@@ -37,6 +37,8 @@ import { spreadProgress } from '../../lib/prepaidSchedule';
 import { undoSpreadRequest } from '../../services/spreadActions';
 import { estimateDeposits } from '../../lib/advancePayments';
 import { applyEstimateDeposits } from '../../services/depositActions';
+import { recordReceiptPayment } from '../../services/receiptActions';
+import type { ReceiptPayment } from './InvoiceModal';
 import InvoiceEmailDialog from './InvoiceEmailDialog';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import ReceivePaymentModal from './ReceivePaymentModal';
@@ -87,7 +89,10 @@ export default function Sales() {
     }
     return map;
   }, [customers, invoices, payments, creditNotes]);
-  const onAddInvoice = async (data: any) => { 
+  const onAddInvoice = async (input: any) => { 
+    // a sale receipt (K-03) carries where its money went; that is a payment, not part of the invoice
+    const { receiptPayment, ...rest } = input;
+    let data = rest;
     // A customer typed in the invoice that isn't on the list yet is added first, so the invoice
     // belongs to a real customer (statements, balances, emails)
     if (typeof data.customerId === 'string' && data.customerId.startsWith('new-')) {
@@ -103,6 +108,7 @@ export default function Sales() {
       res = await updateEntity('invoices', id, updates); 
     } else {
       res = await addEntity('invoices', data); 
+      if (res && receiptPayment) await recordReceiptPayment(currentWorkspaceId || '', { ...data, id: res.id }, receiptPayment as ReceiptPayment);
     }
 
     if (data.type === 'recurring') {
@@ -138,6 +144,7 @@ export default function Sales() {
   // opens on the invoice list ('pipeline' was the default but nothing draws it: the page was blank)
   const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'customers'>('invoices');
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [receiptMode, setReceiptMode] = useState(false);
   const [newInvoiceFor, setNewInvoiceFor] = useState<Partial<Invoice> | undefined>(undefined);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [customerTag, setCustomerTag] = useState<string | null>(null);
@@ -278,6 +285,16 @@ export default function Sales() {
                 Customers & Clients
               </button>
             </div>
+            {activeSubTab === 'invoices' && canEditContacts && (
+              <button type="button"
+                onClick={() => { setReceiptMode(true); setIsInvoiceModalOpen(true); }}
+                title="A sale paid on the spot: the invoice and its payment in one step"
+                className="flex items-center gap-1.5 px-4 py-2 border border-[var(--line)] text-[var(--text)] rounded-xl text-xs font-bold hover:bg-[var(--ink)] transition-all cursor-pointer"
+              >
+                <Plus size={15} />
+                Sale receipt
+              </button>
+            )}
             <button 
               onClick={() => activeSubTab === 'invoices' ? setIsInvoiceModalOpen(true) : setIsCustomerModalOpen(true)}
               className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black rounded-xl text-xs font-bold hover:opacity-95 transition-all shadow-md hover:shadow-lg cursor-pointer active:scale-95"
@@ -422,6 +439,7 @@ export default function Sales() {
                         )}>
                           {inv.status}
                         </span>
+                        {Boolean(inv.metadata?.saleReceipt) && <span className="ml-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] border border-[var(--line)] text-[var(--muted)]">Receipt</span>}
                         {(inv.writtenOffCents || 0) > 0 && (
                           <span className="text-[10px] text-amber-600 font-bold" title={inv.writeOffReason || undefined}>written off {formatCurrency(inv.writtenOffCents || 0)}</span>
                         )}
@@ -701,13 +719,15 @@ export default function Sales() {
 
       {/* mounted per opening, so a new invoice never inherits the last one's fields */}
       {isInvoiceModalOpen && <InvoiceModal
-        key={newInvoiceFor?.id || 'new'}
+        key={`${newInvoiceFor?.id || 'new'}${receiptMode ? '-receipt' : ''}`}
         isOpen={isInvoiceModalOpen}
-        onClose={() => { setIsInvoiceModalOpen(false); setNewInvoiceFor(undefined); }}
+        receipt={receiptMode}
+        onClose={() => { setIsInvoiceModalOpen(false); setNewInvoiceFor(undefined); setReceiptMode(false); }}
         onSave={async (inv) => {
           await onAddInvoice(inv);
           setIsInvoiceModalOpen(false);
           setNewInvoiceFor(undefined);
+          setReceiptMode(false);
         }}
         customers={customers}
         accounts={accounts}
