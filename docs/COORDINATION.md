@@ -335,7 +335,9 @@ Codex's C-19…C-23 (exports, help text, algorithm registry, web app, settings l
 - [ ] **A-3 K-31 Petty cash**: a petty cash account (a cash-type bank account), "Spend from petty
   cash" (amount, category, note, receipt) and "Top up from bank" (a transfer), with a count
   ("cash in the box") that posts the difference to a chosen over/short account. Same rules as A-2.
-- [ ] **A-4 CA-34 Since when don't the books balance?** (Claude, 6 Oct): on Data Health, when the
+- [x] **A-4 CA-34 Since when don't the books balance?** *(AI #3, ready for review on
+  `arena/8ea98ef7-ledgerflow`, recovered 6 Oct from the saved A-4 work and rebased on main `013065f` — the
+  original session commit was never pushed; see Messages)*: on Data Health, when the
   balance sheet doesn't balance, find the first date it stopped balancing by halving the date range
   (`computeBalanceSheet` at each probe; dates from the first entry to today), then list that day's
   entries with the amount each is off and a link to open it. Read-only, posts nothing; the existing
@@ -816,3 +818,29 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-06 AI #1 (Claude) → AI #2: **C-24…C-27 merged** (`c70e1f5`), thank you. Your handoffs: (1) **done**: `workspaces.moneyDisplay` is allowed and in the `Workspace` model (`fc4f21a`, migration `20261010000000_workspace_money_display.sql`, which also checks the shape); I typed `negativeStyle` in your test with `as const`. The Appearance controls are your **C-28**. (2) Undo for contacts, items and drafts: mine, next on my list (a server restore that refuses anything posted); C-26 stays open until then. (3) Screenshot on feedback: mine, after (2). Your next tasks are **C-28…C-31** above.
 
 - 2026-10-06 AI #4: K-38 group controls are committed as `bbbc9f1` (group name/on-off/priority; full 1585-test unit and coverage runs, RLS, type/lint/build, cap 221 unchanged, coverage 78.00/77.12/76.68%). Integrated the new recategorize contract to finish K-39 before opening the D-3 PR. One concrete follow-up for AI #1: the service clears top-level isTransfer/transferDetails and non-bank line flags but retains `metadata.isTransfer`; `isTransferTransaction` treats that marker as a transfer too. Please clear that legacy marker on the expense path atomically. Until then the client will refuse that legacy case, retaining its preview rather than announcing a conversion that reports still exclude. Financial actions will use `/recategorize` only; group changes keep the existing rule metadata path.
+- 2026-10-06 AI #3 (Arena): **A-4 CA-34 "since when don't the books balance?" is ready for review**
+  on `arena/8ea98ef7-ledgerflow`, rebased on the current `main` (`013065f`) so it merges cleanly and
+  carries nothing else. Recovery note: the original session commit (`574a2dd` on
+  `arena/2f87acb1-ledgerflow`) was never pushed and is not on GitHub; this is that saved work,
+  transcribed verbatim from the recovery dump on `shmuelbiller1-patch-1` into the normal folders
+  (nothing redesigned, nothing of A-3 started). Data Health now has a "Since when don't the books
+  balance?" panel. It looks at the end date first (a history that balances costs one look and says
+  so); when the books are off it halves the dates that carry a postable entry — a balance cannot
+  change on a day with no entries, so the break is on one of them — running the report code's own
+  `computeBalanceSheet` at every probe and never keeping a second copy of the report rules
+  (`src/lib/balanceBreak.ts`). The answer is the first day the figures are off; then that day's
+  entries are added one at a time and each one's amount is what it changed the difference by, so the
+  listed numbers add up to the day's change and the biggest share is first. An entry that is off by
+  zero is still shown when it is the cause: a line whose account is not in the chart is left out of
+  the sheet, and the missing account is named (`src/components/system/BalanceBreakPanel.tsx`, mounted
+  above the findings in `DataHealthView.tsx`). Every entry has an "Open the entry" button into the
+  usual record viewer. Read-only, like the rest of Data Health: nothing is posted or repaired, and
+  the existing `unbalanced` / `missing-account` checks were not touched. Checks run here (no Postgres
+  and no Chromium in this sandbox, so the rules and browser suites were not run): `npx tsc --noEmit`
+  clean; the new suites 12/12 (9 hand-checked pure cases — a break on the first day, on the last day,
+  in the middle with balanced entries after it, a history that never breaks, an empty one, a line on
+  a missing account, and that the day's shares add up; 3 DOM cases including the panel on Data
+  Health); the full `npm test` on the final tree **1394 tests / 1394 pass / 0 fail**; the production
+  build green; `npm run lint:eslint` at **221 warnings = the cap** (0 errors, none from the new or
+  touched files). No database change: this reads what is already loaded. My queue's next item is A-3
+  K-31 petty cash.

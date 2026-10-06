@@ -2317,7 +2317,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CA-31 Payment order
 - [ ] CA-32 Ledger health monitor
 - [ ] CA-33 Ledger merge
-- [ ] CA-34 Bisect accounting statements
+- [x] CA-34 Bisect accounting statements — **done 6 Oct (AI #3, A-4)**: the balance sheet does not balance and nobody knows since when. New `src/lib/balanceBreak.ts` finds the first day it was off by halving the dates that carry a postable entry (a balance cannot change on a day with no entries), probing the report code's own `computeBalanceSheet` at each step (the end date first: a history that balances costs one look), then adds that day's entries one at a time and reports what each changed the difference by, so the day's numbers add up to the day's change; a line whose account is missing from the chart is named as such. Data Health now shows "Since when don't the books balance?" with the day, the amount, each entry's share and an Open button into the usual record viewer — read-only, it posts nothing and leaves the existing `unbalanced` and `missing-account` checks alone (`src/components/system/BalanceBreakPanel.tsx`; tests `balance-break.test.ts` with hand-checked dates — first day, last day, middle, never, and a missing account — and `balance-break-ui.test.tsx`)
 - [ ] CA-35 Invalid ledger entries
 - [ ] CA-36 Process deferred accounting
 - [x] CB-01 Customer ledger summary

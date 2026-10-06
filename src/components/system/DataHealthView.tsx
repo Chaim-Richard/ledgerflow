@@ -8,6 +8,7 @@ import { DATA_CHECKS, runDataChecks } from '../../lib/dataChecks';
 import type { CheckSeverity } from '../../lib/dataChecks';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
+import BalanceBreakPanel from './BalanceBreakPanel';
 
 /**
  * Data Health (launch step 8): runs every check in the registry (src/lib/dataChecks.ts) over the
@@ -52,6 +53,8 @@ export default function DataHealthView() {
           <p className="text-xs text-[var(--muted)]">{DATA_CHECKS.length} checks on your books: entries that don't balance, duplicate numbers, missing accounts, wrong dates and more. Updated as you work.</p>
         </div>
       </div>
+
+      <BalanceBreakPanel />
 
       <div className="grid grid-cols-3 gap-4" role="status">
         {(['high', 'medium', 'low'] as CheckSeverity[]).map(s => (
