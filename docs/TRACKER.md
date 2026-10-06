@@ -1558,7 +1558,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] K-33 Categories management UI
 - [ ] K-34 Workspace switcher
 - [ ] K-35 Per-workspace inbox address
-- [ ] K-36 Transaction enrichment
+- [x] K-36 Transaction enrichment — **done 6 Oct** (names): bank lines show a readable payee ("SQ *JOES COFFEE 4421 SEATTLE WA" → "Joes Coffee", "AMZN Mktp US*2K4L91TQ0" → "Amazon") with the bank's own text underneath and on hover, on the reconciliation screen. Card-processor prefixes, card numbers, dates, store numbers and codes are removed, well-known merchants named, Hebrew and other non-Latin text kept as written; `lineKind` tells fees, interest, refunds, transfers and payroll apart for hints. Display only: the stored line and the matching keep the bank's text (`src/lib/merchantNames.ts`, `src/components/ui/BankLineName.tsx`; tests `merchant-names.test.tsx`). Logos and learned names can follow
 - [ ] K-37 Webhook delivery tracking
 - [ ] K-38 Rule-group UI
 - [ ] K-39 Rule actions: accounts + type conversion
