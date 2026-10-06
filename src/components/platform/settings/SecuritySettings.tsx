@@ -1,55 +1,136 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { Lock, ShieldCheck, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn, safeConfirm } from '../../../lib/utils';
 import { describeError } from '../../../lib/errorRemedies';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useTransactionActions } from '../../../hooks/useTransactionActions';
-import { multiFactor, TotpMultiFactorGenerator } from '../../../lib/db/auth';
+import { multiFactor, TotpMultiFactorGenerator, type TotpSecret } from '../../../lib/db/auth';
 import { auth } from '../../../firebase';
 import { toast } from 'sonner';
 import { RequireRole } from '../../ui/RequireRole';
 import { useUIStore } from '../../../stores/useUIStore';
 import RetentionSettingsPanel from './RetentionSettingsPanel';
 import { retentionFor } from '../../../lib/retention';
+import AsyncButton from '../../ui/AsyncButton';
+
+type AuthenticatorFactor = Awaited<ReturnType<ReturnType<typeof multiFactor>['getFactors']>>[number];
+
+/** Personal account settings: independent of the user's workspace role. */
+export function TwoStepLoginSettings() {
+  const uid = useAuthStore(s => s.user?.uid);
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const available = useAuthStore(s => Boolean(s.user && !s.user.isAnonymous && !s.isGuest));
+  return <TwoStepLoginPanel key={JSON.stringify([uid, workspaceId, available])} />;
+}
+
+function TwoStepLoginPanel() {
+  const [user] = useState(() => useAuthStore.getState().user);
+  const [workspaceId] = useState(() => useAuthStore.getState().currentWorkspaceId);
+  const [available] = useState(() => Boolean(user && !user.isAnonymous && !useAuthStore.getState().isGuest));
+  const [factors, setFactors] = useState<AuthenticatorFactor[] | null>(null);
+  const [secret, setSecret] = useState<TotpSecret | null>(null);
+  const [removing, setRemoving] = useState<AuthenticatorFactor | null>(null);
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const generation = useRef(0);
+  const running = useRef(false);
+  const codeRef = useRef<HTMLInputElement>(null);
+  const statusRef = useRef<HTMLParagraphElement>(null);
+  const id = useId();
+  const current = useCallback((version: number) => generation.current === version && useAuthStore.getState().user?.uid === user?.uid && useAuthStore.getState().currentWorkspaceId === workspaceId && !useAuthStore.getState().isGuest, [user?.uid, workspaceId]);
+
+  useEffect(() => {
+    const version = ++generation.current;
+    if (available && user) {
+      void multiFactor(user).getFactors().then(list => { if (current(version)) setFactors(list); }).catch(e => { if (current(version)) setError(e instanceof Error ? e.message : 'Could not load authenticators.'); });
+    }
+    return () => { generation.current = version + 1; };
+  }, [user, available, current]);
+
+  useEffect(() => { if (secret || removing) codeRef.current?.focus(); }, [secret, removing]);
+
+  const run = async (action: 'reload' | 'add' | 'verify' | 'remove' | 'cancel', factor?: AuthenticatorFactor) => {
+    if (!available || !user || running.current) return;
+    const version = generation.current;
+    running.current = true; setBusy(true); setError(''); setNotice('');
+    try {
+      const mfa = multiFactor(user);
+      if (action === 'add') {
+        const next = await TotpMultiFactorGenerator.generateSecret(await mfa.getSession());
+        if (current(version)) { setSecret(next); setCode(''); }
+        else { await mfa.cancelEnrollment(next.factorId).catch(() => {}); }
+      } else if (action === 'verify' && secret) {
+        await mfa.enroll(TotpMultiFactorGenerator.assertionForEnrollment(secret, code));
+        if (!current(version)) return;
+        setSecret(null); setCode(''); setNotice('Authenticator added. Two-step login is on.');
+      } else if (action === 'remove' && removing) {
+        await mfa.remove(removing.id, code);
+        if (!current(version)) return;
+        setRemoving(null); setCode(''); setNotice('Authenticator removed.');
+      } else if (action === 'cancel') {
+        const factorId = secret?.factorId || factor?.id;
+        if (!factorId) return;
+        await mfa.cancelEnrollment(factorId);
+        if (!current(version)) return;
+        setSecret(null); setCode(''); setNotice('Unfinished setup canceled.');
+      }
+      if (action !== 'add' && current(version)) {
+        setFactors(null);
+        const list = await mfa.getFactors();
+        if (current(version)) { setFactors(list); statusRef.current?.focus(); }
+      }
+    } catch (e) {
+      if (current(version)) { setError(e instanceof Error ? e.message : 'Authenticator action failed. Please retry.'); codeRef.current?.focus(); }
+    } finally {
+      if (current(version)) { running.current = false; setBusy(false); }
+    }
+  };
+
+  const verified = factors?.filter(f => f.status === 'verified') || [];
+  const setup = Boolean(secret || removing);
+  const buttonClass = 'min-h-11 max-w-full';
+  return (
+    <section aria-labelledby={`${id}-title`} className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-xl space-y-4 min-w-0">
+      <h3 id={`${id}-title`} className="text-base font-black text-[var(--text)] uppercase tracking-tight">Two-step login</h3>
+      <p className="text-xs text-[var(--muted)]">Use an authenticator app for your account across all workspaces. Keep access to an enrolled app until its replacement is verified.</p>
+      <p ref={statusRef} tabIndex={-1} role="status" className="text-sm text-[var(--text)]">{!available ? 'Sign in to manage your authenticators.' : factors === null ? 'Authenticator status is unavailable until it loads.' : verified.length ? `Two-step login is on (${verified.length} authenticator${verified.length === 1 ? '' : 's'}).` : 'Two-step login is off.'}</p>
+      {error && <p role="alert" className="text-sm text-rose-400 break-words">{error}</p>}
+      {notice && <p role="status" className="text-sm text-[var(--pos)]">{notice}</p>}
+      {available && !setup && <>
+        <ul className="space-y-3">{factors?.map(factor => <li key={factor.id} className="flex flex-wrap items-center justify-between gap-3">
+          <span className="min-w-0 break-words text-sm">{factor.friendly_name || 'Authenticator'} — {factor.status === 'verified' ? 'verified' : 'unfinished setup'}</span>
+          {factor.status === 'verified' ? <button type="button" disabled={busy} className={`${buttonClass} px-4 border border-[var(--line)] rounded-xl`} onClick={() => { setRemoving(factor); setCode(''); setError(''); setNotice(''); }}>Remove {factor.friendly_name || 'authenticator'}</button> : <AsyncButton type="button" disabled={busy} variant="secondary" className={buttonClass} onClick={() => run('cancel', factor)}>Cancel unfinished setup</AsyncButton>}
+        </li>)}</ul>
+        <div className="flex flex-wrap gap-3">
+          <button type="button" disabled={busy || factors === null} className={`${buttonClass} px-4 bg-[var(--surface)] border border-[var(--line)] rounded-xl`} onClick={() => run('add')}>{busy ? 'Working…' : 'Add authenticator'}</button>
+          <AsyncButton type="button" disabled={busy} variant="secondary" className={buttonClass} onClick={() => run('reload')}>Reload status</AsyncButton>
+        </div>
+      </>}
+      {setup && <div className="space-y-3">
+        {secret ? <>
+          <p className="text-sm">Scan this QR code or enter the setup key in your authenticator app, then verify its current code.</p>
+          {secret.qrCodeSvg && <img src={secret.qrCodeSvg} alt="QR code to add LedgerFlow to your authenticator app" className="w-40 h-40 bg-white p-2 rounded" />}
+          <code className="block break-all text-sm text-[var(--text)]">{secret.secretKey}</code>
+        </> : <p className="text-sm">To remove {removing?.friendly_name || 'this authenticator'}, enter a current code from that app. {verified.length === 1 && 'Removing your last authenticator turns off two-step login.'}</p>}
+        <label htmlFor={`${id}-code`} className="block text-sm">Current 6-digit authenticator code</label>
+        <input ref={codeRef} id={`${id}-code`} type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} readOnly={busy} onChange={e => setCode(e.target.value)} className="min-h-11 w-full max-w-48 px-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-[var(--text)]" />
+        <div className="flex flex-wrap gap-3">
+          <AsyncButton type="button" disabled={busy || !/^\d{6}$/.test(code)} className={buttonClass} variant={secret ? 'primary' : 'danger'} onClick={() => run(secret ? 'verify' : 'remove')}>{secret ? 'Verify and add' : 'Verify and remove'}</AsyncButton>
+          {secret ? <AsyncButton type="button" variant="secondary" className={buttonClass} disabled={busy} onClick={() => run('cancel')}>Cancel setup</AsyncButton> : <button type="button" className={`${buttonClass} px-4 border border-[var(--line)] rounded-xl`} disabled={busy} onClick={() => { setRemoving(null); setCode(''); setError(''); statusRef.current?.focus(); }}>Cancel removal</button>}
+        </div>
+      </div>}
+    </section>
+  );
+}
 
 export default function SecuritySettings() {
   const lockDate = useLedgerStore(s => s.lockDate);
   const [isResetting, setIsResetting] = useState(false);
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
-  const user = useAuthStore(state => state.user);
   const txActions = useTransactionActions();
-  
-  const [mfaSecret, setMfaSecret] = useState<Awaited<ReturnType<typeof TotpMultiFactorGenerator.generateSecret>> | null>(null);
-  const [mfaCode, setMfaCode] = useState('');
-  const [isEnrollingMfa, setIsEnrollingMfa] = useState(false);
-
-  const startMfaEnrollment = async () => {
-    if (!user) return;
-    try {
-      setIsEnrollingMfa(true);
-      const mfaSession = await multiFactor(user).getSession();
-      const secret = await TotpMultiFactorGenerator.generateSecret(mfaSession);
-      setMfaSecret(secret);
-    } catch (e) {
-      toast.error('Failed to start MFA: ' + (e as Error).message);
-      setIsEnrollingMfa(false);
-    }
-  };
-
-  const completeMfaEnrollment = async () => {
-    if (!user || !mfaSecret || !mfaCode) return;
-    try {
-      const assertion = TotpMultiFactorGenerator.assertionForEnrollment(mfaSecret, mfaCode);
-      await multiFactor(user).enroll(assertion, 'Authenticator');
-      toast.success('MFA Successfully Enrolled');
-      setMfaSecret(null);
-      setMfaCode('');
-      setIsEnrollingMfa(false);
-    } catch (e) {
-      toast.error('Failed to enroll MFA: ' + (e as Error).message);
-    }
-  };
 
   const handleLockDateChange = async (dateStr: string | null) => {
     if (dateStr) {
@@ -65,7 +146,7 @@ export default function SecuritySettings() {
 
   const handleSystemPurge = async () => {
     if (!currentWorkspaceId) return;
-    
+
     setIsResetting(true);
     try {
         await txActions.handleResetWorkspace();
@@ -90,7 +171,7 @@ export default function SecuritySettings() {
             <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mt-1">Immutable Ledger Storage Compliance</p>
           </div>
         </div>
-        
+
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-6 p-6 bg-[var(--ink)]/50 rounded-xl border border-[var(--line)]">
           <div className="flex-1 space-y-1">
             <p className="text-sm font-bold text-[var(--text)] uppercase tracking-tight">Closed Period Lock Date</p>
@@ -117,7 +198,7 @@ export default function SecuritySettings() {
             <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mt-1">Zero-Trust Modal Configuration</p>
           </div>
         </div>
-        
+
         <div className="flex flex-col gap-4">
           {[
             { label: 'Rule Encryption', status: 'AES-256 GCM', desc: 'Symmetric encryption for all stored rule keys and model context.', active: true },
@@ -142,51 +223,7 @@ export default function SecuritySettings() {
           ))}
 
           <div className="pt-6 mt-4 border-t border-[var(--line)] space-y-6">
-            <div className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="space-y-1">
-                  <h3 className="text-base font-black text-[var(--text)] uppercase tracking-tight">Multi-Factor Authentication (MFA)</h3>
-                  <p className="text-xs font-medium text-[var(--muted)] leading-relaxed max-w-md">
-                    Secure your account using an authenticator app (TOTP). Required for administrative actions.
-                  </p>
-                  {mfaSecret && (
-                    <div className="mt-4 p-4 bg-[var(--surface)] border border-[var(--line)] rounded-lg">
-                      <p className="text-sm font-bold text-[var(--text)] mb-2">1. Scan or enter this secret in your Authenticator app:</p>
-                      {mfaSecret.qrCodeSvg && (
-                        <img src={mfaSecret.qrCodeSvg} alt="QR code to add LedgerFlow to your authenticator app" className="w-40 h-40 bg-white p-2 rounded mb-3" />
-                      )}
-                      <code className="block bg-[var(--ink)] p-2 rounded text-indigo-400 font-mono text-sm break-all mb-4">
-                        {mfaSecret.secretKey}
-                      </code>
-                      <p className="text-sm font-bold text-[var(--text)] mb-2">2. Enter the 6-digit code:</p>
-                      <div className="flex gap-2">
-                        <input aria-label="6-digit authentication code"
-                          type="text" 
-                          value={mfaCode}
-                          onChange={e => setMfaCode(e.target.value)}
-                          placeholder="000000"
-                          className="bg-[var(--ink)] border border-[var(--line)] px-4 py-2 rounded-lg text-[var(--text)] font-mono outline-none w-32"
-                        />
-                        <button 
-                          onClick={completeMfaEnrollment}
-                          className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-bold uppercase tracking-wider text-[10px]"
-                        >
-                          Verify
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {!mfaSecret && (
-                  <button 
-                    onClick={startMfaEnrollment}
-                    disabled={isEnrollingMfa}
-                    className="px-6 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--ink)] transition-all flex items-center gap-2 cursor-pointer shrink-0"
-                  >
-                    <ShieldCheck aria-hidden="true" size={14} />
-                    {isEnrollingMfa ? 'ENROLLING...' : 'ENROLL TOTP'}
-                  </button>
-                )}
-            </div>
+            <TwoStepLoginSettings />
 
             <div className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-1">

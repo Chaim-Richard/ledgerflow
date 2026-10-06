@@ -1648,7 +1648,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-82 Removed AI Studio IAM fallbacks (errors were reported as success) + in-memory billing copy
 - [ ] L-83 Verify the database TLS certificate (`DATABASE_CA_CERT`)
 - [ ] L-84 Custom SMTP sender for sign-up / reset emails
-- [ ] L-85 Two-step login management screen (status, remove, recovery codes)
+- [ ] L-85 Two-step login management screen (status, remove, recovery codes) — AI #4 D-2, PR #46: status/add/code-verified removal complete for review; recovery codes deferred per D-2, proposal in coordination.
 - [ ] L-86 Move security-definer helpers to a private schema
 - [ ] L-87 Sort large lists with an index (with C-14/C-15)
 - [x] L-88 Two-step login enforced on Supabase (database + server + code screen)
