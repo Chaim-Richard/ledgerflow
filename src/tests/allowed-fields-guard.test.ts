@@ -55,7 +55,7 @@ const TABLES: Record<string, [string, string[]]> = {
 // in the schema, except those only the server writes.
 const SCHEMA_MODELS: Array<[string, () => Promise<Record<string, unknown>>, string[]]> = [
   ['Invoice', async () => (await import('../schemas')).InvoiceSchema.shape, ['writtenOffCents', 'writeOffTransactionId', 'writeOffReason', 'writtenOffAt', 'writeOffReversalTransactionId', 'createdAt', 'updatedAt']],
-  ['Bill', async () => (await import('../schemas')).BillSchema.shape, ['createdAt', 'updatedAt']],
+  ['Bill', async () => (await import('../schemas')).BillSchema.shape, ['prepaidSchedule', 'createdAt', 'updatedAt']],
   ['CreditNote', async () => (await import('../schemas')).CreditNoteSchema.shape, ['createdAt', 'updatedAt', 'refundedCents']],
   ['VendorCredit', async () => (await import('../schemas')).VendorCreditSchema.shape, ['createdAt', 'updatedAt', 'refundedCents']],
 ];
