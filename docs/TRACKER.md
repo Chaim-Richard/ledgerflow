@@ -1551,7 +1551,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] K-26 Dunning: reminders on chosen days after the due date, per-customer opt-out (tested)
 - [ ] K-27 Customer portal
 - [ ] K-28 Scheduled reports
-- [ ] K-29 Exchange-rate history at posting
+- [x] K-29 Exchange-rate history at posting — **done 6 Oct**, read from the documents themselves (no second copy that could disagree): `rateHistory` / `rateOn` in `src/lib/exchangeRates.ts` give, per currency, the rates the books were posted at by day. A back-dated invoice, bill, payment or journal entry now gets the rate used on (or the closest day before) its date, with a note saying which, instead of today's live rate (which would be wrong for a past day); with none recorded it asks for that day's rate. Reports → Exchange Rates Used lists them for the period (journals included), with lowest/highest/latest. Tests: `rate-history.test.tsx`; browser: `e2e/everyday-reports.spec.ts`
 - [ ] K-30 Loans with amortisation
 - [ ] K-31 Petty cash
 - [ ] K-32 Notification preferences

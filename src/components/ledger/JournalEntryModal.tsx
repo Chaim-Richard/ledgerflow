@@ -88,7 +88,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
     .filter(t => t.originalCurrency && typeof t.exchangeRate === 'number')
     .map(t => ({ currency: t.originalCurrency, exchangeRate: t.exchangeRate, date: t.date })), [transactions]);
   const rateNote = useSuggestedRate({
-    currency: transactionCurrency, homeCurrency: baseCurrency || 'USD', enabled: !rateTyped, docs: usedRates,
+    currency: transactionCurrency, homeCurrency: baseCurrency || 'USD', enabled: !rateTyped, docs: usedRates, date,
     onRate: rate => setExchangeRate(rate),
   });
   const currencyChoices = useMemo(() => documentCurrencies(baseCurrency || 'USD', transactionCurrency, usedRates), [baseCurrency, transactionCurrency, usedRates]);

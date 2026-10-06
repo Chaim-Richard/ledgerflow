@@ -127,7 +127,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   // the rate fills itself in for another currency until the person types one (BA-06, I-23)
   const [rateTyped, setRateTyped] = useState(false);
   const rateNote = useSuggestedRate({
-    currency: billCurrency, homeCurrency: workspaceCurrency, enabled: !editingExisting && !rateTyped, docs: storeBills,
+    currency: billCurrency, homeCurrency: workspaceCurrency, enabled: !editingExisting && !rateTyped, docs: storeBills, date: bill.date,
     onRate: rate => setBill(prev => ({ ...prev, exchangeRate: rate })),
   });
   const money = (cents: number) => formatCurrency(cents, billCurrency);

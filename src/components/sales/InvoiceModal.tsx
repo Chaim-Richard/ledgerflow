@@ -134,7 +134,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   // the rate fills itself in for another currency until the person types one (BA-06, I-23)
   const [rateTyped, setRateTyped] = useState(false);
   const rateNote = useSuggestedRate({
-    currency, homeCurrency: workspaceCurrency, enabled: !editingExisting && !rateTyped, docs: pastInvoices,
+    currency, homeCurrency: workspaceCurrency, enabled: !editingExisting && !rateTyped, docs: pastInvoices, date: invoice.date,
     onRate: rate => setInvoice(prev => ({ ...prev, exchangeRate: rate })),
   });
   // I-23: a new invoice for a customer can copy the lines of their latest invoice
