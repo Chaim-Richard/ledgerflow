@@ -7,6 +7,7 @@ import { TaxReserveWidget } from './finance/TaxReserveWidget';
 import OnboardingView from './onboarding/OnboardingView';
 import SetupWizard from './onboarding/SetupWizard';
 import { useDataNeedsStore } from '../stores/useDataNeedsStore';
+import { LoadingState } from './ui/LoadingState';
 import SavedViewsBar from './ui/SavedViewsBar';
 import { cn } from '../lib/utils';
 import DashboardWidgets from './dashboard/DashboardWidgets';
@@ -35,6 +36,7 @@ export default function Dashboard() {
   // entries have loaded). The wizard stays until finished, even after it posts the first entry.
   const isGuest = useAuthStore(s => s.isGuest);
   const transactionsLoaded = useDataNeedsStore(s => Boolean(s.loaded.transactions));
+  const accountsLoaded = useDataNeedsStore(s => Boolean(s.loaded.accounts));
   const workspaceForSetup = workspaces.find(w => w.id === currentWorkspaceId);
   const needsSetup = !isGuest && Boolean(workspaceForSetup) && !workspaceForSetup?.setupCompletedAt && transactionsLoaded && rawTransactions.length === 0;
   const [setupStarted, setSetupStarted] = useState(false);
@@ -70,6 +72,12 @@ export default function Dashboard() {
   const hasTransactions = rawTransactions.length > 0;
   const setupStepCount = [hasSelectedTemplate, hasAccounts, hasTransactions].filter(Boolean).length;
   const isSetupIncomplete = setupStepCount < 3 && !isChecklistDismissed;
+
+  // until the entries and accounts are in, a workspace looks empty: deciding then flipped the page
+  // between the dashboard, the welcome page and setup while it loaded
+  if (!isGuest && !(transactionsLoaded && accountsLoaded) && !setupStarted) {
+    return <LoadingState what="your books" />;
+  }
 
   if ((needsSetup || setupStarted) && !setupClosed) {
     return <SetupWizard onStarted={() => setSetupStarted(true)} onDone={() => setSetupClosed(true)} />;
