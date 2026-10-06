@@ -1546,7 +1546,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] K-21 Expected-bill tracking: vendors that bill on a rhythm (weekly to quarterly, at least 3 regular bills) are learned from the bills already recorded; Purchases shows "Expected bills" (usual amount or range, how often, expected by / days late) with "Record bill" (the latest bill's lines copied, new dates) and "Not expected"; vendors on a recurring bill schedule are left out (tested)
 - [ ] K-22 Expense claims
 - [ ] K-23 Purchase requisitions
-- [ ] K-24 Payment runs + bank file
+- [x] K-24 Payment runs + bank file — **done 6 Oct**: Purchases → "Payment run" (writers): every open bill due by a date (default a week ahead) ticked, untick any; one payment per vendor out of the chosen bank account on the chosen day (the same server payments as K-06 "Pay bills"; other-currency bills left out with the reason), and a bank file (CSV: payee, account name, account number/IBAN, routing/sort code/BIC, amount, currency, date, the bills it pays) downloaded with it or alone. Vendors keep their bank details on their page, edited in place: an IBAN must pass its check digits, spaces are taken out, viewers see only the last four; the run warns about vendors without details. (`src/lib/paymentRun.ts`; tests `payment-run.test.tsx`.) Bank-specific formats (NACHA, SEPA XML) can follow when someone needs one
 - [x] K-25 Remittance advice: "Pay bills" can email each vendor what was paid, on which date, for which of their bills (new "Payment sent to a vendor" email, editable in Settings → Emails; logged; vendors without an address are skipped) (tested)
 - [x] K-26 Dunning: reminders on chosen days after the due date, per-customer opt-out (tested)
 - [ ] K-27 Customer portal
