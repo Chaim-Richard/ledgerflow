@@ -112,3 +112,18 @@ test('a file read started in another workspace cannot fill the new workspace rev
   assert.match(screen.getByRole('alert').textContent || '', /Workspace or user changed/);
   assert.ok(screen.queryByRole('button', { name: /Import \d+ Entries/ }) === null);
 });
+
+test('QIF refuses zero- and three-decimal workspace currencies before scaling or importing money', async () => {
+  let calls = 0;
+  render(<StatementImporter isOpen onClose={() => {}} onImport={() => { calls++; }} existingTransactions={[]} businessContext="" accounts={[]} patternCache={{}} />);
+  fireEvent.change(screen.getByLabelText('QIF date order'), { target: { value: 'mdy' } });
+  const ws = useAuthStore.getState().getCurrentWorkspace()!;
+  for (const currency of ['JPY', 'KWD']) {
+    useAuthStore.setState({ workspaces: [{ ...ws, currency }] });
+    await upload('checking.qif', fixture('checking-mdy.qif'));
+    assert.match(screen.getByRole('alert').textContent || '', /two-decimal workspace currencies only/);
+    assert.ok(screen.queryByRole('button', { name: /Import \d+ Entries/ }) === null);
+  }
+  assert.equal(calls, 0);
+  assert.equal(aiCalls, 0);
+});
