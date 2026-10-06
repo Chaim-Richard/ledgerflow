@@ -1859,16 +1859,16 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] P-11 Multi-language documents
 - [ ] P-12 Per-customer templates
 - [ ] P-13 Sales rep + commission
-- [ ] P-14 Cohort analysis
+- [x] P-14 Cohort analysis — first observed invoice-month activity preview; history limits shown; C-21
 
 # SECTION Q — CALCULATION ENGINES
 
-- [ ] Q-01 Units-of-production depreciation
-- [ ] Q-02 Depreciation conventions
+- [x] Q-01 Units-of-production depreciation — integer-cent cumulative preview; C-21
+- [x] Q-02 Depreciation conventions — straight-line calendar-year planning previews; statutory MACRS excluded; C-21
 - [ ] Q-03 Serial / lot tracking
-- [ ] Q-04 Tiered pricing
-- [ ] Q-05 Cost allocation rules
-- [ ] Q-06 Standard cost variance
+- [x] Q-04 Tiered pricing — three-band graduated and volume previews; C-21
+- [ ] Q-05 Cost allocation rules — C-21 percentage/driver calculation preview complete; saved reusable rules remain.
+- [x] Q-06 Standard cost variance — material price/quantity preview; C-21
 
 # SECTION R — PERIOD CLOSE WORKFLOW
 
@@ -2308,8 +2308,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CA-22 Coupons
 - [ ] CA-23 Loyalty
 - [ ] CA-24 Shipping rules
-- [ ] CA-25 Seasonal budget distribution
-- [ ] CA-26 Cost centre allocation %
+- [x] CA-25 Seasonal budget distribution — posted prior-year monthly expense pattern preview; C-21
+- [x] CA-26 Cost centre allocation % — three-recipient exact-cent preview; no posting; C-21
 - [ ] CA-27 JE templates
 - [ ] CA-28 Mode of payment
 - [ ] CA-29 Party link

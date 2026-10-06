@@ -127,6 +127,7 @@ export function buildAlgorithmContext(
 }
 
 export interface AlgorithmDefinition {
+  help?: { scope: string; method: string; example: string; limits: string };
   domain?: 'finance' | 'operations' | 'forensics' | 'planning' | 'treasury' | 'system' | 'valuation';
   requires?: ('transactions' | 'invoices' | 'bills' | 'accounts' | 'budgets')[];
   tags?: string[];

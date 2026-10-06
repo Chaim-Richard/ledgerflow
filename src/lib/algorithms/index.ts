@@ -1,3 +1,10 @@
+import { PRODUCTION_DEPRECIATION } from './production-depreciation';
+import { DEPRECIATION_CONVENTIONS } from './depreciation-conventions';
+import { PRICING_PREVIEW } from './pricing-preview';
+import { ALLOCATION_PREVIEW } from './allocation-preview';
+import { STANDARD_COST_VARIANCE } from './standard-cost-variance';
+import { SEASONAL_BUDGET } from './seasonal-budget';
+import { CUSTOMER_COHORTS } from './customer-cohorts';
 import { AlgorithmDefinition } from './types';
 import { MULTIDIMENSIONAL_MATRIX } from './multidimensional-matrix';
 import { heuristicPipeline } from './heuristic-pipeline';
@@ -62,6 +69,14 @@ import {
 export * from './types';
 
 export const FINANCIAL_ALGORITHMS: Record<string, AlgorithmDefinition> = {
+  [PRODUCTION_DEPRECIATION.id]: PRODUCTION_DEPRECIATION,
+  [DEPRECIATION_CONVENTIONS.id]: DEPRECIATION_CONVENTIONS,
+  [PRICING_PREVIEW.id]: PRICING_PREVIEW,
+  [ALLOCATION_PREVIEW.id]: ALLOCATION_PREVIEW,
+  [STANDARD_COST_VARIANCE.id]: STANDARD_COST_VARIANCE,
+  [SEASONAL_BUDGET.id]: SEASONAL_BUDGET,
+  [CUSTOMER_COHORTS.id]: CUSTOMER_COHORTS,
+
   '1': MULTIDIMENSIONAL_MATRIX,
   '2': heuristicPipeline,
   '3': assetAmortizer,

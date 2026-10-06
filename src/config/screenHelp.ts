@@ -70,6 +70,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Inspect the developer-only administration demonstration. Explore its example panels when developer mode is enabled. Demonstration telemetry is distinct from production monitoring.",
   },
   reports: {
+    "exchange-rates-used": "Review exchange rates stored on workspace documents and entries. Choose dates and inspect the rates actually used. Historical rates on records are distinct from current market quotes.",
     pnl: "Review posted income, cost of goods sold and expenses for the period. Compare periods and choose presentation columns. Incomplete loaded history makes the figures provisional.",
     "balance-sheet":
       "Review assets, liabilities and equity at the end date. Compare snapshots and inspect account detail. The start date does not erase earlier activity.",
@@ -85,8 +86,6 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review customer receipts grouped by stored payment method. Compare periods and inspect undated receipt counts. Unapplied receipts are not automatically sales revenue.",
     "deferred-revenue-waterfall":
       "Review scheduled revenue earned by month and still deferred at the period end. Inspect each schedule and its recorded earned amounts. Future scheduled amounts remain distinct from posted earned revenue.",
-    "exchange-rates-used":
-      "Review the exchange rate each foreign-currency document was recorded at, by currency and date. Compare it with the reference rate for that day. New documents dated in the past suggest the rate of their own date.",
     "financial-ratios":
       "Review financial ratios together with their formulas. Adjust report-only current-account groups and compare periods. Zero denominators are undefined and turnover days use labelled revenue or COGS proxies.",
     "gross-profit-by-customer":
