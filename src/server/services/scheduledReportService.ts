@@ -46,7 +46,7 @@ export async function sendReport(db: Firestore, workspace: { id: string; name?: 
   const table = await buildReport(db, workspace.id, schedule, period);
   const currency = workspace.currency || 'USD';
   const html = reportEmailHtml(table, { workspaceName: workspace.name || 'Your books', currency, format: cents => formatCurrency(cents, currency) });
-  const attachment = { filename: `${schedule.report}-${period.endDate}.csv`, content: Buffer.from(`﻿${reportCsv(table)}`, 'utf8'), contentType: 'text/csv' };
+  const attachment = { filename: `${schedule.report}-${period.endDate}.csv`, content: Buffer.from(`\uFEFF${reportCsv(table)}`, 'utf8'), contentType: 'text/csv' };
   let sent = 0;
   const failed: string[] = [];
   for (const to of schedule.recipients) {

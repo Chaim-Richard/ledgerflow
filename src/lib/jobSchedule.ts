@@ -33,6 +33,7 @@ export const DAILY_JOBS: DailyJobDescriptor[] = [
   { id: 'notifications', name: 'Team notices and overdue letters', what: 'Customers are told about invoices that have just gone past their due date, and notices the team has read are cleared away.' },
   { id: 'reminders', name: 'Invoice reminders', what: 'The reminders each workspace asked for, at the spacing it set, to the address the customer prefers (Y-27). An invoice waiting on an approval is left out and resumes when it is signed.' },
   { id: 'statements', name: 'Monthly statements', what: 'Once a month, every customer with something open who is set to receive one.' },
+  { id: 'scheduledReports', name: 'Scheduled reports', what: 'Each report set in Settings → Scheduled reports, once per finished week or month, to its addresses.' },
   { id: 'retention', name: 'What you asked to keep for less time', what: 'Email receipts, error logs and other records past the retention period each workspace sets are pruned.' },
 ];
 
