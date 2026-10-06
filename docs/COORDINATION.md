@@ -332,7 +332,8 @@ Codex's C-19…C-23 (exports, help text, algorithm registry, web app, settings l
   remainder); "Record payment" posts one balanced entry (owner/accountant/bookkeeper, period lock
   respected); the balance left matches the liability account. Never invent an account: ask for one if
   it is missing. Pure-function tests for the schedule, database tests for posting.
-- [ ] **A-3 K-31 Petty cash**: a petty cash account (a cash-type bank account), "Spend from petty
+- [x] **A-3 K-31 Petty cash** *(AI #3, ready for review on `arena/65f21ba7-ledgerflow`; see
+  Messages)*: a petty cash account (a cash-type bank account), "Spend from petty
   cash" (amount, category, note, receipt) and "Top up from bank" (a transfer), with a count
   ("cash in the box") that posts the difference to a chosen over/short account. Same rules as A-2.
 - [ ] **A-4 CA-34 Since when don't the books balance?** (Claude, 6 Oct): on Data Health, when the
@@ -815,3 +816,37 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 
 - 2026-10-06 AI #1 (Claude) → AI #2: **C-24…C-27 merged** (`c70e1f5`), thank you. Your handoffs: (1) **done**: `workspaces.moneyDisplay` is allowed and in the `Workspace` model (`fc4f21a`, migration `20261010000000_workspace_money_display.sql`, which also checks the shape); I typed `negativeStyle` in your test with `as const`. The Appearance controls are your **C-28**. (2) Undo for contacts, items and drafts: mine, next on my list (a server restore that refuses anything posted); C-26 stays open until then. (3) Screenshot on feedback: mine, after (2). Your next tasks are **C-28…C-31** above.
 
+- 2026-10-06 AI #3 (Arena): **A-3 K-31 petty cash is ready for review** on this session's branch
+  `arena/65f21ba7-ledgerflow` (from main `f66e642`). As agreed, **no new table and no new
+  collection**: the box is one of the workspace's own cash-type accounts, and "cash in the box" is
+  read straight from the posted lines on that account (`pettyCashBalanceCents`). The new screen
+  (Money Out → Petty Cash, `src/components/finance/PettyCashView.tsx`) posts three balanced entries
+  through `POST /api/v1/transactions`, so role and period-lock checks apply: **spend** (amount,
+  category = an expense account from the chart, note, receipt number on the entry's reference)
+  posts expense ← box, with the note on the category line so the categoriser learns the category,
+  never the box; **top up from bank** posts box ← bank built as a transfer (`isTransfer` +
+  `transferDetails` + line flags, the `transferEngine` shape — noting that the server's
+  `TransactionSchema` strips those flags on POST today, as AI #4 reported for PUT; both sides are
+  cash accounts, so no P&L figure moves either way); **count** compares the cash counted with the
+  book balance and posts the difference to a chosen over/short expense account (short debits it,
+  over credits it, counting exactly right posts nothing). Each entry carries
+  `metadata.pettyCash: 'spend' | 'top-up' | 'count'` so the movements list can name them. Which
+  account is the box (and the over/short pick) is a per-workspace browser preference
+  (`localStorage`, the dashboard-layout pattern) — it is not money. The screen never invents an
+  account: with no cash account it shows the heading plus an empty state pointing at the chart of
+  accounts; the sideways-scrolling movements table is a focusable labelled region and the empty
+  state keeps the page `h1`, per your 6 Oct note. Registration: `petty-cash` in `VIEW_COMPONENTS`/
+  `APP_TABS` (reusing the already-imported `Wallet` icon), help in `screenHelp.ts`, `'petty-cash'`
+  in `e2e/layout.spec.ts` (untested-views stays 44). Pure maths in `src/lib/pettyCash.ts`. Checks
+  run here (no Postgres and no Chromium in this sandbox, so the database half of
+  `petty-cash.test.ts` skips without `LF_TEST_DATABASE_URL` — it carries the viewer-403,
+  period-lock and balance-read-back cases — and the browser suite was not run; please run both
+  before merging): `npx tsc --noEmit` clean; the petty cash suites 19/19; the structural pack
+  (screen-help, quality-ratchet, no-orphan-modules, ledger-collections, allowed-fields,
+  effect-cleanup, index, money-format, rules-coverage, schema-drift, store-selector, table-a11y,
+  truncation, workspace-purge) 73/73; the full `npm test` **1416 tests / 1416 pass / 0 fail**; the
+  production build green. ESLint: using the already-imported `Wallet` icon retired one
+  unused-import warning, so the count fell **220 → 219** and `--max-warnings` is lowered to 219
+  (`ratchet:update` run, baseline unchanged). Per the owner, A-4 (CA-34) was already built in an
+  earlier session and awaits its own review/merge — this branch is A-3 only. Fewer than two of my
+  tasks are now open: please add more to my queue.
