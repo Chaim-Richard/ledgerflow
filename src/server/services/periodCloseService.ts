@@ -5,6 +5,9 @@ import { CLOSE_ITEM_IDS } from '../../lib/closeChecklist';
 import { formatTzDate } from '../../lib/utils';
 import { dayNumber } from '../../lib/fiscalCalendar';
 import { writeServerAuditLog } from './auditLogService';
+import { addToDateISO } from '../../lib/utils';
+import { balancesAsOf, snapshotChanges, takeClosingSnapshot, type ClosingSnapshot } from '../../lib/closingSnapshot';
+import type { ChartAccount, Transaction as LedgerEntry } from '../../types';
 
 /**
  * Closing the books (R-02 sign-offs, R-03 soft/hard close, R-08 drafts, R-10 roles, BA-15 partial
@@ -51,6 +54,22 @@ async function loadWorkspace(db: Firestore, t: Transaction, actor: Actor, roles:
 
 const later = (a?: string | null, b?: string | null) => ((a || '') > (b || '') ? a || '' : b || '');
 
+/**
+ * The workspace's accounts and its entries dated up to `asOfDate` (CA-06). Dates may carry a time,
+ * so the query asks for everything before the next day and the snapshot rule cuts at the date.
+ */
+async function ledgerThrough(db: Firestore, workspaceId: string, asOfDate: string, t?: Transaction) {
+  const accountsQuery = db.collection('chartAccounts').where('workspaceId', '==', workspaceId);
+  const entriesQuery = db.collection('transactions').where('workspaceId', '==', workspaceId).where('date', '<', addToDateISO(asOfDate, { days: 1 }));
+  const [accounts, entries] = t
+    ? [await t.get(accountsQuery), await t.get(entriesQuery)]
+    : [await accountsQuery.get(), await entriesQuery.get()];
+  return {
+    accounts: accounts.docs.map(d => ({ ...(d.data() as ChartAccount), id: d.id })),
+    entries: entries.docs.map(d => ({ ...(d.data() as LedgerEntry), id: d.id })),
+  };
+}
+
 function audit(db: Firestore, t: Transaction, actor: Actor, action: string, description: string, details: Record<string, unknown>) {
   return writeServerAuditLog({
     workspaceId: actor.workspaceId, uid: actor.uid, email: actor.email, action,
@@ -84,6 +103,9 @@ export async function closePeriod(db: Firestore, input: Actor & { month: string;
     }
 
     const now = new Date().toISOString();
+    // CA-06: every account's balance on the last day, kept with the period to compare with later
+    const ledger = await ledgerThrough(db, input.workspaceId, end, t);
+    const closingSnapshot = takeClosingSnapshot(ledger.accounts, ledger.entries, end, now);
     const update: DocumentData = { softLockDate: later(ws.softLockDate, end), updatedAt: now };
     if (input.mode === 'hard') update.lockDate = end;
     const ex = ws.lockException;
@@ -93,10 +115,30 @@ export async function closePeriod(db: Firestore, input: Actor & { month: string;
       workspaceId: input.workspaceId, periodId: input.month, startDate: `${input.month}-01`, endDate: end,
       status: input.mode === 'hard' ? 'closed' : 'soft_closed', closeMode: input.mode,
       closedAt: now, closedBy: input.email || input.uid, closedByUid: input.uid, updatedAt: now,
+      closingSnapshot,
     }, { merge: true });
     await audit(db, t, input, 'PERIOD_CLOSED', `${input.mode === 'hard' ? 'Hard' : 'Soft'}-closed ${input.month} (through ${end})`, { month: input.month, mode: input.mode });
     return { month: input.month, mode: input.mode, lockDate: update.lockDate ?? (hard || null), softLockDate: update.softLockDate as string };
   });
+}
+
+/**
+ * CA-06: the balances on the closed month's last day, worked out again from the whole ledger and
+ * compared with the snapshot taken when it was closed. Read only. `snapshot: null` when the month
+ * was never closed (or was closed before snapshots were kept).
+ */
+export async function closingBalanceCheck(db: Firestore, input: Actor & { month: string }) {
+  if (!MONTH.test(input.month)) throw new PeriodCloseError(400, 'Month must be YYYY-MM');
+  const period = (await periodRef(db, input.workspaceId, input.month).get()).data();
+  const snapshot = period?.closingSnapshot as ClosingSnapshot | undefined;
+  if (!snapshot?.asOfDate || !Array.isArray(snapshot.accounts)) return { snapshot: null, changes: [] };
+  const ledger = await ledgerThrough(db, input.workspaceId, snapshot.asOfDate);
+  const now = balancesAsOf(ledger.accounts, ledger.entries, snapshot.asOfDate);
+  return {
+    snapshot: { asOfDate: snapshot.asOfDate, takenAt: snapshot.takenAt, entries: snapshot.entries, accounts: snapshot.accounts.length },
+    entriesNow: now.entries,
+    changes: snapshotChanges(snapshot, now, ledger.accounts),
+  };
 }
 
 export async function reopenPeriod(db: Firestore, input: Actor & { month: string; reason: string }) {

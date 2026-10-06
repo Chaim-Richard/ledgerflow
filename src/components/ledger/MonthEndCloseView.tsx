@@ -17,6 +17,7 @@ import { monthCloseState, monthEnd } from '../../lib/periodLock';
 import type { AppTab, PeriodStatus, Workspace } from '../../types';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import CloseComparisonPanel from './CloseComparisonPanel';
+import ClosingBalanceCheck from './ClosingBalanceCheck';
 
 /**
  * Month-End Close (R-01 checklist, R-02 sign-offs, R-03 soft/hard close, R-08 drafts, R-10 roles,
@@ -375,6 +376,11 @@ export default function MonthEndCloseView() {
             )}
           </div>
         </section>
+
+        {/* CA-06: a closed month's balances now, against the snapshot taken when it was closed */}
+        {state !== 'open' && (
+          <ClosingBalanceCheck key={`${month}-${period?.status || ''}-${period?.closeMode || ''}`} workspaceId={workspaceId} month={month} currency={workspace?.currency} />
+        )}
 
         {/* R-09: this month beside the month before and the same month last year, read-only. */}
         <CloseComparisonPanel month={month} currency={workspace?.currency} />

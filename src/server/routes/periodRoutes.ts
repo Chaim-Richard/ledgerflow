@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { getDb } from '../db/firestore';
-import { closePeriod, partialUnlock, PeriodCloseError, relock, reopenPeriod, signOff } from '../services/periodCloseService';
+import { closePeriod, closingBalanceCheck, partialUnlock, PeriodCloseError, relock, reopenPeriod, signOff } from '../services/periodCloseService';
 import { DepreciationError, runDepreciation } from '../services/depreciationService';
 
 /**
@@ -37,6 +37,8 @@ periodRouter.post('/unlock', handle((req, p) => partialUnlock(getDb(), { ...acto
 periodRouter.post('/relock', handle((req, p) => relock(getDb(), actor(req, p))));
 periodRouter.post('/:month/close', handle((req, p) => closePeriod(getDb(), { ...actor(req, p), month: p.month, ...closeSchema.parse(req.body) })));
 periodRouter.post('/:month/reopen', handle((req, p) => reopenPeriod(getDb(), { ...actor(req, p), month: p.month, ...reopenSchema.parse(req.body) })));
+// CA-06: the closed month's balances now, against the snapshot taken when it was closed (read only)
+periodRouter.get('/:month/balance-check', handle((req, p) => closingBalanceCheck(getDb(), { ...actor(req, p), month: p.month })));
 periodRouter.post('/:month/sign-off', handle((req, p) => signOff(getDb(), { ...actor(req, p), month: p.month, ...signOffSchema.parse(req.body) })));
 // Month-end depreciation run for all active fixed assets (R-06, depreciationService.ts)
 periodRouter.post('/:month/depreciation', handle((req, p) => runDepreciation(getDb(), { ...actor(req, p), month: p.month })));

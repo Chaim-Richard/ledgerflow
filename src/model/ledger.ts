@@ -338,6 +338,8 @@ export interface PeriodStatus {
   reopenedAt?: string;
   reopenedBy?: string;
   reopenReason?: string;
+  /** CA-06: every account's balance on the last day when the month was closed (written by the server) */
+  closingSnapshot?: { asOfDate: string; takenAt: string; accounts: Array<{ accountId: string; cents: number }>; entries: number };
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
