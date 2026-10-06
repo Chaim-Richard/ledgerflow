@@ -16,6 +16,7 @@ import { badDebtRouter } from './badDebtRoutes';
 import { prepaidRouter, revenueSpreadRouter } from './prepaidRoutes';
 import { attachmentRouter } from './attachmentRoutes';
 import { incomingEventRouter } from './incomingEventRoutes';
+import { tagRouter } from './tagRoutes';
 import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
 import { brandingRouter } from './brandingRoutes';
@@ -156,6 +157,8 @@ workspaceRouter.use('/:workspaceId/numbering', requireWorkspaceRole(['owner', 'a
 workspaceRouter.use('/:workspaceId/attachments', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), attachmentRouter);
 // What Stripe and the email provider told us about this workspace (K-37): read only, owners and accountants
 workspaceRouter.use('/:workspaceId/incoming-events', requireWorkspaceRole(['owner', 'accountant']), incomingEventRouter);
+// Tags for the whole workspace (K-15): members read; writers rename, merge and remove (checked in the route)
+workspaceRouter.use('/:workspaceId/tags', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), tagRouter);
 
 // Bulk import of customers, vendors, items or accounts from a spreadsheet (K-01; rules in
 // src/lib/recordImport.ts). Writers may import; the chart of accounts is owner/accountant only.
