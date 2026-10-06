@@ -6,6 +6,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { getLocalDateISO } from '../../lib/utils';
 import { DATA_CHECKS, runDataChecks } from '../../lib/dataChecks';
 import type { CheckSeverity } from '../../lib/dataChecks';
+import type { LedgerHealth } from '../../lib/ledgerHealth';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
 import BalanceBreakPanel from './BalanceBreakPanel';
@@ -22,6 +23,16 @@ const SEVERITY: Record<CheckSeverity, { label: string; className: string }> = {
   low: { label: 'Worth a look', className: 'text-[var(--muted)] border-[var(--line)]' },
 };
 
+/** CA-32: what the nightly check found last time (the whole ledger, on the server). */
+function nightlyLine(health: LedgerHealth | undefined): string {
+  const told = 'Owners and accountants are told about new serious problems.';
+  if (!health?.checkedAt) return `The server also checks the whole ledger every night. ${told}`;
+  const when = new Date(health.checkedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  const { high, medium, low } = health.counts;
+  const found = high + medium + low === 0 ? 'nothing to fix' : `${high} serious, ${medium} to look at, ${low} minor`;
+  return `Last nightly check of the whole ledger: ${when}, ${found}. ${told}`;
+}
+
 export default function DataHealthView() {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
@@ -32,6 +43,7 @@ export default function DataHealthView() {
   const bankLines = useLedgerStore(s => s.bankLines);
   const { loading } = useLedgerCollections('bankLines', 'bills', 'inventory', 'invoices', 'recurring');
   const baseCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
+  const nightly = useAuthStore(s => s.getCurrentWorkspace()?.ledgerHealth);
   const openRecord = useUIStore(s => s.openRecord);
   const [only, setOnly] = useState<string>('all');
 
@@ -51,6 +63,7 @@ export default function DataHealthView() {
         <div>
           <h1 className="text-2xl font-bold">Data health</h1>
           <p className="text-xs text-[var(--muted)]">{DATA_CHECKS.length} checks on your books: entries that don't balance, duplicate numbers, missing accounts, wrong dates and more. Updated as you work.</p>
+          <p className="text-xs text-[var(--muted)] mt-1">{nightlyLine(nightly)}</p>
         </div>
       </div>
 

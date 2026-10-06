@@ -6,6 +6,7 @@ import type { InvoiceApprovalSettings } from '../lib/invoiceApproval';
 import type { MoneyDisplaySettings } from '../lib/moneyFormat';
 import type { ScheduledReport } from '../lib/scheduledReports';
 import type { CloseStep } from '../lib/closeSteps';
+import type { LedgerHealth } from '../lib/ledgerHealth';
 import type { NotificationType } from '../lib/notifications';
 import type { EntityMetadata, DimensionDefinition, Transaction } from './ledger';
 
@@ -58,6 +59,8 @@ export interface Workspace {
   scheduledReportsSent?: Record<string, string>;
   /** The client's own month-end steps (BD-10, src/lib/closeSteps.ts); saved by the server for owners and accountants. */
   closeSteps?: CloseStep[];
+  /** The nightly ledger health check (CA-32, src/lib/ledgerHealth.ts); written by the server only. */
+  ledgerHealth?: LedgerHealth;
   /** Set by the daily job: the month (YYYY-MM) monthly statements were last sent (Y-28). */
   lastStatementsMonth?: string;
   strategicAdvice?: string[];

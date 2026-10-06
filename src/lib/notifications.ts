@@ -23,6 +23,7 @@ export const NOTIFICATION_TYPES = {
   'member.joined': { label: 'Someone joined the workspace', roles: ['owner', 'accountant'] as Role[], tab: 'settings' },
   'query.asked': { label: 'Someone asked a question about an entry', roles: ['owner', 'accountant'] as Role[], tab: 'client-queries' },
   'query.answered': { label: 'A question about an entry was answered', roles: BOOKS, tab: 'client-queries' },
+  'health.problem': { label: 'The nightly check found a new problem in the books', roles: ['owner', 'accountant'] as Role[], tab: 'data-health' },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;
