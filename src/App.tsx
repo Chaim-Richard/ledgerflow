@@ -1,3 +1,4 @@
+import FeedbackWidget from './components/support/FeedbackWidget';
 import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import { usePerformanceTrace } from './hooks/usePerformanceTrace';
 import { auth } from './firebase';
@@ -345,6 +346,7 @@ const shortcutMap = useMemo(() => {
     return (
       <Suspense fallback={<InitializationScreen language={language} />}>
         <RootLayout />
+        <FeedbackWidget />
       </Suspense>
     );
   }
@@ -383,6 +385,7 @@ const shortcutMap = useMemo(() => {
         )}
         <Suspense fallback={null}><LedgerAutoAuditor /></Suspense>
         <RootLayout />
+        <FeedbackWidget />
         <CookieConsent onOpenPrivacyPolicy={() => { setLegalModalTab('privacy'); setIsLegalModalOpen(true); }} />
         <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} initialTab={legalModalTab} />
       </div>

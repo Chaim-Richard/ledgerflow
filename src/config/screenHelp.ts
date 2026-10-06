@@ -61,7 +61,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Inspect consistency and data-quality findings. Follow record links and review corrections in their normal editors. Findings cover the records currently loaded, which may be incomplete.",
     support:
       "Review support requests and conversations. Create a ticket using the existing support workflow. Availability depends on the configured service and access.",
-    help: "Find workflow guidance and registered screen descriptions. Search All screens using English or Hebrew names and inspect release notes. Help describes the implemented workflow and its limits.",
+    help: "Find workflow guidance and registered screen descriptions. Search All screens using English or Hebrew names and inspect release notes. Send feedback from any screen to save a support ticket with screen and app version. Help describes the implemented workflow and its limits.",
     vault:
       "Manage supporting documents for financial work. Browse files and inspect their record associations. Upload availability depends on the configured document service.",
     pricing:

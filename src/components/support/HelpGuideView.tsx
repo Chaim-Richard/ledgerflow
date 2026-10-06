@@ -223,6 +223,7 @@ export default function HelpGuideView() {
         </div>
 
         <ReleaseNotes />
+        <button type="button" className="min-h-11 px-4 border rounded-lg mt-4" onClick={() => window.dispatchEvent(new Event('ledgerflow:feedback'))}>Send feedback</button>
         <div className="max-w-7xl mx-auto flex gap-2 mt-4">
           <button type="button" aria-pressed={mode === 'workflows'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('workflows')}>Workflows</button>
           <button type="button" aria-pressed={mode === 'screens'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('screens')}>All screens</button>
