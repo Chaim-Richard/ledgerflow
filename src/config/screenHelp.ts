@@ -72,6 +72,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Inspect the developer-only administration demonstration. Explore its example panels when developer mode is enabled. Demonstration telemetry is distinct from production monitoring.",
   },
   reports: {
+    "budget-actual": "Compare a saved account budget with posted account movement for the selected period or months. Open an actual to inspect its contributing entries. Recurring caps are spread by month; partial months keep their cap, and loaded-cache figures are provisional until full history is requested.",
     pnl: "Review posted income, cost of goods sold and expenses for the period. Compare periods and choose presentation columns. Incomplete loaded history makes the figures provisional.",
     "balance-sheet":
       "Review assets, liabilities and equity at the end date. Compare snapshots and inspect account detail. The start date does not erase earlier activity.",
