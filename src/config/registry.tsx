@@ -249,6 +249,7 @@ export interface CommandDefinition {
 }
 
 export const SYSTEM_COMMANDS: CommandDefinition[] = [
+  { id: 'export-data', label: { en: 'Export workspace data', he: 'ייצוא נתוני סביבת העבודה' }, category: 'Data', actionId: 'export' },
   { id: 'reconcile', label: { en: 'Smart Matching', he: 'התאמות חכמות' }, category: 'Operations', actionId: 'start-reconciliation' },
   { id: 'generate-report', label: { en: 'Financial Reports', he: 'דוחות כספיים' }, category: 'Insights', actionId: 'reports' },
   { id: 'calibrate', label: { en: 'Currency Converter', he: 'המרת מטבעות' }, category: 'System', actionId: 'open-converter' },
