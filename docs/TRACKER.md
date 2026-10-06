@@ -2287,12 +2287,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] CA-01 Payment reconciliation: bank deposit → payment allocated to invoices, line matched
 - [x] CA-02 Unreconcile — exists, now role-checked, lock-checked, audited
 - [x] CA-03 Repost accounting ledger (check + repost; tested)
-- [ ] CA-04 Bank clearance date
+- [x] CA-04 Bank clearance date — **done 6 Oct**: in the Account Register, marking an entry cleared asks for the day the bank cleared it (today by default, never before the entry's own date) and shows "cleared 2026-05-04" under its date; unmarking undoes it. Saved through the server (owners, accountants, bookkeepers; the period lock applies; viewers can't). Fixed on the way: the register's cleared tick changed only the screen and was gone after a reload, and entries cleared by bank reconciliation showed as not cleared there (`src/services/clearanceActions.ts`, `POST /api/v1/transactions/reconciliation/clear`; tests `account-register-view.test.tsx`, `clearance-date.test.ts` with the database)
 - [ ] CA-05 Finance books
 - [ ] CA-06 Closing balance snapshots
 - [ ] CA-07 Period closing voucher
 - [ ] CA-08 Opening invoice tool
-- [ ] CA-09 Advance payment ledger
+- [x] CA-09 Advance payment ledger — **done 6 Oct**: Reports → Open Advances lists customer deposits (or, switched, vendor prepayments) not yet applied to an invoice or bill: contact, payment, date, paid, applied, still open and days waiting at the period end (90+ days in red), oldest first, totals per currency and the contacts holding the most; voided payments and ones after the date are left out. What is open is today's state (applying is not dated), only the age follows the date. Applying stays on the contact's page (BE-12) (`openAdvances` in `src/lib/advancePayments.ts`; tests `open-advances.test.tsx`; browser `e2e/everyday-reports.spec.ts`)
 - [x] CA-10 Transaction deletion record — **done 6 Oct**: deleting an entry (only drafts can be; posted ones are voided) or a draft invoice, bill or credit through the posting route now leaves an audit line saying what it was ("Deleted the invoice INV-9 of 2026-10-01 (Acme, USD 50.00)") with a copy of its main fields and up to 100 lines, written in the same database transaction as the deletion; before, only "Deleted transaction ref [id]" was kept, and document deletions weren't recorded at all (`src/server/services/deletionRecord.ts`; tests `deletion-record.test.ts` with the database)
 - [x] CA-11 Import log (recent imports from the audit log)
 - [x] CA-12 Saved column map (= Y-03)

@@ -107,6 +107,8 @@ export interface Transaction {
   // Bank Reconciliation
   isCleared?: boolean;
   clearedAt?: string;
+  /** the day the bank cleared it (CA-04), as marked in the account register */
+  clearanceDate?: string;
   bankTransactionId?: string; // For Plaid/Teller linking
   importIdentity?: string; // Deterministic idempotency fingerprint: <source>:<kind>:<hash>
   

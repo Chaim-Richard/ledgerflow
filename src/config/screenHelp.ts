@@ -85,6 +85,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review customer receipts grouped by stored payment method. Compare periods and inspect undated receipt counts. Unapplied receipts are not automatically sales revenue.",
     "exchange-rates-used":
       "Review exchange rates stored on workspace documents and entries. Choose dates and inspect the rates actually used. Historical rates on records are distinct from current market quotes.",
+    "open-advances":
+      "Review customer deposits and vendor prepayments not yet applied to an invoice or bill, oldest first. See how long each has waited and which contacts hold the most. Apply them from the customer's or vendor's page.",
     "deferred-revenue-waterfall":
       "Review scheduled revenue earned by month and still deferred at the period end. Inspect each schedule and its recorded earned amounts. Future scheduled amounts remain distinct from posted earned revenue.",
     "financial-ratios":

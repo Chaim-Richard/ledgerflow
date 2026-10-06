@@ -7,7 +7,8 @@ import { stubFetch } from './helpers/dom';
 import test, { afterEach, beforeEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { setComponentWorkspace } from './helpers/componentFixtures';
 import { AccountRegisterView } from '../components/finance/AccountRegisterView';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { makeChartAccount, makeTransaction } from './fixtures';
@@ -58,5 +59,55 @@ describe('Account Register', () => {
     render(<AccountRegisterView />);
     fireEvent.change(screen.getByLabelText('Register account'), { target: { value: 'cogs' } });
     assert.match(balanceCard('Current Register Balance'), /\$200\.00/);
+  });
+});
+
+describe('Cleared by the bank (CA-04)', () => {
+  afterEach(() => cleanup());
+  const setup = (role: 'bookkeeper' | 'viewer') => {
+    setComponentWorkspace(role);
+    const sent: Array<{ url: string; body: Record<string, unknown> }> = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      sent.push({ url: String(input), body: JSON.parse(String(init?.body || '{}')) });
+      return new Response(JSON.stringify({ status: 'ok' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }) as typeof fetch;
+    useLedgerStore.setState({
+      accounts: [makeChartAccount({ id: 'bank', name: 'Checking', type: 'asset' }), makeChartAccount({ id: 'sales', name: 'Sales', type: 'income' })],
+      transactions: [
+        makeTransaction({ id: 't1', date: '2026-05-01', description: 'Sale', lines: [line('bank', 50000), line('sales', -50000)] }),
+        makeTransaction({ id: 't2', date: '2026-05-03', description: 'Reconciled sale', isCleared: true, clearanceDate: '2026-05-04', lines: [line('bank', 1000), line('sales', -1000)] } as never),
+      ],
+    });
+    return sent;
+  };
+
+  test('an entry cleared by reconciliation shows as cleared, with the day', () => {
+    setup('viewer');
+    render(<AccountRegisterView />);
+    assert.match(rows()[0], /2026-05-03cleared 2026-05-04——Reconciled sale/);
+    assert.ok(screen.getAllByRole('button', { name: 'Mark transaction as uncleared' }).length === 1);
+  });
+
+  test('marking cleared asks for the bank\'s day and saves it through the server; unmarking too', async () => {
+    const sent = setup('bookkeeper');
+    render(<AccountRegisterView />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mark transaction as cleared' }));
+    fireEvent.change(screen.getByLabelText('Cleared the bank on'), { target: { value: '2026-05-02' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Mark cleared' })); });
+    await waitFor(() => assert.ok(sent.length >= 1));
+    assert.deepEqual([sent[0].url, sent[0].body], ['/api/v1/transactions/reconciliation/clear', { workspaceId: 'component-workspace', transactionIds: ['t1'], cleared: true, clearanceDate: '2026-05-02' }]);
+    await waitFor(() => assert.match(rows()[1], /cleared 2026-05-02/));
+    await act(async () => { fireEvent.click(screen.getAllByRole('button', { name: 'Mark transaction as uncleared' })[0]); });
+    await waitFor(() => assert.equal(sent.length, 2));
+    assert.deepEqual(sent[1].body, { workspaceId: 'component-workspace', transactionIds: ['t2'], cleared: false });
+  });
+
+  test('a viewer cannot change it', () => {
+    const sent = setup('viewer');
+    render(<AccountRegisterView />);
+    const button = screen.getByRole('button', { name: 'Mark transaction as cleared' }) as HTMLButtonElement;
+    assert.equal(button.disabled, true);
+    fireEvent.click(button);
+    assert.equal(sent.length, 0);
   });
 });
