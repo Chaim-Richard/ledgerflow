@@ -40,6 +40,8 @@ export interface Vendor {
   noteLog?: ContactNote[];
   /** Set when the vendor came from a spreadsheet import (src/lib/recordImport.ts); lets the import be undone. */
   importBatchId?: string;
+  /** Where payment runs send the money (K-24, src/lib/paymentRun.ts). */
+  bankDetails?: { accountName?: string; accountNumber?: string; routingCode?: string };
 }
 
 /** A bill's expense spread over months (K-17): the entries are in `transactionIds`, the first one moves it to Prepaid. */
