@@ -1,6 +1,6 @@
 import { useDialog } from '../../hooks/useDialog';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { headerSignature, mappingToSaved, savedToMapping } from '../../lib/importColumnMaps';
 import type { LedgerState } from '../../stores/useLedgerStore';
 import type { ColumnMapping } from '../../lib/importColumnMaps';
@@ -94,6 +94,9 @@ export default function StatementImporter({
   const [isParsing, setIsParsing] = useState(false);
   const [parsedTxs, setParsedTxs] = useState<ParsedTx[]>([]);
   const [step, setStep] = useState<'input' | 'mapping' | 'review'>('input');
+  const backButtonRef = useRef<HTMLButtonElement>(null);
+  // Upload/mapping fields unmount on review; keep keyboard events inside useDialog's boundary.
+  useEffect(() => { if (isOpen && step !== 'input') backButtonRef.current?.focus(); }, [isOpen, step]);
   const [csvData, setCsvData] = useState<string[][]>([]);
   const [qifDateOrder, setQifDateOrder] = useState<QIFDateOrder | ''>('');
   const [fileError, setFileError] = useState('');
@@ -693,6 +696,7 @@ export default function StatementImporter({
         <div className="p-4 md:p-6 border-t border-[var(--line)] bg-[var(--ink)] flex items-center justify-between">
           {step !== 'input' ? (
             <button 
+              ref={backButtonRef}
               onClick={() => setStep('input')}
               className="px-5 py-2.5 text-[var(--muted)] font-bold hover:text-[var(--text)] transition-all cursor-pointer text-xs uppercase tracking-wider"
             >
