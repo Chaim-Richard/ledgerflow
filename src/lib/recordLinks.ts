@@ -21,6 +21,9 @@ export function recordHash(record: RecordRef): string {
 /** The screen and (optionally) the record a hash points to. */
 export function parseRecordHash(hash: string): { tab: string; record?: RecordRef } {
   const clean = hash.replace(/^#/, '');
+  // sign-in data sent back after "Sign in with Google" (#access_token=…&…, #error=…) is not a page;
+  // no page name has "=" in it
+  if (clean.includes('=')) return { tab: '' };
   const [tab, type, ...rest] = clean.split('/');
   const id = rest.join('/');
   if (type && id && TYPES.has(type)) {
