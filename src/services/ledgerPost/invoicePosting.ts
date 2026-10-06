@@ -101,7 +101,8 @@ export async function postInvoiceLedger(
   const status = invoiceData.status || 'pending';
   if (status === 'draft' || status === 'rejected' || status === 'void' || status === 'cancelled') {
     // If setting to draft, rejected, voided, or cancelled, reversing prior postings (if any) is sufficient
-    if (txsToPost.length > 0) {
+    // the document itself is saved with them; a new draft has nothing to reverse and is still saved
+    if (txsToPost.length > 0 || entityMutation) {
       await postTxsServerApi(txsToPost, workspaceId, entityMutation);
     }
     return {};

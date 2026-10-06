@@ -86,6 +86,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review customer receipts grouped by stored payment method. Compare periods and inspect undated receipt counts. Unapplied receipts are not automatically sales revenue.",
     "deferred-revenue-waterfall":
       "Review scheduled revenue earned by month and still deferred at the period end. Inspect each schedule and its recorded earned amounts. Future scheduled amounts remain distinct from posted earned revenue.",
+    "exchange-rates-used":
+      "Review the exchange rate each foreign-currency document was recorded at, by currency and date. Compare it with the reference rate for that day. New documents dated in the past suggest the rate of their own date.",
     "financial-ratios":
       "Review financial ratios together with their formulas. Adjust report-only current-account groups and compare periods. Zero denominators are undefined and turnover days use labelled revenue or COGS proxies.",
     "gross-profit-by-customer":
