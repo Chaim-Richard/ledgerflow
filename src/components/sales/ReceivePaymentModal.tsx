@@ -143,7 +143,7 @@ export default function ReceivePaymentModal({
   const isForeign = payCurrency !== homeCurrency;
   const rateNote = useSuggestedRate({
     currency: payCurrency, homeCurrency, enabled: isForeign && !rateTyped,
-    docs: [...(invoices || []), ...(bills || [])], onRate: rate => setDayRate(rate),
+    docs: [...(invoices || []), ...(bills || [])], onRate: rate => setDayRate(rate), date,
   });
   const bookedCents = payDoc ? Math.round(paymentAmountCents * payDoc.rate) : 0;
   const arrivedCents = dayRate ? Math.round(paymentAmountCents * dayRate) : bookedCents;

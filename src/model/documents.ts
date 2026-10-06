@@ -228,6 +228,8 @@ export interface Payment {
   depositAccountId: string;             // which bank/cash account it hit
   allocations: PaymentAllocation[];
   unappliedCents: number;               // amountCents minus sum(allocations)
+  /** A deposit taken for this estimate (BE-05); applied to its invoice once that is issued. */
+  estimateId?: string;
   status: 'draft' | 'posted' | 'void';
   createdAt: string;
   updatedAt?: string;

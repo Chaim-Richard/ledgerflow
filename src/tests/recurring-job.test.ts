@@ -110,13 +110,19 @@ describe('The daily recurring job', { skip: !url && 'LF_TEST_DATABASE_URL not se
     const next = (await db.collection('recurring').doc(id('inv')).get()).data();
     assert.equal(next?.nextOccurrence, '2026-10-01');
 
-    const notes = await db.collection('notifications').where('workspaceId', '==', ws).get();
-    assert.equal(notes.docs.length, 2, 'the owner is told about each draft');
+    const notes = (await db.collection('notifications').where('workspaceId', '==', ws).get()).docs.map(d => d.data());
+    assert.equal(notes.filter(n => n.kind === 'invoice.draft_ready').length, 2, 'the owner is told about each draft');
+    const failed = notes.filter(n => n.kind === 'recurring.failed');
+    assert.equal(failed.length, 1, 'and about the entry that could not be created (S-12)');
+    assert.match(String(failed[0].message), /2026-09-01: .*two lines/);
+    assert.equal(failed[0].linkTab, 'recurring');
   });
 
   test('running again the same day creates nothing new', async () => {
     const again = await processRecurring(db, '2026-09-01');
     assert.equal(again.processedCount, 0);
+    const failedNotes = (await db.collection('notifications').where('workspaceId', '==', ws).get()).docs.filter(d => d.data().kind === 'recurring.failed');
+    assert.equal(failedNotes.length, 1, 'the same failure is not announced twice');
     assert.equal((await db.collection('invoices').where('workspaceId', '==', ws).get()).docs.length, 2);
   });
 

@@ -35,6 +35,8 @@ const paymentInputSchema = z.object({
   sendRemittance: z.boolean().optional(),
   /** Home-currency units for one unit of a foreign document's currency on the payment day (L-192). */
   paymentExchangeRate: z.number().positive().max(1e6).optional(),
+  /** BE-05: a deposit for this estimate */
+  estimateId: z.string().min(1).max(200).optional(),
 });
 
 export async function handleCreatePayment(req: express.Request, res: express.Response, dbOverride?: Firestore) {

@@ -46,6 +46,8 @@ export interface PdfDocument {
   taxBreakdown?: Array<{ name?: string; rate?: number; taxCents?: number }>;
   pricesIncludeTax?: boolean;
   depositCents?: number;
+  /** `saleReceipt` (K-03): an invoice paid on the spot, titled as a receipt */
+  metadata?: { saleReceipt?: boolean };
 }
 
 export interface PdfWorkspace { name?: string; companyName?: string; currency?: string; branding?: WorkspaceBranding }
@@ -161,9 +163,11 @@ export function layoutDocumentPdf(
     summary.push({ label: 'AMOUNT DUE', value: money(totalCents - depositCents), strong: true });
   }
 
-  const qrWanted = type === 'invoice' && branding.showPaymentQr !== false && /^https?:\/\//.test(options.paymentUrl || '') && totalCents - depositCents > 0;
+  // a sale receipt (K-03) is an invoice paid on the spot: titled as a receipt, nothing to pay
+  const saleReceipt = type === 'invoice' && Boolean(doc.metadata?.saleReceipt);
+  const qrWanted = type === 'invoice' && !saleReceipt && branding.showPaymentQr !== false && /^https?:\/\//.test(options.paymentUrl || '') && totalCents - depositCents > 0;
   return {
-    title: TITLES[type],
+    title: saleReceipt ? 'SALES RECEIPT' : TITLES[type],
     company: {
       name: clean(workspace?.name || workspace?.companyName || 'LedgerFlow Workspace', 120),
       addressLines: clean(branding.address, 300).split(/\s*\n\s*/).filter(Boolean).slice(0, 5),

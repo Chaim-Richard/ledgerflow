@@ -4,7 +4,7 @@ import { usePerformanceTrace } from '../../hooks/usePerformanceTrace';
 import { motion, AnimatePresence } from 'motion/react';
 import { BookOpen, Plus, Search, ArrowRightLeft, Scale, ShieldCheck, AlertCircle, Activity, Cpu, Layers, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import type { ChartAccount, JournalEntry } from '../../types';
+import type { ChartAccount } from '../../types';
 import type { ReconciliationResult } from './ReconciliationWizard';
 import { cn, reportError, OperationType, formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
@@ -19,6 +19,8 @@ import { LexiconText } from '../../hooks/useLexicon';
 // Sub-views (Dynamically loaded to optimize bundle footprint and ensure near-instant initial tab rendering)
 const ChartOfAccountsView = React.lazy(() => import('./ChartOfAccountsView'));
 const JournalView = React.lazy(() => import('./JournalView'));
+import type { JournalListEntry } from './JournalView';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
 const TrialBalanceView = React.lazy(() => import('./TrialBalanceView'));
 // Keep legacy views reachable for the structural component guard.
 const _ProjectProfitabilityView = React.lazy(() => import('./ProjectProfitabilityView'));
@@ -76,8 +78,12 @@ const Ledger = React.memo(() => {
   const accounts = React.useMemo(() => {
     return computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
   }, [computedAccounts, rawAccounts]);
-  const journalEntries = React.useMemo<JournalEntry[]>(() => (transactions || []).filter(isPostable).map(tx => ({
+  const journalEntries = React.useMemo<JournalListEntry[]>(() => (transactions || []).filter(isPostable).map(tx => ({
     id: tx.id,
+    kind: tx.type,
+    isReversal: Boolean(tx.metadata?.isReversal),
+    reversedBy: (tx as { reversalEventId?: string }).reversalEventId || undefined,
+    autoReverseOn: typeof tx.metadata?.autoReverseOn === 'string' ? tx.metadata.autoReverseOn : undefined,
     uid: tx.uid || 'system',
     workspaceId: tx.workspaceId || '',
     date: tx.date || '',
@@ -145,6 +151,9 @@ const Ledger = React.memo(() => {
 
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('coa');
   const [activeModal, setActiveModal] = useState<ModalType>(null);
+  // K-05: "Duplicate" opens the journal form with an entry's lines
+  const [duplicateOf, setDuplicateOf] = useState<JournalListEntry | null>(null);
+  const ledgerRole = useCurrentRole();
   const { dialogProps: overlay2DialogProps, titleId: overlay2TitleId } = useDialog(() => setActiveModal(null), activeModal === 'period');
   const { dialogProps: overlay1DialogProps, titleId: overlay1TitleId } = useDialog(() => setActiveModal(null), activeModal === 'account');
   const [searchTerm, setSearchTerm] = useState('');
@@ -370,7 +379,10 @@ const Ledger = React.memo(() => {
             />
           )}
           {activeSubTab === 'journal' && (
-            <JournalView journalEntries={journalEntries} formatCurrency={formatCurrency} />
+            <JournalView journalEntries={journalEntries} formatCurrency={formatCurrency}
+              canEdit={ledgerRole !== 'viewer'}
+              onReverse={(entry, date, reason) => txActions.handleReverseTransaction(entry.id, date, reason)}
+              onDuplicate={entry => { setDuplicateOf(entry); setActiveModal('journal'); }} />
           )}
           {activeSubTab === 'trial' && (
             <TrialBalanceView 
@@ -643,8 +655,10 @@ const Ledger = React.memo(() => {
 
       {/* Journal Entry Modal */}
       {user && <JournalEntryModal 
+        key={duplicateOf?.id || 'new'}
         isOpen={activeModal === 'journal'}
-        onClose={() => setActiveModal(null)}
+        initialEntry={duplicateOf ? { description: duplicateOf.description, reference: '', lines: duplicateOf.lines } : undefined}
+        onClose={() => { setActiveModal(null); setDuplicateOf(null); }}
         user={user}
         accounts={accounts}
         workspaceId={workspaceId || ""}

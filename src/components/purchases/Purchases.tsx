@@ -16,6 +16,8 @@ import { undoSpreadRequest } from '../../services/spreadActions';
 import { spreadProgress } from '../../lib/prepaidSchedule';
 import SpreadBillDialog from './SpreadBillDialog';
 import PaymentRunDialog from './PaymentRunDialog';
+import ExpenseClaims, { type NewClaim } from './ExpenseClaims';
+import { claimBill, claimDecision, claimOf } from '../../lib/expenseClaims';
 import BillModal from './BillModal';
 import VendorModal from './VendorModal';
 import TagFilter from '../common/TagFilter';
@@ -44,7 +46,8 @@ export default function Purchases() {
   const schedules = useLedgerStore(s => s.recurring) || [];
   useLedgerCollections('recurring');
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
-  const canEditContacts = useCurrentRole() !== 'viewer';
+  const currentRole = useCurrentRole();
+  const canEditContacts = currentRole !== 'viewer';
 
   const [activeSubTab, setActiveSubTab] = useState<'bills' | 'vendors'>('bills');
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
@@ -117,6 +120,23 @@ export default function Purchases() {
   };
   const stopExpecting = (e: ExpectedBill) =>
     updateEntity('vendors', e.vendorId, { billsExpected: false }, `Bills from ${e.vendorName} are no longer expected`);
+
+  // K-22: a claim is a draft bill owed to the person who paid (a vendor of type "employee") until approved
+  const currentUser = useAuthStore(s => s.user);
+  const submitClaim = async (c: NewClaim) => {
+    let payee: { id: string; name: string } | undefined = vendors.find(v => v.name.trim().toLowerCase() === c.payeeName.toLowerCase());
+    if (!payee) {
+      const created = await addEntity('vendors', { name: c.payeeName, type: 'employee', category: 'Employee', status: 'active' }, `${c.payeeName} added as someone to pay back`);
+      if (!created) return;
+      payee = { id: created.id, name: c.payeeName };
+    }
+    await addEntity('bills', claimBill({
+      payee, date: c.date, lines: c.lines, note: c.note, currency: homeCurrency, now: new Date().toISOString(),
+      submittedBy: currentUser?.uid || '', submittedByName: currentUser?.displayName || currentUser?.email || undefined,
+    }), 'Expense claim submitted for approval');
+  };
+  const decideClaim = (b: Bill, approve: boolean, reason?: string) =>
+    updateEntity('bills', b.id, claimDecision(b, approve, currentUser?.uid || '', new Date().toISOString(), reason), approve ? 'Claim approved: it is now a bill to pay' : 'Claim rejected');
 
   const describeBill = (b: Bill) => `bill ${b.number || ''} from ${b.vendorName || 'this vendor'} (${formatCurrency(b.amountCents || 0, b.currency)})`.replace('bill  from', 'bill from');
 
@@ -234,7 +254,11 @@ export default function Purchases() {
       </div>
 
       {activeSubTab === 'bills' && (
+        <>
         <ExpectedBills bills={bills} vendors={vendors} schedules={schedules} canEdit={canEditContacts} onRecord={recordExpected} onDismiss={stopExpecting} />
+        <ExpenseClaims bills={bills} vendors={vendors} accounts={accounts} userRole={currentRole} uid={currentUser?.uid || ''} currency={homeCurrency}
+          onSubmit={submitClaim} onDecide={decideClaim} />
+        </>
       )}
 
       {/* Search Input Bar */}
@@ -317,6 +341,7 @@ export default function Purchases() {
                           {b.status || 'Unpaid'}
                         </span>
                         {b.prepaidSchedule && <div className="mt-1 text-[10px] text-[var(--muted)]">{spreadProgress(b.prepaidSchedule, getLocalDateISO())}</div>}
+                        {claimOf(b) && <div className="mt-1 text-[10px] text-[var(--muted)]">Expense claim{claimOf(b)?.state === 'rejected' ? ` · rejected${claimOf(b)?.reason ? `: ${claimOf(b)?.reason}` : ''}` : ''}</div>}
                       </td>
                       <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
                         {formatCurrency(b.amountCents || 0)}

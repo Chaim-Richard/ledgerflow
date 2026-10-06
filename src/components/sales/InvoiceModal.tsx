@@ -6,6 +6,7 @@ import { calculateDueDate, isFixedTerm, termsForCustomer } from '../../lib/payme
 import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
+import { isUndepositedFundsAccount, resolveAccountRole } from '../../lib/accountUtils';
 import { X, Plus, Trash2, Save, Download, Eye } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Invoice, Customer, ChartAccount } from '../../types';
@@ -29,9 +30,14 @@ interface InvoiceModalProps {
   customers: Customer[];
   accounts: ChartAccount[];
   initialInvoice?: Partial<Invoice>;
+  /** A sale receipt (K-03): paid on the spot; saved as an issued invoice with its payment recorded at once. */
+  receipt?: boolean;
 }
 
-export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], accounts = [], initialInvoice }: InvoiceModalProps) {
+/** What a sale receipt adds to the saved invoice: where the money went and how (not stored on the invoice). */
+export interface ReceiptPayment { cashAccountId: string; method: string }
+
+export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], accounts = [], initialInvoice, receipt = false }: InvoiceModalProps) {
   // Ensure we have arrays even if props were passed as null
   // archived contacts aren't offered for new documents; one already on this document stays (I-22)
   const safeCustomers = (Array.isArray(customers) ? customers : []).filter(c => !isArchivedParty(c) || c.id === initialInvoice?.customerId);
@@ -42,6 +48,12 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   useLedgerCollections('inventory', 'invoices');
   const pastInvoices = useLedgerStore(s => s.invoices);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
+  // a sale receipt goes into a bank account or Undeposited Funds (then "Make deposit" takes it to the bank)
+  const chartAccounts = useLedgerStore(s => s.accounts);
+  const paidIntoChoices = useMemo(() => (chartAccounts || []).filter(a => !a.isArchived && (resolveAccountRole(a) === 'cash' || isUndepositedFundsAccount(a))), [chartAccounts]);
+  const [receiptAccountId, setReceiptAccountId] = useState('');
+  const [receiptMethod, setReceiptMethod] = useState('card');
+  const paidIntoId = receiptAccountId || (paidIntoChoices.find(isUndepositedFundsAccount) || paidIntoChoices[0])?.id || '';
 
   const [invoice, setInvoice] = useState<Partial<Invoice>>(() => initialInvoice || ({
     number: `INV-${Date.now().toString().slice(-6)}`,
@@ -122,7 +134,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   // the rate fills itself in for another currency until the person types one (BA-06, I-23)
   const [rateTyped, setRateTyped] = useState(false);
   const rateNote = useSuggestedRate({
-    currency, homeCurrency: workspaceCurrency, enabled: !editingExisting && !rateTyped, docs: pastInvoices,
+    currency, homeCurrency: workspaceCurrency, enabled: !editingExisting && !rateTyped, docs: pastInvoices, date: invoice.date,
     onRate: rate => setInvoice(prev => ({ ...prev, exchangeRate: rate })),
   });
   // I-23: a new invoice for a customer can copy the lines of their latest invoice
@@ -154,6 +166,10 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       toast.error("The deposit can't be more than the invoice total");
       return;
     }
+    if (receipt && !paidIntoId) {
+      toast.error('Add a bank account (or Undeposited Funds) to the chart first: a sale receipt needs somewhere the money went');
+      return;
+    }
     
     // Support file attachments (preview only)
     if (attachments.length > 0) {
@@ -165,6 +181,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       await onSave({
         ...invoice,
         status: actionStatus as any,
+        ...(receipt ? { paymentTerms: 'due_on_receipt', dueDate: invoice.date, receiptPayment: { cashAccountId: paidIntoId, method: receiptMethod } as ReceiptPayment } : {}),
         currency,
         // the total owed (after the discount, tax included) and the tax, explicitly (taxCodes.ts)
         amountCents: totals.amountCents,
@@ -181,6 +198,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
         items,
         metadata: {
           ...(invoice.metadata || {}),
+          ...(receipt ? { saleReceipt: true } : {}),
           memo,
           terms,
           emailSubject,
@@ -228,7 +246,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       >
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
           <div>
-            <h2 id={titleId} className="text-2xl font-black text-[var(--text)] tracking-tight">{editingExisting ? `Edit invoice ${invoice.number || ''}`.trim() : 'New invoice'}</h2>
+            <h2 id={titleId} className="text-2xl font-black text-[var(--text)] tracking-tight">{receipt ? 'New sale receipt' : editingExisting ? `Edit invoice ${invoice.number || ''}`.trim() : 'New invoice'}</h2>
             <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Sales & Receivables</p>
           </div>
           <div className="flex items-center gap-2">
@@ -691,31 +709,66 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
              aria-label="Cancel">
               Cancel
             </button>
-            <AsyncButton 
-              type="button"
-              onClick={(e) => handleAction(e, 'draft')}
-              loadingText="Saving..."
-              className="px-6 py-3.5 bg-zinc-100 text-zinc-700 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-200 transition-all flex items-center gap-2"
-            >
-              Save Draft
-            </AsyncButton>
-            <AsyncButton 
-              type="submit"
-              onClick={(e) => handleAction(e, 'pending')}
-              loadingText="Saving..."
-              className="px-6 py-3.5 bg-zinc-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2"
-            >
-              <Save size={16} />
-              Save & Close
-            </AsyncButton>
-            <AsyncButton 
-              type="button"
-              onClick={(e) => handleAction(e, 'sent')}
-              loadingText="Sending..."
-              className="px-6 py-3.5 bg-slate-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
-            >
-              Send Invoice
-            </AsyncButton>
+            {receipt ? (
+              <>
+                <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                  Paid into
+                  <select aria-label="Paid into" value={paidIntoId} onChange={e => setReceiptAccountId(e.target.value)}
+                    className="px-3 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-medium normal-case text-[var(--text)]">
+                    {paidIntoChoices.length === 0 && <option value="">No bank account in the chart</option>}
+                    {paidIntoChoices.map(a => <option key={a.id} value={a.id}>{a.code ? `${a.code} – ` : ''}{a.name}</option>)}
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                  Method
+                  <select aria-label="Payment method" value={receiptMethod} onChange={e => setReceiptMethod(e.target.value)}
+                    className="px-3 py-2 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-xs font-medium normal-case text-[var(--text)]">
+                    <option value="card">Card</option>
+                    <option value="cash">Cash</option>
+                    <option value="bank_transfer">Bank transfer</option>
+                    <option value="check">Check</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+                <AsyncButton
+                  type="button"
+                  onClick={(e) => handleAction(e, 'sent')}
+                  loadingText="Saving..."
+                  className="px-6 py-3.5 bg-emerald-600 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-emerald-700 transition-all shadow-lg flex items-center gap-2"
+                >
+                  <Save size={16} />
+                  Save receipt
+                </AsyncButton>
+              </>
+            ) : (
+              <>
+              <AsyncButton 
+                type="button"
+                onClick={(e) => handleAction(e, 'draft')}
+                loadingText="Saving..."
+                className="px-6 py-3.5 bg-zinc-100 text-zinc-700 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-200 transition-all flex items-center gap-2"
+              >
+                Save Draft
+              </AsyncButton>
+              <AsyncButton 
+                type="submit"
+                onClick={(e) => handleAction(e, 'pending')}
+                loadingText="Saving..."
+                className="px-6 py-3.5 bg-zinc-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2"
+              >
+                <Save size={16} />
+                Save & Close
+              </AsyncButton>
+              <AsyncButton 
+                type="button"
+                onClick={(e) => handleAction(e, 'sent')}
+                loadingText="Sending..."
+                className="px-6 py-3.5 bg-slate-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
+              >
+                Send Invoice
+              </AsyncButton>
+              </>
+            )}
           </div>
         </div>
       </motion.div>

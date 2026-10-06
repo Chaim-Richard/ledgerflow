@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 
 import AsyncButton from '../ui/AsyncButton';
 import BankLineActionDialog from './BankLineActionDialog';
+import BankLineName from '../ui/BankLineName';
 
 import type { useReconciliationModel } from './useReconciliationModel';
 
@@ -168,7 +169,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                         <span className={cn("text-[8px] font-bold uppercase tracking-wider font-mono", isSelected ? "text-[var(--brass)]" : "text-[var(--muted)]")}>
                           {formatDate(btx.date)}
                         </span>
-                        <span className="text-sm font-bold tracking-tight truncate max-w-[220px] md:max-w-xs">{btx.description}</span>
+                        <BankLineName text={btx.description} className="text-sm font-bold tracking-tight max-w-[220px] md:max-w-xs" />
                         {matchedLedgerId && !isSelected && (
                           <div className="flex items-center gap-1.5 mt-2 text-[8px] font-bold uppercase tracking-wider text-[var(--pos)] bg-[var(--pos)]/10 px-2 py-1 rounded border border-[var(--pos)]/20 w-fit">
                             <Zap aria-hidden="true" size={9} fill="currentColor" />
@@ -307,7 +308,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                                  <span className="text-[8px] font-black uppercase text-[var(--muted)] font-mono tracking-wider">{line.date}</span>
                                  <span className="px-2 py-0.2 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[7px] font-black uppercase tracking-wider">Locked Status</span>
                                </div>
-                               <h4 className="font-extrabold text-sm text-[var(--text)] truncate">{line.description}</h4>
+                               <h4 className="font-extrabold text-sm text-[var(--text)] min-w-0"><BankLineName text={line.description} /></h4>
                                <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 tabular-nums">Statement Amount: {formatCurrency(line.amountCents)}</p>
                              </button>
 
@@ -369,7 +370,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                 <div className="md:col-span-2 flex flex-col bg-[var(--ink)]/50 p-4 rounded-xl border border-[var(--line)] relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-2 opacity-10"><Layers aria-hidden="true" size={36} /></div>
                   <span className="text-[8px] font-bold text-[var(--pos)] uppercase tracking-wider font-mono">Statement Node A</span>
-                  <span className="text-md font-bold truncate mt-1 tracking-tight">{selectedBankLine.description}</span>
+                  <BankLineName text={selectedBankLine.description} className="text-md font-bold mt-1 tracking-tight" />
                   <div className="flex items-center justify-between mt-3 flex-wrap gap-1">
                     <span className="text-[10px] font-mono text-[var(--muted)]">{selectedBankLine.date}</span>
                     <span className="text-sm font-bold font-mono text-[var(--text)] tabular-nums">{formatCurrency(selectedBankLine.amountCents)}</span>
@@ -610,7 +611,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                                 {/* Bank Item info */}
                                 <div className="md:col-span-5 overflow-hidden">
                                    <span className="text-[8px] uppercase tracking-widest font-black text-[var(--muted)] block mb-0.5">Physical Inflow Node</span>
-                                   <p className="font-bold text-[var(--text)] truncate text-sm">{btx.description}</p>
+                                   <div className="font-bold text-[var(--text)] text-sm"><BankLineName text={btx.description} /></div>
                                    <p className="text-[10px] font-semibold text-[var(--muted)] font-mono mt-0.5">{btx.date} • {formatCurrency(btx.amountCents)}</p>
                                 </div>
 

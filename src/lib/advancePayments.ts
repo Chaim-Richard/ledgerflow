@@ -93,3 +93,31 @@ export function suggestApplication(unappliedCents: number, documents: Array<{ id
   }
   return out;
 }
+
+/**
+ * Deposits taken for an estimate (BE-05): received payments linked to it, not void. `receivedCents`
+ * is everything taken, `waiting` the ones with money not yet applied to the estimate's invoice.
+ */
+export function estimateDeposits<P extends AdvancePayment & { estimateId?: string; amountCents?: number }>(payments: P[], estimateId: string | undefined): { receivedCents: number; unappliedCents: number; waiting: P[] } {
+  if (!estimateId) return { receivedCents: 0, unappliedCents: 0, waiting: [] };
+  const mine = payments.filter(p => p.estimateId === estimateId && p.direction === 'received' && p.status !== 'void');
+  const waiting = mine.filter(p => (Number(p.unappliedCents) || 0) > 0).sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+  return {
+    receivedCents: mine.reduce((sum, p) => sum + (Number(p.amountCents) || 0), 0),
+    unappliedCents: waiting.reduce((sum, p) => sum + (Number(p.unappliedCents) || 0), 0),
+    waiting,
+  };
+}
+
+/** How much of each waiting deposit goes to an invoice with `dueCents` left (oldest deposit first). */
+export function depositApplication(waiting: Array<{ id: string; unappliedCents?: number }>, dueCents: number): Array<{ paymentId: string; amountCents: number }> {
+  const out: Array<{ paymentId: string; amountCents: number }> = [];
+  let left = Math.max(0, dueCents);
+  for (const p of waiting) {
+    if (left <= 0) break;
+    const amount = Math.min(left, Number(p.unappliedCents) || 0);
+    if (amount > 0) out.push({ paymentId: p.id, amountCents: amount });
+    left -= amount;
+  }
+  return out;
+}

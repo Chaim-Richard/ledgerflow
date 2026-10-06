@@ -229,8 +229,17 @@ export async function processRecurring(db: Firestore, asOf?: string): Promise<Pr
       } else {
         failedRules.add(item.templateId);
         result.failedCount++;
-        result.details.push({ operationId, status: 'failed', error: err instanceof Error ? err.message : String(err) });
-        logger.warn('recurring occurrence failed', { operationId, error: err instanceof Error ? err.message : String(err) });
+        const why = err instanceof Error ? err.message : String(err);
+        result.details.push({ operationId, status: 'failed', error: why });
+        logger.warn('recurring occurrence failed', { operationId, error: why });
+        // S-12: the people who keep the books hear about it (once per occurrence), not only the job log
+        const what = isInvoiceSchedule(rule) ? 'invoice' : isBillSchedule(rule) ? 'bill' : 'entry';
+        await notify(db, {
+          workspaceId: rule.workspaceId, kind: 'recurring.failed',
+          title: `A recurring ${what} could not be created`,
+          message: `${rule.description || `Recurring ${what}`} for ${item.transaction.date}: ${why}`,
+          eventKey: `recurring.failed:${operationId}`, recordId: rule.id,
+        });
       }
     }
   }
