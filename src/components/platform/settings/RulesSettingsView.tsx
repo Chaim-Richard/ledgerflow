@@ -1,9 +1,10 @@
 import { formatCurrency } from '../../../lib/utils';
 import { SlidersHorizontal, Plus, Play, Trash2, Copy, CheckCircle2, AlertCircle, Filter, Tag, RotateCw, Search, Eye, Check, X, Sparkles } from 'lucide-react';
+import InlineEdit from '../../ui/InlineEdit';
 import { Labelled } from '../../ui/Labelled';
 import type { RulesSettingsModel } from './RulesSettings';
 
-export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, canBuildRules, autoRules, selectedGroup, setSelectedGroup, searchQuery, setSearchQuery, isCreatingRule, setIsCreatingRule, overlay2DialogProps, overlay2TitleId, editingRule, aiSentence, setAiSentence, isGeneratingAiRule, aiError, aiPreview, setAiPreview, dryRunResult, isTestingRule, setIsTestingRule, overlay1DialogProps, overlay1TitleId, isApplyingExisting, applySuccessMessage, setApplySuccessMessage, formName, setFormName, formGroup, setFormGroup, formDescContains, setFormDescContains, formVendor, setFormVendor, formCategory, setFormCategory, formAmountThreshold, setFormAmountThreshold, formTargetCategory, setFormTargetCategory, formTargetClass, setFormTargetClass, formTargetLocation, setFormTargetLocation, formAddTags, setFormAddTags, formFlagForReview, setFormFlagForReview, formStopOnMatch, setFormStopOnMatch, singleRuleTestResult, groups, filteredRules, handleToggleActive, handleDeleteRule, handleDuplicateRule, openCreateModal, openEditModal, handleSaveRule, handleTestSingleRule, handleGenerateAiRule, handleSaveAiRule, handleRunDryRun, handleApplyToExisting }: RulesSettingsModel) {
+export function RulesSettingsView({ canEditRules, disabledGroups, groupError, handleToggleGroup, handleRenameGroup, setRulePriority, isUpdatingGroup, formPriority, setFormPriority, withOccurrenceKeys, formId, currentRole, canBuildRules, autoRules, selectedGroup, setSelectedGroup, searchQuery, setSearchQuery, isCreatingRule, setIsCreatingRule, overlay2DialogProps, overlay2TitleId, editingRule, aiSentence, setAiSentence, isGeneratingAiRule, aiError, aiPreview, setAiPreview, dryRunResult, isTestingRule, setIsTestingRule, overlay1DialogProps, overlay1TitleId, isApplyingExisting, applySuccessMessage, setApplySuccessMessage, formName, setFormName, formGroup, setFormGroup, formDescContains, setFormDescContains, formVendor, setFormVendor, formCategory, setFormCategory, formAmountThreshold, setFormAmountThreshold, formTargetCategory, setFormTargetCategory, formTargetClass, setFormTargetClass, formTargetLocation, setFormTargetLocation, formAddTags, setFormAddTags, formFlagForReview, setFormFlagForReview, formStopOnMatch, setFormStopOnMatch, singleRuleTestResult, groups, filteredRules, handleToggleActive, handleDeleteRule, handleDuplicateRule, openCreateModal, openEditModal, handleSaveRule, handleTestSingleRule, handleGenerateAiRule, handleSaveAiRule, handleRunDryRun, handleApplyToExisting }: RulesSettingsModel) {
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-4 sm:p-6" id="rules-settings-view">
       {/* Header */}
@@ -27,6 +28,7 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
             Test Against Ledger
           </button>
           <button
+            disabled={!canEditRules}
             onClick={openCreateModal}
             className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors"
             id="create-new-rule-btn"
@@ -160,9 +162,9 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-neutral-50 p-3 rounded-lg border border-neutral-200">
         <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
           <button
-            onClick={() => setSelectedGroup('all')}
+            onClick={() => setSelectedGroup(null)}
             className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors ${
-              selectedGroup === 'all'
+              selectedGroup === null
                 ? 'bg-white text-neutral-900 shadow-xs border border-neutral-300'
                 : 'text-neutral-600 hover:text-neutral-900'
             }`}
@@ -196,6 +198,25 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
         </div>
       </div>
 
+      <section aria-label="Rule groups" className="space-y-2">
+        <p className="text-xs text-neutral-600">Group off pauses its rules without changing their individual switches. Lower priority runs first, including across groups. This preview uses the transactions loaded in this workspace.</p>
+        {groupError && <p role="alert" className="text-sm text-red-700">{groupError}</p>}
+        <div className="flex flex-wrap gap-3">
+          {groups.map(group => (
+            <div key={group} className="flex items-center gap-2 min-w-0 max-w-full rounded-lg border border-neutral-200 px-3">
+              <InlineEdit label={`Name of group ${group}`} value={group} canEdit={canEditRules && !isUpdatingGroup}
+                suggestions={groups} onSave={next => handleRenameGroup(group, next)} className="min-h-11 break-all" inputClassName="min-h-11"
+                validate={next => String(next).trim().length > 0 && String(next).trim().length <= 120 ? null : 'Enter a group name of 1–120 characters.'} />
+              <button type="button" aria-label={`Enable group ${group}`} aria-pressed={!disabledGroups.has(group)}
+                disabled={!canEditRules || isUpdatingGroup} onClick={() => void handleToggleGroup(group)}
+                className="min-h-11 min-w-11 px-3 text-xs border-l border-neutral-200 disabled:opacity-50">
+                {disabledGroups.has(group) ? 'Off' : 'On'}
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Rules Table */}
       {filteredRules.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-neutral-200 p-6">
@@ -205,6 +226,7 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
             Create deterministic rules to automatically match incoming transactions, assign chart-of-accounts categories, and append analytical coordinates.
           </p>
           <button
+            disabled={!canEditRules}
             onClick={openCreateModal}
             className="mt-4 px-4 py-2 text-xs font-semibold bg-neutral-900 text-white rounded-lg inline-flex items-center gap-1.5"
           >
@@ -213,7 +235,7 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
           </button>
         </div>
       ) : (
-        <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-xs">
+        <div role="region" aria-label="Automation rules table" tabIndex={0} className="bg-white border border-neutral-200 rounded-lg overflow-x-auto shadow-xs">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Automation rules</caption>
             <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider">
@@ -235,6 +257,7 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
                       <input aria-label={`Enable rule ${rule.name}`}
                         type="checkbox"
                         checked={isActive}
+                        disabled={!canEditRules}
                         onChange={() => handleToggleActive(rule.id)}
                         className="rounded-sm border-neutral-300 text-neutral-900 focus:ring-neutral-500 h-4 w-4 cursor-pointer"
                       />
@@ -245,7 +268,11 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
                         <span className="bg-neutral-100 px-1.5 py-0.5 rounded-sm border border-neutral-200">
                           {rule.groupName || 'General'}
                         </span>
-                        <span>Priority #{rule.priority ?? 10}</span>
+                        <InlineEdit label={`Priority of ${rule.name || rule.id}`} value={rule.priority ?? 100} kind="number"
+                          display={`Priority #${rule.priority ?? 100}`} canEdit={canEditRules} className="min-h-11" inputClassName="min-h-11"
+                          validate={next => Number.isSafeInteger(Number(next)) ? null : 'Enter a whole-number priority.'}
+                          onSave={next => setRulePriority(rule.id, Number(next))} />
+                        {disabledGroups.has(rule.groupName || 'General') && <span>Group paused</span>}
                         {rule.stopProcessingOnMatch && (
                           <span className="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-sm">Stop on match</span>
                         )}
@@ -303,7 +330,8 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
                     </td>
                     <td className="py-3 px-3 text-right space-x-1">
                       <button
-                        onClick={() => openEditModal(rule)}
+                        disabled={!canEditRules}
+                          onClick={() => openEditModal(rule)}
                         className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors"
                         title="Edit Rule"
                         aria-label={`Edit rule ${rule.name}`}
@@ -311,7 +339,8 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
                         <Eye aria-hidden="true" className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => handleDuplicateRule(rule)}
+                        disabled={!canEditRules}
+                          onClick={() => handleDuplicateRule(rule)}
                         className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-md transition-colors"
                         title="Duplicate Rule"
                         aria-label={`Duplicate rule ${rule.name}`}
@@ -319,7 +348,8 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
                         <Copy aria-hidden="true" className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => handleDeleteRule(rule.id)}
+                        disabled={!canEditRules}
+                          onClick={() => handleDeleteRule(rule.id)}
                         className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-md transition-colors"
                         title="Delete Rule"
                         aria-label={`Delete rule ${rule.name}`}
@@ -396,7 +426,7 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
               </button>
               <button
                 onClick={handleApplyToExisting}
-                disabled={isApplyingExisting || dryRunResult.matches.length === 0}
+                disabled={!canEditRules || isApplyingExisting || dryRunResult.matches.length === 0}
                 className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50"
               >
                 {isApplyingExisting ? (
@@ -448,6 +478,7 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
                     <input
                       type="text"
                       placeholder="General / SaaS / Vendors"
+                      list={`${formId}-groups`}
                       value={formGroup}
                       onChange={e => setFormGroup(e.target.value)}
                       className="w-full p-2 border border-neutral-300 rounded-md focus:ring-1 focus:ring-neutral-500 focus:outline-hidden"
@@ -455,6 +486,12 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
                   </Labelled>
                 </div>
               </div>
+
+              <datalist id={`${formId}-groups`}>{groups.map(group => <option key={group} value={group} />)}</datalist>
+              <Labelled label="Priority (lower runs first)">
+                <input type="number" value={formPriority} step="1" className="min-h-11 w-full p-2 border border-neutral-300 rounded-md"
+                  onChange={event => setFormPriority(event.target.value)} />
+              </Labelled>
 
               {/* Conditions */}
               <div className="p-3 bg-neutral-50 rounded-lg border border-neutral-200 space-y-3">
@@ -633,6 +670,7 @@ export function RulesSettingsView({ withOccurrenceKeys, formId, currentRole, can
                 Cancel
               </button>
               <button
+                disabled={!canEditRules || isUpdatingGroup || !formPriority.trim() || !Number.isSafeInteger(Number(formPriority))}
                 onClick={handleSaveRule}
                 className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors"
               >
