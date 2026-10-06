@@ -1571,7 +1571,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-03 `test:e2e` in CI — runs fully (23 pass, 8 fail)
 - [x] L-04 `npm audit` in CI — green
 - [x] L-05 TZ matrix in CI: Auckland + Los Angeles (94661cd) — found L-79 on its first run
-- [~] L-06 Dependencies: all in-range updates applied on main 2026-10-02 (the Dependabot group PR closes itself); majors wait for a feature that needs them (Vite 8, TypeScript 7, Recharts 3, Plaid 47, Stripe 23, React Window 2…); npm audit clean
+- [~] L-06 Dependencies: all in-range updates applied on main 2026-10-02 (the Dependabot group PR closes itself); majors wait for a feature that needs them (Vite 8, TypeScript 7, Recharts 3, Plaid 47, Stripe 23, React Window 2…); npm audit clean. **6 Oct:** bidi-js 1.1.0 applied (its PR #39 closes itself); the major-version PRs were closed with a note (#4 Plaid 47, #40 @vitejs/plugin-react 6 (needs Vite 7+ first), #41 Recharts 3 (every chart changes), #42 @types/node 26: should be **24**, the Node we run); Dependabot no longer opens major-version PRs (`.github/dependabot.yml`), so these are planned here: @types/node → 24, then Vite + plugin-react, Recharts 3, Plaid 47
 - [x] L-07 Backup restore test: export → change → restore gives the same trial balance and documents (database test); backup holds all the books
 - [x] L-08 Per-workspace retention (Settings → Security → Data retention, owners): recovery window after deletion 30–365 days, email send log, browser error reports; pruned by the daily job; bounces/spam reports always kept; audited (tested)
 - [x] L-09 Account deletion: shared workspaces handed over (or blocked with a clear message), solo ones scheduled for deletion, personal data removed (tested)

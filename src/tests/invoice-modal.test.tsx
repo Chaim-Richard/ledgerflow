@@ -11,6 +11,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import InvoiceModal from '../components/sales/InvoiceModal';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { getSupabase } from '../lib/db/client';
 import type { Invoice, Workspace } from '../types';
 import { makeChartAccount, makeCustomer } from './fixtures';
 
@@ -34,7 +35,8 @@ describe('Invoice dialog', () => {
       taxRates: [{ id: 'gst', uid: 'u', workspaceId: 'w1', name: 'GST', rate: 10, type: 'Sales', createdAt: '2026-01-01' }],
     });
   });
-  afterEach(() => cleanup());
+  // the Files panel (K-07) opens the database client: close it so the test process ends
+  afterEach(async () => { cleanup(); getSupabase().realtime.disconnect(); await getSupabase().auth.dispose(); });
 
   test('two lines with 10% tax on top: the customer owes the lines plus the tax', async () => {
     const saved = setup();

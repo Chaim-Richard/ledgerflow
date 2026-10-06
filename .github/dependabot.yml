@@ -9,3 +9,9 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    # Major versions change how a library works and need code changes, so they are planned as
+    # tracker items (see docs/TRACKER.md, "Library major versions") instead of arriving as PRs
+    # that sit open. Security fixes still come through Dependabot security updates.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

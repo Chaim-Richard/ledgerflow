@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render } from '@testing-library/react';
 import { setComponentWorkspace, markComponentCollectionsLoaded } from './helpers/componentFixtures';
 import { makeCustomer, makeVendor, makeInvoice, makeBill, makePayment } from './fixtures';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { getSupabase } from '../lib/db/client';
 import CustomerDetailView from '../components/sales/CustomerDetailView';
 import VendorDetailView from '../components/purchases/VendorDetailView';
 import ARAgingReportView from '../components/reporting/ARAgingReportView';
@@ -23,7 +24,8 @@ beforeEach(() => {
     payments: [makePayment({ date: '2026-03-10', amountCents: 2500, reference: 'קבלה-1' }), makePayment({ id: 'made', contactId: 'vend-1', direction: 'made', date: '2026-03-10', amountCents: 2500, reference: 'תשלום-1' }), makePayment({ id: 'void', status: 'void', amountCents: 990000 })],
   });
 });
-afterEach(cleanup);
+// the Files panel (K-07) on contact pages opens the database client: close it so the test process ends
+afterEach(async () => { cleanup(); getSupabase().realtime.disconnect(); await getSupabase().auth.dispose(); });
 
 for (const side of ['customer', 'vendor'] as const) {
   test(`${side} detail displays mixed-language identity and excludes draft/void amounts`, () => {

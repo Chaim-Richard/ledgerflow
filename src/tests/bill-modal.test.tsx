@@ -11,6 +11,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import BillModal, { type BillDraft } from '../components/purchases/BillModal';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { getSupabase } from '../lib/db/client';
 import type { Bill, Workspace } from '../types';
 import { makeChartAccount, makeVendor } from './fixtures';
 
@@ -46,7 +47,8 @@ describe('Bill dialog', () => {
       taxRates: [{ id: 'gst', uid: 'u', workspaceId: 'w1', name: 'GST', rate: 10, type: 'Sales', createdAt: '2026-01-01' }],
     });
   });
-  afterEach(() => cleanup());
+  // the Files panel (K-07) opens the database client: close it so the test process ends
+  afterEach(async () => { cleanup(); getSupabase().realtime.disconnect(); await getSupabase().auth.dispose(); });
 
   test('amounts as on the vendor\'s bill (tax included): owed 150.00, of which tax 13.64', async () => {
     const saved = setup();

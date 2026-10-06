@@ -13,6 +13,7 @@ import BillModal from '../components/purchases/BillModal';
 import { latestDocumentFor } from '../lib/repeatDocument';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { getSupabase } from '../lib/db/client';
 import type { Bill, Invoice, Workspace } from '../types';
 import { makeChartAccount, makeCustomer, makeVendor } from './fixtures';
 
@@ -37,7 +38,7 @@ describe('In the dialogs', () => {
       bills: [{ id: 'b1', vendorId: 'v1', date: '2026-02-01', status: 'paid', amountCents: 9000, dueDate: '2026-02-15',
         splits: [{ accountId: 'exp', amountCents: 6000, description: 'Rent' }, { accountId: 'exp', amountCents: 3000, description: 'Service charge' }] } as Bill] });
   });
-  afterEach(() => cleanup());
+  afterEach(async () => { cleanup(); getSupabase().realtime.disconnect(); await getSupabase().auth.dispose(); });
 
   test('invoice: pick the customer, one click copies the latest invoice\'s lines', async () => {
     render(<InvoiceModal isOpen onClose={() => {}} onSave={() => {}} customers={[makeCustomer({ id: 'c1', name: 'Acme Ltd' })]} accounts={[makeChartAccount({ id: 'rev', name: 'Sales', type: 'income' })]} />);
