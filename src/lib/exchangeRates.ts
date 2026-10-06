@@ -40,3 +40,31 @@ export function documentCurrencies(home: string, current: string | undefined, us
   const inUse = used.map(d => (d.currency || '').toUpperCase()).filter(c => /^[A-Z]{3}$/.test(c));
   return [...new Set([home, ...(current ? [current] : []), ...inUse, ...WORLD_CURRENCIES])];
 }
+
+/** A rate this workspace used: on which day, how many documents used it (K-29). */
+export interface RateUse { date: string; rate: number; count: number }
+
+interface RatedDoc { currency?: string; exchangeRate?: number; date?: string }
+
+/**
+ * Exchange-rate history at posting (K-29): the rates the workspace's documents were posted at for
+ * one currency, by day (newest first). Built from the documents themselves, so it is exactly what
+ * the books used.
+ */
+export function rateHistory(currency: string, docs: RatedDoc[]): RateUse[] {
+  const byKey = new Map<string, RateUse>();
+  for (const d of docs) {
+    if (d.currency !== currency || typeof d.exchangeRate !== 'number' || !(d.exchangeRate > 0) || d.exchangeRate === 1 || !d.date) continue;
+    const date = d.date.slice(0, 10);
+    const key = `${date}|${d.exchangeRate}`;
+    const use = byKey.get(key) || { date, rate: d.exchangeRate, count: 0 };
+    use.count += 1;
+    byKey.set(key, use);
+  }
+  return [...byKey.values()].sort((a, b) => b.date.localeCompare(a.date) || a.rate - b.rate);
+}
+
+/** The rate used on `date`, or the closest day before it; null when none was used by then. */
+export function rateOn(currency: string, date: string, docs: RatedDoc[]): RateUse | null {
+  return rateHistory(currency, docs).find(u => u.date <= date.slice(0, 10)) ?? null;
+}

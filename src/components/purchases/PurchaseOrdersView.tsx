@@ -10,7 +10,7 @@ import { useCollection } from '../../hooks/useCollection';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { performThreeWayMatch } from '../../lib/threeWayMatchEngine';
-import { addOrderItem, billLinesFromOrder, canChangeOrder, canDeleteOrder, canMoveDelivery, changeOrderItem, lastOrderLines, nextPoNumber, removeOrderItem, vendorsByOrders } from '../../lib/purchaseOrders';
+import { addOrderItem, awaitingApproval, billLinesFromOrder, canChangeOrder, canDeleteOrder, canMoveDelivery, changeOrderItem, lastOrderLines, nextPoNumber, orderDecision, orderDecisionProblem, orderNeedsApproval, removeOrderItem, vendorsByOrders } from '../../lib/purchaseOrders';
 import { suggestionsFrom } from '../../lib/inlineEdit';
 import { isArchivedParty } from '../../lib/contacts';
 import { formatCurrency, formatDate, formatTzDate } from '../../lib/utils';
@@ -38,6 +38,11 @@ export const PurchaseOrdersView: React.FC = () => {
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const role = useCurrentRole();
   const canEdit = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
+  // K-23: a bookkeeper's order is a request until an owner or accountant approves it
+  const asRequest = orderNeedsApproval(role);
+  const myUid = useAuthStore(s => s.user?.uid) || '';
+  const [declining, setDeclining] = useState<string | null>(null);
+  const [declineReason, setDeclineReason] = useState('');
   const { addEntity, updateEntity, deleteEntity } = useEntityOperations();
   const { data: purchaseOrders, loading } = useCollection<PurchaseOrder>('purchaseOrders', { orderByField: 'createdAt', orderDirection: 'desc', limit: 500 });
   const goodsReceipts = useMemo(() => purchaseOrders.flatMap(po => po.receipts || []), [purchaseOrders]);
@@ -81,9 +86,10 @@ export const PurchaseOrdersView: React.FC = () => {
     const poNumber = nextPoNumber(purchaseOrders, today.slice(0, 4));
     const saved = await addEntity('purchaseOrders', {
       poNumber, vendorId: vendor.id, vendorName: vendor.name, issueDate: today, expectedDeliveryDate: poExpectedDate,
-      status: 'approved', items, totalAmountCents: items.reduce((sum, i) => sum + i.totalCents, 0),
+      status: asRequest ? 'pending_approval' : 'approved', ...(asRequest ? { approvalStatus: 'pending' } : {}),
+      items, totalAmountCents: items.reduce((sum, i) => sum + i.totalCents, 0),
       currency: workspace?.currency || 'USD', receipts: [],
-    }, `Purchase order ${poNumber} saved`);
+    }, asRequest ? `Purchase order ${poNumber} sent for approval` : `Purchase order ${poNumber} saved`);
     setSaving(false);
     if (saved) {
       setIsCreatingPO(false);
@@ -142,6 +148,10 @@ export const PurchaseOrdersView: React.FC = () => {
     if (!window.confirm(`Delete purchase order ${po.poNumber}? This can't be undone.`)) return;
     deleteEntity('purchaseOrders', po.id, `${po.poNumber} deleted`);
   };
+
+  const decideOrder = (po: PurchaseOrder, approve: boolean, reason?: string) =>
+    updateEntity('purchaseOrders', po.id, { ...orderDecision(approve, myUid, new Date().toISOString(), reason), updatedAt: new Date().toISOString() },
+      approve ? `${po.poNumber} approved` : `${po.poNumber} declined`);
 
   const cancelPO = (po: PurchaseOrder) => {
     if (!window.confirm(`Cancel purchase order ${po.poNumber}?`)) return;
@@ -225,10 +235,28 @@ export const PurchaseOrdersView: React.FC = () => {
                   <td className="py-3 px-4 text-right font-mono font-bold">{formatCurrency(po.totalAmountCents, po.currency)}</td>
                   <td className="py-3 px-4 text-center"><span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusClass(po.status)}`}>{po.status.replace('_', ' ')}</span></td>
                   <td className="py-3 px-4 text-right whitespace-nowrap space-x-2">
-                    {canEdit && !['received', 'billed', 'cancelled', 'closed'].includes(po.status) && (
+                    {awaitingApproval(po) && (() => {
+                      const problem = orderDecisionProblem(po, role, myUid);
+                      if (problem) return <span className="text-[var(--muted)]">{problem === 'Not waiting for approval' ? '' : problem}</span>;
+                      if (declining === po.id) return (
+                        <span className="inline-flex items-center gap-2">
+                          <label htmlFor={`decline-${po.id}`} className="sr-only">Why is it declined?</label>
+                          <input id={`decline-${po.id}`} value={declineReason} onChange={e => setDeclineReason(e.target.value)} placeholder="Why? (optional)" className="px-2 py-1 border border-[var(--line)] rounded bg-[var(--panel)]" />
+                          <button type="button" onClick={() => { void decideOrder(po, false, declineReason.trim() || undefined); setDeclining(null); setDeclineReason(''); }} className="font-semibold text-[var(--neg)]">Decline</button>
+                          <button type="button" onClick={() => setDeclining(null)} className="text-[var(--muted)]">Cancel</button>
+                        </span>
+                      );
+                      return (
+                        <>
+                          <button type="button" onClick={() => void decideOrder(po, true)} aria-label={`Approve ${po.poNumber}`} className="px-2.5 py-1 font-semibold bg-[var(--pos)] text-white rounded-md">Approve</button>
+                          <button type="button" onClick={() => setDeclining(po.id)} aria-label={`Decline ${po.poNumber}`} className="px-2.5 py-1 font-semibold border border-[var(--line)] rounded-md">Decline</button>
+                        </>
+                      );
+                    })()}
+                    {canEdit && !awaitingApproval(po) && !['received', 'billed', 'cancelled', 'closed'].includes(po.status) && (
                       <button type="button" onClick={() => openReceive(po)} className="px-2.5 py-1 font-semibold border border-[var(--line)] rounded-md">Receive goods</button>
                     )}
-                    {canEdit && !po.billId && po.status !== 'cancelled' && (
+                    {canEdit && !awaitingApproval(po) && !po.billId && po.status !== 'cancelled' && (
                       <button type="button" onClick={() => setBillingPO(po)} className="px-2.5 py-1 font-semibold bg-[var(--brass)] text-[var(--ink)] rounded-md inline-flex items-center gap-1">
                         <FileText className="w-3 h-3" aria-hidden="true" /> Create bill
                       </button>
@@ -367,7 +395,7 @@ export const PurchaseOrdersView: React.FC = () => {
               <div className="pt-3 flex items-center justify-end gap-2">
                 <button type="button" onClick={() => setIsCreatingPO(false)} className="px-4 py-2 font-semibold border border-[var(--line)] rounded-lg">Cancel</button>
                 <button type="button" disabled={saving} onClick={handleSavePO} className="px-4 py-2 font-semibold bg-[var(--brass)] text-[var(--ink)] rounded-lg flex items-center gap-1.5 disabled:opacity-50">
-                  <Check className="w-3.5 h-3.5" aria-hidden="true" /> Save purchase order
+                  <Check className="w-3.5 h-3.5" aria-hidden="true" /> {asRequest ? 'Send for approval' : 'Save purchase order'}
                 </button>
               </div>
             </div>

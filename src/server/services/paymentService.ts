@@ -23,6 +23,8 @@ export interface CreatePaymentPayload {
   offsetAccountId?: string;
   /** The rate on the payment day for a foreign document (home units per 1); the difference from its own rate is a realized exchange gain or loss (L-192). */
   paymentExchangeRate?: number;
+  /** A deposit for this estimate (BE-05): the customer's own, not yet converted; it waits unapplied until the invoice is issued. */
+  estimateId?: string;
   allocations: Array<{
     documentId: string;
     documentType: 'invoice' | 'bill';
@@ -54,6 +56,7 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     entityName,
     cashAccountId,
     offsetAccountId,
+    estimateId,
     allocations = []
   } = payload;
 
@@ -88,6 +91,15 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       if (offsetAccData.workspaceId !== workspaceId) {
         throw new Error(`Invalid offset account ID: ${resolvedOffsetAccountId}`);
       }
+    }
+
+    // a deposit for an estimate (BE-05): the customer's own estimate, still open, and nothing applied yet
+    if (estimateId) {
+      const estimate = (await tx.get(db.collection('estimates').doc(estimateId))).data();
+      if (!estimate || estimate.workspaceId !== workspaceId) throw new Error('Estimate not found');
+      if (!customerId || estimate.customerId !== customerId) throw new Error('The deposit must come from the estimate\'s customer');
+      if (['declined', 'converted', 'expired'].includes(String(estimate.status))) throw new Error(`The estimate is ${estimate.status}; a deposit is taken before it becomes an invoice`);
+      if (allocations.length) throw new Error('A deposit is not applied to invoices when it is received');
     }
 
     // 3. Read & validate target invoices / bills
@@ -220,6 +232,7 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       unappliedCents: amountCents - totalAllocatedCents,
       // where the unapplied part is held (BE-12): the deposits/prepayments account, else A/R or A/P
       advanceAccountId: advance?.id || resolvedOffsetAccountId,
+      ...(estimateId ? { estimateId } : {}),
       currency: paymentCurrency || baseCurrency,
       exchangeRate: paymentRate,
       status: 'posted',

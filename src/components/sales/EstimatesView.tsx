@@ -14,6 +14,9 @@ import { LoadingState } from '../ui/LoadingState';
 import { Labelled } from '../ui/Labelled';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { convertEstimateToInvoice } from '../../lib/estimateConverter';
+import { estimateDeposits } from '../../lib/advancePayments';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import EstimateDepositDialog from './EstimateDepositDialog';
 
 export default function EstimatesView() {
   const user = useAuthStore(s => s.user);
@@ -22,7 +25,13 @@ export default function EstimatesView() {
 
   const estimates = useLedgerStore(s => s.estimates);
   const customers = useLedgerStore(s => s.customers);
+  const payments = useLedgerStore(s => s.payments);
   const { loading } = useLedgerCollections('customers', 'estimates');
+  // only the "Deposit received" line needs payments: the list doesn't wait for them
+  useLedgerCollections('payments');
+  const role = useCurrentRole();
+  const canTakeDeposit = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
+  const [depositFor, setDepositFor] = useState<import("../../types").Estimate | null>(null);
 
   const [isCreating, setIsCreating] = useState(false);
   const [customerId, setCustomerId] = useState('');
@@ -131,7 +140,8 @@ export default function EstimatesView() {
         updatedAt: new Date().toISOString()
       });
 
-      toast.success(`Estimate converted to draft invoice ${invoiceNumber}. Review it in Sales, then send it.`);
+      const deposit = estimateDeposits(payments || [], est.id);
+      toast.success(`Estimate converted to draft invoice ${invoiceNumber}. Review it in Sales, then send it.${deposit.unappliedCents > 0 ? ` Its deposit of ${formatCurrency(deposit.unappliedCents)} is applied with "Apply deposit" once it is sent.` : ''}`);
     } catch (err) {
       toast.error((err as Error).message || 'Failed to convert estimate');
     }
@@ -266,6 +276,14 @@ export default function EstimatesView() {
                   </td>
                   <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">
                     {formatCurrency(est.amountCents)}
+                    {(() => {
+                      const deposit = estimateDeposits(payments || [], est.id);
+                      return deposit.receivedCents > 0 ? (
+                        <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          Deposit received {formatCurrency(deposit.receivedCents)}{deposit.unappliedCents > 0 && est.status === 'converted' ? ' · apply it on the invoice' : ''}
+                        </div>
+                      ) : null;
+                    })()}
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
@@ -283,6 +301,13 @@ export default function EstimatesView() {
                       >
                         <Download className="w-3.5 h-3.5" />
                       </button>
+                      {canTakeDeposit && !['converted', 'declined', 'expired'].includes(est.status) && (
+                        <button type="button" onClick={() => setDepositFor(est)}
+                          className="px-2.5 py-1 text-xs font-semibold border border-[var(--line)] text-[var(--text)] rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
+                          aria-label={`Take a deposit for estimate ${est.number || ''}`.trim()}>
+                          Deposit
+                        </button>
+                      )}
                       {est.status !== 'converted' && (
                         <button
                           onClick={() => handleConvertToInvoice(est)}
@@ -301,6 +326,7 @@ export default function EstimatesView() {
         )}
       </div>
 
+      {depositFor && <EstimateDepositDialog estimate={depositFor} onClose={() => setDepositFor(null)} />}
       {previewEstimate && (
         <PdfPreviewModal
           isOpen={!!previewEstimate}
