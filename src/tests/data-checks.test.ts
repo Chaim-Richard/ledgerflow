@@ -75,6 +75,8 @@ describe('Data-health checks', () => {
     assert.equal(recordHash({ type: 'invoice', id: 'abc 1/2' }), 'sales/invoice/abc%201%2F2');
     assert.deepEqual(parseRecordHash('#sales/invoice/abc%201%2F2'), { tab: 'sales', record: { type: 'invoice', id: 'abc 1/2' } });
     assert.deepEqual(parseRecordHash('#transactions'), { tab: 'transactions' });
+    assert.deepEqual(parseRecordHash('#access_token=eyJ.x.y&expires_in=3600&provider=google'), { tab: '' }, 'sign-in data is not a page: the dashboard opens');
+    assert.deepEqual(parseRecordHash('#error=access_denied&error_description=x'), { tab: '' });
     assert.deepEqual(parseRecordHash('#sales/unknown/x'), { tab: 'sales' });
     assert.deepEqual(parseRecordHash('#sales/invoice/%E0%A4%A'), { tab: 'sales' });
     assert.deepEqual(parseRecordHash(''), { tab: '' });

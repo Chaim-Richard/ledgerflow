@@ -121,3 +121,68 @@ export function depositApplication(waiting: Array<{ id: string; unappliedCents?:
   }
   return out;
 }
+
+/**
+ * Open advances (CA-09): customer deposits or vendor prepayments with money not yet applied to an
+ * invoice or bill, with how long each has waited at `asOf` and the waiting grouped by contact —
+ * so old deposits get applied (or refunded) instead of sitting forgotten. What is open is today's
+ * state (applying is not dated), so only the age depends on the date.
+ */
+export type AgeBucket = '0-30' | '31-60' | '61-90' | '90+';
+
+export interface AdvanceRow {
+  paymentId: string;
+  number: string;
+  date: string;
+  partyId: string;
+  partyName: string;
+  currency: string;
+  amountCents: number;
+  appliedCents: number;
+  openCents: number;
+  ageDays: number;
+  bucket: AgeBucket;
+}
+
+const dayNumber = (iso: string) => Math.floor(Date.parse(`${iso.slice(0, 10)}T00:00:00Z`) / 86400000);
+
+export function ageBucket(days: number): AgeBucket {
+  return days <= 30 ? '0-30' : days <= 60 ? '31-60' : days <= 90 ? '61-90' : '90+';
+}
+
+export function openAdvances<P extends AdvancePayment & { amountCents?: number; contactName?: string; entityName?: string }>(
+  payments: P[], direction: PaymentDirection, asOf: string,
+): { rows: AdvanceRow[]; byParty: Array<{ partyId: string; partyName: string; currency: string; openCents: number; count: number; oldestDays: number }>; totals: Record<string, number> } {
+  const rows: AdvanceRow[] = payments
+    .filter(p => p.direction === direction && p.status !== 'void' && (Number(p.unappliedCents) || 0) > 0)
+    .filter(p => !p.date || String(p.date).slice(0, 10) <= asOf)
+    .map(p => {
+      const amountCents = Math.round(Number(p.amountCents) || 0);
+      const openCents = Math.round(Number(p.unappliedCents) || 0);
+      const ageDays = p.date ? Math.max(0, dayNumber(asOf) - dayNumber(String(p.date))) : 0;
+      return {
+        paymentId: p.id,
+        number: String(p.number || p.id),
+        date: String(p.date || '').slice(0, 10),
+        partyId: String(p.contactId || (direction === 'received' ? p.customerId : p.vendorId) || ''),
+        partyName: String(p.contactName || p.entityName || 'Unknown contact'),
+        currency: String(p.currency || ''),
+        amountCents,
+        appliedCents: Math.max(0, amountCents - openCents),
+        openCents,
+        ageDays,
+        bucket: ageBucket(ageDays),
+      };
+    })
+    .sort((a, b) => b.ageDays - a.ageDays || a.partyName.localeCompare(b.partyName));
+  const parties = new Map<string, { partyId: string; partyName: string; currency: string; openCents: number; count: number; oldestDays: number }>();
+  const totals: Record<string, number> = {};
+  for (const r of rows) {
+    const k = `${r.partyId}|${r.currency}`;
+    const p = parties.get(k) || { partyId: r.partyId, partyName: r.partyName, currency: r.currency, openCents: 0, count: 0, oldestDays: 0 };
+    p.openCents += r.openCents; p.count += 1; p.oldestDays = Math.max(p.oldestDays, r.ageDays);
+    parties.set(k, p);
+    totals[r.currency] = (totals[r.currency] || 0) + r.openCents;
+  }
+  return { rows, byParty: [...parties.values()].sort((a, b) => b.openCents - a.openCents), totals };
+}

@@ -44,6 +44,9 @@ export default tseslint.config(
       'jsx-a11y/click-events-have-key-events': 'warn',
       'jsx-a11y/no-static-element-interactions': 'warn',
       'jsx-a11y/no-noninteractive-element-interactions': 'warn',
+      // a region that scrolls sideways (a wide table) must take keyboard focus to be scrolled:
+      // role="region" + aria-label + tabIndex={0} is the accessible pattern (axe scrollable-region-focusable)
+      'jsx-a11y/no-noninteractive-tabindex': ['error', { tags: [], roles: ['tabpanel', 'region'], allowExpressionValues: true }],
       // depth: text inside a cell's wrapper divs counts; table cells and datalist options are not controls
       'jsx-a11y/control-has-associated-label': ['warn', { depth: 4, ignoreElements: ['audio', 'canvas', 'embed', 'input', 'textarea', 'tr', 'td', 'option', 'video'] }],
     },

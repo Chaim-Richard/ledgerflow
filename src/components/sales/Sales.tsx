@@ -39,6 +39,7 @@ import { estimateDeposits } from '../../lib/advancePayments';
 import { applyEstimateDeposits } from '../../services/depositActions';
 import { recordReceiptPayment } from '../../services/receiptActions';
 import { attachFiles, attachSummary } from '../../services/attachmentActions';
+import OpeningDocumentsDialog from '../common/OpeningDocumentsDialog';
 import type { ReceiptPayment } from './InvoiceModal';
 import InvoiceEmailDialog from './InvoiceEmailDialog';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
@@ -53,8 +54,6 @@ import InlineEdit from '../ui/InlineEdit';
 import InlineAdd from '../ui/InlineAdd';
 import DocumentBulkBar from '../ui/DocumentBulkBar';
 import { printInvoice } from '../../lib/printInvoice';
-import { convertEstimateToInvoice } from '../../lib/estimateConverter';
-import { detectDuplicateContacts } from '../../lib/contactUtils';
 import { getDefaultTaxConfig, generateDefaultTaxRates } from '../../lib/taxRateDefaults';
 import { calculateNextOccurrence } from '../../lib/recurringEngine';
 
@@ -75,7 +74,6 @@ export default function Sales() {
   const [spreadingInvoice, setSpreadingInvoice] = useState<Invoice | null>(null);
   const [pickedInvoices, setPickedInvoices] = useState<Set<string>>(() => new Set());
 
-  const transactions = useLedgerStore(s => s.transactions);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   // What each customer owes: the same calculation as the Customer Balance Summary report (open
@@ -151,6 +149,7 @@ export default function Sales() {
   // opens on the invoice list ('pipeline' was the default but nothing draws it: the page was blank)
   const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'customers'>('invoices');
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [openingOpen, setOpeningOpen] = useState(false);
   const [receiptMode, setReceiptMode] = useState(false);
   const [newInvoiceFor, setNewInvoiceFor] = useState<Partial<Invoice> | undefined>(undefined);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -300,6 +299,13 @@ export default function Sales() {
               >
                 <Plus size={15} />
                 Sale receipt
+              </button>
+            )}
+            {activeSubTab === 'invoices' && canEditContacts && (
+              <button type="button" onClick={() => setOpeningOpen(true)}
+                title="The invoices still unpaid when you started: paste them from a spreadsheet"
+                className="px-3 py-2 text-[var(--muted)] rounded-xl text-xs font-semibold hover:text-[var(--text)] hover:underline">
+                Opening invoices
               </button>
             )}
             <button 
@@ -724,6 +730,7 @@ export default function Sales() {
         </div>
       )}
 
+      {openingOpen && <OpeningDocumentsDialog side="customer" onClose={() => setOpeningOpen(false)} />}
       {/* mounted per opening, so a new invoice never inherits the last one's fields */}
       {isInvoiceModalOpen && <InvoiceModal
         key={`${newInvoiceFor?.id || 'new'}${receiptMode ? '-receipt' : ''}`}

@@ -12,7 +12,7 @@ const screens = [
   'dashboard', 'inbox', 'copilot', 'transactions', 'credit-notes', 'assets', 'register', 'ledger',
   'intercompany', 'recurring', 'query-builder', 'banking', 'audit-trail', 'reconciliation',
   'month-end-close', 'fiscal-periods', 'sales', 'estimates', 'payments', 'purchases',
-  'purchase-orders', 'payroll', 'reports', 'charts', 'forecaster', 'intelligence', 'settings',
+  'purchase-orders', 'loans', 'payroll', 'reports', 'charts', 'forecaster', 'intelligence', 'settings',
   'data-health', 'support', 'help', 'vault', 'pricing', 'api-hub',
 ];
 

@@ -3,10 +3,42 @@ import { Receipt, Plus, Trash2, X } from 'lucide-react';
 import { useDialog } from '../../hooks/useDialog';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { formatCurrency, getLocalDateISO, parseAmountToCents } from '../../lib/utils';
-import { claimOf, claimProblem, decisionProblem, type ClaimLine } from '../../lib/expenseClaims';
+import { claimOf, claimProblem, decimalNumber, decisionProblem, mileageLine, perDiemLine, rateInThousandths, workedLineProblem, type ClaimLine, type ClaimLineKind, type DistanceUnit } from '../../lib/expenseClaims';
 import type { Bill, ChartAccount, Vendor } from '../../types';
 
 export interface NewClaim { payeeName: string; date: string; lines: ClaimLine[]; note: string }
+
+/** One line of the claim form: an expense typed as an amount, or mileage / per diem worked out (BE-09, BE-10). */
+interface DraftLine { key: string; kind: ClaimLineKind; description: string; accountId: string; amount: string; from: string; to: string; distance: string; unit: DistanceUnit; rate: string; days: string }
+
+// the last mileage and per-diem rates used, per workspace, in this browser (the person's own rates: no default is made up)
+const RATES_KEY = 'lf_claim_rates';
+type SavedRates = { mileageRate?: string; unit?: DistanceUnit; dailyRate?: string };
+function savedRates(): SavedRates {
+  try { return JSON.parse(localStorage.getItem(RATES_KEY) || '{}') as SavedRates; } catch { return {}; }
+}
+function saveRates(lines: DraftLine[]) {
+  const mileage = lines.find(l => l.kind === 'mileage' && rateInThousandths(l.rate) > 0);
+  const perDiem = lines.find(l => l.kind === 'perDiem' && parseAmountToCents(l.rate) > 0);
+  if (!mileage && !perDiem) return;
+  try {
+    localStorage.setItem(RATES_KEY, JSON.stringify({ ...savedRates(), ...(mileage ? { mileageRate: mileage.rate, unit: mileage.unit } : {}), ...(perDiem ? { dailyRate: perDiem.rate } : {}) }));
+  } catch { /* private window: nothing remembered */ }
+}
+const blankLine = (accountId = ''): DraftLine => ({ key: crypto.randomUUID(), kind: 'expense', description: '', accountId, amount: '', from: '', to: '', distance: '', unit: 'km', rate: '', days: '' });
+
+/** The claim line a draft line stands for (mileage and per diem worked out), and what it still needs. */
+function toClaimLine(l: DraftLine, currency: string): { line: ClaimLine; problem: string | null } {
+  if (l.kind === 'mileage') {
+    const input = { distance: decimalNumber(l.distance), rateThousandths: rateInThousandths(l.rate) };
+    return { line: mileageLine({ purpose: l.description, from: l.from, to: l.to, unit: l.unit, accountId: l.accountId, currency, ...input }), problem: workedLineProblem('mileage', input) };
+  }
+  if (l.kind === 'perDiem') {
+    const input = { days: decimalNumber(l.days), dailyRateCents: parseAmountToCents(l.rate) };
+    return { line: perDiemLine({ purpose: l.description, accountId: l.accountId, currency, ...input }), problem: workedLineProblem('perDiem', input) };
+  }
+  return { line: { description: l.description, accountId: l.accountId, amountCents: parseAmountToCents(l.amount) }, problem: null };
+}
 
 interface Props {
   bills: Bill[];
@@ -101,18 +133,25 @@ function NewClaimDialog({ vendors, accounts, currency, onClose, onSubmit }: {
   const [payeeName, setPayeeName] = useState('');
   const [date, setDate] = useState(getLocalDateISO());
   const [note, setNote] = useState('');
-  const [lines, setLines] = useState([{ key: crypto.randomUUID(), description: '', accountId: '', amount: '' }]);
+  const [lines, setLines] = useState<DraftLine[]>([blankLine()]);
   const [saving, setSaving] = useState(false);
-  const claimLines: ClaimLine[] = lines.map(l => ({ description: l.description, accountId: l.accountId, amountCents: parseAmountToCents(l.amount) }));
+  const worked = lines.map(l => toClaimLine(l, currency));
+  const claimLines: ClaimLine[] = worked.map(w => w.line);
   const total = claimLines.reduce((sum, l) => sum + (l.amountCents > 0 ? l.amountCents : 0), 0);
-  const problem = claimProblem({ payeeName, date, lines: claimLines });
-  const setLine = (key: string, change: Partial<(typeof lines)[number]>) => setLines(prev => prev.map(l => (l.key === key ? { ...l, ...change } : l)));
+  const problem = worked.find(w => w.problem)?.problem || claimProblem({ payeeName, date, lines: claimLines });
+  const setLine = (key: string, change: Partial<DraftLine>) => setLines(prev => prev.map(l => (l.key === key ? { ...l, ...change } : l)));
+  // switching a line to mileage or per diem fills in the rate used last time
+  const setKind = (key: string, kind: ClaimLineKind) => {
+    const remembered = savedRates();
+    setLine(key, kind === 'mileage' ? { kind, rate: remembered.mileageRate || '', unit: remembered.unit || 'km' } : kind === 'perDiem' ? { kind, rate: remembered.dailyRate || '' } : { kind, rate: '' });
+  };
 
   const submit = async () => {
     if (problem || saving) return;
     setSaving(true);
     try {
       await onSubmit({ payeeName: payeeName.trim(), date, lines: claimLines.filter(l => l.description.trim() || l.amountCents), note });
+      saveRates(lines);
     } finally {
       setSaving(false);
     }
@@ -140,19 +179,49 @@ function NewClaimDialog({ vendors, accounts, currency, onClose, onSubmit }: {
           <fieldset className="space-y-2">
             <legend className="text-xs font-semibold text-[var(--muted)]">What was paid for</legend>
             {lines.map((l, i) => (
-              <div key={l.key} className="grid grid-cols-[1fr_1fr_7rem_auto] gap-2 items-center">
-                <input aria-label={`What, line ${i + 1}`} value={l.description} onChange={e => setLine(l.key, { description: e.target.value })} placeholder="Taxi to client" className={field} />
-                <select aria-label={`Category, line ${i + 1}`} value={l.accountId} onChange={e => setLine(l.key, { accountId: e.target.value })} className={field}>
-                  <option value="">Category…</option>
-                  {expenseAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
-                <input aria-label={`Amount, line ${i + 1}`} inputMode="decimal" value={l.amount} onChange={e => setLine(l.key, { amount: e.target.value })} placeholder="0.00" className={`${field} text-right font-mono`} />
-                <button type="button" onClick={() => setLines(prev => (prev.length > 1 ? prev.filter(x => x.key !== l.key) : prev))} aria-label={`Remove line ${i + 1}`} className="p-1 text-[var(--muted)] hover:text-rose-600">
-                  <Trash2 className="w-4 h-4" aria-hidden="true" />
-                </button>
+              <div key={l.key} className="space-y-1.5 border-b border-[var(--line)] pb-2 last:border-0">
+                <div className="grid grid-cols-[6.5rem_1fr_1fr_7rem_auto] gap-2 items-center">
+                  <select aria-label={`Kind, line ${i + 1}`} value={l.kind} onChange={e => setKind(l.key, e.target.value as ClaimLineKind)} className={field}>
+                    <option value="expense">Expense</option>
+                    <option value="mileage">Mileage</option>
+                    <option value="perDiem">Per diem</option>
+                  </select>
+                  <input aria-label={`What, line ${i + 1}`} value={l.description} onChange={e => setLine(l.key, { description: e.target.value })}
+                    placeholder={l.kind === 'expense' ? 'Taxi to client' : 'Client visit'} className={field} />
+                  <select aria-label={`Category, line ${i + 1}`} value={l.accountId} onChange={e => setLine(l.key, { accountId: e.target.value })} className={field}>
+                    <option value="">Category…</option>
+                    {expenseAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                  {l.kind === 'expense' ? (
+                    <input aria-label={`Amount, line ${i + 1}`} inputMode="decimal" value={l.amount} onChange={e => setLine(l.key, { amount: e.target.value })} placeholder="0.00" className={`${field} text-right font-mono`} />
+                  ) : (
+                    <output aria-label={`Amount, line ${i + 1}`} className="text-right font-mono px-1">{formatCurrency(worked[i].line.amountCents, currency)}</output>
+                  )}
+                  <button type="button" onClick={() => setLines(prev => (prev.length > 1 ? prev.filter(x => x.key !== l.key) : prev))} aria-label={`Remove line ${i + 1}`} className="p-1 text-[var(--muted)] hover:text-rose-600">
+                    <Trash2 className="w-4 h-4" aria-hidden="true" />
+                  </button>
+                </div>
+                {l.kind === 'mileage' && (
+                  <div className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_5rem_4.5rem_6rem] gap-2 items-center pl-[7rem]">
+                    <input aria-label={`From, line ${i + 1}`} value={l.from} onChange={e => setLine(l.key, { from: e.target.value })} placeholder="From" className={field} />
+                    <input aria-label={`To, line ${i + 1}`} value={l.to} onChange={e => setLine(l.key, { to: e.target.value })} placeholder="To" className={field} />
+                    <input aria-label={`Distance, line ${i + 1}`} inputMode="decimal" value={l.distance} onChange={e => setLine(l.key, { distance: e.target.value })} placeholder="0" className={`${field} text-right font-mono`} />
+                    <select aria-label={`Unit, line ${i + 1}`} value={l.unit} onChange={e => setLine(l.key, { unit: e.target.value as DistanceUnit })} className={field}>
+                      <option value="km">km</option>
+                      <option value="mi">miles</option>
+                    </select>
+                    <input aria-label={`Rate per ${l.unit === 'mi' ? 'mile' : 'km'}, line ${i + 1}`} inputMode="decimal" value={l.rate} onChange={e => setLine(l.key, { rate: e.target.value })} placeholder={`${currency}/${l.unit}`} className={`${field} text-right font-mono`} />
+                  </div>
+                )}
+                {l.kind === 'perDiem' && (
+                  <div className="grid grid-cols-2 sm:grid-cols-[5rem_7rem] gap-2 items-center pl-[7rem]">
+                    <input aria-label={`Days, line ${i + 1}`} inputMode="decimal" value={l.days} onChange={e => setLine(l.key, { days: e.target.value })} placeholder="Days" className={`${field} text-right font-mono`} />
+                    <input aria-label={`Daily rate, line ${i + 1}`} inputMode="decimal" value={l.rate} onChange={e => setLine(l.key, { rate: e.target.value })} placeholder={`${currency}/day`} className={`${field} text-right font-mono`} />
+                  </div>
+                )}
               </div>
             ))}
-            <button type="button" onClick={() => setLines(prev => [...prev, { key: crypto.randomUUID(), description: '', accountId: prev[prev.length - 1]?.accountId || '', amount: '' }])}
+            <button type="button" onClick={() => setLines(prev => [...prev, blankLine(prev[prev.length - 1]?.accountId || '')])}
               className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">+ Add a line</button>
           </fieldset>
           <label className="block">

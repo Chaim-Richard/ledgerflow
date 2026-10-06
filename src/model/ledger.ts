@@ -107,6 +107,8 @@ export interface Transaction {
   // Bank Reconciliation
   isCleared?: boolean;
   clearedAt?: string;
+  /** the day the bank cleared it (CA-04), as marked in the account register */
+  clearanceDate?: string;
   bankTransactionId?: string; // For Plaid/Teller linking
   importIdentity?: string; // Deterministic idempotency fingerprint: <source>:<kind>:<hash>
   
@@ -336,6 +338,8 @@ export interface PeriodStatus {
   reopenedAt?: string;
   reopenedBy?: string;
   reopenReason?: string;
+  /** CA-06: every account's balance on the last day when the month was closed (written by the server) */
+  closingSnapshot?: { asOfDate: string; takenAt: string; accounts: Array<{ accountId: string; cents: number }>; entries: number };
   notes?: string;
   createdAt?: string;
   updatedAt?: string;

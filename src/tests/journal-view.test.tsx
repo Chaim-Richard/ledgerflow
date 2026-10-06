@@ -8,7 +8,7 @@ import './helpers/dom';
 import test, { afterEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import JournalView, { type JournalListEntry } from '../components/ledger/JournalView';
 import JournalEntryModal from '../components/ledger/JournalEntryModal';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -92,5 +92,34 @@ describe('Duplicating into the journal form', () => {
     assert.equal((screen.getByLabelText('Debit amount for line 1') as HTMLInputElement).value, '500');
     assert.match((screen.getByLabelText('Account for line 2') as HTMLInputElement).value, /Checking/);
     assert.equal((screen.getByLabelText('Credit amount for line 2') as HTMLInputElement).value, '500');
+  });
+});
+
+describe('Adjusting entries (BD-03)', () => {
+  afterEach(() => cleanup());
+
+  test('marked in the list, and listed alone on request', () => {
+    const withAdjusting = [...entries, entry('adj', '2026-12-31', 'Year-end accrual', { adjusting: true })];
+    render(<JournalView journalEntries={withAdjusting} formatCurrency={money} canEdit />);
+    assert.match(document.body.textContent || '', /Year-end accrualadjusting/);
+    fireEvent.click(screen.getByLabelText('Adjusting entries only'));
+    assert.deepEqual(screen.getAllByRole('listitem').map(li => li.textContent?.includes('Year-end accrual')), [true]);
+  });
+
+  test('the journal form saves the mark with the entry; a duplicate keeps it', async () => {
+    const accounts = [makeChartAccount({ id: 'rent', code: '6000', name: 'Rent', type: 'expense' }), makeChartAccount({ id: 'bank', code: '1000', name: 'Checking', type: 'asset', category: 'Cash' })];
+    useLedgerStore.setState({ baseCurrency: 'USD', transactions: [], lockDate: null, accounts });
+    const sent: Array<{ url: string; body: Record<string, unknown> }> = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      sent.push({ url: String(input), body: JSON.parse(String(init?.body || '{}')) });
+      return new Response(JSON.stringify({ status: 'success' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }) as typeof fetch;
+    render(<JournalEntryModal isOpen onClose={() => {}} user={{ uid: 'test-user', getIdToken: async () => 't' } as never} accounts={accounts} workspaceId="w"
+      initialEntry={{ description: 'Year-end accrual', lines: entries[1].lines, adjusting: true }} />);
+    assert.equal((screen.getByLabelText('Adjusting entry') as HTMLInputElement).checked, true);
+    await act(async () => { fireEvent.submit(screen.getByLabelText('Description').closest('form')!); });
+    await waitFor(() => assert.ok(sent.some(s => s.url === '/api/v1/transactions')));
+    const tx = sent.find(s => s.url === '/api/v1/transactions')!.body.transaction as { metadata?: Record<string, unknown>; type: string };
+    assert.deepEqual([tx.type, tx.metadata], ['journal', { adjusting: true }]);
   });
 });

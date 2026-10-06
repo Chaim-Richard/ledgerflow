@@ -5,6 +5,7 @@ import type { Firestore } from '../db/firestore';
 import { generateDocumentPdf } from '../services/pdfService';
 import type { PdfDocument, PdfDocumentType, PdfWorkspace } from '../services/pdfService';
 import { loadStatement } from '../services/statementService';
+import { ChequeError, generateChequePdf, layoutCheque } from '../services/chequePdf';
 import { getTrustedAppUrl } from '../utils/urlHelper';
 import { zipStore } from '../utils/zip';
 import { z } from 'zod';
@@ -106,6 +107,9 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
       return res.status(400).json({ status: 'error', message: 'workspaceId is required' });
     }
 
+    // a payment made to a vendor, printed as a cheque (BE-13): owners, accountants and bookkeepers
+    if (type === 'cheque') return await handleChequeRequest(req, res, id, workspaceId, dbOverride);
+
     if (!isPdfType(type)) {
       return res.status(400).json({ status: 'error', message: `Invalid document type. Must be one of: ${PDF_TYPES.join(', ')}` });
     }
@@ -151,6 +155,34 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
     if (errorMessage(err) === 'FORBIDDEN' || /not a member/i.test(errorMessage(err))) return res.status(403).json({ status: 'error', message: 'Forbidden' });
     console.error('PDF Generation Error:', err);
     return res.status(500).json({ status: 'error', message: errorMessage(err) || 'Failed to generate PDF' });
+  }
+}
+
+const CHEQUE_ROLES = new Set(['owner', 'accountant', 'bookkeeper']);
+
+async function handleChequeRequest(req: express.Request, res: express.Response, paymentId: string, workspaceId: string, dbOverride?: Firestore) {
+  const user = requestUser(req);
+  const db = dbOverride || getDb();
+  await validateWorkspaceMember(db, workspaceId, user);
+  const wsSnap = await db.collection('workspaces').doc(workspaceId).get();
+  const ws = (wsSnap.data() || {}) as { uid?: string; roles?: Record<string, string>; name?: string; companyName?: string };
+  const role = ws.uid === user.uid ? 'owner' : ws.roles?.[user.uid] || 'viewer';
+  if (!CHEQUE_ROLES.has(role)) return res.status(403).json({ status: 'error', message: 'Only owners, accountants and bookkeepers print cheques' });
+  const snap = await db.collection('payments').doc(paymentId).get();
+  const payment = snap.exists ? snap.data() : undefined;
+  if (!payment || payment.workspaceId !== workspaceId) return res.status(404).json({ status: 'error', message: 'Payment not found' });
+  const billIds = ((payment.allocations || []) as Array<{ documentId: string }>).map(a => a.documentId).filter(Boolean);
+  const bills = billIds.length ? await db.getAll(...billIds.slice(0, 50).map(bid => db.collection('bills').doc(bid))) : [];
+  const numbers = Object.fromEntries(bills.filter(b => b.exists && b.data()?.workspaceId === workspaceId).map(b => [b.id, String(b.data()?.number || b.id)]));
+  try {
+    const layout = layoutCheque(payment, ws, numbers);
+    const pdf = await generateChequePdf(layout);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="cheque_${(layout.chequeNumber || paymentId).replace(/[^\w.-]+/g, '_')}.pdf"`);
+    return res.send(pdf);
+  } catch (err) {
+    if (err instanceof ChequeError) return res.status(err.status).json({ status: 'error', message: err.message });
+    throw err;
   }
 }
 

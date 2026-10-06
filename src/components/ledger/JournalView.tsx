@@ -10,6 +10,8 @@ export type JournalListEntry = JournalEntry & {
   isReversal?: boolean;
   reversedBy?: string;
   autoReverseOn?: string;
+  /** an accountant's adjusting entry (BD-03) */
+  adjusting?: boolean;
 };
 
 interface JournalViewProps {
@@ -40,6 +42,7 @@ function keyedLines<L extends { accountId: string; debit: number; credit: number
  */
 export default function JournalView({ journalEntries = [], formatCurrency, canEdit = false, onReverse, onDuplicate }: JournalViewProps) {
   const [manualOnly, setManualOnly] = useState(true);
+  const [adjustingOnly, setAdjustingOnly] = useState(false);
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState<string | null>(null);
   const [reversing, setReversing] = useState<string | null>(null);
@@ -51,9 +54,10 @@ export default function JournalView({ journalEntries = [], formatCurrency, canEd
     const q = search.trim().toLowerCase();
     return journalEntries
       .filter(e => !manualOnly || e.kind === 'journal')
+      .filter(e => !adjustingOnly || e.adjusting)
       .filter(e => !q || [e.description, e.reference, ...e.lines.map(l => l.accountName)].some(t => String(t || '').toLowerCase().includes(q)))
       .sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  }, [journalEntries, manualOnly, search]);
+  }, [journalEntries, manualOnly, adjustingOnly, search]);
   const debits = (e: JournalListEntry) => e.lines.reduce((sum, l) => sum + (l.debit || 0), 0);
   const total = entries.reduce((sum, e) => sum + debits(e), 0);
 
@@ -68,6 +72,10 @@ export default function JournalView({ journalEntries = [], formatCurrency, canEd
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input type="checkbox" checked={manualOnly} onChange={e => { setManualOnly(e.target.checked); setShown(PAGE); }} />
             Entries typed in by hand only
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" checked={adjustingOnly} onChange={e => { setAdjustingOnly(e.target.checked); setShown(PAGE); }} />
+            Adjusting entries only
           </label>
           <label className="flex items-center gap-1.5">
             <span className="sr-only">Search the journal</span>
@@ -98,6 +106,7 @@ export default function JournalView({ journalEntries = [], formatCurrency, canEd
                   <span className="flex-1 min-w-0 truncate text-[var(--text)]">
                     {e.description || 'Journal entry'}
                     {e.reference && e.reference !== e.id && <span className="text-[var(--muted)]"> · {e.reference}</span>}
+                    {e.adjusting && <span className="ml-2 text-[10px] font-semibold text-indigo-700 dark:text-indigo-400">adjusting</span>}
                     {e.isReversal && <span className="ml-2 text-[10px] font-semibold text-amber-700 dark:text-amber-400">a reversal</span>}
                     {e.reversedBy && <span className="ml-2 text-[10px] font-semibold text-[var(--muted)]">reversed</span>}
                     {e.autoReverseOn && !e.reversedBy && <span className="ml-2 text-[10px] font-semibold text-[var(--muted)]">reverses on {e.autoReverseOn}</span>}

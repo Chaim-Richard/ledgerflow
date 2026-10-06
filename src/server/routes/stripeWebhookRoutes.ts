@@ -86,6 +86,8 @@ export function registerStripeWebhookRoutes(app: express.Express, _ctx: ServerCo
               t.set(eventRef, {
                 id: eventId,
                 type: event.type,
+                outcome: 'plan_updated',
+                workspaceId,
                 processedAt: FieldValue.serverTimestamp()
               });
 
@@ -129,6 +131,8 @@ export function registerStripeWebhookRoutes(app: express.Express, _ctx: ServerCo
           t.set(eventRef, {
             id: eventId,
             type: event.type,
+            outcome: wsSnap.empty ? 'no_workspace' : 'plan_cancelled',
+            ...(wsSnap.empty ? {} : { workspaceId: wsSnap.docs[0].id }),
             processedAt: FieldValue.serverTimestamp()
           });
         });
@@ -137,6 +141,7 @@ export function registerStripeWebhookRoutes(app: express.Express, _ctx: ServerCo
         await eventRef.set({
           id: eventId,
           type: event.type,
+          outcome: 'ignored',
           processedAt: FieldValue.serverTimestamp()
         }, { merge: true });
       }

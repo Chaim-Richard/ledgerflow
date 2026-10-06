@@ -1537,7 +1537,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] K-12 Item categories: filter chips on Inventory, existing categories suggested in the item form (renaming a category across items: BA-05)
 - [x] K-13 Inventory adjustments: Adjust stock per item (correction, stock received with average cost, opening stock), posted at cost with the quantity in one database transaction (tested)
 - [ ] K-14 Account groups
-- [ ] K-15 Tags as an entity
+- [x] K-15 Tags as an entity — **done 6 Oct**: Settings → Tags lists every tag used in the workspace with where ("2 customers · 1 invoices · 1 entries"), counting "VIP" and "vip" as one (as the tag filters do). Owners, accountants and bookkeepers rename a tag everywhere at once (customers, vendors, projects, invoices, bills, credits, entries, journal entries), merge two by renaming one to the other's name (the screen says "Merge into …"), or remove a tag from every record; only the tags change, never amounts or postings; batches of 300 records per database transaction, so a repeat finishes anything interrupted; audited; another workspace is never touched. No database change (`src/server/services/tagService.ts`, `GET/POST /api/v1/workspaces/:id/tags`; tests `tags.test.ts` with the database, `tags-ui.test.tsx`)
 - [x] K-16 Revenue recognition schedules — **done 6 Oct**: the invoice list has "Spread" on a posted invoice (writers): income account (the biggest income line, lines without an account counting for the default one; tax is not income), Deferred Revenue account (Settings → Defaults, else a liability named "deferred/unearned revenue"; never invented), 2–60 months from the invoice's month or later, with the monthly share shown first. The server (the same service as K-17, `prepaidService.ts`) posts in one database transaction the move to Deferred Revenue on the invoice date and one share earned at each month end (whole cents, remainder last), records the schedule on the invoice (spread once) and audits it. The list shows the progress with "Undo spread" (voids the schedule; refused once one of its months is closed); Void undoes the spread first. Entries are tagged `spreadOfInvoiceId`, so editing the invoice re-posts only its own entry, and un-posting a spread invoice elsewhere is refused until the spread is undone. Tests: `revenue-spread.test.ts` (database, through the real workspace routes), `revenue-spread-ui.test.tsx`
 - [x] K-17 Prepaids + auto-reversing accruals — **done 5 Oct**: accruals that reverse themselves are R-05. Prepaids: a posted bill has "Spread" in the bills list (writers): amount (the biggest expense line, in the home currency), expense account, Prepaid Expenses account (Settings → Defaults, else an asset named "prepaid"; never invented), 2–60 months from the bill's month or later, with the monthly share shown first. The server posts, in one database transaction, the move to Prepaid on the bill date and one share back to the expense at each month end (whole cents, the remainder last; marked `scheduled` so the future-date check doesn't flag them), records the schedule on the bill (spread once), and audits it. The list shows "Spread over 12 months from Sep 2026 · 2 of 12 taken" with "Undo spread" (voids every entry of it; refused once one of its months is closed); voiding the bill undoes the spread first. The bill's own posting is not touched: the spread's entries are tagged `spreadOfBillId` (not `billId`), so editing the bill re-posts only its own entry, and turning a spread bill back to draft or void from anywhere else is refused until the spread is undone. Tests: `prepaid-spread.test.ts` (database), `spread-bill.test.tsx`
 - [x] K-18 Retainers — **done 5 Oct (with BE-12)**: money received before an invoice (a customer deposit) or paid before a bill waits in Customer Deposits / Vendor Prepayments (found by Settings mapping or name; without one it stays on A/R or A/P as before), and the customer or vendor page lists it as "Unapplied: $X" with "Apply to invoices/bills": the open ones in the same currency are filled oldest first, amounts can be changed, more than is left or open is refused, and `POST /api/v1/payments/:id/apply` settles them and moves the money to A/R or A/P in one database transaction (writers only, closed period refused, audited). Tests: `advance-payments.test.ts` (database), `unapplied-payments.test.tsx`
@@ -1552,14 +1552,14 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] K-27 Customer portal
 - [ ] K-28 Scheduled reports
 - [x] K-29 Exchange-rate history at posting — **done 6 Oct**, read from the documents themselves (no second copy that could disagree): `rateHistory` / `rateOn` in `src/lib/exchangeRates.ts` give, per currency, the rates the books were posted at by day. A back-dated invoice, bill, payment or journal entry now gets the rate used on (or the closest day before) its date, with a note saying which, instead of today's live rate (which would be wrong for a past day); with none recorded it asks for that day's rate. Reports → Exchange Rates Used lists them for the period (journals included), with lowest/highest/latest. Tests: `rate-history.test.tsx`; browser: `e2e/everyday-reports.spec.ts`
-- [ ] K-30 Loans with amortisation
+- [x] K-30 Loans with amortisation — **done 6 Oct (AI #3, A-2; ready for review on `arena/2f87acb1-ledgerflow`)**: Money Out → Loans holds a loan's lender, principal, rate a year, term, start date, liability account, interest-expense account and bank account. The schedule is worked out to the cent (the annuity payment rounded up, each month's interest rounded half up on the balance, the last payment taking the remainder, so the closing balance is exactly zero); "Record the money arriving" posts bank ← liability and "Record payment" posts liability + principal part, interest expense + interest, bank − the payment, both through the ordinary transaction route (owner/accountant/bookkeeper, closed periods refused), and every entry carries the loan's own reference so the ledger balance is shown beside the schedule. The screen never invents an account. New `loans` table in `supabase/migrations/20261009000000_loans.sql` (needs applying by the lead); `src/lib/loanSchedule.ts`, `src/lib/loans.ts`, `src/components/finance/LoansView.tsx`; tests `loans.test.ts` (hand-checked schedule + database posting cases) and `loans-view.test.tsx`
 - [ ] K-31 Petty cash
 - [x] K-32 Notification preferences — done as S-19: each person chooses which notices they get (`src/lib/notifications.ts` `wantsNotification`, the bell's settings)
 - [ ] K-33 Categories management UI
 - [ ] K-34 Workspace switcher
 - [ ] K-35 Per-workspace inbox address
 - [x] K-36 Transaction enrichment — **done 6 Oct** (names): bank lines show a readable payee ("SQ *JOES COFFEE 4421 SEATTLE WA" → "Joes Coffee", "AMZN Mktp US*2K4L91TQ0" → "Amazon") with the bank's own text underneath and on hover, on the reconciliation screen. Card-processor prefixes, card numbers, dates, store numbers and codes are removed, well-known merchants named, Hebrew and other non-Latin text kept as written; `lineKind` tells fees, interest, refunds, transfers and payroll apart for hints. Display only: the stored line and the matching keep the bank's text (`src/lib/merchantNames.ts`, `src/components/ui/BankLineName.tsx`; tests `merchant-names.test.tsx`). Logos and learned names can follow
-- [ ] K-37 Webhook delivery tracking
+- [x] K-37 Webhook delivery tracking — **done 6 Oct**: Settings → Incoming events (owners and accountants) lists, newest first and in words, what Stripe and the email provider told LedgerFlow about the workspace and what came of it: an online card payment recorded / waiting for the bank / refused (other currency, nothing paid, invoice not found), plan changes, and emails delivered, bounced or marked as spam (with the address). Filters for online payments / email delivery and "only problems". Every Stripe outcome is now kept with its workspace (before, only some were, and without the outcome); events that can't be tied to a workspace are shown to nobody. Read only, no database change (`stripeProcessedEvents`, `emailEvents`; `src/lib/incomingEvents.ts`, `GET /api/v1/workspaces/:id/incoming-events`; tests `incoming-events.test.ts` with the database, `incoming-events-ui.test.tsx`, `online-payments.test.ts`)
 - [ ] K-38 Rule-group UI
 - [ ] K-39 Rule actions: accounts + type conversion
 - [ ] K-40 OAuth provider
@@ -1875,7 +1875,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] R-01 Close checklist (tested; blockers + items to sign off)
 - [x] R-02 Sign-off per item (who, when, note; final once hard-closed)
 - [x] R-03 Soft vs hard close (soft: only owners/accountants post)
-- [x] R-04 Year-end retained-earnings roll (`/close-year` + `ClosingEntryEngine`, tested)
+- [x] R-04 Year-end retained-earnings roll (`/close-year`; since CA-07 no closing entry is posted: the balance sheet carries past profit in retained earnings, and the unused `ClosingEntryEngine` was removed)
 - [x] R-05 Auto-reversing accruals: a journal entry can be marked "Reverse automatically"; its mirror (every line negated, linked both ways) is posted on the 1st of the next month, or a chosen later date, in the same request, so there is never an accrual without its reversal; a closed month refuses both (tested against the database). The server now accepts a reversal of an entry in the same request
 - [x] R-06 Depreciation run (server, one entry per month, catch-up, tested)
 - [x] R-07 FX revaluation run (the old run was switched off, L-187: open foreign-currency invoices and bills, owner/accountant, reversal next day) — implementation and local checks done 2026-10-05; **merged 5 Oct after Claude ran the database tests (`fx-revaluation-server.test.ts`, Undo and historical month-end included): they pass**:
@@ -1906,7 +1906,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
   `multi_currency_revaluation` Pro flag: that flag is otherwise unused, and which pages a plan gets is
   the owner's commercial call.
 - [x] R-08 Unposted-drafts review (drafts in the period block the close, listed)
-- [ ] R-09 Close comparison
+- [x] R-09 Close comparison (AI #3: the Month-End Close "Compare <month>" panel shows this month's P&L and balance sheet beside the previous month and the same month last year with big-move flags; see COORDINATION Messages)
 - [x] R-10 Lock by role (close/reopen owner+accountant; hard reopen owner; soft close by role)
 - [ ] R-11 Close package export
 
@@ -2152,13 +2152,13 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [ ] BD-01 Practice view
 - [ ] BD-02 Client switcher
-- [ ] BD-03 Adjusting-entry flag
+- [x] BD-03 Adjusting-entry flag — **done 6 Oct**: the journal form has "Adjusting entry" (an accountant's year-end, audit or correcting adjustment), saved with the entry; Ledger → General journal marks them "adjusting" and lists them alone with "Adjusting entries only"; Duplicate keeps the mark (tests `journal-view.test.tsx`). An adjusted/unadjusted trial balance can build on the mark
 - [ ] BD-04 Workpapers
-- [ ] BD-05 TB export for tax software
+- [x] BD-05 TB export for tax software: Settings → Export → "Trial balance — for tax software": the trial balance on a date from the complete workspace, one row per account with a balance (account number, name, type, the tax line it is mapped to), debit/credit columns or one balance column, no totals row; a trial balance that does not balance is still downloaded but says by how much (`workspace-exports.test.tsx`)
 - [ ] BD-06 Client report pack
 - [ ] BD-07 Client queries
 - [ ] BD-08 Asset register export
-- [ ] BD-09 Journal entry templates
+- [x] BD-09 Journal entry templates: in the journal entry form, "Save as template" keeps the lines (accounts, sides, dimensions, and amounts if typed) under a name, and "Start from a template" fills a new entry from one. A template balances or holds no amounts; saving under a used name replaces it. Templates are shared by the workspace: writers save and remove them, and every change is in the audit trail. Nothing is posted from a template (`journal-templates.test.tsx`; same as CA-27)
 - [ ] BD-10 Checklist per client
 
 # SECTION BE — DOCUMENT WORKFLOW
@@ -2171,11 +2171,11 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] BE-06 Auto-apply credits: "Apply open credits" on the credit notes screen (all customers or all vendors) and on each customer's or vendor's page: every open credit, oldest first, goes to that contact's open invoices (bills) in the same currency, the one due first first; drafts, voided and paid ones get nothing; one database transaction on the server, audited; no ledger entry (issuing the credit already lowered what is owed) (tested)
 - [x] BE-07 Batch statement send: "Email statements" on the customer list: every active customer with something open gets their statement PDF with the new "Customer statement" email (editable in Settings → Emails); no address, nothing open, archived or bounced customers are skipped and listed with the reason; logged per customer; writers only. Also: the statement PDF now reads only that contact's payments, not the whole workspace's (tested)
 - [x] BE-08 Recurring expense: a new bill can be set to repeat (every week, month, quarter or year). The daily job makes a draft copy on each date (vendor, lines, tax and currency; not the number or payments), tells the team, and it is posted only when someone checks it and saves it; paused like other schedules on the Recurring screen; once per date (tested)
-- [ ] BE-09 Mileage
-- [ ] BE-10 Per-diem
+- [x] BE-09 Mileage — **done 6 Oct**, in expense claims (K-22): a line can be "Mileage": from → to, distance in km or miles and the rate per km/mile (typed by the person, tenths of a cent allowed, e.g. 0.655; the last rate and unit used come back next time in that browser; no made-up default rate). The amount is worked out in whole cents and the claim line says how ("Mileage Office → Acme (42 mi × USD 0.655/mi): Client visit") (`src/lib/expenseClaims.ts`; tests `expense-claims.test.tsx`)
+- [x] BE-10 Per-diem — **done 6 Oct**, in expense claims: a "Per diem" line is days (half days allowed) × the daily rate, worked out in whole cents, with the working in the line's description; the last daily rate comes back next time (tested with BE-09)
 - [x] BE-11 PO → bill conversion (purchase orders saved, goods received, "Create bill"; tested)
 - [x] BE-12 Vendor prepayment — **done 5 Oct (with K-18)**: see K-18
-- [ ] BE-13 Cheque printing
+- [x] BE-13 Cheque printing — **done 6 Oct**: Payments → the printer button on a payment made to a vendor (owners, accountants, bookkeepers) prints it as a cheque on US Letter cheque stock, cheque on top and two vouchers (vendor copy, for your records): payee, date, cheque number (the payment's reference), the amount in figures behind asterisks and written out in words ("One thousand two hundred thirty-four and 56/100", filled to the end of the line), DOLLARS or the currency code, memo, signature line; the vouchers list the bills it pays by number and any part paid in advance. Nothing is posted (the payment already is); a money-in or voided payment is refused, as is another workspace's (`src/lib/amountInWords.ts`, `src/server/services/chequePdf.ts`, through `GET /api/v1/documents/cheque/:paymentId/pdf`; tests `cheque-printing.test.ts` with the database). Printing positions for a specific bank's pre-printed stock (MICR line, offsets) can follow when someone needs them
 
 # SECTION BF — ITEMS · PRICING · STOCK
 
@@ -2287,18 +2287,18 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] CA-01 Payment reconciliation: bank deposit → payment allocated to invoices, line matched
 - [x] CA-02 Unreconcile — exists, now role-checked, lock-checked, audited
 - [x] CA-03 Repost accounting ledger (check + repost; tested)
-- [ ] CA-04 Bank clearance date
+- [x] CA-04 Bank clearance date — **done 6 Oct**: in the Account Register, marking an entry cleared asks for the day the bank cleared it (today by default, never before the entry's own date) and shows "cleared 2026-05-04" under its date; unmarking undoes it. Saved through the server (owners, accountants, bookkeepers; the period lock applies; viewers can't). Fixed on the way: the register's cleared tick changed only the screen and was gone after a reload, and entries cleared by bank reconciliation showed as not cleared there (`src/services/clearanceActions.ts`, `POST /api/v1/transactions/reconciliation/clear`; tests `account-register-view.test.tsx`, `clearance-date.test.ts` with the database)
 - [ ] CA-05 Finance books
-- [ ] CA-06 Closing balance snapshots
-- [ ] CA-07 Period closing voucher
-- [ ] CA-08 Opening invoice tool
-- [ ] CA-09 Advance payment ledger
-- [ ] CA-10 Transaction deletion record
+- [x] CA-06 Closing balance snapshots: closing a month (soft or hard) keeps every account's balance on its last day with the period; Month-End Close shows "Balances since the close" for a closed month: still as closed, or the accounts that moved since (then, now, difference), worked out again by the server from the whole ledger. Closing again after a reopen replaces the snapshot whole (`closing-snapshot.test.ts`, `closing-balance-check-ui.test.tsx`)
+- [x] CA-07 Period closing voucher — **done 6 Oct, as a fix**: the year-end close posted an entry moving revenue and expenses to retained earnings, and nothing left it out of the profit and loss, so after closing a year its P&L showed zero profit (and closing twice at once could post two). The balance sheet already carries every past year's profit in retained earnings by itself, so closing a year no longer posts an entry: it records the year's profit (the twelve months ending on the closing date) in the audit trail and locks the year when asked; entries from earlier closes are ignored everywhere (`isPostable`), so a closed year reads right again and the balance sheet still balances. Month-End Close → "Record the year as closed" (owner) (tests `year-end-close.test.ts` with the database)
+- [x] CA-08 Opening invoice tool: "Opening invoices" on Sales and "Opening bills" on Purchases take the unpaid documents of the old system pasted from a spreadsheet (contact, number, date, due date, amount still owed). Each becomes an open invoice or bill against Opening Balance Equity with its own number and due date, so aging is right on day one; unknown contacts are added, and lines with a problem are named and left out (`opening-documents.test.tsx`)
+- [x] CA-09 Advance payment ledger — **done 6 Oct**: Reports → Open Advances lists customer deposits (or, switched, vendor prepayments) not yet applied to an invoice or bill: contact, payment, date, paid, applied, still open and days waiting at the period end (90+ days in red), oldest first, totals per currency and the contacts holding the most; voided payments and ones after the date are left out. What is open is today's state (applying is not dated), only the age follows the date. Applying stays on the contact's page (BE-12) (`openAdvances` in `src/lib/advancePayments.ts`; tests `open-advances.test.tsx`; browser `e2e/everyday-reports.spec.ts`)
+- [x] CA-10 Transaction deletion record — **done 6 Oct**: deleting an entry (only drafts can be; posted ones are voided) or a draft invoice, bill or credit through the posting route now leaves an audit line saying what it was ("Deleted the invoice INV-9 of 2026-10-01 (Acme, USD 50.00)") with a copy of its main fields and up to 100 lines, written in the same database transaction as the deletion; before, only "Deleted transaction ref [id]" was kept, and document deletions weren't recorded at all (`src/server/services/deletionRecord.ts`; tests `deletion-record.test.ts` with the database)
 - [x] CA-11 Import log (recent imports from the audit log)
 - [x] CA-12 Saved column map (= Y-03)
 - [ ] CA-13 Bank transaction rules with conditions
 - [ ] CA-14 Bank guarantee
-- [ ] CA-15 Cheque print template
+- [x] CA-15 Cheque print template — done as BE-13 (cheque on top, two vouchers, US Letter)
 - [ ] CA-16 Item tax template
 - [ ] CA-17 Tax rule engine
 - [ ] CA-18 Withholding category
@@ -2310,7 +2310,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CA-24 Shipping rules
 - [x] CA-25 Seasonal budget distribution — posted prior-year monthly expense pattern preview; C-21
 - [x] CA-26 Cost centre allocation % — three-recipient exact-cent preview; no posting; C-21
-- [ ] CA-27 JE templates
+- [x] CA-27 JE templates — done as BD-09
 - [ ] CA-28 Mode of payment
 - [ ] CA-29 Party link
 - [ ] CA-30 Payment request

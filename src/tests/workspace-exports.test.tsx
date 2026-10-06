@@ -3,7 +3,7 @@ import test,{afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import {render,cleanup,screen,fireEvent,waitFor,act} from '@testing-library/react';
-import {ledgerExportTable,recordExportTable,readExportedRecords,bankExportLines,generateQIF} from '../lib/workspaceExports';
+import {ledgerExportTable,recordExportTable,readExportedRecords,bankExportLines,generateQIF,trialBalanceExportTable} from '../lib/workspaceExports';
 import {toCsv} from '../lib/csvExport';
 import {parseCsv} from '../lib/csv';
 import {prepareImport,applyMapping,guessMapping} from '../lib/recordImport';
@@ -78,4 +78,42 @@ test('OFX declares UTF-8, escapes text markup and records the selected period an
  const text=generateOFX([makeTransaction({id:'x<y',date:'2024-02-29',description:'שלום & <NAME>bad',lines:[{accountId:account.id,amountCents:200}]})],account,period);
  assert.match(text,/ENCODING:UTF-8/);assert.match(text,/<ACCTID>1&lt;2/);assert.match(text,/<FITID>x&lt;y/);assert.match(text,/שלום &amp; &lt;NAME&gt;bad/);
  assert.match(text,/<DTSTART>20240229000000/);assert.match(text,/<DTEND>20240331235959/);assert.match(text,/<DTASOF>20240331235959/);
+});
+
+// BD-05: the trial balance for tax software
+test('trial balance for tax software: one row per account by number, tax line, debit/credit or one balance, no totals row',()=>{
+ const accounts=[
+  makeChartAccount({id:'cash',code:'1000',name:'Checking',type:'asset',openingBalanceCents:20000}),
+  makeChartAccount({id:'sales',code:'4000',name:'Sales',type:'income',taxCategory:'Schedule C: Gross receipts'} as never),
+  makeChartAccount({id:'rent',code:'600',name:'Rent',type:'expense',taxCategory:'Schedule C: Rent'} as never),
+  makeChartAccount({id:'idle',code:'1500',name:'Idle',type:'asset'}),
+ ];
+ const ledger=[
+  makeTransaction({id:'s',date:'2026-03-05',lines:[{accountId:'cash',accountName:'Checking',amountCents:50000},{accountId:'sales',accountName:'Sales',amountCents:-50000}]}),
+  makeTransaction({id:'r',date:'2026-03-31T17:00:00Z',lines:[{accountId:'rent',accountName:'Rent',amountCents:12000},{accountId:'cash',accountName:'Checking',amountCents:-12000}]}),
+  makeTransaction({id:'later',date:'2026-04-01',lines:[{accountId:'cash',amountCents:1},{accountId:'sales',amountCents:-1}]}),
+  makeTransaction({id:'d',date:'2026-03-10',status:'draft',lines:[{accountId:'cash',amountCents:999},{accountId:'sales',amountCents:-999}]}),
+ ];
+ const table=trialBalanceExportTable(ledger,accounts,'2026-03-31','debit-credit');
+ assert.deepEqual(table.headers,['Account Number','Account Name','Account Type','Tax Line','Debit','Credit']);
+ assert.deepEqual(table.rows,[
+  ['600','Rent','expense','Schedule C: Rent','120.00','0.00'],
+  ['1000','Checking','asset','','580.00','0.00'],
+  ['4000','Sales','income','Schedule C: Gross receipts','0.00','500.00'],
+ ],'numeric account order, the idle account and April left out');
+ assert.deepEqual([table.debitCents,table.creditCents],[70000,50000],'the opening balance has no other side here, so this one does not balance');
+ const single=trialBalanceExportTable(ledger,accounts,'2026-03-31','balance');
+ assert.deepEqual(single.headers.at(-1),'Balance');
+ assert.deepEqual(single.rows.map(row=>row.at(-1)),['120.00','580.00','-500.00']);
+ assert.throws(()=>trialBalanceExportTable(ledger,accounts,'31/03/2026','balance'),/Choose the date/);
+});
+
+test('export dialog: the trial balance asks for one date and the columns',()=>{
+ useAuthStore.setState({isGuest:true,user:null,currentWorkspaceId:'ws-1'});useLedgerStore.setState({accounts:[makeChartAccount()]});
+ render(<WorkspaceExportDialog onClose={()=>{}} />);
+ fireEvent.change(screen.getByLabelText('What to export'),{target:{value:'trial-balance'}});
+ assert.ok(screen.getByLabelText('As of'));assert.equal(screen.queryByLabelText('From'),null);
+ assert.equal((screen.getByLabelText('Columns') as HTMLSelectElement).value,'debit-credit');
+ assert.match(screen.getByText(/the way tax software imports a trial balance/).textContent||'',/no totals row/);
+ assert.equal((screen.getByRole('button',{name:'Download export'}) as HTMLButtonElement).disabled,false);
 });

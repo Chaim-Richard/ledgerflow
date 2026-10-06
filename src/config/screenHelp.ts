@@ -43,6 +43,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Manage suppliers and purchase bills. Inspect a bill, record payment and edit related metadata without leaving the form. Review taxes and totals before saving a bill.",
     "purchase-orders":
       "Prepare and track purchase orders. Inspect ordered items and use the existing receiving and bill workflows. A purchase order is not a posted bill.",
+    loans:
+      "Maintain loans the workspace owes: the lender, the principal, the rate, the term and the repayment schedule to the cent. Recording the money arriving or a payment posts one balanced entry through the ordinary posting path, so the period lock applies; a closed period refuses it. The screen never invents an account: it asks for the liability, interest and bank accounts it already has.",
     payroll:
       "Maintain employee information and inspect pay runs. Edit supported metadata and review the existing payroll workflow. A displayed calculation does not prove that a pay run was posted.",
     reports:
@@ -85,6 +87,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review customer receipts grouped by stored payment method. Compare periods and inspect undated receipt counts. Unapplied receipts are not automatically sales revenue.",
     "exchange-rates-used":
       "Review exchange rates stored on workspace documents and entries. Choose dates and inspect the rates actually used. Historical rates on records are distinct from current market quotes.",
+    "open-advances":
+      "Review customer deposits and vendor prepayments not yet applied to an invoice or bill, oldest first. See how long each has waited and which contacts hold the most. Apply them from the customer's or vendor's page.",
     "deferred-revenue-waterfall":
       "Review scheduled revenue earned by month and still deferred at the period end. Inspect each schedule and its recorded earned amounts. Future scheduled amounts remain distinct from posted earned revenue.",
     "financial-ratios":
@@ -141,6 +145,10 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review the existing sales-tax liability report. Select dates and inspect taxable amounts and tax totals. Review the report scope before using it for a tax filing.",
   },
   settings: {
+    tags:
+      "Review every tag used in the workspace and how many customers, vendors, projects, documents and entries carry it. Rename a tag everywhere at once, merge two by giving one the other's name, or remove a tag from every record. Only the tags change; amounts and entries stay as they are.",
+    "incoming-events":
+      "Review what Stripe and the email provider reported for this workspace and what came of it. Check whether an online card payment was recorded, is waiting for the bank or was refused, and whether an email was delivered or bounced. Nothing here changes any record.",
     rules:
       "Manage classification and automation rules. Inspect conditions, test matches and use the existing save or apply workflow. Review proposed matches before applying changes.",
     dimensions:

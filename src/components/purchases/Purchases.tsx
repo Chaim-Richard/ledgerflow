@@ -30,6 +30,7 @@ import VendorDetailView from './VendorDetailView';
 import ReceivePaymentModal from '../sales/ReceivePaymentModal';
 import { toast } from 'sonner';
 import { attachFiles, attachSummary } from '../../services/attachmentActions';
+import OpeningDocumentsDialog from '../common/OpeningDocumentsDialog';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
 import { csvMoney, downloadCsv } from '../../lib/csvExport';
@@ -59,6 +60,7 @@ export default function Purchases() {
   const [previewBill, setPreviewBill] = useState<Bill | null>(null);
   const [spreadingBill, setSpreadingBill] = useState<Bill | null>(null);
   const [paymentRunOpen, setPaymentRunOpen] = useState(false);
+  const [openingOpen, setOpeningOpen] = useState(false);
   const [pickedBills, setPickedBills] = useState<Set<string>>(() => new Set());
   const pdfWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const homeCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
@@ -208,6 +210,13 @@ export default function Purchases() {
               className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg flex items-center gap-2 text-sm shadow-sm transition-colors border border-slate-200 dark:border-slate-800">
               <DollarSign className="w-4 h-4" aria-hidden="true" />
               Payment run
+            </button>
+          )}
+          {activeSubTab === 'bills' && canEditContacts && (
+            <button type="button" onClick={() => setOpeningOpen(true)}
+              title="The bills still unpaid when you started: paste them from a spreadsheet"
+              className="px-3 py-2 text-slate-500 dark:text-slate-400 text-sm font-semibold hover:underline">
+              Opening bills
             </button>
           )}
           {activeSubTab === 'bills' && (
@@ -521,6 +530,7 @@ export default function Purchases() {
 
       {spreadingBill && <SpreadBillDialog bill={spreadingBill} onClose={() => setSpreadingBill(null)} />}
       {paymentRunOpen && <PaymentRunDialog bills={bills} vendors={vendors} onClose={() => setPaymentRunOpen(false)} />}
+      {openingOpen && <OpeningDocumentsDialog side="vendor" onClose={() => setOpeningOpen(false)} />}
       {isPaymentModalOpen && paymentDocumentId && paymentContactId && (
         <ReceivePaymentModal
           isOpen={isPaymentModalOpen}

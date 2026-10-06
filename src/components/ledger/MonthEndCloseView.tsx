@@ -16,6 +16,8 @@ import type { CloseItem } from '../../lib/closeChecklist';
 import { monthCloseState, monthEnd } from '../../lib/periodLock';
 import type { AppTab, PeriodStatus, Workspace } from '../../types';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import CloseComparisonPanel from './CloseComparisonPanel';
+import ClosingBalanceCheck from './ClosingBalanceCheck';
 
 /**
  * Month-End Close (R-01 checklist, R-02 sign-offs, R-03 soft/hard close, R-08 drafts, R-10 roles,
@@ -172,9 +174,11 @@ export default function MonthEndCloseView() {
     if (done) toast.success(`Reposted ${done} document${done === 1 ? '' : 's'}.`);
   };
 
+  // CA-07: closing the year records it (and its profit) without posting an entry; the balance
+  // sheet carries the profit in retained earnings by itself
   const postYearEnd = () => run(
     () => post<{ message?: string }>('/api/v1/transactions/close-year', { workspaceId, closingDate: end, lockPeriod: false }),
-    'Year-end closing entry posted (revenue and expenses moved to retained earnings).',
+    'Year closed: its profit stays in retained earnings on the balance sheet.',
   );
 
   const exportPackage = async () => {
@@ -342,7 +346,7 @@ export default function MonthEndCloseView() {
                   {isFiscalYearEnd && role === 'owner' && (
                     <button type="button" disabled={busy || isFutureMonth} onClick={postYearEnd}
                       className="px-4 py-2 rounded-lg border border-[var(--line)] text-sm font-semibold text-[var(--text)] disabled:opacity-50">
-                      Post year-end closing entry
+                      Record the year as closed
                     </button>
                   )}
                 </div>
@@ -372,6 +376,14 @@ export default function MonthEndCloseView() {
             )}
           </div>
         </section>
+
+        {/* CA-06: a closed month's balances now, against the snapshot taken when it was closed */}
+        {state !== 'open' && (
+          <ClosingBalanceCheck key={`${month}-${period?.status || ''}-${period?.closeMode || ''}`} workspaceId={workspaceId} month={month} currency={workspace?.currency} />
+        )}
+
+        {/* R-09: this month beside the month before and the same month last year, read-only. */}
+        <CloseComparisonPanel month={month} currency={workspace?.currency} />
 
         {canClose && (workspace?.lockDate || workspace?.softLockDate) && (
           <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 space-y-3" aria-labelledby="partial-unlock">

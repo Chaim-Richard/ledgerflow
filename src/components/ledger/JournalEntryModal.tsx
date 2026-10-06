@@ -1,6 +1,6 @@
 import { useDialog } from '../../hooks/useDialog';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { User } from '../../lib/db/auth';
 import { ChartAccount, JournalLine } from '../../types';
 import { 
@@ -13,7 +13,7 @@ import {
   Type as TypeIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, getLocalDateISO, formatCurrency } from '../../lib/utils';
+import { cn, getLocalDateISO, formatCurrency, safeConfirm } from '../../lib/utils';
 import { getIdToken } from '../../firebase';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -28,6 +28,9 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isLockedDate } from '../../lib/periodLock';
+import { formLines, templateLines, templateProblem, templateSummary, type JournalTemplate } from '../../lib/journalTemplates';
+import { listJournalTemplates, removeJournalTemplate, saveJournalTemplate } from '../../services/journalTemplateActions';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
 
 interface JournalEntryModalProps {
   isOpen: boolean;
@@ -36,7 +39,8 @@ interface JournalEntryModalProps {
   accounts: ChartAccount[];
   workspaceId: string;
   /** Start from another entry's lines (K-05 "Duplicate"); the date is today and nothing is posted until saved. */
-  initialEntry?: { description?: string; reference?: string; lines: JournalLine[] };
+  /** BD-03: `adjusting` marks an accountant's adjusting entry (year-end, audit) */
+  initialEntry?: { description?: string; reference?: string; lines: JournalLine[]; adjusting?: boolean };
 }
 
 export default function JournalEntryModal({ isOpen, onClose, user, accounts, workspaceId, initialEntry }: JournalEntryModalProps) {
@@ -45,6 +49,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   const [reference, setReference] = useState('');
   // R-05: an accrual that undoes itself (on the 1st of the next month unless another date is chosen)
   const [autoReverse, setAutoReverse] = useState(false);
+  const [adjusting, setAdjusting] = useState(Boolean(initialEntry?.adjusting));
   const [reverseOnTyped, setReverseOnTyped] = useState('');
   const reverseOn = reverseOnTyped || (date ? firstOfNextMonth(date) : '');
   const [suggestion, setSuggestion] = useState<string | null>(null);
@@ -71,6 +76,62 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
     ]);
   const [lineKeys, setLineKeys] = useState(() => (initialEntry?.lines.length ? initialEntry.lines.map((_, i) => `initial-${i}`) : ['initial-first', 'initial-second']));
   const nextLineKey = useRef(0);
+
+  // BD-09 / CA-27: start from a saved template, or keep these lines as one
+  const role = useCurrentRole();
+  const canSaveTemplates = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
+  const [templates, setTemplates] = useState<JournalTemplate[]>([]);
+  const [templateId, setTemplateId] = useState('');
+  const [templateName, setTemplateName] = useState<string | null>(null);
+  const chosenTemplate = templates.find(t => t.id === templateId);
+
+  useEffect(() => {
+    if (!isOpen || !workspaceId) return;
+    let live = true;
+    // templates are a convenience: the form works the same without them
+    listJournalTemplates(workspaceId).then(list => { if (live) setTemplates(list); }).catch(() => {});
+    return () => { live = false; };
+  }, [isOpen, workspaceId]);
+
+  const applyTemplate = (id: string) => {
+    setTemplateId(id);
+    const template = templates.find(t => t.id === id);
+    if (!template) return;
+    const { lines: filled, missing } = formLines(template, accounts);
+    while (filled.length < 2) filled.push({ accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} });
+    setLines(filled);
+    setLineKeys(filled.map(() => `template-${nextLineKey.current++}`));
+    if (template.description) setDescription(template.description);
+    setAdjusting(Boolean(template.adjusting));
+    if (missing) toast.warning(`${missing} ${missing === 1 ? 'line was' : 'lines were'} left out: the account no longer exists`);
+  };
+
+  const saveTemplate = async () => {
+    const input = { name: (templateName || '').trim(), description: description.trim(), adjusting, lines: templateLines(lines) };
+    const problem = templateProblem(input, new Set(accounts.map(a => a.id)));
+    if (problem) { toast.error(problem); return; }
+    try {
+      const { template, replaced } = await saveJournalTemplate(workspaceId, input);
+      setTemplates(list => [...list.filter(t => t.id !== template.id), template].sort((a, b) => a.name.localeCompare(b.name)));
+      setTemplateId(template.id);
+      setTemplateName(null);
+      toast.success(replaced ? `Template "${template.name}" replaced` : `Saved as the template "${template.name}"`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const removeTemplate = async () => {
+    if (!chosenTemplate || !safeConfirm(`Remove the template "${chosenTemplate.name}"? Entries already made from it stay as they are.`)) return;
+    try {
+      await removeJournalTemplate(workspaceId, chosenTemplate.id);
+      setTemplates(list => list.filter(t => t.id !== chosenTemplate.id));
+      setTemplateId('');
+      toast.success(`Template "${chosenTemplate.name}" removed`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
 
   const handleDimensionChange = (index: number, dimensionId: string, value: string) => {
     setLines(prev => prev.map((l, i) => {
@@ -265,7 +326,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         type: 'journal',
         status: 'completed',
         lines: mappedLines,
-        isCleared: true
+        isCleared: true,
+        // an adjusting entry (BD-03): marked so the journal can list and filter them
+        ...(adjusting ? { metadata: { adjusting: true } } : {}),
       };
 
       const token = await getIdToken();
@@ -459,6 +522,10 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                   <input id="je-auto-reverse" type="checkbox" checked={autoReverse} onChange={e => setAutoReverse(e.target.checked)} />
                   Reverse automatically (an accrual)
                 </label>
+                <label htmlFor="je-adjusting" className="flex items-center gap-2 cursor-pointer" title="An accountant's adjustment: year-end, audit or correction">
+                  <input id="je-adjusting" type="checkbox" checked={adjusting} onChange={e => setAdjusting(e.target.checked)} />
+                  Adjusting entry
+                </label>
                 {autoReverse && (
                   <label htmlFor="je-reverse-on" className="flex items-center gap-2">
                     <span className="text-[var(--muted)]">on</span>
@@ -467,6 +534,38 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                   </label>
                 )}
               </div>
+
+              {(templates.length > 0 || canSaveTemplates) && (
+                <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--text)]">
+                  {templates.length > 0 && (
+                    <label htmlFor="je-template" className="flex items-center gap-2">
+                      <span className="text-[var(--muted)]">Start from a template</span>
+                      <select id="je-template" value={templateId} onChange={e => applyTemplate(e.target.value)}
+                        className="px-3 py-1.5 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-[var(--text)] cursor-pointer">
+                        <option value="">Choose…</option>
+                        {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                    </label>
+                  )}
+                  {chosenTemplate && <span className="text-xs text-[var(--muted)]">{templateSummary(chosenTemplate, c => formatCurrency(c, activeCurrency))}</span>}
+                  {chosenTemplate && canSaveTemplates && (
+                    <button type="button" onClick={() => void removeTemplate()} className="text-xs text-[var(--muted)] hover:text-rose-600 cursor-pointer">Remove template</button>
+                  )}
+                  {canSaveTemplates && (templateName === null ? (
+                    <button type="button" onClick={() => setTemplateName(chosenTemplate?.name || description.trim())}
+                      className="text-xs font-semibold text-[var(--brass)] hover:underline cursor-pointer">Save as template</button>
+                  ) : (
+                    <span className="flex flex-wrap items-center gap-2">
+                      <input aria-label="Template name" value={templateName} maxLength={60} onChange={e => setTemplateName(e.target.value)} placeholder="e.g. Monthly payroll accrual"
+                        dir="auto" className="px-3 py-1.5 bg-[var(--ink)] border border-[var(--line)] rounded-lg text-[var(--text)]" />
+                      <button type="button" onClick={() => void saveTemplate()} disabled={!templateName.trim()}
+                        className="px-3 py-1.5 text-xs rounded-lg bg-[var(--brass)] text-[var(--ink)] font-bold disabled:opacity-50 cursor-pointer">Save template</button>
+                      <button type="button" onClick={() => setTemplateName(null)} className="text-xs text-[var(--muted)] hover:underline cursor-pointer">Cancel</button>
+                      <span className="text-[11px] text-[var(--muted)]">Keeps the accounts and any amounts typed; leave amounts empty to type them each time.</span>
+                    </span>
+                  ))}
+                </div>
+              )}
 
               {/* Lines Table */}
               <div className="space-y-4">

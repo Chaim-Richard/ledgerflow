@@ -20,6 +20,65 @@ export interface ClaimRecord {
 
 export interface ClaimLine { description: string; accountId: string; amountCents: number }
 
+/**
+ * Mileage and per diem (BE-09, BE-10): two more kinds of claim line, worked out from what the person
+ * types; the rate is theirs (or their organisation's), never a made-up default. Each becomes an
+ * ordinary claim line whose description says how its amount was reached.
+ */
+export type ClaimLineKind = 'expense' | 'mileage' | 'perDiem';
+export type DistanceUnit = 'km' | 'mi';
+
+/** "0.68" → 680 (thousandths of the currency unit: mileage rates are often in tenths of a cent, 65.5¢). */
+export function rateInThousandths(text: string): number {
+  const value = Number(String(text).replace(/,/g, '').trim());
+  return Number.isFinite(value) && value > 0 ? Math.round(value * 1000) : 0;
+}
+
+export function decimalNumber(text: string): number {
+  const value = Number(String(text).replace(/,/g, '').trim());
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+/** Distance × rate per km/mile, in whole cents. */
+export function mileageCents(distance: number, rateThousandths: number): number {
+  return distance > 0 && rateThousandths > 0 ? Math.round(distance * rateThousandths / 10) : 0;
+}
+
+/** Days × daily rate, in whole cents (half days allowed). */
+export function perDiemCents(days: number, dailyRateCents: number): number {
+  return days > 0 && dailyRateCents > 0 ? Math.round(days * dailyRateCents) : 0;
+}
+
+const amount = (thousandths: number) => (thousandths / 1000).toFixed(thousandths % 10 ? 3 : 2);
+
+export function mileageLine(input: { purpose: string; from?: string; to?: string; distance: number; unit: DistanceUnit; rateThousandths: number; accountId: string; currency: string }): ClaimLine {
+  const route = [input.from?.trim(), input.to?.trim()].filter(Boolean).join(' → ');
+  const how = `${input.distance} ${input.unit} × ${input.currency} ${amount(input.rateThousandths)}/${input.unit}`;
+  return {
+    description: ['Mileage', route, `(${how})`].filter(Boolean).join(' ') + (input.purpose.trim() ? `: ${input.purpose.trim()}` : ''),
+    accountId: input.accountId,
+    amountCents: mileageCents(input.distance, input.rateThousandths),
+  };
+}
+
+export function perDiemLine(input: { purpose: string; days: number; dailyRateCents: number; accountId: string; currency: string }): ClaimLine {
+  const how = `${input.days} day${input.days === 1 ? '' : 's'} × ${input.currency} ${(input.dailyRateCents / 100).toFixed(2)}`;
+  return {
+    description: `Per diem (${how})` + (input.purpose.trim() ? `: ${input.purpose.trim()}` : ''),
+    accountId: input.accountId,
+    amountCents: perDiemCents(input.days, input.dailyRateCents),
+  };
+}
+
+/** What a mileage or per-diem line still needs, or null. */
+export function workedLineProblem(kind: ClaimLineKind, input: { distance?: number; rateThousandths?: number; days?: number; dailyRateCents?: number }): string | null {
+  if (kind === 'mileage' && !(input.distance && input.distance > 0)) return 'Mileage needs the distance';
+  if (kind === 'mileage' && !(input.rateThousandths && input.rateThousandths > 0)) return 'Mileage needs the rate per km or mile';
+  if (kind === 'perDiem' && !(input.days && input.days > 0)) return 'Per diem needs the number of days';
+  if (kind === 'perDiem' && !(input.dailyRateCents && input.dailyRateCents > 0)) return 'Per diem needs the daily rate';
+  return null;
+}
+
 interface ClaimBill {
   status?: string;
   metadata?: { expenseClaim?: ClaimRecord } & Record<string, unknown>;

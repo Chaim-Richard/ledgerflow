@@ -409,6 +409,17 @@ export function registerReconcileRoutes(transactionRouter: express.Router): void
       if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
         return res.status(403).json({ error: 'Not a member' });
       }
+      // marking entries cleared is bookkeeping: owners, accountants and bookkeepers (CA-04)
+      const role = wsDoc.data()?.uid === user.uid ? 'owner' : wsDoc.data()?.roles?.[user.uid] || 'viewer';
+      if (!user.admin && !['owner', 'accountant', 'bookkeeper'].includes(role)) {
+        return res.status(403).json({ error: 'Only owners, accountants and bookkeepers mark entries cleared' });
+      }
+      // the day the bank cleared it (CA-04): optional, never before the entry's own date; cleared: false undoes it
+      const { clearanceDate, cleared } = req.body as { clearanceDate?: unknown; cleared?: unknown };
+      if (clearanceDate !== undefined && (typeof clearanceDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(clearanceDate))) {
+        return res.status(400).json({ error: 'The clearance date must be a date (YYYY-MM-DD)' });
+      }
+      const undo = cleared === false;
 
       // Verify all transactions belong to this workspace to prevent cross-tenant IDOR tampering
       const refs = transactionIds.map((id: string) => db.collection('transactions').doc(id));
@@ -428,18 +439,24 @@ export function registerReconcileRoutes(transactionRouter: express.Router): void
           wsData
         });
 
-        batch.update(snap.ref, {
-          isCleared: true,
-          clearedAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp()
-        });
+        if (!undo && typeof clearanceDate === 'string' && txData.date && clearanceDate < String(txData.date).slice(0, 10)) {
+          return res.status(400).json({ error: `It can't clear the bank before the entry's own date (${String(txData.date).slice(0, 10)})` });
+        }
+        batch.update(snap.ref, undo
+          ? { isCleared: false, isReconciled: false, clearedAt: FieldValue.delete(), clearanceDate: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }
+          : {
+            isCleared: true,
+            clearedAt: FieldValue.serverTimestamp(),
+            ...(typeof clearanceDate === 'string' ? { clearanceDate } : {}),
+            updatedAt: FieldValue.serverTimestamp()
+          });
       }
       await batch.commit();
 
       res.json({
         status: 'ok',
         clearedCount: transactionIds.length,
-        message: 'Transactions successfully cleared.'
+        message: undo ? 'Marked as not cleared.' : 'Transactions successfully cleared.'
       });
     } catch (e) {
       res.status(500).json({ error: errorMessage(e) });

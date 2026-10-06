@@ -35,6 +35,7 @@ import {
   SupportTicket,
   SupportMessage
 } from '../types';
+import type { Loan } from '../lib/loans';
 
 
 import { DoubleEntryValidator } from '../kernel/validation/DoubleEntryValidator';
@@ -100,6 +101,7 @@ export interface LedgerState {
   vendorCredits: VendorCredit[];
   inventory: InventoryItem[];
   assets: FixedAsset[];
+  loans: Loan[];
   recurring: RecurringTransaction[];
   employees: Employee[];
   payRuns: PayRun[];
@@ -183,6 +185,7 @@ export interface LedgerState {
   setVendorCredits: (data: VendorCredit[]) => void;
   setInventory: (data: InventoryItem[]) => void;
   setAssets: (data: FixedAsset[]) => void;
+  setLoans: (data: Loan[]) => void;
   setRecurring: (data: RecurringTransaction[]) => void;
   setEmployees: (data: Employee[]) => void;
   setPayRuns: (data: PayRun[]) => void;
@@ -234,6 +237,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   vendorCredits: [],
   inventory: [],
   assets: [],
+  loans: [],
   recurring: [],
   employees: [],
   payRuns: [],
@@ -501,6 +505,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   setVendorCredits: (vendorCredits) => set({ vendorCredits }),
   setInventory: (inventory) => set({ inventory }),
   setAssets: (assets) => set({ assets }),
+  setLoans: (loans) => set({ loans }),
   setRecurring: (recurring) => set({ recurring }),
   setEmployees: (employees) => set({ employees }),
   setPayRuns: (payRuns) => set({ payRuns }),
@@ -597,6 +602,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
       vendorCredits: [],
       inventory: [],
       assets: [],
+      loans: [],
       recurring: [],
       employees: [],
       payRuns: [],

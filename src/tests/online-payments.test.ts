@@ -75,6 +75,14 @@ describe('Invoices paid online', { skip: !url && 'LF_TEST_DATABASE_URL not set' 
     assert.equal((await record(db, `evt_${ws}_4`, 'checkout.session.async_payment_succeeded', session('d'))).status, 'recorded', 'then the success event records it');
   });
 
+  test('every outcome is kept with its workspace, for Settings → Incoming events (K-37)', async () => {
+    const event = async (n: number) => (await db.collection('stripeProcessedEvents').doc(`evt_${ws}_${n}`).get()).data() || {};
+    assert.deepEqual([(await event(1)).outcome, (await event(1)).workspaceId], ['recorded', ws]);
+    assert.deepEqual([(await event(2)).outcome, (await event(2)).workspaceId], ['currency_mismatch', ws]);
+    assert.deepEqual([(await event(3)).outcome, (await event(3)).workspaceId], ['pending', ws]);
+    assert.equal((await event(4)).outcome, 'recorded');
+  });
+
   test('paying more than is due: the invoice is paid, the rest stays unapplied', async () => {
     const out = await record(db, `evt_${ws}_5`, 'checkout.session.completed', session('c'));
     const payment = (await db.collection('payments').doc((out as { paymentId: string }).paymentId).get()).data();

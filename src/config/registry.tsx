@@ -76,6 +76,7 @@ export const VIEW_COMPONENTS: Record<string, ElementType> = {
   'sales': lazy(() => import('../components/sales/Sales')),
   'purchases': lazy(() => import('../components/purchases/Purchases')),
   'purchase-orders': lazy(() => import('../components/purchases/PurchaseOrdersView')),
+  'loans': lazy(() => import('../components/finance/LoansView')),
   'payroll': lazy(() => import('../components/hr/PayrollView')),
   'assets': lazy(() => import('../components/assets/FixedAssetsView')),
   'settings': lazy(() => import('../components/platform/Settings')),
@@ -146,6 +147,7 @@ export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition
   
   { id: 'purchases', label: { en: 'Purchases', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'money_out' },
   { id: 'purchase-orders', label: { en: 'Purchase Orders', he: 'הזמנות רכש' }, icon: ShoppingCart, groupId: 'money_out' },
+  { id: 'loans', label: { en: 'Loans', he: 'הלוואות' }, icon: Coins, groupId: 'money_out' },
   { id: 'payroll', label: { en: 'Payroll & Wages', he: 'שכר עובדים' }, icon: Users, groupId: 'money_out' },
 
   { id: 'reports', label: { en: 'Reports', he: 'דוחות' }, icon: FileText, groupId: 'reports' },
@@ -350,6 +352,7 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'PaymentMethodSummaryView': lazy(() => import('../components/reporting/PaymentMethodSummaryView')),
   'SpreadWaterfallView': lazy(() => import('../components/reporting/SpreadWaterfallView')),
   'ExchangeRateHistoryView': lazy(() => import('../components/reporting/ExchangeRateHistoryView')),
+  'OpenAdvancesView': lazy(() => import('../components/reporting/OpenAdvancesView')),
   'FinancialRatiosReportView': lazy(() => import('../components/reporting/FinancialRatiosReportView')),
   'CustomerGrossProfitView': lazy(() => import('../components/reporting/CustomerGrossProfitView')),
   'InactiveItemsReportView': lazy(() => import('../components/reporting/InactiveItemsReportView')),
@@ -386,6 +389,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'sales-payment-summary', label: { en: 'Sales Payment Summary', he: 'תקבולים לפי אמצעי תשלום' }, componentName: 'PaymentMethodSummaryView', icon: CreditCard },
   { id: 'deferred-revenue-waterfall', label: { en: 'Deferred Revenue Waterfall', he: 'מפל הכנסות נדחות' }, componentName: 'SpreadWaterfallView', icon: Calendar },
   { id: 'exchange-rates-used', label: { en: 'Exchange Rates Used', he: 'שערי חליפין ששימשו' }, componentName: 'ExchangeRateHistoryView', icon: TrendingUp },
+  { id: 'open-advances', label: { en: 'Open Advances', he: 'מקדמות פתוחות' }, componentName: 'OpenAdvancesView', icon: Calendar },
   { id: 'financial-ratios', label: { en: 'Financial Ratios', he: 'יחסים פיננסיים' }, componentName: 'FinancialRatiosReportView', icon: Activity },
   { id: 'gross-profit-by-customer', label: { en: 'Gross Profit by Customer', he: 'רווח גולמי לפי לקוח' }, componentName: 'CustomerGrossProfitView', icon: TrendingUp },
   { id: 'inactive-items', label: { en: 'Inactive Items', he: 'פריטים ללא מכירה' }, componentName: 'InactiveItemsReportView', icon: Package },
@@ -430,6 +434,8 @@ export const SETTINGS_TABS_REGISTRY = withScreenHelp([
   { id: 'numbering', label: { en: 'Document Numbering', he: 'מספור מסמכים' }, componentName: 'NumberingSettingsView', icon: Hash },
   { id: 'defaults', label: { en: 'Defaults', he: 'ברירות מחדל' }, componentName: 'DefaultsSettingsView', icon: Scale },
   { id: 'schedule', label: { en: 'Schedule', he: 'לוח זמנים' }, componentName: 'ScheduleSettingsView', icon: CalendarClock },
+  { id: 'incoming-events', label: { en: 'Incoming events', he: 'אירועים נכנסים' }, componentName: 'IncomingEventsSettingsView', icon: CalendarClock },
+  { id: 'tags', label: { en: 'Tags', he: 'תגיות' }, componentName: 'TagsSettingsView', icon: Tag },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ], 'settings');
@@ -451,6 +457,8 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'DefaultsSettingsView': lazy(() => import('../components/platform/settings/DefaultsSettings')),
   'ExportView': lazy(() => import('../components/platform/settings/BackupExportSettings')),
   'ScheduleSettingsView': lazy(() => import('../components/platform/settings/ScheduleSettings')),
+  'IncomingEventsSettingsView': lazy(() => import('../components/platform/settings/IncomingEventsSettings')),
+  'TagsSettingsView': lazy(() => import('../components/platform/settings/TagsSettings')),
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };
 

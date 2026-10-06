@@ -31,6 +31,7 @@ export const WORKSPACE_SCOPED_COLLECTIONS = [
   'scenarios',
   'recurring',
   'assets',
+  'loans',
   'invites',
   'journalEntries',
   'workspaceShards',
