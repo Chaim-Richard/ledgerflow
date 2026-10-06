@@ -268,7 +268,11 @@ export default function LoansView() {
 
   if (!rows.length && !formOpen) {
     return (
-      <div className="h-full overflow-auto p-6 md:p-8" id="loans-view">
+      <div className="h-full overflow-auto p-6 md:p-8 space-y-4" id="loans-view">
+        {/* every screen has its page heading, the empty one too */}
+        <h1 className="max-w-5xl mx-auto text-xl font-bold text-[var(--text)] flex items-center gap-2">
+          <Banknote className="w-5 h-5 text-[var(--brass)]" aria-hidden="true" /> Loans
+        </h1>
         <EmptyState
           title="No loans yet"
           description={canWrite
