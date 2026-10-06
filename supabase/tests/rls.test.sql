@@ -290,7 +290,7 @@ begin
   foreach t in array array[
     'transactions','journalEntries','invoices','payments','bills','creditNotes','vendorCredits',
     'projects','estimates','inventory','recurring','budgets','autoRules','fixedAssets','assets',
-    'taxRates','dimensionNodes','vendors','customers','rulePatterns','scenarios',
+    'taxRates','dimensionNodes','vendors','customers','rulePatterns','scenarios','loans',
     'employees','payRuns','partners','reconciliations','workspaceShards'
   ] loop
     doc := case when t = 'transactions' then '{"workspaceId":"ws1","date":"2026-02-15","status":"draft"}'
