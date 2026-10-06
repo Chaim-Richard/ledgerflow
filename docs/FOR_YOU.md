@@ -127,7 +127,7 @@ Last updated: 2026-10-05.
     entry; any old closing entries are ignored. *Default: this way.* If your accountant wants a
     classic closing entry posted anyway, say so.
 
-24. **One database change for Loans (6 Oct, A-2 from the arena AI).** `supabase/migrations/20261009000000_loans.sql`
+24. ~~**One database change for Loans**~~ **Done: applied 6 Oct.** (A-2 from the arena AI) `supabase/migrations/20261009000000_loans.sql`
     adds the table loans are kept in (members read; owners, accountants and bookkeepers write).
     Claude applies it through the Supabase connector right after the code is pushed; this line is
     crossed out once it is applied. If the connector asks you to approve, approving it is all that is
