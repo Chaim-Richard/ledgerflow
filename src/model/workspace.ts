@@ -5,6 +5,7 @@ import type { ReminderSettings } from '../lib/reminders';
 import type { InvoiceApprovalSettings } from '../lib/invoiceApproval';
 import type { MoneyDisplaySettings } from '../lib/moneyFormat';
 import type { ScheduledReport } from '../lib/scheduledReports';
+import type { CloseStep } from '../lib/closeSteps';
 import type { NotificationType } from '../lib/notifications';
 import type { EntityMetadata, DimensionDefinition, Transaction } from './ledger';
 
@@ -55,6 +56,8 @@ export interface Workspace {
   scheduledReports?: ScheduledReport[];
   /** Which period each schedule last sent (written by the server only). */
   scheduledReportsSent?: Record<string, string>;
+  /** The client's own month-end steps (BD-10, src/lib/closeSteps.ts); saved by the server for owners and accountants. */
+  closeSteps?: CloseStep[];
   /** Set by the daily job: the month (YYYY-MM) monthly statements were last sent (Y-28). */
   lastStatementsMonth?: string;
   strategicAdvice?: string[];

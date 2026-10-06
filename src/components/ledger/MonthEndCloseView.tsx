@@ -18,6 +18,8 @@ import type { AppTab, PeriodStatus, Workspace } from '../../types';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import CloseComparisonPanel from './CloseComparisonPanel';
 import ClosingBalanceCheck from './ClosingBalanceCheck';
+import CloseStepsEditor from './CloseStepsEditor';
+import { closeStepItems } from '../../lib/closeSteps';
 
 /**
  * Month-End Close (R-01 checklist, R-02 sign-offs, R-03 soft/hard close, R-08 drafts, R-10 roles,
@@ -100,8 +102,9 @@ export default function MonthEndCloseView() {
     month, transactions: transactions || [], bankLines: bankLines || [], invoices: invoices || [], bills: bills || [], journalEntries: journalEntries || [], assets: assets || [],
   }), [month, transactions, bankLines, invoices, bills, journalEntries, assets]);
   const mismatches = useMemo(() => postingMismatchesThrough({ invoices: invoices || [], bills: bills || [], transactions: transactions || [] }, monthEnd(month)), [invoices, bills, transactions, month]);
+  const stepItems = useMemo(() => closeStepItems(workspace?.closeSteps, month, workspace?.fiscalYearStartMonth || 1), [workspace?.closeSteps, workspace?.fiscalYearStartMonth, month]);
   const signOffs = period?.signOffs || {};
-  const readiness = readyToClose(items, signOffs);
+  const readiness = readyToClose([...items, ...stepItems], signOffs);
   const state = monthCloseState(month, workspace);
   const end = monthEnd(month);
   const isFutureMonth = end > getLocalDateISO();
@@ -217,7 +220,7 @@ export default function MonthEndCloseView() {
     }
   };
 
-  const doneCount = items.filter(i => i.status === 'done' || signOffs[i.id]).length;
+  const doneCount = items.filter(i => i.status === 'done' || signOffs[i.id]).length + stepItems.filter(i => signOffs[i.id]).length;
   const monthLabel = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1).toLocaleString(undefined, { month: 'long', year: 'numeric' });
 
   return (
@@ -256,7 +259,7 @@ export default function MonthEndCloseView() {
                 {lockException ? ` · unlocked ${lockException.fromDate} to ${lockException.toDate}` : ''}
               </p>
             </div>
-            <div className="text-sm text-[var(--muted)]">{doneCount} of {items.length} checked</div>
+            <div className="text-sm text-[var(--muted)]">{doneCount} of {items.length + stepItems.length} checked</div>
           </div>
 
           <ul className="divide-y divide-[var(--line)]">
@@ -290,7 +293,32 @@ export default function MonthEndCloseView() {
                 </li>
               );
             })}
+            {stepItems.map(item => {
+              const signed = signOffs[item.id];
+              return (
+                <li key={item.id} className="p-4 flex items-start gap-3">
+                  <span className="mt-0.5" aria-hidden="true">
+                    {signed ? <CheckCircle2 className="w-5 h-5 text-[var(--pos)]" /> : <Circle className="w-5 h-5 text-[var(--muted)]" />}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-[var(--text)]"><bdi>{item.title}</bdi></p>
+                    <p className="text-sm mt-0.5 text-[var(--muted)]">{item.detail}</p>
+                    {signed && <p className="text-xs text-[var(--muted)] mt-1">Signed off by {signed.by} on {signed.at.slice(0, 10)}{signed.note ? `: ${signed.note}` : ''}</p>}
+                  </div>
+                  {canSign && state !== 'hard' && (
+                    <button type="button" disabled={busy} onClick={() => sign(item.id, !!signed)} aria-label={`${signed ? 'Remove sign-off' : 'Sign off'}: ${item.title}`}
+                      className="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg border border-[var(--line)] text-[var(--text)] disabled:opacity-50">
+                      {signed ? 'Remove sign-off' : 'Sign off'}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
           </ul>
+
+          {canClose && workspace && (
+            <CloseStepsEditor workspace={workspace} workspaces={workspaces} onSaved={closeSteps => patchWorkspace({ closeSteps })} />
+          )}
 
           {mismatches.length > 0 && (
             <div className="p-4 border-t border-[var(--line)] space-y-2">

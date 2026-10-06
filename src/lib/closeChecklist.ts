@@ -122,7 +122,7 @@ export function postingMismatchesThrough(input: Pick<CloseChecklistInput, 'invoi
 export interface SignOff { by: string; at: string; note?: string }
 
 /** Ready to close: nothing blocks, and every item that needs attention has been signed off. */
-export function readyToClose(items: CloseItem[], signOffs: Record<string, SignOff | undefined> = {}): { ready: boolean; reason?: string } {
+export function readyToClose(items: Array<Pick<CloseItem, 'status' | 'title' | 'detail'> & { id: string }>, signOffs: Record<string, SignOff | undefined> = {}): { ready: boolean; reason?: string } {
   const blocker = items.find(i => i.status === 'blocker');
   if (blocker) return { ready: false, reason: blocker.detail };
   const unsigned = items.filter(i => i.status === 'attention' && !signOffs[i.id]);
