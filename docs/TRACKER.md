@@ -1519,7 +1519,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] J-11 Sales Tax Liability Summary (Tax screen: tax by rate, collected and paid, in the home currency; adds up to the return boxes; tested)
 - [x] J-12 Journal Sheet: isPostable + lineAmount, unbalanced list, tested
 - [ ] J-13 Budget vs Actual with drill-down
-- [ ] J-14 Deferred-revenue waterfall
+- [x] J-14 Deferred-revenue waterfall — **done 6 Oct**: Reports → Deferred Revenue Waterfall: each invoice spread over months (K-16) with what is earned in each month of the report period, earned by its end and still deferred after it, with totals; "Show: Expenses (bills)" gives the same for prepaid expenses (K-17). Read from the monthly entries (`src/lib/spreadWaterfall.ts`), so a voided share isn't counted; says so when the loaded ledger is incomplete. Tests: `spread-waterfall.test.tsx`; browser: in `e2e/everyday-reports.spec.ts`
 
 # SECTION K — MISSING FEATURES
 
