@@ -38,9 +38,18 @@ export default function DataStatusBar() {
   const cut = (Object.keys(LEDGER_COLLECTIONS) as LedgerKey[])
     .filter(k => truncated?.[LEDGER_COLLECTIONS[k].collection]);
 
-  if (!failedKeys.length && !loadingKeys.length && !cut.length) return null;
+  // loading floats over the page and takes no space: a bar appearing and going as each kind of data
+  // arrives made the whole page jump up and down
+  const loadingNote = loadingKeys.length > 0 && (
+    <div role="status" className="pointer-events-none fixed bottom-4 left-1/2 -translate-x-1/2 z-[150] flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--muted)] shadow-md">
+      <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+      <span>Loading {list(loadingKeys.map(k => COLLECTION_LABELS[k]))}…</span>
+    </div>
+  );
+  if (!failedKeys.length && !cut.length) return loadingNote || null;
   return (
     <div className="border-b border-[var(--line)] text-xs px-4 py-1.5 space-y-1">
+      {loadingNote}
       {failedKeys.length > 0 && (
         <div role="alert" className="flex flex-wrap items-center gap-2 text-[var(--neg)]">
           <AlertTriangle size={14} aria-hidden="true" />
@@ -50,12 +59,6 @@ export default function DataStatusBar() {
               try again{failedKeys.length > 1 ? ` (${COLLECTION_LABELS[k]})` : ''}
             </button>
           ))}
-        </div>
-      )}
-      {loadingKeys.length > 0 && (
-        <div role="status" className="flex items-center gap-2 text-[var(--muted)]">
-          <Loader2 size={14} className="animate-spin" aria-hidden="true" />
-          <span>Loading {list(loadingKeys.map(k => COLLECTION_LABELS[k]))}…</span>
         </div>
       )}
       {cut.length > 0 && (
