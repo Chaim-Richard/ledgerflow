@@ -76,7 +76,8 @@ test('phone upload and review stay within the viewport with reachable new contro
   await page.setViewportSize({ width: 390, height: 844 });
   const dialog = page.getByRole('dialog', { name: 'Statement Intelligence' });
   const order = dialog.getByLabel('QIF date order');
-  expect((await order.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  // the dialog scales in: measure once it has settled, not mid-animation
+  await expect.poll(async () => (await order.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
   await order.selectOption('mdy');
   await dialog.locator('input[type=file]').setInputFiles({ name: 'checking.qif', mimeType: 'text/plain', buffer: fixture('checking-mdy.qif') });
   await expect(dialog.getByText('שכירות Office - October rent', { exact: true })).toBeVisible();
