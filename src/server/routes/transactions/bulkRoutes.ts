@@ -13,6 +13,8 @@ import { errorMessage, requestUser } from '../../auth/requestUser';
 import { isUpdatedAtMismatch } from './helpers';
 import { writeServerAuditLog } from '../../services/auditLogService';
 import { deletionSentence, deletionSnapshot } from '../../services/deletionRecord';
+import { MAX_RECATEGORIZE, RecategorizeError, recategorize } from '../../services/recategorizeService';
+import { workspaceRole } from '../../../lib/periodLock';
 
 
 /** Many entries at once: posting in bulk and batch updates. Part of /api/v1/transactions (F-06), registered in the original order. */
@@ -166,6 +168,23 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
     }
   });
 
+  // Rule actions (D-3 / K-39): move the non-bank side of bank entries to another account, all or none
+  const recategorizeSchema = z.object({
+    workspaceId: z.string().min(1),
+    changes: z.array(z.object({ id: z.string().min(1), bankAccountId: z.string().min(1), toAccountId: z.string().min(1), expectedUpdatedAt: z.string().optional() }).strict()).min(1).max(MAX_RECATEGORIZE),
+  }).strict();
+  transactionRouter.post('/recategorize', async (req, res) => {
+    try {
+      const { workspaceId, changes } = recategorizeSchema.parse(req.body);
+      const user = requestUser(req);
+      res.json({ status: 'success', ...(await recategorize(getDb(), { workspaceId, uid: user.uid, email: user.email, changes })) });
+    } catch (e) {
+      if (e instanceof z.ZodError) return res.status(400).json({ error: 'Invalid request', details: e.issues });
+      if (e instanceof RecategorizeError) return res.status(e.status).json({ error: e.message, ...(e.entryId ? { entryId: e.entryId } : {}) });
+      res.status(500).json({ error: errorMessage(e) });
+    }
+  });
+
   // A batch endpoint for mass updates
   transactionRouter.post('/batch', async (req, res) => {
      try {
@@ -180,6 +199,8 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
        if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) return res.status(403).json({ error: 'Not a member' });
 
        const wsData = wsDoc.data();
+       // writers only: a viewer is a member too
+       if (!user.admin && !['owner', 'accountant', 'bookkeeper'].includes(workspaceRole(wsData as never, user.uid))) return res.status(403).json({ error: 'Only owners, accountants and bookkeepers change entries' });
        const allowedStatuses = ['draft', 'pending', 'certified', 'void', 'reconciled', 'completed', 'failed', 'flagged', 'reviewed', 'overdue', 'approved'];
 
        // Chunk updates in batches of 400 to respect Firestore write limits
