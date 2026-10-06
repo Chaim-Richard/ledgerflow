@@ -31,6 +31,7 @@ import ReceivePaymentModal from '../sales/ReceivePaymentModal';
 import { toast } from 'sonner';
 import { attachFiles, attachSummary } from '../../services/attachmentActions';
 import OpeningDocumentsDialog from '../common/OpeningDocumentsDialog';
+import { deleteWithUndo } from '../../lib/undoableDelete';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
 import { csvMoney, downloadCsv } from '../../lib/csvExport';
@@ -149,11 +150,21 @@ export default function Purchases() {
 
   const describeBill = (b: Bill) => `bill ${b.number || ''} from ${b.vendorName || 'this vendor'} (${formatCurrency(b.amountCents || 0, b.currency)})`.replace('bill  from', 'bill from');
 
-  // Only drafts can be deleted (the database keeps issued bills; void them instead)
+  // Only drafts can be deleted (the database keeps issued bills; void them instead). A draft has no
+  // postings, so it leaves the list with an Undo for a few seconds before it is really deleted (BO-08).
   const handleDeleteBill = async (b: Bill) => {
-    if (safeConfirm(`Delete the draft ${describeBill(b)}? This can't be undone.`)) {
-      await deleteEntity('bills', b.id, 'Draft bill deleted');
-    }
+    const at = useLedgerStore.getState().bills.findIndex(x => x.id === b.id);
+    deleteWithUndo({
+      key: `bills/${b.id}`,
+      label: `Draft ${describeBill(b)}`,
+      hide: () => useLedgerStore.setState(s => ({ bills: s.bills.filter(x => x.id !== b.id) })),
+      restore: () => useLedgerStore.setState(s => {
+        const rows = s.bills.filter(x => x.id !== b.id);
+        rows.splice(at < 0 ? rows.length : Math.min(at, rows.length), 0, b);
+        return { bills: rows };
+      }),
+      commit: () => deleteEntity('bills', b.id),
+    });
   };
 
   // K-17: the spread's entries are voided by the server (refused once one of its months is closed)

@@ -1,6 +1,7 @@
 /**
  * Archive, restore and delete a customer or vendor from its list (I-22): archive hides it from the
- * list (records keep it); delete goes to the server, which refuses a contact that is in use.
+ * list (records keep it); delete asks the server first, which refuses a contact that is in use;
+ * otherwise the contact leaves the list with Undo and is deleted when the time is up (BO-08).
  */
 import { stubFetchWithBodies } from './helpers/dom';
 import test, { afterEach, beforeEach, describe } from 'node:test';
@@ -9,6 +10,7 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import PartyRowActions, { ArchivedBadge, ShowArchivedToggle } from '../components/common/PartyRowActions';
 import { isArchivedParty } from '../lib/contacts';
+import { setUndoWindowForTests, undoDelete } from '../lib/undoableDelete';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { getSupabase } from '../lib/db/client';
 import { makeCustomer, makeVendor } from './fixtures';
@@ -24,7 +26,7 @@ describe('Contact row actions', () => {
     asked.length = 0;
     window.confirm = (message?: string) => { asked.push(String(message)); return true; };
   });
-  afterEach(async () => { cleanup(); await getSupabase().auth.dispose(); });
+  afterEach(async () => { cleanup(); setUndoWindowForTests(null); await getSupabase().auth.dispose(); });
 
   test('archive saves the status; an archived one can be restored', async () => {
     const calls = stubFetchWithBodies(200, {});
@@ -38,26 +40,36 @@ describe('Contact row actions', () => {
     assert.ok(screen.getByRole('button', { name: 'Restore Acme' }));
   });
 
-  test('delete asks first, then the server deletes it and it leaves the list', async () => {
+  test('delete: the server is asked first, the contact leaves the list with Undo, and is deleted when the time is up', async () => {
+    setUndoWindowForTests(30);
+    const calls = stubFetchWithBodies(200, { status: 'success' });
+    render(<PartyRowActions side="customer" party={acme} />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Delete Acme' })); });
+    assert.deepEqual(asked, [], 'no "cannot be undone" question any more');
+    await waitFor(() => assert.deepEqual(useLedgerStore.getState().customers.map(c => c.id), ['c2']));
+    assert.deepEqual([calls[0].url, calls[0].method], ['/api/v1/workspaces/component-workspace/contacts/customer/c1?check=1', 'DELETE']);
+    await waitFor(() => assert.equal(calls.length, 2));
+    assert.deepEqual([calls[1].url, calls[1].method], ['/api/v1/workspaces/component-workspace/contacts/customer/c1', 'DELETE']);
+  });
+
+  test('Undo puts it back where it was and nothing is deleted', async () => {
+    setUndoWindowForTests(5000);
     const calls = stubFetchWithBodies(200, { status: 'success' });
     render(<PartyRowActions side="customer" party={acme} />);
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Delete Acme' })); });
     await waitFor(() => assert.equal(useLedgerStore.getState().customers.length, 1));
-    assert.deepEqual(asked, ['Delete customer "Acme"? This cannot be undone.']);
-    assert.deepEqual([calls[0].url, calls[0].method], ['/api/v1/workspaces/component-workspace/contacts/customer/c1', 'DELETE']);
-    assert.deepEqual(useLedgerStore.getState().customers.map(c => c.id), ['c2']);
+    assert.equal(undoDelete('customers/c1'), true);
+    assert.deepEqual(useLedgerStore.getState().customers.map(c => c.id), ['c1', 'c2']);
+    assert.equal(calls.length, 1, 'only the check was sent');
   });
 
-  test('a contact in use is not deleted; answering No sends nothing', async () => {
+  test('a contact in use is not deleted and stays listed', async () => {
     const calls = stubFetchWithBodies(409, { message: '"Paper Co" is used by 2 bills: archive it instead (those records keep it)' });
     render(<PartyRowActions side="vendor" party={makeVendor({ id: 'v1', name: 'Paper Co' })} />);
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Delete Paper Co' })); });
     await waitFor(() => assert.equal(calls.length, 1));
-    assert.equal(calls[0].url, '/api/v1/workspaces/component-workspace/contacts/vendor/v1');
+    assert.equal(calls[0].url, '/api/v1/workspaces/component-workspace/contacts/vendor/v1?check=1');
     assert.equal(useLedgerStore.getState().vendors.length, 1, 'still listed');
-    window.confirm = () => false;
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Delete Paper Co' })); });
-    assert.equal(calls.length, 1);
   });
 
   test('the list toggle and badge', () => {

@@ -53,6 +53,7 @@ import StockAdjustDialog from './StockAdjustDialog';
 import StockCountDialog from './StockCountDialog';
 import CategoryManagerDialog from './CategoryManagerDialog';
 import { categoryCounts } from '../../lib/itemCategories';
+import { deleteWithUndo } from '../../lib/undoableDelete';
 
 export default function Inventory() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -206,22 +207,21 @@ export default function Inventory() {
 
   const handleDelete = async (id: string) => {
     const item = items.find(i => i.id === id);
-    if (item && item.quantityAtHand > 0) {
-      if (!safeConfirm(`WARNING: "${item.name}" currently has ${item.quantityAtHand} units on hand representing active asset value. Are you sure you want to delete this inventory record?`)) {
-        return;
-      }
-    } else {
-      if (!safeConfirm('Are you sure you want to delete this inventory item?')) {
-        return;
-      }
-    }
-
-    try {
-      await deleteDoc(doc(db, 'inventory', id));
-      toast.success('Item removed');
-    } catch {
-      toast.error('Failed to remove item');
-    }
+    if (!item) return;
+    // stock on hand is asset value: that still needs a clear yes; otherwise Undo is enough (BO-08)
+    if (item.quantityAtHand > 0 && !safeConfirm(`"${item.name}" has ${item.quantityAtHand} units on hand representing asset value. Delete this item anyway?`)) return;
+    const at = useLedgerStore.getState().inventory.findIndex(i => i.id === id);
+    deleteWithUndo({
+      key: `inventory/${id}`,
+      label: `Item "${item.name}"`,
+      hide: () => useLedgerStore.setState(s => ({ inventory: s.inventory.filter(i => i.id !== id) })),
+      restore: () => useLedgerStore.setState(s => {
+        const rows = s.inventory.filter(i => i.id !== id);
+        rows.splice(at < 0 ? rows.length : Math.min(at, rows.length), 0, item);
+        return { inventory: rows };
+      }),
+      commit: () => deleteDoc(doc(db, 'inventory', id)),
+    });
   };
 
   const categories = useMemo(() => categoryCounts(items).map(c => c.name), [items]);

@@ -2272,7 +2272,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BO-05 Feedback widget (partial: AI #2 any-screen text ticket + screen/version complete; screenshot attachment target/viewer extension awaits AI #1)
 - [x] BO-06 Status page link in Help ("Something not working? System status")
 - [x] BO-07 Errors name a remedy (describeError: central reporter, payment and write-off dialogs; tested)
-- [ ] BO-08 Undo for destructive actions (partial: AI #2 exact-ID project Undo complete; contact/item/draft paths and guarded server restoration await AI #1)
+- [x] BO-08 Undo for destructive actions: deleting a customer, vendor, item or draft bill takes it off the list with "Deleted · Undo" for 8 seconds before it is really deleted (`src/lib/undoableDelete.ts`; Undo cancels the delete, so nothing posted can come back); contacts are checked by the server first (`?check=1`) so one in use is never hidden; an item with stock still asks first; projects by AI #2 (C-26). Tests `undoable-delete.test.ts`, `party-row-actions.test.tsx`, `contact-merge.test.ts`
 - [ ] BP-01 Docker compose
 - [ ] BP-02 Emulator setup docs
 - [ ] BP-03 ADRs

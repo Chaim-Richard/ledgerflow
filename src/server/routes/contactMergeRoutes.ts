@@ -37,8 +37,10 @@ contactMergeRouter.delete('/:side/:id', async (req, res) => {
     const params = req.params as Record<string, string>;
     const { side, id } = deleteSchema.parse({ side: params.side, id: params.id });
     const { user } = req as unknown as AuthedRequest;
-    await deleteContact(getDb(), { workspaceId: String(params.workspaceId), uid: user.uid, email: user.email, side, id });
-    res.json({ status: 'success' });
+    // ?check=1: may it be deleted? (nothing is deleted; the screen then offers Undo before deleting)
+    const checkOnly = req.query.check === '1';
+    await deleteContact(getDb(), { workspaceId: String(params.workspaceId), uid: user.uid, email: user.email, side, id, checkOnly });
+    res.json({ status: 'success', ...(checkOnly ? { deletable: true } : {}) });
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ status: 'error', message: 'Invalid request', details: err.issues });
     if (err instanceof ContactMergeError) return res.status(err.status).json({ status: 'error', message: err.message });
