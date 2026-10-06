@@ -11,6 +11,9 @@ import { z } from 'zod';
 import { assertPostingOpen } from '../../../lib/periodLock';
 import { errorMessage, requestUser } from '../../auth/requestUser';
 import { isUpdatedAtMismatch } from './helpers';
+import { writeServerAuditLog } from '../../services/auditLogService';
+import { deletionSentence, deletionSnapshot } from '../../services/deletionRecord';
+
 
 /** Many entries at once: posting in bulk and batch updates. Part of /api/v1/transactions (F-06), registered in the original order. */
 export function registerTransactionBulkRoutes(transactionRouter: express.Router): void {
@@ -140,6 +143,14 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
           t.set(entityRef, { ...validatedData, uid: user.uid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
         } else if (entityRef && entityMutation.action === 'delete') {
           t.delete(entityRef);
+          // what was deleted, kept in the audit trail with the deletion itself (CA-10)
+          if (existingEntity) {
+            await writeServerAuditLog({
+              workspaceId: wsId, uid: user.uid, email: user.email, action: 'DOCUMENT_DELETED',
+              entityType: entityMutation.collection, entityId: entityRef.id,
+              details: { description: deletionSentence(entityMutation.collection, entityRef.id, existingEntity), deleted: deletionSnapshot(existingEntity) },
+            }, { db, tx: t });
+          }
         }
         validatedTransactions.forEach((tx, j) => t.create(refs[j], { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }));
         stock.apply();

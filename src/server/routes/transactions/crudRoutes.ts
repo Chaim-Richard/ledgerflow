@@ -10,6 +10,7 @@ import { executeCommand } from '../../utils/commandExecutor';
 import { requirePlanCapacity } from '../../middleware/planCapacity';
 import { requireOpenPeriod } from '../../middleware/periodLock';
 import { writeServerAuditLog } from '../../services/auditLogService';
+import { deletionSentence, deletionSnapshot } from '../../services/deletionRecord';
 import { assertPostingOpen, lockMessage, postingLock } from '../../../lib/periodLock';
 import { errorMessage, HttpError, requestUser } from '../../auth/requestUser';
 import { enforceDoubleEntrySafety, isUpdatedAtMismatch } from './helpers';
@@ -327,8 +328,10 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
         action: "TRANSACTION_DELETED",
         entityType: "transaction",
         entityId: id,
+        // what was deleted, kept in the audit trail (CA-10)
         details: {
-          description: `Deleted transaction ref [${id}].`
+          description: deletionSentence('transactions', id, data || {}),
+          deleted: deletionSnapshot(data || {}),
         }
       }, { db });
 

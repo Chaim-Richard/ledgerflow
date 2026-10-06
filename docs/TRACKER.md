@@ -2293,7 +2293,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CA-07 Period closing voucher
 - [ ] CA-08 Opening invoice tool
 - [ ] CA-09 Advance payment ledger
-- [ ] CA-10 Transaction deletion record
+- [x] CA-10 Transaction deletion record — **done 6 Oct**: deleting an entry (only drafts can be; posted ones are voided) or a draft invoice, bill or credit through the posting route now leaves an audit line saying what it was ("Deleted the invoice INV-9 of 2026-10-01 (Acme, USD 50.00)") with a copy of its main fields and up to 100 lines, written in the same database transaction as the deletion; before, only "Deleted transaction ref [id]" was kept, and document deletions weren't recorded at all (`src/server/services/deletionRecord.ts`; tests `deletion-record.test.ts` with the database)
 - [x] CA-11 Import log (recent imports from the audit log)
 - [x] CA-12 Saved column map (= Y-03)
 - [ ] CA-13 Bank transaction rules with conditions
