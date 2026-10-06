@@ -120,6 +120,13 @@ Last updated: 2026-10-05.
     write around the app is not yet blocked. The two other changes from today (delivery method,
     approval rule) are applied.
 
+23. **Closing a year (decided by default, 6 Oct).** Closing a year used to post an entry moving all
+    revenue and expenses to Retained Earnings; that made the closed year's Profit & Loss show zero
+    profit. LedgerFlow's balance sheet already shows past profit in retained earnings automatically
+    (as Xero and QuickBooks do), so closing a year now locks it and records its profit, without that
+    entry; any old closing entries are ignored. *Default: this way.* If your accountant wants a
+    classic closing entry posted anyway, say so.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

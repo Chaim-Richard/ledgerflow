@@ -1,7 +1,6 @@
 import express from 'express';
 import { z } from 'zod';
-import { ClosingEntryEngine } from '../../../kernel/ledger/ClosingEntryEngine';
-import { TransactionSchema } from '../../../schemas';
+import { calculateNetIncome } from '../../../lib/txFilters';
 import type { ChartAccount, Transaction } from '../../../types';
 import { getDb } from '../../db/firestore';
 import { writeServerAuditLog } from '../../services/auditLogService';
@@ -47,6 +46,14 @@ function revaluationRoute(dryRun: boolean) {
       revaluationError(res, err);
     }
   };
+}
+
+/** The day after the same date one year earlier: the first day of the year ending on `closingDate`. */
+export function fiscalYearStart(closingDate: string): string {
+  const [y, md] = [Number(closingDate.slice(0, 4)), closingDate.slice(5)];
+  const yearBefore = Date.parse(`${y - 1}-${md}T00:00:00Z`);
+  const base = Number.isNaN(yearBefore) || new Date(yearBefore).toISOString().slice(5, 10) !== md ? Date.parse(`${y - 1}-02-28T00:00:00Z`) : yearBefore;
+  return new Date(base + 86400000).toISOString().slice(0, 10);
 }
 
 /** Period work: currency revaluation, year-end and month-end close, workspace reset. Part of /api/v1/transactions (F-06), registered in the original order. */
@@ -106,53 +113,24 @@ export function registerPeriodRoutes(transactionRouter: express.Router): void {
         return res.status(400).json({ error: `Cannot close future accounting period. Closing date (${closingDate}) is ahead of current date (${today}).` });
       }
 
-      // 1. Fetch all chartAccounts for workspace
+      // The year's profit, for the record: the twelve months ending on the closing date
       const accountsSnap = await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get();
       const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }) as ChartAccount);
-
-      // 2. Fetch all transactions for workspace on or before closingDate
       const txSnap = await db.collection('transactions')
         .where('workspaceId', '==', workspaceId)
         .where('date', '<=', closingDate)
         .get();
       const transactions = txSnap.docs.map(d => ({ id: d.id, ...d.data() }) as Transaction);
+      const yearStart = fiscalYearStart(closingDate);
+      const year = calculateNetIncome(transactions, accounts, yearStart, closingDate);
 
-      // 3. Generate closing journal entry via ClosingEntryEngine
-      const result = ClosingEntryEngine.generateClosingJournalEntry({
-        workspaceId,
-        uid: user.uid,
-        closingDate,
-        accounts,
-        transactions,
-        baseCurrency: wsData?.currency || 'USD'
-      });
-
-      // 4. Validate schema
-      const parsed = TransactionSchema.safeParse(result.closingTransaction);
-      if (!parsed.success) {
-        return res.status(500).json({ error: 'Closing entry failed schema validation', details: parsed.error.issues });
-      }
-
-      // 5. Commit closing transaction
-      const txRef = db.collection('transactions').doc(result.closingTransaction.id);
-      const batch = db.batch();
-      batch.set(txRef, result.closingTransaction);
-
-      // If synthetic account was generated, persist it
-      if (result.generatedRetainedEarningsAccount) {
-        const accRef = db.collection('chartAccounts').doc(result.generatedRetainedEarningsAccount.id);
-        batch.set(accRef, result.generatedRetainedEarningsAccount);
-      }
-
-      // If lockPeriod is requested, advance workspace lockDate to closingDate
+      // No closing entry is posted (CA-07): the balance sheet already carries every past year's profit
+      // in retained earnings, and an entry moving revenue and expenses to retained earnings made the
+      // closed year's profit and loss show zero. Closing a year locks it (when asked) and records it.
       if (lockPeriod) {
-        batch.update(db.collection('workspaces').doc(workspaceId), {
-          lockDate: closingDate,
-          updatedAt: new Date().toISOString()
-        });
+        await db.collection('workspaces').doc(workspaceId).update({ lockDate: closingDate, updatedAt: new Date().toISOString() });
       }
 
-      // 6. Log audit event
       await writeServerAuditLog({
         workspaceId,
         uid: user.uid,
@@ -161,24 +139,21 @@ export function registerPeriodRoutes(transactionRouter: express.Router): void {
         entityType: 'workspace',
         entityId: workspaceId,
         details: {
-          description: `Fiscal year closed as of ${closingDate}. Net income of $${(result.netIncomeCents / 100).toFixed(2)} transferred to Retained Earnings. ${result.revenueAccountsClosed} revenue accounts and ${result.expenseAccountsClosed} expense accounts closed.`,
-          transactionId: result.closingTransaction.id,
+          description: `Year ${yearStart} – ${closingDate} closed: net ${year.netIncome >= 0 ? 'profit' : 'loss'} of ${(Math.abs(year.netIncome) / 100).toFixed(2)} (income ${(year.income / 100).toFixed(2)}, costs ${((year.cogs + year.expense) / 100).toFixed(2)}), carried in retained earnings on the balance sheet${lockPeriod ? '; the year is locked' : ''}.`,
           closingDate,
-          netIncomeCents: result.netIncomeCents,
+          yearStart,
+          netIncomeCents: year.netIncome,
+          incomeCents: year.income,
+          costsCents: year.cogs + year.expense,
           lockPeriod: !!lockPeriod,
-          syntheticAccountCreated: !!result.generatedRetainedEarningsAccount
         }
       }, { db });
 
-      await batch.commit();
-
       res.json({
         status: 'ok',
-        message: `Fiscal year closed successfully as of ${closingDate}.`,
-        transaction: result.closingTransaction,
-        generatedAccount: result.generatedRetainedEarningsAccount,
-        summary: result.summary,
-        accountsClosed: result.revenueAccountsClosed + result.expenseAccountsClosed
+        message: `Year ${yearStart} – ${closingDate} closed. Its net ${year.netIncome >= 0 ? 'profit' : 'loss'} of ${(Math.abs(year.netIncome) / 100).toFixed(2)} is carried in retained earnings on the balance sheet${lockPeriod ? ', and the year is locked' : ''}.`,
+        netIncomeCents: year.netIncome,
+        yearStart,
       });
     } catch (e) {
       res.status(500).json({ error: errorMessage(e) });

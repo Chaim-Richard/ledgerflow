@@ -71,7 +71,10 @@ export class ClosingEntryEngine {
     transactions.forEach(tx => {
       if (!tx || typeof tx !== 'object') return;
       if (tx.workspaceId && tx.workspaceId !== workspaceId) return;
-      if (!isPostable(tx)) return;
+      // earlier closing entries count here (a second close of the same date nets to zero), although
+      // the rest of the ledger ignores them (txFilters isPostable, CA-07: closing no longer posts one)
+      const earlierClose = (tx.metadata as { isYearEndClose?: unknown } | undefined)?.isYearEndClose === true && tx.status !== 'void' && !tx.deletedAt;
+      if (!isPostable(tx) && !earlierClose) return;
       if (!isTransactionInDateRange(tx, undefined, closingDate)) return;
 
       if (Array.isArray(tx.lines)) {

@@ -172,9 +172,11 @@ export default function MonthEndCloseView() {
     if (done) toast.success(`Reposted ${done} document${done === 1 ? '' : 's'}.`);
   };
 
+  // CA-07: closing the year records it (and its profit) without posting an entry; the balance
+  // sheet carries the profit in retained earnings by itself
   const postYearEnd = () => run(
     () => post<{ message?: string }>('/api/v1/transactions/close-year', { workspaceId, closingDate: end, lockPeriod: false }),
-    'Year-end closing entry posted (revenue and expenses moved to retained earnings).',
+    'Year closed: its profit stays in retained earnings on the balance sheet.',
   );
 
   const exportPackage = async () => {
@@ -342,7 +344,7 @@ export default function MonthEndCloseView() {
                   {isFiscalYearEnd && role === 'owner' && (
                     <button type="button" disabled={busy || isFutureMonth} onClick={postYearEnd}
                       className="px-4 py-2 rounded-lg border border-[var(--line)] text-sm font-semibold text-[var(--text)] disabled:opacity-50">
-                      Post year-end closing entry
+                      Record the year as closed
                     </button>
                   )}
                 </div>

@@ -34,6 +34,10 @@ export function isPostable(t: Transaction, options?: PostableOptions): boolean {
   if (t.status === 'void' || t.status === 'failed' || t.status === 'draft' || t.deletedAt) {
     return false;
   }
+  // A year-end closing entry from before CA-07 (revenue and expenses moved to retained earnings):
+  // the balance sheet carries past profit in retained earnings by itself, so counting it would show
+  // the closed year's profit and loss as zero. Closing a year no longer posts one.
+  if ((t.metadata as { isYearEndClose?: unknown } | undefined)?.isYearEndClose === true) return false;
   const includeSimulations = Boolean(options?.includeSimulations);
   if (!includeSimulations && isSimulationTransaction(t)) {
     return false;
