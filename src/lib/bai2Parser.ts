@@ -1,4 +1,5 @@
 import type { ParsedBankLine } from './mt940Parser';
+import { bankStatementDate } from './bankStatementDate';
 
 interface RecordLine { text: string; line: number; count: number }
 
@@ -82,9 +83,9 @@ export function parseBAI2Statement(content: string, expectedCurrency?: string): 
         const year = (yearRaw < 70 ? 2000 : 1900) + yearRaw;
         const month = Number(rawDate.slice(2, 4));
         const day = Number(rawDate.slice(4));
-        const stamp = new Date(Date.UTC(year, month - 1, day));
-        if (stamp.getUTCFullYear() !== year || stamp.getUTCMonth() !== month - 1 || stamp.getUTCDate() !== day) fail(line, 'Invalid group calendar date.');
-        date = `${year}-${rawDate.slice(2, 4)}-${rawDate.slice(4)}`;
+        const dateISO = bankStatementDate(year, month, day);
+        if (!dateISO) fail(line, 'Invalid group calendar date.');
+        date = dateISO!;
         groupCurrency = fields[6] || 'USD';
         groupRecords = count;
         groupAccounts = 0;

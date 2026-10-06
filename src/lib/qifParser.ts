@@ -1,4 +1,5 @@
 import type { ParsedBankLine } from './mt940Parser';
+import { bankStatementDate } from './bankStatementDate';
 
 export type QIFDateOrder = 'mdy' | 'dmy';
 
@@ -33,8 +34,8 @@ export function parseQIFStatement(content: string, dateOrder: QIFDateOrder): Par
       const year = match![3].length === 2 ? (yearRaw < 70 ? 2000 : 1900) + yearRaw : yearRaw;
       const month = Number(match![dateOrder === 'mdy' ? 1 : 2]);
       const day = Number(match![dateOrder === 'mdy' ? 2 : 1]);
-      const stamp = new Date(Date.UTC(year, month - 1, day));
-      if (year < 1900 || stamp.getUTCFullYear() !== year || stamp.getUTCMonth() !== month - 1 || stamp.getUTCDate() !== day) fail(date!.line, 'Invalid calendar date for the selected date order.');
+      const dateISO = bankStatementDate(year, month, day);
+      if (!dateISO) fail(date!.line, 'Invalid calendar date for the selected date order.');
       const parseAmount = (field: { value: string; line: number }) => {
         if (!/^[+-]?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d{1,2})?$/.test(field.value)) fail(field.line, 'Amount must be a number with at most two decimal places.');
         const normalized = field.value.replace(/,/g, '');
@@ -48,7 +49,7 @@ export function parseQIFStatement(content: string, dateOrder: QIFDateOrder): Par
       if (fields.has('T') && alternate && parseAmount(alternate) !== amountCents) fail(alternate.line, 'T and U amounts disagree.');
       const description = [fields.get('P')?.value, fields.get('M')?.value].filter(Boolean).join(' - ') || 'QIF Entry';
       const reference = fields.get('N')?.value;
-      result.push({ date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`, amountCents, description, ...(reference ? { reference } : {}), type: amountCents < 0 ? 'debit' : 'credit' });
+      result.push({ date: dateISO!, amountCents, description, ...(reference ? { reference } : {}), type: amountCents < 0 ? 'debit' : 'credit' });
       fields = new Map();
     } else {
       if (!fields.size) start = line;

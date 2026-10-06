@@ -3,9 +3,21 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseQIFStatement } from '../lib/qifParser';
 import { parseBAI2Statement } from '../lib/bai2Parser';
+import { bankStatementDate } from '../lib/bankStatementDate';
 
 const sample = (name: string) => readFileSync(new URL(`./fixtures/bank-statements/${name}`, import.meta.url), 'utf8');
 const bai = sample('checking.bai2');
+
+test('statement dates use calendar rules, including century leap years and skipped local-clock days', () => {
+  assert.equal(bankStatementDate(1900, 2, 29), null);
+  assert.equal(bankStatementDate(2000, 2, 29), '2000-02-29');
+  assert.equal(bankStatementDate(2100, 2, 29), null);
+  assert.equal(bankStatementDate(2400, 2, 29), '2400-02-29');
+  assert.equal(bankStatementDate(2011, 12, 30), '2011-12-30');
+  for (const [year, month, day] of [[1899, 1, 1], [10000, 1, 1], [2026, 0, 1], [2026, 13, 1], [2026, 4, 31], [2026, 1, 0], [2026, 1, 1.5]]) {
+    assert.equal(bankStatementDate(year, month, day), null);
+  }
+});
 
 test('QIF parses both date orders, signed exact cents, Hebrew and cheque references', () => {
   const expected = [
