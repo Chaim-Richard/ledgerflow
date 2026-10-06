@@ -19,9 +19,11 @@ import { addComment } from '../../lib/commentService';
 import { documentTotals, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import { formatCurrency, safeConfirm } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import AttachmentsPanel from '../common/AttachmentsPanel';
+import { attachmentProblem } from '../../lib/attachments';
 
 /** What the dialog saves: the bill, and for a new one whether it repeats (BE-08; never stored on the bill). */
-export type BillDraft = Partial<Bill> & { recurringInterval?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' };
+export type BillDraft = Partial<Bill> & { recurringInterval?: 'weekly' | 'monthly' | 'quarterly' | 'yearly'; attachmentFiles?: File[] };
 
 interface BillModalProps {
   isOpen: boolean;
@@ -194,10 +196,6 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
       return;
     }
 
-    if (attachments.length > 0) {
-      toast.success(`${attachments.length} file(s) attached`);
-    }
-
     const wsId = useAuthStore.getState().currentWorkspaceId || 'default';
     const userEmail = useAuthStore.getState().user?.email || 'user';
     const approval = evaluateApprovalRequirement(
@@ -240,17 +238,20 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
       metadata: {
         ...(bill.metadata || {}),
         memo,
-        hasAttachments: attachments.length > 0
-      }
+      },
+      // files picked for a new bill are kept with it once it has an id (Purchases.tsx)
+      ...(attachments.length > 0 && !bill.id ? { attachmentFiles: attachments } : {}),
     });
   };
 
   const handleSubmit = (e: React.FormEvent) => handleAction(e, bill.status || 'pending');
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setAttachments([...attachments, ...Array.from(e.target.files)]);
-    }
+    const picked = Array.from(e.target.files || []);
+    e.target.value = '';
+    const refused = picked.map(f => attachmentProblem(f)).filter(Boolean);
+    if (refused.length) toast.error(refused.join('; '));
+    setAttachments(prev => [...prev, ...picked.filter(f => !attachmentProblem(f))]);
   };
 
   // I-07: closing with unsaved edits asks first
@@ -516,22 +517,28 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               </div>
             </div>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="bill-file-upload" className="micro-label">Attachments & Receipts</label>
-                <div className="flex items-center gap-4">
-                   <label htmlFor="bill-file-upload" className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-[var(--ink)] border-2 border-dashed border-zinc-300 rounded-xl hover:bg-zinc-100 transition-colors">
-                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Select Files</span>
-                     <input id="bill-file-upload" type="file" multiple className="hidden" onChange={handleFileUpload} />
-                   </label>
+              {bill.id ? (
+                <AttachmentsPanel target={{ collection: 'bills', id: bill.id, label: `Bill ${bill.number || ''}`.trim() }} />
+              ) : (
+                <div className="space-y-2">
+                  <label htmlFor="bill-file-upload" className="micro-label">Files and receipts</label>
+                  <label htmlFor="bill-file-upload" className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-[var(--ink)] border-2 border-dashed border-zinc-300 rounded-xl hover:bg-zinc-100 transition-colors">
+                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Select files</span>
+                    <input id="bill-file-upload" type="file" multiple className="hidden" onChange={handleFileUpload} />
+                  </label>
+                  {attachments.length > 0 && (
+                    <ul className="flex flex-wrap gap-2 mt-2" aria-label="Files to keep with the bill">
+                      {attachments.map(f => (
+                        <li key={`${f.name}-${f.size}-${f.lastModified}`} className="flex items-center gap-1 px-2 py-1 bg-zinc-100 text-zinc-600 text-xs rounded-lg">
+                          <bdi>{f.name}</bdi>
+                          <button type="button" onClick={() => setAttachments(prev => prev.filter(x => x !== f))} aria-label={`Don't attach ${f.name}`} className="text-zinc-400 hover:text-rose-600"><X size={12} aria-hidden="true" /></button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {attachments.length > 0 && <p className="text-[10px] text-[var(--muted)]">Kept with the bill when you save it.</p>}
                 </div>
-                {attachments.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                     {attachments.map(f => (
-                       <span key={`${f.name}-${f.size}-${f.lastModified}`} className="px-2 py-1 bg-zinc-100 text-zinc-600 text-xs rounded-lg">{f.name}</span>
-                     ))}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </form>

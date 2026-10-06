@@ -29,6 +29,7 @@ import PartyRowActions, { ArchivedBadge, ShowArchivedToggle } from '../common/Pa
 import VendorDetailView from './VendorDetailView';
 import ReceivePaymentModal from '../sales/ReceivePaymentModal';
 import { toast } from 'sonner';
+import { attachFiles, attachSummary } from '../../services/attachmentActions';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
 import { csvMoney, downloadCsv } from '../../lib/csvExport';
@@ -98,12 +99,18 @@ export default function Purchases() {
   };
 
   const handleAddBill = async (input: BillDraft) => {
-    const { recurringInterval, ...data } = input;
+    // files picked for a new bill (K-07) are kept with it once it has an id
+    const { recurringInterval, attachmentFiles, ...data } = input;
     if (data.id) {
       const { id, ...updates } = data;
       await updateEntity('bills', id, updates, 'Bill updated');
     } else {
-      await addEntity('bills', data, 'Bill successfully recorded');
+      const created = await addEntity('bills', data, 'Bill successfully recorded');
+      const uid = useAuthStore.getState().user?.uid;
+      if (created && uid && attachmentFiles?.length) {
+        const { ok, message } = attachSummary(await attachFiles(useAuthStore.getState().currentWorkspaceId || '', uid, { collection: 'bills', id: created.id, label: `Bill ${data.number || ''}`.trim() }, attachmentFiles));
+        if (ok) toast.success(message); else toast.error(message);
+      }
       if (recurringInterval) await addEntity('recurring', recurringBillSchedule(data, recurringInterval), 'Recurring bill scheduled');
     }
     setIsBillModalOpen(false);

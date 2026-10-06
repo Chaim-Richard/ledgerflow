@@ -7,6 +7,7 @@ import { ArrowLeft, DollarSign, FileText, User } from 'lucide-react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import PartyProfilePanel from '../common/PartyProfilePanel';
 import UnappliedPayments from '../common/UnappliedPayments';
+import AttachmentsPanel from '../common/AttachmentsPanel';
 
 interface CustomerDetailViewProps {
   customerId: string;
@@ -74,6 +75,7 @@ export default function CustomerDetailView({ customerId, onBack }: CustomerDetai
 
       <PartyProfilePanel side="customer" party={customer} />
       <UnappliedPayments side="customer" partyId={customerId} />
+      <AttachmentsPanel target={{ collection: 'customers', id: customerId, label: customer.name }} className="p-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]" />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

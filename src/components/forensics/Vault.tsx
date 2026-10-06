@@ -109,22 +109,28 @@ export default function Vault() {
           // Optimistically update local state so guest mode or immediate scans work reliably
           setDocuments(prev => [newDoc, ...prev.filter(d => d.id !== newDoc.id)]);
 
+          if (!workspaceId || !uid) {
+            // guest mode: nothing is saved anywhere, and the message says so
+            toast.success('Kept on this screen only: sign in to save documents', { id: toastId });
+            return;
+          }
           try {
-            if (workspaceId && uid) {
-              const docRef = await addDoc(collection(db, 'documents'), {
-                uid: newDoc.uid,
-                workspaceId: newDoc.workspaceId,
-                name: newDoc.name,
-                fileUrl: newDoc.fileUrl,
-                mimeType: newDoc.mimeType,
-                sizeBytes: newDoc.sizeBytes,
-                tags: newDoc.tags,
-                createdAt: newDoc.createdAt
-              });
-              setDocuments(prev => prev.map(d => d.id === generatedId ? { ...d, id: docRef.id } : d));
-            }
-          } catch {
-            // Firestore write skipped or failed (e.g. offline/guest mode); local state is preserved
+            const docRef = await addDoc(collection(db, 'documents'), {
+              uid: newDoc.uid,
+              workspaceId: newDoc.workspaceId,
+              name: newDoc.name,
+              fileUrl: newDoc.fileUrl,
+              mimeType: newDoc.mimeType,
+              sizeBytes: newDoc.sizeBytes,
+              tags: newDoc.tags,
+              createdAt: newDoc.createdAt
+            });
+            setDocuments(prev => prev.map(d => d.id === generatedId ? { ...d, id: docRef.id } : d));
+          } catch (saveErr) {
+            // not saved: it doesn't stay on the list as if it were
+            setDocuments(prev => prev.filter(d => d.id !== generatedId));
+            toast.error(`Not saved: ${(saveErr as Error)?.message || 'the database refused it'}`, { id: toastId });
+            return;
           }
 
           toast.success('Document uploaded to Vault', { id: toastId });

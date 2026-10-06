@@ -22,11 +22,14 @@ import { lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
 import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import { depositAppliedCents } from '../../lib/documentMath';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import AttachmentsPanel from '../common/AttachmentsPanel';
+import { attachmentProblem } from '../../lib/attachments';
 
 interface InvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (invoice: Partial<Invoice>) => void;
+  /** `attachmentFiles`: files picked for a new invoice, kept with it once it is saved (K-07) */
+  onSave: (invoice: Partial<Invoice> & { attachmentFiles?: File[] }) => void;
   customers: Customer[];
   accounts: ChartAccount[];
   initialInvoice?: Partial<Invoice>;
@@ -171,11 +174,6 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       return;
     }
     
-    // Support file attachments (preview only)
-    if (attachments.length > 0) {
-      toast.success(`${attachments.length} file(s) attached`);
-    }
-
     setIsSubmitting(true);
     try {
       await onSave({
@@ -203,8 +201,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
           terms,
           emailSubject,
           emailBody,
-          hasAttachments: attachments.length > 0
-        }
+        },
+        // files picked for a new invoice are kept with it once it has an id (Sales.tsx)
+        ...(attachments.length > 0 && !invoice.id ? { attachmentFiles: attachments } : {}),
       });
     } finally {
       setIsSubmitting(false);
@@ -214,9 +213,11 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const handleSubmit = (e: React.FormEvent) => handleAction(e, invoice.status || 'pending');
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setAttachments([...attachments, ...Array.from(e.target.files)]);
-    }
+    const picked = Array.from(e.target.files || []);
+    e.target.value = '';
+    const refused = picked.map(f => attachmentProblem(f)).filter(Boolean);
+    if (refused.length) toast.error(refused.join('; '));
+    setAttachments(prev => [...prev, ...picked.filter(f => !attachmentProblem(f))]);
   };
 
   // I-07: closing with unsaved edits asks first
@@ -647,22 +648,28 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                   className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none"
                 />
               </div>
-              <div className="space-y-2">
-                <label htmlFor="inv-attachments" className="micro-label">Attachments</label>
-                <div className="flex items-center gap-4">
-                   <label htmlFor="inv-attachments" className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-[var(--ink)] border-2 border-dashed border-zinc-300 rounded-xl hover:bg-zinc-100 transition-colors">
-                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Select Files</span>
-                     <input id="inv-attachments" type="file" multiple className="hidden" onChange={handleFileUpload} />
-                   </label>
+              {invoice.id ? (
+                <AttachmentsPanel target={{ collection: 'invoices', id: invoice.id, label: `Invoice ${invoice.number || ''}`.trim() }} />
+              ) : (
+                <div className="space-y-2">
+                  <label htmlFor="inv-attachments" className="micro-label">Files</label>
+                  <label htmlFor="inv-attachments" className="cursor-pointer flex items-center justify-center w-full px-4 py-3 bg-[var(--ink)] border-2 border-dashed border-zinc-300 rounded-xl hover:bg-zinc-100 transition-colors">
+                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Select files</span>
+                    <input id="inv-attachments" type="file" multiple className="hidden" onChange={handleFileUpload} />
+                  </label>
+                  {attachments.length > 0 && (
+                    <ul className="flex flex-wrap gap-2 mt-2" aria-label="Files to keep with the invoice">
+                      {attachments.map(f => (
+                        <li key={`${f.name}-${f.size}-${f.lastModified}`} className="flex items-center gap-1 px-2 py-1 bg-zinc-100 text-zinc-600 text-xs rounded-lg">
+                          <bdi>{f.name}</bdi>
+                          <button type="button" onClick={() => setAttachments(prev => prev.filter(x => x !== f))} aria-label={`Don't attach ${f.name}`} className="text-zinc-400 hover:text-rose-600"><X size={12} aria-hidden="true" /></button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {attachments.length > 0 && <p className="text-[10px] text-[var(--muted)]">Kept with the invoice when you save it.</p>}
                 </div>
-                {attachments.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                     {attachments.map(f => (
-                       <span key={`${f.name}-${f.size}-${f.lastModified}`} className="px-2 py-1 bg-zinc-100 text-zinc-600 text-xs rounded-lg">{f.name}</span>
-                     ))}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </form>

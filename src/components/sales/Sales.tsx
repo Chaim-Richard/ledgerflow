@@ -38,6 +38,7 @@ import { undoSpreadRequest } from '../../services/spreadActions';
 import { estimateDeposits } from '../../lib/advancePayments';
 import { applyEstimateDeposits } from '../../services/depositActions';
 import { recordReceiptPayment } from '../../services/receiptActions';
+import { attachFiles, attachSummary } from '../../services/attachmentActions';
 import type { ReceiptPayment } from './InvoiceModal';
 import InvoiceEmailDialog from './InvoiceEmailDialog';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
@@ -91,7 +92,8 @@ export default function Sales() {
   }, [customers, invoices, payments, creditNotes]);
   const onAddInvoice = async (input: any) => { 
     // a sale receipt (K-03) carries where its money went; that is a payment, not part of the invoice
-    const { receiptPayment, ...rest } = input;
+    // files picked for a new invoice (K-07) are kept with it once it has an id
+    const { receiptPayment, attachmentFiles, ...rest } = input;
     let data = rest;
     // A customer typed in the invoice that isn't on the list yet is added first, so the invoice
     // belongs to a real customer (statements, balances, emails)
@@ -109,6 +111,11 @@ export default function Sales() {
     } else {
       res = await addEntity('invoices', data); 
       if (res && receiptPayment) await recordReceiptPayment(currentWorkspaceId || '', { ...data, id: res.id }, receiptPayment as ReceiptPayment);
+      const uid = useAuthStore.getState().user?.uid;
+      if (res && uid && Array.isArray(attachmentFiles) && attachmentFiles.length) {
+        const { ok, message } = attachSummary(await attachFiles(currentWorkspaceId || '', uid, { collection: 'invoices', id: res.id, label: `Invoice ${data.number || ''}`.trim() }, attachmentFiles));
+        if (ok) toast.success(message); else toast.error(message);
+      }
     }
 
     if (data.type === 'recurring') {
