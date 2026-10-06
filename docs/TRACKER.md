@@ -2152,7 +2152,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [ ] BD-01 Practice view
 - [ ] BD-02 Client switcher
-- [ ] BD-03 Adjusting-entry flag
+- [x] BD-03 Adjusting-entry flag — **done 6 Oct**: the journal form has "Adjusting entry" (an accountant's year-end, audit or correcting adjustment), saved with the entry; Ledger → General journal marks them "adjusting" and lists them alone with "Adjusting entries only"; Duplicate keeps the mark (tests `journal-view.test.tsx`). An adjusted/unadjusted trial balance can build on the mark
 - [ ] BD-04 Workpapers
 - [ ] BD-05 TB export for tax software
 - [ ] BD-06 Client report pack
@@ -2298,7 +2298,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] CA-12 Saved column map (= Y-03)
 - [ ] CA-13 Bank transaction rules with conditions
 - [ ] CA-14 Bank guarantee
-- [ ] CA-15 Cheque print template
+- [x] CA-15 Cheque print template — done as BE-13 (cheque on top, two vouchers, US Letter)
 - [ ] CA-16 Item tax template
 - [ ] CA-17 Tax rule engine
 - [ ] CA-18 Withholding category

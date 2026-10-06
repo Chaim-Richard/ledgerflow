@@ -84,6 +84,7 @@ const Ledger = React.memo(() => {
     isReversal: Boolean(tx.metadata?.isReversal),
     reversedBy: (tx as { reversalEventId?: string }).reversalEventId || undefined,
     autoReverseOn: typeof tx.metadata?.autoReverseOn === 'string' ? tx.metadata.autoReverseOn : undefined,
+    adjusting: tx.metadata?.adjusting === true,
     uid: tx.uid || 'system',
     workspaceId: tx.workspaceId || '',
     date: tx.date || '',
@@ -657,7 +658,7 @@ const Ledger = React.memo(() => {
       {user && <JournalEntryModal 
         key={duplicateOf?.id || 'new'}
         isOpen={activeModal === 'journal'}
-        initialEntry={duplicateOf ? { description: duplicateOf.description, reference: '', lines: duplicateOf.lines } : undefined}
+        initialEntry={duplicateOf ? { description: duplicateOf.description, reference: '', lines: duplicateOf.lines, adjusting: duplicateOf.adjusting } : undefined}
         onClose={() => { setActiveModal(null); setDuplicateOf(null); }}
         user={user}
         accounts={accounts}

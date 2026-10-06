@@ -36,7 +36,8 @@ interface JournalEntryModalProps {
   accounts: ChartAccount[];
   workspaceId: string;
   /** Start from another entry's lines (K-05 "Duplicate"); the date is today and nothing is posted until saved. */
-  initialEntry?: { description?: string; reference?: string; lines: JournalLine[] };
+  /** BD-03: `adjusting` marks an accountant's adjusting entry (year-end, audit) */
+  initialEntry?: { description?: string; reference?: string; lines: JournalLine[]; adjusting?: boolean };
 }
 
 export default function JournalEntryModal({ isOpen, onClose, user, accounts, workspaceId, initialEntry }: JournalEntryModalProps) {
@@ -45,6 +46,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   const [reference, setReference] = useState('');
   // R-05: an accrual that undoes itself (on the 1st of the next month unless another date is chosen)
   const [autoReverse, setAutoReverse] = useState(false);
+  const [adjusting, setAdjusting] = useState(Boolean(initialEntry?.adjusting));
   const [reverseOnTyped, setReverseOnTyped] = useState('');
   const reverseOn = reverseOnTyped || (date ? firstOfNextMonth(date) : '');
   const [suggestion, setSuggestion] = useState<string | null>(null);
@@ -265,7 +267,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         type: 'journal',
         status: 'completed',
         lines: mappedLines,
-        isCleared: true
+        isCleared: true,
+        // an adjusting entry (BD-03): marked so the journal can list and filter them
+        ...(adjusting ? { metadata: { adjusting: true } } : {}),
       };
 
       const token = await getIdToken();
@@ -458,6 +462,10 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                 <label htmlFor="je-auto-reverse" className="flex items-center gap-2 cursor-pointer">
                   <input id="je-auto-reverse" type="checkbox" checked={autoReverse} onChange={e => setAutoReverse(e.target.checked)} />
                   Reverse automatically (an accrual)
+                </label>
+                <label htmlFor="je-adjusting" className="flex items-center gap-2 cursor-pointer" title="An accountant's adjustment: year-end, audit or correction">
+                  <input id="je-adjusting" type="checkbox" checked={adjusting} onChange={e => setAdjusting(e.target.checked)} />
+                  Adjusting entry
                 </label>
                 {autoReverse && (
                   <label htmlFor="je-reverse-on" className="flex items-center gap-2">
