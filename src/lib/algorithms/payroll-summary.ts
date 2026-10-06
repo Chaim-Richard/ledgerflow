@@ -1,5 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
-import { formatCurrency } from '../../lib/utils';
+import { currencyChartValue, formatCurrency } from '../../lib/utils';
 import { computePeriodPayroll, PAYROLL_DISCLAIMER } from '../../lib/payroll-engine';
 
 export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
@@ -37,6 +37,7 @@ export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
       };
     }
 
+    const chartData: { employee: string; net: number; taxes: number; burden: number }[] = [];
     const rows: ({ id: string; employee: string; role: string; frequency: string; gross: string; taxes: string; net: string; employerBurden: string })[] = [];
     
     let totalGross = 0;
@@ -52,6 +53,7 @@ export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
       totalEmployerBurden += breakdown.totalEmployerTaxCents;
       totalLiability += breakdown.totalPeriodLiabilityCents;
       
+      chartData.push({ employee: emp.name, net: currencyChartValue(breakdown.netPayCents), taxes: currencyChartValue(breakdown.totalWithholdingCents), burden: currencyChartValue(breakdown.totalEmployerTaxCents) });
       rows.push({
         id: emp.id,
         employee: emp.name,
@@ -81,12 +83,7 @@ export const PAYROLL_SUMMARY_ALGO: AlgorithmDefinition = {
               { key: 'burden', name: 'Employer Burden', color: '#fbbf24', type: 'bar' }
             ]
           },
-          data: rows.map(r => ({
-            employee: r.employee.split(' ')[0], // First name for chart
-            net: parseFloat(r.net.replace(/[^0-9.-]+/g,"")),
-            taxes: parseFloat(r.taxes.replace(/[^0-9.-]+/g,"")),
-            burden: parseFloat(r.employerBurden.replace(/[^0-9.-]+/g,""))
-          }))
+          data: chartData
         }
       ],
       insights: [
