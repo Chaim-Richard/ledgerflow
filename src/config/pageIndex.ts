@@ -18,6 +18,7 @@ const SETTINGS_KEYWORDS: Record<string, string> = {
   numbering: 'invoice number prefix sequence bill estimate',
   defaults: 'default accounts receivable payable sales expense bank tax deposits prepayments prepaid mapping',
   schedule: 'cron jobs daily run reminders statements recurring when next time',
+  'incoming-events': 'webhooks stripe online payment card email bounced delivered spam events log',
   export: 'backup download restore data archive',
   shortcuts: 'keyboard keys speed dial hotkeys',
 };

@@ -49,7 +49,8 @@ async function clearingAccountId(db: Firestore, workspaceId: string): Promise<st
 export async function recordStripeInvoicePayment(db: Firestore, eventId: string, eventType: string, session: StripeInvoiceSession): Promise<OnlinePaymentResult> {
   const invoiceId = session.metadata?.invoiceId;
   const eventRef = db.collection('stripeProcessedEvents').doc(eventId);
-  const markEvent = (note: string) => eventRef.set({ id: eventId, type: eventType, sessionId: session.id, note, processedAt: new Date().toISOString() });
+  // every outcome is kept, with the workspace when known, for Settings → Incoming events (K-37)
+  const markEvent = (note: string, workspaceId?: string) => eventRef.set({ id: eventId, type: eventType, sessionId: session.id, note, outcome: note, ...(workspaceId ? { workspaceId } : {}), ...(invoiceId ? { invoiceId: String(invoiceId) } : {}), processedAt: new Date().toISOString() });
   if ((await eventRef.get()).exists) return { status: 'already_processed' };
 
   const invoiceRef = db.collection('invoices').doc(String(invoiceId || ''));
@@ -64,20 +65,21 @@ export async function recordStripeInvoicePayment(db: Firestore, eventId: string,
   if (session.payment_status !== 'paid') {
     // e.g. a bank debit still clearing: the next event (async_payment_succeeded) records it
     await invoiceRef.update({ paymentStatus: 'pending_settlement', updatedAt: new Date().toISOString() });
+    await markEvent('pending', workspaceId);
     return { status: 'pending' };
   }
 
   const invoiceCurrency = String(invoice.currency || workspace.currency || 'USD').toLowerCase();
   if (String(session.currency || '').toLowerCase() !== invoiceCurrency) {
     logger.warn('online payment currency differs from the invoice; not booked', { workspaceId, invoiceId, sessionId: session.id });
-    await markEvent('currency_mismatch');
+    await markEvent('currency_mismatch', workspaceId);
     return { status: 'currency_mismatch' };
   }
 
   const paidCents = Math.max(0, Math.round(Number(session.amount_total) || 0));
   const dueCents = calculateAmountDue(invoice as DocumentData);
   if (paidCents <= 0) {
-    await markEvent('nothing_paid');
+    await markEvent('nothing_paid', workspaceId);
     return { status: 'nothing_due' };
   }
   const cashAccountId = await clearingAccountId(db, workspaceId);
@@ -100,7 +102,7 @@ export async function recordStripeInvoicePayment(db: Firestore, eventId: string,
       // anything above what is due stays on the payment as unapplied (a credit for the customer)
       allocations: dueCents > 0 ? [{ documentId: invoiceRef.id, documentType: 'invoice', amountCents: Math.min(paidCents, dueCents) }] : [],
     });
-    t.set(eventRef, { id: eventId, type: eventType, sessionId: session.id, paymentId: payment.paymentId, processedAt: new Date().toISOString() });
+    t.set(eventRef, { id: eventId, type: eventType, sessionId: session.id, paymentId: payment.paymentId, outcome: 'recorded', workspaceId, invoiceId: invoiceRef.id, amountCents: paidCents, processedAt: new Date().toISOString() });
     return payment;
   });
   if (!result) return { status: 'already_processed' };

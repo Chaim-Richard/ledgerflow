@@ -141,6 +141,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review the existing sales-tax liability report. Select dates and inspect taxable amounts and tax totals. Review the report scope before using it for a tax filing.",
   },
   settings: {
+    "incoming-events":
+      "Review what Stripe and the email provider reported for this workspace and what came of it. Check whether an online card payment was recorded, is waiting for the bank or was refused, and whether an email was delivered or bounced. Nothing here changes any record.",
     rules:
       "Manage classification and automation rules. Inspect conditions, test matches and use the existing save or apply workflow. Review proposed matches before applying changes.",
     dimensions:
