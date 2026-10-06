@@ -29,6 +29,8 @@ import { BloomFilter, MinHash, AnalyticalMatcher, generateImportIdentity } from 
 import CategoryWhyPopover from '../common/CategoryWhyPopover';
 import { normalizeDateString } from '../../lib/dateParsing';
 import { Labelled } from '../ui/Labelled';
+import { parseQIFStatement, type QIFDateOrder } from '../../lib/qifParser';
+import { parseBAI2Statement } from '../../lib/bai2Parser';
 
 function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => string) {
   const occurrences = new Map<string, number>();
@@ -93,6 +95,8 @@ export default function StatementImporter({
   const [parsedTxs, setParsedTxs] = useState<ParsedTx[]>([]);
   const [step, setStep] = useState<'input' | 'mapping' | 'review'>('input');
   const [csvData, setCsvData] = useState<string[][]>([]);
+  const [qifDateOrder, setQifDateOrder] = useState<QIFDateOrder | ''>('');
+  const [fileError, setFileError] = useState('');
   const csvHeaders = withOccurrenceKeys(csvData[0] || [], column => column);
   const csvPreview = withOccurrenceKeys(csvData.slice(1, 6), row => JSON.stringify(row));
   const [mapping, setMapping] = useState({ date: -1, description: -1, amount: -1, debit: -1, credit: -1, payee: -1, memo: -1, skipRows: 1 });
@@ -133,6 +137,7 @@ export default function StatementImporter({
     if (!file) return;
 
     setIsParsing(true);
+    setFileError('');
     const loader = toast.loading(`Analytical engine analyzing ${file.name}...`);
     
     try {
@@ -141,7 +146,18 @@ export default function StatementImporter({
       const fileType = file.type;
       const fileName = file.name.toLowerCase();
       
-      if (fileType.startsWith('image/')) {
+      if (fileName.endsWith('.qif') || fileName.endsWith('.bai') || fileName.endsWith('.bai2')) {
+        const workspaceId = useAuthStore.getState().currentWorkspaceId;
+        const userId = useAuthStore.getState().user?.uid;
+        const content = await file.text();
+        if (workspaceId !== useAuthStore.getState().currentWorkspaceId || userId !== useAuthStore.getState().user?.uid) throw new Error('Workspace or user changed. Upload the statement again in the current workspace.');
+        if (fileName.endsWith('.qif') && !qifDateOrder) throw new Error('Choose the QIF date order before uploading the statement.');
+        const bankLines = fileName.endsWith('.qif')
+          ? parseQIFStatement(content, qifDateOrder as QIFDateOrder)
+          : parseBAI2Statement(content, useAuthStore.getState().getCurrentWorkspace()?.currency || 'USD');
+        processResults(bankLines);
+        toast.success(`Loaded ${bankLines.length} statement entries from ${file.name}. Review before importing.`, { id: loader });
+      } else if (fileType.startsWith('image/')) {
         const result = await aiService.parseReceipt(file, undefined, patternCache, labels);
         if (result) {
           results = [{
@@ -206,10 +222,13 @@ export default function StatementImporter({
         }
       }
     } catch (error) {
-      toast.error('Parsing failure', { id: loader });
+      const message = error instanceof Error ? error.message : 'Parsing failure';
+      setFileError(message);
+      toast.error(message, { id: loader });
       console.error(error);
     } finally {
       setIsParsing(false);
+      e.target.value = '';
     }
   };
 
@@ -450,24 +469,34 @@ export default function StatementImporter({
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <label htmlFor={`${formId}-statement-text`} className="micro-label">Paste Statement Text or Upload CSV</label>
+                    <label htmlFor={`${formId}-statement-text`} className="micro-label">Paste Statement Text or Upload a Statement</label>
                     <div className="flex items-center gap-2">
                       <input 
                         type="file" 
                         id={`${formId}-csv-upload`}
-                        accept=".csv,.txt"
+                        accept=".csv,.txt,.qif,.bai,.bai2"
                         className="hidden" 
                         onChange={handleFileUpload}
+                        disabled={isParsing}
                       />
                       <label 
                         htmlFor={`${formId}-csv-upload`}
                         className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all cursor-pointer"
                       >
                         <Upload aria-hidden="true" size={14} />
-                        Upload CSV / Excel
+                        Upload CSV / QIF / BAI2
                       </label>
                     </div>
                   </div>
+                  <Labelled label="QIF date order">
+                    <select value={qifDateOrder} onChange={e => setQifDateOrder(e.target.value as QIFDateOrder | '')} disabled={isParsing} className="min-h-11 px-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-sm text-[var(--text)]">
+                      <option value="">Choose for QIF files…</option>
+                      <option value="mdy">Month / day / year</option>
+                      <option value="dmy">Day / month / year</option>
+                    </select>
+                  </Labelled>
+                  <p className="text-xs text-[var(--muted)]">QIF: Bank, Cash or CCard, one account per file. BAI2: one account in the workspace currency, with complete trailers. Entries are reviewed before import.</p>
+                  {fileError && <p role="alert" className="text-sm text-rose-600">{fileError}</p>}
                   <textarea
                     id={`${formId}-statement-text`}
                     value={rawText}
