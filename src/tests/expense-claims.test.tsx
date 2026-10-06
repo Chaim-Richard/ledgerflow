@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import ExpenseClaims, { type NewClaim } from '../components/purchases/ExpenseClaims';
-import { claimBill, claimDecision, claimOf, claimProblem, decisionProblem } from '../lib/expenseClaims';
+import { claimBill, claimDecision, claimOf, claimProblem, decisionProblem, mileageCents, mileageLine, perDiemCents, perDiemLine, rateInThousandths, workedLineProblem } from '../lib/expenseClaims';
 import { makeChartAccount } from './fixtures';
 import type { Bill, Vendor } from '../types';
 
@@ -105,5 +105,55 @@ describe('The claims panel', () => {
   test('a viewer with nothing waiting sees no panel', () => {
     const { container } = render(<ExpenseClaims bills={[]} vendors={vendors} accounts={accounts} userRole="viewer" uid="u-v" currency="USD" onSubmit={() => {}} onDecide={() => {}} />);
     assert.equal(container.innerHTML, '');
+  });
+});
+
+describe('Mileage and per diem (BE-09, BE-10)', () => {
+  afterEach(() => { cleanup(); localStorage.clear(); });
+  const vendors = [] as Vendor[];
+
+  test('worked out in whole cents, the rate in tenths of a cent allowed, and the line says how', () => {
+    assert.equal(rateInThousandths('0.655'), 655);
+    assert.equal(mileageCents(42, rateInThousandths('0.655')), 2751, '42 mi × $0.655 = $27.51');
+    assert.equal(mileageCents(12.5, rateInThousandths('0.68')), 850);
+    assert.equal(perDiemCents(2.5, 5900), 14750);
+    assert.deepEqual(mileageLine({ purpose: 'Client visit', from: 'Office', to: 'Acme', distance: 42, unit: 'mi', rateThousandths: 655, accountId: 'travel', currency: 'USD' }),
+      { description: 'Mileage Office → Acme (42 mi × USD 0.655/mi): Client visit', accountId: 'travel', amountCents: 2751 });
+    assert.deepEqual(perDiemLine({ purpose: 'Trade fair', days: 3, dailyRateCents: 5900, accountId: 'meals', currency: 'EUR' }),
+      { description: 'Per diem (3 days × EUR 59.00): Trade fair', accountId: 'meals', amountCents: 17700 });
+    assert.equal(workedLineProblem('mileage', { distance: 10 }), 'Mileage needs the rate per km or mile');
+    assert.equal(workedLineProblem('perDiem', { dailyRateCents: 100 }), 'Per diem needs the number of days');
+    assert.equal(workedLineProblem('expense', {}), null);
+  });
+
+  test('on the form: the amount is worked out, the claim gets ordinary lines, and the rates are remembered for next time', async () => {
+    const claims: NewClaim[] = [];
+    const view = render(<ExpenseClaims bills={[]} vendors={vendors} accounts={accounts} userRole="bookkeeper" uid="u-book" currency="USD" onSubmit={c => { claims.push(c); }} onDecide={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'New expense claim' }));
+    fireEvent.change(screen.getByLabelText('Who paid'), { target: { value: 'Dana' } });
+    fireEvent.change(screen.getByLabelText('Kind, line 1'), { target: { value: 'mileage' } });
+    fireEvent.change(screen.getByLabelText('What, line 1'), { target: { value: 'Client visit' } });
+    fireEvent.change(screen.getByLabelText('Category, line 1'), { target: { value: 'travel' } });
+    fireEvent.change(screen.getByLabelText('Distance, line 1'), { target: { value: '42' } });
+    assert.equal(screen.getByRole('alert').textContent, 'Mileage needs the rate per km or mile');
+    fireEvent.change(screen.getByLabelText('Unit, line 1'), { target: { value: 'mi' } });
+    fireEvent.change(screen.getByLabelText('Rate per mile, line 1'), { target: { value: '0.655' } });
+    assert.equal(screen.getByLabelText('Amount, line 1').textContent, '$27.51');
+    fireEvent.click(screen.getByRole('button', { name: '+ Add a line' }));
+    fireEvent.change(screen.getByLabelText('Kind, line 2'), { target: { value: 'perDiem' } });
+    fireEvent.change(screen.getByLabelText('Category, line 2'), { target: { value: 'meals' } });
+    fireEvent.change(screen.getByLabelText('Days, line 2'), { target: { value: '2' } });
+    fireEvent.change(screen.getByLabelText('Daily rate, line 2'), { target: { value: '59' } });
+    assert.match(document.body.textContent || '', /Total \$145\.51/);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Submit for approval' })); });
+    assert.deepEqual(claims[0].lines.map(l => [l.description, l.accountId, l.amountCents]), [
+      ['Mileage (42 mi × USD 0.655/mi): Client visit', 'travel', 2751],
+      ['Per diem (2 days × USD 59.00)', 'meals', 11800],
+    ]);
+    view.unmount();
+    render(<ExpenseClaims bills={[]} vendors={vendors} accounts={accounts} userRole="bookkeeper" uid="u-book" currency="USD" onSubmit={() => {}} onDecide={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'New expense claim' }));
+    fireEvent.change(screen.getByLabelText('Kind, line 1'), { target: { value: 'mileage' } });
+    assert.equal((screen.getByLabelText('Rate per mile, line 1') as HTMLInputElement).value, '0.655', 'the last rate and unit come back');
   });
 });
