@@ -26,7 +26,9 @@ export default function EstimatesView() {
   const estimates = useLedgerStore(s => s.estimates);
   const customers = useLedgerStore(s => s.customers);
   const payments = useLedgerStore(s => s.payments);
-  const { loading } = useLedgerCollections('customers', 'estimates', 'payments');
+  const { loading } = useLedgerCollections('customers', 'estimates');
+  // only the "Deposit received" line needs payments: the list doesn't wait for them
+  useLedgerCollections('payments');
   const role = useCurrentRole();
   const canTakeDeposit = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
   const [depositFor, setDepositFor] = useState<import("../../types").Estimate | null>(null);
