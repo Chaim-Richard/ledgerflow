@@ -35,10 +35,12 @@ interface JournalEntryModalProps {
   user: User;
   accounts: ChartAccount[];
   workspaceId: string;
+  /** Start from another entry's lines (K-05 "Duplicate"); the date is today and nothing is posted until saved. */
+  initialEntry?: { description?: string; reference?: string; lines: JournalLine[] };
 }
 
-export default function JournalEntryModal({ isOpen, onClose, user, accounts, workspaceId }: JournalEntryModalProps) {
-  const [description, setDescription] = useState('');
+export default function JournalEntryModal({ isOpen, onClose, user, accounts, workspaceId, initialEntry }: JournalEntryModalProps) {
+  const [description, setDescription] = useState(initialEntry?.description || '');
   const [date, setDate] = useState(getLocalDateISO());
   const [reference, setReference] = useState('');
   // R-05: an accrual that undoes itself (on the 1st of the next month unless another date is chosen)
@@ -61,11 +63,13 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   
   const isLocked = !!date && isLockedDate(date, lockDate, lockException);
 
-  const [lines, setLines] = useState<JournalLine[]>([
-    { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
-    { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
-  ]);
-  const [lineKeys, setLineKeys] = useState(['initial-first', 'initial-second']);
+  const [lines, setLines] = useState<JournalLine[]>(() => initialEntry?.lines.length
+    ? initialEntry.lines.map(l => ({ accountId: l.accountId, accountName: l.accountName, debit: l.debit || 0, credit: l.credit || 0, dimensions: { ...(l.dimensions || {}) } }))
+    : [
+      { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
+      { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
+    ]);
+  const [lineKeys, setLineKeys] = useState(() => (initialEntry?.lines.length ? initialEntry.lines.map((_, i) => `initial-${i}`) : ['initial-first', 'initial-second']));
   const nextLineKey = useRef(0);
 
   const handleDimensionChange = (index: number, dimensionId: string, value: string) => {

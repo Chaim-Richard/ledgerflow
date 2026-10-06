@@ -1527,7 +1527,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] K-02 Items on invoice lines: pick by name/SKU, fills price + cost, free text unlinks, tested
 - [x] K-03 Sale receipts — **done 6 Oct**: Sales → "Sale receipt" (writers) opens the invoice form in receipt mode: "Paid into" (Undeposited Funds first, so Make deposit takes it to the bank, or a bank account) and the method, one "Save receipt". It saves an issued invoice due on receipt, marked as a receipt ("Receipt" in the list, "SALES RECEIPT" on the PDF, no pay-now code), and records its payment at once through the server's payments (`src/services/receiptActions.ts`); if the payment is refused the invoice stays open and the message says to record it. Tests: `sale-receipt.test.tsx`
 - [ ] K-04 Sales orders
-- [ ] K-05 Manual journals entity
+- [x] K-05 Manual journals entity — **done 6 Oct**: Ledger → General journal is now a working list: entries typed in by hand only (or all), newest first, search by description/reference/account, each opens to its debit/credit lines, badges for "a reversal", "reversed" and "reverses on …". Writers can Reverse a manual entry on a chosen day with a reason (the server's reverse route: a mirror entry, never twice) or Duplicate it into the journal form with the same lines. The old "Cryptographic Log / Full Audit" buttons, which claimed a verification that never ran, are gone. Tests: `journal-view.test.tsx`
 - [x] K-06 Bulk action bar: transaction list (categorize safely, Enter/Apply, accounts used most first; L-180); invoice and bill lists: tick several, then download the PDFs as a zip, email the invoices to their customers (drafts and voided ones left out, each failure named), or pay them in full at once ("Record payment" / "Pay bills": one payment per customer or vendor into or out of the chosen bank account; drafts, paid and other-currency documents left out with the reason; a refused payment doesn't stop the others; not for viewers) (tested)
 - [ ] K-07 Attachments on every entity
 - [x] K-08 Email templates (invoice, reminder, receipt; preview)
@@ -1798,7 +1798,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] M-01 Items / products catalogue
 - [ ] M-02 Sales orders
 - [x] M-03 Sale receipts — see K-03 (done 6 Oct)
-- [ ] M-04 Manual journals
+- [x] M-04 Manual journals — see K-05 (done 6 Oct)
 - [x] M-05 Email templates (= K-08)
 - [ ] M-06 Exchange-rate entity
 - [ ] M-07 Expected bills
