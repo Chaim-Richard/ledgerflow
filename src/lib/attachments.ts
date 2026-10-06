@@ -10,7 +10,8 @@
 export const MAX_ATTACHMENT_BYTES = 700_000;
 export const MAX_FILES_AT_ONCE = 10;
 
-export type AttachmentCollection = 'invoices' | 'bills' | 'customers' | 'vendors' | 'estimates' | 'purchaseOrders';
+// supportTickets (BO-05): a screenshot kept with feedback or a support ticket
+export type AttachmentCollection = 'invoices' | 'bills' | 'customers' | 'vendors' | 'estimates' | 'purchaseOrders' | 'supportTickets';
 
 /** The record a file belongs to, and how it is named in lists ("Invoice INV-12"). */
 export interface AttachmentTarget {

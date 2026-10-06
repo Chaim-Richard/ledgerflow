@@ -12,8 +12,10 @@ import { safeConfirm } from '../../lib/utils';
  * person who added it, or owners, accountants and bookkeepers), and "Attach files" for anyone who
  * can write. Each file is saved on its own and only reported as attached once the database has it.
  */
-export default function AttachmentsPanel({ target, className = '' }: { target: AttachmentTarget; className?: string }) {
-  const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
+/** `workspaceId`: the record's own workspace when it isn't the current one (a platform admin reading a support ticket). */
+export default function AttachmentsPanel({ target, className = '', workspaceId: forWorkspace }: { target: AttachmentTarget; className?: string; workspaceId?: string }) {
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
+  const workspaceId = forWorkspace || currentWorkspaceId;
   const uid = useAuthStore(s => s.user?.uid);
   const role = useCurrentRole();
   const canAttach = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
