@@ -20,6 +20,7 @@ import { tagRouter } from './tagRoutes';
 import { journalTemplateRouter } from './journalTemplateRoutes';
 import { ScheduledReportError, sendScheduleNow } from '../services/scheduledReportService';
 import { portalLinkRouter } from './customerPortalRoutes';
+import { clientQueryRouter } from './clientQueryRoutes';
 import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
 import { brandingRouter } from './brandingRoutes';
@@ -177,6 +178,8 @@ workspaceRouter.post('/:workspaceId/report-schedules/:scheduleId/send-now', requ
 });
 // Journal entry templates (BD-09 / CA-27): members read; writers save and remove (checked in the route)
 workspaceRouter.use('/:workspaceId/journal-templates', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), journalTemplateRouter);
+// Questions about entries (BD-07): writers ask, every member answers (checked in the service)
+workspaceRouter.use('/:workspaceId/queries', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), clientQueryRouter);
 
 // Bulk import of customers, vendors, items or accounts from a spreadsheet (K-01; rules in
 // src/lib/recordImport.ts). Writers may import; the chart of accounts is owner/accountant only.

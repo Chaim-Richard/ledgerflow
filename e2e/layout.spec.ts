@@ -10,7 +10,7 @@ import AxeBuilder from '@axe-core/playwright';
  */
 const screens = [
   'dashboard', 'inbox', 'copilot', 'transactions', 'credit-notes', 'assets', 'register', 'ledger',
-  'intercompany', 'recurring', 'query-builder', 'banking', 'audit-trail', 'reconciliation',
+  'intercompany', 'recurring', 'query-builder', 'banking', 'audit-trail', 'client-queries', 'reconciliation',
   'month-end-close', 'fiscal-periods', 'sales', 'estimates', 'payments', 'purchases',
   'purchase-orders', 'loans', 'petty-cash', 'payroll', 'reports', 'charts', 'forecaster', 'intelligence', 'settings',
   'data-health', 'support', 'help', 'vault', 'pricing', 'api-hub',

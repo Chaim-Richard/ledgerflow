@@ -1,7 +1,7 @@
 import { useDialog } from '../../hooks/useDialog';
 import React, { useEffect, useState, useId } from 'react';
 import { toast } from 'sonner';
-import { Bell, CheckCheck, X, FileText, CreditCard, Landmark, Users, MailWarning, Settings2, ArrowRight } from 'lucide-react';
+import { Bell, CheckCheck, X, FileText, CreditCard, Landmark, Users, MailWarning, Settings2, ArrowRight, MessageCircleQuestion } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { unreadCount, useNotificationStore } from '../../stores/useNotificationStore';
 import { useUIStore } from '../../stores/useUIStore';
@@ -23,6 +23,7 @@ function KindIcon({ kind }: { kind: string }) {
   if (kind.startsWith('bank')) return <Landmark {...props} className="text-[var(--neg)]" />;
   if (kind.startsWith('member')) return <Users {...props} className="text-[var(--brass)]" />;
   if (kind.startsWith('email')) return <MailWarning {...props} className="text-[var(--neg)]" />;
+  if (kind.startsWith('query')) return <MessageCircleQuestion {...props} className="text-[var(--brass)]" />;
   return <FileText {...props} className="text-[var(--brass)]" />;
 }
 

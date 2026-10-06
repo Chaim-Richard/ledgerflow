@@ -430,6 +430,15 @@ select pg_temp.expect_denied('owner changes a filed return', 'u-owner', $$select
 select pg_temp.expect_denied('owner files a return from the browser', 'u-owner',
   $$insert into "taxReturns"(id,data) values ('tr2', '{"workspaceId":"ws1","startDate":"2026-01-01","endDate":"2026-03-31"}')$$);
 
+-- questions about entries (BD-07): written only by the server; members read; nobody writes them from the browser
+select set_config('request.jwt.claims', '', true);
+insert into "clientQueries" (id, data) values ('cq1', '{"workspaceId":"ws1","transactionId":"t1","status":"open","messages":[]}');
+select pg_temp.expect_count('viewer reads questions', 'u-view', $$select count(*) from "clientQueries"$$, 1);
+select pg_temp.expect_count('outsider reads questions', 'u-out', $$select count(*) from "clientQueries"$$, 0);
+select pg_temp.expect_denied('owner answers from the browser', 'u-owner', $$select lf_update('clientQueries','cq1','{"status":"answered"}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper asks from the browser', 'u-book',
+  $$insert into "clientQueries"(id,data) values ('cq2', '{"workspaceId":"ws1","transactionId":"t1","status":"open"}')$$);
+
 -- purchase orders: members read; owners, accountants and bookkeepers write
 select pg_temp.expect_ok('bookkeeper saves a purchase order', 'u-book',
   $$insert into "purchaseOrders"(id,data) values ('po1', '{"workspaceId":"ws1","poNumber":"PO-2026-001","vendorId":"v1","vendorName":"V","status":"approved","items":[],"totalAmountCents":1000,"receipts":[]}')$$);

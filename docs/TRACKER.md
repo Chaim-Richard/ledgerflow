@@ -2156,7 +2156,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BD-04 Workpapers
 - [x] BD-05 TB export for tax software: Settings → Export → "Trial balance — for tax software": the trial balance on a date from the complete workspace, one row per account with a balance (account number, name, type, the tax line it is mapped to), debit/credit columns or one balance column, no totals row; a trial balance that does not balance is still downloaded but says by how much (`workspace-exports.test.tsx`)
 - [ ] BD-06 Client report pack
-- [ ] BD-07 Client queries
+- [x] BD-07 Client queries — **done 6 Oct**: in an entry's edit window, owners, accountants and bookkeepers use "Ask about this entry" ("What was this $340 at Amazon?"); the owner and accountants get a notification and answer there or on the new Questions screen (Transactions → Questions about Entries: waiting, answered, closed). Any member may answer; the asker's follow-up puts it back to waiting; the asker, an owner or an accountant closes it. Only the server writes questions (members read them live); each step is in the audit trail; at most 5 open questions per entry (`client-queries.test.ts`, `client-queries-ui.test.tsx`)
 - [ ] BD-08 Asset register export
 - [x] BD-09 Journal entry templates: in the journal entry form, "Save as template" keeps the lines (accounts, sides, dimensions, and amounts if typed) under a name, and "Start from a template" fills a new entry from one. A template balances or holds no amounts; saving under a used name replaces it. Templates are shared by the workspace: writers save and remove them, and every change is in the audit trail. Nothing is posted from a template (`journal-templates.test.tsx`; same as CA-27)
 - [ ] BD-10 Checklist per client

@@ -21,6 +21,8 @@ export const NOTIFICATION_TYPES = {
   'bank.disconnected': { label: 'A bank connection needs to be reconnected', roles: BOOKS, tab: 'banking' },
   'member.invited': { label: 'Someone was invited to the workspace', roles: ['owner'] as Role[], tab: 'settings' },
   'member.joined': { label: 'Someone joined the workspace', roles: ['owner', 'accountant'] as Role[], tab: 'settings' },
+  'query.asked': { label: 'Someone asked a question about an entry', roles: ['owner', 'accountant'] as Role[], tab: 'client-queries' },
+  'query.answered': { label: 'A question about an entry was answered', roles: BOOKS, tab: 'client-queries' },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;

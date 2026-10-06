@@ -27,6 +27,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Manage existing bank connections and imported activity. Reconnect expired logins and inspect connection health. Provider setup determines which live services are available.",
     "audit-trail":
       "Review the recorded history of workspace actions. Find a record and inspect who changed it and when. An audit log is not an independent financial reconciliation.",
+    "client-queries":
+      "Questions the bookkeeper or accountant asked about entries, and the answers. Ask from an entry's edit window with \"Ask about this entry\"; answer, follow up or close the question here. Each side gets a notification; a question changes nothing in the books.",
     reconciliation:
       "Match bank activity with ledger entries. Review differences before accepting matches or completing reconciliation. Inspect the underlying documents when a match is uncertain.",
     "month-end-close":
