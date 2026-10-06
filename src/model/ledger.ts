@@ -260,6 +260,8 @@ export interface AutoRule {
   workspaceId?: string;
   name?: string;
   groupName?: string;
+  /** Whole-group gate; individual isActive is preserved when this changes. */
+  groupIsActive?: boolean;
   condition: {
     vendor?: string;
     project?: string;

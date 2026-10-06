@@ -4,7 +4,7 @@ import { AutoRule, Transaction } from '../../../types';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useCurrentRole } from '../../../hooks/useCurrentRole';
-import { dryRunRules, sortRulesByPriority, evaluateRuleCondition } from '../../../lib/rulesEngine';
+import { disabledRuleGroups, dryRunRules, sortRulesByPriority, evaluateRuleCondition } from '../../../lib/rulesEngine';
 import { useTimeout } from '../../../hooks/useTimeout';
 import { aiService } from '../../../services/aiService';
 import { AutoRuleSchema } from '../../../schemas';
@@ -23,17 +23,22 @@ function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
 function useRulesSettingsModel() {
   const formId = useId();
   const currentRole = useCurrentRole();
+  const canEditRules = currentRole !== 'viewer';
   const canBuildRules = currentRole === 'owner' || currentRole === 'accountant';
 
-  const autoRules = useLedgerStore(s => (s.autoRules || []) as AutoRule[]);
-  const { saveRule, setRuleActive, deleteRule, applyToExisting } = useAutoRules();
-  const transactions = useLedgerStore(s => s.transactions);
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const isGuest = useAuthStore(s => s.isGuest);
+  const cachedRules = useLedgerStore(s => (s.autoRules || []) as AutoRule[]);
+  const autoRules = useMemo(() => cachedRules.filter(rule => isGuest || rule.workspaceId === workspaceId), [cachedRules, workspaceId, isGuest]);
+  const { saveRule, setRuleActive, deleteRule, applyToExisting, updateGroup, setRulePriority, isUpdatingGroup } = useAutoRules();
+  const cachedTransactions = useLedgerStore(s => s.transactions);
+  const transactions = useMemo(() => cachedTransactions.filter(tx => isGuest || tx.workspaceId === workspaceId), [cachedTransactions, workspaceId, isGuest]);
   useLedgerStore(s => s.setTransactions);
   const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
   const user = useAuthStore(s => s.user);
   const currentWorkspace = getCurrentWorkspace();
 
-  const [selectedGroup, setSelectedGroup] = useState<string>('all');
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreatingRule, setIsCreatingRule] = useState(false);
   const { dialogProps: overlay2DialogProps, titleId: overlay2TitleId } = useDialog(() => setIsCreatingRule(false), isCreatingRule);
@@ -56,7 +61,7 @@ function useRulesSettingsModel() {
   // Form state
   const [formName, setFormName] = useState('');
   const [formGroup, setFormGroup] = useState('General');
-  const [formPriority, setFormPriority] = useState(10);
+  const [formPriority, setFormPriority] = useState('10');
   const [formDescContains, setFormDescContains] = useState('');
   const [formVendor, setFormVendor] = useState('');
   const [formCategory, setFormCategory] = useState('');
@@ -69,6 +74,18 @@ function useRulesSettingsModel() {
   const [formFlagForReview, setFormFlagForReview] = useState(false);
   const [formStopOnMatch, setFormStopOnMatch] = useState(false);
   const [singleRuleTestResult, setSingleRuleTestResult] = useState<Transaction[] | null>(null);
+
+  const disabledGroups = useMemo(() => disabledRuleGroups(autoRules), [autoRules]);
+  const [groupError, setGroupError] = useState<string | null>(null);
+  const handleToggleGroup = async (name: string) => {
+    setGroupError(null);
+    try { await updateGroup(name, { groupIsActive: disabledGroups.has(name) }); }
+    catch (error) { setGroupError(error instanceof Error ? error.message : 'The group was not saved.'); }
+  };
+  const handleRenameGroup = async (name: string, next: string | number) => {
+    await updateGroup(name, { groupName: String(next) });
+    if (selectedGroup === name) setSelectedGroup(String(next).trim());
+  };
 
   const sortedRules = useMemo(() => {
     return sortRulesByPriority(autoRules);
@@ -85,7 +102,7 @@ function useRulesSettingsModel() {
 
   const filteredRules = useMemo(() => {
     return sortedRules.filter(r => {
-      if (selectedGroup !== 'all') {
+      if (selectedGroup !== null) {
         const group = r.groupName || 'General';
         if (group !== selectedGroup) return false;
       }
@@ -121,10 +138,11 @@ function useRulesSettingsModel() {
   };
 
   const openCreateModal = () => {
+    if (!canEditRules) return;
     setEditingRule(null);
     setFormName('');
     setFormGroup('General');
-    setFormPriority(autoRules.length * 10 + 10);
+    setFormPriority(String(autoRules.length * 10 + 10));
     setFormDescContains('');
     setFormVendor('');
     setFormCategory('');
@@ -141,10 +159,11 @@ function useRulesSettingsModel() {
   };
 
   const openEditModal = (rule: AutoRule) => {
+    if (!canEditRules) return;
     setEditingRule(rule);
     setFormName(rule.name || '');
     setFormGroup(rule.groupName || 'General');
-    setFormPriority(rule.priority ?? 10);
+    setFormPriority(String(rule.priority ?? 100));
     setFormDescContains(rule.condition.descriptionContains || '');
     setFormVendor(rule.condition.vendor || '');
     setFormCategory(rule.condition.category || '');
@@ -161,29 +180,33 @@ function useRulesSettingsModel() {
   };
 
   const handleSaveRule = async () => {
+    if (!canEditRules || !formPriority.trim() || !Number.isSafeInteger(Number(formPriority))) return;
     const tags = formAddTags.split(',').map(t => t.trim()).filter(Boolean);
     const amountThresh = formAmountThreshold ? parseFloat(formAmountThreshold) : undefined;
 
     const ruleData: AutoRule = {
+      ...editingRule,
       id: editingRule ? editingRule.id : `rule_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       uid: editingRule?.uid || user?.uid || '',
       workspaceId: currentWorkspace?.id || '',
       name: formName || `Rule: ${formDescContains || formVendor || 'Untitled'}`,
       groupName: formGroup || 'General',
-      priority: Number(formPriority) || 10,
-      isActive: true,
+      priority: Number(formPriority),
+      isActive: editingRule?.isActive ?? true,
       stopProcessingOnMatch: formStopOnMatch,
       confidence: 1.0,
       isHardened: true,
       hitCount: editingRule?.hitCount || 0,
       createdAt: editingRule?.createdAt || new Date().toISOString(),
       condition: {
+        ...editingRule?.condition,
         descriptionContains: formDescContains || undefined,
         vendor: formVendor || undefined,
         category: formCategory || undefined,
         amountThreshold: isNaN(amountThresh as number) ? undefined : amountThresh
       },
       action: {
+        ...editingRule?.action,
         targetCategory: formTargetCategory || undefined,
         targetClass: formTargetClass || undefined,
         targetLocation: formTargetLocation || undefined,
@@ -299,12 +322,18 @@ function useRulesSettingsModel() {
     }
   };
 
-  return { withOccurrenceKeys, formId, currentRole, canBuildRules, autoRules, selectedGroup, setSelectedGroup, searchQuery, setSearchQuery, isCreatingRule, setIsCreatingRule, overlay2DialogProps, overlay2TitleId, editingRule, aiSentence, setAiSentence, isGeneratingAiRule, aiError, aiPreview, setAiPreview, dryRunResult, isTestingRule, setIsTestingRule, overlay1DialogProps, overlay1TitleId, isApplyingExisting, applySuccessMessage, setApplySuccessMessage, formName, setFormName, formGroup, setFormGroup, formDescContains, setFormDescContains, formVendor, setFormVendor, formCategory, setFormCategory, formAmountThreshold, setFormAmountThreshold, formTargetCategory, setFormTargetCategory, formTargetClass, setFormTargetClass, formTargetLocation, setFormTargetLocation, formAddTags, setFormAddTags, formFlagForReview, setFormFlagForReview, formStopOnMatch, setFormStopOnMatch, singleRuleTestResult, groups, filteredRules, handleToggleActive, handleDeleteRule, handleDuplicateRule, openCreateModal, openEditModal, handleSaveRule, handleTestSingleRule, handleGenerateAiRule, handleSaveAiRule, handleRunDryRun, handleApplyToExisting };
+  return { canEditRules, disabledGroups, groupError, handleToggleGroup, handleRenameGroup, setRulePriority, isUpdatingGroup, formPriority, setFormPriority, withOccurrenceKeys, formId, currentRole, canBuildRules, autoRules, selectedGroup, setSelectedGroup, searchQuery, setSearchQuery, isCreatingRule, setIsCreatingRule, overlay2DialogProps, overlay2TitleId, editingRule, aiSentence, setAiSentence, isGeneratingAiRule, aiError, aiPreview, setAiPreview, dryRunResult, isTestingRule, setIsTestingRule, overlay1DialogProps, overlay1TitleId, isApplyingExisting, applySuccessMessage, setApplySuccessMessage, formName, setFormName, formGroup, setFormGroup, formDescContains, setFormDescContains, formVendor, setFormVendor, formCategory, setFormCategory, formAmountThreshold, setFormAmountThreshold, formTargetCategory, setFormTargetCategory, formTargetClass, setFormTargetClass, formTargetLocation, setFormTargetLocation, formAddTags, setFormAddTags, formFlagForReview, setFormFlagForReview, formStopOnMatch, setFormStopOnMatch, singleRuleTestResult, groups, filteredRules, handleToggleActive, handleDeleteRule, handleDuplicateRule, openCreateModal, openEditModal, handleSaveRule, handleTestSingleRule, handleGenerateAiRule, handleSaveAiRule, handleRunDryRun, handleApplyToExisting };
 }
 
 export type RulesSettingsModel = NonNullable<ReturnType<typeof useRulesSettingsModel>>;
 
 export const RulesSettings: React.FC = () => {
+  const userId = useAuthStore(state => state.user?.uid);
+  const workspaceId = useAuthStore(state => state.currentWorkspaceId);
+  return <RulesSettingsContent key={JSON.stringify([userId, workspaceId])} />;
+};
+
+const RulesSettingsContent: React.FC = () => {
   const model = useRulesSettingsModel();
   return <RulesSettingsView {...model} />;
 };

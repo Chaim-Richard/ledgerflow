@@ -6,6 +6,13 @@ import { isPostable, isTransactionInDateRange } from './txFilters';
  * Handles condition matching, action execution, dry-run simulation, and batch reprocessing.
  */
 
+export const ruleGroupName = (rule: AutoRule): string => rule.groupName || 'General';
+
+/** Missing group flags keep legacy rules enabled. A disabled member gates the whole group. */
+export function disabledRuleGroups(rules: AutoRule[]): Set<string> {
+  return new Set(rules.filter(rule => rule.groupIsActive === false).map(ruleGroupName));
+}
+
 export function sortRulesByPriority(rules: AutoRule[]): AutoRule[] {
   return [...rules].sort((a, b) => {
     const priorityA = a.priority ?? 100;
@@ -15,7 +22,7 @@ export function sortRulesByPriority(rules: AutoRule[]): AutoRule[] {
 }
 
 export function evaluateRuleCondition(rule: AutoRule, tx: Transaction): boolean {
-  if (rule.isActive === false) return false;
+  if (rule.isActive === false || rule.groupIsActive === false) return false;
   const cond = rule.condition;
   if (!cond) return false;
 
@@ -221,7 +228,8 @@ export interface DryRunResult {
  * Dry-run test of rules against transaction ledger
  */
 export function dryRunRules(rules: AutoRule[], transactions: Transaction[]): DryRunResult {
-  const sortedRules = sortRulesByPriority(rules.filter(r => r.isActive !== false));
+  const disabledGroups = disabledRuleGroups(rules);
+  const sortedRules = sortRulesByPriority(rules.filter(r => r.isActive !== false && !disabledGroups.has(ruleGroupName(r))));
   const matches: DryRunMatch[] = [];
   const rulesTriggered: Record<string, number> = {};
 
