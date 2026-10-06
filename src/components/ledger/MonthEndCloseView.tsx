@@ -16,6 +16,7 @@ import type { CloseItem } from '../../lib/closeChecklist';
 import { monthCloseState, monthEnd } from '../../lib/periodLock';
 import type { AppTab, PeriodStatus, Workspace } from '../../types';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import CloseComparisonPanel from './CloseComparisonPanel';
 
 /**
  * Month-End Close (R-01 checklist, R-02 sign-offs, R-03 soft/hard close, R-08 drafts, R-10 roles,
@@ -374,6 +375,9 @@ export default function MonthEndCloseView() {
             )}
           </div>
         </section>
+
+        {/* R-09: this month beside the month before and the same month last year, read-only. */}
+        <CloseComparisonPanel month={month} currency={workspace?.currency} />
 
         {canClose && (workspace?.lockDate || workspace?.softLockDate) && (
           <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 space-y-3" aria-labelledby="partial-unlock">
