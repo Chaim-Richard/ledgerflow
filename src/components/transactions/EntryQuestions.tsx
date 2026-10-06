@@ -16,14 +16,15 @@ export default function EntryQuestions({ transactionId }: { transactionId: strin
   const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
   const uid = useAuthStore(s => s.user?.uid) || '';
   const role = useCurrentRole();
-  const { queries } = useClientQueries(workspaceId, transactionId);
+  // nobody signed in (a guest, a preview): nothing to read
+  const { queries, reload } = useClientQueries(uid ? workspaceId : null, transactionId);
   const [asking, setAsking] = useState(false);
   const [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false);
   const boxId = useId();
   const mayAsk = ASKER_ROLES.includes(role);
 
-  if (!workspaceId || (!mayAsk && queries.length === 0)) return null;
+  if (!workspaceId || !uid || (!mayAsk && queries.length === 0)) return null;
 
   const ask = async () => {
     const problem = questionProblem(question);
@@ -33,6 +34,7 @@ export default function EntryQuestions({ transactionId }: { transactionId: strin
       await askAboutEntry(workspaceId, transactionId, question);
       setQuestion('');
       setAsking(false);
+      reload();
       toast.success('Question sent. The owner gets a notification.');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
@@ -65,7 +67,7 @@ export default function EntryQuestions({ transactionId }: { transactionId: strin
           </div>
         </div>
       )}
-      {queries.map(q => <ClientQueryThread key={q.id} query={q} workspaceId={workspaceId} uid={uid} role={role} />)}
+      {queries.map(q => <ClientQueryThread key={q.id} query={q} workspaceId={workspaceId} uid={uid} role={role} onChanged={reload} />)}
     </section>
   );
 }

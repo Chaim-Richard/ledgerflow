@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { db, getIdToken } from '../firebase';
-import { collection, limit, onSnapshot, query, where } from '../lib/db/firestore';
+import { collection, getDocs, limit, onSnapshot, query, where } from '../lib/db/firestore';
 import { sortQueries, type ClientQuery } from '../lib/clientQueries';
 
 /** Questions about entries (BD-07): written through the server, which checks who may ask, answer or close. */
@@ -28,24 +28,34 @@ export async function closeQuery(workspaceId: string, queryId: string): Promise<
   await call(workspaceId, `/${encodeURIComponent(queryId)}/close`, {});
 }
 
-/** The workspace's questions (or one entry's), live, waiting ones first. */
+/**
+ * The workspace's questions, live (the Questions screen), or one entry's, read once with `reload`
+ * after each change (the entry's window: no live connection held open for every entry opened).
+ * Waiting ones first.
+ */
 export function useClientQueries(workspaceId: string | null | undefined, transactionId?: string) {
   const [queries, setQueries] = useState<ClientQuery[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [round, setRound] = useState(0);
+  const reload = useCallback(() => setRound(r => r + 1), []);
 
   useEffect(() => {
-    setQueries([]);
     setFailed(false);
-    if (!workspaceId) { setLoading(false); return undefined; }
+    if (!workspaceId) { setQueries([]); setLoading(false); return undefined; }
     setLoading(true);
     const filters = [where('workspaceId', '==', workspaceId), ...(transactionId ? [where('transactionId', '==', transactionId)] : [])];
     const q = query(collection(db, 'clientQueries'), ...filters, limit(500));
-    return onSnapshot(q, snap => {
-      setQueries(sortQueries(snap.docs.map(d => ({ ...(d.data() as Omit<ClientQuery, 'id'>), id: d.id }))));
-      setLoading(false);
-    }, () => { setFailed(true); setLoading(false); });
-  }, [workspaceId, transactionId]);
+    const show = (docs: Array<{ id: string; data: () => unknown }>) =>
+      setQueries(sortQueries(docs.map(d => ({ ...(d.data() as Omit<ClientQuery, 'id'>), id: d.id }))));
+    if (transactionId) {
+      let live = true;
+      getDocs(q).then(snap => { if (live) { show(snap.docs); setLoading(false); } })
+        .catch(() => { if (live) { setFailed(true); setLoading(false); } });
+      return () => { live = false; };
+    }
+    return onSnapshot(q, snap => { show(snap.docs); setLoading(false); }, () => { setFailed(true); setLoading(false); });
+  }, [workspaceId, transactionId, round]);
 
-  return { queries, loading, failed };
+  return { queries, loading, failed, reload };
 }

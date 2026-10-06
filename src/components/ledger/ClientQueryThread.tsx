@@ -17,6 +17,8 @@ interface Props {
   role: string;
   /** The Questions screen shows which entry; the entry's own window does not need to. */
   onOpenEntry?: (transactionId: string) => void;
+  /** Called after an answer or a close (a list that is not live reads again). */
+  onChanged?: () => void;
 }
 
 const STATUS_STYLE: Record<ClientQuery['status'], string> = {
@@ -30,7 +32,7 @@ const when = (iso: string) => {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 };
 
-export default function ClientQueryThread({ query, workspaceId, uid, role, onOpenEntry }: Props) {
+export default function ClientQueryThread({ query, workspaceId, uid, role, onOpenEntry, onChanged }: Props) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState<'' | 'reply' | 'close'>('');
   const boxId = useId();
@@ -45,6 +47,7 @@ export default function ClientQueryThread({ query, workspaceId, uid, role, onOpe
     try {
       await replyToQuery(workspaceId, query.id, text);
       setText('');
+      onChanged?.();
       toast.success(isAsker ? 'Follow-up sent' : 'Answer sent');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
@@ -55,6 +58,7 @@ export default function ClientQueryThread({ query, workspaceId, uid, role, onOpe
     setBusy('close');
     try {
       await closeQuery(workspaceId, query.id);
+      onChanged?.();
       toast.success('Question closed');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
