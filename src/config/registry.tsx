@@ -76,6 +76,7 @@ export const VIEW_COMPONENTS: Record<string, ElementType> = {
   'sales': lazy(() => import('../components/sales/Sales')),
   'purchases': lazy(() => import('../components/purchases/Purchases')),
   'purchase-orders': lazy(() => import('../components/purchases/PurchaseOrdersView')),
+  'loans': lazy(() => import('../components/finance/LoansView')),
   'payroll': lazy(() => import('../components/hr/PayrollView')),
   'assets': lazy(() => import('../components/assets/FixedAssetsView')),
   'settings': lazy(() => import('../components/platform/Settings')),
@@ -146,6 +147,7 @@ export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition
   
   { id: 'purchases', label: { en: 'Purchases', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'money_out' },
   { id: 'purchase-orders', label: { en: 'Purchase Orders', he: 'הזמנות רכש' }, icon: ShoppingCart, groupId: 'money_out' },
+  { id: 'loans', label: { en: 'Loans', he: 'הלוואות' }, icon: Coins, groupId: 'money_out' },
   { id: 'payroll', label: { en: 'Payroll & Wages', he: 'שכר עובדים' }, icon: Users, groupId: 'money_out' },
 
   { id: 'reports', label: { en: 'Reports', he: 'דוחות' }, icon: FileText, groupId: 'reports' },

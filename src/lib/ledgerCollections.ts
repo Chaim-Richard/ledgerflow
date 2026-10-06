@@ -47,6 +47,7 @@ export const LEDGER_COLLECTIONS = {
   auditLogs: { collection: 'auditLogs', cap: 500, newestFirstBy: 'timestamp' },
   recurring: { collection: 'recurring', cap: 1000 },
   assets: { collection: 'assets', cap: 2000 },
+  loans: { collection: 'loans', cap: 1000 },
   scenarios: { collection: 'scenarios', cap: 100 },
 } as const satisfies Record<string, LedgerCollectionSpec>;
 

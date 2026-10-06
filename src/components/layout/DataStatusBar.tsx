@@ -12,7 +12,7 @@ export const COLLECTION_LABELS: Record<LedgerKey, string> = {
   vendors: 'vendors', invoices: 'invoices', creditNotes: 'credit notes', payments: 'payments', estimates: 'estimates',
   bills: 'bills', vendorCredits: 'vendor credits', inventory: 'items', budgets: 'budgets', projects: 'projects',
   journalEntries: 'journal entries', payRuns: 'pay runs', employees: 'employees', bankLines: 'bank lines',
-  reconciliations: 'reconciliations', auditLogs: 'activity', recurring: 'recurring schedules', assets: 'fixed assets',
+  reconciliations: 'reconciliations', auditLogs: 'activity', recurring: 'recurring schedules', assets: 'fixed assets', loans: 'loans',
   scenarios: 'scenarios',
 };
 

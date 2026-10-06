@@ -43,6 +43,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Manage suppliers and purchase bills. Inspect a bill, record payment and edit related metadata without leaving the form. Review taxes and totals before saving a bill.",
     "purchase-orders":
       "Prepare and track purchase orders. Inspect ordered items and use the existing receiving and bill workflows. A purchase order is not a posted bill.",
+    loans:
+      "Maintain loans the workspace owes: the lender, the principal, the rate, the term and the repayment schedule to the cent. Recording the money arriving or a payment posts one balanced entry through the ordinary posting path, so the period lock applies; a closed period refuses it. The screen never invents an account: it asks for the liability, interest and bank accounts it already has.",
     payroll:
       "Maintain employee information and inspect pay runs. Edit supported metadata and review the existing payroll workflow. A displayed calculation does not prove that a pay run was posted.",
     reports:
