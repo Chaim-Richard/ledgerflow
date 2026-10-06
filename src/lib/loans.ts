@@ -196,7 +196,28 @@ export function createLoanPaymentEntry(input: {
     type: 'actual',
     status: 'completed',
     lines,
+    // which installment this entry pays, so a payment posted but not yet noted on the loan still counts
+    metadata: { [LOAN_INSTALLMENT_KEY]: installment.number },
   };
+}
+
+export const LOAN_INSTALLMENT_KEY = 'loanInstallment';
+
+/**
+ * The installments already paid: those noted on the loan, and any whose entry is in the ledger.
+ * Posting the entry and noting it on the loan are two saves; when the second fails, the ledger
+ * still shows the payment, so the screen never offers (and posts) that installment again.
+ */
+export function recordedInstallments(loan: Pick<Loan, 'reference' | 'payments'>, transactions: Transaction[]): Array<{ installment: number }> {
+  const recorded = (loan.payments || []).map(p => ({ installment: p.installment }));
+  const seen = new Set(recorded.map(p => p.installment));
+  for (const tx of transactions || []) {
+    const n = tx.metadata?.[LOAN_INSTALLMENT_KEY];
+    if (tx.reference !== loan.reference || !isPostable(tx) || typeof n !== 'number' || seen.has(n)) continue;
+    seen.add(n);
+    recorded.push({ installment: n });
+  }
+  return recorded;
 }
 
 /**

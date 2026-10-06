@@ -30,6 +30,7 @@ import {
   loanLiabilityChoices,
   loanProblem,
   newLoanReference,
+  recordedInstallments,
 } from '../lib/loans';
 import type { Loan } from '../lib/loans';
 import { makeChartAccount, makeTransaction } from './fixtures';
@@ -228,6 +229,22 @@ describe('loan record and entries', () => {
     assert.equal(scheduleBalanceCents(schedule, [{ installment: 1 }, { installment: 2 }, { installment: 3 }]), 0);
   });
 
+  test('a payment posted but not yet noted on the loan still counts: it is never offered twice', () => {
+    const schedule = scheduleOf();
+    const entry = (id: string, n: number, status: Transaction['status'] = 'completed') => makeTransaction({
+      ...createLoanPaymentEntry({ loan, installment: schedule.installments[n - 1], date: '2026-02-28', bank, liability: loanAccount, interest: interestAccount }),
+      id, workspaceId: 'ws-1', status,
+    } as Partial<Transaction>);
+    assert.deepEqual(entry('t-1', 1).metadata, { loanInstallment: 1 });
+    // payment 1 noted on the loan; payment 2 posted, but noting it on the loan failed
+    const noted = { ...loan, payments: [{ installment: 1, date: '2026-02-28' }] };
+    const ledger = [entry('t-1', 1), entry('t-2', 2), entry('t-3', 3, 'draft'), { ...entry('t-x', 3), reference: 'LOAN-OTHER123' }];
+    const recorded = recordedInstallments(noted, ledger);
+    assert.deepEqual(recorded.map(r => r.installment), [1, 2], 'a draft and another loan\'s entry do not count');
+    assert.equal(nextInstallment(schedule, recorded)?.number, 3);
+    assert.equal(scheduleBalanceCents(schedule, recorded), schedule.installments[1].balanceCents);
+  });
+
   test('the reference and the rate read the way a person writes them', () => {
     assert.equal(newLoanReference('abc-def-1234'), 'LOAN-ABCDEF12');
     assert.equal(formatLoanRate(0.065), '6.5% a year');
@@ -253,6 +270,10 @@ describe('Recording a loan against a real database', { skip: !url && 'LF_TEST_DA
     liabilityAccountId: `${wsId}_loanacct`, interestAccountId: `${wsId}_interest`, bankAccountId: `${wsId}_bank`,
     currency: 'USD', reference: newLoanReference(loanId), payments: [],
   };
+  // the accounts as this workspace holds them (the entries must name its own accounts)
+  const dbBank = { ...bank, id: `${wsId}_bank` };
+  const dbLoan = { ...loanAccount, id: `${wsId}_loanacct` };
+  const dbInterest = { ...interestAccount, id: `${wsId}_interest` };
   const schedule = scheduleOf({ principalCents: loan.principalCents, annualRate: loan.annualRate, termMonths: loan.termMonths, startDate: loan.startDate, firstPaymentDate: loan.firstPaymentDate });
   let server: Server;
   let base = '';
@@ -300,8 +321,8 @@ describe('Recording a loan against a real database', { skip: !url && 'LF_TEST_DA
   });
 
   test('the money arriving is one balanced entry and the ledger reads the principal back', async () => {
-    assert.equal((await post('view-1', createLoanDisbursementEntry({ loan, bank, liability: loanAccount }))).status, 403, 'a viewer cannot post');
-    const res = await post('book-1', createLoanDisbursementEntry({ loan, bank, liability: loanAccount }));
+    assert.equal((await post('view-1', createLoanDisbursementEntry({ loan, bank: dbBank, liability: dbLoan }))).status, 403, 'a viewer cannot post');
+    const res = await post('book-1', createLoanDisbursementEntry({ loan, bank: dbBank, liability: dbLoan }));
     assert.equal(res.status, 200, JSON.stringify(res.body));
     const posted = await ledger();
     assert.equal(posted.length, 1);
@@ -311,7 +332,7 @@ describe('Recording a loan against a real database', { skip: !url && 'LF_TEST_DA
 
   test('a payment is split to the cent and the ledger balance follows the schedule', async () => {
     const first = schedule.installments[0];
-    const res = await post('owner-1', createLoanPaymentEntry({ loan, installment: first, date: first.dueDate, bank, liability: loanAccount, interest: interestAccount }));
+    const res = await post('owner-1', createLoanPaymentEntry({ loan, installment: first, date: first.dueDate, bank: dbBank, liability: dbLoan, interest: dbInterest }));
     assert.equal(res.status, 200, JSON.stringify(res.body));
     const posted = await ledger();
     const payment = posted.find(t => t.description === `Loan payment 1/3 — Northwind Bank`);
@@ -327,11 +348,11 @@ describe('Recording a loan against a real database', { skip: !url && 'LF_TEST_DA
 
   test('a closed month refuses the entry, so a payment cannot be back-dated into it', async () => {
     await db.collection('workspaces').doc(wsId).update({ lockDate: '2026-02-28' });
-    const refused = await post('book-1', createLoanPaymentEntry({ loan, installment: schedule.installments[1], date: '2026-02-28', bank, liability: loanAccount, interest: interestAccount }));
+    const refused = await post('book-1', createLoanPaymentEntry({ loan, installment: schedule.installments[1], date: '2026-02-28', bank: dbBank, liability: dbLoan, interest: dbInterest }));
     assert.equal(refused.status, 400, JSON.stringify(refused.body));
     assert.equal(refused.body.code, 'PERIOD_LOCKED', 'the period lock is what refused it');
     await db.collection('workspaces').doc(wsId).update({ lockDate: null });
-    const allowed = await post('book-1', createLoanPaymentEntry({ loan, installment: schedule.installments[1], date: '2026-03-28', bank, liability: loanAccount, interest: interestAccount }));
+    const allowed = await post('book-1', createLoanPaymentEntry({ loan, installment: schedule.installments[1], date: '2026-03-28', bank: dbBank, liability: dbLoan, interest: dbInterest }));
     assert.equal(allowed.status, 200, JSON.stringify(allowed.body));
     assert.equal(loanLedgerCents(loan, await ledger()), 40_398);
   });

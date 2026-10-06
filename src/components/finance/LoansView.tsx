@@ -37,6 +37,7 @@ import {
   loanLiabilityChoices,
   loanProblem,
   newLoanReference,
+  recordedInstallments,
 } from '../../lib/loans';
 import type { Loan, LoanDraft } from '../../lib/loans';
 import type { ChartAccount, Transaction } from '../../types';
@@ -372,10 +373,12 @@ export default function LoansView() {
             const info = schedules.get(loan.id);
             const posted = ledger.some(t => t.reference === loan.reference && isPostable(t));
             const ledgerOwed = loanLedgerCents(loan, ledger);
-            const scheduleOwed = info?.schedule ? scheduleBalanceCents(info.schedule, loan.payments) : 0;
-            const interestPaid = info?.schedule ? scheduleInterestPaidCents(info.schedule, loan.payments) : 0;
-            const next = info?.schedule ? nextInstallment(info.schedule, loan.payments) : null;
-            const paidCount = (loan.payments || []).length;
+            // noted on the loan or found in the ledger: a payment is never offered twice
+            const recorded = recordedInstallments(loan, ledger);
+            const scheduleOwed = info?.schedule ? scheduleBalanceCents(info.schedule, recorded) : 0;
+            const interestPaid = info?.schedule ? scheduleInterestPaidCents(info.schedule, recorded) : 0;
+            const next = info?.schedule ? nextInstallment(info.schedule, recorded) : null;
+            const paidCount = recorded.length;
             const isOpen = openLoan?.id === loan.id;
             const liability = account(loan.liabilityAccountId);
             return (
