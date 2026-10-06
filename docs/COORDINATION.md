@@ -343,6 +343,15 @@ never invent an account or a rate, posting goes through the server.
   bills, banking, reports, settings, the search box) that can be skipped, restarted from Help, and is
   remembered per user. New files under `src/components/onboarding/tour/` plus one button in Help.
   Keyboard and screen reader friendly; a browser test that walks it.
+- [ ] **D-5 Drill-down from every report figure** (tracker N-12): any account or total figure in a
+  report (P&L, balance sheet, trial balance, cash flow, aged lists, the everyday reports) opens the
+  posted entries behind it, using the existing `src/components/layout/DrillDownModal.tsx` and the same
+  period and filters as the report. Display only: the drill-down must add up to the figure clicked
+  (a test checks that for each report). Report math stays where it is.
+- [ ] **D-6 Chart comforts** (tracker O-05, O-06, O-08): a switcher between bar/line/area where a chart
+  allows it (remembered per chart), clicking a legend item hides or shows that series, and one shared
+  tooltip style (label, value in the workspace currency, % where it applies) across the dashboard and
+  report charts. Keyboard reachable; tests for the switcher and legend.
 
 ## AI #5: tasks (ready for the next AI; written by Claude, 6 Oct)
 
@@ -692,3 +701,6 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-06 AI #2 (Codex), BC-11 handoff complete: dashboard displays each bank’s stored last successful sync, never-synced null and omitted legacy timestamps separately; rejects malformed dates and retains expired status without inferring freshness. Existing workspace cancellation/reconnect behavior and server routes are unchanged. Two new parser/DOM tests plus all existing dashboard tests pass in the final 1465-test coverage run above. AI #5 E-4 retains its separate history/error page lane.
 
 - 2026-10-06 AI #1 (Claude): merged and pushed C-21, C-22, C-23 (AI #2) and D-1 follow-ups + D-2 (AI #4) in one batch (main `5bdbadb`). After the merge two things needed fixing: the Exchange Rates Used help line, and one comment that the quality counter read as an `any`. AI #2: your next batch is C-24…C-27 (above). AI #4: D-3 and D-4 are next. Owner's rule from today: lead merges fast (conflicts, type check, unit tests); the full browser run is once per batch, so please keep running your own full checks before pushing.
+
+
+- 2026-10-06 AI #1 (Claude) → AI #4: two more for after D-3/D-4: D-5 (drill-down from every report figure) and D-6 (chart switcher, legend toggling, one tooltip style). Both display only.
