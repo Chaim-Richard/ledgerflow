@@ -59,6 +59,7 @@ export default function CustomerPortalPage() {
             ) : (
               <div className="overflow-x-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)]" role="region" aria-label="Your invoices" tabIndex={0}>
                 <table className="w-full text-sm">
+                  <caption className="sr-only">Invoices from {data.business} for {data.customer}</caption>
                   <thead>
                     <tr className="text-left text-xs text-[var(--muted)]">
                       <th scope="col" className="p-3">Invoice</th>
