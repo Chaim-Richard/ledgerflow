@@ -352,6 +352,9 @@ export interface Customer {
   noStatements?: boolean;
   /** Set when the customer came from a spreadsheet import; lets the import be undone. */
   importBatchId?: string;
+  /** Customer portal (K-27): the private link's token and when it was made; written by the server only. */
+  portalToken?: string | null;
+  portalTokenAt?: string | null;
 }
 
 export interface CustomTemplate {

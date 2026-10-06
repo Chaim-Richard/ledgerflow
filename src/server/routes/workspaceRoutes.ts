@@ -19,6 +19,7 @@ import { incomingEventRouter } from './incomingEventRoutes';
 import { tagRouter } from './tagRoutes';
 import { journalTemplateRouter } from './journalTemplateRoutes';
 import { ScheduledReportError, sendScheduleNow } from '../services/scheduledReportService';
+import { portalLinkRouter } from './customerPortalRoutes';
 import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
 import { brandingRouter } from './brandingRoutes';
@@ -161,6 +162,8 @@ workspaceRouter.use('/:workspaceId/attachments', requireWorkspaceRole(['owner', 
 workspaceRouter.use('/:workspaceId/incoming-events', requireWorkspaceRole(['owner', 'accountant']), incomingEventRouter);
 // Tags for the whole workspace (K-15): members read; writers rename, merge and remove (checked in the route)
 workspaceRouter.use('/:workspaceId/tags', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), tagRouter);
+// Customer portal links (K-27): writers create or turn them off (checked in the service)
+workspaceRouter.use('/:workspaceId/customers/:customerId/portal-link', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), portalLinkRouter);
 // Scheduled reports (K-28): send one now (owners and accountants); the daily job sends the rest
 workspaceRouter.post('/:workspaceId/report-schedules/:scheduleId/send-now', requireWorkspaceRole(['owner', 'accountant']), async (req, res) => {
   try {

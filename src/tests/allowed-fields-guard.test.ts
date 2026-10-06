@@ -37,7 +37,7 @@ function interfaceFields(name: string): string[] {
 
 // table → [model, fields written only through the server]
 const TABLES: Record<string, [string, string[]]> = {
-  customers: ['Customer', []],
+  customers: ['Customer', ['portalToken', 'portalTokenAt']],
   chartAccounts: ['ChartAccount', []],
   projects: ['Project', []],
   supportTickets: ['SupportTicket', []],
