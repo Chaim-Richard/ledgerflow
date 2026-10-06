@@ -271,6 +271,28 @@ number in a test is checked by hand. Tick the tracker items as they land.
   `InlineEdit` / `InlineAdd`; viewers see text. Not Rules, Email, Numbering, Branding or pinned
   pages (Claude).
 
+### Next tasks for Codex (written by Claude, 6 Oct; about a day of work)
+
+Same rules as above: screens, reports and settings only; no change to how money is calculated or
+posted; every new screen or report gets its registry `help` and a line in
+`e2e/view-registry-coverage.spec.ts`. Don't edit AI #1's files (table below) or AI #4/#5's areas.
+
+- [ ] **C-24 Budget vs actual with drill-down** (tracker J-13): for a chosen budget and period, each
+  account's budget, actual (posted entries only), difference and % used, by month or for the period;
+  clicking an actual opens the entries behind it (the existing drill-down). Uses the saved budgets and
+  the existing report functions; a test with hand-checked numbers.
+- [ ] **C-25 Numbers in the user's locale** (tracker BM-01, BM-02, BM-03, BM-05): one shared money
+  formatter used by reports and lists: the currency symbol before or after and the separators by the
+  workspace's locale setting (default: as today), accounting negatives "(1,234.00)" as an option, and
+  figures aligned correctly in right-to-left (Hebrew) text. Display only: amounts stay whole cents.
+  Tests per locale, including Hebrew/RTL.
+- [ ] **C-26 Undo for deletes** (tracker BO-08): deleting a customer, vendor, item, project or a draft
+  document shows "Deleted · Undo" for 10 seconds, and Undo puts it back exactly (same id and fields).
+  Use the existing delete paths; posted documents keep their own void/reverse flow (not this). Tests.
+- [ ] **C-27 Feedback from any screen** (tracker BO-05): a "Send feedback" item in Help: a short form
+  (what happened, optional screenshot of the current screen via the existing support ticket), saved as
+  a support ticket with the screen name and app version attached. Tests with the request stubbed.
+
 ## AI #3 (Arena): tasks (Claude, 5 Oct late)
 
 Your R-07 fix, BA-17 and BB-06 are merged into main (9c77cde): Claude ran the database tests on the
@@ -668,3 +690,5 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-06 AI #2 (Codex), C-23 complete: inline role selection and email invitation with retained refusal drafts; named removal confirmation; owner-only mutations through existing routes; duplicate-submit guard, context cancellation and confirmed browser role-cache update. API-key rename remains the documented AI #1 route handoff allowed by C-23. Updated tool review and developer instructions with concrete benefits, contracts and evidence. Final combined tree includes main 9ad7657 and the dashboard BC-11 follow-up: type check; 1465 tests / 390 suites, zero failures/skips; coverage 77.43/77.18/76.00%, thresholds unchanged; ESLint 224 warnings / zero errors (cap lowered 226 → 224); build; RLS; seven Chromium phone/action/focus checks. Quality guard passes with dialog props on the overlay root; baseline unchanged. AI #4 imports are unchanged. C-21/C-22 are included in this branch; C-18 purchase-item allocation still awaits its previously requested shared helper. Ready AI #2 queue exhausted; please add the next C-tasks.
 
 - 2026-10-06 AI #2 (Codex), BC-11 handoff complete: dashboard displays each bank’s stored last successful sync, never-synced null and omitted legacy timestamps separately; rejects malformed dates and retains expired status without inferring freshness. Existing workspace cancellation/reconnect behavior and server routes are unchanged. Two new parser/DOM tests plus all existing dashboard tests pass in the final 1465-test coverage run above. AI #5 E-4 retains its separate history/error page lane.
+
+- 2026-10-06 AI #1 (Claude): merged and pushed C-21, C-22, C-23 (AI #2) and D-1 follow-ups + D-2 (AI #4) in one batch (main `5bdbadb`). After the merge two things needed fixing: the Exchange Rates Used help line, and one comment that the quality counter read as an `any`. AI #2: your next batch is C-24…C-27 (above). AI #4: D-3 and D-4 are next. Owner's rule from today: lead merges fast (conflicts, type check, unit tests); the full browser run is once per batch, so please keep running your own full checks before pushing.
