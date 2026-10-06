@@ -35,6 +35,8 @@ import WriteOffModal from './WriteOffModal';
 import SpreadDialog from '../common/SpreadDialog';
 import { spreadProgress } from '../../lib/prepaidSchedule';
 import { undoSpreadRequest } from '../../services/spreadActions';
+import { estimateDeposits } from '../../lib/advancePayments';
+import { applyEstimateDeposits } from '../../services/depositActions';
 import InvoiceEmailDialog from './InvoiceEmailDialog';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import ReceivePaymentModal from './ReceivePaymentModal';
@@ -464,6 +466,21 @@ export default function Sales() {
                             <DollarSign size={16} />
                           </button>
                         )}
+                        {(() => {
+                          // BE-05: the estimate's deposit waits until its invoice is issued
+                          const deposit = estimateDeposits(payments || [], inv.metadata?.convertedFromEstimateId as string | undefined);
+                          const due = calculateAmountDue(inv);
+                          if (!canEditContacts || deposit.unappliedCents <= 0 || due <= 0 || ['draft', 'void', 'rejected', 'cancelled', 'paid'].includes(String(inv.status))) return null;
+                          return (
+                            <button type="button"
+                              onClick={() => void applyEstimateDeposits(currentWorkspaceId || '', inv, deposit.waiting, due)}
+                              className="px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                              aria-label={`Apply the estimate's deposit to invoice ${inv.number || ''}`.trim()}
+                            >
+                              Apply deposit {formatCurrency(Math.min(deposit.unappliedCents, due), inv.currency)}
+                            </button>
+                          );
+                        })()}
                         {canEditContacts && !['draft', 'void', 'rejected', 'cancelled'].includes(String(inv.status)) && (inv.revenueSchedule ? (
                           <button type="button"
                             onClick={async () => {
