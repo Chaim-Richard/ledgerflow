@@ -2248,7 +2248,13 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BF-03 Item bundles
 - [ ] BF-04 Landed cost on receipt
 - [ ] BF-05 Consignment stock
-- [ ] BF-06 Sales returns / RMA — **expanded 7 Oct (roadmap, Later P0, after BF-08 step 1)**: a return is linked to the delivery or invoice line it returns. It gives back at most the quantity that left, at the cost it left at, only once, and it reverses that cost. The credit note and the refund use K-09
+- [x] BF-06 Sales returns / RMA — **done 7 Oct**:
+  - **The form:** a customer credit note can be for one invoice (the new "For invoice" choice; none could be linked before) and list the goods that came back, per stock line of that invoice. It shows what was sold and what earlier returns took back, and offers the credit at the invoice's price.
+  - **Posting:** puts the units back into stock at the cost they left at (DR Inventory, CR Cost of goods sold), once.
+  - **Limits:** a line can't take back more than was sold, less earlier returns. That is checked on the screen and again by the server.
+  - **Undoing:** each return is in the stock history, and voiding the credit note takes the units out again.
+  - **Bug fixed on the way:** a voided credit note's reversal didn't name the invoice, so its return would still have counted against the line. It is now found either way, and the reversal names the invoice too.
+  - Code: `src/lib/salesReturns.ts`, `ReturnedGoodsFields.tsx`, `creditPosting.ts`, `cogsStockService.ts`; tests `sales-returns.test.tsx`, with the database. The original plan was: a return is linked to the delivery or invoice line it returns. It gives back at most the quantity that left, at the cost it left at, only once, and it reverses that cost. The credit note and the refund use K-09
 - [ ] BF-07 Purchase returns
 - [~] BF-08 Partial fulfilment (step 1 done 7 Oct; step 2 open) — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`); step 1 V1, step 2 Later P0)**.
   - **Found 7 Oct:** the New Estimate form took one amount and no lines, it saved every quote as USD, and a quote or order line could not name an item (`Estimate.lines` has no `itemId`). Invoicing an order (`orderPartInvoice` in `src/lib/salesOrders.ts`, and `convertEstimateToInvoice`) makes invoice lines without one. So an order of stock items never lowers stock and never books cost of goods sold, even when it is invoiced in one go, because `planInvoiceCogs` (`src/services/invoiceCogs.ts`) needs `line.itemId`. The same sale typed straight onto an invoice does both.

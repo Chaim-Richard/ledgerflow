@@ -7,7 +7,7 @@
  * Pure: the Stock history window and the nightly check read it.
  */
 
-export type StockMoveKind = 'sale' | 'sale-reversal' | 'purchase' | 'opening' | 'adjustment' | 'count' | 'manual-cogs';
+export type StockMoveKind = 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'opening' | 'adjustment' | 'count' | 'manual-cogs';
 
 export interface StockMove {
   id?: string;
@@ -25,7 +25,7 @@ export interface StockMove {
   /** the value that moved, signed like the quantity (whole cents) */
   valueCents: number;
   transactionId?: string | null;
-  documentType?: 'invoice' | 'adjustment' | 'import';
+  documentType?: 'invoice' | 'credit-note' | 'adjustment' | 'import';
   documentId?: string;
   /** the order the moves happened in: the time written, then the place in that write */
   seq: string;
@@ -36,6 +36,8 @@ export interface StockMove {
 export const STOCK_MOVE_LABEL: Record<StockMoveKind, string> = {
   sale: 'Sold',
   'sale-reversal': 'Sale undone',
+  return: 'Returned by the customer',
+  'return-reversal': 'Return undone',
   purchase: 'Bought',
   opening: 'Opening stock',
   adjustment: 'Adjusted',

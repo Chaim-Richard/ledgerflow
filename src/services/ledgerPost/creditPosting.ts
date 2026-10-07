@@ -1,9 +1,10 @@
 import { getLocalDateISO, roundCents } from '../../lib/utils';
-import { isIncomeAccount } from '../../lib/accountUtils';
+import { planReturnEntries, returnableLines, returnProblem } from '../../lib/salesReturns';
+import { isIncomeAccount, resolveAccountRole } from '../../lib/accountUtils';
 import { CreditNote, VendorCredit } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
-import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi, reversalDate } from './postingKit';
+import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi, reversalDate, findAccount, getInvoices } from './postingKit';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
 
 /**
@@ -72,7 +73,9 @@ export async function postCreditNoteLedger(
         creditNoteId,
         type: 'credit-note-reversal',
         reversesTxId: prevTx.id,
-        isReversal: true
+        isReversal: true,
+        // a returned-goods entry's reversal names its invoice too (BF-06)
+        ...(prevTx.metadata?.invoiceId ? { invoiceId: prevTx.metadata.invoiceId } : {})
       },
       lines: TransactionTemplates.buildReversalLines(prevTx.lines || [], prevTx.description)
     });
@@ -126,6 +129,24 @@ export async function postCreditNoteLedger(
     ]
   };
   txsToPost.push(inBaseCurrency(cnTx, workspaceId, context));
+
+  // BF-06: goods the customer sent back go back into stock, at the cost they left at
+  const goods = (creditNoteData.returnedGoods || []).filter(g => g.quantity > 0);
+  if (goods.length > 0) {
+    const invoice = getInvoices(context).find(i => i.id === creditNoteData.invoiceId);
+    if (!invoice) throw new Error('Returned goods need the credited invoice: link the credit note to it, or open Sales and try again.');
+    // the credit note's own earlier returns are reversed above, so they don't count against it
+    const lines = returnableLines(invoice, getTransactions(context), creditNoteId);
+    const problem = returnProblem(goods, lines);
+    if (problem) throw new Error(problem);
+    const inventoryAccount = findAccount(accounts, mappings, ['inventory', 'stock', 'inventory asset'], a => resolveAccountRole(a) === 'inventory');
+    const cogsAccount = findAccount(accounts, mappings, ['cogs', 'cost of goods sold', 'direct costs'], a => resolveAccountRole(a) === 'cogs');
+    if (!inventoryAccount || !cogsAccount) throw new Error('Returned goods need an Inventory account and a Cost of Goods Sold account in the chart of accounts.');
+    txsToPost.push(...planReturnEntries({
+      creditNote: { id: creditNoteId, number: creditNoteData.number, invoiceId: creditNoteData.invoiceId, date: cnDate, returnedGoods: goods },
+      lines, uid, workspaceId, baseCurrency: currentWs?.currency || 'USD', inventoryAccount, cogsAccount,
+    }) as PostableTransaction[]);
+  }
 
   await postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
 }

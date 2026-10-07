@@ -299,6 +299,8 @@ export interface CreditNote {
   taxInclusive?: boolean;
   taxVersion?: number;
   taxTreatment?: TaxTreatment;
+  /** BF-06: goods the customer sent back, per stock line of the credited invoice (src/lib/salesReturns.ts) */
+  returnedGoods?: Array<{ invoiceLineId: string; itemId: string; quantity: number }>;
 }
 
 export interface VendorCredit {

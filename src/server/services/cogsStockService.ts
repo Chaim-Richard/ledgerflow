@@ -1,6 +1,7 @@
 import { FieldValue } from '../db/firestore';
 import type { DocumentData, Firestore, Transaction as DbTransaction } from '../db/firestore';
 import { INVOICE_COGS_TYPE } from '../../services/invoiceCogs';
+import { SALES_RETURN_TYPE } from '../../lib/salesReturns';
 import { isPostable } from '../../lib/txFilters';
 import type { Transaction } from '../../types';
 import { writeStockMoves, type NewStockMove } from './stockMoveService';
@@ -34,7 +35,7 @@ interface LedgerEntry {
 interface PendingMove {
   itemId: string;
   quantity: number;
-  kind: 'sale' | 'sale-reversal';
+  kind: 'sale' | 'sale-reversal' | 'return' | 'return-reversal';
   entry: LedgerEntry;
   valueCents: number;
 }
@@ -52,6 +53,25 @@ function cogsMove(tx: { metadata?: Record<string, unknown> }): { itemId: string;
   return { itemId, quantity };
 }
 
+/** Goods a customer sent back (BF-06, src/lib/salesReturns.ts): the units come back into stock. */
+function returnMove(tx: { metadata?: Record<string, unknown> }): { itemId: string; quantity: number; invoiceId: string; lineId: string } | null {
+  const meta = tx.metadata;
+  if (meta?.type !== SALES_RETURN_TYPE) return null;
+  const quantity = Number(meta.quantity);
+  if (typeof meta.inventoryItemId !== 'string' || !meta.inventoryItemId || typeof meta.invoiceId !== 'string' || typeof meta.returnForLineId !== 'string' || !Number.isFinite(quantity) || quantity <= 0) {
+    throw new LedgerPostingError(400, 'A goods-returned entry needs the item, the invoice line and a positive quantity.');
+  }
+  return { itemId: meta.inventoryItemId, quantity, invoiceId: meta.invoiceId, lineId: meta.returnForLineId };
+}
+
+/** What an entry does to stock: a sale takes units out, a return brings them back. */
+function stockEffect(tx: LedgerEntry): { itemId: string; quantity: number; kind: 'sale' | 'return' } | null {
+  const sale = cogsMove(tx);
+  if (sale) return { itemId: sale.itemId, quantity: -sale.quantity, kind: 'sale' };
+  const back = returnMove(tx);
+  return back ? { itemId: back.itemId, quantity: back.quantity, kind: 'return' } : null;
+}
+
 export interface PreparedStockMoves {
   /** Queue the stock writes on the transaction (call after all reads). */
   apply: () => void;
@@ -63,6 +83,37 @@ export interface PreparedStockMoves {
  * Reads what the entries need and checks the reversal rules. Call inside the posting's
  * database transaction, before any write.
  */
+/**
+ * BF-06: a line of an invoice can't take back more than was sold on it. Counts the returns in force
+ * after this request (stored ones, this request's new ones, less those this request reverses) against
+ * the line's sale in force.
+ */
+async function checkReturns(db: Firestore, t: DbTransaction, workspaceId: string, entries: LedgerEntry[]): Promise<void> {
+  const invoices = new Set(entries.map(e => returnMove(e)?.invoiceId).filter((x): x is string => Boolean(x)));
+  for (const invoiceId of invoices) {
+    const stored = (await t.get(db.collection('transactions').where('workspaceId', '==', workspaceId).where('metadata.invoiceId', '==', invoiceId))).docs
+      .map(d => ({ ...d.data(), id: d.id }) as Transaction);
+    // the reversals of those entries need not name the invoice (a voided credit note's names only the note)
+    const storedIds = stored.map(e => e.id);
+    const reversals: Transaction[] = [];
+    for (let i = 0; i < storedIds.length; i += 200) {
+      const snap = await t.get(db.collection('transactions').where('workspaceId', '==', workspaceId).where('metadata.reversesTxId', 'in', storedIds.slice(i, i + 200)));
+      reversals.push(...snap.docs.map(d => ({ ...d.data(), id: d.id }) as Transaction));
+    }
+    const all = [...stored, ...entries.filter(e => e.metadata?.invoiceId === invoiceId) as unknown as Transaction[]];
+    const reversed = new Set([...all, ...reversals, ...entries as unknown as Transaction[]].map(e => e.metadata?.reversesTxId).filter(Boolean));
+    const live = all.filter(e => isPostable(e) && !e.metadata?.isReversal && !e.reversalEventId && !reversed.has(e.id));
+    const lines = new Set(live.map(e => (e.metadata?.type === SALES_RETURN_TYPE ? String(e.metadata.returnForLineId) : '')).filter(Boolean));
+    for (const lineId of lines) {
+      const sold = live.filter(e => e.metadata?.type === INVOICE_COGS_TYPE && e.metadata?.cogsForLineId === lineId).reduce((s, e) => s + (Number(e.metadata?.quantity) || 0), 0);
+      const back = live.filter(e => e.metadata?.type === SALES_RETURN_TYPE && e.metadata?.returnForLineId === lineId).reduce((s, e) => s + (Number(e.metadata?.quantity) || 0), 0);
+      if (round6(back) > round6(sold)) {
+        throw new LedgerPostingError(409, `Only ${sold} of that item were sold on this invoice line, and ${back} would have come back. Return at most what was sold.`);
+      }
+    }
+  }
+}
+
 export async function prepareStockMoves(
   db: Firestore,
   t: DbTransaction,
@@ -75,18 +126,20 @@ export async function prepareStockMoves(
   // the reversal entry of each target in this request (its stock move belongs to it)
   const reversalOf = new Map(entries.filter(e => typeof e.metadata?.reversesTxId === 'string').map(e => [String(e.metadata!.reversesTxId), e]));
   const putBack = (target: string, original: LedgerEntry) => {
-    const move = cogsMove(original);
-    if (!move) return;
-    add(move.itemId, move.quantity);
-    pending.push({ itemId: move.itemId, quantity: move.quantity, kind: 'sale-reversal', entry: reversalOf.get(target) || original, valueCents: Math.abs(Number(original.totalAmountCents) || 0) });
+    const effect = stockEffect(original);
+    if (!effect) return;
+    const sign = effect.quantity > 0 ? -1 : 1;
+    add(effect.itemId, -effect.quantity);
+    pending.push({ itemId: effect.itemId, quantity: -effect.quantity, kind: effect.kind === 'sale' ? 'sale-reversal' : 'return-reversal', entry: reversalOf.get(target) || original, valueCents: sign * Math.abs(Number(original.totalAmountCents) || 0) });
   };
 
   for (const tx of entries) {
-    const move = cogsMove(tx);
-    if (!move) continue;
-    add(move.itemId, -move.quantity);
-    pending.push({ itemId: move.itemId, quantity: -move.quantity, kind: 'sale', entry: tx, valueCents: -Math.abs(Number(tx.totalAmountCents) || 0) });
+    const effect = stockEffect(tx);
+    if (!effect) continue;
+    add(effect.itemId, effect.quantity);
+    pending.push({ itemId: effect.itemId, quantity: effect.quantity, kind: effect.kind, entry: tx, valueCents: Math.sign(effect.quantity) * Math.abs(Number(tx.totalAmountCents) || 0) });
   }
+  await checkReturns(db, t, workspaceId, entries);
 
   // Reversals: each target once, in this workspace, not reversed before.
   const targets: string[] = [];
@@ -149,11 +202,13 @@ export async function prepareStockMoves(
       for (const p of pending.filter(x => x.itemId === snap.id)) {
         const after = round6(before + p.quantity);
         const invoiceId = typeof p.entry.metadata?.invoiceId === 'string' ? p.entry.metadata.invoiceId : undefined;
+        const creditNoteId = typeof p.entry.metadata?.creditNoteId === 'string' ? p.entry.metadata.creditNoteId : undefined;
+        const document = creditNoteId ? { documentType: 'credit-note' as const, documentId: creditNoteId } : invoiceId ? { documentType: 'invoice' as const, documentId: invoiceId } : {};
         moves.push({
           workspaceId, itemId: snap.id, itemName: String(item.name || ''), date: String(p.entry.date || '').slice(0, 10), kind: p.kind,
           quantity: p.quantity, quantityBefore: before, quantityAfter: after,
           unitCostCents: Math.round(Math.abs(p.valueCents) / Math.abs(p.quantity)), valueCents: p.valueCents,
-          transactionId: p.entry.id, ...(invoiceId ? { documentType: 'invoice' as const, documentId: invoiceId } : {}),
+          transactionId: p.entry.id, ...document,
           uid: String(p.entry.uid || ''),
         });
         before = after;

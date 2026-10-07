@@ -22,6 +22,8 @@ import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { nextDocumentNumber } from '../../services/documentNumbers';
 import { suggestionsFrom } from '../../lib/inlineEdit';
 import { creditDateEditable, duplicateNumber } from '../../lib/creditEdits';
+import { returnableLines, returnProblem } from '../../lib/salesReturns';
+import ReturnedGoodsFields from './ReturnedGoodsFields';
 
 export default function CreditNotesView() {
   const [activeTab, setActiveTab] = useState<'customer' | 'vendor'>('customer');
@@ -34,6 +36,7 @@ export default function CreditNotesView() {
   const creditNotes = useLedgerStore(s => s.creditNotes || []);
   const vendorCredits = useLedgerStore(s => s.vendorCredits || []);
   const invoices = useLedgerStore(s => s.invoices || []);
+  const transactions = useLedgerStore(s => s.transactions || []);
   const bills = useLedgerStore(s => s.bills || []);
   const { loading } = useLedgerCollections('bills', 'creditNotes', 'customers', 'invoices', 'vendorCredits', 'vendors');
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
@@ -58,6 +61,8 @@ export default function CreditNotesView() {
   const [customerId, setCustomerId] = useState('');
   const [vendorId, setVendorId] = useState('');
   const [invoiceId, setInvoiceId] = useState('');
+  // BF-06: how many of each stock line of the credited invoice came back
+  const [returned, setReturned] = useState<Record<string, string>>({});
   const [billId, setBillId] = useState('');
   const [amountStr, setAmountStr] = useState('');
   const [reason, setReason] = useState('');
@@ -88,6 +93,13 @@ export default function CreditNotesView() {
     const customer = customers.find(c => c.id === customerId);
     // A credit for an invoice is in its currency and reverses its share of the tax (L-118)
     const invoice = invoiceId ? invoices.find(i => i.id === invoiceId) : undefined;
+    const lines = invoice ? returnableLines(invoice, transactions) : [];
+    const returnedGoods = lines.flatMap(l => (Number(returned[l.invoiceLineId]) > 0 ? [{ invoiceLineId: l.invoiceLineId, itemId: l.itemId, quantity: Number(returned[l.invoiceLineId]) }] : []));
+    const problem = returnProblem(returnedGoods, lines);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
     const newCreditNote: Partial<CreditNote> = {
       customerId,
       customerName: customer?.name || 'Customer',
@@ -101,6 +113,7 @@ export default function CreditNotesView() {
       currency: invoice?.currency || workspaceCurrency,
       ...(invoice?.exchangeRate ? { exchangeRate: invoice.exchangeRate } : {}),
       ...(invoice ? creditTaxFrom(amountCents, invoice) : {}),
+      ...(returnedGoods.length > 0 ? { returnedGoods } : {}),
     };
 
     await addEntity('creditNotes', newCreditNote, `Credit Note ${newCreditNote.number} issued successfully!`);
@@ -146,6 +159,7 @@ export default function CreditNotesView() {
     setCustomerId('');
     setVendorId('');
     setInvoiceId('');
+    setReturned({});
     setBillId('');
     setAmountStr('');
     setReason('');
@@ -386,6 +400,27 @@ export default function CreditNotesView() {
                       ))}
                     </select>
                   </Labelled>
+                  {/* BF-06: the invoice the credit is for, and the goods that came back from it */}
+                  {customerId && (
+                    <div className="mt-3 space-y-3">
+                      <Labelled labelClassName="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" label="For invoice (optional)">
+                        <select value={invoiceId} onChange={(e) => { setInvoiceId(e.target.value); setReturned({}); }}
+                          className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white">
+                          <option value="">-- Not for one invoice --</option>
+                          {invoices.filter(i => i.customerId === customerId && !['draft', 'void', 'cancelled'].includes(String(i.status))).map(i => (
+                            <option key={i.id} value={i.id}>{i.number || i.id} · {i.date}</option>
+                          ))}
+                        </select>
+                      </Labelled>
+                      {invoiceId && (() => {
+                        const invoice = invoices.find(i => i.id === invoiceId);
+                        return invoice ? (
+                          <ReturnedGoodsFields lines={returnableLines(invoice, transactions)} value={returned} onChange={setReturned}
+                            currency={invoice.currency || workspaceCurrency} onUsePrice={cents => setAmountStr((cents / 100).toFixed(2))} />
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>

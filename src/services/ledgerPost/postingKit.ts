@@ -19,6 +19,8 @@ export interface EntityMutation {
 
 export interface LedgerPostContext {
   accounts?: ChartAccount[];
+  /** the invoices a credit note's returned goods are checked against (BF-06) */
+  invoices?: Invoice[];
   lockDate?: string | null;
   transactions?: Transaction[];
   workspaces?: Workspace[];
@@ -51,6 +53,10 @@ export function getLockDate(context?: LedgerPostContext): string | null {
 
 export function getTransactions(context?: LedgerPostContext): Transaction[] {
   return context?.transactions || useLedgerStore.getState().transactions || [];
+}
+
+export function getInvoices(context?: LedgerPostContext): Invoice[] {
+  return context?.invoices || useLedgerStore.getState().invoices || [];
 }
 
 export function getWorkspaces(context?: LedgerPostContext): Workspace[] {
