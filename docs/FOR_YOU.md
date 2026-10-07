@@ -5,7 +5,7 @@ is needed, it takes the default written below and moves on. When you have time, 
 as you like in one message, e.g. **"1 done, 4 yes, 11 hide, 10 keep Hebrew"**. Answered items are
 removed from this list.
 
-Last updated: 2026-10-05.
+Last updated: 2026-10-07.
 
 ## A. Settings only you can change (a few minutes each)
 
@@ -133,6 +133,22 @@ Last updated: 2026-10-05.
     crossed out once it is applied. If the connector asks you to approve, approving it is all that is
     needed. Until it is applied, saving a loan says nothing was saved, and deleting a whole workspace
     would stop at the missing table.
+
+25. **Four database changes to paste (7 Oct) — please look soon.** The code is on main; the
+    Supabase connector timed out on all of them (the first one rebuilds the list indexes, and a
+    rebuild waits until each table is free, the same as item 22). First, in Supabase → SQL editor,
+    check nothing is stuck (a waiting index build can hold up saving on that table):
+    `select pid, now() - query_start as running, left(query, 60) from pg_stat_activity where state <> 'idle' and query ilike '%create index%';`
+    If a row has been running for minutes, stop it with `select pg_cancel_backend(<pid>);`.
+    Then paste each file, in this order, and Run (each is safe to run twice):
+    1. `supabase/migrations/20261013010000_list_order_indexes.sql` (faster long lists, L-87)
+    2. `supabase/migrations/20261013020000_pay_runs_server_only.sql` (pay runs written only by the server, U-10)
+    3. `supabase/migrations/20261013030000_private_helpers.sql` (three helper functions out of the public API, L-86)
+    4. `supabase/migrations/20261013040000_require_two_step.sql` (owners can require two-step login, Y-30)
+    *Until then:* everything works as before; payroll approval is enforced by the server but a
+    direct database write around the app is not yet blocked, and "require two-step login" is
+    enforced by the server but not yet by the database rules. Claude tries the connector again at
+    the next session; this item is crossed out once they are in.
 
 ## C. Good to know (no action needed)
 
