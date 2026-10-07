@@ -11,6 +11,7 @@ import { Bill, Vendor, ChartAccount } from '../../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { BudgetLeft } from '../common/BudgetLeft';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
@@ -472,6 +473,8 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                       <option value="">Select Account</option>
                       {safeAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
+                    {/* M-20: what is left of this account's budget for the bill's date */}
+                    <BudgetLeft accountId={split.accountId} date={bill.date || ''} addingCents={Math.round(split.amountCents * (billCurrency === workspaceCurrency ? 1 : (bill.exchangeRate || 1)))} excludeDocumentId={bill.id} currency={workspaceCurrency} />
                   </div>
                   <div className="col-span-3 space-y-1">
                     <label htmlFor={`bill-split-amount-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Amount ({billCurrency})</label>

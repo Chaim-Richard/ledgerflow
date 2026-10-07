@@ -1815,7 +1815,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] M-17 Bulk action bar (= K-06)
 - [x] M-18 Bulk import wizard (= K-01)
 - [x] M-19 Customer portal — done as K-27
-- [ ] M-20 Available budget
+- [x] M-20 Available budget — done 7 Oct: under a bill's expense account and Money out, what is left of the account's budget for that date's period, amber when the amount would go over (`src/lib/availableBudget.ts`, `BudgetLeft.tsx`; tests `available-budget.test.tsx`)
 - [ ] M-21 Standard costing
 
 # SECTION N — REPORT FEATURE MATRIX
