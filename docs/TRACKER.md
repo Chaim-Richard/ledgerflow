@@ -1999,7 +1999,13 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] W-03 COGS posting on sale + stock moves with the ledger (tested)
 - [x] W-04 Stock count: enter counted quantities for any items; one entry for all differences (tested)
 - [x] W-05 Count variance account: chosen per count (default: an expense named shrinkage/adjustment/variance, else Cost of Goods Sold)
-- [ ] W-06 Negative-stock policy
+- [x] W-06 Negative-stock policy — **done 7 Oct**: one explicit rule.
+  - **By default:** an invoice that sells more than is on hand is recorded, stock goes below zero, and a warning says so. Simple books are never blocked.
+  - **Owner switch:** on Inventory, an owner can turn on "Refuse sales beyond stock". Then the server refuses any sale that would take an item below zero, and nothing of it is written. Sales within stock still work, and putting stock back (a reversal) is never refused.
+  - **Who sees what:** others see a line saying sales beyond stock are refused.
+  - **How it is stored:** only the server writes the setting (`refuseNegativeStock`, owners only, audited). No database change was needed.
+  - **Unchanged:** stock adjustments never go below zero, and the manual cost-of-goods-sold entry always refuses it.
+  - Code: `stockPolicyService.ts`, `PUT /api/v1/inventory/stock-policy`, the check in `cogsStockService.ts`, `StockPolicySwitch.tsx`. Tests: `stock-policy.test.tsx`, with the database.
 - [ ] W-07 Assembly / kitting
 - [ ] W-08 Backorder + drop-ship
 - [ ] W-09 Aging + slow-moving reports

@@ -56,7 +56,7 @@ Test repeated imports, ambiguous candidates, a partial/multi-entry match, unmatc
 
 Quantities are not editable financial cache values. `src/server/services/cogsStockService.ts` applies invoice-linked COGS stock movement and reversal in the same database transaction as the ledger entries. `stockAdjustmentService.ts` owns adjustments/counts. Preserve item IDs, quantity precision, quantity delta, item workspace and reversal-once rules.
 
-The quantity-protection migration prevents direct browser writes. Do not work around it by updating the item from a modal. A successful adjustment needs both stock and ledger evidence; a failed one needs neither change. Negative stock is currently a warning in some flows, so do not claim that every oversell is refused. Missing/deleted items have explicit warning behavior.
+The quantity-protection migration prevents direct browser writes. Do not work around it by updating the item from a modal. A successful adjustment needs both stock and ledger evidence; a failed one needs neither change. Selling below zero follows one workspace rule (W-06): by default an invoice is recorded with a warning; with the owner's "Refuse sales beyond stock" (`refuseNegativeStock`, server-written) `prepareStockMoves` refuses it with nothing written. Adjustments never go below zero, and the manual COGS route always refuses it. A new stock-decreasing path must go through `prepareStockMoves` to keep the rule. Missing/deleted items have explicit warning behavior.
 
 Use `stock-adjustments.test.ts`, `stock-dialogs.test.tsx`, invoice COGS tests and RLS checks. Include duplicate reversal, foreign-workspace item, invalid quantity and server failure where applicable.
 

@@ -8,6 +8,7 @@ import { formatTzDate, getLocalDateISO } from '../../lib/utils';
 import { z } from 'zod';
 import { requireWorkspaceRole } from './workspaceRoutes';
 import { adjustStock, StockAdjustmentError } from '../services/stockAdjustmentService';
+import { setNegativeStockPolicy } from '../services/stockPolicyService';
 
 /** Who may change stock or record its cost (viewers read only). */
 const STOCK_ROLES = ['owner', 'accountant', 'bookkeeper'];
@@ -221,3 +222,15 @@ inventoryRouter.post('/adjust', requireWorkspaceRole(STOCK_ROLES), (req, res) =>
 /** A stock count (W-04 W-05): the counted quantities; differences go to the offset (variance) account in one entry. */
 inventoryRouter.post('/count', requireWorkspaceRole(STOCK_ROLES), (req, res) => stockRequest(req, res, 'count'));
 
+/** W-06: an owner chooses whether a sale may take stock below zero (stockPolicyService.ts). */
+inventoryRouter.put('/stock-policy', requireWorkspaceRole(['owner']), async (req, res) => {
+  try {
+    const parsed = z.object({ workspaceId: z.string().min(1), refuseNegativeStock: z.boolean() }).strict().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Say whether to refuse sales beyond stock (true or false)' });
+    const user = requestUser(req);
+    res.json({ status: 'ok', ...(await setNegativeStockPolicy(getDb(), { workspaceId: parsed.data.workspaceId, uid: user.uid, email: user.email, refuse: parsed.data.refuseNegativeStock })) });
+  } catch (e) {
+    if (e instanceof StockAdjustmentError) return res.status(e.status).json({ error: e.message });
+    res.status(400).json({ error: errorMessage(e) });
+  }
+});

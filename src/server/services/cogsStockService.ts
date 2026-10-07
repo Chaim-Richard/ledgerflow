@@ -8,7 +8,10 @@ import type { Transaction } from '../../types';
  * Stock follows the ledger: a cost-of-goods-sold entry for an invoice line (metadata.type
  * 'invoice-cogs-auto') lowers the item's quantity on hand, and reversing that entry raises it
  * back. The stock change is written in the same database transaction as the ledger entries,
- * so the two can't drift apart. A ledger entry can be reversed only once.
+ * so the two can't drift apart. A ledger entry can be reversed only once. Selling more than is on
+ * hand is recorded with a warning, unless an owner turned on "Refuse sales beyond stock"
+ * (`refuseNegativeStock` on the workspace, W-06: stockPolicyService.ts); then it is refused and
+ * nothing is written. Putting stock back (a reversal) is never refused.
  */
 
 export class LedgerPostingError extends Error {
@@ -100,6 +103,9 @@ export async function prepareStockMoves(
   const itemIds = Array.from(deltas.keys()).filter(id => deltas.get(id) !== 0);
   const warnings: string[] = [];
   const writes: { id: string; quantityAtHand: number }[] = [];
+  // W-06: selling below zero is allowed with a warning, unless an owner chose to refuse it
+  const refuseBelowZero = itemIds.some(id => (deltas.get(id) || 0) < 0)
+    && (await t.get(db.collection('workspaces').doc(workspaceId))).data()?.refuseNegativeStock === true;
   if (itemIds.length > 0) {
     const items = await t.getAll(...itemIds.map(id => db.collection('inventory').doc(id)));
     for (const snap of items) {
@@ -110,7 +116,11 @@ export async function prepareStockMoves(
       }
       if (item.workspaceId !== workspaceId) throw new LedgerPostingError(403, 'Forbidden: inventory item belongs to another workspace.');
       const current = typeof item.quantityAtHand === 'number' ? item.quantityAtHand : 0;
-      const quantityAtHand = round6(current + (deltas.get(snap.id) || 0));
+      const delta = deltas.get(snap.id) || 0;
+      const quantityAtHand = round6(current + delta);
+      if (quantityAtHand < 0 && delta < 0 && refuseBelowZero) {
+        throw new LedgerPostingError(409, `Only ${Math.max(0, current)} of ${item.name || snap.id} in stock, and this needs ${-delta}. Record the stock received first (Inventory → Adjust stock); an owner can allow selling below zero on Inventory.`);
+      }
       if (quantityAtHand < 0) warnings.push(`Stock of ${item.name || snap.id} is now ${quantityAtHand} (below zero).`);
       writes.push({ id: snap.id, quantityAtHand });
     }

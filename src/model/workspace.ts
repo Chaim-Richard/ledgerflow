@@ -68,6 +68,8 @@ export interface Workspace {
   alertsSent?: AlertsSent;
   /** U-10: pay runs prepared by others wait for an owner's approval (set by owners, through the server). */
   payrollApproval?: boolean;
+  /** W-06: refuse sales that would take an item's stock below zero (written by the server only, owners) */
+  refuseNegativeStock?: boolean;
   /** Y-30: everyone in the workspace must use two-step login (set by owners, through the server). */
   requireTwoStep?: boolean;
   /** Set by the daily job: the month (YYYY-MM) monthly statements were last sent (Y-28). */

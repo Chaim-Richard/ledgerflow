@@ -48,6 +48,7 @@ import { adjustStockRequest, countStockRequest } from '../../services/stockReque
 import InlineEdit from '../ui/InlineEdit';
 import InlineAdd from '../ui/InlineAdd';
 import CogsDialog from './CogsDialog';
+import StockPolicySwitch from './StockPolicySwitch';
 import InventoryItemDialog from './InventoryItemDialog';
 import StockAdjustDialog from './StockAdjustDialog';
 import StockCountDialog from './StockCountDialog';
@@ -254,6 +255,7 @@ export default function Inventory() {
                 </div>
              </div>
           </div>
+          <StockPolicySwitch />
         </div>
 
         <div className="flex flex-wrap items-center gap-8">
