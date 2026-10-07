@@ -1796,13 +1796,13 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION M — ENTITIES
 
-- [ ] M-01 Items / products catalogue
+- [x] M-01 Items / products catalogue — covered (checked 7 Oct): Inventory's items (name, SKU, price, cost, category; services without stock too) are the catalogue, picked by name or SKU on invoice lines (K-02, K-12)
 - [x] M-02 Sales orders — done as K-04 (an order is an accepted estimate; no separate table)
 - [x] M-03 Sale receipts — see K-03 (done 6 Oct)
 - [x] M-04 Manual journals — see K-05 (done 6 Oct)
 - [x] M-05 Email templates (= K-08)
-- [ ] M-06 Exchange-rate entity
-- [ ] M-07 Expected bills
+- [x] M-06 Exchange-rate entity — covered by K-29 (checked 7 Oct): each document keeps the rate it was posted at; the "Exchange rates used" report lists them by currency and day, and a back-dated document gets the rate used on its day (no separate table needed)
+- [x] M-07 Expected bills — done as K-21 (vendors' billing rhythm learned; late bills shown with one-click record)
 - [x] M-08 Report schedules — done as K-28
 - [x] M-09 Generic attachments — done as K-07 (the `documents` table, linked to the record; one panel for any record)
 - [ ] M-10 Transaction links
