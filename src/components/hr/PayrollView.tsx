@@ -66,6 +66,8 @@ const PayrollViewContent: React.FC = () => {
   // Pay run generation form
   const [runPayDate, setRunPayDate] = useState(getLocalDateISO());
   const [selectedBankAccountId, setSelectedBankAccountId] = useState<string>('');
+  // U-07: whom this run pays
+  const [runSchedule, setRunSchedule] = useState<'all' | Employee['payFrequency']>('all');
   const [wagesAccountId, setWagesAccountId] = useState('');
   const [taxExpenseAccountId, setTaxExpenseAccountId] = useState('');
   const [liabilitiesAccountId, setLiabilitiesAccountId] = useState('');
@@ -115,7 +117,7 @@ const PayrollViewContent: React.FC = () => {
 
   // Auto-calculated pay run preview
   const calculatedPayRun = useMemo(() => {
-    const activeEmployees = employees.filter(e => e.status !== 'Terminated');
+    const activeEmployees = employees.filter(e => e.status !== 'Terminated' && (runSchedule === 'all' || e.payFrequency === runSchedule));
     let totalGrossCents = 0;
     let totalNetCents = 0;
     let totalTaxWithheldCents = 0;
@@ -144,7 +146,7 @@ const PayrollViewContent: React.FC = () => {
       totalEmployerTaxesCents,
       totalCostCents: totalGrossCents + totalEmployerTaxesCents
     };
-  }, [employees, runPayDate]);
+  }, [employees, runPayDate, runSchedule]);
 
   const handleSaveEmployee = async () => {
     if (!empName || !empSalary || employeeBusy.current) return;
@@ -198,7 +200,7 @@ const PayrollViewContent: React.FC = () => {
       const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(currentWorkspace.id)}/pay-runs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` },
-        body: JSON.stringify({ date: runPayDate, bankAccountId: selectedBankAccountId, wagesAccountId, taxExpenseAccountId, liabilitiesAccountId, ...(again ? { again } : {}) }),
+        body: JSON.stringify({ date: runPayDate, bankAccountId: selectedBankAccountId, wagesAccountId, taxExpenseAccountId, liabilitiesAccountId, ...(runSchedule !== 'all' ? { schedule: runSchedule } : {}), ...(again ? { again } : {}) }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 409 && !again && /already posted/.test(String(data.message))) {
@@ -659,6 +661,16 @@ const PayrollViewContent: React.FC = () => {
                       onChange={e => setRunPayDate(e.target.value)}
                       className="w-full p-2 bg-white border border-neutral-300 rounded-lg"
                     />
+                  </Labelled>
+                </div>
+                <div>
+                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Who is paid">
+                    <select value={runSchedule} onChange={e => setRunSchedule(e.target.value as typeof runSchedule)} className="w-full p-2 bg-white border border-neutral-300 rounded-lg">
+                      <option value="all">Everyone (each one period of their own schedule)</option>
+                      <option value="Monthly">Monthly-paid people</option>
+                      <option value="Bi-Weekly">People paid every two weeks</option>
+                      <option value="Weekly">Weekly-paid people</option>
+                    </select>
                   </Labelled>
                 </div>
                 {([

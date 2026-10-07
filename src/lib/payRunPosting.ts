@@ -36,8 +36,11 @@ export interface PayRunTotals {
   costCents: number;
 }
 
-export function payRunTotals(employees: Employee[], year: number): PayRunTotals {
-  const lines = employees.filter(e => e.status !== 'Terminated').map(e => {
+export type PaySchedule = Employee['payFrequency'] | 'all';
+
+export function payRunTotals(employees: Employee[], year: number, schedule: PaySchedule = 'all'): PayRunTotals {
+  // U-07: a run pays one schedule (weekly, every two weeks, monthly) or everyone
+  const lines = employees.filter(e => e.status !== 'Terminated' && (schedule === 'all' || e.payFrequency === schedule)).map(e => {
     const calc = computePeriodPayroll(e, year);
     return {
       employeeId: e.id, name: e.name, ...(e.workerType === 'contractor' ? { contractor: true } : {}), grossCents: calc.grossPayCents, deductionsCents: calc.preTaxDeductionsCents,

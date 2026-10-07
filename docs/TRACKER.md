@@ -1959,7 +1959,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] U-04 PTO accrual
 - [ ] U-05 Benefits and deductions
 - [ ] U-06 Garnishments
-- [ ] U-07 Multiple pay schedules
+- [x] U-07 Multiple pay schedules — **done 7 Oct**: a pay run pays everyone or one schedule (monthly, every two weeks, weekly people); the preview and the posted entry follow it. Paying the same people twice on one date asks first; another schedule on that date is fine (`schedule` on the run; `payRunTotals(…, schedule)`; tests in `pay-run-posting.test.ts`)
 - [x] U-08 Contractor vs employee — **done 7 Oct**: a person on Payroll is an employee (taxes withheld) or a contractor (paid in full: nothing withheld, no employer taxes; the run still balances). The employee directory marks contractors, and "1099-NEC for <year>" lists contractors paid $600 or more by this year's posted pay runs (`workerType` on the employee; `contractorsToReport` in `src/lib/payRunPosting.ts`; tests in `pay-run-posting.test.ts`)
 - [ ] U-09 Direct deposit file
 - [ ] U-10 Payroll approval

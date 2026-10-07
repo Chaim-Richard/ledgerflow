@@ -2,7 +2,7 @@ import type { Firestore } from '../db/firestore';
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { lockMessage, postingLock, workspaceRole } from '../../lib/periodLock';
-import { payRunLines, payRunTotals, type PayRunAccounts } from '../../lib/payRunPosting';
+import { payRunLines, payRunTotals, type PayRunAccounts, type PaySchedule } from '../../lib/payRunPosting';
 import { isCashAccount } from '../../lib/txFilters';
 import { formatCurrency, formatTzDate } from '../../lib/utils';
 import { addDaysYMD } from '../../lib/fiscalCalendar';
@@ -32,6 +32,8 @@ export interface PostPayRunInput extends Actor {
   liabilitiesAccountId: string;
   /** a second run on the same date (for example a bonus run) */
   again?: boolean;
+  /** U-07: whom this run pays: one pay schedule, or everyone */
+  schedule?: PaySchedule;
 }
 
 export async function postPayRun(db: Firestore, input: PostPayRunInput) {
@@ -55,17 +57,20 @@ export async function postPayRun(db: Firestore, input: PostPayRunInput) {
       liabilities: pick(input.liabilitiesAccountId, 'the payroll liabilities account', a => type(a) === 'liability'),
     };
     const employees = (await t.get(db.collection('employees').where('workspaceId', '==', input.workspaceId))).docs.map(d => ({ ...d.data(), id: d.id }) as Employee);
-    const totals = payRunTotals(employees, Number(input.date.slice(0, 4)));
-    if (totals.employees.length === 0) throw new PayRunError(400, 'There is nobody on the payroll');
+    const schedule: PaySchedule = input.schedule || 'all';
+    const totals = payRunTotals(employees, Number(input.date.slice(0, 4)), schedule);
+    if (totals.employees.length === 0) throw new PayRunError(400, schedule === 'all' ? 'There is nobody on the payroll' : `Nobody is paid ${schedule.toLowerCase()}`);
+    // the same people paid twice on one date is the mistake to catch; another schedule on that date is not
+    const paidIds = new Set(totals.employees.map(e => e.employeeId));
     const sameDay = (await t.get(db.collection('payRuns').where('workspaceId', '==', input.workspaceId).where('date', '==', input.date))).docs
-      .filter(d => d.data().status === 'processed');
+      .filter(d => d.data().status === 'processed' && (!Array.isArray(d.data().employees) || (d.data().employees as Array<{ employeeId: string }>).some(e => paidIds.has(e.employeeId))));
     if (sameDay.length && !input.again) throw new PayRunError(409, `A pay run on ${input.date} is already posted; post another only if it is meant (for example a bonus run)`);
     const today = formatTzDate(new Date(), typeof workspace.timezone === 'string' ? workspace.timezone : 'UTC');
     if (input.date > addDaysYMD(today, 31)) throw new PayRunError(400, 'The pay date is more than a month away');
 
     const lines = payRunLines(totals, chosen);
     const currency = String(workspace.currency || 'USD');
-    const description = `Payroll ${input.date}: ${totals.employees.length} employee${totals.employees.length === 1 ? '' : 's'}`;
+    const description = `Payroll ${input.date}${schedule === 'all' ? '' : ` (${schedule.toLowerCase()})`}: ${totals.employees.length} ${totals.employees.length === 1 ? 'person' : 'people'}`;
     const runRef = db.collection('payRuns').doc();
     let ledgerTx;
     try {
@@ -84,7 +89,7 @@ export async function postPayRun(db: Firestore, input: PostPayRunInput) {
     const now = new Date().toISOString();
     t.create(db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     t.set(runRef, {
-      workspaceId: input.workspaceId, uid: input.uid, date: input.date, status: 'processed', createdAt: now,
+      workspaceId: input.workspaceId, uid: input.uid, date: input.date, status: 'processed', createdAt: now, schedule,
       totalAmountCents: totals.costCents, employeeCount: totals.employees.length, transactionId: ledgerTx.id,
       grossCents: totals.grossCents, netCents: totals.netCents, withheldCents: totals.withheldCents,
       employerTaxCents: totals.employerTaxCents, deductionsCents: totals.deductionsCents, employees: totals.employees,

@@ -19,6 +19,7 @@ const schema = z.object({
   taxExpenseAccountId: z.string().min(1).max(200),
   liabilitiesAccountId: z.string().min(1).max(200),
   again: z.boolean().optional(),
+  schedule: z.enum(['all', 'Weekly', 'Bi-Weekly', 'Monthly']).optional(),
 }).strict();
 
 const actor = (req: express.Request) => {

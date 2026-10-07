@@ -111,6 +111,8 @@ export interface PayRun {
   createdAt: string;
   /** U-02: posted by the server; its entry and the amounts behind it. */
   transactionId?: string;
+  /** U-07: whom it paid: one pay schedule, or everyone */
+  schedule?: 'all' | Employee['payFrequency'];
   grossCents?: number;
   netCents?: number;
   withheldCents?: number;

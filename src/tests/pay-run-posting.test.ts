@@ -179,4 +179,16 @@ describe('Pay runs (database)', { skip: !url && 'LF_TEST_DATABASE_URL not set' }
     assert.equal(run.status, 'undone');
     assert.equal((await db.collection('transactions').doc(String(run.transactionId)).get()).data()?.status, 'void');
   });
+
+  test('pay schedules: a monthly run pays only monthly people; a weekly run on the same date is not a duplicate', async () => {
+    await db.collection('employees').doc(id('cal')).set({ ...employee('Cal', 5_200_000, { payFrequency: 'Weekly' }), id: undefined, workspaceId: ws });
+    const monthly = await call('acct-1', 'POST', '', { ...body(), date: '2026-10-15', schedule: 'Monthly' });
+    assert.equal(monthly.status, 200);
+    assert.deepEqual((monthly.body.employees as Array<{ name: string }>).map(e => e.name).sort(), ['Ann', 'Bo']);
+    const weekly = await call('acct-1', 'POST', '', { ...body(), date: '2026-10-15', schedule: 'Weekly' });
+    assert.equal(weekly.status, 200, 'other people, not a second run for the same ones');
+    assert.deepEqual((weekly.body.employees as Array<{ name: string; grossCents: number }>).map(e => [e.name, e.grossCents]), [['Cal', 100_000]]);
+    assert.equal((await call('acct-1', 'POST', '', { ...body(), date: '2026-10-15', schedule: 'Weekly' })).status, 409);
+    assert.equal((await call('acct-1', 'POST', '', { ...body(), date: '2026-10-16', schedule: 'Bi-Weekly' })).status, 400);
+  });
 });
