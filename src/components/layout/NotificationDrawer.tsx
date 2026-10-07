@@ -9,6 +9,8 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { loadNotificationPrefs, markNotificationsRead, saveNotificationPrefs } from '../../hooks/useNotificationFeed';
 import { NOTIFICATION_TYPES, typesForRole, wantsNotification } from '../../lib/notifications';
+import { EMAIL_MODE_LABEL, EMAIL_MODES, emailMode, type NotificationEmailMode } from '../../lib/notificationEmail';
+import { getIdToken } from '../../firebase';
 import type { NotificationPrefs } from '../../lib/notifications';
 import type { AppNotification } from '../../types';
 
@@ -33,12 +35,20 @@ function Preferences({ onDone }: { onDone: () => void }) {
   const role = useCurrentRole();
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
   const [saving, setSaving] = useState(false);
+  // S-18: whether notices also come by email (kept by the server)
+  const [mail, setMail] = useState<NotificationEmailMode | null>(null);
+  const [mailLoaded, setMailLoaded] = useState<NotificationEmailMode | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     loadNotificationPrefs(uid)
       .then(p => { if (!cancelled) setPrefs(p); })
       .catch(() => { if (!cancelled) setPrefs({}); });
+    void getIdToken()
+      .then(token => fetch('/api/v1/account/notification-email', { headers: { Authorization: `Bearer ${token}` } }))
+      .then(res => res.json())
+      .then((data: { mode?: string }) => { if (!cancelled) { setMail(emailMode(data.mode)); setMailLoaded(emailMode(data.mode)); } })
+      .catch(() => { if (!cancelled) { setMail('off'); setMailLoaded('off'); } });
     return () => { cancelled = true; };
   }, [uid]);
 
@@ -47,6 +57,13 @@ function Preferences({ onDone }: { onDone: () => void }) {
     setSaving(true);
     try {
       await saveNotificationPrefs(uid, prefs);
+      if (mail && mail !== mailLoaded) {
+        const res = await fetch('/api/v1/account/notification-email', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` }, body: JSON.stringify({ mode: mail }),
+        });
+        if (!res.ok) throw new Error('email choice');
+        setMailLoaded(mail);
+      }
       toast.success('Notification choices saved.');
       onDone();
     } catch {
@@ -73,6 +90,15 @@ function Preferences({ onDone }: { onDone: () => void }) {
           ))}
           {types.length === 0 && <li className="text-xs text-[var(--muted)]">Your role doesn't receive notifications.</li>}
         </ul>
+      )}
+      {mail !== null && (
+        <label htmlFor={`${preferencesId}-mail`} className="block text-sm text-[var(--text)]">
+          <span className="block text-xs font-semibold text-[var(--muted)] mb-1">By email too</span>
+          <select id={`${preferencesId}-mail`} value={mail} onChange={e => setMail(e.target.value as NotificationEmailMode)}
+            className="w-full p-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] text-sm text-[var(--text)]">
+            {EMAIL_MODES.map(m => <option key={m} value={m}>{EMAIL_MODE_LABEL[m]}</option>)}
+          </select>
+        </label>
       )}
       <div className="flex gap-2">
         <button type="button" disabled={saving || prefs === null} onClick={save}

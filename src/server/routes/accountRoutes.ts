@@ -11,6 +11,8 @@ import { collectPersonalData } from '../services/personalDataService';
 import type { AuthenticatedRequest } from './workspaceRoutes';
 import { makeRecoveryCodes, recoveryStatus, RecoveryError, useRecoveryCode } from '../services/recoveryCodeService';
 import { workspacesRequiringTwoStep } from '../auth/supabaseAuth';
+import { getNotificationEmail, setNotificationEmail } from '../services/notificationEmailService';
+import { EMAIL_MODES, type NotificationEmailMode } from '../../lib/notificationEmail';
 
 export const accountRouter = express.Router();
 
@@ -61,4 +63,19 @@ accountRouter.get('/two-step', async (req, res) => {
   } catch (err) {
     res.status(500).json({ status: 'error', message: 'Could not check two-step login', details: err instanceof Error ? err.message : String(err) });
   }
+});
+
+// S-18: whether notices also come by email (off, each as it happens, one a day)
+accountRouter.get('/notification-email', async (req, res) => {
+  const user = (req as unknown as AuthenticatedRequest).user;
+  try { res.json({ status: 'success', mode: await getNotificationEmail(getDb(), user.uid) }); }
+  catch (err) { res.status(500).json({ status: 'error', message: 'Could not read the email choice', details: err instanceof Error ? err.message : String(err) }); }
+});
+
+accountRouter.put('/notification-email', async (req, res) => {
+  const user = (req as unknown as AuthenticatedRequest).user;
+  const mode = req.body?.mode as NotificationEmailMode;
+  if (!EMAIL_MODES.includes(mode)) return res.status(400).json({ status: 'error', message: 'Choose off, immediate or daily' });
+  try { res.json({ status: 'success', mode: await setNotificationEmail(getDb(), user.uid, mode) }); }
+  catch (err) { res.status(500).json({ status: 'error', message: 'Could not save the email choice', details: err instanceof Error ? err.message : String(err) }); }
 });

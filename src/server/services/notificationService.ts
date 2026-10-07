@@ -8,6 +8,7 @@
  */
 import crypto from 'crypto';
 import type { DocumentData, Firestore } from '../db/firestore';
+import { emailNoticeNow } from './notificationEmailService';
 import { logger } from '../utils/logger';
 import { NOTIFICATION_TYPES, notificationRecipients } from '../../lib/notifications';
 import type { NotificationPrefs, NotificationType } from '../../lib/notifications';
@@ -50,6 +51,7 @@ export async function notify(db: Firestore, input: NotifyInput): Promise<number>
       .filter(uid => !input.onlyUids || input.onlyUids.includes(uid));
     const createdAt = new Date().toISOString();
     let sent = 0;
+    const told: string[] = [];
     for (const uid of recipients) {
       try {
         await db.collection('notifications').doc(notificationId(input.workspaceId, input.eventKey, uid)).create({
@@ -65,9 +67,15 @@ export async function notify(db: Firestore, input: NotifyInput): Promise<number>
           createdAt,
         });
         sent++;
+        told.push(uid);
       } catch (err) {
         if ((err as { code?: number }).code !== 6) throw err; // 6 = already notified
       }
+    }
+    // S-18: those who chose an email for each notice get one (a notice told before is not emailed again)
+    if (told.length) {
+      const users = new Map(profiles.map((p, i) => [everyone[i], p.data() as Record<string, unknown> | undefined]));
+      await emailNoticeNow(told.map(uid => ({ uid, user: users.get(uid) })), { workspaceName: String(workspace.name || ''), title: input.title, message: input.message });
     }
     return sent;
   } catch (err) {
