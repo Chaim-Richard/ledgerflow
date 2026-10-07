@@ -83,8 +83,8 @@ export default function ClientQueryThread({ query, workspaceId, uid, role, onOpe
       </div>
 
       <ol className="space-y-2" aria-label="Conversation">
-        {(query.messages || []).map((m, i) => (
-          <li key={`${m.at}-${i}`} className={cn('rounded-xl px-3 py-2 text-sm', m.uid === query.askedBy ? 'bg-[var(--ink)]' : 'bg-indigo-50 dark:bg-indigo-500/10')}>
+        {(query.messages || []).map(m => (
+          <li key={`${m.at}-${m.uid}`} className={cn('rounded-xl px-3 py-2 text-sm', m.uid === query.askedBy ? 'bg-[var(--ink)]' : 'bg-indigo-50 dark:bg-indigo-500/10')}>
             <p className="text-xs text-[var(--muted)]">{who(m)} · {when(m.at)}</p>
             <p className="whitespace-pre-wrap break-words text-[var(--text)]"><bdi>{m.text}</bdi></p>
           </li>

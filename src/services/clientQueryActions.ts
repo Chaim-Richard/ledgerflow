@@ -34,28 +34,31 @@ export async function closeQuery(workspaceId: string, queryId: string): Promise<
  * Waiting ones first.
  */
 export function useClientQueries(workspaceId: string | null | undefined, transactionId?: string) {
-  const [queries, setQueries] = useState<ClientQuery[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
   const [round, setRound] = useState(0);
   const reload = useCallback(() => setRound(r => r + 1), []);
+  // the answer for the request it belongs to: a newer request shows as loading until it is answered
+  const list = `${workspaceId}|${transactionId || ''}|`;
+  const key = workspaceId ? `${list}${round}` : '';
+  const [result, setResult] = useState<{ key: string; queries: ClientQuery[]; failed: boolean } | null>(null);
 
   useEffect(() => {
-    setFailed(false);
-    if (!workspaceId) { setQueries([]); setLoading(false); return undefined; }
-    setLoading(true);
+    if (!workspaceId) return undefined;
     const filters = [where('workspaceId', '==', workspaceId), ...(transactionId ? [where('transactionId', '==', transactionId)] : [])];
     const q = query(collection(db, 'clientQueries'), ...filters, limit(500));
     const show = (docs: Array<{ id: string; data: () => unknown }>) =>
-      setQueries(sortQueries(docs.map(d => ({ ...(d.data() as Omit<ClientQuery, 'id'>), id: d.id }))));
+      setResult({ key, failed: false, queries: sortQueries(docs.map(d => ({ ...(d.data() as Omit<ClientQuery, 'id'>), id: d.id }))) });
+    const fail = () => setResult(r => ({ key, failed: true, queries: r?.queries || [] }));
     if (transactionId) {
       let live = true;
-      getDocs(q).then(snap => { if (live) { show(snap.docs); setLoading(false); } })
-        .catch(() => { if (live) { setFailed(true); setLoading(false); } });
+      getDocs(q).then(snap => { if (live) show(snap.docs); }).catch(() => { if (live) fail(); });
       return () => { live = false; };
     }
-    return onSnapshot(q, snap => { show(snap.docs); setLoading(false); }, () => { setFailed(true); setLoading(false); });
-  }, [workspaceId, transactionId, round]);
+    return onSnapshot(q, snap => show(snap.docs), fail);
+  }, [workspaceId, transactionId, key]);
 
-  return { queries, loading, failed, reload };
+  if (!workspaceId) return { queries: [] as ClientQuery[], loading: false, failed: false, reload };
+  const current = result?.key === key ? result : null;
+  // while the same list is read again, its last answer stays on screen (never another workspace's)
+  const shown = result && result.key.startsWith(list) ? result.queries : [];
+  return { queries: shown, loading: !current, failed: current?.failed || false, reload };
 }
