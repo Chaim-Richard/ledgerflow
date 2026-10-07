@@ -535,5 +535,20 @@ begin
   if not refused then raise exception 'FAIL password-only session wrote a document'; end if;
 end $$;
 
+-- Y-30: a workspace that requires two-step login: its members without an authenticator see nothing
+-- until they set one up (a code-verified session); people in other workspaces are unaffected
+select set_config('request.jwt.claims', '', true);
+insert into workspaces (id, data) values ('ws-2fa', '{"uid":"u-strict","name":"Strict","requireTwoStep":true,"roles":{"u-strict-book":"bookkeeper"}}');
+insert into customers (id, data) values ('c-2fa', '{"workspaceId":"ws-2fa","name":"Kept"}');
+select pg_temp.expect_value('a member without two-step login sees nothing',
+  $$select pg_temp.count_as('u-strict-book', 'aal1', 'select count(*) from customers')::text$$, '0');
+select pg_temp.expect_value('the same member, code-verified, sees the books',
+  $$select pg_temp.count_as('u-strict-book', 'aal2', 'select count(*) from customers')::text$$, '1');
+select pg_temp.expect_value('the owner too',
+  $$select pg_temp.count_as('u-strict', 'aal1', 'select count(*) from workspaces')::text$$, '0');
+select pg_temp.expect_count('someone in another workspace is unaffected', 'u-owner', $$select count(*) from workspaces where id = 'ws1'$$, 1);
+select pg_temp.expect_denied('a member cannot switch the requirement off from the browser', 'u-strict',
+  $$select lf_update('workspaces','ws-2fa','{"requireTwoStep":false}'::jsonb)$$);
+
 select 'ALL RLS TESTS PASSED' as result;
 rollback;

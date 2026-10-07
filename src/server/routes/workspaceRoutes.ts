@@ -24,6 +24,7 @@ import { clientQueryRouter } from './clientQueryRoutes';
 import { accountMergeRouter } from './accountMergeRoutes';
 import { assetDisposalRouter } from './assetDisposalRoutes';
 import { payRunRouter } from './payRunRoutes';
+import { twoStepPolicyRouter } from './twoStepPolicyRoutes';
 import { AlertSettingsError, saveAlertSettings } from '../services/bookAlertService';
 import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
@@ -190,6 +191,7 @@ workspaceRouter.use('/:workspaceId/chart-accounts', requireWorkspaceRole(['owner
 workspaceRouter.use('/:workspaceId/assets/:assetId/disposal', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), assetDisposalRouter);
 // Pay runs posted by the server (U-02): owners and accountants
 workspaceRouter.use('/:workspaceId/pay-runs', requireWorkspaceRole(['owner', 'accountant']), payRunRouter);
+workspaceRouter.use('/:workspaceId/security', requireWorkspaceRole(['owner']), twoStepPolicyRouter);
 // Settings → Alerts (S-08, S-10, S-11): owners and accountants
 const alertsSchema = z.object({
   cashLowCents: z.number().int().nullable().optional(),

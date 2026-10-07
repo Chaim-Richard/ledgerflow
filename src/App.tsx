@@ -26,6 +26,7 @@ import { AuthScreen } from './core/auth/AuthScreen';
 import { InitializationScreen } from './core/auth/InitializationScreen';
 import { SecondFactorScreen } from './core/auth/SecondFactorScreen';
 import { redeemRecoveryCode } from './core/auth/recoveryCode';
+import { useTwoStepSetup } from './core/auth/twoStepSetup';
 import { RootLayout } from './core/layout/RootLayout';
 import { lazy, Suspense } from 'react';
 const LedgerAutoAuditor = lazy(() => import('./components/forensics/LedgerAutoAuditor').then(m => ({ default: m.LedgerAutoAuditor })));
@@ -34,6 +35,7 @@ import { FallbackBoundary } from './components/FallbackBoundary';
 import PublicInvoicePage from './components/sales/PublicInvoicePage';
 import CustomerPortalPage from './components/sales/CustomerPortalPage';
 const StatusPage = lazy(() => import('./components/system/StatusPage'));
+const TwoStepSetupScreen = lazy(() => import('./core/auth/TwoStepSetupScreen'));
 import CookieConsent from './components/legal/CookieConsent';
 import LegalModal from './components/legal/LegalModal';
 
@@ -246,6 +248,8 @@ const shortcutMap = useMemo(() => {
 
   const isGuest = useAuthStore(state => state.isGuest);
   const setIsGuest = useAuthStore(state => state.setIsGuest);
+  // Y-30: a workspace this person is in may require two-step login this session has not passed
+  const twoStep = useTwoStepSetup(user?.uid ?? null, !user || user.isAnonymous || isGuest || Boolean(pendingSecondFactor));
 
   const handleGuest = () => {
     setIsGuest(true);
@@ -369,6 +373,18 @@ const shortcutMap = useMemo(() => {
         onCancel={() => { void signOut(auth); }}
         onRecover={redeemRecoveryCode}
       />
+    );
+  }
+
+  if (!twoStep.checked) {
+    return <InitializationScreen language={language} />;
+  }
+
+  if (twoStep.setupRequired) {
+    return (
+      <Suspense fallback={<InitializationScreen language={language} />}>
+        <TwoStepSetupScreen workspaces={twoStep.workspaces} onContinue={twoStep.recheck} onSignOut={() => { void signOut(auth); }} />
+      </Suspense>
     );
   }
 

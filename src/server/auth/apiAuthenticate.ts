@@ -172,7 +172,9 @@ export const apiAuthenticate = async (req: express.Request, res: express.Respons
     try {
       // L-85: someone who lost the authenticator signs in with the password and uses a recovery code
       const firstStepOnly = req.method === 'POST' && req.originalUrl.split('?')[0] === '/api/v1/account/recovery-codes/use';
-      const decodedToken = await verifyIdToken(idToken, { firstStepOnly }) as AuthUser;
+      // Y-30: someone who must still set up two-step login can ask why
+      const setupCheck = req.method === 'GET' && req.originalUrl.split('?')[0] === '/api/v1/account/two-step';
+      const decodedToken = await verifyIdToken(idToken, { firstStepOnly, setupCheck }) as AuthUser;
       const isAnonymous = decodedToken.firebase?.sign_in_provider === 'anonymous';
       if (!decodedToken.email_verified && !isAnonymous) {
         return res.status(403).json({ status: "error", message: "Access Denied: Please verify your email protocol." });
@@ -183,6 +185,9 @@ export const apiAuthenticate = async (req: express.Request, res: express.Respons
       (req as AuthenticatedRequest).user = decodedToken;
       return next();
     } catch (error) {
+      if (error instanceof Error && (error as { code?: string }).code === 'auth/two-step-setup-required') {
+        return res.status(403).json({ status: "error", code: "two_step_setup_required", message: error.message });
+      }
       return res.status(401).json({ status: "error", message: "Unauthorized: Invalid bearer token" });
     }
   }

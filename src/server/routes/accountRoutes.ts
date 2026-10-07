@@ -2,12 +2,15 @@
  * The signed-in person's own account: GET /api/v1/account/my-data (L-10), and recovery codes for
  * two-step login (L-85): GET /recovery-codes (how many are left), POST /recovery-codes (ten new ones,
  * shown once), POST /recovery-codes/use (a password-only session may call it: apiAuthenticate).
+ * GET /two-step (Y-30): whether a workspace the person belongs to requires two-step login that this
+ * session has not passed, and which (a password-only session may call it, to be told why).
  */
 import express from 'express';
 import { getDb } from '../db/firestore';
 import { collectPersonalData } from '../services/personalDataService';
 import type { AuthenticatedRequest } from './workspaceRoutes';
 import { makeRecoveryCodes, recoveryStatus, RecoveryError, useRecoveryCode } from '../services/recoveryCodeService';
+import { workspacesRequiringTwoStep } from '../auth/supabaseAuth';
 
 export const accountRouter = express.Router();
 
@@ -47,4 +50,15 @@ accountRouter.post('/recovery-codes/use', async (req, res) => {
   const code = typeof req.body?.code === 'string' ? req.body.code.slice(0, 40) : '';
   if (!code) return res.status(400).json({ status: 'error', message: 'Enter a recovery code' });
   try { res.json({ status: 'success', ...(await useRecoveryCode(getDb(), user.uid, code)) }); } catch (err) { recoveryFail(res, err); }
+});
+
+accountRouter.get('/two-step', async (req, res) => {
+  const user = (req as unknown as AuthenticatedRequest).user as AuthenticatedRequest['user'] & { aal?: string; is_anonymous?: boolean };
+  try {
+    const workspaces = user.is_anonymous ? [] : await workspacesRequiringTwoStep(user.uid);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ status: 'success', setupRequired: user.aal !== 'aal2' && workspaces.length > 0, workspaces });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: 'Could not check two-step login', details: err instanceof Error ? err.message : String(err) });
+  }
 });

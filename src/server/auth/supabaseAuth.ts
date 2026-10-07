@@ -89,6 +89,31 @@ async function hasVerifiedAuthenticator(uid: string): Promise<boolean> {
   return has;
 }
 
+const twoStepCache = new Map<string, { workspaces: Array<{ id: string; name: string }>; until: number }>();
+
+/**
+ * Y-30: the workspaces this person belongs to that require two-step login (cached for a minute).
+ * Belonging is what the database rules use: the owner, a role, an admin, or the members list.
+ */
+export async function workspacesRequiringTwoStep(uid: string): Promise<Array<{ id: string; name: string }>> {
+  const hit = twoStepCache.get(uid);
+  if (hit && hit.until > Date.now()) return hit.workspaces;
+  const { rows } = await getDb().pool.query<{ id: string; name: string }>(
+    `select id, coalesce(data->>'name', '') as name from public.workspaces
+      where (data->>'requireTwoStep') = 'true'
+        and (data->>'uid' = $1 or jsonb_typeof(data->'roles'->$1) = 'string' or (data->'admins'->$1) = 'true'::jsonb
+             or coalesce(data->'members', '[]'::jsonb) ? $1)
+      order by 2`, [uid]);
+  if (twoStepCache.size > 10_000) twoStepCache.clear();
+  twoStepCache.set(uid, { workspaces: rows, until: Date.now() + 60_000 });
+  return rows;
+}
+
+/** After a workspace turns the requirement on or off: do not wait for the cache to expire. */
+export function forgetTwoStepRequirements(): void {
+  twoStepCache.clear();
+}
+
 /** After an authenticator is removed (a recovery code, L-85): do not wait for the cache to expire. */
 export function forgetAuthenticator(uid: string): void {
   authenticatorCache.delete(uid);
@@ -98,8 +123,10 @@ export function forgetAuthenticator(uid: string): void {
  * Checks a Supabase access token (signature, issuer, audience, expiry) and decodes it.
  * `firstStepOnly`: accept a password-only session of someone with an authenticator; only for using a
  * recovery code (POST /api/v1/account/recovery-codes/use).
+ * `setupCheck`: accept a password-only session of someone who still has to set up two-step login for
+ * a workspace that requires it (Y-30); only for asking whether they must (GET /api/v1/account/two-step).
  */
-export async function verifyIdToken(token: string, opts: { firstStepOnly?: boolean } = {}): Promise<DecodedIdToken> {
+export async function verifyIdToken(token: string, opts: { firstStepOnly?: boolean; setupCheck?: boolean } = {}): Promise<DecodedIdToken> {
   if (typeof token !== 'string' || token.split('.').length !== 3) {
     throw new AuthError('auth/argument-error', 'Missing or malformed token');
   }
@@ -131,8 +158,13 @@ export async function verifyIdToken(token: string, opts: { firstStepOnly?: boole
 
   const appMeta = (payload.app_metadata || {}) as Record<string, unknown>;
   const isAnonymous = payload.is_anonymous === true;
-  if (!opts.firstStepOnly && payload.aal !== 'aal2' && !isAnonymous && await hasVerifiedAuthenticator(payload.sub)) {
-    throw new AuthError('auth/multi-factor-auth-required', 'Two-step verification is required for this account');
+  if (!opts.firstStepOnly && payload.aal !== 'aal2' && !isAnonymous) {
+    if (await hasVerifiedAuthenticator(payload.sub)) {
+      throw new AuthError('auth/multi-factor-auth-required', 'Two-step verification is required for this account');
+    }
+    if (!opts.setupCheck && (await workspacesRequiringTwoStep(payload.sub)).length > 0) {
+      throw new AuthError('auth/two-step-setup-required', 'A workspace you belong to requires two-step login: set up an authenticator app to continue');
+    }
   }
   const email = typeof payload.email === 'string' && payload.email ? payload.email : undefined;
   const provider = isAnonymous ? 'anonymous'
