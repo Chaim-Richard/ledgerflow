@@ -15,6 +15,7 @@ import {
 } from "./utils";
 import { getFiscalQuarter } from "./fiscalCalendar";
 import { csvMoney } from "./csvExport";
+import { accountGroupLayout, groupSubtotals } from "./accountGroups";
 
 export type ReportColumnMode = "total" | "months" | "quarters";
 export type StatementKind = "pl" | "bs";
@@ -42,6 +43,14 @@ export interface StatementRow {
   accountId?: string;
   heading?: boolean;
   total?: boolean;
+  /** Account groups (K-14): how far the row sits inside its section, 0 at the section level. */
+  depth?: number;
+  /** The groups that hide this row while they are collapsed. */
+  collapsedBy?: string[];
+  /** An account row with accounts inside it, so the table can hide them. */
+  group?: boolean;
+  /** A "Total <parent>" row: the accounts inside that group, and nothing else. */
+  subtotal?: boolean;
 }
 
 function validDate(date: string): boolean {
@@ -120,21 +129,48 @@ export function computeReportColumns(
   });
 }
 
-export function statementFigures(data: StatementData): StatementFigures {
+/**
+ * Every figure a statement row can show, by row id. `accounts` is only needed for the account-group
+ * subtotals (K-14): a group's figure is the sum of the accounts of that group already in the
+ * section, so no total here is anything but the accounts' own figures added up.
+ */
+export function statementFigures(
+  data: StatementData,
+  accounts: ChartAccount[] = [],
+): StatementFigures {
   const values: Record<string, number> = {};
   if ("income" in data) {
     for (const section of ["income", "cogs", "expense"] as const) {
       for (const [id, account] of Object.entries(data[section].accounts))
         values[`account:${id}`] = account.balance;
       values[`total:${section}`] = data[section].total;
+      const members = accounts.filter(
+        (account) => account.id in data[section].accounts,
+      );
+      for (const [id, sum] of groupSubtotals(members, (account) => ({
+        amount: data[section].accounts[account.id]?.balance || 0,
+      })))
+        values[`group:${id}`] = sum.amount;
     }
     values["total:grossProfit"] = data.grossProfit;
     values["total:netIncome"] = data.netIncome;
     return { values, denominator: data.income.total };
   }
+  const sectionType = {
+    assets: "asset",
+    liabilities: "liability",
+    equity: "equity",
+  } as const;
   for (const section of ["assets", "liabilities", "equity"] as const) {
     for (const [id, amount] of Object.entries(data[section]))
       values[`account:${id}`] = amount;
+    const members = accounts.filter(
+      (account) => account.type === sectionType[section],
+    );
+    for (const [id, sum] of groupSubtotals(members, (account) => ({
+      amount: data[section][account.id] || 0,
+    })))
+      values[`group:${id}`] = sum.amount;
   }
   values["total:assets"] = data.totalAssets;
   values["total:liabilities"] = data.totalLiabilities;
@@ -171,29 +207,45 @@ export function statementRows(
   sortDir: "asc" | "desc" = "asc",
   sortFigures?: StatementFigures,
 ): StatementRow[] {
-  const figures = sortFigures || statementFigures(data);
+  const figures = sortFigures || statementFigures(data, accounts);
   const rows: StatementRow[] = [];
-  const sortedAccounts = (members: ChartAccount[]) =>
-    [...members].sort((a, b) => {
-      const result =
-        sortBy === "balance"
-          ? (figures.values[`account:${a.id}`] || 0) -
-            (figures.values[`account:${b.id}`] || 0)
-          : (sortBy === "code" ? a.code || "" : a.name).localeCompare(
-              sortBy === "code" ? b.code || "" : b.name,
-            );
-      return sortDir === "asc" ? result : -result;
-    });
+  const compare = (a: ChartAccount, b: ChartAccount) => {
+    const result =
+      sortBy === "balance"
+        ? (figures.values[`account:${a.id}`] || 0) -
+          (figures.values[`account:${b.id}`] || 0)
+        : (sortBy === "code" ? a.code || "" : a.name).localeCompare(
+            sortBy === "code" ? b.code || "" : b.name,
+          );
+    return sortDir === "asc" ? result : -result;
+  };
+  /**
+   * The section's accounts in the report's own order, with a group's children indented under their
+   * parent and a subtotal row after them (K-14). Without a group this is the flat sorted list it was.
+   */
+  const accountRows = (members: ChartAccount[]): StatementRow[] =>
+    accountGroupLayout(members, compare).map((row) =>
+      row.kind === "subtotal"
+        ? {
+            id: `group:${row.member.id}`,
+            label: row.label,
+            depth: row.depth,
+            collapsedBy: row.collapsedBy,
+            subtotal: true,
+          }
+        : {
+            id: `account:${row.member.id}`,
+            accountId: row.member.id,
+            label: row.member.name,
+            code: row.member.code,
+            depth: row.depth,
+            collapsedBy: row.collapsedBy,
+            group: row.hasChildren,
+          },
+    );
   const section = (id: string, title: string, members: ChartAccount[]) => {
     rows.push({ id: `heading:${id}`, label: title, heading: true });
-    rows.push(
-      ...sortedAccounts(members).map((account) => ({
-        id: `account:${account.id}`,
-        accountId: account.id,
-        label: account.name,
-        code: account.code,
-      })),
-    );
+    rows.push(...accountRows(members));
     rows.push({ id: `total:${id}`, label: `Total ${title}`, total: true });
   };
   if ("income" in data) {
@@ -227,16 +279,8 @@ export function statementRows(
     );
     // Current earnings are a separate equity row, included once in the equity subtotal.
     rows.push({ id: "heading:equity", label: "Equity", heading: true });
-    const equity = sortedAccounts(
-      accounts.filter((account) => account.type === "equity"),
-    );
     rows.push(
-      ...equity.map((account) => ({
-        id: `account:${account.id}`,
-        accountId: account.id,
-        label: account.name,
-        code: account.code,
-      })),
+      ...accountRows(accounts.filter((account) => account.type === "equity")),
     );
     rows.push({ id: "total:retainedEarnings", label: "Current earnings" });
     rows.push({ id: "total:equity", label: "Total Equity", total: true });
@@ -255,6 +299,7 @@ export function statementColumnCsv(
   columns: ReportColumn[],
   showPercent: boolean,
   compare: boolean,
+  accounts: ChartAccount[] = [],
 ): { headers: string[]; rows: string[][] } {
   const headers = ["Account", "Code"];
   for (const column of columns) {
@@ -269,9 +314,9 @@ export function statementColumnCsv(
       );
   }
   const figures = columns.map((column) => ({
-    current: statementFigures(column.data),
+    current: statementFigures(column.data, accounts),
     previous: column.previousData
-      ? statementFigures(column.previousData)
+      ? statementFigures(column.previousData, accounts)
       : undefined,
   }));
   return {

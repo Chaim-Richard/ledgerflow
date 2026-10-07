@@ -1,5 +1,9 @@
+import { useState } from 'react';
 import { AlertCircle, Layers, HandCoins, ShieldCheck, Activity, Calendar, FileSpreadsheet, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, CheckCircle2, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import type { ChartAccount } from '../../types';
+import { accountGroupLayout, groupSubtotals, toggleAccountGroup, visibleGroupRows } from '../../lib/accountGroups';
+import { AccountGroupRow, AccountGroupSubtotal } from './AccountGroupControls';
 import { isPostable, isTransactionInDateRange } from '../../lib/txFilters';
 import { motion } from 'motion/react';
 import MonthNavigator from '../ui/MonthNavigator';
@@ -8,6 +12,26 @@ import type { BalanceSheetModel } from './BalanceSheetView';
 import { StatementColumns } from './StatementColumns';
 
 export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, isDataTruncated, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct }: BalanceSheetModel) {
+  // Account groups (K-14): the same accounts, a group's children indented under their parent with a
+  // subtotal under them. A group starts open, and the section totals below are the report's own.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
+  const groupedSection = (type: ChartAccount['type'], balances: Record<string, number>) => {
+    const members = accounts.filter(account => account.type === type);
+    const compare = (a: ChartAccount, b: ChartAccount) => {
+      const comp = sortBy === 'code' ? (a.code || '').localeCompare(b.code || '')
+        : sortBy === 'name' ? (a.name || '').localeCompare(b.name || '')
+        : (balances[a.id] || 0) - (balances[b.id] || 0);
+      return sortDir === 'asc' ? comp : -comp;
+    };
+    return {
+      rows: visibleGroupRows(accountGroupLayout(members, compare), collapsedGroups),
+      subtotals: groupSubtotals(members, account => ({ amount: balances[account.id] || 0 })),
+    };
+  };
+  const assetGroups = groupedSection('asset', currentData.assets);
+  const liabilityGroups = groupedSection('liability', currentData.liabilities);
+  const equityGroups = groupedSection('equity', currentData.equity);
+
   return (
     <div className="space-y-6">
       {/* Authoritative / Truncation Status Banner */}
@@ -228,22 +252,21 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
           </div>
           <div className="p-4 flex-1 flex flex-col justify-between">
             <div className="space-y-2">
-              {accounts.filter(a => a.type === 'asset')
-                .sort((a, b) => {
-                  let comp: number;
-                  if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
-                  else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
-                  else comp = (currentData.assets[a.id] || 0) - (currentData.assets[b.id] || 0);
-                  return sortDir === 'asc' ? comp : -comp;
-                })
-                .map(acc => {
+              {assetGroups.rows.map(row => {
+                if (row.kind === 'subtotal') return (
+                  <AccountGroupSubtotal key={row.key} label={row.label} depth={row.depth}
+                    amount={assetGroups.subtotals.get(row.member.id)?.amount || 0} formatMoney={formatCurrency} />
+                );
+                const acc = row.member;
                 const curVal = currentData.assets[acc.id] || 0;
                 const prVal = isComparative ? prevData.assets[acc.id] || 0 : curVal;
                 const variance = getVarianceAndPct(curVal, prVal);
 
                 return (
+                  <AccountGroupRow key={row.key} depth={row.depth} hasChildren={row.hasChildren} label={acc.name}
+                    expanded={!collapsedGroups.has(acc.id)}
+                    onToggle={() => setCollapsedGroups(collapsed => toggleAccountGroup(collapsed, acc.id))}>
                   <button
-                    key={acc.id} 
                     type="button" onClick={() => {
                       const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
                       setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
@@ -277,6 +300,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                       )}
                     </div>
                   </button>
+                  </AccountGroupRow>
                 );
               })}
             </div>
@@ -317,22 +341,21 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
               {/* Liabilities Section */}
               <div className="space-y-2">
                 <p className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-wider truncate border-b border-[var(--line)] pb-2">{labels.liabilitiesLabel}</p>
-                {accounts.filter(a => a.type === 'liability')
-                  .sort((a, b) => {
-                    let comp: number;
-                    if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
-                    else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
-                    else comp = (currentData.liabilities[a.id] || 0) - (currentData.liabilities[b.id] || 0);
-                    return sortDir === 'asc' ? comp : -comp;
-                  })
-                  .map(acc => {
+                {liabilityGroups.rows.map(row => {
+                  if (row.kind === 'subtotal') return (
+                    <AccountGroupSubtotal key={row.key} label={row.label} depth={row.depth}
+                      amount={liabilityGroups.subtotals.get(row.member.id)?.amount || 0} formatMoney={formatCurrency} />
+                  );
+                  const acc = row.member;
                   const curVal = currentData.liabilities[acc.id] || 0;
                   const prVal = isComparative ? prevData.liabilities[acc.id] || 0 : curVal;
                   const variance = getVarianceAndPct(curVal, prVal);
 
                   return (
+                    <AccountGroupRow key={row.key} depth={row.depth} hasChildren={row.hasChildren} label={acc.name}
+                      expanded={!collapsedGroups.has(acc.id)}
+                      onToggle={() => setCollapsedGroups(collapsed => toggleAccountGroup(collapsed, acc.id))}>
                     <button
-                      key={acc.id} 
                       type="button" onClick={() => {
                         const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
                         setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
@@ -366,6 +389,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                         )}
                       </div>
                     </button>
+                    </AccountGroupRow>
                   );
                 })}
                 <div className="flex justify-between items-center pt-2 text-[var(--muted)] text-[8px] font-bold uppercase tracking-wider">
@@ -377,22 +401,21 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
               {/* Equity Section */}
               <div className="space-y-2">
                 <p className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-wider truncate border-b border-[var(--line)] pb-2">{labels.equityLabel}</p>
-                {accounts.filter(a => a.type === 'equity')
-                  .sort((a, b) => {
-                    let comp: number;
-                    if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
-                    else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
-                    else comp = (currentData.equity[a.id] || 0) - (currentData.equity[b.id] || 0);
-                    return sortDir === 'asc' ? comp : -comp;
-                  })
-                  .map(acc => {
+                {equityGroups.rows.map(row => {
+                  if (row.kind === 'subtotal') return (
+                    <AccountGroupSubtotal key={row.key} label={row.label} depth={row.depth}
+                      amount={equityGroups.subtotals.get(row.member.id)?.amount || 0} formatMoney={formatCurrency} />
+                  );
+                  const acc = row.member;
                   const curVal = currentData.equity[acc.id] || 0;
                   const prVal = isComparative ? prevData.equity[acc.id] || 0 : curVal;
                   const variance = getVarianceAndPct(curVal, prVal);
 
                   return (
+                    <AccountGroupRow key={row.key} depth={row.depth} hasChildren={row.hasChildren} label={acc.name}
+                      expanded={!collapsedGroups.has(acc.id)}
+                      onToggle={() => setCollapsedGroups(collapsed => toggleAccountGroup(collapsed, acc.id))}>
                     <button
-                      key={acc.id} 
                       type="button" onClick={() => {
                         const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
                         setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
@@ -426,6 +449,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                         )}
                       </div>
                     </button>
+                    </AccountGroupRow>
                   );
                 })}
 

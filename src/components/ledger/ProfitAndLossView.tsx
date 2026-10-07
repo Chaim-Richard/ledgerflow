@@ -15,8 +15,14 @@ import MonthNavigator from '../ui/MonthNavigator';
 import { StatementColumns } from './StatementColumns';
 import type { ReportColumnMode } from '../../lib/reportColumns';
 import DrillDownModal from '../layout/DrillDownModal';
+import { accountGroupLayout, groupSubtotals, hasAccountGroups, toggleAccountGroup, visibleGroupRows } from '../../lib/accountGroups';
+import { AccountGroupRow, AccountGroupSubtotal } from './AccountGroupControls';
 
-interface PLAccount { name: string; code?: string; balance: number }
+/** A P&L line as the report holds it; `parentId` is only for account groups (K-14). */
+interface PLAccount { name: string; code?: string; balance: number; parentId?: string }
+
+/** A P&L line with its own id, the shape the account-group helpers want. */
+interface PLRow { id: string; name: string; code?: string; type: string; parentId?: string; balance: number }
 
 interface PLData {
   income: { total: number; accounts: Record<string, PLAccount> };
@@ -197,21 +203,21 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             const amount = -amt;
             pl.income.total += amount;
             if (!pl.income.accounts[acc.id]) {
-              pl.income.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0 };
+              pl.income.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0, parentId: acc.parentId };
             }
             pl.income.accounts[acc.id].balance += amount;
           } else if (isCogs) {
             const amount = amt;
             pl.cogs.total += amount;
             if (!pl.cogs.accounts[acc.id]) {
-              pl.cogs.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0 };
+              pl.cogs.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0, parentId: acc.parentId };
             }
             pl.cogs.accounts[acc.id].balance += amount;
           } else if (acc.type === 'expense') {
             const amount = amt;
             pl.expense.total += amount;
             if (!pl.expense.accounts[acc.id]) {
-              pl.expense.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0 };
+              pl.expense.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0, parentId: acc.parentId };
             }
             pl.expense.accounts[acc.id].balance += amount;
           }
@@ -239,6 +245,29 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
 
   const data = isServerAuthoritative && serverData ? serverData : localCalculation.data;
   const prevData = isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;
+
+  // Account groups (K-14): the same P&L lines, a group's children indented under their parent with
+  // a subtotal under them. A group starts open and no figure here is the report's own total.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
+  const groupedSection = (entries: Record<string, PLAccount> | undefined, type: string) => {
+    const members: PLRow[] = Object.entries(entries || {}).map(([id, account]) => ({
+      id, name: account.name, code: account.code, type, parentId: account.parentId, balance: account.balance || 0,
+    }));
+    const compare = (a: PLRow, b: PLRow) => {
+      const comp = sortBy === 'code' ? (a.code || '').localeCompare(b.code || '')
+        : sortBy === 'name' ? (a.name || '').localeCompare(b.name || '')
+        : (a.balance || 0) - (b.balance || 0);
+      return sortDir === 'asc' ? comp : -comp;
+    };
+    return {
+      rows: visibleGroupRows(accountGroupLayout(members, compare), collapsedGroups),
+      subtotals: groupSubtotals(members, member => ({ amount: member.balance })),
+      // a hierarchy needs one column, so the two-column cards stay for a chart without groups
+      grouped: hasAccountGroups(members),
+    };
+  };
+  const incomeGroups = groupedSection(data?.income?.accounts, 'income');
+  const expenseGroups = groupedSection(data?.expense?.accounts, 'expense');
 
   const exportToExcel = async () => {
     if (!data) return;
@@ -567,24 +596,24 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(data.income?.accounts || {})
-                .sort(([, a]: [string, PLAccount], [, b]: [string, PLAccount]) => {
-                  let comp: number;
-                  if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
-                  else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
-                  else comp = (a.balance || 0) - (b.balance || 0);
-                  return sortDir === 'asc' ? comp : -comp;
-                })
-                .map(([id, acc]: [string, PLAccount]) => {
+            <div className={cn("grid gap-4", incomeGroups.grouped ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
+              {incomeGroups.rows.map(row => {
+                if (row.kind === 'subtotal') return (
+                  <AccountGroupSubtotal key={row.key} label={row.label} depth={row.depth}
+                    amount={incomeGroups.subtotals.get(row.member.id)?.amount || 0} formatMoney={formatCurrency} />
+                );
+                const id = row.member.id;
+                const acc = row.member;
                 const prevAcc = (prevData.income?.accounts as Record<string, PLAccount>)[id];
                 const prevBalance = prevAcc ? prevAcc.balance : 0;
                 const balance = acc.balance || 0;
                 const variance = isComparative && prevBalance !== 0 ? ((balance - prevBalance) / Math.abs(prevBalance)) * 100 : null;
 
                 return (
+                  <AccountGroupRow key={row.key} depth={row.depth} hasChildren={row.hasChildren} label={acc.name}
+                    expanded={!collapsedGroups.has(id)}
+                    onToggle={() => setCollapsedGroups(collapsed => toggleAccountGroup(collapsed, id))}>
                   <button
-                    key={id} 
                     type="button" onClick={() => {
                       const matchedTxs = transactions.filter(t => 
                         isTransactionInDateRange(t, dateRange.start, dateRange.end) && 
@@ -619,6 +648,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       )}
                     </div>
                   </button>
+                  </AccountGroupRow>
                 );
               })}
             </div>
@@ -646,24 +676,24 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                  )}
                </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(data.expense?.accounts || {})
-                .sort(([, a]: [string, PLAccount], [, b]: [string, PLAccount]) => {
-                  let comp: number;
-                  if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
-                  else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
-                  else comp = (a.balance || 0) - (b.balance || 0);
-                  return sortDir === 'asc' ? comp : -comp;
-                })
-                .map(([id, acc]: [string, PLAccount]) => {
+            <div className={cn("grid gap-4", expenseGroups.grouped ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
+              {expenseGroups.rows.map(row => {
+                if (row.kind === 'subtotal') return (
+                  <AccountGroupSubtotal key={row.key} label={row.label} depth={row.depth}
+                    amount={expenseGroups.subtotals.get(row.member.id)?.amount || 0} formatMoney={formatCurrency} />
+                );
+                const id = row.member.id;
+                const acc = row.member;
                 const prevAcc = (prevData.expense?.accounts as Record<string, PLAccount>)[id];
                 const prevBalance = prevAcc ? prevAcc.balance : 0;
                 const balance = acc.balance || 0;
                 const variance = isComparative && prevBalance !== 0 ? ((balance - prevBalance) / Math.abs(prevBalance)) * 100 : null;
 
                 return (
+                  <AccountGroupRow key={row.key} depth={row.depth} hasChildren={row.hasChildren} label={acc.name}
+                    expanded={!collapsedGroups.has(id)}
+                    onToggle={() => setCollapsedGroups(collapsed => toggleAccountGroup(collapsed, id))}>
                   <button
-                    key={id} 
                     type="button" onClick={() => {
                       const matchedTxs = transactions.filter(t => 
                         isTransactionInDateRange(t, dateRange.start, dateRange.end) && 
@@ -698,6 +728,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       )}
                     </div>
                   </button>
+                  </AccountGroupRow>
                 );
               })}
             </div>
