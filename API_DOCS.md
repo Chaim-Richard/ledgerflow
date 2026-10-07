@@ -939,3 +939,8 @@ Generates deterministic, pixel-perfect binary PDF documents (`application/pdf`) 
 - `payment` — Official payment receipts with document allocation tables.
 - `statement` — Chronological customer/vendor balance statements with running balances.
 
+
+## ETags and conditional requests (Z-05)
+
+- Every `GET` answer carries an `ETag` header. Send it back as `If-None-Match` and an unchanged answer comes back as `304 Not Modified` with no body.
+- An entry's version is its `updatedAt`. To update it only if nobody changed it since you read it, send `If-Match: "<updatedAt>"` with `PUT /api/v1/transactions/:id` (a full update or a `partialUpdate`). If it changed, the answer is `412 Precondition Failed` with `{"error": "version_conflict", "currentTransaction": {...}}` and nothing is saved. `If-Match: *` checks nothing. Sending `expectedUpdatedAt` in the body still works and answers `409` on a conflict.

@@ -13,7 +13,7 @@ import { writeServerAuditLog } from '../../services/auditLogService';
 import { deletionSentence, deletionSnapshot } from '../../services/deletionRecord';
 import { assertPostingOpen, lockMessage, postingLock } from '../../../lib/periodLock';
 import { errorMessage, HttpError, requestUser } from '../../auth/requestUser';
-import { enforceDoubleEntrySafety, isUpdatedAtMismatch } from './helpers';
+import { enforceDoubleEntrySafety, ifMatchVersion, isUpdatedAtMismatch } from './helpers';
 
 /** Read, create, edit and delete one entry. Part of /api/v1/transactions (F-06), registered in the original order. */
 export function registerTransactionCrudRoutes(transactionRouter: express.Router): void {
@@ -163,7 +163,7 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
            const txData = doc.data();
 
            // Optimistic concurrency check
-           const expectedUpdatedAt = req.body.expectedUpdatedAt || partialUpdate.expectedUpdatedAt;
+           const expectedUpdatedAt = req.body.expectedUpdatedAt || partialUpdate.expectedUpdatedAt || ifMatchVersion(req.header('if-match'));
            if (isUpdatedAtMismatch(expectedUpdatedAt, txData?.updatedAt)) {
              throw Object.assign(new Error('version_conflict'), { currentTransaction: { ...txData, id: doc.id } });
            }
@@ -239,7 +239,7 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
         if (!doc.exists) throw new Error('Not found');
 
         // Optimistic concurrency check
-        const expectedUpdatedAt = req.body.expectedUpdatedAt || transaction?.expectedUpdatedAt;
+        const expectedUpdatedAt = req.body.expectedUpdatedAt || transaction?.expectedUpdatedAt || ifMatchVersion(req.header('if-match'));
         if (isUpdatedAtMismatch(expectedUpdatedAt, doc.data()?.updatedAt)) {
           throw Object.assign(new Error('version_conflict'), { currentTransaction: { ...doc.data(), id: doc.id } });
         }
@@ -271,7 +271,8 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
       res.json({ status: 'ok', transactionId: id, data: transaction });
     } catch (e) {
       if (errorMessage(e) === 'version_conflict') {
-         return res.status(409).json({
+         // Z-05: a stale If-Match is a failed precondition (412); a stale expectedUpdatedAt stays 409
+         return res.status(ifMatchVersion(req.header('if-match')) ? 412 : 409).json({
            error: 'version_conflict',
            message: 'This transaction was modified by another user.',
            currentTransaction: (e as { currentTransaction?: unknown }).currentTransaction

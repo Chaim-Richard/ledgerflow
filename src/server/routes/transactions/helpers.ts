@@ -69,6 +69,16 @@ export function enforceDoubleEntrySafety(req: Request, res: Response, next: Next
 /**
  * Optimistic Concurrency Control: detects if existing transaction was updated since client read it.
  */
+/**
+ * Z-05: the version a client sends in an `If-Match` header (an entry's ETag is its `updatedAt` in
+ * quotes; a weak `W/` prefix is accepted). `*` means any version, so it checks nothing.
+ */
+export function ifMatchVersion(header: string | undefined): string | undefined {
+  const value = String(header || '').trim().replace(/^W\//, '');
+  if (!value || value === '*') return undefined;
+  return value.replace(/^"(.*)"$/, '$1') || undefined;
+}
+
 export function isUpdatedAtMismatch(expected: unknown, current: unknown): boolean {
   if (!expected || !current) return false;
   type TimestampLike = { toMillis?: () => number; toDate?: () => Date; seconds?: number; nanoseconds?: number };
