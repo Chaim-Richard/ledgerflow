@@ -12,6 +12,7 @@ import { depreciationThrough } from '../../lib/depreciationEngine';
 import { formatCurrency, formatDate, formatTzDate, parseAmountToCents } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import DisposeAssetDialog from './DisposeAssetDialog';
+import TransferAssetDialog from './TransferAssetDialog';
 import DepreciationScheduleTable from './DepreciationScheduleTable';
 import { assetCandidates } from '../../lib/assetFromBill';
 
@@ -47,6 +48,7 @@ export const FixedAssetsView: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
   // X-03: the asset being sold or scrapped, and the one whose disposal is being undone
   const [disposing, setDisposing] = useState<FixedAsset | null>(null);
+  const [moving, setMoving] = useState<FixedAsset | null>(null);
   const [undoing, setUndoing] = useState('');
   // X-02: the asset whose depreciation schedule is open
   const [scheduleOf, setScheduleOf] = useState('');
@@ -87,6 +89,24 @@ export const FixedAssetsView: React.FC = () => {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || 'The disposal could not be undone');
       toast.success(`${asset.name} is back on the books; its disposal entry is void`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUndoing('');
+    }
+  };
+
+  // X-05: undo the latest move
+  const undoMove = async (asset: FixedAsset) => {
+    if (!workspace?.id) return;
+    setUndoing(asset.id);
+    try {
+      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspace.id)}/assets/${encodeURIComponent(asset.id)}/transfer`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${await getIdToken()}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'The move could not be undone');
+      toast.success(`${asset.name} is back where it was`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     } finally {
@@ -217,6 +237,9 @@ export const FixedAssetsView: React.FC = () => {
                   <td className="py-3 px-4 font-semibold">
                     <AssetInlineDetails asset={asset} />
                     <div className="text-[11px] text-[var(--muted)] font-normal">{asset.depreciationMethod === 'declining-balance' ? 'Declining balance' : 'Straight line'}{asset.status === 'disposed' ? ' · disposed' : ''}</div>
+                    {(asset.transfers || []).slice(-1).map(m => (
+                      <div key={`${m.date}-${m.description}`} className="text-[11px] text-[var(--muted)] font-normal">{m.description} on {formatDate(m.date)}</div>
+                    ))}
                     {(asset.partialDisposals || []).map(p => (
                       <div key={p.transactionId} className="text-[11px] text-[var(--muted)] font-normal">
                         {p.percent}% {p.proceedsCents > 0 ? 'sold' : 'scrapped'} {formatDate(p.date)}{p.gainLossCents ? ` · ${p.gainLossCents > 0 ? 'gain' : 'loss'} ${formatCurrency(Math.abs(p.gainLossCents))}` : ''}
@@ -248,6 +271,16 @@ export const FixedAssetsView: React.FC = () => {
                           Undo disposal<span className="sr-only"> of {asset.name}</span>
                         </button>
                       ) : null}
+                      {asset.status !== 'disposed' && (
+                        <button type="button" onClick={() => setMoving(asset)} className="block ml-auto mt-1 text-xs font-semibold text-[var(--brass)] hover:underline">
+                          Move<span className="sr-only"> {asset.name}</span>
+                        </button>
+                      )}
+                      {asset.status !== 'disposed' && (asset.transfers || []).length > 0 && (
+                        <button type="button" disabled={undoing === asset.id} onClick={() => void undoMove(asset)} className="block ml-auto mt-1 text-xs font-semibold text-[var(--muted)] hover:underline disabled:opacity-50">
+                          Undo last move<span className="sr-only"> of {asset.name}</span>
+                        </button>
+                      )}
                       {asset.status !== 'disposed' && (asset.partialDisposals || []).length > 0 && (
                         <button type="button" disabled={undoing === asset.id} onClick={() => void undoDisposal(asset)} className="block ml-auto mt-1 text-xs font-semibold text-[var(--muted)] hover:underline disabled:opacity-50">
                           Undo last part sold<span className="sr-only"> of {asset.name}</span>
@@ -272,6 +305,9 @@ export const FixedAssetsView: React.FC = () => {
 
       {disposing && workspace && (
         <DisposeAssetDialog asset={disposing} accounts={chart} workspaceId={workspace.id} today={today} currency={workspace.currency || 'USD'} onClose={() => setDisposing(null)} />
+      )}
+      {moving && workspace && (
+        <TransferAssetDialog asset={moving} accounts={chart} workspaceId={workspace.id} today={today} currency={workspace.currency || 'USD'} onClose={() => setMoving(null)} />
       )}
 
       {isAdding && (

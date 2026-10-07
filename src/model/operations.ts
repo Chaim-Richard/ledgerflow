@@ -62,6 +62,14 @@ export interface PartialDisposal {
   before: { purchasePriceCents: number; salvageValueCents: number; accumulatedDepreciationCents: number; depreciatedThrough: string | null };
 }
 
+export interface AssetTransfer {
+  date: string;
+  description: string;
+  /** the entry moving cost and depreciation between accounts; none for a move of place only */
+  transactionId?: string;
+  before: { location: string | null; assetAccountId: string | null; accumulatedAccountId: string | null };
+}
+
 export interface FixedAsset {
   id: string;
   uid: string;
@@ -88,6 +96,9 @@ export interface FixedAsset {
   disposalProceedsCents?: number;
   disposalGainLossCents?: number;
   disposalTransactionId?: string;
+  /** X-05: where it is, and its moves (newest last) */
+  location?: string;
+  transfers?: AssetTransfer[];
   /** X-08: the day the warranty ends and the day the insurance renews (YYYY-MM-DD); reminded 30 days before. */
   warrantyExpires?: string;
   insuranceRenews?: string;
