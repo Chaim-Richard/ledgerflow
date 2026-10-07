@@ -4,7 +4,7 @@ import { Bill } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { calculateDocumentTax, cashPostedWithDocumentCents } from '../../lib/documentMath';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
-import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi } from './postingKit';
+import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate } from './postingKit';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
 
 /**
@@ -78,7 +78,7 @@ export async function postBillLedger(
     txsToPost.push({
       uid,
       workspaceId,
-      date: today,
+      date: reversalDate(prevTx.date, today, context),
       description: `Reversal of prior bill posting (Bill ${billData.number || billId})`,
       totalAmountCents: prevTx.totalAmountCents,
       currency: prevTx.currency || 'USD',

@@ -5,7 +5,7 @@ import { isPostable } from '../../lib/txFilters';
 import { calculateDocumentTax, cashPostedWithDocumentCents, depositAppliedCents } from '../../lib/documentMath';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
 import { planInvoiceCogs } from '../invoiceCogs';
-import { getAccounts, getTransactions, getWorkspaces, loadInventory, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi } from './postingKit';
+import { getAccounts, getTransactions, getWorkspaces, loadInventory, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate } from './postingKit';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
 import { isOpeningBalanceEquity } from '../../lib/openingBalances';
 
@@ -80,7 +80,7 @@ export async function postInvoiceLedger(
     txsToPost.push({
       uid,
       workspaceId,
-      date: today,
+      date: reversalDate(prevTx.date, today, context),
       description: `Reversal of prior invoice posting (Invoice ${invoiceData.number || invoiceId})`,
       totalAmountCents: prevTx.totalAmountCents,
       currency: prevTx.currency || 'USD',

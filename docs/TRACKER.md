@@ -2581,6 +2581,10 @@ BD-06, P-08 and BB-07. Each item says its bucket. Only the owner moves an item i
   11. drill a report figure down to its document.
 
   It extends `e2e/accounting-lifecycle.spec.ts`. Mixed Hebrew and English data.
-- [ ] DA-08 The main path with labels — **V1**: the same path, with two locations and a project on the entries; each report figure split by label, and each split adds back to the total.
+- [x] DA-08 The main path with labels — **done 7 Oct, against the real database** (`src/tests/main-path-labels.test.ts`).
+  - **What it runs:** an invoice with a line per location and bills split between them, posted by the app's own code. Every income and expense figure split by Location adds back to the server's own P&L total. "Location required on Office expenses" lists the one bill without it; editing the bill to carry one clears the finding, with the totals unchanged.
+  - **Real bug found and fixed:** editing, voiding or deleting an invoice, bill, credit or payment reversed the old entry dated **today** while the corrected entry kept the document's date. A past month then showed the old and the new amount together, and the current month a negative: every monthly report was wrong after a correction. Now the old entry is reversed on its own day while that day is open, and today only when it is closed (`reversalDate` in `postingKit.ts`, used by all five posting files).
+  - **Also:** the missing-label check skips an entry that was corrected and its reversal.
+  - **The original plan:** the same path, with two locations and a project on the entries; each report figure split by label, and each split adds back to the total.
 - [ ] DA-09 The main path across a group of books — **Later P1, after DA-01 and Z-20**: the same path in two workspaces of one group, plus a report across both that drills back into each.
 - [ ] DA-10 Move a label into its own books — **Research**: when a company that was an Entity label outgrows it (see ROADMAP, "Can a company just be a label?"), move that label's activity into a new workspace in the same group, without retyping. Opening balances move on a chosen date, and there is an audit trail in both. Needs an owner decision on the date and the history kept.

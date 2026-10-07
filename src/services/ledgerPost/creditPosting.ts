@@ -3,7 +3,7 @@ import { isIncomeAccount } from '../../lib/accountUtils';
 import { CreditNote, VendorCredit } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
-import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi } from './postingKit';
+import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi, reversalDate } from './postingKit';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
 
 /**
@@ -60,7 +60,7 @@ export async function postCreditNoteLedger(
     txsToPost.push({
       uid,
       workspaceId,
-      date: today,
+      date: reversalDate(prevTx.date, today, context),
       description: `Reversal of prior credit note posting (CN ${creditNoteId})`,
       totalAmountCents: prevTx.totalAmountCents,
       currency: prevTx.currency || 'USD',
@@ -184,7 +184,7 @@ export async function postVendorCreditLedger(
     txsToPost.push({
       uid,
       workspaceId,
-      date: today,
+      date: reversalDate(prevTx.date, today, context),
       description: `Reversal of prior vendor credit posting (VC ${vendorCreditId})`,
       totalAmountCents: prevTx.totalAmountCents,
       currency: prevTx.currency || 'USD',

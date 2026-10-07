@@ -106,6 +106,20 @@ export function verifyLockDate(dateStr: string, context?: LedgerPostContext): vo
   }
 }
 
+/**
+ * The day to reverse a document's earlier entry when the document is edited, voided or deleted: the
+ * earlier entry's own date while that day is open, so its month nets to the corrected amount (dated
+ * today, the old amount stayed in the document's month next to the new one and the month's reports
+ * were wrong; found by the main-path test, DA-08); today when that day is closed, so closed books are
+ * corrected in the current period instead.
+ */
+export function reversalDate(originalDate: string | undefined, today: string, context?: LedgerPostContext): string {
+  if (!originalDate) return today;
+  const day = originalDate.slice(0, 10);
+  const exception = context && context.lockDate !== undefined ? null : useLedgerStore.getState().lockException;
+  return isLockedDate(day, getLockDate(context), exception) ? today : day;
+}
+
 /** Workspace mapping first, then the first chart account matching the predicate. */
 export function findAccount(
   accounts: ChartAccount[],

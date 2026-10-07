@@ -253,7 +253,7 @@ These are the tracker IDs; `docs/TRACKER.md` has the detail.
   - N-12 (explain this number: statements, trial balance, aging, budget vs actual);
   - Z-12 (the missing-label check, with a simple rule per account) — the check, the rules and the warning done 7 Oct; refusing on the server still open;
   - K-34 and BD-02 (one fast switcher between books).
-- **Proof:** DA-05, DA-06, DA-07 (done 7 Oct, against the real database) and DA-08.
+- **Proof:** DA-05, DA-06 (both AI #3's A-10 and A-11), DA-07 and DA-08 (both done 7 Oct, against the real database).
 - **The owner's settings:** L-67 and L-83.
 
 ### Later, P0 (core and strategic)

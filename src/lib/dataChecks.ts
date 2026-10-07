@@ -282,7 +282,11 @@ export const DATA_CHECKS: DataCheck[] = [
     id: 'missing-label',
     label: 'Entries missing a required label (Z-12)',
     remedy: 'Open the entry and fill in the label. The rules (which label on which accounts) are in Settings → Dimensions.',
-    run: ({ transactions, accounts, dimensions }) => transactions.flatMap(tx => {
+    run: ({ transactions, accounts, dimensions }) => {
+      // an entry that was corrected and its reversal cancel out: only the entry that replaced them counts
+      const reversed = new Set(transactions.map(t => t.metadata?.reversesTxId || t.metadata?.reversedTransactionId).filter(Boolean));
+      return transactions.flatMap(tx => {
+      if (tx.reversalEventId || tx.metadata?.isReversal || tx.metadata?.reversesTxId || reversed.has(tx.id)) return [];
       const missing = missingLabels(tx, dimensions, accounts);
       if (missing.length === 0) return [];
       return [{
@@ -291,7 +295,8 @@ export const DATA_CHECKS: DataCheck[] = [
         description: 'Reports by that label show this entry under "Unassigned" until it is filled in.',
         record: { type: 'transaction' as const, id: tx.id },
       }];
-    }),
+      });
+    },
   },
 ];
 
