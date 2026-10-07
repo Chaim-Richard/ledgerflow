@@ -196,6 +196,14 @@ Last updated: 2026-10-07.
     - *Default:* that stays refused, so closed books are never replaced by an older state. If you
       want an owner-only "reopen everything" that allows it, say so and Claude adds it, audited.
 
+30. **One more database change to paste (7 Oct, stock history W-02) — after the four in item 25.**
+    `supabase/migrations/20261013060000_stock_moves.sql` adds the stock history: every change to an
+    item's stock with its reason (sold, returned, bought, counted, moved between locations). The
+    Supabase connector timed out on it. Paste it in Supabase → SQL editor and Run (safe to run
+    twice). *Until then:* selling, returns, counts and imports work exactly as before; the server
+    just keeps no history yet (Inventory → History shows none), and moving stock between
+    locations says it needs this update. Nothing breaks either way.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

@@ -8,7 +8,7 @@
 import type { Firestore } from '../db/firestore';
 import { assertPeriodOpen } from '../db/firestore';
 import { stockByLocation, transferProblem, type StockMove } from '../../lib/stockMoves';
-import { writeStockMoves } from './stockMoveService';
+import { stockMovesReady, writeStockMoves } from './stockMoveService';
 import { writeServerAuditLog } from './auditLogService';
 import { StockAdjustmentError } from './stockAdjustmentService';
 
@@ -16,6 +16,8 @@ export async function transferStock(db: Firestore, input: {
   workspaceId: string; uid: string; email?: string; itemId: string; from: string; to: string; quantity: number; date: string; note?: string;
 }) {
   await assertPeriodOpen(db, input.workspaceId, input.date, input.uid);
+  // locations are known only from the stock history (W-02)
+  if (!(await stockMovesReady(db))) throw new StockAdjustmentError(503, 'Stock locations need the stock history, which this server does not have yet. Ask the owner to apply the stock-moves database update.');
   return db.runTransaction(async t => {
     const snap = await t.get(db.collection('inventory').doc(input.itemId));
     const item = snap.exists ? snap.data() : undefined;

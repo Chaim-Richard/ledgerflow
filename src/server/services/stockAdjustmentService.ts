@@ -4,7 +4,7 @@ import type { Firestore } from '../db/firestore';
 import { assertPeriodOpen, validateWorkspaceAccounts } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import type { ValidationContext } from '../../kernel/validation/TransactionValidator';
-import { writeStockMoves } from './stockMoveService';
+import { stockMovesReady, writeStockMoves } from './stockMoveService';
 import { stockByLocation, type StockMove } from '../../lib/stockMoves';
 
 type WorkspaceData = ValidationContext['wsData'] & { currency?: string };
@@ -66,13 +66,14 @@ export async function adjustStock(db: Firestore, input: StockAdjustmentInput): P
   const offsetAcc = accounts.get(input.offsetAccountId);
   if (!inventoryAcc || !offsetAcc) throw new StockAdjustmentError(400, 'Choose accounts from this workspace');
   const currency = String(input.wsData?.currency || 'USD');
+  const historyKept = await stockMovesReady(db);
 
   return db.runTransaction(async t => {
     const refs = input.changes.map(c => db.collection('inventory').doc(c.itemId));
     const snaps = await Promise.all(refs.map(r => t.get(r)));
     // W-01: a count at one location is compared with what is there, not with the item's total
     const atLocation = new Map<string, number>();
-    if (kind === 'count' && input.locationId) {
+    if (kind === 'count' && input.locationId && historyKept) {
       for (const change of input.changes) {
         const history = (await t.get(db.collection('stockMoves').where('workspaceId', '==', workspaceId).where('itemId', '==', change.itemId))).docs.map(d => d.data() as StockMove);
         atLocation.set(change.itemId, stockByLocation(history).get(input.locationId) || 0);

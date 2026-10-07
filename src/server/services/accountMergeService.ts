@@ -32,7 +32,9 @@ export interface MergePreview { from: string; into: string; changes: Record<stri
 async function mentioning(db: Firestore, workspaceId: string, accountId: string): Promise<Array<{ table: string; id: string }>> {
   const found: Array<{ table: string; id: string }> = [];
   const needle = JSON.stringify(accountId);
-  for (const table of [...TABLES, 'chartAccounts']) {
+  // a table whose migration is not applied yet is skipped (it has no rows to change)
+  const existing = await db.tables();
+  for (const table of [...TABLES, 'chartAccounts'].filter(name => existing.has(name))) {
     const { rows } = await db.pool.query(`select id from public."${table}" where workspace_id = $1 and position($2 in data::text) > 0`, [workspaceId, needle]);
     for (const r of rows) found.push({ table, id: String(r.id) });
   }

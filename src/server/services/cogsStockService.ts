@@ -4,7 +4,7 @@ import { INVOICE_COGS_TYPE } from '../../services/invoiceCogs';
 import { SALES_RETURN_TYPE } from '../../lib/salesReturns';
 import { isPostable } from '../../lib/txFilters';
 import type { Transaction } from '../../types';
-import { writeStockMoves, type NewStockMove } from './stockMoveService';
+import { stockMovesReady, writeStockMoves, type NewStockMove } from './stockMoveService';
 
 /**
  * Stock follows the ledger: a cost-of-goods-sold entry for an invoice line (metadata.type
@@ -121,6 +121,7 @@ export async function prepareStockMoves(
   workspaceId: string,
   entries: LedgerEntry[]
 ): Promise<PreparedStockMoves> {
+  await stockMovesReady(db);
   const deltas = new Map<string, number>();
   const add = (itemId: string, delta: number) => deltas.set(itemId, round6((deltas.get(itemId) || 0) + delta));
   const pending: PendingMove[] = [];

@@ -36,7 +36,9 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
  * many rows and when the newest change was. Equal to the last check's: nothing to check again.
  */
 async function booksFingerprint(db: Firestore, workspaceId: string): Promise<string> {
-  const parts = Object.values(SOURCES).map(s => `select count(*) as n, max(updated_at) as at from public."${s.table}" where workspace_id = $1`);
+  // a table whose migration is not applied yet is left out (reads of it return nothing)
+  const existing = await db.tables();
+  const parts = Object.values(SOURCES).filter(s => existing.has(s.table)).map(s => `select count(*) as n, max(updated_at) as at from public."${s.table}" where workspace_id = $1`);
   const { rows } = await db.pool.query(`select sum(n)::bigint as n, max(at) as at from (${parts.join(' union all ')}) changes`, [workspaceId]);
   const at = rows[0]?.at as Date | null;
   return `${rows[0]?.n || 0}:${at ? new Date(at).toISOString() : ''}`;

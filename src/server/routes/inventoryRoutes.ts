@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { requireWorkspaceRole } from './workspaceRoutes';
 import { adjustStock, StockAdjustmentError } from '../services/stockAdjustmentService';
 import { setNegativeStockPolicy } from '../services/stockPolicyService';
-import { writeStockMoves } from '../services/stockMoveService';
+import { stockMovesReady, writeStockMoves } from '../services/stockMoveService';
 import { transferStock } from '../services/stockTransferService';
 
 /** Who may change stock or record its cost (viewers read only). */
@@ -125,6 +125,7 @@ inventoryRouter.post('/cogs', requireWorkspaceRole(STOCK_ROLES), async (req, res
 
     let resultResponse = responsePayload;
 
+    await stockMovesReady(db);
     await db.runTransaction(async (t: any) => {
       // Re-fetch item inside transaction for race-condition safety
       const itemSnap = await t.get(db.collection('inventory').doc(itemId));
