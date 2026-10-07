@@ -6,9 +6,16 @@ import crypto from "crypto";
 import { SecurityService } from "../../services/securityService";
 import { getDb, FieldValue } from "../db/firestore";
 import { apiKeyLimit } from "../middleware/rateLimiters";
+import { openApiDocument } from "../openapi";
 
 /** Routes moved out of server.ts (F-01), registered in the same place and order. */
 export function registerApiKeysRoutes(app: express.Express, _ctx: ServerContext): void {
+  // Z-01: the API described for tools (OpenAPI 3.1), built from the schemas the server checks with
+  app.get("/api/v1/openapi.json", (_req: express.Request, res: express.Response) => {
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.json(openApiDocument());
+  });
+
   // --- API Key Management endpoints ---
   app.post("/api/v1/keys/provision", authenticate, requireWorkspaceRole(['owner']), async (req: express.Request, res: express.Response) => {
     try {

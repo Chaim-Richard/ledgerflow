@@ -956,3 +956,7 @@ Requests made with an API key count against that key's own limit a minute (chose
 ## Batch create (Z-03)
 
 `POST /api/v1/transactions/batch-create` with `{"workspaceId": "...", "transactions": [ {...}, {...} ]}` creates up to 500 entries in one request, all or none. Each entry is checked exactly as `POST /api/v1/transactions` checks one (the schema, balanced lines, accounts in the workspace, the period lock, a unique id). The answer is `{"status": "success", "data": {"created": 3, "ids": [...]}}` with the ids in the order sent. If one entry is refused, nothing is written and the message names it by its index (`"Entry 1: ..."`: `400`, or `409` for a closed period or an id that already exists). A batch counts in full against the plan's entry limit (`402` when it would go over). Send an `Idempotency-Key` header to retry safely.
+
+## OpenAPI description (Z-01)
+
+`GET /api/v1/openapi.json` (no key needed) is an OpenAPI 3.1 description of the transaction endpoints, for Postman, code generators and other tools. The entry shape in it is generated from the schema the server checks requests with, so it always matches.
