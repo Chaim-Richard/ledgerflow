@@ -71,6 +71,27 @@ const PayrollViewContent: React.FC = () => {
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState('');
   const [undoingRun, setUndoingRun] = useState('');
+  // U-01: the run whose payslips are listed
+  const [slipsOf, setSlipsOf] = useState('');
+  const downloadPayslip = async (run: PayRun, employeeId: string, name: string) => {
+    if (!currentWorkspace?.id) return;
+    try {
+      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(currentWorkspace.id)}/pay-runs/${encodeURIComponent(run.id)}/payslips/${encodeURIComponent(employeeId)}`, {
+        headers: { Authorization: `Bearer ${await getIdToken()}` },
+      });
+      if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { message?: string }).message || 'The payslip could not be made');
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `payslip_${run.date}_${name.replace(/[^\w.-]+/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      setPostError(err instanceof Error ? err.message : String(err));
+    }
+  };
   // U-03: what this year's posted pay runs paid each employee
   const thisYear = getLocalDateISO().slice(0, 4);
   const ytd = useMemo(() => yearToDate(payRuns as Parameters<typeof yearToDate>[0], thisYear), [payRuns, thisYear]);
@@ -328,7 +349,8 @@ const PayrollViewContent: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {payRuns.map((run) => (
-                  <tr key={run.id} className="hover:bg-neutral-50/80 transition-colors">
+                  <React.Fragment key={run.id}>
+                  <tr className="hover:bg-neutral-50/80 transition-colors">
                     <td className="py-3 px-4 font-medium text-neutral-900 font-mono">
                       {formatDate(run.date)}
                     </td>
@@ -346,6 +368,11 @@ const PayrollViewContent: React.FC = () => {
                     </td>
                     {canRunPayroll && (
                       <td className="py-3 px-4 text-right">
+                        {run.status === 'processed' && (run.employees || []).length > 0 && (
+                          <button type="button" aria-expanded={slipsOf === run.id} onClick={() => setSlipsOf(slipsOf === run.id ? '' : run.id)} className="mr-3 text-xs font-semibold text-neutral-700 hover:underline">
+                            Payslips<span className="sr-only"> of the pay run of {formatDate(run.date)}</span>
+                          </button>
+                        )}
                         {run.status === 'processed' && run.transactionId && (
                           <button type="button" disabled={undoingRun === run.id} onClick={() => void undoRun(run)} className="text-xs font-semibold text-neutral-500 hover:underline disabled:opacity-50">
                             Undo<span className="sr-only"> the pay run of {formatDate(run.date)}</span>
@@ -354,6 +381,22 @@ const PayrollViewContent: React.FC = () => {
                       </td>
                     )}
                   </tr>
+                  {slipsOf === run.id && (
+                    <tr>
+                      <td colSpan={5} className="px-4 pb-3 bg-neutral-50">
+                        <ul className="flex flex-wrap gap-2 pt-2">
+                          {(run.employees || []).map(e => (
+                            <li key={e.employeeId}>
+                              <button type="button" onClick={() => void downloadPayslip(run, e.employeeId, e.name)} className="px-2.5 py-1 rounded-md border border-neutral-300 text-xs text-neutral-800 hover:bg-white">
+                                {e.name}: payslip (PDF)
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

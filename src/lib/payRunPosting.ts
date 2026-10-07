@@ -19,6 +19,8 @@ export interface PayRunEmployeeLine {
   withheldCents: number;
   employerTaxCents: number;
   netCents: number;
+  /** U-01: what was withheld, by kind, for the payslip (runs posted before 7 Oct have none) */
+  taxes?: { federalCents: number; stateCents: number; localCents: number; socialSecurityCents: number; medicareCents: number };
 }
 
 export interface PayRunTotals {
@@ -38,9 +40,14 @@ export function payRunTotals(employees: Employee[], year: number): PayRunTotals 
     return {
       employeeId: e.id, name: e.name, grossCents: calc.grossPayCents, deductionsCents: calc.preTaxDeductionsCents,
       withheldCents: calc.totalWithholdingCents, employerTaxCents: calc.totalEmployerTaxCents, netCents: calc.netPayCents,
+      taxes: {
+        federalCents: calc.employeeFederalTaxCents, stateCents: calc.employeeStateTaxCents,
+        localCents: calc.employeeCityTaxCents + calc.employeeCountyTaxCents,
+        socialSecurityCents: calc.employeeFicaSocialSecurityCents, medicareCents: calc.employeeFicaMedicareCents,
+      },
     };
   });
-  const sum = (key: keyof Omit<PayRunEmployeeLine, 'employeeId' | 'name'>) => lines.reduce((s, l) => s + l[key], 0);
+  const sum = (key: 'grossCents' | 'deductionsCents' | 'withheldCents' | 'employerTaxCents' | 'netCents') => lines.reduce((s, l) => s + l[key], 0);
   const grossCents = sum('grossCents');
   const employerTaxCents = sum('employerTaxCents');
   return {

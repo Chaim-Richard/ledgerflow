@@ -1,4 +1,5 @@
 import type { EntityMetadata } from './ledger';
+import type { PayRunEmployeeLine } from '../lib/payRunPosting';
 
 // Running the business: projects, inventory, fixed assets, payroll, documents, expense claims, support.
 // Part of src/types.ts (F-10): import from '../types' as before; it re-exports this file.
@@ -113,7 +114,7 @@ export interface PayRun {
   withheldCents?: number;
   employerTaxCents?: number;
   deductionsCents?: number;
-  employees?: Array<{ employeeId: string; name: string; grossCents: number; deductionsCents: number; withheldCents: number; employerTaxCents: number; netCents: number }>;
+  employees?: PayRunEmployeeLine[];
   undoneAt?: string;
 }
 

@@ -12,6 +12,8 @@ import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import type { Firestore } from '../server/db/pgFirestore';
 import { payRunLines, payRunTotals, yearToDate } from '../lib/payRunPosting';
+import { generatePayslipPdf, layoutPayslip } from '../server/services/payslipPdf';
+import { pdfTextRuns } from './helpers/pdfText';
 import type { Employee } from '../types';
 
 const employee = (id: string, salaryCents: number, extra: Partial<Employee> = {}): Employee => ({
@@ -48,6 +50,26 @@ describe('Year to date (U-03)', () => {
     ], '2026');
     assert.deepEqual(ytd.get('ann'), { grossCents: 1_000_000, deductionsCents: 0, withheldCents: 100_000, employerTaxCents: 0, netCents: 900_000, runs: 2 });
     assert.equal(ytd.get('bo')?.runs, 1);
+  });
+});
+
+describe('Payslip (U-01)', () => {
+  const line = { employeeId: 'ann', name: 'Ann Lee', grossCents: 500_000, deductionsCents: 20_000, withheldCents: 90_000, employerTaxCents: 40_000, netCents: 390_000,
+    taxes: { federalCents: 50_000, stateCents: 0, localCents: 0, socialSecurityCents: 31_000, medicareCents: 9_000 } };
+  test('gross, deductions, each tax withheld (none at zero), net, and the year to date up to this run', () => {
+    const runs = [{ date: '2026-09-30', status: 'processed', employees: [line] }, { date: '2026-10-31', status: 'processed', employees: [line] }, { date: '2026-11-30', status: 'processed', employees: [line] }];
+    const layout = layoutPayslip({ date: '2026-10-31' }, line, runs, { name: 'Acme Ltd', currency: 'usd' });
+    assert.deepEqual(layout.rows.map(r => [r.label, r.amount]), [
+      ['Gross pay', '5,000.00 USD'], ['Pre-tax deductions (retirement, health)', '−200.00 USD'], ['Federal income tax', '−500.00 USD'],
+      ['Social Security', '−310.00 USD'], ['Medicare', '−90.00 USD'], ['Net pay', '3,900.00 USD'],
+    ]);
+    assert.deepEqual(layout.ytd[0], { label: 'Gross pay in 2026', amount: '10,000.00 USD' }, 'September and October, not November');
+  });
+
+  test('the PDF says it', async () => {
+    const layout = layoutPayslip({ date: '2026-10-31' }, line, [{ date: '2026-10-31', status: 'processed', employees: [line] }], { name: 'Acme Ltd', currency: 'USD' });
+    const text = pdfTextRuns(await generatePayslipPdf(layout)).join(' ');
+    for (const word of ['Payslip', 'Ann', 'Lee', '2026-10-31', '3,900.00', 'Medicare']) assert.ok(text.includes(word), word);
   });
 });
 
@@ -110,6 +132,17 @@ describe('Pay runs (database)', { skip: !url && 'LF_TEST_DATABASE_URL not set' }
     assert.equal(entry.date, '2026-10-01');
     assert.equal((entry.lines as Array<{ amountCents: number }>).reduce((s, l) => s + l.amountCents, 0), 0);
     assert.equal(entry.totalAmountCents, run.totalAmountCents);
+  });
+
+  test('a payslip for an employee of the run comes back as a PDF; one for someone not in it does not', async () => {
+    const run = (await db.collection('payRuns').doc(runId).get()).data()!;
+    const employeeId = (run.employees as Array<{ employeeId: string }>)[0].employeeId;
+    const pdf = await fetch(`${base}/api/v1/workspaces/${ws}/pay-runs/${runId}/payslips/${employeeId}`, { headers: { 'x-test-uid': 'owner-1' } });
+    assert.equal(pdf.status, 200);
+    assert.equal(pdf.headers.get('content-type'), 'application/pdf');
+    assert.equal((await pdf.arrayBuffer()).byteLength > 1000, true);
+    assert.equal((await fetch(`${base}/api/v1/workspaces/${ws}/pay-runs/${runId}/payslips/nobody`, { headers: { 'x-test-uid': 'owner-1' } })).status, 404);
+    assert.equal((await fetch(`${base}/api/v1/workspaces/${ws}/pay-runs/${runId}/payslips/${employeeId}`, { headers: { 'x-test-uid': 'book-1' } })).status, 403);
   });
 
   test('a second run on the same date needs saying so; undo voids the entry but not in a closed period', async () => {
