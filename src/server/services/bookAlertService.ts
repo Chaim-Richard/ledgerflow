@@ -61,8 +61,9 @@ async function fingerprint(db: Firestore, workspaceId: string): Promise<string> 
   return `${rows[0]?.n || 0}:${at ? new Date(at).toISOString() : ''}`;
 }
 
-const monthName = (month: string) => new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1))
-  .toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+/** "2026-10" → "October 2026" (no clock or time zone involved). */
+const monthName = (month: string) => `${MONTHS[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`;
 
 interface Sent extends AlertsSent { fingerprint?: string }
 
