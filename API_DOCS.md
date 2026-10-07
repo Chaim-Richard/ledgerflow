@@ -960,3 +960,16 @@ Requests made with an API key count against that key's own limit a minute (chose
 ## OpenAPI description (Z-01)
 
 `GET /api/v1/openapi.json` (no key needed) is an OpenAPI 3.1 description of the transaction endpoints, for Postman, code generators and other tools. The entry shape in it is generated from the schema the server checks requests with, so it always matches.
+
+## TypeScript client (Z-06)
+
+`sdk/ledgerflowClient.ts` is a small client with no dependencies (Node 18+ or a browser): copy the file into your project.
+
+```ts
+const lf = new LedgerFlowClient({ apiKey: process.env.LEDGERFLOW_KEY!, baseUrl: 'https://your-ledgerflow-address' });
+for await (const entry of lf.listTransactions(workspaceId, { startDate: '2026-01-01', fields: ['date', 'totalAmountCents'] })) { /* every page */ }
+const { ids } = await lf.createTransactions(workspaceId, [entryA, entryB]);   // all or none
+await lf.updateTransaction(ids[0], { memo: 'Checked' }, { ifUpdatedAt: entry.updatedAt });  // 412 if changed since
+```
+
+It follows pages for you, sends an `Idempotency-Key` with every create (a retried request never creates twice), waits and retries when your key's limit a minute is reached, and throws `LedgerFlowError` (with `status` and the server's message) when a request is refused.
