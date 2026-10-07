@@ -952,3 +952,7 @@ Generates deterministic, pixel-perfect binary PDF documents (`application/pdf`) 
 ## Rate limits per API key (Z-02)
 
 Requests made with an API key count against that key's own limit a minute (chosen when the key is made: 30 to 1,200 on the screen, 10 to 10,000 through `POST /api/v1/keys/provision` with `rateLimitPerMinute`; 120 otherwise), not against your IP address. Every answer carries `RateLimit-*` headers; over the limit, the answer is `429` with `{"code": "RATE_LIMIT_EXCEEDED"}` until the minute is over.
+
+## Batch create (Z-03)
+
+`POST /api/v1/transactions/batch-create` with `{"workspaceId": "...", "transactions": [ {...}, {...} ]}` creates up to 500 entries in one request, all or none. Each entry is checked exactly as `POST /api/v1/transactions` checks one (the schema, balanced lines, accounts in the workspace, the period lock, a unique id). The answer is `{"status": "success", "data": {"created": 3, "ids": [...]}}` with the ids in the order sent. If one entry is refused, nothing is written and the message names it by its index (`"Entry 1: ..."`: `400`, or `409` for a closed period or an id that already exists). A batch counts in full against the plan's entry limit (`402` when it would go over). Send an `Idempotency-Key` header to retry safely.

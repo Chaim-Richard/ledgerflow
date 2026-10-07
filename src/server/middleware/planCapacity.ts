@@ -52,7 +52,9 @@ export function requirePlanCapacity(resource: 'transactions' | 'seats' | 'storag
           txCount = txSnap.size ?? (txSnap.docs ? txSnap.docs.length : 0);
         }
 
-        if (txCount >= txCap) {
+        // Z-03: a batch adds as many entries as it carries
+        const adding = Array.isArray(req.body?.transactions) ? Math.max(1, req.body.transactions.length) : 1;
+        if (txCount + adding > txCap) {
           return res.status(402).json({
             status: 'error',
             message: `Payment Required: Plan transaction limit reached (${txCount}/${txCap}). Upgrade workspace plan to continue creating transactions.`,
