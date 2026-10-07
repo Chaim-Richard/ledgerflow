@@ -52,6 +52,11 @@ export function payRunTotals(employees: Employee[], year: number, schedule: PayS
       },
     };
   });
+  return totalsOfLines(lines);
+}
+
+/** A run's totals from its per-employee lines (U-10: an approved run posts the lines that were approved). */
+export function totalsOfLines(lines: PayRunEmployeeLine[]): PayRunTotals {
   const sum = (key: 'grossCents' | 'deductionsCents' | 'withheldCents' | 'employerTaxCents' | 'netCents') => lines.reduce((s, l) => s + l[key], 0);
   const grossCents = sum('grossCents');
   const employerTaxCents = sum('employerTaxCents');

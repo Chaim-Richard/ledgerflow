@@ -107,7 +107,8 @@ export interface PayRun {
   date: string;
   totalAmountCents: number;
   employeeCount: number;
-  status: 'draft' | 'processed' | 'failed' | 'undone';
+  /** U-10: awaiting_approval → processed (approved), rejected (sent back) or withdrawn */
+  status: 'draft' | 'processed' | 'failed' | 'undone' | 'awaiting_approval' | 'rejected' | 'withdrawn';
   createdAt: string;
   /** U-02: posted by the server; its entry and the amounts behind it. */
   transactionId?: string;
@@ -120,6 +121,16 @@ export interface PayRun {
   deductionsCents?: number;
   employees?: PayRunEmployeeLine[];
   undoneAt?: string;
+  /** U-10: who prepared it (uid is theirs), who approved or sent it back, and why */
+  submittedByEmail?: string;
+  approvedBy?: string;
+  approvedByEmail?: string;
+  approvedAt?: string;
+  rejectedBy?: string;
+  rejectedByEmail?: string;
+  rejectedAt?: string;
+  rejectionNote?: string;
+  withdrawnAt?: string;
 }
 
 export interface CloudDocument {

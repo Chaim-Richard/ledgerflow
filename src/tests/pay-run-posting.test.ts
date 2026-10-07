@@ -2,8 +2,9 @@
  * Pay runs posted by the server (U-02): the entry always balances, deductions included (it did not
  * before); only owners and accountants post; the four accounts must be real and of the right kind;
  * the run is saved with its amounts (before, nothing was saved); a second run on the same date
- * needs saying so; undo voids the entry while the date is open. The database part runs when
- * LF_TEST_DATABASE_URL is set.
+ * needs saying so; undo voids the entry while the date is open; with approval on (U-10) an
+ * accountant's run waits and an owner posts exactly what was sent, or sends it back. The database
+ * part runs when LF_TEST_DATABASE_URL is set.
  */
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -133,7 +134,7 @@ describe('Pay runs (database)', { skip: !url && 'LF_TEST_DATABASE_URL not set' }
 
   after(async () => {
     server?.close();
-    for (const table of ['transactions', 'payRuns', 'employees', 'chartAccounts', 'auditLogs', 'workspaces']) await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
+    for (const table of ['transactions', 'payRuns', 'employees', 'chartAccounts', 'auditLogs', 'notifications', 'workspaces']) await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
     await db.terminate();
   });
 
@@ -190,5 +191,62 @@ describe('Pay runs (database)', { skip: !url && 'LF_TEST_DATABASE_URL not set' }
     assert.deepEqual((weekly.body.employees as Array<{ name: string; grossCents: number }>).map(e => [e.name, e.grossCents]), [['Cal', 100_000]]);
     assert.equal((await call('acct-1', 'POST', '', { ...body(), date: '2026-10-15', schedule: 'Weekly' })).status, 409);
     assert.equal((await call('acct-1', 'POST', '', { ...body(), date: '2026-10-16', schedule: 'Bi-Weekly' })).status, 400);
+  });
+
+  test('approval (U-10): an accountant\'s run waits; an owner posts exactly what was sent, or sends it back; the preparer can withdraw', async () => {
+    const run = async (runId: string) => (await db.collection('payRuns').doc(runId).get()).data()!;
+    const liveEntriesOn = async (date: string) => (await db.collection('transactions').where('workspaceId', '==', ws).where('date', '==', date).get()).docs.filter(d => d.data().status !== 'void').length;
+    const told = async (kind: string) => (await db.pool.query<{ uid: string; title: string; message: string }>(
+      `select data->>'uid' as uid, data->>'title' as title, data->>'message' as message from public.notifications where workspace_id = $1 and data->>'kind' = $2 order by data->>'createdAt'`, [ws, kind])).rows;
+    const monthly = (date: string) => ({ ...body(), date, schedule: 'Monthly' });
+
+    assert.equal((await call('acct-1', 'PUT', '/approval', { required: true })).status, 403, 'only owners decide');
+    assert.equal((await call('owner-1', 'PUT', '/approval', { required: true })).status, 200);
+    assert.equal((await db.collection('workspaces').doc(ws).get()).data()?.payrollApproval, true);
+
+    const sent = await call('acct-1', 'POST', '', monthly('2026-10-20'));
+    assert.equal(sent.status, 200);
+    assert.equal(sent.body.awaitingApproval, true);
+    const waitingId = String(sent.body.payRunId);
+    assert.deepEqual([(await run(waitingId)).status, (await run(waitingId)).transactionId], ['awaiting_approval', undefined]);
+    assert.equal(await liveEntriesOn('2026-10-20'), 0, 'nothing is posted while it waits');
+    assert.deepEqual((await told('payroll.approval_requested')).map(n => n.uid), ['owner-1'], 'the owner is told, not the accountant');
+    assert.equal((await call('acct-1', 'POST', '', monthly('2026-10-20'))).status, 409, 'the same people twice on one date, even while waiting');
+    const slip = await fetch(`${base}/api/v1/workspaces/${ws}/pay-runs/${waitingId}/payslips/${id('ann')}`, { headers: { 'x-test-uid': 'owner-1' } });
+    assert.equal(slip.status, 409, 'no payslip before it is posted');
+
+    // a pay rise after it was sent does not change what the owner approves
+    await db.collection('employees').doc(id('ann')).update({ salaryCents: 12_000_000 });
+    assert.equal((await call('acct-1', 'POST', `/${waitingId}/approve`, {})).status, 403, 'an accountant cannot approve');
+    const approved = await call('owner-1', 'POST', `/${waitingId}/approve`, {});
+    assert.equal(approved.status, 200);
+    const posted = await run(waitingId);
+    assert.deepEqual([posted.status, posted.uid, posted.approvedBy, posted.grossCents], ['processed', 'acct-1', 'owner-1', 900_000]);
+    const entry = (await db.collection('transactions').doc(String(posted.transactionId)).get()).data()!;
+    assert.equal(entry.date, '2026-10-20');
+    assert.equal(entry.totalAmountCents, posted.totalAmountCents);
+    assert.equal((entry.lines as Array<{ amountCents: number }>).reduce((s, l) => s + l.amountCents, 0), 0);
+    assert.equal((await call('owner-1', 'POST', `/${waitingId}/approve`, {})).status, 409, 'approved once');
+    assert.deepEqual((await told('payroll.decided')).map(n => [n.uid, n.title]), [['acct-1', 'The pay run of 2026-10-20 was approved and posted']]);
+
+    const second = String((await call('acct-1', 'POST', '', monthly('2026-10-22'))).body.payRunId);
+    assert.equal((await call('owner-1', 'POST', `/${second}/reject`, { note: 'Wrong date: the 23rd' })).status, 200);
+    assert.deepEqual([(await run(second)).status, (await run(second)).rejectionNote], ['rejected', 'Wrong date: the 23rd']);
+    assert.equal(await liveEntriesOn('2026-10-22'), 0);
+    assert.match((await told('payroll.decided')).map(n => n.message).join('|'), /Wrong date: the 23rd/);
+    assert.equal((await call('owner-1', 'POST', `/${second}/approve`, {})).status, 409, 'a run sent back is not approved later');
+
+    const third = String((await call('acct-1', 'POST', '', monthly('2026-10-23'))).body.payRunId);
+    assert.equal((await call('acct-1', 'DELETE', `/${third}`)).status, 200, 'the preparer withdraws it');
+    assert.equal((await run(third)).status, 'withdrawn');
+
+    const own = await call('owner-1', 'POST', '', monthly('2026-10-24'));
+    assert.equal(own.status, 200);
+    assert.equal(own.body.awaitingApproval, undefined, "an owner's own run posts straight away");
+    assert.equal(typeof own.body.transactionId, 'string');
+
+    assert.equal((await call('owner-1', 'PUT', '/approval', { required: false })).status, 200);
+    const direct = await call('acct-1', 'POST', '', monthly('2026-10-26'));
+    assert.equal(typeof direct.body.transactionId, 'string', 'with approval off an accountant posts again');
   });
 });

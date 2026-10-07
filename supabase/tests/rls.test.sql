@@ -291,7 +291,7 @@ begin
     'transactions','journalEntries','invoices','payments','bills','creditNotes','vendorCredits',
     'projects','estimates','inventory','recurring','budgets','autoRules','fixedAssets','assets',
     'taxRates','dimensionNodes','vendors','customers','rulePatterns','scenarios','loans',
-    'employees','payRuns','partners','reconciliations','workspaceShards'
+    'employees','partners','reconciliations','workspaceShards'
   ] loop
     doc := case when t = 'transactions' then '{"workspaceId":"ws1","date":"2026-02-15","status":"draft"}'
                 else '{"workspaceId":"ws1"}' end;
@@ -444,6 +444,16 @@ select pg_temp.expect_count('outsider reads questions', 'u-out', $$select count(
 select pg_temp.expect_denied('owner answers from the browser', 'u-owner', $$select lf_update('clientQueries','cq1','{"status":"answered"}'::jsonb)$$);
 select pg_temp.expect_denied('bookkeeper asks from the browser', 'u-book',
   $$insert into "clientQueries"(id,data) values ('cq2', '{"workspaceId":"ws1","transactionId":"t1","status":"open"}')$$);
+
+-- pay runs (U-02, U-10): posted, approved and undone only by the server; members read
+select set_config('request.jwt.claims', '', true);
+insert into "payRuns" (id, data) values ('pr1', '{"workspaceId":"ws1","date":"2026-02-15","status":"awaiting_approval"}');
+select pg_temp.expect_count('viewer reads pay runs', 'u-view', $$select count(*) from "payRuns"$$, 1);
+select pg_temp.expect_count('outsider reads pay runs', 'u-out', $$select count(*) from "payRuns"$$, 0);
+select pg_temp.expect_denied('owner approves a pay run from the browser', 'u-owner', $$select lf_update('payRuns','pr1','{"status":"processed"}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper adds a pay run from the browser', 'u-book',
+  $$insert into "payRuns"(id,data) values ('pr2', '{"workspaceId":"ws1","date":"2026-02-15","status":"processed"}')$$);
+select pg_temp.expect_denied('owner deletes a pay run from the browser', 'u-owner', $$delete from "payRuns" where id = 'pr1'$$);
 
 -- purchase orders: members read; owners, accountants and bookkeepers write
 select pg_temp.expect_ok('bookkeeper saves a purchase order', 'u-book',

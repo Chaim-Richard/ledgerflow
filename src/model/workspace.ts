@@ -66,6 +66,8 @@ export interface Workspace {
   alerts?: AlertSettings;
   /** What the alerts already told (written by the server only). */
   alertsSent?: AlertsSent;
+  /** U-10: pay runs prepared by others wait for an owner's approval (set by owners, through the server). */
+  payrollApproval?: boolean;
   /** Set by the daily job: the month (YYYY-MM) monthly statements were last sent (Y-28). */
   lastStatementsMonth?: string;
   strategicAdvice?: string[];

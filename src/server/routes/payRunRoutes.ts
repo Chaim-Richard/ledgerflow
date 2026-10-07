@@ -1,13 +1,15 @@
 import express from 'express';
 import { z } from 'zod';
 import { getDb } from '../db/firestore';
-import { PayRunError, postPayRun, undoPayRun } from '../services/payRunService';
+import { approvePayRun, PayRunError, postPayRun, rejectPayRun, setPayrollApproval, undoPayRun } from '../services/payRunService';
 import { generatePayslipPdf, layoutPayslip } from '../services/payslipPdf';
 import type { PayRunEmployeeLine } from '../../lib/payRunPosting';
 
 /**
  * Pay runs (U-02), mounted at /api/v1/workspaces/:workspaceId/pay-runs (workspaceRoutes.ts, owners
- * and accountants). POST posts a run for the pay date; DELETE /:payRunId undoes it while the date is open.
+ * and accountants). POST posts a run for the pay date (or, U-10, sends it for an owner's approval);
+ * DELETE /:payRunId undoes it while the date is open, or withdraws it while it waits. Owners:
+ * POST /:payRunId/approve or /reject, and PUT /approval turns approval on or off.
  */
 export const payRunRouter = express.Router({ mergeParams: true });
 
@@ -44,6 +46,27 @@ payRunRouter.delete('/:payRunId', async (req, res) => {
   } catch (err) { fail(res, err, 'The pay run could not be undone'); }
 });
 
+payRunRouter.put('/approval', async (req, res) => {
+  try {
+    const { required } = z.object({ required: z.boolean() }).strict().parse(req.body);
+    res.json({ status: 'success', ...(await setPayrollApproval(getDb(), { ...actor(req), required })) });
+  } catch (err) { fail(res, err, 'The setting could not be saved'); }
+});
+
+payRunRouter.post('/:payRunId/approve', async (req, res) => {
+  try {
+    const { again } = z.object({ again: z.boolean().optional() }).strict().parse(req.body || {});
+    res.json({ status: 'success', ...(await approvePayRun(getDb(), { ...actor(req), payRunId: String(req.params.payRunId), again })) });
+  } catch (err) { fail(res, err, 'The pay run could not be approved'); }
+});
+
+payRunRouter.post('/:payRunId/reject', async (req, res) => {
+  try {
+    const { note } = z.object({ note: z.string().max(500).optional() }).strict().parse(req.body || {});
+    res.json({ status: 'success', ...(await rejectPayRun(getDb(), { ...actor(req), payRunId: String(req.params.payRunId), note })) });
+  } catch (err) { fail(res, err, 'The pay run could not be sent back'); }
+});
+
 // U-01: one employee's payslip for a posted run (PDF)
 payRunRouter.get('/:payRunId/payslips/:employeeId', async (req, res) => {
   try {
@@ -51,6 +74,7 @@ payRunRouter.get('/:payRunId/payslips/:employeeId', async (req, res) => {
     const db = getDb();
     const run = (await db.collection('payRuns').doc(String(req.params.payRunId)).get()).data();
     if (!run || run.workspaceId !== workspaceId) return res.status(404).json({ status: 'error', message: 'That pay run is not in this workspace' });
+    if (['awaiting_approval', 'rejected', 'withdrawn'].includes(String(run.status))) return res.status(409).json({ status: 'error', message: 'Payslips are for pay runs that were posted' });
     const line = ((run.employees || []) as PayRunEmployeeLine[]).find(e => e.employeeId === req.params.employeeId);
     if (!line) return res.status(404).json({ status: 'error', message: 'That employee was not paid in this run' });
     const year = String(run.date).slice(0, 4);

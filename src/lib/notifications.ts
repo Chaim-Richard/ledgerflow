@@ -35,6 +35,8 @@ export const NOTIFICATION_TYPES = {
   'close.reminder': { label: 'A reminder to close last month', roles: ['owner', 'accountant'] as Role[], tab: 'month-end-close' },
   'budget.exceeded': { label: 'A budget was overspent', roles: ['owner', 'accountant'] as Role[], tab: 'budgets' },
   'cash.low': { label: 'Cash fell below the amount set in Settings → Alerts', roles: ['owner', 'accountant'] as Role[], tab: 'dashboard' },
+  'payroll.approval_requested': { label: 'A pay run waits for your approval', roles: ['owner'] as Role[], tab: 'payroll' },
+  'payroll.decided': { label: 'A pay run you prepared was approved or sent back', roles: ['owner', 'accountant'] as Role[], tab: 'payroll' },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;

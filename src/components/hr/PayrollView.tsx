@@ -25,6 +25,11 @@ import {
 } from 'lucide-react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { Labelled } from '../ui/Labelled';
+import PayRunApprovals from './PayRunApprovals';
+
+const RUN_STATUS: Partial<Record<PayRun['status'], string>> = {
+  processed: 'Posted to the ledger', undone: 'Undone', awaiting_approval: 'Waiting for approval', rejected: 'Sent back', withdrawn: 'Withdrawn',
+};
 
 const PayrollViewContent: React.FC = () => {
   const employees = useLedgerStore(s => (s.employees || []) as Employee[]);
@@ -48,6 +53,8 @@ const PayrollViewContent: React.FC = () => {
   const canWrite = role !== 'viewer';
   // U-02: owners and accountants post pay runs (the server checks too)
   const canRunPayroll = role === 'owner' || role === 'accountant';
+  // U-10: with approval on, an accountant's run waits for an owner instead of posting
+  const needsApproval = currentWorkspace?.payrollApproval === true && role !== 'owner';
   const [employeeSaving, setEmployeeSaving] = useState(false);
   const [employeeError, setEmployeeError] = useState('');
   const employeeBusy = useRef(false);
@@ -203,20 +210,24 @@ const PayrollViewContent: React.FC = () => {
         body: JSON.stringify({ date: runPayDate, bankAccountId: selectedBankAccountId, wagesAccountId, taxExpenseAccountId, liabilitiesAccountId, ...(runSchedule !== 'all' ? { schedule: runSchedule } : {}), ...(again ? { again } : {}) }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.status === 409 && !again && /already posted/.test(String(data.message))) {
-        if (window.confirm(`${data.message}. Post another pay run on ${runPayDate}?`)) { setPosting(false); await handlePostPayRunToLedger(true); }
+      if (res.status === 409 && !again && /already (posted|waiting)/.test(String(data.message))) {
+        if (window.confirm(`${data.message}. ${needsApproval ? 'Prepare' : 'Post'} another pay run on ${runPayDate}?`)) { setPosting(false); await handlePostPayRunToLedger(true); }
         return;
       }
       if (!res.ok) throw new Error(data.message || 'The pay run could not be posted');
+      const waits = data.awaitingApproval === true;
       const record: PayRun = {
         id: data.payRunId, uid: user?.uid || '', workspaceId: currentWorkspace.id, date: runPayDate, totalAmountCents: data.costCents,
-        employeeCount: data.employees.length, status: 'processed', createdAt: new Date().toISOString(), transactionId: data.transactionId,
-        employees: data.employees, grossCents: data.grossCents, netCents: data.netCents, withheldCents: data.withheldCents,
+        employeeCount: data.employees.length, status: waits ? 'awaiting_approval' : 'processed', createdAt: new Date().toISOString(),
+        ...(waits ? { submittedByEmail: user?.email || '' } : { transactionId: data.transactionId }),
+        schedule: runSchedule, employees: data.employees, grossCents: data.grossCents, netCents: data.netCents, withheldCents: data.withheldCents,
         employerTaxCents: data.employerTaxCents, deductionsCents: data.deductionsCents,
       };
       setPayRuns([...payRuns.filter(r => r.id !== record.id), record]);
       setIsGeneratingRun(false);
-      setSuccessMessage(`Pay run of ${formatDate(runPayDate)} posted: ${formatCurrency(data.costCents)} total cost, ${formatCurrency(data.netCents)} paid out.`);
+      setSuccessMessage(waits
+        ? `Pay run of ${formatDate(runPayDate)} sent for approval: an owner approves it before it is posted (${formatCurrency(data.costCents)} total cost).`
+        : `Pay run of ${formatDate(runPayDate)} posted: ${formatCurrency(data.costCents)} total cost, ${formatCurrency(data.netCents)} paid out.`);
       setSafeTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
       setPostError(err instanceof Error ? err.message : String(err));
@@ -321,6 +332,8 @@ const PayrollViewContent: React.FC = () => {
         </button>
       </div>
 
+      {activeTab === 'runs' && <PayRunApprovals />}
+
       {/* Main Content */}
       {activeTab === 'runs' ? (
         payRuns.length === 0 ? (
@@ -366,10 +379,11 @@ const PayrollViewContent: React.FC = () => {
                       {formatCurrency(run.totalAmountCents)}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-semibold">
-                        <CheckCircle2 aria-hidden="true" className="w-3 h-3 text-emerald-600" />
-                        {run.status === 'processed' ? 'Posted to the ledger' : run.status === 'undone' ? 'Undone' : run.status}
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 border rounded-full text-[10px] font-semibold ${run.status === 'processed' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : run.status === 'awaiting_approval' ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-neutral-50 text-neutral-700 border-neutral-200'}`}>
+                        {run.status === 'processed' && <CheckCircle2 aria-hidden="true" className="w-3 h-3 text-emerald-600" />}
+                        {RUN_STATUS[run.status] || run.status}
                       </span>
+                      {run.status === 'rejected' && run.rejectionNote && <p className="mt-1 text-[10px] text-neutral-600">{run.rejectionNote}</p>}
                     </td>
                     {canRunPayroll && (
                       <td className="py-3 px-4 text-right">
@@ -760,7 +774,7 @@ const PayrollViewContent: React.FC = () => {
                 className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Check aria-hidden="true" className="w-3.5 h-3.5" />
-                {posting ? 'Posting…' : 'Post the pay run to the ledger'}
+                {posting ? (needsApproval ? 'Sending…' : 'Posting…') : needsApproval ? 'Send the pay run for approval' : 'Post the pay run to the ledger'}
               </button>
             </div>
           </div>

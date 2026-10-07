@@ -50,7 +50,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     "petty-cash":
       "Run the petty cash box: one of the workspace's own cash-type accounts, with its balance read straight from the ledger. Spend from the box against an expense category, top it up from a bank account, or count the cash and post the difference to a chosen over/short account. Every movement is one balanced entry through the ordinary posting path, so the period lock applies; the screen never invents an account.",
     payroll:
-      "Keep the employee list and post pay runs. The server works out each employee's pay for the period and posts one balanced entry on the pay date: wages and the employer's taxes as expenses, net pay out of the bank, and withholding and deductions as payroll liabilities. Undo voids a pay run's entry while its date is open; the tax figures are estimates, so check them before paying.",
+      "Keep the employee list and post pay runs. The server works out each employee's pay for the period and posts one balanced entry on the pay date: wages and the employer's taxes as expenses, net pay out of the bank, and withholding and deductions as payroll liabilities. Undo voids a pay run's entry while its date is open. An owner can require approval: an accountant's run then waits until an owner approves it (exactly those amounts are posted) or sends it back. The tax figures are estimates, so check them before paying.",
     reports:
       "Choose a financial report and its dates. Compare periods, print or copy an exact report link. Each report explains its timing and loaded-history limits.",
     charts:
