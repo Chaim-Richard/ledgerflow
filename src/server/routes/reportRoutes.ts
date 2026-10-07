@@ -14,8 +14,7 @@ import {
   computeTrialBalance,
   computeCashFlow,
   computeGeneralLedger,
-  computeStatement,
-  computeTaxLiability
+  computeStatement
 } from "../reports/computeReports";
 import type { Bill, Budget, ChartAccount, CreditNote, Customer, Invoice, Payment, Transaction as LedgerTransaction, VendorCredit } from "../../types";
 import { agingBucket, daysOverdue, outstandingBaseCents } from '../../lib/aging';
@@ -245,7 +244,7 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
             const snap = await txQuery.get();
             transactions = snap.docs.map((doc) => doc.data() as LedgerTransaction);
             resolve();
-          } catch (fallbackErr) {
+          } catch {
             reject(err);
           }
         });
@@ -356,29 +355,3 @@ reportRouter.get("/statement", async (req, res) => {
   }
 });
 
-reportRouter.get("/tax-liability", async (req, res) => {
-  const authReq = req as AuthenticatedRequest;
-  const result = ReportRangeSchema.safeParse(req.query);
-  if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
-  const { workspaceId, startDate, endDate } = result.data;
-
-  try {
-    await authorizeWorkspace(authReq, workspaceId);
-    const db = getDb();
-
-    const [invSnap, billSnap] = await Promise.all([
-      db.collection("invoices").where("workspaceId", "==", workspaceId).get(),
-      db.collection("bills").where("workspaceId", "==", workspaceId).get()
-    ]);
-
-    const invoices = invSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Invoice);
-    const bills = billSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Bill);
-
-    const taxLiability = computeTaxLiability(invoices, bills, startDate, endDate);
-    res.json(taxLiability);
-  } catch (error) {
-    if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
-    if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
-    sendError(res, "Failed to generate Tax Liability report", 500, errorMessage(error));
-  }
-});

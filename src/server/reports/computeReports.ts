@@ -1,6 +1,5 @@
 import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lineAmount, isTransactionInDateRange } from "../../lib/txFilters";
 import { isUndepositedFundsAccount, resolveAccountRole } from "../../lib/accountUtils";
-import { calculateDocumentTax, calculateDocumentNet } from "../../lib/documentMath";
 import type { Invoice, Bill, Payment, Customer, Vendor, Transaction, ChartAccount, TransactionLine, CreditNote, VendorCredit } from "../../types";
 
 export const INVOICE_IS_ISSUED = new Set<Invoice['status']>([
@@ -10,9 +9,6 @@ export const INVOICE_IS_ISSUED = new Set<Invoice['status']>([
 export const BILL_IS_ISSUED = new Set<Bill['status']>([
   'pending', 'approved', 'unpaid', 'overdue', 'partially_paid', 'paid'
 ]);
-
-export const INVOICE_COUNTS_FOR_TAX = INVOICE_IS_ISSUED;
-export const BILL_COUNTS_FOR_TAX = BILL_IS_ISSUED;
 
 export function computeProfitAndLoss(accounts: ChartAccount[], transactions: Transaction[], startDate?: string, endDate?: string) {
   const start = startDate || "1970-01-01";
@@ -472,48 +468,6 @@ export function computeStatement(
     openingBalanceCents,
     endingBalanceCents: runningBalanceCents,
     entries
-  };
-}
-
-const toBase = (cents: number, rate?: number) => Math.round(cents * (typeof rate === 'number' && rate > 0 ? rate : 1));
-
-export function computeTaxLiability(invoices: Invoice[], bills: Bill[], startDate?: string, endDate?: string) {
-  const start = startDate || "1970-01-01";
-  const end = endDate || "2099-12-31";
-
-  let taxableSalesCents = 0;
-  let taxCollectedCents = 0;
-  let taxablePurchasesCents = 0;
-  let taxPaidCents = 0;
-
-  invoices.forEach((inv) => {
-    if ((inv.date || '') >= start && (inv.date || '') <= end && INVOICE_COUNTS_FOR_TAX.has(inv.status)) {
-      // in the base currency (a foreign invoice's tax used to be added in its own currency)
-      const tax = toBase(calculateDocumentTax(inv), inv.exchangeRate);
-      const net = toBase(calculateDocumentNet(inv), inv.exchangeRate);
-      taxableSalesCents += net;
-      taxCollectedCents += tax;
-    }
-  });
-
-  bills.forEach((b) => {
-    const bDate = b.date || b.issueDate || '';
-    if (bDate >= start && bDate <= end && BILL_COUNTS_FOR_TAX.has(b.status)) {
-      const tax = toBase(calculateDocumentTax(b), b.exchangeRate);
-      const net = toBase(calculateDocumentNet(b), b.exchangeRate);
-      taxablePurchasesCents += net;
-      taxPaidCents += tax;
-    }
-  });
-
-  return {
-    startDate: start,
-    endDate: end,
-    taxableSalesCents,
-    taxCollectedCents,
-    taxablePurchasesCents,
-    taxPaidCents,
-    netTaxLiabilityCents: taxCollectedCents - taxPaidCents
   };
 }
 
