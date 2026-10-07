@@ -1809,7 +1809,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] M-09 Generic attachments — done as K-07 (the `documents` table, linked to the record; one panel for any record)
 - [ ] M-10 Transaction links
 - [ ] M-11 Price lists
-- [ ] M-12 Delivery notes
+- [~] M-12 Delivery notes — deliveries from an order that move stock and book the cost are done (BF-08 step 2, 7 Oct); the printable note is open
 - [ ] M-13 Commodities
 - [x] M-14 Item categories (= K-12)
 - [ ] M-15 Warehouses (deferred)
@@ -2263,7 +2263,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
   - **Bug fixed on the way:** a voided credit note's reversal didn't name the invoice, so its return would still have counted against the line. It is now found either way, and the reversal names the invoice too.
   - Code: `src/lib/salesReturns.ts`, `ReturnedGoodsFields.tsx`, `creditPosting.ts`, `cogsStockService.ts`; tests `sales-returns.test.tsx`, with the database. The original plan was: a return is linked to the delivery or invoice line it returns. It gives back at most the quantity that left, at the cost it left at, only once, and it reverses that cost. The credit note and the refund use K-09
 - [ ] BF-07 Purchase returns
-- [~] BF-08 Partial fulfilment (step 1 done 7 Oct; step 2 open) — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`); step 1 V1, step 2 Later P0)**.
+- [~] BF-08 Partial fulfilment (step 1 done 7 Oct; step 2 mostly done 7 Oct, see below) — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`); step 1 V1, step 2 Later P0)**.
   - **Found 7 Oct:** the New Estimate form took one amount and no lines, it saved every quote as USD, and a quote or order line could not name an item (`Estimate.lines` has no `itemId`). Invoicing an order (`orderPartInvoice` in `src/lib/salesOrders.ts`, and `convertEstimateToInvoice`) makes invoice lines without one. So an order of stock items never lowers stock and never books cost of goods sold, even when it is invoiced in one go, because `planInvoiceCogs` (`src/services/invoiceCogs.ts`) needs `line.itemId`. The same sale typed straight onto an invoice does both.
   - **Step 1 (V1) — done 7 Oct:**
     - **The quote form:** a quote can have lines ("Add lines (items, quantities, prices)"). A line whose text is a stock item's name or SKU is linked to the item and takes its price (`EstimateLinesEditor.tsx`, `src/lib/estimateLines.ts`). One amount still works as before.
@@ -2285,6 +2285,15 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
     - Each delivery moves stock exactly once, also when it is retried. The cost follows the units that left, under the workspace's costing method.
     - A return gives back exactly what its delivery moved (BF-06).
     - Freight and delivery costs are separate expenses, never product cost.
+    - **Done 7 Oct (Claude):**
+      - **The choice:** an owner picks on Inventory "Stock leaves with: the invoice (default) / a delivery from the order" (`goodsLeaveWith` on the workspace, server only, audited; `PUT /api/v1/inventory/stock-policy`).
+      - **Deliver:** on an order with stock items, "Deliver" says how many of each item leave now (never more than is left, two decimals), the date and the location (W-01). The server books one cost entry per order line ('delivery-cogs-auto', DR Cost of Goods Sold, CR Inventory at the item's cost) and lowers stock in the same database transaction, with ids made from the delivery id: a retried request changes nothing (`src/server/services/deliveryService.ts`, `src/lib/deliveries.ts`, `OrderDeliveryDialog.tsx`, `POST /api/v1/inventory/deliveries`).
+      - **Undo:** a delivery is undone whole; its entries are reversed and the units come back (`POST /api/v1/inventory/deliveries/:id/undo`).
+      - **Invoices:** in delivery mode a new invoice books no cost and moves no stock (the server refuses an invoice cost entry then). An invoice that shipped its goods before the switch keeps doing so when edited, so no unit comes back by mistake. A delivery entry can't be posted directly.
+      - **Going back** to "the invoice" is refused while an order is part-way (delivered and invoiced differ), naming the order.
+      - **The history** (W-02) names the delivery for each unit that left.
+      - Tests: `deliveries.test.tsx` (the rules, the server against the database, the screens).
+    - **Still open:** a printable delivery note (M-12); returns of delivered goods after invoicing (in delivery mode a credit note can't take goods back yet: undo the delivery instead); deliveries from an invoice that came from no order.
 - [x] BF-09 Line-level class / location — **done 7 Oct**: labels on invoice and bill lines.
   - **On screen:** each line of the invoice and bill forms has "Labels" (Project, Location, Property and the workspace's own labels), folded away until wanted. The workspace's values are offered. It opens by itself and names what is missing when the line's account needs a label (Z-12).
   - **In the books:** the labels are posted with the line's revenue or expense. Two lines on the same account with different labels stay two posted lines, the amounts still add up to the cent, and an invoice line's labels go with its cost of goods sold too.

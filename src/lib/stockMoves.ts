@@ -25,7 +25,7 @@ export interface StockMove {
   /** the value that moved, signed like the quantity (whole cents) */
   valueCents: number;
   transactionId?: string | null;
-  documentType?: 'invoice' | 'credit-note' | 'adjustment' | 'import';
+  documentType?: 'invoice' | 'credit-note' | 'adjustment' | 'import' | 'delivery';
   documentId?: string;
   /** the order the moves happened in: the time written, then the place in that write */
   seq: string;

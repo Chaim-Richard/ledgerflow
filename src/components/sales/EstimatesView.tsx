@@ -18,9 +18,11 @@ import { estimateDeposits } from '../../lib/advancePayments';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import EstimateDepositDialog from './EstimateDepositDialog';
 import OrderInvoiceDialog from './OrderInvoiceDialog';
+import OrderDeliveryDialog from './OrderDeliveryDialog';
+import { goodsLeaveWith } from '../../lib/deliveries';
 import { EstimateLinesEditor } from './EstimateLinesEditor';
 import { blankEstimateLine, estimateLinesProblem, type EstimateLineDraft, toEstimateLines } from '../../lib/estimateLines';
-import { type OrderPart, type OrderStage, isOrder, orderPartInvoice, orderProgress, orderStage, partCents, partLabel, resolvePart } from '../../lib/salesOrders';
+import { type OrderPart, type OrderStage, hasItemLines, isOrder, orderPartInvoice, orderProgress, orderStage, partCents, partLabel, resolvePart } from '../../lib/salesOrders';
 import type { Estimate } from '../../types';
 
 type EstimateRow = Estimate & { currency?: string; description?: string };
@@ -58,6 +60,9 @@ export default function EstimatesView() {
   const canWrite = canTakeDeposit;
   const [depositFor, setDepositFor] = useState<import("../../types").Estimate | null>(null);
   const [invoicing, setInvoicing] = useState<EstimateRow | null>(null);
+  // BF-08 step 2: where stock leaves with deliveries, orders of stock items are delivered apart from invoicing
+  const deliveriesShip = useAuthStore(s => goodsLeaveWith(s.getCurrentWorkspace()) === 'delivery');
+  const [delivering, setDelivering] = useState<EstimateRow | null>(null);
   const [ordering, setOrdering] = useState<string | null>(null);
   const [customerReference, setCustomerReference] = useState('');
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('all');
@@ -451,6 +456,13 @@ export default function EstimatesView() {
                           </button>
                         </>
                       )}
+                      {deliveriesShip && isOrder(est) && hasItemLines(est) && stage !== 'declined' && (
+                        <button type="button" onClick={() => setDelivering(est)}
+                          className="px-2.5 py-1 text-xs font-semibold border border-indigo-500/40 text-indigo-600 dark:text-indigo-400 rounded-md hover:bg-indigo-500/10 ml-1"
+                          aria-label={`Deliver order ${est.number || ''}`.trim()} title="Goods leaving: stock goes down and their cost is booked">
+                          Deliver
+                        </button>
+                      )}
                       {canWrite && isOrder(est) && progress.leftCents > 0 && stage !== 'declined' && (
                         <button type="button" onClick={() => setInvoicing(est)}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition-colors ml-1"
@@ -488,6 +500,7 @@ export default function EstimatesView() {
       </div>
 
       {depositFor && <EstimateDepositDialog estimate={depositFor} onClose={() => setDepositFor(null)} />}
+      {delivering && <OrderDeliveryDialog order={delivering} canWrite={canWrite} onClose={() => setDelivering(null)} />}
       {invoicing && (
         <OrderInvoiceDialog estimate={invoicing} progress={orderProgress(invoicing, invoices || [])} currency={invoicing.currency || 'USD'}
           onCreate={part => invoiceOrderPart(invoicing, part)} onClose={() => setInvoicing(null)} />

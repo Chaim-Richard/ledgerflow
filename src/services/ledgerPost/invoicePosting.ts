@@ -4,7 +4,8 @@ import { Invoice } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { calculateDocumentTax, cashPostedWithDocumentCents, depositAppliedCents } from '../../lib/documentMath';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
-import { planInvoiceCogs } from '../invoiceCogs';
+import { INVOICE_COGS_TYPE, planInvoiceCogs } from '../invoiceCogs';
+import { goodsLeaveWith } from '../../lib/deliveries';
 import { getAccounts, getTransactions, getWorkspaces, loadInventory, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate } from './postingKit';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
 import { isOpeningBalanceEquity } from '../../lib/openingBalances';
@@ -212,8 +213,11 @@ export async function postInvoiceLedger(
     }, workspaceId, context));
   }
 
-  // 2.5 Cost of goods sold for lines that sell inventory items (the server moves the stock).
-  const cogs = planInvoiceCogs({
+  // 2.5 Cost of goods sold for lines that sell inventory items (the server moves the stock). Where
+  // deliveries ship the goods (BF-08 step 2) an invoice books none, unless it already shipped its
+  // goods before the workspace switched (an edit keeps that).
+  const shipsGoods = goodsLeaveWith(currentWs) === 'invoice' || existingTxs.some(t => t.metadata?.type === INVOICE_COGS_TYPE);
+  const cogs = !shipsGoods ? { entries: [], pendingReason: undefined } : planInvoiceCogs({
     invoiceId, invoice: invoiceData, date: invoiceDate, uid, workspaceId,
     baseCurrency: currentWs?.currency || 'USD',
     inventoryAccount: findAccount(accounts, mappings, ['inventory', 'stock', 'inventory asset'], a => resolveAccountRole(a) === 'inventory'),

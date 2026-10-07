@@ -11,6 +11,9 @@ import { adjustStock, StockAdjustmentError } from '../services/stockAdjustmentSe
 import { setNegativeStockPolicy } from '../services/stockPolicyService';
 import { stockMovesReady, writeStockMoves } from '../services/stockMoveService';
 import { transferStock } from '../services/stockTransferService';
+import { DeliveryError, deliverOrder, setGoodsLeaveWith, undoDelivery } from '../services/deliveryService';
+import { LedgerPostingError } from '../services/cogsStockService';
+import { DELIVERY_ID } from '../../lib/deliveries';
 
 /** Who may change stock or record its cost (viewers read only). */
 const STOCK_ROLES = ['owner', 'accountant', 'bookkeeper'];
@@ -237,13 +240,49 @@ inventoryRouter.post('/count', requireWorkspaceRole(STOCK_ROLES), (req, res) => 
 /** W-06: an owner chooses whether a sale may take stock below zero (stockPolicyService.ts). */
 inventoryRouter.put('/stock-policy', requireWorkspaceRole(['owner']), async (req, res) => {
   try {
-    const parsed = z.object({ workspaceId: z.string().min(1), refuseNegativeStock: z.boolean() }).strict().safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Say whether to refuse sales beyond stock (true or false)' });
+    // BF-08 step 2: or when stock leaves (with the invoice, or with a delivery)
+    const leave = z.object({ workspaceId: z.string().min(1), goodsLeaveWith: z.enum(['invoice', 'delivery']) }).strict().safeParse(req.body);
     const user = requestUser(req);
+    if (leave.success) return res.json({ status: 'ok', ...(await setGoodsLeaveWith(getDb(), { workspaceId: leave.data.workspaceId, uid: user.uid, email: user.email, value: leave.data.goodsLeaveWith })) });
+    const parsed = z.object({ workspaceId: z.string().min(1), refuseNegativeStock: z.boolean() }).strict().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: 'Say whether to refuse sales beyond stock (true or false), or when stock leaves (invoice or delivery)' });
     res.json({ status: 'ok', ...(await setNegativeStockPolicy(getDb(), { workspaceId: parsed.data.workspaceId, uid: user.uid, email: user.email, refuse: parsed.data.refuseNegativeStock })) });
   } catch (e) {
-    if (e instanceof StockAdjustmentError) return res.status(e.status).json({ error: e.message });
+    if (e instanceof StockAdjustmentError || e instanceof DeliveryError) return res.status(e.status).json({ error: e.message });
     res.status(400).json({ error: errorMessage(e) });
+  }
+});
+
+/** BF-08 step 2: deliver items from an order (deliveryService.ts): stock leaves and its cost is booked, once. */
+inventoryRouter.post('/deliveries', requireWorkspaceRole(STOCK_ROLES), async (req, res) => {
+  try {
+    const parsed = z.object({
+      workspaceId: z.string().min(1), orderId: z.string().min(1), deliveryId: z.string().regex(DELIVERY_ID, 'Unknown delivery id'), date,
+      lines: z.array(z.object({ position: z.number().int().min(0), quantity: z.number().finite() }).strict()).min(1).max(500),
+      inventoryAccountId: z.string().min(1), cogsAccountId: z.string().min(1),
+      locationId: z.string().trim().max(200).optional(), note: z.string().max(200).optional(),
+    }).strict().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Check the fields' });
+    const user = requestUser(req);
+    const { locationId, ...rest } = parsed.data;
+    res.json({ status: 'ok', ...(await deliverOrder(getDb(), { ...rest, ...(locationId ? { locationId } : {}), uid: user.uid, email: user.email })) });
+  } catch (e) {
+    if (e instanceof DeliveryError || e instanceof LedgerPostingError) return res.status(e.status).json({ error: e.message });
+    res.status(/locked|closed/i.test(errorMessage(e)) ? 409 : 400).json({ error: errorMessage(e) });
+  }
+});
+
+/** BF-08 step 2: undo a delivery: its entries are reversed and the units come back. */
+inventoryRouter.post('/deliveries/:deliveryId/undo', requireWorkspaceRole(STOCK_ROLES), async (req, res) => {
+  try {
+    const { deliveryId } = req.params as Record<string, string>;
+    const parsed = z.object({ workspaceId: z.string().min(1), orderId: z.string().min(1), date }).strict().safeParse(req.body);
+    if (!parsed.success || !DELIVERY_ID.test(deliveryId)) return res.status(400).json({ error: parsed.success ? 'Unknown delivery id' : parsed.error.issues[0]?.message || 'Check the fields' });
+    const user = requestUser(req);
+    res.json({ status: 'ok', ...(await undoDelivery(getDb(), { ...parsed.data, deliveryId, uid: user.uid, email: user.email })) });
+  } catch (e) {
+    if (e instanceof DeliveryError || e instanceof LedgerPostingError) return res.status(e.status).json({ error: e.message });
+    res.status(/locked|closed/i.test(errorMessage(e)) ? 409 : 400).json({ error: errorMessage(e) });
   }
 });
 

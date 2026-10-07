@@ -18,6 +18,7 @@ import { deletionSentence, deletionSnapshot } from '../../services/deletionRecor
 import { MAX_RECATEGORIZE, RecategorizeError, recategorize } from '../../services/recategorizeService';
 import { workspaceRole } from '../../../lib/periodLock';
 import { refusedLabels, refusedLabelsMessage } from '../../../lib/requiredLabels';
+import { DELIVERY_COGS_TYPE } from '../../../lib/deliveries';
 
 
 /** Many entries at once: posting in bulk and batch updates. Part of /api/v1/transactions (F-06), registered in the original order. */
@@ -91,6 +92,10 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
         });
         validatedTransactions.push(validatedTx);
       }
+
+      // BF-08 step 2: a delivery's cost entries are made by the delivery (Deliver on the order), never posted directly
+      const delivery = validatedTransactions.find(tx => tx.metadata?.type === DELIVERY_COGS_TYPE);
+      if (delivery) return res.status(400).json({ error: 'Deliver goods from the order (Deliver), not as an entry', transactionId: delivery.id });
 
       // Z-12: a required label whose rule refuses stops an entry a person typed without it. Entries
       // made with bank lines imported in this request are saved and listed instead: an import never stops.

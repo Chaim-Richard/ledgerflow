@@ -2,6 +2,7 @@ import { FieldValue } from '../db/firestore';
 import type { DocumentData, Firestore, Transaction as DbTransaction } from '../db/firestore';
 import { INVOICE_COGS_TYPE } from '../../services/invoiceCogs';
 import { SALES_RETURN_TYPE } from '../../lib/salesReturns';
+import { DELIVERY_COGS_TYPE, goodsLeaveWith } from '../../lib/deliveries';
 import { isPostable } from '../../lib/txFilters';
 import type { Transaction } from '../../types';
 import { stockMovesReady, writeStockMoves, type NewStockMove } from './stockMoveService';
@@ -14,6 +15,10 @@ import { stockMovesReady, writeStockMoves, type NewStockMove } from './stockMove
  * hand is recorded with a warning, unless an owner turned on "Refuse sales beyond stock"
  * (`refuseNegativeStock` on the workspace, W-06: stockPolicyService.ts); then it is refused and
  * nothing is written. Putting stock back (a reversal) is never refused.
+ *
+ * BF-08 step 2: in a workspace where stock leaves with deliveries (`goodsLeaveWith: 'delivery'`), a
+ * delivery's cost entry ('delivery-cogs-auto', deliveryService.ts) lowers stock the same way, and an
+ * invoice's cost entry is refused: the goods leave once, with the delivery.
  */
 
 export class LedgerPostingError extends Error {
@@ -45,7 +50,7 @@ const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
 
 function cogsMove(tx: { metadata?: Record<string, unknown> }): { itemId: string; quantity: number } | null {
   const meta = tx.metadata;
-  if (meta?.type !== INVOICE_COGS_TYPE) return null;
+  if (meta?.type !== INVOICE_COGS_TYPE && meta?.type !== DELIVERY_COGS_TYPE) return null;
   const itemId = meta.inventoryItemId;
   const quantity = Number(meta.quantity);
   if (typeof itemId !== 'string' || !itemId || !Number.isFinite(quantity) || quantity <= 0) {
@@ -127,7 +132,10 @@ export async function prepareStockMoves(
   const pending: PendingMove[] = [];
   // the reversal entry of each target in this request (its stock move belongs to it)
   const reversalOf = new Map(entries.filter(e => typeof e.metadata?.reversesTxId === 'string').map(e => [String(e.metadata!.reversesTxId), e]));
+  // invoices whose earlier cost entry this request reverses (an edit keeps how that invoice ships)
+  const reshipped = new Set<string>();
   const putBack = (target: string, original: LedgerEntry) => {
+    if (original.metadata?.type === INVOICE_COGS_TYPE) reshipped.add(String(original.metadata.invoiceId));
     const effect = stockEffect(original);
     if (!effect) return;
     const sign = effect.quantity > 0 ? -1 : 1;
@@ -179,9 +187,17 @@ export async function prepareStockMoves(
   const warnings: string[] = [];
   const writes: { id: string; quantityAtHand: number }[] = [];
   const moves: NewStockMove[] = [];
+  const invoiceSale = entries.some(e => e.metadata?.type === INVOICE_COGS_TYPE && !reshipped.has(String(e.metadata?.invoiceId)));
+  const workspace = invoiceSale || itemIds.some(id => (deltas.get(id) || 0) < 0)
+    ? (await t.get(db.collection('workspaces').doc(workspaceId))).data()
+    : undefined;
+  // BF-08 step 2: where deliveries ship the goods, a new invoice moves no stock (an invoice that
+  // already shipped its goods, before the switch, keeps doing so when it is edited)
+  if (invoiceSale && goodsLeaveWith(workspace) === 'delivery') {
+    throw new LedgerPostingError(409, 'In this workspace stock leaves with deliveries, so an invoice books no cost of goods: save the invoice again (refresh first), and deliver the goods from the order.');
+  }
   // W-06: selling below zero is allowed with a warning, unless an owner chose to refuse it
-  const refuseBelowZero = itemIds.some(id => (deltas.get(id) || 0) < 0)
-    && (await t.get(db.collection('workspaces').doc(workspaceId))).data()?.refuseNegativeStock === true;
+  const refuseBelowZero = itemIds.some(id => (deltas.get(id) || 0) < 0) && workspace?.refuseNegativeStock === true;
   if (itemIds.length > 0) {
     const items = await t.getAll(...itemIds.map(id => db.collection('inventory').doc(id)));
     for (const snap of items) {
@@ -205,7 +221,10 @@ export async function prepareStockMoves(
         const after = round6(before + p.quantity);
         const invoiceId = typeof p.entry.metadata?.invoiceId === 'string' ? p.entry.metadata.invoiceId : undefined;
         const creditNoteId = typeof p.entry.metadata?.creditNoteId === 'string' ? p.entry.metadata.creditNoteId : undefined;
-        const document = creditNoteId ? { documentType: 'credit-note' as const, documentId: creditNoteId } : invoiceId ? { documentType: 'invoice' as const, documentId: invoiceId } : {};
+        const deliveryId = typeof p.entry.metadata?.deliveryId === 'string' ? p.entry.metadata.deliveryId : undefined;
+        const document = creditNoteId ? { documentType: 'credit-note' as const, documentId: creditNoteId }
+          : invoiceId ? { documentType: 'invoice' as const, documentId: invoiceId }
+            : deliveryId ? { documentType: 'delivery' as const, documentId: deliveryId } : {};
         moves.push({
           workspaceId, itemId: snap.id, itemName: String(item.name || ''), date: String(p.entry.date || '').slice(0, 10), kind: p.kind,
           quantity: p.quantity, quantityBefore: before, quantityAfter: after,
