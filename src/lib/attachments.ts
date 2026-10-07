@@ -11,7 +11,8 @@ export const MAX_ATTACHMENT_BYTES = 700_000;
 export const MAX_FILES_AT_ONCE = 10;
 
 // supportTickets (BO-05): a screenshot kept with feedback or a support ticket
-export type AttachmentCollection = 'invoices' | 'bills' | 'customers' | 'vendors' | 'estimates' | 'purchaseOrders' | 'supportTickets';
+// chartAccounts (BD-04): a file kept with one account's workpaper for a month
+export type AttachmentCollection = 'invoices' | 'bills' | 'customers' | 'vendors' | 'estimates' | 'purchaseOrders' | 'supportTickets' | 'chartAccounts';
 
 /** The record a file belongs to, and how it is named in lists ("Invoice INV-12"). */
 export interface AttachmentTarget {

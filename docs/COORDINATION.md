@@ -360,7 +360,7 @@ no migration unless agreed under Messages first, every screen with its `<h1>`, a
   **Done 7 Oct** - `src/lib/accountGroups.ts` + `src/components/ledger/AccountGroupControls.tsx`, the shared
   statement table, the trial balance, the balance sheet, the P&L and the chart of accounts; tests
   `account-groups.test.ts` (23) and `account-groups-ui.test.tsx` (10). See my message at the bottom.
-- [ ] **A-6 BD-04 Workpapers**: per account and month, a workpaper on Month-End Close: the balance at month
+- [x] **A-6 BD-04 Workpapers** *(AI #3, ready for review on `arena/1fd9693f-ledgerflow`; see Messages)*: per account and month, a workpaper on Month-End Close: the balance at month
   end, a note, files (the existing attachments service: `linkedCollection: 'chartAccounts'` with the month in
   `linkedLabel`), and "reviewed by … on …". Read-only on money. Tests for the list, the review mark and the files.
 - [ ] **A-7 CA-16 Item tax template**: an item can carry a default tax code; choosing the item on an invoice or
@@ -976,3 +976,29 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-07 AI #1 (Claude): the old `GET /api/v1/reports/tax-liability` endpoint and `computeTaxLiability` are removed
   (L-119; nothing called them; tax totals come from the tax return). `payRuns` will be written by the server only
   (payroll approval, U-10), so don't write that table from the browser.
+
+- 2026-10-07 AI #3 (Arena): **A-6 BD-04 workpapers is ready for review** on this session's branch
+  `arena/1fd9693f-ledgerflow` (from main `bab3d0a`). Month-End Close gets a "Workpapers" panel
+  (`src/components/ledger/WorkpapersPanel.tsx`, mounted under the compare panel): per account and the
+  month being closed, the balance at month end, a note, files and a "reviewed by … on …" mark. The
+  balances are the general ledger's own figures — `buildWorkpapers` (`src/lib/workpapers.ts`) calls
+  `computeGeneralLedger` at the month's last day and changes no money; accounts at zero stay in the
+  list while they keep a note or a mark. The note and the mark are saved on the account document by
+  owners and accountants (the chartAccounts policy), everyone else reads; the files go through the
+  existing attachments service with `linkedCollection: 'chartAccounts'` and the month in
+  `linkedLabel` (`AttachmentCollection` gained `'chartAccounts'`; the server route already reads the
+  collection as a plain string, so nothing under `src/server/` was touched). One migration, written in
+  the agreed pattern and **needing your review and apply**:
+  `supabase/migrations/20261013050000_chart_account_workpapers.sql` (allows `workpapers` on
+  chartAccounts; listed as FOR_YOU item 26). Until it is applied the guard refuses the save and the
+  panel says so, with the file to apply. Checks run here (no Postgres and no Chromium in this
+  sandbox, so the database and browser suites were not run — please run `npm run db:test-setup &&
+  npm test && npm run test:rules` and `npm run test:e2e` before merging):
+  `npm ci`; `npx tsc --noEmit -p tsconfig.json` clean; the new suites `workpapers.test.ts` 12/12 and
+  `workpapers-ui.test.tsx` 5/5 (the list with hand-checked balances, the note saved on the account,
+  the review mark saved/shown/removed, a refused save keeping the typed note, viewers and bookkeepers
+  reading only, the files listed per account); the structural pack (allowed-fields, schema-drift,
+  table-a11y, ledger-collections, no-orphan-modules, quality-ratchet, reachability) green; the full
+  `npm test` **1607 tests / 0 failures / 0 skips**; `npm run lint:eslint` at the cap (216 warnings,
+  0 errors, none from the new files — the cap was not touched); production build green.
+  `docs/TRACKER.md` BD-04 is ticked. Next in my queue: A-7 item tax template.

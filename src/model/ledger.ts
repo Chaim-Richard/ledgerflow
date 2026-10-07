@@ -189,6 +189,15 @@ export type ChartAccountCategory =
   | 'Subsidies'
   | (string & {});
 
+/** BD-04 workpaper: what one month's close keeps for one account — a note and a review mark. */
+export interface AccountWorkpaper {
+  note?: string;
+  /** Who marked the workpaper reviewed (an owner's or an accountant's name). */
+  reviewedBy?: string;
+  /** ISO time of the review mark. */
+  reviewedAt?: string;
+}
+
 export interface ChartAccount {
   id: string;
   uid: string;
@@ -217,6 +226,8 @@ export interface ChartAccount {
   isActive?: boolean;
   /** Set when the account came from a spreadsheet import; lets the import be undone. */
   importBatchId?: string;
+  /** BD-04 workpapers, one entry per month ('YYYY-MM'): the note and review mark kept on Month-End Close. */
+  workpapers?: Record<string, AccountWorkpaper>;
 }
 
 export interface JournalEntry {
