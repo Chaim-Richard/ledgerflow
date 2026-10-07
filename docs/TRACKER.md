@@ -1924,7 +1924,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] S-10 budget.exceeded — **done 7 Oct**: an account budget whose month, quarter or year has spent more than budgeted tells owners and accountants once per period ("$250.00 spent against $200.00 budgeted for October 2026"); on unless turned off in Settings → Alerts (same files and tests as S-08)
 - [x] S-11 cash.low — **done 7 Oct**: Settings → Alerts takes an amount; when the bank and cash accounts in the home currency hold less, owners and accountants are told once, and again only after it was back above. The ledger is read only when the books or budgets changed or a month began (same files and tests as S-08; settings `PUT …/alerts`, owners and accountants, audited; `alerts-settings-ui.test.tsx`)
 - [x] S-12 job.failed — **done 6 Oct** for what a workspace can act on: a recurring invoice, bill or entry that could not be created (a missing account, a closed month…) now tells the people who keep the books, once per occurrence, with the reason and a link to Recurring Items (`recurring.failed`, can be turned off like the others). The installation-wide daily run's own failures stay on the status page and Settings → Schedule (BB-06), not in every customer's bell
-- [ ] S-13 export.ready
+- [ ] S-13 export.ready — waits: every export today (document zips, CSVs, the close package, backups) is made while you wait and downloaded at once, so there is nothing to tell about later; the notice comes with the first export that runs in the background
 - [x] S-14 user.invited / joined
 - [x] S-15 permission.changed — **done 7 Oct**: when an owner changes someone's role, that person alone is told ("Your role is now Accountant · before: Bookkeeper"); the same role again tells nobody. Viewers can get this one notice (`notify(…, { onlyUids })`; tests `role-change-notice.test.ts` with the database)
 - [x] S-16 subscription events — **done 7 Oct** (failed charge): when the workspace's own plan could not be charged (`invoice.payment_failed`), the owners are told to update the card in Settings → Billing; the plan ending was already recorded (same files and tests as S-05)
@@ -2081,7 +2081,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [x] BA-01 Merge duplicate contacts dialog (= Y-23)
 - [x] BA-02 Vendor opening balance (customers too): on a vendor's or customer's page, type what was owed on the day the books start and press Enter. It becomes one open bill (invoice) booked against Opening Balance Equity (added if missing), so aging, statements and balances include it and it is paid like any other; not counted as sales or expenses (Sales by Item leaves it out); entered once, then shown (tested)
-- [ ] BA-03 Allocate landed cost
+- [ ] BA-03 Allocate landed cost — waits, like J-08 and J-10: bills have no item lines yet (only splits), so freight and duties cannot be spread over the items a bill brought in (W-02)
 - [x] BA-04 Inventory adjustment form (= K-13)
 - [x] BA-05 Item category management: rename, merge or remove a category on all its items at once (Inventory → Manage categories; tested)
 - [x] BA-06 Add-a-currency dialog: invoices and bills offer the home currency, the ones the workspace uses and 35 common world currencies; switching to one fills the exchange rate (the last rate used for it at once, then today's rate from the rate service; never a guessed number; a typed rate is kept) and says where it came from (tested). A Currencies settings page (BB-02) is still open
@@ -2094,7 +2094,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] BA-13 Refund a vendor credit (dialog)
 - [ ] BA-14 Notify via SMS
 - [x] BA-15 Partial period unlock (date range, reason, close again)
-- [ ] BA-16 Branch activate / deactivate
+- [x] BA-16 Branch activate / deactivate — **covered by dimensions (checked 7 Oct)**: a branch is a value of a dimension (Settings → Dimensions, e.g. a "Branch" dimension); Archive deactivates it and Unarchive brings it back (saved with Save changes). An archived branch is hidden from new entries while the entries that already carry it keep it (`DimensionsSettings.tsx`, the entry form's dimension pickers)
 - [x] BA-17 Money-In / Money-Out dialogs — **done 2026-10-05**: "Money in" and "Money out" on the banking page
   (`src/components/banking/CashMovementDialog.tsx`, the rules in `src/lib/cashMovement.ts`): how much, which of
   your accounts it lands in or leaves, which account it belongs to, and a name and a reference if there is one.
