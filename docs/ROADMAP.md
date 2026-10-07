@@ -251,7 +251,7 @@ These are the tracker IDs; `docs/TRACKER.md` has the detail.
   - BF-08, step 1 (orders keep their items, so stock and cost move) — done 7 Oct;
   - W-06 (negative-stock policy);
   - N-12 (explain this number: statements, trial balance, aging, budget vs actual);
-  - Z-12 (the missing-label check, with a simple rule per account);
+  - Z-12 (the missing-label check, with a simple rule per account) — the check, the rules and the warning done 7 Oct; refusing on the server still open;
   - K-34 and BD-02 (one fast switcher between books).
 - **Proof:** DA-05, DA-06, DA-07 and DA-08.
 - **The owner's settings:** L-67 and L-83.

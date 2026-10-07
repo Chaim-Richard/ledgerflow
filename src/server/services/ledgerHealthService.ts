@@ -52,7 +52,7 @@ export async function checkLedgerHealth(db: Firestore, workspaceId: string, now 
   }));
   const data = Object.fromEntries(loaded) as unknown as Omit<CheckContext, 'today' | 'baseCurrency'>;
   const today = formatTzDate(now, typeof ws.timezone === 'string' ? ws.timezone : 'UTC');
-  const findings = runDataChecks({ ...data, today, baseCurrency: String(ws.currency || 'USD') });
+  const findings = runDataChecks({ ...data, today, baseCurrency: String(ws.currency || 'USD'), dimensions: Array.isArray(ws.dimensions) ? ws.dimensions : undefined });
   const fresh = newSeriousProblems(findings, ws.ledgerHealth as LedgerHealth | undefined);
   // S-07: a reconciled period whose books moved since (the difference to the statement is kept per reconciliation)
   const kept = ((ws.ledgerHealth as LedgerHealth | undefined)?.reconciled || {}) as Record<string, number>;

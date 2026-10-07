@@ -4,10 +4,11 @@
  * registry and links each finding to its record (Z-32). Adding a check = adding one entry.
  * Money is compared in integer cents with lineAmount() on postable entries (AGENTS.md).
  */
-import type { BankStatementLine, Bill, ChartAccount, Invoice, RecurringTransaction, Transaction } from '../types';
+import type { BankStatementLine, Bill, ChartAccount, DimensionDefinition, Invoice, RecurringTransaction, Transaction } from '../types';
 import { isPostable, lineAmount } from './txFilters';
 import { calculateAmountDue } from './documentMath';
 import { findTaxDifferences } from './taxRecompute';
+import { missingLabels } from './requiredLabels';
 import { formatCurrency } from './utils';
 import type { RecordType } from './recordLinks';
 
@@ -37,6 +38,8 @@ export interface CheckContext {
   today: string;
   /** Home currency, for documents without one. */
   baseCurrency: string;
+  /** The workspace's labels, with their required-label rules (Z-12). */
+  dimensions?: DimensionDefinition[];
 }
 
 export interface DataCheck {
@@ -48,7 +51,6 @@ export interface DataCheck {
 }
 
 const ISSUED = new Set(['sent', 'pending', 'approved', 'paid', 'partially_paid', 'overdue']);
-const BILL_OPEN = new Set(['pending', 'approved', 'paid', 'partially_paid', 'overdue', 'unpaid']);
 const label = (doc: { number?: string; id: string }) => doc.number || doc.id;
 
 /** Groups by key and returns the groups with more than one member. */
@@ -275,6 +277,21 @@ export const DATA_CHECKS: DataCheck[] = [
         };
       });
     },
+  },
+  {
+    id: 'missing-label',
+    label: 'Entries missing a required label (Z-12)',
+    remedy: 'Open the entry and fill in the label. The rules (which label on which accounts) are in Settings → Dimensions.',
+    run: ({ transactions, accounts, dimensions }) => transactions.flatMap(tx => {
+      const missing = missingLabels(tx, dimensions, accounts);
+      if (missing.length === 0) return [];
+      return [{
+        id: `missing-label-${tx.id}`, checkId: 'missing-label', severity: 'low' as const,
+        title: `${tx.description || 'Entry'} (${missing[0].date}): ${missing.map(m => `no ${m.dimensionName} on ${m.accountName}`).join('; ')}`,
+        description: 'Reports by that label show this entry under "Unassigned" until it is filled in.',
+        record: { type: 'transaction' as const, id: tx.id },
+      }];
+    }),
   },
 ];
 

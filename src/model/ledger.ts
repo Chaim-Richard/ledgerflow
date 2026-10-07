@@ -21,6 +21,8 @@ export interface DimensionDefinition {
   isWorld?: boolean;      // True if this axis forms an independent sub-ledger with single-world statements & elimination
   sortOrder?: number;
   systemDefault?: boolean;
+  /** Z-12: entries on these accounts need this label, from `since` (YYYY-MM-DD) on (src/lib/requiredLabels.ts) */
+  requiredOn?: { accountIds: string[]; since: string };
 }
 
 export interface DimensionNode {

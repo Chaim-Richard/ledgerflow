@@ -2067,11 +2067,22 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Z-09 Negative inventory check
 - [x] Z-10 Future-dated posting check
 - [x] Z-11 Non-zero suspense check (suspense, uncategorized and clearing accounts not at zero; Data Health, tested)
-- [ ] Z-12 Missing dimension check — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`), V1 the check with a rule per account; Later the other conditions)**: required labels, e.g. "Property is required on Utilities" or "Project is required on Construction expenses".
+- [~] Z-12 Missing dimension check (the check, the rules per account and the form warning done 7 Oct; refusing on the server and the other conditions open) — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`), V1 the check with a rule per account; Later the other conditions)**: required labels, e.g. "Property is required on Utilities" or "Project is required on Construction expenses".
   - **Conditions:** by account or account group first; later by document type, vendor or customer, item, or workspace, through the rule engine.
   - **What a rule does:** each rule picks one of warn before posting, refuse to post, or allow it but list it.
   - **What the user sees:** a missing label is a Data Health finding and a row in "Needs attention" (DA-02). The row opens the entry with the field ready, and it disappears only when the label is filled.
   - **Off by default:** a business without rules sees nothing new.
+  - **Done 7 Oct:**
+    - **The rule:** Settings → Dimensions → "Required labels" lets owners and accountants choose, for each label, the accounts whose entries need it and the day it applies from. Older entries are not flagged. It saves at once, on the label's own definition (`requiredOn`), so no database change was needed (`RequiredLabelRules.tsx`, `src/lib/requiredLabels.ts`).
+    - **What counts as labelled:** a value on the line, in its tags, on the entry, or on every split.
+    - **The list:** entries missing a label are a Data Health finding ("missing-label"), one per entry. It opens the entry, is gone once the label is filled, and is in the nightly check too.
+    - **The warning:** the journal form names each missing label, account and line before saving, and shows the label columns when a line's account needs one.
+    - Tests: `required-labels.test.tsx`.
+  - **Still open:**
+    - **Refuse to post:** the server needs to tell entries a person typed from the ones it makes itself. Cost of goods sold, spreads and revaluations must not be blocked.
+    - **More warnings:** the same warning in the bill and invoice forms.
+    - **More conditions:** document type, vendor or customer, item.
+    - **Needs attention:** a row there (DA-02).
 - [x] Z-13 Stale unreconciled check (bank lines unmatched over 30 days, one finding per bank account, opens Reconcile; tested)
 - [x] Z-14 Empty invoice / accountless line check
 - [x] Z-15 FX line with no rate check
