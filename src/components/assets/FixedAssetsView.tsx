@@ -217,6 +217,11 @@ export const FixedAssetsView: React.FC = () => {
                   <td className="py-3 px-4 font-semibold">
                     <AssetInlineDetails asset={asset} />
                     <div className="text-[11px] text-[var(--muted)] font-normal">{asset.depreciationMethod === 'declining-balance' ? 'Declining balance' : 'Straight line'}{asset.status === 'disposed' ? ' · disposed' : ''}</div>
+                    {(asset.partialDisposals || []).map(p => (
+                      <div key={p.transactionId} className="text-[11px] text-[var(--muted)] font-normal">
+                        {p.percent}% {p.proceedsCents > 0 ? 'sold' : 'scrapped'} {formatDate(p.date)}{p.gainLossCents ? ` · ${p.gainLossCents > 0 ? 'gain' : 'loss'} ${formatCurrency(Math.abs(p.gainLossCents))}` : ''}
+                      </div>
+                    ))}
                     <button type="button" aria-expanded={scheduleOf === asset.id} onClick={() => setScheduleOf(scheduleOf === asset.id ? '' : asset.id)}
                       className="mt-1 text-[11px] font-semibold text-[var(--brass)] hover:underline">
                       {scheduleOf === asset.id ? 'Hide schedule' : 'Schedule'}<span className="sr-only"> of {asset.name}</span>
@@ -243,6 +248,11 @@ export const FixedAssetsView: React.FC = () => {
                           Undo disposal<span className="sr-only"> of {asset.name}</span>
                         </button>
                       ) : null}
+                      {asset.status !== 'disposed' && (asset.partialDisposals || []).length > 0 && (
+                        <button type="button" disabled={undoing === asset.id} onClick={() => void undoDisposal(asset)} className="block ml-auto mt-1 text-xs font-semibold text-[var(--muted)] hover:underline disabled:opacity-50">
+                          Undo last part sold<span className="sr-only"> of {asset.name}</span>
+                        </button>
+                      )}
                     </td>
                   )}
                 </tr>

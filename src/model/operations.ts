@@ -49,6 +49,19 @@ export interface InventoryItem {
   importBatchId?: string;
 }
 
+export interface PartialDisposal {
+  date: string;
+  percent: number;
+  costCents: number;
+  salvageCents: number;
+  accumulatedCents: number;
+  proceedsCents: number;
+  gainLossCents: number;
+  transactionId: string;
+  /** what the asset carried before, to undo it */
+  before: { purchasePriceCents: number; salvageValueCents: number; accumulatedDepreciationCents: number; depreciatedThrough: string | null };
+}
+
 export interface FixedAsset {
   id: string;
   uid: string;
@@ -75,6 +88,8 @@ export interface FixedAsset {
   disposalProceedsCents?: number;
   disposalGainLossCents?: number;
   disposalTransactionId?: string;
+  /** X-04: shares sold or scrapped while the rest is kept (newest last); cost and salvage above are what is left. */
+  partialDisposals?: PartialDisposal[];
   /** X-01: the bill line it was bought on (bill id and line number), when added from a bill. */
   sourceBillId?: string;
   sourceBillLine?: number;

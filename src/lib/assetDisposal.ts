@@ -7,6 +7,11 @@
  * - the difference is the gain (CR) or loss (DR) on the chosen account:
  *   proceeds + accumulated depreciation − cost.
  * Lines on the same account are added together. Positive cents are debits, negative credits.
+ *
+ * Part of an asset (X-04, for example 2 of 5 vans): the depreciation still due is posted for the whole
+ * asset, then only that share of its cost and of its accumulated depreciation leaves the books, with
+ * the money received and the gain or loss on that share. The rest stays and keeps depreciating on the
+ * smaller cost and salvage value.
  */
 export interface DisposalAccounts {
   asset: { id: string; name: string };
@@ -58,4 +63,29 @@ export function disposalLines(input: DisposalInput, accounts: DisposalAccounts):
   add(accounts.asset, -input.costCents);
   add(accounts.gainLoss, -disposalGainLoss(input));
   return [...totals.values()].filter(l => l.amountCents !== 0);
+}
+
+/** Why a share cannot be sold or scrapped, or null: more than 0% and less than 100%, two decimals at most. */
+export function portionProblem(percent: number): string | null {
+  if (!Number.isFinite(percent) || percent <= 0 || percent >= 100) return 'Choose a share between 0% and 100% (all of it is a full disposal)';
+  if (Math.round(percent * 100) / 100 !== percent) return 'The share has at most two decimals';
+  return null;
+}
+
+/** The share of the cost and salvage value that leaves (whole cents), and what stays. */
+export function portionOf(asset: { purchasePriceCents?: number; salvageValueCents?: number }, percent: number) {
+  const cost = asset.purchasePriceCents || 0;
+  const salvage = asset.salvageValueCents || 0;
+  const costPartCents = Math.round(cost * percent / 100);
+  const salvagePartCents = Math.round(salvage * percent / 100);
+  return { costPartCents, salvagePartCents, remainingCostCents: cost - costPartCents, remainingSalvageCents: salvage - salvagePartCents };
+}
+
+/**
+ * The entry for a share, in the terms `disposalLines` takes: the catch-up for the whole asset, then
+ * `accumulatedPartCents` (the share's accumulated depreciation, catch-up included) and the share's cost
+ * leave. Gain or loss = proceeds + accumulatedPartCents − costPartCents.
+ */
+export function partialDisposalInput(costPartCents: number, accumulatedPartCents: number, catchUpCents: number, proceedsCents: number): DisposalInput {
+  return { costCents: costPartCents, postedDepreciationCents: accumulatedPartCents - catchUpCents, catchUpCents, proceedsCents };
 }

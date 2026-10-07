@@ -6,7 +6,8 @@ import { disposeAsset, DisposalError, undoDisposal } from '../services/assetDisp
 /**
  * Selling or scrapping a fixed asset (X-03), mounted at
  * /api/v1/workspaces/:workspaceId/assets/:assetId/disposal (workspaceRoutes.ts, writers).
- * POST disposes of it (one ledger entry with the gain or loss); DELETE undoes that while the date is open.
+ * POST disposes of it, or of a share of it (X-04, `portionPercent`), in one ledger entry with the gain
+ * or loss; DELETE undoes the latest one while the date is open.
  */
 export const assetDisposalRouter = express.Router({ mergeParams: true });
 
@@ -17,6 +18,7 @@ const schema = z.object({
   proceedsAccountId: z.string().max(200).optional(),
   gainLossAccountId: z.string().max(200).optional(),
   assetAccountId: z.string().max(200).optional(),
+  portionPercent: z.number().gt(0).max(100).optional(),
 }).strict();
 
 const fail = (res: express.Response, err: unknown, what: string) => {

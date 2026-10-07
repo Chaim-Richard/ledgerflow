@@ -3,8 +3,9 @@
  * due through the disposal month, takes the cost and all accumulated depreciation off the books,
  * records the money received and the gain or loss, and balances; the asset is marked disposed. A
  * viewer, a future date, a date before the purchase or a missing account are refused; a second
- * disposal too. Undo voids the entry and puts the asset back, but not in a closed period. The
- * database part runs when LF_TEST_DATABASE_URL is set.
+ * disposal too. Undo voids the entry and puts the asset back, but not in a closed period. Part of an
+ * asset (X-04): only that share of the cost and depreciation leaves, the rest stays on the smaller
+ * cost; undo takes the latest share back. The database part runs when LF_TEST_DATABASE_URL is set.
  */
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,7 +13,7 @@ import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import type { Firestore } from '../server/db/pgFirestore';
-import { disposalGainLoss, disposalLines, disposalProblem } from '../lib/assetDisposal';
+import { disposalGainLoss, disposalLines, disposalProblem, partialDisposalInput, portionOf, portionProblem } from '../lib/assetDisposal';
 
 const acc = (id: string) => ({ id, name: id });
 
@@ -46,6 +47,24 @@ describe('Disposal entry', () => {
 });
 
 const url = process.env.LF_TEST_DATABASE_URL;
+describe('Part of an asset (X-04)', () => {
+  test('40% of a 50,000.00 fleet (salvage 5,000.00): 20,000.00 of cost and 40% of the depreciation leave', () => {
+    const share = portionOf({ purchasePriceCents: 5_000_000, salvageValueCents: 500_000 }, 40);
+    assert.deepEqual(share, { costPartCents: 2_000_000, salvagePartCents: 200_000, remainingCostCents: 3_000_000, remainingSalvageCents: 300_000 });
+    // 900,000 accumulated after a 300,000 catch-up; what stays carries 540,000, so 360,000 leaves; sold for 17,000.00
+    const input = partialDisposalInput(2_000_000, 360_000, 300_000, 1_700_000);
+    assert.equal(disposalGainLoss(input), 60_000);
+    const lines = disposalLines(input, { asset: acc('fleet'), accumulated: acc('accum'), expense: acc('depexp'), gainLoss: acc('gain'), proceeds: acc('bank') });
+    assert.deepEqual(Object.fromEntries(lines.map(l => [l.accountId, l.amountCents])), { depexp: 300_000, accum: 60_000, bank: 1_700_000, fleet: -2_000_000, gain: -60_000 });
+    assert.equal(lines.reduce((sum, l) => sum + l.amountCents, 0), 0);
+  });
+
+  test('a share is more than 0% and less than 100%, two decimals at most', () => {
+    for (const bad of [0, 100, -5, 33.333]) assert.ok(portionProblem(bad), String(bad));
+    assert.equal(portionProblem(12.5), null);
+  });
+});
+
 describe('Asset disposal (database)', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
   const ws = `ws_dispose_${crypto.randomBytes(4).toString('hex')}`;
   const id = (name: string) => `${ws}_${name}`;
@@ -130,5 +149,28 @@ describe('Asset disposal (database)', { skip: !url && 'LF_TEST_DATABASE_URL not 
     assert.equal((await db.collection('transactions').doc(entryId).get()).data()?.status, 'void');
     const v = await van();
     assert.deepEqual([v?.status, v?.accumulatedDepreciationCents, v?.depreciatedThrough, v?.disposedOn], ['active', 160_000, '2026-09', undefined]);
+  });
+
+  test('part of it (X-04): 25% sold for 2,500.00; only that share leaves; the rest keeps depreciating on 9,000.00; undo takes it back', async () => {
+    assert.equal((await call('book-1', 'POST', { ...sale, portionPercent: 33.333 })).status, 400);
+    const res = await call('book-1', 'POST', { ...sale, proceedsCents: 250_000, portionPercent: 25 });
+    assert.equal(res.status, 200);
+    // 180,000 accumulated through October (20,000 caught up); what stays (9,000.00 over 60 months) carries
+    // 9 × 150.00 = 1,350.00, so 450.00 leaves with 3,000.00 of cost: 2,500 + 450 − 3,000 = −50.00
+    assert.deepEqual([res.body.catchUpCents, res.body.gainLossCents], [20_000, -5_000]);
+    const entry = (await db.collection('transactions').doc(String(res.body.transactionId)).get()).data()!;
+    assert.equal(entry.description, 'Sale of 25% of Delivery van (loss $50.00)');
+    const lines = Object.fromEntries((entry.lines as Array<{ accountId: string; amountCents: number }>).map(l => [l.accountId.replace(`${ws}_`, ''), l.amountCents]));
+    assert.deepEqual(lines, { depexp: 20_000, accum: 25_000, bank: 250_000, equipment: -300_000, gainloss: 5_000 });
+    let v = await van();
+    assert.deepEqual([v?.status, v?.purchasePriceCents, v?.accumulatedDepreciationCents, v?.depreciatedThrough, (v?.partialDisposals as unknown[]).length], ['active', 900_000, 135_000, '2026-10', 1]);
+
+    await db.collection('assets').doc(id('van')).update({ depreciatedThrough: '2026-11' });
+    assert.match(String((await call('book-1', 'DELETE')).body.message), /posted after this sale/);
+    await db.collection('assets').doc(id('van')).update({ depreciatedThrough: '2026-10' });
+    assert.equal((await call('book-1', 'DELETE')).status, 200);
+    assert.equal((await db.collection('transactions').doc(String(res.body.transactionId)).get()).data()?.status, 'void');
+    v = await van();
+    assert.deepEqual([v?.status, v?.purchasePriceCents, v?.accumulatedDepreciationCents, v?.depreciatedThrough, (v?.partialDisposals as unknown[]).length], ['active', 1_200_000, 160_000, '2026-09', 0]);
   });
 });

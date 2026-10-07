@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useDialog } from '../../hooks/useDialog';
 import { getIdToken } from '../../firebase';
 import { depreciationThrough } from '../../lib/depreciationEngine';
-import { disposalGainLoss } from '../../lib/assetDisposal';
+import { disposalGainLoss, partialDisposalInput, portionOf, portionProblem } from '../../lib/assetDisposal';
 import { isCashAccount } from '../../lib/txFilters';
 import { formatCurrency, parseAmountToCents } from '../../lib/utils';
 import type { ChartAccount, FixedAsset } from '../../types';
@@ -13,7 +13,8 @@ import type { ChartAccount, FixedAsset } from '../../types';
  * Sell or scrap a fixed asset (X-03): the date, what was received (nothing when scrapped), where the
  * money went and the account for the gain or loss. Shows the book value on that date (with the
  * depreciation still due through that month) and the gain or loss before anything is posted; the
- * server posts the one entry and marks the asset disposed.
+ * server posts the one entry and marks the asset disposed. "Part of it" (X-04) sells or scraps a
+ * share: only that share's cost and depreciation leave, and the rest stays on the register.
  */
 interface Props {
   asset: FixedAsset;
@@ -39,14 +40,24 @@ export default function DisposeAssetDialog({ asset, accounts, workspaceId, today
   const [proceedsAccountId, setProceedsAccountId] = useState(moneyAccounts.find(isCashAccount)?.id || '');
   const [gainLossAccountId, setGainLossAccountId] = useState(suggested?.id || '');
   const [assetAccountId, setAssetAccountId] = useState('');
+  const [howMuch, setHowMuch] = useState<'all' | 'part'>('all');
+  const [percentText, setPercentText] = useState('');
   const [saving, setSaving] = useState(false);
 
   const proceedsCents = parseAmountToCents(received) || 0;
   const posted = asset.accumulatedDepreciationCents || 0;
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date);
   const depreciation = validDate ? Math.max(posted, depreciationThrough(asset, date.slice(0, 7))) : posted;
-  const book = (asset.purchasePriceCents || 0) - depreciation;
-  const gainLoss = disposalGainLoss({ costCents: asset.purchasePriceCents || 0, postedDepreciationCents: posted, catchUpCents: depreciation - posted, proceedsCents });
+  const percent = Number(percentText);
+  const partProblem = howMuch === 'part' ? (percentText.trim() ? portionProblem(percent) : 'Enter the share sold or scrapped') : null;
+  const share = howMuch === 'part' && !partProblem ? portionOf(asset, percent) : null;
+  const remaining = share && validDate ? Math.min(depreciation, depreciationThrough({ ...asset, purchasePriceCents: share.remainingCostCents, salvageValueCents: share.remainingSalvageCents }, date.slice(0, 7))) : 0;
+  const shareCost = share ? share.costPartCents : asset.purchasePriceCents || 0;
+  const shareDepreciation = share ? depreciation - remaining : depreciation;
+  const book = shareCost - shareDepreciation;
+  const gainLoss = share
+    ? disposalGainLoss(partialDisposalInput(share.costPartCents, shareDepreciation, depreciation - posted, proceedsCents))
+    : disposalGainLoss({ costCents: asset.purchasePriceCents || 0, postedDepreciationCents: posted, catchUpCents: depreciation - posted, proceedsCents });
 
   const submit = async () => {
     setSaving(true);
@@ -59,11 +70,12 @@ export default function DisposeAssetDialog({ asset, accounts, workspaceId, today
           ...(proceedsCents > 0 && proceedsAccountId ? { proceedsAccountId } : {}),
           ...(gainLossAccountId ? { gainLossAccountId } : {}),
           ...(!asset.assetAccountId && assetAccountId ? { assetAccountId } : {}),
+          ...(share ? { portionPercent: percent } : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || 'The asset could not be disposed of');
-      toast.success(`${asset.name} ${proceedsCents > 0 ? 'sold' : 'scrapped'}${data.gainLossCents ? `: ${data.gainLossCents > 0 ? 'gain' : 'loss'} of ${formatCurrency(Math.abs(data.gainLossCents), currency)}` : ''}`);
+      toast.success(`${share ? `${percent}% of ` : ''}${asset.name} ${proceedsCents > 0 ? 'sold' : 'scrapped'}${data.gainLossCents ? `: ${data.gainLossCents > 0 ? 'gain' : 'loss'} of ${formatCurrency(Math.abs(data.gainLossCents), currency)}` : ''}`);
       onClose();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
@@ -92,6 +104,22 @@ export default function DisposeAssetDialog({ asset, accounts, workspaceId, today
               <input id="dispose-received" inputMode="decimal" value={received} onChange={e => setReceived(e.target.value)} className={`${field} font-mono`} />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="dispose-how-much" className="block font-semibold text-[var(--text)] mb-1">How much</label>
+              <select id="dispose-how-much" value={howMuch} onChange={e => setHowMuch(e.target.value as 'all' | 'part')} className={field}>
+                <option value="all">All of it</option>
+                <option value="part">Part of it</option>
+              </select>
+            </div>
+            {howMuch === 'part' && (
+              <div>
+                <label htmlFor="dispose-percent" className="block font-semibold text-[var(--text)] mb-1">Share sold or scrapped (%)</label>
+                <input id="dispose-percent" inputMode="decimal" value={percentText} onChange={e => setPercentText(e.target.value)} className={`${field} font-mono`} />
+              </div>
+            )}
+          </div>
+          {partProblem && percentText.trim() !== '' && <p role="alert" className="text-rose-600">{partProblem}</p>}
           {proceedsCents > 0 && (
             <div>
               <label htmlFor="dispose-proceeds" className="block font-semibold text-[var(--text)] mb-1">The money went to</label>
@@ -120,13 +148,14 @@ export default function DisposeAssetDialog({ asset, accounts, workspaceId, today
             </div>
           )}
           <p role="status" className="text-[var(--text)] bg-[var(--ink)] border border-[var(--line)] rounded-lg p-3">
-            Book value on that date: {formatCurrency(book, currency)} (cost {formatCurrency(asset.purchasePriceCents || 0, currency)}, depreciation {formatCurrency(depreciation, currency)}
-            {depreciation > posted ? `, of which ${formatCurrency(depreciation - posted, currency)} is posted now` : ''}).{' '}
+            {share ? `Book value of ${percent}% on that date` : 'Book value on that date'}: {formatCurrency(book, currency)} (cost {formatCurrency(shareCost, currency)}, depreciation {formatCurrency(shareDepreciation, currency)}
+            {depreciation > posted ? (share ? `; ${formatCurrency(depreciation - posted, currency)} of depreciation still due on the whole asset is posted now` : `, of which ${formatCurrency(depreciation - posted, currency)} is posted now`) : ''}).{' '}
             {gainLoss === 0 ? 'No gain or loss.' : `${gainLoss > 0 ? 'Gain' : 'Loss'} on disposal: ${formatCurrency(Math.abs(gainLoss), currency)}.`}
+            {share ? ` ${formatCurrency(share.remainingCostCents, currency)} of cost stays on the register.` : ''}
           </p>
           <div className="flex justify-end gap-3 pt-1">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg text-[var(--text)] hover:bg-[var(--ink)]">Cancel</button>
-            <button type="button" disabled={saving || !validDate} onClick={submit} className="px-4 py-2 text-sm font-semibold rounded-lg bg-rose-700 text-white disabled:opacity-50">
+            <button type="button" disabled={saving || !validDate || Boolean(partProblem)} onClick={submit} className="px-4 py-2 text-sm font-semibold rounded-lg bg-rose-700 text-white disabled:opacity-50">
               {saving ? 'Posting…' : proceedsCents > 0 ? 'Record the sale' : 'Record as scrapped'}
             </button>
           </div>
