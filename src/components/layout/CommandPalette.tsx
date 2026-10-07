@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { SYSTEM_COMMANDS, ANALYTICAL_LENSES_REGISTRY } from '../../config/registry';
 import { useUIStore } from '../../stores/useUIStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { parseNaturalLanguageEntry, ParsedCommandIntent } from '../../lib/algorithms/nl-parser';
 import { useShallow } from 'zustand/react/shallow';
 import { DimensionNode } from '../../types';
@@ -121,7 +122,9 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
   };
 
   const developerMode = useUIStore(state => state.developerMode);
-  const pages = useMemo(() => pageIndex(language, { developerMode }), [language, developerMode]);
+  // BB-07: modules turned off are not offered
+  const modules = useAuthStore(s => s.getCurrentWorkspace()?.modules);
+  const pages = useMemo(() => pageIndex(language, { developerMode, modules }), [language, developerMode, modules]);
 
   // Map commands to the currently active UI language
   const localizedCommands = React.useMemo(() => {

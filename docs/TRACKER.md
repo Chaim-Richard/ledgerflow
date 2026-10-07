@@ -2186,7 +2186,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
   for anyone). Two lists that must not drift are held together by tests: the jobs the cron route runs, and the jobs this screen
   describes; and the time the screen calls "due" is read out of `vercel.json`. (tested: 15 on the rules, 5 on the tab, plus its
   settings tab in the browser suite)
-- [ ] BB-07 Modules — **expanded 7 Oct (roadmap, Later P0)**: simple until needed. There is one app that grows, never a "simple" and an "advanced" version.
+- [~] BB-07 Modules — **expanded 7 Oct (roadmap, Later P0)**: simple until needed. There is one app that grows, never a "simple" and an "advanced" version.
+  - **Step 1 done 7 Oct (Claude):** Settings → Modules (src/lib/modules.ts, moduleService.ts, `PUT /api/v1/workspaces/:id/modules`, owners and accountants, audited). Nine modules whose screens are whole menu tabs: quotes and sales orders, purchase orders, payroll, fixed assets, loans, petty cash, intercompany, forecasting, query builder. Off = gone from the menu and the ⌘K search; nothing deleted. A new workspace starts with quotes on and the other eight off; a workspace made before keeps everything on (tested: modules.test.tsx).
+  - **Left (step 2):** the modules spread inside other screens (projects, stock, more currencies, budgets, groups, the API tools), and a module turning itself on when first used.
   - **What is a module:** projects, stock, payroll, fixed assets, more than one currency, budgets, companies and groups, and the API tools.
   - **When it appears:** each module is off until the workspace starts using it (the first project, the first stock item, a second currency, a second workspace in a group) or someone turns it on in Settings → Modules.
   - **When it is off:** its menu entries, reports and settings are hidden. No data is deleted, and turning it back on shows everything again.

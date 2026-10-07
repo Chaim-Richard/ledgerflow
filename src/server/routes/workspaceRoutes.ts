@@ -37,6 +37,7 @@ import { allocateNextNumber, NUMBERED_TYPES, type NumberedType } from '../servic
 import { retentionFor, RetentionSettingsSchema, scheduledPurgeAt as purgeDate } from '../../lib/retention';
 import { RetentionError, updateRetention } from '../services/retentionService';
 import { completeSetup, recordOpeningBalances, SetupError } from '../services/openingBalanceService';
+import { ModuleSettingError, setModules } from '../services/moduleService';
 
 export const workspaceRouter = express.Router();
 
@@ -224,6 +225,20 @@ const importRecordsSchema = z.object({
 }).strict();
 const LEDGER_ADMIN_ROLES = ['owner', 'accountant'];
 const roleOf = (req: express.Request) => String((req as unknown as { userRole?: string }).userRole || '');
+
+/** BB-07: owners and accountants turn modules on or off (moduleService.ts); nothing is deleted. */
+workspaceRouter.put('/:workspaceId/modules', requireWorkspaceRole(LEDGER_ADMIN_ROLES), async (req, res) => {
+  try {
+    const { workspaceId } = req.params as Record<string, string>;
+    const { modules } = z.object({ modules: z.record(z.string(), z.boolean()) }).strict().parse(req.body);
+    const { user } = req as AuthenticatedRequest;
+    res.json({ status: 'success', ...(await setModules(getDb(), { workspaceId, uid: user.uid, email: user.email, modules })) });
+  } catch (err) {
+    if (err instanceof z.ZodError) return sendError(res, 'Send which modules are on (true or false)', 400, err.issues);
+    if (err instanceof ModuleSettingError) return sendError(res, errorMessage(err), err.status);
+    sendError(res, 'Could not save the modules', 500, err instanceof Error ? errorMessage(err) : String(err));
+  }
+});
 
 workspaceRouter.post('/:workspaceId/import-records', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
   try {

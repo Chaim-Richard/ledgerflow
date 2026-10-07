@@ -109,6 +109,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Tags', componentName: 'TagsSettingsView' },
     { label: 'Scheduled reports', componentName: 'ScheduledReportsSettingsView' },
     { label: 'Alerts', componentName: 'AlertsSettingsView' },
+    { label: 'Modules', componentName: 'ModulesSettingsView' },
   ];
 
   for (const tab of settingsTabs) {

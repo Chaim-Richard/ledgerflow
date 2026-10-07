@@ -444,6 +444,7 @@ export const SETTINGS_TABS_REGISTRY = withScreenHelp([
   { id: 'tags', label: { en: 'Tags', he: 'תגיות' }, componentName: 'TagsSettingsView', icon: Tag },
   { id: 'scheduled-reports', label: { en: 'Scheduled reports', he: 'דוחות מתוזמנים' }, componentName: 'ScheduledReportsSettingsView', icon: CalendarClock },
   { id: 'alerts', label: { en: 'Alerts', he: 'התראות' }, componentName: 'AlertsSettingsView', icon: BellRing },
+  { id: 'modules', label: { en: 'Modules', he: 'מודולים' }, componentName: 'ModulesSettingsView', icon: Blocks },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ], 'settings');
@@ -469,6 +470,7 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'TagsSettingsView': lazy(() => import('../components/platform/settings/TagsSettings')),
   'ScheduledReportsSettingsView': lazy(() => import('../components/platform/settings/ScheduledReportsSettings')),
   'AlertsSettingsView': lazy(() => import('../components/platform/settings/AlertsSettings')),
+  'ModulesSettingsView': lazy(() => import('../components/platform/settings/ModulesSettings')),
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };
 

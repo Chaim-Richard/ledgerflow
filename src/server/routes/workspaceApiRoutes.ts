@@ -12,6 +12,7 @@ import { getDb } from "../db/firestore";
 import type { DocumentData } from "../db/firestore";
 import { exportWorkspaceBackup, restoreWorkspaceBackup, RestoreError } from "../services/workspaceRestoreService";
 import { authAdmin } from "../auth/supabaseAuth";
+import { NEW_WORKSPACE_MODULES } from '../../lib/modules';
 
 /** Routes moved out of server.ts (F-01), registered in the same place and order. */
 export function registerWorkspaceApiRoutes(app: express.Express, _ctx: ServerContext): void {
@@ -60,6 +61,8 @@ export function registerWorkspaceApiRoutes(app: express.Express, _ctx: ServerCon
       const db = getDb();
       const newId = validation.data.id || `ws_${crypto.randomUUID().replace(/-/g, '')}`;
       const newWorkspace = {
+        // BB-07: a new workspace starts with the everyday screens; the rest is turned on when wanted
+        modules: NEW_WORKSPACE_MODULES,
         ...validation.data,
         id: newId,
         uid,

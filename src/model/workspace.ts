@@ -70,6 +70,8 @@ export interface Workspace {
   payrollApproval?: boolean;
   /** W-06: refuse sales that would take an item's stock below zero (written by the server only, owners) */
   refuseNegativeStock?: boolean;
+  /** BB-07: which modules are on (src/lib/modules.ts; written by the server only, owners and accountants) */
+  modules?: Record<string, boolean>;
   /** Y-30: everyone in the workspace must use two-step login (set by owners, through the server). */
   requireTwoStep?: boolean;
   /** Set by the daily job: the month (YYYY-MM) monthly statements were last sent (Y-28). */
