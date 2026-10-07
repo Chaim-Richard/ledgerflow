@@ -156,6 +156,30 @@ Last updated: 2026-10-07.
     enforced by the server but not yet by the database rules. Claude tries the connector again at
     the next session; this item is crossed out once they are in.
 
+27. **Your roadmap is in (7 Oct): `docs/ROADMAP.md`.** It holds the other AI's plan, rewritten in
+    plain words and checked against the tracker. Nothing was duplicated: 16 existing items were
+    expanded, and 10 new ones were added (tracker section DA). All 292 open items now sit in one of
+    four buckets. Your question, "can the legal stuff be a label too?", is answered on that page:
+    yes, while the companies share people, a currency, a fiscal year and one close; separate books
+    once one of them files its own taxes, has someone who may see it but not the others, or closes
+    on its own. Decisions with the default Claude uses until you say otherwise:
+    - **What counts as "first release" (V1)?**
+      - *Default:* the main path (books → bank → money in/out → reconcile → reports → close →
+        backup → "where does this number come from"), and anything that can make money, stock or
+        reports wrong. That is 12 items, listed at the bottom of ROADMAP.md (two of them are your GitHub and database settings, L-67 and L-83).
+      - Everything else is "Later". You alone move an item into V1.
+    - **A company as a label vs its own books:**
+      - *Default:* both. Start with a label. Move it into its own books when it needs to be separate
+        (DA-10, research: you would pick the date the move happens).
+    - **Orders of stock items:** a found gap. Invoicing a sales order never lowered stock and never
+      booked the cost of the goods.
+      - *Default fix (BF-08 step 1, Claude, now):* an order's item lines are invoiced by quantity.
+        A percent or amount part of such an order is a deposit or progress bill that moves no stock.
+    - **Simple until needed:**
+      - *Default:* one app that grows. Projects, stock, payroll, assets, more currencies and groups
+        stay hidden until a workspace uses them or you turn them on (BB-07).
+      - No separate "simple" and "advanced" versions.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

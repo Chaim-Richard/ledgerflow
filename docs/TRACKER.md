@@ -1258,6 +1258,8 @@ Do not fail the build on existing violations — fail only on NEW ones.
 
 # LEDGERFLOW — MASTER BACKLOG (tracked)
 
+> **Roadmap filter (owner, 7 Oct):** every item is judged by [`docs/ROADMAP.md`](ROADMAP.md): start simple, and complexity appears only when needed. Every open item is in one bucket: V1, Later (P0/P1/P2), Add-on, or Research. Only the owner moves an item into V1. Section DA holds the new items.
+
 Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pass) ·
 108,507 lines · `server.ts` 4,693 lines · 1,251 `any`
 
@@ -1556,12 +1558,12 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] K-31 Petty cash — **done 6 Oct (AI #3, A-3; ready for review on `arena/65f21ba7-ledgerflow`)**: Money Out → Petty Cash. The box is one of the workspace's own cash-type accounts (no new table, no new collection); "cash in the box" is read straight from the posted lines on that account. "Spend from petty cash" (amount, category = an expense account, note, receipt number) posts expense ← box; "Top up from bank" posts box ← bank as a transfer; "Count the box" compares the cash counted with the book balance and posts the difference to a chosen over/short expense account (short debits it, over credits it, counting exactly right posts nothing). All three go through the ordinary transaction route (owner/accountant/bookkeeper, closed periods refused); the screen never invents an account. `src/lib/pettyCash.ts`, `src/components/finance/PettyCashView.tsx`; tests `petty-cash.test.ts` (hand-checked cents + database posting cases) and `petty-cash-view.test.tsx`
 - [x] K-32 Notification preferences — done as S-19: each person chooses which notices they get (`src/lib/notifications.ts` `wantsNotification`, the bell's settings)
 - [ ] K-33 Categories management UI
-- [ ] K-34 Workspace switcher
+- [ ] K-34 Workspace switcher — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`), V1; = AI #5's E-1, with BD-02)**: find and enter the right books in seconds. Type to filter (Hebrew names too), arrows + Enter, the most recent first, "Switch to …" in ⌘K. Each row shows the role, and later the count of things that need attention (DA-02) and its group (DA-01). It lists only workspaces the user is a member of. One switcher, not two
 - [ ] K-35 Per-workspace inbox address
 - [x] K-36 Transaction enrichment — **done 6 Oct** (names): bank lines show a readable payee ("SQ *JOES COFFEE 4421 SEATTLE WA" → "Joes Coffee", "AMZN Mktp US*2K4L91TQ0" → "Amazon") with the bank's own text underneath and on hover, on the reconciliation screen. Card-processor prefixes, card numbers, dates, store numbers and codes are removed, well-known merchants named, Hebrew and other non-Latin text kept as written; `lineKind` tells fees, interest, refunds, transfers and payroll apart for hints. Display only: the stored line and the matching keep the bank's text (`src/lib/merchantNames.ts`, `src/components/ui/BankLineName.tsx`; tests `merchant-names.test.tsx`). Logos and learned names can follow
 - [x] K-37 Webhook delivery tracking — **done 6 Oct**: Settings → Incoming events (owners and accountants) lists, newest first and in words, what Stripe and the email provider told LedgerFlow about the workspace and what came of it: an online card payment recorded / waiting for the bank / refused (other currency, nothing paid, invoice not found), plan changes, and emails delivered, bounced or marked as spam (with the address). Filters for online payments / email delivery and "only problems". Every Stripe outcome is now kept with its workspace (before, only some were, and without the outcome); events that can't be tied to a workspace are shown to nobody. Read only, no database change (`stripeProcessedEvents`, `emailEvents`; `src/lib/incomingEvents.ts`, `GET /api/v1/workspaces/:id/incoming-events`; tests `incoming-events.test.ts` with the database, `incoming-events-ui.test.tsx`, `online-payments.test.ts`)
 - [x] K-38 Rule-group UI — **done 6 Oct** (AI #4, D-3): bank rules in named groups, each group on or off as a whole, the order inside a group (`rule-groups.test.tsx`, `e2e/rule-groups.spec.ts`); the rule actions are K-39 (AI #4's D-7)
-- [ ] K-39 Rule actions: accounts + type conversion
+- [ ] K-39 Rule actions: accounts + type conversion — = AI #4's D-7; part of the rule family in Q-05 (roadmap 7 Oct, Later P1)
 - [ ] K-40 OAuth provider
 
 # SECTION L — OPERATIONS & TRUST
@@ -1831,7 +1833,17 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] N-09 As-of date passed to every report (Balance Sheet, balance summaries follow it)
 - [ ] N-10 Column chooser
 - [x] N-11 Permalink: report, year, period, comparison in the address
-- [ ] N-12 Full drill-down
+- [ ] N-12 Full drill-down — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`), V1 for the statements; AI #4's D-5 is the first slice)**: **explain this number**, one shared drill-down contract instead of one per screen. The chain:
+  1. the number;
+  2. the filter that made it (dates, cash or accrual, accounts, label, status);
+  3. the account and label rows;
+  4. the entries;
+  5. the document (invoice, bill, payment);
+  6. the bank match;
+  7. the attached files;
+  8. the change history.
+
+  What the drill-down lists adds up to the number clicked, and a test checks that for each report. It reads full history from the server and never a capped browser list; when only part is loaded, it says so. First: the P&L, the balance sheet, the trial balance, aging, and budget vs actual. Later: dashboard figures, project and label totals, reconciliation, and consolidation. Uses typed record links (`src/lib/recordLinks.ts`) and the report shell
 
 # SECTION O — VISUALISATION
 
@@ -1853,7 +1865,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] P-05 Two-person rule
 - [ ] P-06 Usage metering
 - [x] P-07 In-app changelog (codex, `codex/p-07-in-app-changelog`): Help & Guide → What’s new; dated shipped updates, keyboard-accessible disclosure
-- [ ] P-08 Product tour
+- [ ] P-08 Product tour — = AI #4's D-4. **Expanded 7 Oct (roadmap, Later P0, with BB-07)**: short, and it grows with the workspace. The first tour shows only the basics (the books, money in, money out, the bank, reports). Later hints appear when something new starts being used (the first project, the first stock item, a second workspace)
 - [x] P-09 Onboarding (= L-19 setup wizard)
 - [ ] P-10 Referrals
 - [ ] P-11 Multi-language documents
@@ -1867,7 +1879,10 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Q-02 Depreciation conventions — straight-line calendar-year planning previews; statutory MACRS excluded; C-21
 - [ ] Q-03 Serial / lot tracking
 - [x] Q-04 Tiered pricing — three-band graduated and volume previews; C-21
-- [ ] Q-05 Cost allocation rules — C-21 percentage/driver calculation preview complete; saved reusable rules remain.
+- [ ] Q-05 Cost allocation rules — C-21 percentage/driver calculation preview complete; saved reusable rules remain. **expanded 7 Oct (roadmap, `docs/ROADMAP.md`), Later P1; one rule family with K-39 and CA-13)**: a saved rule says which account, labels and splits apply (e.g. rent 60/40 between two properties).
+  - **It explains itself:** "rule 'Rent split' matched: payee contains 'Landlord'".
+  - **It shows before it posts:** the result is shown first, and posting goes through the normal checked route (whole cents, the remainder on the last share, the period lock).
+  - **It never posts on its own:** a suggestion waits for a person.
 - [x] Q-06 Standard cost variance — material price/quantity preview; C-21
 
 # SECTION R — PERIOD CLOSE WORKFLOW
@@ -1979,8 +1994,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION W — INVENTORY DEPTH
 
-- [ ] W-01 Stock per location
-- [ ] W-02 Stock-moves ledger
+- [ ] W-01 Stock per location — **expanded 7 Oct (roadmap, Later P0, with BF-08 step 2; = CG-12, M-15)**: stock per location is a sum of the movement ledger (W-02), not a second quantity field. A transfer between locations is two movements in one database transaction
+- [ ] W-02 Stock-moves ledger — **expanded 7 Oct (roadmap, Later P0)**: the source of truth for quantities. Every movement is one row with the item, location, quantity, unit cost, its document and its ledger entry: a sale or delivery, a receipt, an adjustment, a count, a return, or a transfer. An item's quantity is the sum of its rows; today's stored quantity becomes a cache that is checked against them. Unblocks J-10 and BA-03
 - [x] W-03 COGS posting on sale + stock moves with the ledger (tested)
 - [x] W-04 Stock count: enter counted quantities for any items; one entry for all differences (tested)
 - [x] W-05 Count variance account: chosen per count (default: an expense named shrinkage/adjustment/variance, else Cost of Goods Sold)
@@ -2052,17 +2067,30 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Z-09 Negative inventory check
 - [x] Z-10 Future-dated posting check
 - [x] Z-11 Non-zero suspense check (suspense, uncategorized and clearing accounts not at zero; Data Health, tested)
-- [ ] Z-12 Missing dimension check
+- [ ] Z-12 Missing dimension check — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`), V1 the check with a rule per account; Later the other conditions)**: required labels, e.g. "Property is required on Utilities" or "Project is required on Construction expenses".
+  - **Conditions:** by account or account group first; later by document type, vendor or customer, item, or workspace, through the rule engine.
+  - **What a rule does:** each rule picks one of warn before posting, refuse to post, or allow it but list it.
+  - **What the user sees:** a missing label is a Data Health finding and a row in "Needs attention" (DA-02). The row opens the entry with the field ready, and it disappears only when the label is filled.
+  - **Off by default:** a business without rules sees nothing new.
 - [x] Z-13 Stale unreconciled check (bank lines unmatched over 30 days, one finding per bank account, opens Reconcile; tested)
 - [x] Z-14 Empty invoice / accountless line check
 - [x] Z-15 FX line with no rate check
-- [ ] Z-16 Parent/child entities
-- [ ] Z-17 Currency translation rates
-- [ ] Z-18 CTA account
-- [ ] Z-19 Intercompany matching report
-- [ ] Z-20 Entity selector on reports
-- [ ] Z-21 Minority interest
-- [ ] Z-22 Equity-method investments
+- [ ] Z-16 Parent/child entities — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`), Later P0, after DA-01)**: **one multi-entity design for Z-16…Z-22 and CB-26**, not separate enterprise screens.
+  - **Model:** each legal company is its own workspace (its own books, currency, locks and roles). A group (DA-01) says which belong together, which is the parent, and the ownership share (this item).
+  - **Build order:**
+    1. Z-20: choose the group's books on a report; each figure drills back into its own workspace.
+    2. Z-17: translation rates (closing rate for the balance sheet, average for the P&L, historical for equity).
+    3. Z-18: the translation difference (CTA) account.
+    4. Z-19: intercompany matching. An entry marked as with another member needs its match there; the ones that don't match are listed.
+    5. Eliminations in the consolidated report (CB-26).
+    6. Z-21 and Z-22, only when a real customer needs them.
+  - **Rules:** consolidation reads each workspace under the user's own access and never copies entries into a new ledger. A user without access to one member gets the report refused, never quietly short
+- [ ] Z-17 Currency translation rates — part of the Z-16 design (roadmap 7 Oct, Later P0)
+- [ ] Z-18 CTA account — part of the Z-16 design (roadmap 7 Oct, Later P0)
+- [ ] Z-19 Intercompany matching report — part of the Z-16 design (roadmap 7 Oct, Later P0)
+- [ ] Z-20 Entity selector on reports — part of the Z-16 design (roadmap 7 Oct, Later P0)
+- [ ] Z-21 Minority interest — Research: last step of the Z-16 design, only with a real group customer (roadmap 7 Oct)
+- [ ] Z-22 Equity-method investments — Research: last step of the Z-16 design, only with a real group customer (roadmap 7 Oct)
 - [ ] Z-23 WooCommerce
 - [ ] Z-24 Square
 - [ ] Z-25 Drive / Dropbox
@@ -2130,7 +2158,11 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
   for anyone). Two lists that must not drift are held together by tests: the jobs the cron route runs, and the jobs this screen
   describes; and the time the screen calls "due" is read out of `vercel.json`. (tested: 15 on the rules, 5 on the tab, plus its
   settings tab in the browser suite)
-- [ ] BB-07 Modules
+- [ ] BB-07 Modules — **expanded 7 Oct (roadmap, Later P0)**: simple until needed. There is one app that grows, never a "simple" and an "advanced" version.
+  - **What is a module:** projects, stock, payroll, fixed assets, more than one currency, budgets, companies and groups, and the API tools.
+  - **When it appears:** each module is off until the workspace starts using it (the first project, the first stock item, a second currency, a second workspace in a group) or someone turns it on in Settings → Modules.
+  - **When it is off:** its menu entries, reports and settings are hidden. No data is deleted, and turning it back on shows everything again.
+  - **New workspaces:** start with the basics only.
 - [x] BB-08 Invoice settings (Settings → Branding & PDFs for logo, colours, footer and terms; Document Numbering; default terms per document type, Y-34)
 - [x] BB-09 Settings search: ⌘K finds every screen, report and settings tab, settings also by what they're about ("logo", "invoice number", "2fa"); opens at once (the palette's 0.4 s pause before every action removed) (tested)
 
@@ -2150,12 +2182,20 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION BD — ACCOUNTANT PERSONA
 
-- [ ] BD-01 Practice view
-- [ ] BD-02 Client switcher
+- [ ] BD-01 Practice view — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`), Later P0)**: answers "which clients need work today?" One row per workspace the user belongs to, with:
+  - bank lines not reconciled, and the bank connection's state;
+  - unanswered questions (BD-07);
+  - entries missing a document or a required label;
+  - drafts waiting, and Data Health warnings;
+  - the last month closed and the steps left this month;
+  - the next recurring obligations.
+
+  Sorted by most work. A count opens that workspace on that exact screen. Each count comes from that workspace's own server reads, under the user's role there; no cross-workspace query gets around the database rules. Builds on K-34; shares its counts with DA-02; grouped by DA-01
+- [ ] BD-02 Client switcher — = K-34 (one switcher for owners and accountants; roadmap 7 Oct)
 - [x] BD-03 Adjusting-entry flag — **done 6 Oct**: the journal form has "Adjusting entry" (an accountant's year-end, audit or correcting adjustment), saved with the entry; Ledger → General journal marks them "adjusting" and lists them alone with "Adjusting entries only"; Duplicate keeps the mark (tests `journal-view.test.tsx`). An adjusted/unadjusted trial balance can build on the mark
-- [ ] BD-04 Workpapers
+- [ ] BD-04 Workpapers — = AI #3's A-6. **Expanded 7 Oct (roadmap, Later P1)**: with R-11 (close package, done) and BD-06 (report pack), this completes the cycle from the close to the client. Each account and month gets a workpaper (the balance, the support attached, preparer and reviewer sign-off), and it goes into the close package
 - [x] BD-05 TB export for tax software: Settings → Export → "Trial balance — for tax software": the trial balance on a date from the complete workspace, one row per account with a balance (account number, name, type, the tax line it is mapped to), debit/credit columns or one balance column, no totals row; a trial balance that does not balance is still downloaded but says by how much (`workspace-exports.test.tsx`)
-- [ ] BD-06 Client report pack
+- [ ] BD-06 Client report pack — = AI #2's C-30 (roadmap 7 Oct, Later P1; with R-11 and BD-04)
 - [x] BD-07 Client queries — **done 6 Oct**: in an entry's edit window, owners, accountants and bookkeepers use "Ask about this entry" ("What was this $340 at Amazon?"); the owner and accountants get a notification and answer there or on the new Questions screen (Transactions → Questions about Entries: waiting, answered, closed). Any member may answer; the asker's follow-up puts it back to waiting; the asker, an owner or an accountant closes it. Only the server writes questions (members read them live); each step is in the audit trail; at most 5 open questions per entry (`client-queries.test.ts`, `client-queries-ui.test.tsx`)
 - [ ] BD-08 Asset register export
 - [x] BD-09 Journal entry templates: in the journal entry form, "Save as template" keeps the lines (accounts, sides, dimensions, and amounts if typed) under a name, and "Start from a template" fills a new entry from one. A template balances or holds no amounts; saving under a used name replaces it. Templates are shared by the workspace: writers save and remove them, and every change is in the audit trail. Nothing is posted from a template (`journal-templates.test.tsx`; same as CA-27)
@@ -2184,9 +2224,22 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BF-03 Item bundles
 - [ ] BF-04 Landed cost on receipt
 - [ ] BF-05 Consignment stock
-- [ ] BF-06 Sales returns / RMA
+- [ ] BF-06 Sales returns / RMA — **expanded 7 Oct (roadmap, Later P0, after BF-08 step 1)**: a return is linked to the delivery or invoice line it returns. It gives back at most the quantity that left, at the cost it left at, only once, and it reverses that cost. The credit note and the refund use K-09
 - [ ] BF-07 Purchase returns
-- [ ] BF-08 Partial fulfilment
+- [ ] BF-08 Partial fulfilment — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`); step 1 V1, step 2 Later P0)**.
+  - **Found 7 Oct:** a quote or order line cannot name an item (`Estimate.lines` has no `itemId`). Invoicing an order (`orderPartInvoice` in `src/lib/salesOrders.ts`, and `convertEstimateToInvoice`) makes invoice lines without one. So an order of stock items never lowers stock and never books cost of goods sold, even when it is invoiced in one go, because `planInvoiceCogs` (`src/services/invoiceCogs.ts`) needs `line.itemId`. The same sale typed straight onto an invoice does both.
+  - **Step 1 (V1):**
+    - Quote and order lines keep the item and the quantity.
+    - An item line is invoiced by quantity, in whole units of that line, and the invoice line carries the item. Stock and cost then move once for each unit invoiced.
+    - A percent or amount part of an order that has item lines is a deposit or progress bill with no item: no stock moves, no cost is booked, and the screen says so. The item is never copied onto a line that was cut by amount.
+    - Tests: two part invoices together book exactly the cost of the units, never twice; voiding one gives back exactly its units; a retry moves nothing twice.
+  - **Step 2 (Later P0): delivery kept apart from invoicing.**
+    - Six things are kept separately: ordered, delivered (a delivery note, M-12), invoiced, paid, stock moved, and cost booked.
+    - A deposit never moves stock and never books cost.
+    - An invoice moves stock only in a workspace set to "the invoice ships the goods". That is today's behaviour, and it stays the default for simple books.
+    - Each delivery moves stock exactly once, also when it is retried. The cost follows the units that left, under the workspace's costing method.
+    - A return gives back exactly what its delivery moved (BF-06).
+    - Freight and delivery costs are separate expenses, never product cost.
 - [ ] BF-09 Line-level class / location
 
 # SECTION BG — COLLABORATION
@@ -2296,7 +2349,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] CA-10 Transaction deletion record — **done 6 Oct**: deleting an entry (only drafts can be; posted ones are voided) or a draft invoice, bill or credit through the posting route now leaves an audit line saying what it was ("Deleted the invoice INV-9 of 2026-10-01 (Acme, USD 50.00)") with a copy of its main fields and up to 100 lines, written in the same database transaction as the deletion; before, only "Deleted transaction ref [id]" was kept, and document deletions weren't recorded at all (`src/server/services/deletionRecord.ts`; tests `deletion-record.test.ts` with the database)
 - [x] CA-11 Import log (recent imports from the audit log)
 - [x] CA-12 Saved column map (= Y-03)
-- [ ] CA-13 Bank transaction rules with conditions
+- [ ] CA-13 Bank transaction rules with conditions — the conditions exist (AutoRule) and the groups are K-38; closes with K-39 (roadmap 7 Oct, Later P1)
 - [ ] CA-14 Bank guarantee
 - [x] CA-15 Cheque print template — done as BE-13 (cheque on top, two vouchers, US Letter)
 - [ ] CA-16 Item tax template
@@ -2371,7 +2424,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CD-04 Formula engine
 - [ ] CD-05 E2E encryption
 - [ ] CD-06 Notes on any entity
-- [ ] CD-07 Account groups
+- [x] CD-07 Account groups — covered by K-14 (7 Oct): accounts inside a parent account, with subtotals on the reports
 - [ ] CE-01 Account subtypes
 - [ ] CE-02 Holdings
 - [ ] CE-03 Securities + prices
@@ -2405,3 +2458,93 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CG-13 Workflow engine
 - [ ] CG-14 Locking module
 - [ ] CG-15 Translation module
+
+# SECTION DA — CONNECTED WORKFLOWS (owner's roadmap, 7 Oct; `docs/ROADMAP.md`)
+
+New items only for what was not in the tracker yet. The rest of the roadmap expanded existing
+items: K-34, BD-01, N-12, Z-12, Z-16…Z-22, Q-05/K-39/CA-13, BF-08, W-01, W-02, BF-06, BD-04,
+BD-06, P-08 and BB-07. Each item says its bucket. Only the owner moves an item into V1.
+
+- [ ] DA-01 Group of books (portfolio) — **Later P0**: a layer above workspaces, for anyone with access to several sets of books (holding structures, related companies, an accountant's clients).
+  - **What a group is:** it has a stable id and a name, and holds several workspaces.
+  - **What membership changes:** nothing in the workspace's own ledger, roles or database rules.
+  - **What a user sees:** only the members they could already open one by one.
+  - **Getting around:** navigation inside a group is searchable and fast (K-34).
+  - **Later:** it is the base for reports across workspaces (Z-16), which read each member under the user's own access and never copy entries into a new ledger.
+  - **Design first:** a `workspaceGroups` table (owner, name, members), its database rules, and tests that a member the user cannot open stays invisible and unreadable.
+- [ ] DA-02 Needs attention: one queue — **Later P1**: the daily starting point for people who don't want to learn the whole menu. It is one shared queue, not another warning screen. Rows look like this:
+  - 3 bank lines to review;
+  - 1 connection to reconnect;
+  - 2 documents to approve;
+  - 4 entries missing a required label;
+  - 1 possible duplicate bill;
+  - 2 close steps left;
+  - 1 client question unanswered.
+
+  Every row says why it is there, opens the exact record or step, and says who can resolve it. It disappears only when the cause is really gone; dismissing a row does not remove it. It is fed by what exists today:
+  - To Review (`InboxView`) and the notifications;
+  - Data Health and the bank connection state;
+  - unreconciled lines and the close checklist;
+  - client questions (BD-07), approvals (invoices, bills, pay runs, expense claims, requisitions) and missing documents.
+
+  The per-workspace counts also feed BD-01.
+- [ ] DA-03 Ask the books, verified — **Later P1**: a human question becomes a typed query, the server calculates it exactly, and the answer can be traced.
+  - **Example:** "How much did Property 5 spend on electricity last year?" becomes:
+    - workspace = the current one, as allowed;
+    - label Property = Property 5;
+    - account = Utilities › Electricity;
+    - dates = last fiscal year;
+    - posted entries only;
+    - home currency.
+
+    The answer is $X, and clicking it lists the entries and documents behind it (N-12).
+  - **AI's part:** AI only reads the question. It never produces the figure.
+  - **What the user sees:** the filters it understood, shown with the answer, and a way to change them.
+  - **How it calculates:** with the same money and report code as the reports, on the full history from the server.
+  - **Permissions:** it respects the user's role.
+  - **Incomplete data:** it says plainly when the data is incomplete, instead of counting a capped browser list.
+  - **No promises:** never sold as understanding any sentence. Builds on the existing query engine (`TransactionQueryEngine`, `nl-parser`).
+- [ ] DA-04 Extension contract — **Later P2**: before any marketplace, a formal manifest (`ledgerflow.plugin.json`, building on the auto-discovered `src/plugins/*.tsx`, `FINANCIAL_ALGORITHMS`, the report and plugin scaffolds, API keys and the registry).
+  - **What the manifest declares:** name, id, version, the LedgerFlow versions it works with, the author, menu entries, required API scopes, a settings schema, the collections it reads, permissions, database needs and licence.
+  - **Reading:** an extension may read and suggest within the user's permissions.
+  - **Changing money:** only through LedgerFlow's own checked actions, never a direct database write. That keeps the workspace boundary, roles, period locks, balanced entries, safe retries and the audit trail in force.
+  - **What it enables:** custom work, industry packs and private deployments, without making the core heavier.
+- [ ] DA-05 What works today: one truth table — **V1**: one table of capabilities, each with one label:
+  - Available;
+  - Available with limits;
+  - Partial;
+  - Internal, test or demo only;
+  - Planned;
+  - Needs an owner decision.
+
+  Each entry has its evidence (code and tests, as in `docs/TOOL_REVIEW.md`). The README, Help, onboarding and pricing take their claims from it. A type, a route, an empty screen or an arithmetic-only test never makes something "Available". It replaces the stale `docs/STATUS.md` (TOOL_REVIEW F5).
+- [ ] DA-06 Workflow pages for the main path — **V1**: for each step of the main path (ROADMAP "The main path"), Help says:
+  - before you start;
+  - what you do;
+  - what LedgerFlow changes;
+  - what you see afterwards;
+  - what it affects further on;
+  - what can fail;
+  - whether it can be undone;
+  - what belongs to this workspace only;
+  - what happens by itself;
+  - what still needs a person to check.
+
+  The pages take their claims from DA-05.
+- [ ] DA-07 The main path, tested end to end (one simple business) — **V1**: one browser test, signed in, goes through:
+  1. create the books;
+  2. import accounts;
+  3. add a customer, a vendor and an item;
+  4. import a bank statement;
+  5. invoice and bill;
+  6. pay partly;
+  7. reconcile;
+  8. read the reports;
+  9. close the month, and check that a write into it is refused;
+  10. back up, restore, and get the same figures;
+  11. drill a report figure down to its document.
+
+  It extends `e2e/accounting-lifecycle.spec.ts`. Mixed Hebrew and English data.
+- [ ] DA-08 The main path with labels — **V1**: the same path, with two locations and a project on the entries; each report figure split by label, and each split adds back to the total.
+- [ ] DA-09 The main path across a group of books — **Later P1, after DA-01 and Z-20**: the same path in two workspaces of one group, plus a report across both that drills back into each.
+- [ ] DA-10 Move a label into its own books — **Research**: when a company that was an Entity label outgrows it (see ROADMAP, "Can a company just be a label?"), move that label's activity into a new workspace in the same group, without retyping. Opening balances move on a chosen date, and there is an audit trail in both. Needs an owner decision on the date and the history kept.

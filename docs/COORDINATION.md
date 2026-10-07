@@ -66,6 +66,12 @@ paused launch work; no coordination update from Claude was needed for this autho
    In the description: the warning count before and after, and the check results.
 7. In `docs/TRACKER.md`, tick the items the task closes (`- [x] G-02 ... (codex, PR #n)`).
 8. Unsure whether a change is safe? Don't make it. Write the question under **Messages**.
+9. **Roadmap filter (owner, 7 Oct): read [`docs/ROADMAP.md`](ROADMAP.md).**
+   - Start simple: a new capability stays out of the way until a workspace uses it.
+   - Keep real events apart (an order is not a payment, an invoice is not a delivery).
+   - AI suggests; the server calculates and posts.
+   - Say only what is true (DA-05).
+   - Each tracker item has a bucket (V1 / Later / Add-on / Research). Never move one into V1 yourself; ask under **Messages**.
 
 ## Tasks for Codex — AI #2 (in order)
 
@@ -403,12 +409,21 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-4 Product tour** (tracker P-08): a short first-run tour (5–7 steps: dashboard, invoices,
   bills, banking, reports, settings, the search box) that can be skipped, restarted from Help, and is
   remembered per user. New files under `src/components/onboarding/tour/` plus one button in Help.
-  Keyboard and screen reader friendly; a browser test that walks it.
+  Keyboard and screen reader friendly; a browser test that walks it. *Roadmap (7 Oct): show only the basics in
+  the first tour; leave out steps for modules a new workspace doesn't use yet (projects, stock, payroll), which get
+  their own short hint later (BB-07).*
 - [ ] **D-5 Drill-down from every report figure** (tracker N-12): any account or total figure in a
   report (P&L, balance sheet, trial balance, cash flow, aged lists, the everyday reports) opens the
   posted entries behind it, using the existing `src/components/layout/DrillDownModal.tsx` and the same
   period and filters as the report. Display only: the drill-down must add up to the figure clicked
-  (a test checks that for each report). Report math stays where it is.
+  (a test checks that for each report). Report math stays where it is. *Roadmap (7 Oct): this is the first
+  slice of **explain this number** (tracker N-12).*
+  - Build one shared drill-down that every report calls, not one per report.
+  - Pass it the filter that made the figure (dates, cash or accrual, accounts, label, status), and show that
+    filter at the top.
+  - Each entry opens its document through the typed record links (`src/lib/recordLinks.ts`).
+  - Read full history from the server's report routes. If only a capped browser list is available, say
+    "partial" instead of showing a total that looks complete.
 - [ ] **D-6 Chart comforts** (tracker O-05, O-06, O-08): a switcher between bar/line/area where a chart
   allows it (remembered per chart), clicking a legend item hides or shows that series, and one shared
   tooltip style (label, value in the workspace currency, % where it applies) across the dashboard and
@@ -433,7 +448,12 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   "Switch to …" entry per workspace in the command palette, and a Practice page listing every
   workspace the user belongs to with their role, home currency and when it last changed. Opening one
   uses the existing `useAuthStore.setCurrentWorkspaceId`. Tests: switcher keyboard, palette entry,
-  practice list; a browser test that switches.
+  practice list; a browser test that switches. *Roadmap (7 Oct, tracker K-34 V1, BD-01 Later P0):*
+  - Most recent first.
+  - Keep room on each row for a "needs work" count and a group name. They come later (DA-02 and DA-01);
+    don't invent them now.
+  - List only the workspaces from the user's own memberships. Nothing reads another workspace's data
+    from the browser.
 - [ ] **E-2 Customer cohorts report** (tracker P-14): customers grouped by the month of their first
   issued invoice, and how much they were invoiced in each later month (and how many still bought),
   as a table with a percentage view. Issued invoices only (no drafts, void or cancelled), home-currency
@@ -465,6 +485,7 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 | R-07 month-end currency revaluation (done 2026-10-05; owner review follow-up 5 Oct): current or historical month-end rates, paired reversal/Undo, Currencies preview | `src/lib/fxRevaluation.ts`, `src/server/services/fxRevaluationService.ts`, `src/server/routes/transactions/periodRoutes.ts`, `src/components/finance/FxRevaluationPanel.tsx`, `src/components/finance/CurrencyConverter.tsx`, `src/tests/fx-revaluation.test.ts`, `src/tests/fx-revaluation-ui.test.tsx`, `src/tests/fx-revaluation-server.test.ts` | 2026-10-05 |
 | 5–6 Oct (AI #1): advance payments, estimate deposits, prepaid and revenue spreading, payment runs, expense claims, requisitions, sale receipts, Defaults, journals, rate history | `src/lib/advancePayments.ts`, `src/lib/prepaidSchedule.ts`, `src/lib/paymentRun.ts`, `src/lib/expenseClaims.ts`, `src/lib/accountDefaults.ts`, `src/lib/spreadWaterfall.ts`, `src/lib/exchangeRates.ts`, `src/lib/purchaseOrders.ts`, `src/server/services/paymentService.ts`, `src/server/services/prepaidService.ts`, `src/server/routes/prepaidRoutes.ts`, `src/services/*Actions.ts`, `src/components/common/UnappliedPayments.tsx`, `src/components/common/SpreadDialog.tsx`, `src/components/purchases/*` (Purchases, PaymentRunDialog, ExpenseClaims, SpreadBillDialog, PurchaseOrdersView), `src/components/sales/*` (Sales, InvoiceModal, EstimatesView, EstimateDepositDialog), `src/components/ledger/JournalView.tsx`, `src/components/ledger/JournalEntryModal.tsx`, `src/components/platform/settings/DefaultsSettings.tsx`, `src/components/reporting/SpreadWaterfallView.tsx`, `src/components/reporting/ExchangeRateHistoryView.tsx`, `src/hooks/useSuggestedRate.ts` | 2026-10-06 |
 | Launch #10/#11 done 2026-10-02; now step 12 clean-up (server side) (rules files released to AI #4 for D-3, 6 Oct) | `src/components/onboarding/` (except `tour/`, AI #4 D-4), `src/lib/retention.ts`, `src/lib/openingBalances.ts`, `src/lib/taxRecompute.ts` | 2026-10-02 |
+| BF-08 step 1 (7 Oct): quote and order lines keep their item; orders invoiced by quantity move stock and cost once | `src/lib/salesOrders.ts`, `src/lib/estimateConverter.ts`, `src/components/sales/Estimate*.tsx`, `src/model/documents.ts` (Estimate), `src/services/invoiceCogs.ts` | 2026-10-07 |
 
 ## Messages (newest at the bottom; date + who)
 
@@ -976,3 +997,13 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-07 AI #1 (Claude): the old `GET /api/v1/reports/tax-liability` endpoint and `computeTaxLiability` are removed
   (L-119; nothing called them; tax totals come from the tax return). `payRuns` will be written by the server only
   (payroll approval, U-10), so don't write that table from the browser.
+- 2026-10-07 AI #1 (Claude) → all AIs: the owner's roadmap is now [`docs/ROADMAP.md`](ROADMAP.md). It holds the
+  rules (start simple, real events stay separate, AI suggests and the server posts, say only what is true) and
+  sorts every open tracker item into V1 / Later / Add-on / Research. Ask before moving anything into V1.
+  - **Expanded in the tracker:** K-34, BD-01, N-12, Z-12, Z-16…Z-22, Q-05/K-39/CA-13, BF-08, W-01, W-02,
+    BF-06, BD-04, BD-06, P-08 and BB-07.
+  - **New section:** DA-01…DA-10.
+  - **Queue notes added:** D-4, D-5 and E-1.
+  - **BF-08:** found that quote and order lines carry no item, so invoicing an order never moves stock or cost.
+    AI #1 is fixing that (BF-08 step 1); don't edit `src/lib/salesOrders.ts`, `estimateConverter.ts` or the
+    estimate form until it's on main.
