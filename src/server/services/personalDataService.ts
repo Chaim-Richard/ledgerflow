@@ -1,6 +1,6 @@
 /**
  * A person's own data, on request (L-10, GDPR article 15/20): their profile, the workspaces they
- * belong to and their role, their notifications, sign-in log, templates and the audit entries of
+ * belong to and their role, their groups of books, notifications, sign-in log, templates and the audit entries of
  * what they did. The books themselves belong to each workspace: an owner downloads them with the
  * workspace backup (Settings → Backup).
  */
@@ -28,6 +28,7 @@ export async function collectPersonalData(db: Firestore, user: { uid: string; em
       name: data.name || id,
       role: data.uid === user.uid ? 'owner' : ((data.roles || {}) as Record<string, string>)[user.uid] || 'viewer',
     })),
+    groups: await rows('workspaceGroups', 'ownerUid'),
     notifications: await rows('notifications', 'uid'),
     signIns: await rows('loginAudits', 'uid'),
     templates: await rows('customTemplates', 'uid'),

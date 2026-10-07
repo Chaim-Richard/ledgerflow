@@ -103,6 +103,8 @@ export async function deleteAccount(db: Firestore, user: { uid: string; email?: 
     const snap = await db.collection(table).where('uid', '==', user.uid).get();
     for (const d of snap.docs) await d.ref.delete();
   }
+  // DA-01: their own groups of books (the workspaces in them are not touched)
+  for (const d of (await db.collection('workspaceGroups').where('ownerUid', '==', user.uid).get()).docs) await d.ref.delete();
   await deleteSignIn(user.uid);
   return { scheduledForDeletion: plan.scheduleDeletion.map(w => w.id), left: plan.leave.map(w => w.id) };
 }

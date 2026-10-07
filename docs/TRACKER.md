@@ -2522,13 +2522,19 @@ New items only for what was not in the tracker yet. The rest of the roadmap expa
 items: K-34, BD-01, N-12, Z-12, Z-16…Z-22, Q-05/K-39/CA-13, BF-08, W-01, W-02, BF-06, BD-04,
 BD-06, P-08 and BB-07. Each item says its bucket. Only the owner moves an item into V1.
 
-- [ ] DA-01 Group of books (portfolio) — **Later P0**: a layer above workspaces, for anyone with access to several sets of books (holding structures, related companies, an accountant's clients).
+- [~] DA-01 Group of books (portfolio) — **Later P0** (step 1 done 7 Oct: your own groups, Settings → Groups of books; shared groups and the switcher filter (AI #5's E-1) open): a layer above workspaces, for anyone with access to several sets of books (holding structures, related companies, an accountant's clients).
   - **What a group is:** it has a stable id and a name, and holds several workspaces.
   - **What membership changes:** nothing in the workspace's own ledger, roles or database rules.
   - **What a user sees:** only the members they could already open one by one.
   - **Getting around:** navigation inside a group is searchable and fast (K-34).
   - **Later:** it is the base for reports across workspaces (Z-16), which read each member under the user's own access and never copy entries into a new ledger.
   - **Design first:** a `workspaceGroups` table (owner, name, members), its database rules, and tests that a member the user cannot open stays invisible and unreadable.
+  - **Done 7 Oct (Claude):**
+    - **The table:** `workspaceGroups` (owner, name, members; migration `20261013070000_workspace_groups.sql`). The owner reads their own; only the server writes (RLS tests: another member and an outsider read nothing, browser writes refused).
+    - **The server:** `GET/POST /api/v1/account/groups`, `PUT/DELETE /api/v1/account/groups/:id` (`workspaceGroupService.ts`). Only workspaces the person can open are added (another answers like a missing one). A member they can no longer open is left out when the group is read, and kept unseen when the group changes. Someone else's group answers like a missing one. The data export lists the groups; deleting the account deletes them; no workspace changes.
+    - **The screen:** Settings → Groups of books: list, new, change (name and workspaces), remove.
+    - Tests: `workspace-groups.test.tsx`.
+  - **Still open:** groups shared with other people (an accountant's team, the companies of a holding for Z-16), the parent and the ownership share (Z-16), and the group filter in the switcher (AI #5's E-1).
 - [ ] DA-02 Needs attention: one queue — **Later P1**: the daily starting point for people who don't want to learn the whole menu. It is one shared queue, not another warning screen. Rows look like this:
   - 3 bank lines to review;
   - 1 connection to reconnect;

@@ -4,6 +4,7 @@
  * shown once), POST /recovery-codes/use (a password-only session may call it: apiAuthenticate).
  * GET /two-step (Y-30): whether a workspace the person belongs to requires two-step login that this
  * session has not passed, and which (a password-only session may call it, to be told why).
+ * Groups of books (DA-01): GET/POST /groups, PUT/DELETE /groups/:id (workspaceGroupService.ts).
  */
 import express from 'express';
 import { getDb } from '../db/firestore';
@@ -13,6 +14,7 @@ import { makeRecoveryCodes, recoveryStatus, RecoveryError, useRecoveryCode } fro
 import { workspacesRequiringTwoStep } from '../auth/supabaseAuth';
 import { getNotificationEmail, setNotificationEmail } from '../services/notificationEmailService';
 import { EMAIL_MODES, type NotificationEmailMode } from '../../lib/notificationEmail';
+import { createGroup, deleteGroup, listGroups, updateGroup, WorkspaceGroupError } from '../services/workspaceGroupService';
 
 export const accountRouter = express.Router();
 
@@ -78,4 +80,41 @@ accountRouter.put('/notification-email', async (req, res) => {
   if (!EMAIL_MODES.includes(mode)) return res.status(400).json({ status: 'error', message: 'Choose off, immediate or daily' });
   try { res.json({ status: 'success', mode: await setNotificationEmail(getDb(), user.uid, mode) }); }
   catch (err) { res.status(500).json({ status: 'error', message: 'Could not save the email choice', details: err instanceof Error ? err.message : String(err) }); }
+});
+
+// DA-01: the person's own groups of books; only workspaces they can open are added or shown
+const groupFail = (res: express.Response, err: unknown) => {
+  if (err instanceof WorkspaceGroupError) return res.status(err.status).json({ status: 'error', message: err.message });
+  res.status(500).json({ status: 'error', message: 'Groups are not available right now', details: err instanceof Error ? err.message : String(err) });
+};
+const stringList = (value: unknown) => {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) throw new WorkspaceGroupError(400, 'Choose the workspaces of the group');
+  return value.map(v => String(v));
+};
+
+accountRouter.get('/groups', async (req, res) => {
+  const user = (req as unknown as AuthenticatedRequest).user;
+  try { res.json({ status: 'success', groups: await listGroups(getDb(), user.uid) }); } catch (err) { groupFail(res, err); }
+});
+
+accountRouter.post('/groups', async (req, res) => {
+  const user = (req as unknown as AuthenticatedRequest).user;
+  try {
+    const group = await createGroup(getDb(), { uid: user.uid, name: typeof req.body?.name === 'string' ? req.body.name : '', workspaceIds: stringList(req.body?.workspaceIds) || [] });
+    res.status(201).json({ status: 'success', group });
+  } catch (err) { groupFail(res, err); }
+});
+
+accountRouter.put('/groups/:id', async (req, res) => {
+  const user = (req as unknown as AuthenticatedRequest).user;
+  try {
+    const name = req.body?.name === undefined ? undefined : String(req.body.name);
+    res.json({ status: 'success', group: await updateGroup(getDb(), { uid: user.uid, groupId: String(req.params.id), name, workspaceIds: stringList(req.body?.workspaceIds) }) });
+  } catch (err) { groupFail(res, err); }
+});
+
+accountRouter.delete('/groups/:id', async (req, res) => {
+  const user = (req as unknown as AuthenticatedRequest).user;
+  try { await deleteGroup(getDb(), { uid: user.uid, groupId: String(req.params.id) }); res.json({ status: 'success' }); } catch (err) { groupFail(res, err); }
 });

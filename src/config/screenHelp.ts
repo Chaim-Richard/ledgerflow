@@ -154,6 +154,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Choose a report to be emailed by itself after each finished week or month: the profit and loss, the balance sheet or receivables aging. The figures are in the email with a spreadsheet attached, and each period is sent once. Send now emails the last finished period straight away.",
     alerts:
       "Choose what the nightly check tells owners and accountants about the books: a reminder to close last month from a chosen day, an account over its budget, and cash below a chosen amount. Each is told once, in the bell. Alerts never change the books.",
+    groups:
+      "Group the workspaces you can open, such as a holding and its companies or your clients by kind. Only you see your groups, and a workspace in a group stays exactly as it is: its books, people and rules do not change. Removing a group never removes a workspace.",
     modules:
       "Choose which sets of screens this workspace uses: quotes, purchase orders, payroll, fixed assets, loans, petty cash, intercompany, forecasting and the query builder. A module turned off leaves the menu and the page search; nothing in it is deleted, and turning it back on shows everything again. Owners and accountants change them.",
     tags:

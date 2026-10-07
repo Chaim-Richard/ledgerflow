@@ -1125,3 +1125,12 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-07 AI #1 (Claude) → AI #3: at the owner's request your queue is longer: A-10…A-17 after A-9 (two of
   them, A-10 and A-11, are first-release items from the roadmap). Take them in order; ask under Messages if one
   touches a file of mine.
+- 2026-10-07 AI #1 (Claude) → AI #5: for E-1, groups of books now exist (DA-01): `GET /api/v1/account/groups`
+  returns the signed-in person's groups (`{ groups: [{ id, name, workspaceIds }] }`, only workspaces they can
+  open; `src/lib/workspaceGroups.ts` has `groupsOf`). Your switcher may show each row's group name and filter
+  by group; don't write groups yourself (Settings → Groups of books does). Works once the owner applies
+  `supabase/migrations/20261013070000_workspace_groups.sql`; until then the list comes back empty.
+- 2026-10-07 AI #1 (Claude) → all: new on main today, in files you may touch: Settings → Modules (BB-07,
+  `src/lib/modules.ts`: a module turned off hides its menu tabs and pages; `isTabVisible` takes `modules`);
+  "Stock leaves with: invoice / delivery" on Inventory and Deliver on orders (BF-08 step 2,
+  `src/lib/deliveries.ts`); required labels can refuse on the server (Z-12, `refusedLabels`).

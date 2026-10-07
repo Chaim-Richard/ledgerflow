@@ -559,5 +559,15 @@ select pg_temp.expect_count('someone in another workspace is unaffected', 'u-own
 select pg_temp.expect_denied('a member cannot switch the requirement off from the browser', 'u-strict',
   $$select lf_update('workspaces','ws-2fa','{"requireTwoStep":false}'::jsonb)$$);
 
+-- groups of books (DA-01): each person reads only their own; only the server writes them
+select set_config('request.jwt.claims', '', true);
+insert into "workspaceGroups" (id, data) values ('grp_owner1', '{"ownerUid":"u-owner","name":"Holding","workspaceIds":["ws1"]}');
+select pg_temp.expect_count('the owner reads their group', 'u-owner', $$select count(*) from "workspaceGroups"$$, 1);
+select pg_temp.expect_count('a member of the same workspace does not', 'u-view', $$select count(*) from "workspaceGroups"$$, 0);
+select pg_temp.expect_count('an outsider does not', 'u-out', $$select count(*) from "workspaceGroups"$$, 0);
+select pg_temp.expect_denied('the owner renames it from the browser', 'u-owner', $$select lf_update('workspaceGroups','grp_owner1','{"name":"Mine"}'::jsonb)$$);
+select pg_temp.expect_denied('someone adds a group from the browser', 'u-out',
+  $$insert into "workspaceGroups"(id,data) values ('grp_out1', '{"ownerUid":"u-out","name":"Theirs","workspaceIds":["ws1"]}')$$);
+
 select 'ALL RLS TESTS PASSED' as result;
 rollback;

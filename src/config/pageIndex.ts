@@ -24,6 +24,7 @@ const SETTINGS_KEYWORDS: Record<string, string> = {
   'scheduled-reports': 'email reports schedule weekly monthly automatic send profit loss balance sheet aging',
   alerts: 'notify warn reminder close month budget overspent over budget cash low balance threshold',
   modules: 'features turn on off hide show payroll assets loans purchase orders petty cash intercompany forecasting quotes simple advanced',
+  groups: 'group portfolio holding companies clients workspaces entities related folders',
   export: 'backup download restore data archive',
   shortcuts: 'keyboard keys speed dial hotkeys',
 };
