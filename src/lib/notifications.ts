@@ -12,6 +12,8 @@ const BOOKS: Role[] = ['owner', 'accountant', 'bookkeeper'];
 export const NOTIFICATION_TYPES = {
   'invoice.sent': { label: 'An invoice was emailed to a customer', roles: BOOKS, tab: 'sales' },
   'invoice.viewed': { label: 'A customer opened an invoice for the first time', roles: BOOKS, tab: 'sales' },
+  'approval.requested': { label: 'An invoice waits for approval', roles: ['owner', 'accountant'] as Role[], tab: 'sales' },
+  'approval.decided': { label: 'An invoice was approved or sent back', roles: BOOKS, tab: 'sales' },
   'invoice.overdue': { label: 'An invoice became overdue', roles: BOOKS, tab: 'sales' },
   'invoice.draft_ready': { label: 'A recurring invoice is ready to review and send', roles: BOOKS, tab: 'sales' },
   'invoice.paper_copy': { label: 'A reminder is due for a customer who gets paper copies', roles: BOOKS, tab: 'sales' },
