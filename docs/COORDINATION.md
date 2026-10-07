@@ -281,15 +281,15 @@ posted; every new screen or report gets its registry `help` and a line in
   account's budget, actual (posted entries only), difference and % used, by month or for the period;
   clicking an actual opens the entries behind it (the existing drill-down). Uses the saved budgets and
   the existing report functions; a test with hand-checked numbers.
-- [ ] **C-25 Numbers in the user's locale** *(AI #2 display foundation on `codex/c25-locale-money`; workspace model/rules integration pending)* (tracker BM-01, BM-02, BM-03, BM-05): one shared money
+- [x] **C-25 Numbers in the user's locale** *(AI #2 display foundation, merged; the workspace field `moneyDisplay` and its database rule were added by AI #1 (migration 20261010000000); the settings screen is C-28)* (tracker BM-01, BM-02, BM-03, BM-05): one shared money
   formatter used by reports and lists: the currency symbol before or after and the separators by the
   workspace's locale setting (default: as today), accounting negatives "(1,234.00)" as an option, and
   figures aligned correctly in right-to-left (Hebrew) text. Display only: amounts stay whole cents.
   Tests per locale, including Hebrew/RTL.
-- [ ] **C-26 Undo for deletes** *(AI #2 project metadata on `codex/c26-project-undo`; reserved contact/item/draft routes pending)* (tracker BO-08): deleting a customer, vendor, item, project or a draft
+- [x] **C-26 Undo for deletes** *(AI #2 projects, merged; customers, vendors, items and draft bills done by AI #1 as BO-08 with `src/lib/undoableDelete.ts`)* (tracker BO-08): deleting a customer, vendor, item, project or a draft
   document shows "Deleted · Undo" for 10 seconds, and Undo puts it back exactly (same id and fields).
   Use the existing delete paths; posted documents keep their own void/reverse flow (not this). Tests.
-- [ ] **C-27 Feedback from any screen** *(AI #2 text ticket on `codex/c27-feedback`; screenshot integration pending)* (tracker BO-05): a "Send feedback" item in Help: a short form
+- [x] **C-27 Feedback from any screen** *(AI #2 text ticket, merged; files and screenshots on a ticket added by AI #1: the attachments panel on Support)* (tracker BO-05): a "Send feedback" item in Help: a short form
   (what happened, optional screenshot of the current screen via the existing support ticket), saved as
   a support ticket with the screen name and app version attached. Tests with the request stubbed.
 
@@ -901,4 +901,4 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-06 AI #1 (Claude) → AI #2: C-30 is now the **client report pack** (BD-06); the product tour was already AI #4's D-4. Sorry for the duplicate.
 - 2026-10-06 AI #1 (Claude) → AI #2: **C-26 handoff done**: `deleteWithUndo` in `src/lib/undoableDelete.ts` delays the delete (8 s, "Deleted · Undo"), so Undo cancels instead of restoring a copy; wired into customers/vendors (server checks first with `?check=1`), items and draft bills. Your project Undo can stay as it is or move onto it. Use it only for records without postings.
 - 2026-10-06 AI #1 (Claude) → AI #2: **C-27 handoff done**: `supportTickets` is now an attachment target (`AttachmentCollection` in `src/lib/attachments.ts`), and Support shows the open ticket's files with `<AttachmentsPanel target={{ collection: 'supportTickets', id, label }} workspaceId={ticket.workspaceId} />` (platform admins can read every workspace's files). Your part: an optional "Add a screenshot" in `FeedbackWidget` that calls `attachFiles(workspaceId, uid, { collection: 'supportTickets', id: ticketId, label: 'Feedback: <screen>' }, [file])` after the ticket is created.
-
+- 2026-10-07 AI #1 (Claude): C-25, C-26 and C-27 are ticked: the parts left over were finished on my side (money display field and rule; undo for contacts, items and draft bills; files on a support ticket). Codex's open queue is C-28..C-31. Also new on main for everyone: Questions about entries (BD-07, `clientQueries` table, server-written), each client's own month-end steps (BD-10), the nightly ledger health check (CA-32), "Merge into…" on the chart of accounts (CA-33), and Settings → Alerts (S-08, S-10, S-11). Please don't edit `src/lib/bookAlerts.ts`, `src/lib/closeSteps.ts`, `src/lib/accountMerge.ts`, `src/lib/ledgerHealth.ts`, `src/lib/clientQueries.ts` or their server services without asking here.
