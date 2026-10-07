@@ -74,6 +74,12 @@ Last updated: 2026-10-07.
     invoice field needs a migration (the approval itself is stored with the invoice). Same as item 19:
     paste it in Supabase → SQL editor, or say so and the next session runs it through the connector.
 
+26. **Password rules in Supabase too (2 minutes, 7 Oct).** The app now asks for at least 10
+    characters (not a common password, not your email name) when someone signs up or picks a new
+    password after a reset link. Make Supabase say the same, so nobody can get around it: Supabase →
+    Authentication → Providers → Email → *Minimum password length* **10**, and, if your plan has it,
+    turn on *Prevent use of leaked passwords*. *Default meanwhile: the app's own check.*
+
 ## B. Decisions (Claude uses the default until you say otherwise)
 
 10. **Hebrew data — decided by owner (2 Oct).** Keep menus and options in English. The system and algorithms must handle Hebrew and mixed Hebrew/English names, labels, item descriptions and other record text throughout search/matching, imports/exports and documents. This is data-language support, not a request to translate the interface. Codex is auditing it after C-6…C-11; existing financial rules must stay intact.

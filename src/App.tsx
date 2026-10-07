@@ -2,7 +2,7 @@ import FeedbackWidget from './components/support/FeedbackWidget';
 import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import { usePerformanceTrace } from './hooks/usePerformanceTrace';
 import { auth } from './firebase';
-import { onAuthStateChanged, onSecondFactorRequired, verifySecondFactor, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from './lib/db/auth';
+import { onAuthStateChanged, onSecondFactorRequired, onPasswordRecovery, setNewPassword, verifySecondFactor, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from './lib/db/auth';
 import { Toaster, toast } from 'sonner';
 import { motion } from 'motion/react';
 
@@ -36,6 +36,7 @@ import PublicInvoicePage from './components/sales/PublicInvoicePage';
 import CustomerPortalPage from './components/sales/CustomerPortalPage';
 const StatusPage = lazy(() => import('./components/system/StatusPage'));
 const TwoStepSetupScreen = lazy(() => import('./core/auth/TwoStepSetupScreen'));
+const NewPasswordScreen = lazy(() => import('./core/auth/NewPasswordScreen'));
 import CookieConsent from './components/legal/CookieConsent';
 import LegalModal from './components/legal/LegalModal';
 
@@ -197,6 +198,9 @@ export default function App() {
   }, [setUser]);
 
   useEffect(() => onSecondFactorRequired(auth, setPendingSecondFactor), []);
+  // Y-31: arrived from a password-reset link; a new password is chosen first
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
+  useEffect(() => onPasswordRecovery(auth, setPasswordRecovery), []);
 
   // Operational Keyboard Shortcuts
 const shortcutMap = useMemo(() => {
@@ -373,6 +377,14 @@ const shortcutMap = useMemo(() => {
         onCancel={() => { void signOut(auth); }}
         onRecover={redeemRecoveryCode}
       />
+    );
+  }
+
+  if (passwordRecovery && user) {
+    return (
+      <Suspense fallback={<InitializationScreen language={language} />}>
+        <NewPasswordScreen email={user.email || ''} onSave={async (password) => { await setNewPassword(auth, password); toast.success('New password saved'); }} onSignOut={() => { void signOut(auth); }} />
+      </Suspense>
     );
   }
 

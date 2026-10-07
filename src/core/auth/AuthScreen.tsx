@@ -5,6 +5,7 @@ import { useBillingStore } from '../../modules/billing/BillingService';
 import LegalModal from '../../components/legal/LegalModal';
 import AsyncButton from '../../components/ui/AsyncButton';
 import { toast } from 'sonner';
+import { MIN_PASSWORD_LENGTH, passwordProblem } from '../../lib/passwordPolicy';
 
 interface AuthScreenProps {
   onLogin: () => void;
@@ -19,6 +20,7 @@ export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onPasswordRes
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [legalTab, setLegalTab] = useState<'terms' | 'privacy'>('terms');
@@ -39,6 +41,10 @@ export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onPasswordRes
   const handleEmailAction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
+    // Y-31: the same password rules as a reset
+    const weak = isRegistering ? passwordProblem(password, email) : null;
+    if (weak) { setPasswordError(weak); return; }
+    setPasswordError('');
     setIsSubmitting(true);
     try {
       if (isRegistering) {
@@ -156,13 +162,18 @@ export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onPasswordRes
                     id="auth-password-input"
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
                     disabled={isRegistering && !registrationAllowed}
                     className="w-full h-12 px-4 rounded-xl border border-[#E5E5E5] focus:border-[#0A0A0A] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0A0A0A] focus-visible:ring-offset-2 transition-all disabled:opacity-40"
                     placeholder="••••••••"
                     required
                     aria-label="Password"
+                    autoComplete={isRegistering ? 'new-password' : 'current-password'}
+                    aria-invalid={passwordError ? true : undefined}
+                    aria-describedby={passwordError ? 'auth-password-error' : isRegistering ? 'auth-password-rule' : undefined}
                   />
+                  {isRegistering && !passwordError && <p id="auth-password-rule" className="mt-1 text-xs text-[#737373]">At least {MIN_PASSWORD_LENGTH} characters; not a common password or your email name.</p>}
+                  {passwordError && <p id="auth-password-error" role="alert" className="mt-1 text-xs text-red-700">{passwordError}</p>}
                 </div>
                 
                 <AsyncButton 
