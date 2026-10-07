@@ -22,6 +22,7 @@ import { ScheduledReportError, sendScheduleNow } from '../services/scheduledRepo
 import { portalLinkRouter } from './customerPortalRoutes';
 import { clientQueryRouter } from './clientQueryRoutes';
 import { accountMergeRouter } from './accountMergeRoutes';
+import { assetDisposalRouter } from './assetDisposalRoutes';
 import { AlertSettingsError, saveAlertSettings } from '../services/bookAlertService';
 import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
@@ -184,6 +185,8 @@ workspaceRouter.use('/:workspaceId/journal-templates', requireWorkspaceRole(['ow
 workspaceRouter.use('/:workspaceId/queries', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), clientQueryRouter);
 // Merging two accounts (CA-33): owners and accountants
 workspaceRouter.use('/:workspaceId/chart-accounts', requireWorkspaceRole(['owner', 'accountant']), accountMergeRouter);
+// Selling or scrapping a fixed asset (X-03): writers
+workspaceRouter.use('/:workspaceId/assets/:assetId/disposal', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), assetDisposalRouter);
 // Settings → Alerts (S-08, S-10, S-11): owners and accountants
 const alertsSchema = z.object({
   cashLowCents: z.number().int().nullable().optional(),

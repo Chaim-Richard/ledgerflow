@@ -11,6 +11,7 @@ import { getIdToken } from '../../firebase';
 import { depreciationThrough } from '../../lib/depreciationEngine';
 import { formatCurrency, formatDate, formatTzDate, parseAmountToCents } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import DisposeAssetDialog from './DisposeAssetDialog';
 
 /**
  * Fixed asset register (R-06). Assets are saved in the database ('assets'); depreciation is posted
@@ -41,6 +42,9 @@ export const FixedAssetsView: React.FC = () => {
   const [runMonth, setRunMonth] = useState(() => previousMonth(today));
   const [running, setRunning] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  // X-03: the asset being sold or scrapped, and the one whose disposal is being undone
+  const [disposing, setDisposing] = useState<FixedAsset | null>(null);
+  const [undoing, setUndoing] = useState('');
   const [form, setForm] = useState(() => ({
     name: '', cost: '', salvage: '0', years: '5', purchaseDate: today, method: 'straight-line' as FixedAsset['depreciationMethod'],
     assetAccountId: '', expenseAccountId: '', accumulatedAccountId: '',
@@ -52,11 +56,30 @@ export const FixedAssetsView: React.FC = () => {
   const expenseAccounts = chart.filter(a => ['expense', 'cost_of_goods'].includes(String(a.type).toLowerCase()));
 
   const totals = useMemo(() => {
-    const cost = list.reduce((s, a) => s + (a.purchasePriceCents || 0), 0);
-    const accumulated = list.reduce((s, a) => s + (a.accumulatedDepreciationCents || 0), 0);
+    // what is still owned: sold or scrapped assets are off the books
+    const owned = list.filter(a => a.status !== 'disposed');
+    const cost = owned.reduce((s, a) => s + (a.purchasePriceCents || 0), 0);
+    const accumulated = owned.reduce((s, a) => s + (a.accumulatedDepreciationCents || 0), 0);
     return { cost, accumulated, book: cost - accumulated };
   }, [list]);
   const dueForRun = list.filter(a => a.status !== 'disposed' && depreciationThrough(a, runMonth) > (a.accumulatedDepreciationCents || 0));
+
+  const undoDisposal = async (asset: FixedAsset) => {
+    if (!workspace?.id) return;
+    setUndoing(asset.id);
+    try {
+      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspace.id)}/assets/${encodeURIComponent(asset.id)}/disposal`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${await getIdToken()}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'The disposal could not be undone');
+      toast.success(`${asset.name} is back on the books; its disposal entry is void`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUndoing('');
+    }
+  };
 
   const openForm = () => {
     setForm(f => ({
@@ -170,6 +193,7 @@ export const FixedAssetsView: React.FC = () => {
                 <th scope="col" className="py-3 px-4 text-right">Depreciated</th>
                 <th scope="col" className="py-3 px-4 text-right">Book value</th>
                 <th scope="col" className="py-3 px-4">Posted through</th>
+                {canWrite && <th scope="col" className="py-3 px-4"><span className="sr-only">Actions</span></th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)] text-[var(--text)]">
@@ -183,13 +207,34 @@ export const FixedAssetsView: React.FC = () => {
                   <td className="py-3 px-4 text-right font-mono">{formatCurrency(asset.purchasePriceCents)}</td>
                   <td className="py-3 px-4 text-right">{asset.usefulLifeYears} yr</td>
                   <td className="py-3 px-4 text-right font-mono">{formatCurrency(asset.accumulatedDepreciationCents || 0)}</td>
-                  <td className="py-3 px-4 text-right font-mono font-bold">{formatCurrency((asset.purchasePriceCents || 0) - (asset.accumulatedDepreciationCents || 0))}</td>
-                  <td className="py-3 px-4 text-[var(--muted)]">{asset.depreciatedThrough || 'not yet'}</td>
+                  <td className="py-3 px-4 text-right font-mono font-bold">{asset.status === 'disposed' ? '—' : formatCurrency((asset.purchasePriceCents || 0) - (asset.accumulatedDepreciationCents || 0))}</td>
+                  <td className="py-3 px-4 text-[var(--muted)]">
+                    {asset.status === 'disposed' && asset.disposedOn
+                      ? <>{(asset.disposalProceedsCents || 0) > 0 ? 'Sold' : 'Scrapped'} {formatDate(asset.disposedOn)}{asset.disposalGainLossCents ? ` · ${asset.disposalGainLossCents > 0 ? 'gain' : 'loss'} ${formatCurrency(Math.abs(asset.disposalGainLossCents))}` : ''}</>
+                      : asset.depreciatedThrough || 'not yet'}
+                  </td>
+                  {canWrite && (
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                      {asset.status !== 'disposed' ? (
+                        <button type="button" onClick={() => setDisposing(asset)} className="text-xs font-semibold text-[var(--brass)] hover:underline">
+                          Sell or scrap<span className="sr-only"> {asset.name}</span>
+                        </button>
+                      ) : asset.disposalTransactionId ? (
+                        <button type="button" disabled={undoing === asset.id} onClick={() => void undoDisposal(asset)} className="text-xs font-semibold text-[var(--muted)] hover:underline disabled:opacity-50">
+                          Undo disposal<span className="sr-only"> of {asset.name}</span>
+                        </button>
+                      ) : null}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {disposing && workspace && (
+        <DisposeAssetDialog asset={disposing} accounts={chart} workspaceId={workspace.id} today={today} currency={workspace.currency || 'USD'} onClose={() => setDisposing(null)} />
       )}
 
       {isAdding && (

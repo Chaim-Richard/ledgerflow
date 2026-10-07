@@ -68,6 +68,11 @@ export interface FixedAsset {
   /** Last month (YYYY-MM) the depreciation run covered, and its ledger entry. */
   depreciatedThrough?: string;
   lastDepreciationTransactionId?: string;
+  /** Sold or scrapped (X-03, src/server/services/assetDisposalService.ts): the day, the money received, the gain (+) or loss (−) and its entry. */
+  disposedOn?: string;
+  disposalProceedsCents?: number;
+  disposalGainLossCents?: number;
+  disposalTransactionId?: string;
 }
 
 export interface Employee {
