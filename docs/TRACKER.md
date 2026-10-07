@@ -1954,7 +1954,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 # SECTION U — PAYROLL LIFECYCLE
 
 - [ ] U-01 Payslip PDF
-- [ ] U-02 Payroll journal posting
+- [x] U-02 Payroll journal posting — **done 7 Oct, as a fix**: "Post to ledger" on Payroll only changed what the screen showed (nothing was saved, so the entry and the run were gone after a reload), could post to whatever account came first, assumed dollars, and its entry did not balance when an employee had pre-tax deductions. Now owners and accountants choose the bank, wages expense, payroll tax expense and payroll liabilities accounts (suggested by name, only real accounts of the right kind), and the server works out each active employee's pay for the period and posts one balanced entry on the pay date (deductions go to the liabilities with the withholding and employer taxes), saving the run with its per-employee amounts and an audit line. A second run on the same date needs confirming; Undo voids the entry while the date is open (`src/lib/payRunPosting.ts`, `src/server/services/payRunService.ts`; tests `pay-run-posting.test.ts` with the database, `pay-run-ui.test.tsx`)
 - [ ] U-03 YTD tracking
 - [ ] U-04 PTO accrual
 - [ ] U-05 Benefits and deductions

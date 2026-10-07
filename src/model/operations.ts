@@ -104,8 +104,17 @@ export interface PayRun {
   date: string;
   totalAmountCents: number;
   employeeCount: number;
-  status: 'draft' | 'processed' | 'failed';
+  status: 'draft' | 'processed' | 'failed' | 'undone';
   createdAt: string;
+  /** U-02: posted by the server; its entry and the amounts behind it. */
+  transactionId?: string;
+  grossCents?: number;
+  netCents?: number;
+  withheldCents?: number;
+  employerTaxCents?: number;
+  deductionsCents?: number;
+  employees?: Array<{ employeeId: string; name: string; grossCents: number; deductionsCents: number; withheldCents: number; employerTaxCents: number; netCents: number }>;
+  undoneAt?: string;
 }
 
 export interface CloudDocument {

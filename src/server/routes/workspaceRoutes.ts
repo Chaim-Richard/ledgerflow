@@ -23,6 +23,7 @@ import { portalLinkRouter } from './customerPortalRoutes';
 import { clientQueryRouter } from './clientQueryRoutes';
 import { accountMergeRouter } from './accountMergeRoutes';
 import { assetDisposalRouter } from './assetDisposalRoutes';
+import { payRunRouter } from './payRunRoutes';
 import { AlertSettingsError, saveAlertSettings } from '../services/bookAlertService';
 import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
@@ -187,6 +188,8 @@ workspaceRouter.use('/:workspaceId/queries', requireWorkspaceRole(['owner', 'acc
 workspaceRouter.use('/:workspaceId/chart-accounts', requireWorkspaceRole(['owner', 'accountant']), accountMergeRouter);
 // Selling or scrapping a fixed asset (X-03): writers
 workspaceRouter.use('/:workspaceId/assets/:assetId/disposal', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), assetDisposalRouter);
+// Pay runs posted by the server (U-02): owners and accountants
+workspaceRouter.use('/:workspaceId/pay-runs', requireWorkspaceRole(['owner', 'accountant']), payRunRouter);
 // Settings → Alerts (S-08, S-10, S-11): owners and accountants
 const alertsSchema = z.object({
   cashLowCents: z.number().int().nullable().optional(),
