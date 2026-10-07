@@ -11,8 +11,13 @@ import { db } from '../../firebase';
 import { collection, getDocs, query, where } from '../../lib/db/firestore';
 import { useDialog } from '../../hooks/useDialog';
 import { useUIStore } from '../../stores/useUIStore';
-import { orderedMoves, STOCK_MOVE_LABEL, stockHistoryProblem, type StockMove } from '../../lib/stockMoves';
-import { formatCurrency, formatDate } from '../../lib/utils';
+import { NO_LOCATION, orderedMoves, STOCK_MOVE_LABEL, stockByLocation, stockHistoryProblem, transferProblem, type StockMove } from '../../lib/stockMoves';
+import { formatCurrency, formatDate, getLocalDateISO } from '../../lib/utils';
+import { getIdToken } from '../../firebase';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { resolveDimensionLabel } from '../../lib/dimensionUtils';
+import { toast } from 'sonner';
 import type { InventoryItem } from '../../types';
 
 export default function StockHistoryDialog({ item, workspaceId, currency, onClose }: { item: InventoryItem; workspaceId: string; currency: string; onClose: () => void }) {
@@ -20,6 +25,12 @@ export default function StockHistoryDialog({ item, workspaceId, currency, onClos
   const openRecord = useUIStore(s => s.openRecord);
   const [moves, setMoves] = useState<StockMove[] | null>(null);
   const [error, setError] = useState('');
+  const [reload, setReload] = useState(0);
+  const canMove = ['owner', 'accountant', 'bookkeeper'].includes(useCurrentRole());
+  const nodes = useLedgerStore(s => s.dimensionNodes || []);
+  const locationName = (id: string) => (id === NO_LOCATION ? 'No location' : resolveDimensionLabel(nodes, 'location', id));
+  const [move, setMove] = useState({ from: NO_LOCATION, to: '', quantity: '', date: getLocalDateISO() });
+  const [moving, setMoving] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -27,9 +38,32 @@ export default function StockHistoryDialog({ item, workspaceId, currency, onClos
       .then(snap => { if (live) setMoves(orderedMoves(snap.docs.map(d => ({ ...(d.data() as StockMove), id: d.id })))); })
       .catch(err => { if (live) { setError(err instanceof Error ? err.message : String(err)); setMoves([]); } });
     return () => { live = false; };
-  }, [workspaceId, item.id]);
+  }, [workspaceId, item.id, reload]);
 
   const problem = moves ? stockHistoryProblem(item, moves) : null;
+  // W-01: where the units are (an item without a history has all its stock at no location)
+  const at = moves && moves.length > 0 ? stockByLocation(moves) : new Map([[NO_LOCATION, Number(item.quantityAtHand) || 0]]);
+  const moveProblem = move.quantity ? transferProblem({ quantity: Number(move.quantity), from: move.from, to: move.to.trim() }, at) : null;
+  const doMove = async () => {
+    if (moveProblem || !move.quantity) return;
+    setMoving(true);
+    try {
+      const res = await fetch('/api/v1/inventory/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` },
+        body: JSON.stringify({ workspaceId, itemId: item.id, from: move.from, to: move.to.trim(), quantity: Number(move.quantity), date: move.date }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'The stock was not moved');
+      toast.success(`Moved ${move.quantity} to ${locationName(move.to.trim())}`);
+      setMove(m => ({ ...m, quantity: '' }));
+      setReload(n => n + 1);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setMoving(false);
+    }
+  };
   const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 
   return (
@@ -45,6 +79,35 @@ export default function StockHistoryDialog({ item, workspaceId, currency, onClos
           <p className="text-xs text-[var(--muted)]">{item.quantityAtHand} on hand now. Every change below was recorded with the entry it belongs to.</p>
           {error && <p role="alert" className="text-xs text-rose-600">The history could not be loaded: {error}</p>}
           {problem && <p role="alert" className="text-xs text-amber-700 dark:text-amber-400">{problem}. Count the stock to set it right.</p>}
+          {(at.size > 1 || [...at.keys()].some(k => k !== NO_LOCATION)) && (
+            <ul aria-label="By location" className="flex flex-wrap gap-2 text-xs">
+              {[...at.entries()].map(([where, n]) => (
+                <li key={where || 'none'} className="rounded-full border border-[var(--line)] px-2.5 py-0.5"><bdi>{locationName(where)}</bdi>: <span className="font-mono">{n}</span></li>
+              ))}
+            </ul>
+          )}
+          {canMove && moves !== null && (
+            <fieldset disabled={moving} className="flex flex-wrap items-end gap-2 text-xs rounded-lg border border-[var(--line)] p-3">
+              <legend className="px-1 font-semibold text-[var(--muted)]">Move stock between locations</legend>
+              <label className="flex flex-col gap-0.5">From
+                <select value={move.from} onChange={e => setMove(m => ({ ...m, from: e.target.value }))} className="rounded border border-[var(--line)] bg-[var(--panel)] px-2 py-1">
+                  {[...at.keys()].map(where => <option key={where || 'none'} value={where}>{locationName(where)} ({at.get(where)})</option>)}
+                </select>
+              </label>
+              <label className="flex flex-col gap-0.5">To
+                <input list="stock-locations" value={move.to} onChange={e => setMove(m => ({ ...m, to: e.target.value }))} placeholder="Location" className="w-32 rounded border border-[var(--line)] bg-[var(--panel)] px-2 py-1" />
+              </label>
+              <datalist id="stock-locations">{nodes.filter(n => n.dimensionId === 'location').map(n => <option key={n.id} value={n.id}>{n.description}</option>)}</datalist>
+              <label className="flex flex-col gap-0.5">How many
+                <input inputMode="decimal" value={move.quantity} onChange={e => setMove(m => ({ ...m, quantity: e.target.value }))} className="w-20 rounded border border-[var(--line)] bg-[var(--panel)] px-2 py-1 text-right font-mono" />
+              </label>
+              <label className="flex flex-col gap-0.5">Date
+                <input type="date" value={move.date} onChange={e => setMove(m => ({ ...m, date: e.target.value }))} className="rounded border border-[var(--line)] bg-[var(--panel)] px-2 py-1" />
+              </label>
+              <button type="button" onClick={() => void doMove()} disabled={!move.quantity || Boolean(moveProblem)} className="rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white disabled:opacity-50">Move</button>
+              {moveProblem && <p role="status" className="w-full text-amber-700 dark:text-amber-400">{moveProblem}</p>}
+            </fieldset>
+          )}
           {moves === null ? <p className="text-xs text-[var(--muted)]">Loading…</p> : moves.length === 0 ? (
             <p className="text-xs text-[var(--muted)]">No recorded changes yet (changes are recorded from 7 Oct 2026 on).</p>
           ) : (
@@ -64,7 +127,7 @@ export default function StockHistoryDialog({ item, workspaceId, currency, onClos
                 {moves.map(m => (
                   <tr key={m.id || m.seq} className="border-b border-[var(--line)]/50">
                     <td className="py-1">{formatDate(m.date)}</td>
-                    <td className="py-1">{STOCK_MOVE_LABEL[m.kind] || m.kind}</td>
+                    <td className="py-1">{STOCK_MOVE_LABEL[m.kind] || m.kind}{m.locationId ? <span className="text-[var(--muted)]"> · <bdi>{locationName(m.locationId)}</bdi></span> : null}</td>
                     <td className={`py-1 text-right font-mono ${m.quantity < 0 ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-400'}`}>{signed(m.quantity)}</td>
                     <td className="py-1 text-right font-mono">{m.quantityAfter}</td>
                     <td className="py-1 text-right font-mono">{formatCurrency(m.valueCents, currency)}</td>

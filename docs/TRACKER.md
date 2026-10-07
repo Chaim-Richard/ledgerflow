@@ -1994,7 +1994,11 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION W — INVENTORY DEPTH
 
-- [ ] W-01 Stock per location — **expanded 7 Oct (roadmap, Later P0, with BF-08 step 2; = CG-12, M-15)**: stock per location is a sum of the movement ledger (W-02), not a second quantity field. A transfer between locations is two movements in one database transaction
+- [x] W-01 Stock per location — **done 7 Oct**: no second quantity field. Stock per location is the stock history (W-02) added up by the Location label.
+  - **Where each change lands:** sales and returns are where their invoice line's label says, and returns come back where they left from. Purchases, opening stock and adjustments go where the Adjust stock dialog says (optional). A count at a location is compared with what is there.
+  - **Moving stock:** "Move stock between locations" (in the item's Stock history) moves units without posting, since the total and the books don't change. It refuses more than is at the "from" location or a closed date, and is audited.
+  - **What the window shows:** how much is at each location. Stock from before the history, or never placed, is "No location".
+  - Code: `stockByLocation` and `transferProblem` in `src/lib/stockMoves.ts`, `stockTransferService.ts`, `POST /api/v1/inventory/transfer`. Tests: `stock-locations.test.tsx`, with the database. The original plan was: stock per location is a sum of the movement ledger (W-02), not a second quantity field. A transfer between locations is two movements in one database transaction
 - [x] W-02 Stock-moves ledger — **done 7 Oct**: the new table `stockMoves` (server writes only, members read; migration `20261013060000_stock_moves.sql`).
   - **What is recorded:** every change to an item's quantity, written with the change in the same database transaction: sales and their reversals (each entry in order), purchases, opening stock, adjustments, counts, imported opening stock and the manual cost-of-goods-sold entry.
   - **Each record keeps:** the quantity before and after, its value, and the entry and document it belongs to.

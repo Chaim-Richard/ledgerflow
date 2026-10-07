@@ -38,6 +38,7 @@ interface PendingMove {
   kind: 'sale' | 'sale-reversal' | 'return' | 'return-reversal';
   entry: LedgerEntry;
   valueCents: number;
+  location?: string;
 }
 
 const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
@@ -130,14 +131,14 @@ export async function prepareStockMoves(
     if (!effect) return;
     const sign = effect.quantity > 0 ? -1 : 1;
     add(effect.itemId, -effect.quantity);
-    pending.push({ itemId: effect.itemId, quantity: -effect.quantity, kind: effect.kind === 'sale' ? 'sale-reversal' : 'return-reversal', entry: reversalOf.get(target) || original, valueCents: sign * Math.abs(Number(original.totalAmountCents) || 0) });
+    pending.push({ itemId: effect.itemId, quantity: -effect.quantity, kind: effect.kind === 'sale' ? 'sale-reversal' : 'return-reversal', entry: reversalOf.get(target) || original, valueCents: sign * Math.abs(Number(original.totalAmountCents) || 0), location: original.metadata?.locationId as string | undefined });
   };
 
   for (const tx of entries) {
     const effect = stockEffect(tx);
     if (!effect) continue;
     add(effect.itemId, effect.quantity);
-    pending.push({ itemId: effect.itemId, quantity: effect.quantity, kind: effect.kind, entry: tx, valueCents: Math.sign(effect.quantity) * Math.abs(Number(tx.totalAmountCents) || 0) });
+    pending.push({ itemId: effect.itemId, quantity: effect.quantity, kind: effect.kind, entry: tx, valueCents: Math.sign(effect.quantity) * Math.abs(Number(tx.totalAmountCents) || 0), location: tx.metadata?.locationId as string | undefined });
   }
   await checkReturns(db, t, workspaceId, entries);
 
@@ -209,6 +210,8 @@ export async function prepareStockMoves(
           quantity: p.quantity, quantityBefore: before, quantityAfter: after,
           unitCostCents: Math.round(Math.abs(p.valueCents) / Math.abs(p.quantity)), valueCents: p.valueCents,
           transactionId: p.entry.id, ...document,
+          // W-01: where the units left from or came back to (a reversal is where its original was)
+          ...(typeof p.location === 'string' && p.location ? { locationId: p.location } : {}),
           uid: String(p.entry.uid || ''),
         });
         before = after;

@@ -5,6 +5,7 @@ import { assertPeriodOpen, validateWorkspaceAccounts } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import type { ValidationContext } from '../../kernel/validation/TransactionValidator';
 import { writeStockMoves } from './stockMoveService';
+import { stockByLocation, type StockMove } from '../../lib/stockMoves';
 
 type WorkspaceData = ValidationContext['wsData'] & { currency?: string };
 
@@ -44,6 +45,8 @@ export interface StockAdjustmentInput {
   kind: 'purchase' | 'opening' | 'adjustment' | 'count';
   reason?: string;
   changes: StockChange[];
+  /** W-01: where the change happened (a Location label value); none = no location */
+  locationId?: string;
 }
 
 export interface StockAdjustmentResult {
@@ -67,6 +70,14 @@ export async function adjustStock(db: Firestore, input: StockAdjustmentInput): P
   return db.runTransaction(async t => {
     const refs = input.changes.map(c => db.collection('inventory').doc(c.itemId));
     const snaps = await Promise.all(refs.map(r => t.get(r)));
+    // W-01: a count at one location is compared with what is there, not with the item's total
+    const atLocation = new Map<string, number>();
+    if (kind === 'count' && input.locationId) {
+      for (const change of input.changes) {
+        const history = (await t.get(db.collection('stockMoves').where('workspaceId', '==', workspaceId).where('itemId', '==', change.itemId))).docs.map(d => d.data() as StockMove);
+        atLocation.set(change.itemId, stockByLocation(history).get(input.locationId) || 0);
+      }
+    }
     const moves: StockAdjustmentResult['items'] = [];
     const updates: Array<{ ref: typeof refs[number]; data: Record<string, unknown> }> = [];
 
@@ -76,7 +87,8 @@ export async function adjustStock(db: Firestore, input: StockAdjustmentInput): P
       // another workspace's item answers like a missing one
       if (!item || item.workspaceId !== workspaceId) throw new StockAdjustmentError(404, `Item ${change.itemId} not found`);
       const before = new Decimal(Number(item.quantityAtHand) || 0);
-      const delta = kind === 'count' ? new Decimal(Number(change.counted)).minus(before) : new Decimal(Number(change.quantityChange) || 0);
+      const countedFrom = kind === 'count' && input.locationId ? new Decimal(atLocation.get(change.itemId) || 0) : before;
+      const delta = kind === 'count' ? new Decimal(Number(change.counted)).minus(countedFrom) : new Decimal(Number(change.quantityChange) || 0);
       if (delta.isZero()) return;
       const after = before.plus(delta);
       if (after.lt(0)) throw new StockAdjustmentError(400, `${item.name || change.itemId}: only ${before.toNumber()} on hand, cannot remove ${delta.abs().toNumber()}`);
@@ -131,7 +143,7 @@ export async function adjustStock(db: Firestore, input: StockAdjustmentInput): P
       workspaceId, itemId: m.itemId, itemName: m.name, date, kind,
       quantity: Number(new Decimal(m.after).minus(m.before)), quantityBefore: m.before, quantityAfter: m.after,
       unitCostCents: m.unitCostCents, valueCents: m.valueCents, transactionId, documentType: 'adjustment' as const,
-      uid: input.user.uid,
+      uid: input.user.uid, ...(input.locationId ? { locationId: input.locationId } : {}),
     })));
     return { transactionId, valueCents, items: moves };
   });

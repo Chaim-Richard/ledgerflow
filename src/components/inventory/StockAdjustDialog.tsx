@@ -9,6 +9,7 @@ import {
   STOCK_CHANGE_LABELS, defaultOffsetAccount, inventoryAccountsOf, offsetAccountChoices, stockChangeValueCents,
 } from '../../lib/inventoryAccounts';
 import { adjustStockRequest } from '../../services/stockRequests';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import { StockAccountFields } from './StockAccountFields';
 import { stockFieldClass, stockLabelClass } from './stockStyles';
 
@@ -47,6 +48,10 @@ export default function StockAdjustDialog({ item, workspaceId, accounts, currenc
   const [offsetAccountId, setOffsetAccountId] = useState(defaultOffsetAccount(accounts, initialKind)?.id || '');
   const [date, setDate] = useState(getLocalDateISO());
   const [note, setNote] = useState('');
+  // W-01: where the units are added or taken from (optional)
+  const [locationId, setLocationId] = useState('');
+  const dimensionNodes = useLedgerStore(s => s.dimensionNodes);
+  const locations = (dimensionNodes || []).filter(n => n.dimensionId === 'location' && n.status !== 'archived');
   const [saving, setSaving] = useState(false);
   const { dialogProps, titleId } = useDialog(onClose, true);
 
@@ -77,6 +82,7 @@ export default function StockAdjustDialog({ item, workspaceId, accounts, currenc
       const result = await adjustStockRequest({
         workspaceId, itemId: item.id, quantityChange, type: kind, inventoryAccountId, offsetAccountId, date,
         ...(note.trim() ? { reason: note.trim() } : {}),
+        ...(locationId.trim() ? { locationId: locationId.trim() } : {}),
         ...(kind === 'purchase' ? { unitCostCents: costCents } : {}),
       });
       toast.success(`${item.name}: ${result.newQuantity ?? after} in stock`);
@@ -138,6 +144,11 @@ export default function StockAdjustDialog({ item, workspaceId, accounts, currenc
             onInventoryChange={setInventoryAccountId} onOffsetChange={setOffsetAccountId}
             offsetLabel={OFFSET_LABEL[kind]} date={date} onDateChange={setDate} note={note} onNoteChange={setNote}
           />
+          <div>
+            <label htmlFor="stock-adjust-location" className={stockLabelClass}>Location (optional)</label>
+            <input id="stock-adjust-location" list="stock-adjust-locations" value={locationId} onChange={e => setLocationId(e.target.value)} placeholder="Where the units are" className={stockFieldClass} />
+            <datalist id="stock-adjust-locations">{locations.map(n => <option key={n.id} value={n.id}>{n.description}</option>)}</datalist>
+          </div>
           <div className="p-3 rounded-lg bg-[var(--ink)] border border-[var(--line)] text-sm flex justify-between" aria-live="polite">
             <span className="text-[var(--muted)]">Stock {item.quantityAtHand} → {quantityChange ? after : item.quantityAtHand}</span>
             <span className="font-mono tabular-nums text-[var(--text)]" data-testid="stock-adjust-value">{formatCurrency(valueCents, currency)}</span>

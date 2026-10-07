@@ -7,7 +7,7 @@
  * Pure: the Stock history window and the nightly check read it.
  */
 
-export type StockMoveKind = 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'opening' | 'adjustment' | 'count' | 'manual-cogs';
+export type StockMoveKind = 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'opening' | 'adjustment' | 'count' | 'manual-cogs' | 'transfer-out' | 'transfer-in';
 
 export interface StockMove {
   id?: string;
@@ -29,6 +29,8 @@ export interface StockMove {
   documentId?: string;
   /** the order the moves happened in: the time written, then the place in that write */
   seq: string;
+  /** W-01: where the units are (a Location label value); none = no location */
+  locationId?: string;
   uid: string;
   createdAt: string;
 }
@@ -43,7 +45,12 @@ export const STOCK_MOVE_LABEL: Record<StockMoveKind, string> = {
   adjustment: 'Adjusted',
   count: 'Counted',
   'manual-cogs': 'Cost of goods sold recorded',
+  'transfer-out': 'Moved out',
+  'transfer-in': 'Moved in',
 };
+
+/** W-01: the stock with no location (made before locations were used, or never placed). */
+export const NO_LOCATION = '';
 
 const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
 
@@ -70,5 +77,30 @@ export function stockHistoryProblem(item: { name?: string; quantityAtHand?: numb
   if (round6(last.quantityAfter) !== round6(onHand)) {
     return `${item.name || 'This item'}: ${onHand} on hand, but its history ends at ${last.quantityAfter}`;
   }
+  return null;
+}
+
+/**
+ * W-01: how many units are at each location, from the history. Stock the history starts with (from
+ * before it was kept) and moves without a location count as "no location". The total is the item's
+ * quantity on hand when the history explains it.
+ */
+export function stockByLocation(moves: StockMove[]): Map<string, number> {
+  const ordered = orderedMoves(moves);
+  const at = new Map<string, number>();
+  if (ordered.length === 0) return at;
+  const add = (where: string, n: number) => at.set(where, round6((at.get(where) || 0) + n));
+  if (ordered[0].quantityBefore) add(NO_LOCATION, ordered[0].quantityBefore);
+  for (const m of ordered) add(m.locationId || NO_LOCATION, m.quantity);
+  for (const [where, n] of at) if (n === 0) at.delete(where);
+  return at;
+}
+
+/** Why units can't be moved between locations, or null. */
+export function transferProblem(input: { quantity: number; from: string; to: string }, at: Map<string, number>): string | null {
+  if (input.from === input.to) return 'Choose two different locations';
+  if (!Number.isFinite(input.quantity) || input.quantity <= 0 || round6(input.quantity) !== input.quantity) return 'Enter how many to move (more than zero)';
+  const there = at.get(input.from) || 0;
+  if (input.quantity > there) return `Only ${there} ${input.from ? `at ${input.from}` : 'without a location'}`;
   return null;
 }

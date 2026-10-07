@@ -10,6 +10,7 @@ import { requireWorkspaceRole } from './workspaceRoutes';
 import { adjustStock, StockAdjustmentError } from '../services/stockAdjustmentService';
 import { setNegativeStockPolicy } from '../services/stockPolicyService';
 import { writeStockMoves } from '../services/stockMoveService';
+import { transferStock } from '../services/stockTransferService';
 
 /** Who may change stock or record its cost (viewers read only). */
 const STOCK_ROLES = ['owner', 'accountant', 'bookkeeper'];
@@ -186,6 +187,7 @@ const AdjustSchema = z.object({
   type: z.enum(['purchase', 'opening', 'adjustment']).default('adjustment'),
   reason: z.string().max(200).optional(),
   date: date.optional(),
+  locationId: z.string().trim().max(200).optional(),
 });
 const CountSchema = z.object({
   workspaceId: z.string().min(1),
@@ -193,6 +195,7 @@ const CountSchema = z.object({
   offsetAccountId: z.string().min(1),
   reason: z.string().max(200).optional(),
   date: date.optional(),
+  locationId: z.string().trim().max(200).optional(),
   counts: z.array(z.object({ itemId: z.string().min(1), counted: z.number().finite().nonnegative() })).min(1).max(2000),
 });
 
@@ -208,6 +211,7 @@ async function stockRequest(req: express.Request, res: express.Response, kind: '
     const result = await adjustStock(db, {
       workspaceId: body.workspaceId, user: { uid: user.uid, admin: user.admin }, wsData, date: txDate,
       inventoryAccountId: body.inventoryAccountId, offsetAccountId: body.offsetAccountId, reason: body.reason,
+      ...(body.locationId ? { locationId: body.locationId } : {}),
       ...('counts' in body
         ? { kind: 'count' as const, changes: body.counts }
         : { kind: body.type, changes: [{ itemId: body.itemId, quantityChange: body.quantityChange, unitCostCents: body.unitCostCents }] }),
@@ -239,5 +243,21 @@ inventoryRouter.put('/stock-policy', requireWorkspaceRole(['owner']), async (req
   } catch (e) {
     if (e instanceof StockAdjustmentError) return res.status(e.status).json({ error: e.message });
     res.status(400).json({ error: errorMessage(e) });
+  }
+});
+
+/** W-01: move units of an item between locations (stockTransferService.ts); nothing is posted. */
+inventoryRouter.post('/transfer', requireWorkspaceRole(STOCK_ROLES), async (req, res) => {
+  try {
+    const parsed = z.object({
+      workspaceId: z.string().min(1), itemId: z.string().min(1), from: z.string().trim().max(200), to: z.string().trim().max(200),
+      quantity: z.number().positive().finite(), date, note: z.string().max(200).optional(),
+    }).strict().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Check the fields' });
+    const user = requestUser(req);
+    res.json({ status: 'ok', ...(await transferStock(getDb(), { ...parsed.data, uid: user.uid, email: user.email })) });
+  } catch (e) {
+    if (e instanceof StockAdjustmentError) return res.status(e.status).json({ error: e.message });
+    res.status(/locked|closed/i.test(errorMessage(e)) ? 409 : 400).json({ error: errorMessage(e) });
   }
 });

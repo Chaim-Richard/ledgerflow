@@ -31,6 +31,8 @@ export interface ReturnableLine {
   unitCostCents: number;
   /** the price per unit on the invoice, in the invoice's currency */
   unitPriceCents: number;
+  /** W-01: where the units left from; they come back there */
+  locationId?: string;
 }
 
 const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
@@ -63,6 +65,7 @@ export function returnableLines(invoice: Pick<Invoice, 'id' | 'items'>, ledger: 
       sold, returned, returnable: Math.max(0, round6(sold - returned)),
       unitCostCents: Math.round(Math.abs(Number(sale.totalAmountCents) || 0) / sold),
       unitPriceCents: Number(line.rateCents) || 0,
+      ...(typeof sale.metadata?.locationId === 'string' && sale.metadata.locationId ? { locationId: sale.metadata.locationId } : {}),
     }];
   });
 }
@@ -103,7 +106,7 @@ export function planReturnEntries(input: {
       uid: input.uid, workspaceId: input.workspaceId, date: creditNote.date,
       description: `Goods returned: ${name} × ${g.quantity} (Credit note ${creditNote.number || creditNote.id})`,
       totalAmountCents: cents, currency: input.baseCurrency, exchangeRate: 1, status: 'completed', type: 'actual', createdAt: new Date().toISOString(),
-      metadata: { type: SALES_RETURN_TYPE, creditNoteId: creditNote.id, invoiceId: creditNote.invoiceId, returnForLineId: g.invoiceLineId, inventoryItemId: g.itemId, quantity: g.quantity },
+      metadata: { type: SALES_RETURN_TYPE, creditNoteId: creditNote.id, invoiceId: creditNote.invoiceId, returnForLineId: g.invoiceLineId, inventoryItemId: g.itemId, quantity: g.quantity, ...(line.locationId ? { locationId: line.locationId } : {}) },
       lines: entryLines,
     } as Omit<Transaction, 'id'>];
   });
