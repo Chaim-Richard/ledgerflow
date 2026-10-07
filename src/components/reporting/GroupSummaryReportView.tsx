@@ -5,10 +5,12 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import type { WorkspaceGroup } from '../../lib/workspaceGroups';
+import { averageFromTimeframe, parseRates, rateFromQuote, type TranslationRates } from '../../lib/translationRates';
 
 interface Figures { income: number; cogs: number; grossProfit: number; expense: number; netIncome: number; totalAssets: number; totalLiabilities: number; totalEquity: number }
-interface Member extends Figures { workspaceId: string; name: string; currency: string; isBalanced: boolean }
-interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string }) | null; notIncluded: number }
+interface Member extends Figures { workspaceId: string; name: string; currency: string; isBalanced: boolean; translated?: Figures & { cta: number } }
+interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number }) | null; notIncluded: number }
+type Entered = Record<string, Partial<Record<keyof TranslationRates, string>>>;
 
 const ROWS: Array<{ key: keyof Figures; label: string; report: 'pnl' | 'balance-sheet'; strong?: boolean }> = [
   { key: 'income', label: 'Income', report: 'pnl' },
@@ -32,7 +34,9 @@ async function get<T>(url: string): Promise<T> {
  * Group summary (Z-20): one of your groups of books (Settings → Groups of books) for a period, each
  * company's profit and loss and balance sheet side by side, and the group's total when they all keep
  * their books in the same currency. Each figure opens that company's own report. Read under your own
- * access, never copied (src/server/reports/groupReport.ts).
+ * access, never copied (src/server/reports/groupReport.ts). In one currency (Z-17, Z-18): each other
+ * currency is translated with the closing, average and historical rates entered (or filled from the
+ * rate service), and the translation difference has its own line.
  */
 export default function GroupSummaryReportView() {
   const setCurrentWorkspaceId = useAuthStore(s => s.setCurrentWorkspaceId);
@@ -43,6 +47,14 @@ export default function GroupSummaryReportView() {
   const [endDate, setEndDate] = useState(getLocalDateISO());
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState('');
+  const [reportCurrency, setReportCurrency] = useState('');
+  const [entered, setEntered] = useState<Entered>({});
+  const [filling, setFilling] = useState('');
+  const memberCurrencies = [...new Set((summary?.members || []).map(m => m.currency))];
+  const foreign = reportCurrency ? memberCurrencies.filter(c => c !== reportCurrency) : [];
+  const parsed = parseRates(foreign, entered);
+  const translation = reportCurrency && 'rates' in parsed ? { reportCurrency, rates: JSON.stringify(parsed.rates) } : null;
+  const query = groupId && startDate && endDate ? new URLSearchParams({ groupId, startDate, endDate, ...(translation || {}) }).toString() : '';
 
   useEffect(() => {
     let live = true;
@@ -53,13 +65,38 @@ export default function GroupSummaryReportView() {
   }, []);
 
   useEffect(() => {
-    if (!groupId || !startDate || !endDate) return;
+    if (!query) return;
     let live = true;
-    get<Summary>(`/api/v1/reports/group-summary?${new URLSearchParams({ groupId, startDate, endDate })}`)
+    get<Summary>(`/api/v1/reports/group-summary?${query}`)
       .then(data => { if (live) { setSummary(data); setError(''); } })
       .catch(err => { if (live) { setSummary(null); setError(err instanceof Error ? err.message : String(err)); } });
     return () => { live = false; };
-  }, [groupId, startDate, endDate]);
+  }, [query]);
+
+  // Z-17: the rate service fills the three rates of a currency (1 unit in the reporting currency)
+  const fill = async (currency: string) => {
+    setFilling(currency);
+    try {
+      const at = (date: string) => get<{ quotes?: Record<string, number> }>(`/api/v1/currency/historical?${new URLSearchParams({ date, source: reportCurrency, currencies: currency })}`);
+      const [closing, opening, days] = await Promise.all([
+        at(endDate), at(startDate),
+        get<{ quotes?: Record<string, Record<string, number>> }>(`/api/v1/currency/timeframe?${new URLSearchParams({ start_date: startDate, end_date: endDate, source: reportCurrency, currencies: currency })}`),
+      ]);
+      const next = { closing: rateFromQuote(closing.quotes, reportCurrency, currency), average: averageFromTimeframe(days.quotes, reportCurrency, currency), historical: rateFromQuote(opening.quotes, reportCurrency, currency) };
+      if (!next.closing || !next.average || !next.historical) throw new Error(`The rate service has no rates for ${currency} on these dates: enter them`);
+      setEntered(e => ({ ...e, [currency]: { closing: String(next.closing), average: String(next.average), historical: String(next.historical) } }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setFilling('');
+    }
+  };
+  const rateInput = (currency: string, key: keyof TranslationRates, label: string) => (
+    <label className="flex flex-col gap-0.5 text-[var(--muted)]">{label}
+      <input inputMode="decimal" value={entered[currency]?.[key] ?? ''} onChange={e => setEntered(x => ({ ...x, [currency]: { ...x[currency], [key]: e.target.value } }))}
+        className="w-28 px-2 py-1 border border-[var(--line)] rounded bg-[var(--panel)] text-[var(--text)] text-right font-mono" />
+    </label>
+  );
 
   const open = (member: Member, report: 'pnl' | 'balance-sheet') => {
     setCurrentWorkspaceId(member.workspaceId);
@@ -87,14 +124,34 @@ export default function GroupSummaryReportView() {
           <label className="flex flex-col gap-1 text-[var(--muted)]">To
             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="px-2 py-1.5 border border-[var(--line)] rounded bg-[var(--panel)] text-[var(--text)]" />
           </label>
+          {memberCurrencies.length > 0 && (
+            <label className="flex flex-col gap-1 text-[var(--muted)]">In one currency
+              <select value={reportCurrency} onChange={e => setReportCurrency(e.target.value)} className="px-2 py-1.5 border border-[var(--line)] rounded bg-[var(--panel)] text-[var(--text)]">
+                <option value="">Each in its own</option>
+                {memberCurrencies.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+          )}
         </div>
       )}
+      {foreign.map(currency => (
+        <fieldset key={currency} className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--line)] p-3 text-xs">
+          <legend className="px-1 font-semibold text-[var(--text)]">1 {currency} in {reportCurrency}</legend>
+          {rateInput(currency, 'closing', `At ${endDate} (assets, liabilities)`)}
+          {rateInput(currency, 'average', 'Average (income, costs)')}
+          {rateInput(currency, 'historical', 'Historical (equity)')}
+          <button type="button" onClick={() => void fill(currency)} disabled={filling !== ''} className="rounded-lg border border-[var(--line)] px-2.5 py-1 font-semibold text-[var(--text)] disabled:opacity-50">
+            Fill from the rate service<span className="sr-only"> for {currency}</span>
+          </button>
+        </fieldset>
+      ))}
+      {'problem' in parsed && <p role="status" className="text-xs text-amber-700 dark:text-amber-400">{parsed.problem} to see the group in {reportCurrency}.</p>}
       {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
       {summary && (
         <>
           {summary.notIncluded > 0 && <p className="text-xs text-amber-700 dark:text-amber-400">{summary.notIncluded} workspace{summary.notIncluded === 1 ? '' : 's'} in this group {summary.notIncluded === 1 ? 'is' : 'are'} no longer open to you and {summary.notIncluded === 1 ? 'is' : 'are'} not included.</p>}
           {!summary.total && summary.members.length > 1 && currencies.size > 1 && (
-            <p className="text-xs text-[var(--muted)]">No group total: these books are in {[...currencies].join(', ')}. Adding them up needs translation rates, which come later.</p>
+            <p className="text-xs text-[var(--muted)]">No group total: these books are in {[...currencies].join(', ')}. Choose one currency to add them up.</p>
           )}
           {summary.members.filter(m => !m.isBalanced).map(m => (
             <p key={m.workspaceId} role="alert" className="text-xs text-amber-700 dark:text-amber-400">The balance sheet of {m.name} does not balance: check it in its own books.</p>
@@ -116,13 +173,20 @@ export default function GroupSummaryReportView() {
                     {summary.members.map(m => (
                       <td key={m.workspaceId} className="text-right font-mono py-1.5 px-2">
                         <button type="button" onClick={() => open(m, row.report)} className="hover:underline" title={`Open the ${row.report === 'pnl' ? 'profit and loss' : 'balance sheet'} of ${m.name}`}>
-                          {formatCurrency(m[row.key], m.currency)}<span className="sr-only"> {row.label} of {m.name}: open its report</span>
+                          {m.translated && summary.total ? formatCurrency(m.translated[row.key], summary.total.currency) : formatCurrency(m[row.key], m.currency)}<span className="sr-only"> {row.label} of {m.name}: open its report</span>
                         </button>
                       </td>
                     ))}
                     {summary.total && <td className="text-right font-mono py-1.5 px-2">{formatCurrency(summary.total[row.key], summary.total.currency)}</td>}
                   </tr>
                 ))}
+                {summary.members.some(m => m.translated) && summary.total && (
+                  <tr className="border-b border-[var(--line)]/50 text-[var(--muted)]">
+                    <th scope="row" className="text-left font-normal py-1.5">of which translation difference</th>
+                    {summary.members.map(m => <td key={m.workspaceId} className="text-right font-mono py-1.5 px-2">{formatCurrency(m.translated?.cta || 0, summary.total!.currency)}</td>)}
+                    <td className="text-right font-mono py-1.5 px-2">{formatCurrency(summary.total.cta || 0, summary.total.currency)}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

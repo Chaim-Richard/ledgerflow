@@ -14,10 +14,31 @@ import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import GroupSummaryReportView from '../components/reporting/GroupSummaryReportView';
+import { averageFromTimeframe, parseRates, rateFromQuote } from '../lib/translationRates';
+import { translate } from '../server/reports/groupReport';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useUIStore } from '../stores/useUIStore';
 import { getSupabase } from '../lib/db/client';
+
+describe('Translation (Z-17, Z-18)', () => {
+  test('assets and liabilities at the closing rate, profit at the average, equity at the historical; the difference has its own line', () => {
+    const eur = { income: 10000, cogs: 0, grossProfit: 10000, expense: 1000, netIncome: 9000, totalAssets: 109000, totalLiabilities: 0, totalEquity: 109000, equityAccounts: 100000, earlierProfit: 0 };
+    const t = translate(eur, { closing: 1.2, average: 1.1, historical: 1 });
+    assert.deepEqual(t, { income: 11000, cogs: 0, grossProfit: 11000, expense: 1100, netIncome: 9900, totalAssets: 130800, totalLiabilities: 0, totalEquity: 130800, cta: 20900 });
+    assert.equal(t.totalAssets, t.totalLiabilities + t.totalEquity, 'still balances');
+    assert.equal(translate(eur, null).cta, 0, 'its own currency: nothing to translate');
+  });
+
+  test('rates from the rate service (1 reporting currency = X), averaged over the days it has; never invented', () => {
+    assert.equal(rateFromQuote({ USDEUR: 0.8 }, 'USD', 'EUR'), 1.25);
+    assert.equal(rateFromQuote({}, 'USD', 'EUR'), undefined);
+    assert.equal(averageFromTimeframe({ '2026-01-01': { USDEUR: 0.8 }, '2026-01-02': { USDEUR: 1 }, '2026-01-03': {} }, 'USD', 'EUR'), 1.125);
+    assert.equal(averageFromTimeframe(undefined, 'USD', 'EUR'), undefined);
+    assert.deepEqual(parseRates(['EUR'], { EUR: { closing: '1.2', average: '1.1', historical: '1' } }), { rates: { EUR: { closing: 1.2, average: 1.1, historical: 1 } } });
+    assert.match((parseRates(['EUR'], { EUR: { closing: '1.2', average: '' } }) as { problem: string }).problem, /rates for EUR/);
+  });
+});
 
 describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'LF_TEST_DATABASE_URL not set' }, () => {
   const tag = crypto.randomBytes(4).toString('hex');
@@ -100,7 +121,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
       ['Holding', 50000, 20000, 30000, 130000, 130000, true],
       ['Daughter', 30000, 5000, 25000, 125000, 125000, true],
     ], 'next year is left out of the profit; the balance sheet balances');
-    assert.deepEqual(res.body.total, { currency: 'USD', income: 80000, cogs: 0, grossProfit: 80000, expense: 25000, netIncome: 55000, totalAssets: 255000, totalLiabilities: 0, totalEquity: 255000 });
+    assert.deepEqual(res.body.total, { currency: 'USD', income: 80000, cogs: 0, grossProfit: 80000, expense: 25000, netIncome: 55000, totalAssets: 255000, totalLiabilities: 0, totalEquity: 255000, cta: 0 });
     assert.equal(res.body.notIncluded, 0);
   });
 
@@ -109,6 +130,20 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.equal(res.status, 200);
     assert.deepEqual((res.body.members as Array<{ currency: string }>).map(m => m.currency), ['USD', 'EUR']);
     assert.equal(res.body.total, null);
+  });
+
+  test('in one currency: the other is translated with the rates given, and the total has the translation difference', async () => {
+    const rates = encodeURIComponent(JSON.stringify({ EUR: { closing: 1.2, average: 1.1, historical: 1 } }));
+    const res = await call(`/api/v1/reports/group-summary?groupId=${mixed}&startDate=2026-01-01&endDate=2026-12-31&reportCurrency=USD&rates=${rates}`, ann);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.deepEqual(res.body.total, { currency: 'USD', income: 61000, cogs: 0, grossProfit: 61000, expense: 21100, netIncome: 39900, totalAssets: 260800, totalLiabilities: 0, totalEquity: 260800, cta: 20900 });
+    const euro = (res.body.members as Array<{ name: string; income: number; translated: { cta: number } }>).find(m => m.name === 'Euro Co')!;
+    assert.equal(euro.income, 10000, 'its own figures stay');
+    assert.equal(euro.translated.cta, 20900);
+    const missing = await call(`/api/v1/reports/group-summary?groupId=${mixed}&startDate=2026-01-01&endDate=2026-12-31&reportCurrency=USD`, ann);
+    assert.equal(missing.status, 400);
+    assert.match(String(missing.body.message), /rates for EUR/);
+    assert.equal((await call(`/api/v1/reports/group-summary?groupId=${mixed}&startDate=2026-01-01&endDate=2026-12-31&reportCurrency=USD&rates=nope`, ann)).status, 400);
   });
 
   test('a member no longer open is left out and counted; other people, reversed periods and API keys are refused', async () => {
@@ -155,6 +190,35 @@ describe('On screen', () => {
     assert.equal(useUIStore.getState().activeReportTab, 'pnl');
   });
 
+  test('in one currency: rates are asked for, filled from the rate service, and sent; the translation line shows', async () => {
+    setComponentWorkspace('owner');
+    const members = [
+      { workspaceId: 'ws-a', name: 'Holding', currency: 'USD', isBalanced: true, ...figures(1000) },
+      { workspaceId: 'ws-b', name: 'Euro Co', currency: 'EUR', isBalanced: true, ...figures(2000) },
+    ];
+    const asked: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      asked.push(url);
+      const body = url.startsWith('/api/v1/account/groups') ? { status: 'success', groups }
+        : url.startsWith('/api/v1/currency/historical') ? { success: true, quotes: { USDEUR: 0.8 } }
+          : url.startsWith('/api/v1/currency/timeframe') ? { success: true, quotes: { '2026-01-01': { USDEUR: 0.8 }, '2026-01-02': { USDEUR: 1 } } }
+            : url.includes('reportCurrency=USD')
+              ? { group: groups[0], members: members.map(m => ({ ...m, translated: { ...figures(2000), cta: m.currency === 'EUR' ? 150 : 0 } })), total: { currency: 'USD', ...figures(4000), cta: 150 }, notIncluded: 0 }
+              : { group: groups[0], members, total: null, notIncluded: 0 };
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }) as typeof fetch;
+    render(<GroupSummaryReportView />);
+    await waitFor(() => assert.ok(screen.getByLabelText('In one currency')));
+    fireEvent.change(screen.getByLabelText('In one currency'), { target: { value: 'USD' } });
+    assert.match(screen.getByRole('status').textContent || '', /Enter the closing, average and historical rates for EUR to see the group in USD/);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Fill from the rate service/ })); });
+    await waitFor(() => assert.ok(asked.some(u => u.includes('reportCurrency=USD'))));
+    const sent = new URLSearchParams(asked.find(u => u.includes('reportCurrency=USD'))!.split('?')[1]);
+    assert.deepEqual(JSON.parse(sent.get('rates')!), { EUR: { closing: 1.25, average: 1.125, historical: 1.25 } });
+    await waitFor(() => assert.ok(screen.getByRole('rowheader', { name: 'of which translation difference' })));
+  });
+
   test('different currencies: no total, and why', async () => {
     setComponentWorkspace('owner');
     answer([
@@ -162,7 +226,7 @@ describe('On screen', () => {
       { workspaceId: 'ws-b', name: 'Euro Co', currency: 'EUR', isBalanced: false, ...figures(2000) },
     ], null);
     render(<GroupSummaryReportView />);
-    await waitFor(() => assert.ok(screen.getByText(/No group total: these books are in USD, EUR/)));
+    await waitFor(() => assert.ok(screen.getByText(/No group total: these books are in USD, EUR. Choose one currency/)));
     assert.equal(screen.queryByRole('columnheader', { name: 'Group total' }), null);
     assert.match(screen.getByRole('alert').textContent || '', /balance sheet of Euro Co does not balance/);
   });

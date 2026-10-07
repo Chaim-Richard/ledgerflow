@@ -167,13 +167,23 @@ reportRouter.get("/aging", async (req, res) => {
 
 /** Z-20: one of the person's groups of books, each member side by side and the total (groupReport.ts). */
 reportRouter.get("/group-summary", async (req, res) => {
-  const parsed = z.object({ groupId: z.string().min(1).max(100), startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).safeParse(req.query);
+  const parsed = z.object({
+    groupId: z.string().min(1).max(100), startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    // Z-17: translate into one currency, with rates as JSON { "EUR": { "closing": 1.1, "average": 1.08, "historical": 1.05 } }
+    reportCurrency: z.string().regex(/^[A-Z]{3}$/).optional(), rates: z.string().max(5000).optional(),
+  }).safeParse(req.query);
   if (!parsed.success) return sendError(res, "Choose a group and the period (YYYY-MM-DD)", 400, parsed.error.issues);
+  let rates: Record<string, { closing: number; average: number; historical: number }> | undefined;
+  try {
+    rates = parsed.data.rates ? z.record(z.string().regex(/^[A-Z]{3}$/), z.object({ closing: z.number(), average: z.number(), historical: z.number() })).parse(JSON.parse(parsed.data.rates)) : undefined;
+  } catch {
+    return sendError(res, "The rates could not be read", 400);
+  }
   const user = requestUser(req);
   // an API key belongs to one workspace: a group report is for people
   if (user.developerWorkspaceId) return sendError(res, "Group reports are not available with an API key", 403);
   try {
-    res.json(await groupSummary(getDb(), { uid: user.uid, ...parsed.data }));
+    res.json(await groupSummary(getDb(), { uid: user.uid, ...parsed.data, rates }));
   } catch (error) {
     if (error instanceof GroupReportError) return sendError(res, error.message, error.status);
     sendError(res, "Could not make the group summary", 500, errorMessage(error));
