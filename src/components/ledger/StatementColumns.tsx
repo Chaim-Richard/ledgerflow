@@ -1,4 +1,4 @@
-import React, { useId, useMemo } from "react";
+import React, { useId, useMemo, useState } from "react";
 import type { ChartAccount, Transaction } from "../../types";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useLedgerStore } from "../../stores/useLedgerStore";
@@ -21,6 +21,12 @@ import type {
 } from "../../lib/reportColumns";
 import { downloadCsv } from "../../lib/csvExport";
 import { isPostable, isTransactionInDateRange } from "../../lib/txFilters";
+import {
+  ACCOUNT_GROUP_INDENT_PX,
+  toggleAccountGroup,
+  visibleGroupRows,
+} from "../../lib/accountGroups";
+import { AccountGroupToggle } from "./AccountGroupControls";
 
 interface StatementColumnsProps {
   kind: StatementKind;
@@ -71,6 +77,10 @@ export function StatementColumns(props: StatementColumnsProps) {
     onDrillDown,
   } = props;
   const formId = useId();
+  // K-14: a group starts open, so a report with groups shows every account it showed before.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+    () => new Set(),
+  );
   const fiscalStart =
     useAuthStore(
       (state) => state.getCurrentWorkspace()?.fiscalYearStartMonth,
@@ -120,16 +130,20 @@ export function StatementColumns(props: StatementColumnsProps) {
             report.columns[0].data,
             sortBy,
             sortDir,
-            statementFigures(columns[0].data),
+            statementFigures(columns[0].data, accounts),
           )
         : [],
     [accounts, columns, report.columns, sortBy, sortDir],
   );
+  const visibleRows = useMemo(
+    () => visibleGroupRows(rows, collapsedGroups),
+    [rows, collapsedGroups],
+  );
   const figures = columns.map((column) => ({
     period: column.period,
-    current: statementFigures(column.data),
+    current: statementFigures(column.data, accounts),
     previous: column.previousData
-      ? statementFigures(column.previousData)
+      ? statementFigures(column.previousData, accounts)
       : undefined,
   }));
   const complete = mode === "total" ? totalAuthoritative : report.authoritative;
@@ -148,7 +162,13 @@ export function StatementColumns(props: StatementColumnsProps) {
       ),
     );
   const exportCsv = () => {
-    const csv = statementColumnCsv(rows, columns, showPercent, compare);
+    const csv = statementColumnCsv(
+      rows,
+      columns,
+      showPercent,
+      compare,
+      accounts,
+    );
     downloadCsv(
       `${kind === "pl" ? "Profit_and_Loss" : "Balance_Sheet"}_${startDate}_${endDate}_${mode}.csv`,
       csv.headers,
@@ -329,13 +349,34 @@ export function StatementColumns(props: StatementColumnsProps) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {visibleRows.map((row) => {
+                  // K-14: the group a row can hide, when it is a parent account
+                  const groupId = row.group ? row.accountId : undefined;
+                  return (
                   <tr
                     key={row.id}
-                    className={`border-t border-[var(--line)] ${row.total || row.heading ? "font-semibold bg-[var(--ink)]" : ""}`}
+                    className={`border-t border-[var(--line)] ${row.total || row.heading ? "font-semibold bg-[var(--ink)]" : ""} ${row.subtotal ? "font-semibold" : ""}`}
                   >
                     <th scope="row" className="p-3 text-left whitespace-nowrap">
-                      {row.label}
+                      <span
+                        className="inline-flex items-center gap-1"
+                        style={{
+                          paddingLeft: `${(row.depth || 0) * ACCOUNT_GROUP_INDENT_PX}px`,
+                        }}
+                      >
+                        {groupId ? (
+                          <AccountGroupToggle
+                            label={row.label}
+                            expanded={!collapsedGroups.has(groupId)}
+                            onToggle={() =>
+                              setCollapsedGroups((collapsed) =>
+                                toggleAccountGroup(collapsed, groupId),
+                              )
+                            }
+                          />
+                        ) : null}
+                        {row.label}
+                      </span>
                     </th>
                     <td className="p-3">{row.code}</td>
                     {figures.map((column) => {
@@ -396,7 +437,8 @@ export function StatementColumns(props: StatementColumnsProps) {
                       );
                     })}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
