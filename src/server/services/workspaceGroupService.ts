@@ -17,7 +17,7 @@ export class WorkspaceGroupError extends Error {
 }
 
 /** The workspaces this person can open (owner or member, not being deleted). */
-async function openable(db: Firestore, uid: string): Promise<Set<string>> {
+export async function openable(db: Firestore, uid: string): Promise<Set<string>> {
   const ids = new Set<string>();
   for (const snap of [
     await db.collection('workspaces').where('uid', '==', uid).get(),

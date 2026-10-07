@@ -18,6 +18,7 @@ import {
 } from "../reports/computeReports";
 import type { Bill, Budget, ChartAccount, CreditNote, Customer, Invoice, Payment, Transaction as LedgerTransaction, VendorCredit } from "../../types";
 import { agingBucket, daysOverdue, outstandingBaseCents } from '../../lib/aging';
+import { GroupReportError, groupSummary } from '../reports/groupReport';
 
 export const reportRouter = express.Router();
 
@@ -161,6 +162,21 @@ reportRouter.get("/aging", async (req, res) => {
     if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
     if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
     sendError(res, "Failed to generate aging report", 500, errorMessage(error));
+  }
+});
+
+/** Z-20: one of the person's groups of books, each member side by side and the total (groupReport.ts). */
+reportRouter.get("/group-summary", async (req, res) => {
+  const parsed = z.object({ groupId: z.string().min(1).max(100), startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).safeParse(req.query);
+  if (!parsed.success) return sendError(res, "Choose a group and the period (YYYY-MM-DD)", 400, parsed.error.issues);
+  const user = requestUser(req);
+  // an API key belongs to one workspace: a group report is for people
+  if (user.developerWorkspaceId) return sendError(res, "Group reports are not available with an API key", 403);
+  try {
+    res.json(await groupSummary(getDb(), { uid: user.uid, ...parsed.data }));
+  } catch (error) {
+    if (error instanceof GroupReportError) return sendError(res, error.message, error.status);
+    sendError(res, "Could not make the group summary", 500, errorMessage(error));
   }
 });
 

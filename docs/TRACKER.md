@@ -2117,7 +2117,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] Z-17 Currency translation rates — part of the Z-16 design (roadmap 7 Oct, Later P0)
 - [ ] Z-18 CTA account — part of the Z-16 design (roadmap 7 Oct, Later P0)
 - [ ] Z-19 Intercompany matching report — part of the Z-16 design (roadmap 7 Oct, Later P0)
-- [ ] Z-20 Entity selector on reports — part of the Z-16 design (roadmap 7 Oct, Later P0)
+- [~] Z-20 Entity selector on reports — part of the Z-16 design (roadmap 7 Oct, Later P0). **Step 1 done 7 Oct (Claude):** Reports → Group Summary: choose one of your groups of books (DA-01) and a period; each company's income, cost of goods sold, gross profit, expenses, net income, assets, liabilities and equity side by side, and the group's total when all use one currency (otherwise it says why: translation is Z-17). Each member is read under your own access, never copied; members you can no longer open are left out and counted; each figure opens that company's own report (`src/server/reports/groupReport.ts`, `GET /api/v1/reports/group-summary`, `GroupSummaryReportView.tsx`; tests `group-summary.test.tsx`). **Open:** the selector on the other reports, account-level lines (needs a shared chart mapping), eliminations (Z-19, CB-26).
 - [ ] Z-21 Minority interest — Research: last step of the Z-16 design, only with a real group customer (roadmap 7 Oct)
 - [ ] Z-22 Equity-method investments — Research: last step of the Z-16 design, only with a real group customer (roadmap 7 Oct)
 - [ ] Z-23 WooCommerce
