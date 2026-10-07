@@ -11,6 +11,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { computePeriodPayroll, PAYROLL_DISCLAIMER } from '../../lib/payroll-engine';
 import { formatCurrency, formatDate, getLocalDateISO } from '../../lib/utils';
 import { isCashAccount } from '../../lib/txFilters';
+import { yearToDate } from '../../lib/payRunPosting';
 import { useTimeout } from '../../hooks/useTimeout';
 import { 
   Users, 
@@ -70,6 +71,9 @@ const PayrollViewContent: React.FC = () => {
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState('');
   const [undoingRun, setUndoingRun] = useState('');
+  // U-03: what this year's posted pay runs paid each employee
+  const thisYear = getLocalDateISO().slice(0, 4);
+  const ytd = useMemo(() => yearToDate(payRuns as Parameters<typeof yearToDate>[0], thisYear), [payRuns, thisYear]);
   const usable = accounts.filter(a => !a.isArchived);
   const typeOf = (a: ChartAccount) => String(a.type).toLowerCase();
   const bankAccounts = usable.filter(a => typeOf(a) === 'asset' && isCashAccount(a));
@@ -181,6 +185,8 @@ const PayrollViewContent: React.FC = () => {
       const record: PayRun = {
         id: data.payRunId, uid: user?.uid || '', workspaceId: currentWorkspace.id, date: runPayDate, totalAmountCents: data.costCents,
         employeeCount: data.employees.length, status: 'processed', createdAt: new Date().toISOString(), transactionId: data.transactionId,
+        employees: data.employees, grossCents: data.grossCents, netCents: data.netCents, withheldCents: data.withheldCents,
+        employerTaxCents: data.employerTaxCents, deductionsCents: data.deductionsCents,
       };
       setPayRuns([...payRuns.filter(r => r.id !== record.id), record]);
       setIsGeneratingRun(false);
@@ -381,6 +387,7 @@ const PayrollViewContent: React.FC = () => {
                   <th scope="col" className="py-3 px-4">Frequency</th>
                   <th scope="col" className="py-3 px-4 text-right">Annual Gross</th>
                   <th scope="col" className="py-3 px-4 text-right">Period Net Pay</th>
+                  <th scope="col" className="py-3 px-4 text-right">Paid in {thisYear}</th>
                   <th scope="col" className="py-3 px-4 text-center">Status</th>
                 </tr>
               </thead>
@@ -405,6 +412,16 @@ const PayrollViewContent: React.FC = () => {
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600">
                         {formatCurrency(est.netPayCents)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-neutral-700">
+                        {ytd.get(emp.id) ? (
+                          <>
+                            <div>{formatCurrency(ytd.get(emp.id)!.grossCents)} gross</div>
+                            <div className="text-[10px] text-neutral-500">
+                              {formatCurrency(ytd.get(emp.id)!.withheldCents)} withheld · {formatCurrency(ytd.get(emp.id)!.netCents)} net · {ytd.get(emp.id)!.runs} run{ytd.get(emp.id)!.runs === 1 ? '' : 's'}
+                            </div>
+                          </>
+                        ) : <span className="text-neutral-400">nothing yet</span>}
                       </td>
                       <td className="py-3 px-4 text-center">
                         <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-semibold">

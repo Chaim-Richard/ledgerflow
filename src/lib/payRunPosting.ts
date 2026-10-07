@@ -73,3 +73,27 @@ export function payRunLines(t: PayRunTotals, a: PayRunAccounts): PayRunLine[] {
   add(a.liabilities, -(t.withheldCents + t.employerTaxCents + t.deductionsCents), 'Taxes withheld, employer taxes and deductions to pay over');
   return [...rows.values()].filter(r => r.amountCents !== 0);
 }
+
+export interface YearToDate { grossCents: number; deductionsCents: number; withheldCents: number; employerTaxCents: number; netCents: number; runs: number }
+
+/**
+ * U-03: per employee, what the posted pay runs of a calendar year paid (undone runs left out).
+ * Runs posted before U-02 have no per-employee amounts and are not counted.
+ */
+export function yearToDate(runs: Array<{ date: string; status: string; employees?: PayRunEmployeeLine[] }>, year: string): Map<string, YearToDate> {
+  const out = new Map<string, YearToDate>();
+  for (const run of runs) {
+    if (run.status !== 'processed' || !String(run.date).startsWith(`${year}-`)) continue;
+    for (const e of run.employees || []) {
+      const row = out.get(e.employeeId) || { grossCents: 0, deductionsCents: 0, withheldCents: 0, employerTaxCents: 0, netCents: 0, runs: 0 };
+      row.grossCents += e.grossCents;
+      row.deductionsCents += e.deductionsCents;
+      row.withheldCents += e.withheldCents;
+      row.employerTaxCents += e.employerTaxCents;
+      row.netCents += e.netCents;
+      row.runs++;
+      out.set(e.employeeId, row);
+    }
+  }
+  return out;
+}

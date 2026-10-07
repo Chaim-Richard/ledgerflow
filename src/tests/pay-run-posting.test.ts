@@ -11,7 +11,7 @@ import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import type { Firestore } from '../server/db/pgFirestore';
-import { payRunLines, payRunTotals } from '../lib/payRunPosting';
+import { payRunLines, payRunTotals, yearToDate } from '../lib/payRunPosting';
 import type { Employee } from '../types';
 
 const employee = (id: string, salaryCents: number, extra: Partial<Employee> = {}): Employee => ({
@@ -33,6 +33,21 @@ describe('Pay run entry', () => {
       wages: 900_000, ptax: totals.employerTaxCents, bank: -totals.netCents,
       liab: -(totals.withheldCents + totals.employerTaxCents + 20_000),
     });
+  });
+});
+
+describe('Year to date (U-03)', () => {
+  test('this year\'s posted runs per employee; undone runs, other years and old runs without amounts left out', () => {
+    const line = (employeeId: string, grossCents: number) => ({ employeeId, name: employeeId, grossCents, deductionsCents: 0, withheldCents: grossCents / 10, employerTaxCents: 0, netCents: grossCents * 0.9 });
+    const ytd = yearToDate([
+      { date: '2026-01-31', status: 'processed', employees: [line('ann', 500_000), line('bo', 400_000)] },
+      { date: '2026-02-28', status: 'processed', employees: [line('ann', 500_000)] },
+      { date: '2026-03-31', status: 'undone', employees: [line('ann', 500_000)] },
+      { date: '2025-12-31', status: 'processed', employees: [line('ann', 500_000)] },
+      { date: '2026-04-30', status: 'processed' },
+    ], '2026');
+    assert.deepEqual(ytd.get('ann'), { grossCents: 1_000_000, deductionsCents: 0, withheldCents: 100_000, employerTaxCents: 0, netCents: 900_000, runs: 2 });
+    assert.equal(ytd.get('bo')?.runs, 1);
   });
 });
 
