@@ -81,7 +81,8 @@ export interface FixedAsset {
   usefulLifeYears: number;
   depreciationMethod: 'straight-line' | 'declining-balance';
   accumulatedDepreciationCents: number;
-  status: 'active' | 'disposed';
+  /** X-09: in_progress = still being built (construction in progress): costs are added, nothing depreciates. */
+  status: 'active' | 'disposed' | 'in_progress';
   createdAt: string;
   /** Balance sheet account the asset's cost is in (e.g. Equipment). */
   assetAccountId?: string;
@@ -96,6 +97,10 @@ export interface FixedAsset {
   disposalProceedsCents?: number;
   disposalGainLossCents?: number;
   disposalTransactionId?: string;
+  /** X-09: costs added while it was being built, and placing it in service (the entry moving the cost
+   * out of the construction-in-progress account; depreciation starts from that day). */
+  costAdditions?: Array<{ date: string; amountCents: number; note?: string }>;
+  placedInService?: { date: string; transactionId: string; cipAccountId: string; startedOn: string };
   /** X-05: where it is, and its moves (newest last) */
   location?: string;
   transfers?: AssetTransfer[];

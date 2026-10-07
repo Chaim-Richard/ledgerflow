@@ -13,6 +13,7 @@ import { formatCurrency, formatDate, formatTzDate, parseAmountToCents } from '..
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import DisposeAssetDialog from './DisposeAssetDialog';
 import TransferAssetDialog from './TransferAssetDialog';
+import { ConstructionActions } from './ConstructionActions';
 import DepreciationScheduleTable from './DepreciationScheduleTable';
 import { assetCandidates } from '../../lib/assetFromBill';
 
@@ -57,6 +58,8 @@ export const FixedAssetsView: React.FC = () => {
     assetAccountId: '', expenseAccountId: '', accumulatedAccountId: '',
     /** X-01: the bill line it comes from ("billId#line"), if picked */
     source: '',
+    /** X-09: still being built (construction in progress) */
+    building: false,
   }));
 
   const list = useMemo(() => assets || [], [assets]);
@@ -131,6 +134,7 @@ export const FixedAssetsView: React.FC = () => {
     if (salvage < 0 || salvage > cost) return toast.error('The salvage value must be between 0 and the cost');
     if (!(years > 0 && years <= 100)) return toast.error('Useful life must be between 0 and 100 years');
     if (!form.expenseAccountId || !form.accumulatedAccountId) return toast.error('Choose the depreciation expense and accumulated depreciation accounts');
+    if (form.building && !form.assetAccountId) return toast.error('Choose the construction-in-progress account its costs are posted to');
     const asset: Omit<FixedAsset, 'id' | 'uid' | 'workspaceId' | 'createdAt'> = {
       name: form.name.trim(),
       purchaseDate: form.purchaseDate,
@@ -139,7 +143,7 @@ export const FixedAssetsView: React.FC = () => {
       usefulLifeYears: years,
       depreciationMethod: form.method,
       accumulatedDepreciationCents: 0,
-      status: 'active',
+      status: form.building ? 'in_progress' : 'active',
       ...(form.assetAccountId ? { assetAccountId: form.assetAccountId } : {}),
       expenseAccountId: form.expenseAccountId,
       accumulatedAccountId: form.accumulatedAccountId,
@@ -147,7 +151,7 @@ export const FixedAssetsView: React.FC = () => {
     };
     await addEntity('assets', asset, `"${asset.name}" added to the register`);
     setIsAdding(false);
-    setForm(f => ({ ...f, name: '', cost: '', salvage: '0', source: '' }));
+    setForm(f => ({ ...f, name: '', cost: '', salvage: '0', source: '', building: false }));
   };
 
   const runDepreciation = async () => {
@@ -236,7 +240,8 @@ export const FixedAssetsView: React.FC = () => {
                 <tr>
                   <td className="py-3 px-4 font-semibold">
                     <AssetInlineDetails asset={asset} />
-                    <div className="text-[11px] text-[var(--muted)] font-normal">{asset.depreciationMethod === 'declining-balance' ? 'Declining balance' : 'Straight line'}{asset.status === 'disposed' ? ' · disposed' : ''}</div>
+                    <div className="text-[11px] text-[var(--muted)] font-normal">{asset.status === 'in_progress' ? 'Being built (construction in progress)' : asset.depreciationMethod === 'declining-balance' ? 'Declining balance' : 'Straight line'}{asset.status === 'disposed' ? ' · disposed' : ''}</div>
+                    {asset.placedInService && <div className="text-[11px] text-[var(--muted)] font-normal">In service since {formatDate(asset.placedInService.date)} (building started {formatDate(asset.placedInService.startedOn)})</div>}
                     {(asset.transfers || []).slice(-1).map(m => (
                       <div key={`${m.date}-${m.description}`} className="text-[11px] text-[var(--muted)] font-normal">{m.description} on {formatDate(m.date)}</div>
                     ))}
@@ -258,7 +263,7 @@ export const FixedAssetsView: React.FC = () => {
                   <td className="py-3 px-4 text-[var(--muted)]">
                     {asset.status === 'disposed' && asset.disposedOn
                       ? <>{(asset.disposalProceedsCents || 0) > 0 ? 'Sold' : 'Scrapped'} {formatDate(asset.disposedOn)}{asset.disposalGainLossCents ? ` · ${asset.disposalGainLossCents > 0 ? 'gain' : 'loss'} ${formatCurrency(Math.abs(asset.disposalGainLossCents))}` : ''}</>
-                      : asset.depreciatedThrough || 'not yet'}
+                      : asset.status === 'in_progress' ? `Being built since ${formatDate(asset.purchaseDate)}` : asset.depreciatedThrough || 'not yet'}
                   </td>
                   {canWrite && (
                     <td className="py-3 px-4 text-right whitespace-nowrap">
@@ -271,6 +276,7 @@ export const FixedAssetsView: React.FC = () => {
                           Undo disposal<span className="sr-only"> of {asset.name}</span>
                         </button>
                       ) : null}
+                      {workspace && <ConstructionActions asset={asset} accounts={chart} workspaceId={workspace.id} today={today} currency={workspace.currency || 'USD'} />}
                       {asset.status !== 'disposed' && (
                         <button type="button" onClick={() => setMoving(asset)} className="block ml-auto mt-1 text-xs font-semibold text-[var(--brass)] hover:underline">
                           Move<span className="sr-only"> {asset.name}</span>
@@ -329,6 +335,10 @@ export const FixedAssetsView: React.FC = () => {
                   </select>
                 </div>
               )}
+              <label className="flex items-start gap-2 text-[var(--text)]">
+                <input type="checkbox" className="mt-0.5" checked={form.building} onChange={e => setForm({ ...form, building: e.target.checked })} />
+                <span>Still being built (construction in progress): costs are added as they come in, and it starts depreciating once it is placed in service</span>
+              </label>
               <div>
                 <label htmlFor="asset-name" className="block font-semibold text-[var(--text)] mb-1">Name</label>
                 <input id="asset-name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Delivery van" className={inputClass} />
@@ -347,7 +357,7 @@ export const FixedAssetsView: React.FC = () => {
                   <input id="asset-years" type="number" min="0.5" step="0.5" value={form.years} onChange={e => setForm({ ...form, years: e.target.value })} className={inputClass} />
                 </div>
                 <div>
-                  <label htmlFor="asset-date" className="block font-semibold text-[var(--text)] mb-1">Bought on</label>
+                  <label htmlFor="asset-date" className="block font-semibold text-[var(--text)] mb-1">{form.building ? 'Building started on' : 'Bought on'}</label>
                   <input id="asset-date" type="date" value={form.purchaseDate} onChange={e => setForm({ ...form, purchaseDate: e.target.value })} className={inputClass} />
                 </div>
               </div>
@@ -359,7 +369,7 @@ export const FixedAssetsView: React.FC = () => {
                 </select>
               </div>
               {[
-                { id: 'assetAccountId' as const, label: 'Asset account (optional)', options: assetAccounts },
+                { id: 'assetAccountId' as const, label: form.building ? 'Construction-in-progress account' : 'Asset account (optional)', options: assetAccounts },
                 { id: 'expenseAccountId' as const, label: 'Depreciation expense account', options: expenseAccounts },
                 { id: 'accumulatedAccountId' as const, label: 'Accumulated depreciation account', options: assetAccounts },
               ].map(field => (

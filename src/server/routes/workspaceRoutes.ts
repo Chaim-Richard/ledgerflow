@@ -24,6 +24,7 @@ import { clientQueryRouter } from './clientQueryRoutes';
 import { accountMergeRouter } from './accountMergeRoutes';
 import { assetDisposalRouter } from './assetDisposalRoutes';
 import { assetTransferRouter } from './assetTransferRoutes';
+import { placeInServiceRouter } from './placeInServiceRoutes';
 import { payRunRouter } from './payRunRoutes';
 import { twoStepPolicyRouter } from './twoStepPolicyRoutes';
 import { AlertSettingsError, saveAlertSettings } from '../services/bookAlertService';
@@ -191,6 +192,7 @@ workspaceRouter.use('/:workspaceId/chart-accounts', requireWorkspaceRole(['owner
 // Selling or scrapping a fixed asset (X-03): writers
 workspaceRouter.use('/:workspaceId/assets/:assetId/disposal', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), assetDisposalRouter);
 workspaceRouter.use('/:workspaceId/assets/:assetId/transfer', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), assetTransferRouter);
+workspaceRouter.use('/:workspaceId/assets/:assetId/in-service', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), placeInServiceRouter);
 // Pay runs posted by the server (U-02): owners and accountants
 workspaceRouter.use('/:workspaceId/pay-runs', requireWorkspaceRole(['owner', 'accountant']), payRunRouter);
 workspaceRouter.use('/:workspaceId/security', requireWorkspaceRole(['owner']), twoStepPolicyRouter);

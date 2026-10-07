@@ -1999,7 +1999,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] X-06 Maintenance log
 - [ ] X-07 Asset tag / barcode
 - [x] X-08 Warranty / insurance alerts — **done 7 Oct**: each asset on the Fixed Asset Register has "Warranty ends" and "Insurance renews" dates (edit in place). From 30 days before (and on the day), the register says "The warranty on … ends in 12 days", and a nightly job tells the owners, accountants and bookkeepers in the bell, once for each date (in the workspace's own date; a new date is told again); disposed assets are left out (`src/lib/assetReminders.ts`, `src/server/services/assetReminderService.ts`, daily job `assetReminders`; tests `asset-reminders.test.tsx` with the database)
-- [ ] X-09 Construction in progress
+- [x] X-09 Construction in progress — **done 7 Oct**: "Still being built" when adding an asset (with the construction-in-progress account its bills are posted to and the day building started). While it is built it does not depreciate (the month-end run and the close checklist skip it) and "Add cost" records each cost as it comes in. "Place in service" (the day it was ready, the asset account it belongs in, its life and end value) posts one entry moving the cost out of construction in progress, and depreciation starts the month after; the register shows when building started. "Undo placing in service" makes it in progress again while its date is open and before it was depreciated, sold in part or moved (`src/server/services/placeInServiceService.ts`, `POST/DELETE …/assets/:id/in-service`, `src/components/assets/ConstructionActions.tsx`; tests `construction-in-progress.test.tsx` with the database)
 
 # SECTION Y — BANKING · DOCUMENTS · CONTACTS · SETTINGS
 

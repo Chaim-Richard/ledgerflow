@@ -53,7 +53,8 @@ function monthlyAmounts(asset: FixedAsset): number[] {
 
 /** Depreciation that should have been posted through the end of a YYYY-MM month. */
 export function depreciationThrough(asset: FixedAsset, month: string): number {
-  if (!asset.purchaseDate) return 0;
+  // X-09: still being built: nothing depreciates until it is placed in service
+  if (!asset.purchaseDate || asset.status === 'in_progress') return 0;
   const elapsed = monthIndex(`${month}-01`) - monthIndex(asset.purchaseDate);
   if (elapsed <= 0) return 0;
   return monthlyAmounts(asset).slice(0, elapsed).reduce((sum, a) => sum + a, 0);
@@ -61,6 +62,7 @@ export function depreciationThrough(asset: FixedAsset, month: string): number {
 
 /** The full schedule, one entry per month (dated the 1st of the month after each elapsed month). */
 export function calculateStraightLineDepreciation(asset: FixedAsset): DepreciationPeriodEntry[] {
+  if (asset.status === 'in_progress') return [];
   const cost = asset.purchasePriceCents || 0;
   const salvage = asset.salvageValueCents || 0;
   const start = monthIndex(asset.purchaseDate || '1970-01-01');
@@ -85,7 +87,7 @@ export interface ScheduleYear { year: string; amountCents: number; accumulatedCe
  * purchase to the end of its life; `posted` for the months the month-end run already covered.
  */
 export function depreciationSchedule(asset: FixedAsset): ScheduleMonth[] {
-  if (!asset.purchaseDate) return [];
+  if (!asset.purchaseDate || asset.status === 'in_progress') return [];
   const cost = asset.purchasePriceCents || 0;
   const start = monthIndex(asset.purchaseDate);
   const postedThrough = asset.depreciatedThrough ? monthIndex(`${asset.depreciatedThrough}-01`) : -1;
