@@ -257,6 +257,8 @@ export interface Estimate {
   /** the customer's own reference for the order (their purchase order number) */
   customerReference?: string;
   lines: Array<{
+    /** the stock item this line sells (BF-08): the order is then invoiced by quantity */
+    itemId?: string;
     description: string;
     quantity: number;
     unitPriceCents: number;

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useDialog } from '../../hooks/useDialog';
 import { formatCurrency, parseAmountToCents } from '../../lib/utils';
-import { type OrderPart, type OrderProgress, orderPartInvoice, partCents, partLabel, partProblem } from '../../lib/salesOrders';
+import { type OrderPart, type OrderProgress, hasItemLines, orderLineProgress, orderPartInvoice, partCents, partLabel, partProblem } from '../../lib/salesOrders';
 import type { Estimate } from '../../types';
 
 const field = 'w-full px-3 py-2 text-sm bg-[var(--ink)] border border-[var(--line)] rounded-lg text-[var(--text)]';
@@ -10,7 +10,9 @@ type Mode = OrderPart['mode'];
 
 /**
  * Invoice part of a sales order (K-04): the rest, a percentage of the order, or an amount. Shows
- * what is already invoiced and the lines the draft invoice will have before it is made.
+ * what is already invoiced and the lines the draft invoice will have before it is made. An order
+ * with stock items is invoiced by quantity instead (BF-08): how many of each line, so stock and
+ * cost move with the units invoiced (the rules: src/lib/salesOrders.ts).
  */
 export default function OrderInvoiceDialog({ estimate, progress, currency, onCreate, onClose }: {
   estimate: Estimate;
@@ -19,15 +21,19 @@ export default function OrderInvoiceDialog({ estimate, progress, currency, onCre
   onCreate: (part: OrderPart) => Promise<unknown>;
   onClose: () => void;
 }) {
-  const [mode, setMode] = useState<Mode>('rest');
+  const byQuantity = hasItemLines(estimate);
+  const lines = orderLineProgress(estimate, progress);
+  const [mode, setMode] = useState<Mode>(byQuantity ? 'quantities' : 'rest');
   const [percent, setPercent] = useState('50');
   const [amount, setAmount] = useState('');
+  const [quantities, setQuantities] = useState<string[]>(() => lines.map(l => String(l.leftQuantity)));
   const [saving, setSaving] = useState(false);
   const { dialogProps, titleId } = useDialog(onClose, true);
-  const part: OrderPart = mode === 'rest' ? { mode } : mode === 'percent' ? { mode, percent: Number(percent) } : { mode, cents: parseAmountToCents(amount) };
-  const problem = partProblem(part, progress);
-  const cents = problem ? 0 : partCents(part, progress);
-  const preview = problem ? [] : orderPartInvoice(estimate, progress, cents, partLabel(part, estimate, progress)).items || [];
+  const part: OrderPart = mode === 'quantities' ? { mode, quantities: quantities.map(q => (q.trim() === '' ? 0 : Number(q))) }
+    : mode === 'rest' ? { mode } : mode === 'percent' ? { mode, percent: Number(percent) } : { mode, cents: parseAmountToCents(amount) };
+  const problem = partProblem(part, progress, estimate);
+  const cents = problem ? 0 : partCents(part, progress, estimate);
+  const preview = problem ? [] : orderPartInvoice(estimate, progress, cents, partLabel(part, estimate, progress), part).items || [];
   const money = (c: number) => formatCurrency(c, currency);
 
   const create = async () => {
@@ -62,6 +68,36 @@ export default function OrderInvoiceDialog({ estimate, progress, currency, onCre
             {estimate.customerName || 'Customer'} · order of {money(progress.totalCents)} · invoiced {money(progress.invoicedCents)}
             {progress.invoices.length > 0 && ` (${progress.invoices.map(inv => inv.number || inv.id).join(', ')})`} · <strong className="text-[var(--text)]">left {money(progress.leftCents)}</strong>
           </p>
+          {byQuantity ? (
+            <div className="space-y-2">
+              <p className="text-xs text-[var(--muted)]">This order has stock items, so it is invoiced by quantity: stock and cost move with what is invoiced. To take money before delivery, use Deposit on the order.</p>
+              <table className="w-full text-xs">
+                <caption className="text-left text-xs font-semibold text-[var(--muted)] mb-1">How many to invoice now</caption>
+                <thead>
+                  <tr className="text-[var(--muted)]">
+                    <th scope="col" className="text-left font-semibold py-0.5">Line</th>
+                    <th scope="col" className="text-right font-semibold py-0.5">Ordered</th>
+                    <th scope="col" className="text-right font-semibold py-0.5">Left</th>
+                    <th scope="col" className="text-right font-semibold py-0.5">Now</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map(line => (
+                    <tr key={line.position}>
+                      <td className="py-0.5 pr-2">{line.description}{line.itemId ? '' : <span className="text-[var(--muted)]"> (not a stock item)</span>}</td>
+                      <td className="py-0.5 text-right font-mono">{line.quantity}</td>
+                      <td className="py-0.5 text-right font-mono">{line.leftQuantity}</td>
+                      <td className="py-0.5 pl-2 text-right">
+                        <input aria-label={`How many of ${line.description || `line ${line.position + 1}`} to invoice now`} inputMode="decimal" value={quantities[line.position] ?? ''}
+                          disabled={line.leftQuantity <= 0}
+                          onChange={e => setQuantities(qs => qs.map((q, i) => (i === line.position ? e.target.value : q)))} className={`${field} w-20 font-mono text-right`} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
           <fieldset className="space-y-2">
             <legend className="text-xs font-semibold text-[var(--muted)] mb-1">How much to invoice now</legend>
             {choice('rest', `All that is left (${money(progress.leftCents)})`)}
@@ -78,13 +114,14 @@ export default function OrderInvoiceDialog({ estimate, progress, currency, onCre
               )}
             </div>
           </fieldset>
+          )}
           {preview.length > 0 && (
             <table className="w-full text-xs">
               <caption className="text-left text-xs font-semibold text-[var(--muted)] mb-1">The draft invoice</caption>
               <tbody>
                 {preview.map(item => (
                   <tr key={item.id}>
-                    <td className="py-0.5 pr-2">{item.description}</td>
+                    <td className="py-0.5 pr-2">{item.description}{byQuantity ? ` × ${item.quantity}` : ''}</td>
                     <td className="py-0.5 text-right font-mono">{money(item.amountCents)}</td>
                   </tr>
                 ))}

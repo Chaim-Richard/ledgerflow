@@ -248,7 +248,7 @@ These are the tracker IDs; `docs/TRACKER.md` has the detail.
 ### V1: correct before broad use
 
 - **Product and correctness:**
-  - BF-08, step 1 (orders keep their items, so stock and cost move);
+  - BF-08, step 1 (orders keep their items, so stock and cost move) — done 7 Oct;
   - W-06 (negative-stock policy);
   - N-12 (explain this number: statements, trial balance, aging, budget vs actual);
   - Z-12 (the missing-label check, with a simple rule per account);

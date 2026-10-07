@@ -2226,13 +2226,21 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BF-05 Consignment stock
 - [ ] BF-06 Sales returns / RMA — **expanded 7 Oct (roadmap, Later P0, after BF-08 step 1)**: a return is linked to the delivery or invoice line it returns. It gives back at most the quantity that left, at the cost it left at, only once, and it reverses that cost. The credit note and the refund use K-09
 - [ ] BF-07 Purchase returns
-- [ ] BF-08 Partial fulfilment — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`); step 1 V1, step 2 Later P0)**.
-  - **Found 7 Oct:** a quote or order line cannot name an item (`Estimate.lines` has no `itemId`). Invoicing an order (`orderPartInvoice` in `src/lib/salesOrders.ts`, and `convertEstimateToInvoice`) makes invoice lines without one. So an order of stock items never lowers stock and never books cost of goods sold, even when it is invoiced in one go, because `planInvoiceCogs` (`src/services/invoiceCogs.ts`) needs `line.itemId`. The same sale typed straight onto an invoice does both.
-  - **Step 1 (V1):**
-    - Quote and order lines keep the item and the quantity.
-    - An item line is invoiced by quantity, in whole units of that line, and the invoice line carries the item. Stock and cost then move once for each unit invoiced.
+- [~] BF-08 Partial fulfilment (step 1 done 7 Oct; step 2 open) — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`); step 1 V1, step 2 Later P0)**.
+  - **Found 7 Oct:** the New Estimate form took one amount and no lines, it saved every quote as USD, and a quote or order line could not name an item (`Estimate.lines` has no `itemId`). Invoicing an order (`orderPartInvoice` in `src/lib/salesOrders.ts`, and `convertEstimateToInvoice`) makes invoice lines without one. So an order of stock items never lowers stock and never books cost of goods sold, even when it is invoiced in one go, because `planInvoiceCogs` (`src/services/invoiceCogs.ts`) needs `line.itemId`. The same sale typed straight onto an invoice does both.
+  - **Step 1 (V1) — done 7 Oct:**
+    - **The quote form:** a quote can have lines ("Add lines (items, quantities, prices)"). A line whose text is a stock item's name or SKU is linked to the item and takes its price (`EstimateLinesEditor.tsx`, `src/lib/estimateLines.ts`). One amount still works as before.
+    - **Currency:** a quote is saved in the workspace's currency, not always USD. Older quotes keep the currency they were saved with.
+    - Quote and order lines keep the item and the quantity, and converting a quote whole keeps the item (`estimateConverter.ts`).
+    - An order with stock items is invoiced by quantity: how many of each line now, never more than is left (two decimals at most). The invoice line carries the item and the units, so stock and cost move once for each unit invoiced. The last part of a line takes its exact remainder, so the order is invoiced to the cent. Each invoice line remembers its order line (`metadata.orderLine`) (`orderLineProgress`, `resolvePart` in `src/lib/salesOrders.ts`; the quantity table in `OrderInvoiceDialog.tsx`).
     - A percent or amount part of an order that has item lines is a deposit or progress bill with no item: no stock moves, no cost is booked, and the screen says so. The item is never copied onto a line that was cut by amount.
-    - Tests: two part invoices together book exactly the cost of the units, never twice; voiding one gives back exactly its units; a retry moves nothing twice.
+    - Tests (`order-items.test.tsx`, cost from the real `planInvoiceCogs`):
+      - two part invoices together book exactly the cost of the five units, never more;
+      - voiding a part gives back its units to invoice again;
+      - a percent or amount part, too many units, or too many decimals are refused;
+      - a whole conversion books every unit;
+      - the quote form saves its lines and its total, and the order dialog makes a draft invoice that carries the item.
+      - Stock coming back when an invoice is voided, and a retry never moving stock twice, are the server's existing COGS tests.
   - **Step 2 (Later P0): delivery kept apart from invoicing.**
     - Six things are kept separately: ordered, delivered (a delivery note, M-12), invoiced, paid, stock moved, and cost booked.
     - A deposit never moves stock and never books cost.
