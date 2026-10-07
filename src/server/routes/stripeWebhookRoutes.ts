@@ -4,6 +4,7 @@ import { errorMessage } from "../auth/requestUser";
 import { getDb, FieldValue } from "../db/firestore";
 import { getStripe, stripeId, type Stripe } from "../services/stripeService";
 import { recordStripeInvoicePayment } from "../services/onlinePaymentService";
+import { recordInvoicePaymentFailed, recordSubscriptionPaymentFailed } from "../services/paymentFailureService";
 import { logger } from "../utils/logger";
 
 /** Routes moved out of server.ts (F-01). Registered before the JSON body parser: Stripe signs the raw body. */
@@ -136,6 +137,14 @@ export function registerStripeWebhookRoutes(app: express.Express, _ctx: ServerCo
             processedAt: FieldValue.serverTimestamp()
           });
         });
+      } else if (event.type === 'checkout.session.async_payment_failed' && (event.data.object as Stripe.Checkout.Session).metadata?.invoiceId) {
+        // S-05: a customer's bank payment for an invoice did not go through
+        const outcome = await recordInvoicePaymentFailed(db, eventId, event.type, event.data.object as Stripe.Checkout.Session);
+        if (outcome === 'already_processed') return res.json({ received: true, skipped: true });
+      } else if (event.type === 'invoice.payment_failed') {
+        // S-16: the workspace's own plan could not be charged
+        const outcome = await recordSubscriptionPaymentFailed(db, eventId, event.type, event.data.object as unknown as Parameters<typeof recordSubscriptionPaymentFailed>[3]);
+        if (outcome === 'already_processed') return res.json({ received: true, skipped: true });
       } else {
         // Record event idempotency for other unhandled types
         await eventRef.set({

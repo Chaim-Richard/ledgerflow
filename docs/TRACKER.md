@@ -1916,7 +1916,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] S-02 invoice.viewed — **done 7 Oct**: opening an invoice's own page (/i/…, from the email or the customer portal) records when the customer first and last opened it and how often (at most once an hour; drafts and voided invoices are not counted), and the first time owners, accountants and bookkeepers are notified ("Acme opened invoice INV-7 · $500.00 is still due by 2026-10-31"). The Sales list shows "Opened by the customer <date>" on unpaid invoices. Server-only fields; never breaks the page (`src/server/services/invoiceViewService.ts`; tests `invoice-viewed.test.ts` with the database)
 - [x] S-03 invoice.overdue (daily, once per invoice, workspace date; tested)
 - [x] S-04 payment.received (recorded payments and bank-line payments; online card payments with K-11)
-- [ ] S-05 payment.failed
+- [x] S-05 payment.failed — **done 7 Oct**: when Stripe reports that a customer's bank payment for an invoice (paid from its link) did not go through, owners, accountants and bookkeepers are told once ("Acme's bank payment of $500.00 did not go through…"); the invoice stays open and Settings → Incoming events shows it as a problem (`src/server/services/paymentFailureService.ts`, `checkout.session.async_payment_failed` in the Stripe webhook; tests `payment-failures.test.ts` with the database)
 - [x] S-06 bank.feed.disconnected (when a bank login expires)
 - [ ] S-07 reconciliation.discrepancy
 - [x] S-08 period.close.reminder — **done 7 Oct**: from a chosen day of the month (the 5th unless changed in Settings → Alerts, or off), owners and accountants are reminded to close last month until it is closed (soft or hard), once a month, and only once the workspace has entries (`src/lib/bookAlerts.ts`, `src/server/services/bookAlertService.ts`, daily job `bookAlerts`; tests `book-alerts.test.ts` with the database)
@@ -1927,7 +1927,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] S-13 export.ready
 - [x] S-14 user.invited / joined
 - [x] S-15 permission.changed — **done 7 Oct**: when an owner changes someone's role, that person alone is told ("Your role is now Accountant · before: Bookkeeper"); the same role again tells nobody. Viewers can get this one notice (`notify(…, { onlyUids })`; tests `role-change-notice.test.ts` with the database)
-- [ ] S-16 subscription events
+- [x] S-16 subscription events — **done 7 Oct** (failed charge): when the workspace's own plan could not be charged (`invoice.payment_failed`), the owners are told to update the card in Settings → Billing; the plan ending was already recorded (same files and tests as S-05)
 - [ ] S-17 transaction.unusual
 - [ ] S-18 Digest vs immediate
 - [x] S-19 Per-type opt-out (each person, bell → gear)

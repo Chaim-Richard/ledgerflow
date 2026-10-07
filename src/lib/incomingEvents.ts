@@ -31,6 +31,9 @@ const STRIPE_OUTCOMES: Record<string, [string, EventTone]> = {
   invoice_not_found: ['Not recorded: the invoice was not found', 'problem'],
   plan_updated: ['Plan updated', 'ok'],
   plan_cancelled: ['Plan cancelled', 'info'],
+  payment_failed: ['The bank payment did not go through; the invoice is still open', 'problem'],
+  subscription_payment_failed: ['The plan could not be charged; update the card in Billing', 'problem'],
+  no_workspace: ['Not tied to any workspace', 'info'],
   ignored: ['Nothing to do for this kind of event', 'info'],
 };
 
@@ -38,6 +41,8 @@ const STRIPE_WHAT: Record<string, string> = {
   'checkout.session.completed': 'Online card payment',
   'checkout.session.async_payment_succeeded': 'Online payment cleared',
   'customer.subscription.deleted': 'Subscription ended',
+  'checkout.session.async_payment_failed': 'Online payment failed',
+  'invoice.payment_failed': 'Plan payment',
 };
 
 const EMAIL: Record<string, [string, string, EventTone]> = {
