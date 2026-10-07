@@ -43,7 +43,7 @@ export default function RequireTwoStepPanel() {
 
   return (
     <section aria-labelledby={`${id}-title`} className="ledger-card p-6 bg-[var(--surface)] border border-[var(--line)] shadow-sm rounded-2xl space-y-3">
-      <h2 id={`${id}-title`} className="text-lg font-black text-[var(--text)]">Two-step login for everyone</h2>
+      <h2 id={`${id}-title`} className="text-lg font-black text-[var(--text)]">Sign-in rule for this workspace</h2>
       <label className="flex items-start gap-3 text-sm text-[var(--text)]">
         <input type="checkbox" className="mt-1" checked={required} disabled={busy} onChange={e => void change(e.target.checked)} />
         <span>Everyone in {workspace.name || 'this workspace'} must use two-step login. Anyone without an authenticator app is asked to set one up before they can open the books.</span>
