@@ -53,7 +53,6 @@ import { useCurrentRole } from '../../hooks/useCurrentRole';
 import InlineEdit from '../ui/InlineEdit';
 import InlineAdd from '../ui/InlineAdd';
 import DocumentBulkBar from '../ui/DocumentBulkBar';
-import { printInvoice } from '../../lib/printInvoice';
 import { getDefaultTaxConfig, generateDefaultTaxRates } from '../../lib/taxRateDefaults';
 import { calculateNextOccurrence } from '../../lib/recurringEngine';
 
