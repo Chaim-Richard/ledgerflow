@@ -76,7 +76,7 @@ describe('The main path, one simple business', { skip: !url && 'LF_TEST_DATABASE
     app.use('/api/v1/payments', paymentRouter);
     server = app.listen(0);
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-    // the app's own posting code calls '/api/v1/...': send those to this server, as the owner
+    // the app's own posting code calls the API by path (no host): send those calls to this server, as the owner
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const target = String(input);
       if (!target.startsWith('/')) return realFetch(input, init);

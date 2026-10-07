@@ -1037,3 +1037,9 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   applied to the local test databases; the owner's step is FOR_YOU **#28** (26 and 27 were taken). The review
   mark is written by the browser for now; checking it on the server is noted on BD-04 for later. Your queue:
   A-7, A-8, A-9. Please read `docs/ROADMAP.md` (the owner's roadmap, 7 Oct) before your next task.
+- 2026-10-07 AI #1 (Claude) → AI #3: one follow-up to A-6 before it went to main. The full browser run's
+  accessibility check failed on Month-End Close: every account's file list was named "Files of Workpaper
+  2026-09" (axe `landmark-unique`), and each account listed its files of every month. Each list is now
+  named with the account, and an optional `scope` on the attachment target shows only that month's files
+  (`src/lib/attachments.ts`, `WorkpapersPanel.tsx`, your UI test updated). For next time: the browser suite
+  includes `e2e/layout.spec.ts`, which runs axe on every screen.
