@@ -13,6 +13,7 @@ import { formatCurrency, formatDate, formatTzDate, parseAmountToCents } from '..
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import DisposeAssetDialog from './DisposeAssetDialog';
 import DepreciationScheduleTable from './DepreciationScheduleTable';
+import { assetCandidates } from '../../lib/assetFromBill';
 
 /**
  * Fixed asset register (R-06). Assets are saved in the database ('assets'); depreciation is posted
@@ -33,7 +34,8 @@ const byName = (pattern: RegExp, type: string) => (a: ChartAccount) => pattern.t
 export const FixedAssetsView: React.FC = () => {
   const assets = useLedgerStore(s => s.assets) as FixedAsset[] | undefined;
   const accounts = useLedgerStore(s => s.accounts) as ChartAccount[] | undefined;
-  useLedgerCollections('assets');
+  const bills = useLedgerStore(s => s.bills);
+  useLedgerCollections('assets', 'bills');
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const { addEntity } = useEntityOperations();
   const role = useCurrentRole();
@@ -51,12 +53,20 @@ export const FixedAssetsView: React.FC = () => {
   const [form, setForm] = useState(() => ({
     name: '', cost: '', salvage: '0', years: '5', purchaseDate: today, method: 'straight-line' as FixedAsset['depreciationMethod'],
     assetAccountId: '', expenseAccountId: '', accumulatedAccountId: '',
+    /** X-01: the bill line it comes from ("billId#line"), if picked */
+    source: '',
   }));
 
   const list = useMemo(() => assets || [], [assets]);
   const chart = useMemo(() => (accounts || []).filter(a => !a.isArchived), [accounts]);
   const assetAccounts = chart.filter(a => String(a.type).toLowerCase() === 'asset');
   const expenseAccounts = chart.filter(a => ['expense', 'cost_of_goods'].includes(String(a.type).toLowerCase()));
+  const fromBills = useMemo(() => assetCandidates(bills || [], chart, list), [bills, chart, list]);
+  const pickBillLine = (key: string) => {
+    const c = fromBills.find(x => `${x.billId}#${x.line}` === key);
+    if (!c) { setForm(f => ({ ...f, source: '' })); return; }
+    setForm(f => ({ ...f, source: key, name: c.name, cost: (c.costCents / 100).toFixed(2), purchaseDate: c.date || f.purchaseDate, assetAccountId: c.accountId }));
+  };
 
   const totals = useMemo(() => {
     // what is still owned: sold or scrapped assets are off the books
@@ -113,10 +123,11 @@ export const FixedAssetsView: React.FC = () => {
       ...(form.assetAccountId ? { assetAccountId: form.assetAccountId } : {}),
       expenseAccountId: form.expenseAccountId,
       accumulatedAccountId: form.accumulatedAccountId,
+      ...(form.source ? { sourceBillId: form.source.split('#')[0], sourceBillLine: Number(form.source.split('#')[1]) } : {}),
     };
     await addEntity('assets', asset, `"${asset.name}" added to the register`);
     setIsAdding(false);
-    setForm(f => ({ ...f, name: '', cost: '', salvage: '0' }));
+    setForm(f => ({ ...f, name: '', cost: '', salvage: '0', source: '' }));
   };
 
   const runDepreciation = async () => {
@@ -263,6 +274,15 @@ export const FixedAssetsView: React.FC = () => {
               </button>
             </div>
             <div className="p-5 space-y-3 text-xs">
+              {fromBills.length > 0 && (
+                <div>
+                  <label htmlFor="asset-from-bill" className="block font-semibold text-[var(--text)] mb-1">From a bill (optional)</label>
+                  <select id="asset-from-bill" value={form.source} onChange={e => pickBillLine(e.target.value)} className={inputClass}>
+                    <option value="">Not from a bill</option>
+                    {fromBills.map(c => <option key={`${c.billId}#${c.line}`} value={`${c.billId}#${c.line}`}>{c.label}</option>)}
+                  </select>
+                </div>
+              )}
               <div>
                 <label htmlFor="asset-name" className="block font-semibold text-[var(--text)] mb-1">Name</label>
                 <input id="asset-name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Delivery van" className={inputClass} />

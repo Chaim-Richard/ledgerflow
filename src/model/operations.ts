@@ -73,6 +73,9 @@ export interface FixedAsset {
   disposalProceedsCents?: number;
   disposalGainLossCents?: number;
   disposalTransactionId?: string;
+  /** X-01: the bill line it was bought on (bill id and line number), when added from a bill. */
+  sourceBillId?: string;
+  sourceBillLine?: number;
 }
 
 export interface Employee {
