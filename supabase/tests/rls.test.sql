@@ -430,6 +430,12 @@ select pg_temp.expect_denied('owner changes a filed return', 'u-owner', $$select
 select pg_temp.expect_denied('owner files a return from the browser', 'u-owner',
   $$insert into "taxReturns"(id,data) values ('tr2', '{"workspaceId":"ws1","startDate":"2026-01-01","endDate":"2026-03-31"}')$$);
 
+-- recovery codes (L-85): server only; nobody reads or writes them from the browser, not even their owner
+select set_config('request.jwt.claims', '', true);
+insert into "recoveryCodes" (id, data) values ('u-owner', '{"uid":"u-owner","codes":[]}');
+select pg_temp.expect_denied('owner reads their recovery codes', 'u-owner', $$select count(*) from "recoveryCodes"$$);
+select pg_temp.expect_denied('owner writes recovery codes', 'u-owner', $$select lf_set('recoveryCodes','u-owner','{"uid":"u-owner","codes":[]}'::jsonb)$$);
+
 -- questions about entries (BD-07): written only by the server; members read; nobody writes them from the browser
 select set_config('request.jwt.claims', '', true);
 insert into "clientQueries" (id, data) values ('cq1', '{"workspaceId":"ws1","transactionId":"t1","status":"open","messages":[]}');

@@ -1648,7 +1648,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-82 Removed AI Studio IAM fallbacks (errors were reported as success) + in-memory billing copy
 - [ ] L-83 Verify the database TLS certificate (`DATABASE_CA_CERT`)
 - [ ] L-84 Custom SMTP sender for sign-up / reset emails
-- [ ] L-85 Two-step login management screen (status, remove, recovery codes) — AI #4 D-2, PR #46: status/add/code-verified removal complete for review; recovery codes deferred per D-2, proposal in coordination.
+- [x] L-85 Two-step login management screen (status, remove, recovery codes) — status/add/code-verified removal by AI #4 (D-2); **recovery codes done 7 Oct (AI #1)**: Settings → Security → Two-step login → "Make recovery codes" gives ten one-time codes, shown once (copy or download); only keyed hashes are kept, in a server-only table (`recoveryCodes`, migration 20261013000000; nobody reads it from the browser). On the code step of sign-in, "Lost your phone? Use a recovery code": a right code (any case, with or without the dash) is used up and removes the authenticator, so the person signs in with the password and sets two-step login up again; five wrong codes in an hour lock the step; if removing fails the code is given back. Only that one route accepts a password-only session (`src/server/services/recoveryCodeService.ts`; tests `recovery-codes.test.ts` with the database, `recovery-codes-ui.test.tsx`, `supabase-auth.test.ts`, RLS)
 - [ ] L-86 Move security-definer helpers to a private schema
 - [ ] L-87 Sort large lists with an index (with C-14/C-15)
 - [x] L-88 Two-step login enforced on Supabase (database + server + code screen)

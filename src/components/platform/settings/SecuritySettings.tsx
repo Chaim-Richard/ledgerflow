@@ -13,6 +13,7 @@ import { useUIStore } from '../../../stores/useUIStore';
 import RetentionSettingsPanel from './RetentionSettingsPanel';
 import { retentionFor } from '../../../lib/retention';
 import AsyncButton from '../../ui/AsyncButton';
+import RecoveryCodesPanel from './RecoveryCodesPanel';
 
 type AuthenticatorFactor = Awaited<ReturnType<ReturnType<typeof multiFactor>['getFactors']>>[number];
 
@@ -108,6 +109,7 @@ function TwoStepLoginPanel() {
           <button type="button" disabled={busy || factors === null} className={`${buttonClass} px-4 bg-[var(--surface)] border border-[var(--line)] rounded-xl`} onClick={() => run('add')}>{busy ? 'Working…' : 'Add authenticator'}</button>
           <AsyncButton type="button" disabled={busy} variant="secondary" className={buttonClass} onClick={() => run('reload')}>Reload status</AsyncButton>
         </div>
+        {verified.length > 0 && <RecoveryCodesPanel />}
       </>}
       {setup && <div className="space-y-3">
         {secret ? <>

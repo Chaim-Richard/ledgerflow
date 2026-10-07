@@ -25,6 +25,7 @@ import { useBillingStore } from './modules/billing/BillingService';
 import { AuthScreen } from './core/auth/AuthScreen';
 import { InitializationScreen } from './core/auth/InitializationScreen';
 import { SecondFactorScreen } from './core/auth/SecondFactorScreen';
+import { redeemRecoveryCode } from './core/auth/recoveryCode';
 import { RootLayout } from './core/layout/RootLayout';
 import { lazy, Suspense } from 'react';
 const LedgerAutoAuditor = lazy(() => import('./components/forensics/LedgerAutoAuditor').then(m => ({ default: m.LedgerAutoAuditor })));
@@ -366,6 +367,7 @@ const shortcutMap = useMemo(() => {
       <SecondFactorScreen
         onVerify={(code) => verifySecondFactor(auth, code)}
         onCancel={() => { void signOut(auth); }}
+        onRecover={redeemRecoveryCode}
       />
     );
   }

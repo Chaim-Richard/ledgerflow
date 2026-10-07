@@ -98,6 +98,7 @@ export async function deleteAccount(db: Firestore, user: { uid: string; email?: 
 
   // personal data
   await db.collection('users').doc(user.uid).delete().catch(() => {});
+  await db.collection('recoveryCodes').doc(user.uid).delete().catch(() => {});
   for (const table of ['customTemplates', 'notifications', 'loginAudits']) {
     const snap = await db.collection(table).where('uid', '==', user.uid).get();
     for (const d of snap.docs) await d.ref.delete();

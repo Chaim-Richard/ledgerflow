@@ -89,8 +89,17 @@ async function hasVerifiedAuthenticator(uid: string): Promise<boolean> {
   return has;
 }
 
-/** Checks a Supabase access token (signature, issuer, audience, expiry) and decodes it. */
-export async function verifyIdToken(token: string): Promise<DecodedIdToken> {
+/** After an authenticator is removed (a recovery code, L-85): do not wait for the cache to expire. */
+export function forgetAuthenticator(uid: string): void {
+  authenticatorCache.delete(uid);
+}
+
+/**
+ * Checks a Supabase access token (signature, issuer, audience, expiry) and decodes it.
+ * `firstStepOnly`: accept a password-only session of someone with an authenticator; only for using a
+ * recovery code (POST /api/v1/account/recovery-codes/use).
+ */
+export async function verifyIdToken(token: string, opts: { firstStepOnly?: boolean } = {}): Promise<DecodedIdToken> {
   if (typeof token !== 'string' || token.split('.').length !== 3) {
     throw new AuthError('auth/argument-error', 'Missing or malformed token');
   }
@@ -122,7 +131,7 @@ export async function verifyIdToken(token: string): Promise<DecodedIdToken> {
 
   const appMeta = (payload.app_metadata || {}) as Record<string, unknown>;
   const isAnonymous = payload.is_anonymous === true;
-  if (payload.aal !== 'aal2' && !isAnonymous && await hasVerifiedAuthenticator(payload.sub)) {
+  if (!opts.firstStepOnly && payload.aal !== 'aal2' && !isAnonymous && await hasVerifiedAuthenticator(payload.sub)) {
     throw new AuthError('auth/multi-factor-auth-required', 'Two-step verification is required for this account');
   }
   const email = typeof payload.email === 'string' && payload.email ? payload.email : undefined;

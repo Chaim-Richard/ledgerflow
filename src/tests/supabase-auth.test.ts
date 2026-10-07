@@ -116,6 +116,8 @@ describe('email confirmation and account operations', { skip: !dbUrl && 'LF_TEST
       "insert into auth.mfa_factors (id, user_id, factor_type, status) values ($1, $2, 'totp', 'verified')", [uid(), other]);
     const otherAal1 = await token({ sub: other, email: 'x@example.com', role: 'authenticated', aal: 'aal1', app_metadata: { provider: 'email' } });
     await assert.rejects(verifyIdToken(otherAal1), (err: unknown) => authCode(err) === 'auth/multi-factor-auth-required');
+    // only for using a recovery code (L-85) is the password-only session enough
+    assert.equal((await verifyIdToken(otherAal1, { firstStepOnly: true })).uid, other);
     const otherAal2 = await token({ sub: other, email: 'x@example.com', role: 'authenticated', aal: 'aal2', app_metadata: { provider: 'email' } });
     assert.equal((await verifyIdToken(otherAal2)).uid, other);
   });

@@ -170,7 +170,9 @@ export const apiAuthenticate = async (req: express.Request, res: express.Respons
   if (authHeader.startsWith("Bearer ")) {
     const idToken = authHeader.split("Bearer ")[1];
     try {
-      const decodedToken = await verifyIdToken(idToken) as AuthUser;
+      // L-85: someone who lost the authenticator signs in with the password and uses a recovery code
+      const firstStepOnly = req.method === 'POST' && req.originalUrl.split('?')[0] === '/api/v1/account/recovery-codes/use';
+      const decodedToken = await verifyIdToken(idToken, { firstStepOnly }) as AuthUser;
       const isAnonymous = decodedToken.firebase?.sign_in_provider === 'anonymous';
       if (!decodedToken.email_verified && !isAnonymous) {
         return res.status(403).json({ status: "error", message: "Access Denied: Please verify your email protocol." });

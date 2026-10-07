@@ -77,6 +77,7 @@ export const KEPT_AFTER_WORKSPACE_PURGE: Record<string, string> = {
   users: 'people, not workspace data; deleted with the account (L-09)',
   admins: 'platform administrators',
   loginAudits: 'per-person sign-in security log',
+  recoveryCodes: 'a person\'s own two-step login recovery codes, not workspace data; deleted with the account',
   stripeProcessedEvents: 'payment webhook de-duplication across all workspaces',
   external_api_cache: 'shared cache of public data (exchange rates)',
 };
