@@ -22,6 +22,7 @@ import { ScheduledReportError, sendScheduleNow } from '../services/scheduledRepo
 import { portalLinkRouter } from './customerPortalRoutes';
 import { clientQueryRouter } from './clientQueryRoutes';
 import { accountMergeRouter } from './accountMergeRoutes';
+import { AlertSettingsError, saveAlertSettings } from '../services/bookAlertService';
 import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
 import { brandingRouter } from './brandingRoutes';
@@ -183,6 +184,23 @@ workspaceRouter.use('/:workspaceId/journal-templates', requireWorkspaceRole(['ow
 workspaceRouter.use('/:workspaceId/queries', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), clientQueryRouter);
 // Merging two accounts (CA-33): owners and accountants
 workspaceRouter.use('/:workspaceId/chart-accounts', requireWorkspaceRole(['owner', 'accountant']), accountMergeRouter);
+// Settings → Alerts (S-08, S-10, S-11): owners and accountants
+const alertsSchema = z.object({
+  cashLowCents: z.number().int().nullable().optional(),
+  closeReminderDay: z.number().int().nullable().optional(),
+  budgetAlerts: z.boolean().optional(),
+}).strict();
+workspaceRouter.put('/:workspaceId/alerts', requireWorkspaceRole(['owner', 'accountant']), async (req, res) => {
+  const user = (req as AuthenticatedRequest).user;
+  try {
+    const alerts = await saveAlertSettings(getDb(), { workspaceId: String(req.params.workspaceId), uid: user.uid, email: user.email, alerts: alertsSchema.parse(req.body) });
+    res.json({ status: 'success', alerts });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ status: 'error', message: 'Those alert settings are not in the expected form' });
+    if (err instanceof AlertSettingsError) return res.status(err.status).json({ status: 'error', message: err.message });
+    res.status(500).json({ status: 'error', message: 'The alerts could not be saved', details: err instanceof Error ? err.message : String(err) });
+  }
+});
 
 // Bulk import of customers, vendors, items or accounts from a spreadsheet (K-01; rules in
 // src/lib/recordImport.ts). Writers may import; the chart of accounts is owner/accountant only.

@@ -9,6 +9,7 @@ import { recordDailyJobRun } from '../services/statusService';
 import { runDailyRetention } from '../services/retentionService';
 import { runDailyScheduledReports } from '../services/scheduledReportService';
 import { runDailyLedgerHealth } from '../services/ledgerHealthService';
+import { runDailyBookAlerts } from '../services/bookAlertService';
 import { getDb } from '../db/firestore';
 
 /**
@@ -34,6 +35,7 @@ const DAILY_JOBS: [string, () => Promise<unknown>][] = [
   ['statements', runDailyStatements],
   ['scheduledReports', runDailyScheduledReports],
   ['ledgerHealth', runDailyLedgerHealth],
+  ['bookAlerts', runDailyBookAlerts],
   ['retention', runDailyRetention],
 ];
 

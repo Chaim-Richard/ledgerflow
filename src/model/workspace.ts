@@ -7,6 +7,7 @@ import type { MoneyDisplaySettings } from '../lib/moneyFormat';
 import type { ScheduledReport } from '../lib/scheduledReports';
 import type { CloseStep } from '../lib/closeSteps';
 import type { LedgerHealth } from '../lib/ledgerHealth';
+import type { AlertSettings, AlertsSent } from '../lib/bookAlerts';
 import type { NotificationType } from '../lib/notifications';
 import type { EntityMetadata, DimensionDefinition, Transaction } from './ledger';
 
@@ -61,6 +62,10 @@ export interface Workspace {
   closeSteps?: CloseStep[];
   /** The nightly ledger health check (CA-32, src/lib/ledgerHealth.ts); written by the server only. */
   ledgerHealth?: LedgerHealth;
+  /** Alerts about the books (S-08, S-10, S-11, src/lib/bookAlerts.ts); saved by the server for owners and accountants. */
+  alerts?: AlertSettings;
+  /** What the alerts already told (written by the server only). */
+  alertsSent?: AlertsSent;
   /** Set by the daily job: the month (YYYY-MM) monthly statements were last sent (Y-28). */
   lastStatementsMonth?: string;
   strategicAdvice?: string[];

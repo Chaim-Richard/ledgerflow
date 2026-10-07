@@ -21,6 +21,7 @@ const SETTINGS_KEYWORDS: Record<string, string> = {
   'incoming-events': 'webhooks stripe online payment card email bounced delivered spam events log',
   tags: 'labels tag rename merge remove categories groups',
   'scheduled-reports': 'email reports schedule weekly monthly automatic send profit loss balance sheet aging',
+  alerts: 'notify warn reminder close month budget overspent over budget cash low balance threshold',
   export: 'backup download restore data archive',
   shortcuts: 'keyboard keys speed dial hotkeys',
 };

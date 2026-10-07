@@ -22,7 +22,7 @@ import {
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag, ArrowLeftRight
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion } from 'lucide-react';
+, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing } from 'lucide-react';
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
@@ -443,6 +443,7 @@ export const SETTINGS_TABS_REGISTRY = withScreenHelp([
   { id: 'incoming-events', label: { en: 'Incoming events', he: 'אירועים נכנסים' }, componentName: 'IncomingEventsSettingsView', icon: CalendarClock },
   { id: 'tags', label: { en: 'Tags', he: 'תגיות' }, componentName: 'TagsSettingsView', icon: Tag },
   { id: 'scheduled-reports', label: { en: 'Scheduled reports', he: 'דוחות מתוזמנים' }, componentName: 'ScheduledReportsSettingsView', icon: CalendarClock },
+  { id: 'alerts', label: { en: 'Alerts', he: 'התראות' }, componentName: 'AlertsSettingsView', icon: BellRing },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ], 'settings');
@@ -467,6 +468,7 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'IncomingEventsSettingsView': lazy(() => import('../components/platform/settings/IncomingEventsSettings')),
   'TagsSettingsView': lazy(() => import('../components/platform/settings/TagsSettings')),
   'ScheduledReportsSettingsView': lazy(() => import('../components/platform/settings/ScheduledReportsSettings')),
+  'AlertsSettingsView': lazy(() => import('../components/platform/settings/AlertsSettings')),
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };
 

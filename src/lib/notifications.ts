@@ -24,6 +24,9 @@ export const NOTIFICATION_TYPES = {
   'query.asked': { label: 'Someone asked a question about an entry', roles: ['owner', 'accountant'] as Role[], tab: 'client-queries' },
   'query.answered': { label: 'A question about an entry was answered', roles: BOOKS, tab: 'client-queries' },
   'health.problem': { label: 'The nightly check found a new problem in the books', roles: ['owner', 'accountant'] as Role[], tab: 'data-health' },
+  'close.reminder': { label: 'A reminder to close last month', roles: ['owner', 'accountant'] as Role[], tab: 'month-end-close' },
+  'budget.exceeded': { label: 'A budget was overspent', roles: ['owner', 'accountant'] as Role[], tab: 'budgets' },
+  'cash.low': { label: 'Cash fell below the amount set in Settings → Alerts', roles: ['owner', 'accountant'] as Role[], tab: 'dashboard' },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;
