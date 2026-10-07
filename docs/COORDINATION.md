@@ -383,6 +383,85 @@ no migration unless agreed under Messages first, every screen with its `<h1>`, a
   buckets (0–30, 31–90, 91–180, 180+ days, never sold), with a filter for "no sale in N days" and a CSV.
   Read-only (value = quantity × average cost as the stock screen shows it). Tests with hand-checked dates.
 
+### More tasks for AI #3 (written by Claude, 7 Oct, at the owner's request: "make sure AI #3 has a lot to work on")
+
+In order after A-7…A-9. Read [`docs/ROADMAP.md`](ROADMAP.md) first: each task says its bucket. Same rules as
+before:
+- **Files:** stay out of AI #1's files (the table below) and keep to read-only figures unless the task says otherwise.
+- **Database:** a needed database change is a migration file in the agreed pattern, listed for review.
+- **Help:** every new screen gets its `help` and its line in `e2e/view-registry-coverage.spec.ts`.
+- **Browser checks:** run the browser suite before handing in, because `e2e/layout.spec.ts` runs axe on every screen.
+
+- [ ] **A-10 DA-05 What works today: one truth table** (V1). Write `docs/CAPABILITIES.md`, one row per capability
+  of the app (start from `docs/TOOL_REVIEW.md`'s 70 rows and `src/config/registry.tsx`'s screens).
+  - **Labels:** each row gets exactly one of Available · Available with limits · Partial · Internal, test or demo
+    only · Planned · Needs an owner decision.
+  - **Evidence:** the code path and the test that prove it.
+  - **Limits:** the limit in one plain sentence.
+  - **What "Available" needs:** a working screen, a saved result and a test of that path. A type, a route, an
+    empty screen or an arithmetic-only test is not enough.
+  - **Make the rest agree:** README, Help → What's new and the onboarding texts. Where they claim more than the
+    table, change their words, not the table.
+  - **Replace the old status page:** `docs/STATUS.md` (stale, TOOL_REVIEW F5) becomes a pointer to the new file.
+  - **Hand-in:** list in Messages every claim you changed.
+- [ ] **A-11 DA-06 Workflow pages for the main path** (V1, after A-10). In Help & Guide, one page per step of the
+  main path (ROADMAP "The main path": books, accounts, customers/vendors/items, bank, money in, money out, labels,
+  payments, reconcile, reports, close, backup and restore, "where a number comes from").
+  - **What each page says:** before you start · what you do · what LedgerFlow changes · what you see afterwards ·
+    what it affects further on · what can fail · whether it can be undone · what belongs to this workspace only ·
+    what happens by itself · what still needs a person.
+  - **Source of truth:** the pages take their claims from A-10's table.
+  - **Language:** English menus and plain sentences.
+  - **Tests:** every page is reachable from Help's search and from the screen's help bar.
+- [ ] **A-12 CB-25 Report by label** (Later P1). A report "By label": choose a label (Property, Project,
+  Location…) and a period.
+  - **What it shows:** income, cost of goods sold, expenses and the result per value of that label, with an
+    "Unassigned" column.
+  - **Where labels come from:** they now arrive from invoice and bill lines too (BF-09, `getLineDimension` in
+    `src/lib/dimensionUtils.ts`).
+  - **Totals:** each column adds back to the P&L total of the same period, and a test checks that.
+  - **Drill-down:** a figure opens the entries behind it (`DrillDownModal`).
+  - **Full history:** reads full history the way the budget-vs-actual report does (C-24: a paginated read;
+    figures marked provisional when only cached data is there).
+  - **Tests:** hand-checked numbers with Hebrew label values.
+- [ ] **A-13 CB-08 Profitability by customer, item or project** (Later). One report with a "by" switch.
+  - **What it shows:** revenue (posted invoice lines), cost of goods sold (`invoice-cogs-auto` entries, by their
+    invoice line), gross margin and margin %.
+  - **Projects:** "by project" also takes the project's bills and labelled expense lines.
+  - **Read-only:** whole cents, CSV.
+  - **Tests:** a customer with two invoices, one partly credited (credit notes reduce revenue); an item sold at
+    two prices.
+- [ ] **A-14 CB-17, CB-18, CB-19 Received-not-billed, billed-not-received, ordered-not-received** (Later). Three
+  small read-only lists on Purchases, from purchase orders, their goods receipts (`receipts` on the order) and
+  bills (`billId`, BE-11).
+  - **Each row:** the order, the vendor, the quantities and values on each side, the age.
+  - **Totals:** each list has its total and a CSV.
+  - **No posting:** these lists are what an accountant uses to accrue by hand.
+  - **Tests:** an order received in full and billed half, one billed but not received, one neither.
+- [ ] **A-15 V-07 Project budget against actual** (Later). On a project's page: its budget (a total, or per account
+  when set), what is spent and earned so far, what is left and the % used.
+  - **Where actuals come from:** posted entries with that project label, from journal lines and now from invoice
+    and bill lines (BF-09).
+  - **The budget:** stored on the project document (its existing allow-listed fields; if a new field is needed, a
+    migration file for review).
+  - **Warning:** amber when an expense line would take it over.
+  - **Tests:** hand-checked numbers, an entry without the label not counted.
+- [ ] **A-16 BF-02 Customer price overrides** (Later). On a customer's page, "Prices for this customer": an item and
+  its price.
+  - **On the invoice:** choosing that item fills that price instead of the list price, and says so ("customer
+    price"). A typed price still wins.
+  - **What it never changes:** posting and tax.
+  - **Storage:** on the customer document. The customers table has a field allow-list, so the migration file goes
+    in the agreed pattern, listed for review.
+  - **Tests:** the override fills, another customer gets the list price, a removed override falls back.
+- [ ] **A-17 Y-19 Print stylesheet** (Later). Printing any screen gives a clean page:
+  - no sidebar, header, buttons or toasts;
+  - tables not cut across pages (headers repeated);
+  - amounts in black;
+  - the workspace name and the date printed at the top.
+  - **Tests:** a browser test that prints the transactions list and an invoice preview to PDF and checks the
+    sidebar is not in it.
+
 ## AI #4 (Codex): tasks (written by Claude, 6 Oct)
 
 Each task is a whole feature with tests, in its own area. **Don't edit** AI #1's files (the table
@@ -1043,3 +1122,6 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   named with the account, and an optional `scope` on the attachment target shows only that month's files
   (`src/lib/attachments.ts`, `WorkpapersPanel.tsx`, your UI test updated). For next time: the browser suite
   includes `e2e/layout.spec.ts`, which runs axe on every screen.
+- 2026-10-07 AI #1 (Claude) → AI #3: at the owner's request your queue is longer: A-10…A-17 after A-9 (two of
+  them, A-10 and A-11, are first-release items from the roadmap). Take them in order; ask under Messages if one
+  touches a file of mine.

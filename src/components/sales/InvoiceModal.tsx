@@ -23,6 +23,7 @@ import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TRE
 import { depositAppliedCents } from '../../lib/documentMath';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import AttachmentsPanel from '../common/AttachmentsPanel';
+import { LineLabels } from '../common/LineLabels';
 import { attachmentProblem } from '../../lib/attachments';
 
 interface InvoiceModalProps {
@@ -66,7 +67,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     amountCents: 0
   }));
 
-  const [items, setItems] = useState<Array<{ id: string, itemId?: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string, taxRate?: number, unitCostCents?: number }>>([
+  const [items, setItems] = useState<Array<{ id: string, itemId?: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string, taxRate?: number, unitCostCents?: number, dimensions?: Record<string, string> }>>([
     { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }
   ]);
 
@@ -609,6 +610,8 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                       <Trash2 size={18} />
                     </button>
                   </div>
+                  <div className="col-span-12"><LineLabels value={item.dimensions} lineNumber={idx + 1} accountId={item.accountId} date={invoice.date || ''}
+                    onChange={dimensions => setItems(items.map((it, i) => (i === idx ? { ...it, dimensions } : it)))} /></div>{/* BF-09 */}
                 </div>
               ))}
             </div>

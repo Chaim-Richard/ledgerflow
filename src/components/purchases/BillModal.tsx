@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { BudgetLeft } from '../common/BudgetLeft';
+import { LineLabels } from '../common/LineLabels';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
@@ -87,7 +88,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     }
   }, [isOpen, editingExisting]);
 
-  const [splits, setSplits] = useState<Array<{ id: string, amountCents: number, accountId: string, description: string }>>([
+  const [splits, setSplits] = useState<Array<{ id: string, amountCents: number, accountId: string, description: string, dimensions?: Record<string, string> }>>([
     { id: crypto.randomUUID(), amountCents: 0, accountId: '', description: '' }
   ]);
 
@@ -100,7 +101,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     setFilledFrom(initialBill);
     const { splits: initialSplits, ...fields } = initialBill;
     setBill(prev => ({ ...prev, ...fields }));
-    if (initialSplits?.length) setSplits(initialSplits.map(s => ({ id: crypto.randomUUID(), amountCents: s.amountCents, accountId: s.accountId || '', description: s.description || '' })));
+    if (initialSplits?.length) setSplits(initialSplits.map(s => ({ id: crypto.randomUUID(), amountCents: s.amountCents, accountId: s.accountId || '', description: s.description || '', ...(s.dimensions ? { dimensions: { ...s.dimensions } } : {}) })));
   }
 
   const total = splits.reduce((sum, split) => sum + split.amountCents, 0);
@@ -120,7 +121,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   const splitsEmpty = splits.every(sp => !sp.amountCents);
   const repeatLast = () => {
     if (!lastForVendor?.splits) return;
-    setSplits(lastForVendor.splits.map(sp => ({ id: crypto.randomUUID(), amountCents: sp.amountCents, accountId: sp.accountId || '', description: sp.description || '' })));
+    setSplits(lastForVendor.splits.map(sp => ({ id: crypto.randomUUID(), amountCents: sp.amountCents, accountId: sp.accountId || '', description: sp.description || '', ...(sp.dimensions ? { dimensions: { ...sp.dimensions } } : {}) })));
     setBill(prev => ({
       ...prev,
       ...(lastForVendor.taxCodeId ? { taxCodeId: lastForVendor.taxCodeId } : {}),
@@ -500,6 +501,11 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                     >
                       <Trash2 size={18} />
                     </button>
+                  </div>
+                  {/* BF-09: Property, Project… on this line, posted with its expense */}
+                  <div className="col-span-12">
+                    <LineLabels value={split.dimensions} lineNumber={idx + 1} accountId={split.accountId} date={bill.date || ''}
+                      onChange={dimensions => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, dimensions } : sp)))} />
                   </div>
                 </div>
               ))}

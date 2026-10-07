@@ -2265,7 +2265,10 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
     - Each delivery moves stock exactly once, also when it is retried. The cost follows the units that left, under the workspace's costing method.
     - A return gives back exactly what its delivery moved (BF-06).
     - Freight and delivery costs are separate expenses, never product cost.
-- [ ] BF-09 Line-level class / location
+- [x] BF-09 Line-level class / location — **done 7 Oct**: labels on invoice and bill lines.
+  - **On screen:** each line of the invoice and bill forms has "Labels" (Project, Location, Property and the workspace's own labels), folded away until wanted. The workspace's values are offered. It opens by itself and names what is missing when the line's account needs a label (Z-12).
+  - **In the books:** the labels are posted with the line's revenue or expense. Two lines on the same account with different labels stay two posted lines, the amounts still add up to the cent, and an invoice line's labels go with its cost of goods sold too.
+  - **What it unblocks:** reports by label now include invoices and bills (`LineLabels.tsx`, `TransactionTemplates.ts`, `postingKit.lineAccounts`, `invoiceCogs.ts`; tests `line-labels.test.tsx`). This unblocks DA-08 and AI #3's A-12, A-13 and A-15.
 
 # SECTION BG — COLLABORATION
 

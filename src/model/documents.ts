@@ -92,6 +92,8 @@ export interface Bill {
     accountId: string;
     taxRate?: number;
     description?: string;
+    /** BF-09: the line's labels (Property, Project…), posted with its expense */
+    dimensions?: Record<string, string>;
   }>;
   projectId?: string;
   issueDate?: string;
@@ -168,6 +170,8 @@ export interface Invoice {
     accountId: string;
     taxRate?: number;
     unitCostCents?: number;
+    /** BF-09: the line's labels (Project, Location…), posted with its revenue */
+    dimensions?: Record<string, string>;
     metadata?: EntityMetadata;
   }>;
   progressPercentage?: number;

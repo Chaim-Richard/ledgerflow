@@ -180,7 +180,7 @@ Last updated: 2026-10-07.
         stay hidden until a workspace uses them or you turn them on (BB-07).
       - No separate "simple" and "advanced" versions.
 
-28. **One database change to paste (7 Oct, A-6 from the arena AI).**
+28. ~~**One database change to paste (7 Oct, A-6 from the arena AI).**~~ **Done: applied by Claude on 7 Oct.**
     `supabase/migrations/20261013050000_chart_account_workpapers.sql` — it allows the `workpapers`
     field on chart accounts: the note and the review mark a month's close keeps per account and
     month (BD-04, the Workpapers panel on Month-End Close). Safe to run twice. *Until it is

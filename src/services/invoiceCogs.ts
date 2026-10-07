@@ -84,7 +84,8 @@ export function planInvoiceCogs(input: InvoiceCogsInput): InvoiceCogsPlan {
       createdAt: now,
       metadata: { invoiceId, type: INVOICE_COGS_TYPE, cogsForInvoiceId: invoiceId, cogsForLineId: lineId, inventoryItemId: itemId, quantity },
       lines: [
-        { accountId: cogsAccount.id, accountName: cogsAccount.name, amountCents: costCents, debitCents: costCents, creditCents: 0, description: `Cost of ${name}` },
+        // the invoice line's labels (BF-09) go with its cost, so margin by project or location adds up
+        { accountId: cogsAccount.id, accountName: cogsAccount.name, amountCents: costCents, debitCents: costCents, creditCents: 0, description: `Cost of ${name}`, ...(line.dimensions ? { dimensions: line.dimensions } : {}) },
         { accountId: inventoryAccount.id, accountName: inventoryAccount.name, amountCents: -costCents, debitCents: 0, creditCents: costCents, description: `Inventory out: ${name}` },
       ],
     };

@@ -145,7 +145,7 @@ export function resolveAccount(
  * document's default account. Returns undefined when there are no lines.
  */
 export function lineAccounts(
-  lines: Array<{ accountId?: string; amountCents?: number }> | undefined,
+  lines: Array<{ accountId?: string; amountCents?: number; dimensions?: Record<string, string> }> | undefined,
   accounts: ChartAccount[],
   fallback: { id: string; name: string },
   usable: (a: ChartAccount) => boolean
@@ -154,9 +154,13 @@ export function lineAccounts(
   return lines.map(line => {
     const key = String(line.accountId || '').trim();
     const account = key ? accounts.find(a => a.id === key) || accounts.find(a => (a.name || '').toLowerCase() === key.toLowerCase()) : undefined;
+    // the line's labels (BF-09), without empty ones
+    const labels = Object.fromEntries(Object.entries(line.dimensions || {})
+      .filter(([k, v]) => k && typeof v === 'string' && v.trim() !== '').map(([k, v]) => [k, v.trim()]));
     return {
       account: account && usable(account) ? { id: account.id, name: account.name } : fallback,
       weightCents: Number(line.amountCents) || 0,
+      ...(Object.keys(labels).length > 0 ? { dimensions: labels } : {}),
     };
   });
 }
