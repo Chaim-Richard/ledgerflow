@@ -27,6 +27,8 @@ export interface NotifyInput {
   actorUid?: string;
   /** Pass the workspace when it is already loaded. */
   workspace?: DocumentData;
+  /** Only these people (still only if their role gets this kind and they want it): news about them. */
+  onlyUids?: string[];
 }
 
 export function notificationId(workspaceId: string, eventKey: string, uid: string): string {
@@ -38,12 +40,14 @@ export async function notify(db: Firestore, input: NotifyInput): Promise<number>
   try {
     const workspace = input.workspace || (await db.collection('workspaces').doc(input.workspaceId).get()).data();
     if (!workspace) return 0;
-    const everyone = notificationRecipients(workspace, input.kind, new Map(), input.actorUid);
+    const everyone = notificationRecipients(workspace, input.kind, new Map(), input.actorUid)
+      .filter(uid => !input.onlyUids || input.onlyUids.includes(uid));
     if (!everyone.length) return 0;
     const profiles = await Promise.all(everyone.map(uid => db.collection('users').doc(uid).get()));
     const prefs = new Map<string, NotificationPrefs | undefined>(
       profiles.map((p, i) => [everyone[i], (p.data()?.notificationPrefs as NotificationPrefs | undefined)]));
-    const recipients = notificationRecipients(workspace, input.kind, prefs, input.actorUid);
+    const recipients = notificationRecipients(workspace, input.kind, prefs, input.actorUid)
+      .filter(uid => !input.onlyUids || input.onlyUids.includes(uid));
     const createdAt = new Date().toISOString();
     let sent = 0;
     for (const uid of recipients) {

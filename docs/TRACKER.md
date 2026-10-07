@@ -1926,7 +1926,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] S-12 job.failed — **done 6 Oct** for what a workspace can act on: a recurring invoice, bill or entry that could not be created (a missing account, a closed month…) now tells the people who keep the books, once per occurrence, with the reason and a link to Recurring Items (`recurring.failed`, can be turned off like the others). The installation-wide daily run's own failures stay on the status page and Settings → Schedule (BB-06), not in every customer's bell
 - [ ] S-13 export.ready
 - [x] S-14 user.invited / joined
-- [ ] S-15 permission.changed
+- [x] S-15 permission.changed — **done 7 Oct**: when an owner changes someone's role, that person alone is told ("Your role is now Accountant · before: Bookkeeper"); the same role again tells nobody. Viewers can get this one notice (`notify(…, { onlyUids })`; tests `role-change-notice.test.ts` with the database)
 - [ ] S-16 subscription events
 - [ ] S-17 transaction.unusual
 - [ ] S-18 Digest vs immediate

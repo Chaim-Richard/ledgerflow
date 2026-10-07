@@ -312,6 +312,8 @@ workspaceRouter.get('/:workspaceId/roles', async (req, res) => {
 /**
  * Update workspace user role (Owner only) - Supports POST and PATCH /:workspaceId/roles/:uid
  */
+const ROLE_LABEL: Record<string, string> = { owner: 'Owner', accountant: 'Accountant', bookkeeper: 'Bookkeeper', viewer: 'Viewer' };
+
 const handleUpdateRole = async (req: express.Request, res: express.Response) => {
   const { workspaceId } = req.params as Record<string, string>;
   const targetUid = req.params.uid || req.body.targetUid;
@@ -363,6 +365,15 @@ const handleUpdateRole = async (req: express.Request, res: express.Response) => 
       }, { db, tx });
     });
 
+    // S-15: the person is told their new role (not when they changed it themselves)
+    if (previousRole !== role) {
+      const label = (r: string) => ROLE_LABEL[r] || r;
+      await notify(db, {
+        workspaceId, kind: 'member.role_changed', title: `Your role is now ${label(role)}`,
+        message: `In this workspace you are now ${label(role)} (before: ${label(previousRole)}). What you can see and change follows the new role.`,
+        eventKey: `role:${targetUid}:${previousRole}:${role}:${Date.now()}`, actorUid: requestUser(req).uid, onlyUids: [String(targetUid)],
+      });
+    }
     res.json({ status: 'success', targetUid, role, previousRole });
   } catch (err) {
     if (errorMessage(err) === 'LAST_OWNER_PROTECTION') {
