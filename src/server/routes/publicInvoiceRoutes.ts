@@ -5,6 +5,7 @@ import { getTrustedAppUrl } from '../utils/urlHelper';
 import { calculateAmountDue, depositAppliedCents } from '../../lib/documentMath';
 import Stripe from 'stripe';
 import { publicPortalRouter } from './customerPortalRoutes';
+import { recordInvoiceView } from '../services/invoiceViewService';
 
 let stripeClient: Stripe | null = null;
 function getStripe(): Stripe {
@@ -67,6 +68,8 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
       : 0;
     // What is still due, by the one money rule (discounts, retainage, credits, payments)
     const remainingBalance = calculateAmountDue(invoice);
+    // S-02: the customer opened it (recorded before answering: work after the answer may not run on the host)
+    if (!['draft', 'void', 'voided'].includes(String(invoice.status || '').toLowerCase())) await recordInvoiceView(db, doc.ref, invoice);
 
     res.json({
       invoice: {

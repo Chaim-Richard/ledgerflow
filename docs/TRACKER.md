@@ -1913,7 +1913,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 # SECTION S — NOTIFICATIONS
 
 - [x] S-01 invoice.sent (email to the customer, logged)
-- [ ] S-02 invoice.viewed
+- [x] S-02 invoice.viewed — **done 7 Oct**: opening an invoice's own page (/i/…, from the email or the customer portal) records when the customer first and last opened it and how often (at most once an hour; drafts and voided invoices are not counted), and the first time owners, accountants and bookkeepers are notified ("Acme opened invoice INV-7 · $500.00 is still due by 2026-10-31"). The Sales list shows "Opened by the customer <date>" on unpaid invoices. Server-only fields; never breaks the page (`src/server/services/invoiceViewService.ts`; tests `invoice-viewed.test.ts` with the database)
 - [x] S-03 invoice.overdue (daily, once per invoice, workspace date; tested)
 - [x] S-04 payment.received (recorded payments and bank-line payments; online card payments with K-11)
 - [ ] S-05 payment.failed

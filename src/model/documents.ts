@@ -203,6 +203,10 @@ export interface Invoice {
   /** set when saved (database row times) */
   createdAt?: string;
   updatedAt?: string;
+  /** S-02: when the customer first and last opened the invoice's own page, and how often (an hour apart at most). Set by the server. */
+  viewedAt?: string;
+  lastViewedAt?: string;
+  viewCount?: number;
 }
 
 export interface PaymentAllocation {
