@@ -9,7 +9,7 @@ import { Labelled } from '../ui/Labelled';
 import { AVAILABLE_SCOPES } from './ApiHubShared';
 import type { useApiHubModel } from './useApiHubModel';
 export function ApiHubKeys({ model }: { model: ReturnType<typeof useApiHubModel> }) {
- const { overlayDialogProps, overlayTitleId, formId, currentWorkspace, nowMs, apiKey, isRegenerating, isCopied, publicKeys, newKeyName, setNewKeyName, selectedScopes, setSelectedScopes, expiration, setExpiration, showCreateModal, setShowCreateModal, generateNewKey, revokeKey, copyKey } = model;
+ const { overlayDialogProps, overlayTitleId, formId, currentWorkspace, nowMs, apiKey, isRegenerating, isCopied, publicKeys, newKeyName, setNewKeyName, selectedScopes, setSelectedScopes, expiration, setExpiration, perMinute, setPerMinute, showCreateModal, setShowCreateModal, generateNewKey, revokeKey, copyKey } = model;
  return (<div className="space-y-6">
           <div className="ledger-card p-4 md:p-8 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--line)] pb-6">
@@ -219,6 +219,19 @@ export function ApiHubKeys({ model }: { model: ReturnType<typeof useApiHubModel>
                         <option value="24h">24 Hours (Daily Rotation)</option>
                         <option value="30d">30 Days</option>
                         <option value="90d">90 Days</option>
+                      </select>
+                    </Labelled>
+                  </div>
+
+                  {/* Z-02: this key's own limit */}
+                  <div className="space-y-2">
+                    <Labelled labelClassName="text-xs font-black uppercase tracking-wider text-[var(--muted)] block" label="Requests a minute (this key)">
+                      <select
+                        value={perMinute}
+                        onChange={(e) => setPerMinute(Number(e.target.value))}
+                        className="w-full bg-[var(--ink)] border border-[var(--line)] p-3.5 rounded-xl text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-slate-950 focus:bg-[var(--surface)] transition-all shadow-3xs"
+                      >
+                        {[30, 60, 120, 300, 600, 1200].map(n => <option key={n} value={n}>{n} a minute{n === 120 ? ' (usual)' : ''}</option>)}
                       </select>
                     </Labelled>
                   </div>

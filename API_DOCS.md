@@ -948,3 +948,7 @@ Generates deterministic, pixel-perfect binary PDF documents (`application/pdf`) 
 ## Sparse fieldsets (Z-04)
 
 `GET /api/v1/transactions?workspaceId=…&fields=date,description,totalAmountCents` returns only those fields of each entry, plus its `id`. A field can name one level inside an object (`metadata.invoiceId`). At most 50 fields; a name that is not a field name answers `400`. Without `fields`, whole entries come back as before.
+
+## Rate limits per API key (Z-02)
+
+Requests made with an API key count against that key's own limit a minute (chosen when the key is made: 30 to 1,200 on the screen, 10 to 10,000 through `POST /api/v1/keys/provision` with `rateLimitPerMinute`; 120 otherwise), not against your IP address. Every answer carries `RateLimit-*` headers; over the limit, the answer is `429` with `{"code": "RATE_LIMIT_EXCEEDED"}` until the minute is over.

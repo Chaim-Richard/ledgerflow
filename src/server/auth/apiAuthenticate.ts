@@ -4,6 +4,7 @@ import { getDb, FieldValue } from "../db/firestore";
 import { getShardedCounterValue } from "../services/shardedCounterService";
 import { verifyIdToken } from "./supabaseAuth";
 import { globalAdminConfig } from "../http/serverKit";
+import { apiKeyLimit, apiKeyRateLimiter } from "../middleware/rateLimiters";
 import type { AuthenticatedRequest, AuthUser } from "../http/serverKit";
 
 // Deep API Key Authentication Middleware
@@ -147,7 +148,8 @@ export const apiAuthenticate = async (req: express.Request, res: express.Respons
         developerWorkspaceId: workspaceIdPattern,
         apiKeyName: docData?.name || "Production Integration Key",
         firebase: { sign_in_provider: "custom" },
-        usedApiKeyId: keyId
+        usedApiKeyId: keyId,
+        apiKeyRateLimit: apiKeyLimit(docData?.rateLimitPerMinute)
       } as any;
 
       // Background metrics update (does not block original request response)
@@ -160,7 +162,8 @@ export const apiAuthenticate = async (req: express.Request, res: express.Respons
         // stats silently fail with safety
       }
 
-      return next();
+      // Z-02: each key has its own limit a minute
+      return apiKeyRateLimiter(req, res, next);
     } catch (err) {
       console.error("[Deep Auth] Token verification failure:", err);
       return res.status(500).json({ status: "error", message: "Authentication / Verification failure within LedgerFlow core." });
