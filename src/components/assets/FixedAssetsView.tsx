@@ -12,6 +12,7 @@ import { depreciationThrough } from '../../lib/depreciationEngine';
 import { formatCurrency, formatDate, formatTzDate, parseAmountToCents } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import DisposeAssetDialog from './DisposeAssetDialog';
+import DepreciationScheduleTable from './DepreciationScheduleTable';
 
 /**
  * Fixed asset register (R-06). Assets are saved in the database ('assets'); depreciation is posted
@@ -45,6 +46,8 @@ export const FixedAssetsView: React.FC = () => {
   // X-03: the asset being sold or scrapped, and the one whose disposal is being undone
   const [disposing, setDisposing] = useState<FixedAsset | null>(null);
   const [undoing, setUndoing] = useState('');
+  // X-02: the asset whose depreciation schedule is open
+  const [scheduleOf, setScheduleOf] = useState('');
   const [form, setForm] = useState(() => ({
     name: '', cost: '', salvage: '0', years: '5', purchaseDate: today, method: 'straight-line' as FixedAsset['depreciationMethod'],
     assetAccountId: '', expenseAccountId: '', accumulatedAccountId: '',
@@ -198,10 +201,15 @@ export const FixedAssetsView: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-[var(--line)] text-[var(--text)]">
               {list.map(asset => (
-                <tr key={asset.id}>
+                <React.Fragment key={asset.id}>
+                <tr>
                   <td className="py-3 px-4 font-semibold">
                     <AssetInlineDetails asset={asset} />
                     <div className="text-[11px] text-[var(--muted)] font-normal">{asset.depreciationMethod === 'declining-balance' ? 'Declining balance' : 'Straight line'}{asset.status === 'disposed' ? ' · disposed' : ''}</div>
+                    <button type="button" aria-expanded={scheduleOf === asset.id} onClick={() => setScheduleOf(scheduleOf === asset.id ? '' : asset.id)}
+                      className="mt-1 text-[11px] font-semibold text-[var(--brass)] hover:underline">
+                      {scheduleOf === asset.id ? 'Hide schedule' : 'Schedule'}<span className="sr-only"> of {asset.name}</span>
+                    </button>
                   </td>
                   <td className="py-3 px-4 font-mono">{formatDate(asset.purchaseDate)}</td>
                   <td className="py-3 px-4 text-right font-mono">{formatCurrency(asset.purchasePriceCents)}</td>
@@ -227,6 +235,14 @@ export const FixedAssetsView: React.FC = () => {
                     </td>
                   )}
                 </tr>
+                {scheduleOf === asset.id && (
+                  <tr>
+                    <td colSpan={canWrite ? 8 : 7} className="px-4 pb-4 bg-[var(--panel)]">
+                      <DepreciationScheduleTable asset={asset} />
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

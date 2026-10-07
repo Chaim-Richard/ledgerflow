@@ -1992,7 +1992,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 # SECTION X — FIXED ASSET LIFECYCLE
 
 - [ ] X-01 Asset from a bill
-- [ ] X-02 Depreciation schedule report
+- [x] X-02 Depreciation schedule report — **done 7 Oct**: on the Fixed Asset Register, "Schedule" under each asset opens its depreciation by year (depreciation, accumulated and book value at the year end, and whether the month-end run already posted it), and "Monthly schedule (.csv)" downloads every month. Worked out by the same engine the run posts from, by the asset's own method (`depreciationSchedule`, `scheduleByYear` in `src/lib/depreciationEngine.ts`; tests `depreciation-schedule.test.tsx`)
 - [x] X-03 Disposal with gain/loss — **done 7 Oct**: Fixed Asset Register → "Sell or scrap" (owners, accountants, bookkeepers): the date, what was received (0 if scrapped), where the money went and the account for the gain or loss, with the book value and the gain or loss shown before posting. One balanced entry on that date posts the depreciation still due through the month, takes the cost and all accumulated depreciation off the books, records the money and the gain (credit) or loss (debit); the asset is marked disposed and leaves the register totals. "Undo disposal" voids that entry and puts the asset back while the date is open; the period lock applies (`src/lib/assetDisposal.ts`, `src/server/services/assetDisposalService.ts`; tests `asset-disposal.test.ts` with hand-checked cents and the database, `asset-disposal-ui.test.tsx`)
 - [ ] X-04 Partial disposal
 - [ ] X-05 Asset transfer
