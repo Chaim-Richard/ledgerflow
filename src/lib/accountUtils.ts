@@ -2,6 +2,16 @@ import { ChartAccount } from '../types';
 
 export type AccountRole = 'cash' | 'ar' | 'ap' | 'inventory' | 'revenue' | 'expense' | 'cogs' | 'equity' | 'liability' | 'asset' | 'fx_rounding' | 'unknown';
 
+/**
+ * An income account. Both spellings are saved: 'income' (the chart's own form) and 'revenue'
+ * (spreadsheet imports, `parseAccountType`); code that looks for income accounts must accept both,
+ * or an imported "Sales" account is missed (found by the main-path test, DA-07).
+ */
+export function isIncomeAccount(account: { type?: string } | undefined | null): boolean {
+  const type = String(account?.type || '').toLowerCase();
+  return type === 'income' || type === 'revenue';
+}
+
 export function resolveAccountRole(account: ChartAccount | undefined | null): AccountRole {
   if (!account) return 'unknown';
 

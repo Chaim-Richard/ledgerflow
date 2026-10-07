@@ -22,6 +22,7 @@ const ChartOfAccountsView = React.lazy(() => import('./ChartOfAccountsView'));
 const JournalView = React.lazy(() => import('./JournalView'));
 import type { JournalListEntry } from './JournalView';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { isIncomeAccount } from '../../lib/accountUtils';
 const TrialBalanceView = React.lazy(() => import('./TrialBalanceView'));
 // Keep legacy views reachable for the structural component guard.
 const _ProjectProfitabilityView = React.lazy(() => import('./ProjectProfitabilityView'));
@@ -217,8 +218,8 @@ const Ledger = React.memo(() => {
 
   const totalProfitCents = useMemo(() => {
     return accounts
-      .filter(a => a.type === 'income' || a.type === 'expense')
-      .reduce((sum, a) => a.type === 'income' ? sum + a.balanceCents : sum - a.balanceCents, 0);
+      .filter(a => isIncomeAccount(a) || a.type === 'expense')
+      .reduce((sum, a) => isIncomeAccount(a) ? sum + a.balanceCents : sum - a.balanceCents, 0);
   }, [accounts]);
 
   return (

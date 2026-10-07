@@ -1,4 +1,4 @@
-import { resolveAccountRole } from '../../lib/accountUtils';
+import { isIncomeAccount, resolveAccountRole } from '../../lib/accountUtils';
 import { getLocalDateISO, roundCents } from '../../lib/utils';
 import { Invoice } from '../../types';
 import { isPostable } from '../../lib/txFilters';
@@ -49,7 +49,7 @@ export async function postInvoiceLedger(
     accounts,
     mappings,
     ['revenue', 'sales', 'income'],
-    a => a.type === 'income' || a.category === 'Revenue' || a.category === 'Sales',
+    a => isIncomeAccount(a) || a.category === 'Revenue' || a.category === 'Sales',
     'Sales Revenue'
   );
 
@@ -132,7 +132,7 @@ export async function postInvoiceLedger(
     accounts,
     mappings,
     ['discount', 'sales discount'],
-    a => a.type === 'expense' || (a.type === 'income' && a.name.toLowerCase().includes('discount')),
+    a => a.type === 'expense' || (isIncomeAccount(a) && a.name.toLowerCase().includes('discount')),
     'Sales Discounts'
   ) : null;
   
@@ -155,7 +155,7 @@ export async function postInvoiceLedger(
     arAccount,
     revenueAccount,
     // income accounts; Opening Balance Equity only for a customer's opening balance (BA-02)
-    lineAccounts: lineAccounts(invoiceData.items, accounts, revenueAccount, a => a.type === 'income' || isOpeningBalanceEquity(a)),
+    lineAccounts: lineAccounts(invoiceData.items, accounts, revenueAccount, a => isIncomeAccount(a) || isOpeningBalanceEquity(a)),
     taxAccount,
     discountAccount,
     retainageAccount

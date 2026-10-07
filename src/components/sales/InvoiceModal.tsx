@@ -6,7 +6,7 @@ import { calculateDueDate, isFixedTerm, termsForCustomer } from '../../lib/payme
 import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
-import { isUndepositedFundsAccount, resolveAccountRole } from '../../lib/accountUtils';
+import { isIncomeAccount, isUndepositedFundsAccount, resolveAccountRole } from '../../lib/accountUtils';
 import { X, Plus, Trash2, Save, Download, Eye } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Invoice, Customer, ChartAccount } from '../../types';
@@ -44,7 +44,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   // Ensure we have arrays even if props were passed as null
   // archived contacts aren't offered for new documents; one already on this document stays (I-22)
   const safeCustomers = (Array.isArray(customers) ? customers : []).filter(c => !isArchivedParty(c) || c.id === initialInvoice?.customerId);
-  const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'income') : [];
+  const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => isIncomeAccount(a)) : [];
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const inventoryItems = useLedgerStore(s => s.inventory || []);

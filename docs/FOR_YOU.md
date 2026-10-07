@@ -187,6 +187,15 @@ Last updated: 2026-10-07.
     applied:* saving a note or a review mark is refused by the database guard and the panel says
     so; everything else on the page works.
 
+29. **Restoring a backup made before a month was closed (7 Oct, decided by default).** The new
+    end-to-end test of the main path found that once any month was closed, no backup could be
+    restored at all, because reopening a month never fully clears the lock.
+    - **Fixed:** a backup made when the books were closed at least as far as now restores normally
+      (its closed months are the same closed books).
+    - **Still refused:** a backup from before a close, with a message saying why.
+    - *Default:* that stays refused, so closed books are never replaced by an older state. If you
+      want an owner-only "reopen everything" that allows it, say so and Claude adds it, audited.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

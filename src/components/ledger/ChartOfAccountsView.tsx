@@ -16,6 +16,7 @@ import type { AccountGroupLayoutRow } from '../../lib/accountGroups';
 import InlineEdit from '../ui/InlineEdit';
 import MergeAccountDialog from './MergeAccountDialog';
 import { AccountGroupToggle } from './AccountGroupControls';
+import { isIncomeAccount } from '../../lib/accountUtils';
 
 /** Edit in place (I-22): one field of an account. System accounts keep their code (the database refuses it). */
 async function saveAccountField(account: ChartAccount, field: 'name' | 'code' | 'description' | 'category', value: string | number) {
@@ -130,7 +131,7 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
               account.type === 'asset' ? "bg-blue-50 border-blue-100 text-blue-700" :
               account.type === 'liability' ? "bg-amber-50 border-amber-100 text-amber-700" :
               account.type === 'equity' ? "bg-purple-50 border-purple-100 text-purple-700" :
-              account.type === 'income' ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-rose-50 border-rose-100 text-rose-700"
+              isIncomeAccount(account) ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-rose-50 border-rose-100 text-rose-700"
             )}>
               {account.type}
             </span>

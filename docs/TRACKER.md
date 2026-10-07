@@ -2556,7 +2556,15 @@ BD-06, P-08 and BB-07. Each item says its bucket. Only the owner moves an item i
   - what still needs a person to check.
 
   The pages take their claims from DA-05.
-- [ ] DA-07 The main path, tested end to end (one simple business) — **V1**: one browser test, signed in, goes through:
+- [x] DA-07 The main path, tested end to end (one simple business) — **done 7 Oct, against the real database** (`src/tests/main-path.test.ts`). Ten steps run through the routes and services the app uses; invoices and bills are posted by the app's own posting code, whose requests go to the real server routes:
+  1. the books; 2. accounts, a customer and a vendor imported; 3. the bank statement's lines; 4. an invoice and a bill; 5. a part payment and a bill paid in full; 6. both bank lines matched; 7. trial balance, P&L, balance sheet and receivables aging checked against hand figures; 8. May closed, and a write into it refused; 9. backup and restore; 10. the 400.00 owed traced to its entries, its invoice and its bank line. Hebrew and English data together.
+
+  **Two real bugs found and fixed:**
+  - **Imported income accounts were missed:** an "Income" account imported from a spreadsheet is saved as type `revenue`, which invoice and credit posting, the invoice form's account list, revaluation and four screens did not recognise. Invoices then failed with "Missing Sales Revenue account", and a line on such an account went to the default sales account. Fixed with `isIncomeAccount` (`src/lib/accountUtils.ts`).
+  - **Restore was impossible after any close:** restore was refused once any month had been closed, and reopening never clears the lock date. Now a backup made when the books were closed at least as far as now restores normally; one from before the close is still refused, saying why.
+  - **Restored entries had no id in the reports:** the report routes read entries without their row id, so after a restore the general ledger's drill-down had empty ids. Fixed in seven readers.
+
+  **Still open:** a signed-in browser run of the same path needs a local Supabase sign-in stack. The original browser plan for this item was: one browser test, signed in, goes through:
   1. create the books;
   2. import accounts;
   3. add a customer, a vendor and an item;

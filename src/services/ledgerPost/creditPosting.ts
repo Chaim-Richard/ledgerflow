@@ -1,4 +1,5 @@
 import { getLocalDateISO, roundCents } from '../../lib/utils';
+import { isIncomeAccount } from '../../lib/accountUtils';
 import { CreditNote, VendorCredit } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
@@ -38,7 +39,7 @@ export async function postCreditNoteLedger(
     accounts,
     mappings,
     ['revenue', 'sales', 'income', 'sales returns'],
-    a => a.type === 'income' || a.category === 'Revenue',
+    a => isIncomeAccount(a) || a.category === 'Revenue',
     'Sales Returns / Revenue'
   );
 

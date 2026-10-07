@@ -196,7 +196,7 @@ export function registerDeveloperApiRoutes(app: express.Express, _ctx: ServerCon
       ]);
 
       const accounts = accountsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ChartAccount);
-      const transactions = transactionsSnap.docs.map(doc => doc.data() as LedgerTransaction);
+      const transactions = transactionsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }) as LedgerTransaction);
 
       // Trial balance double-entry cross checking
       let globalNetBalanceCents = 0;

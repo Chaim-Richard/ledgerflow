@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { RecordDetailsLauncher } from '../common/RecordDetailsLauncher';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { isIncomeAccount } from '../../lib/accountUtils';
 
 // Highly Optimized Lazy Loading of heavy overlay system modals
 const MagicEntry = lazy(() => import('../ledger/MagicEntry'));
@@ -72,7 +73,7 @@ export default function CommandPortal({ modals, handlers }: CommandPortalProps) 
   const baseCurrency = currentWorkspace?.currency || 'USD';
   const currentTemplateId = currentWorkspace?.businessType || 'generic';
   
-  const categories = Array.from(new Set(accounts.filter((a) => a.type === 'income' || a.type === 'expense').map((a) => a.name)));
+  const categories = Array.from(new Set(accounts.filter((a) => isIncomeAccount(a) || a.type === 'expense').map((a) => a.name)));
   
   return (
     <>

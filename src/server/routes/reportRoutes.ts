@@ -67,8 +67,9 @@ async function getReportContext(req: AuthenticatedRequest, workspaceId: string, 
   const transactions: LedgerTransaction[] = [];
   const txStream = txQuery.stream();
   
-  for await (const chunk of txStream as AsyncIterable<{ data: () => DocumentData }>) {
-    transactions.push(chunk.data() as LedgerTransaction);
+  // the row's own id: a restored entry's data does not repeat it (DA-07)
+  for await (const chunk of txStream as AsyncIterable<{ id: string; data: () => DocumentData }>) {
+    transactions.push({ ...chunk.data(), id: chunk.id } as LedgerTransaction);
   }
   
   return {
@@ -237,12 +238,12 @@ reportRouter.get("/budget-vs-actual", async (req, res) => {
     let transactions: LedgerTransaction[] = [];
     await new Promise<void>((resolve, reject) => {
       txQuery.stream()
-        .on("data", (doc: { data: () => DocumentData }) => transactions.push(doc.data() as LedgerTransaction))
+        .on("data", (doc: { id: string; data: () => DocumentData }) => transactions.push({ ...doc.data(), id: doc.id } as LedgerTransaction))
         .on("end", () => resolve())
         .on("error", async (err: unknown) => {
           try {
             const snap = await txQuery.get();
-            transactions = snap.docs.map((doc) => doc.data() as LedgerTransaction);
+            transactions = snap.docs.map((doc) => ({ ...doc.data(), id: doc.id }) as LedgerTransaction);
             resolve();
           } catch {
             reject(err);

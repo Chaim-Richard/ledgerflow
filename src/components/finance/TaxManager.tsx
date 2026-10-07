@@ -26,6 +26,7 @@ import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { safeConfirm } from '../../lib/utils';
 import { effectiveRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import type { TaxComponent, TaxTreatment } from '../../lib/taxCodes';
+import { isIncomeAccount } from '../../lib/accountUtils';
 
 const fieldClass = 'w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[var(--text)]';
 
@@ -177,7 +178,7 @@ export default function TaxManager({
     
     const grossIncome = yearTransactions
       .reduce((acc, tx) => {
-        const incomeLines = tx.lines?.filter(l => accounts.find(a => a.id === l.accountId)?.type === 'income') || [];
+        const incomeLines = tx.lines?.filter(l => isIncomeAccount(accounts.find(a => a.id === l.accountId))) || [];
         // Typically income lines are negative in a ledger (Credit)
         return acc + incomeLines.reduce((sum, l) => sum + Math.abs(lineAmount(l, tx)), 0);
       }, 0);
