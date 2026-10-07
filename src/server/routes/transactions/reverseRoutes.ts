@@ -11,6 +11,7 @@ import { writeServerAuditLog } from '../../services/auditLogService';
 import { lockMessage, postingLock } from '../../../lib/periodLock';
 import { errorMessage, HttpError, requestUser } from '../../auth/requestUser';
 import { formatTzDate } from './helpers';
+import { refusedLabels, refusedLabelsMessage } from '../../../lib/requiredLabels';
 
 /** Reversing an entry and intercompany transfers. Part of /api/v1/transactions (F-06), registered in the original order. */
 export function registerReverseRoutes(transactionRouter: express.Router): void {
@@ -193,6 +194,9 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
             wsData,
             accountsMap: accMap
           }, undefined, t);
+          // Z-12: the corrected entry needs the labels a refusing rule asks for (voiding never does)
+          const missing = refusedLabels(validatedReplacement, wsData?.dimensions);
+          if (missing.length > 0) throw new LedgerPostingError(400, refusedLabelsMessage(missing));
         }
 
         // Reversing a cost-of-goods-sold entry puts the stock back (and no entry is reversed twice).

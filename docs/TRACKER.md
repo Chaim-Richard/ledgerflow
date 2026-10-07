@@ -2084,7 +2084,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Z-09 Negative inventory check
 - [x] Z-10 Future-dated posting check
 - [x] Z-11 Non-zero suspense check (suspense, uncategorized and clearing accounts not at zero; Data Health, tested)
-- [~] Z-12 Missing dimension check (the check, the rules per account and the form warning done 7 Oct; refusing on the server and the other conditions open) — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`), V1 the check with a rule per account; Later the other conditions)**: required labels, e.g. "Property is required on Utilities" or "Project is required on Construction expenses".
+- [~] Z-12 Missing dimension check (V1 part done 7 Oct: the check, the rules per account, the form warnings and refusing on the server; the other conditions open) — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`), V1 the check with a rule per account; Later the other conditions)**: required labels, e.g. "Property is required on Utilities" or "Project is required on Construction expenses".
   - **Conditions:** by account or account group first; later by document type, vendor or customer, item, or workspace, through the rule engine.
   - **What a rule does:** each rule picks one of warn before posting, refuse to post, or allow it but list it.
   - **What the user sees:** a missing label is a Data Health finding and a row in "Needs attention" (DA-02). The row opens the entry with the field ready, and it disappears only when the label is filled.
@@ -2095,10 +2095,11 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
     - **The list:** entries missing a label are a Data Health finding ("missing-label"), one per entry. It opens the entry, is gone once the label is filled, and is in the nightly check too.
     - **The warning:** the journal form names each missing label, account and line before saving, and shows the label columns when a line's account needs one.
     - Tests: `required-labels.test.tsx`.
-  - **Still open:**
-    - **Refuse to post:** the server needs to tell entries a person typed from the ones it makes itself. Cost of goods sold, spreads and revaluations must not be blocked.
-    - **More warnings:** the same warning in the bill and invoice forms.
+    - **Refuse to post (7 Oct):** a rule can be set to "Refuse to save an entry without it" (`requiredOn.refuse`). The server then refuses an entry a person typed without the label when it is posted (`/transactions/bulk`), created (`POST /transactions`, `/batch-create`), changed (`PUT /transactions/:id`) or corrected (`/:id/reverse` with a replacement), naming the label and account. Never refused, only listed: entries LedgerFlow makes itself (cost of goods sold, spreads, revaluations, payments, depreciation…), reversals and voids, and entries made with bank lines imported in the same request (an import never stops). Which entries a person typed: `typedByPerson` in `src/lib/requiredLabels.ts`. Tests: `required-labels-refuse.test.tsx`.
+    - **The warning in the bill and invoice forms:** each line's Labels (BF-09) names what is missing; with a refusing rule the warning says the entry is not saved without it.
+  - **Still open (Later):**
     - **More conditions:** document type, vendor or customer, item.
+    - A draft turned into a posted entry by a status change, and a bank line split, are listed but not refused yet.
     - **Needs attention:** a row there (DA-02).
 - [x] Z-13 Stale unreconciled check (bank lines unmatched over 30 days, one finding per bank account, opens Reconcile; tested)
 - [x] Z-14 Empty invoice / accountless line check

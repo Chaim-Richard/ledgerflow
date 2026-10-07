@@ -17,6 +17,7 @@ import { writeServerAuditLog } from '../../services/auditLogService';
 import { deletionSentence, deletionSnapshot } from '../../services/deletionRecord';
 import { MAX_RECATEGORIZE, RecategorizeError, recategorize } from '../../services/recategorizeService';
 import { workspaceRole } from '../../../lib/periodLock';
+import { refusedLabels, refusedLabelsMessage } from '../../../lib/requiredLabels';
 
 
 /** Many entries at once: posting in bulk and batch updates. Part of /api/v1/transactions (F-06), registered in the original order. */
@@ -89,6 +90,14 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
           wsData
         });
         validatedTransactions.push(validatedTx);
+      }
+
+      // Z-12: a required label whose rule refuses stops an entry a person typed without it. Entries
+      // made with bank lines imported in this request are saved and listed instead: an import never stops.
+      const imported = new Set(bankLines.map(b => b.matchedTransactionId).filter(Boolean));
+      for (const tx of validatedTransactions) {
+        const missing = imported.has(tx.id) ? [] : refusedLabels(tx, wsData?.dimensions);
+        if (missing.length > 0) return res.status(400).json({ error: refusedLabelsMessage(missing), transactionId: tx.id, missingLabels: missing });
       }
 
       // ONE database transaction: the document change, the ledger entries, stock moved by cost of

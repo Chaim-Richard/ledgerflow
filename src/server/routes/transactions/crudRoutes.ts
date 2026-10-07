@@ -15,6 +15,7 @@ import { assertPostingOpen, lockMessage, postingLock } from '../../../lib/period
 import { errorMessage, HttpError, requestUser } from '../../auth/requestUser';
 import { enforceDoubleEntrySafety, ifMatchVersion, isUpdatedAtMismatch } from './helpers';
 import { FieldsError, parseFields, pickFields } from '../../http/sparseFields';
+import { refusedLabels, refusedLabelsMessage } from '../../../lib/requiredLabels';
 
 /** Read, create, edit and delete one entry. Part of /api/v1/transactions (F-06), registered in the original order. */
 export function registerTransactionCrudRoutes(transactionRouter: express.Router): void {
@@ -129,6 +130,9 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
         user: { uid: user.uid, admin: user.admin },
         wsData
       });
+      // Z-12: a required label whose rule refuses
+      const missing = refusedLabels(validatedTx, wsData?.dimensions);
+      if (missing.length > 0) throw new HttpError(refusedLabelsMessage(missing), 400);
 
       // Execute atomic validation and create inside the single command transaction boundary
       const txRef = db.collection('transactions').doc(transactionToSave.id);
@@ -179,6 +183,8 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
         } catch (err) {
           throw new HttpError(`Entry ${index}: ${errorMessage(err)}`, /Period Locked/i.test(errorMessage(err)) ? 409 : 400);
         }
+        const missing = refusedLabels(prepared[prepared.length - 1], wsData?.dimensions);
+        if (missing.length > 0) throw new HttpError(`Entry ${index}: ${refusedLabelsMessage(missing)}`, 400);
         if ((await t.get(db.collection('transactions').doc(id))).exists) throw new HttpError(`Entry ${index}: an entry with the id ${id} already exists`, 409);
       }
       for (const tx of prepared) {
@@ -280,6 +286,9 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
         user: { uid: user.uid, admin: user.admin },
         wsData
       }, existingTx);
+      // Z-12: a required label whose rule refuses
+      const missing = refusedLabels(validatedTx, wsData?.dimensions);
+      if (missing.length > 0) return res.status(400).json({ error: refusedLabelsMessage(missing), missingLabels: missing });
 
       await db.runTransaction(async (t) => {
         const txRef = db.collection('transactions').doc(id);

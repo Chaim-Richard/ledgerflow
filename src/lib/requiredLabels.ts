@@ -9,6 +9,10 @@
  * on the entry), or when every split of the line has one. Missing labels are a Data Health finding
  * that opens the entry, gone once it is labelled, and a warning in the journal form before saving.
  * Postable entries only (AGENTS.md): drafts and voided entries are never flagged.
+ *
+ * A rule can also refuse: then the server does not save an entry a person typed without the label
+ * (`refusedLabels`, checked when entries are posted or edited). Entries LedgerFlow makes itself (cost
+ * of goods sold, spreads, revaluations, payments, reversals) are never refused, only listed.
  */
 import type { ChartAccount, DimensionDefinition, Transaction, TransactionLine } from '../types';
 import { getLineDimension } from './dimensionUtils';
@@ -19,6 +23,8 @@ export interface RequiredOn {
   accountIds: string[];
   /** YYYY-MM-DD: entries dated before it are not checked */
   since: string;
+  /** the server refuses an entry a person typed without it (otherwise it is listed and warned about) */
+  refuse?: boolean;
 }
 
 export interface MissingLabel {
@@ -36,7 +42,7 @@ type LineLike = Pick<TransactionLine, 'accountId' | 'dimensions' | 'class' | 'lo
 /** The label rules of a workspace (only labels with at least one account). */
 export function requiredLabelRules(dimensions: DimensionDefinition[] | undefined) {
   return (dimensions || []).flatMap(d => (d.id !== 'category' && d.requiredOn?.accountIds?.length
-    ? [{ dimensionId: d.id, dimensionName: d.name || d.id, accountIds: new Set(d.requiredOn.accountIds), since: d.requiredOn.since || '' }]
+    ? [{ dimensionId: d.id, dimensionName: d.name || d.id, accountIds: new Set(d.requiredOn.accountIds), since: d.requiredOn.since || '', refuse: d.requiredOn.refuse === true }]
     : []));
 }
 
@@ -67,6 +73,29 @@ export function missingLabels(tx: Transaction, dimensions: DimensionDefinition[]
   return [...found.values()];
 }
 
+/** The kinds of entry where a person chose the accounts (an entry without a kind is a journal entry). */
+const TYPED_BY_A_PERSON = new Set(['journal', 'invoice-accrual', 'bill-accrual', 'bank-line-split', 'standalone-payment', 'credit-note-issuance', 'vendor-credit-issuance']);
+
+/** Whether a person typed this entry; a reversal, or an entry LedgerFlow made itself, is not. */
+export function typedByPerson(tx: Pick<Transaction, 'metadata'>): boolean {
+  const meta = (tx.metadata || {}) as Record<string, unknown>;
+  if (meta.reversesTxId || meta.isReversal) return false;
+  return meta.type === undefined || meta.type === null || meta.type === '' || TYPED_BY_A_PERSON.has(String(meta.type));
+}
+
+/** The missing labels whose rule refuses the entry (none for an entry a person did not type). */
+export function refusedLabels(tx: Transaction, dimensions: DimensionDefinition[] | undefined, accounts: Pick<ChartAccount, 'id' | 'name'>[] = []): MissingLabel[] {
+  const refusing = new Set(requiredLabelRules(dimensions).filter(r => r.refuse).map(r => r.dimensionId));
+  if (refusing.size === 0 || !typedByPerson(tx)) return [];
+  return missingLabels(tx, dimensions, accounts).filter(m => refusing.has(m.dimensionId));
+}
+
+/** What the server answers when it refuses: each label and account, and what to do. */
+export function refusedLabelsMessage(missing: MissingLabel[]): string {
+  const what = missing.map(m => `${m.dimensionName} on ${m.accountName}`).join(', ');
+  return `This entry needs ${what} (a required label). Add it to the line, or ask an owner or accountant to change the rule in Settings → Dimensions → Required labels.`;
+}
+
 /**
  * For a form before it is saved: "Project is required on Utilities (line 2)". `lines` are the form's
  * lines with an account; `date` is the entry's date.
@@ -80,7 +109,7 @@ export function requiredLabelWarnings(lines: LineLike[], date: string, dimension
     if (rule.since && date.slice(0, 10) < rule.since) continue;
     lines.forEach((line, i) => {
       if (line.accountId && rule.accountIds.has(line.accountId) && !hasLabel(line, undefined, rule.dimensionId)) {
-        warnings.push(`${rule.dimensionName} is required on ${name.get(line.accountId) || line.accountName || 'this account'} (line ${i + 1})`);
+        warnings.push(`${rule.dimensionName} is required on ${name.get(line.accountId) || line.accountName || 'this account'} (line ${i + 1})${rule.refuse ? ': the entry is not saved without it' : ''}`);
       }
     });
   }
@@ -92,6 +121,8 @@ export function withRequiredOn(dimensions: DimensionDefinition[], dimensionId: s
   return dimensions.map(d => {
     if (d.id !== dimensionId) return d;
     const { requiredOn: _old, ...rest } = d;
-    return requiredOn && requiredOn.accountIds.length > 0 ? { ...rest, requiredOn: { accountIds: [...new Set(requiredOn.accountIds)], since: requiredOn.since } } : rest;
+    return requiredOn && requiredOn.accountIds.length > 0
+      ? { ...rest, requiredOn: { accountIds: [...new Set(requiredOn.accountIds)], since: requiredOn.since, ...(requiredOn.refuse ? { refuse: true } : {}) } }
+      : rest;
   });
 }

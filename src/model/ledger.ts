@@ -22,7 +22,7 @@ export interface DimensionDefinition {
   sortOrder?: number;
   systemDefault?: boolean;
   /** Z-12: entries on these accounts need this label, from `since` (YYYY-MM-DD) on (src/lib/requiredLabels.ts) */
-  requiredOn?: { accountIds: string[]; since: string };
+  requiredOn?: { accountIds: string[]; since: string; refuse?: boolean };
 }
 
 export interface DimensionNode {
