@@ -6,15 +6,18 @@
  *   CR the bank account         net pay (what reaches the employees)
  *   CR payroll liabilities      employee withholding + employer taxes + pre-tax deductions (401k, health)
  * gross + employer taxes = net + withholding + deductions + employer taxes, so it always balances.
+ * Deductions are all of the employee's (U-05, U-06): pre-tax, garnishments and after-tax ones.
  * Before, deductions were left out of the entry and it did not balance when an employee had any.
  */
 import type { Employee } from '../types';
 import { computePeriodPayroll } from './payroll-engine';
+import type { DeductionKind } from './payrollDeductions';
 
 export interface PayRunEmployeeLine {
   employeeId: string;
   name: string;
   grossCents: number;
+  /** every deduction taken from the employee's pay: pre-tax, garnishments and after-tax (U-05, U-06) */
   deductionsCents: number;
   withheldCents: number;
   employerTaxCents: number;
@@ -23,6 +26,8 @@ export interface PayRunEmployeeLine {
   contractor?: boolean;
   /** U-01: what was withheld, by kind, for the payslip (runs posted before 7 Oct have none) */
   taxes?: { federalCents: number; stateCents: number; localCents: number; socialSecurityCents: number; medicareCents: number };
+  /** U-05, U-06: each deduction by name, for the payslip (runs before 7 Oct have none) */
+  deductions?: Array<{ name: string; kind: DeductionKind; cents: number }>;
 }
 
 export interface PayRunTotals {
@@ -43,7 +48,9 @@ export function payRunTotals(employees: Employee[], year: number, schedule: PayS
   const lines = employees.filter(e => e.status !== 'Terminated' && (schedule === 'all' || e.payFrequency === schedule)).map(e => {
     const calc = computePeriodPayroll(e, year);
     return {
-      employeeId: e.id, name: e.name, ...(e.workerType === 'contractor' ? { contractor: true } : {}), grossCents: calc.grossPayCents, deductionsCents: calc.preTaxDeductionsCents,
+      employeeId: e.id, name: e.name, ...(e.workerType === 'contractor' ? { contractor: true } : {}), grossCents: calc.grossPayCents,
+      deductionsCents: calc.preTaxDeductionsCents + calc.garnishmentsCents + calc.postTaxDeductionsCents,
+      ...(calc.deductionLines.some(l => l.cents) ? { deductions: calc.deductionLines.filter(l => l.cents).map(l => ({ name: l.name, kind: l.kind, cents: l.cents })) } : {}),
       withheldCents: calc.totalWithholdingCents, employerTaxCents: calc.totalEmployerTaxCents, netCents: calc.netPayCents,
       taxes: {
         federalCents: calc.employeeFederalTaxCents, stateCents: calc.employeeStateTaxCents,

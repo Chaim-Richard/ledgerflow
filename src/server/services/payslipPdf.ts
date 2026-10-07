@@ -5,7 +5,8 @@ import { yearToDate, type PayRunEmployeeLine } from '../../lib/payRunPosting';
 
 /**
  * Payslips (U-01): one employee's pay for one posted pay run, as a PDF: gross pay, pre-tax
- * deductions, each kind of tax withheld, net pay, and the year to date up to and including this run.
+ * deductions, each kind of tax withheld, garnishments and after-tax deductions (U-05, U-06, each by
+ * name), net pay, and the year to date up to and including this run.
  * Laid out first (`layoutPayslip`, tested), then drawn. Only what the run kept is shown; nothing is
  * worked out again, so a later change to the employee's salary does not change an old payslip.
  */
@@ -30,7 +31,10 @@ export function layoutPayslip(
   const currency = clean(workspace.currency || 'USD', 3).toUpperCase();
   const m = (cents: number) => money(cents, currency);
   const rows: PayslipLayout['rows'] = [{ label: 'Gross pay', amount: m(line.grossCents), strong: true }];
-  if (line.deductionsCents) rows.push({ label: 'Pre-tax deductions (retirement, health)', amount: `−${m(line.deductionsCents)}` });
+  const named = line.deductions || [];
+  const deduct = (kind: string) => { for (const d of named.filter(x => x.kind === kind)) rows.push({ label: kind === 'garnishment' ? `${clean(d.name, 60)} (garnishment)` : clean(d.name, 60), amount: `−${m(d.cents)}` }); };
+  if (named.length) deduct('pre_tax');
+  else if (line.deductionsCents) rows.push({ label: 'Pre-tax deductions (retirement, health)', amount: `−${m(line.deductionsCents)}` });
   const t = line.taxes;
   if (t) {
     for (const [label, cents] of [['Federal income tax', t.federalCents], ['State income tax', t.stateCents], ['Local income tax', t.localCents], ['Social Security', t.socialSecurityCents], ['Medicare', t.medicareCents]] as const) {
@@ -39,6 +43,8 @@ export function layoutPayslip(
   } else if (line.withheldCents) {
     rows.push({ label: 'Taxes withheld', amount: `−${m(line.withheldCents)}` });
   }
+  deduct('garnishment');
+  deduct('post_tax');
   rows.push({ label: 'Net pay', amount: m(line.netCents), strong: true });
   const year = run.date.slice(0, 4);
   const upTo = runsOfYear.filter(r => r.date <= run.date);
@@ -51,7 +57,7 @@ export function layoutPayslip(
     ytd: total ? [
       { label: `Gross pay in ${year}`, amount: m(total.grossCents) },
       { label: 'Taxes withheld', amount: m(total.withheldCents) },
-      { label: 'Pre-tax deductions', amount: m(total.deductionsCents) },
+      { label: 'Deductions', amount: m(total.deductionsCents) },
       { label: 'Net pay', amount: m(total.netCents) },
     ] : [],
     note: 'Tax amounts are estimates worked out by LedgerFlow; check them against the tax tables before filing.',
