@@ -14,6 +14,7 @@ import { deletionSentence, deletionSnapshot } from '../../services/deletionRecor
 import { assertPostingOpen, lockMessage, postingLock } from '../../../lib/periodLock';
 import { errorMessage, HttpError, requestUser } from '../../auth/requestUser';
 import { enforceDoubleEntrySafety, ifMatchVersion, isUpdatedAtMismatch } from './helpers';
+import { FieldsError, parseFields, pickFields } from '../../http/sparseFields';
 
 /** Read, create, edit and delete one entry. Part of /api/v1/transactions (F-06), registered in the original order. */
 export function registerTransactionCrudRoutes(transactionRouter: express.Router): void {
@@ -34,6 +35,12 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
       }
 
       const { startDate, endDate, accountId, limit, cursor } = req.query;
+      // Z-04: ?fields=date,description,… returns only those fields (and the id)
+      let fields: string[] | null;
+      try { fields = parseFields(req.query.fields); } catch (err) {
+        if (err instanceof FieldsError) return res.status(400).json({ error: err.message });
+        throw err;
+      }
 
       let queryFn = db.collection("transactions").where("workspaceId", "==", workspaceId);
     
@@ -70,7 +77,7 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
         workspaceId,
         transactionsCount: transactions.length,
         nextCursor,
-        transactions
+        transactions: pickFields(transactions as Array<Record<string, unknown>>, fields)
       });
     } catch (err) {
       if (errorMessage(err) === "FORBIDDEN") return res.status(403).json({ error: "Forbidden workspace access" });

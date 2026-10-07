@@ -944,3 +944,7 @@ Generates deterministic, pixel-perfect binary PDF documents (`application/pdf`) 
 
 - Every `GET` answer carries an `ETag` header. Send it back as `If-None-Match` and an unchanged answer comes back as `304 Not Modified` with no body.
 - An entry's version is its `updatedAt`. To update it only if nobody changed it since you read it, send `If-Match: "<updatedAt>"` with `PUT /api/v1/transactions/:id` (a full update or a `partialUpdate`). If it changed, the answer is `412 Precondition Failed` with `{"error": "version_conflict", "currentTransaction": {...}}` and nothing is saved. `If-Match: *` checks nothing. Sending `expectedUpdatedAt` in the body still works and answers `409` on a conflict.
+
+## Sparse fieldsets (Z-04)
+
+`GET /api/v1/transactions?workspaceId=…&fields=date,description,totalAmountCents` returns only those fields of each entry, plus its `id`. A field can name one level inside an object (`metadata.invoiceId`). At most 50 fields; a name that is not a field name answers `400`. Without `fields`, whole entries come back as before.

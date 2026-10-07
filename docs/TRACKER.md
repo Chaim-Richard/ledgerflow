@@ -2044,7 +2044,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] Z-01 OpenAPI spec from code
 - [ ] Z-02 Per-key rate limits
 - [ ] Z-03 Batch create endpoints
-- [ ] Z-04 Sparse fieldsets
+- [x] Z-04 Sparse fieldsets — **done 7 Oct**: `?fields=date,description,totalAmountCents` on the API's transaction list returns only those fields of each entry (and its id), one level into an object too (`metadata.invoiceId`); a bad name or more than 50 fields is a 400; without it, whole entries as before. Documented in `API_DOCS.md` (`src/server/http/sparseFields.ts`; tests `sparse-fields.test.ts` with the database)
 - [x] Z-05 ETag — **done 7 Oct**: every API read answers with an `ETag`, and the same read with `If-None-Match` is a `304` with no body (shown for the transaction list); `PUT /api/v1/transactions/:id` takes `If-Match: "<updatedAt>"` and answers `412` with the current entry when it changed since, saving nothing (the existing `expectedUpdatedAt` check, 409, still works). Documented in `API_DOCS.md` (`ifMatchVersion` in `src/server/routes/transactions/helpers.ts`; tests `etag.test.ts` with the database)
 - [ ] Z-06 Client SDK
 - [x] Z-07 Duplicate invoice number check
