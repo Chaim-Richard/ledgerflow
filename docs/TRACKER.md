@@ -1928,7 +1928,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] S-14 user.invited / joined
 - [x] S-15 permission.changed — **done 7 Oct**: when an owner changes someone's role, that person alone is told ("Your role is now Accountant · before: Bookkeeper"); the same role again tells nobody. Viewers can get this one notice (`notify(…, { onlyUids })`; tests `role-change-notice.test.ts` with the database)
 - [x] S-16 subscription events — **done 7 Oct** (failed charge): when the workspace's own plan could not be charged (`invoice.payment_failed`), the owners are told to update the card in Settings → Billing; the plan ending was already recorded (same files and tests as S-05)
-- [ ] S-17 transaction.unusual
+- [x] S-17 transaction.unusual — **done 7 Oct**: the nightly check tells owners and accountants once about an entry of the last two weeks that is at least 3 times its account's usual (median) amount and bigger than anything on it before (with at least 5 earlier amounts and at least 100.00; bank and cash accounts left out): "$4,800.00 on 2026-10-05; it usually sees about $122.50. Check it is right." (`src/lib/unusualEntries.ts`, in `ledgerHealthService.ts`; tests `unusual-entries.test.ts`)
 - [ ] S-18 Digest vs immediate
 - [x] S-19 Per-type opt-out (each person, bell → gear)
 - [ ] S-20 Push delivery
