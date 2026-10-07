@@ -162,7 +162,8 @@ export default function WorkpapersPanel({ month, currency }: { month: string; cu
                       />
                     </td>
                     <td className="p-3 min-w-[14rem]">
-                      <AttachmentsPanel target={{ collection: 'chartAccounts', id: row.accountId, label }} />
+                      {/* one name per account (screen readers tell the file lists apart), and only this month's files */}
+                      <AttachmentsPanel target={{ collection: 'chartAccounts', id: row.accountId, label: `${label}: ${row.name}`, scope: label }} />
                     </td>
                     <td className="p-3">
                       {row.reviewedBy ? (

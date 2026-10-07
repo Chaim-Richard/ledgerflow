@@ -40,7 +40,7 @@ export async function attachFiles(workspaceId: string, uid: string, target: Atta
 }
 
 /** The files kept with one record, newest first. */
-export async function loadAttachments(workspaceId: string, target: Pick<AttachmentTarget, 'collection' | 'id'>): Promise<Attachment[]> {
+export async function loadAttachments(workspaceId: string, target: Pick<AttachmentTarget, 'collection' | 'id' | 'scope'>): Promise<Attachment[]> {
   const snap = await getDocs(query(collection(db, 'documents'), where('workspaceId', '==', workspaceId), where('linkedId', '==', target.id)));
   return attachmentsOf(snap.docs.map(d => ({ ...(d.data() as Omit<Attachment, 'id'>), id: d.id })), target);
 }

@@ -40,12 +40,12 @@ const transactions = [
 interface SavedWorkpaper { note?: string; reviewedBy?: string; reviewedAt?: string }
 interface UpdateCall { p_table: string; p_id: string; p_set: { workpapers?: Record<string, SavedWorkpaper> } }
 
-const storedFile = (id: string, name: string, linkedId: string) => ({
+const storedFile = (id: string, name: string, linkedId: string, linkedLabel = 'Workpaper 2026-09') => ({
   id,
   updated_at: '2026-10-01T00:00:00Z',
   data: {
     workspaceId: 'component-workspace', uid: 'someone', name, fileUrl: 'data:text/plain;base64,aGk=', sizeBytes: 2,
-    createdAt: '2026-10-01T00:00:00Z', linkedCollection: 'chartAccounts', linkedId, linkedLabel: 'Workpaper 2026-09',
+    createdAt: '2026-10-01T00:00:00Z', linkedCollection: 'chartAccounts', linkedId, linkedLabel,
   },
 });
 
@@ -73,7 +73,7 @@ const updates = () => calls.filter(c => c.url.includes('/rpc/lf_update')).map(c 
 describe('the workpapers panel on Month-End Close', () => {
   beforeEach(() => {
     calls = [];
-    fileRows = [storedFile('f1', 'statement.pdf', 'ar'), storedFile('f2', 'receipt.pdf', 'cash')];
+    fileRows = [storedFile('f1', 'statement.pdf', 'ar'), storedFile('f2', 'receipt.pdf', 'cash'), storedFile('f3', 'august.pdf', 'ar', 'Workpaper 2026-08: Accounts receivable')];
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       calls.push({ url, method: init?.method || 'GET', body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined });
@@ -96,11 +96,12 @@ describe('the workpapers panel on Month-End Close', () => {
     assert.ok(within(rowOf('Reviewed loan')).getByText(/Reviewed by Ada on 2026-10-02/), 'a kept review mark is shown');
 
     // the files come through the attachments service, one list per account, the month in the label
-    const arFiles = within(rowOf('Accounts receivable')).getByRole('region', { name: 'Files of Workpaper 2026-09' });
+    const arFiles = within(rowOf('Accounts receivable')).getByRole('region', { name: 'Files of Workpaper 2026-09: Accounts receivable' });
     await waitFor(() => assert.ok(within(arFiles).getByText('statement.pdf')));
-    const cashFiles = within(rowOf('Cash')).getByRole('region', { name: 'Files of Workpaper 2026-09' });
+    const cashFiles = within(rowOf('Cash')).getByRole('region', { name: 'Files of Workpaper 2026-09: Cash' });
     await waitFor(() => assert.ok(within(cashFiles).getByText('receipt.pdf')));
     assert.equal(within(arFiles).queryByText('receipt.pdf'), null, 'each account lists only its own files');
+    assert.equal(within(arFiles).queryByText('august.pdf'), null, 'and only this month\'s files');
     assert.ok(calls.some(c => c.url.includes('/rest/v1/documents') && c.url.includes('linkedId=eq.ar')), 'the files are queried by account');
 
     assert.equal(updates().length, 0, 'looking at the workpapers writes nothing');
@@ -174,7 +175,7 @@ describe('the workpapers panel on Month-End Close', () => {
     assert.equal(screen.queryByRole('button', { name: /^Edit Note on / }), null);
     assert.ok(within(rowOf('Noted supplies')).getByText('kept under a zero balance'));
     assert.ok(within(rowOf('Reviewed loan')).getByText(/Reviewed by Ada on 2026-10-02/));
-    const arFiles = within(rowOf('Accounts receivable')).getByRole('region', { name: 'Files of Workpaper 2026-09' });
+    const arFiles = within(rowOf('Accounts receivable')).getByRole('region', { name: 'Files of Workpaper 2026-09: Accounts receivable' });
     await waitFor(() => assert.ok(within(arFiles).getByText('statement.pdf')));
     assert.equal(updates().length, 0);
 

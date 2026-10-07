@@ -24,18 +24,18 @@ export default function AttachmentsPanel({ target, className = '', workspaceId: 
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState('');
 
-  const { collection: targetCollection, id: targetId } = target;
+  const { collection: targetCollection, id: targetId, scope: targetScope } = target;
   // loads again only when the record changes, not on every render of the form around it
   const refresh = useCallback(async () => {
     if (!workspaceId || !targetId) return;
     try {
-      setFiles(await loadAttachments(workspaceId, { collection: targetCollection, id: targetId }));
+      setFiles(await loadAttachments(workspaceId, { collection: targetCollection, id: targetId, scope: targetScope }));
       setLoadError('');
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : String(err));
       setFiles([]);
     }
-  }, [workspaceId, targetCollection, targetId]);
+  }, [workspaceId, targetCollection, targetId, targetScope]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const add = async (list: FileList | null) => {
