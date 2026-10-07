@@ -88,6 +88,9 @@ export interface FixedAsset {
   disposalProceedsCents?: number;
   disposalGainLossCents?: number;
   disposalTransactionId?: string;
+  /** X-08: the day the warranty ends and the day the insurance renews (YYYY-MM-DD); reminded 30 days before. */
+  warrantyExpires?: string;
+  insuranceRenews?: string;
   /** X-04: shares sold or scrapped while the rest is kept (newest last); cost and salvage above are what is left. */
   partialDisposals?: PartialDisposal[];
   /** X-01: the bill line it was bought on (bill id and line number), when added from a bill. */

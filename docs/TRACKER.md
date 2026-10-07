@@ -1998,7 +1998,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] X-05 Asset transfer
 - [ ] X-06 Maintenance log
 - [ ] X-07 Asset tag / barcode
-- [ ] X-08 Warranty / insurance alerts
+- [x] X-08 Warranty / insurance alerts — **done 7 Oct**: each asset on the Fixed Asset Register has "Warranty ends" and "Insurance renews" dates (edit in place). From 30 days before (and on the day), the register says "The warranty on … ends in 12 days", and a nightly job tells the owners, accountants and bookkeepers in the bell, once for each date (in the workspace's own date; a new date is told again); disposed assets are left out (`src/lib/assetReminders.ts`, `src/server/services/assetReminderService.ts`, daily job `assetReminders`; tests `asset-reminders.test.tsx` with the database)
 - [ ] X-09 Construction in progress
 
 # SECTION Y — BANKING · DOCUMENTS · CONTACTS · SETTINGS

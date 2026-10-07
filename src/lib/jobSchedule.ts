@@ -36,6 +36,7 @@ export const DAILY_JOBS: DailyJobDescriptor[] = [
   { id: 'scheduledReports', name: 'Scheduled reports', what: 'Each report set in Settings → Scheduled reports, once per finished week or month, to its addresses.' },
   { id: 'ledgerHealth', name: 'Ledger health check', what: 'The Data Health checks on every workspace whose books changed; owners and accountants are told about serious problems that are new since the night before.' },
   { id: 'bookAlerts', name: 'Alerts about the books', what: 'From the chosen day, a reminder to close last month; a budget overspent; cash below the amount set in Settings → Alerts. Each told once.' },
+  { id: 'assetReminders', name: 'Warranty and insurance reminders', what: 'Fixed assets whose warranty ends or whose insurance renews within 30 days: the people who keep the books are told once for each date.' },
   { id: 'retention', name: 'What you asked to keep for less time', what: 'Email receipts, error logs and other records past the retention period each workspace sets are pruned.' },
 ];
 
