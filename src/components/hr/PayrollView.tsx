@@ -26,6 +26,7 @@ import {
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { Labelled } from '../ui/Labelled';
 import PayRunApprovals from './PayRunApprovals';
+import { TimeOffCell } from './TimeOffCell';
 
 const RUN_STATUS: Partial<Record<PayRun['status'], string>> = {
   processed: 'Posted to the ledger', undone: 'Undone', awaiting_approval: 'Waiting for approval', rejected: 'Sent back', withdrawn: 'Withdrawn',
@@ -450,6 +451,7 @@ const PayrollViewContent: React.FC = () => {
                   <th scope="col" className="py-3 px-4 text-right">Annual Gross</th>
                   <th scope="col" className="py-3 px-4 text-right">Period Net Pay</th>
                   <th scope="col" className="py-3 px-4 text-right">Paid in {thisYear}</th>
+                  <th scope="col" className="py-3 px-4 text-right">Time off</th>
                   <th scope="col" className="py-3 px-4 text-center">Status</th>
                 </tr>
               </thead>
@@ -484,6 +486,9 @@ const PayrollViewContent: React.FC = () => {
                             </div>
                           </>
                         ) : <span className="text-neutral-400">nothing yet</span>}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <TimeOffCell employee={emp} runs={payRuns} canWrite={canWrite} />
                       </td>
                       <td className="py-3 px-4 text-center">
                         <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-semibold">

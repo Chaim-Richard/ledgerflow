@@ -98,6 +98,10 @@ export interface Employee {
   createdAt: string;
   /** U-08: a contractor is paid in full, nothing withheld and no employer taxes, and reported on a 1099-NEC. */
   workerType?: 'employee' | 'contractor';
+  /** U-04: paid time off earned in a year (hours, spread over the pay runs), the hours brought in, and the time taken */
+  ptoHoursPerYear?: number;
+  ptoOpeningHours?: number;
+  ptoTaken?: Array<{ date: string; hours: number; note?: string }>;
 }
 
 export interface PayRun {
