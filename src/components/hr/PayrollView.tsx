@@ -11,7 +11,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { computePeriodPayroll, PAYROLL_DISCLAIMER } from '../../lib/payroll-engine';
 import { formatCurrency, formatDate, getLocalDateISO } from '../../lib/utils';
 import { isCashAccount } from '../../lib/txFilters';
-import { yearToDate } from '../../lib/payRunPosting';
+import { contractorsToReport, yearToDate } from '../../lib/payRunPosting';
 import { useTimeout } from '../../hooks/useTimeout';
 import { 
   Users, 
@@ -60,6 +60,7 @@ const PayrollViewContent: React.FC = () => {
   const [empSalary, setEmpSalary] = useState('');
   const [empFrequency, setEmpFrequency] = useState<Employee['payFrequency']>('Monthly');
   const [empStatus, setEmpStatus] = useState<Employee['filingStatus']>('Single');
+  const [empWorkerType, setEmpWorkerType] = useState<'employee' | 'contractor'>('employee');
   const [empState, setEmpState] = useState('CA');
 
   // Pay run generation form
@@ -95,6 +96,7 @@ const PayrollViewContent: React.FC = () => {
   // U-03: what this year's posted pay runs paid each employee
   const thisYear = getLocalDateISO().slice(0, 4);
   const ytd = useMemo(() => yearToDate(payRuns as Parameters<typeof yearToDate>[0], thisYear), [payRuns, thisYear]);
+  const necList = useMemo(() => contractorsToReport(payRuns as Parameters<typeof contractorsToReport>[0], thisYear), [payRuns, thisYear]);
   const usable = accounts.filter(a => !a.isArchived);
   const typeOf = (a: ChartAccount) => String(a.type).toLowerCase();
   const bankAccounts = usable.filter(a => typeOf(a) === 'asset' && isCashAccount(a));
@@ -163,6 +165,7 @@ const PayrollViewContent: React.FC = () => {
       salaryCents,
       payFrequency: empFrequency,
       filingStatus: empStatus,
+      workerType: empWorkerType,
       state: empState,
       status: 'Active',
       createdAt: identity.createdAt
@@ -445,7 +448,7 @@ const PayrollViewContent: React.FC = () => {
                       </td>
                       <td className="py-3 px-4 text-neutral-700">
                         <span className="sr-only">Role is editable beside the employee name</span>
-                        <div className="text-[11px] text-neutral-400">{emp.state || 'CA'} &bull; {emp.filingStatus || 'Single'}</div>
+                        <div className="text-[11px] text-neutral-400">{emp.workerType === 'contractor' ? 'Contractor · nothing withheld' : <>{emp.state || 'CA'} &bull; {emp.filingStatus || 'Single'}</>}</div>
                       </td>
                       <td className="py-3 px-4 text-neutral-600">
                         {emp.payFrequency}
@@ -476,6 +479,17 @@ const PayrollViewContent: React.FC = () => {
                 })}
               </tbody>
             </table>
+          {necList.length > 0 && (
+            <section aria-labelledby="nec-title" className="border-t border-neutral-200 p-4 text-xs">
+              <h2 id="nec-title" className="text-sm font-semibold text-neutral-900">1099-NEC for {thisYear}</h2>
+              <p className="text-neutral-500 mt-0.5">Contractors paid $600 or more this year by posted pay runs; each needs a 1099-NEC.</p>
+              <ul className="mt-2 divide-y divide-neutral-100">
+                {necList.map(c => (
+                  <li key={c.employeeId} className="py-1.5 flex justify-between"><span>{c.name}</span><span className="font-mono">{formatCurrency(c.paidCents)}</span></li>
+                ))}
+              </ul>
+            </section>
+          )}
           </div>
         )
       )}
@@ -556,7 +570,17 @@ const PayrollViewContent: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Worker type">
+                  <select value={empWorkerType} onChange={e => setEmpWorkerType(e.target.value === 'contractor' ? 'contractor' : 'employee')}
+                    className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden">
+                    <option value="employee">Employee on the payroll (taxes withheld)</option>
+                    <option value="contractor">Contractor (paid in full, nothing withheld; 1099-NEC)</option>
+                  </select>
+                </Labelled>
+              </div>
+
+              {empWorkerType === 'employee' && <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Filing Status">
                     <select
@@ -582,7 +606,7 @@ const PayrollViewContent: React.FC = () => {
                     />
                   </Labelled>
                 </div>
-              </div>
+              </div>}
 
               {employeeError && <p role="alert" className="text-sm text-red-700">{employeeError}</p>}
               <div className="pt-2 flex items-center justify-end gap-2">

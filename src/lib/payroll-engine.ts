@@ -300,6 +300,16 @@ export function computeFederalIncomeTaxWithholding(
 export function computePeriodPayroll(employee: Employee, year: number = 2026): PayPeriodBreakdown {
   const payPeriods = getPeriodsPerYear(employee.payFrequency);
   const grossPayCents = Math.round(employee.salaryCents / payPeriods);
+  // U-08: a contractor is paid the agreed amount in full: nothing withheld, no employer taxes
+  if (employee.workerType === 'contractor') {
+    return {
+      grossPayCents, preTaxDeductionsCents: 0, taxableGrossCents: grossPayCents,
+      employeeFicaSocialSecurityCents: 0, employeeFicaMedicareCents: 0, employeeAdditionalMedicareCents: 0,
+      employeeFederalTaxCents: 0, employeeStateTaxCents: 0, employeeCityTaxCents: 0, employeeCountyTaxCents: 0,
+      netPayCents: grossPayCents, employerFicaSocialSecurityCents: 0, employerFicaMedicareCents: 0, employerFutaCents: 0, employerSutaCents: 0,
+      totalWithholdingCents: 0, totalEmployerTaxCents: 0, totalPeriodLiabilityCents: grossPayCents, disclaimer: PAYROLL_DISCLAIMER,
+    };
+  }
   const config = getFederalTaxYearConfig(year);
 
   // Pre-tax deductions (401k, health, HSA)

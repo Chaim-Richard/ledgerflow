@@ -11,7 +11,8 @@ import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import type { Firestore } from '../server/db/pgFirestore';
-import { payRunLines, payRunTotals, yearToDate } from '../lib/payRunPosting';
+import { contractorsToReport, payRunLines, payRunTotals, yearToDate } from '../lib/payRunPosting';
+import { computePeriodPayroll } from '../lib/payroll-engine';
 import { generatePayslipPdf, layoutPayslip } from '../server/services/payslipPdf';
 import { pdfTextRuns } from './helpers/pdfText';
 import type { Employee } from '../types';
@@ -35,6 +36,28 @@ describe('Pay run entry', () => {
       wages: 900_000, ptax: totals.employerTaxCents, bank: -totals.netCents,
       liab: -(totals.withheldCents + totals.employerTaxCents + 20_000),
     });
+  });
+});
+
+describe('Contractors (U-08)', () => {
+  test('paid in full: nothing withheld, no employer taxes, and the run still balances', () => {
+    const calc = computePeriodPayroll(employee('dev', 7_200_000, { workerType: 'contractor', preTaxDeductionsCents: 10_000 }), 2026);
+    assert.deepEqual([calc.grossPayCents, calc.netPayCents, calc.totalWithholdingCents, calc.totalEmployerTaxCents, calc.preTaxDeductionsCents], [600_000, 600_000, 0, 0, 0]);
+    const totals = payRunTotals([employee('ann', 6_000_000), employee('dev', 7_200_000, { workerType: 'contractor' })], 2026);
+    assert.equal(totals.employees.find(e => e.employeeId === 'dev')?.contractor, true);
+    assert.equal(payRunLines(totals, accounts).reduce((s, l) => s + l.amountCents, 0), 0);
+  });
+
+  test('1099-NEC: contractors paid 600.00 or more in the year, most paid first; employees and undone runs left out', () => {
+    const c = (employeeId: string, grossCents: number) => ({ employeeId, name: employeeId, contractor: true, grossCents, deductionsCents: 0, withheldCents: 0, employerTaxCents: 0, netCents: grossCents });
+    const e = { employeeId: 'ann', name: 'ann', grossCents: 900_000, deductionsCents: 0, withheldCents: 1, employerTaxCents: 1, netCents: 1 };
+    const list = contractorsToReport([
+      { date: '2026-03-31', status: 'processed', employees: [c('dev', 40_000), c('kim', 59_999), e] },
+      { date: '2026-04-30', status: 'processed', employees: [c('dev', 40_000)] },
+      { date: '2026-05-31', status: 'undone', employees: [c('kim', 50_000)] },
+      { date: '2025-12-31', status: 'processed', employees: [c('kim', 90_000)] },
+    ], '2026');
+    assert.deepEqual(list, [{ employeeId: 'dev', name: 'dev', paidCents: 80_000 }]);
   });
 });
 

@@ -19,6 +19,8 @@ export interface PayRunEmployeeLine {
   withheldCents: number;
   employerTaxCents: number;
   netCents: number;
+  /** U-08: paid as a contractor (nothing withheld; 1099-NEC) */
+  contractor?: boolean;
   /** U-01: what was withheld, by kind, for the payslip (runs posted before 7 Oct have none) */
   taxes?: { federalCents: number; stateCents: number; localCents: number; socialSecurityCents: number; medicareCents: number };
 }
@@ -38,7 +40,7 @@ export function payRunTotals(employees: Employee[], year: number): PayRunTotals 
   const lines = employees.filter(e => e.status !== 'Terminated').map(e => {
     const calc = computePeriodPayroll(e, year);
     return {
-      employeeId: e.id, name: e.name, grossCents: calc.grossPayCents, deductionsCents: calc.preTaxDeductionsCents,
+      employeeId: e.id, name: e.name, ...(e.workerType === 'contractor' ? { contractor: true } : {}), grossCents: calc.grossPayCents, deductionsCents: calc.preTaxDeductionsCents,
       withheldCents: calc.totalWithholdingCents, employerTaxCents: calc.totalEmployerTaxCents, netCents: calc.netPayCents,
       taxes: {
         federalCents: calc.employeeFederalTaxCents, stateCents: calc.employeeStateTaxCents,
@@ -103,4 +105,18 @@ export function yearToDate(runs: Array<{ date: string; status: string; employees
     }
   }
   return out;
+}
+
+/** The 1099-NEC threshold: contractors paid at least this in a calendar year are reported. */
+export const NEC_THRESHOLD_CENTS = 60_000;
+
+/** U-08: contractors paid at least the threshold in the year by posted pay runs, most paid first. */
+export function contractorsToReport(runs: Array<{ date: string; status: string; employees?: PayRunEmployeeLine[] }>, year: string): Array<{ employeeId: string; name: string; paidCents: number }> {
+  const names = new Map<string, string>();
+  const contractors = new Set<string>();
+  for (const run of runs) for (const e of run.employees || []) if (e.contractor) { contractors.add(e.employeeId); names.set(e.employeeId, e.name); }
+  const totals = yearToDate(runs.map(r => ({ ...r, employees: (r.employees || []).filter(e => e.contractor) })), year);
+  return [...totals].filter(([id, t]) => contractors.has(id) && t.grossCents >= NEC_THRESHOLD_CENTS)
+    .map(([employeeId, t]) => ({ employeeId, name: names.get(employeeId) || employeeId, paidCents: t.grossCents }))
+    .sort((a, b) => b.paidCents - a.paidCents || a.name.localeCompare(b.name));
 }

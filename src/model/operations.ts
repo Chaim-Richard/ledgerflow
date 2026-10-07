@@ -96,6 +96,8 @@ export interface Employee {
   allowances?: number;
   lastPayDate?: string;
   createdAt: string;
+  /** U-08: a contractor is paid in full, nothing withheld and no employer taxes, and reported on a 1099-NEC. */
+  workerType?: 'employee' | 'contractor';
 }
 
 export interface PayRun {
