@@ -1338,7 +1338,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [~] C-17 Dev-only document-read counter (code present in 2 files — verify it reports)
 - [x] C-18 Sharded counter service
 - [ ] C-19 `transactionsArchive` tier for closed years
-- [ ] C-20 Seed 200k transactions, record load time + reads
+- [x] C-20 Seed 200k transactions, record load time + reads — **done 7 Oct**: `scripts/load-test.ts` seeds a workspace with 200,000 entries in a local database and measures the app's paged query for the newest 20,000, their size, the browser's report maths on them, and the balances worked out by the database; results in `docs/perf.md`. Found on the way: long lists were read 1,000 rows a request one after another (20 round trips for 20,000 entries); now the first page alone, then four at a time, with the id as the last sort key so rows with the same date never move between pages (`fetchRows` in `src/lib/db/firestore.ts`; tests `paged-reads.test.ts`)
 
 # SECTION D — TYPE SAFETY (420 `any` by the ratchet count, was 1,365; every named file done)
 
