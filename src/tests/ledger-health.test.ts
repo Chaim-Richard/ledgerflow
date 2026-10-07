@@ -64,7 +64,7 @@ describe('Ledger health monitor (database)', { skip: !url && 'LF_TEST_DATABASE_U
   });
 
   after(async () => {
-    for (const table of ['transactions', 'chartAccounts', 'notifications', 'workspaces']) await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
+    for (const table of ['transactions', 'chartAccounts', 'reconciliations', 'notifications', 'workspaces']) await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
     await db.terminate();
   });
 
@@ -82,6 +82,25 @@ describe('Ledger health monitor (database)', { skip: !url && 'LF_TEST_DATABASE_U
     assert.deepEqual(await run(db, { workspaceIds: [ws] }), { checked: 1, notified: 1, left: 0 });
     assert.equal((await health())?.counts.high, 2);
     assert.equal((await told()).length, 4, 'the new problem is told; the old one is not told twice');
+  });
+
+  test('a reconciled period that moves tells the owner and the accountant once (S-07)', async () => {
+    const recon = (await db.pool.query(`select count(*)::int as n from public.notifications where workspace_id = $1 and data->>'kind' = 'reconciliation.discrepancy'`, [ws]));
+    assert.equal(recon.rows[0].n, 0);
+    // the first look keeps the books-minus-statement difference on 2026-09-30, whatever it is
+    await db.collection('reconciliations').doc(id('rec')).set({ workspaceId: ws, accountId: id('bank'), statementDate: '2026-09-30', statementBalanceCents: 0, reconciledIds: [] });
+    await run(db, { workspaceIds: [ws] });
+    const kept = (await health())?.reconciled?.[id('rec')];
+    assert.equal(typeof kept, 'number');
+    await entry('backdated', [{ accountId: id('bank'), amountCents: 700 }, { accountId: id('sales'), amountCents: -700 }]);
+    await run(db, { workspaceIds: [ws] });
+    const told = (await db.pool.query(`select data->>'uid' as uid, data->>'message' as m from public.notifications where workspace_id = $1 and data->>'kind' = 'reconciliation.discrepancy' order by 1`, [ws])).rows;
+    assert.deepEqual(told.map(r => r.uid), ['acct-1', 'owner-1']);
+    assert.match(told[0].m, /^On 2026-09-30 the books now differ from the statement by \$\d/);
+    assert.equal((await health())?.reconciled?.[id('rec')], (kept as number) + 700);
+    await db.collection('transactions').doc(id('backdated')).delete();
+    await db.collection('reconciliations').doc(id('rec')).delete();
+    await run(db, { workspaceIds: [ws] });
   });
 
   test('fixed: checked again, nothing told; the time budget stops the run', async () => {

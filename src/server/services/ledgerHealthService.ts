@@ -1,7 +1,9 @@
 import type { Firestore } from '../db/firestore';
 import { runDataChecks, type CheckContext } from '../../lib/dataChecks';
 import { healthSummary, newSeriousProblems, problemNotice, type LedgerHealth } from '../../lib/ledgerHealth';
-import { formatTzDate } from '../../lib/utils';
+import { formatCurrency, formatTzDate } from '../../lib/utils';
+import { reconciliationDrift, type ReconciliationRecord } from '../../lib/reconciliationDrift';
+import type { ChartAccount, Transaction } from '../../types';
 import { logger } from '../utils/logger';
 import { notify } from './notificationService';
 
@@ -21,6 +23,7 @@ const SOURCES = {
   recurring: { table: 'recurring', cap: 1000 },
   inventory: { table: 'inventory', cap: 5000 },
   bankLines: { table: 'bankLines', cap: 10000 },
+  reconciliations: { table: 'reconciliations', cap: 1000 },
 } as const;
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -50,8 +53,20 @@ export async function checkLedgerHealth(db: Firestore, workspaceId: string, now 
   const today = formatTzDate(now, typeof ws.timezone === 'string' ? ws.timezone : 'UTC');
   const findings = runDataChecks({ ...data, today, baseCurrency: String(ws.currency || 'USD') });
   const fresh = newSeriousProblems(findings, ws.ledgerHealth as LedgerHealth | undefined);
-  const summary = healthSummary(findings, now.toISOString(), fingerprint);
+  // S-07: a reconciled period whose books moved since (the difference to the statement is kept per reconciliation)
+  const kept = ((ws.ledgerHealth as LedgerHealth | undefined)?.reconciled || {}) as Record<string, number>;
+  const { baselines, drifted } = reconciliationDrift(data.accounts as ChartAccount[], data.transactions as Transaction[],
+    (data as unknown as { reconciliations: ReconciliationRecord[] }).reconciliations || [], kept);
+  const summary = { ...healthSummary(findings, now.toISOString(), fingerprint), reconciled: baselines };
   await wsRef.update({ ledgerHealth: summary });
+  const currency = String(ws.currency || 'USD');
+  for (const d of drifted) {
+    await notify(db, {
+      workspaceId, kind: 'reconciliation.discrepancy', title: `${d.account.name} no longer matches its reconciled statement`,
+      message: `On ${d.statementDate} the books now differ from the statement by ${formatCurrency(d.nowCents, currency)} (it was ${formatCurrency(d.thenCents, currency)} when reconciled): an entry on or before that date was added, changed, voided or deleted.`,
+      eventKey: `recon-drift:${d.reconciliationId}:${d.thenCents}:${d.nowCents}`, workspace: ws,
+    });
+  }
   if (fresh.length) {
     const notice = problemNotice(fresh);
     await notify(db, {

@@ -14,6 +14,8 @@ export interface LedgerHealth {
   highIds: string[];
   /** The books when checked (row count and newest change), to skip an unchanged workspace. */
   fingerprint?: string;
+  /** S-07: per latest reconciliation, the books minus the statement on its date as last seen. */
+  reconciled?: Record<string, number>;
 }
 
 /** At most this many ids are kept; past it, a few old ones may be told again (harmless). */
