@@ -1908,7 +1908,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] R-08 Unposted-drafts review (drafts in the period block the close, listed)
 - [x] R-09 Close comparison (AI #3: the Month-End Close "Compare <month>" panel shows this month's P&L and balance sheet beside the previous month and the same month last year with big-move flags; see COORDINATION Messages)
 - [x] R-10 Lock by role (close/reopen owner+accountant; hard reopen owner; soft close by role)
-- [ ] R-11 Close package export
+- [x] R-11 Close package export — **done 7 Oct**: Month-End Close → "Close package (.xlsx)": a Close status sheet (open or closed and through when; every checklist item and the client's own steps with who signed them off, when and the note), the trial balance on the month's last day (opening balances in, drafts and later entries out, a total row), the month's general ledger with references, and the month's questions about entries with the latest answer; money as numbers, not text (`src/lib/closePackage.ts`; tests `close-package.test.ts`)
 
 # SECTION S — NOTIFICATIONS
 

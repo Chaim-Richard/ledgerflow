@@ -6,10 +6,9 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { db, getIdToken } from '../../firebase';
-import { doc, getDoc } from '../../lib/db/firestore';
+import { collection, doc, getDoc, getDocs, limit, query, where } from '../../lib/db/firestore';
 import { cn, formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { downloadWorkbook, createWorkbook } from '../../lib/excelExport';
-import { isPostable, lineAmount } from '../../lib/txFilters';
 import { buildCloseChecklist, postingMismatchesThrough, readyToClose } from '../../lib/closeChecklist';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import type { CloseItem } from '../../lib/closeChecklist';
@@ -20,6 +19,8 @@ import CloseComparisonPanel from './CloseComparisonPanel';
 import ClosingBalanceCheck from './ClosingBalanceCheck';
 import CloseStepsEditor from './CloseStepsEditor';
 import { closeStepItems } from '../../lib/closeSteps';
+import { closePackageSheets } from '../../lib/closePackage';
+import type { ClientQuery } from '../../lib/clientQueries';
 
 /**
  * Month-End Close (R-01 checklist, R-02 sign-offs, R-03 soft/hard close, R-08 drafts, R-10 roles,
@@ -185,36 +186,25 @@ export default function MonthEndCloseView() {
   );
 
   const exportPackage = async () => {
-    const toastId = toast.loading('Building the accountant package…');
+    const toastId = toast.loading('Building the close package…');
     try {
+      // R-11: the month's questions about entries go in too (read once, not kept live here)
+      const queries = workspaceId
+        ? (await getDocs(query(collection(db, 'clientQueries'), where('workspaceId', '==', workspaceId), limit(2000)))).docs.map(d => ({ ...(d.data() as Omit<ClientQuery, 'id'>), id: d.id }))
+        : [];
+      const sheets = closePackageSheets({
+        month, monthEnd: end, state: STATE_LABEL[state].text,
+        closedThrough: [workspace?.lockDate || '', workspace?.softLockDate || ''].sort().pop() || '',
+        items: [...items, ...stepItems], signOffs, accounts: accounts || [], transactions: transactions || [], queries,
+      });
       const workbook = await createWorkbook();
-      const posted = (transactions || []).filter(t => isPostable(t) && (t.date || '').slice(0, 10) <= end);
-      const inMonth = posted.filter(t => (t.date || '').slice(0, 7) === month);
-
-      const tb = workbook.addWorksheet('Trial Balance');
-      tb.columns = [
-        { header: 'Code', key: 'code', width: 12 }, { header: 'Account', key: 'name', width: 32 }, { header: 'Type', key: 'type', width: 14 },
-        { header: 'Debits', key: 'debit', width: 16 }, { header: 'Credits', key: 'credit', width: 16 }, { header: 'Balance', key: 'net', width: 16 },
-      ];
-      const totals = new Map<string, { code: string; name: string; type: string; debit: number; credit: number }>();
-      for (const a of accounts || []) totals.set(a.id, { code: a.code || '', name: a.name, type: a.type, debit: 0, credit: 0 });
-      for (const t of posted) for (const l of t.lines || []) {
-        const row = totals.get(l.accountId) || { code: '', name: l.accountName || l.accountId || 'Unassigned', type: '', debit: 0, credit: 0 };
-        const amount = lineAmount(l, t);
-        if (amount > 0) row.debit += amount; else row.credit -= amount;
-        totals.set(l.accountId, row);
+      for (const sheet of sheets) {
+        const ws = workbook.addWorksheet(sheet.name);
+        ws.columns = sheet.columns.map(c => ({ header: c.header, key: c.key, width: c.width, ...(c.money ? { style: { numFmt: '#,##0.00' } } : {}) }));
+        for (const row of sheet.rows) ws.addRow(row);
       }
-      for (const r of totals.values()) tb.addRow({ code: r.code, name: r.name, type: r.type, debit: (r.debit / 100).toFixed(2), credit: (r.credit / 100).toFixed(2), net: ((r.debit - r.credit) / 100).toFixed(2) });
-
-      const gl = workbook.addWorksheet('General Ledger');
-      gl.columns = [
-        { header: 'Date', key: 'date', width: 12 }, { header: 'Entry', key: 'id', width: 22 }, { header: 'Description', key: 'desc', width: 32 },
-        { header: 'Account', key: 'account', width: 28 }, { header: 'Amount', key: 'amount', width: 14 },
-      ];
-      for (const t of inMonth) for (const l of t.lines || []) gl.addRow({ date: t.date, id: t.id, desc: t.description, account: l.accountName || l.accountId, amount: (lineAmount(l, t) / 100).toFixed(2) });
-
-      await downloadWorkbook(workbook, `Accountant_Package_${month}.xlsx`);
-      toast.success('Accountant package downloaded.', { id: toastId });
+      await downloadWorkbook(workbook, `Close_Package_${month}.xlsx`);
+      toast.success('Close package downloaded.', { id: toastId });
     } catch (err) {
       toast.error(`The package could not be built: ${err instanceof Error ? err.message : String(err)}`, { id: toastId });
     }
@@ -240,7 +230,7 @@ export default function MonthEndCloseView() {
                 className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-sm text-[var(--text)]" />
             </div>
             <button type="button" onClick={exportPackage} className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-sm text-[var(--text)] inline-flex items-center gap-2">
-              <BookOpen className="w-4 h-4" aria-hidden="true" /> Accountant package (.xlsx)
+              <BookOpen className="w-4 h-4" aria-hidden="true" /> Close package (.xlsx)
             </button>
           </div>
         </div>
