@@ -12,11 +12,17 @@
  * and the historical rate for its equity and the profit of earlier periods. The difference that
  * leaves is the translation difference (CTA), shown on its own line so the group still balances.
  * Rates are never invented: a missing one is refused.
+ *
+ * Dealings between the companies (Z-19): an entry posted as intercompany (`metadata.isIntercompany`,
+ * with the other company and its entry) needs its match there. Matched pairs are counted; the rest
+ * are listed with why: the match is missing, was undone, or has another amount, or the other company
+ * is outside the group (or not one the person can open).
  */
 import type { Firestore } from '../db/firestore';
 import { openable } from '../services/workspaceGroupService';
 import { computeBalanceSheet, computeProfitAndLoss } from './computeReports';
 import type { ChartAccount, Transaction } from '../../types';
+import { isPostable } from '../../lib/txFilters';
 
 export class GroupReportError extends Error {
   constructor(readonly status: number, message: string) {
@@ -64,11 +70,74 @@ export interface GroupSummary {
   total: (GroupFigures & { currency: string; cta: number }) | null;
   /** members of the group this person can no longer open (left out) */
   notIncluded: number;
+  /** Z-19: dealings between the members in the period */
+  intercompany: IntercompanySummary;
+}
+
+export type IntercompanyReason = 'missing' | 'undone' | 'amount' | 'outside-group' | 'not-open';
+
+export interface IntercompanyIssue {
+  workspaceId: string;
+  transactionId: string;
+  date: string;
+  description: string;
+  amountCents: number;
+  currency: string;
+  withWorkspaceId: string;
+  /** the other company's name, when it is in the group */
+  withName: string | null;
+  reason: IntercompanyReason;
+  /** the other side's amount, when it differs */
+  otherAmountCents?: number;
+}
+
+export interface IntercompanySummary {
+  /** pairs found on both sides, in force, with the same amount */
+  matched: number;
+  unmatched: IntercompanyIssue[];
+}
+
+const inForce = (tx: Transaction) => isPostable(tx) && !tx.reversalEventId && !tx.metadata?.isReversal;
+
+/**
+ * Each intercompany entry in force, dated in the period, against its match in the other company.
+ * `entries` are each member's intercompany entries up to the end date (a match may be dated earlier).
+ */
+export function matchIntercompany(members: Array<{ workspaceId: string; name: string; currency: string; entries: Transaction[] }>, open: Set<string>, startDate: string, endDate: string): IntercompanySummary {
+  const byWorkspace = new Map(members.map(m => [m.workspaceId, m]));
+  let matched = 0;
+  const unmatched: IntercompanyIssue[] = [];
+  for (const m of members) {
+    for (const e of m.entries) {
+      const date = String(e.date || '').slice(0, 10);
+      if (!inForce(e) || date < startDate || date > endDate) continue;
+      const meta = (e.metadata || {}) as Record<string, unknown>;
+      const withWorkspaceId = String(meta.targetWorkspaceId || meta.sourceWorkspaceId || '');
+      const otherId = String(meta.targetTxId || meta.sourceTxId || '');
+      const other = byWorkspace.get(withWorkspaceId);
+      const issue = (reason: IntercompanyReason, extra: Partial<IntercompanyIssue> = {}) => unmatched.push({
+        workspaceId: m.workspaceId, transactionId: e.id, date, description: e.description || '', amountCents: Math.round(Number(e.totalAmountCents) || 0),
+        currency: m.currency, withWorkspaceId, withName: other?.name || null, reason, ...extra,
+      });
+      if (!other) { issue(open.has(withWorkspaceId) ? 'outside-group' : 'not-open'); continue; }
+      const match = other.entries.find(x => x.id === otherId);
+      if (!match) { issue('missing'); continue; }
+      if (!inForce(match)) { issue('undone'); continue; }
+      const otherAmountCents = Math.round(Number(match.totalAmountCents) || 0);
+      if (other.currency === m.currency && otherAmountCents !== Math.round(Number(e.totalAmountCents) || 0)) {
+        // reported once, from the side that started it
+        if (meta.targetWorkspaceId) issue('amount', { otherAmountCents });
+        continue;
+      }
+      if (meta.targetWorkspaceId) matched += 1;
+    }
+  }
+  return { matched, unmatched };
 }
 
 const FIGURES: Array<keyof GroupFigures> = ['income', 'cogs', 'grossProfit', 'expense', 'netIncome', 'totalAssets', 'totalLiabilities', 'totalEquity'];
 
-async function memberFigures(db: Firestore, workspaceId: string, startDate: string, endDate: string): Promise<GroupMember & { earlierProfit: number; equityAccounts: number }> {
+async function memberFigures(db: Firestore, workspaceId: string, startDate: string, endDate: string): Promise<GroupMember & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[] }> {
   const ws = (await db.collection('workspaces').doc(workspaceId).get()).data() || {};
   const accounts = (await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as ChartAccount);
   const transactions = (await db.collection('transactions').where('workspaceId', '==', workspaceId).where('date', '<=', endDate).get()).docs
@@ -91,6 +160,7 @@ async function memberFigures(db: Firestore, workspaceId: string, startDate: stri
     equityAccounts: bs.totalEquity,
     // profit before the period that is not closed into equity yet
     earlierProfit: bs.netIncome - pl.netIncome,
+    intercompany: transactions.filter(tx => tx.metadata?.isIntercompany === true),
   };
 }
 
@@ -123,7 +193,7 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
   const open = await openable(db, input.uid);
   const ids = (Array.isArray(group.workspaceIds) ? group.workspaceIds as string[] : []);
   const shown = ids.filter(id => open.has(id));
-  const read: Array<GroupMember & { earlierProfit: number; equityAccounts: number }> = [];
+  const read: Array<GroupMember & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[] }> = [];
   for (const id of shown) read.push(await memberFigures(db, id, input.startDate, input.endDate));
   const reportCurrency = input.reportCurrency;
   if (reportCurrency) {
@@ -132,7 +202,8 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
       if (problem) throw new GroupReportError(400, problem);
     }
   }
-  const members: GroupMember[] = read.map(({ earlierProfit, equityAccounts, ...m }) => {
+  const intercompany = matchIntercompany(read.map(m => ({ workspaceId: m.workspaceId, name: m.name, currency: m.currency, entries: m.intercompany })), open, input.startDate, input.endDate);
+  const members: GroupMember[] = read.map(({ earlierProfit, equityAccounts, intercompany: _entries, ...m }) => {
     if (!reportCurrency) return m;
     const rates = m.currency === reportCurrency ? null : input.rates![m.currency];
     return { ...m, translated: { ...translate({ ...m, earlierProfit, equityAccounts }, rates), rates } };
@@ -145,5 +216,5 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
   const total = members.length === 0 ? null
     : reportCurrency ? sum(members.map(m => m.translated!), reportCurrency)
       : currencies.size === 1 ? sum(members.map(m => ({ ...m, cta: 0 })), members[0].currency) : null;
-  return { group: { id: snap.id, name: String(group.name || '') }, startDate: input.startDate, endDate: input.endDate, members, total, notIncluded: ids.length - shown.length };
+  return { group: { id: snap.id, name: String(group.name || '') }, startDate: input.startDate, endDate: input.endDate, members, total, notIncluded: ids.length - shown.length, intercompany };
 }

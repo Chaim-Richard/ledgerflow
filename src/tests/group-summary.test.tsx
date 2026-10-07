@@ -15,7 +15,9 @@ import type { Server } from 'node:http';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import GroupSummaryReportView from '../components/reporting/GroupSummaryReportView';
 import { averageFromTimeframe, parseRates, rateFromQuote } from '../lib/translationRates';
-import { translate } from '../server/reports/groupReport';
+import { matchIntercompany, translate } from '../server/reports/groupReport';
+import { makeTransaction } from './fixtures';
+import type { Transaction } from '../types';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useUIStore } from '../stores/useUIStore';
@@ -37,6 +39,29 @@ describe('Translation (Z-17, Z-18)', () => {
     assert.equal(averageFromTimeframe(undefined, 'USD', 'EUR'), undefined);
     assert.deepEqual(parseRates(['EUR'], { EUR: { closing: '1.2', average: '1.1', historical: '1' } }), { rates: { EUR: { closing: 1.2, average: 1.1, historical: 1 } } });
     assert.match((parseRates(['EUR'], { EUR: { closing: '1.2', average: '' } }) as { problem: string }).problem, /rates for EUR/);
+  });
+});
+
+describe('Dealings between the companies (Z-19)', () => {
+  const ic = (id: string, amount: number, meta: Record<string, unknown>, over: Partial<Transaction> = {}) =>
+    makeTransaction({ id, date: '2026-05-01', status: 'completed', description: id, totalAmountCents: amount, metadata: { isIntercompany: true, ...meta }, ...over } as Partial<Transaction>);
+  const toB = (id: string, other: string, amount = 500, over: Partial<Transaction> = {}) => ic(id, amount, { targetWorkspaceId: 'B', targetTxId: other }, over);
+  const fromA = (id: string, other: string, amount = 500, over: Partial<Transaction> = {}) => ic(id, amount, { sourceWorkspaceId: 'A', sourceTxId: other }, over);
+
+  test('a pair found on both sides is matched once; the rest are listed with why', () => {
+    const a = [toB('e1', 'b1'), toB('e2', 'b2'), toB('e3', 'b3'), toB('e4', 'b4'), ic('e5', 100, { targetWorkspaceId: 'C', targetTxId: 'c1' }),
+      ic('e6', 100, { targetWorkspaceId: 'D', targetTxId: 'd1' }), toB('e7', 'b7', 500, { date: '2025-05-01' }), toB('e8', 'b8', 500, { reversalEventId: 'r8' } as Partial<Transaction>)];
+    const b = [fromA('b1', 'e1'), fromA('b3', 'e3', 500, { status: 'void' }), fromA('b4', 'e4', 400), fromA('b7', 'e7', 500, { date: '2025-05-01' }), fromA('b8', 'e8')];
+    const result = matchIntercompany([{ workspaceId: 'A', name: 'Holding', currency: 'USD', entries: a }, { workspaceId: 'B', name: 'Daughter', currency: 'USD', entries: b }], new Set(['A', 'B', 'C']), '2026-01-01', '2026-12-31');
+    assert.equal(result.matched, 1);
+    assert.deepEqual(result.unmatched.map(i => [i.transactionId, i.reason, i.withName, i.otherAmountCents]), [
+      ['e2', 'missing', 'Daughter', undefined],
+      ['e3', 'undone', 'Daughter', undefined],
+      ['e4', 'amount', 'Daughter', 400],
+      ['e5', 'outside-group', null, undefined],
+      ['e6', 'not-open', null, undefined],
+      ['b8', 'undone', 'Holding', undefined],
+    ], 'a different amount is listed once; an entry of another period is not checked');
   });
 });
 
@@ -146,6 +171,20 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.equal((await call(`/api/v1/reports/group-summary?groupId=${mixed}&startDate=2026-01-01&endDate=2026-12-31&reportCurrency=USD&rates=nope`, ann)).status, 400);
   });
 
+  test('dealings between the members: matched pairs are counted, one without its match is listed', async () => {
+    const put = (ws: string, id: string, meta: Record<string, unknown>, debit: string, credit: string) => db.collection('transactions').doc(id).set({
+      workspaceId: ws, date: '2026-06-01', description: `Loan ${id}`, status: 'completed', type: 'actual', currency: 'USD', totalAmountCents: 700,
+      metadata: { isIntercompany: true, ...meta }, lines: [{ accountId: `${ws}_${debit}`, amountCents: 700 }, { accountId: `${ws}_${credit}`, amountCents: -700 }],
+    });
+    await put(ws1, `${ws1}_ic1`, { targetWorkspaceId: ws2, targetTxId: `${ws2}_ic1` }, 'cash', 'cash');
+    await put(ws2, `${ws2}_ic1`, { sourceWorkspaceId: ws1, sourceTxId: `${ws1}_ic1` }, 'cash', 'cash');
+    await put(ws1, `${ws1}_ic2`, { targetWorkspaceId: ws2, targetTxId: `${ws2}_gone` }, 'cash', 'cash');
+    const res = await summary(sameCurrency);
+    const dealings = res.body.intercompany as { matched: number; unmatched: Array<{ transactionId: string; reason: string }> };
+    assert.equal(dealings.matched, 1);
+    assert.deepEqual(dealings.unmatched.map(i => [i.transactionId, i.reason]), [[`${ws1}_ic2`, 'missing']]);
+  });
+
   test('a member no longer open is left out and counted; other people, reversed periods and API keys are refused', async () => {
     await db.collection('workspaces').doc(ws2).update({ members: [bob] });
     const res = await summary(sameCurrency);
@@ -217,6 +256,26 @@ describe('On screen', () => {
     const sent = new URLSearchParams(asked.find(u => u.includes('reportCurrency=USD'))!.split('?')[1]);
     assert.deepEqual(JSON.parse(sent.get('rates')!), { EUR: { closing: 1.25, average: 1.125, historical: 1.25 } });
     await waitFor(() => assert.ok(screen.getByRole('rowheader', { name: 'of which translation difference' })));
+  });
+
+  test('dealings without a match say why and open the entry in its own books', async () => {
+    setComponentWorkspace('owner');
+    const members = [{ workspaceId: 'ws-a', name: 'Holding', currency: 'USD', isBalanced: true, ...figures(1000) }];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const body = url.startsWith('/api/v1/account/groups') ? { status: 'success', groups } : {
+        group: groups[0], members, total: { currency: 'USD', ...figures(1000), cta: 0 }, notIncluded: 0,
+        intercompany: { matched: 2, unmatched: [{ workspaceId: 'ws-a', transactionId: 'tx-9', date: '2026-06-01', description: 'Loan', amountCents: 50000, currency: 'USD', withWorkspaceId: 'ws-b', withName: 'Daughter', reason: 'amount', otherAmountCents: 40000 }] },
+      };
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }) as typeof fetch;
+    render(<GroupSummaryReportView />);
+    await waitFor(() => assert.ok(screen.getByRole('heading', { name: 'Dealings between the companies' })));
+    assert.match(document.body.textContent || '', /2 matched on both sides; 1 without a match/);
+    assert.ok(screen.getByText(/\$400\.00 in Daughter/));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /2026-06-01: Loan/ })); });
+    assert.equal(useAuthStore.getState().currentWorkspaceId, 'ws-a');
+    assert.deepEqual(useUIStore.getState().focusRecord, { type: 'transaction', id: 'tx-9' });
   });
 
   test('different currencies: no total, and why', async () => {

@@ -9,7 +9,17 @@ import { averageFromTimeframe, parseRates, rateFromQuote, type TranslationRates 
 
 interface Figures { income: number; cogs: number; grossProfit: number; expense: number; netIncome: number; totalAssets: number; totalLiabilities: number; totalEquity: number }
 interface Member extends Figures { workspaceId: string; name: string; currency: string; isBalanced: boolean; translated?: Figures & { cta: number } }
-interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number }) | null; notIncluded: number }
+interface Issue { workspaceId: string; transactionId: string; date: string; description: string; amountCents: number; currency: string; withName: string | null; reason: 'missing' | 'undone' | 'amount' | 'outside-group' | 'not-open'; otherAmountCents?: number }
+interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number }) | null; notIncluded: number; intercompany?: { matched: number; unmatched: Issue[] } }
+
+/** Why an intercompany entry has no match (Z-19), in words. */
+const whyUnmatched = (i: Issue) => ({
+  missing: `Its match in ${i.withName} is missing`,
+  undone: `Its match in ${i.withName} was undone`,
+  amount: `${formatCurrency(i.otherAmountCents || 0, i.currency)} in ${i.withName}`,
+  'outside-group': 'The other company is not in this group',
+  'not-open': 'The other company is not one you can open',
+}[i.reason]);
 type Entered = Record<string, Partial<Record<keyof TranslationRates, string>>>;
 
 const ROWS: Array<{ key: keyof Figures; label: string; report: 'pnl' | 'balance-sheet'; strong?: boolean }> = [
@@ -41,6 +51,7 @@ async function get<T>(url: string): Promise<T> {
 export default function GroupSummaryReportView() {
   const setCurrentWorkspaceId = useAuthStore(s => s.setCurrentWorkspaceId);
   const goToPage = useUIStore(s => s.goToPage);
+  const openRecord = useUIStore(s => s.openRecord);
   const [groups, setGroups] = useState<WorkspaceGroup[] | null>(null);
   const [groupId, setGroupId] = useState('');
   const [startDate, setStartDate] = useState(`${getLocalDateISO().slice(0, 4)}-01-01`);
@@ -190,7 +201,46 @@ export default function GroupSummaryReportView() {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-[var(--muted)]">Each company is read from its own books, as you can see them. Dealings between the companies are not taken out yet.</p>
+          {summary.intercompany && (summary.intercompany.matched > 0 || summary.intercompany.unmatched.length > 0) && (
+            <section aria-labelledby="group-dealings-title" className="space-y-2">
+              <h3 id="group-dealings-title" className="text-sm font-semibold text-[var(--text)]">Dealings between the companies</h3>
+              <p className="text-xs text-[var(--muted)]">
+                {summary.intercompany.matched} matched on both sides{summary.intercompany.unmatched.length ? `; ${summary.intercompany.unmatched.length} without a match:` : '.'}
+              </p>
+              {summary.intercompany.unmatched.length > 0 && (
+                <table className="w-full text-xs">
+                  <caption className="sr-only">Dealings between the companies without a match</caption>
+                  <thead>
+                    <tr className="border-b border-[var(--line)] text-[var(--muted)]">
+                      <th scope="col" className="text-left font-semibold py-1">Company</th>
+                      <th scope="col" className="text-left font-semibold py-1">Entry</th>
+                      <th scope="col" className="text-right font-semibold py-1">Amount</th>
+                      <th scope="col" className="text-left font-semibold py-1 pl-2">What is wrong</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summary.intercompany.unmatched.map(i => {
+                      const member = summary.members.find(m => m.workspaceId === i.workspaceId);
+                      return (
+                        <tr key={`${i.workspaceId}-${i.transactionId}`} className="border-b border-[var(--line)]/50">
+                          <td className="py-1"><bdi>{member?.name || i.workspaceId}</bdi></td>
+                          <td className="py-1">
+                            <button type="button" className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                              onClick={() => { setCurrentWorkspaceId(i.workspaceId); openRecord({ type: 'transaction', id: i.transactionId }); }}>
+                              {i.date}: <bdi>{i.description || 'entry'}</bdi>
+                            </button>
+                          </td>
+                          <td className="py-1 text-right font-mono">{formatCurrency(i.amountCents, i.currency)}</td>
+                          <td className="py-1 pl-2">{whyUnmatched(i)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </section>
+          )}
+          <p className="text-xs text-[var(--muted)]">Each company is read from its own books, as you can see them. Dealings between the companies are not taken out of the total yet.</p>
         </>
       )}
     </section>
