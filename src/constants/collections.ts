@@ -64,6 +64,7 @@ export const WORKSPACE_PURGE_EXTRA = [
   'deepAuditJobs',
   'errorLogs',
   'clientQueries',
+  'stockMoves',
 ] as const;
 
 /** Everything a workspace purge deletes, in order (the job resumes by position in this list). */

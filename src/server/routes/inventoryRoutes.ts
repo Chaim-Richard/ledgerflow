@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { requireWorkspaceRole } from './workspaceRoutes';
 import { adjustStock, StockAdjustmentError } from '../services/stockAdjustmentService';
 import { setNegativeStockPolicy } from '../services/stockPolicyService';
+import { writeStockMoves } from '../services/stockMoveService';
 
 /** Who may change stock or record its cost (viewers read only). */
 const STOCK_ROLES = ['owner', 'accountant', 'bookkeeper'];
@@ -151,6 +152,12 @@ inventoryRouter.post('/cogs', requireWorkspaceRole(STOCK_ROLES), async (req, res
         quantityAtHand: FieldValue.increment(-quantitySold),
         updatedAt: FieldValue.serverTimestamp()
       });
+      // W-02: the change in the item's stock history
+      writeStockMoves(db, t, [{
+        workspaceId, itemId, itemName: String(itemName), date: txDate, kind: 'manual-cogs',
+        quantity: -quantitySold, quantityBefore: currentQty, quantityAfter: currentQty - quantitySold,
+        unitCostCents: itemData.unitCostCents, valueCents: -totalCogsCents, transactionId: validatedTx.id, uid: user.uid,
+      }]);
 
       if (idempotencyKey) {
         const idempRef = db.collection('idempotencyKeys').doc(`${workspaceId}_inv_${idempotencyKey}`);

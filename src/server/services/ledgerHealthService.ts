@@ -25,6 +25,8 @@ const SOURCES = {
   inventory: { table: 'inventory', cap: 5000 },
   bankLines: { table: 'bankLines', cap: 10000 },
   reconciliations: { table: 'reconciliations', cap: 1000 },
+  // W-02: the stock history, checked against each item's quantity
+  stockMoves: { table: 'stockMoves', cap: 50000 },
 } as const;
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;

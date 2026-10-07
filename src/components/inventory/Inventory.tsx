@@ -24,7 +24,8 @@ import {
   TrendingDown,
   ShoppingCart,
   SlidersHorizontal,
-  ClipboardList
+  ClipboardList,
+  History
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTimeout } from '../../hooks/useTimeout';
@@ -49,6 +50,7 @@ import InlineEdit from '../ui/InlineEdit';
 import InlineAdd from '../ui/InlineAdd';
 import CogsDialog from './CogsDialog';
 import StockPolicySwitch from './StockPolicySwitch';
+import StockHistoryDialog from './StockHistoryDialog';
 import InventoryItemDialog from './InventoryItemDialog';
 import StockAdjustDialog from './StockAdjustDialog';
 import StockCountDialog from './StockCountDialog';
@@ -68,6 +70,7 @@ export default function Inventory() {
   const [showRuleIntel, setShowRuleIntel] = useState(false);
   const [cogsItem, setCogsItem] = useState<InventoryItem | null>(null);
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
+  const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null);
   const [isCounting, setIsCounting] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [isManagingCategories, setIsManagingCategories] = useState(false);
@@ -581,6 +584,12 @@ export default function Inventory() {
                         <SlidersHorizontal aria-hidden="true" size={14} className="text-[var(--muted)]" />
                       </button>
                     )}
+                    <button type="button" aria-label={`Stock history of ${item.name}`} title="Stock history"
+                      onClick={() => setHistoryItem(item)}
+                      className="p-2 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
+                    >
+                      <History aria-hidden="true" size={14} className="text-[var(--muted)]" />
+                    </button>
                     <button aria-label={`Edit item ${item.name}`}
                       onClick={() => setEditingItem(item)}
                       className="p-2 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
@@ -617,6 +626,9 @@ export default function Inventory() {
       )}
       {adjustItem && workspaceId && (
         <StockAdjustDialog item={adjustItem} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setAdjustItem(null)} />
+      )}
+      {historyItem && workspaceId && (
+        <StockHistoryDialog item={historyItem} workspaceId={workspaceId} currency={baseCurrency} onClose={() => setHistoryItem(null)} />
       )}
       {isManagingCategories && (
         <CategoryManagerDialog items={items} onClose={() => setIsManagingCategories(false)} />

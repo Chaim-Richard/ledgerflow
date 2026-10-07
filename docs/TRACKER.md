@@ -1995,7 +1995,14 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 # SECTION W — INVENTORY DEPTH
 
 - [ ] W-01 Stock per location — **expanded 7 Oct (roadmap, Later P0, with BF-08 step 2; = CG-12, M-15)**: stock per location is a sum of the movement ledger (W-02), not a second quantity field. A transfer between locations is two movements in one database transaction
-- [ ] W-02 Stock-moves ledger — **expanded 7 Oct (roadmap, Later P0)**: the source of truth for quantities. Every movement is one row with the item, location, quantity, unit cost, its document and its ledger entry: a sale or delivery, a receipt, an adjustment, a count, a return, or a transfer. An item's quantity is the sum of its rows; today's stored quantity becomes a cache that is checked against them. Unblocks J-10 and BA-03
+- [x] W-02 Stock-moves ledger — **done 7 Oct**: the new table `stockMoves` (server writes only, members read; migration `20261013060000_stock_moves.sql`).
+  - **What is recorded:** every change to an item's quantity, written with the change in the same database transaction: sales and their reversals (each entry in order), purchases, opening stock, adjustments, counts, imported opening stock and the manual cost-of-goods-sold entry.
+  - **Each record keeps:** the quantity before and after, its value, and the entry and document it belongs to.
+  - **On Inventory:** "Stock history" on each item lists the changes, links each to its entry, and says when the history does not end at the quantity on hand.
+  - **The nightly check:** "stock-history" reports such an item.
+  - **Backup:** a backup carries the history, and restore replaces it.
+  - **Bug fixed on the way:** undoing an import of items looked for invoice lines under `lines`, but invoices keep them under `items`, so an imported item already sold could be removed. Any recorded movement other than the import's own opening stock now keeps the item.
+  - Tests: `stock-moves.test.tsx`, with the database. The original plan was: the source of truth for quantities. Every movement is one row with the item, location, quantity, unit cost, its document and its ledger entry: a sale or delivery, a receipt, an adjustment, a count, a return, or a transfer. An item's quantity is the sum of its rows; today's stored quantity becomes a cache that is checked against them. Unblocks J-10 and BA-03
 - [x] W-03 COGS posting on sale + stock moves with the ledger (tested)
 - [x] W-04 Stock count: enter counted quantities for any items; one entry for all differences (tested)
 - [x] W-05 Count variance account: chosen per count (default: an expense named shrinkage/adjustment/variance, else Cost of Goods Sold)

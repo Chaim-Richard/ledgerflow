@@ -4,6 +4,7 @@ import type { Firestore } from '../db/firestore';
 import { assertPeriodOpen, validateWorkspaceAccounts } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import type { ValidationContext } from '../../kernel/validation/TransactionValidator';
+import { writeStockMoves } from './stockMoveService';
 
 type WorkspaceData = ValidationContext['wsData'] & { currency?: string };
 
@@ -125,6 +126,13 @@ export async function adjustStock(db: Firestore, input: StockAdjustmentInput): P
       t.set(db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     }
     for (const u of updates) t.update(u.ref, u.data);
+    // W-02: the history of each item changed, with the entry it belongs to
+    writeStockMoves(db, t, moves.map(m => ({
+      workspaceId, itemId: m.itemId, itemName: m.name, date, kind,
+      quantity: Number(new Decimal(m.after).minus(m.before)), quantityBefore: m.before, quantityAfter: m.after,
+      unitCostCents: m.unitCostCents, valueCents: m.valueCents, transactionId, documentType: 'adjustment' as const,
+      uid: input.user.uid,
+    })));
     return { transactionId, valueCents, items: moves };
   });
 }

@@ -9,6 +9,7 @@ import { isPostable, lineAmount } from './txFilters';
 import { calculateAmountDue } from './documentMath';
 import { findTaxDifferences } from './taxRecompute';
 import { missingLabels } from './requiredLabels';
+import { stockHistoryProblem, type StockMove } from './stockMoves';
 import { formatCurrency } from './utils';
 import type { RecordType } from './recordLinks';
 
@@ -40,6 +41,8 @@ export interface CheckContext {
   baseCurrency: string;
   /** The workspace's labels, with their required-label rules (Z-12). */
   dimensions?: DimensionDefinition[];
+  /** The stock-moves ledger (W-02); the nightly check reads it, the browser does not load it. */
+  stockMoves?: StockMove[];
 }
 
 export interface DataCheck {
@@ -295,6 +298,20 @@ export const DATA_CHECKS: DataCheck[] = [
         description: 'Reports by that label show this entry under "Unassigned" until it is filled in.',
         record: { type: 'transaction' as const, id: tx.id },
       }];
+      });
+    },
+  },
+  {
+    id: 'stock-history',
+    label: 'Stock on hand that its history does not explain (W-02)',
+    remedy: 'Open the item\'s Stock history on Inventory: the changes listed should end at the quantity on hand. Count the stock to set it right.',
+    run: ({ inventory, stockMoves }) => {
+      if (!stockMoves?.length) return [];
+      const byItem = new Map<string, StockMove[]>();
+      for (const m of stockMoves) byItem.set(m.itemId, [...(byItem.get(m.itemId) || []), m]);
+      return (inventory || []).flatMap(item => {
+        const problem = stockHistoryProblem(item, byItem.get(item.id) || []);
+        return problem ? [{ id: `stock-history-${item.id}`, checkId: 'stock-history', severity: 'medium' as const, title: problem, description: 'The quantity changed without a recorded reason, or a change was recorded twice.', record: { type: 'item' as const, id: item.id } }] : [];
       });
     },
   },

@@ -3,6 +3,7 @@ import type { DocumentData, Firestore, Transaction as DbTransaction } from '../d
 import { INVOICE_COGS_TYPE } from '../../services/invoiceCogs';
 import { isPostable } from '../../lib/txFilters';
 import type { Transaction } from '../../types';
+import { writeStockMoves, type NewStockMove } from './stockMoveService';
 
 /**
  * Stock follows the ledger: a cost-of-goods-sold entry for an invoice line (metadata.type
@@ -23,7 +24,19 @@ export class LedgerPostingError extends Error {
 
 interface LedgerEntry {
   id: string;
+  date?: string;
+  uid?: string;
+  totalAmountCents?: number;
   metadata?: Record<string, unknown>;
+}
+
+/** One entry's effect on one item, in the order of the request (W-02 records each as a stock move). */
+interface PendingMove {
+  itemId: string;
+  quantity: number;
+  kind: 'sale' | 'sale-reversal';
+  entry: LedgerEntry;
+  valueCents: number;
 }
 
 const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
@@ -58,10 +71,21 @@ export async function prepareStockMoves(
 ): Promise<PreparedStockMoves> {
   const deltas = new Map<string, number>();
   const add = (itemId: string, delta: number) => deltas.set(itemId, round6((deltas.get(itemId) || 0) + delta));
+  const pending: PendingMove[] = [];
+  // the reversal entry of each target in this request (its stock move belongs to it)
+  const reversalOf = new Map(entries.filter(e => typeof e.metadata?.reversesTxId === 'string').map(e => [String(e.metadata!.reversesTxId), e]));
+  const putBack = (target: string, original: LedgerEntry) => {
+    const move = cogsMove(original);
+    if (!move) return;
+    add(move.itemId, move.quantity);
+    pending.push({ itemId: move.itemId, quantity: move.quantity, kind: 'sale-reversal', entry: reversalOf.get(target) || original, valueCents: Math.abs(Number(original.totalAmountCents) || 0) });
+  };
 
   for (const tx of entries) {
     const move = cogsMove(tx);
-    if (move) add(move.itemId, -move.quantity);
+    if (!move) continue;
+    add(move.itemId, -move.quantity);
+    pending.push({ itemId: move.itemId, quantity: -move.quantity, kind: 'sale', entry: tx, valueCents: -Math.abs(Number(tx.totalAmountCents) || 0) });
   }
 
   // Reversals: each target once, in this workspace, not reversed before.
@@ -77,10 +101,7 @@ export async function prepareStockMoves(
     // an entry posted together with its own reversal (R-05: an accrual reversing next month) is in this
     // request, not in the database yet; its stock move comes back the same way
     const inRequest = new Map(entries.filter(e => e.id).map(e => [String(e.id), e]));
-    for (const target of targets.filter(id => inRequest.has(id))) {
-      const move = cogsMove(inRequest.get(target)!);
-      if (move) add(move.itemId, move.quantity);
-    }
+    for (const target of targets.filter(id => inRequest.has(id))) putBack(target, inRequest.get(target)!);
     const stored = targets.filter(id => !inRequest.has(id));
     const originals = stored.length ? await t.getAll(...stored.map(id => db.collection('transactions').doc(id))) : [];
     for (const snap of originals) {
@@ -88,8 +109,7 @@ export async function prepareStockMoves(
       if (!snap.exists || !data) throw new LedgerPostingError(400, `Transaction ${snap.id} to reverse does not exist.`);
       if (data.workspaceId !== workspaceId) throw new LedgerPostingError(403, 'Forbidden: the transaction to reverse belongs to another workspace.');
       if (data.reversalEventId) throw new LedgerPostingError(409, `Transaction ${snap.id} was already reversed.`);
-      const move = cogsMove(data);
-      if (move) add(move.itemId, move.quantity);
+      putBack(snap.id, { ...data, id: snap.id } as LedgerEntry);
     }
     for (let i = 0; i < targets.length; i += 100) {
       const earlier = await t.get(db.collection('transactions')
@@ -103,6 +123,7 @@ export async function prepareStockMoves(
   const itemIds = Array.from(deltas.keys()).filter(id => deltas.get(id) !== 0);
   const warnings: string[] = [];
   const writes: { id: string; quantityAtHand: number }[] = [];
+  const moves: NewStockMove[] = [];
   // W-06: selling below zero is allowed with a warning, unless an owner chose to refuse it
   const refuseBelowZero = itemIds.some(id => (deltas.get(id) || 0) < 0)
     && (await t.get(db.collection('workspaces').doc(workspaceId))).data()?.refuseNegativeStock === true;
@@ -123,6 +144,20 @@ export async function prepareStockMoves(
       }
       if (quantityAtHand < 0) warnings.push(`Stock of ${item.name || snap.id} is now ${quantityAtHand} (below zero).`);
       writes.push({ id: snap.id, quantityAtHand });
+      // W-02: each entry's change, in order, from the quantity before
+      let before = current;
+      for (const p of pending.filter(x => x.itemId === snap.id)) {
+        const after = round6(before + p.quantity);
+        const invoiceId = typeof p.entry.metadata?.invoiceId === 'string' ? p.entry.metadata.invoiceId : undefined;
+        moves.push({
+          workspaceId, itemId: snap.id, itemName: String(item.name || ''), date: String(p.entry.date || '').slice(0, 10), kind: p.kind,
+          quantity: p.quantity, quantityBefore: before, quantityAfter: after,
+          unitCostCents: Math.round(Math.abs(p.valueCents) / Math.abs(p.quantity)), valueCents: p.valueCents,
+          transactionId: p.entry.id, ...(invoiceId ? { documentType: 'invoice' as const, documentId: invoiceId } : {}),
+          uid: String(p.entry.uid || ''),
+        });
+        before = after;
+      }
     }
   }
 
@@ -132,6 +167,7 @@ export async function prepareStockMoves(
       for (const w of writes) {
         t.update(db.collection('inventory').doc(w.id), { quantityAtHand: w.quantityAtHand, updatedAt: FieldValue.serverTimestamp() });
       }
+      writeStockMoves(db, t, moves);
     },
   };
 }

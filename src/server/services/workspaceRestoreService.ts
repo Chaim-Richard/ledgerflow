@@ -48,6 +48,8 @@ export const RESTORE_COLLECTIONS: { key: string; coll: string }[] = [
   { key: 'dimensionNodes', coll: 'dimensionNodes' },
   { key: 'numberingSeries', coll: 'numberingSeries' },
   { key: 'periods', coll: 'periods' },
+  // W-02: the stock history goes with the quantities (an older backup without it clears it)
+  { key: 'stockMoves', coll: 'stockMoves' },
 ];
 
 /** Workspace fields a backup may not change: ownership, membership, billing, closing and system state. */

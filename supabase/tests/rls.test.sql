@@ -445,6 +445,15 @@ select pg_temp.expect_denied('owner answers from the browser', 'u-owner', $$sele
 select pg_temp.expect_denied('bookkeeper asks from the browser', 'u-book',
   $$insert into "clientQueries"(id,data) values ('cq2', '{"workspaceId":"ws1","transactionId":"t1","status":"open"}')$$);
 
+-- stock moves (W-02): the history of each item's quantity, written only by the server with the change; members read
+select set_config('request.jwt.claims', '', true);
+insert into "stockMoves" (id, data) values ('sm1', '{"workspaceId":"ws1","itemId":"i1","kind":"sale","quantity":-2,"quantityBefore":5,"quantityAfter":3,"seq":"1"}');
+select pg_temp.expect_count('viewer reads the stock history', 'u-view', $$select count(*) from "stockMoves"$$, 1);
+select pg_temp.expect_count('outsider reads no stock history', 'u-out', $$select count(*) from "stockMoves"$$, 0);
+select pg_temp.expect_denied('owner rewrites the stock history from the browser', 'u-owner', $$select lf_update('stockMoves','sm1','{"quantityAfter":30}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper adds a stock move from the browser', 'u-book',
+  $$insert into "stockMoves"(id,data) values ('sm2', '{"workspaceId":"ws1","itemId":"i1","kind":"adjustment","quantity":5}')$$);
+
 -- pay runs (U-02, U-10): posted, approved and undone only by the server; members read
 select set_config('request.jwt.claims', '', true);
 insert into "payRuns" (id, data) values ('pr1', '{"workspaceId":"ws1","date":"2026-02-15","status":"awaiting_approval"}');
