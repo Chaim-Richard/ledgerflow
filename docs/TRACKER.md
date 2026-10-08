@@ -2542,7 +2542,7 @@ BD-06, P-08 and BB-07. Each item says its bucket. Only the owner moves an item i
     - **The screen:** Settings → Groups of books: list, new, change (name and workspaces), remove.
     - Tests: `workspace-groups.test.tsx`.
   - **Still open:** groups shared with other people (an accountant's team, the companies of a holding for Z-16), the parent and the ownership share (Z-16), and the group filter in the switcher (AI #5's E-1).
-- [ ] DA-02 Needs attention: one queue — **Later P1**: the daily starting point for people who don't want to learn the whole menu. It is one shared queue, not another warning screen. Rows look like this:
+- [~] DA-02 Needs attention: one queue — **step 1 done 8 Oct (Claude)**: the top of the Overview lists, worked out from the books each time (so a row goes only when its cause has gone): bank lines to review, invoices waiting for approval, serious Data Health problems, entries missing a required label, duplicate bills, and last month not closed (from the reminder day in Settings → Alerts, else the 10th). Each row says why and for whom, and opens its screen (`src/lib/needsAttention.ts`, `NeedsAttentionCard.tsx`; `needs-attention.test.tsx`). **Open:** bank connections to reconnect, client questions, bill/pay-run/expense approvals, close steps left, and opening the exact record. **Later P1**: the daily starting point for people who don't want to learn the whole menu. It is one shared queue, not another warning screen. Rows look like this:
   - 3 bank lines to review;
   - 1 connection to reconnect;
   - 2 documents to approve;

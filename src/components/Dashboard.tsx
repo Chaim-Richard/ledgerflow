@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import NeedsAttentionCard from './dashboard/NeedsAttentionCard';
 import { Plus, CheckCircle2, Layers, UploadCloud, Sparkles, X } from 'lucide-react';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { useUIStore } from '../stores/useUIStore';
@@ -90,6 +91,8 @@ export default function Dashboard() {
   return (
     <div className="w-full p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1360px] mx-auto text-[var(--text)]">
       <SinceLastVisitCard />
+      {/* DA-02: one queue of what needs doing */}
+      <NeedsAttentionCard />
 
       {/* Header section with lens selector and subtle gold gradient backdrop */}
       <div className="relative overflow-hidden bg-gradient-to-r from-[var(--brass-soft)] via-[var(--surface)]/40 to-[var(--panel)] p-6 rounded-2xl border border-[var(--brass-line)]/50 shadow-sm">

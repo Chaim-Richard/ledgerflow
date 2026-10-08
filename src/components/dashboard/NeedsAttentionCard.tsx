@@ -1,0 +1,63 @@
+import React, { useMemo } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useUIStore } from '../../stores/useUIStore';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { runDataChecks } from '../../lib/dataChecks';
+import { needsAttention } from '../../lib/needsAttention';
+import { getLocalDateISO } from '../../lib/utils';
+
+/**
+ * Needs attention (DA-02) at the top of the Overview: one row per kind of thing to do, with how
+ * many, why and who can resolve it; each opens the exact place. Worked out from the books each
+ * time (src/lib/needsAttention.ts), so a row goes only when its cause has gone. Nothing to do: it
+ * says so in one line.
+ */
+export default function NeedsAttentionCard() {
+  const transactions = useLedgerStore(s => s.transactions);
+  const accounts = useLedgerStore(s => s.accounts);
+  const invoices = useLedgerStore(s => s.invoices);
+  const bills = useLedgerStore(s => s.bills);
+  const recurring = useLedgerStore(s => s.recurring);
+  const inventory = useLedgerStore(s => s.inventory);
+  const bankLines = useLedgerStore(s => s.bankLines);
+  const { loading } = useLedgerCollections('bankLines', 'bills', 'inventory', 'invoices', 'recurring');
+  const workspace = useAuthStore(s => s.getCurrentWorkspace());
+  const goToPage = useUIStore(s => s.goToPage);
+
+  const rows = useMemo(() => {
+    if (!workspace) return [];
+    const today = getLocalDateISO();
+    const findings = runDataChecks({
+      transactions: transactions || [], accounts: accounts || [], invoices: invoices || [], bills: bills || [], recurring: recurring || [],
+      inventory: inventory || [], bankLines: bankLines || [], today, baseCurrency: workspace.currency || 'USD', dimensions: workspace.dimensions,
+    });
+    const closeByDay = (workspace.alerts as { closeReminderDay?: number | null } | undefined)?.closeReminderDay || undefined;
+    return needsAttention({ today, workspace, bankLines: bankLines || [], invoices: invoices || [], findings, closeByDay });
+  }, [workspace, transactions, accounts, invoices, bills, recurring, inventory, bankLines]);
+
+  if (loading || !workspace) return null;
+  return (
+    <section aria-labelledby="needs-attention-title" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+      <h2 id="needs-attention-title" className="text-sm font-bold text-[var(--text)]">Needs attention</h2>
+      {rows.length === 0 ? (
+        <p className="mt-1 text-sm text-[var(--muted)]">Nothing waiting: the bank is matched, nothing waits for approval and the books have no problems.</p>
+      ) : (
+        <ul className="mt-2 divide-y divide-[var(--line)]">
+          {rows.map(row => (
+            <li key={row.id}>
+              <button type="button" onClick={() => goToPage(row.page)} className="w-full flex items-center justify-between gap-3 py-2 text-left hover:bg-[var(--elevated)] rounded">
+                <span>
+                  <span className="block text-sm font-semibold text-[var(--text)]">{row.text}</span>
+                  <span className="block text-xs text-[var(--muted)]">{row.why} For {row.who}.</span>
+                </span>
+                <ChevronRight aria-hidden="true" size={16} className="shrink-0 text-[var(--muted)]" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
