@@ -35,6 +35,8 @@ export function needsAttention(input: {
   findings?: CheckFinding[];
   /** the day of the month from which last month should be closed (default the 10th) */
   closeByDay?: number;
+  /** questions about entries (BD-07) */
+  questions?: Array<{ status?: string }>;
 }): AttentionRow[] {
   const rows: AttentionRow[] = [];
   const add = (row: AttentionRow) => { if (row.count > 0) rows.push(row); };
@@ -58,6 +60,11 @@ export function needsAttention(input: {
 
   const duplicates = count('duplicate-bill');
   add({ id: 'duplicate-bill', count: duplicates, text: plural(duplicates, 'possible duplicate bill', 'possible duplicate bills'), why: 'The same bill number from the same vendor is entered more than once; paying both would pay twice.', who: BOOKKEEPING, page: { tab: 'data-health' } });
+
+  const asked = (input.questions || []).filter(q => q.status === 'open').length;
+  add({ id: 'questions', count: asked, text: plural(asked, 'question about an entry waiting for an answer', 'questions about entries waiting for an answer'), why: 'Someone asked what an entry was; it stays unclear in the books until it is answered.', who: 'the owner', page: { tab: 'client-queries' } });
+  const answered = (input.questions || []).filter(q => q.status === 'answered').length;
+  add({ id: 'answers', count: answered, text: plural(answered, 'answer to read', 'answers to read'), why: 'The owner answered a question; read it, fix the entry if needed, and close the question.', who: BOOKKEEPING, page: { tab: 'client-queries' } });
 
   // last month should be closed from the workspace's reminder day (Settings → Alerts), else the 10th, on
   const [y, m, d] = input.today.split('-').map(Number);

@@ -17,6 +17,7 @@ import { useLedgerStore } from '../stores/useLedgerStore';
 import { useUIStore } from '../stores/useUIStore';
 import { stubFetch } from './helpers/dom';
 import type { CheckFinding } from '../lib/dataChecks';
+import { getSupabase } from '../lib/db/client';
 
 const finding = (checkId: string, severity: CheckFinding['severity'] = 'high'): CheckFinding => ({ id: `${checkId}-${Math.random()}`, checkId, severity, title: '', description: '' });
 const approval = { enabled: true, thresholdCents: 1000 };
@@ -40,6 +41,14 @@ describe('The queue', () => {
     assert.ok(rows.every(r => r.why && r.who));
   });
 
+  test('questions about entries: waiting for the owner, and answers to read', () => {
+    const rows = needsAttention({ today: '2026-10-05', workspace: { lockDate: '2026-09-30' } as never, questions: [{ status: 'open' }, { status: 'open' }, { status: 'answered' }, { status: 'closed' }] });
+    assert.deepEqual(rows.map(r => [r.text, r.who, r.page.tab]), [
+      ['2 questions about entries waiting for an answer', 'the owner', 'client-queries'],
+      ['1 answer to read', 'owners, accountants and bookkeepers', 'client-queries'],
+    ]);
+  });
+
   test('a row goes when its cause does: nothing waiting is an empty queue', () => {
     assert.deepEqual(needsAttention({ today: '2026-10-12', workspace: { lockDate: '2026-09-30' } as never, bankLines: [{ status: 'matched' }], findings: [finding('future-dated', 'low')] }), []);
   });
@@ -54,7 +63,7 @@ describe('The queue', () => {
 });
 
 describe('On the Overview', () => {
-  afterEach(() => cleanup());
+  afterEach(async () => { cleanup(); getSupabase().realtime.disconnect(); await getSupabase().auth.dispose(); });
 
   test('shows the rows; one opens its screen', async () => {
     stubFetch(404);

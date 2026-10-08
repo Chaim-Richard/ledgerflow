@@ -7,6 +7,7 @@ import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { runDataChecks } from '../../lib/dataChecks';
 import { needsAttention } from '../../lib/needsAttention';
 import { getLocalDateISO } from '../../lib/utils';
+import { useClientQueries } from '../../services/clientQueryActions';
 
 /**
  * Needs attention (DA-02) at the top of the Overview: one row per kind of thing to do, with how
@@ -25,6 +26,7 @@ export default function NeedsAttentionCard() {
   const { loading } = useLedgerCollections('bankLines', 'bills', 'inventory', 'invoices', 'recurring');
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const goToPage = useUIStore(s => s.goToPage);
+  const { queries } = useClientQueries(workspace?.id);
 
   const rows = useMemo(() => {
     if (!workspace) return [];
@@ -34,8 +36,8 @@ export default function NeedsAttentionCard() {
       inventory: inventory || [], bankLines: bankLines || [], today, baseCurrency: workspace.currency || 'USD', dimensions: workspace.dimensions,
     });
     const closeByDay = (workspace.alerts as { closeReminderDay?: number | null } | undefined)?.closeReminderDay || undefined;
-    return needsAttention({ today, workspace, bankLines: bankLines || [], invoices: invoices || [], findings, closeByDay });
-  }, [workspace, transactions, accounts, invoices, bills, recurring, inventory, bankLines]);
+    return needsAttention({ today, workspace, bankLines: bankLines || [], invoices: invoices || [], findings, closeByDay, questions: queries });
+  }, [workspace, transactions, accounts, invoices, bills, recurring, inventory, bankLines, queries]);
 
   if (loading || !workspace) return null;
   return (
