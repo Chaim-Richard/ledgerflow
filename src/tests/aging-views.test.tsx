@@ -10,6 +10,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import ARAgingReportView from '../components/reporting/ARAgingReportView';
 import APAgingReportView from '../components/reporting/APAgingReportView';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { useUIStore } from '../stores/useUIStore';
 import { addToDateISO, getLocalDateISO } from '../lib/utils';
 import { makeBill, makeCustomer, makeInvoice, makeVendor } from './fixtures';
 
@@ -48,6 +49,21 @@ describe('aging screens', () => {
     const dialog = screen.getByRole('dialog', { name: /Acme/ });
     assert.match(dialog.textContent || '', /INV-2.*45 days overdue/);
     assert.match(dialog.textContent || '', /INV-1.*Not yet due/);
+  });
+
+  test('A/R details (N-12): add up to the row in the base currency, open each invoice, and say when the list is partial', () => {
+    render(<ARAgingReportView />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open Bob' }));
+    const dialog = screen.getByRole('dialog', { name: /Bob/ });
+    assert.match(dialog.textContent || '', /Still owed in all \(1 document, in the base currency\)\$110\.00/);
+    assert.equal(within(dialog).queryByRole('status'), null);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Open invoice INV-3' }));
+    assert.deepEqual(useUIStore.getState().focusRecord, { type: 'invoice', id: 'i3' });
+    assert.equal(screen.queryByRole('dialog', { name: /Bob/ }), null);
+    useLedgerStore.setState({ truncatedCollections: { invoices: true } });
+    fireEvent.click(screen.getByRole('button', { name: 'Open Acme' }));
+    assert.match(screen.getByRole('status').textContent || '', /Only part of the invoices is loaded/);
+    useLedgerStore.setState({ truncatedCollections: {} });
   });
 
   test('A/P: bills the same way', () => {
