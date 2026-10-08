@@ -93,6 +93,13 @@ const stringList = (value: unknown) => {
   return value.map(v => String(v));
 };
 
+// Z-16: the parent company (a member id, or null for none) and the share it owns of each other member;
+// anything else is passed on as it came, so the service refuses it with a reason
+const structure = (body: Record<string, unknown> | undefined) => ({
+  ...(body?.parentId !== undefined ? { parentId: body.parentId as string | null } : {}),
+  ...(body?.ownership !== undefined ? { ownership: body.ownership as Record<string, number> } : {}),
+});
+
 accountRouter.get('/groups', async (req, res) => {
   const user = (req as unknown as AuthenticatedRequest).user;
   try { res.json({ status: 'success', groups: await listGroups(getDb(), user.uid) }); } catch (err) { groupFail(res, err); }
@@ -101,7 +108,7 @@ accountRouter.get('/groups', async (req, res) => {
 accountRouter.post('/groups', async (req, res) => {
   const user = (req as unknown as AuthenticatedRequest).user;
   try {
-    const group = await createGroup(getDb(), { uid: user.uid, name: typeof req.body?.name === 'string' ? req.body.name : '', workspaceIds: stringList(req.body?.workspaceIds) || [] });
+    const group = await createGroup(getDb(), { uid: user.uid, name: typeof req.body?.name === 'string' ? req.body.name : '', workspaceIds: stringList(req.body?.workspaceIds) || [], ...structure(req.body) });
     res.status(201).json({ status: 'success', group });
   } catch (err) { groupFail(res, err); }
 });
@@ -110,7 +117,7 @@ accountRouter.put('/groups/:id', async (req, res) => {
   const user = (req as unknown as AuthenticatedRequest).user;
   try {
     const name = req.body?.name === undefined ? undefined : String(req.body.name);
-    res.json({ status: 'success', group: await updateGroup(getDb(), { uid: user.uid, groupId: String(req.params.id), name, workspaceIds: stringList(req.body?.workspaceIds) }) });
+    res.json({ status: 'success', group: await updateGroup(getDb(), { uid: user.uid, groupId: String(req.params.id), name, workspaceIds: stringList(req.body?.workspaceIds), ...structure(req.body) }) });
   } catch (err) { groupFail(res, err); }
 });
 

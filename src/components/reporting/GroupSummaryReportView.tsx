@@ -8,10 +8,11 @@ import type { WorkspaceGroup } from '../../lib/workspaceGroups';
 import { averageFromTimeframe, parseRates, rateFromQuote, type TranslationRates } from '../../lib/translationRates';
 
 interface Figures { income: number; cogs: number; grossProfit: number; expense: number; netIncome: number; totalAssets: number; totalLiabilities: number; totalEquity: number }
-interface Member extends Figures { workspaceId: string; name: string; currency: string; isBalanced: boolean; translated?: Figures & { cta: number } }
+interface Member extends Figures { workspaceId: string; name: string; currency: string; isBalanced: boolean; share?: number; translated?: Figures & { cta: number } }
 interface Issue { workspaceId: string; transactionId: string; date: string; description: string; amountCents: number; currency: string; withName: string | null; reason: 'missing' | 'undone' | 'amount' | 'outside-group' | 'not-open'; otherAmountCents?: number }
 interface Eliminated { assets: number; liabilities: number; difference: number }
-interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number; eliminated?: Eliminated }) | null; notIncluded: number; intercompany?: { matched: number; unmatched: Issue[] } }
+interface OtherOwners { equity: number; netIncome: number }
+interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number; eliminated?: Eliminated; otherOwners?: OtherOwners }) | null; parent?: { workspaceId: string; name: string } | null; notIncluded: number; intercompany?: { matched: number; unmatched: Issue[] } }
 
 /** Why an intercompany entry has no match (Z-19), in words. */
 const whyUnmatched = (i: Issue) => ({
@@ -161,6 +162,11 @@ export default function GroupSummaryReportView() {
       {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
       {summary && (
         <>
+          {summary.parent && (
+            <p className="text-xs text-[var(--muted)]">
+              Parent: <bdi>{summary.parent.name}</bdi>. Each company it owns is added in full; the part that belongs to its other owners is shown under the total.
+            </p>
+          )}
           {summary.notIncluded > 0 && <p className="text-xs text-amber-700 dark:text-amber-400">{summary.notIncluded} workspace{summary.notIncluded === 1 ? '' : 's'} in this group {summary.notIncluded === 1 ? 'is' : 'are'} no longer open to you and {summary.notIncluded === 1 ? 'is' : 'are'} not included.</p>}
           {!summary.total && summary.members.length > 1 && currencies.size > 1 && (
             <p className="text-xs text-[var(--muted)]">No group total: these books are in {[...currencies].join(', ')}. Choose one currency to add them up.</p>
@@ -174,7 +180,11 @@ export default function GroupSummaryReportView() {
               <thead>
                 <tr className="border-b border-[var(--line)] text-[var(--muted)]">
                   <th scope="col" className="text-left font-semibold py-2"><span className="sr-only">Figure</span></th>
-                  {summary.members.map(m => <th key={m.workspaceId} scope="col" className="text-right font-semibold py-2 px-2"><bdi>{m.name}</bdi></th>)}
+                  {summary.members.map(m => (
+                    <th key={m.workspaceId} scope="col" className="text-right font-semibold py-2 px-2">
+                      <bdi>{m.name}</bdi>{summary.parent && m.workspaceId !== summary.parent.workspaceId && <span className="block text-xs font-normal">{m.share ?? 100}% owned</span>}
+                    </th>
+                  ))}
                   {summary.total && <th scope="col" className="text-right font-semibold py-2 px-2">Group total</th>}
                 </tr>
               </thead>
@@ -199,6 +209,16 @@ export default function GroupSummaryReportView() {
                     <td className="text-right font-mono py-1.5 px-2">{formatCurrency(summary.total.cta || 0, summary.total.currency)}</td>
                   </tr>
                 )}
+                {summary.total?.otherOwners && ([['netIncome', 'of which net income of other owners'], ['totalEquity', 'of which equity of other owners']] as const).map(([key, label]) => (
+                  <tr key={key} className="border-b border-[var(--line)]/50 text-[var(--muted)]">
+                    <th scope="row" className="text-left font-normal py-1.5">{label}</th>
+                    {summary.members.map(m => {
+                      const figure = m.translated ? m.translated[key] : m[key];
+                      return <td key={m.workspaceId} className="text-right font-mono py-1.5 px-2">{formatCurrency(Math.round(figure * (100 - (m.share ?? 100)) / 100), m.translated ? summary.total!.currency : m.currency)}</td>;
+                    })}
+                    <td className="text-right font-mono py-1.5 px-2">{formatCurrency(summary.total!.otherOwners![key === 'netIncome' ? 'netIncome' : 'equity'], summary.total!.currency)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -251,7 +271,7 @@ export default function GroupSummaryReportView() {
               )}
             </section>
           )}
-          <p className="text-xs text-[var(--muted)]">Each company is read from its own books, as you can see them. Balances between the companies are taken out of the total; their sales to each other are not yet.</p>
+          <p className="text-xs text-[var(--muted)]">Each company is read from its own books, as you can see them. Balances between the companies are taken out of the total; their sales to each other, and the parent's investment against the companies' share capital, are not yet.</p>
         </>
       )}
     </section>

@@ -3,7 +3,7 @@ import { FolderTree } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { getIdToken } from '../../../firebase';
-import { groupProblem, type WorkspaceGroup } from '../../../lib/workspaceGroups';
+import { groupProblem, structureProblem, type WorkspaceGroup } from '../../../lib/workspaceGroups';
 
 const field = 'px-2 py-1.5 text-sm border border-[var(--line)] rounded bg-[var(--panel)] text-[var(--text)]';
 
@@ -25,7 +25,8 @@ export default function GroupsSettings() {
   const workspaces = useAuthStore(s => s.workspaces);
   const [groups, setGroups] = useState<WorkspaceGroup[] | null>(null);
   const [error, setError] = useState('');
-  const [editing, setEditing] = useState<{ id: string | null; name: string; workspaceIds: string[] } | null>(null);
+  // Z-16: the parent and the share it owns of each other member, typed as text until saved
+  const [editing, setEditing] = useState<{ id: string | null; name: string; workspaceIds: string[]; parentId: string; shares: Record<string, string> } | null>(null);
   const [busy, setBusy] = useState(false);
   const nameOf = (id: string) => workspaces.find(w => w.id === id)?.name || id;
 
@@ -39,12 +40,22 @@ export default function GroupsSettings() {
   }, [reload]);
   const load = () => setReload(n => n + 1);
 
-  const problem = editing ? (groupProblem(editing) || (editing.workspaceIds.length === 0 ? 'Choose at least one workspace' : null)) : null;
+  const ownership = (e: NonNullable<typeof editing>) => e.parentId
+    ? Object.fromEntries(e.workspaceIds.filter(id => id !== e.parentId && (e.shares[id] ?? '').trim() !== '').map(id => [id, Number(e.shares[id])]))
+    : {};
+  const problem = editing
+    ? (groupProblem(editing) || (editing.workspaceIds.length === 0 ? 'Choose at least one workspace' : null)
+      || structureProblem({ workspaceIds: editing.workspaceIds, parentId: editing.parentId || null, ownership: ownership(editing) }))
+    : null;
+  const edit = (g: WorkspaceGroup) => setEditing({
+    id: g.id, name: g.name, workspaceIds: g.workspaceIds, parentId: g.parentId || '',
+    shares: Object.fromEntries(Object.entries(g.ownership || {}).map(([id, n]) => [id, String(n)])),
+  });
   const save = async () => {
     if (!editing || problem || busy) return;
     setBusy(true);
     try {
-      const body = { name: editing.name, workspaceIds: editing.workspaceIds };
+      const body = { name: editing.name, workspaceIds: editing.workspaceIds, parentId: editing.parentId || null, ownership: ownership(editing) };
       if (editing.id) await call(`/${encodeURIComponent(editing.id)}`, 'PUT', body); else await call('', 'POST', body);
       toast.success(editing.id ? `Saved ${editing.name.trim()}` : `Group ${editing.name.trim()} made`);
       setEditing(null);
@@ -68,7 +79,12 @@ export default function GroupsSettings() {
       setBusy(false);
     }
   };
-  const toggle = (id: string, on: boolean) => setEditing(e => e && ({ ...e, workspaceIds: on ? [...e.workspaceIds, id] : e.workspaceIds.filter(x => x !== id) }));
+  const toggle = (id: string, on: boolean) => setEditing(e => e && ({
+    ...e, workspaceIds: on ? [...e.workspaceIds, id] : e.workspaceIds.filter(x => x !== id), parentId: !on && e.parentId === id ? '' : e.parentId,
+  }));
+  const shareText = (g: WorkspaceGroup) => g.parentId
+    ? `Parent: ${nameOf(g.parentId)}${g.workspaceIds.filter(id => id !== g.parentId).map(id => `; ${nameOf(id)} ${g.ownership?.[id] ?? 100}%`).join('')}`
+    : '';
 
   return (
     <section aria-labelledby="groups-title" className="space-y-4">
@@ -85,9 +101,10 @@ export default function GroupsSettings() {
               <div>
                 <p className="font-semibold text-[var(--text)]"><bdi>{g.name}</bdi></p>
                 <p className="text-xs text-[var(--muted)]">{g.workspaceIds.length ? g.workspaceIds.map(nameOf).join(', ') : 'No workspaces you can open'}</p>
+                {g.parentId && <p className="text-xs text-[var(--muted)]">{shareText(g)}</p>}
               </div>
               <div className="flex gap-2 text-xs">
-                <button type="button" disabled={busy} onClick={() => setEditing({ id: g.id, name: g.name, workspaceIds: g.workspaceIds })} className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                <button type="button" disabled={busy} onClick={() => edit(g)} className="text-indigo-600 dark:text-indigo-400 hover:underline">
                   Change<span className="sr-only"> {g.name}</span>
                 </button>
                 <button type="button" disabled={busy} onClick={() => void remove(g)} className="text-rose-600 hover:underline">
@@ -112,6 +129,28 @@ export default function GroupsSettings() {
               </label>
             ))}
           </div>
+          {editing.workspaceIds.length > 1 && (
+            <div className="space-y-2">
+              <label className="flex flex-col gap-1 text-[var(--muted)]">Parent company (optional)
+                <select value={editing.parentId} onChange={e => setEditing({ ...editing, parentId: e.target.value })} className={field}>
+                  <option value="">None: just a list of books</option>
+                  {editing.workspaceIds.map(id => <option key={id} value={id}>{nameOf(id)}</option>)}
+                </select>
+              </label>
+              {editing.parentId && (
+                <div role="group" aria-label="Share the parent owns" className="space-y-1">
+                  <p className="text-xs text-[var(--muted)]">The share the parent owns of each company (above 50%; empty is 100%). The rest belongs to other owners, and the group total says how much.</p>
+                  {editing.workspaceIds.filter(id => id !== editing.parentId).map(id => (
+                    <label key={id} className="flex items-center gap-2 text-[var(--text)]">
+                      <bdi className="min-w-[8rem]">{nameOf(id)}</bdi>
+                      <input inputMode="decimal" placeholder="100" aria-label={`Share of ${nameOf(id)} owned, in percent`} value={editing.shares[id] ?? ''}
+                        onChange={e => setEditing({ ...editing, shares: { ...editing.shares, [id]: e.target.value } })} className={`${field} w-24`} />%
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {problem && <p role="status" className="text-xs text-amber-700 dark:text-amber-400">{problem}</p>}
           <div className="flex gap-2">
             <button type="button" onClick={() => void save()} disabled={Boolean(problem)} className="rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white disabled:opacity-50">Save group</button>
@@ -119,7 +158,7 @@ export default function GroupsSettings() {
           </div>
         </fieldset>
       ) : (
-        <button type="button" onClick={() => setEditing({ id: null, name: '', workspaceIds: [] })} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm font-semibold text-[var(--text)] hover:bg-[var(--elevated)]">New group</button>
+        <button type="button" onClick={() => setEditing({ id: null, name: '', workspaceIds: [], parentId: '', shares: {} })} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm font-semibold text-[var(--text)] hover:bg-[var(--elevated)]">New group</button>
       )}
     </section>
   );

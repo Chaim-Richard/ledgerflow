@@ -10,6 +10,10 @@ export interface WorkspaceGroup {
   name: string;
   /** the member workspaces, in the order chosen */
   workspaceIds: string[];
+  /** Z-16: the company that owns the others, when the group is a holding structure */
+  parentId?: string;
+  /** Z-16: the parent's share of each other member, in percent (a member not listed: 100) */
+  ownership?: Record<string, number>;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -31,6 +35,33 @@ export function groupProblem(input: { name?: unknown; workspaceIds?: unknown }):
   }
   return null;
 }
+
+/**
+ * Why the group's structure (Z-16) can't be saved, or null. The parent is one of the members; each
+ * other member's share is above 50% (a company the parent controls, so its books are added in full
+ * and the rest belongs to other owners) and at most 100%, with two decimals at most.
+ */
+export function structureProblem(input: { workspaceIds: string[]; parentId?: unknown; ownership?: unknown }): string | null {
+  if (input.parentId !== undefined && input.parentId !== null) {
+    if (typeof input.parentId !== 'string' || !input.workspaceIds.includes(input.parentId)) return 'The parent company must be one of the group\'s workspaces';
+  }
+  if (input.ownership === undefined || input.ownership === null) return null;
+  if (typeof input.ownership !== 'object' || Array.isArray(input.ownership)) return 'Enter the share owned of each company';
+  const entries = Object.entries(input.ownership as Record<string, unknown>);
+  if (entries.length > 0 && !input.parentId) return 'Choose the parent company before the shares it owns';
+  for (const [id, share] of entries) {
+    if (!input.workspaceIds.includes(id)) return 'A share is given for a workspace outside the group';
+    if (id === input.parentId) return 'The parent company has no share of itself';
+    if (typeof share !== 'number' || !Number.isFinite(share) || share > 100) return 'A share is a percentage up to 100';
+    if (Math.round(share * 100) / 100 !== share) return 'A share has two decimals at most';
+    if (share <= 50) return 'A company owned 50% or less is not added line by line (the equity method is not supported): leave it out of the group';
+  }
+  return null;
+}
+
+/** The parent's share of a member, in percent: 100 without a parent, for the parent, or when none is given. */
+export const shareOf = (group: Pick<WorkspaceGroup, 'parentId' | 'ownership'>, workspaceId: string) =>
+  group.parentId && workspaceId !== group.parentId ? group.ownership?.[workspaceId] ?? 100 : 100;
 
 /** The groups a workspace is in (for showing it next to the workspace's name). */
 export const groupsOf = (groups: WorkspaceGroup[], workspaceId: string) => groups.filter(g => g.workspaceIds.includes(workspaceId));

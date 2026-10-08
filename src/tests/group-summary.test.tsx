@@ -192,8 +192,30 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.equal(total.totalAssets, total.totalLiabilities + total.totalEquity, 'the group still balances');
   });
 
+  let owned = '';
+  test('with a parent, each company it owns is added in full and the other owners\' part is said (Z-16)', async () => {
+    const made = await call('/api/v1/account/groups', ann, { method: 'POST', body: { name: 'Owned', workspaceIds: [ws1, ws2], parentId: ws1, ownership: { [ws2]: 80 } } });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    owned = String((made.body.group as { id: string }).id);
+    const res = await summary(owned);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.deepEqual(res.body.parent, { workspaceId: ws1, name: 'Holding' });
+    const members = res.body.members as Array<{ name: string; share: number; netIncome: number; totalEquity: number }>;
+    assert.deepEqual(members.map(m => [m.name, m.share]), [['Holding', 100], ['Daughter', 80]]);
+    const daughter = members[1];
+    const total = res.body.total as { netIncome: number; totalEquity: number; otherOwners: { equity: number; netIncome: number } };
+    assert.deepEqual(total.otherOwners, { equity: Math.round(daughter.totalEquity * 0.2), netIncome: Math.round(daughter.netIncome * 0.2) });
+    assert.equal(total.otherOwners.netIncome, 5000, 'a fifth of the daughter\'s 25,000 profit');
+    const plain = (await summary(sameCurrency)).body.total as { netIncome: number; totalEquity: number; otherOwners?: unknown };
+    assert.deepEqual([total.netIncome, total.totalEquity], [plain.netIncome, plain.totalEquity], 'added in full');
+    assert.equal(plain.otherOwners, undefined, 'a group without a parent says nothing about owners');
+  });
+
   test('a member no longer open is left out and counted; other people, reversed periods and API keys are refused', async () => {
     await db.collection('workspaces').doc(ws2).update({ members: [bob] });
+    const consolidation = await summary(owned);
+    assert.equal(consolidation.status, 403, 'a group with a parent is refused, never quietly short');
+    assert.match(String(consolidation.body.error || consolidation.body.message), /1 of them is not open to you/);
     const res = await summary(sameCurrency);
     assert.deepEqual((res.body.members as Array<{ name: string }>).map(m => m.name), ['Holding']);
     assert.equal(res.body.notIncluded, 1);
@@ -208,12 +230,12 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
 describe('On screen', () => {
   const groups = [{ id: 'grp_aaaaaaaa', name: 'Family', workspaceIds: ['ws-a', 'ws-b'] }];
   const figures = (income: number) => ({ income, cogs: 0, grossProfit: income, expense: 100, netIncome: income - 100, totalAssets: 5000, totalLiabilities: 0, totalEquity: 5000 });
-  const answer = (members: Array<Record<string, unknown>>, total: Record<string, unknown> | null) => {
+  const answer = (members: Array<Record<string, unknown>>, total: Record<string, unknown> | null, extra: Record<string, unknown> = {}) => {
     const asked: string[] = [];
     globalThis.fetch = (async (input: RequestInfo | URL) => {
       const url = String(input);
       asked.push(url);
-      const body = url.startsWith('/api/v1/account/groups') ? { status: 'success', groups } : { group: groups[0], members, total, notIncluded: 0 };
+      const body = url.startsWith('/api/v1/account/groups') ? { status: 'success', groups } : { group: groups[0], members, total, notIncluded: 0, ...extra };
       return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }) as typeof fetch;
     return asked;
@@ -234,6 +256,20 @@ describe('On screen', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Net income of Daughter/ })); });
     assert.equal(useAuthStore.getState().currentWorkspaceId, 'ws-b');
     assert.equal(useUIStore.getState().activeReportTab, 'pnl');
+  });
+
+  test('with a parent: each company\'s share, and the other owners\' part of the profit and the equity (Z-16)', async () => {
+    setComponentWorkspace('owner');
+    answer([
+      { workspaceId: 'ws-a', name: 'Holding', currency: 'USD', isBalanced: true, share: 100, ...figures(1000) },
+      { workspaceId: 'ws-b', name: 'Daughter', currency: 'USD', isBalanced: true, share: 80, ...figures(2100) },
+    ], { currency: 'USD', ...figures(3100), otherOwners: { equity: 1000, netIncome: 400 } }, { parent: { workspaceId: 'ws-a', name: 'Holding' } });
+    render(<GroupSummaryReportView />);
+    await waitFor(() => assert.ok(screen.getByText('80% owned')));
+    assert.ok(screen.getByText(/Parent: /));
+    const row = (name: string) => screen.getByRole('rowheader', { name }).parentElement!.textContent || '';
+    assert.match(row('of which net income of other owners'), /\$0\.00\$4\.00\$4\.00/);
+    assert.match(row('of which equity of other owners'), /\$0\.00\$10\.00\$10\.00/);
   });
 
   test('in one currency: rates are asked for, filled from the rate service, and sent; the translation line shows', async () => {

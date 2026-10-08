@@ -22,9 +22,17 @@
  * intercompany accounts: role 'intercompany', or "Intercompany" in the name) is taken out of the
  * group's total assets and liabilities. If the two sides differ, the difference is said, and kept in
  * equity so the total still balances.
+ *
+ * Parent and ownership (Z-16): when the group names its parent company, every other member is one the
+ * parent controls (owned above 50%), so its books are added in full and the part that belongs to its
+ * other owners (non-controlling interest) is said: their share of its equity and of its profit. A
+ * group with a parent is a consolidation, so it is refused while any of its companies is not one the
+ * person can open, never quietly short. Not yet: taking the parent's investment out against the
+ * companies' share capital.
  */
 import type { Firestore } from '../db/firestore';
 import { openable } from '../services/workspaceGroupService';
+import { shareOf } from '../../lib/workspaceGroups';
 import { computeBalanceSheet, computeProfitAndLoss } from './computeReports';
 import type { ChartAccount, Transaction } from '../../types';
 import { isPostable } from '../../lib/txFilters';
@@ -62,6 +70,8 @@ export interface GroupMember extends GroupFigures {
   name: string;
   currency: string;
   isBalanced: boolean;
+  /** Z-16: the parent's share of this company, in percent (100 without a parent) */
+  share: number;
   /** in the reporting currency, when one was asked for */
   translated?: GroupFigures & { cta: number; rates: TranslationRates | null };
 }
@@ -72,11 +82,21 @@ export interface GroupSummary {
   endDate: string;
   members: GroupMember[];
   /** the group's total: in the reporting currency, or when every member uses the same currency */
-  total: (GroupFigures & { currency: string; cta: number; eliminated: Eliminated }) | null;
+  total: (GroupFigures & { currency: string; cta: number; eliminated: Eliminated; otherOwners?: OtherOwners }) | null;
+  /** Z-16: the parent company, when the group names one */
+  parent: { workspaceId: string; name: string } | null;
   /** members of the group this person can no longer open (left out) */
   notIncluded: number;
   /** Z-19: dealings between the members in the period */
   intercompany: IntercompanySummary;
+}
+
+/** Z-16: what belongs to the companies' other owners (non-controlling interest), inside the total */
+export interface OtherOwners {
+  /** of total equity */
+  equity: number;
+  /** of net income */
+  netIncome: number;
 }
 
 export interface Eliminated {
@@ -154,7 +174,7 @@ export function matchIntercompany(members: Array<{ workspaceId: string; name: st
 
 const FIGURES: Array<keyof GroupFigures> = ['income', 'cogs', 'grossProfit', 'expense', 'netIncome', 'totalAssets', 'totalLiabilities', 'totalEquity'];
 
-type ReadMember = GroupMember & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[]; owedBy: number; owedTo: number };
+type ReadMember = Omit<GroupMember, 'share'> & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[]; owedBy: number; owedTo: number };
 
 async function memberFigures(db: Firestore, workspaceId: string, startDate: string, endDate: string): Promise<ReadMember> {
   const ws = (await db.collection('workspaces').doc(workspaceId).get()).data() || {};
@@ -215,6 +235,11 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
   const open = await openable(db, input.uid);
   const ids = (Array.isArray(group.workspaceIds) ? group.workspaceIds as string[] : []);
   const shown = ids.filter(id => open.has(id));
+  const structure = { parentId: typeof group.parentId === 'string' ? group.parentId : undefined, ownership: (group.ownership || {}) as Record<string, number> };
+  if (structure.parentId && shown.length < ids.length) {
+    const n = ids.length - shown.length;
+    throw new GroupReportError(403, `This group adds up its companies under a parent, and ${n} of them ${n === 1 ? 'is' : 'are'} not open to you: ask for access, or take ${n === 1 ? 'it' : 'them'} out of the group`);
+  }
   const read: ReadMember[] = [];
   for (const id of shown) read.push(await memberFigures(db, id, input.startDate, input.endDate));
   const reportCurrency = input.reportCurrency;
@@ -225,7 +250,8 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     }
   }
   const intercompany = matchIntercompany(read.map(m => ({ workspaceId: m.workspaceId, name: m.name, currency: m.currency, entries: m.intercompany })), open, input.startDate, input.endDate);
-  const members: GroupMember[] = read.map(({ earlierProfit, equityAccounts, intercompany: _entries, owedBy: _by, owedTo: _to, ...m }) => {
+  const members: GroupMember[] = read.map(({ earlierProfit, equityAccounts, intercompany: _entries, owedBy: _by, owedTo: _to, ...rest }) => {
+    const m = { ...rest, share: shareOf(structure, rest.workspaceId) };
     if (!reportCurrency) return m;
     const rates = m.currency === reportCurrency ? null : input.rates![m.currency];
     return { ...m, translated: { ...translate({ ...m, earlierProfit, equityAccounts }, rates), rates } };
@@ -238,10 +264,17 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
   const eliminated: Eliminated = { assets: owedBy, liabilities: owedTo, difference: owedBy - owedTo };
   const sum = (figures: Array<GroupFigures & { cta: number }>, currency: string) => {
     const t = Object.fromEntries([...FIGURES, 'cta' as const].map(f => [f, figures.reduce((s, x) => s + x[f], 0)])) as unknown as GroupFigures & { cta: number };
-    return { currency, ...t, totalAssets: t.totalAssets - owedBy, totalLiabilities: t.totalLiabilities - owedTo, totalEquity: t.totalEquity - eliminated.difference, eliminated };
+    // Z-16: the other owners' part of each company the parent owns less than all of
+    const others = (f: 'totalEquity' | 'netIncome') => figures.reduce((s, x, i) => s + Math.round(x[f] * (100 - members[i].share) / 100), 0);
+    const otherOwners = structure.parentId ? { otherOwners: { equity: others('totalEquity'), netIncome: others('netIncome') } } : {};
+    return { currency, ...t, totalAssets: t.totalAssets - owedBy, totalLiabilities: t.totalLiabilities - owedTo, totalEquity: t.totalEquity - eliminated.difference, eliminated, ...otherOwners };
   };
   const total = members.length === 0 ? null
     : reportCurrency ? sum(members.map(m => m.translated!), reportCurrency)
       : currencies.size === 1 ? sum(members.map(m => ({ ...m, cta: 0 })), members[0].currency) : null;
-  return { group: { id: snap.id, name: String(group.name || '') }, startDate: input.startDate, endDate: input.endDate, members, total, notIncluded: ids.length - shown.length, intercompany };
+  const parent = members.find(m => m.workspaceId === structure.parentId);
+  return {
+    group: { id: snap.id, name: String(group.name || '') }, startDate: input.startDate, endDate: input.endDate, members, total,
+    parent: parent ? { workspaceId: parent.workspaceId, name: parent.name } : null, notIncluded: ids.length - shown.length, intercompany,
+  };
 }

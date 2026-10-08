@@ -12,7 +12,7 @@ import React from 'react';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { groupProblem, groupsOf } from '../lib/workspaceGroups';
+import { groupProblem, groupsOf, shareOf, structureProblem } from '../lib/workspaceGroups';
 import GroupsSettings from '../components/platform/settings/GroupsSettings';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import { stubFetchWithBodies } from './helpers/dom';
@@ -27,6 +27,24 @@ describe('The rules', () => {
     assert.match(String(groupProblem({ workspaceIds: ['a', 'a'] })), /twice/);
     assert.match(String(groupProblem({ workspaceIds: 'a' })), /Choose the workspaces/);
     assert.deepEqual(groupsOf([{ id: 'g1', name: 'A', workspaceIds: ['a'] }, { id: 'g2', name: 'B', workspaceIds: ['b'] }], 'b').map(g => g.id), ['g2']);
+  });
+
+  test('the parent is a member; each other company is owned above 50% and at most 100% (Z-16)', () => {
+    const workspaceIds = ['a', 'b', 'c'];
+    assert.equal(structureProblem({ workspaceIds }), null);
+    assert.equal(structureProblem({ workspaceIds, parentId: 'a', ownership: { b: 80, c: 100 } }), null);
+    assert.equal(structureProblem({ workspaceIds, parentId: null, ownership: {} }), null);
+    assert.match(String(structureProblem({ workspaceIds, parentId: 'z' })), /parent company must be one of/);
+    assert.match(String(structureProblem({ workspaceIds, ownership: { b: 80 } })), /Choose the parent/);
+    assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { a: 80 } })), /no share of itself/);
+    assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { z: 80 } })), /outside the group/);
+    assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { b: 50 } })), /50% or less/);
+    assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { b: 101 } })), /up to 100/);
+    assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { b: NaN } })), /up to 100/);
+    assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { b: 75.555 } })), /two decimals/);
+    const group = { parentId: 'a', ownership: { b: 80 } };
+    assert.deepEqual(['a', 'b', 'c'].map(id => shareOf(group, id)), [100, 80, 100]);
+    assert.equal(shareOf({ ownership: { b: 80 } }, 'b'), 100, 'no parent: no shares');
   });
 });
 
@@ -84,6 +102,18 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.deepEqual(Object.keys((await db.collection('workspaces').doc(ws2).get()).data()!).sort(), ['members', 'name', 'roles', 'uid']);
   });
 
+  test('the parent and the shares it owns are kept; ones that break the rules are refused (Z-16)', async () => {
+    assert.equal((await call(`/${groupId}`, 'PUT', ann, { parentId: ws3 })).status, 404, 'one the person can\'t open answers like a missing one');
+    assert.equal((await call(`/${groupId}`, 'PUT', ann, { workspaceIds: [ws2], parentId: ws1 })).status, 400, 'not a member');
+    assert.equal((await call(`/${groupId}`, 'PUT', ann, { parentId: ws1, ownership: { [ws2]: 40 } })).status, 400);
+    assert.equal((await call(`/${groupId}`, 'PUT', ann, { ownership: { [ws2]: 80 } })).status, 400, 'shares need a parent');
+    const set = await call(`/${groupId}`, 'PUT', ann, { parentId: ws1, ownership: { [ws2]: 80 } });
+    assert.equal(set.status, 200, JSON.stringify(set.body));
+    assert.deepEqual([(set.body.group as { parentId: string }).parentId, (set.body.group as { ownership: unknown }).ownership], [ws1, { [ws2]: 80 }]);
+    const renamed = await call(`/${groupId}`, 'PUT', ann, { name: 'Family' });
+    assert.deepEqual((renamed.body.group as { ownership: unknown }).ownership, { [ws2]: 80 }, 'left out: kept');
+  });
+
   test('nobody else reads or changes the group', async () => {
     assert.deepEqual((await call('', 'GET', bob)).body.groups, []);
     assert.equal((await call(`/${groupId}`, 'PUT', bob, { name: 'Mine now' })).status, 404);
@@ -99,6 +129,8 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.equal(renamed.status, 200, JSON.stringify(renamed.body));
     assert.deepEqual(ids(renamed.body), [ws1]);
     assert.deepEqual((await db.collection('workspaceGroups').doc(groupId).get()).data()?.workspaceIds, [ws1, ws2], 'kept, unseen');
+    assert.equal((renamed.body.group as { ownership: Record<string, number> }).ownership[ws2], undefined, 'its share is not shown');
+    assert.deepEqual((await db.collection('workspaceGroups').doc(groupId).get()).data()?.ownership, { [ws2]: 80 }, 'its share is kept, unseen');
     assert.equal((await call(`/${groupId}`, 'PUT', ann, { workspaceIds: [ws1, ws3] })).status, 404, 'still only openable ones are added');
   });
 
@@ -130,7 +162,7 @@ describe('Settings → Groups of books', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Branch C' }));
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save group' })); });
     const post = calls.find(c => c.url === '/api/v1/account/groups' && c.method === 'POST')!;
-    assert.deepEqual(post.body, { name: 'Branches', workspaceIds: ['ws-b', 'ws-c'] });
+    assert.deepEqual(post.body, { name: 'Branches', workspaceIds: ['ws-b', 'ws-c'], parentId: null, ownership: {} });
   });
 
   test('changing a group sends its id; removing one says its workspaces are untouched', async () => {
@@ -144,8 +176,28 @@ describe('Settings → Groups of books', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save group' })); });
     const put = calls.find(c => c.method === 'PUT')!;
     assert.equal(put.url, '/api/v1/account/groups/grp_aaaaaaaa');
-    assert.deepEqual(put.body, { name: 'Holding', workspaceIds: ['ws-b', 'component-workspace'] });
+    assert.deepEqual(put.body, { name: 'Holding', workspaceIds: ['ws-b', 'component-workspace'], parentId: null, ownership: {} });
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Remove Holding' })); });
     assert.ok(calls.some(c => c.method === 'DELETE' && c.url === '/api/v1/account/groups/grp_aaaaaaaa'));
+  });
+
+  test('a parent and the share it owns of each other company (Z-16)', async () => {
+    const ws = setComponentWorkspace('owner');
+    useAuthStore.setState({ workspaces: [ws, { ...ws, id: 'ws-b', name: 'Branch B' }, { ...ws, id: 'ws-c', name: 'Branch C' }] });
+    const calls = stubFetchWithBodies(200, { status: 'success', groups: [{ id: 'grp_aaaaaaaa', name: 'Holding', workspaceIds: ['component-workspace', 'ws-b', 'ws-c'], parentId: 'component-workspace', ownership: { 'ws-b': 80 } }] });
+    render(<GroupsSettings />);
+    await waitFor(() => assert.ok(screen.getByText('Parent: Test workspace; Branch B 80%; Branch C 100%')));
+    fireEvent.click(screen.getByRole('button', { name: 'Change Holding' }));
+    assert.equal((screen.getByLabelText('Share of Branch B owned, in percent') as HTMLInputElement).value, '80');
+    fireEvent.change(screen.getByLabelText('Share of Branch C owned, in percent'), { target: { value: '40' } });
+    assert.match(screen.getByRole('status').textContent || '', /50% or less/);
+    fireEvent.change(screen.getByLabelText('Share of Branch C owned, in percent'), { target: { value: '60' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save group' })); });
+    assert.deepEqual(calls.find(c => c.method === 'PUT')!.body, { name: 'Holding', workspaceIds: ['component-workspace', 'ws-b', 'ws-c'], parentId: 'component-workspace', ownership: { 'ws-b': 80, 'ws-c': 60 } });
+    // taking the parent out of the group clears it, and its shares go with it
+    fireEvent.click(screen.getByRole('button', { name: 'Change Holding' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Test workspace' }));
+    assert.equal((screen.getByLabelText('Parent company (optional)') as HTMLSelectElement).value, '');
+    assert.equal(screen.queryByLabelText('Share of Branch B owned, in percent'), null);
   });
 });
