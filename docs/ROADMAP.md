@@ -255,7 +255,7 @@ These are the tracker IDs; `docs/TRACKER.md` has the detail.
   - Z-12 (the missing-label check, with a simple rule per account) — done 7 Oct (the check, the rules, the warnings, and refusing on the server when the rule says so);
   - K-34 and BD-02 (one fast switcher between books) — done 8 Oct.
 - **Proof:** DA-05 (done 8 Oct, Claude), DA-06 (AI #3's A-11), DA-07 and DA-08 (both done 7 Oct, against the real database).
-  - N-14 (Hebrew learned patterns overwrite each other, found by DA-05).
+  - N-14 (Hebrew learned patterns overwrite each other, found by DA-05) — done 8 Oct.
 - **The owner's settings:** L-67 and L-83.
 
 ### Later, P0 (core and strategic)

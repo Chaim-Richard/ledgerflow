@@ -61,7 +61,7 @@ One row per capability, with one label each (DA-05). The README, Help, onboardin
 | 51 | Persisted auto-rules | Available | `src/hooks/useAutoRules.ts`; `rules-saving.test.ts` | In-memory rule mutation alone is not enough |
 | 52 | Natural-language entry/query tools | Available with limits | `algorithms/nl-parser.ts`, command palette; `algorithms.test.ts`, Hebrew data tests | Parsing requires preview/validation; not unlimited understanding |
 | 53 | Cross-dimension classification | Available with limits | `cross-dimension-inference.ts`, dimension resolver; `deep-labeling.test.ts`, `dimension-identity.test.ts` | Preserve original identifiers and nested structure |
-| 54 | Mixed-script merchant matching | Partial | similarity/merchant-identity modules; `hebrew-data.test.ts` | Finding F1: two Hebrew-only descriptions of the same length save to the same learned-pattern record (N-14). |
+| 54 | Mixed-script merchant matching | Available | similarity/merchant-identity modules, `src/lib/learnedPatterns.ts`; `hebrew-data.test.ts`, `learned-patterns.test.ts` | Learned patterns saved before 8 Oct that had collided keep their last value (N-14 fixed the cause). |
 | 55 | Query engine/directives | Available | `TransactionQueryEngine.ts`; `query-engine-matrix.test.ts` | UI interpretation summaries may have older ASCII patterns |
 | 56 | Saved views | Available with limits | saved-view store/bar; transaction-templates.test.ts | Workspace sharing/permissions need explicit behavior |
 | 57 | Command palette across entities | Available with limits | `CommandPalette.tsx`; registry and browser navigation evidence | Loaded data search is not a full server search index |

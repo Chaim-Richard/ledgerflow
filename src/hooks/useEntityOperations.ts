@@ -1,4 +1,5 @@
 import { collection, updateDoc, deleteDoc, doc, setDoc, query, where, getDocs, getDoc } from '../lib/db/firestore';
+import { learnedPatternId } from '../lib/learnedPatterns';
 import { db, getIdToken } from '../firebase';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -94,7 +95,8 @@ export function useEntityOperations() {
     const cleanDesc = description.toLowerCase().trim();
     if (cleanDesc.length < 3) return;
     
-    const patternId = cleanDesc.replace(/[^a-z0-9]/g, '_');
+    // N-14: collision-free (Hebrew included), same id as before for plain Latin text
+    const patternId = learnedPatternId(cleanDesc);
     try {
       const patternRef = doc(db, 'rulePatterns', `${currentWorkspaceId}_${patternId}`);
       const existing = analyticalPatternCache[cleanDesc];
