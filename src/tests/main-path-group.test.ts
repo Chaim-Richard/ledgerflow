@@ -114,13 +114,24 @@ describe('The main path across a group of books', { skip: !process.env.LF_TEST_D
 
   test('in euros, the daughter is translated and the group still balances, with the translation difference on its line', async () => {
     await db.collection('workspaces').doc(sub).update({ currency: 'EUR' });
+    // a new loan between companies in different currencies needs what arrives; no guessed rate
+    const loan = { sourceWorkspaceId: hold, targetWorkspaceId: sub, amountCents: 12000, date: '2026-05-01', sourceAccountId: `${hold}_cash`, targetAccountId: `${sub}_cash` };
+    const refused = await call('/api/v1/transactions/intercompany/post', { method: 'POST', body: loan });
+    assert.equal(refused.status, 400);
+    assert.match(String(refused.body.error), /in USD and Daughter in EUR: say how much arrives in EUR/);
+    const posted = await call('/api/v1/transactions/intercompany/post', { method: 'POST', body: { ...loan, targetAmountCents: 10000 } });
+    assert.equal(posted.status, 200, JSON.stringify(posted.body));
+    assert.equal((await db.collection('transactions').doc(String(posted.body.targetTxId)).get()).data()?.totalAmountCents, 10000);
     const rates = encodeURIComponent(JSON.stringify({ EUR: { closing: 1.2, average: 1.1, historical: 1 } }));
     const res = await summary(`&reportCurrency=USD&rates=${rates}`);
     assert.equal(res.status, 200, JSON.stringify(res.body));
     const total = res.body.total as Record<string, number> & { eliminated: Record<string, number> };
     assert.equal(total.totalAssets, total.totalLiabilities + total.totalEquity, 'still balances');
     assert.ok(total.cta !== 0, 'a translation difference');
-    assert.equal(total.eliminated.liabilities, 18000, 'the daughter\'s side of the loan at the closing rate');
-    assert.equal(total.eliminated.difference, -3000, 'the two sides differ by the rate, and it is said');
+    // the first loan was booked as 15,000 in both (before the companies' currencies differed): 15,000 EUR at 1.2;
+    // the second as 12,000 USD and 10,000 EUR, which at 1.2 agree
+    assert.equal(total.eliminated.assets, 27000);
+    assert.equal(total.eliminated.liabilities, 30000, 'the daughter\'s side of both loans at the closing rate');
+    assert.equal(total.eliminated.difference, -3000, 'the first loan\'s sides now differ by the rate, and it is said');
   });
 });

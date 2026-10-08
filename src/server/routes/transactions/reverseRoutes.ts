@@ -273,7 +273,8 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
         description, 
         date,
         sourceAccountId, // e.g. Cash account in Source
-        targetAccountId  // e.g. Inventory/Expense in Target
+        targetAccountId,  // e.g. Inventory/Expense in Target
+        targetAmountCents: givenTargetCents // what arrives, in the target's currency (needed when the currencies differ)
       } = req.body;
     
       if (!sourceWorkspaceId || !targetWorkspaceId || !amountCents) {
@@ -291,6 +292,17 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
     
       const sourceWsData = sourceAuth.data;
       const targetWsData = targetAuth.data;
+      // Z-19 (found by DA-09): companies in different currencies need the amount that arrives; it is
+      // never converted with a guessed rate
+      const sourceCurrency = String(sourceWsData.currency || 'USD');
+      const targetCurrency = String(targetWsData.currency || 'USD');
+      let targetCents = amountCents;
+      if (sourceCurrency !== targetCurrency) {
+        if (!Number.isSafeInteger(givenTargetCents) || givenTargetCents <= 0) {
+          return res.status(400).json({ error: `${sourceWsData.name || 'One company'} keeps its books in ${sourceCurrency} and ${targetWsData.name || 'the other'} in ${targetCurrency}: say how much arrives in ${targetCurrency} (targetAmountCents).` });
+        }
+        targetCents = givenTargetCents;
+      }
 
       // 2. Resolve Reciprocal Clearing Accounts
       // We look for accounts marked as 'intercompany' role or named 'Intercompany'
@@ -379,7 +391,7 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
         workspaceId: targetWorkspaceId,
         date: date || formatTzDate(new Date(), targetWsData?.timezone),
         description: description || `Intercompany Receipt from ${sourceWsData.name}`,
-        totalAmountCents: amountCents,
+        totalAmountCents: targetCents,
         currency: targetWsData.currency || 'USD',
         exchangeRate: 1,
         status: 'completed',
@@ -389,13 +401,13 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
           {
             accountId: targetAccountId || targetAccounts.find(a => a.type === 'expense' || a.type === 'asset')?.id,
             accountName: 'Target Account',
-            amountCents: amountCents, // Debit Asset/Expense (Asset Up / Expense Up)
+            amountCents: targetCents, // Debit Asset/Expense (Asset Up / Expense Up)
             description: `Intercompany Receipt`
           },
           {
             accountId: targetClearing.id,
             accountName: targetClearing.name,
-            amountCents: -amountCents, // Credit Due To (Liability Up)
+            amountCents: -targetCents, // Credit Due To (Liability Up)
             description: `Due To ${sourceWsData.name}`
           }
         ]
