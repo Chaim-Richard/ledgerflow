@@ -402,9 +402,13 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
       };
 
       // 4. Validate both transactions before posting
+      // the clearing accounts made above are written in the same batch as the entries, so the check
+      // is given each company's accounts including them (DA-09 found the first post always refused)
+      const accountsOf = (list: Array<DocumentData & { id: string }>, clearing: DocumentData & { id: string }) =>
+        new Map<string, { workspaceId?: string; name?: string }>([...list, clearing].map(a => [a.id, { workspaceId: a.workspaceId, name: a.name }]));
       const [validSource, validTarget] = await Promise.all([
-        TransactionValidator.validateAndPrepare(sourceTx, { workspaceId: sourceWorkspaceId, user, wsData: sourceWsData }),
-        TransactionValidator.validateAndPrepare(targetTx, { workspaceId: targetWorkspaceId, user, wsData: targetWsData })
+        TransactionValidator.validateAndPrepare(sourceTx, { workspaceId: sourceWorkspaceId, user, wsData: sourceWsData, accountsMap: accountsOf(sourceAccounts, sourceClearing as DocumentData & { id: string }) }),
+        TransactionValidator.validateAndPrepare(targetTx, { workspaceId: targetWorkspaceId, user, wsData: targetWsData, accountsMap: accountsOf(targetAccounts, targetClearing as DocumentData & { id: string }) })
       ]);
 
       // 5. Commit Atomically
