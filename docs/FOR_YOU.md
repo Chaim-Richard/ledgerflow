@@ -119,6 +119,22 @@ Last updated: 2026-10-07.
     BE-04 (big invoices wait for approval) are on main, with the two fixes Claude made after
     reviewing it (L-191). BE-05 is left blocked with its reason; R-07 is its next item.
 
+**⚠ Start here — 7 database changes waiting (8 Oct).** The live database is behind the code: the
+Supabase connector now times out even on a change that only adds a new table, so something in the
+database is most likely stuck (an index build waiting since item 25). Until these are in, stock
+history, groups of books, "require two-step login" in the database rules and the pay-run guard are
+not really live (everything else works). In Supabase → SQL editor, one at a time, Run:
+1. The stuck-query check (stop any row running for minutes with `select pg_cancel_backend(<pid>);`):
+   `select pid, now() - query_start as running, left(query, 60) from pg_stat_activity where state <> 'idle' and query ilike '%create index%';`
+2. `supabase/migrations/20261008000000_invoice_approval_guard.sql` (item 22)
+3. `supabase/migrations/20261013010000_list_order_indexes.sql` (item 25)
+4. `supabase/migrations/20261013020000_pay_runs_server_only.sql` (item 25)
+5. `supabase/migrations/20261013030000_private_helpers.sql` (item 25)
+6. `supabase/migrations/20261013040000_require_two_step.sql` (item 25)
+7. `supabase/migrations/20261013060000_stock_moves.sql` (item 30)
+8. `supabase/migrations/20261013070000_workspace_groups.sql` (item 30)
+Each is safe to run twice. Tell Claude when done, or Claude sees it at the next session and crosses these out.
+
 22. **One database change to paste (5 Oct, L-191).** `supabase/migrations/20261008000000_invoice_approval_guard.sql`
     timed out twice through the connector (creating a trigger on the invoices table waits for it to be
     free). Paste the whole file into Supabase → SQL editor → Run; running it twice is safe. Until then,
