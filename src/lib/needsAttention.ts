@@ -8,6 +8,7 @@ import type { PinnedPage } from './pinnedPages';
 import type { CheckFinding } from './dataChecks';
 import { approvalStatus } from './invoiceApproval';
 import { monthCloseState, type PeriodLockSettings } from './periodLock';
+import { closeStepItems, type CloseStep } from './closeSteps';
 
 export interface AttentionRow {
   id: string;
@@ -29,7 +30,9 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 
 export function needsAttention(input: {
   today: string;
-  workspace: (PeriodLockSettings & { invoiceApproval?: unknown }) | null | undefined;
+  workspace: (PeriodLockSettings & { invoiceApproval?: unknown; closeSteps?: CloseStep[]; fiscalYearStartMonth?: number }) | null | undefined;
+  /** last month's sign-offs on Month-End Close, when read (for its own steps left, BD-10) */
+  lastMonthSignOffs?: Record<string, unknown>;
   bankLines?: Array<{ status?: string }>;
   invoices?: Array<Parameters<typeof approvalStatus>[0] & { status?: string }>;
   findings?: CheckFinding[];
@@ -85,7 +88,9 @@ export function needsAttention(input: {
   const lastMonth = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
   if (d >= (input.closeByDay || 10) && monthCloseState(lastMonth, input.workspace) === 'open') {
     const name = `${MONTHS[Number(lastMonth.slice(5)) - 1]} ${lastMonth.slice(0, 4)}`;
-    add({ id: 'close', count: 1, text: `${name} is not closed`, why: 'Until it is closed, entries can still be dated in it and its reports can change.', who: APPROVERS, page: { tab: 'month-end-close' } });
+    const steps = closeStepItems(input.workspace?.closeSteps, lastMonth, input.workspace?.fiscalYearStartMonth);
+    const left = input.lastMonthSignOffs ? steps.filter(s => !input.lastMonthSignOffs![s.id]).length : 0;
+    add({ id: 'close', count: 1, text: `${name} is not closed${left ? `: ${plural(left, 'step of its own is', 'steps of its own are')} not signed off` : ''}`, why: 'Until it is closed, entries can still be dated in it and its reports can change.', who: APPROVERS, page: { tab: 'month-end-close' } });
   }
   return rows;
 }

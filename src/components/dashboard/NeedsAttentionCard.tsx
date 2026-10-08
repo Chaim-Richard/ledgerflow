@@ -9,7 +9,8 @@ import { needsAttention } from '../../lib/needsAttention';
 import { getLocalDateISO } from '../../lib/utils';
 import { useClientQueries } from '../../services/clientQueryActions';
 import { useCollection } from '../../hooks/useCollection';
-import { getIdToken } from '../../firebase';
+import { db, getIdToken } from '../../firebase';
+import { doc, getDoc } from '../../lib/db/firestore';
 import { readBankStatuses, type BankStatus } from '../../lib/bankFeedStatus';
 import type { PurchaseOrder } from '../../types';
 
@@ -46,6 +47,19 @@ export default function NeedsAttentionCard() {
     })().then(list => { if (live) setBanks(list); }).catch(() => { if (live) setBanks([]); });
     return () => { live = false; };
   }, [workspaceId]);
+  // last month's sign-offs, for the workspace's own close steps left (only when it has some)
+  const hasSteps = Boolean(workspace?.closeSteps?.length);
+  const [signOffs, setSignOffs] = useState<Record<string, unknown> | undefined>(undefined);
+  useEffect(() => {
+    if (!workspaceId || !hasSteps) return;
+    const [y, m] = getLocalDateISO().split('-').map(Number);
+    const lastMonth = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+    let live = true;
+    getDoc(doc(db, 'periods', `${workspaceId}_${lastMonth}`))
+      .then(snap => { if (live) setSignOffs((snap.exists() ? snap.data()?.signOffs : null) || {}); })
+      .catch(() => { if (live) setSignOffs(undefined); });
+    return () => { live = false; };
+  }, [workspaceId, hasSteps]);
 
   const rows = useMemo(() => {
     if (!workspace) return [];
@@ -55,8 +69,8 @@ export default function NeedsAttentionCard() {
       inventory: inventory || [], bankLines: bankLines || [], today, baseCurrency: workspace.currency || 'USD', dimensions: workspace.dimensions,
     });
     const closeByDay = (workspace.alerts as { closeReminderDay?: number | null } | undefined)?.closeReminderDay || undefined;
-    return needsAttention({ today, workspace, bankLines: bankLines || [], invoices: invoices || [], findings, closeByDay, questions: queries, payRuns: payRuns || [], purchaseOrders, banks });
-  }, [workspace, transactions, accounts, invoices, bills, recurring, inventory, bankLines, queries, payRuns, purchaseOrders, banks]);
+    return needsAttention({ today, workspace, bankLines: bankLines || [], invoices: invoices || [], findings, closeByDay, questions: queries, payRuns: payRuns || [], purchaseOrders, banks, lastMonthSignOffs: hasSteps ? signOffs : undefined });
+  }, [workspace, transactions, accounts, invoices, bills, recurring, inventory, bankLines, queries, payRuns, purchaseOrders, banks, hasSteps, signOffs]);
 
   if (loading || !workspace) return null;
   return (

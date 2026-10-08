@@ -64,6 +64,13 @@ describe('The queue', () => {
     assert.equal(needsAttention({ today: '2026-10-05', workspace: { lockDate: '2026-09-30' } as never, banks: [{ status: 'login_required' }, { status: 'login_required' }] })[0].text, '2 bank connections need you to log in again');
   });
 
+  test('last month not closed says how many of the workspace\'s own steps are not signed off', () => {
+    const workspace = { lockDate: '2026-08-31', closeSteps: [{ id: 'cs_aaaaaa', title: 'Payroll report', frequency: 'monthly' }, { id: 'cs_bbbbbb', title: 'VAT', frequency: 'quarterly' }, { id: 'cs_cccccc', title: 'Audit', frequency: 'yearly' }] } as never;
+    assert.equal(needsAttention({ today: '2026-10-12', workspace, lastMonthSignOffs: {} })[0].text, 'September 2026 is not closed: 2 steps of its own are not signed off', 'the year-end step is not due in September');
+    assert.equal(needsAttention({ today: '2026-10-12', workspace, lastMonthSignOffs: { 'step:cs_aaaaaa': { by: 'x', at: 'y' } } })[0].text, 'September 2026 is not closed: 1 step of its own is not signed off');
+    assert.equal(needsAttention({ today: '2026-10-12', workspace })[0].text, 'September 2026 is not closed', 'sign-offs not read: just the month');
+  });
+
   test('a row goes when its cause does: nothing waiting is an empty queue', () => {
     assert.deepEqual(needsAttention({ today: '2026-10-12', workspace: { lockDate: '2026-09-30' } as never, bankLines: [{ status: 'matched' }], findings: [finding('future-dated', 'low')] }), []);
   });
