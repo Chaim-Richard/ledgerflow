@@ -85,7 +85,7 @@ One row per capability, with one label each (DA-05). The README, Help, onboardin
 | 75 | Stock per location and moving stock between locations | Available with limits | `stockTransferService.ts`; `stock-locations.test.tsx` | Needs the stock history (above); no bins or serial numbers |
 | 76 | Sales returns put goods back at their cost | Available | `src/lib/salesReturns.ts`, `cogsStockService.ts`; `sales-returns.test.tsx` | In delivery mode, goods come back by undoing the delivery |
 | 77 | Sales orders invoiced by quantity | Available | `src/lib/salesOrders.ts`, `OrderInvoiceDialog.tsx`; `order-items.test.tsx` | A percent or amount part of an item order is a deposit, not goods |
-| 78 | Deliveries ship the goods (owner's choice) | Available with limits | `deliveryService.ts`, `src/lib/deliveries.ts`, `OrderDeliveryDialog.tsx`; `deliveries.test.tsx` | No printable delivery note yet; goods that came back are recorded on the order, the money owed back is a separate credit note |
+| 78 | Deliveries ship the goods (owner's choice) | Available with limits | `deliveryService.ts`, `src/lib/deliveries.ts`, `OrderDeliveryDialog.tsx`; `deliveries.test.tsx` | Deliveries come from an order (not from a stand-alone invoice); the money owed back for returned goods is a separate credit note |
 | 79 | Selling below zero: warn or refuse | Available | `stockPolicyService.ts`; `stock-policy.test.tsx` | Owner setting |
 | 80 | Required labels (warn, list, or refuse) | Available | `src/lib/requiredLabels.ts`; `required-labels.test.tsx`, `required-labels-refuse.test.tsx` | By account only; document type, contact and item conditions are later |
 | 81 | Labels on invoice and bill lines | Available | `LineLabels.tsx`, `TransactionTemplates.ts`; `line-labels.test.tsx` |  |

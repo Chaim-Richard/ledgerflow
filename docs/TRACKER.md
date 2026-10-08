@@ -1809,7 +1809,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] M-09 Generic attachments — done as K-07 (the `documents` table, linked to the record; one panel for any record)
 - [ ] M-10 Transaction links
 - [ ] M-11 Price lists
-- [~] M-12 Delivery notes — deliveries from an order that move stock and book the cost are done (BF-08 step 2, 7 Oct); the printable note is open
+- [x] M-12 Delivery notes — deliveries from an order that move stock and book the cost (BF-08 step 2, 7 Oct); **the printable note done 8 Oct**: "Delivery note" on each delivery opens a PDF with the company, customer, order and their reference, date, each item and quantity (no prices) and a line to sign on receipt (`deliveryNotePdf.ts`, `GET /api/v1/inventory/deliveries/:id/note`, any member). Found on the way: the shared role check crashed on GET requests that pass the workspace in the query (`req.body` is empty on a GET); fixed.
 - [ ] M-13 Commodities
 - [x] M-14 Item categories (= K-12)
 - [ ] M-15 Warehouses (deferred)
@@ -2300,7 +2300,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
       - **The history** (W-02) names the delivery for each unit that left.
       - Tests: `deliveries.test.tsx` (the rules, the server against the database, the screens).
     - **Goods that came back (8 Oct):** on the order's Deliver dialog, "Came back" records units returned after a delivery: stock comes back in and the cost of goods is taken back at the cost the deliveries of that line booked ('delivery-return-auto', `returnDelivered` in `deliveryService.ts`, `POST /api/v1/inventory/deliveries/returns`), never more than was delivered and kept, safe to retry. Once goods came back, a delivery can no longer be undone whole (that would put them back twice). The money is a credit note, made apart. Tests in `deliveries.test.tsx`.
-    - **Still open:** a printable delivery note (M-12); deliveries from an invoice that came from no order.
+    - **Still open:** deliveries from an invoice that came from no order.
 - [x] BF-09 Line-level class / location — **done 7 Oct**: labels on invoice and bill lines.
   - **On screen:** each line of the invoice and bill forms has "Labels" (Project, Location, Property and the workspace's own labels), folded away until wanted. The workspace's values are offered. It opens by itself and names what is missing when the line's account needs a label (Z-12).
   - **In the books:** the labels are posted with the line's revenue or expense. Two lines on the same account with different labels stay two posted lines, the amounts still add up to the cent, and an invoice line's labels go with its cost of goods sold too.

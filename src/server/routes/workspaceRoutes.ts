@@ -72,7 +72,7 @@ export async function getWorkspaceUserRole(db: Firestore, workspaceId: string, u
 export function requireWorkspaceRole(allowedRoles: string[]) {
   return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = req.params.workspaceId || req.body.workspaceId || req.query.workspaceId;
+    const workspaceId = req.params.workspaceId || req.body?.workspaceId || req.query.workspaceId;
     if (!workspaceId) return sendError(res, "Workspace ID required", 400);
 
     try {

@@ -62,6 +62,20 @@ export default function OrderDeliveryDialog({ order, canWrite, onClose }: { orde
     return inventory && cogs ? { inventoryAccountId: inventory.id, cogsAccountId: cogs.id } : null;
   };
 
+  // M-12: the delivery note as a PDF, opened in a new tab to print or save
+  const openNote = async (id: string) => {
+    if (!workspace) return;
+    try {
+      const res = await fetch(`/api/v1/inventory/deliveries/${encodeURIComponent(id)}/note?${new URLSearchParams({ workspaceId: workspace.id, orderId: order.id })}`, { headers: { Authorization: `Bearer ${await getIdToken()}` } });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'The delivery note could not be made');
+      const url = URL.createObjectURL(await res.blob());
+      window.open(url, '_blank', 'noopener');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   const recordReturn = async () => {
     if (backProblem || busy || !workspace) return;
     const accountIds = stockAccounts();
@@ -188,11 +202,16 @@ export default function OrderDeliveryDialog({ order, canWrite, onClose }: { orde
                 {deliveries.map(d => (
                   <li key={d.deliveryId} className="flex items-center justify-between gap-2 rounded border border-[var(--line)] px-2 py-1">
                     <span>{formatDate(d.date)}: {d.lines.map(l => `${describe(l.position)} × ${l.quantity}`).join(', ')}</span>
-                    {canWrite && (
-                      <button type="button" disabled={busy} onClick={() => void undo(d.deliveryId, d.date)} className="text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50">
-                        Undo<span className="sr-only"> the delivery of {formatDate(d.date)}</span>
+                    <span className="flex gap-3">
+                      <button type="button" onClick={() => void openNote(d.deliveryId)} className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                        Delivery note<span className="sr-only"> of {formatDate(d.date)}</span>
                       </button>
-                    )}
+                      {canWrite && (
+                        <button type="button" disabled={busy} onClick={() => void undo(d.deliveryId, d.date)} className="text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50">
+                          Undo<span className="sr-only"> the delivery of {formatDate(d.date)}</span>
+                        </button>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>

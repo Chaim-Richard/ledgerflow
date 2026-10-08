@@ -22,6 +22,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { getSupabase } from '../lib/db/client';
 import OrderDeliveryDialog from '../components/sales/OrderDeliveryDialog';
+import { layoutDeliveryNote } from '../server/services/deliveryNotePdf';
 import StockPolicySwitch from '../components/inventory/StockPolicySwitch';
 import type { Estimate, Transaction } from '../types';
 
@@ -62,6 +63,15 @@ describe('The rules', () => {
     assert.match(String(returnProblem(lines, [{ position: 0, quantity: 4 }])), /only 3 were delivered/);
     assert.match(String(returnProblem(lines, [{ position: 1, quantity: 1 }])), /item lines/);
     assert.match(newReturnId(), RETURN_ID);
+  });
+
+  test('the delivery note lists what left on that delivery, without prices', () => {
+    const entries = [delivered('a', 0, 2), delivered('b', 2, 1.5, { metadata: { type: DELIVERY_COGS_TYPE, orderId: 'o1', orderLine: 2, deliveryId: 'dlv_a0000000', inventoryItemId: 'table', quantity: 1.5 } } as Partial<Transaction>)];
+    const note = layoutDeliveryNote({ ...order, number: 'EST-7', customerName: 'Acme', customerReference: 'PO-55' } as Estimate, entries, 'dlv_a0000000', { name: 'Chairs Ltd' })!;
+    assert.deepEqual(note.rows, [{ item: 'Chair', quantity: '2' }, { item: 'Table', quantity: '1.5' }]);
+    assert.deepEqual([note.company, note.customer, note.order, note.customerReference, note.date], ['Chairs Ltd', 'Acme', 'EST-7', 'PO-55', '2026-10-05']);
+    assert.equal(JSON.stringify(note).includes('9000'), false, 'no prices');
+    assert.equal(layoutDeliveryNote(order, entries, 'dlv_zzzzzzzz', {}), null);
   });
 
   test('never more than is left, item lines only, two decimals at most', () => {
@@ -230,6 +240,11 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.match(String(undo.body.error), /already came back/);
     const direct = await post([{ ...invoiceCogs('fake2', `${ws}_inv9`), metadata: { type: DELIVERY_RETURN_TYPE, orderId, orderLine: 0, inventoryItemId: chair, quantity: 1 } }]);
     assert.equal(direct.status, 400, 'only the return route makes these entries');
+    const note = await fetch(`${base}/api/v1/inventory/deliveries/dlv_ffffffff66/note?workspaceId=${ws}&orderId=${orderId}`, { headers: { 'x-test-uid': 'view-1' } });
+    assert.equal(note.status, 200, note.status === 200 ? "" : await note.clone().text());
+    assert.equal(note.headers.get('content-type'), 'application/pdf');
+    assert.equal((await note.arrayBuffer()).byteLength > 500, true);
+    assert.equal((await fetch(`${base}/api/v1/inventory/deliveries/dlv_zzzzzzzz99/note?workspaceId=${ws}&orderId=${orderId}`, { headers: { 'x-test-uid': 'view-1' } })).status, 404);
   });
 });
 

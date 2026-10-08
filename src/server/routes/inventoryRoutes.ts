@@ -14,6 +14,8 @@ import { transferStock } from '../services/stockTransferService';
 import { DeliveryError, deliverOrder, returnDelivered, setGoodsLeaveWith, undoDelivery } from '../services/deliveryService';
 import { LedgerPostingError } from '../services/cogsStockService';
 import { DELIVERY_ID, RETURN_ID } from '../../lib/deliveries';
+import { generateDeliveryNotePdf, layoutDeliveryNote } from '../services/deliveryNotePdf';
+import type { Estimate, Transaction as LedgerTransaction } from '../../types';
 
 /** Who may change stock or record its cost (viewers read only). */
 const STOCK_ROLES = ['owner', 'accountant', 'bookkeeper'];
@@ -269,6 +271,32 @@ inventoryRouter.post('/deliveries', requireWorkspaceRole(STOCK_ROLES), async (re
   } catch (e) {
     if (e instanceof DeliveryError || e instanceof LedgerPostingError) return res.status(e.status).json({ error: e.message });
     res.status(/locked|closed/i.test(errorMessage(e)) ? 409 : 400).json({ error: errorMessage(e) });
+  }
+});
+
+/** M-12: the delivery note of one delivery, as a PDF to go with the goods (deliveryNotePdf.ts). */
+inventoryRouter.get('/deliveries/:deliveryId/note', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), async (req, res) => {
+  try {
+    const { deliveryId } = req.params as Record<string, string>;
+    const workspaceId = String(req.query.workspaceId || '');
+    const orderId = String(req.query.orderId || '');
+    if (!DELIVERY_ID.test(deliveryId) || !workspaceId || !orderId) return res.status(400).json({ error: 'Say which delivery' });
+    const db = getDb();
+    const orderSnap = await db.collection('estimates').doc(orderId).get();
+    const order = orderSnap.exists ? ({ ...orderSnap.data(), id: orderSnap.id } as Estimate) : null;
+    if (!order || order.workspaceId !== workspaceId) return res.status(404).json({ error: 'Order not found' });
+    const entries = (await db.collection('transactions').where('workspaceId', '==', workspaceId).where('metadata.orderId', '==', orderId).get()).docs
+      .map(d => ({ ...d.data(), id: d.id }) as LedgerTransaction);
+    const ws = (await db.collection('workspaces').doc(workspaceId).get()).data() || {};
+    const layout = layoutDeliveryNote(order, entries, deliveryId, { name: ws.name });
+    if (!layout) return res.status(404).json({ error: 'That delivery is not on this order, or it was undone' });
+    const pdf = await generateDeliveryNotePdf(layout);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Disposition', `inline; filename="delivery_note_${layout.order.replace(/[^\w.-]+/g, '_')}_${layout.date}.pdf"`);
+    res.send(pdf);
+  } catch (e) {
+    res.status(500).json({ error: errorMessage(e) });
   }
 });
 
