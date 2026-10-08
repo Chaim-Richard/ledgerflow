@@ -31,6 +31,41 @@ function InvestmentAccounts({ editing, nameOf, onChange }: { editing: Editing; n
   );
 }
 
+/** DA-01: share one of your groups by email, and stop sharing; the people it is shared with only read it. */
+function SharePanel({ group, onChanged }: { group: WorkspaceGroup; onChanged: () => void }) {
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const run = async (what: () => Promise<unknown>, done: string) => {
+    setBusy(true);
+    try {
+      await what();
+      toast.success(done);
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="mt-2 space-y-1 text-xs">
+      {(group.sharedWith || []).map(p => (
+        <p key={p.uid} className="flex items-center gap-2 text-[var(--muted)]">
+          Shared with <bdi>{p.email}</bdi>
+          <button type="button" disabled={busy} onClick={() => void run(() => call(`/${encodeURIComponent(group.id)}/share/${encodeURIComponent(p.uid)}`, 'DELETE'), `${group.name} is no longer shared with ${p.email}`)} className="text-rose-600 hover:underline">
+            Stop sharing<span className="sr-only"> {group.name} with {p.email}</span>
+          </button>
+        </p>
+      ))}
+      <form className="flex flex-wrap items-center gap-2" onSubmit={e => { e.preventDefault(); if (email.trim()) void run(async () => { await call(`/${encodeURIComponent(group.id)}/share`, 'POST', { email }); setEmail(''); }, `${group.name} is shared with ${email.trim()}`); }}>
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="their sign-in email" aria-label={`Share ${group.name} with (email)`} className={`${field} w-56`} />
+        <button type="submit" disabled={busy || !email.trim()} className="text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50">Share<span className="sr-only"> {group.name}</span></button>
+        <span className="text-[var(--muted)]">They see the group and its summary, each company only if they can open it themselves.</span>
+      </form>
+    </div>
+  );
+}
+
 async function call(path: string, method: string, body?: unknown) {
   const res = await fetch(`/api/v1/account/groups${path}`, {
     method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` }, ...(body ? { body: JSON.stringify(body) } : {}),
@@ -42,11 +77,13 @@ async function call(path: string, method: string, body?: unknown) {
 
 /**
  * Settings → Groups of books (DA-01): your own groups of the workspaces you can open, e.g. a holding
- * and its companies, or clients by kind. Belonging to a group changes nothing in a workspace; nobody
- * else sees your groups. Saved by the server (src/server/services/workspaceGroupService.ts).
+ * and its companies, or clients by kind. Belonging to a group changes nothing in a workspace. A group
+ * can be shared by email: the people it is shared with read it (each company only if they can open it
+ * themselves) and can leave it; only you change it. Saved by the server (workspaceGroupService.ts).
  */
 export default function GroupsSettings() {
   const workspaces = useAuthStore(s => s.workspaces);
+  const myUid = useAuthStore(s => s.user?.uid);
   const [groups, setGroups] = useState<WorkspaceGroup[] | null>(null);
   const [error, setError] = useState('');
   // Z-16: the parent and the share it owns of each other member, typed as text until saved
@@ -104,6 +141,19 @@ export default function GroupsSettings() {
       setBusy(false);
     }
   };
+  const leave = async (group: WorkspaceGroup) => {
+    if (busy || !myUid) return;
+    setBusy(true);
+    try {
+      await call(`/${encodeURIComponent(group.id)}/share/${encodeURIComponent(myUid)}`, 'DELETE');
+      toast.success(`You left ${group.name} (its workspaces are untouched)`);
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
   const toggle = (id: string, on: boolean) => setEditing(e => e && ({
     ...e, workspaceIds: on ? [...e.workspaceIds, id] : e.workspaceIds.filter(x => x !== id), parentId: !on && e.parentId === id ? '' : e.parentId,
   }));
@@ -115,7 +165,7 @@ export default function GroupsSettings() {
     <section aria-labelledby="groups-title" className="space-y-4">
       <div>
         <h2 id="groups-title" className="text-lg font-bold text-[var(--text)] flex items-center gap-2"><FolderTree className="w-5 h-5" aria-hidden="true" /> Groups of books</h2>
-        <p className="text-sm text-[var(--muted)]">Group the workspaces you can open, e.g. a holding and its companies, or clients by kind. Only you see your groups, and a workspace in a group stays exactly as it is.</p>
+        <p className="text-sm text-[var(--muted)]">Group the workspaces you can open, e.g. a holding and its companies, or clients by kind. Only you and the people you share a group with see it, and a workspace in a group stays exactly as it is.</p>
       </div>
       {error && <p role="alert" className="text-sm text-rose-600">Your groups could not be loaded: {error}</p>}
       {groups === null ? <p className="text-sm text-[var(--muted)]">Loading…</p> : (
@@ -127,15 +177,24 @@ export default function GroupsSettings() {
                 <p className="font-semibold text-[var(--text)]"><bdi>{g.name}</bdi></p>
                 <p className="text-xs text-[var(--muted)]">{g.workspaceIds.length ? g.workspaceIds.map(nameOf).join(', ') : 'No workspaces you can open'}</p>
                 {g.parentId && <p className="text-xs text-[var(--muted)]">{shareText(g)}</p>}
+                {g.mine === false ? <p className="text-xs text-[var(--muted)]">Shared with you by <bdi>{g.sharedBy}</bdi></p> : <SharePanel group={g} onChanged={load} />}
               </div>
-              <div className="flex gap-2 text-xs">
-                <button type="button" disabled={busy} onClick={() => edit(g)} className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                  Change<span className="sr-only"> {g.name}</span>
-                </button>
-                <button type="button" disabled={busy} onClick={() => void remove(g)} className="text-rose-600 hover:underline">
-                  Remove<span className="sr-only"> {g.name}</span>
-                </button>
-              </div>
+              {g.mine === false ? (
+                <div className="flex gap-2 text-xs">
+                  <button type="button" disabled={busy || !myUid} onClick={() => void leave(g)} className="text-rose-600 hover:underline">
+                    Leave<span className="sr-only"> {g.name}</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2 text-xs">
+                  <button type="button" disabled={busy} onClick={() => edit(g)} className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                    Change<span className="sr-only"> {g.name}</span>
+                  </button>
+                  <button type="button" disabled={busy} onClick={() => void remove(g)} className="text-rose-600 hover:underline">
+                    Remove<span className="sr-only"> {g.name}</span>
+                  </button>
+                </div>
+              )}
             </li>
           ))}
         </ul>

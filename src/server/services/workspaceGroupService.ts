@@ -7,7 +7,7 @@
  */
 import crypto from 'crypto';
 import type { Firestore } from '../db/firestore';
-import { GROUP_ID, groupProblem, keptRatesProblem, MAX_GROUPS, MAX_KEPT_RATES, ratesKey, structureProblem, type WorkspaceGroup } from '../../lib/workspaceGroups';
+import { GROUP_ID, groupProblem, keptRatesProblem, MAX_GROUP_SHARES, MAX_GROUPS, MAX_KEPT_RATES, ratesKey, structureProblem, type WorkspaceGroup } from '../../lib/workspaceGroups';
 
 export class WorkspaceGroupError extends Error {
   constructor(readonly status: number, message: string) {
@@ -28,9 +28,15 @@ export async function openable(db: Firestore, uid: string): Promise<Set<string>>
   return ids;
 }
 
-const shown = (id: string, data: Record<string, unknown>, open: Set<string>): WorkspaceGroup => ({
+const sharedList = (data: Record<string, unknown>) => (Array.isArray(data.sharedWith) ? data.sharedWith as string[] : []);
+
+const shown = (id: string, data: Record<string, unknown>, open: Set<string>, uid?: string): WorkspaceGroup => ({
   id,
   name: String(data.name || ''),
+  // DA-01: the owner sees whom it is shared with; the others see who shared it
+  ...(uid && data.ownerUid !== uid
+    ? { mine: false, sharedBy: String(data.ownerEmail || 'its owner') }
+    : { mine: true, sharedWith: sharedList(data).map(u => ({ uid: u, email: String((data.sharedEmails as Record<string, string> | undefined)?.[u] || u) })) }),
   workspaceIds: (Array.isArray(data.workspaceIds) ? data.workspaceIds as string[] : []).filter(w => open.has(w)),
   // Z-16: the parent and the shares, of the members the person can open
   ...(typeof data.parentId === 'string' && open.has(data.parentId) ? { parentId: data.parentId } : {}),
@@ -47,8 +53,53 @@ const shown = (id: string, data: Record<string, unknown>, open: Set<string>): Wo
 
 export async function listGroups(db: Firestore, uid: string): Promise<WorkspaceGroup[]> {
   const open = await openable(db, uid);
-  const snap = await db.collection('workspaceGroups').where('ownerUid', '==', uid).get();
-  return snap.docs.map(d => shown(d.id, d.data() || {}, open)).sort((a, b) => a.name.localeCompare(b.name));
+  const own = await db.collection('workspaceGroups').where('ownerUid', '==', uid).get();
+  // DA-01: groups shared with this person: read under their own access (members they can't open stay unseen)
+  const shared = await db.collection('workspaceGroups').where('sharedWith', 'array-contains', uid).get();
+  return [...own.docs, ...shared.docs].map(d => shown(d.id, d.data() || {}, open, uid))
+    .sort((a, b) => Number(b.mine !== false) - Number(a.mine !== false) || a.name.localeCompare(b.name));
+}
+
+/** The owner, or someone the owner shared the group with, may read it. */
+export const canReadGroup = (data: Record<string, unknown> | undefined, uid: string) => Boolean(data && (data.ownerUid === uid || sharedList(data).includes(uid)));
+
+/**
+ * DA-01: the owner shares a group with someone by their sign-in email. They read it (the group
+ * summary too), each member under their own access; only the owner changes or removes it. Sharing
+ * gives no access to any workspace.
+ */
+export async function shareGroup(db: Firestore, input: { uid: string; email?: string; groupId: string; withUid: string; withEmail: string }): Promise<WorkspaceGroup> {
+  if (!GROUP_ID.test(input.groupId)) throw new WorkspaceGroupError(404, 'Group not found');
+  if (input.withUid === input.uid) throw new WorkspaceGroupError(400, 'The group is already yours');
+  const open = await openable(db, input.uid);
+  return db.runTransaction(async t => {
+    const ref = db.collection('workspaceGroups').doc(input.groupId);
+    const data = (await t.get(ref)).data();
+    if (!data || data.ownerUid !== input.uid) throw new WorkspaceGroupError(404, 'Group not found');
+    const list = sharedList(data);
+    if (list.includes(input.withUid)) return shown(input.groupId, data, open, input.uid);
+    if (list.length >= MAX_GROUP_SHARES) throw new WorkspaceGroupError(400, `A group is shared with ${MAX_GROUP_SHARES} people at most`);
+    const next = {
+      ...data, sharedWith: [...list, input.withUid], sharedEmails: { ...((data.sharedEmails as Record<string, string>) || {}), [input.withUid]: input.withEmail },
+      ...(input.email ? { ownerEmail: input.email } : {}), updatedAt: new Date().toISOString(),
+    };
+    t.set(ref, next);
+    return shown(input.groupId, next, open, input.uid);
+  });
+}
+
+/** DA-01: the owner stops sharing with someone, or someone leaves a group shared with them. */
+export async function unshareGroup(db: Firestore, input: { uid: string; groupId: string; withUid: string }): Promise<void> {
+  if (!GROUP_ID.test(input.groupId)) throw new WorkspaceGroupError(404, 'Group not found');
+  await db.runTransaction(async t => {
+    const ref = db.collection('workspaceGroups').doc(input.groupId);
+    const data = (await t.get(ref)).data();
+    const leaving = input.withUid === input.uid && sharedList(data || {}).includes(input.uid);
+    if (!data || (data.ownerUid !== input.uid && !leaving)) throw new WorkspaceGroupError(404, 'Group not found');
+    const emails = { ...((data.sharedEmails as Record<string, string>) || {}) };
+    delete emails[input.withUid];
+    t.set(ref, { ...data, sharedWith: sharedList(data).filter(u => u !== input.withUid), sharedEmails: emails, updatedAt: new Date().toISOString() });
+  });
 }
 
 function refuseUnopenable(workspaceIds: string[], open: Set<string>) {

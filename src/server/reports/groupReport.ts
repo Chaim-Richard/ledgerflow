@@ -35,7 +35,7 @@
  * parent paid above the company's book value (goodwill) is not shown separately.
  */
 import type { Firestore } from '../db/firestore';
-import { openable } from '../services/workspaceGroupService';
+import { canReadGroup, openable } from '../services/workspaceGroupService';
 import { shareOf } from '../../lib/workspaceGroups';
 import { computeBalanceSheet, computeProfitAndLoss } from './computeReports';
 import type { ChartAccount, Transaction } from '../../types';
@@ -251,8 +251,8 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
   if (input.startDate > input.endDate) throw new GroupReportError(400, 'The period starts after it ends');
   const snap = await db.collection('workspaceGroups').doc(input.groupId).get();
   const group = snap.data();
-  // someone else's group answers like a missing one
-  if (!group || group.ownerUid !== input.uid) throw new GroupReportError(404, 'Group not found');
+  // someone else's group answers like a missing one, unless it was shared with this person (DA-01)
+  if (!group || !canReadGroup(group, input.uid)) throw new GroupReportError(404, 'Group not found');
   const open = await openable(db, input.uid);
   const ids = (Array.isArray(group.workspaceIds) ? group.workspaceIds as string[] : []);
   const shown = ids.filter(id => open.has(id));

@@ -16,6 +16,12 @@ export interface WorkspaceGroup {
   ownership?: Record<string, number>;
   /** Z-16: for each other member, the parent's account holding its investment in it (taken out of the total) */
   investments?: Record<string, string>;
+  /** DA-01: false for a group someone else shared with you (you read it; only its owner changes it) */
+  mine?: boolean;
+  /** who the owner shared it with (shown to the owner only) */
+  sharedWith?: Array<{ uid: string; email: string }>;
+  /** who shared it (shown to the people it is shared with) */
+  sharedBy?: string;
   /** Z-17: the translation rates used, by `ratesKey` (reporting currency and period), then member currency */
   rates?: Record<string, Record<string, { closing: number; average: number; historical: number }>>;
   createdAt?: string;
@@ -24,6 +30,8 @@ export interface WorkspaceGroup {
 
 export const MAX_GROUPS = 100;
 export const MAX_GROUP_MEMBERS = 500;
+/** DA-01: people a group can be shared with */
+export const MAX_GROUP_SHARES = 50;
 export const GROUP_ID = /^grp_[a-z0-9]{8,40}$/;
 
 /** Why this group can't be saved, or null. */

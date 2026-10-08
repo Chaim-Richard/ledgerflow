@@ -236,6 +236,18 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     await call(`/api/v1/account/groups/${owned}`, ann, { method: 'PUT', body: { investments: { [ws2]: `${ws1}_invest` } } });
   });
 
+  test('a group shared with someone: they see the companies they can open, and the rest are counted (DA-01)', async () => {
+    await db.collection('workspaceGroups').doc(sameCurrency).update({ sharedWith: [bob] });
+    try {
+      const res = await summary(sameCurrency, bob);
+      assert.equal(res.status, 200, JSON.stringify(res.body));
+      assert.deepEqual((res.body.members as Array<{ name: string }>).map(m => m.name), ['Daughter'], 'Bob can open the daughter, not the holding');
+      assert.equal(res.body.notIncluded, 1);
+    } finally {
+      await db.collection('workspaceGroups').doc(sameCurrency).update({ sharedWith: [] });
+    }
+  });
+
   test('a member no longer open is left out and counted; other people, reversed periods and API keys are refused', async () => {
     await db.collection('workspaces').doc(ws2).update({ members: [bob] });
     const consolidation = await summary(owned);

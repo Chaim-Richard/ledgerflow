@@ -144,6 +144,40 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     await db.collection('workspaceGroups').doc(groupId).update({ rates: {} });
   });
 
+  test('shared by email: they read it under their own access, only the owner changes it, they can leave (DA-01)', async () => {
+    const carol = crypto.randomUUID();
+    const carolEmail = `carol_${tag}@example.test`;
+    await db.pool.query('insert into auth.users (id, email) values ($1, $2)', [carol, carolEmail]);
+    try {
+      await db.collection('workspaces').doc(ws1).update({ members: [ann, carol] });
+      assert.equal((await call(`/${groupId}/share`, 'POST', ann, { email: 'nobody@example.test' })).status, 404);
+      assert.equal((await call(`/${groupId}/share`, 'POST', ann, { email: 'not an email' })).status, 400);
+      assert.equal((await call(`/${groupId}/share`, 'POST', bob, { email: carolEmail })).status, 404, 'only the owner shares it');
+      const shared = await call(`/${groupId}/share`, 'POST', ann, { email: carolEmail.toUpperCase() });
+      assert.equal(shared.status, 200, JSON.stringify(shared.body));
+      assert.deepEqual((shared.body.group as { sharedWith: unknown }).sharedWith, [{ uid: carol, email: carolEmail }]);
+      const seen = (await call('', 'GET', carol)).body.groups as Array<{ id: string; mine: boolean; sharedBy: string; workspaceIds: string[]; sharedWith?: unknown }>;
+      assert.deepEqual(seen.map(g => [g.id, g.mine, g.sharedBy, g.workspaceIds, g.sharedWith]), [[groupId, false, 'x@example.test', [ws1], undefined]], 'only the member she can open; not whom else it is shared with');
+      assert.equal((await call(`/${groupId}`, 'PUT', carol, { name: 'Mine now' })).status, 404);
+      assert.equal((await call(`/${groupId}`, 'DELETE', carol)).status, 404);
+      assert.equal((await call(`/${groupId}/share/${ann}`, 'DELETE', carol)).status, 404, 'she can only take herself off');
+      assert.equal((await call(`/${groupId}/share/${carol}`, 'DELETE', carol)).status, 200);
+      assert.deepEqual((await call('', 'GET', carol)).body.groups, []);
+      await call(`/${groupId}/share`, 'POST', ann, { email: carolEmail });
+      assert.equal((await call(`/${groupId}/share/${carol}`, 'DELETE', ann)).status, 200, 'the owner stops sharing');
+      assert.deepEqual((await call('', 'GET', carol)).body.groups, []);
+      // deleting her account takes her name off groups shared with her
+      await call(`/${groupId}/share`, 'POST', ann, { email: carolEmail });
+      const { deleteAccount } = await import('../server/services/accountDeletionService');
+      await deleteAccount(db, { uid: carol }, async () => {});
+      const after = (await db.collection('workspaceGroups').doc(groupId).get()).data()!;
+      assert.deepEqual([after.sharedWith, after.sharedEmails], [[], {}]);
+    } finally {
+      await db.collection('workspaces').doc(ws1).update({ members: [ann] });
+      await db.pool.query('delete from auth.users where id = $1', [carol]);
+    }
+  });
+
   test('nobody else reads or changes the group', async () => {
     assert.deepEqual((await call('', 'GET', bob)).body.groups, []);
     assert.equal((await call(`/${groupId}`, 'PUT', bob, { name: 'Mine now' })).status, 404);
@@ -209,6 +243,26 @@ describe('Settings → Groups of books', () => {
     assert.deepEqual(put.body, { name: 'Holding', workspaceIds: ['ws-b', 'component-workspace'], parentId: null, ownership: {}, investments: {} });
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Remove Holding' })); });
     assert.ok(calls.some(c => c.method === 'DELETE' && c.url === '/api/v1/account/groups/grp_aaaaaaaa'));
+  });
+
+  test('sharing a group by email, stopping it, and leaving one shared with you (DA-01)', async () => {
+    const ws = setComponentWorkspace('owner');
+    useAuthStore.setState({ workspaces: [ws, { ...ws, id: 'ws-b', name: 'Branch B' }], user: { ...(useAuthStore.getState().user || {}), uid: 'me-1' } as never });
+    const calls = stubFetchWithBodies(200, { status: 'success', groups: [
+      { id: 'grp_aaaaaaaa', name: 'Holding', workspaceIds: ['ws-b'], mine: true, sharedWith: [{ uid: 'u-2', email: 'dana@example.test' }] },
+      { id: 'grp_bbbbbbbb', name: 'Clients', workspaceIds: ['component-workspace'], mine: false, sharedBy: 'eli@example.test' },
+    ] });
+    render(<GroupsSettings />);
+    await waitFor(() => assert.ok(screen.getByText('Clients', { selector: 'bdi' })));
+    assert.ok(screen.getByText('eli@example.test'));
+    assert.equal(screen.queryByRole('button', { name: 'Change Clients' }), null, 'only its owner changes it');
+    fireEvent.change(screen.getByLabelText('Share Holding with (email)'), { target: { value: 'fay@example.test' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Share Holding' })); });
+    assert.deepEqual(calls.find(c => c.url === '/api/v1/account/groups/grp_aaaaaaaa/share')?.body, { email: 'fay@example.test' });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Stop sharing Holding with dana@example.test' })); });
+    assert.ok(calls.some(c => c.method === 'DELETE' && c.url === '/api/v1/account/groups/grp_aaaaaaaa/share/u-2'));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Leave Clients' })); });
+    assert.ok(calls.some(c => c.method === 'DELETE' && c.url === '/api/v1/account/groups/grp_bbbbbbbb/share/me-1'));
   });
 
   test('a parent and the share it owns of each other company (Z-16)', async () => {

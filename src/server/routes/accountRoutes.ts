@@ -14,7 +14,8 @@ import { makeRecoveryCodes, recoveryStatus, RecoveryError, useRecoveryCode } fro
 import { workspacesRequiringTwoStep } from '../auth/supabaseAuth';
 import { getNotificationEmail, setNotificationEmail } from '../services/notificationEmailService';
 import { EMAIL_MODES, type NotificationEmailMode } from '../../lib/notificationEmail';
-import { createGroup, deleteGroup, keepRates, listGroups, updateGroup, WorkspaceGroupError } from '../services/workspaceGroupService';
+import { createGroup, deleteGroup, keepRates, listGroups, shareGroup, unshareGroup, updateGroup, WorkspaceGroupError } from '../services/workspaceGroupService';
+import { authAdmin } from '../auth/supabaseAuth';
 
 export const accountRouter = express.Router();
 
@@ -130,6 +131,24 @@ accountRouter.put('/groups/:id/rates', async (req, res) => {
     const b = req.body || {};
     res.json({ status: 'success', group: await keepRates(getDb(), { uid: user.uid, groupId: String(req.params.id), reportCurrency: b.reportCurrency, startDate: b.startDate, endDate: b.endDate, rates: b.rates }) });
   } catch (err) { groupFail(res, err); }
+});
+
+// DA-01: share a group with someone by their sign-in email; stop sharing, or leave one shared with you
+accountRouter.post('/groups/:id/share', async (req, res) => {
+  const user = (req as unknown as AuthenticatedRequest).user;
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 254) return res.status(400).json({ status: 'error', message: 'Enter the email they sign in with' });
+  try {
+    let withUid = '';
+    try { withUid = (await authAdmin.getUserByEmail(email)).uid; } catch { /* answered below */ }
+    if (!withUid) return res.status(404).json({ status: 'error', message: 'No one signs in to LedgerFlow with that email yet: ask them to sign up first' });
+    res.json({ status: 'success', group: await shareGroup(getDb(), { uid: user.uid, email: user.email, groupId: String(req.params.id), withUid, withEmail: email }) });
+  } catch (err) { groupFail(res, err); }
+});
+
+accountRouter.delete('/groups/:id/share/:uid', async (req, res) => {
+  const user = (req as unknown as AuthenticatedRequest).user;
+  try { await unshareGroup(getDb(), { uid: user.uid, groupId: String(req.params.id), withUid: String(req.params.uid) }); res.json({ status: 'success' }); } catch (err) { groupFail(res, err); }
 });
 
 accountRouter.delete('/groups/:id', async (req, res) => {
