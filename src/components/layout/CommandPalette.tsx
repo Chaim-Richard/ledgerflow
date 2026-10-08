@@ -12,6 +12,7 @@ import { SYSTEM_COMMANDS, ANALYTICAL_LENSES_REGISTRY } from '../../config/regist
 import { useUIStore } from '../../stores/useUIStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { recentWorkspaceIds, rememberWorkspace, switcherRows } from '../../lib/workspaceSwitcher';
 import { parseNaturalLanguageEntry, ParsedCommandIntent } from '../../lib/algorithms/nl-parser';
 import { useShallow } from 'zustand/react/shallow';
 import { DimensionNode } from '../../types';
@@ -124,6 +125,9 @@ export default function CommandPalette({ isOpen, onClose, onAction }: CommandPal
   const developerMode = useUIStore(state => state.developerMode);
   // BB-07: modules turned off are not offered
   const modules = useAuthStore(s => s.getCurrentWorkspace()?.modules);
+  const workspaces = useAuthStore(s => s.workspaces);
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const switcherUid = useAuthStore(s => s.user?.uid || '');
   const pages = useMemo(() => pageIndex(language, { developerMode, modules }), [language, developerMode, modules]);
 
   // Map commands to the currently active UI language
@@ -370,11 +374,24 @@ const pageResults: PaletteResult[] = useMemo(() => (query.trim().length < 2 ? []
     id: `page-${pageKey(p.page)}`, type: 'page', label: `Go to ${p.label}`, category: 'Pages', payload: p.page, icon: <ArrowRight aria-hidden="true" size={16} />,
   }))), [pages, query]);
 
-  const combinedResults = [...recentResults, ...pageResults, ...dataResults, ...filteredCommands];
+  // K-34: "Switch to …" for the workspaces the person belongs to
+  const workspaceResults: PaletteResult[] = useMemo(() => (query.trim().length < 1 || workspaces.length < 2 ? [] : switcherRows(workspaces, { uid: switcherUid, query, recent: recentWorkspaceIds(), currentId: currentWorkspaceId })
+    .filter(w => !w.current).slice(0, 5).map(w => ({
+      id: `workspace-${w.id}`, type: 'workspace', label: `Switch to ${w.name}`, category: 'Workspaces', payload: w.id, icon: <ArrowRight aria-hidden="true" size={16} />,
+    }))), [query, workspaces, switcherUid, currentWorkspaceId]);
+
+  const combinedResults = [...recentResults, ...workspaceResults, ...pageResults, ...dataResults, ...filteredCommands];
   const groupedResults = groupPaletteResults(combinedResults);
 
   const handleSelect = async (item: PaletteResult) => {
     // go to any page, report or settings tab (BB-09); no artificial wait before acting
+    if (item.type === 'workspace') {
+      rememberWorkspace(String(item.payload));
+      useAuthStore.getState().setCurrentWorkspaceId(String(item.payload));
+      setQuery('');
+      onClose();
+      return;
+    }
     if (item.type === 'page') {
       useUIStore.getState().goToPage(item.payload as PinnedPage);
       setQuery('');

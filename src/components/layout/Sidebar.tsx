@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, LogOut, Command, LayoutGrid, Layers, BarChart3, Settings, ShieldCheck, Compass, ChevronDown, Plus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { RefreshCw, LogOut, Command, LayoutGrid, Layers, BarChart3, Settings, ShieldCheck, Compass, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { cn, formatCurrency } from '../../lib/utils';
 import { AppTab } from '../../types';
 import { useUIStore } from '../../stores/useUIStore';
@@ -8,6 +8,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 import { Download } from 'lucide-react';
 import { NAV_GROUPS, APP_TABS } from '../../config/registry';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
 
 interface SidebarProps {
   activeTab: AppTab;
@@ -107,45 +108,8 @@ const Sidebar = React.memo(({
       {/* Brand & Workspace Switcher */}
       <div className="h-16 flex items-center px-4 shrink-0 border-b border-[var(--line)]">
         {uiStore.isSidebarOpen ? (
-          <div className="w-full relative group/workspace cursor-pointer">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] shrink-0 shadow-sm">
-                 <Compass aria-hidden="true" size={18} className="animate-spin-slow" />
-              </div>
-              <div className="flex-1 overflow-hidden">
-                 <div className="flex items-center justify-between">
-                   <p className="text-[14px] font-bold text-[var(--text)] tracking-tight leading-none truncate">
-                     {workspaces.find(w => w.id === currentWorkspaceId)?.name || 'LedgerFlow'}
-                   </p>
-                   <ChevronDown aria-hidden="true" size={14} className="text-[var(--faint)] group-hover/workspace:text-[var(--text)] transition-colors" />
-                 </div>
-                 <p className="text-[10px] font-mono text-[var(--faint)] mt-1 truncate uppercase tracking-wider">Workspace</p>
-              </div>
-            </div>
-            {/* Workspace Dropdown */}
-            <div className="absolute top-full left-0 mt-1 w-full bg-[var(--surface)] border border-[var(--line)] rounded-lg shadow-xl opacity-0 invisible group-hover/workspace:opacity-100 group-hover/workspace:visible transition-all z-50 py-1">
-              {workspaces.map(w => (
-                <button
-                  key={w.id}
-                  onClick={() => onSelectWorkspace(w.id)}
-                  className={cn(
-                    "w-full text-left px-3 py-2 text-[13px] hover:bg-[var(--elevated)] transition-colors truncate",
-                    currentWorkspaceId === w.id ? "text-[var(--brass)] font-semibold" : "text-[var(--text)]"
-                  )}
-                >
-                  {w.name}
-                </button>
-              ))}
-              <div className="h-px bg-[var(--line)] my-1" />
-              <button
-                onClick={onNewWorkspace}
-                className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--elevated)] transition-colors"
-               aria-label="New Workspace">
-                <Plus aria-hidden="true" size={14} />
-                <span>New Workspace</span>
-              </button>
-            </div>
-          </div>
+          // K-34: type to find a workspace, arrows and Enter, the most recent first
+          <WorkspaceSwitcher onSelect={onSelectWorkspace} onNewWorkspace={onNewWorkspace} />
         ) : (
           <div className="flex items-center justify-center w-full">
             <div className="w-8 h-8 rounded-lg bg-[var(--brass-soft)] border border-[var(--brass-line)] flex items-center justify-center text-[var(--brass)] shrink-0 shadow-sm" title={workspaces.find(w => w.id === currentWorkspaceId)?.name || 'LedgerFlow'}>
