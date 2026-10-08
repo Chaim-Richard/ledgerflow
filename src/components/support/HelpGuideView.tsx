@@ -160,7 +160,7 @@ const GUIDE_SECTIONS: SectionDoc[] = [
       "Tax Liability (tax-liability): Real-time sales tax and VAT reporting with tax-inclusive / exclusive breakdowns.",
       "Projects (projects): Assign revenue, costs, and billable hours to project dimension codes for job costing.",
       "Budgets (budgets): Establish department and account fiscal budgets and track real-time variance against actuals.",
-      "Consolidation (consolidation): Multi-entity financial roll-up with automated intercompany transaction eliminations.",
+      "Consolidation (consolidation): A view across entities. For your groups of companies side by side, in one currency, with what they owe each other taken out, use Reports → Group Summary; dealings between them are checked, not yet eliminated from sales (docs/CAPABILITIES.md).",
       "Time Machine (time-machine): Inspect the exact historical state of the entire financial ledger at any prior timestamp.",
       "Vault (vault): Secure, tamper-proof repository for invoices, bill receipts, tax forms, and compliance documents.",
       "Forecaster (forecaster): Monte Carlo cash flow simulation and runway projection engine.",

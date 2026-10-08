@@ -1,6 +1,8 @@
-# LedgerFlow Enterprise ERP & Continuous Ledger
+# LedgerFlow
 
-LedgerFlow is an enterprise-grade multi-entity continuous financial ledger and ERP system built on modern TypeScript, React 19, and Vite. It provides double-entry accounting with absolute directional balancing, multi-dimension allocation, closed-period integrity controls ("Reverse & Correct"), automated bank reconciliation, billing/invoicing with PDF document generation, and real-time financial reporting.
+LedgerFlow is double-entry bookkeeping for small businesses and their accountants, built with TypeScript, React 19 and Vite. It covers the main path: books, bank, money in and out, labels, payments, reconciliation (LedgerFlow suggests matches, a person confirms), reports that explain each figure, period close, and backup and restore. Several companies can be grouped and seen side by side; full consolidation is not there yet.
+
+**What works today, with its limits and the tests behind it: [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md).** Where this README says more than that table, the table is right.
 
 ---
 
@@ -49,7 +51,7 @@ LedgerFlow strictly separates data, computation, and rendering into three decoup
 
 2. **Closed-Period Governance ("Reverse & Correct"):**
    - Locked fiscal periods strictly reject direct edits or deletions.
-   - Corrective actions post an equal-and-opposite reversal in the open period linked to a replacement entry with full audit trail history.
+   - A correction posts an equal-and-opposite reversal (in the original's month while it is open, otherwise today) linked to the replacement entry, with its audit trail.
 
 3. **Sales & Customer Invoicing:**
    - Invoicing with tax-inclusive or tax-exclusive calculations, discounts, and retainage.
@@ -61,7 +63,7 @@ LedgerFlow strictly separates data, computation, and rendering into three decoup
    - Settlement payment processing with automated oldest-first allocation across open bills/invoices.
 
 5. **Banking & Zero-Variance Reconciliation:**
-   - Direct bank feed integration via Plaid.
+   - Bank feeds via Plaid (needs Plaid credentials and a check per bank).
    - Bank statement imports (CSV, OFX, QBO).
    - Zero-variance statement balancing before finalizing reconciliation statements.
 

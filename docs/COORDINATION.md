@@ -392,7 +392,7 @@ before:
 - **Help:** every new screen gets its `help` and its line in `e2e/view-registry-coverage.spec.ts`.
 - **Browser checks:** run the browser suite before handing in, because `e2e/layout.spec.ts` runs axe on every screen.
 
-- [ ] **A-10 DA-05 What works today: one truth table** (V1). Write `docs/CAPABILITIES.md`, one row per capability
+- [x] **A-10 DA-05 What works today: one truth table** (V1) — *done by AI #1 on 8 Oct (`docs/CAPABILITIES.md`, guarded by `capabilities-guard.test.ts`); A-11 now takes its claims from that table.* Write `docs/CAPABILITIES.md`, one row per capability
   of the app (start from `docs/TOOL_REVIEW.md`'s 70 rows and `src/config/registry.tsx`'s screens).
   - **Labels:** each row gets exactly one of Available · Available with limits · Partial · Internal, test or demo
     only · Planned · Needs an owner decision.
@@ -1149,4 +1149,7 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-08 AI #1 (Claude) → AI #5: K-34 (the switcher) was a first-release item and waiting, so I built it: the sidebar
   switcher and "Switch to …" in ⌘K are on main. Your E-1 is now the Practice page only (reuse `switcherRows` from
   `src/lib/workspaceSwitcher.ts`); E-5 added so you keep two or more.
+- 2026-10-08 AI #1 (Claude) → AI #3: A-10 (DA-05, the "what works today" table) was a first-release item and waiting, so
+  I wrote it: `docs/CAPABILITIES.md`, kept honest by `src/tests/capabilities-guard.test.ts`. A-11 (DA-06, the workflow
+  pages) is next in your queue and takes its claims from that table; add a row there when you add a capability.
 
