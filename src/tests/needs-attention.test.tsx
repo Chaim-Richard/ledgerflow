@@ -1,6 +1,7 @@
 /**
  * Needs attention (DA-02): one row per kind of thing to do, worked out from the books, so a row is
- * there only while its cause is: bank lines to review, invoices waiting for approval, serious Data
+ * there only while its cause is: bank lines to review, banks to log in to again, invoices, pay runs
+ * and purchase orders waiting for approval, serious Data
  * Health problems, entries missing a required label, duplicate bills, and last month not closed
  * (from the workspace's reminder day). Each says why and who, and opens its screen.
  */
@@ -49,6 +50,20 @@ describe('The queue', () => {
     ]);
   });
 
+  test('pay runs and purchase orders waiting for approval, and bank connections to log in to again', () => {
+    const rows = needsAttention({
+      today: '2026-10-05', workspace: { lockDate: '2026-09-30' } as never,
+      payRuns: [{ status: 'awaiting_approval' }, { status: 'processed' }], purchaseOrders: [{ status: 'pending_approval' }, { status: 'pending_approval' }, { status: 'approved' }],
+      banks: [{ status: 'login_required', institutionName: 'Leumi' }, { status: 'active', institutionName: 'Chase' }],
+    });
+    assert.deepEqual(rows.map(r => [r.text, r.who, r.page.tab]), [
+      ['Leumi needs you to log in again', 'owners, accountants and bookkeepers', 'banking'],
+      ['1 pay run waiting for approval', 'owners', 'payroll'],
+      ['2 purchase orders waiting for approval', 'owners and accountants', 'purchase-orders'],
+    ]);
+    assert.equal(needsAttention({ today: '2026-10-05', workspace: { lockDate: '2026-09-30' } as never, banks: [{ status: 'login_required' }, { status: 'login_required' }] })[0].text, '2 bank connections need you to log in again');
+  });
+
   test('a row goes when its cause does: nothing waiting is an empty queue', () => {
     assert.deepEqual(needsAttention({ today: '2026-10-12', workspace: { lockDate: '2026-09-30' } as never, bankLines: [{ status: 'matched' }], findings: [finding('future-dated', 'low')] }), []);
   });
@@ -69,20 +84,33 @@ describe('On the Overview', () => {
     stubFetch(404);
     setComponentWorkspace('owner');
     useAuthStore.setState(s => ({ workspaces: s.workspaces.map(w => ({ ...w, lockDate: new Date().toISOString().slice(0, 7) + '-01' })) }));
-    markComponentCollectionsLoaded('bankLines', 'bills', 'inventory', 'invoices', 'recurring');
-    useLedgerStore.setState({ bankLines: [{ id: 'l1', status: 'pending', date: '2026-10-01', amountCents: 100, description: 'x' }] as never, invoices: [], bills: [], transactions: [], accounts: [], recurring: [], inventory: [] });
+    markComponentCollectionsLoaded('bankLines', 'bills', 'inventory', 'invoices', 'payRuns', 'recurring');
+    useLedgerStore.setState({ bankLines: [{ id: 'l1', status: 'pending', date: '2026-10-01', amountCents: 100, description: 'x' }] as never, invoices: [], bills: [], transactions: [], accounts: [], recurring: [], inventory: [], payRuns: [] });
     render(<NeedsAttentionCard />);
     assert.ok(screen.getByRole('heading', { name: 'Needs attention' }));
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /1 bank line to review/ })); });
     assert.equal(useUIStore.getState().activeTab, 'reconciliation');
   });
 
+  test('a bank whose login expired opens Bank Connections', async () => {
+    const urls = stubFetch(200, { banks: [{ id: 'b1', institutionName: 'Leumi', status: 'login_required', lastSyncedAt: null }] });
+    setComponentWorkspace('owner');
+    useAuthStore.setState(s => ({ workspaces: s.workspaces.map(w => ({ ...w, lockDate: '2099-12-31' })) }));
+    markComponentCollectionsLoaded('bankLines', 'bills', 'inventory', 'invoices', 'payRuns', 'recurring');
+    useLedgerStore.setState({ bankLines: [], invoices: [], bills: [], transactions: [], accounts: [], recurring: [], inventory: [], payRuns: [] });
+    render(<NeedsAttentionCard />);
+    const row = await screen.findByRole('button', { name: /Leumi needs you to log in again/ });
+    assert.ok(urls.some(u => u.startsWith('/api/v1/plaid/banks?workspaceId=')));
+    await act(async () => { fireEvent.click(row); });
+    assert.equal(useUIStore.getState().activeTab, 'banking');
+  });
+
   test('nothing waiting says so in one line', () => {
     stubFetch(404);
     setComponentWorkspace('owner');
     useAuthStore.setState(s => ({ workspaces: s.workspaces.map(w => ({ ...w, lockDate: '2099-12-31' })) }));
-    markComponentCollectionsLoaded('bankLines', 'bills', 'inventory', 'invoices', 'recurring');
-    useLedgerStore.setState({ bankLines: [], invoices: [], bills: [], transactions: [], accounts: [], recurring: [], inventory: [] });
+    markComponentCollectionsLoaded('bankLines', 'bills', 'inventory', 'invoices', 'payRuns', 'recurring');
+    useLedgerStore.setState({ bankLines: [], invoices: [], bills: [], transactions: [], accounts: [], recurring: [], inventory: [], payRuns: [] });
     render(<NeedsAttentionCard />);
     assert.match(document.body.textContent || '', /Nothing waiting/);
   });

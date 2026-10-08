@@ -37,6 +37,11 @@ export function needsAttention(input: {
   closeByDay?: number;
   /** questions about entries (BD-07) */
   questions?: Array<{ status?: string }>;
+  /** pay runs (U-10) and purchase orders (K-23), for the ones waiting for approval */
+  payRuns?: Array<{ status?: string }>;
+  purchaseOrders?: Array<{ status?: string }>;
+  /** bank connections (Plaid), for the ones whose login expired */
+  banks?: Array<{ status?: string; institutionName?: string }>;
 }): AttentionRow[] {
   const rows: AttentionRow[] = [];
   const add = (row: AttentionRow) => { if (row.count > 0) rows.push(row); };
@@ -47,8 +52,17 @@ export function needsAttention(input: {
   add({ id: 'bank-lines', count: pending, text: plural(pending, 'bank line to review', 'bank lines to review'), why: 'They came from the bank and are not matched to an entry yet.', who: BOOKKEEPING, page: { tab: 'reconciliation' } });
 
   const settings = input.workspace?.invoiceApproval;
+  const expired = (input.banks || []).filter(b => b.status === 'login_required');
+  add({ id: 'bank-login', count: expired.length, text: expired.length === 1 ? `${expired[0].institutionName || 'A bank'} needs you to log in again` : `${expired.length} bank connections need you to log in again`, why: 'The bank stopped sending lines until someone logs in to it again; nothing new arrives meanwhile.', who: BOOKKEEPING, page: { tab: 'banking' } });
+
   const awaiting = (input.invoices || []).filter(inv => approvalStatus(inv, settings) === 'awaiting').length;
   add({ id: 'approvals', count: awaiting, text: plural(awaiting, 'invoice waiting for approval', 'invoices waiting for approval'), why: 'They are over the approval limit and can’t be sent until someone signs them off.', who: APPROVERS, page: { tab: 'sales' } });
+
+  const runs = (input.payRuns || []).filter(r => r.status === 'awaiting_approval').length;
+  add({ id: 'pay-runs', count: runs, text: plural(runs, 'pay run waiting for approval', 'pay runs waiting for approval'), why: 'Nobody is paid and nothing is posted until an owner approves it or sends it back.', who: 'owners', page: { tab: 'payroll' } });
+
+  const orders = (input.purchaseOrders || []).filter(o => o.status === 'pending_approval').length;
+  add({ id: 'purchase-orders', count: orders, text: plural(orders, 'purchase order waiting for approval', 'purchase orders waiting for approval'), why: 'A bookkeeper asked to order; nothing is received or billed against it until it is approved or declined.', who: APPROVERS, page: { tab: 'purchase-orders' } });
 
   // serious findings other than the ones with a row of their own
   const own = new Set(['missing-label', 'duplicate-bill']);

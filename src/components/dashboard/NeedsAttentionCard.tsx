@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -8,6 +8,10 @@ import { runDataChecks } from '../../lib/dataChecks';
 import { needsAttention } from '../../lib/needsAttention';
 import { getLocalDateISO } from '../../lib/utils';
 import { useClientQueries } from '../../services/clientQueryActions';
+import { useCollection } from '../../hooks/useCollection';
+import { getIdToken } from '../../firebase';
+import { readBankStatuses, type BankStatus } from '../../lib/bankFeedStatus';
+import type { PurchaseOrder } from '../../types';
 
 /**
  * Needs attention (DA-02) at the top of the Overview: one row per kind of thing to do, with how
@@ -23,10 +27,25 @@ export default function NeedsAttentionCard() {
   const recurring = useLedgerStore(s => s.recurring);
   const inventory = useLedgerStore(s => s.inventory);
   const bankLines = useLedgerStore(s => s.bankLines);
-  const { loading } = useLedgerCollections('bankLines', 'bills', 'inventory', 'invoices', 'recurring');
+  const payRuns = useLedgerStore(s => s.payRuns);
+  const { loading } = useLedgerCollections('bankLines', 'bills', 'inventory', 'invoices', 'payRuns', 'recurring');
+  const { data: purchaseOrders } = useCollection<PurchaseOrder>('purchaseOrders', { where: [{ field: 'status', op: '==', value: 'pending_approval' }], limit: 200 });
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const goToPage = useUIStore(s => s.goToPage);
   const { queries } = useClientQueries(workspace?.id);
+  // bank connections whose login expired; none connected, or the server can't say: no row
+  const workspaceId = workspace?.id;
+  const [banks, setBanks] = useState<BankStatus[]>([]);
+  useEffect(() => {
+    if (!workspaceId) return;
+    let live = true;
+    (async () => {
+      const res = await fetch(`/api/v1/plaid/banks?workspaceId=${encodeURIComponent(workspaceId)}`, { headers: { Authorization: `Bearer ${await getIdToken()}` } });
+      if (!res.ok) return [];
+      return readBankStatuses(await res.json());
+    })().then(list => { if (live) setBanks(list); }).catch(() => { if (live) setBanks([]); });
+    return () => { live = false; };
+  }, [workspaceId]);
 
   const rows = useMemo(() => {
     if (!workspace) return [];
@@ -36,15 +55,15 @@ export default function NeedsAttentionCard() {
       inventory: inventory || [], bankLines: bankLines || [], today, baseCurrency: workspace.currency || 'USD', dimensions: workspace.dimensions,
     });
     const closeByDay = (workspace.alerts as { closeReminderDay?: number | null } | undefined)?.closeReminderDay || undefined;
-    return needsAttention({ today, workspace, bankLines: bankLines || [], invoices: invoices || [], findings, closeByDay, questions: queries });
-  }, [workspace, transactions, accounts, invoices, bills, recurring, inventory, bankLines, queries]);
+    return needsAttention({ today, workspace, bankLines: bankLines || [], invoices: invoices || [], findings, closeByDay, questions: queries, payRuns: payRuns || [], purchaseOrders, banks });
+  }, [workspace, transactions, accounts, invoices, bills, recurring, inventory, bankLines, queries, payRuns, purchaseOrders, banks]);
 
   if (loading || !workspace) return null;
   return (
     <section aria-labelledby="needs-attention-title" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
       <h2 id="needs-attention-title" className="text-sm font-bold text-[var(--text)]">Needs attention</h2>
       {rows.length === 0 ? (
-        <p className="mt-1 text-sm text-[var(--muted)]">Nothing waiting: the bank is matched, nothing waits for approval and the books have no problems.</p>
+        <p className="mt-1 text-sm text-[var(--muted)]">Nothing waiting: the bank is matched and connected, nothing waits for approval and the books have no problems.</p>
       ) : (
         <ul className="mt-2 divide-y divide-[var(--line)]">
           {rows.map(row => (
