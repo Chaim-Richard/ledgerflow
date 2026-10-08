@@ -4,8 +4,32 @@ import { toast } from 'sonner';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { getIdToken } from '../../../firebase';
 import { groupProblem, structureProblem, type WorkspaceGroup } from '../../../lib/workspaceGroups';
+import { useCollection } from '../../../hooks/useCollection';
+import type { ChartAccount } from '../../../types';
 
 const field = 'px-2 py-1.5 text-sm border border-[var(--line)] rounded bg-[var(--panel)] text-[var(--text)]';
+
+interface Editing { id: string | null; name: string; workspaceIds: string[]; parentId: string; shares: Record<string, string>; investments: Record<string, string> }
+
+/** Z-16: for each company the parent owns, the parent's asset account holding that investment (read from the parent's chart). */
+function InvestmentAccounts({ editing, nameOf, onChange }: { editing: Editing; nameOf: (id: string) => string; onChange: (id: string, accountId: string) => void }) {
+  const { data: accounts } = useCollection<ChartAccount>('chartAccounts', { workspaceId: editing.parentId, where: [{ field: 'type', op: '==', value: 'asset' }], limit: 1000 });
+  const live = accounts.filter(a => !a.isArchived).sort((a, b) => a.name.localeCompare(b.name));
+  return (
+    <div role="group" aria-label="The parent's investment in each company" className="space-y-1">
+      <p className="text-xs text-[var(--muted)]">Where {nameOf(editing.parentId)} keeps its investment in each company (optional). It is taken out of the group total together with the capital it paid in; what was paid above the company's book value (goodwill) is not shown separately.</p>
+      {editing.workspaceIds.filter(id => id !== editing.parentId).map(id => (
+        <label key={id} className="flex items-center gap-2 text-[var(--text)]">
+          <bdi className="min-w-[8rem]">{nameOf(id)}</bdi>
+          <select aria-label={`Investment in ${nameOf(id)}`} value={editing.investments[id] || ''} onChange={e => onChange(id, e.target.value)} className={field}>
+            <option value="">Not taken out</option>
+            {live.map(a => <option key={a.id} value={a.id}>{a.code ? `${a.code} ` : ''}{a.name}</option>)}
+          </select>
+        </label>
+      ))}
+    </div>
+  );
+}
 
 async function call(path: string, method: string, body?: unknown) {
   const res = await fetch(`/api/v1/account/groups${path}`, {
@@ -26,7 +50,7 @@ export default function GroupsSettings() {
   const [groups, setGroups] = useState<WorkspaceGroup[] | null>(null);
   const [error, setError] = useState('');
   // Z-16: the parent and the share it owns of each other member, typed as text until saved
-  const [editing, setEditing] = useState<{ id: string | null; name: string; workspaceIds: string[]; parentId: string; shares: Record<string, string> } | null>(null);
+  const [editing, setEditing] = useState<Editing | null>(null);
   const [busy, setBusy] = useState(false);
   const nameOf = (id: string) => workspaces.find(w => w.id === id)?.name || id;
 
@@ -40,22 +64,23 @@ export default function GroupsSettings() {
   }, [reload]);
   const load = () => setReload(n => n + 1);
 
-  const ownership = (e: NonNullable<typeof editing>) => e.parentId
+  const investments = (e: Editing) => (e.parentId ? Object.fromEntries(e.workspaceIds.filter(id => id !== e.parentId && e.investments[id]).map(id => [id, e.investments[id]])) : {});
+  const ownership = (e: Editing) => e.parentId
     ? Object.fromEntries(e.workspaceIds.filter(id => id !== e.parentId && (e.shares[id] ?? '').trim() !== '').map(id => [id, Number(e.shares[id])]))
     : {};
   const problem = editing
     ? (groupProblem(editing) || (editing.workspaceIds.length === 0 ? 'Choose at least one workspace' : null)
-      || structureProblem({ workspaceIds: editing.workspaceIds, parentId: editing.parentId || null, ownership: ownership(editing) }))
+      || structureProblem({ workspaceIds: editing.workspaceIds, parentId: editing.parentId || null, ownership: ownership(editing), investments: investments(editing) }))
     : null;
   const edit = (g: WorkspaceGroup) => setEditing({
     id: g.id, name: g.name, workspaceIds: g.workspaceIds, parentId: g.parentId || '',
-    shares: Object.fromEntries(Object.entries(g.ownership || {}).map(([id, n]) => [id, String(n)])),
+    shares: Object.fromEntries(Object.entries(g.ownership || {}).map(([id, n]) => [id, String(n)])), investments: { ...(g.investments || {}) },
   });
   const save = async () => {
     if (!editing || problem || busy) return;
     setBusy(true);
     try {
-      const body = { name: editing.name, workspaceIds: editing.workspaceIds, parentId: editing.parentId || null, ownership: ownership(editing) };
+      const body = { name: editing.name, workspaceIds: editing.workspaceIds, parentId: editing.parentId || null, ownership: ownership(editing), investments: investments(editing) };
       if (editing.id) await call(`/${encodeURIComponent(editing.id)}`, 'PUT', body); else await call('', 'POST', body);
       toast.success(editing.id ? `Saved ${editing.name.trim()}` : `Group ${editing.name.trim()} made`);
       setEditing(null);
@@ -132,7 +157,7 @@ export default function GroupsSettings() {
           {editing.workspaceIds.length > 1 && (
             <div className="space-y-2">
               <label className="flex flex-col gap-1 text-[var(--muted)]">Parent company (optional)
-                <select value={editing.parentId} onChange={e => setEditing({ ...editing, parentId: e.target.value })} className={field}>
+                <select value={editing.parentId} onChange={e => setEditing({ ...editing, parentId: e.target.value, investments: {} })} className={field}>
                   <option value="">None: just a list of books</option>
                   {editing.workspaceIds.map(id => <option key={id} value={id}>{nameOf(id)}</option>)}
                 </select>
@@ -149,6 +174,9 @@ export default function GroupsSettings() {
                   ))}
                 </div>
               )}
+              {editing.parentId && (
+                <InvestmentAccounts editing={editing} nameOf={nameOf} onChange={(id, accountId) => setEditing({ ...editing, investments: { ...editing.investments, [id]: accountId } })} />
+              )}
             </div>
           )}
           {problem && <p role="status" className="text-xs text-amber-700 dark:text-amber-400">{problem}</p>}
@@ -158,7 +186,7 @@ export default function GroupsSettings() {
           </div>
         </fieldset>
       ) : (
-        <button type="button" onClick={() => setEditing({ id: null, name: '', workspaceIds: [], parentId: '', shares: {} })} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm font-semibold text-[var(--text)] hover:bg-[var(--elevated)]">New group</button>
+        <button type="button" onClick={() => setEditing({ id: null, name: '', workspaceIds: [], parentId: '', shares: {}, investments: {} })} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm font-semibold text-[var(--text)] hover:bg-[var(--elevated)]">New group</button>
       )}
     </section>
   );

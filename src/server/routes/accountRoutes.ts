@@ -93,11 +93,13 @@ const stringList = (value: unknown) => {
   return value.map(v => String(v));
 };
 
-// Z-16: the parent company (a member id, or null for none) and the share it owns of each other member;
+// Z-16: the parent company (a member id, or null for none), the share it owns of each other member and
+// the parent's account holding its investment in each;
 // anything else is passed on as it came, so the service refuses it with a reason
 const structure = (body: Record<string, unknown> | undefined) => ({
   ...(body?.parentId !== undefined ? { parentId: body.parentId as string | null } : {}),
   ...(body?.ownership !== undefined ? { ownership: body.ownership as Record<string, number> } : {}),
+  ...(body?.investments !== undefined ? { investments: body.investments as Record<string, string> } : {}),
 });
 
 accountRouter.get('/groups', async (req, res) => {

@@ -30,8 +30,9 @@
  * parent controls (owned above 50%), so its books are added in full and the part that belongs to its
  * other owners (non-controlling interest) is said: their share of its equity and of its profit. A
  * group with a parent is a consolidation, so it is refused while any of its companies is not one the
- * person can open, never quietly short. Not yet: taking the parent's investment out against the
- * companies' share capital.
+ * person can open, never quietly short. The parent's investment in each company (the balance of the
+ * account named for it in the parent's books) is taken out of the total assets and equity; what the
+ * parent paid above the company's book value (goodwill) is not shown separately.
  */
 import type { Firestore } from '../db/firestore';
 import { openable } from '../services/workspaceGroupService';
@@ -116,6 +117,8 @@ export interface Eliminated {
   expense: number;
   /** income − cogs − expense taken out: what the two sides disagree on (kept in net income) */
   profitDifference: number;
+  /** Z-16: the parent's investment in the companies it owns, taken out of total assets and equity */
+  investment: number;
 }
 
 /** An account holding what a company owes or is owed by the others in its group. */
@@ -184,7 +187,7 @@ export function matchIntercompany(members: Array<{ workspaceId: string; name: st
 
 const FIGURES: Array<keyof GroupFigures> = ['income', 'cogs', 'grossProfit', 'expense', 'netIncome', 'totalAssets', 'totalLiabilities', 'totalEquity'];
 
-type ReadMember = Omit<GroupMember, 'share'> & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[]; owedBy: number; owedTo: number; withinGroup: { income: number; cogs: number; expense: number } };
+type ReadMember = Omit<GroupMember, 'share'> & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[]; owedBy: number; owedTo: number; withinGroup: { income: number; cogs: number; expense: number }; assetBalances: Record<string, number> };
 
 /** The other company of an intercompany entry. */
 const otherCompany = (tx: Transaction) => String(tx.metadata?.targetWorkspaceId || tx.metadata?.sourceWorkspaceId || '');
@@ -217,6 +220,7 @@ async function memberFigures(db: Firestore, workspaceId: string, startDate: stri
     earlierProfit: bs.netIncome - pl.netIncome,
     intercompany,
     withinGroup: { income: within.income.total, cogs: within.cogs.total, expense: within.expense.total },
+    assetBalances: Object.fromEntries(accounts.filter(a => a.type === 'asset').map(a => [a.id, bs.assets[a.id] || 0])),
     // CB-26: balances with the other companies (assets: owed to it; liabilities: it owes)
     owedBy: accounts.filter(a => a.type === 'asset' && isIntercompanyAccount(a)).reduce((s, a) => s + (bs.assets[a.id] || 0), 0),
     owedTo: accounts.filter(a => a.type === 'liability' && isIntercompanyAccount(a)).reduce((s, a) => s + (bs.liabilities[a.id] || 0), 0),
@@ -252,7 +256,11 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
   const open = await openable(db, input.uid);
   const ids = (Array.isArray(group.workspaceIds) ? group.workspaceIds as string[] : []);
   const shown = ids.filter(id => open.has(id));
-  const structure = { parentId: typeof group.parentId === 'string' ? group.parentId : undefined, ownership: (group.ownership || {}) as Record<string, number> };
+  const structure = {
+    parentId: typeof group.parentId === 'string' ? group.parentId : undefined,
+    ownership: (group.ownership || {}) as Record<string, number>,
+    investments: (group.investments || {}) as Record<string, string>,
+  };
   if (structure.parentId && shown.length < ids.length) {
     const n = ids.length - shown.length;
     throw new GroupReportError(403, `This group adds up its companies under a parent, and ${n} of them ${n === 1 ? 'is' : 'are'} not open to you: ask for access, or take ${n === 1 ? 'it' : 'them'} out of the group`);
@@ -267,7 +275,7 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     }
   }
   const intercompany = matchIntercompany(read.map(m => ({ workspaceId: m.workspaceId, name: m.name, currency: m.currency, entries: m.intercompany })), open, input.startDate, input.endDate);
-  const members: GroupMember[] = read.map(({ earlierProfit, equityAccounts, intercompany: _entries, owedBy: _by, owedTo: _to, withinGroup: _within, ...rest }) => {
+  const members: GroupMember[] = read.map(({ earlierProfit, equityAccounts, intercompany: _entries, owedBy: _by, owedTo: _to, withinGroup: _within, assetBalances: _balances, ...rest }) => {
     const m = { ...rest, share: shareOf(structure, rest.workspaceId) };
     if (!reportCurrency) return m;
     const rates = m.currency === reportCurrency ? null : input.rates![m.currency];
@@ -282,14 +290,32 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
   const average = (m: ReadMember) => (reportCurrency && m.currency !== reportCurrency ? input.rates![m.currency].average : 1);
   const within = (f: 'income' | 'cogs' | 'expense') => read.reduce((s, m) => s + Math.round(m.withinGroup[f] * average(m)), 0);
   const [income, cogs, expense] = [within('income'), within('cogs'), within('expense')];
-  const eliminated: Eliminated = { assets: owedBy, liabilities: owedTo, difference: owedBy - owedTo, income, cogs, expense, profitDifference: income - cogs - expense };
+  // Z-16: the parent's investment in the companies it owns, from its own balance sheet
+  const parentRead = read.find(m => m.workspaceId === structure.parentId);
+  let investment = 0;
+  if (parentRead) {
+    const accounts = new Set<string>();
+    for (const [memberId, accountId] of Object.entries(structure.investments)) {
+      const member = read.find(m => m.workspaceId === memberId);
+      if (!member) continue;
+      if (!(accountId in parentRead.assetBalances)) {
+        throw new GroupReportError(400, `The investment account chosen for ${member.name} is not an asset account of ${parentRead.name} any more: choose it again in Settings → Groups of books`);
+      }
+      accounts.add(accountId); // one account may hold several companies: counted once
+    }
+    investment = Math.round([...accounts].reduce((s, a) => s + parentRead.assetBalances[a], 0) * closing(parentRead));
+  }
+  const eliminated: Eliminated = { assets: owedBy, liabilities: owedTo, difference: owedBy - owedTo, income, cogs, expense, profitDifference: income - cogs - expense, investment };
   const sum = (figures: Array<GroupFigures & { cta: number }>, currency: string) => {
     const t = Object.fromEntries([...FIGURES, 'cta' as const].map(f => [f, figures.reduce((s, x) => s + x[f], 0)])) as unknown as GroupFigures & { cta: number };
     // Z-16: the other owners' part of each company the parent owns less than all of
     const others = (f: 'totalEquity' | 'netIncome') => figures.reduce((s, x, i) => s + Math.round(x[f] * (100 - members[i].share) / 100), 0);
     const otherOwners = structure.parentId ? { otherOwners: { equity: others('totalEquity'), netIncome: others('netIncome') } } : {};
     // net income stays the companies' own: what the two sides disagree on stays in it, and is said
-    return { currency, ...t, income: t.income - income, cogs: t.cogs - cogs, grossProfit: t.grossProfit - income + cogs, expense: t.expense - expense, totalAssets: t.totalAssets - owedBy, totalLiabilities: t.totalLiabilities - owedTo, totalEquity: t.totalEquity - eliminated.difference, eliminated, ...otherOwners };
+    return {
+      currency, ...t, income: t.income - income, cogs: t.cogs - cogs, grossProfit: t.grossProfit - income + cogs, expense: t.expense - expense,
+      totalAssets: t.totalAssets - owedBy - investment, totalLiabilities: t.totalLiabilities - owedTo, totalEquity: t.totalEquity - eliminated.difference - investment, eliminated, ...otherOwners,
+    };
   };
   const total = members.length === 0 ? null
     : reportCurrency ? sum(members.map(m => m.translated!), reportCurrency)

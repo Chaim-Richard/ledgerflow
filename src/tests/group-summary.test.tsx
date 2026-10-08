@@ -147,7 +147,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
       ['Holding', 50000, 20000, 30000, 130000, 130000, true],
       ['Daughter', 30000, 5000, 25000, 125000, 125000, true],
     ], 'next year is left out of the profit; the balance sheet balances');
-    assert.deepEqual(res.body.total, { currency: 'USD', income: 80000, cogs: 0, grossProfit: 80000, expense: 25000, netIncome: 55000, totalAssets: 255000, totalLiabilities: 0, totalEquity: 255000, cta: 0, eliminated: { assets: 0, liabilities: 0, difference: 0, income: 0, cogs: 0, expense: 0, profitDifference: 0 } });
+    assert.deepEqual(res.body.total, { currency: 'USD', income: 80000, cogs: 0, grossProfit: 80000, expense: 25000, netIncome: 55000, totalAssets: 255000, totalLiabilities: 0, totalEquity: 255000, cta: 0, eliminated: { assets: 0, liabilities: 0, difference: 0, income: 0, cogs: 0, expense: 0, profitDifference: 0, investment: 0 } });
     assert.equal(res.body.notIncluded, 0);
   });
 
@@ -162,7 +162,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     const rates = encodeURIComponent(JSON.stringify({ EUR: { closing: 1.2, average: 1.1, historical: 1 } }));
     const res = await call(`/api/v1/reports/group-summary?groupId=${mixed}&startDate=2026-01-01&endDate=2026-12-31&reportCurrency=USD&rates=${rates}`, ann);
     assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.deepEqual(res.body.total, { currency: 'USD', income: 61000, cogs: 0, grossProfit: 61000, expense: 21100, netIncome: 39900, totalAssets: 260800, totalLiabilities: 0, totalEquity: 260800, cta: 20900, eliminated: { assets: 0, liabilities: 0, difference: 0, income: 0, cogs: 0, expense: 0, profitDifference: 0 } });
+    assert.deepEqual(res.body.total, { currency: 'USD', income: 61000, cogs: 0, grossProfit: 61000, expense: 21100, netIncome: 39900, totalAssets: 260800, totalLiabilities: 0, totalEquity: 260800, cta: 20900, eliminated: { assets: 0, liabilities: 0, difference: 0, income: 0, cogs: 0, expense: 0, profitDifference: 0, investment: 0 } });
     const euro = (res.body.members as Array<{ name: string; income: number; translated: { cta: number } }>).find(m => m.name === 'Euro Co')!;
     assert.equal(euro.income, 10000, 'its own figures stay');
     assert.equal(euro.translated.cta, 20900);
@@ -188,7 +188,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.equal(dealings.matched, 1);
     assert.deepEqual(dealings.unmatched.map(i => [i.transactionId, i.reason]), [[`${ws1}_ic2`, 'missing']]);
     const total = res.body.total as { totalAssets: number; totalLiabilities: number; totalEquity: number; eliminated: Record<string, number> };
-    assert.deepEqual(total.eliminated, { assets: 700, liabilities: 700, difference: 0, income: 0, cogs: 0, expense: 0, profitDifference: 0 }, 'balances between the companies are taken out');
+    assert.deepEqual(total.eliminated, { assets: 700, liabilities: 700, difference: 0, income: 0, cogs: 0, expense: 0, profitDifference: 0, investment: 0 }, 'balances between the companies are taken out');
     assert.equal(total.totalLiabilities, 0);
     assert.equal(total.totalAssets, total.totalLiabilities + total.totalEquity, 'the group still balances');
   });
@@ -210,6 +210,30 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     const plain = (await summary(sameCurrency)).body.total as { netIncome: number; totalEquity: number; otherOwners?: unknown };
     assert.deepEqual([total.netIncome, total.totalEquity], [plain.netIncome, plain.totalEquity], 'added in full');
     assert.equal(plain.otherOwners, undefined, 'a group without a parent says nothing about owners');
+  });
+
+  test('the parent\'s investment in a company is taken out of the total assets and equity (Z-16)', async () => {
+    await db.collection('chartAccounts').doc(`${ws1}_invest`).set({ workspaceId: ws1, name: 'Shares in Daughter', type: 'asset', code: 'invest' });
+    const pay = (ws: string, id: string, debit: string, credit: string) => db.collection('transactions').doc(`${ws}_${id}`).set({
+      workspaceId: ws, date: '2026-02-01', description: id, status: 'completed', type: 'actual', currency: 'USD', totalAmountCents: 20000,
+      lines: [{ accountId: `${ws}_${debit}`, amountCents: 20000 }, { accountId: `${ws}_${credit}`, amountCents: -20000 }],
+    });
+    await pay(ws1, 'buy-shares', 'invest', 'cash');
+    await pay(ws2, 'issue-shares', 'cash', 'capital');
+    const before = (await summary(owned)).body.total as { totalAssets: number; totalEquity: number; totalLiabilities: number; eliminated: { investment: number } };
+    assert.equal(before.eliminated.investment, 0, 'nothing chosen yet');
+    const set = await call(`/api/v1/account/groups/${owned}`, ann, { method: 'PUT', body: { investments: { [ws2]: `${ws1}_invest` } } });
+    assert.equal(set.status, 200, JSON.stringify(set.body));
+    const after = (await summary(owned)).body.total as typeof before;
+    assert.equal(after.eliminated.investment, 20000);
+    assert.deepEqual([after.totalAssets, after.totalEquity], [before.totalAssets - 20000, before.totalEquity - 20000], 'the shares the parent holds and the capital the daughter got from it, both out');
+    assert.equal(after.totalAssets, after.totalLiabilities + after.totalEquity);
+    await call(`/api/v1/account/groups/${owned}`, ann, { method: 'PUT', body: { investments: { [ws2]: `${ws1}_sales` } } });
+    const wrong = await summary(owned);
+    assert.equal(wrong.status, 400);
+    assert.match(String(wrong.body.error || wrong.body.message), /not an asset account of Holding/);
+    assert.equal((await call(`/api/v1/account/groups/${owned}`, ann, { method: 'PUT', body: { investments: { [ws1]: `${ws1}_invest` } } })).status, 400, 'not for the parent itself');
+    await call(`/api/v1/account/groups/${owned}`, ann, { method: 'PUT', body: { investments: { [ws2]: `${ws1}_invest` } } });
   });
 
   test('a member no longer open is left out and counted; other people, reversed periods and API keys are refused', async () => {
@@ -280,6 +304,7 @@ describe('On screen', () => {
     render(<GroupSummaryReportView />);
     await waitFor(() => assert.ok(screen.getByText(/Sales between the companies taken out: \$4\.00 of income, and \$3\.00 of costs/)));
     assert.match(screen.getByRole('alert').textContent || '', /differ by \$1\.00/);
+    assert.equal(screen.queryByText(/The parent's investment/), null, 'none chosen: nothing said');
   });
 
   test('in one currency: rates are asked for, filled from the rate service, and sent; the translation line shows', async () => {

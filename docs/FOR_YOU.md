@@ -237,8 +237,9 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
     - *Default:* only companies owned **above 50%** (ones the parent controls) can be in such a group;
       one owned 50% or less is refused with a reason, because adding it line by line would be wrong
       and the "equity method" for it is not built. Say if you need that.
-    - The parent's investment is not yet taken out against the companies' share capital, so the
-      group's equity still holds both; the report says so under the table.
+    - The parent's investment is taken out of the total once you choose, for each company, the
+      parent's account that holds it (Settings → Groups of books). What the parent paid above the
+      company's book value (goodwill) is not shown separately: the total is lower by that amount.
 
 ## C. Good to know (no action needed)
 

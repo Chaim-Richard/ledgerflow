@@ -95,7 +95,7 @@ describe('The main path across a group of books', { skip: !process.env.LF_TEST_D
     const total = res.body.total as Record<string, number> & { eliminated: Record<string, number> };
     assert.equal(total.netIncome, 55000);
     assert.equal(total.income, 80000);
-    assert.deepEqual(total.eliminated, { assets: 15000, liabilities: 15000, difference: 0, income: 0, cogs: 0, expense: 0, profitDifference: 0 }, 'the loan is taken out on both sides');
+    assert.deepEqual(total.eliminated, { assets: 15000, liabilities: 15000, difference: 0, income: 0, cogs: 0, expense: 0, profitDifference: 0, investment: 0 }, 'the loan is taken out on both sides');
     assert.equal(total.totalAssets, total.totalLiabilities + total.totalEquity, 'the group balances');
     assert.equal(total.totalLiabilities, 0, 'nothing is owed outside the group');
     assert.deepEqual(res.body.intercompany, { matched: 1, unmatched: [] });
@@ -112,7 +112,7 @@ describe('The main path across a group of books', { skip: !process.env.LF_TEST_D
     assert.deepEqual(members.map(m => [m.income, m.expense]), [[54000, 20000], [30000, 9000]], 'each company\'s own books have it');
     const total = group.body.total as Record<string, number> & { eliminated: Record<string, number> };
     assert.deepEqual([total.income, total.expense, total.netIncome], [80000, 25000, 55000], 'the group did not sell to itself');
-    assert.deepEqual(total.eliminated, { assets: 19000, liabilities: 19000, difference: 0, income: 4000, cogs: 0, expense: 4000, profitDifference: 0 });
+    assert.deepEqual(total.eliminated, { assets: 19000, liabilities: 19000, difference: 0, income: 4000, cogs: 0, expense: 4000, profitDifference: 0, investment: 0 });
     assert.equal(total.totalAssets, total.totalLiabilities + total.totalEquity);
   });
 

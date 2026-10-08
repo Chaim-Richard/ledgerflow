@@ -14,6 +14,8 @@ export interface WorkspaceGroup {
   parentId?: string;
   /** Z-16: the parent's share of each other member, in percent (a member not listed: 100) */
   ownership?: Record<string, number>;
+  /** Z-16: for each other member, the parent's account holding its investment in it (taken out of the total) */
+  investments?: Record<string, string>;
   /** Z-17: the translation rates used, by `ratesKey` (reporting currency and period), then member currency */
   rates?: Record<string, Record<string, { closing: number; average: number; historical: number }>>;
   createdAt?: string;
@@ -43,9 +45,18 @@ export function groupProblem(input: { name?: unknown; workspaceIds?: unknown }):
  * other member's share is above 50% (a company the parent controls, so its books are added in full
  * and the rest belongs to other owners) and at most 100%, with two decimals at most.
  */
-export function structureProblem(input: { workspaceIds: string[]; parentId?: unknown; ownership?: unknown }): string | null {
+export function structureProblem(input: { workspaceIds: string[]; parentId?: unknown; ownership?: unknown; investments?: unknown }): string | null {
   if (input.parentId !== undefined && input.parentId !== null) {
     if (typeof input.parentId !== 'string' || !input.workspaceIds.includes(input.parentId)) return 'The parent company must be one of the group\'s workspaces';
+  }
+  if (input.investments !== undefined && input.investments !== null) {
+    if (typeof input.investments !== 'object' || Array.isArray(input.investments)) return 'Choose the parent\'s investment account for each company';
+    const entries = Object.entries(input.investments as Record<string, unknown>);
+    if (entries.length > 0 && !input.parentId) return 'Choose the parent company before its investments';
+    for (const [id, accountId] of entries) {
+      if (!input.workspaceIds.includes(id) || id === input.parentId) return 'An investment is given for a company that is not one the parent owns in this group';
+      if (typeof accountId !== 'string' || !accountId || accountId.length > 200) return 'Choose the parent\'s investment account for each company';
+    }
   }
   if (input.ownership === undefined || input.ownership === null) return null;
   if (typeof input.ownership !== 'object' || Array.isArray(input.ownership)) return 'Enter the share owned of each company';
