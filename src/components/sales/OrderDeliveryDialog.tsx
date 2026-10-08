@@ -9,7 +9,7 @@ import { getIdToken } from '../../firebase';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { getLocalDateISO, formatDate } from '../../lib/utils';
 import { findAccount, reversalDate } from '../../services/ledgerPost/postingKit';
-import { deliveredByLine, deliveryLines, deliveryProblem, newDeliveryId, orderDeliveries } from '../../lib/deliveries';
+import { deliveredByLine, deliveryLines, deliveryProblem, newDeliveryId, newReturnId, orderDeliveries, returnProblem } from '../../lib/deliveries';
 import type { Estimate } from '../../types';
 
 const field = 'px-2 py-1 text-sm bg-[var(--ink)] border border-[var(--line)] rounded text-[var(--text)]';
@@ -18,7 +18,9 @@ const field = 'px-2 py-1 text-sm bg-[var(--ink)] border border-[var(--line)] rou
  * Deliver from an order (BF-08 step 2), where stock leaves with deliveries: how many of each item
  * leave now (never more than is left), the date and, if wanted, the location they leave from. The
  * server lowers stock and books their cost once (src/server/services/deliveryService.ts). Earlier
- * deliveries are listed with Undo, which puts their units back. The rules: src/lib/deliveries.ts.
+ * deliveries are listed with Undo, which puts their units back. Goods that came back later are
+ * recorded under "Came back" (stock in, cost taken back at what the delivery booked; the money is a
+ * credit note, made apart). The rules: src/lib/deliveries.ts.
  */
 export default function OrderDeliveryDialog({ order, canWrite, onClose }: { order: Estimate; canWrite: boolean; onClose: () => void }) {
   const { dialogProps, titleId } = useDialog(onClose, true);
@@ -38,6 +40,12 @@ export default function OrderDeliveryDialog({ order, canWrite, onClose }: { orde
   const [busy, setBusy] = useState(false);
   const quantities = lines.map(l => ({ position: l.position, quantity: now[l.position]?.trim() ? Number(now[l.position]) : 0 }));
   const problem = deliveryProblem(lines, quantities);
+  // goods that came back after a delivery
+  const [back, setBack] = useState<Record<number, string>>({});
+  const [returnId, setReturnId] = useState(newReturnId);
+  const backQuantities = lines.map(l => ({ position: l.position, quantity: back[l.position]?.trim() ? Number(back[l.position]) : 0 }));
+  const backProblem = returnProblem(lines, backQuantities);
+  const anyDelivered = lines.some(l => l.delivered > 0);
   const name = order.number || order.id;
 
   const request = async (path: string, body: Record<string, unknown>) => {
@@ -45,6 +53,30 @@ export default function OrderDeliveryDialog({ order, canWrite, onClose }: { orde
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'That did not work');
     return data as { warnings?: string[] };
+  };
+
+  const stockAccounts = () => {
+    const mappings = workspace?.defaultAccountMappings || {};
+    const inventory = findAccount(accounts || [], mappings, ['inventory', 'stock', 'inventory asset'], a => resolveAccountRole(a) === 'inventory');
+    const cogs = findAccount(accounts || [], mappings, ['cogs', 'cost of goods sold', 'direct costs'], a => resolveAccountRole(a) === 'cogs');
+    return inventory && cogs ? { inventoryAccountId: inventory.id, cogsAccountId: cogs.id } : null;
+  };
+
+  const recordReturn = async () => {
+    if (backProblem || busy || !workspace) return;
+    const accountIds = stockAccounts();
+    if (!accountIds) { toast.error('Add an Inventory account and a Cost of Goods Sold account first'); return; }
+    setBusy(true);
+    try {
+      await request('/api/v1/inventory/deliveries/returns', { workspaceId: workspace.id, orderId: order.id, returnId, date, lines: backQuantities.filter(q => q.quantity > 0), ...accountIds });
+      toast.success('Recorded: the goods are back in stock. Make a credit note for the money if it is owed back.');
+      setBack({});
+      setReturnId(newReturnId());
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const deliver = async () => {
@@ -133,6 +165,21 @@ export default function OrderDeliveryDialog({ order, canWrite, onClose }: { orde
                 className="ml-auto rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white disabled:opacity-50">Deliver</button>
               {problem && <p role="status" className="w-full text-amber-700 dark:text-amber-400">{problem}</p>}
             </div>
+          )}
+          {canWrite && anyDelivered && (
+            <fieldset className="space-y-2 rounded-lg border border-[var(--line)] p-3 text-xs">
+              <legend className="px-1 font-semibold text-[var(--muted)]">Came back</legend>
+              {lines.filter(l => l.delivered > 0).map(l => (
+                <label key={l.position} className="flex items-center justify-between gap-2">
+                  <span><bdi>{l.description || 'Item'}</bdi> <span className="text-[var(--muted)]">(of {l.delivered} delivered)</span></span>
+                  <input aria-label={`Came back: ${l.description || 'item'}`} inputMode="decimal" value={back[l.position] ?? ''}
+                    onChange={e => setBack(b => ({ ...b, [l.position]: e.target.value }))} className={`${field} w-20 text-right font-mono`} />
+                </label>
+              ))}
+              {Object.values(back).some(v => v.trim()) && backProblem && <p role="status" className="text-amber-700 dark:text-amber-400">{backProblem}</p>}
+              <button type="button" onClick={() => void recordReturn()} disabled={Boolean(backProblem) || busy}
+                className="rounded-lg border border-[var(--line)] px-3 py-1.5 font-semibold text-[var(--text)] disabled:opacity-50">Record what came back</button>
+            </fieldset>
           )}
           {deliveries.length > 0 && (
             <section aria-labelledby={`${titleId}-done`}>

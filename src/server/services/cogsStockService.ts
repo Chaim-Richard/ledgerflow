@@ -2,7 +2,7 @@ import { FieldValue } from '../db/firestore';
 import type { DocumentData, Firestore, Transaction as DbTransaction } from '../db/firestore';
 import { INVOICE_COGS_TYPE } from '../../services/invoiceCogs';
 import { SALES_RETURN_TYPE } from '../../lib/salesReturns';
-import { DELIVERY_COGS_TYPE, goodsLeaveWith } from '../../lib/deliveries';
+import { DELIVERY_COGS_TYPE, DELIVERY_RETURN_TYPE, goodsLeaveWith } from '../../lib/deliveries';
 import { isPostable } from '../../lib/txFilters';
 import type { Transaction } from '../../types';
 import { stockMovesReady, writeStockMoves, type NewStockMove } from './stockMoveService';
@@ -75,7 +75,15 @@ function stockEffect(tx: LedgerEntry): { itemId: string; quantity: number; kind:
   const sale = cogsMove(tx);
   if (sale) return { itemId: sale.itemId, quantity: -sale.quantity, kind: 'sale' };
   const back = returnMove(tx);
-  return back ? { itemId: back.itemId, quantity: back.quantity, kind: 'return' } : null;
+  if (back) return { itemId: back.itemId, quantity: back.quantity, kind: 'return' };
+  // BF-08: goods that came back after a delivery
+  const meta = tx.metadata;
+  if (meta?.type !== DELIVERY_RETURN_TYPE) return null;
+  const quantity = Number(meta.quantity);
+  if (typeof meta.inventoryItemId !== 'string' || !meta.inventoryItemId || !Number.isFinite(quantity) || quantity <= 0) {
+    throw new LedgerPostingError(400, 'Goods coming back after a delivery need the item and a positive quantity.');
+  }
+  return { itemId: meta.inventoryItemId, quantity, kind: 'return' };
 }
 
 export interface PreparedStockMoves {

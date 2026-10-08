@@ -2299,7 +2299,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
       - **Going back** to "the invoice" is refused while an order is part-way (delivered and invoiced differ), naming the order.
       - **The history** (W-02) names the delivery for each unit that left.
       - Tests: `deliveries.test.tsx` (the rules, the server against the database, the screens).
-    - **Still open:** a printable delivery note (M-12); returns of delivered goods after invoicing (in delivery mode a credit note can't take goods back yet: undo the delivery instead); deliveries from an invoice that came from no order.
+    - **Goods that came back (8 Oct):** on the order's Deliver dialog, "Came back" records units returned after a delivery: stock comes back in and the cost of goods is taken back at the cost the deliveries of that line booked ('delivery-return-auto', `returnDelivered` in `deliveryService.ts`, `POST /api/v1/inventory/deliveries/returns`), never more than was delivered and kept, safe to retry. Once goods came back, a delivery can no longer be undone whole (that would put them back twice). The money is a credit note, made apart. Tests in `deliveries.test.tsx`.
+    - **Still open:** a printable delivery note (M-12); deliveries from an invoice that came from no order.
 - [x] BF-09 Line-level class / location — **done 7 Oct**: labels on invoice and bill lines.
   - **On screen:** each line of the invoice and bill forms has "Labels" (Project, Location, Property and the workspace's own labels), folded away until wanted. The workspace's values are offered. It opens by itself and names what is missing when the line's account needs a label (Z-12).
   - **In the books:** the labels are posted with the line's revenue or expense. Two lines on the same account with different labels stay two posted lines, the amounts still add up to the cent, and an invoice line's labels go with its cost of goods sold too.

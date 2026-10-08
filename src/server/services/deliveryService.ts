@@ -18,7 +18,7 @@ import { TransactionValidator } from '../../kernel/validation/TransactionValidat
 import { workspaceRole } from '../../lib/periodLock';
 import { isPostable } from '../../lib/txFilters';
 import { isOrder, orderProgress } from '../../lib/salesOrders';
-import { DELIVERY_COGS_TYPE, deliveredByLine, deliveryEntryId, deliveryLines, deliveryProblem, goodsLeaveWith, orderDeliveries, type GoodsLeaveWith } from '../../lib/deliveries';
+import { DELIVERY_COGS_TYPE, DELIVERY_RETURN_TYPE, deliveredByLine, deliveredUnitCost, deliveryEntryId, deliveryLines, deliveryProblem, goodsLeaveWith, liveDeliveryEntries, orderDeliveries, returnProblem, type GoodsLeaveWith } from '../../lib/deliveries';
 import type { Estimate, Invoice, Transaction } from '../../types';
 import { prepareStockMoves } from './cogsStockService';
 import { writeServerAuditLog } from './auditLogService';
@@ -144,6 +144,10 @@ export async function undoDelivery(db: Firestore, input: { workspaceId: string; 
     const entries = await orderEntries(db, t, input.workspaceId, input.orderId);
     const delivery = orderDeliveries(entries, input.orderId).find(d => d.deliveryId === input.deliveryId);
     if (!delivery) throw new DeliveryError(404, 'That delivery is not on this order, or it was undone already');
+    // goods already came back from this order: undoing a whole delivery would put them back twice
+    if (liveDeliveryEntries(entries, input.orderId, DELIVERY_RETURN_TYPE).length > 0) {
+      throw new DeliveryError(409, 'Goods from this order already came back, so a delivery can no longer be undone whole: record what else came back instead.');
+    }
     const originals = delivery.lines.map(l => entries.find(e => e.id === l.entryId)!);
     const now = new Date().toISOString();
     const reversals: Transaction[] = [];
@@ -173,6 +177,72 @@ export async function undoDelivery(db: Firestore, input: { workspaceId: string; 
       details: { description: `Delivery of ${delivery.date} undone: ${delivery.lines.map(l => `× ${l.quantity}`).join(', ')}` },
     }, { db, tx: t });
     return { deliveryId: input.deliveryId, reversed: reversals.map(r => r.id) };
+  });
+}
+
+/**
+ * Goods that came back after a delivery (BF-08): stock comes back in and the cost of goods sold is
+ * taken back at what the deliveries of that line booked, never more than was delivered and kept.
+ * One entry per order line ('delivery-return-auto'), ids from the return id: a retry changes
+ * nothing. The money owed back to the customer is a credit note, made apart.
+ */
+export async function returnDelivered(db: Firestore, input: {
+  workspaceId: string; uid: string; email?: string; orderId: string; returnId: string; date: string;
+  lines: Array<{ position: number; quantity: number }>; inventoryAccountId: string; cogsAccountId: string; note?: string;
+}) {
+  await assertPeriodOpen(db, input.workspaceId, input.date, input.uid);
+  const accounts = await validateWorkspaceAccounts(db, input.workspaceId, [input.inventoryAccountId, input.cogsAccountId]);
+  const inventoryAcc = accounts.get(input.inventoryAccountId);
+  const cogsAcc = accounts.get(input.cogsAccountId);
+  if (!inventoryAcc || !cogsAcc || input.inventoryAccountId === input.cogsAccountId) throw new DeliveryError(400, 'Choose the Inventory and Cost of Goods Sold accounts of this workspace');
+
+  return db.runTransaction(async t => {
+    const workspace = (await t.get(db.collection('workspaces').doc(input.workspaceId))).data();
+    if (!workspace) throw new DeliveryError(404, 'Workspace not found');
+    if (!DELIVERY_ROLES.includes(workspaceRole(workspace, input.uid))) throw new DeliveryError(403, 'Only owners, accountants and bookkeepers record goods coming back');
+    const orderSnap = await t.get(db.collection('estimates').doc(input.orderId));
+    const order = orderSnap.exists ? ({ ...orderSnap.data(), id: orderSnap.id } as Estimate) : null;
+    if (!order || order.workspaceId !== input.workspaceId) throw new DeliveryError(404, 'Order not found');
+
+    const sending = input.lines.filter(l => l.quantity > 0);
+    const ids = sending.map(l => `${input.returnId}_${l.position}`);
+    const already = ids.length ? (await t.getAll(...ids.map(id => db.collection('transactions').doc(id)))).filter(s => s.exists) : [];
+    if (already.length > 0) return { returnId: input.returnId, transactionIds: already.map(s => s.id), repeated: true };
+
+    const entries = await orderEntries(db, t, input.workspaceId, input.orderId);
+    const lines = deliveryLines(order, deliveredByLine(entries, input.orderId));
+    const problem = returnProblem(lines, input.lines);
+    if (problem) throw new DeliveryError(400, problem);
+    const unitCost = deliveredUnitCost(entries, input.orderId);
+    const now = new Date().toISOString();
+    const posted: Transaction[] = [];
+    for (const l of sending) {
+      const line = lines.find(x => x.position === l.position)!;
+      const costCents = Math.round(l.quantity * (unitCost.get(l.position) || 0));
+      if (costCents <= 0) throw new DeliveryError(400, `${line.description || 'An item'}: its delivery booked no cost to take back`);
+      const name = line.description || 'item';
+      posted.push(await TransactionValidator.validateAndPrepare({
+        id: `${input.returnId}_${l.position}`, workspaceId: input.workspaceId, uid: input.uid, date: input.date,
+        description: `Came back: ${name} × ${l.quantity} (order ${order.number || order.id})`,
+        totalAmountCents: costCents, currency: String(workspace.currency || 'USD'), exchangeRate: 1, status: 'completed', type: 'actual', createdAt: now,
+        metadata: {
+          type: DELIVERY_RETURN_TYPE, orderId: order.id, orderLine: l.position, returnId: input.returnId, deliveryId: input.returnId,
+          customerId: order.customerId || null, inventoryItemId: line.itemId, quantity: l.quantity, ...(input.note ? { note: input.note } : {}),
+        },
+        lines: [
+          { accountId: inventoryAcc.id, accountName: inventoryAcc.name, amountCents: costCents, debitCents: costCents, creditCents: 0, description: `Inventory back: ${name}` },
+          { accountId: cogsAcc.id, accountName: cogsAcc.name, amountCents: -costCents, debitCents: 0, creditCents: costCents, description: `Cost of ${name} taken back` },
+        ],
+      } as unknown as Transaction, { workspaceId: input.workspaceId, user: { uid: input.uid }, wsData: workspace }, undefined, t));
+    }
+    const stock = await prepareStockMoves(db, t, input.workspaceId, posted as unknown as Parameters<typeof prepareStockMoves>[3]);
+    stock.apply();
+    for (const tx of posted) t.create(db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    await writeServerAuditLog({
+      workspaceId: input.workspaceId, uid: input.uid, email: input.email, action: 'GOODS_RETURNED', entityType: 'estimates', entityId: order.id,
+      details: { description: `Came back from order ${order.number || order.id}: ${sending.map(l => `${lines.find(x => x.position === l.position)!.description || 'item'} × ${l.quantity}`).join(', ')}` },
+    }, { db, tx: t });
+    return { returnId: input.returnId, transactionIds: posted.map(tx => tx.id), repeated: false };
   });
 }
 

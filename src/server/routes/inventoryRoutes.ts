@@ -11,9 +11,9 @@ import { adjustStock, StockAdjustmentError } from '../services/stockAdjustmentSe
 import { setNegativeStockPolicy } from '../services/stockPolicyService';
 import { stockMovesReady, writeStockMoves } from '../services/stockMoveService';
 import { transferStock } from '../services/stockTransferService';
-import { DeliveryError, deliverOrder, setGoodsLeaveWith, undoDelivery } from '../services/deliveryService';
+import { DeliveryError, deliverOrder, returnDelivered, setGoodsLeaveWith, undoDelivery } from '../services/deliveryService';
 import { LedgerPostingError } from '../services/cogsStockService';
-import { DELIVERY_ID } from '../../lib/deliveries';
+import { DELIVERY_ID, RETURN_ID } from '../../lib/deliveries';
 
 /** Who may change stock or record its cost (viewers read only). */
 const STOCK_ROLES = ['owner', 'accountant', 'bookkeeper'];
@@ -266,6 +266,23 @@ inventoryRouter.post('/deliveries', requireWorkspaceRole(STOCK_ROLES), async (re
     const user = requestUser(req);
     const { locationId, ...rest } = parsed.data;
     res.json({ status: 'ok', ...(await deliverOrder(getDb(), { ...rest, ...(locationId ? { locationId } : {}), uid: user.uid, email: user.email })) });
+  } catch (e) {
+    if (e instanceof DeliveryError || e instanceof LedgerPostingError) return res.status(e.status).json({ error: e.message });
+    res.status(/locked|closed/i.test(errorMessage(e)) ? 409 : 400).json({ error: errorMessage(e) });
+  }
+});
+
+/** BF-08: goods that came back after a delivery (deliveryService.returnDelivered). */
+inventoryRouter.post('/deliveries/returns', requireWorkspaceRole(STOCK_ROLES), async (req, res) => {
+  try {
+    const parsed = z.object({
+      workspaceId: z.string().min(1), orderId: z.string().min(1), returnId: z.string().regex(RETURN_ID, 'Unknown return id'), date,
+      lines: z.array(z.object({ position: z.number().int().min(0), quantity: z.number().finite() }).strict()).min(1).max(500),
+      inventoryAccountId: z.string().min(1), cogsAccountId: z.string().min(1), note: z.string().max(200).optional(),
+    }).strict().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Check the fields' });
+    const user = requestUser(req);
+    res.json({ status: 'ok', ...(await returnDelivered(getDb(), { ...parsed.data, uid: user.uid, email: user.email })) });
   } catch (e) {
     if (e instanceof DeliveryError || e instanceof LedgerPostingError) return res.status(e.status).json({ error: e.message });
     res.status(/locked|closed/i.test(errorMessage(e)) ? 409 : 400).json({ error: errorMessage(e) });

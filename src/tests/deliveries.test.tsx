@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
-import { DELIVERY_COGS_TYPE, deliveredByLine, deliveryLines, deliveryProblem, goodsLeaveWith, newDeliveryId, orderDeliveries, DELIVERY_ID } from '../lib/deliveries';
+import { DELIVERY_COGS_TYPE, DELIVERY_RETURN_TYPE, deliveredByLine, deliveredUnitCost, deliveryLines, deliveryProblem, goodsLeaveWith, newDeliveryId, newReturnId, orderDeliveries, returnProblem, DELIVERY_ID, RETURN_ID } from '../lib/deliveries';
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { makeChartAccount, makeTransaction } from './fixtures';
@@ -50,6 +50,18 @@ describe('The rules', () => {
     const lines = deliveryLines(order, deliveredByLine(entries, 'o1'));
     assert.deepEqual(lines.map(l => [l.position, l.ordered, l.delivered, l.left]), [[0, 5, 3, 2], [2, 2.5, 1.5, 1]], 'only item lines');
     assert.deepEqual(orderDeliveries(entries, 'o1').map(d => d.lines.length), [1, 1, 1]);
+  });
+
+  test('goods that came back count against what was delivered, at the cost the deliveries booked', () => {
+    const entries = [delivered('a', 0, 4, { totalAmountCents: 1600 } as Partial<Transaction>), delivered('b', 0, 1, { totalAmountCents: 500 } as Partial<Transaction>),
+      makeTransaction({ id: 'r1', status: 'completed', metadata: { type: DELIVERY_RETURN_TYPE, orderId: 'o1', orderLine: 0, inventoryItemId: 'chair', quantity: 2 } } as Partial<Transaction>)];
+    assert.deepEqual([...deliveredByLine(entries, 'o1')], [[0, 3]]);
+    assert.equal(deliveredUnitCost(entries, 'o1').get(0), 420, '(1600 + 500) / 5 units');
+    const lines = deliveryLines(order, deliveredByLine(entries, 'o1'));
+    assert.equal(returnProblem(lines, [{ position: 0, quantity: 3 }]), null);
+    assert.match(String(returnProblem(lines, [{ position: 0, quantity: 4 }])), /only 3 were delivered/);
+    assert.match(String(returnProblem(lines, [{ position: 1, quantity: 1 }])), /item lines/);
+    assert.match(newReturnId(), RETURN_ID);
   });
 
   test('never more than is left, item lines only, two decimals at most', () => {
@@ -194,6 +206,31 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     const back = await policy('owner-1', 'invoice');
     assert.equal(back.status, 200, JSON.stringify(back.body));
   });
+
+  test('goods that came back: stock in, cost taken back at the delivered cost, never more than delivered; then no whole undo', async () => {
+    assert.equal((await policy('owner-1', 'delivery')).status, 200);
+    assert.equal((await deliver('owner-1', 'dlv_ffffffff66', 3)).status, 200);
+    const before = await stock();
+    const ret = (returnId: string, quantity: number, uid = 'book-1') =>
+      call('/api/v1/inventory/deliveries/returns', 'POST', uid, { workspaceId: ws, orderId, returnId, date: '2026-10-07', lines: [{ position: 0, quantity }], ...accounts });
+    assert.equal((await ret('ret_aaaaaaaa11', 1, 'view-1')).status, 403);
+    const first = await ret('ret_aaaaaaaa11', 1);
+    assert.equal(first.status, 200, JSON.stringify(first.body));
+    assert.equal(await stock(), before + 1);
+    const entry = (await db.collection('transactions').doc('ret_aaaaaaaa11_0').get()).data()!;
+    assert.equal(entry.metadata.type, DELIVERY_RETURN_TYPE);
+    assert.deepEqual(entry.lines.map((l: { accountId: string; amountCents: number }) => [l.accountId, l.amountCents]), [[`${ws}_inv`, 400], [`${ws}_cogs`, -400]]);
+    assert.equal((await ret('ret_aaaaaaaa11', 1)).body.repeated, true);
+    assert.equal(await stock(), before + 1, 'not twice');
+    const tooMany = await ret('ret_bbbbbbbb22', 3);
+    assert.equal(tooMany.status, 400);
+    assert.match(String(tooMany.body.error), /only 2 were delivered/);
+    const undo = await call(`/api/v1/inventory/deliveries/dlv_ffffffff66/undo`, 'POST', 'owner-1', { workspaceId: ws, orderId, date: '2026-10-07' });
+    assert.equal(undo.status, 409);
+    assert.match(String(undo.body.error), /already came back/);
+    const direct = await post([{ ...invoiceCogs('fake2', `${ws}_inv9`), metadata: { type: DELIVERY_RETURN_TYPE, orderId, orderLine: 0, inventoryItemId: chair, quantity: 1 } }]);
+    assert.equal(direct.status, 400, 'only the return route makes these entries');
+  });
 });
 
 describe('On screen', () => {
@@ -261,6 +298,28 @@ describe('On screen', () => {
     const undo = calls.find(c => c.url.startsWith('/api/v1/inventory/deliveries/'))!;
     assert.equal(undo.url, '/api/v1/inventory/deliveries/dlv_a0000000/undo');
     assert.deepEqual(undo.body, { workspaceId: 'component-workspace', orderId: 'o1', date: '2026-10-05' });
+  });
+
+  test('what came back is sent with the accounts; never more than was delivered', async () => {
+    setComponentWorkspace('owner');
+    markComponentCollectionsLoaded('transactions', 'accounts');
+    useLedgerStore.setState({
+      accounts: [makeChartAccount({ id: 'inv', name: 'Inventory', type: 'asset', category: 'Inventory' }), makeChartAccount({ id: 'cogs', name: 'Cost of Goods Sold', type: 'expense', category: 'COGS' })],
+      transactions: [delivered('a', 0, 2)],
+    });
+    const calls = stubFetchWithBodies(200, { status: 'ok' });
+    render(<OrderDeliveryDialog order={order} canWrite onClose={() => {}} />);
+    const box = screen.getByLabelText('Came back: Chair');
+    fireEvent.change(box, { target: { value: '3' } });
+    assert.match(screen.getByRole('status').textContent || '', /only 2 were delivered/);
+    fireEvent.change(box, { target: { value: '1' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Record what came back' })); });
+    const sent = calls.find(c => c.url === '/api/v1/inventory/deliveries/returns')!;
+    const body = sent.body as Record<string, unknown>;
+    assert.match(String(body.returnId), RETURN_ID);
+    assert.deepEqual(body.lines, [{ position: 0, quantity: 1 }]);
+    assert.equal(body.inventoryAccountId, 'inv');
+    assert.equal(body.cogsAccountId, 'cogs');
   });
 
   test('a viewer sees the deliveries but cannot deliver or undo', () => {
