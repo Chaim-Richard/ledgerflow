@@ -231,6 +231,15 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
     - If you ever entered a loan or capital opening balance as a negative number to make a report
       look right, change it to positive once (Chart of accounts → the account).
 
+32. **A group with a parent company (8 Oct, decided by default).** Settings → Groups of books can now
+    name the parent and the share it owns of each other company; the group summary then shows the
+    other owners' part of profit and equity.
+    - *Default:* only companies owned **above 50%** (ones the parent controls) can be in such a group;
+      one owned 50% or less is refused with a reason, because adding it line by line would be wrong
+      and the "equity method" for it is not built. Say if you need that.
+    - The parent's investment is not yet taken out against the companies' share capital, so the
+      group's equity still holds both; the report says so under the table.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of
