@@ -14,6 +14,7 @@ import { scoreReceiptMatches as _scoreReceiptMatches } from '../../lib/receiptMa
 import { TransferModal } from './TransferModal';
 import MakeDepositDialog from './MakeDepositDialog';
 import CashMovementDialog from './CashMovementDialog';
+import ConnectedBanks from './ConnectedBanks';
 
 export default function Banking() {
   const canImport = hasRoleAtLeast(useCurrentRole(), 'bookkeeper');
@@ -118,6 +119,8 @@ export default function Banking() {
             ))}
           </div>
         </div>
+
+        <ConnectedBanks />
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {accounts.map(account => (
