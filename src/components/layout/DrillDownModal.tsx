@@ -5,6 +5,96 @@ import { Transaction } from '../../types';
 
 import { cn, formatDate } from '../../lib/utils';
 import { useDialog } from '../../hooks/useDialog';
+import { getIdToken } from '../../firebase';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useUIStore } from '../../stores/useUIStore';
+
+/** N-12: the filter that made a report figure; the drill-down then explains it from the server. */
+export interface ExplainRequest {
+  accountIds: string[];
+  /** none = a balance "as of" the end date, from the opening balance */
+  startDate?: string;
+  endDate?: string;
+  /** the figure the report shows, in the report's sign */
+  expectedCents?: number;
+  /** -1 where the report shows credits as positive (income, liabilities, equity) */
+  sign?: 1 | -1;
+  /** how the report names the filter, e.g. "1 Mar – 31 Mar 2026" */
+  label?: string;
+}
+
+interface ExplainLine { key: string; transactionId: string | null; date: string; description: string; payee?: string; accountName: string; amountCents: number; document: { type: 'invoice' | 'bill' | 'transaction'; id: string } | null; bankMatched: boolean; attachments: number; opening?: boolean }
+interface Explanation { lines: ExplainLine[]; totalCents: number; entries: number }
+
+/** The lines behind a figure, from the full history on the server (src/server/reports/explain.ts). */
+function Explained({ request, formatCurrency, onOpen }: { request: ExplainRequest; formatCurrency: (val: number) => string; onOpen: () => void }) {
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const openRecord = useUIStore(s => s.openRecord);
+  const [data, setData] = React.useState<Explanation | null>(null);
+  const [error, setError] = React.useState('');
+  const sign = request.sign || 1;
+  const query = workspaceId ? new URLSearchParams({ workspaceId, accountIds: request.accountIds.join(','), ...(request.startDate ? { startDate: request.startDate } : {}), ...(request.endDate ? { endDate: request.endDate } : {}) }).toString() : '';
+  React.useEffect(() => {
+    if (!query) return;
+    let live = true;
+    (async () => {
+      const res = await fetch(`/api/v1/reports/explain?${query}`, { headers: { Authorization: `Bearer ${await getIdToken()}` } });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.message || 'The entries could not be loaded');
+      return body as Explanation;
+    })().then(d => { if (live) { setData(d); setError(''); } }).catch(err => { if (live) setError(err instanceof Error ? err.message : String(err)); });
+    return () => { live = false; };
+  }, [query]);
+
+  if (error) return <p role="alert" className="text-sm text-rose-600">{error}</p>;
+  if (!data) return <p className="text-sm text-[var(--muted)]">Loading the entries behind this figure…</p>;
+  const total = sign * data.totalCents;
+  const differs = request.expectedCents !== undefined && Math.round(request.expectedCents) !== total;
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-[var(--muted)]">
+        {request.label || (request.startDate ? `${formatDate(request.startDate)} – ${formatDate(request.endDate || '')}` : `As of ${request.endDate ? formatDate(request.endDate) : 'today'}`)} · posted entries only · {data.entries} entr{data.entries === 1 ? 'y' : 'ies'}, from the full history
+      </p>
+      {differs && <p role="alert" className="text-xs text-amber-700 dark:text-amber-400">These lines add up to {formatCurrency(total)}, not the {formatCurrency(request.expectedCents!)} shown: the report on screen may be from a partial list. Refresh the report.</p>}
+      <table className="w-full text-sm">
+        <caption className="sr-only">Entries behind this amount</caption>
+        <thead>
+          <tr className="text-xs text-[var(--muted)] border-b border-[var(--line)]">
+            <th scope="col" className="text-left font-semibold py-1">Date</th>
+            <th scope="col" className="text-left font-semibold py-1">Entry</th>
+            <th scope="col" className="text-left font-semibold py-1">Bank</th>
+            <th scope="col" className="text-right font-semibold py-1">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.lines.map(l => (
+            <tr key={l.key} className="border-b border-[var(--line)]/50">
+              <td className="py-1 font-mono text-xs">{l.date ? formatDate(l.date) : ''}</td>
+              <td className="py-1">
+                {l.document ? (
+                  <button type="button" className="text-left text-indigo-600 dark:text-indigo-400 hover:underline"
+                    onClick={() => { onOpen(); openRecord({ type: l.document!.type, id: l.document!.id }); }}>
+                    <bdi>{l.description || l.payee || 'Entry'}</bdi>
+                    <span className="sr-only"> (open the {l.document.type === 'transaction' ? 'entry' : l.document.type})</span>
+                  </button>
+                ) : <span><bdi>{l.description}</bdi></span>}
+                <span className="block text-[10px] text-[var(--muted)]"><bdi>{l.accountName}</bdi>{l.attachments > 0 ? ` · ${l.attachments} file${l.attachments === 1 ? '' : 's'}` : ''}</span>
+              </td>
+              <td className="py-1 text-xs">{l.bankMatched ? 'Matched' : ''}</td>
+              <td className="py-1 text-right font-mono">{formatCurrency(sign * l.amountCents)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="font-semibold">
+            <th scope="row" colSpan={3} className="text-left py-2">Total</th>
+            <td className="py-2 text-right font-mono">{formatCurrency(total)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
 
 interface DrillDownModalProps {
   isOpen: boolean;
@@ -14,9 +104,11 @@ interface DrillDownModalProps {
   formatCurrency: (val: number) => string;
   /** where the drill-down came from, shown as a breadcrumb: e.g. 'Profit & Loss' (I-16) */
   from?: string;
+  /** N-12: the figure's filter; the lines then come from the server and add up to the figure */
+  explain?: ExplainRequest;
 }
 
-export default function DrillDownModal({ isOpen, onClose, accountName, transactions, formatCurrency, from }: DrillDownModalProps) {
+export default function DrillDownModal({ isOpen, onClose, accountName, transactions, formatCurrency, from, explain }: DrillDownModalProps) {
   const [displayLimit, setDisplayLimit] = React.useState(50);
   const { dialogProps, titleId } = useDialog(onClose, isOpen);
   return (
@@ -50,7 +142,7 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
                     </nav>
                   )}
                   <h2 id={titleId} className="text-2xl font-black text-[var(--text)] tracking-tight">{accountName}</h2>
-                  <p className="micro-label">Transaction Drill-Down • {transactions.length} matched events</p>
+                  <p className="micro-label">{explain ? 'Where this number comes from' : `Transaction Drill-Down • ${transactions.length} matched events (from what this screen loaded)`}</p>
                 </div>
               </div>
               <button aria-label="Close" 
@@ -60,6 +152,7 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
             </div>
 
             <div className="flex-1 overflow-auto p-4 md:p-8 custom-scrollbar">
+              {explain ? <Explained request={explain} formatCurrency={formatCurrency} onOpen={onClose} /> : <>
               <table className="w-full text-left border-separate border-spacing-y-2">
                 <caption className="sr-only">Entries behind this amount</caption>
                 <thead>
@@ -117,6 +210,7 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
                   <p className="text-sm text-[var(--muted)] font-medium italic">No underlying transactions found for this period.</p>
                 </div>
               )}
+              </>}
             </div>
 
             <div className="p-4 md:p-8 border-t border-[var(--line)] bg-[var(--surface)]/30">

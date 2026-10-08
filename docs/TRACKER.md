@@ -1833,7 +1833,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] N-09 As-of date passed to every report (Balance Sheet, balance summaries follow it)
 - [ ] N-10 Column chooser
 - [x] N-11 Permalink: report, year, period, comparison in the address
-- [ ] N-12 Full drill-down — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`), V1 for the statements; AI #4's D-5 is the first slice)**: **explain this number**, one shared drill-down contract instead of one per screen. The chain:
+- [ ] N-13 One sign for opening balances — **found 8 Oct by N-12, V1 (can make reports disagree)**: `openingBalanceCents` is read debit-positive by the server reports (balance sheet, trial balance), the close package and the closing snapshot, but in the account's own direction by the screens' balance sheet, trial balance and account register (a 10,000 loan typed as 10,000). A liability or equity account with an opening balance then shows a different figure on screen than on the server, the group summary and the close package. Fix: one rule (debit-positive, like the server), the form says which way, and existing credit-account opening balances are read correctly; a test across every report that uses it.
+- [~] N-12 Full drill-down (step 1 done 8 Oct: P&L and balance sheet explained from the server; trial balance, aging, budget vs actual next) — **expanded 7 Oct (roadmap, `docs/ROADMAP.md`), V1 for the statements; AI #4's D-5 is the first slice)**: **explain this number**, one shared drill-down contract instead of one per screen. The chain:
   1. the number;
   2. the filter that made it (dates, cash or accrual, accounts, label, status);
   3. the account and label rows;
@@ -1843,7 +1844,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
   7. the attached files;
   8. the change history.
 
-  What the drill-down lists adds up to the number clicked, and a test checks that for each report. It reads full history from the server and never a capped browser list; when only part is loaded, it says so. First: the P&L, the balance sheet, the trial balance, aging, and budget vs actual. Later: dashboard figures, project and label totals, reconciliation, and consolidation. Uses typed record links (`src/lib/recordLinks.ts`) and the report shell
+  What the drill-down lists adds up to the number clicked, and a test checks that for each report.
+  - **Step 1 done 8 Oct (Claude, taken over from AI #4's D-5 to unblock V1):** `GET /api/v1/reports/explain` (`src/server/reports/explain.ts`) lists the lines behind a figure from the full history with the reports' own rules (postable only, base currency, same period, opening balance for a balance "as of"), each with its document (invoice, bill or entry), the bank match and the number of files attached. Tests show it adds up to every account of the server's P&L, balance sheet and trial balance. The shared drill-down (`DrillDownModal`, `explain` prop) shows the filter, every line in the report's sign, the total, says when the total differs from the figure on screen, and opens each line's document. Wired on the P&L and balance sheet account rows. Tests: `explain-number.test.ts`, `explain-number-ui.test.tsx`.
+  - **Found and fixed:** the server trial balance gave credit accounts with an opening balance the wrong sign in its net column. It reads full history from the server and never a capped browser list; when only part is loaded, it says so. First: the P&L, the balance sheet, the trial balance, aging, and budget vs actual. Later: dashboard figures, project and label totals, reconciliation, and consolidation. Uses typed record links (`src/lib/recordLinks.ts`) and the report shell
 
 # SECTION O — VISUALISATION
 

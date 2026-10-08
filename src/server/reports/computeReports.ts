@@ -140,13 +140,15 @@ export function computeTrialBalance(accounts: ChartAccount[], transactions: Tran
   const trialBalance: Record<string, { name: string; code?: string; type: string; debit: number; credit: number; netSigned: number }> = {};
   accounts.forEach((acc) => {
     const opening = acc.openingBalanceCents || 0;
+    const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(acc.type);
     trialBalance[acc.id] = {
       name: acc.name,
       code: acc.code,
       type: acc.type,
       debit: opening > 0 ? opening : 0,
       credit: opening < 0 ? Math.abs(opening) : 0,
-      netSigned: opening
+      // the normal balance, signed like the entries below (a credit opening is positive on a credit account; N-12 found it was not)
+      netSigned: isDebitNature ? opening : -opening
     };
   });
   for (const tx of transactions) {

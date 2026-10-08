@@ -269,7 +269,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                   <button
                     type="button" onClick={() => {
                       const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
-                      setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
+                      setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs, explain: { accountIds: [acc.id], endDate: asOfDate || undefined, expectedCents: curVal, sign: 1 } });
                     }}
                     title={`Click to drill down into ${acc.name}`}
                     className="w-full text-left flex justify-between items-center hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 p-2 rounded-lg transition-all border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 min-w-0 cursor-pointer group/row"
@@ -358,7 +358,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                     <button
                       type="button" onClick={() => {
                         const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
-                        setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
+                        setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs, explain: { accountIds: [acc.id], endDate: asOfDate || undefined, expectedCents: curVal, sign: -1 } });
                       }}
                       title={`Click to drill down into ${acc.name}`}
                       className="w-full text-left flex justify-between items-center hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 p-2 rounded-lg transition-all border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 min-w-0 cursor-pointer group/row"
@@ -418,7 +418,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                     <button
                       type="button" onClick={() => {
                         const matchedTxs = transactions.filter(t => isPostable(t) && isTransactionInDateRange(t, undefined, asOfDate) && t.lines?.some(l => l.accountId === acc.id || l.accountName === acc.name));
-                        setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs });
+                        setDrillDownTarget({ accountName: acc.name, transactions: matchedTxs, explain: { accountIds: [acc.id], endDate: asOfDate || undefined, expectedCents: curVal, sign: -1 } });
                       }}
                       title={`Click to drill down into ${acc.name}`}
                       className="w-full text-left flex justify-between items-center hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 p-2 rounded-lg transition-all border border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 min-w-0 cursor-pointer group/row"
@@ -542,6 +542,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
           from="Balance Sheet"
           transactions={drillDownTarget.transactions}
           formatCurrency={formatCurrency}
+          explain={drillDownTarget.explain}
         />
       )}
     </div>

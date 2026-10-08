@@ -14,7 +14,7 @@ import { getComparePeriod } from '../../lib/fiscalCalendar';
 import MonthNavigator from '../ui/MonthNavigator';
 import { StatementColumns } from './StatementColumns';
 import type { ReportColumnMode } from '../../lib/reportColumns';
-import DrillDownModal from '../layout/DrillDownModal';
+import DrillDownModal, { type ExplainRequest } from '../layout/DrillDownModal';
 import { accountGroupLayout, groupSubtotals, hasAccountGroups, toggleAccountGroup, visibleGroupRows } from '../../lib/accountGroups';
 import { AccountGroupRow, AccountGroupSubtotal } from './AccountGroupControls';
 
@@ -60,7 +60,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   const columnsActive = columnMode !== 'total' || showPercent || isComparative;
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('balance');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[] } | null>(null);
+  const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[]; explain?: ExplainRequest } | null>(null);
 
   const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
   const { fetchPL, loadingStates } = useFinancialReporting();
@@ -621,7 +621,9 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       );
                       setDrillDownTarget({
                         accountName: acc.name,
-                        transactions: matchedTxs
+                        transactions: matchedTxs,
+                        // N-12: explained from the server, adding up to this figure
+                        explain: { accountIds: [id], startDate: dateRange.start || undefined, endDate: dateRange.end || undefined, expectedCents: balance, sign: -1 }
                       });
                     }}
                     title={`Click to drill down into ${acc.name}`}
@@ -701,7 +703,9 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       );
                       setDrillDownTarget({
                         accountName: acc.name,
-                        transactions: matchedTxs
+                        transactions: matchedTxs,
+                        // N-12: explained from the server, adding up to this figure
+                        explain: { accountIds: [id], startDate: dateRange.start || undefined, endDate: dateRange.end || undefined, expectedCents: balance, sign: 1 }
                       });
                     }}
                     title={`Click to drill down into ${acc.name}`}
@@ -778,6 +782,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           from="Profit & Loss"
           transactions={drillDownTarget.transactions}
           formatCurrency={formatCurrency}
+          explain={drillDownTarget.explain}
         />
       )}
     </div>

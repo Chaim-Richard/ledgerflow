@@ -19,6 +19,7 @@ import {
 import type { Bill, Budget, ChartAccount, CreditNote, Customer, Invoice, Payment, Transaction as LedgerTransaction, VendorCredit } from "../../types";
 import { agingBucket, daysOverdue, outstandingBaseCents } from '../../lib/aging';
 import { GroupReportError, groupSummary } from '../reports/groupReport';
+import { explainFigure } from '../reports/explain';
 
 export const reportRouter = express.Router();
 
@@ -162,6 +163,41 @@ reportRouter.get("/aging", async (req, res) => {
     if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
     if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
     sendError(res, "Failed to generate aging report", 500, errorMessage(error));
+  }
+});
+
+/**
+ * N-12: explain this number. The lines behind a report figure (accounts, period, optional label),
+ * from the full history, adding up to the figure (explain.ts), with each line's document, bank match
+ * and attached files.
+ */
+reportRouter.get("/explain", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+  const parsed = z.object({
+    workspaceId: z.string().min(1), accountIds: z.string().min(1).max(4000), startDate: day.optional(), endDate: day.optional(),
+    labelDimension: z.string().max(100).optional(), labelValue: z.string().max(200).optional(),
+  }).safeParse(req.query);
+  if (!parsed.success) return sendError(res, "Say which accounts and which period", 400, parsed.error.issues);
+  const q = parsed.data;
+  try {
+    const { accounts, transactions } = await getReportContext(authReq, q.workspaceId, undefined, q.endDate);
+    const explanation = explainFigure(accounts, transactions, {
+      accountIds: q.accountIds.split(',').filter(Boolean), ...(q.startDate ? { startDate: q.startDate } : {}), ...(q.endDate ? { endDate: q.endDate } : {}),
+      ...(q.labelDimension && q.labelValue ? { label: { dimensionId: q.labelDimension, value: q.labelValue } } : {}),
+    });
+    // attached files, counted without reading them
+    const documentIds = [...new Set(explanation.lines.map(l => l.document?.type !== 'transaction' ? l.document?.id : undefined).filter((x): x is string => Boolean(x)))];
+    if (documentIds.length > 0) {
+      const { rows } = await getDb().pool.query(`select data->>'linkedId' as id, count(*)::int as n from public.documents where workspace_id = $1 and data->>'linkedId' = any($2) group by 1`, [q.workspaceId, documentIds]);
+      const counts = new Map(rows.map(r => [String(r.id), Number(r.n)]));
+      for (const line of explanation.lines) if (line.document) line.attachments = counts.get(line.document.id) || 0;
+    }
+    res.json(explanation);
+  } catch (error) {
+    if (/not a member|Unauthorized|FORBIDDEN/i.test(errorMessage(error))) return sendError(res, "Forbidden", 403);
+    if (/not found/i.test(errorMessage(error))) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Could not explain this number", 500, errorMessage(error));
   }
 });
 

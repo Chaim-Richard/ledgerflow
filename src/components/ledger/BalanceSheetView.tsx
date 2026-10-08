@@ -1,4 +1,5 @@
 import { usePageSyncedState } from '../../hooks/usePageSyncedState';
+import type { ExplainRequest } from '../layout/DrillDownModal';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useId, useState, useMemo, useCallback, useEffect } from 'react';
 import { ChartAccount, Transaction } from '../../types';
@@ -35,7 +36,7 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
   );
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('code');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[] } | null>(null);
+  const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[]; explain?: ExplainRequest } | null>(null);
 
   const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
   const { fetchBalanceSheet, loadingStates } = useFinancialReporting();
