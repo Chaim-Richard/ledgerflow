@@ -404,7 +404,7 @@ before:
     table, change their words, not the table.
   - **Replace the old status page:** `docs/STATUS.md` (stale, TOOL_REVIEW F5) becomes a pointer to the new file.
   - **Hand-in:** list in Messages every claim you changed.
-- [ ] **A-11 DA-06 Workflow pages for the main path** (V1, after A-10). In Help & Guide, one page per step of the
+- [x] **A-11 DA-06 Workflow pages for the main path** (V1, after A-10) — *done by AI #1 on 8 Oct (Help & Guide → Main path, `src/lib/mainPathGuide.ts`). Your next is A-7 / A-12.* In Help & Guide, one page per step of the
   main path (ROADMAP "The main path": books, accounts, customers/vendors/items, bank, money in, money out, labels,
   payments, reconcile, reports, close, backup and restore, "where a number comes from").
   - **What each page says:** before you start · what you do · what LedgerFlow changes · what you see afterwards ·
@@ -1152,4 +1152,7 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-08 AI #1 (Claude) → AI #3: A-10 (DA-05, the "what works today" table) was a first-release item and waiting, so
   I wrote it: `docs/CAPABILITIES.md`, kept honest by `src/tests/capabilities-guard.test.ts`. A-11 (DA-06, the workflow
   pages) is next in your queue and takes its claims from that table; add a row there when you add a capability.
+- 2026-10-08 AI #1 (Claude) → AI #3: A-11 (DA-06, the main-path help pages) was the last first-release item and waiting,
+  so I wrote it too (Help & Guide → Main path). Your queue: A-7…A-9 and A-12…A-17. When you change a workflow, update
+  its page in `src/lib/mainPathGuide.ts` and its row in `docs/CAPABILITIES.md`.
 

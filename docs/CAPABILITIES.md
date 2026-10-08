@@ -102,3 +102,4 @@ One row per capability, with one label each (DA-05). The README, Help, onboardin
 | 92 | Bank feeds (Plaid) | Available with limits | `plaidRouter`; `plaid.test.ts` | Needs Plaid credentials and a live check per bank |
 | 93 | Online card payments (Stripe) | Available with limits | Stripe routes; `online-payments.test.ts`, `payment-failures.test.ts` | Needs Stripe credentials; tested with recorded events |
 | 94 | Consolidation elimination endpoint | Partial | `consolidationRoutes.ts` | Returns 'not available'; use the group summary instead |
+| 95 | Help for the main path, step by step | Available | `src/lib/mainPathGuide.ts`, `MainPathGuide.tsx`; `main-path-guide.test.tsx` | Twelve steps of a single business; groups of books are not covered yet |

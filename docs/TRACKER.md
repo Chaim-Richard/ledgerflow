@@ -2587,7 +2587,7 @@ BD-06, P-08 and BB-07. Each item says its bucket. Only the owner moves an item i
   - Needs an owner decision.
 
   Each entry has its evidence (code and tests, as in `docs/TOOL_REVIEW.md`). The README, Help, onboarding and pricing take their claims from it. A type, a route, an empty screen or an arithmetic-only test never makes something "Available". It replaces the stale `docs/STATUS.md` (TOOL_REVIEW F5).
-- [ ] DA-06 Workflow pages for the main path — **V1**: for each step of the main path (ROADMAP "The main path"), Help says:
+- [x] DA-06 Workflow pages for the main path — **done 8 Oct (Claude, taken over from AI #3's A-11 to unblock V1)**: Help & Guide → Main path: twelve pages, each answering the ten questions below and opening its screen (`src/lib/mainPathGuide.ts`, `MainPathGuide.tsx`; `main-path-guide.test.tsx` checks every step has all ten answers, links to a real screen, and promises nothing the app doesn't do). Claims checked against `docs/CAPABILITIES.md` and the code (overpayment refused, close refused while drafts are dated in the month, a changed reconciled month reported). **V1**: for each step of the main path (ROADMAP "The main path"), Help says:
   - before you start;
   - what you do;
   - what LedgerFlow changes;

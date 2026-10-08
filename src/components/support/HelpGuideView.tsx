@@ -19,6 +19,7 @@ import { motion } from "motion/react";
 import { useUIStore } from "../../stores/useUIStore";
 import ReleaseNotes from "./ReleaseNotes";
 import AllScreensHelp from "./AllScreensHelp";
+import MainPathGuide from "./MainPathGuide";
 
 interface SectionDoc {
   id: string;
@@ -176,7 +177,7 @@ const GUIDE_SECTIONS: SectionDoc[] = [
 ];
 
 export default function HelpGuideView() {
-  const [mode, setMode] = useState<"workflows" | "screens">("workflows");
+  const [mode, setMode] = useState<"workflows" | "screens" | "main-path">("workflows");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedSection, setSelectedSection] = useState(GUIDE_SECTIONS[0]);
@@ -227,6 +228,7 @@ export default function HelpGuideView() {
         <div className="max-w-7xl mx-auto flex gap-2 mt-4">
           <button type="button" aria-pressed={mode === 'workflows'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('workflows')}>Workflows</button>
           <button type="button" aria-pressed={mode === 'screens'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('screens')}>All screens</button>
+          <button type="button" aria-pressed={mode === 'main-path'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('main-path')}>Main path</button>
         </div>
 
         {mode === 'workflows' && (
@@ -249,7 +251,7 @@ export default function HelpGuideView() {
       </div>
 
       <div className="flex-1 overflow-hidden flex flex-col md:flex-row max-w-7xl mx-auto w-full">
-        {mode === 'screens' ? <AllScreensHelp /> : <>
+        {mode === 'main-path' ? <MainPathGuide /> : mode === 'screens' ? <AllScreensHelp /> : <>
         <div className="w-full md:w-80 border-r border-[var(--line)] overflow-y-auto p-4 space-y-2 shrink-0 custom-scrollbar">
           {filteredSections.map(section => {
             const Icon = section.icon;
