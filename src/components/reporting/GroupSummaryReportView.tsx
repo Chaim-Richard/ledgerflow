@@ -12,7 +12,9 @@ interface Member extends Figures { workspaceId: string; name: string; currency: 
 interface Issue { workspaceId: string; transactionId: string; date: string; description: string; amountCents: number; currency: string; withName: string | null; reason: 'missing' | 'undone' | 'amount' | 'outside-group' | 'not-open'; otherAmountCents?: number }
 interface Eliminated { assets: number; liabilities: number; difference: number; income?: number; cogs?: number; expense?: number; profitDifference?: number; investment?: number }
 interface OtherOwners { equity: number; netIncome: number }
-interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number; eliminated?: Eliminated; otherOwners?: OtherOwners }) | null; parent?: { workspaceId: string; name: string } | null; notIncluded: number; intercompany?: { matched: number; unmatched: Issue[] } }
+interface AccountLine { key: string; section: 'income' | 'cogs' | 'expense' | 'asset' | 'liability' | 'equity'; name: string; code?: string; alsoNamed?: string[]; byMember: Record<string, number>; total: number }
+const SECTION_NAMES: Record<AccountLine['section'], string> = { income: 'Income', cogs: 'Cost of goods sold', expense: 'Expenses', asset: 'Assets', liability: 'Liabilities', equity: 'Equity' };
+interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number; eliminated?: Eliminated; otherOwners?: OtherOwners }) | null; parent?: { workspaceId: string; name: string } | null; accountLines?: AccountLine[]; notIncluded: number; intercompany?: { matched: number; unmatched: Issue[] } }
 
 /** Why an intercompany entry has no match (Z-19), in words. */
 const whyUnmatched = (i: Issue) => ({
@@ -75,6 +77,8 @@ export default function GroupSummaryReportView() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState('');
   const [reportCurrency, setReportCurrency] = useState('');
+  // Z-20: each account across the companies as well
+  const [byAccount, setByAccount] = useState(false);
   // what was typed, for one reporting currency and period; over the rates kept for it (Z-17)
   const [typed, setTyped] = useState<{ key: string; values: Entered }>({ key: '', values: {} });
   const [filling, setFilling] = useState('');
@@ -89,7 +93,7 @@ export default function GroupSummaryReportView() {
   const foreign = reportCurrency ? memberCurrencies.filter(c => c !== reportCurrency) : [];
   const parsed = parseRates(foreign, entered);
   const translation = reportCurrency && 'rates' in parsed ? { reportCurrency, rates: JSON.stringify(parsed.rates) } : null;
-  const query = groupId && startDate && endDate ? new URLSearchParams({ groupId, startDate, endDate, ...(translation || {}) }).toString() : '';
+  const query = groupId && startDate && endDate ? new URLSearchParams({ groupId, startDate, endDate, ...(translation || {}), ...(byAccount ? { detail: 'accounts' } : {}) }).toString() : '';
 
   useEffect(() => {
     let live = true;
@@ -168,6 +172,9 @@ export default function GroupSummaryReportView() {
           </label>
           <label className="flex flex-col gap-1 text-[var(--muted)]">To
             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="px-2 py-1.5 border border-[var(--line)] rounded bg-[var(--panel)] text-[var(--text)]" />
+          </label>
+          <label className="flex items-center gap-2 text-[var(--muted)] pb-1.5">
+            <input type="checkbox" checked={byAccount} onChange={e => setByAccount(e.target.checked)} /> Account by account
           </label>
           {memberCurrencies.length > 0 && (
             <label className="flex flex-col gap-1 text-[var(--muted)]">In one currency
@@ -254,6 +261,36 @@ export default function GroupSummaryReportView() {
               </tbody>
             </table>
           </div>
+          {byAccount && summary.accountLines && summary.total && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <caption className="text-left text-xs text-[var(--muted)] pb-1">Each account across the companies (matched by code, else by name), as each company's books have it; what is taken out between the companies comes off the totals above, not these lines.</caption>
+                <thead>
+                  <tr className="border-b border-[var(--line)] text-[var(--muted)]">
+                    <th scope="col" className="text-left font-semibold py-2">Account</th>
+                    {summary.members.map(m => <th key={m.workspaceId} scope="col" className="text-right font-semibold py-2 px-2"><bdi>{m.name}</bdi></th>)}
+                    <th scope="col" className="text-right font-semibold py-2 px-2">Together</th>
+                  </tr>
+                </thead>
+                {(Object.keys(SECTION_NAMES) as AccountLine['section'][]).filter(sec => summary.accountLines!.some(l => l.section === sec)).map(sec => (
+                  <tbody key={sec}>
+                    <tr><th scope="rowgroup" colSpan={summary.members.length + 2} className="text-left text-xs font-semibold uppercase tracking-wide text-[var(--muted)] pt-3">{SECTION_NAMES[sec]}</th></tr>
+                    {summary.accountLines!.filter(l => l.section === sec).map(l => (
+                      <tr key={l.key} className="border-b border-[var(--line)]/50">
+                        <th scope="row" className="text-left font-normal py-1">
+                          {l.code ? <span className="font-mono text-xs text-[var(--muted)]">{l.code} </span> : null}<bdi>{l.name}</bdi>
+                          {l.alsoNamed && <span className="block text-[10px] text-[var(--muted)]">also called {l.alsoNamed.join(', ')}</span>}
+                        </th>
+                        {summary.members.map(m => <td key={m.workspaceId} className="text-right font-mono py-1 px-2">{l.byMember[m.workspaceId] ? formatCurrency(l.byMember[m.workspaceId], summary.total!.currency) : ''}</td>)}
+                        <td className="text-right font-mono py-1 px-2">{formatCurrency(l.total, summary.total!.currency)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                ))}
+              </table>
+            </div>
+          )}
+          {byAccount && !summary.total && <p className="text-xs text-[var(--muted)]">Account by account needs one currency: choose it above.</p>}
           {summary.total?.eliminated && (summary.total.eliminated.assets !== 0 || summary.total.eliminated.liabilities !== 0) && (
             <p className="text-xs text-[var(--muted)]">
               Taken out of the group total: {formatCurrency(summary.total.eliminated.assets, summary.total.currency)} owed to the companies by each other, and {formatCurrency(summary.total.eliminated.liabilities, summary.total.currency)} they owe each other.

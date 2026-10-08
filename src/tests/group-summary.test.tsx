@@ -172,6 +172,35 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.equal((await call(`/api/v1/reports/group-summary?groupId=${mixed}&startDate=2026-01-01&endDate=2026-12-31&reportCurrency=USD&rates=nope`, ann)).status, 400);
   });
 
+  test('account by account: matched by code, each company\'s own figure, adding up to the totals (Z-20)', async () => {
+    const res = await call(`/api/v1/reports/group-summary?groupId=${sameCurrency}&startDate=2026-01-01&endDate=2026-12-31&detail=accounts`, ann);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const lines = res.body.accountLines as Array<{ key: string; section: string; name: string; byMember: Record<string, number>; total: number }>;
+    assert.deepEqual(lines.map(l => [l.section, l.name, l.byMember[ws1] || 0, l.byMember[ws2] || 0, l.total]), [
+      ['income', 'Sales', 50000, 30000, 80000],
+      ['expense', 'Rent', 20000, 5000, 25000],
+      ['asset', 'Cash', 130000, 125000, 255000],
+      ['equity', 'Capital', 100000, 100000, 200000],
+      ['equity', 'Profit not yet closed into equity', 30000, 25000, 55000],
+    ]);
+    const total = res.body.total as Record<string, number>;
+    const sum = (section: string) => lines.filter(l => l.section === section).reduce((x, l) => x + l.total, 0);
+    assert.deepEqual([sum('income'), sum('expense'), sum('asset'), sum('equity')], [total.income, total.expense, total.totalAssets, total.totalEquity]);
+    assert.equal((await summary(sameCurrency)).body.accountLines, undefined, 'only when asked for');
+    assert.equal((await call(`/api/v1/reports/group-summary?groupId=${mixed}&startDate=2026-01-01&endDate=2026-12-31&detail=accounts`, ann)).body.accountLines, undefined, 'no total, no lines');
+  });
+
+  test('account by account, translated: each section at its rate, the translation difference on its line', async () => {
+    const rates = encodeURIComponent(JSON.stringify({ EUR: { closing: 1.2, average: 1.1, historical: 1 } }));
+    const res = await call(`/api/v1/reports/group-summary?groupId=${mixed}&startDate=2026-01-01&endDate=2026-12-31&reportCurrency=USD&rates=${rates}&detail=accounts`, ann);
+    const lines = res.body.accountLines as Array<{ section: string; name: string; byMember: Record<string, number>; total: number }>;
+    const line = (name: string) => lines.find(l => l.name === name)!;
+    assert.deepEqual([line('Sales').byMember[ws3], line('Cash').byMember[ws3], line('Capital').byMember[ws3], line('Translation difference').byMember[ws3]], [11000, 130800, 100000, 20900]);
+    const total = res.body.total as Record<string, number>;
+    const sum = (section: string) => lines.filter(l => l.section === section).reduce((x, l) => x + l.total, 0);
+    assert.deepEqual([sum('income'), sum('asset'), sum('equity')], [total.income, total.totalAssets, total.totalEquity]);
+  });
+
   test('dealings between the members: matched pairs are counted, one without its match is listed', async () => {
     const put = (ws: string, id: string, meta: Record<string, unknown>, debit: string, credit: string) => db.collection('transactions').doc(id).set({
       workspaceId: ws, date: '2026-06-01', description: `Loan ${id}`, status: 'completed', type: 'actual', currency: 'USD', totalAmountCents: 700,
@@ -317,6 +346,25 @@ describe('On screen', () => {
     await waitFor(() => assert.ok(screen.getByText(/Sales between the companies taken out: \$4\.00 of income, and \$3\.00 of costs/)));
     assert.match(screen.getByRole('alert').textContent || '', /differ by \$1\.00/);
     assert.equal(screen.queryByText(/The parent's investment/), null, 'none chosen: nothing said');
+  });
+
+  test('account by account: asked for, shown by section with each company and together (Z-20)', async () => {
+    setComponentWorkspace('owner');
+    const asked = answer([
+      { workspaceId: 'ws-a', name: 'Holding', currency: 'USD', isBalanced: true, ...figures(1000) },
+      { workspaceId: 'ws-b', name: 'Daughter', currency: 'USD', isBalanced: true, ...figures(2000) },
+    ], { currency: 'USD', ...figures(3000) }, { accountLines: [
+      { key: 'income|code:4000', section: 'income', name: 'Sales', code: '4000', alsoNamed: ['Revenue'], byMember: { 'ws-a': 1000, 'ws-b': 2000 }, total: 3000 },
+      { key: 'asset|name:cash', section: 'asset', name: 'Cash', byMember: { 'ws-b': 5000 }, total: 5000 },
+    ] });
+    render(<GroupSummaryReportView />);
+    await waitFor(() => assert.ok(screen.getByRole('columnheader', { name: 'Group total' })));
+    await act(async () => { fireEvent.click(screen.getByRole('checkbox', { name: 'Account by account' })); });
+    await waitFor(() => assert.ok(asked.some(u => u.includes('detail=accounts'))));
+    await waitFor(() => assert.ok(screen.getByRole('columnheader', { name: 'Together' })));
+    assert.ok(screen.getByText('also called Revenue'));
+    assert.match(screen.getByRole('rowheader', { name: /4000 Sales/ }).parentElement!.textContent || '', /\$10\.00\$20\.00\$30\.00/);
+    assert.ok(screen.getByRole('rowheader', { name: 'Assets' }));
   });
 
   test('in one currency: rates are asked for, filled from the rate service, and sent; the translation line shows', async () => {

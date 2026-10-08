@@ -207,6 +207,8 @@ reportRouter.get("/group-summary", async (req, res) => {
     groupId: z.string().min(1).max(100), startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     // Z-17: translate into one currency, with rates as JSON { "EUR": { "closing": 1.1, "average": 1.08, "historical": 1.05 } }
     reportCurrency: z.string().regex(/^[A-Z]{3}$/).optional(), rates: z.string().max(5000).optional(),
+    // Z-20: account by account as well
+    detail: z.enum(['accounts']).optional(),
   }).safeParse(req.query);
   if (!parsed.success) return sendError(res, "Choose a group and the period (YYYY-MM-DD)", 400, parsed.error.issues);
   let rates: Record<string, { closing: number; average: number; historical: number }> | undefined;

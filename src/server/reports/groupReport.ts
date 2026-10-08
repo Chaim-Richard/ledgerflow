@@ -37,6 +37,7 @@
 import type { Firestore } from '../db/firestore';
 import { canReadGroup, openable } from '../services/workspaceGroupService';
 import { shareOf } from '../../lib/workspaceGroups';
+import { groupAccountLines, type GroupAccountLine, type LineAccount, type LineSection } from './groupAccounts';
 import { computeBalanceSheet, computeProfitAndLoss } from './computeReports';
 import type { ChartAccount, Transaction } from '../../types';
 import { isPostable } from '../../lib/txFilters';
@@ -93,6 +94,8 @@ export interface GroupSummary {
   notIncluded: number;
   /** Z-19: dealings between the members in the period */
   intercompany: IntercompanySummary;
+  /** Z-20: account by account, when asked for and there is a total */
+  accountLines?: GroupAccountLine[];
 }
 
 /** Z-16: what belongs to the companies' other owners (non-controlling interest), inside the total */
@@ -187,7 +190,8 @@ export function matchIntercompany(members: Array<{ workspaceId: string; name: st
 
 const FIGURES: Array<keyof GroupFigures> = ['income', 'cogs', 'grossProfit', 'expense', 'netIncome', 'totalAssets', 'totalLiabilities', 'totalEquity'];
 
-type ReadMember = Omit<GroupMember, 'share'> & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[]; owedBy: number; owedTo: number; withinGroup: { income: number; cogs: number; expense: number }; assetBalances: Record<string, number> };
+type ReadMember = Omit<GroupMember, 'share'> & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[]; owedBy: number; owedTo: number; withinGroup: { income: number; cogs: number; expense: number }; assetBalances: Record<string, number>;
+  chart: LineAccount[]; sections: Record<LineSection, Record<string, number>> };
 
 /** The other company of an intercompany entry. */
 const otherCompany = (tx: Transaction) => String(tx.metadata?.targetWorkspaceId || tx.metadata?.sourceWorkspaceId || '');
@@ -221,6 +225,14 @@ async function memberFigures(db: Firestore, workspaceId: string, startDate: stri
     intercompany,
     withinGroup: { income: within.income.total, cogs: within.cogs.total, expense: within.expense.total },
     assetBalances: Object.fromEntries(accounts.filter(a => a.type === 'asset').map(a => [a.id, bs.assets[a.id] || 0])),
+    // Z-20: each account's figure, for the account-by-account view
+    chart: accounts.map(a => ({ id: a.id, name: a.name, code: a.code })),
+    sections: {
+      income: Object.fromEntries(Object.entries(pl.income.accounts).map(([id, a]) => [id, a.balance])),
+      cogs: Object.fromEntries(Object.entries(pl.cogs.accounts).map(([id, a]) => [id, a.balance])),
+      expense: Object.fromEntries(Object.entries(pl.expense.accounts).map(([id, a]) => [id, a.balance])),
+      asset: bs.assets, liability: bs.liabilities, equity: bs.equity,
+    },
     // CB-26: balances with the other companies (assets: owed to it; liabilities: it owes)
     owedBy: accounts.filter(a => a.type === 'asset' && isIntercompanyAccount(a)).reduce((s, a) => s + (bs.assets[a.id] || 0), 0),
     owedTo: accounts.filter(a => a.type === 'liability' && isIntercompanyAccount(a)).reduce((s, a) => s + (bs.liabilities[a.id] || 0), 0),
@@ -247,7 +259,7 @@ export function translate(m: GroupFigures & { equityAccounts: number; earlierPro
   return { income, cogs, grossProfit: income - cogs, expense, netIncome, totalAssets, totalLiabilities, totalEquity: equity + cta, cta };
 }
 
-export async function groupSummary(db: Firestore, input: { uid: string; groupId: string; startDate: string; endDate: string; reportCurrency?: string; rates?: Record<string, TranslationRates> }): Promise<GroupSummary> {
+export async function groupSummary(db: Firestore, input: { uid: string; groupId: string; startDate: string; endDate: string; reportCurrency?: string; rates?: Record<string, TranslationRates>; detail?: 'accounts' }): Promise<GroupSummary> {
   if (input.startDate > input.endDate) throw new GroupReportError(400, 'The period starts after it ends');
   const snap = await db.collection('workspaceGroups').doc(input.groupId).get();
   const group = snap.data();
@@ -275,7 +287,7 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     }
   }
   const intercompany = matchIntercompany(read.map(m => ({ workspaceId: m.workspaceId, name: m.name, currency: m.currency, entries: m.intercompany })), open, input.startDate, input.endDate);
-  const members: GroupMember[] = read.map(({ earlierProfit, equityAccounts, intercompany: _entries, owedBy: _by, owedTo: _to, withinGroup: _within, assetBalances: _balances, ...rest }) => {
+  const members: GroupMember[] = read.map(({ earlierProfit, equityAccounts, intercompany: _entries, owedBy: _by, owedTo: _to, withinGroup: _within, assetBalances: _balances, chart: _chart, sections: _sections, ...rest }) => {
     const m = { ...rest, share: shareOf(structure, rest.workspaceId) };
     if (!reportCurrency) return m;
     const rates = m.currency === reportCurrency ? null : input.rates![m.currency];
@@ -321,8 +333,22 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     : reportCurrency ? sum(members.map(m => m.translated!), reportCurrency)
       : currencies.size === 1 ? sum(members.map(m => ({ ...m, cta: 0 })), members[0].currency) : null;
   const parent = members.find(m => m.workspaceId === structure.parentId);
+  // Z-20: account by account, in the total's currency (so only when there is a total)
+  let accountLines: GroupAccountLine[] | undefined;
+  if (input.detail === 'accounts' && total) {
+    accountLines = groupAccountLines(read.map((m, i) => {
+      const r = reportCurrency && m.currency !== reportCurrency ? input.rates![m.currency] : null;
+      const rate = (section: LineSection) => (!r ? 1 : section === 'asset' || section === 'liability' ? r.closing : section === 'equity' ? r.historical : r.average);
+      const translated = members[i].translated;
+      const equityLines = Object.values(m.sections.equity).reduce((sum, cents) => sum + Math.round(cents * rate('equity')), 0);
+      const cta = translated?.cta || 0;
+      const totalEquity = translated ? translated.totalEquity : m.totalEquity;
+      return { workspaceId: m.workspaceId, accounts: m.chart, sections: m.sections, rate, extraEquity: { profit: totalEquity - cta - equityLines, cta } };
+    }));
+  }
   return {
     group: { id: snap.id, name: String(group.name || '') }, startDate: input.startDate, endDate: input.endDate, members, total,
     parent: parent ? { workspaceId: parent.workspaceId, name: parent.name } : null, notIncluded: ids.length - shown.length, intercompany,
+    ...(accountLines ? { accountLines } : {}),
   };
 }
