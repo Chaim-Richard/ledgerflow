@@ -13,6 +13,9 @@ import type { Server } from 'node:http';
 import { explainFigure } from '../server/reports/explain';
 import { computeBalanceSheet, computeProfitAndLoss, computeTrialBalance } from '../server/reports/computeReports';
 import { makeChartAccount, makeTransaction } from './fixtures';
+import { computeBudgetActual, type SavedBudget } from '../lib/budgetActual';
+import { splitReportPeriods } from '../lib/reportColumns';
+import { isDebitNatureType } from '../lib/accountUtils';
 import type { ChartAccount, Transaction } from '../types';
 
 const accounts: ChartAccount[] = [
@@ -76,6 +79,19 @@ describe('Opening balances in the account\'s own direction (N-13)', () => {
     assert.deepEqual([tb.accounts[0].debit, tb.accounts[0].credit, tb.accounts[0].netSigned], [0, 1000000, 1000000]);
     assert.equal(balancesAsOf([loan], [], '2026-12-31').balances.loan, -1000000);
     assert.equal(balancesAsOf([loan], [], '2026-12-31', { openingAsStored: true }).balances.loan, 1000000);
+  });
+});
+
+describe('Budget vs actual (N-12 step 2)', () => {
+  test('each month\'s actual is what the explanation of that month adds up to, for a cost and for income', () => {
+    for (const id of ['rent', 'sales']) {
+      const budget: SavedBudget = { id: 'b', uid: 'u', targetType: 'account', targetId: id, amountCents: 5000, period: 'monthly', startDate: '2026-01-01', createdAt: '2026-01-01' } as SavedBudget;
+      const report = computeBudgetActual(budget, accounts, ledger, splitReportPeriods('2026-02-01', '2026-03-31', 'months'))!;
+      const sign = isDebitNatureType(report.account.type) ? 1 : -1;
+      for (const column of report.columns) {
+        assert.equal((sign * sum([id], column.period.startDate, column.period.endDate)) || 0, column.actualCents, `${id} ${column.period.label}`);
+      }
+    }
   });
 });
 

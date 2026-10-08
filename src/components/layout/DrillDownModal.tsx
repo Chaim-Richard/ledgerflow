@@ -27,11 +27,10 @@ interface ExplainLine { key: string; transactionId: string | null; date: string;
 interface Explanation { lines: ExplainLine[]; totalCents: number; entries: number }
 
 /** The lines behind a figure, from the full history on the server (src/server/reports/explain.ts). */
-function Explained({ request, formatCurrency, onOpen }: { request: ExplainRequest; formatCurrency: (val: number) => string; onOpen: () => void }) {
+function Explained({ request, formatCurrency, onOpen, onFail }: { request: ExplainRequest; formatCurrency: (val: number) => string; onOpen: () => void; onFail: () => void }) {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const openRecord = useUIStore(s => s.openRecord);
   const [data, setData] = React.useState<Explanation | null>(null);
-  const [error, setError] = React.useState('');
   const sign = request.sign || 1;
   const query = workspaceId ? new URLSearchParams({ workspaceId, accountIds: request.accountIds.join(','), ...(request.startDate ? { startDate: request.startDate } : {}), ...(request.endDate ? { endDate: request.endDate } : {}) }).toString() : '';
   React.useEffect(() => {
@@ -40,13 +39,12 @@ function Explained({ request, formatCurrency, onOpen }: { request: ExplainReques
     (async () => {
       const res = await fetch(`/api/v1/reports/explain?${query}`, { headers: { Authorization: `Bearer ${await getIdToken()}` } });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.message || 'The entries could not be loaded');
+      if (!res.ok || !Array.isArray(body.lines)) throw new Error(body.message || 'The entries could not be loaded');
       return body as Explanation;
-    })().then(d => { if (live) { setData(d); setError(''); } }).catch(err => { if (live) setError(err instanceof Error ? err.message : String(err)); });
+    })().then(d => { if (live) setData(d); }).catch(() => { if (live) onFail(); });
     return () => { live = false; };
-  }, [query]);
+  }, [query, onFail]);
 
-  if (error) return <p role="alert" className="text-sm text-rose-600">{error}</p>;
   if (!data) return <p className="text-sm text-[var(--muted)]">Loading the entries behind this figure…</p>;
   const total = sign * data.totalCents;
   const differs = request.expectedCents !== undefined && Math.round(request.expectedCents) !== total;
@@ -110,6 +108,10 @@ interface DrillDownModalProps {
 
 export default function DrillDownModal({ isOpen, onClose, accountName, transactions, formatCurrency, from, explain }: DrillDownModalProps) {
   const [displayLimit, setDisplayLimit] = React.useState(50);
+  // the server could not explain it (offline, a guest workspace): the list this screen loaded, said to be partial
+  const [explainFailed, setExplainFailed] = React.useState(false);
+  const failExplain = React.useCallback(() => setExplainFailed(true), []);
+  const explained = explain && !explainFailed ? explain : undefined;
   const { dialogProps, titleId } = useDialog(onClose, isOpen);
   return (
     <AnimatePresence>
@@ -142,7 +144,7 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
                     </nav>
                   )}
                   <h2 id={titleId} className="text-2xl font-black text-[var(--text)] tracking-tight">{accountName}</h2>
-                  <p className="micro-label">{explain ? 'Where this number comes from' : `Transaction Drill-Down • ${transactions.length} matched events (from what this screen loaded)`}</p>
+                  <p className="micro-label">{explained ? 'Where this number comes from' : `Transaction Drill-Down • ${transactions.length} matched events (from what this screen loaded${explainFailed ? '; the full history could not be read, so this may be partial' : ''})`}</p>
                 </div>
               </div>
               <button aria-label="Close" 
@@ -152,7 +154,7 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
             </div>
 
             <div className="flex-1 overflow-auto p-4 md:p-8 custom-scrollbar">
-              {explain ? <Explained request={explain} formatCurrency={formatCurrency} onOpen={onClose} /> : <>
+              {explained ? <Explained request={explained} formatCurrency={formatCurrency} onOpen={onClose} onFail={failExplain} /> : <>
               <table className="w-full text-left border-separate border-spacing-y-2">
                 <caption className="sr-only">Entries behind this amount</caption>
                 <thead>

@@ -51,4 +51,14 @@ describe('Explain this number', () => {
     assert.equal(closed, true);
     assert.deepEqual(useUIStore.getState().focusRecord, { type: 'invoice', id: 'inv1' });
   });
+
+  test('when the server cannot explain it, the list this screen loaded is shown and said to be partial', async () => {
+    setComponentWorkspace('owner');
+    stubFetchWithBodies(503, { message: 'down' });
+    const loaded = [{ id: 't9', date: '2026-03-02', description: 'Loaded entry', status: 'completed', totalAmountCents: 500, lines: [{ accountId: 'sales', accountName: 'Sales', amountCents: -500 }] }] as never;
+    render(<DrillDownModal isOpen onClose={() => {}} accountName="Sales" transactions={loaded} formatCurrency={money}
+      explain={{ accountIds: ['sales'], startDate: '2026-03-01', endDate: '2026-03-31' }} />);
+    await waitFor(() => assert.ok(screen.getByText('Loaded entry')));
+    assert.match(document.body.textContent || '', /may be partial/);
+  });
 });

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { isDebitNatureType } from '../../lib/accountUtils';
 import { ChartAccount } from '../../types';
 import { format, subMonths, endOfMonth, endOfQuarter, subQuarters, subYears, endOfYear } from 'date-fns';
 import { 
@@ -20,7 +21,8 @@ import { AccountGroupToggle } from './AccountGroupControls';
 interface TrialBalanceViewProps {
   accounts: ChartAccount[];
   formatCurrency: (val: number) => string;
-  onDrillDown: (accountId: string) => void;
+  /** N-12: with the account's figure, so the drill-down explains it from the server */
+  onDrillDown: (accountId: string, figure?: { asOfDate: string; expectedCents: number; sign: 1 | -1 }) => void;
 }
 
 type SortField = 'code' | 'name' | 'type' | 'debit' | 'credit';
@@ -515,7 +517,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
               <motion.tr 
                 key={row.key} 
                 whileHover={{ backgroundColor: "var(--ink)" }}
-                onClick={() => onDrillDown(row.member.id)}
+                onClick={() => onDrillDown(row.member.id, { asOfDate, expectedCents: row.member.netBalance, sign: isDebitNatureType(row.member.type) ? 1 : -1 })}
                 className="group/row cursor-pointer transition-colors"
               >
                 <td className="px-5 py-3 font-mono">

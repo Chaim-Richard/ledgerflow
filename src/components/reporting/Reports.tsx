@@ -10,6 +10,7 @@ import {
 import { AnimatePresence } from 'motion/react';
 import { cn, formatCurrency, workspaceYearMonth } from '../../lib/utils';
 const DrillDownModal = React.lazy(() => import('../layout/DrillDownModal'));
+type ExplainRequest = import('../layout/DrillDownModal').ExplainRequest;
 
 import { REPORT_TABS_REGISTRY, REPORT_COMPONENTS } from '../../config/registry';
 import { useUIStore } from '../../stores/useUIStore';
@@ -55,6 +56,8 @@ const Reports = React.memo(() => {
   const [customPeriod, setCustomPeriod] = useState(() => linked.startDate && linked.endDate ? { startDate: linked.startDate, endDate: linked.endDate } : undefined);
   const [compareMode, setCompareMode] = useState<CompareMode>(linked.compare);
   const [drillDownAccount, setDrillDownAccount] = useState<string | null>(null);
+  // N-12: a report that knows the figure's filter gets it explained from the server
+  const [drillDownExplain, setDrillDownExplain] = useState<ExplainRequest | undefined>(undefined);
   const language = useUIStore(state => state.language);
 
   const availableYears = useMemo(() => {
@@ -360,7 +363,12 @@ const Reports = React.memo(() => {
                 compareEndDate: comparePeriod?.endDate,
                 formatCurrency,
                 accountTypeMap,
-                onDrillDown: (name: string) => setDrillDownAccount(name)
+                onDrillDown: (nameOrId: string, figure?: { asOfDate: string; expectedCents: number; sign: 1 | -1 }) => {
+                  // the trial balance sends the account id and its figure; other reports send the account name
+                  const byId = figure ? accounts.find(a => a.id === nameOrId) : undefined;
+                  setDrillDownAccount(byId ? byId.name : nameOrId);
+                  setDrillDownExplain(byId && figure ? { accountIds: [byId.id], endDate: figure.asOfDate, expectedCents: figure.expectedCents, sign: figure.sign } : undefined);
+                }
               };
 
               const reportTitle = typeof tab.label === 'string' ? tab.label : (tab.label?.en || tab.id);
@@ -386,10 +394,12 @@ const Reports = React.memo(() => {
         </button>
       </div>
       <React.Suspense fallback={null}>
-        <DrillDownModal 
+        <DrillDownModal
+          key={drillDownAccount || 'closed'}
           isOpen={!!drillDownAccount}
-          onClose={() => setDrillDownAccount(null)}
+          onClose={() => { setDrillDownAccount(null); setDrillDownExplain(undefined); }}
           accountName={drillDownAccount || ''}
+          explain={drillDownExplain}
           from="Reports"
           transactions={drillDownTransactions}
           formatCurrency={formatCurrency}
