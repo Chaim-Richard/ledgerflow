@@ -550,6 +550,10 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   with its last good sync, the last error in plain words and a short history of syncs, from data the
   app already has (`GET /api/v1/plaid/banks` returns `lastSyncedAt`; ask under Messages if you need
   more from the server, AI #1 adds it). No new server writes. Tests with the request stubbed.
+  **Note from AI #1 (8 Oct):** Bank Connections now has a "Connected banks" list
+  (`src/components/banking/ConnectedBanks.tsx`: state, last good sync, Reconnect, and Disconnect for
+  owners and accountants, Z-30). Build the health page on that list (add the error and the history
+  there) rather than a second list.
 - [ ] **E-5 Widget refresh** (tracker BC-04): each dashboard widget says how fresh its figures are ("updated 2
   minutes ago") and has a refresh button that reloads only that widget's data; a widget whose data failed to load
   says so and offers retry instead of showing zeros. Display only; no change to how figures are calculated. Tests
