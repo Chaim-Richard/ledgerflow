@@ -71,6 +71,21 @@ describe('The queue', () => {
     assert.equal(needsAttention({ today: '2026-10-12', workspace })[0].text, 'September 2026 is not closed', 'sign-offs not read: just the month');
   });
 
+  test('a row with exactly one thing behind it opens that record', () => {
+    const rows = needsAttention({
+      today: '2026-10-05', workspace: { invoiceApproval: approval, lockDate: '2026-09-30' } as never,
+      bankLines: [{ id: 'l1', status: 'pending' }, { id: 'l2', status: 'pending' }],
+      invoices: [{ id: 'inv1', amountCents: 5000, status: 'pending' }] as never,
+      findings: [{ ...finding('duplicate-bill'), record: { type: 'bill', id: 'b9' } }, finding('unbalanced')],
+    });
+    assert.deepEqual(rows.map(r => [r.id, r.record]), [
+      ['bank-lines', undefined],
+      ['approvals', { type: 'invoice', id: 'inv1' }],
+      ['serious', undefined],
+      ['duplicate-bill', { type: 'bill', id: 'b9' }],
+    ], 'two lines open the screen; a finding without a record too');
+  });
+
   test('a row goes when its cause does: nothing waiting is an empty queue', () => {
     assert.deepEqual(needsAttention({ today: '2026-10-12', workspace: { lockDate: '2026-09-30' } as never, bankLines: [{ status: 'matched' }], findings: [finding('future-dated', 'low')] }), []);
   });
@@ -97,6 +112,7 @@ describe('On the Overview', () => {
     assert.ok(screen.getByRole('heading', { name: 'Needs attention' }));
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /1 bank line to review/ })); });
     assert.equal(useUIStore.getState().activeTab, 'reconciliation');
+    assert.deepEqual(useUIStore.getState().focusRecord, { type: 'bankLine', id: 'l1' }, 'the one line itself');
   });
 
   test('a bank whose login expired opens Bank Connections', async () => {

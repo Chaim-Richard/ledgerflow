@@ -16,7 +16,7 @@ import type { PurchaseOrder } from '../../types';
 
 /**
  * Needs attention (DA-02) at the top of the Overview: one row per kind of thing to do, with how
- * many, why and who can resolve it; each opens the exact place. Worked out from the books each
+ * many, why and who can resolve it; each opens the exact place (the record itself when there is one). Worked out from the books each
  * time (src/lib/needsAttention.ts), so a row goes only when its cause has gone. Nothing to do: it
  * says so in one line.
  */
@@ -33,6 +33,7 @@ export default function NeedsAttentionCard() {
   const { data: purchaseOrders } = useCollection<PurchaseOrder>('purchaseOrders', { where: [{ field: 'status', op: '==', value: 'pending_approval' }], limit: 200 });
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const goToPage = useUIStore(s => s.goToPage);
+  const openRecord = useUIStore(s => s.openRecord);
   const { queries } = useClientQueries(workspace?.id);
   // bank connections whose login expired; none connected, or the server can't say: no row
   const workspaceId = workspace?.id;
@@ -82,7 +83,7 @@ export default function NeedsAttentionCard() {
         <ul className="mt-2 divide-y divide-[var(--line)]">
           {rows.map(row => (
             <li key={row.id}>
-              <button type="button" onClick={() => goToPage(row.page)} className="w-full flex items-center justify-between gap-3 py-2 text-left hover:bg-[var(--elevated)] rounded">
+              <button type="button" onClick={() => (row.record ? openRecord(row.record) : goToPage(row.page))} className="w-full flex items-center justify-between gap-3 py-2 text-left hover:bg-[var(--elevated)] rounded">
                 <span>
                   <span className="block text-sm font-semibold text-[var(--text)]">{row.text}</span>
                   <span className="block text-xs text-[var(--muted)]">{row.why} For {row.who}.</span>
