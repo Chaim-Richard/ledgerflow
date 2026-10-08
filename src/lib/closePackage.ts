@@ -9,6 +9,7 @@
  * numbers (not text), so the sheet adds up.
  */
 import type { ChartAccount, Transaction } from '../types';
+import { openingDebitCents } from './accountUtils';
 import type { ClientQuery } from './clientQueries';
 import { STATUS_LABEL } from './clientQueries';
 import { isPostable, lineAmount } from './txFilters';
@@ -60,7 +61,9 @@ export function closePackageSheets(input: ClosePackageInput): SheetSpec[] {
   for (const a of input.accounts) totals.set(a.id, { code: a.code || '', name: a.name, type: a.type, debit: 0, credit: 0 });
   for (const a of input.accounts) if (a.openingBalanceCents) {
     const row = totals.get(a.id)!;
-    if (a.openingBalanceCents > 0) row.debit += a.openingBalanceCents; else row.credit -= a.openingBalanceCents;
+    // N-13: the opening balance is in the account's own direction
+    const asDebit = openingDebitCents(a);
+    if (asDebit > 0) row.debit += asDebit; else row.credit -= asDebit;
   }
   for (const t of posted) for (const l of t.lines || []) {
     const row = totals.get(l.accountId) || { code: '', name: l.accountName || l.accountId || 'Unassigned', type: '', debit: 0, credit: 0 };

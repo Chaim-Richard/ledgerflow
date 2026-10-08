@@ -19,7 +19,7 @@ const accounts: ChartAccount[] = [
   makeChartAccount({ id: 'cash', name: 'Cash', type: 'asset', category: 'Cash', openingBalanceCents: 50000 }),
   makeChartAccount({ id: 'ar', name: 'Receivables', type: 'asset', category: 'Receivables' }),
   makeChartAccount({ id: 'loan', name: 'Loan', type: 'liability' }),
-  makeChartAccount({ id: 'capital', name: 'Capital', type: 'equity', openingBalanceCents: -50000 }),
+  makeChartAccount({ id: 'capital', name: 'Capital', type: 'equity', openingBalanceCents: 50000 }),
   makeChartAccount({ id: 'sales', name: 'Sales', type: 'income' }),
   makeChartAccount({ id: 'rent', name: 'Rent', type: 'expense' }),
 ];
@@ -61,6 +61,21 @@ describe('It adds up to the report', () => {
       const debitNature = ['asset', 'expense', 'cost_of_goods'].includes(a.type);
       assert.equal((debitNature ? 1 : -1) * sum([a.id], undefined, '2026-12-31'), a.netSigned, a.id);
     }
+  });
+});
+
+describe('Opening balances in the account\'s own direction (N-13)', () => {
+  test('a loan typed as 10,000 is a credit everywhere; an old closing snapshot is compared as it was stored', async () => {
+    const { openingDebitCents } = await import('../lib/accountUtils');
+    const { balancesAsOf } = await import('../lib/closingSnapshot');
+    const loan = makeChartAccount({ id: 'loan', name: 'Loan', type: 'liability', openingBalanceCents: 1000000 });
+    assert.equal(openingDebitCents(loan), -1000000);
+    assert.equal(openingDebitCents(makeChartAccount({ id: 'b', type: 'asset', openingBalanceCents: -500 })), -500, 'an overdrawn bank stays negative');
+    assert.equal(computeBalanceSheet([loan], [], '2026-12-31').totalLiabilities, 1000000);
+    const tb = computeTrialBalance([loan], [], '2026-12-31');
+    assert.deepEqual([tb.accounts[0].debit, tb.accounts[0].credit, tb.accounts[0].netSigned], [0, 1000000, 1000000]);
+    assert.equal(balancesAsOf([loan], [], '2026-12-31').balances.loan, -1000000);
+    assert.equal(balancesAsOf([loan], [], '2026-12-31', { openingAsStored: true }).balances.loan, 1000000);
   });
 });
 

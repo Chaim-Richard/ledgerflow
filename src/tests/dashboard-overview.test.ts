@@ -13,7 +13,7 @@ test('dashboard periods use fiscal quarters, leap months and reject impossible/c
   assert.equal(validDashboardPeriod({ startDate: '', endDate: '2024-03-01' }), false);
 });
 test('dashboard figures reuse posted base-currency statements, openings, COGS and calendar comparison', () => {
-  const accounts = [makeChartAccount({ id: 'cash', openingBalanceCents: 1000 }), makeChartAccount({ id: 'income', type: 'income', category: 'Revenue' }), makeChartAccount({ id: 'expense', type: 'expense', category: 'Operating Expenses' }), makeChartAccount({ id: 'cogs', type: 'cost_of_goods', category: 'COGS' }), makeChartAccount({ id: 'equity', type: 'equity', category: 'Equity', openingBalanceCents: -1000 })];
+  const accounts = [makeChartAccount({ id: 'cash', openingBalanceCents: 1000 }), makeChartAccount({ id: 'income', type: 'income', category: 'Revenue' }), makeChartAccount({ id: 'expense', type: 'expense', category: 'Operating Expenses' }), makeChartAccount({ id: 'cogs', type: 'cost_of_goods', category: 'COGS' }), makeChartAccount({ id: 'equity', type: 'equity', category: 'Equity', openingBalanceCents: 1000 })];
   const tx = (id: string, date: string, amount: number, accountId: string, status: 'completed' | 'draft' = 'completed') => makeTransaction({ id, date, status, lines: [{ accountId: 'cash', amountCents: amount }, { accountId, amountCents: -amount }] });
   const foreign = { ...tx('fx', '2024-02-10', 500, 'income'), exchangeRate: 2, currency: 'EUR' };
   const transactions = [tx('jan', '2024-01-31', 2000, 'income'), tx('feb', '2024-02-29', 3000, 'income'), foreign, tx('expense', '2024-02-20', -400, 'expense'), tx('cogs', '2024-02-20', -200, 'cogs'), tx('draft', '2024-02-29', 9000, 'income', 'draft'), tx('future', '2024-03-01', 8000, 'income')];

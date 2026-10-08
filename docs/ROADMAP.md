@@ -251,7 +251,7 @@ These are the tracker IDs; `docs/TRACKER.md` has the detail.
   - BF-08, step 1 (orders keep their items, so stock and cost move) — done 7 Oct;
   - W-06 (negative-stock policy) — done 7 Oct;
   - N-12 (explain this number: statements, trial balance, aging, budget vs actual) — P&L and balance sheet done 8 Oct (Claude); the rest next;
-  - N-13 (one sign for opening balances, found by N-12: screens and server can disagree on credit accounts);
+  - N-13 (one sign for opening balances, found by N-12) — done 8 Oct;
   - Z-12 (the missing-label check, with a simple rule per account) — done 7 Oct (the check, the rules, the warnings, and refusing on the server when the rule says so);
   - K-34 and BD-02 (one fast switcher between books).
 - **Proof:** DA-05, DA-06 (both AI #3's A-10 and A-11), DA-07 and DA-08 (both done 7 Oct, against the real database).

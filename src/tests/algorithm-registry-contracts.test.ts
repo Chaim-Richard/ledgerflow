@@ -182,7 +182,7 @@ test("cash conversion cycle reconstructs openings and reconciles 45 + 18 - 15 = 
         : account.id === "ar"
           ? 20000
           : account.id === "ap"
-            ? -10000
+            ? 10000
             : 0,
   }));
   const result = FINANCIAL_ALGORITHMS.ops_1.compute(

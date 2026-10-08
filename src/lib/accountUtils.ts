@@ -81,3 +81,15 @@ export function isUndepositedFundsAccount(account: ChartAccount | undefined | nu
   if (!account || (account.type || '').toLowerCase() !== 'asset') return false;
   return (account.subtype || '').toLowerCase() === 'undeposited_funds' || /undeposited/i.test(account.name || '');
 }
+
+/**
+ * N-13: an account's opening balance is kept in its own direction, as the new-account form asks for
+ * it (a 10,000 loan is 10,000; an overdrawn bank is negative). The books are debit-positive, so a
+ * credit account's opening balance is turned around before it is added to its entries.
+ */
+export const isDebitNatureType = (type: string | undefined) => ['asset', 'expense', 'cost_of_goods', 'cogs'].includes(String(type || ''));
+export function openingDebitCents(account: { type?: string; openingBalanceCents?: number | null }): number {
+  const opening = Number(account.openingBalanceCents) || 0;
+  return isDebitNatureType(account.type) ? opening : -opening;
+}
+

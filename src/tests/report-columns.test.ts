@@ -18,7 +18,7 @@ const accounts = [
     name: "Capital",
     type: "equity",
     category: "Equity",
-    openingBalanceCents: -10000,
+    openingBalanceCents: 10000,
   }),
   makeChartAccount({
     id: "income",

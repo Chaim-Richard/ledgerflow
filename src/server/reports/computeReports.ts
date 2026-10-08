@@ -1,5 +1,5 @@
 import { calculateNetIncome, isPostable, isRevenueAccount, isExpenseAccount, lineAmount, isTransactionInDateRange } from "../../lib/txFilters";
-import { isUndepositedFundsAccount, resolveAccountRole } from "../../lib/accountUtils";
+import { isUndepositedFundsAccount, openingDebitCents, resolveAccountRole } from "../../lib/accountUtils";
 import type { Invoice, Bill, Payment, Customer, Vendor, Transaction, ChartAccount, TransactionLine, CreditNote, VendorCredit } from "../../types";
 
 export const INVOICE_IS_ISSUED = new Set<Invoice['status']>([
@@ -70,7 +70,8 @@ export function computeBalanceSheet(accounts: ChartAccount[], transactions: Tran
 
   const balances: Record<string, number> = {};
   accounts.forEach((acc) => {
-    balances[acc.id] = acc.openingBalanceCents || 0;
+    // N-13: kept in the account's own direction; the books are debit-positive
+    balances[acc.id] = openingDebitCents(acc);
   });
 
   const orphanedLines: Array<{ accountId: string; transactionId?: string; date?: string; amountCents: number }> = [];
@@ -139,16 +140,16 @@ export function computeBalanceSheet(accounts: ChartAccount[], transactions: Tran
 export function computeTrialBalance(accounts: ChartAccount[], transactions: Transaction[], asOfDate?: string) {
   const trialBalance: Record<string, { name: string; code?: string; type: string; debit: number; credit: number; netSigned: number }> = {};
   accounts.forEach((acc) => {
+    // N-13: the opening balance is in the account's own direction (netSigned's sign); debit and credit are the books'
     const opening = acc.openingBalanceCents || 0;
-    const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(acc.type);
+    const asDebit = openingDebitCents(acc);
     trialBalance[acc.id] = {
       name: acc.name,
       code: acc.code,
       type: acc.type,
-      debit: opening > 0 ? opening : 0,
-      credit: opening < 0 ? Math.abs(opening) : 0,
-      // the normal balance, signed like the entries below (a credit opening is positive on a credit account; N-12 found it was not)
-      netSigned: isDebitNature ? opening : -opening
+      debit: asDebit > 0 ? asDebit : 0,
+      credit: asDebit < 0 ? Math.abs(asDebit) : 0,
+      netSigned: opening
     };
   });
   for (const tx of transactions) {

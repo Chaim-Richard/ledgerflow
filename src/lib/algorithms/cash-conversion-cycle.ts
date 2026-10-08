@@ -1,4 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
+import { openingDebitCents } from '../accountUtils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
@@ -17,7 +18,8 @@ export const CASH_CONVERSION_CYCLE_ALGO: AlgorithmDefinition = {
     const accountBalances: Record<string, number> = {};
     const hasTransactions = transactions.some(tx => isPostable(tx));
     accounts.forEach(acc => {
-      accountBalances[acc.id] = hasTransactions ? (acc.openingBalanceCents || 0) : (acc.balanceCents ?? acc.openingBalanceCents ?? 0);
+      // N-13: the opening balance is in the account's own direction; the sums below are debit-positive
+      accountBalances[acc.id] = hasTransactions ? openingDebitCents(acc) : (acc.balanceCents ?? acc.openingBalanceCents ?? 0);
     });
 
     const sourceTransactionIds = new Set<string>();

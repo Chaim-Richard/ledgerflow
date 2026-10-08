@@ -9,6 +9,7 @@
  */
 import { getLineDimension } from '../../lib/dimensionUtils';
 import { isPostable, isTransactionInDateRange, lineAmount } from '../../lib/txFilters';
+import { openingDebitCents } from '../../lib/accountUtils';
 import type { ChartAccount, Transaction } from '../../types';
 
 export interface ExplainFilter {
@@ -56,7 +57,7 @@ export function explainFigure(accounts: ChartAccount[], transactions: Transactio
   const lines: ExplainLine[] = [];
   if (!filter.startDate && !filter.label) {
     for (const acc of accounts) {
-      const opening = Number(acc.openingBalanceCents) || 0;
+      const opening = openingDebitCents(acc);
       if (wanted.has(acc.id) && opening !== 0) {
         lines.push({ key: `opening:${acc.id}`, transactionId: null, date: '', description: 'Opening balance', accountId: acc.id, accountName: acc.name, amountCents: opening, document: null, bankMatched: false, attachments: 0, opening: true });
       }

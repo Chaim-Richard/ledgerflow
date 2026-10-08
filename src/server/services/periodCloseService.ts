@@ -135,7 +135,7 @@ export async function closingBalanceCheck(db: Firestore, input: Actor & { month:
   const snapshot = period?.closingSnapshot as ClosingSnapshot | undefined;
   if (!snapshot?.asOfDate || !Array.isArray(snapshot.accounts)) return { snapshot: null, changes: [] };
   const ledger = await ledgerThrough(db, input.workspaceId, snapshot.asOfDate);
-  const now = balancesAsOf(ledger.accounts, ledger.entries, snapshot.asOfDate);
+  const now = balancesAsOf(ledger.accounts, ledger.entries, snapshot.asOfDate, { openingAsStored: snapshot.openingRule !== 'own-direction' });
   return {
     snapshot: { asOfDate: snapshot.asOfDate, takenAt: snapshot.takenAt, entries: snapshot.entries, accounts: snapshot.accounts.length },
     entriesNow: now.entries,

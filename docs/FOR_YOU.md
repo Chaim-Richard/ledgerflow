@@ -207,6 +207,14 @@ Last updated: 2026-10-07.
     Groups of books). *Until then:* that page shows no groups and saving one says groups are not available
     yet; nothing else is affected.
 
+31. **Opening balances: which way round (8 Oct, decided by default).** An account's opening balance
+    was read two ways: as you type it on the new-account form (a loan of 10,000 = 10,000) by the
+    screens, and debit-positive (a loan = −10,000) by some server reports, the close package and
+    the tax-software export, so a loan could show on the wrong side there.
+    - *Default:* as you type it, everywhere. The form now says so ("what a loan owes, what a bank holds").
+    - If you ever entered a loan or capital opening balance as a negative number to make a report
+      look right, change it to positive once (Chart of accounts → the account).
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

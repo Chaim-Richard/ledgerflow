@@ -547,6 +547,8 @@ const Ledger = React.memo(() => {
                         className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-mono text-[var(--text)] text-right"
                       />
                     </Labelled>
+                    {/* N-13: the rule every report uses (src/lib/accountUtils.ts openingDebitCents) */}
+                    <p className="text-[10px] text-[var(--muted)] px-2">As the account shows it: what a loan owes, what a bank holds (negative if overdrawn).</p>
                   </div>
                 </div>
 

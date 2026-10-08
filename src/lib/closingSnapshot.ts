@@ -9,11 +9,14 @@
  * that no longer exists are kept under its id, so they are not lost from the comparison.
  */
 import type { ChartAccount, Transaction } from '../types';
+import { openingDebitCents } from './accountUtils';
 import { isPostable, lineAmount } from './txFilters';
 
 export interface ClosingSnapshot {
   /** the last day of the closed month */
   asOfDate: string;
+  /** N-13: set on snapshots taken since opening balances are read in the account's own direction */
+  openingRule?: 'own-direction';
   /** when the snapshot was taken (ISO time) */
   takenAt: string;
   /**
@@ -26,9 +29,11 @@ export interface ClosingSnapshot {
 }
 
 /** Account id → balance on the date (zeros left out), and how many entries counted. */
-export function balancesAsOf(accounts: Pick<ChartAccount, 'id' | 'openingBalanceCents'>[], transactions: Transaction[], asOfDate: string): { balances: Record<string, number>; entries: number } {
+export function balancesAsOf(accounts: Array<Pick<ChartAccount, 'id' | 'openingBalanceCents'> & { type?: string }>, transactions: Transaction[], asOfDate: string, opts: { openingAsStored?: boolean } = {}): { balances: Record<string, number>; entries: number } {
   const sums = new Map<string, number>();
-  for (const a of accounts) if (a.openingBalanceCents) sums.set(a.id, a.openingBalanceCents);
+  // N-13: opening balances are in the account's own direction; a snapshot taken before that rule
+  // compares with them as they were stored (openingAsStored), so nothing looks changed since the close
+  for (const a of accounts) if (a.openingBalanceCents) sums.set(a.id, opts.openingAsStored ? a.openingBalanceCents : openingDebitCents(a));
   let entries = 0;
   for (const tx of transactions) {
     if (!isPostable(tx) || (tx.date || '').slice(0, 10) > asOfDate) continue;
@@ -43,10 +48,10 @@ export function balancesAsOf(accounts: Pick<ChartAccount, 'id' | 'openingBalance
   return { balances, entries };
 }
 
-export function takeClosingSnapshot(accounts: Pick<ChartAccount, 'id' | 'openingBalanceCents'>[], transactions: Transaction[], asOfDate: string, takenAt = new Date().toISOString()): ClosingSnapshot {
+export function takeClosingSnapshot(accounts: Array<Pick<ChartAccount, 'id' | 'openingBalanceCents'> & { type?: string }>, transactions: Transaction[], asOfDate: string, takenAt = new Date().toISOString()): ClosingSnapshot {
   const { balances, entries } = balancesAsOf(accounts, transactions, asOfDate);
   return {
-    asOfDate, takenAt, entries,
+    asOfDate, takenAt, entries, openingRule: 'own-direction',
     accounts: Object.entries(balances).map(([accountId, cents]) => ({ accountId, cents })).sort((a, b) => a.accountId.localeCompare(b.accountId)),
   };
 }

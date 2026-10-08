@@ -10,7 +10,7 @@ import { makeChartAccount, makeTransaction } from './fixtures';
 import type { ClientQuery } from '../lib/clientQueries';
 
 const bank = makeChartAccount({ id: 'bank', code: '1000', name: 'Checking', type: 'asset', openingBalanceCents: 100_000 });
-const equity = makeChartAccount({ id: 'eq', code: '3000', name: 'Opening equity', type: 'equity', openingBalanceCents: -100_000 });
+const equity = makeChartAccount({ id: 'eq', code: '3000', name: 'Opening equity', type: 'equity', openingBalanceCents: 100_000 });
 const sales = makeChartAccount({ id: 'sales', code: '4000', name: 'Sales', type: 'revenue' });
 const sale = (id: string, date: string, cents: number, status = 'completed') =>
   makeTransaction({ id, date, status: status as never, description: id, reference: `R-${id}`, lines: [{ accountId: 'bank', accountName: 'Checking', amountCents: cents }, { accountId: 'sales', accountName: 'Sales', amountCents: -cents }] });
