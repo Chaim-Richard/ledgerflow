@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Blocks } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../../stores/useAuthStore';
@@ -17,6 +17,19 @@ export default function ModulesSettings() {
   const role = useCurrentRole();
   const canChange = role === 'owner' || role === 'accountant';
   const [saving, setSaving] = useState<string | null>(null);
+  // how many records each module keeps (step 2): a module turned off says it still holds them
+  const workspaceId = workspace?.id;
+  const [records, setRecords] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!workspaceId) return;
+    let live = true;
+    (async () => {
+      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}/modules/records`, { headers: { Authorization: `Bearer ${await getIdToken()}` } });
+      const data = await res.json().catch(() => ({}));
+      return res.ok && data.records && typeof data.records === 'object' ? data.records as Record<string, number> : {};
+    })().then(r => { if (live) setRecords(r); }).catch(() => { if (live) setRecords({}); });
+    return () => { live = false; };
+  }, [workspaceId]);
   if (!workspace) return null;
 
   const change = async (id: string, on: boolean) => {
@@ -56,6 +69,9 @@ export default function ModulesSettings() {
                 <span>
                   <span className="font-semibold">{m.name}</span>
                   <span className="block text-xs text-[var(--muted)]">{m.about}</span>
+                  {!on && (records[m.id] || 0) > 0 && (
+                    <span className="block text-xs text-amber-700 dark:text-amber-400">Off, but it still holds {records[m.id]} record{records[m.id] === 1 ? '' : 's'}: turn it on to see them.</span>
+                  )}
                 </span>
               </label>
             </li>

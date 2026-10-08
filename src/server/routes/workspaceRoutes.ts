@@ -37,7 +37,7 @@ import { allocateNextNumber, NUMBERED_TYPES, type NumberedType } from '../servic
 import { retentionFor, RetentionSettingsSchema, scheduledPurgeAt as purgeDate } from '../../lib/retention';
 import { RetentionError, updateRetention } from '../services/retentionService';
 import { completeSetup, recordOpeningBalances, SetupError } from '../services/openingBalanceService';
-import { ModuleSettingError, setModules } from '../services/moduleService';
+import { ModuleSettingError, moduleRecords, setModules } from '../services/moduleService';
 
 export const workspaceRouter = express.Router();
 
@@ -225,6 +225,15 @@ const importRecordsSchema = z.object({
 }).strict();
 const LEDGER_ADMIN_ROLES = ['owner', 'accountant'];
 const roleOf = (req: express.Request) => String((req as unknown as { userRole?: string }).userRole || '');
+
+/** BB-07: how many records each module holds (so a module turned off can say it still keeps them). */
+workspaceRouter.get('/:workspaceId/modules/records', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), async (req, res) => {
+  try {
+    res.json({ status: 'success', records: await moduleRecords(getDb(), String(req.params.workspaceId)) });
+  } catch (err) {
+    sendError(res, 'Could not count the modules\' records', 500, err instanceof Error ? errorMessage(err) : String(err));
+  }
+});
 
 /** BB-07: owners and accountants turn modules on or off (moduleService.ts); nothing is deleted. */
 workspaceRouter.put('/:workspaceId/modules', requireWorkspaceRole(LEDGER_ADMIN_ROLES), async (req, res) => {

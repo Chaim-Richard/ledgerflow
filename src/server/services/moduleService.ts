@@ -38,3 +38,33 @@ export async function setModules(db: Firestore, input: { workspaceId: string; ui
     return { modules };
   });
 }
+
+/**
+ * What each module still holds (BB-07 step 2): the records of its screens, so Settings → Modules can
+ * say that a module turned off still keeps them. Counted by the server for the workspace; a table the
+ * database doesn't have yet counts nothing.
+ */
+const MODULE_RECORDS: Record<string, Array<{ table: string; where?: string }>> = {
+  estimates: [{ table: 'estimates' }],
+  'purchase-orders': [{ table: 'purchaseOrders' }],
+  payroll: [{ table: 'employees' }, { table: 'payRuns' }],
+  'fixed-assets': [{ table: 'assets' }],
+  loans: [{ table: 'loans' }],
+  'petty-cash': [{ table: 'transactions', where: `data->'metadata' ? 'pettyCash'` }],
+  intercompany: [{ table: 'transactions', where: `data->'metadata'->>'isIntercompany' = 'true'` }],
+  forecasting: [{ table: 'scenarios' }],
+};
+
+export async function moduleRecords(db: Firestore, workspaceId: string): Promise<Record<string, number>> {
+  const existing = await db.tables();
+  const counts: Record<string, number> = {};
+  for (const [id, sources] of Object.entries(MODULE_RECORDS)) {
+    let n = 0;
+    for (const { table, where } of sources.filter(x => existing.has(x.table))) {
+      const { rows } = await db.pool.query(`select count(*)::int as n from public."${table}" where workspace_id = $1${where ? ` and ${where}` : ''}`, [workspaceId]);
+      n += rows[0]?.n || 0;
+    }
+    counts[id] = n;
+  }
+  return counts;
+}

@@ -107,6 +107,22 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     const audit = await db.pool.query(`select data->'details'->>'description' as d from public."auditLogs" where workspace_id = $1 and data->>'action' = 'MODULES_SET' order by created_at`, [ws]);
     assert.deepEqual(audit.rows.map(r => r.d), ['Modules: Payroll off', 'Modules: Loans off, Payroll on']);
   });
+
+  test('what each module still holds is counted for any member, never for an outsider (step 2)', async () => {
+    await db.collection('loans').doc(`${ws}_loan1`).set({ workspaceId: ws, name: 'Van loan' });
+    await db.collection('transactions').doc(`${ws}_ic1`).set({ workspaceId: ws, date: '2026-01-01', status: 'completed', lines: [], metadata: { isIntercompany: true } });
+    await db.collection('transactions').doc(`${ws}_pc1`).set({ workspaceId: ws, date: '2026-01-01', status: 'completed', lines: [], metadata: { pettyCash: { kind: 'spend' } } });
+    await db.collection('transactions').doc(`${ws}_plain`).set({ workspaceId: ws, date: '2026-01-01', status: 'completed', lines: [] });
+    const get = async (uid: string) => {
+      const res = await fetch(`${base}/api/v1/workspaces/${ws}/modules/records`, { headers: { 'x-test-uid': uid } });
+      return { status: res.status, body: await res.json() as Record<string, unknown> };
+    };
+    const res = await get('book-1');
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.deepEqual(res.body.records, { estimates: 0, 'purchase-orders': 0, payroll: 0, 'fixed-assets': 0, loans: 1, 'petty-cash': 1, intercompany: 1, forecasting: 0 });
+    assert.equal((await get('stranger')).status, 403);
+    for (const table of ['loans', 'transactions']) await db.pool.query(`delete from public."${table}" where workspace_id = $1`, [ws]);
+  });
 });
 
 describe('Settings → Modules', () => {
@@ -126,6 +142,16 @@ describe('Settings → Modules', () => {
     assert.equal(call.method, 'PUT');
     assert.deepEqual(call.body, { modules: { payroll: false } });
     assert.equal(useAuthStore.getState().getCurrentWorkspace()?.modules?.payroll, false);
+  });
+
+  test('a module turned off that still holds records says so', async () => {
+    setComponentWorkspace('owner');
+    withModules({ loans: false, payroll: false });
+    const calls = stubFetchWithBodies(200, { status: 'success', records: { loans: 3, payroll: 0 } });
+    render(<ModulesSettings />);
+    await waitFor(() => assert.ok(screen.getByText('Off, but it still holds 3 records: turn it on to see them.')));
+    assert.equal(screen.getAllByText(/^Off, but it still holds/).length, 1, 'payroll holds nothing; modules that are on say nothing');
+    assert.ok(calls.some(c => c.url === '/api/v1/workspaces/component-workspace/modules/records'));
   });
 
   test('a bookkeeper sees the modules but cannot change them', () => {
