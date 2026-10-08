@@ -550,9 +550,10 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   with its last good sync, the last error in plain words and a short history of syncs, from data the
   app already has (`GET /api/v1/plaid/banks` returns `lastSyncedAt`; ask under Messages if you need
   more from the server, AI #1 adds it). No new server writes. Tests with the request stubbed.
-- [ ] **E-5 Recurring entries list** (tracker: the Recurring screen): show each recurring template's next date, the
-  last entry it made (opens it) and a "paused" state in words; filter by active/paused. Display only, from data the
-  app already has; no change to how entries are made. Tests for the list and the filter.
+- [ ] **E-5 Widget refresh** (tracker BC-04): each dashboard widget says how fresh its figures are ("updated 2
+  minutes ago") and has a refresh button that reloads only that widget's data; a widget whose data failed to load
+  says so and offers retry instead of showing zeros. Display only; no change to how figures are calculated. Tests
+  for the stale, failed and refreshed states.
 
 ## Claude is working on (Codex: don't edit these files)
 
