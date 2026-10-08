@@ -10,7 +10,7 @@ import { averageFromTimeframe, parseRates, rateFromQuote, type TranslationRates 
 interface Figures { income: number; cogs: number; grossProfit: number; expense: number; netIncome: number; totalAssets: number; totalLiabilities: number; totalEquity: number }
 interface Member extends Figures { workspaceId: string; name: string; currency: string; isBalanced: boolean; share?: number; translated?: Figures & { cta: number } }
 interface Issue { workspaceId: string; transactionId: string; date: string; description: string; amountCents: number; currency: string; withName: string | null; reason: 'missing' | 'undone' | 'amount' | 'outside-group' | 'not-open'; otherAmountCents?: number }
-interface Eliminated { assets: number; liabilities: number; difference: number }
+interface Eliminated { assets: number; liabilities: number; difference: number; income?: number; cogs?: number; expense?: number; profitDifference?: number }
 interface OtherOwners { equity: number; netIncome: number }
 interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number; eliminated?: Eliminated; otherOwners?: OtherOwners }) | null; parent?: { workspaceId: string; name: string } | null; notIncluded: number; intercompany?: { matched: number; unmatched: Issue[] } }
 
@@ -227,6 +227,16 @@ export default function GroupSummaryReportView() {
               Taken out of the group total: {formatCurrency(summary.total.eliminated.assets, summary.total.currency)} owed to the companies by each other, and {formatCurrency(summary.total.eliminated.liabilities, summary.total.currency)} they owe each other.
             </p>
           )}
+          {summary.total?.eliminated && Boolean(summary.total.eliminated.income || summary.total.eliminated.cogs || summary.total.eliminated.expense) && (
+            <p className="text-xs text-[var(--muted)]">
+              Sales between the companies taken out: {formatCurrency(summary.total.eliminated.income || 0, summary.total.currency)} of income, and {formatCurrency((summary.total.eliminated.cogs || 0) + (summary.total.eliminated.expense || 0), summary.total.currency)} of costs on the other side.
+            </p>
+          )}
+          {summary.total?.eliminated && Boolean(summary.total.eliminated.profitDifference) && (
+            <p role="alert" className="text-xs text-amber-700 dark:text-amber-400">
+              The two sides of the sales between the companies differ by {formatCurrency(summary.total.eliminated.profitDifference || 0, summary.total.currency)} (kept in net income, so it stays each company's own): see the dealings below.
+            </p>
+          )}
           {summary.total?.eliminated && summary.total.eliminated.difference !== 0 && (
             <p role="alert" className="text-xs text-amber-700 dark:text-amber-400">
               What the companies say they owe each other differs by {formatCurrency(summary.total.eliminated.difference, summary.total.currency)} (kept in equity so the total balances): see the dealings below.
@@ -271,7 +281,7 @@ export default function GroupSummaryReportView() {
               )}
             </section>
           )}
-          <p className="text-xs text-[var(--muted)]">Each company is read from its own books, as you can see them. Balances between the companies are taken out of the total; their sales to each other, and the parent's investment against the companies' share capital, are not yet.</p>
+          <p className="text-xs text-[var(--muted)]">Each company is read from its own books, as you can see them. Balances and sales between the companies are taken out of the total; the parent's investment against the companies' share capital is not yet.</p>
         </>
       )}
     </section>

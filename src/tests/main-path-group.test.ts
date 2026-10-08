@@ -2,7 +2,8 @@
  * The main path across a group of books (DA-09), against the real database: two companies, each with
  * its own sales and costs, a loan from one to the other posted as intercompany (both sides at once),
  * one group of both. The group summary adds them up, finds the loan on both sides, takes it out of
- * the total and still balances; every company figure is what that company's own books say, and
+ * the total and still balances; a fee one charges the other is taken out of the group's income and
+ * costs; every company figure is what that company's own books say, and
  * explaining it there adds up to it. Then the second company keeps its books in euros: translated,
  * the total still balances, with the translation difference on its own line.
  */
@@ -94,10 +95,25 @@ describe('The main path across a group of books', { skip: !process.env.LF_TEST_D
     const total = res.body.total as Record<string, number> & { eliminated: Record<string, number> };
     assert.equal(total.netIncome, 55000);
     assert.equal(total.income, 80000);
-    assert.deepEqual(total.eliminated, { assets: 15000, liabilities: 15000, difference: 0 }, 'the loan is taken out on both sides');
+    assert.deepEqual(total.eliminated, { assets: 15000, liabilities: 15000, difference: 0, income: 0, cogs: 0, expense: 0, profitDifference: 0 }, 'the loan is taken out on both sides');
     assert.equal(total.totalAssets, total.totalLiabilities + total.totalEquity, 'the group balances');
     assert.equal(total.totalLiabilities, 0, 'nothing is owed outside the group');
     assert.deepEqual(res.body.intercompany, { matched: 1, unmatched: [] });
+  });
+
+  test('a sale from one to the other is taken out of the group\'s income and costs; net income stays (CB-26)', async () => {
+    const res = await call('/api/v1/transactions/intercompany/post', { method: 'POST', body: {
+      sourceWorkspaceId: hold, targetWorkspaceId: sub, amountCents: 4000, date: '2026-04-15', description: 'Management fee',
+      sourceAccountId: `${hold}_sales`, targetAccountId: `${sub}_rent`,
+    } });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const group = await summary();
+    const members = group.body.members as Array<{ income: number; expense: number }>;
+    assert.deepEqual(members.map(m => [m.income, m.expense]), [[54000, 20000], [30000, 9000]], 'each company\'s own books have it');
+    const total = group.body.total as Record<string, number> & { eliminated: Record<string, number> };
+    assert.deepEqual([total.income, total.expense, total.netIncome], [80000, 25000, 55000], 'the group did not sell to itself');
+    assert.deepEqual(total.eliminated, { assets: 19000, liabilities: 19000, difference: 0, income: 4000, cogs: 0, expense: 4000, profitDifference: 0 });
+    assert.equal(total.totalAssets, total.totalLiabilities + total.totalEquity);
   });
 
   test('every company figure is its own books\' figure, and explaining it there adds up to it', async () => {
@@ -130,8 +146,10 @@ describe('The main path across a group of books', { skip: !process.env.LF_TEST_D
     assert.ok(total.cta !== 0, 'a translation difference');
     // the first loan was booked as 15,000 in both (before the companies' currencies differed): 15,000 EUR at 1.2;
     // the second as 12,000 USD and 10,000 EUR, which at 1.2 agree
-    assert.equal(total.eliminated.assets, 27000);
-    assert.equal(total.eliminated.liabilities, 30000, 'the daughter\'s side of both loans at the closing rate');
-    assert.equal(total.eliminated.difference, -3000, 'the first loan\'s sides now differ by the rate, and it is said');
+    // the fee (4,000 in both) likewise: 4,000 USD against 4,800 at the closing rate, 4,400 at the average
+    assert.equal(total.eliminated.assets, 31000);
+    assert.equal(total.eliminated.liabilities, 34800, 'the daughter\'s side of both loans and the fee at the closing rate');
+    assert.equal(total.eliminated.difference, -3800, 'the sides booked in one currency now differ by the rate, and it is said');
+    assert.deepEqual([total.eliminated.income, total.eliminated.expense, total.eliminated.profitDifference], [4000, 4400, -400], 'and so do the fee\'s income and cost');
   });
 });

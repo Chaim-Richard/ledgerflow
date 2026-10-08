@@ -146,7 +146,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
       ['Holding', 50000, 20000, 30000, 130000, 130000, true],
       ['Daughter', 30000, 5000, 25000, 125000, 125000, true],
     ], 'next year is left out of the profit; the balance sheet balances');
-    assert.deepEqual(res.body.total, { currency: 'USD', income: 80000, cogs: 0, grossProfit: 80000, expense: 25000, netIncome: 55000, totalAssets: 255000, totalLiabilities: 0, totalEquity: 255000, cta: 0, eliminated: { assets: 0, liabilities: 0, difference: 0 } });
+    assert.deepEqual(res.body.total, { currency: 'USD', income: 80000, cogs: 0, grossProfit: 80000, expense: 25000, netIncome: 55000, totalAssets: 255000, totalLiabilities: 0, totalEquity: 255000, cta: 0, eliminated: { assets: 0, liabilities: 0, difference: 0, income: 0, cogs: 0, expense: 0, profitDifference: 0 } });
     assert.equal(res.body.notIncluded, 0);
   });
 
@@ -161,7 +161,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     const rates = encodeURIComponent(JSON.stringify({ EUR: { closing: 1.2, average: 1.1, historical: 1 } }));
     const res = await call(`/api/v1/reports/group-summary?groupId=${mixed}&startDate=2026-01-01&endDate=2026-12-31&reportCurrency=USD&rates=${rates}`, ann);
     assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.deepEqual(res.body.total, { currency: 'USD', income: 61000, cogs: 0, grossProfit: 61000, expense: 21100, netIncome: 39900, totalAssets: 260800, totalLiabilities: 0, totalEquity: 260800, cta: 20900, eliminated: { assets: 0, liabilities: 0, difference: 0 } });
+    assert.deepEqual(res.body.total, { currency: 'USD', income: 61000, cogs: 0, grossProfit: 61000, expense: 21100, netIncome: 39900, totalAssets: 260800, totalLiabilities: 0, totalEquity: 260800, cta: 20900, eliminated: { assets: 0, liabilities: 0, difference: 0, income: 0, cogs: 0, expense: 0, profitDifference: 0 } });
     const euro = (res.body.members as Array<{ name: string; income: number; translated: { cta: number } }>).find(m => m.name === 'Euro Co')!;
     assert.equal(euro.income, 10000, 'its own figures stay');
     assert.equal(euro.translated.cta, 20900);
@@ -187,7 +187,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.equal(dealings.matched, 1);
     assert.deepEqual(dealings.unmatched.map(i => [i.transactionId, i.reason]), [[`${ws1}_ic2`, 'missing']]);
     const total = res.body.total as { totalAssets: number; totalLiabilities: number; totalEquity: number; eliminated: Record<string, number> };
-    assert.deepEqual(total.eliminated, { assets: 700, liabilities: 700, difference: 0 }, 'balances between the companies are taken out');
+    assert.deepEqual(total.eliminated, { assets: 700, liabilities: 700, difference: 0, income: 0, cogs: 0, expense: 0, profitDifference: 0 }, 'balances between the companies are taken out');
     assert.equal(total.totalLiabilities, 0);
     assert.equal(total.totalAssets, total.totalLiabilities + total.totalEquity, 'the group still balances');
   });
@@ -270,6 +270,15 @@ describe('On screen', () => {
     const row = (name: string) => screen.getByRole('rowheader', { name }).parentElement!.textContent || '';
     assert.match(row('of which net income of other owners'), /\$0\.00\$4\.00\$4\.00/);
     assert.match(row('of which equity of other owners'), /\$0\.00\$10\.00\$10\.00/);
+  });
+
+  test('sales between the companies taken out, and a difference between the two sides said (CB-26)', async () => {
+    setComponentWorkspace('owner');
+    answer([{ workspaceId: 'ws-a', name: 'Holding', currency: 'USD', isBalanced: true, ...figures(1000) }, { workspaceId: 'ws-b', name: 'Daughter', currency: 'USD', isBalanced: true, ...figures(2000) }],
+      { currency: 'USD', ...figures(2600), eliminated: { assets: 0, liabilities: 0, difference: 0, income: 400, cogs: 0, expense: 300, profitDifference: 100 } });
+    render(<GroupSummaryReportView />);
+    await waitFor(() => assert.ok(screen.getByText(/Sales between the companies taken out: \$4\.00 of income, and \$3\.00 of costs/)));
+    assert.match(screen.getByRole('alert').textContent || '', /differ by \$1\.00/);
   });
 
   test('in one currency: rates are asked for, filled from the rate service, and sent; the translation line shows', async () => {

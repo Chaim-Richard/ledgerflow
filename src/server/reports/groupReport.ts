@@ -21,7 +21,10 @@
  * Eliminations (CB-26, Z-16 step 5): what the companies owe each other (balances on their
  * intercompany accounts: role 'intercompany', or "Intercompany" in the name) is taken out of the
  * group's total assets and liabilities. If the two sides differ, the difference is said, and kept in
- * equity so the total still balances.
+ * equity so the total still balances. Their sales to each other in the period (the income and the
+ * costs of intercompany entries in force between members) are taken out of the total income, cost of
+ * goods sold and expenses; net income stays the companies' own, so if the two sides disagree, the
+ * difference is said and stays in it.
  *
  * Parent and ownership (Z-16): when the group names its parent company, every other member is one the
  * parent controls (owned above 50%), so its books are added in full and the part that belongs to its
@@ -106,6 +109,13 @@ export interface Eliminated {
   liabilities: number;
   /** assets − liabilities: what the two sides disagree on (kept in equity) */
   difference: number;
+  /** sales between the companies in the period, taken out of total income */
+  income: number;
+  /** their cost of goods sold and expenses on the other side, taken out of those totals */
+  cogs: number;
+  expense: number;
+  /** income − cogs − expense taken out: what the two sides disagree on (kept in net income) */
+  profitDifference: number;
 }
 
 /** An account holding what a company owes or is owed by the others in its group. */
@@ -174,15 +184,21 @@ export function matchIntercompany(members: Array<{ workspaceId: string; name: st
 
 const FIGURES: Array<keyof GroupFigures> = ['income', 'cogs', 'grossProfit', 'expense', 'netIncome', 'totalAssets', 'totalLiabilities', 'totalEquity'];
 
-type ReadMember = Omit<GroupMember, 'share'> & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[]; owedBy: number; owedTo: number };
+type ReadMember = Omit<GroupMember, 'share'> & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[]; owedBy: number; owedTo: number; withinGroup: { income: number; cogs: number; expense: number } };
 
-async function memberFigures(db: Firestore, workspaceId: string, startDate: string, endDate: string): Promise<ReadMember> {
+/** The other company of an intercompany entry. */
+const otherCompany = (tx: Transaction) => String(tx.metadata?.targetWorkspaceId || tx.metadata?.sourceWorkspaceId || '');
+
+async function memberFigures(db: Firestore, workspaceId: string, startDate: string, endDate: string, group: Set<string>): Promise<ReadMember> {
   const ws = (await db.collection('workspaces').doc(workspaceId).get()).data() || {};
   const accounts = (await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as ChartAccount);
   const transactions = (await db.collection('transactions').where('workspaceId', '==', workspaceId).where('date', '<=', endDate).get()).docs
     .map(d => ({ ...d.data(), id: d.id }) as Transaction);
   const pl = computeProfitAndLoss(accounts, transactions, startDate, endDate);
   const bs = computeBalanceSheet(accounts, transactions, endDate);
+  const intercompany = transactions.filter(tx => tx.metadata?.isIntercompany === true);
+  // CB-26: the income and costs of its dealings in force with the other companies of the group
+  const within = computeProfitAndLoss(accounts, intercompany.filter(tx => inForce(tx) && group.has(otherCompany(tx))), startDate, endDate);
   return {
     workspaceId,
     name: String(ws.name || workspaceId),
@@ -199,7 +215,8 @@ async function memberFigures(db: Firestore, workspaceId: string, startDate: stri
     equityAccounts: bs.totalEquity,
     // profit before the period that is not closed into equity yet
     earlierProfit: bs.netIncome - pl.netIncome,
-    intercompany: transactions.filter(tx => tx.metadata?.isIntercompany === true),
+    intercompany,
+    withinGroup: { income: within.income.total, cogs: within.cogs.total, expense: within.expense.total },
     // CB-26: balances with the other companies (assets: owed to it; liabilities: it owes)
     owedBy: accounts.filter(a => a.type === 'asset' && isIntercompanyAccount(a)).reduce((s, a) => s + (bs.assets[a.id] || 0), 0),
     owedTo: accounts.filter(a => a.type === 'liability' && isIntercompanyAccount(a)).reduce((s, a) => s + (bs.liabilities[a.id] || 0), 0),
@@ -241,7 +258,7 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     throw new GroupReportError(403, `This group adds up its companies under a parent, and ${n} of them ${n === 1 ? 'is' : 'are'} not open to you: ask for access, or take ${n === 1 ? 'it' : 'them'} out of the group`);
   }
   const read: ReadMember[] = [];
-  for (const id of shown) read.push(await memberFigures(db, id, input.startDate, input.endDate));
+  for (const id of shown) read.push(await memberFigures(db, id, input.startDate, input.endDate, new Set(shown)));
   const reportCurrency = input.reportCurrency;
   if (reportCurrency) {
     for (const currency of new Set(read.map(m => m.currency).filter(c => c !== reportCurrency))) {
@@ -250,7 +267,7 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     }
   }
   const intercompany = matchIntercompany(read.map(m => ({ workspaceId: m.workspaceId, name: m.name, currency: m.currency, entries: m.intercompany })), open, input.startDate, input.endDate);
-  const members: GroupMember[] = read.map(({ earlierProfit, equityAccounts, intercompany: _entries, owedBy: _by, owedTo: _to, ...rest }) => {
+  const members: GroupMember[] = read.map(({ earlierProfit, equityAccounts, intercompany: _entries, owedBy: _by, owedTo: _to, withinGroup: _within, ...rest }) => {
     const m = { ...rest, share: shareOf(structure, rest.workspaceId) };
     if (!reportCurrency) return m;
     const rates = m.currency === reportCurrency ? null : input.rates![m.currency];
@@ -261,13 +278,18 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
   const closing = (m: ReadMember) => (reportCurrency && m.currency !== reportCurrency ? input.rates![m.currency].closing : 1);
   const owedBy = read.reduce((s, m) => s + Math.round(m.owedBy * closing(m)), 0);
   const owedTo = read.reduce((s, m) => s + Math.round(m.owedTo * closing(m)), 0);
-  const eliminated: Eliminated = { assets: owedBy, liabilities: owedTo, difference: owedBy - owedTo };
+  // sales and costs between the companies, at the average rate when translated
+  const average = (m: ReadMember) => (reportCurrency && m.currency !== reportCurrency ? input.rates![m.currency].average : 1);
+  const within = (f: 'income' | 'cogs' | 'expense') => read.reduce((s, m) => s + Math.round(m.withinGroup[f] * average(m)), 0);
+  const [income, cogs, expense] = [within('income'), within('cogs'), within('expense')];
+  const eliminated: Eliminated = { assets: owedBy, liabilities: owedTo, difference: owedBy - owedTo, income, cogs, expense, profitDifference: income - cogs - expense };
   const sum = (figures: Array<GroupFigures & { cta: number }>, currency: string) => {
     const t = Object.fromEntries([...FIGURES, 'cta' as const].map(f => [f, figures.reduce((s, x) => s + x[f], 0)])) as unknown as GroupFigures & { cta: number };
     // Z-16: the other owners' part of each company the parent owns less than all of
     const others = (f: 'totalEquity' | 'netIncome') => figures.reduce((s, x, i) => s + Math.round(x[f] * (100 - members[i].share) / 100), 0);
     const otherOwners = structure.parentId ? { otherOwners: { equity: others('totalEquity'), netIncome: others('netIncome') } } : {};
-    return { currency, ...t, totalAssets: t.totalAssets - owedBy, totalLiabilities: t.totalLiabilities - owedTo, totalEquity: t.totalEquity - eliminated.difference, eliminated, ...otherOwners };
+    // net income stays the companies' own: what the two sides disagree on stays in it, and is said
+    return { currency, ...t, income: t.income - income, cogs: t.cogs - cogs, grossProfit: t.grossProfit - income + cogs, expense: t.expense - expense, totalAssets: t.totalAssets - owedBy, totalLiabilities: t.totalLiabilities - owedTo, totalEquity: t.totalEquity - eliminated.difference, eliminated, ...otherOwners };
   };
   const total = members.length === 0 ? null
     : reportCurrency ? sum(members.map(m => m.translated!), reportCurrency)
