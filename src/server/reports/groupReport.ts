@@ -17,6 +17,11 @@
  * with the other company and its entry) needs its match there. Matched pairs are counted; the rest
  * are listed with why: the match is missing, was undone, or has another amount, or the other company
  * is outside the group (or not one the person can open).
+ *
+ * Eliminations (CB-26, Z-16 step 5): what the companies owe each other (balances on their
+ * intercompany accounts: role 'intercompany', or "Intercompany" in the name) is taken out of the
+ * group's total assets and liabilities. If the two sides differ, the difference is said, and kept in
+ * equity so the total still balances.
  */
 import type { Firestore } from '../db/firestore';
 import { openable } from '../services/workspaceGroupService';
@@ -67,12 +72,24 @@ export interface GroupSummary {
   endDate: string;
   members: GroupMember[];
   /** the group's total: in the reporting currency, or when every member uses the same currency */
-  total: (GroupFigures & { currency: string; cta: number }) | null;
+  total: (GroupFigures & { currency: string; cta: number; eliminated: Eliminated }) | null;
   /** members of the group this person can no longer open (left out) */
   notIncluded: number;
   /** Z-19: dealings between the members in the period */
   intercompany: IntercompanySummary;
 }
+
+export interface Eliminated {
+  /** owed to members by members, taken out of total assets */
+  assets: number;
+  /** owed by members to members, taken out of total liabilities */
+  liabilities: number;
+  /** assets − liabilities: what the two sides disagree on (kept in equity) */
+  difference: number;
+}
+
+/** An account holding what a company owes or is owed by the others in its group. */
+export const isIntercompanyAccount = (acc: Pick<ChartAccount, 'name'> & { role?: string }) => acc.role === 'intercompany' || /intercompany/i.test(acc.name || '');
 
 export type IntercompanyReason = 'missing' | 'undone' | 'amount' | 'outside-group' | 'not-open';
 
@@ -137,7 +154,9 @@ export function matchIntercompany(members: Array<{ workspaceId: string; name: st
 
 const FIGURES: Array<keyof GroupFigures> = ['income', 'cogs', 'grossProfit', 'expense', 'netIncome', 'totalAssets', 'totalLiabilities', 'totalEquity'];
 
-async function memberFigures(db: Firestore, workspaceId: string, startDate: string, endDate: string): Promise<GroupMember & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[] }> {
+type ReadMember = GroupMember & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[]; owedBy: number; owedTo: number };
+
+async function memberFigures(db: Firestore, workspaceId: string, startDate: string, endDate: string): Promise<ReadMember> {
   const ws = (await db.collection('workspaces').doc(workspaceId).get()).data() || {};
   const accounts = (await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as ChartAccount);
   const transactions = (await db.collection('transactions').where('workspaceId', '==', workspaceId).where('date', '<=', endDate).get()).docs
@@ -161,6 +180,9 @@ async function memberFigures(db: Firestore, workspaceId: string, startDate: stri
     // profit before the period that is not closed into equity yet
     earlierProfit: bs.netIncome - pl.netIncome,
     intercompany: transactions.filter(tx => tx.metadata?.isIntercompany === true),
+    // CB-26: balances with the other companies (assets: owed to it; liabilities: it owes)
+    owedBy: accounts.filter(a => a.type === 'asset' && isIntercompanyAccount(a)).reduce((s, a) => s + (bs.assets[a.id] || 0), 0),
+    owedTo: accounts.filter(a => a.type === 'liability' && isIntercompanyAccount(a)).reduce((s, a) => s + (bs.liabilities[a.id] || 0), 0),
   };
 }
 
@@ -193,7 +215,7 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
   const open = await openable(db, input.uid);
   const ids = (Array.isArray(group.workspaceIds) ? group.workspaceIds as string[] : []);
   const shown = ids.filter(id => open.has(id));
-  const read: Array<GroupMember & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[] }> = [];
+  const read: ReadMember[] = [];
   for (const id of shown) read.push(await memberFigures(db, id, input.startDate, input.endDate));
   const reportCurrency = input.reportCurrency;
   if (reportCurrency) {
@@ -203,16 +225,21 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     }
   }
   const intercompany = matchIntercompany(read.map(m => ({ workspaceId: m.workspaceId, name: m.name, currency: m.currency, entries: m.intercompany })), open, input.startDate, input.endDate);
-  const members: GroupMember[] = read.map(({ earlierProfit, equityAccounts, intercompany: _entries, ...m }) => {
+  const members: GroupMember[] = read.map(({ earlierProfit, equityAccounts, intercompany: _entries, owedBy: _by, owedTo: _to, ...m }) => {
     if (!reportCurrency) return m;
     const rates = m.currency === reportCurrency ? null : input.rates![m.currency];
     return { ...m, translated: { ...translate({ ...m, earlierProfit, equityAccounts }, rates), rates } };
   });
   const currencies = new Set(members.map(m => m.currency));
-  const sum = (figures: Array<GroupFigures & { cta: number }>, currency: string) => ({
-    currency,
-    ...Object.fromEntries([...FIGURES, 'cta' as const].map(f => [f, figures.reduce((s, x) => s + x[f], 0)])) as unknown as GroupFigures & { cta: number },
-  });
+  // CB-26: balances between the companies, at the closing rate when translated
+  const closing = (m: ReadMember) => (reportCurrency && m.currency !== reportCurrency ? input.rates![m.currency].closing : 1);
+  const owedBy = read.reduce((s, m) => s + Math.round(m.owedBy * closing(m)), 0);
+  const owedTo = read.reduce((s, m) => s + Math.round(m.owedTo * closing(m)), 0);
+  const eliminated: Eliminated = { assets: owedBy, liabilities: owedTo, difference: owedBy - owedTo };
+  const sum = (figures: Array<GroupFigures & { cta: number }>, currency: string) => {
+    const t = Object.fromEntries([...FIGURES, 'cta' as const].map(f => [f, figures.reduce((s, x) => s + x[f], 0)])) as unknown as GroupFigures & { cta: number };
+    return { currency, ...t, totalAssets: t.totalAssets - owedBy, totalLiabilities: t.totalLiabilities - owedTo, totalEquity: t.totalEquity - eliminated.difference, eliminated };
+  };
   const total = members.length === 0 ? null
     : reportCurrency ? sum(members.map(m => m.translated!), reportCurrency)
       : currencies.size === 1 ? sum(members.map(m => ({ ...m, cta: 0 })), members[0].currency) : null;

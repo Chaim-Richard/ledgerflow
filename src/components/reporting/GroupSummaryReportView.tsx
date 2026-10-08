@@ -10,7 +10,8 @@ import { averageFromTimeframe, parseRates, rateFromQuote, type TranslationRates 
 interface Figures { income: number; cogs: number; grossProfit: number; expense: number; netIncome: number; totalAssets: number; totalLiabilities: number; totalEquity: number }
 interface Member extends Figures { workspaceId: string; name: string; currency: string; isBalanced: boolean; translated?: Figures & { cta: number } }
 interface Issue { workspaceId: string; transactionId: string; date: string; description: string; amountCents: number; currency: string; withName: string | null; reason: 'missing' | 'undone' | 'amount' | 'outside-group' | 'not-open'; otherAmountCents?: number }
-interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number }) | null; notIncluded: number; intercompany?: { matched: number; unmatched: Issue[] } }
+interface Eliminated { assets: number; liabilities: number; difference: number }
+interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number; eliminated?: Eliminated }) | null; notIncluded: number; intercompany?: { matched: number; unmatched: Issue[] } }
 
 /** Why an intercompany entry has no match (Z-19), in words. */
 const whyUnmatched = (i: Issue) => ({
@@ -201,6 +202,16 @@ export default function GroupSummaryReportView() {
               </tbody>
             </table>
           </div>
+          {summary.total?.eliminated && (summary.total.eliminated.assets !== 0 || summary.total.eliminated.liabilities !== 0) && (
+            <p className="text-xs text-[var(--muted)]">
+              Taken out of the group total: {formatCurrency(summary.total.eliminated.assets, summary.total.currency)} owed to the companies by each other, and {formatCurrency(summary.total.eliminated.liabilities, summary.total.currency)} they owe each other.
+            </p>
+          )}
+          {summary.total?.eliminated && summary.total.eliminated.difference !== 0 && (
+            <p role="alert" className="text-xs text-amber-700 dark:text-amber-400">
+              What the companies say they owe each other differs by {formatCurrency(summary.total.eliminated.difference, summary.total.currency)} (kept in equity so the total balances): see the dealings below.
+            </p>
+          )}
           {summary.intercompany && (summary.intercompany.matched > 0 || summary.intercompany.unmatched.length > 0) && (
             <section aria-labelledby="group-dealings-title" className="space-y-2">
               <h3 id="group-dealings-title" className="text-sm font-semibold text-[var(--text)]">Dealings between the companies</h3>
@@ -240,7 +251,7 @@ export default function GroupSummaryReportView() {
               )}
             </section>
           )}
-          <p className="text-xs text-[var(--muted)]">Each company is read from its own books, as you can see them. Dealings between the companies are not taken out of the total yet.</p>
+          <p className="text-xs text-[var(--muted)]">Each company is read from its own books, as you can see them. Balances between the companies are taken out of the total; their sales to each other are not yet.</p>
         </>
       )}
     </section>

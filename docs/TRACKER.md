@@ -2455,7 +2455,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CB-23 GL vs payment ledger
 - [ ] CB-24 Bank clearance summary
 - [ ] CB-25 Dimension-wise balance
-- [ ] CB-26 Consolidated TB
+- [~] CB-26 Consolidated TB — **step 1 done 8 Oct (Claude), on the group summary:** what the companies owe each other (balances on intercompany accounts: role 'intercompany' or "Intercompany" in the name) is taken out of the group's total assets and liabilities, at the closing rate when translated; if the two sides differ, the difference is said and kept in equity so the total balances (`groupReport.ts`, tests `group-summary.test.tsx`). **Open:** the account-by-account consolidated trial balance (needs a shared chart mapping), and taking out sales and purchases between the companies.
 - [ ] CB-27 Asset depreciation ledger
 - [ ] CB-28 POS register
 - [x] CB-29 Sales payment summary

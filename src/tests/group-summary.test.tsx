@@ -146,7 +146,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
       ['Holding', 50000, 20000, 30000, 130000, 130000, true],
       ['Daughter', 30000, 5000, 25000, 125000, 125000, true],
     ], 'next year is left out of the profit; the balance sheet balances');
-    assert.deepEqual(res.body.total, { currency: 'USD', income: 80000, cogs: 0, grossProfit: 80000, expense: 25000, netIncome: 55000, totalAssets: 255000, totalLiabilities: 0, totalEquity: 255000, cta: 0 });
+    assert.deepEqual(res.body.total, { currency: 'USD', income: 80000, cogs: 0, grossProfit: 80000, expense: 25000, netIncome: 55000, totalAssets: 255000, totalLiabilities: 0, totalEquity: 255000, cta: 0, eliminated: { assets: 0, liabilities: 0, difference: 0 } });
     assert.equal(res.body.notIncluded, 0);
   });
 
@@ -161,7 +161,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     const rates = encodeURIComponent(JSON.stringify({ EUR: { closing: 1.2, average: 1.1, historical: 1 } }));
     const res = await call(`/api/v1/reports/group-summary?groupId=${mixed}&startDate=2026-01-01&endDate=2026-12-31&reportCurrency=USD&rates=${rates}`, ann);
     assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.deepEqual(res.body.total, { currency: 'USD', income: 61000, cogs: 0, grossProfit: 61000, expense: 21100, netIncome: 39900, totalAssets: 260800, totalLiabilities: 0, totalEquity: 260800, cta: 20900 });
+    assert.deepEqual(res.body.total, { currency: 'USD', income: 61000, cogs: 0, grossProfit: 61000, expense: 21100, netIncome: 39900, totalAssets: 260800, totalLiabilities: 0, totalEquity: 260800, cta: 20900, eliminated: { assets: 0, liabilities: 0, difference: 0 } });
     const euro = (res.body.members as Array<{ name: string; income: number; translated: { cta: number } }>).find(m => m.name === 'Euro Co')!;
     assert.equal(euro.income, 10000, 'its own figures stay');
     assert.equal(euro.translated.cta, 20900);
@@ -176,13 +176,20 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
       workspaceId: ws, date: '2026-06-01', description: `Loan ${id}`, status: 'completed', type: 'actual', currency: 'USD', totalAmountCents: 700,
       metadata: { isIntercompany: true, ...meta }, lines: [{ accountId: `${ws}_${debit}`, amountCents: 700 }, { accountId: `${ws}_${credit}`, amountCents: -700 }],
     });
-    await put(ws1, `${ws1}_ic1`, { targetWorkspaceId: ws2, targetTxId: `${ws2}_ic1` }, 'cash', 'cash');
-    await put(ws2, `${ws2}_ic1`, { sourceWorkspaceId: ws1, sourceTxId: `${ws1}_ic1` }, 'cash', 'cash');
+    // CB-26: what they owe each other sits on intercompany accounts
+    await db.collection('chartAccounts').doc(`${ws1}_icfrom`).set({ workspaceId: ws1, name: 'Intercompany due from Daughter', type: 'asset', code: '1300' });
+    await db.collection('chartAccounts').doc(`${ws2}_icto`).set({ workspaceId: ws2, name: 'Intercompany due to Holding', type: 'liability', code: '2300' });
+    await put(ws1, `${ws1}_ic1`, { targetWorkspaceId: ws2, targetTxId: `${ws2}_ic1` }, 'icfrom', 'cash');
+    await put(ws2, `${ws2}_ic1`, { sourceWorkspaceId: ws1, sourceTxId: `${ws1}_ic1` }, 'cash', 'icto');
     await put(ws1, `${ws1}_ic2`, { targetWorkspaceId: ws2, targetTxId: `${ws2}_gone` }, 'cash', 'cash');
     const res = await summary(sameCurrency);
     const dealings = res.body.intercompany as { matched: number; unmatched: Array<{ transactionId: string; reason: string }> };
     assert.equal(dealings.matched, 1);
     assert.deepEqual(dealings.unmatched.map(i => [i.transactionId, i.reason]), [[`${ws1}_ic2`, 'missing']]);
+    const total = res.body.total as { totalAssets: number; totalLiabilities: number; totalEquity: number; eliminated: Record<string, number> };
+    assert.deepEqual(total.eliminated, { assets: 700, liabilities: 700, difference: 0 }, 'balances between the companies are taken out');
+    assert.equal(total.totalLiabilities, 0);
+    assert.equal(total.totalAssets, total.totalLiabilities + total.totalEquity, 'the group still balances');
   });
 
   test('a member no longer open is left out and counted; other people, reversed periods and API keys are refused', async () => {
