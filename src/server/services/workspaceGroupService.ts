@@ -7,7 +7,7 @@
  */
 import crypto from 'crypto';
 import type { Firestore } from '../db/firestore';
-import { GROUP_ID, groupProblem, MAX_GROUPS, structureProblem, type WorkspaceGroup } from '../../lib/workspaceGroups';
+import { GROUP_ID, groupProblem, keptRatesProblem, MAX_GROUPS, MAX_KEPT_RATES, ratesKey, structureProblem, type WorkspaceGroup } from '../../lib/workspaceGroups';
 
 export class WorkspaceGroupError extends Error {
   constructor(readonly status: number, message: string) {
@@ -37,6 +37,7 @@ const shown = (id: string, data: Record<string, unknown>, open: Set<string>): Wo
   ...(data.ownership && typeof data.ownership === 'object'
     ? { ownership: Object.fromEntries(Object.entries(data.ownership as Record<string, number>).filter(([w]) => open.has(w))) }
     : {}),
+  ...(data.rates && typeof data.rates === 'object' ? { rates: data.rates as WorkspaceGroup['rates'] } : {}),
   ...(data.createdAt ? { createdAt: String(data.createdAt) } : {}),
   ...(data.updatedAt ? { updatedAt: String(data.updatedAt) } : {}),
 });
@@ -116,5 +117,29 @@ export async function deleteGroup(db: Firestore, input: { uid: string; groupId: 
     const data = (await t.get(ref)).data();
     if (!data || data.ownerUid !== input.uid) throw new WorkspaceGroupError(404, 'Group not found');
     t.delete(ref);
+  });
+}
+
+/**
+ * Z-17: keep the translation rates used for a reporting currency and period on the group, so the
+ * same period opens with them next time. The newest periods are kept (at most MAX_KEPT_RATES).
+ */
+export async function keepRates(db: Firestore, input: { uid: string; groupId: string; reportCurrency: string; startDate: string; endDate: string; rates: Record<string, { closing: number; average: number; historical: number }> }): Promise<WorkspaceGroup> {
+  if (!GROUP_ID.test(input.groupId)) throw new WorkspaceGroupError(404, 'Group not found');
+  const problem = keptRatesProblem(input);
+  if (problem) throw new WorkspaceGroupError(400, problem);
+  const open = await openable(db, input.uid);
+  return db.runTransaction(async t => {
+    const ref = db.collection('workspaceGroups').doc(input.groupId);
+    const data = (await t.get(ref)).data();
+    if (!data || data.ownerUid !== input.uid) throw new WorkspaceGroupError(404, 'Group not found');
+    const key = ratesKey(input.reportCurrency, input.startDate, input.endDate);
+    const all = { ...((data.rates as WorkspaceGroup['rates']) || {}), [key]: input.rates };
+    // the newest periods by end date, then start
+    const byEnd = (k: string) => `${k.split(':')[2]}:${k.split(':')[1]}`;
+    const kept = Object.fromEntries(Object.entries(all).sort(([a], [b]) => byEnd(b).localeCompare(byEnd(a))).slice(0, MAX_KEPT_RATES));
+    const next = { ...data, rates: kept, updatedAt: new Date().toISOString() };
+    t.set(ref, next);
+    return shown(input.groupId, next, open);
   });
 }

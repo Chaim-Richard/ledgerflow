@@ -4,7 +4,7 @@ import { getIdToken } from '../../firebase';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
-import type { WorkspaceGroup } from '../../lib/workspaceGroups';
+import { ratesKey, type WorkspaceGroup } from '../../lib/workspaceGroups';
 import { averageFromTimeframe, parseRates, rateFromQuote, type TranslationRates } from '../../lib/translationRates';
 
 interface Figures { income: number; cogs: number; grossProfit: number; expense: number; netIncome: number; totalAssets: number; totalLiabilities: number; totalEquity: number }
@@ -42,13 +42,27 @@ async function get<T>(url: string): Promise<T> {
   return data as T;
 }
 
+/** Z-17: keep the rates used for a period on the group; a convenience, so a failure only means retyping. */
+async function keepRates(groupId: string, body: Record<string, unknown>): Promise<WorkspaceGroup | null> {
+  try {
+    const res = await fetch(`/api/v1/account/groups/${encodeURIComponent(groupId)}/rates`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` }, body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    return res.ok && data.group ? data.group as WorkspaceGroup : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Group summary (Z-20): one of your groups of books (Settings → Groups of books) for a period, each
  * company's profit and loss and balance sheet side by side, and the group's total when they all keep
  * their books in the same currency. Each figure opens that company's own report. Read under your own
  * access, never copied (src/server/reports/groupReport.ts). In one currency (Z-17, Z-18): each other
  * currency is translated with the closing, average and historical rates entered (or filled from the
- * rate service), and the translation difference has its own line.
+ * rate service), and the translation difference has its own line. Rates that worked are kept on the
+ * group for that currency and period, and fill in when the same period is opened again.
  */
 export default function GroupSummaryReportView() {
   const setCurrentWorkspaceId = useAuthStore(s => s.setCurrentWorkspaceId);
@@ -61,8 +75,16 @@ export default function GroupSummaryReportView() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState('');
   const [reportCurrency, setReportCurrency] = useState('');
-  const [entered, setEntered] = useState<Entered>({});
+  // what was typed, for one reporting currency and period; over the rates kept for it (Z-17)
+  const [typed, setTyped] = useState<{ key: string; values: Entered }>({ key: '', values: {} });
   const [filling, setFilling] = useState('');
+  const periodKey = groupId && reportCurrency ? `${groupId}|${ratesKey(reportCurrency, startDate, endDate)}` : '';
+  const kept = groups?.find(g => g.id === groupId)?.rates?.[ratesKey(reportCurrency, startDate, endDate)];
+  const entered: Entered = {
+    ...Object.fromEntries(Object.entries(kept || {}).map(([c, r]) => [c, { closing: String(r.closing), average: String(r.average), historical: String(r.historical) }])),
+    ...(typed.key === periodKey ? typed.values : {}),
+  };
+  const setEntered = (change: (e: Entered) => Entered) => setTyped({ key: periodKey, values: change(entered) });
   const memberCurrencies = [...new Set((summary?.members || []).map(m => m.currency))];
   const foreign = reportCurrency ? memberCurrencies.filter(c => c !== reportCurrency) : [];
   const parsed = parseRates(foreign, entered);
@@ -81,7 +103,17 @@ export default function GroupSummaryReportView() {
     if (!query) return;
     let live = true;
     get<Summary>(`/api/v1/reports/group-summary?${query}`)
-      .then(data => { if (live) { setSummary(data); setError(''); } })
+      .then(data => {
+        if (!live) return;
+        setSummary(data);
+        setError('');
+        // Z-17: rates that worked are kept for this period (the group then opens with them)
+        const asked = new URLSearchParams(query);
+        if (asked.get('rates')) {
+          void keepRates(String(asked.get('groupId')), { reportCurrency: asked.get('reportCurrency'), startDate: asked.get('startDate'), endDate: asked.get('endDate'), rates: JSON.parse(String(asked.get('rates'))) })
+            .then(group => { if (group) setGroups(list => (list || []).map(g => (g.id === group.id ? group : g))); });
+        }
+      })
       .catch(err => { if (live) { setSummary(null); setError(err instanceof Error ? err.message : String(err)); } });
     return () => { live = false; };
   }, [query]);

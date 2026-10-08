@@ -12,7 +12,7 @@ import React from 'react';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { groupProblem, groupsOf, shareOf, structureProblem } from '../lib/workspaceGroups';
+import { groupProblem, groupsOf, keptRatesProblem, shareOf, structureProblem } from '../lib/workspaceGroups';
 import GroupsSettings from '../components/platform/settings/GroupsSettings';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import { stubFetchWithBodies } from './helpers/dom';
@@ -45,6 +45,16 @@ describe('The rules', () => {
     const group = { parentId: 'a', ownership: { b: 80 } };
     assert.deepEqual(['a', 'b', 'c'].map(id => shareOf(group, id)), [100, 80, 100]);
     assert.equal(shareOf({ ownership: { b: 80 } }, 'b'), 100, 'no parent: no shares');
+  });
+
+  test('kept rates: a reporting currency, a period, and three rates above zero per other currency (Z-17)', () => {
+    const ok = { reportCurrency: 'USD', startDate: '2026-01-01', endDate: '2026-12-31', rates: { EUR: { closing: 1.2, average: 1.1, historical: 1 } } };
+    assert.equal(keptRatesProblem(ok), null);
+    assert.match(String(keptRatesProblem({ ...ok, reportCurrency: 'usd' })), /reporting currency/);
+    assert.match(String(keptRatesProblem({ ...ok, endDate: '2025-12-31' })), /period/);
+    assert.match(String(keptRatesProblem({ ...ok, rates: {} })), /by currency/);
+    assert.match(String(keptRatesProblem({ ...ok, rates: { EUR: { closing: 1, average: 1 } } })), /above zero/);
+    assert.match(String(keptRatesProblem({ ...ok, rates: { EUR: { closing: 1, average: 1, historical: 1, extra: 2 } } })), /above zero/);
   });
 });
 
@@ -112,6 +122,26 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.deepEqual([(set.body.group as { parentId: string }).parentId, (set.body.group as { ownership: unknown }).ownership], [ws1, { [ws2]: 80 }]);
     const renamed = await call(`/${groupId}`, 'PUT', ann, { name: 'Family' });
     assert.deepEqual((renamed.body.group as { ownership: unknown }).ownership, { [ws2]: 80 }, 'left out: kept');
+  });
+
+  test('the translation rates used for a period are kept on the group, the newest periods only (Z-17)', async () => {
+    const rates = { EUR: { closing: 1.2, average: 1.1, historical: 1 } };
+    const body = { reportCurrency: 'USD', startDate: '2026-01-01', endDate: '2026-12-31', rates };
+    const kept = await call(`/${groupId}/rates`, 'PUT', ann, body);
+    assert.equal(kept.status, 200, JSON.stringify(kept.body));
+    assert.deepEqual((kept.body.group as { rates: unknown }).rates, { 'USD:2026-01-01:2026-12-31': rates });
+    assert.equal((await call(`/${groupId}/rates`, 'PUT', bob, body)).status, 404, 'only on your own group');
+    assert.equal((await call(`/${groupId}/rates`, 'PUT', ann, { ...body, rates: { EUR: { closing: 0, average: 1, historical: 1 } } })).status, 400);
+    assert.equal((await call(`/${groupId}/rates`, 'PUT', ann, { ...body, rates: { USD: { closing: 1, average: 1, historical: 1 } } })).status, 400, 'not the reporting currency itself');
+    assert.equal((await call(`/${groupId}/rates`, 'PUT', ann, { ...body, startDate: '2027-01-01' })).status, 400);
+    const { MAX_KEPT_RATES } = await import('../lib/workspaceGroups');
+    const many = Object.fromEntries(Array.from({ length: MAX_KEPT_RATES + 5 }, (_, i) => [`USD:2000-01-01:${2000 + i}-12-31`, rates]));
+    await db.collection('workspaceGroups').doc(groupId).update({ rates: many });
+    const trimmed = await call(`/${groupId}/rates`, 'PUT', ann, body);
+    const keys = Object.keys((trimmed.body.group as { rates: Record<string, unknown> }).rates);
+    assert.equal(keys.length, MAX_KEPT_RATES);
+    assert.ok(keys.includes('USD:2026-01-01:2026-12-31') && !keys.includes('USD:2000-01-01:2000-12-31'), 'the oldest periods go');
+    await db.collection('workspaceGroups').doc(groupId).update({ rates: {} });
   });
 
   test('nobody else reads or changes the group', async () => {

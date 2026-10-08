@@ -14,6 +14,8 @@ export interface WorkspaceGroup {
   parentId?: string;
   /** Z-16: the parent's share of each other member, in percent (a member not listed: 100) */
   ownership?: Record<string, number>;
+  /** Z-17: the translation rates used, by `ratesKey` (reporting currency and period), then member currency */
+  rates?: Record<string, Record<string, { closing: number; average: number; historical: number }>>;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -62,6 +64,29 @@ export function structureProblem(input: { workspaceIds: string[]; parentId?: unk
 /** The parent's share of a member, in percent: 100 without a parent, for the parent, or when none is given. */
 export const shareOf = (group: Pick<WorkspaceGroup, 'parentId' | 'ownership'>, workspaceId: string) =>
   group.parentId && workspaceId !== group.parentId ? group.ownership?.[workspaceId] ?? 100 : 100;
+
+/** Z-17: rates are kept per reporting currency and period (the average depends on where it starts). */
+export const ratesKey = (reportCurrency: string, startDate: string, endDate: string) => `${reportCurrency}:${startDate}:${endDate}`;
+export const MAX_KEPT_RATES = 120;
+const CURRENCY = /^[A-Z]{3}$/;
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Why these rates can't be kept, or null. */
+export function keptRatesProblem(input: { reportCurrency?: unknown; startDate?: unknown; endDate?: unknown; rates?: unknown }): string | null {
+  if (typeof input.reportCurrency !== 'string' || !CURRENCY.test(input.reportCurrency)) return 'Say the reporting currency (three letters)';
+  if (typeof input.startDate !== 'string' || !DAY.test(input.startDate) || typeof input.endDate !== 'string' || !DAY.test(input.endDate) || input.startDate > input.endDate) return 'Say the period (YYYY-MM-DD, from before to)';
+  if (!input.rates || typeof input.rates !== 'object' || Array.isArray(input.rates)) return 'Send the rates by currency';
+  const entries = Object.entries(input.rates as Record<string, unknown>);
+  if (entries.length === 0 || entries.length > 50) return 'Send the rates by currency';
+  for (const [currency, r] of entries) {
+    if (!CURRENCY.test(currency) || currency === input.reportCurrency) return `There are no rates to keep for ${currency}`;
+    const x = (r || {}) as Record<string, unknown>;
+    if (!['closing', 'average', 'historical'].every(k => typeof x[k] === 'number' && Number.isFinite(x[k]) && (x[k] as number) > 0) || Object.keys(x).length !== 3) {
+      return `The closing, average and historical rates for ${currency} are numbers above zero`;
+    }
+  }
+  return null;
+}
 
 /** The groups a workspace is in (for showing it next to the workspace's name). */
 export const groupsOf = (groups: WorkspaceGroup[], workspaceId: string) => groups.filter(g => g.workspaceIds.includes(workspaceId));

@@ -14,7 +14,7 @@ import { makeRecoveryCodes, recoveryStatus, RecoveryError, useRecoveryCode } fro
 import { workspacesRequiringTwoStep } from '../auth/supabaseAuth';
 import { getNotificationEmail, setNotificationEmail } from '../services/notificationEmailService';
 import { EMAIL_MODES, type NotificationEmailMode } from '../../lib/notificationEmail';
-import { createGroup, deleteGroup, listGroups, updateGroup, WorkspaceGroupError } from '../services/workspaceGroupService';
+import { createGroup, deleteGroup, keepRates, listGroups, updateGroup, WorkspaceGroupError } from '../services/workspaceGroupService';
 
 export const accountRouter = express.Router();
 
@@ -118,6 +118,15 @@ accountRouter.put('/groups/:id', async (req, res) => {
   try {
     const name = req.body?.name === undefined ? undefined : String(req.body.name);
     res.json({ status: 'success', group: await updateGroup(getDb(), { uid: user.uid, groupId: String(req.params.id), name, workspaceIds: stringList(req.body?.workspaceIds), ...structure(req.body) }) });
+  } catch (err) { groupFail(res, err); }
+});
+
+// Z-17: keep the translation rates used for a reporting currency and period
+accountRouter.put('/groups/:id/rates', async (req, res) => {
+  const user = (req as unknown as AuthenticatedRequest).user;
+  try {
+    const b = req.body || {};
+    res.json({ status: 'success', group: await keepRates(getDb(), { uid: user.uid, groupId: String(req.params.id), reportCurrency: b.reportCurrency, startDate: b.startDate, endDate: b.endDate, rates: b.rates }) });
   } catch (err) { groupFail(res, err); }
 });
 

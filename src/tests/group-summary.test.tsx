@@ -17,6 +17,7 @@ import GroupSummaryReportView from '../components/reporting/GroupSummaryReportVi
 import { averageFromTimeframe, parseRates, rateFromQuote } from '../lib/translationRates';
 import { matchIntercompany, translate } from '../server/reports/groupReport';
 import { makeTransaction } from './fixtures';
+import { getLocalDateISO } from '../lib/utils';
 import type { Transaction } from '../types';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -308,6 +309,37 @@ describe('On screen', () => {
     const sent = new URLSearchParams(asked.find(u => u.includes('reportCurrency=USD'))!.split('?')[1]);
     assert.deepEqual(JSON.parse(sent.get('rates')!), { EUR: { closing: 1.25, average: 1.125, historical: 1.25 } });
     await waitFor(() => assert.ok(screen.getByRole('rowheader', { name: 'of which translation difference' })));
+  });
+
+  test('rates kept for the period fill in, and rates that worked are kept (Z-17)', async () => {
+    setComponentWorkspace('owner');
+    const today = getLocalDateISO();
+    const start = `${today.slice(0, 4)}-01-01`;
+    const keptGroups = [{ ...groups[0], rates: { [`USD:${start}:${today}`]: { EUR: { closing: 1.2, average: 1.1, historical: 1 } } } }];
+    const members = [
+      { workspaceId: 'ws-a', name: 'Holding', currency: 'USD', isBalanced: true, ...figures(1000) },
+      { workspaceId: 'ws-b', name: 'Euro Co', currency: 'EUR', isBalanced: true, ...figures(2000) },
+    ];
+    const calls: Array<{ url: string; method: string; body?: unknown }> = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      calls.push({ url, method: init?.method || 'GET', body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined });
+      const body = url === '/api/v1/account/groups' ? { status: 'success', groups: keptGroups }
+        : url.endsWith('/rates') ? { status: 'success', group: keptGroups[0] }
+          : url.includes('reportCurrency=USD')
+            ? { group: groups[0], members: members.map(m => ({ ...m, translated: { ...figures(2000), cta: 0 } })), total: { currency: 'USD', ...figures(4000), cta: 0 }, notIncluded: 0 }
+            : { group: groups[0], members, total: null, notIncluded: 0 };
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }) as typeof fetch;
+    render(<GroupSummaryReportView />);
+    await waitFor(() => assert.ok(screen.getByLabelText('In one currency')));
+    await act(async () => { fireEvent.change(screen.getByLabelText('In one currency'), { target: { value: 'USD' } }); });
+    await waitFor(() => assert.ok(calls.some(c => c.url.endsWith('/rates'))));
+    const sent = new URLSearchParams(calls.find(c => c.url.includes('reportCurrency=USD'))!.url.split('?')[1]);
+    assert.deepEqual(JSON.parse(sent.get('rates')!), { EUR: { closing: 1.2, average: 1.1, historical: 1 } }, 'no rates to type: the kept ones are used');
+    const put = calls.find(c => c.url.endsWith('/rates'))!;
+    assert.equal(put.url, '/api/v1/account/groups/grp_aaaaaaaa/rates');
+    assert.deepEqual(put.body, { reportCurrency: 'USD', startDate: start, endDate: today, rates: { EUR: { closing: 1.2, average: 1.1, historical: 1 } } });
   });
 
   test('dealings without a match say why and open the entry in its own books', async () => {
