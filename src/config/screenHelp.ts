@@ -79,7 +79,9 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     "budget-actual": "Compare a saved account budget with posted account movement for the selected period or months. Open an actual to inspect its contributing entries. Recurring caps are spread by month; partial months keep their cap, and loaded-cache figures are provisional until full history is requested.",
     pnl: "Review posted income, cost of goods sold and expenses for the period. Compare periods and choose presentation columns. Incomplete loaded history makes the figures provisional.",
     "group-summary":
-      "Choose one of your groups of books (Settings → Groups of books) and a period: each company's income, costs, profit, assets, liabilities and equity side by side, with the group's total when all keep their books in one currency. Each figure opens that company's own report. Dealings between the companies are not taken out yet.",
+      "Choose one of your groups of books (Settings → Groups of books) and a period: each company's income, costs, profit, assets, liabilities and equity side by side, with the group's total when all keep their books in one currency (or translated into one). Each figure opens that company's own report. Balances and sales between the companies are taken out of the total; with a parent, the other owners' part is shown.",
+    "ask-books":
+      "Ask about an account, a label and a period in words. The question is read into filters you can see and change; the figure is calculated from all posted entries in the workspace's currency, and the entries behind it are listed. It reads names and dates, not any sentence.",
     "balance-sheet":
       "Review assets, liabilities and equity at the end date. Compare snapshots and inspect account detail. The start date does not erase earlier activity.",
     "cash-flow":

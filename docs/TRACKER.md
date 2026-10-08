@@ -2559,7 +2559,7 @@ BD-06, P-08 and BB-07. Each item says its bucket. Only the owner moves an item i
   - client questions (BD-07), approvals (invoices, bills, pay runs, expense claims, requisitions) and missing documents.
 
   The per-workspace counts also feed BD-01.
-- [ ] DA-03 Ask the books, verified — **Later P1**: a human question becomes a typed query, the server calculates it exactly, and the answer can be traced.
+- [x] DA-03 Ask the books, verified — **done 8 Oct (Claude)**: Reports → Ask the Books. The question is read by plain matching (`src/lib/askBooks.ts`, no AI): account names (an account takes in its sub-accounts; "spend"/"income" alone mean all expense/income accounts), a label value by its code, description or alias, and a period (last/this year or fiscal year, last/this month, a month, a quarter, a year; none named is this year so far, and said). What was understood is shown and each part can be changed; nothing it can't place is filled in. The figure comes from the server's explanation (N-12) on the full history: posted entries only, the workspace's currency, under the person's access; the entries behind it are listed and open their documents (`AskBooksView.tsx`; tests `ask-books.test.tsx`, including the example question below against the real database). **Later P1**: a human question becomes a typed query, the server calculates it exactly, and the answer can be traced.
   - **Example:** "How much did Property 5 spend on electricity last year?" becomes:
     - workspace = the current one, as allowed;
     - label Property = Property 5;

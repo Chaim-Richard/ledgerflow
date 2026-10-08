@@ -22,7 +22,7 @@ import {
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag, ArrowLeftRight
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree } from 'lucide-react';
+, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText } from 'lucide-react';
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
@@ -341,6 +341,7 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'PNLView': lazy(() => import('../components/ledger/ProfitAndLossView')),
   'BalanceSheetReportView': lazy(() => import('../components/ledger/BalanceSheetView')),
   'GroupSummaryReportView': lazy(() => import('../components/reporting/GroupSummaryReportView')),
+  'AskBooksView': lazy(() => import('../components/reporting/AskBooksView')),
   'CashFlowView': lazy(() => import('../components/ledger/CashFlowView')),
   'ARAgingReportView': lazy(() => import('../components/reporting/ARAgingReportView')),
   'APAgingReportView': lazy(() => import('../components/reporting/APAgingReportView')),
@@ -390,6 +391,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'pnl', label: { en: 'Profit & Loss', he: 'רווח והפסד' }, componentName: 'PNLView', icon: Activity },
   { id: 'balance-sheet', label: { en: 'Balance Sheet', he: 'מאזן' }, componentName: 'BalanceSheetReportView', icon: Layers },
   { id: 'group-summary', label: { en: 'Group Summary', he: 'סיכום קבוצה' }, componentName: 'GroupSummaryReportView', icon: FolderTree },
+  { id: 'ask-books', label: { en: 'Ask the Books', he: 'שאלה לספרים' }, componentName: 'AskBooksView', icon: MessageSquareText },
   { id: 'cash-flow', label: { en: 'Cash Flow', he: 'תזרים' }, componentName: 'CashFlowView', icon: RefreshCw },
   { id: 'party-linked-trial-balance', label: { en: 'Party Linked Trial Balance', he: 'מאזן בוחן רישומים מקושרים' }, componentName: 'PartyLinkedTrialBalanceView', icon: BookOpen },
   { id: 'sales-trends', label: { en: 'Sales Trends', he: 'מגמות מכירה' }, componentName: 'SalesTrendsView', icon: TrendingUp },

@@ -261,17 +261,19 @@ These are the tracker IDs; `docs/TRACKER.md` has the detail.
 ### Later, P0 (core and strategic)
 
 - **Groups and companies:** BD-01, DA-01, Z-16, Z-17, Z-18, Z-19, Z-20 and CB-26 (one multi-entity
-  design, see Z-16).
-- **Sales, stock and returns:** BF-08 step 2 (delivery apart from invoice; done 7 Oct but the printable note and returns after delivery), W-01, W-02 and BF-06 (all three done 7 Oct).
+  design, see Z-16). On 8 Oct: own groups, the group summary with translation, dealings between the
+  companies, eliminations of balances and of sales between them, and the parent with its shares are done;
+  open are shared groups, the parent's investment, account-level lines and the Practice view (BD-01).
+- **Sales, stock and returns:** BF-08 step 2 (delivery apart from invoice, done 7 Oct; the printable note and returns after delivery, done 8 Oct), W-01, W-02 and BF-06 (all three done 7 Oct).
 - **Simple until needed:** BB-07 and P-08.
 
 ### Later, P1 (big friction savers)
 
-- **One queue, and questions:** DA-02 (needs attention) and DA-03 (ask the books, verified).
+- **One queue, and questions:** DA-02 (needs attention, done 8 Oct) and DA-03 (ask the books, verified, done 8 Oct).
 - **Rules:** Q-05, K-39 and CA-13 (one rule family).
 - **The close cycle:** BD-04 and BD-06 (with R-11, which is done).
 - **Bank connections:** Z-28, Z-29 and Z-30.
-- **Reports:** N-07, N-08, N-10, CB-25 and DA-09.
+- **Reports:** N-07, N-08, N-10, CB-25 and DA-09 (done 8 Oct).
 
 ### Later, P2 (platform growth)
 

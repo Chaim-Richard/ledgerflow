@@ -82,6 +82,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Inventory Valuation', componentName: 'InventoryValuationReportView' },
     { label: 'Transactions by Reference', componentName: 'TransactionsByReferenceView' },
     { label: 'Group Summary', componentName: 'GroupSummaryReportView' },
+    { label: 'Ask the Books', componentName: 'AskBooksView' },
   ];
 
   for (const report of reportTabs) {

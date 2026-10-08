@@ -103,3 +103,5 @@ One row per capability, with one label each (DA-05). The README, Help, onboardin
 | 93 | Online card payments (Stripe) | Available with limits | Stripe routes; `online-payments.test.ts`, `payment-failures.test.ts` | Needs Stripe credentials; tested with recorded events |
 | 94 | Consolidation elimination endpoint | Partial | `consolidationRoutes.ts` | Returns 'not available'; use the group summary instead |
 | 95 | Help for the main path, step by step | Available | `src/lib/mainPathGuide.ts`, `MainPathGuide.tsx`; `main-path-guide.test.tsx` | Twelve steps of a single business; groups of books are not covered yet |
+| 96 | Ask the books (a question in words, the figure from the server) | Available with limits | `src/lib/askBooks.ts`, `AskBooksView.tsx`; `ask-books.test.tsx` | Reads account names, label values and common periods only, not any sentence; what it understood is shown and can be changed |
+| 97 | Needs attention (one queue on the Overview) | Available | `src/lib/needsAttention.ts`, `NeedsAttentionCard.tsx`; `needs-attention.test.tsx` | One workspace at a time; bills and expenses have no approval step to count |
