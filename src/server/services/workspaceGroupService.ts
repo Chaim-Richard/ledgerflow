@@ -7,6 +7,7 @@
  */
 import crypto from 'crypto';
 import type { Firestore } from '../db/firestore';
+import { lineMergesProblem } from '../reports/groupAccounts';
 import { GROUP_ID, groupProblem, keptRatesProblem, MAX_GROUP_SHARES, MAX_GROUPS, MAX_KEPT_RATES, ratesKey, structureProblem, type WorkspaceGroup } from '../../lib/workspaceGroups';
 
 export class WorkspaceGroupError extends Error {
@@ -201,4 +202,22 @@ export async function keepRates(db: Firestore, input: { uid: string; groupId: st
     t.set(ref, next);
     return shown(input.groupId, next, open);
   });
+}
+
+/**
+ * Z-20: the group's own chart mapping: which lines of the account-by-account view add to another
+ * (`lineMerges`, line key → line key; src/server/reports/groupAccounts.ts). Only the owner sets it.
+ */
+export async function setLineMerges(db: Firestore, input: { uid: string; groupId: string; merges: unknown }): Promise<Record<string, string>> {
+  if (!GROUP_ID.test(input.groupId)) throw new WorkspaceGroupError(404, 'Group not found');
+  const problem = lineMergesProblem(input.merges);
+  if (problem) throw new WorkspaceGroupError(400, problem);
+  const merges = input.merges as Record<string, string>;
+  await db.runTransaction(async t => {
+    const ref = db.collection('workspaceGroups').doc(input.groupId);
+    const data = (await t.get(ref)).data();
+    if (!data || data.ownerUid !== input.uid) throw new WorkspaceGroupError(404, 'Group not found');
+    t.set(ref, { ...data, lineMerges: merges, updatedAt: new Date().toISOString() });
+  });
+  return merges;
 }

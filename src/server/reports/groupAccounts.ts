@@ -8,7 +8,8 @@
  * the profit not yet closed and the translation difference on lines of their own). Lines are rounded
  * one by one, so a translated section can differ by a few cents from its total. Balances and sales
  * between the companies are taken out of the totals, not of these lines: they show each company's
- * books as they are.
+ * books as they are. The group's owner can combine two lines of a section (its own chart mapping, for
+ * companies whose codes and names both differ): `merges` maps a line's key to the line it adds to.
  */
 
 export type LineSection = 'income' | 'cogs' | 'expense' | 'asset' | 'liability' | 'equity';
@@ -19,8 +20,10 @@ export interface GroupAccountLine {
   section: LineSection;
   name: string;
   code?: string;
-  /** other names the same code has in other companies */
+  /** other names the same code has in other companies, or of lines combined into it */
   alsoNamed?: string[];
+  /** the lines the group's owner combined into this one (to undo it) */
+  combined?: string[];
   /** each company's figure, in the report's currency */
   byMember: Record<string, number>;
   total: number;
@@ -46,7 +49,7 @@ const norm = (s: string) => s.normalize('NFC').toLocaleLowerCase().replace(/\s+/
 export const lineKey = (section: LineSection, acc: Omit<LineAccount, 'id'>) =>
   `${section}|${acc.code && String(acc.code).trim() ? `code:${norm(String(acc.code))}` : `name:${norm(acc.name || '')}`}`;
 
-export function groupAccountLines(members: MemberAccounts[]): GroupAccountLine[] {
+export function groupAccountLines(members: MemberAccounts[], merges: Record<string, string> = {}): GroupAccountLine[] {
   const lines = new Map<string, GroupAccountLine>();
   const add = (key: string, section: LineSection, name: string, code: string | undefined, workspaceId: string, cents: number) => {
     const line = lines.get(key) || { key, section, name, ...(code ? { code } : {}), byMember: {}, total: 0 };
@@ -68,6 +71,30 @@ export function groupAccountLines(members: MemberAccounts[]): GroupAccountLine[]
     if (m.extraEquity?.profit) add('equity|profit', 'equity', 'Profit not yet closed into equity', undefined, m.workspaceId, m.extraEquity.profit);
     if (m.extraEquity?.cta) add('equity|cta', 'equity', 'Translation difference', undefined, m.workspaceId, m.extraEquity.cta);
   }
+  // the group's own chart mapping: a line combined into another of the same section adds to it
+  for (const [from, to] of Object.entries(merges)) {
+    const source = lines.get(from);
+    const target = lines.get(to);
+    if (!source || !target || from === to || source.section !== target.section) continue;
+    for (const [ws, cents] of Object.entries(source.byMember)) target.byMember[ws] = (target.byMember[ws] || 0) + cents;
+    target.total += source.total;
+    target.alsoNamed = [...new Set([...(target.alsoNamed || []), ...[source.name, ...(source.alsoNamed || [])].filter(n => n !== target.name)])];
+    target.combined = [...(target.combined || []), from];
+    lines.delete(from);
+  }
   const order = (l: GroupAccountLine) => SECTIONS.indexOf(l.section);
   return [...lines.values()].sort((a, b) => order(a) - order(b) || (a.code || '￿').localeCompare(b.code || '￿', undefined, { numeric: true }) || a.name.localeCompare(b.name));
+}
+
+/** Why these line combinations can't be saved, or null. */
+export function lineMergesProblem(merges: unknown): string | null {
+  if (!merges || typeof merges !== 'object' || Array.isArray(merges)) return 'Send the combined lines as pairs';
+  const entries = Object.entries(merges as Record<string, unknown>);
+  if (entries.length > 500) return '500 combined lines at most';
+  for (const [from, to] of entries) {
+    if (typeof to !== 'string' || from.length > 300 || to.length > 300 || from === to) return 'Each line combines into another line';
+    if (from.split('|')[0] !== to.split('|')[0] || !SECTIONS.includes(from.split('|')[0] as LineSection)) return 'Lines combine only within their section';
+    if (to in (merges as Record<string, unknown>)) return 'A line that is combined into another cannot take lines itself';
+  }
+  return null;
 }

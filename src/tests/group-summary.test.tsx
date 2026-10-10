@@ -190,6 +190,22 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.equal((await call(`/api/v1/reports/group-summary?groupId=${mixed}&startDate=2026-01-01&endDate=2026-12-31&detail=accounts`, ann)).body.accountLines, undefined, 'no total, no lines');
   });
 
+  test('the owner combines one line into another of its section; it is kept on the group and can be undone (Z-20)', async () => {
+    const put = (merges: unknown, uid = ann) => call(`/api/v1/account/groups/${sameCurrency}/lines`, uid, { method: 'PUT', body: { merges } });
+    const lines = async () => (await call(`/api/v1/reports/group-summary?groupId=${sameCurrency}&startDate=2026-01-01&endDate=2026-12-31&detail=accounts`, ann)).body;
+    assert.deepEqual((await lines()).lineMerges, { canCombine: true, merges: {} });
+    assert.equal((await put({ 'equity|code:capital': 'equity|profit' })).status, 200);
+    const body = await lines();
+    const equity = (body.accountLines as Array<{ section: string; key: string; name: string; combined?: string[]; total: number }>).filter(l => l.section === 'equity');
+    assert.deepEqual(equity.map(l => [l.key, l.combined, l.total]), [['equity|profit', ['equity|code:capital'], 255000]]);
+    assert.deepEqual(body.lineMerges, { canCombine: true, merges: { 'equity|code:capital': 'equity|profit' } });
+    assert.equal((await put({ 'equity|code:capital': 'asset|code:cash' })).status, 400, 'only within a section');
+    assert.equal((await put({}, bob)).status, 404, 'only the group\'s owner');
+    assert.equal((await call('/api/v1/account/groups/grp_nothere/lines', ann, { method: 'PUT', body: { merges: {} } })).status, 404);
+    assert.equal((await put({})).status, 200);
+    assert.equal(((await lines()).accountLines as unknown[]).length, 5, 'undone');
+  });
+
   test('account by account, translated: each section at its rate, the translation difference on its line', async () => {
     const rates = encodeURIComponent(JSON.stringify({ EUR: { closing: 1.2, average: 1.1, historical: 1 } }));
     const res = await call(`/api/v1/reports/group-summary?groupId=${mixed}&startDate=2026-01-01&endDate=2026-12-31&reportCurrency=USD&rates=${rates}&detail=accounts`, ann);
@@ -376,6 +392,35 @@ describe('On screen', () => {
     assert.ok(screen.getByText('also called Revenue'));
     assert.match(screen.getByRole('rowheader', { name: /4000 Sales/ }).parentElement!.textContent || '', /\$10\.00\$20\.00\$30\.00/);
     assert.ok(screen.getByRole('rowheader', { name: 'Assets' }));
+  });
+
+  test('the group\'s owner combines a line with another of its section, and undoes it (Z-20)', async () => {
+    setComponentWorkspace('owner');
+    const sent: Array<{ url: string; body: unknown }> = [];
+    let merges: Record<string, string> = {};
+    const line = (key: string, name: string, cents: number, combined?: string[]) => ({ key, section: 'income', name, ...(combined ? { combined } : {}), byMember: { 'ws-a': cents }, total: cents });
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (init?.method === 'PUT') { merges = (JSON.parse(String(init.body)) as { merges: Record<string, string> }).merges; sent.push({ url, body: merges }); }
+      const combined = 'income|code:700' in merges;
+      const body = url.startsWith('/api/v1/account/groups') ? { status: 'success', groups, merges } : {
+        group: groups[0], members: [{ workspaceId: 'ws-a', name: 'Holding', currency: 'USD', isBalanced: true, ...figures(1000) }], total: { currency: 'USD', ...figures(1000) }, notIncluded: 0,
+        accountLines: combined ? [line('income|code:4000', 'Sales', 1000, ['income|code:700'])] : [line('income|code:4000', 'Sales', 600), line('income|code:700', 'Turnover', 400)],
+        lineMerges: { canCombine: true, merges },
+      };
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }) as typeof fetch;
+    render(<GroupSummaryReportView />);
+    await waitFor(() => assert.ok(screen.getByRole('columnheader', { name: 'Group total' })));
+    await act(async () => { fireEvent.click(screen.getByRole('checkbox', { name: 'Account by account' })); });
+    await waitFor(() => assert.ok(screen.getByRole('combobox', { name: 'Combine Turnover with' })));
+    await act(async () => { fireEvent.change(screen.getByRole('combobox', { name: 'Combine Turnover with' }), { target: { value: 'income|code:4000' } }); });
+    await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Undo 700' })));
+    assert.deepEqual(sent[0], { url: '/api/v1/account/groups/grp_aaaaaaaa/lines', body: { 'income|code:700': 'income|code:4000' } });
+    assert.equal(screen.queryByRole('combobox', { name: 'Combine Turnover with' }), null);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Undo 700' })); });
+    await waitFor(() => assert.ok(screen.getByRole('combobox', { name: 'Combine Turnover with' })));
+    assert.deepEqual(sent[1].body, {});
   });
 
   test('no groups: this workspace on its own is offered and asked for (N-07)', async () => {

@@ -12,9 +12,9 @@ interface Member extends Figures { workspaceId: string; name: string; currency: 
 interface Issue { workspaceId: string; transactionId: string; date: string; description: string; amountCents: number; currency: string; withName: string | null; reason: 'missing' | 'undone' | 'amount' | 'outside-group' | 'not-open'; otherAmountCents?: number }
 interface Eliminated { assets: number; liabilities: number; difference: number; income?: number; cogs?: number; expense?: number; profitDifference?: number; investment?: number }
 interface OtherOwners { equity: number; netIncome: number }
-interface AccountLine { key: string; section: 'income' | 'cogs' | 'expense' | 'asset' | 'liability' | 'equity'; name: string; code?: string; alsoNamed?: string[]; byMember: Record<string, number>; total: number }
+interface AccountLine { key: string; section: 'income' | 'cogs' | 'expense' | 'asset' | 'liability' | 'equity'; name: string; code?: string; alsoNamed?: string[]; combined?: string[]; byMember: Record<string, number>; total: number }
 const SECTION_NAMES: Record<AccountLine['section'], string> = { income: 'Income', cogs: 'Cost of goods sold', expense: 'Expenses', asset: 'Assets', liability: 'Liabilities', equity: 'Equity' };
-interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number; eliminated?: Eliminated; otherOwners?: OtherOwners }) | null; parent?: { workspaceId: string; name: string } | null; accountLines?: AccountLine[]; notIncluded: number; intercompany?: { matched: number; unmatched: Issue[] } }
+interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number; eliminated?: Eliminated; otherOwners?: OtherOwners }) | null; parent?: { workspaceId: string; name: string } | null; accountLines?: AccountLine[]; lineMerges?: { canCombine: boolean; merges: Record<string, string> }; notIncluded: number; intercompany?: { matched: number; unmatched: Issue[] } }
 
 /** Why an intercompany entry has no match (Z-19), in words. */
 const whyUnmatched = (i: Issue) => ({
@@ -84,6 +84,8 @@ export default function GroupSummaryReportView() {
   const [reportCurrency, setReportCurrency] = useState('');
   // Z-20: each account across the companies as well
   const [byAccount, setByAccount] = useState(false);
+  // Z-20: asked again after the owner combines lines
+  const [version, setVersion] = useState(0);
   // what was typed, for one reporting currency and period; over the rates kept for it (Z-17)
   const [typed, setTyped] = useState<{ key: string; values: Entered }>({ key: '', values: {} });
   const [filling, setFilling] = useState('');
@@ -94,11 +96,24 @@ export default function GroupSummaryReportView() {
     ...(typed.key === periodKey ? typed.values : {}),
   };
   const setEntered = (change: (e: Entered) => Entered) => setTyped({ key: periodKey, values: change(entered) });
+  // Z-20: the group's own chart mapping (the owner combines a line into another of its section)
+  const combine = async (merges: Record<string, string>) => {
+    try {
+      const res = await fetch(`/api/v1/account/groups/${encodeURIComponent(groupId)}/lines`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` }, body: JSON.stringify({ merges }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'The lines were not combined');
+      setVersion(v => v + 1);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
   const memberCurrencies = [...new Set((summary?.members || []).map(m => m.currency))];
   const foreign = reportCurrency ? memberCurrencies.filter(c => c !== reportCurrency) : [];
   const parsed = parseRates(foreign, entered);
   const translation = reportCurrency && 'rates' in parsed ? { reportCurrency, rates: JSON.stringify(parsed.rates) } : null;
-  const query = groupId && startDate && endDate ? new URLSearchParams({ groupId, startDate, endDate, ...(translation || {}), ...(byAccount ? { detail: 'accounts' } : {}) }).toString() : '';
+  const query = groupId && startDate && endDate ? new URLSearchParams({ groupId, startDate, endDate, ...(translation || {}), ...(byAccount ? { detail: 'accounts', ...(version ? { v: String(version) } : {}) } : {}) }).toString() : '';
 
   useEffect(() => {
     let live = true;
@@ -286,6 +301,21 @@ export default function GroupSummaryReportView() {
                         <th scope="row" className="text-left font-normal py-1">
                           {l.code ? <span className="font-mono text-xs text-[var(--muted)]">{l.code} </span> : null}<bdi>{l.name}</bdi>
                           {l.alsoNamed && <span className="block text-[10px] text-[var(--muted)]">also called {l.alsoNamed.join(', ')}</span>}
+                          {summary.lineMerges?.canCombine && (
+                            <span className="flex flex-wrap gap-2 text-[10px]">
+                              <select aria-label={`Combine ${l.name} with`} value="" className="max-w-[12rem] border border-[var(--line)] rounded bg-[var(--panel)] text-[var(--text)]"
+                                onChange={e => { if (e.target.value) void combine({ ...summary.lineMerges!.merges, [l.key]: e.target.value }); }}>
+                                <option value="">Combine with…</option>
+                                {summary.accountLines!.filter(o => o.section === l.section && o.key !== l.key).map(o => <option key={o.key} value={o.key}>{o.code ? `${o.code} ` : ''}{o.name}</option>)}
+                              </select>
+                              {(l.combined || []).map(from => (
+                                <button key={from} type="button" className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                                  onClick={() => { const next = { ...summary.lineMerges!.merges }; delete next[from]; void combine(next); }}>
+                                  Undo {from.split('|')[1]?.replace(/^(code|name):/, '')}
+                                </button>
+                              ))}
+                            </span>
+                          )}
                         </th>
                         {summary.members.map(m => <td key={m.workspaceId} className="text-right font-mono py-1 px-2">{l.byMember[m.workspaceId] ? formatCurrency(l.byMember[m.workspaceId], summary.total!.currency) : ''}</td>)}
                         <td className="text-right font-mono py-1 px-2">{formatCurrency(l.total, summary.total!.currency)}</td>

@@ -14,7 +14,7 @@ import { makeRecoveryCodes, recoveryStatus, RecoveryError, useRecoveryCode } fro
 import { workspacesRequiringTwoStep } from '../auth/supabaseAuth';
 import { getNotificationEmail, setNotificationEmail } from '../services/notificationEmailService';
 import { EMAIL_MODES, type NotificationEmailMode } from '../../lib/notificationEmail';
-import { createGroup, deleteGroup, keepRates, listGroups, shareGroup, unshareGroup, updateGroup, WorkspaceGroupError } from '../services/workspaceGroupService';
+import { createGroup, deleteGroup, keepRates, listGroups, setLineMerges, shareGroup, unshareGroup, updateGroup, WorkspaceGroupError } from '../services/workspaceGroupService';
 import { authAdmin } from '../auth/supabaseAuth';
 import { practiceRows } from '../services/practiceService';
 import { getLocalDateISO } from '../../lib/utils';
@@ -124,6 +124,12 @@ accountRouter.put('/groups/:id', async (req, res) => {
     const name = req.body?.name === undefined ? undefined : String(req.body.name);
     res.json({ status: 'success', group: await updateGroup(getDb(), { uid: user.uid, groupId: String(req.params.id), name, workspaceIds: stringList(req.body?.workspaceIds), ...structure(req.body) }) });
   } catch (err) { groupFail(res, err); }
+});
+
+// Z-20: the group's own chart mapping (lines combined in the account-by-account view)
+accountRouter.put('/groups/:id/lines', async (req, res) => {
+  const user = (req as unknown as AuthenticatedRequest).user;
+  try { res.json({ status: 'success', merges: await setLineMerges(getDb(), { uid: user.uid, groupId: String(req.params.id), merges: req.body?.merges }) }); } catch (err) { groupFail(res, err); }
 });
 
 // Z-17: keep the translation rates used for a reporting currency and period

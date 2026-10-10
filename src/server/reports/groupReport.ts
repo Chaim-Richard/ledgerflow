@@ -96,6 +96,8 @@ export interface GroupSummary {
   intercompany: IntercompanySummary;
   /** Z-20: account by account, when asked for and there is a total */
   accountLines?: GroupAccountLine[];
+  /** whether this person may combine lines (the group's owner), and the combinations saved */
+  lineMerges?: { canCombine: boolean; merges: Record<string, string> };
 }
 
 /** Z-16: what belongs to the companies' other owners (non-controlling interest), inside the total */
@@ -351,11 +353,14 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
       const cta = translated?.cta || 0;
       const totalEquity = translated ? translated.totalEquity : m.totalEquity;
       return { workspaceId: m.workspaceId, accounts: m.chart, sections: m.sections, rate, extraEquity: { profit: totalEquity - cta - equityLines, cta } };
-    }));
+    }), (group.lineMerges && typeof group.lineMerges === 'object' ? group.lineMerges : {}) as Record<string, string>);
   }
   return {
     group: { id: input.groupId, name: String(group.name || '') }, startDate: input.startDate, endDate: input.endDate, members, total,
     parent: parent ? { workspaceId: parent.workspaceId, name: parent.name } : null, notIncluded: ids.length - shown.length, intercompany,
-    ...(accountLines ? { accountLines } : {}),
+    ...(accountLines ? {
+      accountLines,
+      lineMerges: { canCombine: !self && group.ownerUid === input.uid, merges: (group.lineMerges && typeof group.lineMerges === 'object' ? group.lineMerges : {}) as Record<string, string> },
+    } : {}),
   };
 }
