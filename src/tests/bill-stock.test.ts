@@ -122,6 +122,15 @@ describe('Buying stock on a bill', { skip: !url && 'LF_TEST_DATABASE_URL not set
     assert.equal((await item()).quantityAtHand, 2);
   });
 
+  test('deleting a bill takes its units out again', async () => {
+    await post(bill([{ amountCents: 3000, accountId: `${ws}_office`, itemId, quantity: 3 }]));
+    assert.equal((await item()).quantityAtHand, 5);
+    const { deletePostings } = await import('../services/ledgerPost/deletePostings');
+    await deletePostings(billId, 'billId', ws, { collection: 'bills', docId: billId, action: 'delete' }, await context());
+    assert.equal((await item()).quantityAtHand, 2);
+    assert.equal(await balance(`${ws}_inv`), 0);
+  });
+
   test('an item line without units is refused before anything is posted', async () => {
     const before = (await db.collection('transactions').where('workspaceId', '==', ws).get()).size;
     await assert.rejects(post(bill([{ amountCents: 500, accountId: `${ws}_office`, itemId }])), /how many units came in/);
