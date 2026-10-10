@@ -37,6 +37,7 @@ export const DAILY_JOBS: DailyJobDescriptor[] = [
   { id: 'ledgerHealth', name: 'Ledger health check', what: 'The Data Health checks on every workspace whose books changed; owners and accountants are told about serious problems that are new since the night before.' },
   { id: 'bookAlerts', name: 'Alerts about the books', what: 'From the chosen day, a reminder to close last month; a budget overspent; cash below the amount set in Settings → Alerts. Each told once.' },
   { id: 'assetReminders', name: 'Warranty and insurance reminders', what: 'Fixed assets whose warranty ends or whose insurance renews within 30 days: the people who keep the books are told once for each date.' },
+  { id: 'watches', name: 'Watched records', what: 'Each person watching an invoice, bill, entry, account or item is told once about each change since they were last told, and when it was deleted.' },
   { id: 'notificationDigest', name: 'Daily summary of notices by email', what: 'People who chose one email a day get the notices they have not read since the last one (bell → gear).' },
   { id: 'retention', name: 'What you asked to keep for less time', what: 'Email receipts, error logs and other records past the retention period each workspace sets are pruned.' },
 ];

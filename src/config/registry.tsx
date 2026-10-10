@@ -144,7 +144,6 @@ export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition
   { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת' }, icon: Search, groupId: 'transactions' },
   { id: 'client-queries', label: { en: 'Questions about Entries', he: 'שאלות על תנועות' }, icon: MessageCircleQuestion, groupId: 'transactions' },
   { id: 'tasks', label: { en: 'Tasks', he: 'משימות' }, icon: ListChecks, groupId: 'transactions' },
-  { id: 'time', label: { en: 'Time', he: 'שעות עבודה' }, icon: Clock, groupId: 'money_in' },
 
   { id: 'reconciliation', label: { en: 'Reconcile', he: 'התאמות' }, icon: RefreshCw, groupId: 'reconcile' },
   { id: 'month-end-close', label: { en: 'Month-End Close', he: 'סגירת חודש' }, icon: ClipboardCheck, groupId: 'reconcile' },
@@ -153,6 +152,7 @@ export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition
   { id: 'sales', label: { en: 'Sales', he: 'כסף נכנס' }, icon: ArrowUpRight, groupId: 'money_in' },
   { id: 'estimates', label: { en: 'Estimates & Quotes', he: 'הצעות מחיר' }, icon: FileSignature, groupId: 'money_in' },
   { id: 'payments', label: { en: 'Payments', he: 'תשלומים' }, icon: DollarSign, groupId: 'money_in' },
+  { id: 'time', label: { en: 'Time', he: 'שעות עבודה' }, icon: Clock, groupId: 'money_in' },
   
   { id: 'purchases', label: { en: 'Purchases', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'money_out' },
   { id: 'purchase-orders', label: { en: 'Purchase Orders', he: 'הזמנות רכש' }, icon: ShoppingCart, groupId: 'money_out' },
