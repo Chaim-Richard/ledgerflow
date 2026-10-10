@@ -53,6 +53,8 @@ export interface PdfDocument {
   /** K-04: an estimate the customer accepted prints as a sales order, with their reference */
   orderedAt?: string;
   customerReference?: string;
+  /** Y-20: the customer signed the estimate online */
+  signature?: { name?: string; signedAt?: string };
 }
 
 export interface PdfWorkspace { name?: string; companyName?: string; currency?: string; branding?: WorkspaceBranding }
@@ -135,6 +137,7 @@ export function layoutDocumentPdf(
   if (type === 'invoice' && doc.paymentTerms) meta.push([words.terms, words.paymentTerms(doc.paymentTerms) || clean(doc.paymentTerms, 40)]);
   const salesOrder = type === 'estimate' && Boolean(doc.orderedAt);
   if (salesOrder && doc.customerReference) meta.push([words.yourReference, clean(doc.customerReference, 60)]);
+  if (type === 'estimate' && doc.signature?.name) meta.push([words.signedBy, `${clean(doc.signature.name, 120)}, ${clean(doc.signature.signedAt, 10)}`]);
 
   // invoices keep `items`, estimates `lines`, statements `transactions`; every one is printed
   const items = doc.items || doc.lines || doc.transactions || [];

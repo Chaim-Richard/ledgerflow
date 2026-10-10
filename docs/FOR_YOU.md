@@ -281,6 +281,11 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
    invoices must say "חשבונית מס" (or "חשבונית מס קבלה") for the tax authority, say so and the titles
    will change.
 
+38. **Signing estimates online (10 Oct, decided by default).** The customer types their full name and
+   ticks "I accept"; the app keeps the name, the time, their internet address and browser. This is an
+   ordinary electronic acceptance, not a certified digital signature (no ID check). Say if you need a
+   drawn signature or a certified signing service.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

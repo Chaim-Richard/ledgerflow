@@ -33,6 +33,7 @@ const LedgerAutoAuditor = lazy(() => import('./components/forensics/LedgerAutoAu
 
 import { FallbackBoundary } from './components/FallbackBoundary';
 import PublicInvoicePage from './components/sales/PublicInvoicePage';
+import PublicEstimatePage from './components/sales/PublicEstimatePage';
 import CustomerPortalPage from './components/sales/CustomerPortalPage';
 const StatusPage = lazy(() => import('./components/system/StatusPage'));
 const TwoStepSetupScreen = lazy(() => import('./core/auth/TwoStepSetupScreen'));
@@ -349,6 +350,11 @@ const shortcutMap = useMemo(() => {
   // the customer portal (K-27): a customer's invoices, no sign-in
   if (window.location.pathname.startsWith('/c/')) {
     return <CustomerPortalPage />;
+  }
+
+  // signing an estimate (Y-20): no sign-in
+  if (window.location.pathname.startsWith('/e/')) {
+    return <PublicEstimatePage />;
   }
 
   const isPublicInvoice = window.location.pathname.startsWith('/i/');

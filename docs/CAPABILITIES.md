@@ -130,3 +130,4 @@ One row per capability, with one label each (DA-05). The README, Help, onboardin
 | 120 | Documents in the customer's language (English, Hebrew), with their own terms | Available | `src/lib/documentLanguage.ts`, `pdfService.ts`, `BrandingSettings.tsx`, `PartyModal.tsx`; `document-language.test.tsx` | Printed words only; typed text prints as typed |
 | 121 | Per-role starting dashboards | Available | `src/lib/dashboardOverview.ts`, `roleDashboardService.ts`, `DashboardWidgets.tsx`; `role-dashboards.test.ts` | A person's own arrangement (this browser) wins |
 | 122 | Money display per workspace (number style, bracketed negatives) | Available | `src/lib/moneyFormat.ts`, `MoneyDisplayPanel.tsx`; `money-display-panel.test.tsx` | Display only |
+| 123 | Customers sign estimates online | Available | `src/lib/estimateSignature.ts`, `estimateSignService.ts`, `PublicEstimatePage.tsx`; `estimate-signature.test.tsx` | Typed name and "I accept"; not a qualified e-signature |

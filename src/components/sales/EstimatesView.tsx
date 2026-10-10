@@ -1,4 +1,5 @@
 import { RecordInlineField } from '../ui/RecordInlineField';
+import { EstimateSignLink, EstimateSignedNote } from './EstimateSignLink';
 import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -449,6 +450,7 @@ export default function EstimatesView() {
                             aria-label={`Make estimate ${est.number || est.id} an order`} title="The customer said yes: invoice it in one go or in parts">
                             Order
                           </button>
+                          {currentWorkspaceId && <EstimateSignLink workspaceId={currentWorkspaceId} estimate={est} />}
                           <button type="button" onClick={() => void declineEstimate(est)}
                             className="px-2.5 py-1 text-xs text-[var(--muted)] hover:text-[var(--text)] hover:underline"
                             aria-label={`Mark estimate ${est.number || est.id} declined`}>
@@ -481,6 +483,7 @@ export default function EstimatesView() {
                         </button>
                       )}
                     </div>
+                    <EstimateSignedNote signature={est.signature} />
                     {ordering === est.id && (
                       <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
                         <label className="flex items-center gap-1 text-[var(--muted)]">Customer&apos;s reference

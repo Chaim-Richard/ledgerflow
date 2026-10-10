@@ -2,6 +2,7 @@ import type { TaxTreatment } from '../lib/taxCodes';
 import type { ContactNote, ContactPerson } from '../lib/contacts';
 import type { DeliveryMethod } from '../lib/delivery';
 import type { InvoiceApprovalRecord } from '../lib/invoiceApproval';
+import type { EstimateSignature } from '../lib/estimateSignature';
 import type { EntityMetadata } from './ledger';
 import type { DashboardSchema } from './workspace';
 
@@ -268,6 +269,10 @@ export interface Estimate {
   orderedBy?: string;
   /** the customer's own reference for the order (their purchase order number) */
   customerReference?: string;
+  /** Y-20: the private signing link (server only) and the customer's signature (src/lib/estimateSignature.ts) */
+  signToken?: string;
+  signTokenAt?: string;
+  signature?: EstimateSignature;
   lines: Array<{
     /** the stock item this line sells (BF-08): the order is then invoiced by quantity */
     itemId?: string;

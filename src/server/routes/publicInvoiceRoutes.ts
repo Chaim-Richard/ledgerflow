@@ -5,6 +5,7 @@ import { getTrustedAppUrl } from '../utils/urlHelper';
 import { calculateAmountDue, depositAppliedCents } from '../../lib/documentMath';
 import Stripe from 'stripe';
 import { publicPortalRouter } from './customerPortalRoutes';
+import { publicEstimateRouter } from './estimateSignRoutes';
 import { recordInvoiceView } from '../services/invoiceViewService';
 
 let stripeClient: Stripe | null = null;
@@ -20,6 +21,8 @@ function getStripe(): Stripe {
 export const publicInvoiceRouter = express.Router();
 // the customer portal (K-27) shares this public route and its rate limit: /api/v1/invoices/public/portal/<token>
 publicInvoiceRouter.use('/portal', publicPortalRouter);
+// signing an estimate (Y-20): /api/v1/invoices/public/estimate/<token>
+publicInvoiceRouter.use('/estimate', publicEstimateRouter);
 
 const publicInvoiceTokenParamsSchema = z.object({
   token: z.string().regex(/^pay_[a-zA-Z0-9_-]{10,128}$/, 'Invalid payment token format')
