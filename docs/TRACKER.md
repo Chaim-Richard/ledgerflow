@@ -2024,7 +2024,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
   - **Unchanged:** stock adjustments never go below zero, and the manual cost-of-goods-sold entry always refuses it.
   - Code: `stockPolicyService.ts`, `PUT /api/v1/inventory/stock-policy`, the check in `cogsStockService.ts`, `StockPolicySwitch.tsx`. Tests: `stock-policy.test.tsx`, with the database.
 - [ ] W-07 Assembly / kitting
-- [ ] W-08 Backorder + drop-ship
+- [~] W-08 Backorder + drop-ship — **backorders done 10 Oct**: Reports → Backorders: sales orders' item lines still to deliver, oldest order first, against stock on hand (what each takes from stock and what it is short), and each short item in all with what is on order from vendors and what is still to buy; read-only (`src/lib/backorders.ts`, `BackordersReportView.tsx`; tests `backorders.test.tsx`). **Open:** drop-ship (a sales order line bought from a vendor and sent straight to the customer)
 - [x] W-09 Aging + slow-moving reports — **done 10 Oct (Claude)**: Reports → Stock Aging: as of a day, each item's stock on hand split by how long ago those units came in (0–30, 31–90, 91–180, 181–365 days, over a year; first in, first out; a purchase undone takes back the latest units; moves between locations keep the age; stock from before the history said apart), its value and its last sale with how long ago, the oldest stock first; from the server's stock history (`stockAging` in `src/lib/stockMoves.ts`, `GET /api/v1/reports/stock-aging`, `StockAgingReportView.tsx`; tests `stock-aging.test.tsx`). Slow-moving items by sales on invoices were already on Inactive Items.
 
 # SECTION X — FIXED ASSET LIFECYCLE
