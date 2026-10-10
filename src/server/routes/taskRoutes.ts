@@ -2,6 +2,7 @@ import express from 'express';
 import { getDb } from '../db/firestore';
 import { createTask, listTasks, removeTask, setTaskStatus, TaskError } from '../services/taskService';
 import { myWatches, unwatch, watchRecord, WatchError } from '../services/watchService';
+import { linkEntries, LinkError, linksOf, unlinkEntries } from '../services/entryLinkService';
 
 /**
  * Tasks (BG-02, BG-03), mounted at /api/v1/workspaces/:workspaceId/tasks (workspaceRoutes.ts, every
@@ -42,4 +43,23 @@ taskRouter.patch('/:taskId', async (req, res) => {
 });
 taskRouter.delete('/:taskId', async (req, res) => {
   try { await removeTask(getDb(), { ...actor(req), taskId: String(req.params.taskId) }); res.json({ status: 'success' }); } catch (err) { fail(res, err); }
+});
+
+/**
+ * Transaction links (M-10, entryLinkService.ts), mounted at /api/v1/workspaces/:workspaceId/entry-links
+ * (every member reads): GET ?transactionId=, POST {a, b, note}, DELETE /:linkId.
+ */
+export const entryLinkRouter = express.Router({ mergeParams: true });
+const linkFail = (res: express.Response, err: unknown) => {
+  if (err instanceof LinkError) return res.status(err.status).json({ status: 'error', message: err.message });
+  res.status(500).json({ status: 'error', message: 'The link could not be saved', details: err instanceof Error ? err.message : String(err) });
+};
+entryLinkRouter.get('/', async (req, res) => {
+  try { res.json({ status: 'success', links: await linksOf(getDb(), { ...actor(req), transactionId: String(req.query.transactionId || '') }) }); } catch (err) { linkFail(res, err); }
+});
+entryLinkRouter.post('/', async (req, res) => {
+  try { res.json({ status: 'success', link: await linkEntries(getDb(), { ...actor(req), a: req.body?.a, b: req.body?.b, note: req.body?.note }) }); } catch (err) { linkFail(res, err); }
+});
+entryLinkRouter.delete('/:linkId', async (req, res) => {
+  try { await unlinkEntries(getDb(), { ...actor(req), linkId: String(req.params.linkId) }); res.json({ status: 'success' }); } catch (err) { linkFail(res, err); }
 });
