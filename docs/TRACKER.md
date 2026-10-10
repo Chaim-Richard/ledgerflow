@@ -2171,7 +2171,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
   reads sees the dialog and its words, with no button. This is also the first half of an advance payment: money in
   booked against the customer deposits account is what a later deposit invoice draws down (see the note on
   BE-05). (tested: 14 on the rules, 7 on the dialogs)
-- [ ] BA-18 Import uncategorised transactions
+- [x] BA-18 Import uncategorised transactions — **covered (10 Oct)**: a bank statement (CSV, QIF…) imports lines without categories; rules and past patterns categorise what they can and the rest wait as bank lines to review on Reconcile (`StatementImporter.tsx`, `importActions.ts`).
 - [x] BA-19 Branding templates screen (= Y-33)
 - [x] BA-20 Export dialog
 
