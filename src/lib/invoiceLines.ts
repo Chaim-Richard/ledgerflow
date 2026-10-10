@@ -14,7 +14,7 @@ export interface InvoiceLineDraft {
   unitCostCents?: number;
 }
 
-type ItemFields = Pick<InventoryItem, 'id' | 'name' | 'sku' | 'unitPriceCents' | 'unitCostCents'>;
+type ItemFields = Pick<InventoryItem, 'id' | 'name' | 'sku' | 'unitPriceCents' | 'unitCostCents' | 'itemType'>;
 
 /** quantity × rate, rounded to whole cents. */
 export function lineAmountCents(quantity: number, rateCents: number): number {
@@ -25,9 +25,13 @@ export function lineAmountCents(quantity: number, rateCents: number): number {
 /** The price of an item for this document's customer (M-11: their price list), when it differs */
 export type ItemPricer = (item: { id: string; unitPriceCents: number }) => number;
 
-/** Picked an inventory item: link it and fill its name, price (the customer's, when they have a price list) and cost. */
+/** Picked an inventory item: link it and fill its name, price (the customer's, when they have a price list) and cost; a service only fills the name and price. */
 export function applyInventoryItem<L extends InvoiceLineDraft>(line: L, item: ItemFields, priceOf?: ItemPricer): L {
   const rateCents = priceOf ? priceOf(item) : item.unitPriceCents;
+  // BF-01: a service fills the name and price only; unlinked, no stock moves and no cost is booked
+  if (item.itemType === 'service') {
+    return { ...line, itemId: undefined, description: item.name, rateCents, unitCostCents: undefined, amountCents: lineAmountCents(line.quantity, rateCents) };
+  }
   return {
     ...line,
     itemId: item.id,

@@ -2258,8 +2258,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION BF — ITEMS · PRICING · STOCK
 
-- [ ] BF-01 Item type
-- [ ] BF-02 Customer price overrides
+- [x] BF-01 Item type — **done 10 Oct (Claude)**: an item is a stock item or a service ("Kind" on the item form; an item with stock on hand stays a stock item). Picking a service on an invoice or estimate fills its name and price (the customer's price list too) but leaves the line unlinked, so it moves no stock and books no cost; bills and purchase orders offer only stock items to bring in (`applyInventoryItem` in `src/lib/invoiceLines.ts`, `InventoryItemDialog.tsx`, `Inventory.tsx`; tests `item-type.test.tsx`). **Open:** service lines in the item-wise reports.
+- [x] BF-02 Customer price overrides — **covered (10 Oct)** by Settings → Price lists (M-11): a list with prices of its own for some items, for one customer or several.
 - [ ] BF-03 Item bundles
 - [ ] BF-04 Landed cost on receipt
 - [ ] BF-05 Consignment stock
@@ -2446,7 +2446,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] CB-05 Voucher-wise balance — **covered by Data Health (10 Oct)**: every entry whose debits and credits differ is listed with the difference and opens (the "unbalanced" check, `src/lib/dataChecks.ts`); the balance-break search says since when the books don't balance (A-4).
 - [x] CB-06 Account balance
 - [x] CB-07 Gross profit
-- [ ] CB-08 Profitability analysis
+- [x] CB-08 Profitability analysis — **covered (10 Oct)** by Reports → Profit by Label (CB-25: income, costs and result per value of any label such as project, property or location, adding back to the P&L) and Gross Profit by Customer (`LabelProfitReportView.tsx`, `CustomerGrossProfitView.tsx`).
 - [x] CB-09 Financial ratios
 - [x] CB-10 Sales trends
 - [ ] CB-11 Purchase trends (vendor totals complete; item allocation needs shared accounting helper, C-18 handoff)
@@ -2454,7 +2454,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] CB-13 Item-wise purchase register — **done 10 Oct (Claude)**: the same report, "Bought": every bill line with a stock item (J-08), its units and price per unit; landed costs and void bills left out (same files and tests).
 - [x] CB-14 Inactive items
 - [ ] CB-15 Partner commission
-- [ ] CB-16 Deferred revenue & expense
+- [x] CB-16 Deferred revenue & expense — **covered (10 Oct)** by Reports → Deferred Revenue Waterfall (J-14): invoices spread over months with what is earned in each month, by the end, and still deferred; switchable to prepaid expenses (bills spread, K-17) (`SpreadWaterfallView.tsx`).
 - [ ] CB-17 Billed not received — waits: a bill made from a purchase order does not keep which units it covered (non-stock lines carry no quantity), so "billed but not received" can't be read exactly yet; the bill would need to keep the order line and units it bills (10 Oct).
 - [x] CB-18 Delivered not billed — **done 10 Oct (Claude)**: Reports → Goods Not Yet Billed, "Delivered, not invoiced": for each sales order line, the units delivered and kept (deliveries less returns, from the delivery entries in force) above the units invoiced from the order, at the order's price (`src/lib/unbilledGoods.ts`, `GoodsNotBilledReportView.tsx`; tests `unbilled-goods.test.tsx`).
 - [x] CB-19 Received not billed — **done 10 Oct (Claude)**: the same report, "Received, not billed": units received on purchase orders that have no bill yet, at the order's price, with totals per currency (same files and tests).

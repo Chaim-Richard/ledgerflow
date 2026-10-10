@@ -44,6 +44,8 @@ export interface InventoryItem {
   measurementUnit?: string; // e.g. 'pack', 'kg', 'box'
   unitsPerPackage?: number; // e.g. 100
   category?: string;
+  /** BF-01: a service fills an invoice line's name and price but never moves stock or books a cost (none = stock) */
+  itemType?: 'stock' | 'service';
   createdAt: string;
   /** Set when the item came from a spreadsheet import; lets the import be undone. */
   importBatchId?: string;

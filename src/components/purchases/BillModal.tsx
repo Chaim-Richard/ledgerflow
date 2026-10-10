@@ -123,7 +123,8 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   // only changes the lines here (each line split by the rule's shares, in whole cents)
   const allocationRules = useAuthStore(s => s.getCurrentWorkspace()?.allocationRules);
   useLedgerCollections('inventory');
-  const stockItems = useLedgerStore(s => s.inventory) || [];
+  // BF-01: services are not bought into stock
+  const stockItems = (useLedgerStore(s => s.inventory) || []).filter(i => i.itemType !== 'service');
   const [ruleApplied, setRuleApplied] = useState('');
   const suggested = suggestRule(allocationRules, { vendorName: bill.vendorName, description: splits.map(sp => sp.description).join(' ') });
   const canSplit = Boolean(suggested && suggested.rule.id !== ruleApplied && splits.some(sp => sp.amountCents));

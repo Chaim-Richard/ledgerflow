@@ -128,6 +128,8 @@ export default function Inventory() {
       measurementUnit: formData.get('measurementUnit') as string || undefined,
       unitsPerPackage: formData.get('unitsPerPackage') ? parseInt(formData.get('unitsPerPackage') as string, 10) || 1 : undefined,
       category: formData.get('category') as string,
+      // BF-01: an item with stock on hand stays a stock item
+      itemType: formData.get('itemType') === 'service' && !editingItem.quantityAtHand ? 'service' : (editingItem.quantityAtHand ? editingItem.itemType || 'stock' : 'stock'),
     };
 
     try {
@@ -156,10 +158,11 @@ export default function Inventory() {
       measurementUnit: formData.get('measurementUnit') as string || undefined,
       unitsPerPackage: formData.get('unitsPerPackage') ? parseInt(formData.get('unitsPerPackage') as string, 10) || 1 : undefined,
       category: formData.get('category') as string,
+      itemType: formData.get('itemType') === 'service' ? 'service' : 'stock',
       createdAt: new Date().toISOString()
     };
 
-    const openingQty = Number(formData.get('quantity')) || 0;
+    const openingQty = newItem.itemType === 'service' ? 0 : Number(formData.get('quantity')) || 0;
     try {
       const ref = await addDoc(collection(db, 'inventory'), newItem);
       setIsAdding(false);

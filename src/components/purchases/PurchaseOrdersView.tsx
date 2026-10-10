@@ -36,7 +36,7 @@ export const PurchaseOrdersView: React.FC = () => {
   const accounts = useLedgerStore(s => s.accounts || []);
   useLedgerCollections('bills', 'inventory', 'vendors');
   // J-08: an order line can be a stock item; the bill made from the order brings its units in
-  const stockItems = useLedgerStore(s => s.inventory) || [];
+  const stockItems = (useLedgerStore(s => s.inventory) || []).filter(i => i.itemType !== 'service');
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const role = useCurrentRole();
   const canEdit = role === 'owner' || role === 'accountant' || role === 'bookkeeper';

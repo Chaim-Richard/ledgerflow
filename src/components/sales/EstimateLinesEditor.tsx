@@ -43,7 +43,8 @@ export function EstimateLinesEditor({ lines, onChange, currency, customerId }: {
                 <input aria-label={`Item or description, line ${i + 1}`} list="estimate-line-items" value={line.description} className={input}
                   onChange={e => change(line.id, l => {
                     const next = setLineDescription(l, e.target.value, items, pricer);
-                    return next.itemId && next.itemId !== l.itemId ? { ...next, priceText: (next.rateCents / 100).toFixed(2) } : next;
+                    // a picked item (a service fills the price without linking) shows its price
+                    return (next.itemId && next.itemId !== l.itemId) || (!next.itemId && next.rateCents !== l.rateCents) ? { ...next, priceText: (next.rateCents / 100).toFixed(2) } : next;
                   })} />
                 {line.itemId && <span className="text-[10px] text-emerald-700 dark:text-emerald-400">Stock item: invoiced by quantity</span>}
               </td>

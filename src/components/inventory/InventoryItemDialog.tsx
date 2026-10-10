@@ -78,6 +78,15 @@ export default function InventoryItemDialog({ open, editingItem, categories, can
                     className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
+                <div className="space-y-2">
+                  <label htmlFor="inv-item-type" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Kind</label>
+                  <select id="inv-item-type" name="itemType" defaultValue={editingItem?.itemType || 'stock'} disabled={Boolean(editingItem?.quantityAtHand)}
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold">
+                    <option value="stock">Stock item (counted, costed when sold)</option>
+                    <option value="service">Service (no stock: fills the price on invoices)</option>
+                  </select>
+                  {Boolean(editingItem?.quantityAtHand) && <p className="text-[10px] text-[var(--muted)]">It has stock on hand, so it stays a stock item.</p>}
+                </div>
                 <datalist id="inv-category-options">
                   {categories.map(c => <option key={c} value={c} />)}
                 </datalist>
