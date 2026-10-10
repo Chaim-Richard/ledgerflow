@@ -62,6 +62,8 @@ export interface PdfOptions {
   paymentUrl?: string;
   /** P-11: the language of the printed words; the workspace's (branding.language) when left out */
   language?: DocumentLanguage;
+  /** P-12: the customer's own terms, printed in place of the workspace's */
+  terms?: string;
 }
 
 export interface PdfLayout {
@@ -177,7 +179,7 @@ export function layoutDocumentPdf(
     recipient: clean(doc.customerName || doc.vendorName || doc.contactName || words.client, 120),
     rows,
     summary,
-    terms: clean((branding.terms as Partial<Record<PdfDocumentType, string>> | undefined)?.[type], 2000) || undefined,
+    terms: clean(options.terms || (branding.terms as Partial<Record<PdfDocumentType, string>> | undefined)?.[type], 2000) || undefined,
     footer: clean(branding.footer, 300) || undefined,
     qrUrl: qrWanted ? options.paymentUrl : undefined,
     watermark: watermarkFor(type, doc.status),

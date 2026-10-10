@@ -1,6 +1,6 @@
 /**
  * Documents in the customer's language (P-11): the customer's own language, else the workspace's,
- * else English; a Hebrew document prints its title, labels, totals and page numbers in Hebrew; the
+ * else English (P-11), and their own terms in place of the workspace's (P-12); a Hebrew document prints its title, labels, totals and page numbers in Hebrew; the
  * PDF download picks the customer's language; Branding and the customer form keep the choice.
  */
 import './helpers/dom';
@@ -11,7 +11,7 @@ import React from 'react';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { documentLanguage } from '../lib/documentLanguage';
+import { contactTerms, documentLanguage } from '../lib/documentLanguage';
 import { BrandingSchema } from '../lib/branding';
 import { generateDocumentPdf, layoutDocumentPdf } from '../server/services/pdfService';
 import PartyModal, { type PartyFields } from '../components/common/PartyModal';
@@ -45,6 +45,14 @@ describe('The language', () => {
     assert.equal(layoutDocumentPdf('invoice', invoice, { name: 'Shop' }).meta[3][1], 'Net 30');
   });
 
+  test('a customer\'s own terms print in place of the workspace\'s; none: the workspace\'s', () => {
+    assert.equal(contactTerms({ metadata: { documentTerms: '  Net 60, by wire  ' } }), 'Net 60, by wire');
+    assert.equal(contactTerms({ metadata: { documentTerms: '   ' } }), undefined);
+    const branding = { terms: { invoice: 'Pay in 30 days' } };
+    assert.equal(layoutDocumentPdf('invoice', invoice, { branding }, { terms: 'Net 60, by wire' }).terms, 'Net 60, by wire');
+    assert.equal(layoutDocumentPdf('invoice', invoice, { branding }).terms, 'Pay in 30 days');
+  });
+
   test('the Hebrew PDF is drawn (no English page numbers on it)', async () => {
     const text = pdfText(await generateDocumentPdf('invoice', invoice, { name: 'Shop' }, { language: 'he' }));
     assert.match(text, /INV-1/);
@@ -66,7 +74,7 @@ describe('Downloading (database)', { skip: !process.env.LF_TEST_DATABASE_URL && 
     const { getDb } = await import('../server/db/firestore');
     db = getDb();
     await db.collection('workspaces').doc(ws).set({ uid: 'owner-1', name: 'Lang', currency: 'USD', members: ['owner-1'] });
-    await db.collection('customers').doc(`${ws}_he`).set({ workspaceId: ws, name: 'Hebrew Co', metadata: { documentLanguage: 'he' } });
+    await db.collection('customers').doc(`${ws}_he`).set({ workspaceId: ws, name: 'Hebrew Co', metadata: { documentLanguage: 'he', documentTerms: 'Special terms 42' } });
     await db.collection('customers').doc(`${ws}_en`).set({ workspaceId: ws, name: 'English Co' });
     for (const who of ['he', 'en']) await db.collection('invoices').doc(`${ws}_inv_${who}`).set({ ...invoice, workspaceId: ws, customerId: `${ws}_${who}`, number: `INV-${who.toUpperCase()}` });
     const app = express();
@@ -82,25 +90,36 @@ describe('Downloading (database)', { skip: !process.env.LF_TEST_DATABASE_URL && 
     await db.terminate();
   });
 
-  test('each customer\'s invoice prints in their language', async () => {
+  test('each customer\'s invoice prints in their language, with their own terms', async () => {
     const he = await download(`${ws}_inv_he`);
     assert.match(he, /INV-HE/);
+    assert.match(he, /Special terms 42/);
     assert.doesNotMatch(he, /Page 1 of 1/);
-    assert.match(await download(`${ws}_inv_en`), /Page 1 of 1/);
+    const en = await download(`${ws}_inv_en`);
+    assert.match(en, /Page 1 of 1/);
+    assert.doesNotMatch(en, /Special terms 42/);
   });
 });
 
 describe('On screen', () => {
   afterEach(() => cleanup());
 
-  test('the customer form keeps the language in the customer\'s details, with what was there', () => {
+  test('the customer form keeps the language and their terms in the customer\'s details, with what was there; cleared, they go', () => {
     setComponentWorkspace('owner');
     const saved: PartyFields[] = [];
     render(<PartyModal side="customer" isOpen initial={{ id: 'c1', name: 'Acme', metadata: { memo: 'keep' } }} onClose={() => {}} onSave={p => { saved.push(p); }} />);
     const chooser = screen.getByLabelText('Language of their documents') as HTMLSelectElement;
     assert.equal(chooser.value, '');
     fireEvent.change(chooser, { target: { value: 'he' } });
+    fireEvent.change(screen.getByLabelText(/Their own terms/), { target: { value: 'Net 60' } });
     fireEvent.submit(screen.getByLabelText('Customer Name').closest('form')!);
-    assert.deepEqual(saved[0].metadata, { memo: 'keep', documentLanguage: 'he' });
+    assert.deepEqual(saved[0].metadata, { memo: 'keep', documentLanguage: 'he', documentTerms: 'Net 60' });
+    cleanup();
+    render(<PartyModal side="customer" isOpen initial={{ id: 'c1', name: 'Acme', metadata: saved[0].metadata }} onClose={() => {}} onSave={p => { saved.push(p); }} />);
+    assert.equal((screen.getByLabelText(/Their own terms/) as HTMLTextAreaElement).value, 'Net 60');
+    fireEvent.change(screen.getByLabelText('Language of their documents'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText(/Their own terms/), { target: { value: '' } });
+    fireEvent.submit(screen.getByLabelText('Customer Name').closest('form')!);
+    assert.deepEqual(saved[1].metadata, { memo: 'keep' });
   });
 });

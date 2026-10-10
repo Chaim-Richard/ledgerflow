@@ -1875,7 +1875,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] P-09 Onboarding (= L-19 setup wizard)
 - [ ] P-10 Referrals
 - [x] P-11 Multi-language documents — **done 10 Oct**: the printed words on every document PDF (title, labels, totals, page numbers, watermark) in English or Hebrew: the workspace's choice in Settings → Branding, a customer's own in their details (kept in the customer's `metadata`, no migration). Downloads, zips, emailed invoices and statements use the customer's language (`src/lib/documentLanguage.ts`; `document-language.test.tsx`). Tax-invoice titles: FOR_YOU 37
-- [ ] P-12 Per-customer templates
+- [x] P-12 Per-customer templates — **done 10 Oct**: in a customer's details, their own terms printed on their documents in place of the workspace's (with their language, P-11), kept in the customer's `metadata` (no migration); downloads, zips and emailed invoices and statements use them (`contactTerms` in `src/lib/documentLanguage.ts`; `document-language.test.tsx`)
 - [x] P-13 Sales rep + commission — **done 10 Oct**: Settings → Sales reps keeps each rep's commission percentage and customers (one rep per customer; saved by the server on the workspace, owners and accountants, audit line; no migration). Reports → Sales commission: for a period, each payment from a rep's customers applied to an invoice, less its tax share, at the payment's rate, and the rep's commission and total. Commission follows what was paid; nothing is posted (`src/lib/salesReps.ts`; `sales-reps.test.tsx`)
 - [~] P-14 Cohort analysis — C-21 first-observed invoice activity preview complete; full revenue report remains AI #5 E-2.
 

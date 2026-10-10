@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DOCUMENT_LANGUAGES } from '../../lib/documentLanguage';
+import { DOCUMENT_LANGUAGES, MAX_CONTACT_TERMS } from '../../lib/documentLanguage';
 import { Plus, Trash2, X } from 'lucide-react';
 import { useDialog } from '../../hooks/useDialog';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -32,7 +32,7 @@ export interface PartyFields {
   tags?: string[];
   contacts?: ContactPerson[];
   balanceCents?: number;
-  /** P-11: `documentLanguage`, the language of the printed words on their documents */
+  /** P-11, P-12: `documentLanguage` and `documentTerms`, the language and their own terms on their documents */
   metadata?: Record<string, unknown>;
 }
 type Party = PartyFields;
@@ -60,6 +60,7 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
     category: initial?.category || 'Standard', currency: initial?.currency || '', tags: (initial?.tags || []).join(', '),
     deliveryMethod: preferredDelivery(initial),
     language: typeof initial?.metadata?.documentLanguage === 'string' ? initial.metadata.documentLanguage : '',
+    terms: typeof initial?.metadata?.documentTerms === 'string' ? initial.metadata.documentTerms : '',
     // each row keeps a key of its own while it is edited (cleanContacts drops it on save)
     contacts: (initial?.contacts || []).map(p => ({ ...p, rowKey: crypto.randomUUID() })) as Array<ContactPerson & { rowKey: string }>,
   });
@@ -91,7 +92,11 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
     // Email is what happened before anyone could choose, so it is only written when it was set before
     if (form.deliveryMethod !== 'email' || (editing && initial?.deliveryMethod)) party.deliveryMethod = form.deliveryMethod;
     if (tags.length || (editing && initial?.tags?.length)) party.tags = tags;
-    if (form.language || initial?.metadata?.documentLanguage) party.metadata = { ...(initial?.metadata || {}), documentLanguage: form.language || null };
+    if (form.language || form.terms.trim() || initial?.metadata?.documentLanguage || initial?.metadata?.documentTerms) {
+      // the whole `metadata` is saved, so a choice taken back is simply left out
+      const { documentLanguage: _l, documentTerms: _t, ...rest } = initial?.metadata || {};
+      party.metadata = { ...rest, ...(form.language ? { documentLanguage: form.language } : {}), ...(form.terms.trim() ? { documentTerms: form.terms.trim() } : {}) };
+    }
     if (contacts.length || (editing && initial?.contacts?.length)) party.contacts = contacts;
     onSave(editing ? { ...party, id: initial!.id } : party);
     if (!editing) setForm(blank());
@@ -170,6 +175,11 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
                 <option value="">The workspace's (Settings → Branding)</option>
                 {DOCUMENT_LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
               </select>
+            </Labelled>
+          </div>
+          <div>
+            <Labelled labelClassName={labelClass} label="Their own terms on their documents (in place of the workspace's)">
+              <textarea rows={2} maxLength={MAX_CONTACT_TERMS} value={form.terms} onChange={e => set({ terms: e.target.value })} placeholder="Leave empty for the workspace's terms (Settings → Branding)" className={field} />
             </Labelled>
           </div>
           <div>

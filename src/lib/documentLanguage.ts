@@ -2,7 +2,8 @@
  * Documents in the customer's language (P-11): the printed words on a PDF (its title, the labels,
  * the totals, the page numbers) in English or Hebrew. The workspace chooses its documents' language
  * (Settings → Branding, `branding.language`) and a customer can have their own (`documentLanguage`
- * in the customer's `metadata`). What people typed (names, lines, terms, footer) prints as typed;
+ * in the customer's `metadata`). A customer can also have their own terms printed on their documents
+ * in place of the workspace's (P-12, `documentTerms` in their `metadata`). What people typed (names, lines, terms, footer) prints as typed;
  * amounts and dates print the same in both.
  */
 export const DOCUMENT_LANGUAGES = [
@@ -18,6 +19,14 @@ export function documentLanguage(branding: { language?: unknown } | null | undef
   const own = (contact?.metadata as { documentLanguage?: unknown } | undefined)?.documentLanguage;
   if (isLanguage(own)) return own;
   return isLanguage(branding?.language) ? branding.language : 'en';
+}
+
+export const MAX_CONTACT_TERMS = 2000;
+
+/** The contact's own terms for their documents (P-12), or undefined to print the workspace's. */
+export function contactTerms(contact?: { metadata?: unknown } | null): string | undefined {
+  const own = (contact?.metadata as { documentTerms?: unknown } | undefined)?.documentTerms;
+  return typeof own === 'string' && own.trim() ? own.trim().slice(0, MAX_CONTACT_TERMS) : undefined;
 }
 
 export type DocumentKind = 'invoice' | 'estimate' | 'creditNote' | 'payment' | 'statement' | 'purchaseOrder' | 'bill' | 'vendorCredit';
