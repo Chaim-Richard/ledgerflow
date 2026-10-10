@@ -1876,7 +1876,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] P-10 Referrals
 - [ ] P-11 Multi-language documents
 - [ ] P-12 Per-customer templates
-- [ ] P-13 Sales rep + commission
+- [x] P-13 Sales rep + commission — **done 10 Oct**: Settings → Sales reps keeps each rep's commission percentage and customers (one rep per customer; saved by the server on the workspace, owners and accountants, audit line; no migration). Reports → Sales commission: for a period, each payment from a rep's customers applied to an invoice, less its tax share, at the payment's rate, and the rep's commission and total. Commission follows what was paid; nothing is posted (`src/lib/salesReps.ts`; `sales-reps.test.tsx`)
 - [~] P-14 Cohort analysis — C-21 first-observed invoice activity preview complete; full revenue report remains AI #5 E-2.
 
 # SECTION Q — CALCULATION ENGINES

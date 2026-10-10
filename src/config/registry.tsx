@@ -22,7 +22,7 @@ import {
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag, ArrowLeftRight
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText, Split, BadgePercent } from 'lucide-react';
+, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText, Split, BadgePercent, UserCheck } from 'lucide-react';
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
@@ -350,6 +350,7 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'AskBooksView': lazy(() => import('../components/reporting/AskBooksView')),
   'LabelProfitReportView': lazy(() => import('../components/reporting/LabelProfitReportView')),
   'GoodsNotBilledReportView': lazy(() => import('../components/reporting/GoodsNotBilledReportView')),
+  'CommissionReportView': lazy(() => import('../components/reporting/CommissionReportView')),
   'StockAgingReportView': lazy(() => import('../components/reporting/StockAgingReportView')),
   'ItemRegisterReportView': lazy(() => import('../components/reporting/ItemRegisterReportView')),
   'DepreciationLedgerReportView': lazy(() => import('../components/reporting/DepreciationLedgerReportView')),
@@ -433,6 +434,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'depreciation-ledger', label: { en: 'Asset Depreciation Ledger', he: 'כרטסת פחת נכסים' }, componentName: 'DepreciationLedgerReportView', icon: Layers },
   { id: 'item-register', label: { en: 'Item-wise Register', he: 'יומן לפי פריט' }, componentName: 'ItemRegisterReportView', icon: Package },
   { id: 'stock-aging', label: { en: 'Stock Aging', he: 'גיול מלאי' }, componentName: 'StockAgingReportView', icon: Package },
+  { id: 'commissions', label: { en: 'Sales Commission', he: 'עמלות מכירה' }, componentName: 'CommissionReportView', icon: UserCheck },
   { id: 'inventory-details', label: { en: 'Inventory Item Details', he: 'פירוט תנועות מלאי' }, componentName: 'InventoryDetailsReportView', icon: Package },
   { id: 'journal-sheet', label: { en: 'Journal Sheet', he: 'גיליון יומן' }, componentName: 'JournalSheetReportView', icon: BookOpen },
   { id: 'expense-by-category', label: { en: 'Expense by Category', he: 'הוצאות לפי קטגוריה' }, componentName: 'ExpenseByCategoryReportView', icon: PieChart },
@@ -472,6 +474,7 @@ export const SETTINGS_TABS_REGISTRY = withScreenHelp([
   { id: 'groups', label: { en: 'Groups of books', he: 'קבוצות ספרים' }, componentName: 'GroupsSettingsView', icon: FolderTree },
   { id: 'split-rules', label: { en: 'Split rules', he: 'כללי פיצול' }, componentName: 'AllocationRulesSettingsView', icon: Split },
   { id: 'price-lists', label: { en: 'Price lists', he: 'מחירונים' }, componentName: 'PriceListsSettingsView', icon: BadgePercent },
+  { id: 'sales-reps', label: { en: 'Sales reps', he: 'אנשי מכירות' }, componentName: 'SalesRepsSettingsView', icon: UserCheck },
   { id: 'currencies', label: { en: 'Currencies', he: 'מטבעות' }, componentName: 'CurrenciesSettingsView', icon: Coins },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
@@ -502,6 +505,7 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'GroupsSettingsView': lazy(() => import('../components/platform/settings/GroupsSettings')),
   'AllocationRulesSettingsView': lazy(() => import('../components/platform/settings/AllocationRulesSettings')),
   'PriceListsSettingsView': lazy(() => import('../components/platform/settings/PriceListsSettings')),
+  'SalesRepsSettingsView': lazy(() => import('../components/platform/settings/SalesRepsSettings')),
   'CurrenciesSettingsView': lazy(() => import('../components/platform/settings/CurrenciesSettings')),
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };

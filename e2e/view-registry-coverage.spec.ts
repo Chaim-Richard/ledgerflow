@@ -86,6 +86,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Ask the Books', componentName: 'AskBooksView' },
     { label: 'Profit by Label', componentName: 'LabelProfitReportView' },
     { label: 'Goods Not Yet Billed', componentName: 'GoodsNotBilledReportView' },
+    { label: 'Sales Commission', componentName: 'CommissionReportView' },
     { label: 'Stock Aging', componentName: 'StockAgingReportView' },
     { label: 'Item-wise Register', componentName: 'ItemRegisterReportView' },
     { label: 'Asset Depreciation Ledger', componentName: 'DepreciationLedgerReportView' },
@@ -121,6 +122,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Modules', componentName: 'ModulesSettingsView' },
     { label: 'Split rules', componentName: 'AllocationRulesSettingsView' },
     { label: 'Price lists', componentName: 'PriceListsSettingsView' },
+    { label: 'Sales reps', componentName: 'SalesRepsSettingsView' },
     { label: 'Currencies', componentName: 'CurrenciesSettingsView' },
     { label: 'Groups of books', componentName: 'GroupsSettingsView' },
   ];

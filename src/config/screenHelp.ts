@@ -88,6 +88,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     pnl: "Review posted income, cost of goods sold and expenses for the period. Compare periods and choose presentation columns. Incomplete loaded history makes the figures provisional.",
     "group-summary":
       "Choose one of your groups of books (Settings → Groups of books) and a period: each company's income, costs, profit, assets, liabilities and equity side by side, with the group's total when all keep their books in one currency (or translated into one). Each figure opens that company's own report. Balances and sales between the companies are taken out of the total; with a parent, the other owners' part is shown. Account by account lists each account across the companies, matched by code or name.",
+    commissions:
+      "Choose a period: for each sales rep, every payment their customers made against an invoice, the part before tax, and the rep's commission on it, with their total. Commission follows what was paid, not what was invoiced. Reps, their percentages and customers are kept in Settings → Sales reps; nothing is posted.",
     "goods-not-billed":
       "Goods delivered to customers that are not invoiced yet, and goods received on purchase orders that have no bill yet, at each order's price. The first is income still to invoice; the second, costs still to come.",
     "bank-clearance":
@@ -186,6 +188,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "The workspace's own currency and every other currency its invoices and bills use: how many, how many are still open, and the last rate posted and when. Each document keeps the rate it was posted at. The month-end revaluation of what is still open is here too.",
     "price-lists":
       "Prices for some customers, such as wholesale: a discount on every item, or a price of its own for some items, and the customers on the list (one list each). On their invoices and estimates, picking an item fills the list's price, which can still be changed on the line; nothing already posted changes. Owners and accountants keep them.",
+    "sales-reps":
+      "Each sales rep's commission percentage and the customers they look after, one rep per customer. Their commission on what those customers pay, before tax, is in the Sales commission report. Nothing is posted. Owners and accountants keep them.",
     "split-rules":
       "Saved ways to split a cost between accounts or labels, e.g. rent 60/40 between two properties. A rule is suggested on a bill whose vendor or description contains its text, says why, and only changes the lines on screen when applied; nothing is posted by a rule. Owners and accountants keep them.",
     modules:
