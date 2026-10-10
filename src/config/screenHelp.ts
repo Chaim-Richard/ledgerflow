@@ -90,6 +90,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Choose one of your groups of books (Settings → Groups of books) and a period: each company's income, costs, profit, assets, liabilities and equity side by side, with the group's total when all keep their books in one currency (or translated into one). Each figure opens that company's own report. Balances and sales between the companies are taken out of the total; with a parent, the other owners' part is shown. Account by account lists each account across the companies, matched by code or name.",
     "inventory-details":
       "For a period, each item's opening quantity and value, every movement (sold, bought, returned, adjusted, counted, moved) with its entry, and the closing quantity and value. Read from the stock history the server keeps with each change.",
+    "by-label":
+      "Choose a label (Property, Project, Location…) and a period: the income, costs and result of each of its values, and of the lines without one, account by account. Together the columns add up to the profit and loss of the period. Each figure opens the entries behind it.",
     "ask-books":
       "Ask about an account, a label and a period in words. The question is read into filters you can see and change; the figure is calculated from all posted entries in the workspace's currency, and the entries behind it are listed. It reads names and dates, not any sentence.",
     "balance-sheet":

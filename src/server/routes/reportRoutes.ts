@@ -19,6 +19,7 @@ import {
 import type { Bill, Budget, ChartAccount, CreditNote, Customer, Invoice, Payment, Transaction as LedgerTransaction, VendorCredit } from "../../types";
 import { agingBucket, daysOverdue, outstandingBaseCents } from '../../lib/aging';
 import { GroupReportError, groupSummary } from '../reports/groupReport';
+import { profitByLabel } from '../reports/byLabel';
 import { explainFigure } from '../reports/explain';
 import { stockMovesReady } from '../services/stockMoveService';
 import { itemDetails, type StockMove } from '../../lib/stockMoves';
@@ -223,6 +224,23 @@ reportRouter.get("/explain", async (req, res) => {
     if (/not a member|Unauthorized|FORBIDDEN/i.test(errorMessage(error))) return sendError(res, "Forbidden", 403);
     if (/not found/i.test(errorMessage(error))) return sendError(res, "Workspace not found", 404);
     sendError(res, "Could not explain this number", 500, errorMessage(error));
+  }
+});
+
+/** CB-25: the profit and loss split by the values of one label, adding back to the P&L (byLabel.ts). */
+reportRouter.get("/by-label", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+  const parsed = z.object({ workspaceId: z.string().min(1).max(200), dimensionId: z.string().min(1).max(100), startDate: day, endDate: day }).safeParse(req.query);
+  if (!parsed.success || parsed.data.startDate > parsed.data.endDate) return sendError(res, "Choose a label and the period (from before to)", 400);
+  const q = parsed.data;
+  try {
+    const { accounts, transactions } = await getReportContext(authReq, q.workspaceId, q.startDate, q.endDate);
+    res.json(profitByLabel(accounts, transactions, q.dimensionId, q.startDate, q.endDate));
+  } catch (error) {
+    if (/not a member|Unauthorized|FORBIDDEN/i.test(errorMessage(error))) return sendError(res, "Forbidden", 403);
+    if (/not.found/i.test(errorMessage(error))) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Could not make the report by label", 500, errorMessage(error));
   }
 });
 

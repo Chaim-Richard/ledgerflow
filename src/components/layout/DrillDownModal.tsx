@@ -21,6 +21,8 @@ export interface ExplainRequest {
   sign?: 1 | -1;
   /** how the report names the filter, e.g. "1 Mar – 31 Mar 2026" */
   label?: string;
+  /** CB-25: only lines with this value of a label ("Unassigned": lines without one) */
+  labelFilter?: { dimensionId: string; value: string };
 }
 
 interface ExplainLine { key: string; transactionId: string | null; date: string; description: string; payee?: string; accountName: string; amountCents: number; document: { type: 'invoice' | 'bill' | 'transaction'; id: string } | null; bankMatched: boolean; attachments: number; opening?: boolean }
@@ -32,7 +34,7 @@ function Explained({ request, formatCurrency, onOpen, onFail }: { request: Expla
   const openRecord = useUIStore(s => s.openRecord);
   const [data, setData] = React.useState<Explanation | null>(null);
   const sign = request.sign || 1;
-  const query = workspaceId ? new URLSearchParams({ workspaceId, accountIds: request.accountIds.join(','), ...(request.startDate ? { startDate: request.startDate } : {}), ...(request.endDate ? { endDate: request.endDate } : {}) }).toString() : '';
+  const query = workspaceId ? new URLSearchParams({ workspaceId, accountIds: request.accountIds.join(','), ...(request.startDate ? { startDate: request.startDate } : {}), ...(request.endDate ? { endDate: request.endDate } : {}), ...(request.labelFilter ? { labelDimension: request.labelFilter.dimensionId, labelValue: request.labelFilter.value } : {}) }).toString() : '';
   React.useEffect(() => {
     if (!query) return;
     let live = true;
