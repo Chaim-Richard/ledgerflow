@@ -1,6 +1,7 @@
 import { errorMessage, requestUser } from '../auth/requestUser';
 import express from 'express';
 import { getDb } from '../db/firestore';
+import type { Firestore } from '../db/firestore';
 
 export const PLAN_LIMITS: Record<string, { transactions: number; seats: number }> = {
   free: { transactions: 100, seats: 1 },
@@ -96,5 +97,33 @@ export function requirePlanCapacity(resource: 'transactions' | 'seats' | 'storag
       console.error('[requirePlanCapacity] Quota check error:', err);
       return res.status(500).json({ status: 'error', message: errorMessage(err) || 'Capacity verification failed' });
     }
+  };
+}
+
+export interface WorkspaceUsage {
+  plan: string;
+  /** billing is not enforced for this workspace (no limits apply) */
+  unlimited: boolean;
+  entries: { used: number; limit: number };
+  seats: { used: number; limit: number };
+  storageMb: { used: number; limit: number };
+}
+
+/**
+ * L-15: what a workspace uses against its plan, worked out the same way the limits above are checked:
+ * entries (all of them), people with access, and document storage.
+ */
+export async function workspaceUsage(db: Firestore, workspaceId: string): Promise<WorkspaceUsage | null> {
+  const ws = (await db.collection('workspaces').doc(workspaceId).get()).data();
+  if (!ws) return null;
+  const plan = String(ws.plan || 'free').toLowerCase();
+  const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+  const { rows } = await db.pool.query('select count(*)::int as n from public.transactions where workspace_id = $1', [workspaceId]);
+  return {
+    plan,
+    unlimited: ws.bypassBilling === true,
+    entries: { used: rows[0]?.n || 0, limit: ws.apiQuotaMonthlyLimitCents ? Math.floor(Number(ws.apiQuotaMonthlyLimitCents) / 100) : limits.transactions },
+    seats: { used: Array.isArray(ws.members) ? ws.members.length : 1, limit: Number(ws.concurrentUserLimit || ws.maxSeats) || limits.seats },
+    storageMb: { used: Number(ws.currentStorageMb) || 0, limit: Number(ws.maxStorageMb) || (plan === 'enterprise' ? 100000 : plan === 'pro' ? 25000 : plan === 'growth' ? 5000 : 500) },
   };
 }

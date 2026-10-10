@@ -39,6 +39,7 @@ import { RetentionError, updateRetention } from '../services/retentionService';
 import { completeSetup, recordOpeningBalances, SetupError } from '../services/openingBalanceService';
 import { ModuleSettingError, moduleRecords, setModules } from '../services/moduleService';
 import { AllocationRuleError, setAllocationRules } from '../services/allocationRuleService';
+import { workspaceUsage } from '../middleware/planCapacity';
 
 export const workspaceRouter = express.Router();
 
@@ -226,6 +227,17 @@ const importRecordsSchema = z.object({
 }).strict();
 const LEDGER_ADMIN_ROLES = ['owner', 'accountant'];
 const roleOf = (req: express.Request) => String((req as unknown as { userRole?: string }).userRole || '');
+
+/** L-15: what the workspace uses against its plan (entries, people, storage), for any member. */
+workspaceRouter.get('/:workspaceId/usage', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), async (req, res) => {
+  try {
+    const usage = await workspaceUsage(getDb(), String(req.params.workspaceId));
+    if (!usage) return sendError(res, 'Workspace not found', 404);
+    res.json({ status: 'success', usage });
+  } catch (err) {
+    sendError(res, 'Could not read the usage', 500, err instanceof Error ? errorMessage(err) : String(err));
+  }
+});
 
 /** Q-05: owners and accountants keep the workspace's split (cost allocation) rules; nothing is posted. */
 workspaceRouter.put('/:workspaceId/allocation-rules', requireWorkspaceRole(LEDGER_ADMIN_ROLES), async (req, res) => {

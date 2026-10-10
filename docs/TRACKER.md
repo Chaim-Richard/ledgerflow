@@ -1582,7 +1582,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] L-12 Structured logging: `src/server/utils/logger.ts` (JSON lines) used by server.ts (94661cd)
 - [x] L-13 `console.log` in `server.ts`: 0 (94661cd)
 - [x] L-14 Browser errors and screen crashes reported to errorLogs with a daily digest; server errors as JSON log lines
-- [ ] L-15 Per-workspace usage metrics
+- [x] L-15 Per-workspace usage metrics — **done 10 Oct (Claude)**: Settings → Billing starts with "Usage on the <plan> plan": entries, people with access and document storage, each against its limit, counted by the server the same way the limits are checked (`workspaceUsage` in `planCapacity.ts`, `GET /api/v1/workspaces/:id/usage` for any member); near the limit from 80%, and when reached it says what is refused (`UsagePanel.tsx`; tests `workspace-usage.test.tsx`).
 - [x] L-16 Health endpoint
 - [x] L-17 Status page: public /status (no sign-in) from GET /api/v1/public/status — app, database, daily job (recorded by the cron, late/failed = problems), sign-in, email, card payments, bank feeds (set up or not); 30 s cache (tested + browser test)
 - [x] L-18 i18n: finish or remove — **removed 7 Oct** (the owner's decision, docs/FOR_YOU.md #10: menus in English, Hebrew handled in the data): the language toggle was already gone; its leftovers are removed (the unused language setter, the Hebrew-only text in the currency converter and the onboarding steps). Hebrew screen names stay, because search uses them
