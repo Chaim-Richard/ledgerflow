@@ -40,11 +40,13 @@ interface BillModalProps {
 }
 
 /** A bill line as the dialog edits it: everything it carries (labels, J-08 stock item and units, BA-03 landed cost). */
-const copyLine = (s: NonNullable<Bill['splits']>[number]) => ({
+const copyLine = (s: NonNullable<Bill['splits']>[number], keepOrder = true) => ({
   id: crypto.randomUUID(), amountCents: s.amountCents, accountId: s.accountId || '', description: s.description || '',
   ...(s.dimensions ? { dimensions: { ...s.dimensions } } : {}),
   ...(s.itemId ? { itemId: s.itemId, ...(s.quantity !== undefined ? { quantity: s.quantity } : {}) } : {}),
   ...(s.landedCost ? { landedCost: true } : {}),
+  // CB-17: the order line it bills stays with the bill (not with a copy for a new bill)
+  ...(keepOrder && s.orderLine !== undefined ? { orderLine: s.orderLine, ...(s.orderQuantity !== undefined ? { orderQuantity: s.orderQuantity } : {}) } : {}),
 });
 
 export default function BillModal({ isOpen, onClose, onSave, vendors = [], accounts = [], initialBill }: BillModalProps) {
@@ -111,7 +113,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     setFilledFrom(initialBill);
     const { splits: initialSplits, ...fields } = initialBill;
     setBill(prev => ({ ...prev, ...fields }));
-    if (initialSplits?.length) setSplits(initialSplits.map(copyLine));
+    if (initialSplits?.length) setSplits(initialSplits.map(s => copyLine(s)));
   }
 
   const total = splits.reduce((sum, split) => sum + split.amountCents, 0);
@@ -140,7 +142,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   const splitsEmpty = splits.every(sp => !sp.amountCents);
   const repeatLast = () => {
     if (!lastForVendor?.splits) return;
-    setSplits(lastForVendor.splits.map(copyLine));
+    setSplits(lastForVendor.splits.map(s => copyLine(s, false)));
     setBill(prev => ({
       ...prev,
       ...(lastForVendor.taxCodeId ? { taxCodeId: lastForVendor.taxCodeId } : {}),

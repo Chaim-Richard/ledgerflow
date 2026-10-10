@@ -5,9 +5,11 @@
  *   the order's price.
  * - Received, not billed: for each purchase order without a bill, the units received, valued at the
  *   order's price.
- * Both are read from what the books already hold, so they agree with the order screens.
+ * - Billed, not received (CB-17): for each purchase order line, the units its bills say they bill
+ *   (bills made from the order keep the order line and units) above the units received.
+ * They are read from what the books already hold, so they agree with the order screens.
  */
-import type { Estimate, Invoice, PurchaseOrder, Transaction } from '../types';
+import type { Bill, Estimate, Invoice, PurchaseOrder, Transaction } from '../types';
 import { deliveredByLine } from './deliveries';
 import { isOrder, orderLineProgress, orderProgress } from './salesOrders';
 
@@ -64,6 +66,33 @@ export function receivedNotBilled(orders: PurchaseOrder[]): ReceivedNotBilled[] 
         orderId: po.id, number: po.poNumber, vendorName: po.vendorName || '', currency: po.currency,
         description: item.description, received: item.receivedQuantity || 0, valueCents: Math.round((item.receivedQuantity || 0) * item.unitPriceCents),
       })));
+}
+
+export interface BilledNotReceived {
+  orderId: string;
+  number: string;
+  vendorName: string;
+  currency?: string;
+  description: string;
+  billed: number;
+  received: number;
+  units: number;
+  valueCents: number;
+}
+
+const NOT_COUNTED_BILL = new Set(['void', 'draft', 'cancelled', 'rejected']);
+
+export function billedNotReceived(orders: PurchaseOrder[], bills: Bill[]): BilledNotReceived[] {
+  return orders.filter(po => po.status !== 'cancelled').flatMap(po => {
+    const mine = bills.filter(b => !NOT_COUNTED_BILL.has(String(b.status)) && ((b.metadata as { poId?: string } | undefined)?.poId === po.id || b.id === po.billId));
+    return po.items.flatMap((item, line) => {
+      const billed = round2(mine.flatMap(b => b.splits || []).filter(s => s.orderLine === line).reduce((s, x) => s + (Number(x.orderQuantity) || 0), 0));
+      const received = item.receivedQuantity || 0;
+      const units = round2(billed - received);
+      if (units <= 0) return [];
+      return [{ orderId: po.id, number: po.poNumber, vendorName: po.vendorName || '', currency: po.currency, description: item.description, billed, received, units, valueCents: Math.round(units * item.unitPriceCents) }];
+    });
+  });
 }
 
 /** Totals by currency (a row without one is in the workspace's). */

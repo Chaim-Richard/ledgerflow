@@ -99,6 +99,9 @@ export interface Bill {
     quantity?: number;
     /** BA-03: freight, duty… spread over the bill's stock items (posts to Inventory) */
     landedCost?: boolean;
+    /** CB-17: on a bill made from a purchase order, the order's line and the units this line bills */
+    orderLine?: number;
+    orderQuantity?: number;
   }>;
   projectId?: string;
   issueDate?: string;

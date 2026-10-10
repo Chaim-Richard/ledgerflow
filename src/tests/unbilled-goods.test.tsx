@@ -6,13 +6,19 @@ import './helpers/dom';
 import test, { afterEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import { deliveredNotInvoiced, receivedNotBilled, totalsByCurrency } from '../lib/unbilledGoods';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import BillModal, { type BillDraft } from '../components/purchases/BillModal';
+import { useAuthStore } from '../stores/useAuthStore';
+import { stubFetch } from './helpers/dom';
+import { makeChartAccount, makeVendor } from './fixtures';
+import type { Workspace } from '../types';
+import { billedNotReceived, deliveredNotInvoiced, receivedNotBilled, totalsByCurrency } from '../lib/unbilledGoods';
+import { billLinesFromOrder } from '../lib/purchaseOrders';
 import GoodsNotBilledReportView from '../components/reporting/GoodsNotBilledReportView';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import { getSupabase } from '../lib/db/client';
-import type { Estimate, Invoice, PurchaseOrder, Transaction } from '../types';
+import type { Bill, Estimate, Invoice, PurchaseOrder, Transaction } from '../types';
 
 const order = {
   id: 'o1', number: 'SO-7', customerName: 'Acme', orderedAt: '2026-09-01', status: 'accepted', amountCents: 100000,
@@ -42,6 +48,32 @@ describe('Goods not yet billed', () => {
     const rows = receivedNotBilled([po('1', {}, 4), po('2', { billId: 'b9', status: 'billed' }, 10), po('3', { status: 'cancelled' }, 2), po('4', {}, 0)]);
     assert.deepEqual(rows.map(r => [r.number, r.received, r.valueCents, r.currency]), [['PO-1', 4, 5000, 'EUR']]);
     assert.deepEqual(totalsByCurrency([...rows, { valueCents: 700 }], 'USD'), [{ currency: 'EUR', cents: 5000 }, { currency: 'USD', cents: 700 }]);
+  });
+
+  test('billed, not received: the units an order\'s bills bill above those received (CB-17)', () => {
+    const order = po('5', { billId: 'b5', status: 'billed', items: [
+      { id: 'x', description: 'Paper', quantity: 10, unitPriceCents: 1250, totalCents: 12500, receivedQuantity: 4 },
+      { id: 'y', description: 'Ink', quantity: 2, unitPriceCents: 3000, totalCents: 6000, receivedQuantity: 2 },
+    ] } as never, 0);
+    // billed before anything came in: the whole order, each line with its order line and units
+    const splits = billLinesFromOrder({ ...order, items: order.items.map(i => ({ ...i, receivedQuantity: 0 })) });
+    assert.deepEqual(splits.map(s => [s.orderLine, s.orderQuantity]), [[0, 10], [1, 2]]);
+    const bill = { id: 'b5', status: 'approved', metadata: { poId: 'p5' }, splits } as unknown as Bill;
+    assert.deepEqual(billedNotReceived([{ ...order, id: 'p5' }], [bill]).map(r => [r.description, r.billed, r.received, r.units, r.valueCents]), [['Paper', 10, 4, 6, 7500]]);
+    assert.deepEqual(billedNotReceived([{ ...order, id: 'p5' }], [{ ...bill, status: 'void' } as Bill]), [], 'a void bill bills nothing');
+  });
+
+  test('a bill made from an order keeps each line\'s order line and units when saved', async () => {
+    stubFetch(404);
+    useAuthStore.setState({ currentWorkspaceId: 'w1', workspaces: [{ id: 'w1', name: 'W', currency: 'USD' } as Workspace] });
+    useLedgerStore.setState({ bills: [], transactions: [], taxRates: [], inventory: [] });
+    const saved: BillDraft[] = [];
+    const initialBill = { vendorId: 'v1', vendorName: 'Supplier', date: '2026-09-10', dueDate: '2026-10-10', currency: 'USD', metadata: { poId: 'p5' },
+      splits: [{ amountCents: 12500, accountId: 'exp', description: 'PO-5: Paper', orderLine: 0, orderQuantity: 10 }] } as never;
+    render(<BillModal isOpen onClose={() => {}} onSave={b => { saved.push(b); }} vendors={[makeVendor({ id: 'v1', name: 'Supplier' })]} accounts={[makeChartAccount({ id: 'exp', name: 'Office', type: 'expense' })]} initialBill={initialBill} />);
+    await act(async () => { fireEvent.click(screen.getByText('Save & Close')); });
+    await waitFor(() => assert.equal(saved.length, 1));
+    assert.deepEqual(saved[0].splits?.map(s => [s.orderLine, s.orderQuantity]), [[0, 10]]);
   });
 
   test('on screen: both lists with their totals', async () => {

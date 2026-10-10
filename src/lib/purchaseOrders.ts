@@ -9,12 +9,14 @@ import { formatCurrency } from './utils';
 export function billLinesFromOrder(po: PurchaseOrder): NonNullable<Bill['splits']> {
   const anyReceived = po.items.some(i => (i.receivedQuantity || 0) > 0);
   return po.items
-    .map(item => {
+    .map((item, orderLine) => {
       const qty = anyReceived ? item.receivedQuantity || 0 : item.quantity;
       const detail = qty !== 1 ? ` (${qty} × ${formatCurrency(item.unitPriceCents, po.currency)})` : '';
       // J-08: a stock item's line brings the units received (or ordered) in with the bill
       return {
         amountCents: Math.round(qty * item.unitPriceCents), accountId: item.accountId || '', description: `${po.poNumber}: ${item.description}${detail}`,
+        // CB-17: which order line and how many units this bills (what is billed but not yet received)
+        orderLine, orderQuantity: qty,
         ...(item.itemId && qty > 0 ? { itemId: item.itemId, quantity: qty } : {}),
       };
     })
