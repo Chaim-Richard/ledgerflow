@@ -39,7 +39,8 @@ const norm = (s: string) => s.normalize('NFC').toLocaleLowerCase().replace(/[֑-
 const has = (hay: string, needle: string) => needle.length > 0 && ` ${hay} `.includes(` ${needle} `);
 
 const pad = (n: number) => String(n).padStart(2, '0');
-const lastDay = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+const leap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+const lastDay = (y: number, m: number) => (m === 2 ? (leap(y) ? 29 : 28) : [4, 6, 9, 11].includes(m) ? 30 : 31);
 const month = (y: number, m: number) => ({ startDate: `${y}-${pad(m)}-01`, endDate: `${y}-${pad(m)}-${pad(lastDay(y, m))}` });
 
 /** The period a question names, or this fiscal year so far (said as such). */
