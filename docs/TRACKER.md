@@ -1337,7 +1337,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] C-14 Screens ask for their data (`useLedgerCollections`); core data at workspace open, the rest on first use, kept live; guard test
 - [~] C-15 Date windows not needed at launch sizes: documents load once asked (caps 10,000 with the banner) and changes are fetched incrementally; true date windows come with server-side balances (L-123)
 - [x] C-16 Reference lists (templates, partners, patterns, dimensions) read once; tax rates and rules live but fetched incrementally
-- [~] C-17 Dev-only document-read counter (code present in 2 files — verify it reports)
+- [x] C-17 Dev-only document-read counter — **done 10 Oct (Claude)**: the old Firestore counter was gone with Firestore; now every list and document read in the browser (`fetchRows`, `getDoc` in `src/lib/db/firestore.ts`) counts its rows per table, shown in Settings → Developer when the developer switch is on, with "Start again" (`src/lib/db/readCounter.ts`, `ReadCounterPanel.tsx`; tests `read-counter.test.tsx`).
 - [x] C-18 Sharded counter service
 - [ ] C-19 `transactionsArchive` tier for closed years
 - [x] C-20 Seed 200k transactions, record load time + reads — **done 7 Oct**: `scripts/load-test.ts` seeds a workspace with 200,000 entries in a local database and measures the app's paged query for the newest 20,000, their size, the browser's report maths on them, and the balances worked out by the database; results in `docs/perf.md`. Found on the way: long lists were read 1,000 rows a request one after another (20 round trips for 20,000 entries); now the first page alone, then four at a time, with the id as the last sort key so rows with the same date never move between pages (`fetchRows` in `src/lib/db/firestore.ts`; tests `paged-reads.test.ts`)
@@ -1994,7 +1994,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] V-04 Rate hierarchy
 - [ ] V-05 Timesheet approval
 - [ ] V-06 Time → invoice line
-- [ ] V-07 Project budget vs actual
+- [x] V-07 Project budget vs actual — **covered (10 Oct)**: each project on Projects shows its budget (editable in place), what was spent and earned on it, and the share of the budget spent as a bar (`ProjectsView.tsx`, `Projects.tsx`). By label, Profit by Label (CB-25) gives each project's income and costs account by account.
 - [ ] V-08 WIP / POC
 - [ ] V-09 Milestone billing
 

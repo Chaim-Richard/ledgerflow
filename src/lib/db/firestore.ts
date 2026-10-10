@@ -12,6 +12,7 @@
  * Live updates use Supabase Realtime plus an immediate local refresh after our own writes.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { recordRead } from './readCounter';
 import { getSupabase } from './client';
 import { changedSince, latestUpdate, mergeChanges } from './liveQuery';
 import type { LiveRow } from './liveQuery';
@@ -402,13 +403,16 @@ async function fetchRows(q: Query): Promise<Row[]> {
   }
   // a row written while the pages were read can show up twice: keep the first
   const seen = new Set<string>();
-  return rows.filter(r => (seen.has(r.id) ? false : (seen.add(r.id), true))).slice(0, Number.isFinite(max) ? max : undefined);
+  const out = rows.filter(r => (seen.has(r.id) ? false : (seen.add(r.id), true))).slice(0, Number.isFinite(max) ? max : undefined);
+  recordRead(q.collectionId, rows.length);
+  return out;
 }
 
 export async function getDoc<T = DocumentData>(ref: DocumentReference<T>): Promise<DocumentSnapshot<T>> {
   const { data, error } = await ref.firestore.client()
     .from(ref.collectionId).select('id,data').eq('id', ref.id).maybeSingle();
   if (error) throw toFirestoreError(error, ref.path);
+  recordRead(ref.collectionId, data ? 1 : 0);
   return new DocumentSnapshot<T>(ref, data ? ((data as Row).data as T) : undefined);
 }
 

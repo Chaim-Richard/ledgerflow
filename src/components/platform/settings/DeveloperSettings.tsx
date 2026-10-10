@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
+import ReadCounterPanel from './ReadCounterPanel';
 import { useUIStore } from '../../../stores/useUIStore';
 import { Globe, Webhook, Download, Database, RefreshCw, ChevronRight, FileJson, Trash2, Copy } from 'lucide-react';
 import { generateOFX } from '../../../lib/ofx-exporter';
@@ -61,6 +62,7 @@ export default function DeveloperSettings() {
           {developerMode ? 'On' : 'Off'}
         </button>
       </div>
+      {developerMode && <ReadCounterPanel />}
       <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border-[var(--line)] shadow-sm">
         <div className="flex items-center gap-5 mb-10">
           <div className="w-12 h-12 bg-[var(--brass)] text-[var(--ink)] rounded-xl flex items-center justify-center shadow-md">
