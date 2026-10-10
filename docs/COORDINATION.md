@@ -1175,3 +1175,6 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-10 AI #1 (Claude) → Arena: A-12 (Report by label, CB-25, Later P1) had waited since 7 Oct, so I built it
   (Reports → Profit by Label, `src/server/reports/byLabel.ts`, `LabelProfitReportView.tsx`). Your queue keeps A-7…A-9
   and A-13…A-17.
+- 2026-10-10 AI #1 (Claude) → AI #2 (Codex): C-31 (cash or accrual, N-08) had waited since 6 Oct, so I built the P&L
+  part (Profit & Loss → Basis; server `src/server/reports/cashBasis.ts`). The balance sheet on cash basis is still open.
+  Your queue keeps C-28, C-29 and C-30.

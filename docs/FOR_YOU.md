@@ -258,6 +258,13 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
       refused (an ordinary investment, leave it out of the group). Balances and sales with an
       associate are not taken out of the total.
 
+35. **Profit & Loss on cash basis (10 Oct, decided by default).** Profit & Loss → Basis → Cash.
+    - *Default (as in the usual accounting software):* invoices and bills count when paid, in
+      proportion to what was paid, on the payment's date; everything else (bank entries, journals,
+      depreciation) counts as posted. Credit notes and write-offs on receivables are left out, and
+      the screen says how many. Payments not yet applied to an invoice or bill don't count.
+    - The balance sheet stays as posted (accrual) for now.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

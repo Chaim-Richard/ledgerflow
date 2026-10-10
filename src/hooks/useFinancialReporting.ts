@@ -99,8 +99,9 @@ export function useFinancialReporting() {
     }
   }, [currentWorkspaceId]);
 
-  const fetchPL = useCallback((startDate?: string, endDate?: string) =>
-    fetchReport<ServerPLData>('pl', { startDate, endDate }), [fetchReport]);
+  // N-08: basis 'cash' counts invoices and bills when paid (the server's cashBasis.ts)
+  const fetchPL = useCallback((startDate?: string, endDate?: string, basis?: 'cash') =>
+    fetchReport<ServerPLData>('pl', { startDate, endDate, basis }), [fetchReport]);
   const fetchBalanceSheet = useCallback((endDate?: string) =>
     fetchReport<ServerBalanceSheetData>('bs', { endDate }), [fetchReport]);
   const fetchTrialBalance = useCallback((asOfDate?: string) =>

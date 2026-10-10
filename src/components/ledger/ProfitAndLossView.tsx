@@ -4,6 +4,7 @@ import React, { useId, useState, useMemo, useEffect, useCallback } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn, getLocalDateISO, monthBoundsISO, formatCurrency } from '../../lib/utils';
+import { toast } from 'sonner';
 import { exportToExcel as exportToExcelHelper } from '../../lib/excelExport';
 import { isPostable, lineAmount, calculateNetIncome, isTransactionInDateRange } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
@@ -31,6 +32,10 @@ interface PLData {
   grossProfit: number;
   netIncome: number;
   orphanedLines?: Array<{ accountId: string; transactionId?: string; date?: string; amountCents: number }>;
+  /** N-08: present on the server's cash-basis answer */
+  basis?: 'cash';
+  /** entries on receivables or payables without cash, left out on cash basis */
+  leftOut?: number;
 }
 
 interface ProfitAndLossViewProps {
@@ -61,6 +66,8 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('balance');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[]; explain?: ExplainRequest } | null>(null);
+  // N-08: accrual (as posted) or cash (invoices and bills when paid, from the server only)
+  const [basis, setBasis] = useState<'accrual' | 'cash'>('accrual');
 
   const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
   const { fetchPL, loadingStates } = useFinancialReporting();
@@ -80,13 +87,14 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
 
   const loadServerReport = useCallback(async () => {
     try {
-      const res = await fetchPL(dateRange.start, dateRange.end);
+      const cashBasis = basis === 'cash' ? 'cash' as const : undefined;
+      const res = await fetchPL(dateRange.start, dateRange.end, cashBasis);
       if (res) {
         setServerData(res);
         setIsServerAuthoritative(true);
       }
       if (isComparative) {
-        const prevRes = await fetchPL(prevRange.start, prevRange.end);
+        const prevRes = await fetchPL(prevRange.start, prevRange.end, cashBasis);
         if (prevRes) {
           setServerPrevData(prevRes);
         }
@@ -94,7 +102,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
     } catch {
       setIsServerAuthoritative(false);
     }
-  }, [fetchPL, dateRange.start, dateRange.end, isComparative, prevRange]);
+  }, [fetchPL, dateRange.start, dateRange.end, isComparative, prevRange, basis]);
 
   useEffect(() => {
     loadServerReport();
@@ -243,8 +251,24 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
     return { data: currentPl, prevData: prevPl };
   }, [transactions, accounts, dateRange, isComparative, prevRange]);
 
-  const data = isServerAuthoritative && serverData ? serverData : localCalculation.data;
-  const prevData = isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;
+  // on cash basis only the server's figures are shown (never the accrual figures computed here)
+  const cashReady = basis === 'cash' && isServerAuthoritative && serverData?.basis === 'cash';
+  const emptyPl: PLData = { income: { total: 0, accounts: {} }, cogs: { total: 0, accounts: {} }, expense: { total: 0, accounts: {} }, grossProfit: 0, netIncome: 0 };
+  const data = basis === 'cash' ? (cashReady ? serverData! : emptyPl) : isServerAuthoritative && serverData ? serverData : localCalculation.data;
+  const prevData = basis === 'cash' ? (cashReady && serverPrevData?.basis === 'cash' ? serverPrevData : emptyPl) : isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;
+  const chooseBasis = (next: 'accrual' | 'cash') => {
+    setBasis(next);
+    setServerData(null);
+    setServerPrevData(null);
+    setIsServerAuthoritative(false);
+    // the period columns are read from the entries as posted: on cash basis the one total is shown
+    if (next === 'cash') { setColumnMode('total'); setShowPercent(false); setIsComparative(false); }
+  };
+  /** the entries behind a figure are those as posted, so on cash basis they are not listed */
+  const drill = (target: { accountName: string; transactions: Transaction[]; explain?: ExplainRequest }) => {
+    if (basis === 'cash') { toast.info('On cash basis the entries behind a figure are not listed yet: switch to accrual to see them'); return; }
+    setDrillDownTarget(target);
+  };
 
   // Account groups (K-14): the same P&L lines, a group's children indented under their parent with
   // a subtotal under them. A group starts open and no figure here is the report's own total.
@@ -282,7 +306,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
 
     const titleRows = [
       [labels.title],
-      [`Period: ${dateRange.start} to ${dateRange.end}`]
+      [`Period: ${dateRange.start} to ${dateRange.end}${basis === 'cash' ? ' (cash basis)' : ''}`]
     ];
 
     const rows: (Record<string, string | number | null> | string[])[] = [];
@@ -407,12 +431,19 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             </div>
           </div>
           <div className="hidden sm:block w-px h-8 bg-slate-200" />
+          <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-700">Basis
+            <select value={basis} onChange={e => chooseBasis(e.target.value === 'cash' ? 'cash' : 'accrual')} className="bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal">
+              <option value="accrual">Accrual (as posted)</option>
+              <option value="cash">Cash (when paid)</option>
+            </select>
+          </label>
           <label htmlFor={`${formId}-comparative`} aria-label="Comparative Mode" className="flex min-h-11 items-center gap-2 cursor-pointer group/toggle rounded focus-within:outline focus-within:outline-2 focus-within:outline-indigo-500">
             <input 
                id={`${formId}-comparative`}
                type="checkbox" 
                className="sr-only"
                checked={isComparative} 
+               disabled={basis === 'cash'}
                onChange={(e) => setIsComparative(e.target.checked)} 
             />
             <div className={cn(
@@ -534,15 +565,22 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
         </motion.div>
       </div>
 
-      <StatementColumns kind="pl" title={labels.title} accounts={accounts} transactions={transactions}
+      {basis === 'cash' && (
+        <p role="status" className="text-xs text-[var(--muted)]">
+          {cashReady
+            ? <>Cash basis: invoices count when they are paid and bills when they are paid, in proportion to what was paid, on the payment's date; other entries count as posted.{serverData?.leftOut ? ` ${serverData.leftOut} ${serverData.leftOut === 1 ? 'entry' : 'entries'} on receivables or payables without cash (credit notes, write-offs) ${serverData.leftOut === 1 ? 'is' : 'are'} left out.` : ''} Payments not yet applied to an invoice or bill are not counted.</>
+            : loadingStates.pl ? 'Calculating on cash basis…' : 'Cash basis is calculated by the server, and it could not be reached: try again in a moment.'}
+        </p>
+      )}
+      {basis === 'accrual' && <StatementColumns kind="pl" title={labels.title} accounts={accounts} transactions={transactions}
         startDate={dateRange.start} endDate={dateRange.end} compare={isComparative}
         compareStartDate={prevRange.start} compareEndDate={prevRange.end}
         mode={columnMode} onModeChange={setColumnMode} showPercent={showPercent} onPercentChange={setShowPercent}
         totalData={data} previousTotalData={prevData} totalAuthoritative={isServerAuthoritative}
         formatMoney={formatCurrency} sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}
-        onDrillDown={(accountName, selectedTransactions) => setDrillDownTarget({ accountName, transactions: selectedTransactions })} />
+        onDrillDown={(accountName, selectedTransactions) => drill({ accountName, transactions: selectedTransactions })} />}
       {/* Detail Core */}
-      {!columnsActive && (
+      {(!columnsActive || basis === 'cash') && (
       <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative">
         <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
         <div className="p-4 border-b border-slate-150 bg-[var(--ink)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -619,7 +657,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                         isTransactionInDateRange(t, dateRange.start, dateRange.end) && 
                         t.lines?.some(l => l.accountId === id || l.accountName === acc.name)
                       );
-                      setDrillDownTarget({
+                      drill({
                         accountName: acc.name,
                         transactions: matchedTxs,
                         // N-12: explained from the server, adding up to this figure
@@ -701,7 +739,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                         isTransactionInDateRange(t, dateRange.start, dateRange.end) && 
                         t.lines?.some(l => l.accountId === id || l.accountName === acc.name)
                       );
-                      setDrillDownTarget({
+                      drill({
                         accountName: acc.name,
                         transactions: matchedTxs,
                         // N-12: explained from the server, adding up to this figure

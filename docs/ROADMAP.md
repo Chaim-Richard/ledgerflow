@@ -275,7 +275,7 @@ These are the tracker IDs; `docs/TRACKER.md` has the detail.
 - **Rules:** Q-05 (done 9 Oct, on bills), K-39 and CA-13 (one rule family).
 - **The close cycle:** BD-04 and BD-06 (with R-11, which is done).
 - **Bank connections:** Z-28, Z-29 and Z-30 (Z-30 done 8 Oct; Z-28 and Z-29 done 10 Oct).
-- **Reports:** N-07 (done 10 Oct, via the group summary), N-08, N-10, CB-25 (done 10 Oct, Profit by Label) and DA-09 (done 8 Oct).
+- **Reports:** N-07 (done 10 Oct, via the group summary), N-08 (the P&L done 10 Oct), N-10, CB-25 (done 10 Oct, Profit by Label) and DA-09 (done 8 Oct).
 
 ### Later, P2 (platform growth)
 

@@ -20,6 +20,7 @@ import type { Bill, Budget, ChartAccount, CreditNote, Customer, Invoice, Payment
 import { agingBucket, daysOverdue, outstandingBaseCents } from '../../lib/aging';
 import { GroupReportError, groupSummary } from '../reports/groupReport';
 import { profitByLabel } from '../reports/byLabel';
+import { cashBasisEntries, type CashBasisPayment } from '../reports/cashBasis';
 import { explainFigure } from '../reports/explain';
 import { stockMovesReady } from '../services/stockMoveService';
 import { itemDetails, type StockMove } from '../../lib/stockMoves';
@@ -92,6 +93,16 @@ reportRouter.get(["/profit-and-loss", "/pl"], async (req, res) => {
   const cached = REPORT_CACHE.get(cacheKey);
   if (cached && cached.expiry > Date.now()) return res.json(cached.data);
   try {
+    // N-08: on cash basis, invoices and bills count when paid (cashBasis.ts): their postings may be
+    // older than the period, so the whole history up to the end is read, with the payments
+    if (req.query.basis === 'cash') {
+      const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, endDate || undefined);
+      const payments = (await getDb().collection('payments').where('workspaceId', '==', workspaceId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as CashBasisPayment);
+      const { entries, leftOut } = cashBasisEntries(accounts, transactions, payments);
+      const pl = { ...computeProfitAndLoss(accounts, entries, startDate, endDate), basis: 'cash', leftOut };
+      REPORT_CACHE.set(cacheKey, { data: pl, expiry: Date.now() + CACHE_TTL_MS });
+      return res.json(pl);
+    }
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, startDate, endDate);
     const pl = computeProfitAndLoss(accounts, transactions, startDate, endDate);
     REPORT_CACHE.set(cacheKey, { data: pl, expiry: Date.now() + CACHE_TTL_MS });

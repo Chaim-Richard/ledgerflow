@@ -177,6 +177,9 @@ describe('The main path, one simple business', { skip: !url && 'LF_TEST_DATABASE
     assert.equal(totals.d, totals.c, 'the trial balance balances');
     const pl = await report('/profit-and-loss?startDate=2026-05-01&endDate=2026-05-31');
     assert.deepEqual([pl.income.total, pl.expense.total, pl.netIncome], [100000, 25000, 75000]);
+    // N-08: on cash basis, the 600.00 the customer paid of the 1,000.00 invoice, and the bill paid in full
+    const cash = await report('/profit-and-loss?startDate=2026-05-01&endDate=2026-05-31&basis=cash');
+    assert.deepEqual([cash.income.total, cash.expense.total, cash.netIncome, cash.basis, cash.leftOut], [60000, 25000, 35000, 'cash', 0]);
     const bs = await report(`/balance-sheet?endDate=${MAY_END}`);
     assert.equal(bs.isBalanced, true);
     assert.equal(bs.totalAssets, 35000 + 40000, 'checking 350.00 and receivables 400.00');
