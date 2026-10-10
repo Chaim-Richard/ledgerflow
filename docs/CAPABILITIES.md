@@ -122,3 +122,4 @@ One row per capability, with one label each (DA-05). The README, Help, onboardin
 | 112 | Asset tags and printable QR labels | Available | `src/lib/assetTags.ts`, `AssetLabels.tsx`; `asset-tags.test.tsx` | QR code of the tag (not a 1D barcode) |
 | 113 | Item-wise sales and purchase registers | Available | `src/lib/itemRegister.ts`, `ItemRegisterReportView.tsx`; `item-register.test.tsx` | Stock item lines only |
 | 114 | Asset depreciation ledger | Available | `src/lib/depreciationLedger.ts`, `DepreciationLedgerReportView.tsx`; `depreciation-ledger.test.tsx` | Reads the loaded entries (the 10,000 cap applies) |
+| 115 | Bank clearance summary | Available | `src/lib/bankClearance.ts`, `BankClearanceReportView.tsx`; `bank-clearance.test.tsx` | Reads the loaded entries |
