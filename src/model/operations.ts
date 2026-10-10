@@ -110,6 +110,8 @@ export interface FixedAsset {
    * out of the construction-in-progress account; depreciation starts from that day). */
   costAdditions?: Array<{ date: string; amountCents: number; note?: string }>;
   placedInService?: { date: string; transactionId: string; cipAccountId: string; startedOn: string };
+  /** X-07: its tag (AT-0001…), printed on its label with a QR code (src/lib/assetTags.ts) */
+  assetTag?: string;
   /** X-05: where it is, and its moves (newest last) */
   location?: string;
   transfers?: AssetTransfer[];

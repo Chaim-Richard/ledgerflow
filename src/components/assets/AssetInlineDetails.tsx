@@ -5,7 +5,7 @@ import { assetRemindersDue, reminderText } from '../../lib/assetReminders';
 import { getLocalDateISO } from '../../lib/utils';
 import { MaintenanceLog } from './MaintenanceLog';
 
-const TEXT_FIELDS = [['name', 'Name'], ['location', 'Location'], ['category', 'Category']] as const;
+const TEXT_FIELDS = [['name', 'Name'], ['assetTag', 'Tag'], ['location', 'Location'], ['category', 'Category']] as const;
 /** X-08, X-06: the warranty, insurance and next service dates, reminded 30 days before (src/lib/assetReminders.ts). */
 const DATE_FIELDS = [['warrantyExpires', 'Warranty ends', 'Add warranty end'], ['insuranceRenews', 'Insurance renews', 'Add insurance renewal'], ['nextServiceDue', 'Next service', 'Add next service']] as const;
 

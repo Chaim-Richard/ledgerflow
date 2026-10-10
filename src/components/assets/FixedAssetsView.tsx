@@ -13,6 +13,8 @@ import { formatCurrency, formatDate, formatTzDate, parseAmountToCents } from '..
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import DisposeAssetDialog from './DisposeAssetDialog';
 import TransferAssetDialog from './TransferAssetDialog';
+import AssetLabels from './AssetLabels';
+import { assetMatches, missingTags } from '../../lib/assetTags';
 import { ConstructionActions } from './ConstructionActions';
 import DepreciationScheduleTable from './DepreciationScheduleTable';
 import { assetCandidates } from '../../lib/assetFromBill';
@@ -39,7 +41,7 @@ export const FixedAssetsView: React.FC = () => {
   const bills = useLedgerStore(s => s.bills);
   useLedgerCollections('assets', 'bills');
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
-  const { addEntity } = useEntityOperations();
+  const { addEntity, updateEntity } = useEntityOperations();
   const role = useCurrentRole();
   const canWrite = role !== 'viewer';
 
@@ -63,6 +65,21 @@ export const FixedAssetsView: React.FC = () => {
   }));
 
   const list = useMemo(() => assets || [], [assets]);
+  // X-07: asset tags, labels and finding an asset by what a label says
+  const [find, setFind] = useState('');
+  const [labels, setLabels] = useState(false);
+  const [tagging, setTagging] = useState(false);
+  const shown = list.filter(a => assetMatches(a, find));
+  const untagged = missingTags(list);
+  const giveTags = async () => {
+    setTagging(true);
+    try {
+      for (const t of untagged) await updateEntity('assets', t.id, { assetTag: t.assetTag });
+      toast.success(`${untagged.length} asset${untagged.length === 1 ? '' : 's'} tagged`);
+    } finally {
+      setTagging(false);
+    }
+  };
   const chart = useMemo(() => (accounts || []).filter(a => !a.isArchived), [accounts]);
   const assetAccounts = chart.filter(a => String(a.type).toLowerCase() === 'asset');
   const expenseAccounts = chart.filter(a => ['expense', 'cost_of_goods'].includes(String(a.type).toLowerCase()));
@@ -212,6 +229,19 @@ export const FixedAssetsView: React.FC = () => {
         ))}
       </div>
 
+      {list.length > 0 && (
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="text-xs font-semibold text-[var(--muted)]">Find (name, tag or place; a scanned label types its tag here)
+            <input type="search" value={find} onChange={e => setFind(e.target.value)} className={`${inputClass} block`} />
+          </label>
+          {canWrite && untagged.length > 0 && (
+            <button type="button" disabled={tagging} onClick={() => void giveTags()} className="px-3 py-2 text-xs font-semibold rounded-lg border border-[var(--line)] text-[var(--text)] disabled:opacity-50">Give tags ({untagged.length})</button>
+          )}
+          <button type="button" onClick={() => setLabels(true)} className="px-3 py-2 text-xs font-semibold rounded-lg border border-[var(--line)] text-[var(--text)]">Print labels</button>
+        </div>
+      )}
+      {labels && <AssetLabels assets={shown} company={workspace?.name || ''} onClose={() => setLabels(false)} />}
+
       {list.length === 0 ? (
         <div className="text-center py-12 rounded-lg border border-[var(--line)] bg-[var(--surface)]">
           <Building className="w-8 h-8 text-[var(--muted)] mx-auto mb-3" aria-hidden="true" />
@@ -235,7 +265,7 @@ export const FixedAssetsView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--line)] text-[var(--text)]">
-              {list.map(asset => (
+              {shown.map(asset => (
                 <React.Fragment key={asset.id}>
                 <tr>
                   <td className="py-3 px-4 font-semibold">
