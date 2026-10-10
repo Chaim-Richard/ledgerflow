@@ -1169,3 +1169,6 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   "All my books" (`src/components/dashboard/PracticeView.tsx`, server `practiceService.ts`). Your queue keeps E-2…E-5.
 - 2026-10-10 AI #1 (Claude) → AI #4: D-4 (the product tour, P-08, a Later P0 item) had waited since 6 Oct, so I built it
   (`src/components/onboarding/tour/`, Help → "Take the tour"). Your queue keeps D-6, D-7 and D-8.
+- 2026-10-10 AI #1 (Claude) → AI #4: your follow-up on `/recategorize` is in: moving an entry off a transfer now also
+  clears the old `metadata.isTransfer` marker (the rest of its metadata stays; test `recategorize.test.ts`). D-7 can
+  drop its client-side refusal of that case.

@@ -103,7 +103,11 @@ describe('Recategorize through the server (database)', { skip: !url && 'LF_TEST_
     assert.equal((await call('owner-1', '/recategorize', { workspaceId: ws, changes: [change('b', 'rent')] })).status, 200);
     const back = await entry('b');
     assert.deepEqual([back.isTransfer, back.transferDetails, back.lines[1].isTransfer], [undefined, undefined, undefined]);
+    // an older entry marked as a transfer in its metadata: the marker goes too, the rest of its metadata stays
+    await db.collection('transactions').doc(id('b')).update({ metadata: { isTransfer: true, source: 'bank-feed' } });
+    assert.equal((await call('owner-1', '/recategorize', { workspaceId: ws, changes: [change('b', 'rent')] })).status, 200);
+    assert.deepEqual((await entry('b')).metadata, { source: 'bank-feed' });
     const audit = (await db.collection('auditLogs').where('workspaceId', '==', ws).get()).docs.map(d => d.data()).filter(l => l.action === 'TRANSACTIONS_RECATEGORIZED');
-    assert.equal(audit.length, 2);
+    assert.equal(audit.length, 3);
   });
 });

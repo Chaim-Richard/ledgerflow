@@ -12,7 +12,8 @@ import { isUpdatedAtMismatch } from '../routes/transactions/helpers';
  * names its bank account; that must be a bank/cash account with a line on the entry. Every other
  * line is moved to the new account; amounts, currencies and rates, the bank lines and everything
  * else stay as they are. Moving to a bank account makes the entry a transfer (`isTransfer`,
- * `transferDetails`); moving to any other account clears both, on the entry and its lines.
+ * `transferDetails`); moving to any other account clears both, on the entry and its lines (and the old
+ * `metadata.isTransfer` marker).
  *
  * Writers only (owner, accountant, bookkeeper); the period lock applies to each entry's date; void
  * and certified entries are refused; `expectedUpdatedAt` catches an entry changed meanwhile. All
@@ -37,6 +38,13 @@ export function recategorizedLines(entry: Pick<Transaction, 'lines'>, bankAccoun
     return moved;
   });
 }
+
+/** The old transfer marker some entries carry in their metadata goes too, or reports still read a transfer. */
+const legacyMarkerCleared = (entry: Transaction) => {
+  if (!entry.metadata || !('isTransfer' in entry.metadata)) return {};
+  const { isTransfer: _old, ...metadata } = entry.metadata as Record<string, unknown>;
+  return { metadata };
+};
 
 export async function recategorize(db: Firestore, input: { workspaceId: string; uid: string; email?: string; changes: Recategorization[] }) {
   const { workspaceId, uid, changes } = input;
@@ -80,7 +88,7 @@ export async function recategorize(db: Firestore, input: { workspaceId: string; 
           lines: recategorizedLines(entry, bank.id, to, transfer),
           ...(transfer
             ? { isTransfer: true, transferDetails: amountOnBank < 0 ? { fromAccountId: bank.id, toAccountId: to.id } : { fromAccountId: to.id, toAccountId: bank.id } }
-            : { isTransfer: FieldValue.delete(), transferDetails: FieldValue.delete() }),
+            : { isTransfer: FieldValue.delete(), transferDetails: FieldValue.delete(), ...legacyMarkerCleared(entry) }),
           updatedAt: new Date().toISOString(),
         },
       });
