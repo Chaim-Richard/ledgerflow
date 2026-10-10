@@ -398,6 +398,8 @@ export interface PurchaseOrderItem {
   totalCents: number;
   receivedQuantity?: number;
   accountId?: string;
+  /** J-08: the stock item ordered; the bill made from the order brings its units in */
+  itemId?: string;
 }
 
 export interface PurchaseOrder {

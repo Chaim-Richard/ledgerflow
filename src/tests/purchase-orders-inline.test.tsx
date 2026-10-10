@@ -109,3 +109,17 @@ test('"Same as last order" fills a new order with the vendor\'s latest lines', a
   assert.equal((screen.getByLabelText('Item 1 unit price') as HTMLInputElement).value, '25.00');
   assert.equal(screen.queryByRole('button', { name: /Same as last order/ }), null, 'offered only while the lines are empty');
 });
+
+test('a line can be a stock item: its name and cost fill in, and the order keeps the item (J-08)', async () => {
+  markComponentCollectionsLoaded('inventory');
+  useLedgerStore.setState({ inventory: [{ id: 'desk', name: 'Desk', unitCostCents: 45000, quantityAtHand: 0 } as never] });
+  render(<PurchaseOrdersView />);
+  await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Lines of PO-2026-001' })));
+  fireEvent.click(screen.getByRole('button', { name: /New purchase order/ }));
+  fireEvent.change(screen.getByLabelText('Vendor'), { target: { value: 'ink' } });
+  fireEvent.change(screen.getByLabelText('Item 1 stock item'), { target: { value: 'desk' } });
+  assert.equal((screen.getByLabelText('Item 1 description') as HTMLInputElement).value, 'Desk');
+  assert.equal((screen.getByLabelText('Item 1 unit price') as HTMLInputElement).value, '450.00');
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Save purchase order/ })); });
+  await waitFor(() => assert.ok(writes.some(w => JSON.stringify(w.body).includes('"itemId":"desk"')), JSON.stringify(writes)));
+});
