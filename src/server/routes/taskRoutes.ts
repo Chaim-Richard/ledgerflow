@@ -4,6 +4,7 @@ import { createTask, listTasks, removeTask, setTaskStatus, TaskError } from '../
 import { myWatches, unwatch, watchRecord, WatchError } from '../services/watchService';
 import { linkEntries, LinkError, linksOf, unlinkEntries } from '../services/entryLinkService';
 import { changeTime, listTime, logTime, markInvoiced, moveTime, removeTime, setRates, TimeError } from '../services/timeService';
+import { defineStages, moveToStage, readStages, StageError } from '../services/stageService';
 
 /**
  * Tasks (BG-02, BG-03), mounted at /api/v1/workspaces/:workspaceId/tasks (workspaceRoutes.ts, every
@@ -70,6 +71,7 @@ export function mountTeamRoutes(workspaceRouter: express.Router, members: expres
   workspaceRouter.use('/:workspaceId/tasks', members, taskRouter);
   workspaceRouter.use('/:workspaceId/entry-links', members, entryLinkRouter);
   workspaceRouter.use('/:workspaceId/time', members, timeRouter);
+  workspaceRouter.use('/:workspaceId/stages', members, stageRouter);
 }
 
 /**
@@ -89,3 +91,13 @@ timeRouter.put('/rates', async (req, res) => { try { res.json({ status: 'success
 timeRouter.post('/', async (req, res) => { try { res.json({ status: 'success', entry: await logTime(getDb(), { ...actor(req), entry: req.body || {} }) }); } catch (err) { timeFail(res, err); } });
 timeRouter.patch('/:entryId', async (req, res) => { try { res.json({ status: 'success', entry: await changeTime(getDb(), { ...actor(req), entryId: String(req.params.entryId), entry: req.body || {} }) }); } catch (err) { timeFail(res, err); } });
 timeRouter.delete('/:entryId', async (req, res) => { try { await removeTime(getDb(), { ...actor(req), entryId: String(req.params.entryId) }); res.json({ status: 'success' }); } catch (err) { timeFail(res, err); } });
+
+/** Custom stages (BG-06, stageService.ts), at .../stages: GET ?kind=; PUT /sets {sets}; PUT / {kind, id, stage}. */
+export const stageRouter = express.Router({ mergeParams: true });
+const stageFail = (res: express.Response, err: unknown) => {
+  if (err instanceof StageError) return res.status(err.status).json({ status: 'error', message: err.message });
+  res.status(500).json({ status: 'error', message: 'The stage could not be saved', details: err instanceof Error ? err.message : String(err) });
+};
+stageRouter.get('/', async (req, res) => { try { res.json({ status: 'success', ...(await readStages(getDb(), { ...actor(req), kind: req.query.kind })) }); } catch (err) { stageFail(res, err); } });
+stageRouter.put('/sets', async (req, res) => { try { res.json({ status: 'success', ...(await defineStages(getDb(), { ...actor(req), sets: req.body?.sets })) }); } catch (err) { stageFail(res, err); } });
+stageRouter.put('/', async (req, res) => { try { res.json({ status: 'success', ...(await moveToStage(getDb(), { ...actor(req), kind: req.body?.kind, id: req.body?.id, stage: req.body?.stage })) }); } catch (err) { stageFail(res, err); } });

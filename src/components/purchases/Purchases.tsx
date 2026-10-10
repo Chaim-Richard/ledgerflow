@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { StageChip } from '../collaboration/StageChip';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import InlineEdit from '../ui/InlineEdit';
 import InlineAdd from '../ui/InlineAdd';
@@ -368,6 +369,7 @@ export default function Purchases() {
                           {b.status || 'Unpaid'}
                         </span>
                         {b.prepaidSchedule && <div className="mt-1 text-[10px] text-[var(--muted)]">{spreadProgress(b.prepaidSchedule, getLocalDateISO())}</div>}
+                        <StageChip kind="bill" id={b.id} label={`bill ${b.number || ''}`.trim()} />
                         {claimOf(b) && <div className="mt-1 text-[10px] text-[var(--muted)]">Expense claim{claimOf(b)?.state === 'rejected' ? ` · rejected${claimOf(b)?.reason ? `: ${claimOf(b)?.reason}` : ''}` : ''}</div>}
                       </td>
                       <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">

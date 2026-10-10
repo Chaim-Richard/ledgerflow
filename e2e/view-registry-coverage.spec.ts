@@ -123,6 +123,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Split rules', componentName: 'AllocationRulesSettingsView' },
     { label: 'Price lists', componentName: 'PriceListsSettingsView' },
     { label: 'Sales reps', componentName: 'SalesRepsSettingsView' },
+    { label: 'Stages', componentName: 'StagesSettingsView' },
     { label: 'Currencies', componentName: 'CurrenciesSettingsView' },
     { label: 'Groups of books', componentName: 'GroupsSettingsView' },
   ];

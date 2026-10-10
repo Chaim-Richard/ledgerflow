@@ -58,6 +58,7 @@ import { calculateNextOccurrence } from '../../lib/recurringEngine';
 
 import CustomerDetailView from './CustomerDetailView';
 import InvoiceApprovalFlag from './InvoiceApprovalFlag';
+import { StageChip } from '../collaboration/StageChip';
 import { approvalDecision, isApproverRole } from '../../lib/invoiceApproval';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
@@ -462,6 +463,7 @@ export default function Sales() {
                         </div>
                       )}
                       {inv.revenueSchedule && <div className="mt-1 text-center text-[10px] text-[var(--muted)]">{spreadProgress(inv.revenueSchedule, getLocalDateISO())}</div>}
+                      <StageChip kind="invoice" id={inv.id} label={`invoice ${inv.number || ''}`.trim()} />
                       <InvoiceApprovalFlag invoice={inv} settings={approvalSettings} currency={homeCurrency}
                         canDecide={canDecideApproval} onDecide={d => decideApproval(inv, d)} />
                       {inv.metadata?.cogsPending && (

@@ -479,6 +479,7 @@ export const SETTINGS_TABS_REGISTRY = withScreenHelp([
   { id: 'split-rules', label: { en: 'Split rules', he: 'כללי פיצול' }, componentName: 'AllocationRulesSettingsView', icon: Split },
   { id: 'price-lists', label: { en: 'Price lists', he: 'מחירונים' }, componentName: 'PriceListsSettingsView', icon: BadgePercent },
   { id: 'sales-reps', label: { en: 'Sales reps', he: 'אנשי מכירות' }, componentName: 'SalesRepsSettingsView', icon: UserCheck },
+  { id: 'stages', label: { en: 'Stages', he: 'שלבים' }, componentName: 'StagesSettingsView', icon: ListChecks },
   { id: 'currencies', label: { en: 'Currencies', he: 'מטבעות' }, componentName: 'CurrenciesSettingsView', icon: Coins },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
@@ -510,6 +511,7 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'AllocationRulesSettingsView': lazy(() => import('../components/platform/settings/AllocationRulesSettings')),
   'PriceListsSettingsView': lazy(() => import('../components/platform/settings/PriceListsSettings')),
   'SalesRepsSettingsView': lazy(() => import('../components/platform/settings/SalesRepsSettings')),
+  'StagesSettingsView': lazy(() => import('../components/platform/settings/StagesSettings')),
   'CurrenciesSettingsView': lazy(() => import('../components/platform/settings/CurrenciesSettings')),
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };

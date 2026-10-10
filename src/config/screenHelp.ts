@@ -194,6 +194,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Prices for some customers, such as wholesale: a discount on every item, or a price of its own for some items, and the customers on the list (one list each). On their invoices and estimates, picking an item fills the list's price, which can still be changed on the line; nothing already posted changes. Owners and accountants keep them.",
     "sales-reps":
       "Each sales rep's commission percentage and the customers they look after, one rep per customer. Their commission on what those customers pay, before tax, is in the Sales commission report. Nothing is posted. Owners and accountants keep them.",
+    stages:
+      "Your own steps for invoices and bills, one per line in order, such as bills: Received, Checked, Ready to pay. Each invoice and bill then shows its stage on its row, where owners, accountants and bookkeepers change it. A stage changes nothing in the books or in what is paid. Owners and accountants keep the stages.",
     "split-rules":
       "Saved ways to split a cost between accounts or labels, e.g. rent 60/40 between two properties. A rule is suggested on a bill whose vendor or description contains its text, says why, and only changes the lines on screen when applied; nothing is posted by a rule. Owners and accountants keep them.",
     modules:

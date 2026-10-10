@@ -135,3 +135,4 @@ One row per capability, with one label each (DA-05). The README, Help, onboardin
 | 125 | Direct deposit (NACHA) file for a pay run | Available | `src/lib/nacha.ts`, `DirectDepositDialog.tsx`; `direct-deposit.test.tsx` | US ACH only; upload to the bank by hand |
 | 126 | Links between entries | Available | `src/lib/entryLinks.ts`, `entryLinkService.ts`, `EntryLinks.tsx`; `entry-links.test.tsx` | Notes only; nothing posted |
 | 127 | Time tracking, approval and billing | Available | `src/lib/timeEntries.ts`, `timeService.ts`, `TimeView.tsx`; `time-tracking.test.tsx` | With a timer (V-02) |
+| 128 | Own stages for invoices and bills | Available | `src/lib/stages.ts`, `stageService.ts`, `StageChip.tsx`; `stages.test.tsx` | A team mark only; no posting |
