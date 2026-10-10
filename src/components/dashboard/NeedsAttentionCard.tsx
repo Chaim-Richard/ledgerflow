@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
+import { useRefreshTick } from '../../hooks/useRefreshTick';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
@@ -38,6 +39,8 @@ export default function NeedsAttentionCard() {
   // bank connections whose login expired; none connected, or the server can't say: no row
   const workspaceId = workspace?.id;
   const [banks, setBanks] = useState<BankStatus[]>([]);
+  // BC-04: read again when the tab comes back into view, and every 5 minutes
+  const tick = useRefreshTick();
   useEffect(() => {
     if (!workspaceId) return;
     let live = true;
@@ -47,7 +50,7 @@ export default function NeedsAttentionCard() {
       return readBankStatuses(await res.json());
     })().then(list => { if (live) setBanks(list); }).catch(() => { if (live) setBanks([]); });
     return () => { live = false; };
-  }, [workspaceId]);
+  }, [workspaceId, tick]);
   // last month's sign-offs, for the workspace's own close steps left (only when it has some)
   const hasSteps = Boolean(workspace?.closeSteps?.length);
   const [signOffs, setSignOffs] = useState<Record<string, unknown> | undefined>(undefined);
@@ -60,7 +63,7 @@ export default function NeedsAttentionCard() {
       .then(snap => { if (live) setSignOffs((snap.exists() ? snap.data()?.signOffs : null) || {}); })
       .catch(() => { if (live) setSignOffs(undefined); });
     return () => { live = false; };
-  }, [workspaceId, hasSteps]);
+  }, [workspaceId, hasSteps, tick]);
 
   const rows = useMemo(() => {
     if (!workspace) return [];
