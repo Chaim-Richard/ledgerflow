@@ -5,7 +5,7 @@ import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, 
 import { motion } from 'motion/react';
 import { cn, getLocalDateISO, monthBoundsISO, formatCurrency } from '../../lib/utils';
 import { toast } from 'sonner';
-import { exportToExcel as exportToExcelHelper } from '../../lib/excelExport';
+import { exportPlToExcel } from '../../lib/plExport';
 import { isPostable, lineAmount, calculateNetIncome, isTransactionInDateRange } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -293,72 +293,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   const incomeGroups = groupedSection(data?.income?.accounts, 'income');
   const expenseGroups = groupedSection(data?.expense?.accounts, 'expense');
 
-  const exportToExcel = async () => {
-    if (!data) return;
-    const isComp = isComparative;
-
-    const columns = [
-      { header: 'Account', key: 'account', width: 30 },
-      { header: 'Amount', key: 'amount', width: 20 },
-      { header: isComp ? 'Prior Amount' : '', key: 'priorAmount', width: 20 },
-      { header: isComp ? 'Variance %' : '', key: 'variance', width: 20 },
-    ];
-
-    const titleRows = [
-      [labels.title],
-      [`Period: ${dateRange.start} to ${dateRange.end}${basis === 'cash' ? ' (cash basis)' : ''}`]
-    ];
-
-    const rows: (Record<string, string | number | null> | string[])[] = [];
-
-    rows.push([labels.revenueStreams.toUpperCase()]);
-    Object.entries(data.income?.accounts || {}).forEach(([id, acc]: [string, PLAccount]) => {
-      const pBal = (prevData?.income?.accounts as Record<string, PLAccount>)[id]?.balance || 0;
-      const varPct = pBal !== 0 ? (((acc.balance || 0) - pBal) / Math.abs(pBal)) * 100 : 0;
-      rows.push({
-        account: acc.name,
-        amount: (acc.balance || 0) / 100,
-        priorAmount: isComp ? pBal / 100 : null,
-        variance: isComp && pBal !== 0 ? varPct.toFixed(2) + '%' : null
-      });
-    });
-    rows.push({
-      account: `Total ${labels.revenueStreams}`,
-      amount: (data.income?.total || 0) / 100,
-      priorAmount: isComp ? (prevData?.income?.total || 0) / 100 : null
-    });
-
-    rows.push([]);
-    rows.push([labels.expenseClusters.toUpperCase()]);
-    Object.entries(data.expense?.accounts || {}).forEach(([id, acc]: [string, PLAccount]) => {
-      const pBal = (prevData?.expense?.accounts as Record<string, PLAccount>)[id]?.balance || 0;
-      const varPct = pBal !== 0 ? (((acc.balance || 0) - pBal) / Math.abs(pBal)) * 100 : 0;
-      rows.push({
-        account: acc.name,
-        amount: (acc.balance || 0) / 100,
-        priorAmount: isComp ? pBal / 100 : null,
-        variance: isComp && pBal !== 0 ? varPct.toFixed(2) + '%' : null
-      });
-    });
-    rows.push({
-      account: `Total ${labels.expenseClusters}`,
-      amount: (data.expense?.total || 0) / 100,
-      priorAmount: isComp ? (prevData?.expense?.total || 0) / 100 : null
-    });
-
-    rows.push([]);
-    rows.push({
-      account: labels.netLabel.toUpperCase(),
-      amount: (data.netIncome || 0) / 100,
-      priorAmount: isComp ? (prevData?.netIncome || 0) / 100 : null
-    });
-
-    await exportToExcelHelper(columns, rows, {
-      sheetName: 'Statement',
-      fileName: `${labels.exportName}_${dateRange.start}_${dateRange.end}.xlsx`,
-      titleRows
-    });
-  };
+  const exportToExcel = () => exportPlToExcel({ data, prevData, isComparative, labels, start: dateRange.start, end: dateRange.end, cash: basis === 'cash' });
 
   if (!data) return null;
 

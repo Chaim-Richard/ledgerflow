@@ -38,8 +38,7 @@ import { retentionFor, RetentionSettingsSchema, scheduledPurgeAt as purgeDate } 
 import { RetentionError, updateRetention } from '../services/retentionService';
 import { completeSetup, recordOpeningBalances, SetupError } from '../services/openingBalanceService';
 import { ModuleSettingError, moduleRecords, setModules } from '../services/moduleService';
-import { AllocationRuleError, setAllocationRules } from '../services/allocationRuleService';
-import { PriceListError, setPriceLists } from '../services/priceListService';
+import { allocationRuleRouter, priceListRouter } from './savedListRoutes';
 import { workspaceUsage } from '../middleware/planCapacity';
 
 export const workspaceRouter = express.Router();
@@ -240,27 +239,9 @@ workspaceRouter.get('/:workspaceId/usage', requireWorkspaceRole(['owner', 'accou
   }
 });
 
-/** Q-05: owners and accountants keep the workspace's split (cost allocation) rules; nothing is posted. */
-workspaceRouter.put('/:workspaceId/allocation-rules', requireWorkspaceRole(LEDGER_ADMIN_ROLES), async (req, res) => {
-  const user = (req as AuthenticatedRequest).user;
-  try {
-    res.json({ status: 'success', ...(await setAllocationRules(getDb(), { workspaceId: String(req.params.workspaceId), uid: user.uid, email: user.email, rules: req.body?.rules })) });
-  } catch (err) {
-    if (err instanceof AllocationRuleError) return sendError(res, err.message, err.status);
-    sendError(res, 'Could not save the split rules', 500, err instanceof Error ? errorMessage(err) : String(err));
-  }
-});
-
-/** M-11: the workspace's price lists (owners and accountants; priceListService.ts). */
-workspaceRouter.put('/:workspaceId/price-lists', requireWorkspaceRole(LEDGER_ADMIN_ROLES), async (req, res) => {
-  const user = (req as AuthenticatedRequest).user;
-  try {
-    res.json({ status: 'success', ...(await setPriceLists(getDb(), { workspaceId: String(req.params.workspaceId), uid: user.uid, email: user.email, lists: req.body?.lists })) });
-  } catch (err) {
-    if (err instanceof PriceListError) return sendError(res, err.message, err.status);
-    sendError(res, 'Could not save the price lists', 500, err instanceof Error ? errorMessage(err) : String(err));
-  }
-});
+// Q-05 split rules and M-11 price lists: owners and accountants (savedListRoutes.ts)
+workspaceRouter.use('/:workspaceId/allocation-rules', requireWorkspaceRole(LEDGER_ADMIN_ROLES), allocationRuleRouter);
+workspaceRouter.use('/:workspaceId/price-lists', requireWorkspaceRole(LEDGER_ADMIN_ROLES), priceListRouter);
 
 /** BB-07: how many records each module holds (so a module turned off can say it still keeps them). */
 workspaceRouter.get('/:workspaceId/modules/records', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), async (req, res) => {
