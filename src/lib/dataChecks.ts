@@ -43,6 +43,8 @@ export interface CheckContext {
   dimensions?: DimensionDefinition[];
   /** The stock-moves ledger (W-02); the nightly check reads it, the browser does not load it. */
   stockMoves?: StockMove[];
+  /** Payment records (CB-23: each has its entry in the ledger). */
+  payments?: Array<{ id: string; number?: string; status?: string; amountCents?: number; exchangeRate?: number; paymentExchangeRate?: number; paymentDate?: string; date?: string; contactName?: string; entityName?: string }>;
 }
 
 export interface DataCheck {
@@ -278,6 +280,62 @@ export const DATA_CHECKS: DataCheck[] = [
           description: `The oldest is from ${oldest.date.slice(0, 10)}: ${oldest.description || 'no description'}. The bank balance and the books can't agree until they are matched.`,
           record: { type: 'bankLine' as const, id: oldest.id },
         };
+      });
+    },
+  },
+  {
+    id: 'cleared-before-issued',
+    label: 'Entries the bank cleared before they were made (CB-21)',
+    remedy: 'Check the entry\'s date, or whether its statement line belongs to another entry: undo the match in Reconcile and match it again.',
+    run: ({ bankLines, transactions }) => {
+      const byId = new Map(transactions.filter(isPostable).map(t => [t.id, t]));
+      return (bankLines || []).flatMap(line => {
+        const tx = line.status === 'matched' && line.matchedTransactionId ? byId.get(line.matchedTransactionId) : undefined;
+        const cleared = String(line.date || '').slice(0, 10);
+        const made = String(tx?.date || '').slice(0, 10);
+        // a few days' difference is how banks and books date the same payment
+        if (!tx || !cleared || !made || shiftDays(made, -3) <= cleared) return [];
+        return [{
+          id: `cleared-early-${line.id}`, checkId: 'cleared-before-issued', severity: 'medium' as const,
+          title: `${tx.description || 'An entry'} (${made}) was cleared by a statement line of ${cleared}`,
+          description: 'A cheque or payment can\'t clear before it is made: the entry\'s date is wrong, or the statement line was matched to the wrong entry.',
+          record: { type: 'transaction' as const, id: tx.id },
+        }];
+      });
+    },
+  },
+  {
+    id: 'payment-ledger',
+    label: 'Payments without their entry, or with another amount (CB-23)',
+    remedy: 'Open the payment: void it and record it again, or undo the entry that cancelled its posting.',
+    run: ({ payments, transactions }) => {
+      if (!payments) return [];
+      const reversed = new Set(transactions.filter(t => t.metadata?.isReversal || t.metadata?.reversesTxId).map(t => String(t.metadata?.reversesTxId || t.metadata?.reversedTransactionId || '')));
+      const posting = new Map<string, Transaction>();
+      for (const t of transactions) {
+        // older postings carry the payment id without a type; a later application of it is not its posting
+        if (t.metadata?.paymentId && t.metadata?.type !== 'payment-application' && isPostable(t) && !t.reversalEventId && !reversed.has(t.id)) posting.set(String(t.metadata.paymentId), t);
+      }
+      // only payments inside the entries read (the browser reads the newest ones), so none looks missing for that
+      const oldest = transactions.reduce((min, t) => (t.date && String(t.date).slice(0, 10) < min ? String(t.date).slice(0, 10) : min), '9999-12-31');
+      return payments.filter(p => p.status !== 'void' && (p.amountCents || 0) > 0 && String(p.paymentDate || p.date || '').slice(0, 10) >= oldest).flatMap(p => {
+        const name = p.number || p.id;
+        const who = p.contactName || p.entityName || '';
+        const entry = posting.get(p.id);
+        if (!entry) {
+          return [{ id: `payment-ledger-${p.id}`, checkId: 'payment-ledger', severity: 'high' as const,
+            title: `Payment ${name}${who ? ` (${who})` : ''} has no entry in the ledger`,
+            description: 'The payment is recorded but its money is not in the books, so the bank and the receivables or payables disagree with it.' }];
+        }
+        // a payment at another day's rate books the difference as exchange gain or loss: not compared
+        if (p.paymentExchangeRate) return [];
+        const expected = Math.round((p.amountCents || 0) * (p.exchangeRate && p.exchangeRate > 0 ? p.exchangeRate : 1));
+        const booked = Math.round(Number(entry.totalAmountCents) || 0);
+        if (booked === expected) return [];
+        return [{ id: `payment-ledger-${p.id}`, checkId: 'payment-ledger', severity: 'high' as const,
+          title: `Payment ${name}${who ? ` (${who})` : ''} is ${formatCurrency(expected)}, its entry ${formatCurrency(booked)}`,
+          description: 'The payment record and its entry in the ledger say different amounts.',
+          record: { type: 'transaction' as const, id: entry.id } }];
       });
     },
   },

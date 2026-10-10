@@ -24,6 +24,8 @@ const SOURCES = {
   recurring: { table: 'recurring', cap: 1000 },
   inventory: { table: 'inventory', cap: 5000 },
   bankLines: { table: 'bankLines', cap: 10000 },
+  // CB-23: each payment has its entry
+  payments: { table: 'payments', cap: 20000 },
   reconciliations: { table: 'reconciliations', cap: 1000 },
   // W-02: the stock history, checked against each item's quantity
   stockMoves: { table: 'stockMoves', cap: 50000 },

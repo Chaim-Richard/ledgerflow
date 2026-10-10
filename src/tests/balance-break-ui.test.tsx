@@ -72,7 +72,7 @@ describe('Since when the books don\'t balance (Data Health)', () => {
   });
 
   test('the panel is part of Data Health, above the findings', () => {
-    markComponentCollectionsLoaded('bankLines', 'bills', 'inventory', 'invoices', 'recurring');
+    markComponentCollectionsLoaded('bankLines', 'bills', 'inventory', 'invoices', 'recurring', 'payments');
     useLedgerStore.setState({
       transactions: [entry('t1', '2026-03-02', 'Cash sale entered short', [['bank', 50000], ['sales', -40000]])],
     });

@@ -41,7 +41,8 @@ export default function DataHealthView() {
   const recurring = useLedgerStore(s => s.recurring);
   const inventory = useLedgerStore(s => s.inventory);
   const bankLines = useLedgerStore(s => s.bankLines);
-  const { loading } = useLedgerCollections('bankLines', 'bills', 'inventory', 'invoices', 'recurring');
+  const payments = useLedgerStore(s => s.payments);
+  const { loading } = useLedgerCollections('bankLines', 'bills', 'inventory', 'invoices', 'recurring', 'payments');
   const baseCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const dimensions = useAuthStore(s => s.getCurrentWorkspace()?.dimensions);
   const nightly = useAuthStore(s => s.getCurrentWorkspace()?.ledgerHealth);
@@ -50,8 +51,8 @@ export default function DataHealthView() {
 
   const findings = useMemo(() => runDataChecks({
     transactions: transactions || [], accounts: accounts || [], invoices: invoices || [], bills: bills || [],
-    recurring: recurring || [], inventory: inventory || [], bankLines: bankLines || [], today: getLocalDateISO(), baseCurrency, dimensions,
-  }), [transactions, accounts, invoices, bills, recurring, inventory, bankLines, baseCurrency, dimensions]);
+    recurring: recurring || [], inventory: inventory || [], bankLines: bankLines || [], payments: payments || [], today: getLocalDateISO(), baseCurrency, dimensions,
+  }), [transactions, accounts, invoices, bills, recurring, inventory, bankLines, payments, baseCurrency, dimensions]);
 
   const byCheck = useMemo(() => DATA_CHECKS.map(check => ({ check, findings: findings.filter(f => f.checkId === check.id) })), [findings]);
   const shown = byCheck.filter(g => g.findings.length > 0 && (only === 'all' || g.check.id === only));
