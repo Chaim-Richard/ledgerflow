@@ -39,6 +39,14 @@ interface BillModalProps {
   initialBill?: Partial<Bill>;
 }
 
+/** A bill line as the dialog edits it: everything it carries (labels, J-08 stock item and units, BA-03 landed cost). */
+const copyLine = (s: NonNullable<Bill['splits']>[number]) => ({
+  id: crypto.randomUUID(), amountCents: s.amountCents, accountId: s.accountId || '', description: s.description || '',
+  ...(s.dimensions ? { dimensions: { ...s.dimensions } } : {}),
+  ...(s.itemId ? { itemId: s.itemId, ...(s.quantity !== undefined ? { quantity: s.quantity } : {}) } : {}),
+  ...(s.landedCost ? { landedCost: true } : {}),
+});
+
 export default function BillModal({ isOpen, onClose, onSave, vendors = [], accounts = [], initialBill }: BillModalProps) {
   // Ensure we have arrays even if props were passed as null
   // archived contacts aren't offered for new documents; one already on this document stays (I-22)
@@ -103,7 +111,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     setFilledFrom(initialBill);
     const { splits: initialSplits, ...fields } = initialBill;
     setBill(prev => ({ ...prev, ...fields }));
-    if (initialSplits?.length) setSplits(initialSplits.map(s => ({ id: crypto.randomUUID(), amountCents: s.amountCents, accountId: s.accountId || '', description: s.description || '', ...(s.dimensions ? { dimensions: { ...s.dimensions } } : {}) })));
+    if (initialSplits?.length) setSplits(initialSplits.map(copyLine));
   }
 
   const total = splits.reduce((sum, split) => sum + split.amountCents, 0);
@@ -131,7 +139,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   const splitsEmpty = splits.every(sp => !sp.amountCents);
   const repeatLast = () => {
     if (!lastForVendor?.splits) return;
-    setSplits(lastForVendor.splits.map(sp => ({ id: crypto.randomUUID(), amountCents: sp.amountCents, accountId: sp.accountId || '', description: sp.description || '', ...(sp.dimensions ? { dimensions: { ...sp.dimensions } } : {}) })));
+    setSplits(lastForVendor.splits.map(copyLine));
     setBill(prev => ({
       ...prev,
       ...(lastForVendor.taxCodeId ? { taxCodeId: lastForVendor.taxCodeId } : {}),

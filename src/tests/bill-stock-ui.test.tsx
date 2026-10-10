@@ -56,3 +56,15 @@ test('with a stock item on the bill, another line can be spread over the items (
   await waitFor(() => assert.equal(saved.length, 1));
   assert.deepEqual(saved[0].splits?.map(s => [s.itemId, s.landedCost, s.amountCents]), [['chair', undefined, 3600], [undefined, true, 400]]);
 });
+
+test('a bill opened again keeps its item lines and landed cost (so saving it does not lose the stock)', async () => {
+  const saved: BillDraft[] = [];
+  render(<BillModal isOpen onClose={() => {}} onSave={b => { saved.push(b); }} vendors={[makeVendor({ id: 'v1', name: 'Furniture Co' })]} accounts={[makeChartAccount({ id: 'exp', name: 'Purchases', type: 'expense' })]}
+    initialBill={{ id: 'b1', vendorId: 'v1', vendorName: 'Furniture Co', status: 'pending', amountCents: 4000, date: '2026-04-01', dueDate: '2026-05-01',
+      splits: [{ amountCents: 3600, accountId: 'exp', description: 'Chairs', itemId: 'chair', quantity: 3 }, { amountCents: 400, accountId: 'exp', description: 'Freight', landedCost: true }] }} />);
+  assert.equal((screen.getByLabelText('Units on line 1') as HTMLInputElement).value, '3');
+  assert.equal((screen.getByLabelText('Spread line 2 over the items') as HTMLInputElement).checked, true);
+  await act(async () => { fireEvent.click(screen.getByText('Save & Close')); });
+  await waitFor(() => assert.equal(saved.length, 1));
+  assert.deepEqual(saved[0].splits?.map(s => [s.itemId, s.quantity, s.landedCost]), [['chair', 3, undefined], [undefined, undefined, true]]);
+});
