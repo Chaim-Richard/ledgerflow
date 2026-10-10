@@ -104,3 +104,49 @@ export function transferProblem(input: { quantity: number; from: string; to: str
   if (input.quantity > there) return `Only ${there} ${input.from ? `at ${input.from}` : 'without a location'}`;
   return null;
 }
+
+/** J-10: one item's movements in a period, between its opening and closing quantity and value. */
+export interface ItemDetails {
+  itemId: string;
+  itemName: string;
+  opening: { quantity: number; valueCents: number };
+  moves: Array<Pick<StockMove, 'date' | 'kind' | 'quantity' | 'quantityAfter' | 'valueCents' | 'unitCostCents' | 'transactionId' | 'documentType' | 'documentId' | 'locationId'> & { key: string }>;
+  received: number;
+  issued: number;
+  closing: { quantity: number; valueCents: number };
+}
+
+/**
+ * Inventory item details (J-10) from the stock-moves ledger: for each item with stock or a movement
+ * in the period, its opening quantity and value (everything before the start), every movement in
+ * the period in the order it happened, what came in and went out, and its closing quantity and value.
+ * The closing quantity is the last movement's quantity after, so it agrees with Stock history.
+ */
+export function itemDetails(moves: StockMove[], startDate: string, endDate: string): ItemDetails[] {
+  const byItem = new Map<string, StockMove[]>();
+  for (const m of moves) byItem.set(m.itemId, [...(byItem.get(m.itemId) || []), m]);
+  const out: ItemDetails[] = [];
+  for (const [itemId, list] of byItem) {
+    const ordered = orderedMoves(list).filter(m => String(m.date).slice(0, 10) <= endDate);
+    const before = ordered.filter(m => String(m.date).slice(0, 10) < startDate);
+    const within = ordered.filter(m => String(m.date).slice(0, 10) >= startDate);
+    const value = (ms: StockMove[]) => ms.reduce((s, m) => s + (Number(m.valueCents) || 0), 0);
+    const opening = { quantity: before.length ? round6(Number(before[before.length - 1].quantityAfter) || 0) : 0, valueCents: value(before) };
+    if (within.length === 0 && opening.quantity === 0 && opening.valueCents === 0) continue;
+    const last = ordered[ordered.length - 1];
+    out.push({
+      itemId,
+      itemName: String(list.find(m => m.itemName)?.itemName || itemId),
+      opening,
+      moves: within.map((m, i) => ({
+        key: m.id || `${m.seq}-${i}`, date: String(m.date).slice(0, 10), kind: m.kind, quantity: m.quantity, quantityAfter: m.quantityAfter, valueCents: m.valueCents, unitCostCents: m.unitCostCents,
+        ...(m.transactionId ? { transactionId: m.transactionId } : {}), ...(m.documentType ? { documentType: m.documentType } : {}), ...(m.documentId ? { documentId: m.documentId } : {}),
+        ...(m.locationId ? { locationId: m.locationId } : {}),
+      })),
+      received: round6(within.filter(m => m.quantity > 0).reduce((s, m) => s + m.quantity, 0)),
+      issued: round6(-within.filter(m => m.quantity < 0).reduce((s, m) => s + m.quantity, 0)) || 0,
+      closing: { quantity: round6(Number(last?.quantityAfter) || 0), valueCents: value(ordered) },
+    });
+  }
+  return out.sort((a, b) => a.itemName.localeCompare(b.itemName));
+}

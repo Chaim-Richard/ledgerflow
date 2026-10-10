@@ -1517,7 +1517,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] J-07 Sales by Item: issued invoices, base currency, posted or estimated cost, tested
 - [ ] J-08 Purchases by Item — waits: bills have no item lines (only `splits`)
 - [x] J-09 Inventory Valuation Sheet (stock at cost, share, reorder flags, compared with the Inventory account in the books; tested)
-- [ ] J-10 Inventory Item Details — waits for W-02: only sales move stock today (bills have no item lines), so a movement history would be one-sided
+- [x] J-10 Inventory Item Details — **done 9 Oct (Claude)**, on the stock-moves ledger (W-02), which records every change (sales, purchases on Inventory, returns, adjustments, counts, deliveries, transfers): Reports → Inventory Item Details: for a period, each item's opening quantity and value, every movement in order with its entry, what came in and went out, and the closing quantity and value, read by the server from the full history (`itemDetails` in `src/lib/stockMoves.ts`, `GET /api/v1/reports/inventory-details`, `InventoryDetailsReportView.tsx`; tests `inventory-details.test.tsx`). Bills still have no item lines, so stock bought on a bill is not in it (J-08).
 - [x] J-11 Sales Tax Liability Summary (Tax screen: tax by rate, collected and paid, in the home currency; adds up to the return boxes; tested)
 - [x] J-12 Journal Sheet: isPostable + lineAmount, unbalanced list, tested
 - [x] J-13 Budget vs Actual with drill-down (AI #2, `codex/c24-budget-actual`; existing general-ledger math, inclusive dates, monthly caps, full-history read and account-impact drill-down)

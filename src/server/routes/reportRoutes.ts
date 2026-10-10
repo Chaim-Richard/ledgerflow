@@ -20,6 +20,8 @@ import type { Bill, Budget, ChartAccount, CreditNote, Customer, Invoice, Payment
 import { agingBucket, daysOverdue, outstandingBaseCents } from '../../lib/aging';
 import { GroupReportError, groupSummary } from '../reports/groupReport';
 import { explainFigure } from '../reports/explain';
+import { stockMovesReady } from '../services/stockMoveService';
+import { itemDetails, type StockMove } from '../../lib/stockMoves';
 
 export const reportRouter = express.Router();
 
@@ -171,6 +173,29 @@ reportRouter.get("/aging", async (req, res) => {
  * from the full history, adding up to the figure (explain.ts), with each line's document, bank match
  * and attached files.
  */
+/**
+ * J-10: inventory item details for a period, from the stock-moves ledger (every change to each item's
+ * quantity, written by the server with the change): opening, each movement, closing. Any member reads.
+ */
+reportRouter.get("/inventory-details", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+  const parsed = z.object({ workspaceId: z.string().min(1).max(200), startDate: day, endDate: day }).safeParse(req.query);
+  if (!parsed.success || parsed.data.startDate > parsed.data.endDate) return sendError(res, "Say the workspace and the period (from before to)", 400);
+  const q = parsed.data;
+  try {
+    const db = getDb();
+    await validateWorkspaceMember(db, q.workspaceId, authReq.user);
+    if (!(await stockMovesReady(db))) return sendError(res, "Stock history is not set up in this database yet", 503);
+    const moves = (await db.collection('stockMoves').where('workspaceId', '==', q.workspaceId).where('date', '<=', q.endDate).get()).docs.map(d => ({ ...d.data(), id: d.id }) as StockMove);
+    res.json({ startDate: q.startDate, endDate: q.endDate, items: itemDetails(moves, q.startDate, q.endDate) });
+  } catch (error) {
+    if (/not a member|Unauthorized|FORBIDDEN/i.test(errorMessage(error))) return sendError(res, "Forbidden", 403);
+    if (/not found/i.test(errorMessage(error))) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Could not read the stock history", 500, errorMessage(error));
+  }
+});
+
 reportRouter.get("/explain", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
