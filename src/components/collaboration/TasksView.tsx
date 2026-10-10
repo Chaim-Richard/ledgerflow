@@ -56,7 +56,7 @@ export default function TasksView() {
     return () => { live = false; };
   }, [workspaceId]);
 
-  if (!workspace) return null;
+  if (!workspace) return <div className="p-6 md:p-8"><h1 className="text-2xl font-bold text-[var(--text)]">Tasks</h1><p className="text-sm text-[var(--muted)]">Open a workspace to see its tasks: what each person has to do, given by owners, accountants and bookkeepers.</p></div>;
   const nameOf = (id: string) => (id === uid ? 'you' : people.find(p => p.uid === id)?.email || `a teammate (${id.slice(0, 6)})`);
   const record = draft.recordType && draft.recordId ? { type: draft.recordType, id: draft.recordId, label: choices.find(c => c.id === draft.recordId)?.label || draft.recordId } : undefined;
   const input = { title: draft.title, assignee: draft.assignee || uid, ...(draft.note.trim() ? { note: draft.note } : {}), ...(draft.due ? { due: draft.due } : {}), ...(record ? { record } : {}) };

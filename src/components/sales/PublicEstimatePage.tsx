@@ -62,6 +62,7 @@ export default function PublicEstimatePage() {
           <p className="text-sm text-slate-600">For <bdi>{view.customerName}</bdi> · {formatDate(view.date)}{view.expiryDate ? ` · valid until ${formatDate(view.expiryDate)}` : ''}</p>
         </header>
         <table className="w-full text-sm">
+          <caption className="sr-only">The estimate's lines</caption>
           <thead><tr className="border-b text-left text-xs text-slate-500"><th scope="col" className="py-1">Description</th><th scope="col" className="py-1 text-right">Qty</th><th scope="col" className="py-1 text-right">Amount</th></tr></thead>
           <tbody>
             {view.lines.map(l => (

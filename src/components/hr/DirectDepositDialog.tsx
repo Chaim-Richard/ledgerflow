@@ -4,6 +4,7 @@ import { db } from '../../firebase';
 import { doc, updateDoc } from '../../lib/db/firestore';
 import { useDialog } from '../../hooks/useDialog';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { bankProblem, companyProblem, nachaFile, type BankAccountType, type CompanyBank, type EmployeeBank } from '../../lib/nacha';
 import type { Employee, PayRun } from '../../types';
@@ -28,6 +29,7 @@ const masked = (account?: string) => (account ? `••••${account.slice(-4)
  */
 export function DirectDepositDialog({ run, workspace, onClose }: { run: PayRun; workspace: { id: string; name?: string; currency?: string }; onClose: () => void }) {
   const { dialogProps, titleId } = useDialog(onClose, true);
+  useLedgerCollections('employees');
   const employees = useLedgerStore(s => (s.employees || []) as Employee[]);
   const setEmployees = useLedgerStore(s => s.setEmployees);
   const [company, setCompany] = useState<CompanyBank>(() => readCompany(workspace.id, workspace.name || ''));
