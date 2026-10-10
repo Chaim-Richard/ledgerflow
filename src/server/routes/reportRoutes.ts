@@ -23,7 +23,7 @@ import { profitByLabel } from '../reports/byLabel';
 import { cashBasisEntries, type CashBasisPayment } from '../reports/cashBasis';
 import { explainFigure } from '../reports/explain';
 import { stockMovesReady } from '../services/stockMoveService';
-import { itemDetails, type StockMove } from '../../lib/stockMoves';
+import { itemDetails, stockAging, type StockMove } from '../../lib/stockMoves';
 
 export const reportRouter = express.Router();
 
@@ -204,6 +204,25 @@ reportRouter.get("/inventory-details", async (req, res) => {
   } catch (error) {
     if (/not a member|Unauthorized|FORBIDDEN/i.test(errorMessage(error))) return sendError(res, "Forbidden", 403);
     if (/not found/i.test(errorMessage(error))) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Could not read the stock history", 500, errorMessage(error));
+  }
+});
+
+/** W-09: how old the stock on hand is, item by item, from the stock-moves ledger (stockMoves.ts `stockAging`). */
+reportRouter.get("/stock-aging", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const parsed = z.object({ workspaceId: z.string().min(1).max(200), asOf: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).safeParse(req.query);
+  if (!parsed.success) return sendError(res, "Say the workspace and the day (YYYY-MM-DD)", 400);
+  const q = parsed.data;
+  try {
+    const db = getDb();
+    await validateWorkspaceMember(db, q.workspaceId, authReq.user);
+    if (!(await stockMovesReady(db))) return sendError(res, "Stock history is not set up in this database yet", 503);
+    const moves = (await db.collection('stockMoves').where('workspaceId', '==', q.workspaceId).where('date', '<=', q.asOf).get()).docs.map(d => ({ ...d.data(), id: d.id }) as StockMove);
+    res.json({ asOf: q.asOf, items: stockAging(moves, q.asOf) });
+  } catch (error) {
+    if (/not a member|Unauthorized|FORBIDDEN/i.test(errorMessage(error))) return sendError(res, "Forbidden", 403);
+    if (/not.found/i.test(errorMessage(error))) return sendError(res, "Workspace not found", 404);
     sendError(res, "Could not read the stock history", 500, errorMessage(error));
   }
 });

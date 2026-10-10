@@ -161,3 +161,86 @@ export function purchasesByItem(items: ItemDetails[]): Array<{ itemId: string; i
     return { itemId: item.itemId, itemName: item.itemName, quantity, valueCents, averageCents: quantity > 0 ? Math.round(valueCents / quantity) : 0 };
   }).filter(p => p.quantity !== 0 || p.valueCents !== 0);
 }
+
+/** W-09: the age buckets of stock on hand, in days since the units came in */
+export const AGE_BUCKETS = [
+  { key: 'd30', label: '0–30 days', upTo: 30 },
+  { key: 'd90', label: '31–90 days', upTo: 90 },
+  { key: 'd180', label: '91–180 days', upTo: 180 },
+  { key: 'd365', label: '181–365 days', upTo: 365 },
+  { key: 'older', label: 'Over a year', upTo: Infinity },
+] as const;
+export type AgeBucket = typeof AGE_BUCKETS[number]['key'];
+
+export interface StockAge {
+  itemId: string;
+  itemName: string;
+  quantity: number;
+  valueCents: number;
+  /** units on hand by how long ago they came in (first in, first out) */
+  buckets: Record<AgeBucket, number>;
+  /** units on hand the history does not say the arrival of (stock from before it began) */
+  unknownAge: number;
+  /** the oldest units' age in days */
+  oldestDays: number | null;
+  lastSold: string | null;
+  daysSinceSold: number | null;
+}
+
+const days = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+
+/**
+ * W-09 stock aging from the stock-moves ledger, as of a day: the units on hand are taken to be the
+ * last ones in (first in, first out), so each item's stock is split by how long ago those units came
+ * in. A purchase undone takes back the latest units; moves between locations don't change the age.
+ * Units the history can't place (stock from before it began) are said apart. With the last sale and
+ * how long ago, for slow-moving stock. The value is the item's value then, shared by units.
+ */
+export function stockAging(moves: StockMove[], asOf: string): StockAge[] {
+  const byItem = new Map<string, StockMove[]>();
+  for (const m of moves) if (String(m.date).slice(0, 10) <= asOf) byItem.set(m.itemId, [...(byItem.get(m.itemId) || []), m]);
+  const out: StockAge[] = [];
+  for (const [itemId, list] of byItem) {
+    const ordered = orderedMoves(list);
+    const quantity = round6(Number(ordered[ordered.length - 1]?.quantityAfter) || 0);
+    if (quantity <= 0) continue;
+    const layers: Array<{ date: string; units: number }> = [];
+    const take = (units: number, newestFirst: boolean) => {
+      let left = units;
+      while (left > 1e-9 && layers.length) {
+        const layer = newestFirst ? layers[layers.length - 1] : layers[0];
+        const used = Math.min(layer.units, left);
+        layer.units = round6(layer.units - used);
+        left = round6(left - used);
+        if (layer.units <= 1e-9) { if (newestFirst) layers.pop(); else layers.shift(); }
+      }
+    };
+    for (const m of ordered) {
+      if (m.kind === 'transfer-in' || m.kind === 'transfer-out' || !m.quantity) continue;
+      if (m.quantity > 0) layers.push({ date: String(m.date).slice(0, 10), units: m.quantity });
+      else take(-m.quantity, m.kind === 'purchase-reversal');
+    }
+    const known = round6(Math.min(quantity, layers.reduce((s, l) => s + l.units, 0)));
+    // the units on hand are the latest in: keep only that many, newest first
+    const buckets = Object.fromEntries(AGE_BUCKETS.map(b => [b.key, 0])) as Record<AgeBucket, number>;
+    let need = known;
+    let oldestDays: number | null = null;
+    for (let i = layers.length - 1; i >= 0 && need > 1e-9; i--) {
+      const units = Math.min(layers[i].units, need);
+      need = round6(need - units);
+      const age = Math.max(0, days(layers[i].date, asOf));
+      oldestDays = age;
+      const bucket = AGE_BUCKETS.find(b => age <= b.upTo)!.key;
+      buckets[bucket] = round6(buckets[bucket] + units);
+    }
+    const sales = ordered.filter(m => m.kind === 'sale');
+    const lastSold = sales.length ? String(sales[sales.length - 1].date).slice(0, 10) : null;
+    out.push({
+      itemId, itemName: String(list.find(m => m.itemName)?.itemName || itemId), quantity,
+      valueCents: ordered.reduce((s, m) => s + (Number(m.valueCents) || 0), 0),
+      buckets, unknownAge: round6(quantity - known), oldestDays: round6(quantity - known) > 0 ? null : oldestDays,
+      lastSold, daysSinceSold: lastSold ? days(lastSold, asOf) : null,
+    });
+  }
+  return out.sort((a, b) => (b.oldestDays ?? Infinity) - (a.oldestDays ?? Infinity) || a.itemName.localeCompare(b.itemName));
+}

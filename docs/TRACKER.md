@@ -2025,7 +2025,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
   - Code: `stockPolicyService.ts`, `PUT /api/v1/inventory/stock-policy`, the check in `cogsStockService.ts`, `StockPolicySwitch.tsx`. Tests: `stock-policy.test.tsx`, with the database.
 - [ ] W-07 Assembly / kitting
 - [ ] W-08 Backorder + drop-ship
-- [ ] W-09 Aging + slow-moving reports
+- [x] W-09 Aging + slow-moving reports — **done 10 Oct (Claude)**: Reports → Stock Aging: as of a day, each item's stock on hand split by how long ago those units came in (0–30, 31–90, 91–180, 181–365 days, over a year; first in, first out; a purchase undone takes back the latest units; moves between locations keep the age; stock from before the history said apart), its value and its last sale with how long ago, the oldest stock first; from the server's stock history (`stockAging` in `src/lib/stockMoves.ts`, `GET /api/v1/reports/stock-aging`, `StockAgingReportView.tsx`; tests `stock-aging.test.tsx`). Slow-moving items by sales on invoices were already on Inactive Items.
 
 # SECTION X — FIXED ASSET LIFECYCLE
 
