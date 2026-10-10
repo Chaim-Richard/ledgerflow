@@ -168,6 +168,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Choose what the nightly check tells owners and accountants about the books: a reminder to close last month from a chosen day, an account over its budget, and cash below a chosen amount. Each is told once, in the bell. Alerts never change the books.",
     groups:
       "Group the workspaces you can open, such as a holding and its companies or your clients by kind. Only you see your groups, and a workspace in a group stays exactly as it is: its books, people and rules do not change. Removing a group never removes a workspace.",
+    currencies:
+      "The workspace's own currency and every other currency its invoices and bills use: how many, how many are still open, and the last rate posted and when. Each document keeps the rate it was posted at. The month-end revaluation of what is still open is here too.",
     "split-rules":
       "Saved ways to split a cost between accounts or labels, e.g. rent 60/40 between two properties. A rule is suggested on a bill whose vendor or description contains its text, says why, and only changes the lines on screen when applied; nothing is posted by a rule. Owners and accountants keep them.",
     modules:

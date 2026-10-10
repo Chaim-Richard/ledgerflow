@@ -457,6 +457,7 @@ export const SETTINGS_TABS_REGISTRY = withScreenHelp([
   { id: 'modules', label: { en: 'Modules', he: 'מודולים' }, componentName: 'ModulesSettingsView', icon: Blocks },
   { id: 'groups', label: { en: 'Groups of books', he: 'קבוצות ספרים' }, componentName: 'GroupsSettingsView', icon: FolderTree },
   { id: 'split-rules', label: { en: 'Split rules', he: 'כללי פיצול' }, componentName: 'AllocationRulesSettingsView', icon: Split },
+  { id: 'currencies', label: { en: 'Currencies', he: 'מטבעות' }, componentName: 'CurrenciesSettingsView', icon: Coins },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ], 'settings');
@@ -485,6 +486,7 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'ModulesSettingsView': lazy(() => import('../components/platform/settings/ModulesSettings')),
   'GroupsSettingsView': lazy(() => import('../components/platform/settings/GroupsSettings')),
   'AllocationRulesSettingsView': lazy(() => import('../components/platform/settings/AllocationRulesSettings')),
+  'CurrenciesSettingsView': lazy(() => import('../components/platform/settings/CurrenciesSettings')),
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };
 
