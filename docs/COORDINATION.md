@@ -314,7 +314,7 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
   the P&L, the balance sheet and receivables aging (plus any of the shell's reports ticked) in one printable PDF
   with a cover page (workspace name, period, date made) and page numbers. Read-only, from the existing report code;
   a test that each section's totals equal the single reports. (The product tour is AI #4's D-4.)
-- [ ] **C-31 Cash or accrual on the P&L and balance sheet** (tracker N-08): a switch on both reports. Accrual is
+- [x] **C-31 Cash or accrual on the P&L and balance sheet** — **done by AI #1 (Claude), 10 Oct** (`src/server/reports/cashBasis.ts`; both reports have Basis → Cash). (tracker N-08): a switch on both reports. Accrual is
   today's figures; cash counts income when invoices are paid and expenses when bills are paid (by payment date and
   amount, partial payments proportionally, whole cents with the remainder on the last line). Read-only, from the
   existing report code and payments; hand-checked tests (a partly paid invoice, a bill paid in the next month, an
