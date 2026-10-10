@@ -68,14 +68,19 @@ async function keepRates(groupId: string, body: Record<string, unknown>): Promis
  */
 export default function GroupSummaryReportView() {
   const setCurrentWorkspaceId = useAuthStore(s => s.setCurrentWorkspaceId);
+  // N-07: this workspace on its own, e.g. to show its figures in another currency
+  const current = useAuthStore(s => s.getCurrentWorkspace());
+  const selfId = current ? `ws:${current.id}` : '';
   const goToPage = useUIStore(s => s.goToPage);
   const openRecord = useUIStore(s => s.openRecord);
   const [groups, setGroups] = useState<WorkspaceGroup[] | null>(null);
-  const [groupId, setGroupId] = useState('');
+  const [picked, setGroupId] = useState('');
   const [startDate, setStartDate] = useState(`${getLocalDateISO().slice(0, 4)}-01-01`);
   const [endDate, setEndDate] = useState(getLocalDateISO());
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState('');
+  // the group chosen, else the first one, else this workspace on its own
+  const groupId = picked || groups?.[0]?.id || (groups ? selfId : '');
   const [reportCurrency, setReportCurrency] = useState('');
   // Z-20: each account across the companies as well
   const [byAccount, setByAccount] = useState(false);
@@ -98,7 +103,7 @@ export default function GroupSummaryReportView() {
   useEffect(() => {
     let live = true;
     get<{ groups: WorkspaceGroup[] }>('/api/v1/account/groups')
-      .then(data => { if (live) { setGroups(data.groups || []); if (data.groups?.[0]) setGroupId(id => id || data.groups[0].id); } })
+      .then(data => { if (live) setGroups(data.groups || []); })
       .catch(err => { if (live) { setGroups([]); setError(err instanceof Error ? err.message : String(err)); } });
     return () => { live = false; };
   }, []);
@@ -158,13 +163,14 @@ export default function GroupSummaryReportView() {
     <section aria-labelledby="group-summary-title" className="space-y-4">
       <h2 id="group-summary-title" className="text-lg font-bold text-[var(--text)]">Group summary</h2>
       {groups !== null && groups.length === 0 && !error && (
-        <p className="text-sm text-[var(--muted)]">You have no groups of books yet. Make one in Settings → Groups of books.</p>
+        <p className="text-sm text-[var(--muted)]">You have no groups of books yet (Settings → Groups of books). This workspace can be shown on its own, in another currency too.</p>
       )}
-      {groups !== null && groups.length > 0 && (
+      {groups !== null && (
         <div className="flex flex-wrap items-end gap-3 text-sm">
           <label className="flex flex-col gap-1 text-[var(--muted)]">Group
             <select value={groupId} onChange={e => setGroupId(e.target.value)} className="px-2 py-1.5 border border-[var(--line)] rounded bg-[var(--panel)] text-[var(--text)]">
               {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              {current && <option value={selfId}>This workspace only ({current.name})</option>}
             </select>
           </label>
           <label className="flex flex-col gap-1 text-[var(--muted)]">From

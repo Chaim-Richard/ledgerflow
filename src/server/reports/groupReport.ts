@@ -261,11 +261,18 @@ export function translate(m: GroupFigures & { equityAccounts: number; earlierPro
 
 export async function groupSummary(db: Firestore, input: { uid: string; groupId: string; startDate: string; endDate: string; reportCurrency?: string; rates?: Record<string, TranslationRates>; detail?: 'accounts' }): Promise<GroupSummary> {
   if (input.startDate > input.endDate) throw new GroupReportError(400, 'The period starts after it ends');
-  const snap = await db.collection('workspaceGroups').doc(input.groupId).get();
-  const group = snap.data();
-  // someone else's group answers like a missing one, unless it was shared with this person (DA-01)
-  if (!group || !canReadGroup(group, input.uid)) throw new GroupReportError(404, 'Group not found');
   const open = await openable(db, input.uid);
+  // N-07: "ws:<id>" is one workspace on its own (its figures in another currency), when the person can open it
+  const self = input.groupId.startsWith('ws:') ? input.groupId.slice(3) : null;
+  let group: Record<string, unknown> | undefined;
+  if (self) {
+    if (!open.has(self)) throw new GroupReportError(404, 'Workspace not found');
+    group = { ownerUid: input.uid, name: String((await db.collection('workspaces').doc(self).get()).data()?.name || self), workspaceIds: [self] };
+  } else {
+    group = (await db.collection('workspaceGroups').doc(input.groupId).get()).data();
+    // someone else's group answers like a missing one, unless it was shared with this person (DA-01)
+    if (!group || !canReadGroup(group, input.uid)) throw new GroupReportError(404, 'Group not found');
+  }
   const ids = (Array.isArray(group.workspaceIds) ? group.workspaceIds as string[] : []);
   const shown = ids.filter(id => open.has(id));
   const structure = {
@@ -347,7 +354,7 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     }));
   }
   return {
-    group: { id: snap.id, name: String(group.name || '') }, startDate: input.startDate, endDate: input.endDate, members, total,
+    group: { id: input.groupId, name: String(group.name || '') }, startDate: input.startDate, endDate: input.endDate, members, total,
     parent: parent ? { workspaceId: parent.workspaceId, name: parent.name } : null, notIncluded: ids.length - shown.length, intercompany,
     ...(accountLines ? { accountLines } : {}),
   };

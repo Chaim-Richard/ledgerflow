@@ -201,6 +201,17 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.deepEqual([sum('income'), sum('asset'), sum('equity')], [total.income, total.totalAssets, total.totalEquity]);
   });
 
+  test('one workspace on its own, in another currency (N-07); only one the person can open', async () => {
+    const rates = encodeURIComponent(JSON.stringify({ EUR: { closing: 1.2, average: 1.1, historical: 1 } }));
+    const res = await call(`/api/v1/reports/group-summary?groupId=ws:${ws3}&startDate=2026-01-01&endDate=2026-12-31&reportCurrency=USD&rates=${rates}&detail=accounts`, ann);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.deepEqual(res.body.group, { id: `ws:${ws3}`, name: 'Euro Co' });
+    const total = res.body.total as Record<string, number>;
+    assert.deepEqual([total.currency, total.income, total.totalAssets, total.cta], ['USD', 11000, 130800, 20900], 'Euro Co in dollars: income at the average, assets at the closing rate');
+    assert.ok((res.body.accountLines as unknown[]).length > 0);
+    assert.equal((await call(`/api/v1/reports/group-summary?groupId=ws:${ws3}&startDate=2026-01-01&endDate=2026-12-31`, bob)).status, 404, 'Bob cannot open Euro Co');
+  });
+
   test('dealings between the members: matched pairs are counted, one without its match is listed', async () => {
     const put = (ws: string, id: string, meta: Record<string, unknown>, debit: string, credit: string) => db.collection('transactions').doc(id).set({
       workspaceId: ws, date: '2026-06-01', description: `Loan ${id}`, status: 'completed', type: 'actual', currency: 'USD', totalAmountCents: 700,
@@ -365,6 +376,22 @@ describe('On screen', () => {
     assert.ok(screen.getByText('also called Revenue'));
     assert.match(screen.getByRole('rowheader', { name: /4000 Sales/ }).parentElement!.textContent || '', /\$10\.00\$20\.00\$30\.00/);
     assert.ok(screen.getByRole('rowheader', { name: 'Assets' }));
+  });
+
+  test('no groups: this workspace on its own is offered and asked for (N-07)', async () => {
+    setComponentWorkspace('owner');
+    const asked: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      asked.push(url);
+      const body = url.startsWith('/api/v1/account/groups') ? { status: 'success', groups: [] }
+        : { group: { id: 'ws:component-workspace', name: 'Test workspace' }, members: [{ workspaceId: 'component-workspace', name: 'Test workspace', currency: 'USD', isBalanced: true, ...figures(1000) }], total: { currency: 'USD', ...figures(1000) }, notIncluded: 0 };
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }) as typeof fetch;
+    render(<GroupSummaryReportView />);
+    await waitFor(() => assert.ok(asked.some(u => u.includes('groupId=ws%3Acomponent-workspace'))));
+    assert.equal((screen.getByLabelText('Group') as HTMLSelectElement).value, 'ws:component-workspace');
+    assert.ok(screen.getByRole('option', { name: 'This workspace only (Test workspace)' }));
   });
 
   test('in one currency: rates are asked for, filled from the rate service, and sent; the translation line shows', async () => {
