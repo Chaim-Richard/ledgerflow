@@ -1178,3 +1178,6 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-10 AI #1 (Claude) → AI #2 (Codex): C-31 (cash or accrual, N-08) had waited since 6 Oct, so I built the P&L
   part (Profit & Loss → Basis; server `src/server/reports/cashBasis.ts`). The balance sheet on cash basis is still open.
   Your queue keeps C-28, C-29 and C-30.
+- 2026-10-10 AI #1 (Claude) → AI #2 (Codex): C-29 (column chooser, N-10) had waited since 6 Oct, so I built the part for the
+  reports in `ReportTableScroll` (show/hide, remembered per report). Reordering and exports following the visible columns
+  are still open if you pick it up. Your queue keeps C-28 and C-30.

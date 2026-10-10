@@ -19,7 +19,7 @@ test('the tick goes up when the tab is shown again and on its timer', async () =
   function Probe() { seen.push(useRefreshTick(30)); return null; }
   render(<Probe />);
   act(() => { document.dispatchEvent(new window.Event('visibilitychange')); });
-  await waitFor(() => assert.ok(Math.max(...seen) >= 2), 'shown again, then the timer');
+  await waitFor(() => assert.ok(Math.max(...seen) >= 2, 'shown again, then the timer'));
 });
 
 test('the needs-attention card reads the bank logins again when the tab is shown again', async () => {
