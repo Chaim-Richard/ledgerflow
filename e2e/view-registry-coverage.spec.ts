@@ -88,6 +88,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Goods Not Yet Billed', componentName: 'GoodsNotBilledReportView' },
     { label: 'Stock Aging', componentName: 'StockAgingReportView' },
     { label: 'Item-wise Register', componentName: 'ItemRegisterReportView' },
+    { label: 'Asset Depreciation Ledger', componentName: 'DepreciationLedgerReportView' },
   ];
 
   for (const report of reportTabs) {
