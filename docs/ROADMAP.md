@@ -267,7 +267,7 @@ These are the tracker IDs; `docs/TRACKER.md` has the detail.
   are a chart mapping for companies whose accounts differ, the equity method and goodwill. The
   Practice view (BD-01) is done 10 Oct.
 - **Sales, stock and returns:** BF-08 step 2 (delivery apart from invoice, done 7 Oct; the printable note and returns after delivery, done 8 Oct), W-01, W-02 and BF-06 (all three done 7 Oct).
-- **Simple until needed:** BB-07 and P-08.
+- **Simple until needed:** BB-07 and P-08 (the tour, done 10 Oct; Stock, Projects and Budgets became modules 10 Oct).
 
 ### Later, P1 (big friction savers)
 

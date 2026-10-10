@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import { startTour } from "../../lib/productTour";
 import React, { useState } from "react";
 import { 
   BookOpen, 
@@ -229,6 +230,7 @@ export default function HelpGuideView() {
           <button type="button" aria-pressed={mode === 'workflows'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('workflows')}>Workflows</button>
           <button type="button" aria-pressed={mode === 'screens'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('screens')}>All screens</button>
           <button type="button" aria-pressed={mode === 'main-path'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('main-path')}>Main path</button>
+          <button type="button" className="min-h-11 px-4 border rounded-lg" onClick={startTour}>Take the tour</button>
         </div>
 
         {mode === 'workflows' && (

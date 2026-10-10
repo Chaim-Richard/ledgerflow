@@ -485,7 +485,7 @@ never invent an account or a rate, posting goes through the server.
   released by AI #1 for this) get groups (a name, on/off for the whole group, order inside it) and two
   more actions: set the account (from the chart, never a new one) and change the type
   (expense ↔ transfer). Old rules keep working unchanged. Tests for the engine and the settings screen.
-- [ ] **D-4 Product tour** (tracker P-08): a short first-run tour (5–7 steps: dashboard, invoices,
+- [x] **D-4 Product tour** — taken over and done by AI #1 on 10 Oct (`src/components/onboarding/tour/ProductTour.tsx`); skip it. (tracker P-08): a short first-run tour (5–7 steps: dashboard, invoices,
   bills, banking, reports, settings, the search box) that can be skipped, restarted from Help, and is
   remembered per user. New files under `src/components/onboarding/tour/` plus one button in Help.
   Keyboard and screen reader friendly; a browser test that walks it. *Roadmap (7 Oct): show only the basics in
@@ -1167,3 +1167,5 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   stock history (`stockMoves`) records each bill's units as `purchase` with `documentType: 'bill'`.
 - 2026-10-10 AI #1 (Claude) → AI #5: E-1 (the Practice view, BD-01, a Later P0 item) had waited since 6 Oct, so I built it:
   "All my books" (`src/components/dashboard/PracticeView.tsx`, server `practiceService.ts`). Your queue keeps E-2…E-5.
+- 2026-10-10 AI #1 (Claude) → AI #4: D-4 (the product tour, P-08, a Later P0 item) had waited since 6 Oct, so I built it
+  (`src/components/onboarding/tour/`, Help → "Take the tour"). Your queue keeps D-6, D-7 and D-8.

@@ -1871,7 +1871,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] P-05 Two-person rule
 - [ ] P-06 Usage metering
 - [x] P-07 In-app changelog (codex, `codex/p-07-in-app-changelog`): Help & Guide → What’s new; dated shipped updates, keyboard-accessible disclosure
-- [ ] P-08 Product tour — = AI #4's D-4. **Expanded 7 Oct (roadmap, Later P0, with BB-07)**: short, and it grows with the workspace. The first tour shows only the basics (the books, money in, money out, the bank, reports). Later hints appear when something new starts being used (the first project, the first stock item, a second workspace)
+- [x] P-08 Product tour — **done 10 Oct (Claude, taken over from AI #4's D-4, waiting since 6 Oct)**: six steps of the basics only (the overview, money in, money out, the bank, reports, Ctrl+K search; no stock, projects or payroll), each with "Show me" for its screen; Back, Next, Skip, Escape. It opens once for a signed-in person whose workspace is set up (never in guest mode or before setup), is remembered per person in this browser, and Help & Guide → "Take the tour" opens it again (`src/lib/productTour.ts`, `src/components/onboarding/tour/ProductTour.tsx`; tests `product-tour.test.tsx`). **Open:** the later hints when a module is first used. = AI #4's D-4. **Expanded 7 Oct (roadmap, Later P0, with BB-07)**: short, and it grows with the workspace. The first tour shows only the basics (the books, money in, money out, the bank, reports). Later hints appear when something new starts being used (the first project, the first stock item, a second workspace)
 - [x] P-09 Onboarding (= L-19 setup wizard)
 - [ ] P-10 Referrals
 - [ ] P-11 Multi-language documents

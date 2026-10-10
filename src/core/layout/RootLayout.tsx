@@ -12,6 +12,7 @@ import CommandPalette from '../../components/layout/CommandPalette';
 import CommandPortal from '../../components/layout/CommandPortal';
 import StatusBar from '../../components/layout/StatusBar';
 import LedgerInterruptOverlay from '../../components/forensics/LedgerInterruptOverlay';
+import ProductTour from '../../components/onboarding/tour/ProductTour';
 
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -179,6 +180,7 @@ export function RootLayout() {
          <Suspense fallback={null}><DiagnosticConsole isOpen={isDiagnosticConsoleOpen} onClose={() => setDiagnosticConsoleOpen(false)} /></Suspense>
 
       <Suspense fallback={null}><LedgerInterruptOverlay /></Suspense>
+      <ProductTour />
       <StatusBar />
     </div>
   );
