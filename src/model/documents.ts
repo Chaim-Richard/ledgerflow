@@ -3,6 +3,7 @@ import type { ContactNote, ContactPerson } from '../lib/contacts';
 import type { DeliveryMethod } from '../lib/delivery';
 import type { InvoiceApprovalRecord } from '../lib/invoiceApproval';
 import type { EstimateSignature } from '../lib/estimateSignature';
+import type { Milestone } from '../lib/milestones';
 import type { EntityMetadata } from './ledger';
 import type { DashboardSchema } from './workspace';
 
@@ -273,6 +274,8 @@ export interface Estimate {
   signToken?: string;
   signTokenAt?: string;
   signature?: EstimateSignature;
+  /** V-09: the order's milestone schedule (src/lib/milestones.ts) */
+  milestones?: Milestone[];
   lines: Array<{
     /** the stock item this line sells (BF-08): the order is then invoiced by quantity */
     itemId?: string;

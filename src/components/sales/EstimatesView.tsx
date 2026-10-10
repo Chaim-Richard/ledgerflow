@@ -1,9 +1,10 @@
 import { RecordInlineField } from '../ui/RecordInlineField';
 import { EstimateSignLink, EstimateSignedNote } from './EstimateSignLink';
+import { dueMilestones } from '../../lib/milestones';
 import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { formatCurrency, formatDate, getLocalDateISO } from '../../lib/utils';
 import { Plus, ArrowRight, FileText, Eye, Download } from 'lucide-react';
 import { collection, addDoc, doc, updateDoc } from '../../lib/db/firestore';
 import { db, getIdToken } from '../../firebase';
@@ -484,6 +485,7 @@ export default function EstimatesView() {
                       )}
                     </div>
                     <EstimateSignedNote signature={est.signature} />
+                    {dueMilestones(est.milestones, getLocalDateISO()).slice(0, 1).map(m => <p key={m.id} className="mt-1 text-right text-xs font-semibold text-amber-700 dark:text-amber-400">Milestone due: <bdi>{m.label}</bdi> ({m.percent}%), {formatDate(m.due!)}</p>)}
                     {ordering === est.id && (
                       <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
                         <label className="flex items-center gap-1 text-[var(--muted)]">Customer&apos;s reference
@@ -506,7 +508,7 @@ export default function EstimatesView() {
       {delivering && <OrderDeliveryDialog order={delivering} canWrite={canWrite} onClose={() => setDelivering(null)} />}
       {invoicing && (
         <OrderInvoiceDialog estimate={invoicing} progress={orderProgress(invoicing, invoices || [])} currency={invoicing.currency || 'USD'}
-          onCreate={part => invoiceOrderPart(invoicing, part)} onClose={() => setInvoicing(null)} />
+          onCreate={part => invoiceOrderPart(invoicing, part)} onClose={() => setInvoicing(null)} canWrite={canWrite} />
       )}
       {previewEstimate && (
         <PdfPreviewModal

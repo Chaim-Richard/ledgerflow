@@ -4,6 +4,10 @@ import { useDialog } from '../../hooks/useDialog';
 import { formatCurrency, parseAmountToCents } from '../../lib/utils';
 import { type OrderPart, type OrderProgress, hasItemLines, orderLineProgress, orderPartInvoice, partCents, partLabel, partProblem } from '../../lib/salesOrders';
 import type { Estimate } from '../../types';
+import type { Milestone } from '../../lib/milestones';
+import { db } from '../../firebase';
+import { doc, updateDoc } from '../../lib/db/firestore';
+import { MilestoneSchedule } from './MilestoneSchedule';
 
 const field = 'w-full px-3 py-2 text-sm bg-[var(--ink)] border border-[var(--line)] rounded-lg text-[var(--text)]';
 type Mode = OrderPart['mode'];
@@ -14,8 +18,9 @@ type Mode = OrderPart['mode'];
  * with stock items is invoiced by quantity instead (BF-08): how many of each line, so stock and
  * cost move with the units invoiced (the rules: src/lib/salesOrders.ts).
  */
-export default function OrderInvoiceDialog({ estimate, progress, currency, onCreate, onClose }: {
+export default function OrderInvoiceDialog({ estimate, progress, currency, onCreate, onClose, canWrite = true }: {
   estimate: Estimate;
+  canWrite?: boolean;
   progress: OrderProgress;
   currency: string;
   onCreate: (part: OrderPart) => Promise<unknown>;
@@ -28,6 +33,9 @@ export default function OrderInvoiceDialog({ estimate, progress, currency, onCre
   const [amount, setAmount] = useState('');
   const [quantities, setQuantities] = useState<string[]>(() => lines.map(l => String(l.leftQuantity)));
   const [saving, setSaving] = useState(false);
+  // V-09: the order's milestone schedule, and the milestone being invoiced now
+  const [milestones, setMilestones] = useState<Milestone[]>(() => estimate.milestones || []);
+  const [milestone, setMilestone] = useState<Milestone | null>(null);
   const { dialogProps, titleId } = useDialog(onClose, true);
   const part: OrderPart = mode === 'quantities' ? { mode, quantities: quantities.map(q => (q.trim() === '' ? 0 : Number(q))) }
     : mode === 'rest' ? { mode } : mode === 'percent' ? { mode, percent: Number(percent) } : { mode, cents: parseAmountToCents(amount) };
@@ -41,6 +49,10 @@ export default function OrderInvoiceDialog({ estimate, progress, currency, onCre
     setSaving(true);
     try {
       await onCreate(part);
+      if (milestone && part.mode === 'percent' && part.percent === milestone.percent) {
+        const done = milestones.map(m => (m.id === milestone.id ? { ...m, invoicedAt: new Date().toISOString() } : m));
+        await updateDoc(doc(db, 'estimates', estimate.id), { milestones: done, updatedAt: new Date().toISOString() });
+      }
       onClose();
     } finally {
       setSaving(false);
@@ -100,6 +112,8 @@ export default function OrderInvoiceDialog({ estimate, progress, currency, onCre
           ) : (
           <fieldset className="space-y-2">
             <legend className="text-xs font-semibold text-[var(--muted)] mb-1">How much to invoice now</legend>
+            <MilestoneSchedule estimateId={estimate.id} milestones={milestones} canWrite={canWrite} onSaved={setMilestones}
+              onPick={m => { setMilestone(m); setMode('percent'); setPercent(String(m.percent)); }} />
             {choice('rest', `All that is left (${money(progress.leftCents)})`)}
             <div className="flex items-center gap-2">
               {choice('percent', 'A percentage of the order')}
