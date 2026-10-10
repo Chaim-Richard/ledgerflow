@@ -241,6 +241,13 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
       parent's account that holds it (Settings → Groups of books). What the parent paid above the
       company's book value (goodwill) is not shown separately: the total is lower by that amount.
 
+33. **Stock, Projects and Budgets are now modules (10 Oct, decided by default).** Until now these three
+    screens were in no menu at all (only Ctrl+K and links). They are now in the menu when their module
+    is on (Settings → Modules).
+    - *Default:* a **new** workspace starts with them off (simple until needed); every existing workspace
+      keeps them on. Turning one off hides it and deletes nothing.
+    - The first-run tour (Help → "Take the tour") shows only the basics for the same reason.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of
