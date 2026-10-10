@@ -3,18 +3,17 @@ import { ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import { getIdToken } from '../../firebase';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
-import { useLedgerCollections } from '../../hooks/useLedgerCollections';
-import { formatCurrency, formatDate, getLocalDateISO } from '../../lib/utils';
+import { formatDate, getLocalDateISO } from '../../lib/utils';
+import { useRecordChoices } from './recordChoices';
+import WatchingPanel from './WatchingPanel';
 import { isLate, MAX_TASK_NOTE, MAX_TASK_TITLE, sortTasks, TASK_RECORD_TYPES, taskProblem, type Task } from '../../lib/tasks';
 import type { RecordType } from '../../lib/recordLinks';
 
 interface Person { uid: string; role: string; email?: string }
 type Show = 'mine' | 'open' | 'done';
 const field = 'px-2 py-1.5 text-sm border border-[var(--line)] rounded bg-[var(--panel)] text-[var(--text)]';
-const COLLECTION: Record<string, 'invoices' | 'bills' | 'transactions' | 'accounts' | 'inventory'> = { invoice: 'invoices', bill: 'bills', transaction: 'transactions', account: 'accounts', item: 'inventory' };
 
 async function call(workspaceId: string, path: string, method = 'GET', body?: unknown) {
   const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}/tasks${path}`, {
@@ -25,20 +24,6 @@ async function call(workspaceId: string, path: string, method = 'GET', body?: un
   return data;
 }
 
-/** The records of one kind to choose from, newest first, with what the list shows for each. */
-function useRecordChoices(type: RecordType | '', currency: string): Array<{ id: string; label: string }> {
-  useLedgerCollections(...(type ? [COLLECTION[type]] : []));
-  const invoices = useLedgerStore(s => s.invoices), bills = useLedgerStore(s => s.bills), transactions = useLedgerStore(s => s.transactions);
-  const accounts = useLedgerStore(s => s.accounts), items = useLedgerStore(s => s.inventory);
-  const money = (c?: number) => formatCurrency(Number(c) || 0, currency);
-  const byDate = <T extends { date?: string }>(list: T[]) => [...list].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 300);
-  if (type === 'invoice') return byDate(invoices || []).map(i => ({ id: i.id, label: `Invoice ${i.number || i.id} · ${i.customerName || ''} · ${money(i.amountCents)}` }));
-  if (type === 'bill') return byDate(bills || []).map(b => ({ id: b.id, label: `Bill ${b.number || b.id} · ${b.vendorName || ''} · ${money(b.amountCents)}` }));
-  if (type === 'transaction') return byDate(transactions || []).map(t => ({ id: t.id, label: `Entry ${t.date} · ${t.description || ''}` }));
-  if (type === 'account') return (accounts || []).map(a => ({ id: a.id, label: `Account ${a.code ? `${a.code} ` : ''}${a.name}` }));
-  if (type === 'item') return (items || []).map(i => ({ id: i.id, label: `Item ${i.name}` }));
-  return [];
-}
 
 /**
  * Tasks (BG-02 assign a record, BG-03 task list): what each person in the workspace has to do, the
@@ -143,6 +128,7 @@ export default function TasksView() {
             <button type="button" disabled={Boolean(problem) || (Boolean(draft.recordType) && !draft.recordId)} onClick={() => void give()} className="rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white disabled:opacity-50">Give the task</button>
           </fieldset>
         )}
+        <WatchingPanel />
         <div role="group" aria-label="Show tasks" className="flex flex-wrap gap-2">
           {(['mine', 'open', 'done'] as Show[]).map(s => (
             <button key={s} type="button" aria-pressed={show === s} onClick={() => setShow(s)}

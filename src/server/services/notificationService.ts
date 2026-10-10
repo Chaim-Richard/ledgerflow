@@ -30,6 +30,8 @@ export interface NotifyInput {
   workspace?: DocumentData;
   /** Only these people (still only if their role gets this kind and they want it): news about them. */
   onlyUids?: string[];
+  /** BG-04: the screen the notice opens, when it is not the kind's own (a watched record's screen) */
+  linkTab?: string;
 }
 
 export function notificationId(workspaceId: string, eventKey: string, uid: string): string {
@@ -60,7 +62,7 @@ export async function notify(db: Firestore, input: NotifyInput): Promise<number>
           kind: input.kind,
           title: input.title.slice(0, 140),
           message: input.message.slice(0, 400),
-          linkTab: NOTIFICATION_TYPES[input.kind].tab,
+          linkTab: input.linkTab || NOTIFICATION_TYPES[input.kind].tab,
           ...(input.recordId ? { recordId: input.recordId } : {}),
           eventKey: input.eventKey.slice(0, 200),
           read: false,

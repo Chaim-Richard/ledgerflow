@@ -1,11 +1,13 @@
 import express from 'express';
 import { getDb } from '../db/firestore';
 import { createTask, listTasks, removeTask, setTaskStatus, TaskError } from '../services/taskService';
+import { myWatches, unwatch, watchRecord, WatchError } from '../services/watchService';
 
 /**
  * Tasks (BG-02, BG-03), mounted at /api/v1/workspaces/:workspaceId/tasks (workspaceRoutes.ts, every
  * member): GET the tasks and the people; POST a task; PATCH /:taskId {status}; DELETE /:taskId. Who
- * may do what is checked in src/server/services/taskService.ts.
+ * may do what is checked in src/server/services/taskService.ts. And watching records (BG-04,
+ * watchService.ts): GET /watching (mine), POST /watching {record}, DELETE /watching/:watchId.
  */
 export const taskRouter = express.Router({ mergeParams: true });
 
@@ -15,9 +17,19 @@ const actor = (req: express.Request) => {
   return { workspaceId: String((req.params as Record<string, string>).workspaceId), uid: user.uid, email: user.email };
 };
 const fail = (res: express.Response, err: unknown) => {
-  if (err instanceof TaskError) return res.status(err.status).json({ status: 'error', message: err.message });
+  if (err instanceof TaskError || err instanceof WatchError) return res.status(err.status).json({ status: 'error', message: err.message });
   res.status(500).json({ status: 'error', message: 'The task could not be saved', details: err instanceof Error ? err.message : String(err) });
 };
+
+taskRouter.get('/watching', async (req, res) => {
+  try { res.json({ status: 'success', watches: await myWatches(getDb(), actor(req)) }); } catch (err) { fail(res, err); }
+});
+taskRouter.post('/watching', async (req, res) => {
+  try { res.json({ status: 'success', watch: await watchRecord(getDb(), { ...actor(req), record: req.body?.record }) }); } catch (err) { fail(res, err); }
+});
+taskRouter.delete('/watching/:watchId', async (req, res) => {
+  try { await unwatch(getDb(), { ...actor(req), watchId: String(req.params.watchId) }); res.json({ status: 'success' }); } catch (err) { fail(res, err); }
+});
 
 taskRouter.get('/', async (req, res) => {
   try { res.json({ status: 'success', ...(await listTasks(getDb(), actor(req))) }); } catch (err) { fail(res, err); }

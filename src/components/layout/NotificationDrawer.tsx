@@ -12,6 +12,7 @@ import { NOTIFICATION_TYPES, typesForRole, wantsNotification } from '../../lib/n
 import { EMAIL_MODE_LABEL, EMAIL_MODES, emailMode, type NotificationEmailMode } from '../../lib/notificationEmail';
 import { getIdToken } from '../../firebase';
 import type { NotificationPrefs } from '../../lib/notifications';
+import { recordFromNotice } from '../../lib/watches';
 import type { AppNotification } from '../../types';
 
 /**
@@ -130,7 +131,12 @@ export default function NotificationDrawer() {
 
   const open = (n: AppNotification) => {
     if (!n.read) markRead([n.id]);
-    if (n.linkTab) {
+    // BG-04: a watched record's notice opens the record itself
+    const record = recordFromNotice(n.kind, n.recordId);
+    if (record) {
+      useUIStore.getState().openRecord(record);
+      setDrawerOpen(false);
+    } else if (n.linkTab) {
       setActiveTab(n.linkTab);
       setDrawerOpen(false);
     }
