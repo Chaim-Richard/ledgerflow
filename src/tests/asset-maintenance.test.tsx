@@ -49,7 +49,8 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     db = (await import('../server/db/firestore')).getDb();
     job = await import('../server/services/assetReminderService');
     await db.collection('workspaces').doc(ws).set({ uid: 'owner-1', name: 'Service Co', timezone: 'UTC', members: ['owner-1'] });
-    await db.collection('assets').doc(`${ws}_van`).set({ workspaceId: ws, uid: 'owner-1', status: 'active', name: 'Van', nextServiceDue: '2026-10-20' });
+    // far from other tests' dates: the nightly job reads every workspace's assets, and other tests run beside this one
+    await db.collection('assets').doc(`${ws}_van`).set({ workspaceId: ws, uid: 'owner-1', status: 'active', name: 'Van', nextServiceDue: '2030-10-20' });
   });
   after(async () => {
     for (const table of ['notifications', 'assets', 'workspaces']) await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
@@ -57,10 +58,10 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
   });
 
   test('the nightly job tells the owner about the service once', async () => {
-    await job.runAssetReminders(db, new Date('2026-10-10T12:00:00Z'));
-    await job.runAssetReminders(db, new Date('2026-10-11T12:00:00Z'));
+    await job.runAssetReminders(db, new Date('2030-10-10T12:00:00Z'));
+    await job.runAssetReminders(db, new Date('2030-10-11T12:00:00Z'));
     const { rows } = await db.pool.query<{ title: string }>(`select data->>'title' as title from public.notifications where workspace_id = $1`, [ws]);
-    assert.deepEqual(rows.map(r => r.title), ['Van is due for its service in 10 days (2026-10-20)']);
+    assert.deepEqual(rows.map(r => r.title), ['Van is due for its service in 10 days (2030-10-20)']);
   });
 });
 
