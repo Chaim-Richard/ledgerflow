@@ -23,7 +23,7 @@ import type { ChartAccount, Transaction } from '../../types';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import { reversedTransactionIds } from '../../lib/postingCheck';
-import { isCashFlowCashAccount } from './computeReports';
+import { computeBalanceSheet, isCashFlowCashAccount } from './computeReports';
 
 export interface CashBasisPayment {
   id: string;
@@ -85,7 +85,8 @@ export function cashBasisEntries(accounts: ChartAccount[], transactions: Transac
       const lines = (tx.lines || []).map(l => ({ ...l, amountCents: lineAmount(l, tx), exchangeRate: 1 }));
       const cash = lines.filter(isCash).reduce((s, l) => s + (kind === 'invoice' ? Math.max(0, l.amountCents) : Math.max(0, -l.amountCents)), 0);
       const owed = owedOn(lines, kind);
-      if (cash > 0) entries.push({ ...tx, id: `${tx.id}:cash`, exchangeRate: 1, lines: shareOfLines(lines.filter(l => !onArAp(l) && !isCash(l)), cash / (cash + owed)) } as Transaction);
+      // its cash lines stay (the balance sheet's bank balance), with the paid share of the rest
+      if (cash > 0) entries.push({ ...tx, id: `${tx.id}:cash`, exchangeRate: 1, lines: [...lines.filter(isCash), ...shareOfLines(lines.filter(l => !onArAp(l) && !isCash(l)), cash / (cash + owed))] } as Transaction);
       continue;
     }
     const lines = tx.lines || [];
@@ -118,4 +119,32 @@ export function cashBasisEntries(accounts: ChartAccount[], transactions: Transac
     }
   }
   return { entries, leftOut };
+}
+
+/** The trade receivable and payable accounts (what cash basis leaves out of the balance sheet). */
+export function tradeAccountIds(accounts: ChartAccount[]): Set<string> {
+  return new Set(accounts.filter(a => ['ar', 'ap'].includes(resolveAccountRole(a)) && !NOT_TRADE.test(String(a.name || ''))).map(a => a.id));
+}
+
+/**
+ * N-08: the balance sheet on cash basis, as of a day: the same entries as the cash-basis profit and
+ * loss, without the trade receivables and payables (what customers owe and what is owed to vendors is
+ * not on it), so its profit to date is the cash-basis profit. What is paid but not yet applied to an
+ * invoice or bill has no income or cost to go to: it is said on a line of its own with the
+ * liabilities (`notApplied`), so the sheet still balances. Books that don't balance on accrual basis
+ * are shown as they are, without that line.
+ */
+export function cashBasisBalanceSheet(accounts: ChartAccount[], transactions: Transaction[], payments: CashBasisPayment[], endDate?: string) {
+  const accrual = computeBalanceSheet(accounts, transactions, endDate);
+  const { entries, leftOut } = cashBasisEntries(accounts, transactions, payments);
+  const trade = tradeAccountIds(accounts);
+  const kept = accounts.filter(a => !trade.has(a.id));
+  const without = entries.map(t => ({ ...t, lines: (t.lines || []).filter(l => !trade.has(l.accountId)) }));
+  const bs = computeBalanceSheet(kept, without, endDate);
+  const notApplied = accrual.isBalanced ? bs.totalAssets - bs.totalClaims : 0;
+  return {
+    ...bs, orphanedLines: [], basis: 'cash' as const, leftOut, notApplied,
+    totalLiabilities: bs.totalLiabilities + notApplied, totalClaims: bs.totalClaims + notApplied,
+    isBalanced: bs.isBalanced || (accrual.isBalanced && bs.totalAssets === bs.totalClaims + notApplied),
+  };
 }

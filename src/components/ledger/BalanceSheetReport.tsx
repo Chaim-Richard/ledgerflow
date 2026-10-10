@@ -11,7 +11,7 @@ import DrillDownModal from '../layout/DrillDownModal';
 import type { BalanceSheetModel } from './BalanceSheetView';
 import { StatementColumns } from './StatementColumns';
 
-export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, isDataTruncated, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct }: BalanceSheetModel) {
+export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, basis, chooseBasis, cashReady, isDataTruncated, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct }: BalanceSheetModel) {
   // Account groups (K-14): the same accounts, a group's children indented under their parent with a
   // subtotal under them. A group starts open, and the section totals below are the report's own.
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
@@ -93,6 +93,13 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
 
           <div className="hidden sm:block w-px h-8 bg-slate-200" />
 
+          {/* N-08: accrual or cash basis */}
+          <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-700">Basis
+            <select value={basis} onChange={e => chooseBasis(e.target.value === 'cash' ? 'cash' : 'accrual')} className="bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal">
+              <option value="accrual">Accrual (as posted)</option>
+              <option value="cash">Cash (when paid)</option>
+            </select>
+          </label>
           {/* Comparative mode selector */}
           <label htmlFor={`${formId}-comparative`} aria-label="Comparative Year-on-Year" className="flex min-h-11 items-center gap-2 cursor-pointer group/toggle rounded focus-within:outline focus-within:outline-2 focus-within:outline-indigo-500">
             <input 
@@ -100,6 +107,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                type="checkbox" 
                className="sr-only"
                checked={isComparative} 
+               disabled={basis === 'cash'}
                onChange={(e) => setIsComparative(e.target.checked)} 
             />
             <div className={cn(
@@ -226,14 +234,21 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
         </div>
       )}
 
-      <StatementColumns kind="bs" title="Balance Sheet" accounts={accounts} transactions={transactions}
+      {basis === 'cash' && (
+        <p role="status" className="text-xs text-[var(--muted)]">
+          {cashReady
+            ? <>Cash basis: what customers owe and what is owed to vendors is not on it, and the profit to date is the cash-basis profit (invoices and bills count when paid).{currentData.leftOut ? ` ${currentData.leftOut} ${currentData.leftOut === 1 ? 'entry' : 'entries'} on receivables or payables without cash (credit notes, write-offs) ${currentData.leftOut === 1 ? 'is' : 'are'} left out.` : ''}</>
+            : loadingStates.bs ? 'Calculating on cash basis…' : 'Cash basis is calculated by the server, and it could not be reached: try again in a moment.'}
+        </p>
+      )}
+      {basis === 'accrual' && <StatementColumns kind="bs" title="Balance Sheet" accounts={accounts} transactions={transactions}
         startDate={columnStartDate} endDate={asOfDate} compare={isComparative}
         compareStartDate={columnCompareStartDate} compareEndDate={priorDate}
         mode={columnMode} onModeChange={setColumnMode} showPercent={showPercent} onPercentChange={setShowPercent}
         totalData={currentData} previousTotalData={prevData} totalAuthoritative={isServerAuthoritative}
         formatMoney={formatCurrency} sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}
-        onDrillDown={(accountName, selectedTransactions) => setDrillDownTarget({ accountName, transactions: selectedTransactions })} />
-      {columnMode === 'total' && !showPercent && !isComparative && (
+        onDrillDown={(accountName, selectedTransactions) => setDrillDownTarget({ accountName, transactions: selectedTransactions })} />}
+      {(basis === 'cash' || (columnMode === 'total' && !showPercent && !isComparative)) && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Assets Column */}
         <motion.div 
@@ -392,6 +407,12 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                     </AccountGroupRow>
                   );
                 })}
+                {Boolean(currentData.notApplied) && (
+                  <div className="flex justify-between items-center p-3 text-xs text-[var(--text)]">
+                    <span>Paid, not yet applied to an invoice or bill</span>
+                    <span className="font-mono tabular-nums">{formatCurrency(currentData.notApplied || 0)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center pt-2 text-[var(--muted)] text-[8px] font-bold uppercase tracking-wider">
                   <span>Sub-Total Liabilities</span>
                   <span className="font-mono font-semibold tabular-nums">{formatCurrency(currentData.totalLiabilities)}</span>

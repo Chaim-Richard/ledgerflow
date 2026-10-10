@@ -20,7 +20,7 @@ import type { Bill, Budget, ChartAccount, CreditNote, Customer, Invoice, Payment
 import { agingBucket, daysOverdue, outstandingBaseCents } from '../../lib/aging';
 import { GroupReportError, groupSummary } from '../reports/groupReport';
 import { profitByLabel } from '../reports/byLabel';
-import { cashBasisEntries, type CashBasisPayment } from '../reports/cashBasis';
+import { cashBasisBalanceSheet, cashBasisEntries, type CashBasisPayment } from '../reports/cashBasis';
 import { explainFigure } from '../reports/explain';
 import { stockMovesReady } from '../services/stockMoveService';
 import { itemDetails, stockAging, type StockMove } from '../../lib/stockMoves';
@@ -124,6 +124,13 @@ reportRouter.get("/balance-sheet", async (req, res) => {
   if (cached && cached.expiry > Date.now()) return res.json(cached.data);
   try {
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, endDate);
+    // N-08: on cash basis, without trade receivables and payables (cashBasis.ts)
+    if (req.query.basis === 'cash') {
+      const payments = (await getDb().collection('payments').where('workspaceId', '==', workspaceId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as CashBasisPayment);
+      const cashBs = cashBasisBalanceSheet(accounts, transactions, payments, endDate || undefined);
+      REPORT_CACHE.set(cacheKey, { data: cashBs, expiry: Date.now() + CACHE_TTL_MS });
+      return res.json(cashBs);
+    }
     const bs = computeBalanceSheet(accounts, transactions, endDate);
     REPORT_CACHE.set(cacheKey, { data: bs, expiry: Date.now() + CACHE_TTL_MS });
     res.json(bs);

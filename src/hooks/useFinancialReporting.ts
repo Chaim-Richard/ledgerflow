@@ -20,6 +20,10 @@ export interface ServerBalanceSheetData {
   totalClaims: number;
   isBalanced: boolean;
   orphanedLines?: Array<{ accountId: string; transactionId?: string; date?: string; amountCents: number }>;
+  /** N-08: on the cash-basis answer, entries left out and payments not yet applied (with the liabilities) */
+  basis?: 'cash';
+  leftOut?: number;
+  notApplied?: number;
 }
 
 export interface ServerTrialBalanceData {
@@ -102,8 +106,8 @@ export function useFinancialReporting() {
   // N-08: basis 'cash' counts invoices and bills when paid (the server's cashBasis.ts)
   const fetchPL = useCallback((startDate?: string, endDate?: string, basis?: 'cash') =>
     fetchReport<ServerPLData>('pl', { startDate, endDate, basis }), [fetchReport]);
-  const fetchBalanceSheet = useCallback((endDate?: string) =>
-    fetchReport<ServerBalanceSheetData>('bs', { endDate }), [fetchReport]);
+  const fetchBalanceSheet = useCallback((endDate?: string, basis?: 'cash') =>
+    fetchReport<ServerBalanceSheetData>('bs', { endDate, basis }), [fetchReport]);
   const fetchTrialBalance = useCallback((asOfDate?: string) =>
     fetchReport<ServerTrialBalanceData>('tb', { asOfDate }), [fetchReport]);
   const fetchCashFlow = useCallback((startDate?: string, endDate?: string) =>

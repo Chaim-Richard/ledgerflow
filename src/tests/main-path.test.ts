@@ -180,6 +180,9 @@ describe('The main path, one simple business', { skip: !url && 'LF_TEST_DATABASE
     // N-08: on cash basis, the 600.00 the customer paid of the 1,000.00 invoice, and the bill paid in full
     const cash = await report('/profit-and-loss?startDate=2026-05-01&endDate=2026-05-31&basis=cash');
     assert.deepEqual([cash.income.total, cash.expense.total, cash.netIncome, cash.basis, cash.leftOut], [60000, 25000, 35000, 'cash', 0]);
+    // and the balance sheet on cash basis: no receivable, the cash-basis profit, still balanced
+    const cashBs = await report(`/balance-sheet?endDate=${MAY_END}&basis=cash`);
+    assert.deepEqual([cashBs.totalAssets, cashBs.netIncome, cashBs.notApplied, cashBs.isBalanced], [35000, 35000, 0, true]);
     const bs = await report(`/balance-sheet?endDate=${MAY_END}`);
     assert.equal(bs.isBalanced, true);
     assert.equal(bs.totalAssets, 35000 + 40000, 'checking 350.00 and receivables 400.00');

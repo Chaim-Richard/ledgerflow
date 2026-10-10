@@ -263,7 +263,8 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
       proportion to what was paid, on the payment's date; everything else (bank entries, journals,
       depreciation) counts as posted. Credit notes and write-offs on receivables are left out, and
       the screen says how many. Payments not yet applied to an invoice or bill don't count.
-    - The balance sheet stays as posted (accrual) for now.
+    - The balance sheet has the same switch: no receivables or payables on cash basis, and a payment
+      not yet applied to an invoice or bill shows on its own line ("Paid, not yet applied").
 
 ## C. Good to know (no action needed)
 

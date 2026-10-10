@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ProfitAndLossView from '../components/ledger/ProfitAndLossView';
+import BalanceSheetView from '../components/ledger/BalanceSheetView';
 import { getSupabase } from '../lib/db/client';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { makeChartAccount, makeTransaction } from './fixtures';
@@ -60,5 +61,29 @@ describe('Cash or accrual on the P&L', () => {
     await act(async () => { fireEvent.change(screen.getByLabelText('Basis'), { target: { value: 'cash' } }); });
     await waitFor(() => assert.match(document.body.textContent || '', /could not be reached/));
     assert.equal(screen.queryAllByText('$1,000.00').length, 0);
+  });
+});
+
+describe('Cash or accrual on the balance sheet', () => {
+  afterEach(async () => { cleanup(); getSupabase().realtime.disconnect(); await getSupabase().auth.dispose(); });
+
+  test('cash asks the server for it, shows its figures, what it leaves out, and a payment not yet applied', async () => {
+    setComponentWorkspace('owner');
+    const sheet = [...chart, makeChartAccount({ id: 'ar', code: '1100', name: 'Accounts Receivable', type: 'asset', category: 'Receivables' })];
+    useLedgerStore.setState({ accounts: sheet, transactions: ledger });
+    const asked: string[] = [];
+    const bs = (cash: number, extra: Record<string, unknown> = {}) => ({ assets: { cash }, liabilities: {}, equity: {}, totalAssets: cash, totalLiabilities: 0, totalEquity: 0, netIncome: cash, totalClaims: cash, isBalanced: true, ...extra });
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      asked.push(url);
+      const body = url.includes('basis=cash') ? bs(70000, { basis: 'cash', leftOut: 1, notApplied: 5000, totalLiabilities: 5000, netIncome: 65000 }) : bs(100000);
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }) as typeof fetch;
+    render(<BalanceSheetView accounts={sheet} formatCurrency={(c: number) => `$${(c / 100).toFixed(2)}`} asOfDate="2026-05-31" />);
+    await act(async () => { fireEvent.change(screen.getByLabelText('Basis'), { target: { value: 'cash' } }); });
+    await waitFor(() => assert.match(document.body.textContent || '', /Cash basis: what customers owe and what is owed to vendors is not on it/));
+    assert.ok(asked.some(u => u.includes('/api/v1/reports/balance-sheet') && u.includes('basis=cash')));
+    assert.match(document.body.textContent || '', /1 entry on receivables or payables without cash/);
+    assert.match(screen.getByText('Paid, not yet applied to an invoice or bill').parentElement!.textContent || '', /\$50\.00/);
   });
 });

@@ -6,7 +6,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cashBasisEntries, shareOfLines, type CashBasisPayment } from '../server/reports/cashBasis';
+import { cashBasisBalanceSheet, cashBasisEntries, shareOfLines, type CashBasisPayment } from '../server/reports/cashBasis';
 import { computeProfitAndLoss } from '../server/reports/computeReports';
 import { makeChartAccount } from './fixtures';
 import type { Transaction } from '../types';
@@ -81,4 +81,13 @@ test('a reversed posting is not brought in; whole cents with the rounding on the
   assert.equal(computeProfitAndLoss(accounts, entries, '2026-07-01', '2026-07-31').income.total, 0);
   assert.equal(leftOut, 0, 'a reversal is not a credit note');
   assert.deepEqual(shareOfLines([{ amountCents: -100 }, { amountCents: -100 }, { amountCents: -100 }], 1 / 3).map(l => l.amountCents), [-34, -33, -33]);
+});
+
+test('the balance sheet on cash basis: no receivables or payables, the cash-basis profit, a payment not yet applied on its own line', () => {
+  const bs = cashBasisBalanceSheet(accounts, transactions, payments, '2026-04-30');
+  assert.deepEqual([bs.assets.bank, bs.assets.ar, bs.liabilities.ap], [58500 - 40000 + 20000 - 1500, undefined, undefined], 'the bank, with the invoice paid on the spot');
+  assert.deepEqual([bs.netIncome, bs.notApplied, bs.isBalanced], [70000 - 1500 - 80000 - 40000, 0, true]);
+  const unapplied = entry('pay3', '2026-04-20', [['bank', 10000], ['ar', -10000]], { type: 'payment-posting', paymentId: 'p3' });
+  const withIt = cashBasisBalanceSheet(accounts, [...transactions, unapplied], [...payments, { id: 'p3', paymentDate: '2026-04-20', allocations: [] }], '2026-04-30');
+  assert.deepEqual([withIt.notApplied, withIt.totalLiabilities - bs.totalLiabilities, withIt.isBalanced], [10000, 10000, true]);
 });
