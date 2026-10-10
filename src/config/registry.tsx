@@ -56,6 +56,7 @@ for (const path in pluginModules) {
 // 1. Definition of all View Components
 export const VIEW_COMPONENTS: Record<string, ElementType> = {
   'inventory': lazy(() => import('../components/inventory/Inventory')),
+  'practice': lazy(() => import('../components/dashboard/PracticeView')),
   'accept-invite': lazy(() => import('../components/auth/AcceptInviteView')),
   ...dynamicComponents,
   'dashboard': lazy(() => import('../components/Dashboard')),
@@ -126,6 +127,7 @@ export { isTabVisible } from './tabVisibility';
 export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition, 'help'>>([
   { id: 'dashboard', label: { en: 'Overview', he: 'סקירה' }, icon: Home, groupId: 'dashboard' },
   { id: 'inbox', label: { en: 'To Review', he: 'לסקירה' }, icon: Inbox, groupId: 'dashboard' },
+  { id: 'practice', label: { en: 'All my books', he: 'כל הספרים שלי' }, icon: Briefcase, groupId: 'dashboard' },
   { id: 'copilot', label: { en: 'AI Co-pilot', he: 'טייס משנה' }, icon: Sparkles, groupId: 'dashboard' },
 
   { id: 'transactions', label: { en: 'Transactions', he: 'תנועות' }, icon: Layers, groupId: 'transactions' },

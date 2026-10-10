@@ -16,6 +16,8 @@ import { getNotificationEmail, setNotificationEmail } from '../services/notifica
 import { EMAIL_MODES, type NotificationEmailMode } from '../../lib/notificationEmail';
 import { createGroup, deleteGroup, keepRates, listGroups, shareGroup, unshareGroup, updateGroup, WorkspaceGroupError } from '../services/workspaceGroupService';
 import { authAdmin } from '../auth/supabaseAuth';
+import { practiceRows } from '../services/practiceService';
+import { getLocalDateISO } from '../../lib/utils';
 
 export const accountRouter = express.Router();
 
@@ -131,6 +133,17 @@ accountRouter.put('/groups/:id/rates', async (req, res) => {
     const b = req.body || {};
     res.json({ status: 'success', group: await keepRates(getDb(), { uid: user.uid, groupId: String(req.params.id), reportCurrency: b.reportCurrency, startDate: b.startDate, endDate: b.endDate, rates: b.rates }) });
   } catch (err) { groupFail(res, err); }
+});
+
+// BD-01: the Practice view: each workspace the person can open, with what is waiting there
+accountRouter.get('/practice', async (req, res) => {
+  const user = (req as unknown as AuthenticatedRequest).user;
+  try {
+    const today = typeof req.query.today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.today) ? req.query.today : getLocalDateISO();
+    res.json({ status: 'success', rows: await practiceRows(getDb(), user.uid, today) });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: 'The practice view is not available right now', details: err instanceof Error ? err.message : String(err) });
+  }
 });
 
 // DA-01: share a group with someone by their sign-in email; stop sharing, or leave one shared with you

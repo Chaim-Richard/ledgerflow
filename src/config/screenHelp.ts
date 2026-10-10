@@ -1,6 +1,8 @@
 /** Screen descriptions are part of the registry contract; no generic fallback hides missing help. */
 export const SCREEN_HELP: Record<string, Record<string, string>> = {
   main: {
+    practice:
+      "Every set of books you can open, with what is waiting there: bank lines to review, banks to log in to again, questions, drafts, last month not closed and the next recurring item, most work first. A number opens that workspace on that screen.",
     inventory:
       "Review items, quantities and stock workflows. Edit supported metadata or inspect counts and adjustments. Use the stock adjustment workflow to change quantities or values.",
     projects:

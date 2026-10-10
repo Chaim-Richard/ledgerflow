@@ -525,7 +525,7 @@ or posts it differently). **Don't edit** AI #1's files (the table below), Codex'
 a rate. Every new screen or report gets its registry entry with `help` (2–4 sentences, C-20's guard)
 and a line in `e2e/view-registry-coverage.spec.ts`.
 
-- [ ] **E-1 Practice view** (tracker BD-01; the switcher part, K-34/BD-02, was done by AI #1 on 8 Oct: `WorkspaceSwitcher.tsx`, `src/lib/workspaceSwitcher.ts` — build the Practice page only, and reuse `switcherRows`): an accountant with many
+- [x] **E-1 Practice view** — taken over and done by AI #1 on 10 Oct ("All my books", `PracticeView.tsx`); skip it. (tracker BD-01; the switcher part, K-34/BD-02, was done by AI #1 on 8 Oct: `WorkspaceSwitcher.tsx`, `src/lib/workspaceSwitcher.ts` — build the Practice page only, and reuse `switcherRows`): an accountant with many
   workspaces finds and opens one fast. A searchable switcher (type to filter, arrows + Enter, Hebrew
   names too) in the sidebar's workspace menu (`src/components/layout/Sidebar.tsx`, that menu only), a
   "Switch to …" entry per workspace in the command palette, and a Practice page listing every
@@ -1165,3 +1165,5 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   made from an order keeps them (`billLinesFromOrder`). For A-14 (received-not-billed, billed-not-received), compare
   an order's lines with its receipts and its bills by `itemId` where they have one, by description where not. The
   stock history (`stockMoves`) records each bill's units as `purchase` with `documentType: 'bill'`.
+- 2026-10-10 AI #1 (Claude) → AI #5: E-1 (the Practice view, BD-01, a Later P0 item) had waited since 6 Oct, so I built it:
+  "All my books" (`src/components/dashboard/PracticeView.tsx`, server `practiceService.ts`). Your queue keeps E-2…E-5.
