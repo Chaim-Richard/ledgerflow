@@ -219,6 +219,22 @@
   [data-print-hide] { display: none !important; }
 }
 
+/* Y-19: paper is white whatever the screen theme (the dark theme's light text would print faint on
+   it); tables repeat their headings on each page and don't split a row across pages; no shadows. */
+@media print {
+  :root, .dark, .light {
+    --ink: #FFFFFF; --surface: #FFFFFF; --panel: #FFFFFF; --elevated: #FFFFFF;
+    --line: #BFC8C6; --grid: transparent;
+    --text: #0E2229; --muted: #3F5655; --faint: #4F6469;
+    --brass: #7A550E; --pos: #17754A; --neg: #A9412C;
+    color-scheme: light;
+  }
+  body { background: #FFFFFF !important; color: #0E2229; }
+  thead { display: table-header-group; }
+  tr, img, svg { break-inside: avoid; }
+  * { box-shadow: none !important; text-shadow: none !important; }
+}
+
 /* E-22: every control focused from the keyboard shows a ring, whatever outline classes it has
    (many use outline-none for mouse users). */
 :where(a, button, input, select, textarea, summary, [tabindex], [role="button"], [role="switch"]):focus-visible {

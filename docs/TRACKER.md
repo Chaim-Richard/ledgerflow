@@ -2059,7 +2059,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Y-16 Watermark: DRAFT, VOID (void/cancelled) and PAID (invoices, bills) stamped across every page of document PDFs; statements and receipts never (tested)
 - [x] Y-17 Page numbers ("Page x of y"; long documents run over pages with the table header repeated)
 - [x] Y-18 Batch PDF zip: tick invoices or bills in their lists → "Download PDFs (zip)"; up to 100 per zip, only this workspace's documents (tested)
-- [ ] Y-19 Print stylesheet
+- [x] Y-19 Print stylesheet — **done 10 Oct (Claude)**: printing a report already showed only the report (Reports → Print / PDF); now paper is always light (the default dark theme's pale text printed faint on white), table headings repeat on every page, rows and charts aren't split across pages, and shadows are left out (`src/index.css`).
 - [ ] Y-20 Digital signature
 - [x] Y-21 Multiple contacts per company (people with role, email, phone on the customer/vendor form and page)
 - [x] Y-22 Default currency per contact (new invoices and bills start in it; bills got a currency and rate field)
