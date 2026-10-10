@@ -12,6 +12,7 @@ import { calculateDueDate } from '../../lib/paymentTerms';
 import { entryValueCents, formatDuration, invoiceLinesFromTime, MAX_DESCRIPTION, parseDuration, STATUS_LABEL, timeProblem, type TimeEntry, type TimeRates } from '../../lib/timeEntries';
 import { useHandOvers } from './useHandOvers';
 import TimeRatesPanel from './TimeRatesPanel';
+import TimeTimer from './TimeTimer';
 
 const field = 'px-2 py-1.5 text-sm border border-[var(--line)] rounded bg-[var(--panel)] text-[var(--text)]';
 
@@ -124,6 +125,7 @@ export default function TimeView() {
 
         <fieldset disabled={busy} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-3 text-sm">
           <legend className="px-1 font-semibold text-[var(--text)]">Log time</legend>
+          <TimeTimer workspaceId={workspaceId} description={draft.description} onStop={(m, d) => setDraft(x => ({ ...x, date: getLocalDateISO(), duration: formatDuration(m), description: x.description || d }))} />
           <div className="flex flex-wrap gap-3">
             <label className="flex flex-col gap-1 text-[var(--muted)]">Day<input type="date" value={draft.date} onChange={e => setDraft(d => ({ ...d, date: e.target.value }))} className={field} /></label>
             <label className="flex flex-col gap-1 text-[var(--muted)]">How long<input value={draft.duration} placeholder="1:30" onChange={e => setDraft(d => ({ ...d, duration: e.target.value }))} className={`${field} w-24`} /></label>

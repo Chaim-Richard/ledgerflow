@@ -1989,7 +1989,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 # SECTION V — PROJECTS & TIME
 
 - [x] V-01 Time entries — **done 10 Oct**: Time (menu, Money in): log a day, how long (1:30, 1.5, 90m), what was done, customer, project; everyone logs their own, owners and accountants see everyone's and log for others; kept with the workspace's documents (kind "timeEntry", server-written; no migration) (`src/lib/timeEntries.ts`, `timeService.ts`, `TimeView.tsx`; tests `time-tracking.test.tsx`)
-- [ ] V-02 Timer
+- [x] V-02 Timer — **done 10 Oct**: Time → "Start a timer": it runs in that browser even if the page is closed; "Stop the timer" puts how long it ran (whole minutes, rounded up) and what it was for into Log time (`TimeTimer.tsx`, `timerMinutes`; tests `time-tracking.test.tsx`)
 - [x] V-03 Billable flag — **done 10 Oct** with V-01: billable time needs its customer; only billable time is invoiced
 - [x] V-04 Rate hierarchy — **done 10 Oct**: Time → Hourly rates (owners, accountants): by project, customer and person; an entry uses its own rate, else its project's, its customer's, its person's; values in whole cents (minutes × rate ÷ 60, rounded once)
 - [x] V-05 Timesheet approval — **done 10 Oct**: "Submit my time"; owners and accountants approve (one by one or all) or send back with a note (the person is told); submitted time is changed only by an approver; invoiced time is locked; audited

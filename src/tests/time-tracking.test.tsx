@@ -12,7 +12,8 @@ import React from 'react';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { entryValueCents, invoiceLinesFromTime, parseDuration, rateFor, timeProblem, type TimeEntry } from '../lib/timeEntries';
+import { entryValueCents, invoiceLinesFromTime, parseDuration, rateFor, timeProblem, timerMinutes, type TimeEntry } from '../lib/timeEntries';
+import TimeTimer from '../components/collaboration/TimeTimer';
 import TimeView from '../components/collaboration/TimeView';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -23,6 +24,10 @@ import { makeCustomer } from './fixtures';
 const entry = (fields: Partial<TimeEntry>): TimeEntry => ({ id: 'e', kind: 'timeEntry', workspaceId: 'w', person: 'p1', date: '2026-10-05', minutes: 90, description: 'Design', billable: true, customerId: 'c1', status: 'approved', createdAt: '2026-10-05T10:00:00Z', ...fields });
 
 describe('The rules', () => {
+  test('the timer: whole minutes rounded up, at least one, at most a day', () => {
+    assert.deepEqual([timerMinutes(0, 1000), timerMinutes(0, 61_000), timerMinutes(0, 120_000), timerMinutes(0, 30 * 3600_000)], [1, 2, 2, 1440]);
+  });
+
   test('durations', () => {
     assert.deepEqual(['1:30', '1.5', '1,5', '90m', '2h', '0:00', '25', '1:75', 'x'].map(parseDuration), [90, 90, 90, 90, 120, null, null, null, null]);
   });
@@ -148,5 +153,16 @@ describe('On screen', () => {
     assert.deepEqual(calls.at(-1), { path: '/move', body: { entryIds: ['n1'], to: 'submitted' } });
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Approve Fix the roof' })); });
     assert.deepEqual(calls.at(-1), { path: '/move', body: { entryIds: ['w1'], to: 'approved' } });
+  });
+
+  test('the timer keeps running across visits and Stop hands over its minutes', () => {
+    localStorage.setItem('lf_time_timer:w1', JSON.stringify({ startedAt: Date.now() - 125_000, description: 'Call with Acme' }));
+    const stops: Array<[number, string]> = [];
+    render(<TimeTimer workspaceId="w1" description="" onStop={(m, d) => stops.push([m, d])} />);
+    assert.match(screen.getByRole('timer').textContent || '', /^0:02:0[5-9]$/);
+    fireEvent.click(screen.getByRole('button', { name: 'Stop the timer' }));
+    assert.deepEqual(stops, [[3, 'Call with Acme']]);
+    assert.equal(localStorage.getItem('lf_time_timer:w1'), null);
+    assert.ok(screen.getByRole('button', { name: 'Start a timer' }));
   });
 });

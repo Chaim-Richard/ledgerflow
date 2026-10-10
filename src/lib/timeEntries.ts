@@ -50,6 +50,9 @@ export function parseDuration(text: string): number | null {
   return minutes > 0 && minutes <= 24 * 60 ? minutes : null;
 }
 
+/** V-02: whole minutes a timer ran, rounded up, at least one, at most a day. */
+export const timerMinutes = (startedAt: number, now: number) => Math.min(24 * 60, Math.max(1, Math.ceil((now - startedAt) / 60000)));
+
 export const formatDuration = (minutes: number) => `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
 
 /** The hourly rate that applies: the entry's own, else its project's, its customer's, its person's, else none. */
