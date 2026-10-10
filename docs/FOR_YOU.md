@@ -286,6 +286,12 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
    ordinary electronic acceptance, not a certified digital signature (no ID check). Say if you need a
    drawn signature or a certified signing service.
 
+39. **Direct deposit file (10 Oct, decided by default).** Payroll → a posted pay run → "Direct deposit
+   file" makes a US ACH (NACHA) file to upload to your bank. Employees' bank account numbers are now
+   kept on the employee record, readable by everyone in the workspace who can see payroll (as salaries
+   already are), and shown masked. Your own bank's routing number and company ID stay in your browser.
+   Say if account numbers should be hidden from bookkeepers, or if you need a non-US format (Masav in Israel).
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

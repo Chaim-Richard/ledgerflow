@@ -132,3 +132,4 @@ One row per capability, with one label each (DA-05). The README, Help, onboardin
 | 122 | Money display per workspace (number style, bracketed negatives) | Available | `src/lib/moneyFormat.ts`, `MoneyDisplayPanel.tsx`; `money-display-panel.test.tsx` | Display only |
 | 123 | Customers sign estimates online | Available | `src/lib/estimateSignature.ts`, `estimateSignService.ts`, `PublicEstimatePage.tsx`; `estimate-signature.test.tsx` | Typed name and "I accept"; not a qualified e-signature |
 | 124 | Tasks given to people, about a record | Available | `src/lib/tasks.ts`, `taskService.ts`, `TasksView.tsx`; `tasks.test.tsx` | With @mentions (BG-01) and watching records (BG-04, told once a day) |
+| 125 | Direct deposit (NACHA) file for a pay run | Available | `src/lib/nacha.ts`, `DirectDepositDialog.tsx`; `direct-deposit.test.tsx` | US ACH only; upload to the bank by hand |

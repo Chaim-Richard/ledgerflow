@@ -1,7 +1,7 @@
 /**
  * The pay runs on Payroll (U-02): each run's date, people, cost and status (posted, undone, waiting
  * for approval, sent back with the owner's note, withdrawn), with payslips (U-01) and Undo for a
- * posted run. Split out of PayrollView.
+ * posted run, and the direct deposit file (U-09). Split out of PayrollView.
  */
 import React, { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
@@ -10,6 +10,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import type { PayRun } from '../../types';
+import { DirectDepositDialog } from './DirectDepositDialog';
 
 const RUN_STATUS: Partial<Record<PayRun['status'], string>> = {
   processed: 'Posted to the ledger', undone: 'Undone', awaiting_approval: 'Waiting for approval', rejected: 'Sent back', withdrawn: 'Withdrawn',
@@ -26,6 +27,8 @@ export function PayRunHistory({ payRuns, canRunPayroll, onDone, onError }: {
   const [undoingRun, setUndoingRun] = useState('');
   // U-01: the run whose payslips are listed
   const [slipsOf, setSlipsOf] = useState('');
+  // U-09: the run whose direct deposit file is being made
+  const [depositOf, setDepositOf] = useState<PayRun | null>(null);
   const downloadPayslip = async (run: PayRun, employeeId: string, name: string) => {
     if (!workspace?.id) return;
     try {
@@ -104,6 +107,11 @@ export function PayRunHistory({ payRuns, canRunPayroll, onDone, onError }: {
                       Payslips<span className="sr-only"> of the pay run of {formatDate(run.date)}</span>
                     </button>
                   )}
+                  {run.status === 'processed' && (run.employees || []).length > 0 && (
+                    <button type="button" onClick={() => setDepositOf(run)} className="mr-3 text-xs font-semibold text-neutral-700 hover:underline">
+                      Direct deposit file<span className="sr-only"> of the pay run of {formatDate(run.date)}</span>
+                    </button>
+                  )}
                   {run.status === 'processed' && run.transactionId && (
                     <button type="button" disabled={undoingRun === run.id} onClick={() => void undoRun(run)} className="text-xs font-semibold text-neutral-500 hover:underline disabled:opacity-50">
                       Undo<span className="sr-only"> the pay run of {formatDate(run.date)}</span>
@@ -131,6 +139,7 @@ export function PayRunHistory({ payRuns, canRunPayroll, onDone, onError }: {
           ))}
         </tbody>
       </table>
+      {depositOf && workspace && <DirectDepositDialog run={depositOf} workspace={workspace} onClose={() => setDepositOf(null)} />}
     </div>
   );
 }

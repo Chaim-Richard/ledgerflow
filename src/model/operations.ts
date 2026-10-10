@@ -155,6 +155,10 @@ export interface Employee {
   ptoTaken?: Array<{ date: string; hours: number; note?: string }>;
   /** U-05, U-06: named deductions each pay period (pre-tax, after-tax, garnishments): src/lib/payrollDeductions.ts */
   deductions?: EmployeeDeduction[];
+  /** U-09: where their net pay is deposited (the direct deposit file, src/lib/nacha.ts) */
+  bankRouting?: string;
+  bankAccount?: string;
+  bankAccountType?: 'checking' | 'savings';
 }
 
 export interface PayRun {
