@@ -28,7 +28,7 @@ describe('Who is notified', () => {
   });
 
   test('viewers only hear that their own role changed (S-15), that they were given a task (BG-02) or mentioned (BG-01)', () => {
-    assert.deepEqual(typesForRole('viewer'), ['member.role_changed', 'task.assigned', 'mention.query', 'record.changed', 'mention.task']);
+    assert.deepEqual(typesForRole('viewer'), ['member.role_changed', 'task.assigned', 'mention.query', 'time.decided', 'record.changed', 'mention.task']);
     assert.ok(typesForRole('owner').includes('member.invited'));
     assert.ok(!typesForRole('bookkeeper').includes('member.invited'));
   });

@@ -3,6 +3,7 @@ import { getDb } from '../db/firestore';
 import { createTask, listTasks, removeTask, setTaskStatus, TaskError } from '../services/taskService';
 import { myWatches, unwatch, watchRecord, WatchError } from '../services/watchService';
 import { linkEntries, LinkError, linksOf, unlinkEntries } from '../services/entryLinkService';
+import { changeTime, listTime, logTime, markInvoiced, moveTime, removeTime, setRates, TimeError } from '../services/timeService';
 
 /**
  * Tasks (BG-02, BG-03), mounted at /api/v1/workspaces/:workspaceId/tasks (workspaceRoutes.ts, every
@@ -68,4 +69,23 @@ entryLinkRouter.delete('/:linkId', async (req, res) => {
 export function mountTeamRoutes(workspaceRouter: express.Router, members: express.RequestHandler) {
   workspaceRouter.use('/:workspaceId/tasks', members, taskRouter);
   workspaceRouter.use('/:workspaceId/entry-links', members, entryLinkRouter);
+  workspaceRouter.use('/:workspaceId/time', members, timeRouter);
 }
+
+/**
+ * Time tracking (V-01, V-03..V-06, timeService.ts), at /api/v1/workspaces/:workspaceId/time: GET;
+ * POST an entry; PATCH /:entryId; DELETE /:entryId; POST /move {entryIds, to, note};
+ * POST /invoiced {entryIds, invoiceId}; PUT /rates {rates}.
+ */
+export const timeRouter = express.Router({ mergeParams: true });
+const timeFail = (res: express.Response, err: unknown) => {
+  if (err instanceof TimeError) return res.status(err.status).json({ status: 'error', message: err.message });
+  res.status(500).json({ status: 'error', message: 'The time could not be saved', details: err instanceof Error ? err.message : String(err) });
+};
+timeRouter.get('/', async (req, res) => { try { res.json({ status: 'success', ...(await listTime(getDb(), actor(req))) }); } catch (err) { timeFail(res, err); } });
+timeRouter.post('/move', async (req, res) => { try { res.json({ status: 'success', entries: await moveTime(getDb(), { ...actor(req), entryIds: req.body?.entryIds, to: req.body?.to, note: req.body?.note }) }); } catch (err) { timeFail(res, err); } });
+timeRouter.post('/invoiced', async (req, res) => { try { res.json({ status: 'success', ...(await markInvoiced(getDb(), { ...actor(req), entryIds: req.body?.entryIds, invoiceId: req.body?.invoiceId })) }); } catch (err) { timeFail(res, err); } });
+timeRouter.put('/rates', async (req, res) => { try { res.json({ status: 'success', ...(await setRates(getDb(), { ...actor(req), rates: req.body?.rates })) }); } catch (err) { timeFail(res, err); } });
+timeRouter.post('/', async (req, res) => { try { res.json({ status: 'success', entry: await logTime(getDb(), { ...actor(req), entry: req.body || {} }) }); } catch (err) { timeFail(res, err); } });
+timeRouter.patch('/:entryId', async (req, res) => { try { res.json({ status: 'success', entry: await changeTime(getDb(), { ...actor(req), entryId: String(req.params.entryId), entry: req.body || {} }) }); } catch (err) { timeFail(res, err); } });
+timeRouter.delete('/:entryId', async (req, res) => { try { await removeTime(getDb(), { ...actor(req), entryId: String(req.params.entryId) }); res.json({ status: 'success' }); } catch (err) { timeFail(res, err); } });

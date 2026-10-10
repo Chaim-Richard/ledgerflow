@@ -97,6 +97,7 @@ export const VIEW_COMPONENTS: Record<string, ElementType> = {
   'audit-trail': lazy(() => import('../components/forensics/AuditTrail')),
   'client-queries': lazy(() => import('../components/ledger/ClientQueriesView')),
   'tasks': lazy(() => import('../components/collaboration/TasksView')),
+  'time': lazy(() => import('../components/collaboration/TimeView')),
   'recurring': lazy(() => import('../components/ledger/RecurringTransactionsView')),
   'system-command-center': lazy(() => import('../components/platform/SystemCommandCenter')),
   'consolidation': lazy(() => import('../components/finance/Consolidation')),
@@ -143,6 +144,7 @@ export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition
   { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת' }, icon: Search, groupId: 'transactions' },
   { id: 'client-queries', label: { en: 'Questions about Entries', he: 'שאלות על תנועות' }, icon: MessageCircleQuestion, groupId: 'transactions' },
   { id: 'tasks', label: { en: 'Tasks', he: 'משימות' }, icon: ListChecks, groupId: 'transactions' },
+  { id: 'time', label: { en: 'Time', he: 'שעות עבודה' }, icon: Clock, groupId: 'money_in' },
 
   { id: 'reconciliation', label: { en: 'Reconcile', he: 'התאמות' }, icon: RefreshCw, groupId: 'reconcile' },
   { id: 'month-end-close', label: { en: 'Month-End Close', he: 'סגירת חודש' }, icon: ClipboardCheck, groupId: 'reconcile' },
