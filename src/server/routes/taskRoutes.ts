@@ -63,3 +63,9 @@ entryLinkRouter.post('/', async (req, res) => {
 entryLinkRouter.delete('/:linkId', async (req, res) => {
   try { await unlinkEntries(getDb(), { ...actor(req), linkId: String(req.params.linkId) }); res.json({ status: 'success' }); } catch (err) { linkFail(res, err); }
 });
+
+/** Mounts the team routes (every member; each service checks who may do what) under /:workspaceId. */
+export function mountTeamRoutes(workspaceRouter: express.Router, members: express.RequestHandler) {
+  workspaceRouter.use('/:workspaceId/tasks', members, taskRouter);
+  workspaceRouter.use('/:workspaceId/entry-links', members, entryLinkRouter);
+}
