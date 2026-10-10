@@ -14,6 +14,7 @@ import { db, getIdToken } from '../../firebase';
 import { doc, getDoc } from '../../lib/db/firestore';
 import { readBankStatuses, type BankStatus } from '../../lib/bankFeedStatus';
 import type { PurchaseOrder } from '../../types';
+import { TASK_KIND, type Task } from '../../lib/tasks';
 
 /**
  * Needs attention (DA-02) at the top of the Overview: one row per kind of thing to do, with how
@@ -33,6 +34,9 @@ export default function NeedsAttentionCard() {
   const { loading } = useLedgerCollections('bankLines', 'bills', 'inventory', 'invoices', 'payRuns', 'recurring');
   const { data: purchaseOrders } = useCollection<PurchaseOrder>('purchaseOrders', { where: [{ field: 'status', op: '==', value: 'pending_approval' }], limit: 200 });
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
+  // BG-03: open tasks given to whoever is looking
+  const uid = useAuthStore(s => s.user?.uid) || '';
+  const { data: myTasks } = useCollection<Task>('documents', { where: [{ field: 'kind', op: '==', value: TASK_KIND }, { field: 'assignee', op: '==', value: uid }, { field: 'status', op: '==', value: 'open' }], limit: 200 });
   const goToPage = useUIStore(s => s.goToPage);
   const openRecord = useUIStore(s => s.openRecord);
   const { queries } = useClientQueries(workspace?.id);
@@ -73,8 +77,8 @@ export default function NeedsAttentionCard() {
       inventory: inventory || [], bankLines: bankLines || [], today, baseCurrency: workspace.currency || 'USD', dimensions: workspace.dimensions,
     });
     const closeByDay = (workspace.alerts as { closeReminderDay?: number | null } | undefined)?.closeReminderDay || undefined;
-    return needsAttention({ today, workspace, bankLines: bankLines || [], invoices: invoices || [], findings, closeByDay, questions: queries, payRuns: payRuns || [], purchaseOrders, banks, lastMonthSignOffs: hasSteps ? signOffs : undefined });
-  }, [workspace, transactions, accounts, invoices, bills, recurring, inventory, bankLines, queries, payRuns, purchaseOrders, banks, hasSteps, signOffs]);
+    return needsAttention({ today, workspace, bankLines: bankLines || [], invoices: invoices || [], findings, closeByDay, questions: queries, payRuns: payRuns || [], purchaseOrders, banks, lastMonthSignOffs: hasSteps ? signOffs : undefined, myTasks });
+  }, [workspace, transactions, accounts, invoices, bills, recurring, inventory, bankLines, queries, payRuns, purchaseOrders, banks, hasSteps, signOffs, myTasks]);
 
   if (loading || !workspace) return null;
   return (

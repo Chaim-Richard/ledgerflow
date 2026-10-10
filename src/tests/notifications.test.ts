@@ -27,8 +27,8 @@ describe('Who is notified', () => {
     assert.deepEqual(notificationRecipients(workspace, 'payment.received', prefs).sort(), ['book', 'late', 'owner']);
   });
 
-  test('viewers only hear that their own role changed (S-15)', () => {
-    assert.deepEqual(typesForRole('viewer'), ['member.role_changed']);
+  test('viewers only hear that their own role changed (S-15), and that they were given a task (BG-02)', () => {
+    assert.deepEqual(typesForRole('viewer'), ['member.role_changed', 'task.assigned']);
     assert.ok(typesForRole('owner').includes('member.invited'));
     assert.ok(!typesForRole('bookkeeper').includes('member.invited'));
   });

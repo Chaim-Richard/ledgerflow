@@ -21,6 +21,7 @@ import { journalTemplateRouter } from './journalTemplateRoutes';
 import { ScheduledReportError, sendScheduleNow } from '../services/scheduledReportService';
 import { portalLinkRouter } from './customerPortalRoutes';
 import { signLinkRouter } from './estimateSignRoutes';
+import { taskRouter } from './taskRoutes';
 import { clientQueryRouter } from './clientQueryRoutes';
 import { accountMergeRouter } from './accountMergeRoutes';
 import { assetDisposalRouter } from './assetDisposalRoutes';
@@ -177,6 +178,7 @@ workspaceRouter.use('/:workspaceId/tags', requireWorkspaceRole(['owner', 'accoun
 // Customer portal links (K-27): writers create or turn them off (checked in the service)
 workspaceRouter.use('/:workspaceId/customers/:customerId/portal-link', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), portalLinkRouter);
 workspaceRouter.use('/:workspaceId/estimates/:estimateId/sign-link', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), signLinkRouter);
+workspaceRouter.use('/:workspaceId/tasks', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), taskRouter);
 // Scheduled reports (K-28): send one now (owners and accountants); the daily job sends the rest
 workspaceRouter.post('/:workspaceId/report-schedules/:scheduleId/send-now', requireWorkspaceRole(['owner', 'accountant']), async (req, res) => {
   try {

@@ -50,6 +50,8 @@ export function needsAttention(input: {
   purchaseOrders?: Array<{ status?: string }>;
   /** bank connections (Plaid), for the ones whose login expired */
   banks?: Array<{ status?: string; institutionName?: string; lastSyncedAt?: string | null }>;
+  /** BG-03: the open tasks given to the person looking */
+  myTasks?: Array<{ status?: string; due?: string }>;
 }): AttentionRow[] {
   const rows: AttentionRow[] = [];
   const add = (row: AttentionRow) => { if (row.count > 0) rows.push(row); };
@@ -96,6 +98,9 @@ export function needsAttention(input: {
 
   const asked = (input.questions || []).filter(q => q.status === 'open').length;
   add({ id: 'questions', count: asked, text: plural(asked, 'question about an entry waiting for an answer', 'questions about entries waiting for an answer'), why: 'Someone asked what an entry was; it stays unclear in the books until it is answered.', who: 'the owner', page: { tab: 'client-queries' } });
+  const mine = (input.myTasks || []).filter(t => t.status === 'open');
+  const late = mine.filter(t => t.due && t.due < input.today).length;
+  add({ id: 'tasks', count: mine.length, text: plural(mine.length, 'task for you', 'tasks for you'), why: late ? `${late} of them ${late === 1 ? 'is' : 'are'} past the date asked.` : 'A teammate asked you to do something; tick it done on Tasks.', who: 'you', page: { tab: 'tasks' } });
   const answered = (input.questions || []).filter(q => q.status === 'answered').length;
   add({ id: 'answers', count: answered, text: plural(answered, 'answer to read', 'answers to read'), why: 'The owner answered a question; read it, fix the entry if needed, and close the question.', who: BOOKKEEPING, page: { tab: 'client-queries' } });
 

@@ -2311,8 +2311,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 # SECTION BG — COLLABORATION
 
 - [ ] BG-01 @mention
-- [ ] BG-02 Assign a record
-- [ ] BG-03 Task list
+- [x] BG-02 Assign a record — **done 10 Oct** with BG-03: a task can be about an invoice, bill, entry, account or item (chosen from the newest 300), which opens from the task list
+- [x] BG-03 Task list — **done 10 Oct**: Tasks (menu, next to Questions about Entries): owners, accountants and bookkeepers give a task to anyone in the workspace (viewers too), with an optional due date, note and record; For me / All open / Done, the late ones flagged. The person is told when given one; the person, whoever made it or an owner ticks it done (whoever made it is told) or opens it again; whoever made it or an owner removes it; every step is audited. "N tasks for you" in Needs attention. Kept with the workspace's documents (kind "task", written by the server; no migration) (`src/lib/tasks.ts`, `taskService.ts`, `TasksView.tsx`; tests `tasks.test.tsx`)
 - [ ] BG-04 Watch a record
 - [ ] BG-05 Shared-inbox triage
 - [ ] BG-06 Custom status workflows

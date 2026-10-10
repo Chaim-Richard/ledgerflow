@@ -131,3 +131,4 @@ One row per capability, with one label each (DA-05). The README, Help, onboardin
 | 121 | Per-role starting dashboards | Available | `src/lib/dashboardOverview.ts`, `roleDashboardService.ts`, `DashboardWidgets.tsx`; `role-dashboards.test.ts` | A person's own arrangement (this browser) wins |
 | 122 | Money display per workspace (number style, bracketed negatives) | Available | `src/lib/moneyFormat.ts`, `MoneyDisplayPanel.tsx`; `money-display-panel.test.tsx` | Display only |
 | 123 | Customers sign estimates online | Available | `src/lib/estimateSignature.ts`, `estimateSignService.ts`, `PublicEstimatePage.tsx`; `estimate-signature.test.tsx` | Typed name and "I accept"; not a qualified e-signature |
+| 124 | Tasks given to people, about a record | Available | `src/lib/tasks.ts`, `taskService.ts`, `TasksView.tsx`; `tasks.test.tsx` | No @mentions or watching yet (BG-01, BG-04) |

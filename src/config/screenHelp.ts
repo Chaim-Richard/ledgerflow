@@ -37,6 +37,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review the recorded history of workspace actions. Find a record and inspect who changed it and when. An audit log is not an independent financial reconciliation.",
     "client-queries":
       "Questions the bookkeeper or accountant asked about entries, and the answers. Ask from an entry's edit window with \"Ask about this entry\"; answer, follow up or close the question here. Each side gets a notification; a question changes nothing in the books.",
+    tasks:
+      "What each person in the workspace has to do, the late ones flagged. Owners, accountants and bookkeepers give a task to anyone here, optionally about an invoice, bill, entry, account or item, which opens from the list. The person given it is told, and ticking it done tells whoever gave it.",
     reconciliation:
       "Match bank activity with ledger entries. Review differences before accepting matches or completing reconciliation. Inspect the underlying documents when a match is uncertain.",
     "month-end-close":
