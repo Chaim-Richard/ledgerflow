@@ -3,13 +3,17 @@ import { toast } from 'sonner';
 import { getIdToken } from '../../firebase';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
-import { readBankStatuses, type BankStatus } from '../../lib/bankFeedStatus';
+import { bankHealth, readBankStatuses, type BankStatus, type SyncLogEntry } from '../../lib/bankFeedStatus';
 import PlaidConnectButton from '../finance/PlaidConnectButton';
 
+const RESULT: Record<SyncLogEntry['result'], string> = { ok: 'Synced', login_required: 'Login expired', error: 'Failed' };
+const tone = { ok: 'text-[var(--muted)]', behind: 'text-amber-700 dark:text-amber-400', action: 'text-rose-600' } as const;
+
 /**
- * The workspace's bank connections on Bank Connections: each with its state and last good sync,
- * "Reconnect" when its login expired, and "Disconnect" for owners and accountants (Z-30): the bank is
- * told to stop and the stored connection is removed; the bank lines already imported stay.
+ * The workspace's bank connections on Bank Connections: each with its health (Z-28: connected, behind,
+ * or needing someone) and last good sync, its sync history (Z-29: the last attempts and what came of
+ * each), "Reconnect" when its login expired, and "Disconnect" for owners and accountants (Z-30): the
+ * bank is told to stop and the stored connection is removed; the bank lines already imported stay.
  */
 export default function ConnectedBanks() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -17,6 +21,7 @@ export default function ConnectedBanks() {
   const [banks, setBanks] = useState<BankStatus[] | null>(null);
   const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState('');
+  const [now] = useState(() => Date.now());
   useEffect(() => {
     if (!workspaceId) return;
     let live = true;
@@ -57,9 +62,19 @@ export default function ConnectedBanks() {
           <li key={bank.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
             <span>
               <bdi className="font-semibold text-[var(--text)]">{bank.institutionName}</bdi>
-              <span className="block text-xs text-[var(--muted)]">
-                {bank.status === 'login_required' ? 'Login expired' : 'Connected'} · last good sync: {bank.lastSyncedAt ? new Date(bank.lastSyncedAt).toLocaleString() : 'never'}
+              <span className={`block text-xs ${tone[bankHealth(bank, now).level]}`}>
+                {bankHealth(bank, now).words} · last good sync: {bank.lastSyncedAt ? new Date(bank.lastSyncedAt).toLocaleString() : 'never'}
               </span>
+              {bank.syncLog && bank.syncLog.length > 0 && (
+                <details className="text-xs text-[var(--muted)]">
+                  <summary className="cursor-pointer">Sync history<span className="sr-only"> of {bank.institutionName}</span></summary>
+                  <ol className="mt-1 space-y-0.5">
+                    {bank.syncLog.map(e => (
+                      <li key={e.at}><time dateTime={e.at}>{new Date(e.at).toLocaleString()}</time>: {RESULT[e.result]}{e.result === 'ok' ? `, ${e.lines ?? 0} bank line${e.lines === 1 ? '' : 's'}` : ''}{e.error ? ` (${e.error})` : ''}</li>
+                    ))}
+                  </ol>
+                </details>
+              )}
             </span>
             <span className="flex items-center gap-2">
               {bank.status === 'login_required' && role !== 'viewer' && <PlaidConnectButton bankId={bank.id} label="Reconnect" onSuccessSync={() => setReload(n => n + 1)} />}

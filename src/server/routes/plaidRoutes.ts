@@ -4,6 +4,7 @@ import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
 import { getDb, validateWorkspaceMember } from "../db/firestore.ts";
 import { SecurityService } from "../../services/securityService.ts";
 import { getLocalDateISO } from "../../lib/utils.ts";
+import { appendSyncLog, readSyncLog } from "../../lib/bankFeedStatus.ts";
 import { requireWorkspaceRole } from "./workspaceRoutes.ts";
 import { notify } from "../services/notificationService.ts";
 import { writeServerAuditLog } from "../services/auditLogService.ts";
@@ -167,7 +168,7 @@ plaidRouter.get("/banks", async (req, res) => {
     const db = getDb();
     await validateWorkspaceMember(db, workspaceId, (req as AuthedRequest).user);
     const snap = await db.collection("banks").where("workspaceId", "==", workspaceId).get();
-    res.json({ banks: snap.docs.map(d => ({ id: d.id, institutionName: d.data().institutionName || '', accountId: d.data().accountId || null, status: d.data().status || 'active', createdAt: d.data().createdAt, lastSyncedAt: d.data().lastSyncedAt || null })) });
+    res.json({ banks: snap.docs.map(d => ({ id: d.id, institutionName: d.data().institutionName || '', accountId: d.data().accountId || null, status: d.data().status || 'active', createdAt: d.data().createdAt, lastSyncedAt: d.data().lastSyncedAt || null, syncLog: readSyncLog(d.data().syncLog) })) });
   } catch (error) {
     sendError(res, error instanceof Error ? error.message : "Could not list bank connections", 403);
   }
@@ -195,6 +196,9 @@ plaidRouter.post("/sync", async (req, res) => {
     thirtyDaysAgo.setDate(today.getDate() - 30);
     const transactions: unknown[] = [];
     const needsReconnect: { bankId: string; institutionName: string }[] = [];
+    // Z-28: a bank that fails another way is said and kept in its log; the others still sync
+    const failed: { bankId: string; institutionName: string; error: string }[] = [];
+    let answered = 0;
     for (const doc of banksSnap.docs) {
       const bank = doc.data();
       try {
@@ -204,15 +208,23 @@ plaidRouter.post("/sync", async (req, res) => {
           end_date: getLocalDateISO(today),
         });
         transactions.push(...response.data.transactions);
+        answered += 1;
         // the last time this connection answered (BC-11: the dashboard's bank feed health); a failed or
-        // expired sync leaves it where it was
+        // expired sync leaves it where it was. Z-29: each attempt goes in the connection's sync log
         const syncedAt = new Date().toISOString();
-        await doc.ref.update({ status: 'active', lastSyncedAt: syncedAt, updatedAt: syncedAt });
+        await doc.ref.update({ status: 'active', lastSyncedAt: syncedAt, updatedAt: syncedAt, syncLog: appendSyncLog(bank.syncLog, { at: syncedAt, result: 'ok', lines: response.data.transactions.length }) });
       } catch (err) {
-        if (plaidErrorCode(err) !== 'ITEM_LOGIN_REQUIRED') throw err;
-        needsReconnect.push({ bankId: doc.id, institutionName: bank.institutionName || '' });
+        const code = plaidErrorCode(err);
         const now = new Date().toISOString();
-        await doc.ref.update({ status: 'login_required', updatedAt: now });
+        if (code !== 'ITEM_LOGIN_REQUIRED') {
+          console.error("[Plaid] sync of one bank:", code || err);
+          const error = code || 'UNKNOWN_ERROR';
+          failed.push({ bankId: doc.id, institutionName: bank.institutionName || '', error });
+          await doc.ref.update({ status: 'error', updatedAt: now, syncLog: appendSyncLog(bank.syncLog, { at: now, result: 'error', error }) });
+          continue;
+        }
+        needsReconnect.push({ bankId: doc.id, institutionName: bank.institutionName || '' });
+        await doc.ref.update({ status: 'login_required', updatedAt: now, syncLog: appendSyncLog(bank.syncLog, { at: now, result: 'login_required' }) });
         if (bank.status !== 'login_required') {
           const name = bank.institutionName || 'A bank';
           await notify(db, {
@@ -224,7 +236,9 @@ plaidRouter.post("/sync", async (req, res) => {
         }
       }
     }
-    res.json({ success: transactions.length > 0, transactions, needsReconnect, banks: banksSnap.size });
+    // every connection failed: the sync failed (as before), with each one's reason kept in its log
+    if (failed.length > 0 && answered === 0 && needsReconnect.length === 0) return sendError(res, "Could not sync the bank feed", 502);
+    res.json({ success: transactions.length > 0, transactions, needsReconnect, failed, banks: banksSnap.size });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (/not a member|Unauthorized|not found/i.test(message)) return sendError(res, message, 403);

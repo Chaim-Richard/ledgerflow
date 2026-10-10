@@ -24,7 +24,7 @@ describe('Connected banks', () => {
     const asked = mock.method(window, 'confirm', () => true);
     render(<ConnectedBanks />);
     await screen.findByText('Leumi', { selector: 'bdi' });
-    assert.match(document.body.textContent || '', /Login expired · last good sync: never/);
+    assert.match(document.body.textContent || '', /Login expired: reconnect it · last good sync: never/);
     assert.ok(screen.getByRole('button', { name: /Reconnect/ }));
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Disconnect Chase' })); });
     assert.match(String(asked.mock.calls[0].arguments[0]), /the lines already imported stay/);
@@ -32,6 +32,25 @@ describe('Connected banks', () => {
     assert.equal(post.method, 'POST');
     assert.deepEqual(post.body, { workspaceId: 'component-workspace', bankId: 'b2' });
     assert.equal(calls.filter(c => c.url.startsWith('/api/v1/plaid/banks')).length, 2, 'read again after');
+  });
+
+  test('each bank\'s health and its sync history, newest first (Z-28, Z-29)', async () => {
+    setComponentWorkspace('viewer');
+    const recent = new Date(Date.now() - 3_600_000).toISOString();
+    stubFetchWithBodies(200, { banks: [
+      { id: 'b3', institutionName: 'Discount', status: 'error', lastSyncedAt: '2026-01-01T10:00:00.000Z', syncLog: [{ at: recent, result: 'error', error: 'INSTITUTION_DOWN' }, { at: '2026-01-01T10:00:00.000Z', result: 'ok', lines: 1 }] },
+      { id: 'b4', institutionName: 'Hapoalim', status: 'active', lastSyncedAt: '2026-01-01T10:00:00.000Z', syncLog: [{ at: '2026-01-01T10:00:00.000Z', result: 'ok', lines: 12 }] },
+      { id: 'b5', institutionName: 'Mizrahi', status: 'active', lastSyncedAt: recent },
+    ] });
+    render(<ConnectedBanks />);
+    await screen.findByText('Discount', { selector: 'bdi' });
+    const text = document.body.textContent || '';
+    assert.match(text, /The last sync failed \(INSTITUTION_DOWN\): try again, or reconnect it/);
+    assert.match(text, /No sync for \d+ days/);
+    assert.match(text, /Connected · last good sync/);
+    const history = screen.getAllByText(/Sync history/, { selector: 'summary' })[0].parentElement!;
+    assert.deepEqual([...history.querySelectorAll('li')].map(li => li.textContent?.replace(/^.*?: /, '')), ['Failed (INSTITUTION_DOWN)', 'Synced, 1 bank line']);
+    assert.match(screen.getAllByText(/Sync history/, { selector: 'summary' })[1].parentElement!.textContent || '', /Synced, 12 bank lines/);
   });
 
   test('saying no sends nothing; a bookkeeper can reconnect but not disconnect; no banks shows nothing', async () => {

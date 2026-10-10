@@ -50,6 +50,7 @@ describe('Plaid bank connections', { skip: !url && 'LF_TEST_DATABASE_URL not set
       }) as never,
       transactionsGet: (async ({ access_token }: { access_token: string }) => {
         if (access_token === 'access-expired') throw Object.assign(new Error('login'), { response: { data: { error_code: 'ITEM_LOGIN_REQUIRED' } } });
+        if (access_token === 'access-broken') throw Object.assign(new Error('down'), { response: { data: { error_code: 'INSTITUTION_DOWN' } } });
         return { data: { transactions: [{ transaction_id: `tx-${access_token}` }] } };
       }) as never,
     });
@@ -127,6 +128,26 @@ describe('Plaid bank connections', { skip: !url && 'LF_TEST_DATABASE_URL not set
     assert.ok(banks.every(b => !('access_token' in b)));
     assert.deepEqual(banks.map(b => typeof b.lastSyncedAt).sort(), ['object', 'string'], 'last successful sync shown (null for the expired one)');
     assert.equal(goodBankId.length > 0, true);
+  });
+
+  test('each sync is kept in the connection\'s log; a bank that fails is said and the others still sync (Z-28, Z-29)', async () => {
+    nextAccessToken = 'access-broken';
+    const broken = String((await call('owner-1', 'POST', 'exchange_public_token', { workspaceId: ws, public_token: 'p6', institutionName: 'Broken Bank', accountId: 'acc-broken' })).body.bankId);
+    const res = await call('owner-1', 'POST', 'sync', { workspaceId: ws });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.deepEqual(res.body.failed, [{ bankId: broken, institutionName: 'Broken Bank', error: 'INSTITUTION_DOWN' }]);
+    assert.deepEqual((res.body.transactions as { transaction_id: string }[]).map(t => t.transaction_id), ['tx-access-good'], 'the good one still came');
+    const list = (await call('view-1', 'GET', `banks?workspaceId=${ws}`)).body.banks as Array<{ id: string; status: string; syncLog: Array<{ result: string; lines?: number; error?: string }> }>;
+    const good = list.find(b => b.id === goodBankId)!;
+    assert.deepEqual(good.syncLog.map(e => [e.result, e.lines]), [['ok', 1], ['ok', 1]], 'newest first');
+    const bad = list.find(b => b.id === broken)!;
+    assert.equal(bad.status, 'error');
+    assert.deepEqual(bad.syncLog.map(e => [e.result, e.error]), [['error', 'INSTITUTION_DOWN']]);
+    assert.deepEqual(list.find(b => b.id === expiredBankId)!.syncLog.map(e => e.result), ['login_required', 'login_required']);
+    // only the failing one asked for: the sync fails, and says so in the log
+    assert.equal((await call('owner-1', 'POST', 'sync', { workspaceId: ws, accountId: 'acc-broken' })).status, 502);
+    assert.equal(((await db.collection('banks').doc(broken).get()).data()?.syncLog as unknown[]).length, 2);
+    await db.collection('banks').doc(broken).delete();
   });
 
   test('disconnecting tells the bank to stop, deletes the connection and its token, and keeps the imported lines (Z-30)', async () => {

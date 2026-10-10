@@ -64,6 +64,14 @@ describe('The queue', () => {
     assert.equal(needsAttention({ today: '2026-10-05', workspace: { lockDate: '2026-09-30' } as never, banks: [{ status: 'login_required' }, { status: 'login_required' }] })[0].text, '2 bank connections need you to log in again');
   });
 
+  test('a bank whose last sync failed, or that has not synced for more than 3 days (Z-28)', () => {
+    const rows = (banks: Array<{ status?: string; institutionName?: string; lastSyncedAt?: string | null }>) => needsAttention({ today: '2026-10-05', workspace: { lockDate: '2026-09-30' } as never, banks }).filter(r => r.id === 'bank-sync');
+    assert.deepEqual(rows([{ status: 'error', institutionName: 'Discount', lastSyncedAt: '2026-10-05T08:00:00.000Z' }]).map(r => [r.text, r.page.tab]), [['Discount is not syncing', 'banking']]);
+    assert.equal(rows([{ status: 'active', lastSyncedAt: '2026-10-02T08:00:00.000Z' }]).length, 0, 'three days is fine');
+    assert.equal(rows([{ status: 'active', lastSyncedAt: '2026-10-01T23:00:00.000Z' }, { status: 'error' }])[0].text, '2 bank connections are not syncing');
+    assert.equal(rows([{ status: 'active', lastSyncedAt: null }, { status: 'login_required', lastSyncedAt: '2026-01-01T00:00:00.000Z' }]).length, 0, 'new ones, and expired logins (their own row)');
+  });
+
   test('last month not closed says how many of the workspace\'s own steps are not signed off', () => {
     const workspace = { lockDate: '2026-08-31', closeSteps: [{ id: 'cs_aaaaaa', title: 'Payroll report', frequency: 'monthly' }, { id: 'cs_bbbbbb', title: 'VAT', frequency: 'quarterly' }, { id: 'cs_cccccc', title: 'Audit', frequency: 'yearly' }] } as never;
     assert.equal(needsAttention({ today: '2026-10-12', workspace, lastMonthSignOffs: {} })[0].text, 'September 2026 is not closed: 2 steps of its own are not signed off', 'the year-end step is not due in September');

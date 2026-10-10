@@ -10,6 +10,8 @@ import type { CheckFinding } from './dataChecks';
 import { approvalStatus } from './invoiceApproval';
 import { monthCloseState, type PeriodLockSettings } from './periodLock';
 import { closeStepItems, type CloseStep } from './closeSteps';
+import { STALE_DAYS } from './bankFeedStatus';
+import { addDaysYMD } from './fiscalCalendar';
 
 export interface AttentionRow {
   id: string;
@@ -47,7 +49,7 @@ export function needsAttention(input: {
   payRuns?: Array<{ status?: string }>;
   purchaseOrders?: Array<{ status?: string }>;
   /** bank connections (Plaid), for the ones whose login expired */
-  banks?: Array<{ status?: string; institutionName?: string }>;
+  banks?: Array<{ status?: string; institutionName?: string; lastSyncedAt?: string | null }>;
 }): AttentionRow[] {
   const rows: AttentionRow[] = [];
   const add = (row: AttentionRow) => { if (row.count > 0) rows.push(row); };
@@ -64,6 +66,11 @@ export function needsAttention(input: {
   const settings = input.workspace?.invoiceApproval;
   const expired = (input.banks || []).filter(b => b.status === 'login_required');
   add({ id: 'bank-login', count: expired.length, text: expired.length === 1 ? `${expired[0].institutionName || 'A bank'} needs you to log in again` : `${expired.length} bank connections need you to log in again`, why: 'The bank stopped sending lines until someone logs in to it again; nothing new arrives meanwhile.', who: BOOKKEEPING, page: { tab: 'banking' } });
+
+  // Z-28: a connection whose last sync failed, or that has not synced for more than STALE_DAYS days
+  const since = addDaysYMD(input.today, -STALE_DAYS);
+  const behind = (input.banks || []).filter(b => b.status === 'error' || (b.status !== 'login_required' && b.lastSyncedAt && b.lastSyncedAt.slice(0, 10) < since));
+  add({ id: 'bank-sync', count: behind.length, text: behind.length === 1 ? `${behind[0].institutionName || 'A bank'} is not syncing` : `${behind.length} bank connections are not syncing`, why: `Its last sync failed, or it has not synced for more than ${STALE_DAYS} days; its history on Banking says why.`, who: BOOKKEEPING, page: { tab: 'banking' } });
 
   const awaitingInvoices = (input.invoices || []).filter(inv => approvalStatus(inv, settings) === 'awaiting');
   const awaiting = awaitingInvoices.length;

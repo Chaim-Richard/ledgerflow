@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import BankFeedHealth from '../components/dashboard/BankFeedHealth';
-import { readBankStatuses } from '../lib/bankFeedStatus';
+import { appendSyncLog, bankHealth, MAX_SYNC_LOG, readBankStatuses } from '../lib/bankFeedStatus';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import { getSupabase } from '../lib/db/client';
 afterEach(async () => { cleanup(); await getSupabase().auth.dispose(); });
@@ -18,6 +18,22 @@ test('bank timestamps preserve omitted, null and canonical server timestamps; ma
   for (const invalid of ['2026-02-30T00:00:00.000Z', 'yesterday', 0, '', undefined, '2026-02-28']) {
     assert.throws(() => readBankStatuses({ banks: [{ ...base, lastSyncedAt: invalid }] }), /Invalid bank last successful sync timestamp/);
   }
+});
+
+test('the sync log keeps the newest attempts first, drops what it can\'t read; health in words (Z-28, Z-29)', () => {
+  const at = (n: number) => new Date(Date.parse('2026-10-01T00:00:00.000Z') + n * 60_000).toISOString();
+  let log = appendSyncLog(undefined, { at: at(0), result: 'ok', lines: 3 });
+  for (let i = 1; i <= 25; i++) log = appendSyncLog(log, { at: at(i), result: 'ok', lines: i });
+  assert.equal(log.length, MAX_SYNC_LOG);
+  assert.equal(log[0].lines, 25);
+  assert.deepEqual(appendSyncLog([{ at: 'yesterday', result: 'ok' }, { at: at(0), result: 'maybe' }, 'x'], { at: at(1), result: 'error', error: 'X' }), [{ at: at(1), result: 'error', error: 'X' }]);
+  assert.deepEqual(readBankStatuses({ banks: [{ id: 'b', status: 'active', syncLog: [{ at: at(0), result: 'ok', lines: 2 }, { bad: true }] }] })[0].syncLog, [{ at: at(0), result: 'ok', lines: 2 }]);
+  const now = Date.parse('2026-10-05T12:00:00.000Z');
+  assert.deepEqual(bankHealth({ status: 'active', lastSyncedAt: '2026-10-05T11:00:00.000Z' }, now), { level: 'ok', words: 'Connected' });
+  assert.deepEqual(bankHealth({ status: 'active', lastSyncedAt: '2026-10-01T11:00:00.000Z' }, now), { level: 'behind', words: 'No sync for 4 days' });
+  assert.deepEqual(bankHealth({ status: 'active', lastSyncedAt: null }, now), { level: 'behind', words: 'Not synced yet' });
+  assert.equal(bankHealth({ status: 'login_required' }, now).level, 'action');
+  assert.equal(bankHealth({ status: 'error', syncLog: [{ at: at(0), result: 'error', error: 'ITEM_LOCKED' }] }, now).words, 'The last sync failed (ITEM_LOCKED): try again, or reconnect it');
 });
 
 test('expired connections show the actual last successful sync, never synced and legacy unknown separately', async () => {
