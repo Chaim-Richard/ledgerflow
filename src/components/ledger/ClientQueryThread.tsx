@@ -100,6 +100,7 @@ export default function ClientQueryThread({ query, workspaceId, uid, role, onOpe
             onChange={e => setText(e.target.value)}
             maxLength={MAX_REPLY}
             rows={2}
+            placeholder="Write @name (their email before the @) to tell someone"
             className="w-full rounded-xl border border-[var(--line)] bg-[var(--ink)] px-3 py-2 text-sm text-[var(--text)]"
           />
           <div className="flex flex-wrap items-center justify-end gap-2">

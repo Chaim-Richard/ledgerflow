@@ -57,7 +57,7 @@ export default function EntryQuestions({ transactionId }: { transactionId: strin
       {asking && (
         <div className="space-y-2 rounded-2xl border border-[var(--line)] bg-[var(--ink)] p-3">
           <label htmlFor={boxId} className="text-xs font-semibold text-[var(--muted)]">Your question for the owner (for example: what was this for, and which receipt goes with it?)</label>
-          <textarea id={boxId} value={question} onChange={e => setQuestion(e.target.value)} maxLength={MAX_QUESTION} rows={3}
+          <textarea id={boxId} value={question} onChange={e => setQuestion(e.target.value)} maxLength={MAX_QUESTION} rows={3} placeholder="Write @name (their email before the @) to tell someone"
             className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]" />
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => { setAsking(false); setQuestion(''); }} className="px-3 py-1.5 text-xs font-semibold text-[var(--muted)]">Cancel</button>

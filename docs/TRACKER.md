@@ -2310,7 +2310,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 # SECTION BG — COLLABORATION
 
-- [ ] BG-01 @mention
+- [x] BG-01 @mention — **done 10 Oct**: writing @name (the part of their email before the @, or the whole email) in a question about an entry, an answer, or a task's title or note tells that person (only people in the workspace, never the writer); the text boxes say so (`src/lib/mentions.ts`, `mentionService.ts`; tests `mentions.test.ts`)
 - [x] BG-02 Assign a record — **done 10 Oct** with BG-03: a task can be about an invoice, bill, entry, account or item (chosen from the newest 300), which opens from the task list
 - [x] BG-03 Task list — **done 10 Oct**: Tasks (menu, next to Questions about Entries): owners, accountants and bookkeepers give a task to anyone in the workspace (viewers too), with an optional due date, note and record; For me / All open / Done, the late ones flagged. The person is told when given one; the person, whoever made it or an owner ticks it done (whoever made it is told) or opens it again; whoever made it or an owner removes it; every step is audited. "N tasks for you" in Needs attention. Kept with the workspace's documents (kind "task", written by the server; no migration) (`src/lib/tasks.ts`, `taskService.ts`, `TasksView.tsx`; tests `tasks.test.tsx`)
 - [ ] BG-04 Watch a record

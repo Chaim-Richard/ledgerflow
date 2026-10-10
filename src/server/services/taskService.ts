@@ -3,6 +3,7 @@ import { workspaceRole } from '../../lib/periodLock';
 import { MAX_OPEN_TASKS, TASK_KIND, taskProblem, type Task, type TaskInput } from '../../lib/tasks';
 import { writeServerAuditLog } from './auditLogService';
 import { notify } from './notificationService';
+import { notifyMentions } from './mentionService';
 
 /**
  * Tasks (BG-02, BG-03, src/lib/tasks.ts). Owners, accountants and bookkeepers give tasks to anyone in
@@ -69,6 +70,7 @@ export async function createTask(db: Firestore, input: Actor & { task: TaskInput
       eventKey: `task-assigned:${ref.id}`, recordId: ref.id, actorUid: input.uid, onlyUids: [assignee],
     });
   }
+  await notifyMentions(db, { workspaceId: input.workspaceId, text: `${task.title}${task.note ? `\n${task.note}` : ''}`, actorUid: input.uid, actorEmail: input.email, where: `Task "${task.title}"`, recordId: ref.id, eventKey: `task:${ref.id}`, kind: 'mention.task' });
   return { task: { ...task, id: ref.id } };
 }
 

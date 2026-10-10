@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { notifyMentions } from './mentionService';
 import type { Firestore } from '../db/firestore';
 import { workspaceRole } from '../../lib/periodLock';
 import { workspaceMemberIds } from '../../lib/notifications';
@@ -77,6 +78,7 @@ export async function askQuery(db: Firestore, input: Actor & { transactionId: st
     workspaceId: input.workspaceId, kind: 'query.asked', title: 'A question about an entry',
     message: `${what}: ${short(question, 200)}`, eventKey: `query:${query.id}:0`, recordId: query.id, actorUid: input.uid,
   });
+  await notifyMentions(db, { workspaceId: input.workspaceId, text: question, actorUid: input.uid, actorEmail: input.email, where: `A question about ${what}`, recordId: query.id, eventKey: `query:${query.id}:0`, kind: 'mention.query' });
   return query;
 }
 
@@ -114,6 +116,7 @@ export async function replyToQuery(db: Firestore, input: Actor & { queryId: stri
     message: `${query.entry?.description || 'An entry'}: ${short(text, 200)}`,
     eventKey: `query:${input.queryId}:${query.messages.length - 1}`, recordId: input.queryId, actorUid: input.uid,
   });
+  await notifyMentions(db, { workspaceId: input.workspaceId, text, actorUid: input.uid, actorEmail: input.email, where: `About ${query.entry?.description || 'an entry'}`, recordId: input.queryId, eventKey: `query:${input.queryId}:${query.messages.length - 1}`, kind: 'mention.query' });
   return query;
 }
 

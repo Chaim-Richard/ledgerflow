@@ -32,6 +32,8 @@ export const NOTIFICATION_TYPES = {
   'query.answered': { label: 'A question about an entry was answered', roles: BOOKS, tab: 'client-queries' },
   'task.assigned': { label: 'Someone gave you a task', roles: ['owner', 'accountant', 'bookkeeper', 'viewer'] as Role[], tab: 'tasks' },
   'task.done': { label: 'A task you gave was done', roles: ['owner', 'accountant', 'bookkeeper'] as Role[], tab: 'tasks' },
+  'mention.query': { label: 'Someone mentioned you in a question about an entry', roles: ['owner', 'accountant', 'bookkeeper', 'viewer'] as Role[], tab: 'client-queries' },
+  'mention.task': { label: 'Someone mentioned you in a task', roles: ['owner', 'accountant', 'bookkeeper', 'viewer'] as Role[], tab: 'tasks' },
   'health.problem': { label: 'The nightly check found a new problem in the books', roles: ['owner', 'accountant'] as Role[], tab: 'data-health' },
   'reconciliation.discrepancy': { label: 'A reconciled bank account no longer matches its statement', roles: ['owner', 'accountant'] as Role[], tab: 'reconciliation' },
   'transaction.unusual': { label: 'An entry far bigger than its account usually sees', roles: ['owner', 'accountant'] as Role[], tab: 'transactions' },

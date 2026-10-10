@@ -138,7 +138,7 @@ export default function TasksView() {
                 </label>
               )}
             </div>
-            <label className="flex flex-col gap-1 text-[var(--muted)]">Note (optional)<textarea rows={2} maxLength={MAX_TASK_NOTE} value={draft.note} onChange={e => setDraft(d => ({ ...d, note: e.target.value }))} className={field} /></label>
+            <label className="flex flex-col gap-1 text-[var(--muted)]">Note (optional)<textarea rows={2} placeholder="Write @name (their email before the @) to tell someone else too" maxLength={MAX_TASK_NOTE} value={draft.note} onChange={e => setDraft(d => ({ ...d, note: e.target.value }))} className={field} /></label>
             {draft.title && problem && <p role="status" className="text-xs text-amber-700 dark:text-amber-400">{problem}</p>}
             <button type="button" disabled={Boolean(problem) || (Boolean(draft.recordType) && !draft.recordId)} onClick={() => void give()} className="rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white disabled:opacity-50">Give the task</button>
           </fieldset>
