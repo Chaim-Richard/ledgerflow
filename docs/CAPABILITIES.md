@@ -116,3 +116,4 @@ One row per capability, with one label each (DA-05). The README, Help, onboardin
 | 106 | Profit by label (each value of a label, adding back to the P&L) | Available | `src/server/reports/byLabel.ts`, `LabelProfitReportView.tsx`; `by-label.test.tsx` | Income and costs only; balance sheet by label not yet |
 | 107 | Profit & Loss on cash basis | Available with limits | `src/server/reports/cashBasis.ts`, `ProfitAndLossView.tsx`; `cash-basis.test.ts`, `main-path.test.ts` | P&L total only (no period columns); balance sheet stays accrual |
 | 108 | Price lists for customers | Available | `src/lib/priceLists.ts`, `PriceListsSettings.tsx`; `price-lists.test.tsx` | One currency (the workspace's); fills new lines only |
+| 109 | Goods not yet billed (delivered not invoiced, received not billed) | Available | `src/lib/unbilledGoods.ts`, `GoodsNotBilledReportView.tsx`; `unbilled-goods.test.tsx` | Billed-not-received not yet |

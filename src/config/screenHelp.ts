@@ -88,6 +88,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     pnl: "Review posted income, cost of goods sold and expenses for the period. Compare periods and choose presentation columns. Incomplete loaded history makes the figures provisional.",
     "group-summary":
       "Choose one of your groups of books (Settings → Groups of books) and a period: each company's income, costs, profit, assets, liabilities and equity side by side, with the group's total when all keep their books in one currency (or translated into one). Each figure opens that company's own report. Balances and sales between the companies are taken out of the total; with a parent, the other owners' part is shown. Account by account lists each account across the companies, matched by code or name.",
+    "goods-not-billed":
+      "Goods delivered to customers that are not invoiced yet, and goods received on purchase orders that have no bill yet, at each order's price. The first is income still to invoice; the second, costs still to come.",
     "inventory-details":
       "For a period, each item's opening quantity and value, every movement (sold, bought, returned, adjusted, counted, moved) with its entry, and the closing quantity and value. Read from the stock history the server keeps with each change.",
     "by-label":

@@ -2455,9 +2455,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] CB-14 Inactive items
 - [ ] CB-15 Partner commission
 - [ ] CB-16 Deferred revenue & expense
-- [ ] CB-17 Billed not received
-- [ ] CB-18 Delivered not billed
-- [ ] CB-19 Received not billed
+- [ ] CB-17 Billed not received — waits: a bill made from a purchase order does not keep which units it covered (non-stock lines carry no quantity), so "billed but not received" can't be read exactly yet; the bill would need to keep the order line and units it bills (10 Oct).
+- [x] CB-18 Delivered not billed — **done 10 Oct (Claude)**: Reports → Goods Not Yet Billed, "Delivered, not invoiced": for each sales order line, the units delivered and kept (deliveries less returns, from the delivery entries in force) above the units invoiced from the order, at the order's price (`src/lib/unbilledGoods.ts`, `GoodsNotBilledReportView.tsx`; tests `unbilled-goods.test.tsx`).
+- [x] CB-19 Received not billed — **done 10 Oct (Claude)**: the same report, "Received, not billed": units received on purchase orders that have no bill yet, at the order's price, with totals per currency (same files and tests).
 - [ ] CB-20 Invalid ledger entries report
 - [ ] CB-21 Incorrectly cleared cheques
 - [ ] CB-22 Discount mismatch
