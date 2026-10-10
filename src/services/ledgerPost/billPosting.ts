@@ -137,7 +137,8 @@ export async function postBillLedger(
   }
   const inventoryAccount = itemSplits.length ? findAccount(accounts, mappings, ['inventory', 'stock', 'inventory asset'], a => resolveAccountRole(a) === 'inventory') : null;
   if (itemSplits.length && !inventoryAccount) throw new Error('Add an Inventory account (an asset) to the chart of accounts to buy stock on a bill');
-  const splits = (billData.splits || []).map(sp => (sp.itemId && inventoryAccount ? { ...sp, accountId: inventoryAccount.id } : sp));
+  // BA-03: freight and duties spread over the items go to Inventory too (without items, they stay ordinary lines)
+  const splits = (billData.splits || []).map(sp => ((sp.itemId || sp.landedCost) && inventoryAccount ? { ...sp, accountId: inventoryAccount.id } : sp));
   const weights = lineAccounts(splits, accounts, expenseAccount, a => !['cash', 'ar', 'ap'].includes(resolveAccountRole(a)));
   const stockIn = itemSplits.length && weights ? billStockLines(splits, allocateCents(amount - taxAmount, weights.map(w => w.weightCents))) : [];
 

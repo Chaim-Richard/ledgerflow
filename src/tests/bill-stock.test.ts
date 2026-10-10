@@ -106,6 +106,22 @@ describe('Buying stock on a bill', { skip: !url && 'LF_TEST_DATABASE_URL not set
     assert.deepEqual(kinds, ['purchase', 'purchase-reversal', 'purchase', 'purchase-reversal']);
   });
 
+  test('freight spread over the items adds to what they cost and goes to Inventory (BA-03)', async () => {
+    await post(bill([
+      { amountCents: 2000, accountId: `${ws}_office`, description: 'Chairs', itemId, quantity: 2 },
+      { amountCents: 500, accountId: `${ws}_office`, description: 'Freight', landedCost: true },
+      { amountCents: 300, accountId: `${ws}_office`, description: 'Stationery' },
+    ]));
+    const chair = await item();
+    assert.deepEqual([chair.quantityAtHand, chair.unitCostCents], [4, 1125], '(2 × 10.00 + 20.00 + 5.00 freight) / 4');
+    assert.equal(await balance(`${ws}_inv`), 2500);
+    assert.equal(await balance(`${ws}_office`), 300);
+    const last = (await db.collection('stockMoves').where('workspaceId', '==', ws).get()).docs.map(d => d.data()).sort((a, b) => String(b.seq).localeCompare(String(a.seq)))[0];
+    assert.deepEqual([last.kind, last.quantity, last.valueCents], ['purchase', 2, 2500]);
+    await post(bill([{ amountCents: 2000, accountId: `${ws}_office`, itemId, quantity: 2 }], 'void'));
+    assert.equal((await item()).quantityAtHand, 2);
+  });
+
   test('an item line without units is refused before anything is posted', async () => {
     const before = (await db.collection('transactions').where('workspaceId', '==', ws).get()).size;
     await assert.rejects(post(bill([{ amountCents: 500, accountId: `${ws}_office`, itemId }])), /how many units came in/);

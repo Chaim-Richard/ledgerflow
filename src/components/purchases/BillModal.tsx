@@ -90,7 +90,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     }
   }, [isOpen, editingExisting]);
 
-  const [splits, setSplits] = useState<Array<{ id: string, amountCents: number, accountId: string, description: string, dimensions?: Record<string, string>, itemId?: string, quantity?: number }>>([
+  const [splits, setSplits] = useState<Array<{ id: string, amountCents: number, accountId: string, description: string, dimensions?: Record<string, string>, itemId?: string, quantity?: number, landedCost?: boolean }>>([
     { id: crypto.randomUUID(), amountCents: 0, accountId: '', description: '' }
   ]);
 
@@ -540,6 +540,13 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                         </label>
                       )}
                       {split.itemId && <span className="pb-2 text-[var(--muted)]">{billItemProblem(split) || 'Posts to Inventory; the units come in with the bill.'}</span>}
+                      {!split.itemId && splits.some(sp => sp.itemId) && (
+                        <label className="flex items-center gap-2 pb-2 text-[var(--muted)]">
+                          <input type="checkbox" checked={Boolean(split.landedCost)} aria-label={`Spread line ${idx + 1} over the items`}
+                            onChange={e => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, landedCost: e.target.checked || undefined } : sp)))} />
+                          Spread over the items (freight, duty): adds to what they cost
+                        </label>
+                      )}
                     </div>
                   )}
                   {/* BF-09: Property, Project… on this line, posted with its expense */}

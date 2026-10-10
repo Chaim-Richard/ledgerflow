@@ -38,3 +38,21 @@ test('a line buys 3 chairs: it says what is missing until the units are in, and 
   await waitFor(() => assert.equal(saved.length, 1));
   assert.deepEqual(saved[0].splits?.map(s => [s.itemId, s.quantity, s.amountCents]), [['chair', 3, 3600]]);
 });
+
+test('with a stock item on the bill, another line can be spread over the items (BA-03)', async () => {
+  const saved: BillDraft[] = [];
+  render(<BillModal isOpen onClose={() => {}} onSave={b => { saved.push(b); }} vendors={[makeVendor({ id: 'v1', name: 'Furniture Co' })]} accounts={[makeChartAccount({ id: 'exp', name: 'Purchases', type: 'expense' })]} />);
+  fireEvent.change(screen.getByLabelText('Vendor'), { target: { value: 'v1' } });
+  fireEvent.change(screen.getByLabelText('Expense Account'), { target: { value: 'exp' } });
+  fireEvent.change(screen.getByLabelText(/^Amount \(/), { target: { value: '36' } });
+  fireEvent.click(screen.getByLabelText('Add Split Expense'));
+  fireEvent.change(screen.getAllByLabelText('Expense Account')[1], { target: { value: 'exp' } });
+  fireEvent.change(screen.getAllByLabelText(/^Amount \(/)[1], { target: { value: '4' } });
+  assert.equal(screen.queryByLabelText('Spread line 2 over the items'), null, 'no stock item yet');
+  fireEvent.change(screen.getByLabelText('Stock item on line 1'), { target: { value: 'chair' } });
+  fireEvent.change(screen.getByLabelText('Units on line 1'), { target: { value: '3' } });
+  fireEvent.click(screen.getByLabelText('Spread line 2 over the items'));
+  await act(async () => { fireEvent.click(screen.getByText('Save & Close')); });
+  await waitFor(() => assert.equal(saved.length, 1));
+  assert.deepEqual(saved[0].splits?.map(s => [s.itemId, s.landedCost, s.amountCents]), [['chair', undefined, 3600], [undefined, true, 400]]);
+});

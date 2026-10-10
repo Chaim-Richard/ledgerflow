@@ -97,6 +97,8 @@ export interface Bill {
     /** J-08: an inventory item bought on this line, and how many units (src/lib/billStock.ts) */
     itemId?: string;
     quantity?: number;
+    /** BA-03: freight, duty… spread over the bill's stock items (posts to Inventory) */
+    landedCost?: boolean;
   }>;
   projectId?: string;
   issueDate?: string;
