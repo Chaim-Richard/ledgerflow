@@ -112,6 +112,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Scheduled reports', componentName: 'ScheduledReportsSettingsView' },
     { label: 'Alerts', componentName: 'AlertsSettingsView' },
     { label: 'Modules', componentName: 'ModulesSettingsView' },
+    { label: 'Split rules', componentName: 'AllocationRulesSettingsView' },
     { label: 'Groups of books', componentName: 'GroupsSettingsView' },
   ];
 

@@ -22,7 +22,7 @@ import {
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag, ArrowLeftRight
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText } from 'lucide-react';
+, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText, Split } from 'lucide-react';
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
@@ -450,6 +450,7 @@ export const SETTINGS_TABS_REGISTRY = withScreenHelp([
   { id: 'alerts', label: { en: 'Alerts', he: 'התראות' }, componentName: 'AlertsSettingsView', icon: BellRing },
   { id: 'modules', label: { en: 'Modules', he: 'מודולים' }, componentName: 'ModulesSettingsView', icon: Blocks },
   { id: 'groups', label: { en: 'Groups of books', he: 'קבוצות ספרים' }, componentName: 'GroupsSettingsView', icon: FolderTree },
+  { id: 'split-rules', label: { en: 'Split rules', he: 'כללי פיצול' }, componentName: 'AllocationRulesSettingsView', icon: Split },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ], 'settings');
@@ -477,6 +478,7 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'AlertsSettingsView': lazy(() => import('../components/platform/settings/AlertsSettings')),
   'ModulesSettingsView': lazy(() => import('../components/platform/settings/ModulesSettings')),
   'GroupsSettingsView': lazy(() => import('../components/platform/settings/GroupsSettings')),
+  'AllocationRulesSettingsView': lazy(() => import('../components/platform/settings/AllocationRulesSettings')),
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };
 

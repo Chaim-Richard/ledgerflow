@@ -272,7 +272,7 @@ These are the tracker IDs; `docs/TRACKER.md` has the detail.
 ### Later, P1 (big friction savers)
 
 - **One queue, and questions:** DA-02 (needs attention, done 8 Oct) and DA-03 (ask the books, verified, done 8 Oct).
-- **Rules:** Q-05, K-39 and CA-13 (one rule family).
+- **Rules:** Q-05 (done 9 Oct, on bills), K-39 and CA-13 (one rule family).
 - **The close cycle:** BD-04 and BD-06 (with R-11, which is done).
 - **Bank connections:** Z-28, Z-29 and Z-30 (Z-30 done 8 Oct).
 - **Reports:** N-07, N-08, N-10, CB-25 and DA-09 (done 8 Oct).

@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { BudgetLeft } from '../common/BudgetLeft';
 import { LineLabels } from '../common/LineLabels';
+import { applyRule, suggestRule } from '../../lib/allocationRules';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
@@ -109,6 +110,12 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   // Tax: a purchase tax code (Settings → Tax); reverse charge means the vendor charges none
   const taxRates = useLedgerStore(s => s.taxRates || []);
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
+  // Q-05: a saved split rule whose text the vendor or a line contains is suggested, with why; applying it
+  // only changes the lines here (each line split by the rule's shares, in whole cents)
+  const allocationRules = useAuthStore(s => s.getCurrentWorkspace()?.allocationRules);
+  const [ruleApplied, setRuleApplied] = useState('');
+  const suggested = suggestRule(allocationRules, { vendorName: bill.vendorName, description: splits.map(sp => sp.description).join(' ') });
+  const canSplit = Boolean(suggested && suggested.rule.id !== ruleApplied && splits.some(sp => sp.amountCents));
   const purchaseCodes = useMemo(() => taxRates.filter(r => r.type === 'Sales' && r.appliesTo !== 'sales').map(taxCodeFromRate), [taxRates]);
   const taxCode = purchaseCodes.find(c => c.id === bill.taxCodeId) || null;
   const pricesIncludeTax = bill.pricesIncludeTax ?? true;
@@ -422,6 +429,15 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
           </div>
 
           <div className="space-y-4">
+            {canSplit && suggested && (
+              <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] px-3 py-2 text-xs text-[var(--text)]">
+                <span>Split rule suggested: {suggested.why} ({suggested.rule.shares.map(sh => `${sh.percent}%`).join(' / ')}).</span>
+                <button type="button" onClick={() => { setSplits(applyRule(suggested.rule, splits.filter(sp => sp.amountCents), () => crypto.randomUUID())); setRuleApplied(suggested.rule.id); }}
+                  className="rounded-lg border border-[var(--line)] px-2.5 py-1 font-semibold hover:border-[var(--brass-line)]">
+                  Apply {suggested.rule.name}
+                </button>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <h3 className="micro-label">Expense Allocation</h3>
               {lastForVendor && splitsEmpty && (
