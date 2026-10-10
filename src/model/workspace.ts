@@ -7,6 +7,7 @@ import type { MoneyDisplaySettings } from '../lib/moneyFormat';
 import type { ScheduledReport } from '../lib/scheduledReports';
 import type { CloseStep } from '../lib/closeSteps';
 import type { AllocationRule } from '../lib/allocationRules';
+import type { PriceList } from '../lib/priceLists';
 import type { LedgerHealth } from '../lib/ledgerHealth';
 import type { AlertSettings, AlertsSent } from '../lib/bookAlerts';
 import type { NotificationType } from '../lib/notifications';
@@ -63,6 +64,8 @@ export interface Workspace {
   closeSteps?: CloseStep[];
   /** Q-05: saved split (cost allocation) rules, suggested on bills (src/lib/allocationRules.ts); saved by the server. */
   allocationRules?: AllocationRule[];
+  /** M-11: price lists for some customers, filled on invoice and estimate lines (src/lib/priceLists.ts); saved by the server. */
+  priceLists?: PriceList[];
   /** The nightly ledger health check (CA-32, src/lib/ledgerHealth.ts); written by the server only. */
   ledgerHealth?: LedgerHealth;
   /** Alerts about the books (S-08, S-10, S-11, src/lib/bookAlerts.ts); saved by the server for owners and accountants. */

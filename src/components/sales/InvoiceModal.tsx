@@ -18,7 +18,7 @@ import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { formatCurrency, safeConfirm } from '../../lib/utils';
-import { lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
+import { customerPricer, lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
 import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import { depositAppliedCents } from '../../lib/documentMath';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
@@ -524,7 +524,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                         value={item.description}
                         onChange={(e) => {
                           const newItems = [...items];
-                          newItems[idx] = setLineDescription(newItems[idx], e.target.value, inventoryItems);
+                          newItems[idx] = setLineDescription(newItems[idx], e.target.value, inventoryItems, customerPricer(useAuthStore.getState().getCurrentWorkspace()?.priceLists, invoice.customerId));
                           setItems(newItems);
                         }}
                         placeholder="Service or Product"

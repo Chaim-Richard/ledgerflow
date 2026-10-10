@@ -7,15 +7,19 @@
 import React from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
-import { lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
+import { customerPricer, lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { blankEstimateLine, type EstimateLineDraft } from '../../lib/estimateLines';
 import { formatCurrency, parseAmountToCents } from '../../lib/utils';
 
 const input = 'w-full px-2 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white';
 
-export function EstimateLinesEditor({ lines, onChange, currency }: { lines: EstimateLineDraft[]; onChange: (lines: EstimateLineDraft[]) => void; currency: string }) {
+export function EstimateLinesEditor({ lines, onChange, currency, customerId }: { lines: EstimateLineDraft[]; onChange: (lines: EstimateLineDraft[]) => void; currency: string; customerId?: string }) {
   useLedgerCollections('inventory');
   const items = useLedgerStore(s => s.inventory || []);
+  // M-11: the customer's price list, when they are on one
+  const priceLists = useAuthStore(s => s.getCurrentWorkspace()?.priceLists);
+  const pricer = customerPricer(priceLists, customerId);
   const change = (id: string, next: (line: EstimateLineDraft) => EstimateLineDraft) => onChange(lines.map(l => (l.id === id ? next(l) : l)));
   const total = lines.reduce((s, l) => s + l.amountCents, 0);
 
@@ -38,7 +42,7 @@ export function EstimateLinesEditor({ lines, onChange, currency }: { lines: Esti
               <td className="py-1 pr-2">
                 <input aria-label={`Item or description, line ${i + 1}`} list="estimate-line-items" value={line.description} className={input}
                   onChange={e => change(line.id, l => {
-                    const next = setLineDescription(l, e.target.value, items);
+                    const next = setLineDescription(l, e.target.value, items, pricer);
                     return next.itemId && next.itemId !== l.itemId ? { ...next, priceText: (next.rateCents / 100).toFixed(2) } : next;
                   })} />
                 {line.itemId && <span className="text-[10px] text-emerald-700 dark:text-emerald-400">Stock item: invoiced by quantity</span>}

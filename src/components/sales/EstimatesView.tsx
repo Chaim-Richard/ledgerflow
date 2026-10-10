@@ -328,7 +328,7 @@ export default function EstimatesView() {
             </Labelled>
           </div>
           {lines.length > 0 ? (
-            <EstimateLinesEditor lines={lines} onChange={setLines} currency={workspaceCurrency} />
+            <EstimateLinesEditor lines={lines} onChange={setLines} currency={workspaceCurrency} customerId={customerId} />
           ) : (
             <button type="button" onClick={() => setLines([blankEstimateLine(description, amountDollars)])}
               className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">

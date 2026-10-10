@@ -1808,7 +1808,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] M-08 Report schedules — done as K-28
 - [x] M-09 Generic attachments — done as K-07 (the `documents` table, linked to the record; one panel for any record)
 - [ ] M-10 Transaction links
-- [ ] M-11 Price lists
+- [x] M-11 Price lists — **done 10 Oct (Claude)**: Settings → Price lists: a named list (e.g. Wholesale) with a discount on every item and/or a price of its own for some items, and its customers (one list each). On an invoice or estimate for a customer on a list, picking an item fills the list's price (its own, else the item's price less the discount, in whole cents); the line can still be changed and nothing posted changes. Owners and accountants keep the lists, saved by the server with an audit line (`src/lib/priceLists.ts`, `priceListService.ts`, `PUT /workspaces/:id/price-lists`, `PriceListsSettings.tsx`; tests `price-lists.test.tsx`). **Open:** lists in another currency; dates a price is valid from.
 - [x] M-12 Delivery notes — deliveries from an order that move stock and book the cost (BF-08 step 2, 7 Oct); **the printable note done 8 Oct**: "Delivery note" on each delivery opens a PDF with the company, customer, order and their reference, date, each item and quantity (no prices) and a line to sign on receipt (`deliveryNotePdf.ts`, `GET /api/v1/inventory/deliveries/:id/note`, any member). Found on the way: the shared role check crashed on GET requests that pass the workspace in the query (`req.body` is empty on a GET); fixed.
 - [ ] M-13 Commodities
 - [x] M-14 Item categories (= K-12)

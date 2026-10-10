@@ -1,4 +1,5 @@
 import type { InventoryItem } from '../types';
+export { customerPricer } from './priceLists';
 
 /** One line of the invoice form (amounts in integer cents). */
 export interface InvoiceLineDraft {
@@ -21,15 +22,19 @@ export function lineAmountCents(quantity: number, rateCents: number): number {
   return Math.round(qty * rateCents);
 }
 
-/** Picked an inventory item: link it and fill its name, price and cost. */
-export function applyInventoryItem<L extends InvoiceLineDraft>(line: L, item: ItemFields): L {
+/** The price of an item for this document's customer (M-11: their price list), when it differs */
+export type ItemPricer = (item: { id: string; unitPriceCents: number }) => number;
+
+/** Picked an inventory item: link it and fill its name, price (the customer's, when they have a price list) and cost. */
+export function applyInventoryItem<L extends InvoiceLineDraft>(line: L, item: ItemFields, priceOf?: ItemPricer): L {
+  const rateCents = priceOf ? priceOf(item) : item.unitPriceCents;
   return {
     ...line,
     itemId: item.id,
     description: item.name,
-    rateCents: item.unitPriceCents,
+    rateCents,
     unitCostCents: item.unitCostCents,
-    amountCents: lineAmountCents(line.quantity, item.unitPriceCents),
+    amountCents: lineAmountCents(line.quantity, rateCents),
   };
 }
 
@@ -44,8 +49,8 @@ export function findInventoryItem<I extends ItemFields>(items: I[], text: string
  * The description field changed: link the matching item, or turn the line into a free-text
  * line (unlinked, no cost) so a stale item link can't post the wrong cost of goods sold.
  */
-export function setLineDescription<L extends InvoiceLineDraft>(line: L, text: string, items: ItemFields[]): L {
+export function setLineDescription<L extends InvoiceLineDraft>(line: L, text: string, items: ItemFields[], priceOf?: ItemPricer): L {
   const match = findInventoryItem(items, text);
-  if (match) return applyInventoryItem(line, match);
+  if (match) return applyInventoryItem(line, match, priceOf);
   return { ...line, description: text, itemId: undefined, unitCostCents: undefined };
 }
