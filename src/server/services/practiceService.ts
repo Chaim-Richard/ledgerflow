@@ -7,6 +7,7 @@ import type { Firestore } from '../db/firestore';
 import { openable } from './workspaceGroupService';
 import { monthCloseState, workspaceRole, type PeriodLockSettings } from '../../lib/periodLock';
 import { monthBefore, sortPractice, type PracticeRow } from '../../lib/practice';
+import type { LedgerHealth } from '../../lib/ledgerHealth';
 
 export async function practiceRows(db: Firestore, uid: string, today: string): Promise<PracticeRow[]> {
   const ids = [...(await openable(db, uid))];
@@ -37,7 +38,8 @@ export async function practiceRows(db: Firestore, uid: string, today: string): P
   const lastMonth = monthBefore(today);
   const snaps = await db.getAll(...ids.map(id => db.collection('workspaces').doc(id)));
   return sortPractice(snaps.filter(s => s.exists).map(s => {
-    const ws = (s.data() || {}) as PeriodLockSettings & { name?: string; currency?: string };
+    const ws = (s.data() || {}) as PeriodLockSettings & { name?: string; currency?: string; ledgerHealth?: LedgerHealth };
+    const health = ws.ledgerHealth?.checkedAt ? { serious: Number(ws.ledgerHealth.counts?.high) || 0, warnings: Number(ws.ledgerHealth.counts?.medium) || 0, checkedAt: String(ws.ledgerHealth.checkedAt) } : null;
     const id = s.id;
     return {
       workspaceId: id, name: String(ws.name || id), role: workspaceRole(ws, uid), currency: String(ws.currency || 'USD'), groups: groups.get(id) || [],
@@ -45,6 +47,7 @@ export async function practiceRows(db: Firestore, uid: string, today: string): P
       drafts: drafts.reduce((sum, m) => sum + (m.get(id) || 0), 0),
       lastMonth, lastMonthClosed: ['hard', 'soft'].includes(monthCloseState(lastMonth, ws)),
       nextRecurring: next.get(id) || null,
+      health,
     };
   }));
 }

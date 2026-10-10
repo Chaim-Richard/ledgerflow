@@ -24,11 +24,13 @@ export interface PracticeRow {
   lastMonthClosed: boolean;
   /** the next recurring item due, if any */
   nextRecurring: { date: string; description: string } | null;
+  /** Data Health from the nightly check (missing labels, duplicate bills, unbalanced entries…), when it ran */
+  health: { serious: number; warnings: number; checkedAt: string } | null;
 }
 
 /** How much is waiting: each count, and one for last month still open. */
-export const practiceWork = (r: Pick<PracticeRow, 'bankLines' | 'bankLogins' | 'questions' | 'drafts' | 'lastMonthClosed'>) =>
-  r.bankLines + r.bankLogins + r.questions + r.drafts + (r.lastMonthClosed ? 0 : 1);
+export const practiceWork = (r: Pick<PracticeRow, 'bankLines' | 'bankLogins' | 'questions' | 'drafts' | 'lastMonthClosed'> & { health?: PracticeRow['health'] }) =>
+  r.bankLines + r.bankLogins + r.questions + r.drafts + (r.lastMonthClosed ? 0 : 1) + (r.health?.serious || 0);
 
 /** Most work first, then by name. */
 export const sortPractice = (rows: PracticeRow[]) => [...rows].sort((a, b) => practiceWork(b) - practiceWork(a) || a.name.localeCompare(b.name));
