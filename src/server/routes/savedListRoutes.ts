@@ -4,6 +4,7 @@ import { AllocationRuleError, setAllocationRules } from '../services/allocationR
 import { PriceListError, setPriceLists } from '../services/priceListService';
 import { SalesRepError, setSalesReps } from '../services/salesRepService';
 import { RoleDashboardError, setRoleDashboard } from '../services/roleDashboardService';
+import { DelegateError, setApprovalDelegate } from '../services/approvalDelegateService';
 
 /**
  * A workspace's saved lists that only the server writes, each replaced whole with PUT: the split
@@ -48,4 +49,13 @@ roleDashboardRouter.put('/', async (req, res) => {
   try {
     res.json({ status: 'success', ...(await setRoleDashboard(getDb(), { workspaceId: String((req.params as Record<string, string>).workspaceId), uid: user.uid, email: user.email, role: req.body?.role, layout: req.body?.layout ?? null })) });
   } catch (err) { fail(res, err, (e): e is RoleDashboardError => e instanceof RoleDashboardError, 'dashboard'); }
+});
+
+// BG-07: hand one's invoice approvals to someone until a date, PUT .../approval-delegate {to, until} or {clear: true}
+export const approvalDelegateRouter = express.Router({ mergeParams: true });
+approvalDelegateRouter.put('/', async (req, res) => {
+  const user = (req as AuthedRequest).user;
+  try {
+    res.json({ status: 'success', ...(await setApprovalDelegate(getDb(), { workspaceId: String((req.params as Record<string, string>).workspaceId), uid: user.uid, email: user.email, to: req.body?.to, until: req.body?.until, clear: req.body?.clear === true })) });
+  } catch (err) { fail(res, err, (e): e is DelegateError => e instanceof DelegateError, 'hand-over'); }
 });

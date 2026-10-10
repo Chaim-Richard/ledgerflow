@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useId } from 'react';
+import ApprovalDelegatePanel from './ApprovalDelegatePanel';
 import { toast } from 'sonner';
 import { Mail, RotateCcw } from 'lucide-react';
 import { useAuthStore } from '../../../stores/useAuthStore';
@@ -207,6 +208,7 @@ export default function EmailSettings() {
           <button type="button" disabled={saving} onClick={saveApproval} className="px-4 py-2 rounded-lg bg-[var(--brass)] text-[var(--ink)] text-sm font-bold disabled:opacity-50">Save approval rule</button>
         )}
         {!canEdit && <p className="text-xs text-[var(--muted)]">Owners and accountants change these settings.</p>}
+        {approval.enabled && <ApprovalDelegatePanel />}
       </section>
     </div>
   );

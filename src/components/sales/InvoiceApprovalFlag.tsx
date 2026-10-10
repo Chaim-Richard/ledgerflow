@@ -4,6 +4,8 @@ import {
   type InvoiceApprovalRecord, type InvoiceApprovalSettings,
 } from '../../lib/invoiceApproval';
 import { mayApprove } from '../../lib/twoPersonRule';
+import { approvesInPlace } from '../../lib/approvalDelegation';
+import { getLocalDateISO } from '../../lib/utils';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 /**
@@ -27,6 +29,8 @@ export interface InvoiceApprovalFlagProps {
 export function InvoiceApprovalFlag({ invoice, settings, currency, canDecide, onDecide }: InvoiceApprovalFlagProps) {
   const uid = useAuthStore(s => s.user?.uid);
   const twoPerson = useAuthStore(s => s.getCurrentWorkspace()?.twoPersonRule === true);
+  // BG-07: approving in someone's place counts as an approver
+  const inPlace = useAuthStore(s => Boolean(approvesInPlace(s.getCurrentWorkspace(), s.user?.uid, getLocalDateISO())));
   const state = approvalStatus(invoice, settings);
   if (state !== 'awaiting' && state !== 'rejected') return null;
   const mayApproveIt = mayApprove(twoPerson, uid, invoice.approval?.requestedBy || invoice.uid);
@@ -34,7 +38,7 @@ export function InvoiceApprovalFlag({ invoice, settings, currency, canDecide, on
   return (
     <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[10px] font-bold text-[var(--neg)]">
       <span title={detail}>{approvalChip(state)}</span>
-      {canDecide && (
+      {(canDecide || inPlace) && (
         <span className="flex gap-2">
           {mayApproveIt ? (
             <button type="button" onClick={() => onDecide('approved')}

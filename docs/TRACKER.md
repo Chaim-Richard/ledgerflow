@@ -2316,7 +2316,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] BG-04 Watch a record — **done 10 Oct**: Tasks → "Records I watch": anyone in the workspace watches an invoice, bill, entry, account or item; the nightly job tells them once about each change since they were last told (the notice opens the record itself) and when it is deleted (the watch then ends). By the row's own last-change time, so every way of changing a record counts. Kept with the workspace's documents (kind "watch", server-written; no migration) (`src/lib/watches.ts`, `watchService.ts`, `WatchingPanel.tsx`; tests `watches.test.tsx`)
 - [x] BG-05 Shared-inbox triage — **done 10 Oct**: on To Review, each entry says who has it ("With dana@…") or has "Give to…" (owners, accountants, bookkeepers): a task "Review: <entry>" for that person, who is told (BG-03) (`HandOver.tsx`, `useHandOvers.ts`; tests `hand-over.test.tsx`)
 - [ ] BG-06 Custom status workflows
-- [ ] BG-07 Threshold approvals + delegate
+- [x] BG-07 Threshold approvals + delegate — **done 10 Oct**: the threshold is Invoice approval (BE-04); now under it, "While you are away, someone approves in your place": an owner or accountant hands their invoice approvals to a bookkeeper, accountant or owner until a date (at most 92 days; the last day included), or takes them back. The person is told, sees Approve, and their approval counts on the server until then; every decision still names who made it; audited (`src/lib/approvalDelegation.ts`, `approvalDelegateService.ts`, `ApprovalDelegatePanel.tsx`; tests `approval-delegation.test.tsx`)
 
 # SECTION BH–BP — CURRENCY · COMPLIANCE · OPS
 

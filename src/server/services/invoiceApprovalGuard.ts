@@ -2,6 +2,7 @@ import type { DocumentData } from '../db/firestore';
 import { approvalForSave, isApproverRole, isIssuedForApproval, normalizeInvoiceApproval, type InvoiceApprovalRecord } from '../../lib/invoiceApproval';
 import { workspaceRole } from '../../lib/periodLock';
 import { mayApprove, TWO_PERSON_REFUSAL, twoPersonOn } from '../../lib/twoPersonRule';
+import { approvesInPlace } from '../../lib/approvalDelegation';
 
 /**
  * Invoice approval on the server (BE-04, L-191). The browser used to decide who signed: a save that
@@ -20,7 +21,8 @@ export class ApprovalRefused extends Error {
 
 export function serverApproval(existing: DocumentData | undefined, incoming: DocumentData, workspace: DocumentData, uid: string, now: string): { approval?: InvoiceApprovalRecord } {
   const role = workspaceRole(workspace, uid);
-  const approver = isApproverRole(role);
+  // BG-07: someone approving in an owner's or accountant's place, until the date they were given
+  const approver = isApproverRole(role) || Boolean(approvesInPlace(workspace, uid, now.slice(0, 10)));
   const sent = incoming.approval as InvoiceApprovalRecord | undefined;
   const before = existing?.approval as InvoiceApprovalRecord | undefined;
   const twoPerson = twoPersonOn(workspace);
