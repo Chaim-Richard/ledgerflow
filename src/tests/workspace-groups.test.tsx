@@ -226,7 +226,7 @@ describe('Settings → Groups of books', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Branch C' }));
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save group' })); });
     const post = calls.find(c => c.url === '/api/v1/account/groups' && c.method === 'POST')!;
-    assert.deepEqual(post.body, { name: 'Branches', workspaceIds: ['ws-b', 'ws-c'], parentId: null, ownership: {}, investments: {} });
+    assert.deepEqual(post.body, { name: 'Branches', workspaceIds: ['ws-b', 'ws-c'], parentId: null, ownership: {}, investments: {}, acquired: {} });
   });
 
   test('changing a group sends its id; removing one says its workspaces are untouched', async () => {
@@ -240,7 +240,7 @@ describe('Settings → Groups of books', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save group' })); });
     const put = calls.find(c => c.method === 'PUT')!;
     assert.equal(put.url, '/api/v1/account/groups/grp_aaaaaaaa');
-    assert.deepEqual(put.body, { name: 'Holding', workspaceIds: ['ws-b', 'component-workspace'], parentId: null, ownership: {}, investments: {} });
+    assert.deepEqual(put.body, { name: 'Holding', workspaceIds: ['ws-b', 'component-workspace'], parentId: null, ownership: {}, investments: {}, acquired: {} });
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Remove Holding' })); });
     assert.ok(calls.some(c => c.method === 'DELETE' && c.url === '/api/v1/account/groups/grp_aaaaaaaa'));
   });
@@ -268,7 +268,7 @@ describe('Settings → Groups of books', () => {
   test('a parent and the share it owns of each other company (Z-16)', async () => {
     const ws = setComponentWorkspace('owner');
     useAuthStore.setState({ workspaces: [ws, { ...ws, id: 'ws-b', name: 'Branch B' }, { ...ws, id: 'ws-c', name: 'Branch C' }] });
-    const groupsBody = { status: 'success', groups: [{ id: 'grp_aaaaaaaa', name: 'Holding', workspaceIds: ['component-workspace', 'ws-b', 'ws-c'], parentId: 'component-workspace', ownership: { 'ws-b': 80 }, investments: { 'ws-b': 'acc-shares-b' } }] };
+    const groupsBody = { status: 'success', groups: [{ id: 'grp_aaaaaaaa', name: 'Holding', workspaceIds: ['component-workspace', 'ws-b', 'ws-c'], parentId: 'component-workspace', ownership: { 'ws-b': 80 }, investments: { 'ws-b': 'acc-shares-b' }, acquired: { 'ws-b': '2024-06-30' } }] };
     const calls: Array<{ url: string; method: string; body?: unknown }> = [];
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -288,11 +288,14 @@ describe('Settings → Groups of books', () => {
     fireEvent.change(screen.getByLabelText('Share of Branch C owned, in percent'), { target: { value: '60' } });
     await waitFor(() => assert.equal(screen.getAllByRole('option', { name: 'Shares in C' }).length, 2, 'one list per company'));
     assert.equal((screen.getByLabelText('Investment in Branch B') as HTMLSelectElement).value, 'acc-shares-b');
+    assert.equal((screen.getByLabelText('Day Branch B was bought') as HTMLInputElement).value, '2024-06-30');
+    assert.equal(screen.queryByLabelText('Day Branch C was bought'), null, 'asked once its investment account is chosen');
     fireEvent.change(screen.getByLabelText('Investment in Branch C'), { target: { value: 'acc-shares-c' } });
+    fireEvent.change(screen.getByLabelText('Day Branch C was bought'), { target: { value: '2025-01-15' } });
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save group' })); });
     assert.deepEqual(calls.find(c => c.method === 'PUT')!.body, {
       name: 'Holding', workspaceIds: ['component-workspace', 'ws-b', 'ws-c'], parentId: 'component-workspace', ownership: { 'ws-b': 80, 'ws-c': 60 },
-      investments: { 'ws-b': 'acc-shares-b', 'ws-c': 'acc-shares-c' },
+      investments: { 'ws-b': 'acc-shares-b', 'ws-c': 'acc-shares-c' }, acquired: { 'ws-b': '2024-06-30', 'ws-c': '2025-01-15' },
     });
     // taking the parent out of the group clears it, and its shares go with it
     fireEvent.click(screen.getByRole('button', { name: 'Change Holding' }));

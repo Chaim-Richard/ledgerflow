@@ -31,8 +31,11 @@
  * other owners (non-controlling interest) is said: their share of its equity and of its profit. A
  * group with a parent is a consolidation, so it is refused while any of its companies is not one the
  * person can open, never quietly short. The parent's investment in each company (the balance of the
- * account named for it in the parent's books) is taken out of the total assets and equity; what the
- * parent paid above the company's book value (goodwill) is not shown separately.
+ * account named for it in the parent's books) is taken out of the total assets and equity. When the day
+ * the parent bought the company is given, what it paid above its share of the company's book value
+ * (the company's equity at the end of that day) is goodwill: it stays in the total assets and equity
+ * and is said. Paid below the book value is said too, and nothing is added. An account holding several
+ * companies has goodwill only when the day each was bought is given.
  */
 import type { Firestore } from '../db/firestore';
 import { canReadGroup, openable } from '../services/workspaceGroupService';
@@ -124,6 +127,10 @@ export interface Eliminated {
   profitDifference: number;
   /** Z-16: the parent's investment in the companies it owns, taken out of total assets and equity */
   investment: number;
+  /** Z-16: what the parent paid above its share of the book value of the companies it bought (kept in assets) */
+  goodwill?: number;
+  /** what it paid below that share (said only) */
+  belowBookValue?: number;
 }
 
 /** An account holding what a company owes or is owed by the others in its group. */
@@ -192,13 +199,13 @@ export function matchIntercompany(members: Array<{ workspaceId: string; name: st
 
 const FIGURES: Array<keyof GroupFigures> = ['income', 'cogs', 'grossProfit', 'expense', 'netIncome', 'totalAssets', 'totalLiabilities', 'totalEquity'];
 
-type ReadMember = Omit<GroupMember, 'share'> & { earlierProfit: number; equityAccounts: number; intercompany: Transaction[]; owedBy: number; owedTo: number; withinGroup: { income: number; cogs: number; expense: number }; assetBalances: Record<string, number>;
+type ReadMember = Omit<GroupMember, 'share'> & { equityWhenBought: number | null; earlierProfit: number; equityAccounts: number; intercompany: Transaction[]; owedBy: number; owedTo: number; withinGroup: { income: number; cogs: number; expense: number }; assetBalances: Record<string, number>;
   chart: LineAccount[]; sections: Record<LineSection, Record<string, number>> };
 
 /** The other company of an intercompany entry. */
 const otherCompany = (tx: Transaction) => String(tx.metadata?.targetWorkspaceId || tx.metadata?.sourceWorkspaceId || '');
 
-async function memberFigures(db: Firestore, workspaceId: string, startDate: string, endDate: string, group: Set<string>): Promise<ReadMember> {
+async function memberFigures(db: Firestore, workspaceId: string, startDate: string, endDate: string, group: Set<string>, boughtOn?: string): Promise<ReadMember> {
   const ws = (await db.collection('workspaces').doc(workspaceId).get()).data() || {};
   const accounts = (await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as ChartAccount);
   const transactions = (await db.collection('transactions').where('workspaceId', '==', workspaceId).where('date', '<=', endDate).get()).docs
@@ -206,6 +213,8 @@ async function memberFigures(db: Firestore, workspaceId: string, startDate: stri
   const pl = computeProfitAndLoss(accounts, transactions, startDate, endDate);
   const bs = computeBalanceSheet(accounts, transactions, endDate);
   const intercompany = transactions.filter(tx => tx.metadata?.isIntercompany === true);
+  // Z-16: its equity at the end of the day the parent bought it (its book value then)
+  const then = boughtOn && boughtOn <= endDate ? computeBalanceSheet(accounts, transactions, boughtOn) : null;
   // CB-26: the income and costs of its dealings in force with the other companies of the group
   const within = computeProfitAndLoss(accounts, intercompany.filter(tx => inForce(tx) && group.has(otherCompany(tx))), startDate, endDate);
   return {
@@ -222,6 +231,7 @@ async function memberFigures(db: Firestore, workspaceId: string, startDate: stri
     totalEquity: bs.totalEquity + bs.netIncome,
     isBalanced: bs.isBalanced,
     equityAccounts: bs.totalEquity,
+    equityWhenBought: then ? then.totalEquity + then.netIncome : null,
     // profit before the period that is not closed into equity yet
     earlierProfit: bs.netIncome - pl.netIncome,
     intercompany,
@@ -281,13 +291,14 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     parentId: typeof group.parentId === 'string' ? group.parentId : undefined,
     ownership: (group.ownership || {}) as Record<string, number>,
     investments: (group.investments || {}) as Record<string, string>,
+    acquired: (group.acquired || {}) as Record<string, string>,
   };
   if (structure.parentId && shown.length < ids.length) {
     const n = ids.length - shown.length;
     throw new GroupReportError(403, `This group adds up its companies under a parent, and ${n} of them ${n === 1 ? 'is' : 'are'} not open to you: ask for access, or take ${n === 1 ? 'it' : 'them'} out of the group`);
   }
   const read: ReadMember[] = [];
-  for (const id of shown) read.push(await memberFigures(db, id, input.startDate, input.endDate, new Set(shown)));
+  for (const id of shown) read.push(await memberFigures(db, id, input.startDate, input.endDate, new Set(shown), structure.parentId && structure.investments[id] ? structure.acquired[id] : undefined));
   const reportCurrency = input.reportCurrency;
   if (reportCurrency) {
     for (const currency of new Set(read.map(m => m.currency).filter(c => c !== reportCurrency))) {
@@ -296,7 +307,7 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     }
   }
   const intercompany = matchIntercompany(read.map(m => ({ workspaceId: m.workspaceId, name: m.name, currency: m.currency, entries: m.intercompany })), open, input.startDate, input.endDate);
-  const members: GroupMember[] = read.map(({ earlierProfit, equityAccounts, intercompany: _entries, owedBy: _by, owedTo: _to, withinGroup: _within, assetBalances: _balances, chart: _chart, sections: _sections, ...rest }) => {
+  const members: GroupMember[] = read.map(({ equityWhenBought: _bought, earlierProfit, equityAccounts, intercompany: _entries, owedBy: _by, owedTo: _to, withinGroup: _within, assetBalances: _balances, chart: _chart, sections: _sections, ...rest }) => {
     const m = { ...rest, share: shareOf(structure, rest.workspaceId) };
     if (!reportCurrency) return m;
     const rates = m.currency === reportCurrency ? null : input.rates![m.currency];
@@ -314,19 +325,35 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
   // Z-16: the parent's investment in the companies it owns, from its own balance sheet
   const parentRead = read.find(m => m.workspaceId === structure.parentId);
   let investment = 0;
+  let goodwill = 0;
+  let belowBookValue = 0;
+  let anyBought = false;
   if (parentRead) {
-    const accounts = new Set<string>();
+    // one account may hold several companies: counted once, with the book value of each
+    const accounts = new Map<string, ReadMember[]>();
     for (const [memberId, accountId] of Object.entries(structure.investments)) {
       const member = read.find(m => m.workspaceId === memberId);
       if (!member) continue;
       if (!(accountId in parentRead.assetBalances)) {
         throw new GroupReportError(400, `The investment account chosen for ${member.name} is not an asset account of ${parentRead.name} any more: choose it again in Settings → Groups of books`);
       }
-      accounts.add(accountId); // one account may hold several companies: counted once
+      accounts.set(accountId, [...(accounts.get(accountId) || []), member]);
     }
-    investment = Math.round([...accounts].reduce((s, a) => s + parentRead.assetBalances[a], 0) * closing(parentRead));
+    for (const [accountId, held] of accounts) {
+      const paid = Math.round(parentRead.assetBalances[accountId] * closing(parentRead));
+      investment += paid;
+      if (!held.every(m => m.equityWhenBought !== null)) continue;
+      anyBought = true;
+      // the parent's share of each company's equity on the day bought, at the historical rate
+      const historical = (m: ReadMember) => (reportCurrency && m.currency !== reportCurrency ? input.rates![m.currency].historical : 1);
+      const bookValue = held.reduce((s, m) => s + Math.round(m.equityWhenBought! * historical(m) * shareOf(structure, m.workspaceId) / 100), 0);
+      if (paid > bookValue) goodwill += paid - bookValue; else belowBookValue += bookValue - paid;
+    }
   }
-  const eliminated: Eliminated = { assets: owedBy, liabilities: owedTo, difference: owedBy - owedTo, income, cogs, expense, profitDifference: income - cogs - expense, investment };
+  const eliminated: Eliminated = {
+    assets: owedBy, liabilities: owedTo, difference: owedBy - owedTo, income, cogs, expense, profitDifference: income - cogs - expense, investment,
+    ...(anyBought ? { goodwill, belowBookValue } : {}),
+  };
   const sum = (figures: Array<GroupFigures & { cta: number }>, currency: string) => {
     const t = Object.fromEntries([...FIGURES, 'cta' as const].map(f => [f, figures.reduce((s, x) => s + x[f], 0)])) as unknown as GroupFigures & { cta: number };
     // Z-16: the other owners' part of each company the parent owns less than all of
@@ -335,7 +362,8 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     // net income stays the companies' own: what the two sides disagree on stays in it, and is said
     return {
       currency, ...t, income: t.income - income, cogs: t.cogs - cogs, grossProfit: t.grossProfit - income + cogs, expense: t.expense - expense,
-      totalAssets: t.totalAssets - owedBy - investment, totalLiabilities: t.totalLiabilities - owedTo, totalEquity: t.totalEquity - eliminated.difference - investment, eliminated, ...otherOwners,
+      totalAssets: t.totalAssets - owedBy - investment + goodwill, totalLiabilities: t.totalLiabilities - owedTo,
+      totalEquity: t.totalEquity - eliminated.difference - investment + goodwill, eliminated, ...otherOwners,
     };
   };
   const total = members.length === 0 ? null

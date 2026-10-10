@@ -47,6 +47,9 @@ const shown = (id: string, data: Record<string, unknown>, open: Set<string>, uid
   ...(data.investments && typeof data.investments === 'object'
     ? { investments: Object.fromEntries(Object.entries(data.investments as Record<string, string>).filter(([w]) => open.has(w))) }
     : {}),
+  ...(data.acquired && typeof data.acquired === 'object'
+    ? { acquired: Object.fromEntries(Object.entries(data.acquired as Record<string, string>).filter(([w]) => open.has(w))) }
+    : {}),
   ...(data.rates && typeof data.rates === 'object' ? { rates: data.rates as WorkspaceGroup['rates'] } : {}),
   ...(data.createdAt ? { createdAt: String(data.createdAt) } : {}),
   ...(data.updatedAt ? { updatedAt: String(data.updatedAt) } : {}),
@@ -109,7 +112,7 @@ function refuseUnopenable(workspaceIds: string[], open: Set<string>) {
   if (unknown) throw new WorkspaceGroupError(404, `Workspace ${unknown} not found`);
 }
 
-export async function createGroup(db: Firestore, input: { uid: string; name: string; workspaceIds: string[]; parentId?: string | null; ownership?: Record<string, number>; investments?: Record<string, string> }): Promise<WorkspaceGroup> {
+export async function createGroup(db: Firestore, input: { uid: string; name: string; workspaceIds: string[]; parentId?: string | null; ownership?: Record<string, number>; investments?: Record<string, string>; acquired?: Record<string, string> }): Promise<WorkspaceGroup> {
   const problem = groupProblem(input) || structureProblem(input);
   if (problem) throw new WorkspaceGroupError(400, problem);
   const open = await openable(db, input.uid);
@@ -120,14 +123,14 @@ export async function createGroup(db: Firestore, input: { uid: string; name: str
   const now = new Date().toISOString();
   const data = {
     ownerUid: input.uid, name: input.name.trim(), workspaceIds: input.workspaceIds,
-    ...(input.parentId ? { parentId: input.parentId, ownership: input.ownership || {}, investments: input.investments || {} } : {}),
+    ...(input.parentId ? { parentId: input.parentId, ownership: input.ownership || {}, investments: input.investments || {}, acquired: input.acquired || {} } : {}),
     createdAt: now, updatedAt: now,
   };
   await db.collection('workspaceGroups').doc(id).create(data);
   return shown(id, data, open);
 }
 
-export async function updateGroup(db: Firestore, input: { uid: string; groupId: string; name?: string; workspaceIds?: string[]; parentId?: string | null; ownership?: Record<string, number>; investments?: Record<string, string> }): Promise<WorkspaceGroup> {
+export async function updateGroup(db: Firestore, input: { uid: string; groupId: string; name?: string; workspaceIds?: string[]; parentId?: string | null; ownership?: Record<string, number>; investments?: Record<string, string>; acquired?: Record<string, string> }): Promise<WorkspaceGroup> {
   if (!GROUP_ID.test(input.groupId)) throw new WorkspaceGroupError(404, 'Group not found');
   const problem = groupProblem(input);
   if (problem) throw new WorkspaceGroupError(400, problem);
@@ -158,12 +161,16 @@ export async function updateGroup(db: Firestore, input: { uid: string; groupId: 
     const investments = parentId
       ? (input.investments ? { ...Object.fromEntries(storedInv.filter(([w]) => !open.has(w))), ...input.investments } : Object.fromEntries(storedInv))
       : input.investments;
-    const structure = structureProblem({ workspaceIds, parentId, ownership, investments });
+    const storedDays = data.parentId === parentId ? Object.entries((data.acquired as Record<string, string>) || {}).filter(([w]) => workspaceIds.includes(w) && w !== parentId) : [];
+    const acquired = parentId
+      ? (input.acquired ? { ...Object.fromEntries(storedDays.filter(([w]) => !open.has(w))), ...input.acquired } : Object.fromEntries(storedDays))
+      : input.acquired;
+    const structure = structureProblem({ workspaceIds, parentId, ownership, investments, acquired });
     if (structure) throw new WorkspaceGroupError(400, structure);
-    const { parentId: _p, ownership: _o, investments: _i, ...rest } = data;
+    const { parentId: _p, ownership: _o, investments: _i, acquired: _a, ...rest } = data;
     const next = {
       ...rest, ...(input.name !== undefined ? { name: input.name.trim() } : {}), workspaceIds,
-      ...(parentId ? { parentId, ownership, investments } : {}), updatedAt: new Date().toISOString(),
+      ...(parentId ? { parentId, ownership, investments, acquired } : {}), updatedAt: new Date().toISOString(),
     };
     t.set(ref, next);
     return shown(input.groupId, next, open);

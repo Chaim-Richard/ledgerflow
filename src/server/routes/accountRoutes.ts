@@ -103,6 +103,7 @@ const structure = (body: Record<string, unknown> | undefined) => ({
   ...(body?.parentId !== undefined ? { parentId: body.parentId as string | null } : {}),
   ...(body?.ownership !== undefined ? { ownership: body.ownership as Record<string, number> } : {}),
   ...(body?.investments !== undefined ? { investments: body.investments as Record<string, string> } : {}),
+  ...(body?.acquired !== undefined ? { acquired: body.acquired as Record<string, string> } : {}),
 });
 
 accountRouter.get('/groups', async (req, res) => {

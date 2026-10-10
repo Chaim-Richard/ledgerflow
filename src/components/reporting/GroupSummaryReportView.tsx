@@ -10,7 +10,7 @@ import { averageFromTimeframe, parseRates, rateFromQuote, type TranslationRates 
 interface Figures { income: number; cogs: number; grossProfit: number; expense: number; netIncome: number; totalAssets: number; totalLiabilities: number; totalEquity: number }
 interface Member extends Figures { workspaceId: string; name: string; currency: string; isBalanced: boolean; share?: number; translated?: Figures & { cta: number } }
 interface Issue { workspaceId: string; transactionId: string; date: string; description: string; amountCents: number; currency: string; withName: string | null; reason: 'missing' | 'undone' | 'amount' | 'outside-group' | 'not-open'; otherAmountCents?: number }
-interface Eliminated { assets: number; liabilities: number; difference: number; income?: number; cogs?: number; expense?: number; profitDifference?: number; investment?: number }
+interface Eliminated { assets: number; liabilities: number; difference: number; income?: number; cogs?: number; expense?: number; profitDifference?: number; investment?: number; goodwill?: number; belowBookValue?: number }
 interface OtherOwners { equity: number; netIncome: number }
 interface AccountLine { key: string; section: 'income' | 'cogs' | 'expense' | 'asset' | 'liability' | 'equity'; name: string; code?: string; alsoNamed?: string[]; combined?: string[]; byMember: Record<string, number>; total: number }
 const SECTION_NAMES: Record<AccountLine['section'], string> = { income: 'Income', cogs: 'Cost of goods sold', expense: 'Expenses', asset: 'Assets', liability: 'Liabilities', equity: 'Equity' };
@@ -344,7 +344,10 @@ export default function GroupSummaryReportView() {
           )}
           {summary.total?.eliminated?.investment ? (
             <p className="text-xs text-[var(--muted)]">
-              The parent's investment in its companies, {formatCurrency(summary.total.eliminated.investment, summary.total.currency)}, is taken out of the total assets and equity (what was paid above a company's book value is not shown separately).
+              The parent's investment in its companies, {formatCurrency(summary.total.eliminated.investment, summary.total.currency)}, is taken out of the total assets and equity
+              {summary.total.eliminated.goodwill !== undefined
+                ? <>, except goodwill: {formatCurrency(summary.total.eliminated.goodwill, summary.total.currency)} paid above its share of the companies' book value on the day bought, kept in the total.{summary.total.eliminated.belowBookValue ? <> It paid {formatCurrency(summary.total.eliminated.belowBookValue, summary.total.currency)} below that share for some of them (left in equity).</> : null}</>
+                : <> (give the day each company was bought in Settings → Groups of books to see the goodwill).</>}
             </p>
           ) : null}
           {summary.total?.eliminated && summary.total.eliminated.difference !== 0 && (

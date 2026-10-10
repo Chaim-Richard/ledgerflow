@@ -292,6 +292,27 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     await call(`/api/v1/account/groups/${owned}`, ann, { method: 'PUT', body: { investments: { [ws2]: `${ws1}_invest` } } });
   });
 
+  test('with the day it was bought: what the parent paid above its share of the book value is goodwill, kept in the total (Z-16)', async () => {
+    const before = (await summary(owned)).body.total as { totalAssets: number; totalEquity: number; totalLiabilities: number; eliminated: Record<string, number> };
+    assert.equal(before.eliminated.goodwill, undefined, 'no day given: not said');
+    // bought before the daughter had any equity: all 200.00 paid is goodwill
+    assert.equal((await call(`/api/v1/account/groups/${owned}`, ann, { method: 'PUT', body: { acquired: { [ws2]: '2025-11-30' } } })).status, 200);
+    const early = (await summary(owned)).body.total as typeof before;
+    assert.deepEqual([early.eliminated.investment, early.eliminated.goodwill, early.eliminated.belowBookValue], [20000, 20000, 0]);
+    assert.deepEqual([early.totalAssets, early.totalEquity], [before.totalAssets + 20000, before.totalEquity + 20000]);
+    assert.equal(early.totalAssets, early.totalLiabilities + early.totalEquity);
+    // bought when its equity was 1,200.00: 80% of it is 960.00, paid 200.00, so 760.00 below the book value, said only
+    await call(`/api/v1/account/groups/${owned}`, ann, { method: 'PUT', body: { acquired: { [ws2]: '2026-02-01' } } });
+    const later = (await summary(owned)).body.total as typeof before;
+    assert.deepEqual([later.eliminated.goodwill, later.eliminated.belowBookValue, later.totalAssets], [0, 96000 - 20000, before.totalAssets]);
+    const groups = (await call('/api/v1/account/groups', ann)).body.groups as Array<{ id: string; acquired?: Record<string, string> }>;
+    assert.deepEqual(groups.find(g => g.id === owned)!.acquired, { [ws2]: '2026-02-01' }, 'kept on the group');
+    for (const bad of [{ [ws2]: '2026-13-45' }, { [ws1]: '2026-01-01' }, { nope: '2026-01-01' }]) {
+      assert.equal((await call(`/api/v1/account/groups/${owned}`, ann, { method: 'PUT', body: { acquired: bad } })).status, 400, JSON.stringify(bad));
+    }
+    await call(`/api/v1/account/groups/${owned}`, ann, { method: 'PUT', body: { acquired: {} } });
+  });
+
   test('a group shared with someone: they see the companies they can open, and the rest are counted (DA-01)', async () => {
     await db.collection('workspaceGroups').doc(sameCurrency).update({ sharedWith: [bob] });
     try {
@@ -373,6 +394,15 @@ describe('On screen', () => {
     await waitFor(() => assert.ok(screen.getByText(/Sales between the companies taken out: \$4\.00 of income, and \$3\.00 of costs/)));
     assert.match(screen.getByRole('alert').textContent || '', /differ by \$1\.00/);
     assert.equal(screen.queryByText(/The parent's investment/), null, 'none chosen: nothing said');
+  });
+
+  test('the parent\'s investment and its goodwill are said (Z-16)', async () => {
+    setComponentWorkspace('owner');
+    answer([{ workspaceId: 'ws-a', name: 'Holding', currency: 'USD', isBalanced: true, ...figures(1000) }, { workspaceId: 'ws-b', name: 'Daughter', currency: 'USD', isBalanced: true, share: 80, ...figures(2000) }],
+      { currency: 'USD', ...figures(3000), eliminated: { assets: 0, liabilities: 0, difference: 0, investment: 5000, goodwill: 1200, belowBookValue: 300 } }, { parent: { workspaceId: 'ws-a', name: 'Holding' } });
+    render(<GroupSummaryReportView />);
+    await waitFor(() => assert.ok(screen.getByText(/The parent's investment in its companies, \$50\.00/)));
+    assert.match(screen.getByText(/The parent's investment/).textContent || '', /except goodwill: \$12\.00 paid above its share.*\$3\.00 below that share/);
   });
 
   test('account by account: asked for, shown by section with each company and together (Z-20)', async () => {

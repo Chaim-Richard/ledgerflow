@@ -16,6 +16,8 @@ export interface WorkspaceGroup {
   ownership?: Record<string, number>;
   /** Z-16: for each other member, the parent's account holding its investment in it (taken out of the total) */
   investments?: Record<string, string>;
+  /** Z-16: the day the parent bought each company (YYYY-MM-DD), for goodwill: what it paid above its share of the book value then */
+  acquired?: Record<string, string>;
   /** DA-01: false for a group someone else shared with you (you read it; only its owner changes it) */
   mine?: boolean;
   /** who the owner shared it with (shown to the owner only) */
@@ -33,6 +35,8 @@ export const MAX_GROUP_MEMBERS = 500;
 /** DA-01: people a group can be shared with */
 export const MAX_GROUP_SHARES = 50;
 export const GROUP_ID = /^grp_[a-z0-9]{8,40}$/;
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Why this group can't be saved, or null. */
 export function groupProblem(input: { name?: unknown; workspaceIds?: unknown }): string | null {
@@ -53,7 +57,7 @@ export function groupProblem(input: { name?: unknown; workspaceIds?: unknown }):
  * other member's share is above 50% (a company the parent controls, so its books are added in full
  * and the rest belongs to other owners) and at most 100%, with two decimals at most.
  */
-export function structureProblem(input: { workspaceIds: string[]; parentId?: unknown; ownership?: unknown; investments?: unknown }): string | null {
+export function structureProblem(input: { workspaceIds: string[]; parentId?: unknown; ownership?: unknown; investments?: unknown; acquired?: unknown }): string | null {
   if (input.parentId !== undefined && input.parentId !== null) {
     if (typeof input.parentId !== 'string' || !input.workspaceIds.includes(input.parentId)) return 'The parent company must be one of the group\'s workspaces';
   }
@@ -64,6 +68,15 @@ export function structureProblem(input: { workspaceIds: string[]; parentId?: unk
     for (const [id, accountId] of entries) {
       if (!input.workspaceIds.includes(id) || id === input.parentId) return 'An investment is given for a company that is not one the parent owns in this group';
       if (typeof accountId !== 'string' || !accountId || accountId.length > 200) return 'Choose the parent\'s investment account for each company';
+    }
+  }
+  if (input.acquired !== undefined && input.acquired !== null) {
+    if (typeof input.acquired !== 'object' || Array.isArray(input.acquired)) return 'Enter the day the parent bought each company';
+    const entries = Object.entries(input.acquired as Record<string, unknown>);
+    if (entries.length > 0 && !input.parentId) return 'Choose the parent company before the days it bought the others';
+    for (const [id, day] of entries) {
+      if (!input.workspaceIds.includes(id) || id === input.parentId) return 'A day bought is given for a company that is not one the parent owns in this group';
+      if (typeof day !== 'string' || !DAY.test(day) || Number.isNaN(Date.parse(day))) return 'The day a company was bought is a date (YYYY-MM-DD)';
     }
   }
   if (input.ownership === undefined || input.ownership === null) return null;
@@ -88,7 +101,6 @@ export const shareOf = (group: Pick<WorkspaceGroup, 'parentId' | 'ownership'>, w
 export const ratesKey = (reportCurrency: string, startDate: string, endDate: string) => `${reportCurrency}:${startDate}:${endDate}`;
 export const MAX_KEPT_RATES = 120;
 const CURRENCY = /^[A-Z]{3}$/;
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Why these rates can't be kept, or null. */
 export function keptRatesProblem(input: { reportCurrency?: unknown; startDate?: unknown; endDate?: unknown; rates?: unknown }): string | null {

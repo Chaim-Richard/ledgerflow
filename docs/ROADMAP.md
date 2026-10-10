@@ -263,8 +263,8 @@ These are the tracker IDs; `docs/TRACKER.md` has the detail.
 - **Groups and companies:** BD-01, DA-01, Z-16, Z-17, Z-18, Z-19, Z-20 and CB-26 (one multi-entity
   design, see Z-16). On 8 Oct: own groups, the group summary with translation, dealings between the
   companies, eliminations of balances and of sales between them, and the parent with its shares are done;
-  the parent's investment, shared groups, kept rates and account-by-account lines are done too; open
-  are a chart mapping for companies whose accounts differ, the equity method and goodwill. The
+  the parent's investment, shared groups, kept rates and account-by-account lines are done too; the
+  chart mapping for companies whose accounts differ and goodwill are done 10 Oct; open is the equity method. The
   Practice view (BD-01) is done 10 Oct.
 - **Sales, stock and returns:** BF-08 step 2 (delivery apart from invoice, done 7 Oct; the printable note and returns after delivery, done 8 Oct), W-01, W-02 and BF-06 (all three done 7 Oct).
 - **Simple until needed:** BB-07 and P-08 (the tour, done 10 Oct; Stock, Projects and Budgets became modules 10 Oct).
