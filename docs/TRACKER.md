@@ -2450,8 +2450,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] CB-09 Financial ratios
 - [x] CB-10 Sales trends
 - [ ] CB-11 Purchase trends (vendor totals complete; item allocation needs shared accounting helper, C-18 handoff)
-- [ ] CB-12 Item-wise sales register
-- [ ] CB-13 Item-wise purchase register
+- [x] CB-12 Item-wise sales register — **done 10 Oct (Claude)**: Reports → Item-wise Register, "Sold": every issued invoice's line with a stock item in a period, for one item or all, oldest first, each opening its invoice, with each item's units and amount (by currency) at the end (`src/lib/itemRegister.ts`, `ItemRegisterReportView.tsx`; tests `item-register.test.tsx`).
+- [x] CB-13 Item-wise purchase register — **done 10 Oct (Claude)**: the same report, "Bought": every bill line with a stock item (J-08), its units and price per unit; landed costs and void bills left out (same files and tests).
 - [x] CB-14 Inactive items
 - [ ] CB-15 Partner commission
 - [ ] CB-16 Deferred revenue & expense
