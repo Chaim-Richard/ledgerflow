@@ -7,7 +7,7 @@
  * Pure: the Stock history window and the nightly check read it.
  */
 
-export type StockMoveKind = 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'purchase-reversal' | 'opening' | 'adjustment' | 'count' | 'manual-cogs' | 'transfer-out' | 'transfer-in';
+export type StockMoveKind = 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'purchase-reversal' | 'purchase-return' | 'purchase-return-reversal' | 'opening' | 'adjustment' | 'count' | 'manual-cogs' | 'transfer-out' | 'transfer-in';
 
 export interface StockMove {
   id?: string;
@@ -25,7 +25,7 @@ export interface StockMove {
   /** the value that moved, signed like the quantity (whole cents) */
   valueCents: number;
   transactionId?: string | null;
-  documentType?: 'invoice' | 'credit-note' | 'adjustment' | 'import' | 'delivery' | 'bill';
+  documentType?: 'invoice' | 'credit-note' | 'adjustment' | 'import' | 'delivery' | 'bill' | 'vendor-credit';
   documentId?: string;
   /** the order the moves happened in: the time written, then the place in that write */
   seq: string;
@@ -42,6 +42,8 @@ export const STOCK_MOVE_LABEL: Record<StockMoveKind, string> = {
   'return-reversal': 'Return undone',
   purchase: 'Bought',
   'purchase-reversal': 'Purchase undone',
+  'purchase-return': 'Sent back to the vendor',
+  'purchase-return-reversal': 'Sending back undone',
   opening: 'Opening stock',
   adjustment: 'Adjusted',
   count: 'Counted',

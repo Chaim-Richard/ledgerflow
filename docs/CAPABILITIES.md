@@ -124,3 +124,4 @@ One row per capability, with one label each (DA-05). The README, Help, onboardin
 | 114 | Asset depreciation ledger | Available | `src/lib/depreciationLedger.ts`, `DepreciationLedgerReportView.tsx`; `depreciation-ledger.test.tsx` | Reads the loaded entries (the 10,000 cap applies) |
 | 115 | Bank clearance summary | Available | `src/lib/bankClearance.ts`, `BankClearanceReportView.tsx`; `bank-clearance.test.tsx` | Reads the loaded entries |
 | 116 | Service items (no stock) | Available | `src/lib/invoiceLines.ts`, `InventoryItemDialog.tsx`; `item-type.test.tsx` | Service lines are not in the item-wise reports |
+| 117 | Purchase returns (stock sent back on a vendor credit) | Available | `src/lib/vendorReturns.ts`, `creditPosting.ts`, `cogsStockService.ts`; `vendor-returns.test.ts` | At the bill line's price; spread freight stays in stock |

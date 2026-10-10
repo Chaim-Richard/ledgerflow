@@ -248,6 +248,16 @@ export async function postVendorCreditLedger(
     'Tax Paid'
   ) : null;
 
+  // BF-07: stock sent back to the vendor comes off Inventory (at the bill line's cost) instead of the
+  // expense, and the entry says which units leave stock (the server takes them out)
+  const goods = (vendorCreditData.returnedGoods || []).filter(g => g.quantity > 0);
+  const goodsBase = goods.map(g => roundCents(g.valueCents * rate));
+  const goodsTotal = goodsBase.reduce((s, c) => s + c, 0);
+  if (goodsTotal > amount - vcTax) throw new Error('The goods sent back are worth more than the credit (before tax): raise the credit, or send back fewer');
+  const inventoryAccount = goods.length ? findAccount(accounts, mappings, ['inventory', 'stock', 'inventory asset'], a => resolveAccountRole(a) === 'inventory') : null;
+  if (goods.length && !inventoryAccount) throw new Error('Add an Inventory account (an asset) to the chart of accounts to send stock back to a vendor');
+  const rebate = amount - vcTax - goodsTotal;
+
   const vcTx = {
     uid,
     workspaceId,
@@ -262,11 +272,13 @@ export async function postVendorCreditLedger(
     metadata: {
       vendorCreditId,
       vendorId: vendorCreditData.vendorId,
-      type: 'vendor-credit-issuance'
+      type: 'vendor-credit-issuance',
+      ...(goods.length ? { stockOut: goods.map((g, i) => ({ itemId: g.itemId, quantity: g.quantity, valueCents: goodsBase[i] })) } : {}),
     },
     lines: [
       { accountId: apAccount.id, accountName: apAccount.name, amountCents: amount, debitCents: amount, creditCents: 0, description: 'Accounts Payable Reduction' },
-      { accountId: expenseAccount.id, accountName: expenseAccount.name, amountCents: -(amount - vcTax), debitCents: 0, creditCents: amount - vcTax, description: 'Purchase Rebate / Expense Discount' },
+      ...(goodsTotal > 0 && inventoryAccount ? [{ accountId: inventoryAccount.id, accountName: inventoryAccount.name, amountCents: -goodsTotal, debitCents: 0, creditCents: goodsTotal, description: 'Stock sent back to the vendor' }] : []),
+      ...(rebate !== 0 ? [{ accountId: expenseAccount.id, accountName: expenseAccount.name, amountCents: -rebate, debitCents: 0, creditCents: rebate, description: 'Purchase Rebate / Expense Discount' }] : []),
       ...(vcTax > 0 && vcTaxAccount ? [{ accountId: vcTaxAccount.id, accountName: vcTaxAccount.name, amountCents: -vcTax, debitCents: 0, creditCents: vcTax, description: 'Input tax reversed by the credit' }] : [])
     ]
   };

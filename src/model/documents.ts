@@ -334,6 +334,16 @@ export interface VendorCredit {
   taxInclusive?: boolean;
   taxVersion?: number;
   taxTreatment?: TaxTreatment;
+  /** BF-07: stock sent back to the vendor, by line of the credited bill (src/lib/vendorReturns.ts) */
+  returnedGoods?: VendorReturnLine[];
+}
+
+/** BF-07: units of one stock line of a bill sent back, at that line's cost (the credit's currency) */
+export interface VendorReturnLine {
+  billLine: number;
+  itemId: string;
+  quantity: number;
+  valueCents: number;
 }
 
 export interface Customer {

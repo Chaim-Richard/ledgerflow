@@ -45,7 +45,7 @@ interface LedgerEntry {
 interface PendingMove {
   itemId: string;
   quantity: number;
-  kind: 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'purchase-reversal';
+  kind: 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'purchase-reversal' | 'purchase-return' | 'purchase-return-reversal';
   entry: LedgerEntry;
   valueCents: number;
   location?: string;
@@ -91,6 +91,27 @@ function billStockIn(tx: LedgerEntry): Array<{ itemId: string; quantity: number;
     const valueCents = Number(l.valueCents);
     if (typeof l.itemId !== 'string' || !l.itemId || !Number.isFinite(quantity) || quantity <= 0 || !Number.isSafeInteger(valueCents) || valueCents < 0) {
       throw new LedgerPostingError(400, 'Each item line of a bill needs the item, a positive quantity and its value in whole cents.');
+    }
+    return { itemId: l.itemId, quantity, valueCents };
+  });
+}
+
+/**
+ * BF-07: the stock a vendor credit sends back (`metadata.stockOut` on its entry, src/lib/vendorReturns.ts):
+ * each takes units out at the value its line took off Inventory.
+ */
+function vendorReturnOut(tx: LedgerEntry): Array<{ itemId: string; quantity: number; valueCents: number }> {
+  const lines = tx.metadata?.stockOut;
+  if (lines === undefined) return [];
+  if (tx.metadata?.type !== 'vendor-credit-issuance' || !Array.isArray(lines) || lines.length > 500) {
+    throw new LedgerPostingError(400, 'Stock goes back to a vendor only on a vendor credit\'s entry, as a list of its lines.');
+  }
+  return lines.map(raw => {
+    const l = (raw || {}) as Record<string, unknown>;
+    const quantity = Number(l.quantity);
+    const valueCents = Number(l.valueCents);
+    if (typeof l.itemId !== 'string' || !l.itemId || !Number.isFinite(quantity) || quantity <= 0 || !Number.isSafeInteger(valueCents) || valueCents < 0) {
+      throw new LedgerPostingError(400, 'Each line sent back to a vendor needs the item, a positive quantity and its value in whole cents.');
     }
     return { itemId: l.itemId, quantity, valueCents };
   });
@@ -175,6 +196,11 @@ export async function prepareStockMoves(
       add(line.itemId, -line.quantity);
       pending.push({ itemId: line.itemId, quantity: -line.quantity, kind: 'purchase-reversal', entry: reversalOf.get(target) || original, valueCents: -line.valueCents, location: original.metadata?.locationId as string | undefined });
     }
+    // BF-07: stock sent back to a vendor comes back in when the credit is undone
+    for (const line of vendorReturnOut(original)) {
+      add(line.itemId, line.quantity);
+      pending.push({ itemId: line.itemId, quantity: line.quantity, kind: 'purchase-return-reversal', entry: reversalOf.get(target) || original, valueCents: line.valueCents, location: original.metadata?.locationId as string | undefined });
+    }
     const effect = stockEffect(original);
     if (!effect) return;
     const sign = effect.quantity > 0 ? -1 : 1;
@@ -183,6 +209,10 @@ export async function prepareStockMoves(
   };
 
   for (const tx of entries) {
+    for (const line of vendorReturnOut(tx)) {
+      add(line.itemId, -line.quantity);
+      pending.push({ itemId: line.itemId, quantity: -line.quantity, kind: 'purchase-return', entry: tx, valueCents: -line.valueCents, location: tx.metadata?.locationId as string | undefined });
+    }
     for (const line of billStockIn(tx)) {
       add(line.itemId, line.quantity);
       pending.push({ itemId: line.itemId, quantity: line.quantity, kind: 'purchase', entry: tx, valueCents: line.valueCents, location: tx.metadata?.locationId as string | undefined });
@@ -264,9 +294,11 @@ export async function prepareStockMoves(
       let costChanged = false;
       // a bill edited in this request: its old units go out before its new ones come in
       const mine = pending.filter(x => x.itemId === snap.id);
-      for (const p of [...mine.filter(x => x.kind === 'purchase-reversal'), ...mine.filter(x => x.kind !== 'purchase-reversal')]) {
+      const undoFirst = (k: string) => k === 'purchase-reversal' || k === 'purchase-return-reversal';
+      for (const p of [...mine.filter(x => undoFirst(x.kind)), ...mine.filter(x => !undoFirst(x.kind))]) {
         const after = round6(before + p.quantity);
-        if ((p.kind === 'purchase' || p.kind === 'purchase-reversal') && after > 0) {
+        // what is bought or sent back (or either undone) moves the average cost by its own value
+        if (['purchase', 'purchase-reversal', 'purchase-return', 'purchase-return-reversal'].includes(p.kind) && after > 0) {
           cost = Math.round((Math.max(0, before) * cost + p.valueCents) / after);
           costChanged = true;
         }
@@ -274,7 +306,9 @@ export async function prepareStockMoves(
         const creditNoteId = typeof p.entry.metadata?.creditNoteId === 'string' ? p.entry.metadata.creditNoteId : undefined;
         const deliveryId = typeof p.entry.metadata?.deliveryId === 'string' ? p.entry.metadata.deliveryId : undefined;
         const billId = typeof p.entry.metadata?.billId === 'string' ? p.entry.metadata.billId : undefined;
-        const document = billId ? { documentType: 'bill' as const, documentId: billId }
+        const vendorCreditId = typeof p.entry.metadata?.vendorCreditId === 'string' ? p.entry.metadata.vendorCreditId : undefined;
+        const document = vendorCreditId ? { documentType: 'vendor-credit' as const, documentId: vendorCreditId }
+          : billId ? { documentType: 'bill' as const, documentId: billId }
           : creditNoteId ? { documentType: 'credit-note' as const, documentId: creditNoteId }
           : invoiceId ? { documentType: 'invoice' as const, documentId: invoiceId }
             : deliveryId ? { documentType: 'delivery' as const, documentId: deliveryId } : {};

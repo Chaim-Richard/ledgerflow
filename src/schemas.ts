@@ -518,6 +518,11 @@ export const VendorCreditSchema = z.object({
   tags: z.array(z.string()).optional(),
   metadata: z.record(z.string(), z.any()).optional(),
   ...creditTaxFields,
+  // BF-07: stock sent back to the vendor, by line of the credited bill
+  returnedGoods: z.array(z.object({
+    billLine: z.number().int().nonnegative(), itemId: z.string().min(1).max(200),
+    quantity: z.number().positive().finite(), valueCents: z.number().int().nonnegative(),
+  })).max(500).optional(),
 });
 
 export const AutoRuleConditionSchema = z.object({
