@@ -5,8 +5,8 @@ import { logger } from '../utils/logger';
 import { notify } from './notificationService';
 
 /**
- * Warranty and insurance reminders (X-08), every night: each asset whose warranty ends or whose
- * insurance renews within 30 days (src/lib/assetReminders.ts), in its workspace's own date, tells the
+ * Warranty, insurance and service reminders (X-08, X-06), every night: each asset whose warranty
+ * ends, whose insurance renews or whose next service is due within 30 days (src/lib/assetReminders.ts), in its workspace's own date, tells the
  * people who keep the books once for that date (the notification id comes from the asset, the kind
  * and the date, so a new date is told again). Only assets carrying one of the two dates are read.
  */
@@ -14,7 +14,7 @@ export async function runAssetReminders(db: Firestore, now = new Date()): Promis
   const { rows } = await db.pool.query<{ id: string; data: Record<string, unknown> }>(
     `select id, data from public.assets
       where coalesce(data->>'status', 'active') <> 'disposed'
-        and ((data->>'warrantyExpires') is not null or (data->>'insuranceRenews') is not null)`);
+        and ((data->>'warrantyExpires') is not null or (data->>'insuranceRenews') is not null or (data->>'nextServiceDue') is not null)`);
   const timezones = new Map<string, string>();
   let told = 0;
   for (const row of rows) {
@@ -27,7 +27,7 @@ export async function runAssetReminders(db: Firestore, now = new Date()): Promis
     const timezone = timezones.get(workspaceId);
     if (!timezone) continue;
     const name = String(row.data.name || 'an asset');
-    for (const due of assetRemindersDue(row.data as { status?: string; warrantyExpires?: string; insuranceRenews?: string }, formatTzDate(now, timezone))) {
+    for (const due of assetRemindersDue(row.data as { status?: string; warrantyExpires?: string; insuranceRenews?: string; nextServiceDue?: string }, formatTzDate(now, timezone))) {
       try {
         told += await notify(db, {
           workspaceId,
@@ -35,7 +35,7 @@ export async function runAssetReminders(db: Firestore, now = new Date()): Promis
           title: reminderText(name, due),
           message: due.kind === 'warranty'
             ? 'Have anything that is still wrong with it fixed while the warranty covers it.'
-            : 'Check the cover and the price before it renews.',
+            : due.kind === 'insurance' ? 'Check the cover and the price before it renews.' : 'Book the service, then note it in the asset\'s maintenance log.',
           eventKey: `asset:${row.id}:${due.kind}:${due.date}`,
           recordId: row.id,
         });

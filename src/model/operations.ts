@@ -70,6 +70,15 @@ export interface AssetTransfer {
   before: { location: string | null; assetAccountId: string | null; accumulatedAccountId: string | null };
 }
 
+/** X-06: one service, repair or inspection of a fixed asset (a note: the cost is posted on its bill). */
+export interface AssetMaintenance {
+  id: string;
+  date: string;
+  description: string;
+  costCents?: number;
+  by?: string;
+}
+
 export interface FixedAsset {
   id: string;
   uid: string;
@@ -107,6 +116,9 @@ export interface FixedAsset {
   /** X-08: the day the warranty ends and the day the insurance renews (YYYY-MM-DD); reminded 30 days before. */
   warrantyExpires?: string;
   insuranceRenews?: string;
+  /** X-06: what was done to it (newest first; src/lib/assetMaintenance.ts) and the day its next service is due, reminded 30 days before. */
+  maintenance?: AssetMaintenance[];
+  nextServiceDue?: string;
   /** X-04: shares sold or scrapped while the rest is kept (newest last); cost and salvage above are what is left. */
   partialDisposals?: PartialDisposal[];
   /** X-01: the bill line it was bought on (bill id and line number), when added from a bill. */

@@ -118,3 +118,4 @@ One row per capability, with one label each (DA-05). The README, Help, onboardin
 | 108 | Price lists for customers | Available | `src/lib/priceLists.ts`, `PriceListsSettings.tsx`; `price-lists.test.tsx` | One currency (the workspace's); fills new lines only |
 | 109 | Goods not yet billed (delivered not invoiced, received not billed) | Available | `src/lib/unbilledGoods.ts`, `GoodsNotBilledReportView.tsx`; `unbilled-goods.test.tsx` | Billed-not-received not yet |
 | 110 | Stock aging (on hand by age, last sale) | Available with limits | `src/lib/stockMoves.ts` `stockAging`, `StockAgingReportView.tsx`; `stock-aging.test.tsx` | Needs the stockMoves database change in production (FOR_YOU 30) |
+| 111 | Fixed asset maintenance log and next service reminder | Available | `src/lib/assetMaintenance.ts`, `MaintenanceLog.tsx`; `asset-maintenance.test.tsx` | The cost is a note; the bill books it |

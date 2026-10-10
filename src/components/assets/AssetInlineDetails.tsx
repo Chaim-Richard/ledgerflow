@@ -3,12 +3,13 @@ import type { FixedAsset } from '../../types';
 import { RecordInlineField } from '../ui/RecordInlineField';
 import { assetRemindersDue, reminderText } from '../../lib/assetReminders';
 import { getLocalDateISO } from '../../lib/utils';
+import { MaintenanceLog } from './MaintenanceLog';
 
 const TEXT_FIELDS = [['name', 'Name'], ['location', 'Location'], ['category', 'Category']] as const;
-/** X-08: the warranty and insurance dates, reminded 30 days before (src/lib/assetReminders.ts). */
-const DATE_FIELDS = [['warrantyExpires', 'Warranty ends', 'Add warranty end'], ['insuranceRenews', 'Insurance renews', 'Add insurance renewal']] as const;
+/** X-08, X-06: the warranty, insurance and next service dates, reminded 30 days before (src/lib/assetReminders.ts). */
+const DATE_FIELDS = [['warrantyExpires', 'Warranty ends', 'Add warranty end'], ['insuranceRenews', 'Insurance renews', 'Add insurance renewal'], ['nextServiceDue', 'Next service', 'Add next service']] as const;
 
-export function AssetInlineDetails({ asset }: { asset: FixedAsset & { location?: string; category?: string } }) {
+export function AssetInlineDetails({ asset, currency = 'USD' }: { asset: FixedAsset & { location?: string; category?: string }; currency?: string }) {
   const due = assetRemindersDue(asset, getLocalDateISO());
   return (
     <div className="flex flex-col gap-1">
@@ -20,6 +21,7 @@ export function AssetInlineDetails({ asset }: { asset: FixedAsset & { location?:
         </div>
       ))}
       {due.map(r => <p key={r.kind} className="text-[11px] font-semibold text-amber-700">{reminderText(asset.name, r)}</p>)}
+      <MaintenanceLog asset={asset} currency={currency} />
     </div>
   );
 }

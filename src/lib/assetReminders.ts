@@ -1,10 +1,11 @@
 /**
- * Warranty and insurance reminders for fixed assets (X-08). An asset can carry the day its warranty
- * ends and the day its insurance renews; from 30 days before (and on the day) the people who keep the
- * books are told once for each date in the bell, and the register says how many days are left.
- * Disposed assets are left out. Pure: the nightly job and the register both use it.
+ * Warranty, insurance and service reminders for fixed assets (X-08, X-06). An asset can carry the day
+ * its warranty ends, the day its insurance renews and the day its next service is due; from 30 days
+ * before (and on the day) the people who keep the books are told once for each date in the bell, and
+ * the register says how many days are left. Disposed assets are left out. Pure: the nightly job and
+ * the register both use it.
  */
-export type AssetReminderKind = 'warranty' | 'insurance';
+export type AssetReminderKind = 'warranty' | 'insurance' | 'service';
 export const REMINDER_DAYS = 30;
 
 export interface AssetReminder { kind: AssetReminderKind; date: string; daysLeft: number }
@@ -27,7 +28,7 @@ const dayNumber = (d: string) => {
 };
 
 export function assetRemindersDue(
-  asset: { status?: string; warrantyExpires?: string; insuranceRenews?: string },
+  asset: { status?: string; warrantyExpires?: string; insuranceRenews?: string; nextServiceDue?: string },
   today: string,
   days = REMINDER_DAYS,
 ): AssetReminder[] {
@@ -35,7 +36,7 @@ export function assetRemindersDue(
   const now = dayNumber(today);
   if (now === null) return [];
   const due: AssetReminder[] = [];
-  for (const [kind, date] of [['warranty', asset.warrantyExpires], ['insurance', asset.insuranceRenews]] as const) {
+  for (const [kind, date] of [['warranty', asset.warrantyExpires], ['insurance', asset.insuranceRenews], ['service', asset.nextServiceDue]] as const) {
     const at = date ? dayNumber(String(date).slice(0, 10)) : null;
     if (at === null) continue;
     const daysLeft = at - now;
@@ -46,5 +47,5 @@ export function assetRemindersDue(
 
 export function reminderText(name: string, r: AssetReminder): string {
   const when = r.daysLeft === 0 ? 'today' : r.daysLeft === 1 ? 'tomorrow' : `in ${r.daysLeft} days (${r.date})`;
-  return r.kind === 'warranty' ? `The warranty on ${name} ends ${when}` : `The insurance on ${name} renews ${when}`;
+  return r.kind === 'warranty' ? `The warranty on ${name} ends ${when}` : r.kind === 'insurance' ? `The insurance on ${name} renews ${when}` : `${name} is due for its service ${when}`;
 }

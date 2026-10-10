@@ -239,7 +239,7 @@ export const FixedAssetsView: React.FC = () => {
                 <React.Fragment key={asset.id}>
                 <tr>
                   <td className="py-3 px-4 font-semibold">
-                    <AssetInlineDetails asset={asset} />
+                    <AssetInlineDetails asset={asset} currency={workspace?.currency || 'USD'} />
                     <div className="text-[11px] text-[var(--muted)] font-normal">{asset.status === 'in_progress' ? 'Being built (construction in progress)' : asset.depreciationMethod === 'declining-balance' ? 'Declining balance' : 'Straight line'}{asset.status === 'disposed' ? ' · disposed' : ''}</div>
                     {asset.placedInService && <div className="text-[11px] text-[var(--muted)] font-normal">In service since {formatDate(asset.placedInService.date)} (building started {formatDate(asset.placedInService.startedOn)})</div>}
                     {(asset.transfers || []).slice(-1).map(m => (
