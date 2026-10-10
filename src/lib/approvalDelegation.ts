@@ -5,6 +5,7 @@
  * on the workspace by the server (`approvalDelegates`, src/server/services/approvalDelegateService.ts).
  */
 import { workspaceRole } from './periodLock';
+import { addDaysYMD } from './fiscalCalendar';
 
 export interface ApprovalDelegate { from: string; to: string; until: string }
 
@@ -26,8 +27,6 @@ export function delegationProblem(workspace: { uid?: string; members?: unknown; 
   if (!people.includes(input.to)) return 'That person is not in this workspace';
   if (workspaceRole(workspace, input.to) === 'viewer') return 'A viewer cannot approve; choose a bookkeeper, accountant or owner';
   if (typeof input.until !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(input.until) || input.until < today) return 'Choose the last day, today or later';
-  const limit = new Date(`${today}T00:00:00Z`);
-  limit.setUTCDate(limit.getUTCDate() + MAX_DELEGATION_DAYS);
-  if (input.until > limit.toISOString().slice(0, 10)) return `${MAX_DELEGATION_DAYS} days at most`;
+  if (input.until > addDaysYMD(today, MAX_DELEGATION_DAYS)) return `${MAX_DELEGATION_DAYS} days at most`;
   return null;
 }
