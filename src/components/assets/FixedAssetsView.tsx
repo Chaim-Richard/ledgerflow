@@ -15,6 +15,8 @@ import DisposeAssetDialog from './DisposeAssetDialog';
 import TransferAssetDialog from './TransferAssetDialog';
 import AssetLabels from './AssetLabels';
 import { assetMatches, missingTags } from '../../lib/assetTags';
+import { ASSET_REGISTER_HEADERS, assetRegisterRows } from '../../lib/assetRegisterExport';
+import { downloadCsv } from '../../lib/csvExport';
 import { ConstructionActions } from './ConstructionActions';
 import DepreciationScheduleTable from './DepreciationScheduleTable';
 import { assetCandidates } from '../../lib/assetFromBill';
@@ -238,6 +240,8 @@ export const FixedAssetsView: React.FC = () => {
             <button type="button" disabled={tagging} onClick={() => void giveTags()} className="px-3 py-2 text-xs font-semibold rounded-lg border border-[var(--line)] text-[var(--text)] disabled:opacity-50">Give tags ({untagged.length})</button>
           )}
           <button type="button" onClick={() => setLabels(true)} className="px-3 py-2 text-xs font-semibold rounded-lg border border-[var(--line)] text-[var(--text)]">Print labels</button>
+          {/* BD-08: the whole register as a spreadsheet */}
+          <button type="button" onClick={() => downloadCsv(`fixed-asset-register-${today}.csv`, ASSET_REGISTER_HEADERS, assetRegisterRows(list, chart))} className="px-3 py-2 text-xs font-semibold rounded-lg border border-[var(--line)] text-[var(--text)]">Export register</button>
         </div>
       )}
       {labels && <AssetLabels assets={shown} company={workspace?.name || ''} onClose={() => setLabels(false)} />}
