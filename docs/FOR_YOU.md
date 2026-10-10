@@ -266,6 +266,14 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
     - The balance sheet has the same switch: no receivables or payables on cash basis, and a payment
       not yet applied to an invoice or bill shows on its own line ("Paid, not yet applied").
 
+36. **The two-person rule (10 Oct, decided by default).** Settings → Security → Two-person rule (owners).
+   When on, nobody approves what they prepared: an invoice over the approval limit waits for someone
+   other than whoever issued it (an owner's own too), and every pay run waits, an owner's too. So that
+   an owner's pay run can be approved, an accountant may approve pay runs while the rule is on (never
+   their own). It turns on only with a second owner or accountant. Purchase orders are not covered yet
+   (they are saved by the browser; the rule would need a database change). Say if accountants should not
+   approve pay runs, or if purchase orders should be included.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

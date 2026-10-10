@@ -136,10 +136,11 @@ export function useEntityOperations() {
    * list) is left exactly as it is. Returns the field to write, or nothing at all.
    */
   const approvalStamp = (merged: Invoice, wasIssued: boolean): { approval?: InvoiceApprovalRecord } => {
-    const settings = normalizeInvoiceApproval(useAuthStore.getState().getCurrentWorkspace()?.invoiceApproval);
+    const ws = useAuthStore.getState().getCurrentWorkspace();
+    const settings = normalizeInvoiceApproval(ws?.invoiceApproval);
     if (!settings.enabled) return {};
     if (wasIssued || 'approval' in merged) return {};
-    const stamp = approvalForSave(merged, settings, { role, uid: user?.uid, now: new Date().toISOString() });
+    const stamp = approvalForSave(merged, settings, { role, uid: user?.uid, now: new Date().toISOString(), twoPerson: ws?.twoPersonRule === true });
     return stamp ? { approval: stamp } : {};
   };
 

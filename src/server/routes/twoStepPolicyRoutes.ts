@@ -1,11 +1,12 @@
 import express from 'express';
 import { z } from 'zod';
 import { getDb } from '../db/firestore';
-import { setRequireTwoStep, TwoStepPolicyError } from '../services/twoStepPolicyService';
+import { setRequireTwoStep, setTwoPersonRule, TwoStepPolicyError } from '../services/twoStepPolicyService';
 
 /**
  * Two-step login for everyone in a workspace (Y-30), mounted at
- * /api/v1/workspaces/:workspaceId/security (workspaceRoutes.ts, owners): PUT /two-step {required}.
+ * /api/v1/workspaces/:workspaceId/security (workspaceRoutes.ts, owners): PUT /two-step {required};
+ * and the two-person rule (P-05): PUT /two-person {on}.
  */
 export const twoStepPolicyRouter = express.Router({ mergeParams: true });
 
@@ -19,6 +20,19 @@ twoStepPolicyRouter.put('/two-step', async (req, res) => {
     res.json({ status: 'success', ...(await setRequireTwoStep(getDb(), { workspaceId, uid: user.uid, email: user.email, aal: user.aal, required })) });
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ status: 'error', message: 'Say whether two-step login is required' });
+    if (err instanceof TwoStepPolicyError) return res.status(err.status).json({ status: 'error', message: err.message });
+    res.status(500).json({ status: 'error', message: 'The setting could not be saved', details: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+twoStepPolicyRouter.put('/two-person', async (req, res) => {
+  try {
+    const { on } = z.object({ on: z.boolean() }).strict().parse(req.body);
+    const { user } = req as unknown as AuthedRequest;
+    const workspaceId = String((req.params as Record<string, string>).workspaceId);
+    res.json({ status: 'success', ...(await setTwoPersonRule(getDb(), { workspaceId, uid: user.uid, email: user.email, on })) });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ status: 'error', message: 'Say whether the two-person rule is on' });
     if (err instanceof TwoStepPolicyError) return res.status(err.status).json({ status: 'error', message: err.message });
     res.status(500).json({ status: 'error', message: 'The setting could not be saved', details: err instanceof Error ? err.message : String(err) });
   }

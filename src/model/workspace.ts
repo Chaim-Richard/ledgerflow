@@ -77,6 +77,8 @@ export interface Workspace {
   alertsSent?: AlertsSent;
   /** U-10: pay runs prepared by others wait for an owner's approval (set by owners, through the server). */
   payrollApproval?: boolean;
+  /** P-05: nobody approves what they prepared (src/lib/twoPersonRule.ts; set by owners, through the server). */
+  twoPersonRule?: boolean;
   /** W-06: refuse sales that would take an item's stock below zero (written by the server only, owners) */
   refuseNegativeStock?: boolean;
   /** BF-08 step 2: when stock leaves, with the invoice (default) or with a delivery (src/lib/deliveries.ts; server only, owners) */

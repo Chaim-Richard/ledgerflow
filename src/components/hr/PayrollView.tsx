@@ -53,7 +53,7 @@ const PayrollViewContent: React.FC = () => {
   // U-02: owners and accountants post pay runs (the server checks too)
   const canRunPayroll = role === 'owner' || role === 'accountant';
   // U-10: with approval on, an accountant's run waits for an owner instead of posting
-  const needsApproval = currentWorkspace?.payrollApproval === true && role !== 'owner';
+  const needsApproval = (currentWorkspace?.payrollApproval === true && role !== 'owner') || currentWorkspace?.twoPersonRule === true;
   const [employeeSaving, setEmployeeSaving] = useState(false);
   const [employeeError, setEmployeeError] = useState('');
   const employeeBusy = useRef(false);

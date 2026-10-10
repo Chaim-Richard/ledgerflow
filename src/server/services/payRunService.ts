@@ -2,6 +2,7 @@ import type { DocumentData, DocumentReference, Firestore, Transaction as Tx } fr
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { lockMessage, postingLock, workspaceRole } from '../../lib/periodLock';
+import { mayApprove, TWO_PERSON_REFUSAL, twoPersonOn } from '../../lib/twoPersonRule';
 import { payRunLines, payRunTotals, totalsOfLines, type PayRunAccounts, type PayRunEmployeeLine, type PayRunTotals, type PaySchedule } from '../../lib/payRunPosting';
 import { isCashAccount } from '../../lib/txFilters';
 import { formatCurrency, formatTzDate } from '../../lib/utils';
@@ -135,8 +136,9 @@ export async function postPayRun(db: Firestore, input: PostPayRunInput) {
     if (input.date > addDaysYMD(today, 31)) throw new PayRunError(400, 'The pay date is more than a month away');
     const runRef = db.collection('payRuns').doc();
 
-    if (workspace.payrollApproval === true && role !== 'owner') {
-      // U-10: kept with its amounts until an owner approves it; nothing is posted yet
+    if ((workspace.payrollApproval === true && role !== 'owner') || twoPersonOn(workspace)) {
+      // U-10: kept with its amounts until an owner approves it; nothing is posted yet (with the
+      // two-person rule, P-05, every run waits for someone other than whoever prepared it)
       const now = new Date().toISOString();
       t.set(runRef, {
         workspaceId: input.workspaceId, uid: input.uid, submittedByEmail: input.email || '', date: input.date, createdAt: now, schedule,
@@ -161,22 +163,26 @@ export async function postPayRun(db: Firestore, input: PostPayRunInput) {
 
 interface StoredRun { workspaceId: string; uid: string; date: string; status: string; schedule?: PaySchedule; again?: boolean; accountIds?: AccountIds; employees?: PayRunEmployeeLine[]; submittedByEmail?: string; createdAt?: string }
 
-async function waitingRun(t: Tx, db: Firestore, input: Actor & { payRunId: string }) {
+async function waitingRun(t: Tx, db: Firestore, input: Actor & { payRunId: string }, approving = false) {
   const wsRef = db.collection('workspaces').doc(input.workspaceId);
   const workspace = (await t.get(wsRef)).data();
   if (!workspace) throw new PayRunError(404, 'Workspace not found');
-  if (workspaceRole(workspace, input.uid) !== 'owner') throw new PayRunError(403, 'Only an owner approves or sends back a pay run');
+  // P-05: with the two-person rule an accountant may decide too, but never on a run they prepared
+  const twoPerson = twoPersonOn(workspace);
+  const role = workspaceRole(workspace, input.uid);
+  if (role !== 'owner' && !(twoPerson && role === 'accountant')) throw new PayRunError(403, 'Only an owner approves or sends back a pay run');
   const runRef = db.collection('payRuns').doc(input.payRunId);
   const run = (await t.get(runRef)).data() as StoredRun | undefined;
   if (!run || run.workspaceId !== input.workspaceId) throw new PayRunError(404, 'That pay run is not in this workspace');
   if (run.status !== AWAITING) throw new PayRunError(409, 'This pay run is not waiting for approval');
+  if (approving && !mayApprove(twoPerson, input.uid, run.uid)) throw new PayRunError(403, TWO_PERSON_REFUSAL);
   return { workspace, runRef, run };
 }
 
 /** U-10: an owner approves a waiting run; the amounts that were sent for approval are posted. */
 export async function approvePayRun(db: Firestore, input: Actor & { payRunId: string; again?: boolean }) {
   const result = await db.runTransaction(async t => {
-    const { workspace, runRef, run } = await waitingRun(t, db, input);
+    const { workspace, runRef, run } = await waitingRun(t, db, input, true);
     if (!run.accountIds || !Array.isArray(run.employees) || run.employees.length === 0) throw new PayRunError(409, 'This pay run is incomplete; send it back and prepare it again');
     const chosen = await chooseAccounts(t, db, input.workspaceId, run.accountIds);
     const totals = totalsOfLines(run.employees);

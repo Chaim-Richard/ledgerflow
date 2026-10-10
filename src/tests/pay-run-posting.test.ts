@@ -249,4 +249,22 @@ describe('Pay runs (database)', { skip: !url && 'LF_TEST_DATABASE_URL not set' }
     const direct = await call('acct-1', 'POST', '', monthly('2026-10-26'));
     assert.equal(typeof direct.body.transactionId, 'string', 'with approval off an accountant posts again');
   });
+
+  test('the two-person rule (P-05): every run waits, an owner\'s too; nobody approves their own; an accountant may approve an owner\'s', async () => {
+    const monthly = (date: string) => ({ ...body(), date, schedule: 'Monthly' });
+    assert.equal((await call('owner-1', 'PUT', '/approval', { required: false })).status, 200);
+    const setRule = (uid: string, on: boolean) => fetch(`${base}/api/v1/workspaces/${ws}/security/two-person`, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-test-uid': uid }, body: JSON.stringify({ on }) });
+    assert.equal((await setRule('acct-1', true)).status, 403, 'only owners decide');
+    assert.equal((await setRule('owner-1', true)).status, 200);
+    const mine = await call('owner-1', 'POST', '', monthly('2026-10-27'));
+    assert.equal(mine.body.awaitingApproval, true, "an owner's own run waits");
+    const ownersRun = String(mine.body.payRunId);
+    assert.equal((await call('owner-1', 'POST', `/${ownersRun}/approve`, {})).status, 403, 'not by whoever prepared it');
+    assert.equal((await call('acct-1', 'POST', `/${ownersRun}/approve`, {})).status, 200, 'an accountant approves the owner\'s run');
+    const theirs = String((await call('acct-1', 'POST', '', monthly('2026-10-28'))).body.payRunId);
+    assert.equal((await call('acct-1', 'POST', `/${theirs}/approve`, {})).status, 403);
+    assert.equal((await call('owner-1', 'POST', `/${theirs}/approve`, {})).status, 200);
+    assert.equal((await setRule('owner-1', false)).status, 200);
+    assert.equal(typeof (await call('owner-1', 'POST', '', monthly('2026-10-29'))).body.transactionId, 'string', 'off: an owner posts straight away again');
+  });
 });

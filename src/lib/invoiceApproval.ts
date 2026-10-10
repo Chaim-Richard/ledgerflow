@@ -153,6 +153,8 @@ export interface ApprovalActor {
    * record was created, and components must not build dates themselves (see no-new-date-in-handlers).
    */
   now?: string;
+  /** the two-person rule (P-05, src/lib/twoPersonRule.ts): nobody's own save is their signature */
+  twoPerson?: boolean;
 }
 
 const stampTime = (now?: string): string => now || new Date().toISOString();
@@ -165,7 +167,7 @@ const stampTime = (now?: string): string => now || new Date().toISOString();
 export function approvalForSave(doc: ApprovalDoc, settings: unknown, actor: ApprovalActor): InvoiceApprovalRecord | null {
   if (!needsApproval(doc, settings)) return null;
   const { thresholdCents } = normalizeInvoiceApproval(settings);
-  if (isApproverRole(actor.role)) {
+  if (isApproverRole(actor.role) && !actor.twoPerson) {
     return { state: 'approved', thresholdCents, decidedAt: stampTime(actor.now), ...(actor.uid ? { decidedBy: actor.uid } : {}) };
   }
   const previous = doc.approval;

@@ -15,6 +15,7 @@ import { retentionFor } from '../../../lib/retention';
 import AsyncButton from '../../ui/AsyncButton';
 import RecoveryCodesPanel from './RecoveryCodesPanel';
 import RequireTwoStepPanel from './RequireTwoStepPanel';
+import TwoPersonRulePanel from './TwoPersonRulePanel';
 
 type AuthenticatorFactor = Awaited<ReturnType<ReturnType<typeof multiFactor>['getFactors']>>[number];
 
@@ -164,6 +165,7 @@ export default function SecuritySettings() {
   return (
     <div className="space-y-10">
       <RequireTwoStepPanel />
+      <TwoPersonRulePanel />
       {/* Fiscal Period Locking */}
       <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm rounded-2xl">
         <div className="flex items-center gap-5 mb-8">

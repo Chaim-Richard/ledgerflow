@@ -2,7 +2,8 @@
  * Payroll approval (U-10) on Payroll → Pay runs. Owners turn on "an owner approves pay runs that
  * others prepare", and see the runs waiting with what each pays and costs: Approve posts exactly
  * those amounts; Send back keeps nothing posted and tells whoever prepared it why. Whoever prepared
- * a run can withdraw it while it waits. The server decides who may do what
+ * a run can withdraw it while it waits. With the two-person rule (P-05) every run waits, an accountant
+ * may decide too, and nobody approves a run they prepared. The server decides who may do what
  * (src/server/services/payRunService.ts); this panel only asks.
  */
 import React, { useId, useState } from 'react';
@@ -13,6 +14,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { formatCurrency, formatDate, safeConfirm } from '../../lib/utils';
+import { mayApprove, twoPersonOn } from '../../lib/twoPersonRule';
 import type { PayRun } from '../../types';
 
 async function call(workspaceId: string, path: string, method: 'POST' | 'PUT' | 'DELETE', body?: unknown) {
@@ -45,6 +47,8 @@ export default function PayRunApprovals() {
   if (!workspace) return null;
   const isOwner = role === 'owner';
   const required = workspace.payrollApproval === true;
+  const twoPerson = twoPersonOn(workspace);
+  const canDecide = isOwner || (twoPerson && role === 'accountant');
   const waiting = payRuns.filter(r => r.status === 'awaiting_approval').sort((a, b) => a.date.localeCompare(b.date));
   const currency = workspace.currency || 'USD';
   const change = (runId: string, patch: Partial<PayRun>) => setPayRuns(payRuns.map(r => (r.id === runId ? { ...r, ...patch } : r)));
@@ -96,6 +100,7 @@ export default function PayRunApprovals() {
   };
 
   if (!isOwner && waiting.length === 0) {
+    if (twoPerson) return <p className="text-xs text-neutral-600">Pay runs wait for someone other than whoever prepared them (two-person rule).</p>;
     return required ? <p className="text-xs text-neutral-600">Pay runs you prepare wait for an owner's approval before they are posted.</p> : null;
   }
 
@@ -132,11 +137,13 @@ export default function PayRunApprovals() {
                   </ul>
                 </details>
                 <div className="flex flex-wrap gap-2">
-                  {isOwner && (
+                  {canDecide && (
                     <>
-                      <button type="button" disabled={busy === run.id} onClick={() => void approve(run)} className="min-h-9 px-3 rounded-lg bg-neutral-900 text-white font-semibold disabled:opacity-50">
-                        Approve and post<span className="sr-only"> the pay run of {formatDate(run.date)}</span>
-                      </button>
+                      {mayApprove(twoPerson, uid, run.uid) ? (
+                        <button type="button" disabled={busy === run.id} onClick={() => void approve(run)} className="min-h-9 px-3 rounded-lg bg-neutral-900 text-white font-semibold disabled:opacity-50">
+                          Approve and post<span className="sr-only"> the pay run of {formatDate(run.date)}</span>
+                        </button>
+                      ) : <span className="self-center text-neutral-600">Someone else approves it (two-person rule)</span>}
                       <button type="button" disabled={busy === run.id} aria-expanded={sendingBack === run.id} onClick={() => { setSendingBack(sendingBack === run.id ? '' : run.id); setNote(''); }} className="min-h-9 px-3 rounded-lg border border-neutral-300 font-semibold disabled:opacity-50">
                         Send back<span className="sr-only"> the pay run of {formatDate(run.date)}</span>
                       </button>

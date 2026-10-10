@@ -1,5 +1,6 @@
 import type { Firestore } from '../db/firestore';
 import { workspaceRole } from '../../lib/periodLock';
+import { approverCount } from '../../lib/twoPersonRule';
 import { writeServerAuditLog } from './auditLogService';
 import { forgetTwoStepRequirements } from '../auth/supabaseAuth';
 
@@ -31,4 +32,25 @@ export async function setRequireTwoStep(db: Firestore, input: { workspaceId: str
   });
   forgetTwoStepRequirements();
   return result;
+}
+
+/**
+ * The two-person rule (P-05, src/lib/twoPersonRule.ts): owners turn it on so nobody approves what
+ * they prepared. It needs two people who can approve (owners and accountants), or invoices over the
+ * limit and pay runs could never be approved. Saved on the workspace (`twoPersonRule`, server-only).
+ */
+export async function setTwoPersonRule(db: Firestore, input: { workspaceId: string; uid: string; email?: string; on: boolean }) {
+  return db.runTransaction(async t => {
+    const ref = db.collection('workspaces').doc(input.workspaceId);
+    const workspace = (await t.get(ref)).data();
+    if (!workspace) throw new TwoStepPolicyError(404, 'Workspace not found');
+    if (workspaceRole(workspace, input.uid) !== 'owner') throw new TwoStepPolicyError(403, 'Only owners decide this');
+    if (input.on && approverCount(workspace) < 2) throw new TwoStepPolicyError(409, 'The two-person rule needs a second owner or accountant in the workspace first (Settings → Team)');
+    t.update(ref, { twoPersonRule: input.on, updatedAt: new Date().toISOString() });
+    await writeServerAuditLog({
+      workspaceId: input.workspaceId, uid: input.uid, email: input.email, action: 'TWO_PERSON_RULE_SET', entityType: 'workspaces', entityId: input.workspaceId,
+      details: { description: input.on ? 'Nobody approves what they prepared themselves (two-person rule on)' : 'The two-person rule is off' },
+    }, { db, tx: t });
+    return { on: input.on };
+  });
 }
