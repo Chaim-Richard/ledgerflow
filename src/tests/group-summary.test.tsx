@@ -313,6 +313,27 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     await call(`/api/v1/account/groups/${owned}`, ann, { method: 'PUT', body: { acquired: {} } });
   });
 
+  test('a company owned 50% or less is on the equity method: not added, the parent takes its share of the profit and equity since bought (Z-16)', async () => {
+    const make = (body: Record<string, unknown>) => call('/api/v1/account/groups', ann, { method: 'POST', body: { name: 'Associate', workspaceIds: [ws1, ws2], parentId: ws1, ...body } });
+    assert.equal((await make({ ownership: { [ws2]: 15 } })).status, 400, 'below 20%: an ordinary investment');
+    assert.match(String((await make({ ownership: { [ws2]: 40 } })).body.message), /equity method/);
+    const made = await make({ ownership: { [ws2]: 40 }, investments: { [ws2]: `${ws1}_invest` }, acquired: { [ws2]: '2026-02-01' } });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    const res = await summary(String((made.body.group as { id: string }).id));
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const [holding, daughter] = res.body.members as Array<Record<string, number> & { associate?: boolean }>;
+    assert.deepEqual([holding.associate, daughter.associate], [undefined, true]);
+    const total = res.body.total as Record<string, number> & { eliminated: Record<string, number>; associates: Record<string, number>; otherOwners: Record<string, number> };
+    // equity 1,200.00 the day bought, 1,450.00 at the end: 40% of the 250.00 profit since then
+    assert.deepEqual(total.associates, { profit: 10000, equity: 10000 });
+    assert.equal(total.income, holding.income, 'its sales are not added');
+    assert.equal(total.netIncome, holding.netIncome + 10000);
+    assert.equal(total.eliminated.investment, 0, 'the parent\'s investment in it stays');
+    assert.equal(total.totalAssets, holding.totalAssets - total.eliminated.assets + 10000);
+    assert.equal(total.totalAssets, total.totalLiabilities + total.totalEquity);
+    assert.deepEqual(total.otherOwners, { equity: 0, netIncome: 0 });
+  });
+
   test('a group shared with someone: they see the companies they can open, and the rest are counted (DA-01)', async () => {
     await db.collection('workspaceGroups').doc(sameCurrency).update({ sharedWith: [bob] });
     try {
@@ -394,6 +415,18 @@ describe('On screen', () => {
     await waitFor(() => assert.ok(screen.getByText(/Sales between the companies taken out: \$4\.00 of income, and \$3\.00 of costs/)));
     assert.match(screen.getByRole('alert').textContent || '', /differ by \$1\.00/);
     assert.equal(screen.queryByText(/The parent's investment/), null, 'none chosen: nothing said');
+  });
+
+  test('an associate is shown but not added; the parent\'s share of its profit and equity has its rows (Z-16)', async () => {
+    setComponentWorkspace('owner');
+    answer([{ workspaceId: 'ws-a', name: 'Holding', currency: 'USD', isBalanced: true, ...figures(1000) }, { workspaceId: 'ws-b', name: 'Daughter', currency: 'USD', isBalanced: true, share: 40, associate: true, ...figures(2000) }],
+      { currency: 'USD', ...figures(1000), otherOwners: { equity: 0, netIncome: 0 }, associates: { profit: 700, equity: 900 } }, { parent: { workspaceId: 'ws-a', name: 'Holding' } });
+    render(<GroupSummaryReportView />);
+    await waitFor(() => assert.ok(screen.getByText('40% owned: equity method, not added')));
+    const row = (name: string) => screen.getByRole('rowheader', { name }).parentElement!.textContent || '';
+    assert.match(row('of which net income: share of associates\' profit'), /\$7\.00/);
+    assert.match(row('of which equity: share of associates\' equity since bought'), /\$9\.00/);
+    assert.equal(row('of which equity of other owners').match(/\$/g)?.length, 2, 'none for the associate');
   });
 
   test('the parent\'s investment and its goodwill are said (Z-16)', async () => {

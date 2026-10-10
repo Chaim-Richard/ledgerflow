@@ -12,7 +12,7 @@ import React from 'react';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { groupProblem, groupsOf, keptRatesProblem, shareOf, structureProblem } from '../lib/workspaceGroups';
+import { groupProblem, groupsOf, isAssociate, keptRatesProblem, shareOf, structureProblem } from '../lib/workspaceGroups';
 import GroupsSettings from '../components/platform/settings/GroupsSettings';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import { stubFetchWithBodies } from './helpers/dom';
@@ -39,6 +39,14 @@ describe('The rules', () => {
     assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { a: 80 } })), /no share of itself/);
     assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { z: 80 } })), /outside the group/);
     assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { b: 50 } })), /50% or less/);
+    // Z-16: 20% to 50% is an associate, on the equity method: its own investment account and the day bought
+    assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { b: 19.99 } })), /below 20%/);
+    assert.equal(structureProblem({ workspaceIds, parentId: 'a', ownership: { b: 20 }, investments: { b: 'inv' }, acquired: { b: '2025-01-01' } }), null);
+    assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { b: 40 }, investments: { b: 'inv', c: 'inv' }, acquired: { b: '2025-01-01' } })), /account of its own/);
+    assert.match(String(structureProblem({ workspaceIds, parentId: 'a', acquired: { b: '2025-02-30x' } })), /is a date/);
+    assert.match(String(structureProblem({ workspaceIds, acquired: { b: '2025-01-01' } })), /Choose the parent/);
+    assert.equal(isAssociate({ parentId: 'a', ownership: { b: 50 } }, 'b'), true);
+    assert.equal(isAssociate({ parentId: 'a', ownership: { b: 50.01 } }, 'b'), false);
     assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { b: 101 } })), /up to 100/);
     assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { b: NaN } })), /up to 100/);
     assert.match(String(structureProblem({ workspaceIds, parentId: 'a', ownership: { b: 75.555 } })), /two decimals/);

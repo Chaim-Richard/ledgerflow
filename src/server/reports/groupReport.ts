@@ -36,10 +36,17 @@
  * (the company's equity at the end of that day) is goodwill: it stays in the total assets and equity
  * and is said. Paid below the book value is said too, and nothing is added. An account holding several
  * companies has goodwill only when the day each was bought is given.
+ *
+ * Associates (Z-16, the equity method): a company the parent owns 20% to 50% of is shown side by side
+ * but not added to the total. Instead the parent's investment in it (left in the total) grows by the
+ * parent's share of the company's equity since the day bought, and the parent's share of its profit
+ * after that day, in the period, is added to the group's net income (said on its own line). Its
+ * balances and sales with the others are not taken out.
  */
 import type { Firestore } from '../db/firestore';
 import { canReadGroup, openable } from '../services/workspaceGroupService';
-import { shareOf } from '../../lib/workspaceGroups';
+import { isAssociate, shareOf } from '../../lib/workspaceGroups';
+import { addDaysYMD } from '../../lib/fiscalCalendar';
 import { groupAccountLines, type GroupAccountLine, type LineAccount, type LineSection } from './groupAccounts';
 import { computeBalanceSheet, computeProfitAndLoss } from './computeReports';
 import type { ChartAccount, Transaction } from '../../types';
@@ -80,6 +87,8 @@ export interface GroupMember extends GroupFigures {
   isBalanced: boolean;
   /** Z-16: the parent's share of this company, in percent (100 without a parent) */
   share: number;
+  /** Z-16: owned 50% or less: on the equity method, not added to the total */
+  associate?: boolean;
   /** in the reporting currency, when one was asked for */
   translated?: GroupFigures & { cta: number; rates: TranslationRates | null };
 }
@@ -90,7 +99,7 @@ export interface GroupSummary {
   endDate: string;
   members: GroupMember[];
   /** the group's total: in the reporting currency, or when every member uses the same currency */
-  total: (GroupFigures & { currency: string; cta: number; eliminated: Eliminated; otherOwners?: OtherOwners }) | null;
+  total: (GroupFigures & { currency: string; cta: number; eliminated: Eliminated; otherOwners?: OtherOwners; associates?: Associates }) | null;
   /** Z-16: the parent company, when the group names one */
   parent: { workspaceId: string; name: string } | null;
   /** members of the group this person can no longer open (left out) */
@@ -101,6 +110,14 @@ export interface GroupSummary {
   accountLines?: GroupAccountLine[];
   /** whether this person may combine lines (the group's owner), and the combinations saved */
   lineMerges?: { canCombine: boolean; merges: Record<string, string> };
+}
+
+/** Z-16: the associates on the equity method, inside the total */
+export interface Associates {
+  /** the parent's share of their profit after the day bought, in the period (in net income) */
+  profit: number;
+  /** the parent's share of their equity since the day bought (added to its investment, in assets and equity) */
+  equity: number;
 }
 
 /** Z-16: what belongs to the companies' other owners (non-controlling interest), inside the total */
@@ -199,7 +216,7 @@ export function matchIntercompany(members: Array<{ workspaceId: string; name: st
 
 const FIGURES: Array<keyof GroupFigures> = ['income', 'cogs', 'grossProfit', 'expense', 'netIncome', 'totalAssets', 'totalLiabilities', 'totalEquity'];
 
-type ReadMember = Omit<GroupMember, 'share'> & { equityWhenBought: number | null; earlierProfit: number; equityAccounts: number; intercompany: Transaction[]; owedBy: number; owedTo: number; withinGroup: { income: number; cogs: number; expense: number }; assetBalances: Record<string, number>;
+type ReadMember = Omit<GroupMember, 'share'> & { equityWhenBought: number | null; profitSinceBought: number; earlierProfit: number; equityAccounts: number; intercompany: Transaction[]; owedBy: number; owedTo: number; withinGroup: { income: number; cogs: number; expense: number }; assetBalances: Record<string, number>;
   chart: LineAccount[]; sections: Record<LineSection, Record<string, number>> };
 
 /** The other company of an intercompany entry. */
@@ -215,6 +232,9 @@ async function memberFigures(db: Firestore, workspaceId: string, startDate: stri
   const intercompany = transactions.filter(tx => tx.metadata?.isIntercompany === true);
   // Z-16: its equity at the end of the day the parent bought it (its book value then)
   const then = boughtOn && boughtOn <= endDate ? computeBalanceSheet(accounts, transactions, boughtOn) : null;
+  // the period's profit after that day (the part an associate's owner takes in)
+  const from = boughtOn && boughtOn >= startDate ? addDaysYMD(boughtOn, 1) : startDate;
+  const profitSinceBought = !then ? 0 : from === startDate ? pl.netIncome : from <= endDate ? computeProfitAndLoss(accounts, transactions, from, endDate).netIncome : 0;
   // CB-26: the income and costs of its dealings in force with the other companies of the group
   const within = computeProfitAndLoss(accounts, intercompany.filter(tx => inForce(tx) && group.has(otherCompany(tx))), startDate, endDate);
   return {
@@ -232,6 +252,7 @@ async function memberFigures(db: Firestore, workspaceId: string, startDate: stri
     isBalanced: bs.isBalanced,
     equityAccounts: bs.totalEquity,
     equityWhenBought: then ? then.totalEquity + then.netIncome : null,
+    profitSinceBought,
     // profit before the period that is not closed into equity yet
     earlierProfit: bs.netIncome - pl.netIncome,
     intercompany,
@@ -297,8 +318,12 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     const n = ids.length - shown.length;
     throw new GroupReportError(403, `This group adds up its companies under a parent, and ${n} of them ${n === 1 ? 'is' : 'are'} not open to you: ask for access, or take ${n === 1 ? 'it' : 'them'} out of the group`);
   }
+  // Z-16: companies owned 50% or less are on the equity method, not added to the total
+  const associate = (id: string) => Boolean(structure.parentId) && id !== structure.parentId && isAssociate(structure, id);
+  const inTotal = new Set(shown.filter(id => !associate(id)));
   const read: ReadMember[] = [];
-  for (const id of shown) read.push(await memberFigures(db, id, input.startDate, input.endDate, new Set(shown), structure.parentId && structure.investments[id] ? structure.acquired[id] : undefined));
+  for (const id of shown) read.push(await memberFigures(db, id, input.startDate, input.endDate, inTotal, structure.parentId && structure.investments[id] ? structure.acquired[id] : undefined));
+  const added = read.filter(m => inTotal.has(m.workspaceId));
   const reportCurrency = input.reportCurrency;
   if (reportCurrency) {
     for (const currency of new Set(read.map(m => m.currency).filter(c => c !== reportCurrency))) {
@@ -307,8 +332,8 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     }
   }
   const intercompany = matchIntercompany(read.map(m => ({ workspaceId: m.workspaceId, name: m.name, currency: m.currency, entries: m.intercompany })), open, input.startDate, input.endDate);
-  const members: GroupMember[] = read.map(({ equityWhenBought: _bought, earlierProfit, equityAccounts, intercompany: _entries, owedBy: _by, owedTo: _to, withinGroup: _within, assetBalances: _balances, chart: _chart, sections: _sections, ...rest }) => {
-    const m = { ...rest, share: shareOf(structure, rest.workspaceId) };
+  const members: GroupMember[] = read.map(({ equityWhenBought: _bought, profitSinceBought: _since, earlierProfit, equityAccounts, intercompany: _entries, owedBy: _by, owedTo: _to, withinGroup: _within, assetBalances: _balances, chart: _chart, sections: _sections, ...rest }) => {
+    const m = { ...rest, share: shareOf(structure, rest.workspaceId), ...(associate(rest.workspaceId) ? { associate: true } : {}) };
     if (!reportCurrency) return m;
     const rates = m.currency === reportCurrency ? null : input.rates![m.currency];
     return { ...m, translated: { ...translate({ ...m, earlierProfit, equityAccounts }, rates), rates } };
@@ -316,12 +341,13 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
   const currencies = new Set(members.map(m => m.currency));
   // CB-26: balances between the companies, at the closing rate when translated
   const closing = (m: ReadMember) => (reportCurrency && m.currency !== reportCurrency ? input.rates![m.currency].closing : 1);
-  const owedBy = read.reduce((s, m) => s + Math.round(m.owedBy * closing(m)), 0);
-  const owedTo = read.reduce((s, m) => s + Math.round(m.owedTo * closing(m)), 0);
+  const owedBy = added.reduce((s, m) => s + Math.round(m.owedBy * closing(m)), 0);
+  const owedTo = added.reduce((s, m) => s + Math.round(m.owedTo * closing(m)), 0);
   // sales and costs between the companies, at the average rate when translated
   const average = (m: ReadMember) => (reportCurrency && m.currency !== reportCurrency ? input.rates![m.currency].average : 1);
-  const within = (f: 'income' | 'cogs' | 'expense') => read.reduce((s, m) => s + Math.round(m.withinGroup[f] * average(m)), 0);
+  const within = (f: 'income' | 'cogs' | 'expense') => added.reduce((s, m) => s + Math.round(m.withinGroup[f] * average(m)), 0);
   const [income, cogs, expense] = [within('income'), within('cogs'), within('expense')];
+  const historical = (m: ReadMember) => (reportCurrency && m.currency !== reportCurrency ? input.rates![m.currency].historical : 1);
   // Z-16: the parent's investment in the companies it owns, from its own balance sheet
   const parentRead = read.find(m => m.workspaceId === structure.parentId);
   let investment = 0;
@@ -333,7 +359,7 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     const accounts = new Map<string, ReadMember[]>();
     for (const [memberId, accountId] of Object.entries(structure.investments)) {
       const member = read.find(m => m.workspaceId === memberId);
-      if (!member) continue;
+      if (!member || associate(memberId)) continue;
       if (!(accountId in parentRead.assetBalances)) {
         throw new GroupReportError(400, `The investment account chosen for ${member.name} is not an asset account of ${parentRead.name} any more: choose it again in Settings → Groups of books`);
       }
@@ -345,7 +371,6 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
       if (!held.every(m => m.equityWhenBought !== null)) continue;
       anyBought = true;
       // the parent's share of each company's equity on the day bought, at the historical rate
-      const historical = (m: ReadMember) => (reportCurrency && m.currency !== reportCurrency ? input.rates![m.currency].historical : 1);
       const bookValue = held.reduce((s, m) => s + Math.round(m.equityWhenBought! * historical(m) * shareOf(structure, m.workspaceId) / 100), 0);
       if (paid > bookValue) goodwill += paid - bookValue; else belowBookValue += bookValue - paid;
     }
@@ -354,16 +379,28 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
     assets: owedBy, liabilities: owedTo, difference: owedBy - owedTo, income, cogs, expense, profitDifference: income - cogs - expense, investment,
     ...(anyBought ? { goodwill, belowBookValue } : {}),
   };
-  const sum = (figures: Array<GroupFigures & { cta: number }>, currency: string) => {
+  const sum = (all: Array<GroupFigures & { cta: number }>, currency: string) => {
+    const figures = all.filter((_, i) => !members[i].associate);
     const t = Object.fromEntries([...FIGURES, 'cta' as const].map(f => [f, figures.reduce((s, x) => s + x[f], 0)])) as unknown as GroupFigures & { cta: number };
-    // Z-16: the other owners' part of each company the parent owns less than all of
-    const others = (f: 'totalEquity' | 'netIncome') => figures.reduce((s, x, i) => s + Math.round(x[f] * (100 - members[i].share) / 100), 0);
+    // Z-16: the other owners' part of each company the parent owns less than all of (and adds in full)
+    const others = (f: 'totalEquity' | 'netIncome') => all.reduce((s, x, i) => s + (members[i].associate ? 0 : Math.round(x[f] * (100 - members[i].share) / 100)), 0);
     const otherOwners = structure.parentId ? { otherOwners: { equity: others('totalEquity'), netIncome: others('netIncome') } } : {};
+    // the associates: the parent's share of their profit after the day bought, and of their equity since then
+    let associates: Associates | null = null;
+    read.forEach((m, i) => {
+      if (!members[i].associate || m.equityWhenBought === null) return;
+      const share = members[i].share / 100;
+      associates = associates || { profit: 0, equity: 0 };
+      associates.profit += Math.round(m.profitSinceBought * average(m) * share);
+      associates.equity += Math.round((all[i].totalEquity - Math.round(m.equityWhenBought * historical(m))) * share);
+    });
+    const picked = (associates || { profit: 0, equity: 0 }) as Associates;
     // net income stays the companies' own: what the two sides disagree on stays in it, and is said
     return {
       currency, ...t, income: t.income - income, cogs: t.cogs - cogs, grossProfit: t.grossProfit - income + cogs, expense: t.expense - expense,
-      totalAssets: t.totalAssets - owedBy - investment + goodwill, totalLiabilities: t.totalLiabilities - owedTo,
-      totalEquity: t.totalEquity - eliminated.difference - investment + goodwill, eliminated, ...otherOwners,
+      netIncome: t.netIncome + picked.profit,
+      totalAssets: t.totalAssets - owedBy - investment + goodwill + picked.equity, totalLiabilities: t.totalLiabilities - owedTo,
+      totalEquity: t.totalEquity - eliminated.difference - investment + goodwill + picked.equity, eliminated, ...otherOwners, ...(associates ? { associates: picked } : {}),
     };
   };
   const total = members.length === 0 ? null
@@ -373,14 +410,15 @@ export async function groupSummary(db: Firestore, input: { uid: string; groupId:
   // Z-20: account by account, in the total's currency (so only when there is a total)
   let accountLines: GroupAccountLine[] | undefined;
   if (input.detail === 'accounts' && total) {
-    accountLines = groupAccountLines(read.map((m, i) => {
+    accountLines = groupAccountLines(read.flatMap((m, i) => {
+      if (members[i].associate) return [];
       const r = reportCurrency && m.currency !== reportCurrency ? input.rates![m.currency] : null;
       const rate = (section: LineSection) => (!r ? 1 : section === 'asset' || section === 'liability' ? r.closing : section === 'equity' ? r.historical : r.average);
       const translated = members[i].translated;
       const equityLines = Object.values(m.sections.equity).reduce((sum, cents) => sum + Math.round(cents * rate('equity')), 0);
       const cta = translated?.cta || 0;
       const totalEquity = translated ? translated.totalEquity : m.totalEquity;
-      return { workspaceId: m.workspaceId, accounts: m.chart, sections: m.sections, rate, extraEquity: { profit: totalEquity - cta - equityLines, cta } };
+      return [{ workspaceId: m.workspaceId, accounts: m.chart, sections: m.sections, rate, extraEquity: { profit: totalEquity - cta - equityLines, cta } }];
     }), (group.lineMerges && typeof group.lineMerges === 'object' ? group.lineMerges : {}) as Record<string, string>);
   }
   return {

@@ -227,7 +227,7 @@ export default function GroupsSettings() {
               </label>
               {editing.parentId && (
                 <div role="group" aria-label="Share the parent owns" className="space-y-1">
-                  <p className="text-xs text-[var(--muted)]">The share the parent owns of each company (above 50%; empty is 100%). The rest belongs to other owners, and the group total says how much.</p>
+                  <p className="text-xs text-[var(--muted)]">The share the parent owns of each company (20% to 100%; empty is 100%). Above 50% its books are added and the rest belongs to other owners; 50% or less is on the equity method (its investment account and the day bought are needed below).</p>
                   {editing.workspaceIds.filter(id => id !== editing.parentId).map(id => (
                     <label key={id} className="flex items-center gap-2 text-[var(--text)]">
                       <bdi className="min-w-[8rem]">{nameOf(id)}</bdi>

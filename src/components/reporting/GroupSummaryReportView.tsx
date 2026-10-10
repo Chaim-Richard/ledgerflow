@@ -8,13 +8,13 @@ import { ratesKey, type WorkspaceGroup } from '../../lib/workspaceGroups';
 import { averageFromTimeframe, parseRates, rateFromQuote, type TranslationRates } from '../../lib/translationRates';
 
 interface Figures { income: number; cogs: number; grossProfit: number; expense: number; netIncome: number; totalAssets: number; totalLiabilities: number; totalEquity: number }
-interface Member extends Figures { workspaceId: string; name: string; currency: string; isBalanced: boolean; share?: number; translated?: Figures & { cta: number } }
+interface Member extends Figures { workspaceId: string; name: string; currency: string; isBalanced: boolean; share?: number; associate?: boolean; translated?: Figures & { cta: number } }
 interface Issue { workspaceId: string; transactionId: string; date: string; description: string; amountCents: number; currency: string; withName: string | null; reason: 'missing' | 'undone' | 'amount' | 'outside-group' | 'not-open'; otherAmountCents?: number }
 interface Eliminated { assets: number; liabilities: number; difference: number; income?: number; cogs?: number; expense?: number; profitDifference?: number; investment?: number; goodwill?: number; belowBookValue?: number }
 interface OtherOwners { equity: number; netIncome: number }
 interface AccountLine { key: string; section: 'income' | 'cogs' | 'expense' | 'asset' | 'liability' | 'equity'; name: string; code?: string; alsoNamed?: string[]; combined?: string[]; byMember: Record<string, number>; total: number }
 const SECTION_NAMES: Record<AccountLine['section'], string> = { income: 'Income', cogs: 'Cost of goods sold', expense: 'Expenses', asset: 'Assets', liability: 'Liabilities', equity: 'Equity' };
-interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number; eliminated?: Eliminated; otherOwners?: OtherOwners }) | null; parent?: { workspaceId: string; name: string } | null; accountLines?: AccountLine[]; lineMerges?: { canCombine: boolean; merges: Record<string, string> }; notIncluded: number; intercompany?: { matched: number; unmatched: Issue[] } }
+interface Summary { group: { id: string; name: string }; members: Member[]; total: (Figures & { currency: string; cta?: number; eliminated?: Eliminated; otherOwners?: OtherOwners; associates?: { profit: number; equity: number } }) | null; parent?: { workspaceId: string; name: string } | null; accountLines?: AccountLine[]; lineMerges?: { canCombine: boolean; merges: Record<string, string> }; notIncluded: number; intercompany?: { matched: number; unmatched: Issue[] } }
 
 /** Why an intercompany entry has no match (Z-19), in words. */
 const whyUnmatched = (i: Issue) => ({
@@ -242,7 +242,7 @@ export default function GroupSummaryReportView() {
                   <th scope="col" className="text-left font-semibold py-2"><span className="sr-only">Figure</span></th>
                   {summary.members.map(m => (
                     <th key={m.workspaceId} scope="col" className="text-right font-semibold py-2 px-2">
-                      <bdi>{m.name}</bdi>{summary.parent && m.workspaceId !== summary.parent.workspaceId && <span className="block text-xs font-normal">{m.share ?? 100}% owned</span>}
+                      <bdi>{m.name}</bdi>{summary.parent && m.workspaceId !== summary.parent.workspaceId && <span className="block text-xs font-normal">{m.share ?? 100}% owned{m.associate ? ': equity method, not added' : ''}</span>}
                     </th>
                   ))}
                   {summary.total && <th scope="col" className="text-right font-semibold py-2 px-2">Group total</th>}
@@ -274,9 +274,16 @@ export default function GroupSummaryReportView() {
                     <th scope="row" className="text-left font-normal py-1.5">{label}</th>
                     {summary.members.map(m => {
                       const figure = m.translated ? m.translated[key] : m[key];
-                      return <td key={m.workspaceId} className="text-right font-mono py-1.5 px-2">{formatCurrency(Math.round(figure * (100 - (m.share ?? 100)) / 100), m.translated ? summary.total!.currency : m.currency)}</td>;
+                      return <td key={m.workspaceId} className="text-right font-mono py-1.5 px-2">{m.associate ? '' : formatCurrency(Math.round(figure * (100 - (m.share ?? 100)) / 100), m.translated ? summary.total!.currency : m.currency)}</td>;
                     })}
                     <td className="text-right font-mono py-1.5 px-2">{formatCurrency(summary.total!.otherOwners![key === 'netIncome' ? 'netIncome' : 'equity'], summary.total!.currency)}</td>
+                  </tr>
+                ))}
+                {summary.total?.associates && ([['profit', 'of which net income: share of associates\' profit'], ['equity', 'of which equity: share of associates\' equity since bought']] as const).map(([key, label]) => (
+                  <tr key={key} className="border-b border-[var(--line)]/50 text-[var(--muted)]">
+                    <th scope="row" className="text-left font-normal py-1.5">{label}</th>
+                    {summary.members.map(m => <td key={m.workspaceId} />)}
+                    <td className="text-right font-mono py-1.5 px-2">{formatCurrency(summary.total!.associates![key], summary.total!.currency)}</td>
                   </tr>
                 ))}
               </tbody>

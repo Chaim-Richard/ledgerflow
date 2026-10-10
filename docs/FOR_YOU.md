@@ -248,6 +248,16 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
       keeps them on. Turning one off hides it and deletes nothing.
     - The first-run tour (Help → "Take the tour") shows only the basics for the same reason.
 
+34. **Goodwill and companies owned 50% or less (10 Oct, decided by default).** Settings → Groups of
+    books now asks, next to the parent's investment account for a company, the day it was bought.
+    - *Goodwill:* what the parent paid above its share of the company's equity at the end of that day
+      stays in the group total and is said. No yearly write-down (impairment) yet.
+    - *20% to 50% (an associate):* shown next to the others but not added; the group takes in the
+      parent's share of its profit after the day bought, and of its equity since then (the equity
+      method). *Default:* it needs its own investment account and the day bought; below 20% is
+      refused (an ordinary investment, leave it out of the group). Balances and sales with an
+      associate are not taken out of the total.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

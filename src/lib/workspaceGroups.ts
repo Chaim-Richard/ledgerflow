@@ -54,8 +54,12 @@ export function groupProblem(input: { name?: unknown; workspaceIds?: unknown }):
 
 /**
  * Why the group's structure (Z-16) can't be saved, or null. The parent is one of the members; each
- * other member's share is above 50% (a company the parent controls, so its books are added in full
- * and the rest belongs to other owners) and at most 100%, with two decimals at most.
+ * other member's share is at most 100%, with two decimals at most. Above 50% the parent controls the
+ * company, so its books are added in full and the rest belongs to other owners. From 20% to 50% it is
+ * an associate, on the equity method: its books are not added, the parent's investment in it grows by
+ * its share of the company's equity since the day bought, and its share of the profit is added; so an
+ * associate needs the parent's investment account (holding only it) and the day bought. Below 20% it is
+ * an ordinary investment, left out of the group.
  */
 export function structureProblem(input: { workspaceIds: string[]; parentId?: unknown; ownership?: unknown; investments?: unknown; acquired?: unknown }): string | null {
   if (input.parentId !== undefined && input.parentId !== null) {
@@ -88,10 +92,18 @@ export function structureProblem(input: { workspaceIds: string[]; parentId?: unk
     if (id === input.parentId) return 'The parent company has no share of itself';
     if (typeof share !== 'number' || !Number.isFinite(share) || share > 100) return 'A share is a percentage up to 100';
     if (Math.round(share * 100) / 100 !== share) return 'A share has two decimals at most';
-    if (share <= 50) return 'A company owned 50% or less is not added line by line (the equity method is not supported): leave it out of the group';
+    if (share < 20) return 'A company owned below 20% is an ordinary investment, not part of the group: leave it out';
+    if (share <= 50) {
+      const investments = (input.investments || {}) as Record<string, string>;
+      if (!investments[id] || !((input.acquired || {}) as Record<string, string>)[id]) return 'A company owned 50% or less is on the equity method: choose the parent\'s investment account and the day it was bought';
+      if (Object.entries(investments).some(([other, acc]) => other !== id && acc === investments[id])) return 'A company owned 50% or less needs an investment account of its own';
+    }
   }
   return null;
 }
+
+/** Z-16: a company owned 50% or less by the group's parent (an associate, on the equity method). */
+export const isAssociate = (group: Pick<WorkspaceGroup, 'parentId' | 'ownership'>, workspaceId: string) => shareOf(group, workspaceId) <= 50;
 
 /** The parent's share of a member, in percent: 100 without a parent, for the parent, or when none is given. */
 export const shareOf = (group: Pick<WorkspaceGroup, 'parentId' | 'ownership'>, workspaceId: string) =>
