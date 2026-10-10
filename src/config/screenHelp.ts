@@ -1,6 +1,12 @@
 /** Screen descriptions are part of the registry contract; no generic fallback hides missing help. */
 export const SCREEN_HELP: Record<string, Record<string, string>> = {
   main: {
+    inventory:
+      "Review items, quantities and stock workflows. Edit supported metadata or inspect counts and adjustments. Use the stock adjustment workflow to change quantities or values.",
+    projects:
+      "Manage projects and inspect their pipeline or profitability. Edit metadata and inspect associated records. Profitability uses the included posted activity.",
+    budgets:
+      "Maintain budgets and compare them with actual activity. Edit supported metadata and review dates. A budget is a plan rather than a posted transaction.",
     dashboard:
       "Review the workspace overview for a chosen period. Arrange widgets, inspect balances and follow their report links. Forecast estimates and incomplete loaded history are labelled separately.",
     inbox:
@@ -214,16 +220,10 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Explore categorization checks in the shared catalog. Review algorithm suggestions against source records. A suggested category does not authorize a posting change.",
   },
   extra: {
-    inventory:
-      "Review items, quantities and stock workflows. Edit supported metadata or inspect counts and adjustments. Use the stock adjustment workflow to change quantities or values.",
-    projects:
-      "Manage projects and inspect their pipeline or profitability. Edit metadata and inspect associated records. Profitability uses the included posted activity.",
     architecture:
       "Explore the application architecture map. Inspect data, algorithm and view layers. The map describes software structure rather than financial results.",
     audit:
       "Inspect the forensic audit presentation. Review source activity and signal explanations. A finding is a reason to investigate rather than proof of fraud.",
-    budgets:
-      "Maintain budgets and compare them with actual activity. Edit supported metadata and review dates. A budget is a plan rather than a posted transaction.",
     "time-machine":
       "Explore the historical ledger presentation. Choose available dates and inspect included activity. Missing loaded records can leave the view incomplete.",
     ask: "Explore the question-driven ledger workflow. Review interpreted requests and source records. Financial changes require their normal authorized action.",

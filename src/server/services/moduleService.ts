@@ -53,6 +53,9 @@ const MODULE_RECORDS: Record<string, Array<{ table: string; where?: string }>> =
   'petty-cash': [{ table: 'transactions', where: `data->'metadata' ? 'pettyCash'` }],
   intercompany: [{ table: 'transactions', where: `data->'metadata'->>'isIntercompany' = 'true'` }],
   forecasting: [{ table: 'scenarios' }],
+  inventory: [{ table: 'inventory' }],
+  projects: [{ table: 'projects' }],
+  budgets: [{ table: 'budgets' }],
 };
 
 export async function moduleRecords(db: Firestore, workspaceId: string): Promise<Record<string, number>> {

@@ -26,6 +26,9 @@ export const MODULES: ModuleDefinition[] = [
   { id: 'intercompany', name: 'Intercompany', about: 'Dealings between related companies.', tabs: ['intercompany'] },
   { id: 'forecasting', name: 'Forecasting', about: 'Cash-flow forecasts and scenarios.', tabs: ['forecaster'] },
   { id: 'query-builder', name: 'Query builder', about: 'Searches written in a query language, for power users.', tabs: ['query-builder'] },
+  { id: 'inventory', name: 'Stock', about: 'Items with quantities and cost: bought on bills, sold on invoices, counted and moved.', tabs: ['inventory'] },
+  { id: 'projects', name: 'Projects', about: 'Projects with their pipeline and profitability.', tabs: ['projects'] },
+  { id: 'budgets', name: 'Budgets', about: 'Budgets by account, compared with what actually happened.', tabs: ['budgets'] },
 ];
 
 export type Modules = Record<string, boolean>;
@@ -41,6 +44,9 @@ export const NEW_WORKSPACE_MODULES: Modules = {
   intercompany: false,
   forecasting: false,
   'query-builder': false,
+  inventory: false,
+  projects: false,
+  budgets: false,
 };
 
 const BY_TAB = new Map(MODULES.flatMap(m => m.tabs.map(tab => [tab, m.id] as const)));

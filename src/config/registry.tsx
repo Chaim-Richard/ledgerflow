@@ -150,6 +150,8 @@ export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition
   
   { id: 'purchases', label: { en: 'Purchases', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'money_out' },
   { id: 'purchase-orders', label: { en: 'Purchase Orders', he: 'הזמנות רכש' }, icon: ShoppingCart, groupId: 'money_out' },
+  // BB-07: in the menu when their module is on (Settings → Modules)
+  { id: 'inventory', label: { en: 'Inventory', he: 'מלאי' }, icon: Package, groupId: 'money_out' },
   { id: 'loans', label: { en: 'Loans', he: 'הלוואות' }, icon: Coins, groupId: 'money_out' },
   { id: 'petty-cash', label: { en: 'Petty Cash', he: 'קופה קטנה' }, icon: Wallet, groupId: 'money_out' },
   { id: 'payroll', label: { en: 'Payroll & Wages', he: 'שכר עובדים' }, icon: Users, groupId: 'money_out' },
@@ -157,6 +159,8 @@ export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition
   { id: 'reports', label: { en: 'Reports', he: 'דוחות' }, icon: FileText, groupId: 'reports' },
   { id: 'charts', label: { en: 'Visual Analytics', he: 'ניתוח חזותי' }, icon: PieChart, groupId: 'reports' },
   { id: 'forecaster', label: { en: 'Forecasting', he: 'תחזית תזרים' }, icon: TrendingUp, groupId: 'reports' },
+  { id: 'budgets', label: { en: 'Budgets', he: 'תקציבים' }, icon: Target, groupId: 'reports' },
+  { id: 'projects', label: { en: 'Projects', he: 'פרויקטים' }, icon: Briefcase, groupId: 'reports' },
   { id: 'intelligence', label: { en: 'Insights', he: 'תובנות' }, icon: BarChart3, groupId: 'reports' },
 
   { id: 'settings', label: { en: 'Preferences', he: 'הגדרות' }, icon: Settings, groupId: 'settings' },
@@ -492,11 +496,8 @@ export const INTELLIGENCE_TABS_REGISTRY = withScreenHelp([
 export const SCREEN_TABS_REGISTRY = [
   ...APP_TABS,
   ...withScreenHelp([
-    { id: 'inventory', label: { en: 'Inventory', he: 'מלאי' } },
-    { id: 'projects', label: { en: 'Projects', he: 'פרויקטים' } },
     { id: 'architecture', label: { en: 'Architecture Map', he: 'מפת ארכיטקטורה' } },
     { id: 'audit', label: { en: 'Forensic Audit', he: 'ביקורת' } },
-    { id: 'budgets', label: { en: 'Budgets', he: 'תקציבים' } },
     { id: 'time-machine', label: { en: 'Time Machine', he: 'מכונת זמן' } },
     { id: 'ask', label: { en: 'Ask Ledger', he: 'שאלות' } },
     { id: 'magic', label: { en: 'Assisted Entry', he: 'הזנה חכמה' } },

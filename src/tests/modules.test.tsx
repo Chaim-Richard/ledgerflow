@@ -119,7 +119,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     };
     const res = await get('book-1');
     assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.deepEqual(res.body.records, { estimates: 0, 'purchase-orders': 0, payroll: 0, 'fixed-assets': 0, loans: 1, 'petty-cash': 1, intercompany: 1, forecasting: 0 });
+    assert.deepEqual(res.body.records, { estimates: 0, 'purchase-orders': 0, payroll: 0, 'fixed-assets': 0, loans: 1, 'petty-cash': 1, intercompany: 1, forecasting: 0, inventory: 0, projects: 0, budgets: 0 });
     assert.equal((await get('stranger')).status, 403);
     for (const table of ['loans', 'transactions']) await db.pool.query(`delete from public."${table}" where workspace_id = $1`, [ws]);
   });
