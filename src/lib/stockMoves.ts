@@ -7,7 +7,7 @@
  * Pure: the Stock history window and the nightly check read it.
  */
 
-export type StockMoveKind = 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'opening' | 'adjustment' | 'count' | 'manual-cogs' | 'transfer-out' | 'transfer-in';
+export type StockMoveKind = 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'purchase-reversal' | 'opening' | 'adjustment' | 'count' | 'manual-cogs' | 'transfer-out' | 'transfer-in';
 
 export interface StockMove {
   id?: string;
@@ -25,7 +25,7 @@ export interface StockMove {
   /** the value that moved, signed like the quantity (whole cents) */
   valueCents: number;
   transactionId?: string | null;
-  documentType?: 'invoice' | 'credit-note' | 'adjustment' | 'import' | 'delivery';
+  documentType?: 'invoice' | 'credit-note' | 'adjustment' | 'import' | 'delivery' | 'bill';
   documentId?: string;
   /** the order the moves happened in: the time written, then the place in that write */
   seq: string;
@@ -41,6 +41,7 @@ export const STOCK_MOVE_LABEL: Record<StockMoveKind, string> = {
   return: 'Returned by the customer',
   'return-reversal': 'Return undone',
   purchase: 'Bought',
+  'purchase-reversal': 'Purchase undone',
   opening: 'Opening stock',
   adjustment: 'Adjusted',
   count: 'Counted',
@@ -149,4 +150,14 @@ export function itemDetails(moves: StockMove[], startDate: string, endDate: stri
     });
   }
   return out.sort((a, b) => a.itemName.localeCompare(b.itemName));
+}
+
+/** J-08: what was bought of each item in the period (purchases on bills or on Inventory, less those undone). */
+export function purchasesByItem(items: ItemDetails[]): Array<{ itemId: string; itemName: string; quantity: number; valueCents: number; averageCents: number }> {
+  return items.map(item => {
+    const bought = item.moves.filter(m => m.kind === 'purchase' || m.kind === 'purchase-reversal');
+    const quantity = round6(bought.reduce((s, m) => s + m.quantity, 0));
+    const valueCents = bought.reduce((s, m) => s + m.valueCents, 0);
+    return { itemId: item.itemId, itemName: item.itemName, quantity, valueCents, averageCents: quantity > 0 ? Math.round(valueCents / quantity) : 0 };
+  }).filter(p => p.quantity !== 0 || p.valueCents !== 0);
 }

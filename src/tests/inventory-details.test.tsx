@@ -12,7 +12,7 @@ import React from 'react';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { itemDetails, type StockMove } from '../lib/stockMoves';
+import { itemDetails, purchasesByItem, type StockMove } from '../lib/stockMoves';
 import InventoryDetailsReportView from '../components/reporting/InventoryDetailsReportView';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import { stubFetchWithBodies } from './helpers/dom';
@@ -41,6 +41,7 @@ describe('The calculation', () => {
       ['Desk', { quantity: 2, valueCents: 5000 }, [], 0, 0, { quantity: 2, valueCents: 5000 }],
     ], 'the March sale is after the period; the lamp has nothing and did not move');
     assert.equal(items[0].moves[0].transactionId, 't-sale');
+    assert.deepEqual(purchasesByItem(items), [{ itemId: 'i1', itemName: 'Chair', quantity: 5, valueCents: 6000, averageCents: 1200 }], 'J-08: what was bought, per item');
   });
 });
 
@@ -89,9 +90,10 @@ describe('Reports → Inventory Item Details', () => {
     setComponentWorkspace('owner');
     const calls = stubFetchWithBodies(200, { items: itemDetails(moves, '2026-02-01', '2026-02-28') });
     render(<InventoryDetailsReportView />);
-    await waitFor(() => assert.ok(screen.getByText('Chair')));
+    await waitFor(() => assert.ok(screen.getByText('Chair', { selector: 'caption bdi' })));
     assert.ok(calls[0].url.startsWith('/api/v1/reports/inventory-details?workspaceId=component-workspace'));
-    assert.match(screen.getByText('Chair').closest('table')!.textContent || '', /Opening10\$100\.00.*Sold.*-37.*Bought.*\+512.*Closing \(in 5, out 3\)12\$130\.00/);
+    assert.match(screen.getByText('Chair', { selector: 'caption bdi' }).closest('table')!.textContent || '', /Opening10\$100\.00.*Sold.*-37.*Bought.*\+512.*Closing \(in 5, out 3\)12\$130\.00/);
+    assert.match(screen.getByText('Bought in the period').closest('table')!.textContent || '', /Chair5\$60\.00\$12\.00/);
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Sold on 2026-02-03/ })); });
     assert.deepEqual(useUIStore.getState().focusRecord, { type: 'transaction', id: 't-sale' });
   });

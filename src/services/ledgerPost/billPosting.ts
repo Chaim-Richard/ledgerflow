@@ -4,6 +4,8 @@ import { Bill } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { calculateDocumentTax, cashPostedWithDocumentCents } from '../../lib/documentMath';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
+import { allocateCents } from '../../lib/Allocation';
+import { BILL_ACCRUAL_TYPE, billItemProblem, billStockLines } from '../../lib/billStock';
 import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate } from './postingKit';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
 
@@ -126,6 +128,19 @@ export async function postBillLedger(
     'Tax Paid'
   ) : null;
 
+  // J-08: lines that buy an inventory item post to Inventory, and the entry says what came in; each
+  // item line's value is its share of the posted amount exactly as the lines below get it
+  const itemSplits = (billData.splits || []).filter(sp => sp.itemId);
+  for (const sp of itemSplits) {
+    const problem = billItemProblem(sp);
+    if (problem) throw new Error(`Bill ${billNum}: ${problem}`);
+  }
+  const inventoryAccount = itemSplits.length ? findAccount(accounts, mappings, ['inventory', 'stock', 'inventory asset'], a => resolveAccountRole(a) === 'inventory') : null;
+  if (itemSplits.length && !inventoryAccount) throw new Error('Add an Inventory account (an asset) to the chart of accounts to buy stock on a bill');
+  const splits = (billData.splits || []).map(sp => (sp.itemId && inventoryAccount ? { ...sp, accountId: inventoryAccount.id } : sp));
+  const weights = lineAccounts(splits, accounts, expenseAccount, a => !['cash', 'ar', 'ap'].includes(resolveAccountRole(a)));
+  const stockIn = itemSplits.length && weights ? billStockLines(splits, allocateCents(amount - taxAmount, weights.map(w => w.weightCents))) : [];
+
   const accrualLines = TransactionTemplates.buildBillLines({
     billNumber: String(billNum),
     vendorName: vendor,
@@ -135,7 +150,7 @@ export async function postBillLedger(
     apAccount,
     expenseAccount,
     taxAccount,
-    lineAccounts: lineAccounts(billData.splits, accounts, expenseAccount, a => !['cash', 'ar', 'ap'].includes(resolveAccountRole(a)))
+    lineAccounts: weights
   });
 
   // Reverse charge (T-03): the vendor charged no tax; the business owes it and reclaims it,
@@ -167,7 +182,8 @@ export async function postBillLedger(
     metadata: {
       billId,
       vendorId: billData.vendorId,
-      type: 'bill-accrual'
+      type: BILL_ACCRUAL_TYPE,
+      ...(stockIn.length ? { stockIn } : {})
     },
     lines: accrualLines
   };

@@ -4,6 +4,7 @@ import { INVOICE_COGS_TYPE } from '../../services/invoiceCogs';
 import { SALES_RETURN_TYPE } from '../../lib/salesReturns';
 import { DELIVERY_COGS_TYPE, DELIVERY_RETURN_TYPE, goodsLeaveWith } from '../../lib/deliveries';
 import { isPostable } from '../../lib/txFilters';
+import { BILL_ACCRUAL_TYPE } from '../../lib/billStock';
 import type { Transaction } from '../../types';
 import { stockMovesReady, writeStockMoves, type NewStockMove } from './stockMoveService';
 
@@ -15,6 +16,10 @@ import { stockMovesReady, writeStockMoves, type NewStockMove } from './stockMove
  * hand is recorded with a warning, unless an owner turned on "Refuse sales beyond stock"
  * (`refuseNegativeStock` on the workspace, W-06: stockPolicyService.ts); then it is refused and
  * nothing is written. Putting stock back (a reversal) is never refused.
+ *
+ * J-08: a bill's entry may carry its item lines (`metadata.stockIn`): the units come in at the value
+ * the line posted to Inventory, and the item's average cost moves with them; reversing the entry
+ * takes them out again.
  *
  * BF-08 step 2: in a workspace where stock leaves with deliveries (`goodsLeaveWith: 'delivery'`), a
  * delivery's cost entry ('delivery-cogs-auto', deliveryService.ts) lowers stock the same way, and an
@@ -40,7 +45,7 @@ interface LedgerEntry {
 interface PendingMove {
   itemId: string;
   quantity: number;
-  kind: 'sale' | 'sale-reversal' | 'return' | 'return-reversal';
+  kind: 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'purchase-reversal';
   entry: LedgerEntry;
   valueCents: number;
   location?: string;
@@ -68,6 +73,27 @@ function returnMove(tx: { metadata?: Record<string, unknown> }): { itemId: strin
     throw new LedgerPostingError(400, 'A goods-returned entry needs the item, the invoice line and a positive quantity.');
   }
   return { itemId: meta.inventoryItemId, quantity, invoiceId: meta.invoiceId, lineId: meta.returnForLineId };
+}
+
+/**
+ * J-08: the item lines of a bill (`metadata.stockIn` on its entry, src/lib/billStock.ts): each brings
+ * units in at the value its line posted to Inventory.
+ */
+function billStockIn(tx: LedgerEntry): Array<{ itemId: string; quantity: number; valueCents: number }> {
+  const lines = tx.metadata?.stockIn;
+  if (lines === undefined) return [];
+  if (tx.metadata?.type !== BILL_ACCRUAL_TYPE || !Array.isArray(lines) || lines.length > 500) {
+    throw new LedgerPostingError(400, 'Stock comes in only on a bill\'s entry, as a list of its item lines.');
+  }
+  return lines.map(raw => {
+    const l = (raw || {}) as Record<string, unknown>;
+    const quantity = Number(l.quantity);
+    const valueCents = Number(l.valueCents);
+    if (typeof l.itemId !== 'string' || !l.itemId || !Number.isFinite(quantity) || quantity <= 0 || !Number.isSafeInteger(valueCents) || valueCents < 0) {
+      throw new LedgerPostingError(400, 'Each item line of a bill needs the item, a positive quantity and its value in whole cents.');
+    }
+    return { itemId: l.itemId, quantity, valueCents };
+  });
 }
 
 /** What an entry does to stock: a sale takes units out, a return brings them back. */
@@ -144,6 +170,11 @@ export async function prepareStockMoves(
   const reshipped = new Set<string>();
   const putBack = (target: string, original: LedgerEntry) => {
     if (original.metadata?.type === INVOICE_COGS_TYPE) reshipped.add(String(original.metadata.invoiceId));
+    // J-08: a bill's item lines go back out with it
+    for (const line of billStockIn(original)) {
+      add(line.itemId, -line.quantity);
+      pending.push({ itemId: line.itemId, quantity: -line.quantity, kind: 'purchase-reversal', entry: reversalOf.get(target) || original, valueCents: -line.valueCents, location: original.metadata?.locationId as string | undefined });
+    }
     const effect = stockEffect(original);
     if (!effect) return;
     const sign = effect.quantity > 0 ? -1 : 1;
@@ -152,6 +183,10 @@ export async function prepareStockMoves(
   };
 
   for (const tx of entries) {
+    for (const line of billStockIn(tx)) {
+      add(line.itemId, line.quantity);
+      pending.push({ itemId: line.itemId, quantity: line.quantity, kind: 'purchase', entry: tx, valueCents: line.valueCents, location: tx.metadata?.locationId as string | undefined });
+    }
     const effect = stockEffect(tx);
     if (!effect) continue;
     add(effect.itemId, effect.quantity);
@@ -193,7 +228,7 @@ export async function prepareStockMoves(
 
   const itemIds = Array.from(deltas.keys()).filter(id => deltas.get(id) !== 0);
   const warnings: string[] = [];
-  const writes: { id: string; quantityAtHand: number }[] = [];
+  const writes: { id: string; quantityAtHand: number; unitCostCents?: number }[] = [];
   const moves: NewStockMove[] = [];
   const invoiceSale = entries.some(e => e.metadata?.type === INVOICE_COGS_TYPE && !reshipped.has(String(e.metadata?.invoiceId)));
   const workspace = invoiceSale || itemIds.some(id => (deltas.get(id) || 0) < 0)
@@ -222,15 +257,25 @@ export async function prepareStockMoves(
         throw new LedgerPostingError(409, `Only ${Math.max(0, current)} of ${item.name || snap.id} in stock, and this needs ${-delta}. Record the stock received first (Inventory → Adjust stock); an owner can allow selling below zero on Inventory.`);
       }
       if (quantityAtHand < 0) warnings.push(`Stock of ${item.name || snap.id} is now ${quantityAtHand} (below zero).`);
-      writes.push({ id: snap.id, quantityAtHand });
       // W-02: each entry's change, in order, from the quantity before
       let before = current;
-      for (const p of pending.filter(x => x.itemId === snap.id)) {
+      // J-08: what is bought (or a purchase undone) moves the weighted average cost of what is on hand
+      let cost = Number(item.unitCostCents) || 0;
+      let costChanged = false;
+      // a bill edited in this request: its old units go out before its new ones come in
+      const mine = pending.filter(x => x.itemId === snap.id);
+      for (const p of [...mine.filter(x => x.kind === 'purchase-reversal'), ...mine.filter(x => x.kind !== 'purchase-reversal')]) {
         const after = round6(before + p.quantity);
+        if ((p.kind === 'purchase' || p.kind === 'purchase-reversal') && after > 0) {
+          cost = Math.round((Math.max(0, before) * cost + p.valueCents) / after);
+          costChanged = true;
+        }
         const invoiceId = typeof p.entry.metadata?.invoiceId === 'string' ? p.entry.metadata.invoiceId : undefined;
         const creditNoteId = typeof p.entry.metadata?.creditNoteId === 'string' ? p.entry.metadata.creditNoteId : undefined;
         const deliveryId = typeof p.entry.metadata?.deliveryId === 'string' ? p.entry.metadata.deliveryId : undefined;
-        const document = creditNoteId ? { documentType: 'credit-note' as const, documentId: creditNoteId }
+        const billId = typeof p.entry.metadata?.billId === 'string' ? p.entry.metadata.billId : undefined;
+        const document = billId ? { documentType: 'bill' as const, documentId: billId }
+          : creditNoteId ? { documentType: 'credit-note' as const, documentId: creditNoteId }
           : invoiceId ? { documentType: 'invoice' as const, documentId: invoiceId }
             : deliveryId ? { documentType: 'delivery' as const, documentId: deliveryId } : {};
         moves.push({
@@ -244,6 +289,7 @@ export async function prepareStockMoves(
         });
         before = after;
       }
+      writes.push({ id: snap.id, quantityAtHand, ...(costChanged ? { unitCostCents: cost } : {}) });
     }
   }
 
@@ -251,7 +297,7 @@ export async function prepareStockMoves(
     warnings,
     apply: () => {
       for (const w of writes) {
-        t.update(db.collection('inventory').doc(w.id), { quantityAtHand: w.quantityAtHand, updatedAt: FieldValue.serverTimestamp() });
+        t.update(db.collection('inventory').doc(w.id), { quantityAtHand: w.quantityAtHand, ...(w.unitCostCents !== undefined ? { unitCostCents: w.unitCostCents } : {}), updatedAt: FieldValue.serverTimestamp() });
       }
       writeStockMoves(db, t, moves);
     },

@@ -94,6 +94,9 @@ export interface Bill {
     description?: string;
     /** BF-09: the line's labels (Property, Project…), posted with its expense */
     dimensions?: Record<string, string>;
+    /** J-08: an inventory item bought on this line, and how many units (src/lib/billStock.ts) */
+    itemId?: string;
+    quantity?: number;
   }>;
   projectId?: string;
   issueDate?: string;

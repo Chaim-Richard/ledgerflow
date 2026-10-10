@@ -3,7 +3,7 @@ import { getIdToken } from '../../firebase';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { formatCurrency, formatDate, getLocalDateISO } from '../../lib/utils';
-import { STOCK_MOVE_LABEL, type ItemDetails } from '../../lib/stockMoves';
+import { purchasesByItem, STOCK_MOVE_LABEL, type ItemDetails } from '../../lib/stockMoves';
 
 const field = 'px-2 py-1.5 border border-[var(--line)] rounded bg-[var(--panel)] text-[var(--text)]';
 const qty = (n: number) => String(Math.round(n * 1e6) / 1e6);
@@ -12,7 +12,8 @@ const qty = (n: number) => String(Math.round(n * 1e6) / 1e6);
  * Inventory item details (J-10): for a period, each item's opening quantity and value, every movement
  * (sold, bought, returned, adjusted, counted, moved) with its entry, what came in and went out, and
  * the closing quantity and value. Read by the server from the stock-moves ledger, the same history
- * as Stock history on Inventory (src/lib/stockMoves.ts `itemDetails`).
+ * as Stock history on Inventory (src/lib/stockMoves.ts `itemDetails`). Above them, what was bought of
+ * each item in the period (J-08: on bills or on Inventory), with its cost per unit.
  */
 export default function InventoryDetailsReportView() {
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
@@ -47,6 +48,29 @@ export default function InventoryDetailsReportView() {
       {key && !shown && <p className="text-sm text-[var(--muted)]">Loading…</p>}
       {shown?.error && <p role="alert" className="text-sm text-rose-600">{shown.error}</p>}
       {shown?.items && shown.items.length === 0 && <p className="text-sm text-[var(--muted)]">No stock and no movements in this period.</p>}
+      {shown?.items && purchasesByItem(shown.items).length > 0 && (
+        <table className="w-full text-sm">
+          <caption className="text-left font-semibold text-[var(--text)] pb-1">Bought in the period</caption>
+          <thead>
+            <tr className="border-b border-[var(--line)] text-xs text-[var(--muted)]">
+              <th scope="col" className="text-left font-semibold py-1">Item</th>
+              <th scope="col" className="text-right font-semibold py-1">Units</th>
+              <th scope="col" className="text-right font-semibold py-1">Cost</th>
+              <th scope="col" className="text-right font-semibold py-1">Per unit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {purchasesByItem(shown.items).map(p => (
+              <tr key={p.itemId} className="border-b border-[var(--line)]/50">
+                <th scope="row" className="text-left font-normal py-1"><bdi>{p.itemName}</bdi></th>
+                <td className="text-right font-mono py-1">{qty(p.quantity)}</td>
+                <td className="text-right font-mono py-1">{formatCurrency(p.valueCents, currency)}</td>
+                <td className="text-right font-mono py-1">{formatCurrency(p.averageCents, currency)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
       {shown?.items?.map(item => (
         <div key={item.itemId} className="overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
           <table className="w-full text-sm">

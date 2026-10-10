@@ -14,6 +14,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { BudgetLeft } from '../common/BudgetLeft';
 import { LineLabels } from '../common/LineLabels';
 import { applyRule, suggestRule } from '../../lib/allocationRules';
+import { billItemProblem } from '../../lib/billStock';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
@@ -89,7 +90,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     }
   }, [isOpen, editingExisting]);
 
-  const [splits, setSplits] = useState<Array<{ id: string, amountCents: number, accountId: string, description: string, dimensions?: Record<string, string> }>>([
+  const [splits, setSplits] = useState<Array<{ id: string, amountCents: number, accountId: string, description: string, dimensions?: Record<string, string>, itemId?: string, quantity?: number }>>([
     { id: crypto.randomUUID(), amountCents: 0, accountId: '', description: '' }
   ]);
 
@@ -113,6 +114,8 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   // Q-05: a saved split rule whose text the vendor or a line contains is suggested, with why; applying it
   // only changes the lines here (each line split by the rule's shares, in whole cents)
   const allocationRules = useAuthStore(s => s.getCurrentWorkspace()?.allocationRules);
+  useLedgerCollections('inventory');
+  const stockItems = useLedgerStore(s => s.inventory) || [];
   const [ruleApplied, setRuleApplied] = useState('');
   const suggested = suggestRule(allocationRules, { vendorName: bill.vendorName, description: splits.map(sp => sp.description).join(' ') });
   const canSplit = Boolean(suggested && suggested.rule.id !== ruleApplied && splits.some(sp => sp.amountCents));
@@ -518,6 +521,27 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                       <Trash2 size={18} />
                     </button>
                   </div>
+                  {/* J-08: stock bought on this line (it then posts to Inventory and the units come in) */}
+                  {stockItems.length > 0 && (
+                    <div className="col-span-12 flex flex-wrap items-end gap-3 text-xs">
+                      <label className="flex flex-col gap-1 text-zinc-400">Stock item (optional)
+                        <select aria-label={`Stock item on line ${idx + 1}`} value={split.itemId || ''}
+                          onChange={e => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, itemId: e.target.value || undefined, ...(e.target.value ? {} : { quantity: undefined }) } : sp)))}
+                          className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl">
+                          <option value="">None</option>
+                          {stockItems.map(it => <option key={it.id} value={it.id}>{it.name}</option>)}
+                        </select>
+                      </label>
+                      {split.itemId && (
+                        <label className="flex flex-col gap-1 text-zinc-400">Units
+                          <input aria-label={`Units on line ${idx + 1}`} type="number" min="0" step="any" value={split.quantity ?? ''}
+                            onChange={e => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, quantity: e.target.value === '' ? undefined : Number(e.target.value) } : sp)))}
+                            className="w-24 px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-mono" />
+                        </label>
+                      )}
+                      {split.itemId && <span className="pb-2 text-[var(--muted)]">{billItemProblem(split) || 'Posts to Inventory; the units come in with the bill.'}</span>}
+                    </div>
+                  )}
                   {/* BF-09: Property, Project… on this line, posted with its expense */}
                   <div className="col-span-12">
                     <LineLabels value={split.dimensions} lineNumber={idx + 1} accountId={split.accountId} date={bill.date || ''}
