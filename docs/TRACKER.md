@@ -2181,7 +2181,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] BB-02 Currencies — **done 10 Oct (Claude)**: Settings → Currencies: the workspace's own currency, every other currency its invoices and bills use (how many, how many still open, the newest rate posted and when; never an invented rate), a link to Reports → Exchange Rates Used, and the month-end revaluation of what is still open (R-07), which until now was only inside the currency converter (`currenciesInUse` in `src/lib/exchangeRates.ts`, `CurrenciesSettings.tsx`; tests `currencies-settings.test.tsx`).
 - [x] BB-03 Defaults — **done 5 Oct**: Settings → Defaults lists each kind of posting (A/R, A/P, sales, expenses, bank, sales tax payable, tax paid on purchases, customer deposits, vendor prepayments, prepaid expenses) with the account it uses now: the chosen one, or "Automatic (…)" by the posting's own rule (`src/lib/accountDefaults.ts`), or a warning when the chart has none. Choosing saves at once (owner/accountant; others read), keeping other mappings. The keys are the ones the postings read (`customer deposits`, `vendor prepayments`, `prepaid expenses` now match the invoice posting's spelling). Not here: default payment terms (they come from the customer or their last invoice, I-23; a workspace-wide default needs a new workspace field and so a database migration, left for later) and the default tax code (marked on the tax code itself). Tests: `defaults-settings.test.tsx`; the tab is in the browser view-coverage test
 - [x] BB-04 Email (Settings → Emails & Reminders: templates, reminders, thank-you emails, monthly statements)
-- [ ] BB-05 Localisation
+- [x] BB-05 Localisation — **done 10 Oct**: menus stay in English (owner decision 10); everything regional is in Settings → Appearance: time zone and fiscal year start (workspace), date format (each person), and now money display for the whole workspace — a country's number style (separators and where the symbol goes) and negatives with a minus or in brackets, with a live sample (owners and accountants; display only, `moneyDisplay`, its database rule already applied). Documents print in English or Hebrew (P-11) (`MoneyDisplayPanel.tsx`; tests `money-display-panel.test.tsx`)
 - [x] BB-06 Schedule (UI over jobRuns): Settings → Schedule — anyone signed in may read it, and there is nothing to change — says what the
   once-a-day run takes care of — the recurring drafts, the reminders and statements, the notices, the clearing away of logs past their
   time — when it last ran, whether anything in it went wrong (with the words the job said), and when it is next due. The daily run now
@@ -2370,9 +2370,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BL-06 Resend
 - [ ] BL-07 Open / click tracking
 - [x] BL-08 Plain-text fallback (every email)
-- [ ] BM-01 Symbol placement per locale (partial: AI #2 formatter/read contract ready; workspace settings model/rules handoff to AI #1)
-- [ ] BM-02 Separators per locale (partial: AI #2 en-US/de-DE/he-IL/ja-JP tested; durable locale selection awaits AI #1)
-- [ ] BM-03 Accounting negatives (partial: AI #2 formatting option tested; durable workspace option awaits AI #1)
+- [x] BM-01 Symbol placement per locale — **done 10 Oct** with BB-05: the workspace's number style (Settings → Appearance → Money display) over AI #2's formatter
+- [x] BM-02 Separators per locale — **done 10 Oct** with BB-05 (saved on the workspace, `moneyDisplay.locale`)
+- [x] BM-03 Accounting negatives — **done 10 Oct** with BB-05 (`moneyDisplay.negativeStyle`)
 - [ ] BM-04 Per-currency rounding
 - [ ] BM-05 RTL number alignment (partial: AI #2 Money isolation/native directional marks and Chromium minus-position check verified; C-25 settings integration pending)
 - [ ] BM-06 `rateUsedId` per line

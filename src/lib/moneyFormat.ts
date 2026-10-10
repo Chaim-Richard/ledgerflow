@@ -14,3 +14,19 @@ export function moneyText(cents: number | null | undefined, currency: string, di
   } catch { text = `${currency} ${((accounting ? Math.abs(amount) : amount) / 10 ** digits).toFixed(digits)}`; }
   return accounting ? `(${text})` : text;
 }
+
+/** Number styles offered (BB-05, BM-01..BM-03); the workspace may keep another valid one. */
+export const MONEY_LOCALES = [
+  { value: '', label: 'This browser\'s' },
+  { value: 'en-US', label: 'United States' },
+  { value: 'en-GB', label: 'United Kingdom' },
+  { value: 'he-IL', label: 'Israel' },
+  { value: 'de-DE', label: 'Germany' },
+  { value: 'fr-FR', label: 'France' },
+  { value: 'es-ES', label: 'Spain' },
+  { value: 'it-IT', label: 'Italy' },
+  { value: 'nl-NL', label: 'Netherlands' },
+  { value: 'de-CH', label: 'Switzerland' },
+  { value: 'en-IN', label: 'India' },
+  { value: 'ja-JP', label: 'Japan' },
+] as const;

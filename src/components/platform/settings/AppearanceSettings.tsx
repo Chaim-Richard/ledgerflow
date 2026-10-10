@@ -16,6 +16,7 @@ import {
 import { cn, DATE_DISPLAY_FORMATS, formatDate } from '../../../lib/utils';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
+import MoneyDisplayPanel from './MoneyDisplayPanel';
 import { db } from '../../../firebase';
 import { doc, updateDoc } from '../../../lib/db/firestore';
 
@@ -332,6 +333,8 @@ export default function AppearanceSettings() {
               ))}
             </div>
           </div>
+
+          <MoneyDisplayPanel />
 
           {/* Date Format */}
           <div role="group" aria-labelledby={`${settingsId}-date-format`} className="p-5 bg-[var(--panel)] border border-[var(--line)] rounded-xl space-y-3">
