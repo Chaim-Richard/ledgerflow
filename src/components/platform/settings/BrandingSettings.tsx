@@ -4,7 +4,7 @@ import { Palette, FileText, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useCurrentRole } from '../../../hooks/useCurrentRole';
 import { getIdToken } from '../../../firebase';
-import { BRANDED_DOCUMENTS, BRANDED_DOCUMENT_LABELS, DEFAULT_BRAND_COLOR, MAX_LOGO_BYTES } from '../../../lib/branding';
+import { BRANDED_DOCUMENTS, BRANDED_DOCUMENT_LABELS, DEFAULT_BRAND_COLOR, DOCUMENT_STYLES, MAX_LOGO_BYTES } from '../../../lib/branding';
 import type { WorkspaceBranding } from '../../../lib/branding';
 import { DOCUMENT_LANGUAGES } from '../../../lib/documentLanguage';
 
@@ -146,6 +146,16 @@ export default function BrandingSettings() {
         <label className="flex items-center gap-2 text-sm text-[var(--text)]">
           <input type="checkbox" checked={draft.showPaymentQr !== false} onChange={e => set({ showPaymentQr: e.target.checked })} />
           Print a QR code to the payment page on invoices that have one (sent invoices)
+        </label>
+        <div>
+          <label htmlFor={`${formId}-style`} className="block text-xs font-semibold mb-1 text-[var(--text)]">Page style</label>
+          <select id={`${formId}-style`} value={draft.style || 'classic'} onChange={e => set({ style: e.target.value as WorkspaceBranding['style'] })} className={inputClass}>
+            {DOCUMENT_STYLES.map(st => <option key={st.value} value={st.value}>{st.label}</option>)}
+          </select>
+        </div>
+        <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+          <input type="checkbox" checked={draft.hideQuantity === true} onChange={e => set({ hideQuantity: e.target.checked })} />
+          Leave out the quantity column (for amounts-only billing)
         </label>
         <div>
           <label htmlFor={`${formId}-language`} className="block text-xs font-semibold mb-1 text-[var(--text)]">Language of the printed words (titles, labels, totals)</label>

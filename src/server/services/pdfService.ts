@@ -86,6 +86,10 @@ export interface PdfLayout {
   logo?: Buffer;
   /** P-11: the printed words (headers, page numbers, the watermark) */
   words: DocumentWords;
+  /** Y-11: the page's look (Settings → Branding) */
+  style: 'classic' | 'bold' | 'minimal';
+  /** Y-11: whether the quantity column is printed */
+  quantityColumn: boolean;
 }
 
 /** Text without control characters (tabs and new lines kept), trimmed and cut to `max`. */
@@ -141,10 +145,11 @@ export function layoutDocumentPdf(
 
   // invoices keep `items`, estimates `lines`, statements `transactions`; every one is printed
   const items = doc.items || doc.lines || doc.transactions || [];
+  const quantityColumn = type !== 'statement' && branding.hideQuantity !== true;
   const rows = (Array.isArray(items) && items.length > 0 ? items : [{ description: `${words.titles[type][0]}${words.titles[type].slice(1).toLowerCase()} ${clean(doc.number || '', 60)}`.trim(), quantity: 1, amountCents: totalCents }])
     .map(item => ({
       description: clean(item.description || item.name || words.item, 500),
-      quantity: type === 'statement' ? '' : String(item.quantity ?? 1),
+      quantity: quantityColumn ? String(item.quantity ?? 1) : '',
       amount: money(Number(item.amountCents) || 0),
     }));
 
@@ -189,6 +194,8 @@ export function layoutDocumentPdf(
     color: brandColor(branding.color),
     logo: logoBytes(branding.logoDataUrl),
     words,
+    style: branding.style === 'bold' || branding.style === 'minimal' ? branding.style : 'classic',
+    quantityColumn,
   };
 }
 
@@ -229,23 +236,31 @@ export async function generateDocumentPdf(
   });
 
   // --- header: logo, company and address on the left; title and document details on the right
+  // (Y-11: "bold" puts it on a band of the brand colour across the top, in white)
+  const banded = layout.style === 'bold';
+  pdf.font(bold).fontSize(16);
+  const nameLines = wrapText(pdf, latin(layout.company.name), 260);
+  const headerBottom = Math.max(40 + (layout.logo ? 68 : 0) + nameLines.length * 20 + layout.company.addressLines.length * 12, 40 + 28 + layout.meta.length * 13);
+  if (banded) pdf.rect(0, 0, PAGE.width, headerBottom + 10).fill(layout.color);
+  const onBand = (fallback: () => unknown) => (banded ? pdf.fillColor('#FFFFFF') : fallback());
   let left = 40;
   if (layout.logo) {
     try { pdf.image(layout.logo, PAGE.margin, left, { fit: [150, 60] }); left += 68; } catch { /* unreadable image: no logo */ }
   }
-  pdf.font(bold).fontSize(16); ink();
-  for (const line of wrapText(pdf, latin(layout.company.name), 260)) { text(line, PAGE.margin, left, 260); left += 20; }
-  pdf.font(body).fontSize(9); muted();
+  pdf.font(bold).fontSize(16); onBand(ink);
+  for (const line of nameLines) { text(line, PAGE.margin, left, 260); left += 20; }
+  pdf.font(body).fontSize(9); onBand(muted);
   for (const line of layout.company.addressLines) { text(line, PAGE.margin, left, 260); left += 12; }
 
   let right = 40;
-  pdf.font(bold).fontSize(20); brand();
+  pdf.font(bold).fontSize(20); onBand(layout.style === 'minimal' ? ink : brand);
   text(layout.title, 320, right, RIGHT - 320, 'right'); right += 28;
-  pdf.font(body).fontSize(9); ink();
+  pdf.font(body).fontSize(9); onBand(ink);
   for (const [label, value] of layout.meta) { text(`${label}: ${value}`, 320, right, RIGHT - 320, 'right'); right += 13; }
 
   let y = Math.max(left, right) + 12;
-  pdf.moveTo(PAGE.margin, y).lineTo(RIGHT, y).lineWidth(1).strokeColor(layout.color).stroke();
+  if (banded) y += 8;
+  else pdf.moveTo(PAGE.margin, y).lineTo(RIGHT, y).lineWidth(1).strokeColor(layout.style === 'minimal' ? '#D1D5DB' : layout.color).stroke();
   y += 12;
   pdf.font(body).fontSize(8); muted(); text(layout.recipientLabel, PAGE.margin, y, 300); y += 12;
   pdf.font(bold).fontSize(12); ink(); text(layout.recipient, PAGE.margin, y, 400); y += 26;
@@ -254,10 +269,16 @@ export async function generateDocumentPdf(
   const bottom = PAGE.height - PAGE.margin - FOOTER_SPACE;
   const descWidth = 300;
   const tableHeader = () => {
-    pdf.rect(PAGE.margin, y, RIGHT - PAGE.margin, 20).fill(layout.color);
-    pdf.font(bold).fontSize(9).fillColor('#FFFFFF');
+    // Y-11: "minimal" has no coloured fill, only a thin line under the headings
+    if (layout.style === 'minimal') {
+      pdf.moveTo(PAGE.margin, y + 20).lineTo(RIGHT, y + 20).lineWidth(0.8).strokeColor('#111827').stroke();
+      pdf.font(bold).fontSize(9); ink();
+    } else {
+      pdf.rect(PAGE.margin, y, RIGHT - PAGE.margin, 20).fill(layout.color);
+      pdf.font(bold).fontSize(9).fillColor('#FFFFFF');
+    }
     text(layout.words.description, PAGE.margin + 8, y + 6, descWidth);
-    if (type !== 'statement') text(layout.words.quantity, 360, y + 6, 50, 'right');
+    if (layout.quantityColumn) text(layout.words.quantity, 360, y + 6, 50, 'right');
     text(layout.words.amount, 420, y + 6, RIGHT - 428, 'right');
     y += 26;
   };

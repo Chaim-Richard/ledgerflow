@@ -2051,7 +2051,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] Y-08 Bank feed re-auth flow (reconnect when the bank login expires; tested)
 - [x] Y-09 Split one bank line (tested)
 - [x] Y-10 Match one bank line to many invoices/bills → payment record (tested)
-- [ ] Y-11 PDF template designer
+- [x] Y-11 PDF template designer — **done 10 Oct**: Settings → Branding → Page style: Classic, Bold header band (company and title in white on the brand colour) or Minimal (no coloured fills), and "Leave out the quantity column"; with the logo, colour, address, footer, terms, payment QR and language already there, and Preview PDF before saving. Found with it: saving Branding dropped the documents' language (P-11), now kept (`pdfService.ts`, `brandingRoutes.ts`; tests `document-pdf.test.ts`)
 - [x] Y-12 Logo upload (Settings → Branding & PDFs; PNG/JPEG up to 200 KB, checked by the server)
 - [x] Y-13 Brand colour on documents (title, rule and table header)
 - [x] Y-14 Custom footer / terms (footer on every page, terms at the end, address under the name)
