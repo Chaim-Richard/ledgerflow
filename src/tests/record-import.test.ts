@@ -224,3 +224,25 @@ describe('Importing records', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, 
     assert.equal((await call('owner-1', '/import-records/nope/undo')).status, 400);
   });
 });
+
+test('exports from Xero and Wave map by themselves (CE-09, BK-03)', () => {
+  // Xero's contacts and items exports
+  const contacts = guessMapping('customers', ['*ContactName', 'EmailAddress', 'PhoneNumber', 'TaxNumber']);
+  assert.deepEqual([contacts.name, contacts.email, contacts.phone, contacts.taxId], [0, 1, 2, 3]);
+  const items = guessMapping('items', ['*ItemCode', 'ItemName', 'SalesUnitPrice', 'PurchasesUnitPrice', 'QuantityOnHand']);
+  assert.deepEqual([items.sku, items.name, items.unitPriceCents, items.unitCostCents, items.quantityAtHand], [0, 1, 2, 3, 4]);
+  // Wave's and Xero's account types
+  const type = (s: string) => { const r = parseAccountType(s); return r ? [r.type, r.category] : null; };
+  assert.deepEqual(type('Expected Payments from Customers'), ['asset', 'Accounts Receivable']);
+  assert.deepEqual(type('Expected Payments to Vendors'), ['liability', 'Accounts Payable']);
+  assert.deepEqual(type('Customer Prepayments and Customer Credits'), ['liability', undefined]);
+  assert.deepEqual(type('Sales Taxes'), ['liability', undefined]);
+  assert.deepEqual(type('Business Owner Contribution and Drawing'), ['equity', undefined]);
+  assert.deepEqual(type('Property, Plant, Equipment'), ['asset', 'Fixed Assets']);
+  assert.deepEqual(type('Payment Processing Fee'), ['expense', undefined]);
+  assert.deepEqual(type('Gain On Foreign Exchange'), ['revenue', undefined]);
+  assert.deepEqual(type('Prepayment'), ['asset', undefined]);
+  assert.deepEqual(type('Depreciation'), ['expense', undefined]);
+  assert.deepEqual(type('Current Liability'), ['liability', undefined]);
+  assert.deepEqual(type('Direct Costs'), ['cost_of_goods', undefined]);
+});

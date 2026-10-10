@@ -2352,7 +2352,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BJ-10 ISO 27001 mapping
 - [x] BK-01 Generic CSV import (= K-01; columns matched by header name)
 - [ ] BK-02 QBO API import
-- [ ] BK-03 Wave import
+- [~] BK-03 Wave import — **10 Oct (Claude)**: Wave's customers, vendors, items and chart of accounts exports import with their columns and account types recognised (CE-09). **Open:** its transactions.
 - [ ] BK-04 FreshBooks import
 - [x] BK-05 Per-row import errors (row number + problem)
 - [x] BK-06 Import rollback (undo; records in use are kept)
@@ -2499,7 +2499,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CE-06 Rejected-transfer detection
 - [ ] CE-07 Impersonation session
 - [ ] CE-08 Invite codes
-- [ ] CE-09 Competitor import
+- [~] CE-09 Competitor import — **10 Oct (Claude)**: the customer, vendor, item and chart of accounts imports now map Xero's and Wave's own exports by themselves (Xero's ContactName, EmailAddress, ItemCode, SalesUnitPrice…; Wave's and Xero's account types such as "Expected Payments from Customers", "Customer Prepayments", "Sales Taxes", "Business Owner Contribution", "Prepayment", "Depreciation"), as they already did QuickBooks' (`src/lib/recordImport.ts`; tests `record-import.test.ts`). **Open:** importing their invoices, bills and opening balances.
 - [ ] CE-10 Mobile device registration
 - [ ] CF-01 Timesheet entity
 - [ ] CF-02 Activity under project

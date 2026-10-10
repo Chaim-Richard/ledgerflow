@@ -48,9 +48,9 @@ const f = (key: string, label: string, type: FieldType, aliases: string[], requi
   ({ key, label, type, aliases: [key, label, ...aliases, ...(HEBREW_HEADERS[key] || [])], required });
 
 const CONTACT_FIELDS = [
-  f('email', 'Email', 'email', ['e-mail', 'email address', 'mail']),
-  f('phone', 'Phone', 'text', ['telephone', 'tel', 'phone number', 'mobile']),
-  f('taxId', 'Tax ID', 'text', ['vat', 'vat number', 'tax number', 'ein', 'abn', 'gst number', 'business number']),
+  f('email', 'Email', 'email', ['e-mail', 'email address', 'mail', 'emailaddress']),
+  f('phone', 'Phone', 'text', ['telephone', 'tel', 'phone number', 'mobile', 'phonenumber', 'mobile number']),
+  f('taxId', 'Tax ID', 'text', ['vat', 'vat number', 'tax number', 'ein', 'abn', 'gst number', 'business number', 'taxnumber']),
 ];
 
 export const IMPORT_DEFINITIONS: Record<ImportKind, ImportKindDefinition> = {
@@ -59,7 +59,7 @@ export const IMPORT_DEFINITIONS: Record<ImportKind, ImportKindDefinition> = {
     label: 'Customers',
     collection: 'customers',
     fields: [
-      f('name', 'Name', 'text', ['customer', 'customer name', 'company', 'company name', 'display name', 'client', 'client name'], true),
+      f('name', 'Name', 'text', ['customer', 'customer name', 'company', 'company name', 'display name', 'client', 'client name', 'contact name', 'contactname'], true),
       ...CONTACT_FIELDS,
       f('address', 'Address', 'longText', ['billing address', 'street', 'street address']),
       f('website', 'Website', 'text', ['web', 'url', 'site']),
@@ -74,7 +74,7 @@ export const IMPORT_DEFINITIONS: Record<ImportKind, ImportKindDefinition> = {
     label: 'Vendors',
     collection: 'vendors',
     fields: [
-      f('name', 'Name', 'text', ['vendor', 'vendor name', 'supplier', 'supplier name', 'company', 'company name', 'display name', 'payee'], true),
+      f('name', 'Name', 'text', ['vendor', 'vendor name', 'supplier', 'supplier name', 'company', 'company name', 'display name', 'payee', 'contact name', 'contactname'], true),
       ...CONTACT_FIELDS,
       f('category', 'Category', 'text', ['vendor type', 'type']),
       f('is1099', '1099 vendor', 'yesNo', ['1099', 'track 1099', 'eligible for 1099']),
@@ -86,12 +86,12 @@ export const IMPORT_DEFINITIONS: Record<ImportKind, ImportKindDefinition> = {
     label: 'Items',
     collection: 'inventory',
     fields: [
-      f('name', 'Name', 'text', ['item', 'item name', 'product', 'product name', 'product/service', 'product service', 'title'], true),
-      f('sku', 'SKU', 'code', ['item code', 'product code', 'code', 'part number', 'barcode']),
+      f('name', 'Name', 'text', ['item', 'item name', 'product', 'product name', 'product/service', 'product service', 'title', 'itemname'], true),
+      f('sku', 'SKU', 'code', ['item code', 'product code', 'code', 'part number', 'barcode', 'itemcode']),
       f('description', 'Description', 'longText', ['sales description', 'details']),
-      f('unitPriceCents', 'Sale price', 'money', ['price', 'unit price', 'sales price', 'rate', 'selling price']),
-      f('unitCostCents', 'Cost', 'money', ['unit cost', 'purchase cost', 'purchase price', 'cost price']),
-      f('quantityAtHand', 'Quantity on hand', 'count', ['quantity', 'qty', 'qty on hand', 'on hand', 'stock', 'in stock']),
+      f('unitPriceCents', 'Sale price', 'money', ['price', 'unit price', 'sales price', 'rate', 'selling price', 'sales unit price', 'salesunitprice']),
+      f('unitCostCents', 'Cost', 'money', ['unit cost', 'purchase cost', 'purchase price', 'cost price', 'purchases unit price', 'purchasesunitprice']),
+      f('quantityAtHand', 'Quantity on hand', 'count', ['quantity', 'qty', 'qty on hand', 'on hand', 'stock', 'in stock', 'quantityonhand']),
       f('reorderPoint', 'Reorder point', 'count', ['reorder level', 'min stock', 'minimum stock']),
       f('measurementUnit', 'Unit', 'text', ['uom', 'unit of measure', 'units']),
       f('category', 'Category', 'text', ['item category', 'group']),
@@ -154,6 +154,15 @@ export function parseMoneyCents(raw: string): number | null {
 
 type AccountTypeResult = { type: string; category?: string; subtype?: string };
 const ACCOUNT_TYPE_RULES: Array<[RegExp, AccountTypeResult]> = [
+  // CE-09 / BK-03: Wave's and Xero's own names, before the general words they contain
+  [/expected payments from customers/, { type: 'asset', category: 'Accounts Receivable' }],
+  [/expected payments to vendors/, { type: 'liability', category: 'Accounts Payable' }],
+  [/customer prepayments|sales tax|due for payroll|due to you/, { type: 'liability' }],
+  [/owner contribution|drawing|retained earnings/, { type: 'equity' }],
+  [/gain on foreign exchange|^discount/, { type: 'revenue' }],
+  [/loss on foreign exchange|processing fee|payroll expense|^depreciation$/, { type: 'expense' }],
+  [/property, plant|equipment|depreciation and amortization/, { type: 'asset', category: 'Fixed Assets' }],
+  [/money in transit|prepayment/, { type: 'asset' }],
   [/^(bank|cash|checking|savings)/, { type: 'asset', category: 'Cash', subtype: 'bank' }],
   [/accounts receivable|a\/r|^receivables?$/, { type: 'asset', category: 'Accounts Receivable' }],
   [/inventory|stock/, { type: 'asset', category: 'Inventory' }],
