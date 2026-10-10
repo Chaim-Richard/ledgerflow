@@ -1996,7 +1996,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] V-06 Time → invoice line — **done 10 Oct**: Time → Bill approved time: for a customer, approved billable time not yet invoiced becomes a draft invoice (a line per entry: day, what, hours, rate, amount), and the entries are marked invoiced on it; the invoice is reviewed and sent from Sales as usual
 - [x] V-07 Project budget vs actual — **covered (10 Oct)**: each project on Projects shows its budget (editable in place), what was spent and earned on it, and the share of the budget spent as a bar (`ProjectsView.tsx`, `Projects.tsx`). By label, Profit by Label (CB-25) gives each project's income and costs account by account.
 - [ ] V-08 WIP / POC
-- [ ] V-09 Milestone billing
+- [~] V-09 Milestone billing — **mostly covered (10 Oct)** by sales orders (K-04): an accepted estimate is invoiced in parts, each a percentage or an amount of the order, with what is already invoiced shown; customers sign estimates online (Y-20). **Open:** a milestone schedule kept on the order in advance (e.g. 30% on signing, 40% halfway, 30% at the end) with reminders when one is due
 
 # SECTION W — INVENTORY DEPTH
 
