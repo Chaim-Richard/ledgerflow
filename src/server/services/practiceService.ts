@@ -22,6 +22,16 @@ export async function practiceRows(db: Firestore, uid: string, today: string): P
   const bankLogins = await counts('banks', `data->>'status' = 'login_required'`);
   const questions = await counts('clientQueries', `data->>'status' = 'open'`);
   const drafts = [await counts('transactions', `data->>'status' = 'draft'`), await counts('invoices', `data->>'status' = 'draft'`), await counts('bills', `data->>'status' = 'draft'`)];
+  // bills in force with no file attached to them
+  const withoutFile = new Map<string, number>();
+  if (existing.has('bills') && existing.has('documents')) {
+    const { rows } = await db.pool.query(
+      `select b.workspace_id as id, count(*)::int as n from public.bills b
+       where b.workspace_id = any($1) and coalesce(b.data->>'status', '') not in ('draft', 'void', 'cancelled', 'rejected')
+         and not exists (select 1 from public.documents d where d.workspace_id = b.workspace_id and d.data->>'linkedId' = b.id)
+       group by 1`, [ids]);
+    for (const r of rows) withoutFile.set(String(r.id), Number(r.n));
+  }
   const next = new Map<string, { date: string; description: string }>();
   if (existing.has('recurring')) {
     const { rows } = await db.pool.query(
@@ -45,6 +55,7 @@ export async function practiceRows(db: Firestore, uid: string, today: string): P
       workspaceId: id, name: String(ws.name || id), role: workspaceRole(ws, uid), currency: String(ws.currency || 'USD'), groups: groups.get(id) || [],
       bankLines: bankLines.get(id) || 0, bankLogins: bankLogins.get(id) || 0, questions: questions.get(id) || 0,
       drafts: drafts.reduce((sum, m) => sum + (m.get(id) || 0), 0),
+      billsWithoutFile: withoutFile.get(id) || 0,
       lastMonth, lastMonthClosed: ['hard', 'soft'].includes(monthCloseState(lastMonth, ws)),
       nextRecurring: next.get(id) || null,
       health,

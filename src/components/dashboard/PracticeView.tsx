@@ -71,13 +71,14 @@ export default function PracticeView() {
                 <th scope="col" className="text-right font-semibold py-2 px-2">Bank logins</th>
                 <th scope="col" className="text-right font-semibold py-2 px-2">Questions</th>
                 <th scope="col" className="text-right font-semibold py-2 px-2">Drafts</th>
+                <th scope="col" className="text-right font-semibold py-2 px-2">Bills without a file</th>
                 <th scope="col" className="text-right font-semibold py-2 px-2">Data Health</th>
                 <th scope="col" className="text-left font-semibold py-2 px-2">Last month</th>
                 <th scope="col" className="text-left font-semibold py-2 px-2">Next recurring</th>
               </tr>
             </thead>
             <tbody>
-              {shown.length === 0 && <tr><td colSpan={8} className="py-3 text-[var(--muted)]">No books match.</td></tr>}
+              {shown.length === 0 && <tr><td colSpan={9} className="py-3 text-[var(--muted)]">No books match.</td></tr>}
               {shown.map(r => (
                 <tr key={r.workspaceId} className="border-b border-[var(--line)]/50">
                   <th scope="row" className="text-left font-normal py-2">
@@ -88,6 +89,7 @@ export default function PracticeView() {
                   <td className="text-right py-2 px-2">{count(r, r.bankLogins, 'banks to log in to again', { tab: 'banking' })}</td>
                   <td className="text-right py-2 px-2">{count(r, r.questions, 'questions waiting', { tab: 'client-queries' })}</td>
                   <td className="text-right py-2 px-2">{count(r, r.drafts, 'drafts', { tab: 'transactions' })}</td>
+                  <td className="text-right py-2 px-2">{count(r, r.billsWithoutFile, 'bills without a file', { tab: 'purchases' })}</td>
                   <td className="text-right py-2 px-2" title={r.health ? `Checked ${formatDate(r.health.checkedAt.slice(0, 10))}; ${r.health.warnings} warning${r.health.warnings === 1 ? '' : 's'}` : 'Not checked yet'}>
                     {r.health ? count(r, r.health.serious, 'serious problems', { tab: 'data-health' }) : <span className="text-[var(--muted)]">—</span>}
                   </td>

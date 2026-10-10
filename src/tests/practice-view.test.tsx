@@ -21,7 +21,7 @@ import { useUIStore } from '../stores/useUIStore';
 import { getSupabase } from '../lib/db/client';
 
 const row = (over: Partial<PracticeRow>): PracticeRow => ({
-  workspaceId: 'w', name: 'W', role: 'owner', currency: 'USD', groups: [], bankLines: 0, bankLogins: 0, questions: 0, drafts: 0,
+  workspaceId: 'w', name: 'W', role: 'owner', currency: 'USD', groups: [], bankLines: 0, bankLogins: 0, questions: 0, drafts: 0, billsWithoutFile: 0,
   lastMonth: '2026-09', lastMonthClosed: true, nextRecurring: null, health: null, ...over,
 });
 
@@ -57,6 +57,10 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     await db.collection('clientQueries').doc(`${busy}_q`).set({ workspaceId: busy, status: 'open', question: '?' });
     await db.collection('transactions').doc(`${busy}_d`).set({ workspaceId: busy, status: 'draft', date: '2026-10-02', lines: [] });
     await db.collection('invoices').doc(`${busy}_i`).set({ workspaceId: busy, status: 'draft', amountCents: 1 });
+    await db.collection('bills').doc(`${busy}_b1`).set({ workspaceId: busy, status: 'pending', amountCents: 1 });
+    await db.collection('bills').doc(`${busy}_b2`).set({ workspaceId: busy, status: 'paid', amountCents: 1 });
+    await db.collection('bills').doc(`${busy}_b3`).set({ workspaceId: busy, status: 'void', amountCents: 1 });
+    await db.collection('documents').doc(`${busy}_doc`).set({ workspaceId: busy, linkedId: `${busy}_b2`, name: 'bill.pdf', uid: 'boss' });
     await db.collection('recurring').doc(`${calm}_r1`).set({ workspaceId: calm, description: 'Rent', nextOccurrence: '2026-11-01', isActive: true, status: 'active' });
     await db.collection('recurring').doc(`${calm}_r2`).set({ workspaceId: calm, description: 'Paused', nextOccurrence: '2026-10-15', isActive: true, status: 'paused' });
     await db.collection('workspaceGroups').doc(`grp_${tag}pr01`).set({ ownerUid: ann, name: 'Clients', workspaceIds: [busy] });
@@ -71,7 +75,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     server?.close();
     await db.pool.query(`delete from public."workspaceGroups" where data->>'ownerUid' = $1`, [ann]);
     for (const ws of [busy, calm, theirs]) {
-      for (const table of ['bankLines', 'clientQueries', 'transactions', 'invoices', 'recurring']) await db.pool.query(`delete from public."${table}" where workspace_id = $1`, [ws]);
+      for (const table of ['bankLines', 'clientQueries', 'transactions', 'invoices', 'bills', 'documents', 'recurring']) await db.pool.query(`delete from public."${table}" where workspace_id = $1`, [ws]);
       await db.pool.query('delete from public.workspaces where id = $1', [ws]);
     }
     await db.terminate();
@@ -86,6 +90,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
       ['Calm Co', 'owner', 'USD', [], 0, 0, 0, true, { date: '2026-11-01', description: 'Rent' }],
     ], 'Not mine is not listed; its bank line is not counted; a paused recurring item is not next');
     assert.equal(body.rows[0].lastMonth, '2026-09');
+    assert.deepEqual(body.rows.map(r => r.billsWithoutFile), [1, 0], 'the pending bill has no file; the paid one has; a void one does not count');
     assert.deepEqual(body.rows.map(r => r.health), [null, { serious: 0, warnings: 3, checkedAt: '2026-10-10T02:00:00Z' }], 'from the nightly check, when it ran');
   });
 });

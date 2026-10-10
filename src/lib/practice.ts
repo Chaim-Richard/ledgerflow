@@ -19,6 +19,8 @@ export interface PracticeRow {
   questions: number;
   /** draft entries, invoices and bills waiting */
   drafts: number;
+  /** bills in force with no file attached (the vendor's bill or receipt) */
+  billsWithoutFile: number;
   /** last month, e.g. "2026-09", and whether it is closed */
   lastMonth: string;
   lastMonthClosed: boolean;
