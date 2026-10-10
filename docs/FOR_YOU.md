@@ -274,6 +274,13 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
    (they are saved by the browser; the rule would need a database change). Say if accountants should not
    approve pay runs, or if purchase orders should be included.
 
+37. **Documents in Hebrew (10 Oct, decided by default).** Settings → Branding → "Language of the printed
+   words" (English or Hebrew), and each customer can have their own (customer details → "Language of
+   their documents"). Titles, labels, totals and page numbers change; names, lines, terms and amounts
+   print as typed. An invoice is titled "חשבונית" and a sale receipt "חשבונית קבלה". If your
+   invoices must say "חשבונית מס" (or "חשבונית מס קבלה") for the tax authority, say so and the titles
+   will change.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

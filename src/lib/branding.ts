@@ -25,6 +25,8 @@ export const BrandingSchema = z.object({
   terms: z.object(Object.fromEntries(BRANDED_DOCUMENTS.map(d => [d, z.string().max(2000).optional()])) as Record<BrandedDocument, z.ZodOptional<z.ZodString>>).partial().strict().optional(),
   /** Print a QR code to the invoice's payment page (default on). */
   showPaymentQr: z.boolean().optional(),
+  /** P-11: the language of the printed words on documents (a customer can have their own; src/lib/documentLanguage.ts) */
+  language: z.enum(['en', 'he']).optional(),
 }).strict();
 
 export type WorkspaceBranding = z.infer<typeof BrandingSchema>;

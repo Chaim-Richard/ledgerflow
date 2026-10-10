@@ -7,6 +7,7 @@ import { depositAppliedCents } from '../../lib/documentMath';
 import { brandColor, LOGO_DATA_URL, MAX_LOGO_BYTES } from '../../lib/branding';
 import type { BrandedDocument, WorkspaceBranding } from '../../lib/branding';
 import { drawLine, wrapText } from './pdfText';
+import { DOCUMENT_WORDS, type DocumentLanguage, type DocumentWords } from '../../lib/documentLanguage';
 
 /**
  * Document PDFs (invoices, estimates, credit notes, payment receipts, statements) with pdfkit:
@@ -14,6 +15,7 @@ import { drawLine, wrapText } from './pdfText';
  * address, footer and default terms (Y-12…Y-14, Y-33, Y-34), a QR code to the invoice's payment
  * page (Y-15), and text in any script, Hebrew included (DejaVu Sans, embedded). The old PDF was
  * written by hand: one page, only the first 15 lines, Latin letters only.
+ * The printed words are in the customer's or the workspace's language (P-11, src/lib/documentLanguage.ts).
  * layoutDocumentPdf decides what is printed (pure, tested); generateDocumentPdf draws it.
  */
 /** Branded documents (sent to customers and vendors) plus bills and vendor credits, printed as records (BA-08). */
@@ -58,6 +60,8 @@ export interface PdfWorkspace { name?: string; companyName?: string; currency?: 
 export interface PdfOptions {
   /** The invoice's public payment page; printed as a QR code on invoices. */
   paymentUrl?: string;
+  /** P-11: the language of the printed words; the workspace's (branding.language) when left out */
+  language?: DocumentLanguage;
 }
 
 export interface PdfLayout {
@@ -76,19 +80,9 @@ export interface PdfLayout {
   /** Y-16: DRAFT, PAID or VOID across every page, so a draft or a cancelled document isn't mistaken for a live one. */
   watermark?: string;
   logo?: Buffer;
+  /** P-11: the printed words (headers, page numbers, the watermark) */
+  words: DocumentWords;
 }
-
-const TITLES: Record<PdfDocumentType, string> = {
-  invoice: 'INVOICE', estimate: 'ESTIMATE', creditNote: 'CREDIT NOTE', payment: 'PAYMENT RECEIPT', statement: 'STATEMENT',
-  purchaseOrder: 'PURCHASE ORDER', bill: 'BILL', vendorCredit: 'VENDOR CREDIT',
-};
-const RECIPIENT: Record<PdfDocumentType, string> = {
-  invoice: 'BILLED TO', estimate: 'PREPARED FOR', creditNote: 'CREDITED TO', payment: 'RECEIVED FROM', statement: 'STATEMENT FOR',
-  purchaseOrder: 'ORDERED FROM', bill: 'FROM VENDOR', vendorCredit: 'FROM VENDOR',
-};
-const TERMS_LABEL: Record<string, string> = {
-  due_on_receipt: 'Due on receipt', net_7: 'Net 7', net_10: 'Net 10', net_15: 'Net 15', net_30: 'Net 30', net_45: 'Net 45', net_60: 'Net 60', net_90: 'Net 90',
-};
 
 /** Text without control characters (tabs and new lines kept), trimmed and cut to `max`. */
 const clean = (value: unknown, max = 200) => [...String(value ?? '')].map(ch => {
@@ -123,6 +117,7 @@ export function layoutDocumentPdf(
 ): PdfLayout {
   const doc = docData || {};
   const branding = workspace?.branding || {};
+  const words = DOCUMENT_WORDS[options.language || (branding.language === 'he' ? 'he' : 'en')];
   // amounts in the document's own currency, as a code (unambiguous on paper)
   const currency = String(doc.currency || workspace?.currency || 'USD').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'USD';
   const money = (cents: number) => {
@@ -131,19 +126,19 @@ export function layoutDocumentPdf(
   };
   const totalCents = Number(doc.amountCents) || 0;
 
-  const meta: Array<[string, string]> = [['Number', clean(doc.number || doc.id || 'N/A', 60)], ['Date', clean(doc.date || getLocalDateISO(), 10)]];
+  const meta: Array<[string, string]> = [[words.number, clean(doc.number || doc.id || 'N/A', 60)], [words.date, clean(doc.date || getLocalDateISO(), 10)]];
   if ((type === 'invoice' || type === 'estimate' || type === 'bill' || type === 'purchaseOrder') && doc.dueDate) {
-    meta.push([type === 'estimate' ? 'Valid until' : type === 'purchaseOrder' ? 'Deliver by' : 'Due', clean(doc.dueDate, 10)]);
+    meta.push([type === 'estimate' ? words.validUntil : type === 'purchaseOrder' ? words.deliverBy : words.due, clean(doc.dueDate, 10)]);
   }
-  if (type === 'invoice' && doc.paymentTerms) meta.push(['Terms', TERMS_LABEL[doc.paymentTerms] || clean(doc.paymentTerms, 40)]);
+  if (type === 'invoice' && doc.paymentTerms) meta.push([words.terms, words.paymentTerms(doc.paymentTerms) || clean(doc.paymentTerms, 40)]);
   const salesOrder = type === 'estimate' && Boolean(doc.orderedAt);
-  if (salesOrder && doc.customerReference) meta.push(['Your reference', clean(doc.customerReference, 60)]);
+  if (salesOrder && doc.customerReference) meta.push([words.yourReference, clean(doc.customerReference, 60)]);
 
   // invoices keep `items`, estimates `lines`, statements `transactions`; every one is printed
   const items = doc.items || doc.lines || doc.transactions || [];
-  const rows = (Array.isArray(items) && items.length > 0 ? items : [{ description: `${TITLES[type][0]}${TITLES[type].slice(1).toLowerCase()} ${clean(doc.number || '', 60)}`.trim(), quantity: 1, amountCents: totalCents }])
+  const rows = (Array.isArray(items) && items.length > 0 ? items : [{ description: `${words.titles[type][0]}${words.titles[type].slice(1).toLowerCase()} ${clean(doc.number || '', 60)}`.trim(), quantity: 1, amountCents: totalCents }])
     .map(item => ({
-      description: clean(item.description || item.name || 'Item', 500),
+      description: clean(item.description || item.name || words.item, 500),
       quantity: type === 'statement' ? '' : String(item.quantity ?? 1),
       amount: money(Number(item.amountCents) || 0),
     }));
@@ -153,33 +148,33 @@ export function layoutDocumentPdf(
   const taxCents = Number(doc.taxAmountCents) || 0;
   const discountCents = Number(doc.discountCents) || 0;
   if (taxCents > 0 || discountCents > 0) {
-    if (typeof doc.lineSumCents === 'number') summary.push({ label: 'Subtotal', value: money(doc.lineSumCents) });
-    if (discountCents > 0) summary.push({ label: 'Discount', value: money(-discountCents) });
-    const parts = Array.isArray(doc.taxBreakdown) && doc.taxBreakdown.length ? doc.taxBreakdown : [{ name: 'Tax', rate: doc.taxRate, taxCents }];
+    if (typeof doc.lineSumCents === 'number') summary.push({ label: words.subtotal, value: money(doc.lineSumCents) });
+    if (discountCents > 0) summary.push({ label: words.discount, value: money(-discountCents) });
+    const parts = Array.isArray(doc.taxBreakdown) && doc.taxBreakdown.length ? doc.taxBreakdown : [{ name: words.tax, rate: doc.taxRate, taxCents }];
     for (const p of parts) {
-      summary.push({ label: `${clean(p.name || 'Tax', 30)}${p.rate ? ` ${p.rate}%` : ''}${doc.pricesIncludeTax ? ' incl.' : ''}`, value: money(Number(p.taxCents) || 0) });
+      summary.push({ label: `${clean(p.name || words.tax, 30)}${p.rate ? ` ${p.rate}%` : ''}${doc.pricesIncludeTax ? ` ${words.included}` : ''}`, value: money(Number(p.taxCents) || 0) });
     }
   }
-  summary.push({ label: type === 'statement' ? 'BALANCE' : 'TOTAL', value: money(totalCents), strong: true });
+  summary.push({ label: type === 'statement' ? words.balance : words.total, value: money(totalCents), strong: true });
   // a deposit is a payment in advance: the total keeps its tax, the deposit lowers what is due (AF-03)
   const depositCents = type === 'invoice' ? depositAppliedCents(doc) : 0;
   if (depositCents > 0) {
-    summary.push({ label: 'Deposit received', value: money(-depositCents) });
-    summary.push({ label: 'AMOUNT DUE', value: money(totalCents - depositCents), strong: true });
+    summary.push({ label: words.deposit, value: money(-depositCents) });
+    summary.push({ label: words.amountDue, value: money(totalCents - depositCents), strong: true });
   }
 
   // a sale receipt (K-03) is an invoice paid on the spot: titled as a receipt, nothing to pay
   const saleReceipt = type === 'invoice' && Boolean(doc.metadata?.saleReceipt);
   const qrWanted = type === 'invoice' && !saleReceipt && branding.showPaymentQr !== false && /^https?:\/\//.test(options.paymentUrl || '') && totalCents - depositCents > 0;
   return {
-    title: saleReceipt ? 'SALES RECEIPT' : salesOrder ? 'SALES ORDER' : TITLES[type],
+    title: saleReceipt ? words.titles.saleReceipt : salesOrder ? words.titles.salesOrder : words.titles[type],
     company: {
       name: clean(workspace?.name || workspace?.companyName || 'LedgerFlow Workspace', 120),
       addressLines: clean(branding.address, 300).split(/\s*\n\s*/).filter(Boolean).slice(0, 5),
     },
     meta,
-    recipientLabel: RECIPIENT[type],
-    recipient: clean(doc.customerName || doc.vendorName || doc.contactName || 'Valued Client', 120),
+    recipientLabel: words.recipient[type],
+    recipient: clean(doc.customerName || doc.vendorName || doc.contactName || words.client, 120),
     rows,
     summary,
     terms: clean((branding.terms as Partial<Record<PdfDocumentType, string>> | undefined)?.[type], 2000) || undefined,
@@ -188,6 +183,7 @@ export function layoutDocumentPdf(
     watermark: watermarkFor(type, doc.status),
     color: brandColor(branding.color),
     logo: logoBytes(branding.logoDataUrl),
+    words,
   };
 }
 
@@ -255,9 +251,9 @@ export async function generateDocumentPdf(
   const tableHeader = () => {
     pdf.rect(PAGE.margin, y, RIGHT - PAGE.margin, 20).fill(layout.color);
     pdf.font(bold).fontSize(9).fillColor('#FFFFFF');
-    text('DESCRIPTION', PAGE.margin + 8, y + 6, descWidth);
-    if (type !== 'statement') text('QTY', 360, y + 6, 50, 'right');
-    text('AMOUNT', 420, y + 6, RIGHT - 428, 'right');
+    text(layout.words.description, PAGE.margin + 8, y + 6, descWidth);
+    if (type !== 'statement') text(layout.words.quantity, 360, y + 6, 50, 'right');
+    text(layout.words.amount, 420, y + 6, RIGHT - 428, 'right');
     y += 26;
   };
   const newPage = () => { pdf.addPage(); y = PAGE.margin; };
@@ -301,7 +297,7 @@ export async function generateDocumentPdf(
       }
     }
     pdf.font(body).fontSize(8); muted();
-    text('Scan to view and pay', PAGE.margin, blockTop + qrSize + 4, 160);
+    text(layout.words.scanToPay, PAGE.margin, blockTop + qrSize + 4, 160);
   }
   y = blockTop + blockHeight + 10;
 
@@ -310,7 +306,7 @@ export async function generateDocumentPdf(
     pdf.font(body).fontSize(9);
     const lines = wrapText(pdf, latin(layout.terms), RIGHT - PAGE.margin);
     if (y + 26 > bottom) newPage();
-    pdf.font(bold).fontSize(9); ink(); text('Terms', PAGE.margin, y, 200); y += 14;
+    pdf.font(bold).fontSize(9); ink(); text(layout.words.termsHeading, PAGE.margin, y, 200); y += 14;
     pdf.font(body).fontSize(9); muted();
     for (const line of lines) {
       if (y + 12 > bottom) { newPage(); pdf.font(body).fontSize(9); muted(); }
@@ -326,12 +322,12 @@ export async function generateDocumentPdf(
     const fy = PAGE.height - PAGE.margin + 10;
     pdf.font(body).fontSize(8); muted();
     if (layout.footer) text(layout.footer, PAGE.margin, fy, 380);
-    text(`Page ${i - range.start + 1} of ${range.count}`, RIGHT - 100, fy, 100, 'right');
+    text(layout.words.page(i - range.start + 1, range.count), RIGHT - 100, fy, 100, 'right');
     if (layout.watermark) {
       pdf.save();
       pdf.rotate(-30, { origin: [PAGE.width / 2, PAGE.height / 2] });
       pdf.font(bold).fontSize(110).fillColor(layout.watermark === 'PAID' ? '#047857' : '#B91C1C').fillOpacity(0.1);
-      pdf.text(layout.watermark, 0, PAGE.height / 2 - 60, { width: PAGE.width, align: 'center', lineBreak: false });
+      pdf.text(latin(layout.words.watermark[layout.watermark as 'DRAFT' | 'VOID' | 'PAID'] || layout.watermark), 0, PAGE.height / 2 - 60, { width: PAGE.width, align: 'center', lineBreak: false });
       pdf.restore();
     }
   }

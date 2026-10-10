@@ -9,6 +9,7 @@ import type { EmailTemplateKey, EmailTemplates, TemplateValues } from '../../lib
 import { isMailConfigured, sendMail } from './mailer';
 import { notify } from './notificationService';
 import { generateDocumentPdf } from './pdfService';
+import { documentLanguage } from '../../lib/documentLanguage';
 import { loadStatement } from './statementService';
 import { isArchivedParty } from '../../lib/contacts';
 import { againstPreference, sendsByEmail } from '../../lib/delivery';
@@ -120,7 +121,7 @@ export async function emailInvoice(db: Firestore, input: EmailInvoiceInput) {
 
   let attachments;
   try {
-    const pdf = await generateDocumentPdf('invoice', { ...invoice, id: input.invoiceId }, workspace, { paymentUrl: values.link });
+    const pdf = await generateDocumentPdf('invoice', { ...invoice, id: input.invoiceId }, workspace, { paymentUrl: values.link, language: documentLanguage(workspace.branding, customer) });
     attachments = [{ filename: `invoice_${values.number}.pdf`, content: pdf, contentType: 'application/pdf' }];
   } catch {
     attachments = undefined;
@@ -261,7 +262,7 @@ export async function emailStatements(db: Firestore, input: { workspaceId: strin
     const paper = againstPreference(statement.contact);
     const logBase = { workspaceId: input.workspaceId, documentType: 'statement', documentId: id, template: 'statement', subject: message.subject, recipient: to, sentBy: input.system ? 'schedule' : input.uid, ...(paper ? { againstPreference: paper } : {}) };
     try {
-      const pdf = await generateDocumentPdf('statement', statement.pdf, workspace);
+      const pdf = await generateDocumentPdf('statement', statement.pdf, workspace, { language: documentLanguage(workspace.branding, statement.contact) });
       const sent = await sendMail({ to, subject: message.subject, html: message.html, text: message.text, attachments: [{ filename: `statement_${name.replace(/[^\w.-]+/g, '_')}.pdf`, content: pdf, contentType: 'application/pdf' }] });
       await logEmailEvent(db, { ...logBase, event: 'sent', provider: sent.provider, messageId: sent.messageId || null });
       result.sent.push({ id, name, to });

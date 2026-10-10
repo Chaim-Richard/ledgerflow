@@ -6,6 +6,7 @@ import { useCurrentRole } from '../../../hooks/useCurrentRole';
 import { getIdToken } from '../../../firebase';
 import { BRANDED_DOCUMENTS, BRANDED_DOCUMENT_LABELS, DEFAULT_BRAND_COLOR, MAX_LOGO_BYTES } from '../../../lib/branding';
 import type { WorkspaceBranding } from '../../../lib/branding';
+import { DOCUMENT_LANGUAGES } from '../../../lib/documentLanguage';
 
 /**
  * Settings → Branding (Y-11…Y-14, Y-33, Y-34): logo, colour, address, footer and default terms for
@@ -146,6 +147,13 @@ export default function BrandingSettings() {
           <input type="checkbox" checked={draft.showPaymentQr !== false} onChange={e => set({ showPaymentQr: e.target.checked })} />
           Print a QR code to the payment page on invoices that have one (sent invoices)
         </label>
+        <div>
+          <label htmlFor={`${formId}-language`} className="block text-xs font-semibold mb-1 text-[var(--text)]">Language of the printed words (titles, labels, totals)</label>
+          <select id={`${formId}-language`} value={draft.language || 'en'} onChange={e => set({ language: e.target.value as WorkspaceBranding['language'] })} className={inputClass}>
+            {DOCUMENT_LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+          </select>
+          <p className="mt-1 text-xs text-[var(--muted)]">A customer can have their own language (in the customer's details). What you type prints as typed.</p>
+        </div>
       </fieldset>
 
       <div className="flex flex-wrap gap-3">
