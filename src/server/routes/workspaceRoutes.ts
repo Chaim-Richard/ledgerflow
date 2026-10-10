@@ -38,7 +38,7 @@ import { retentionFor, RetentionSettingsSchema, scheduledPurgeAt as purgeDate } 
 import { RetentionError, updateRetention } from '../services/retentionService';
 import { completeSetup, recordOpeningBalances, SetupError } from '../services/openingBalanceService';
 import { ModuleSettingError, moduleRecords, setModules } from '../services/moduleService';
-import { allocationRuleRouter, priceListRouter, salesRepRouter } from './savedListRoutes';
+import { allocationRuleRouter, priceListRouter, salesRepRouter, roleDashboardRouter } from './savedListRoutes';
 import { workspaceUsage } from '../middleware/planCapacity';
 
 export const workspaceRouter = express.Router();
@@ -243,6 +243,7 @@ workspaceRouter.get('/:workspaceId/usage', requireWorkspaceRole(['owner', 'accou
 workspaceRouter.use('/:workspaceId/allocation-rules', requireWorkspaceRole(LEDGER_ADMIN_ROLES), allocationRuleRouter);
 workspaceRouter.use('/:workspaceId/price-lists', requireWorkspaceRole(LEDGER_ADMIN_ROLES), priceListRouter);
 workspaceRouter.use('/:workspaceId/sales-reps', requireWorkspaceRole(LEDGER_ADMIN_ROLES), salesRepRouter);
+workspaceRouter.use('/:workspaceId/role-dashboards', requireWorkspaceRole(['owner']), roleDashboardRouter);
 
 /** BB-07: how many records each module holds (so a module turned off can say it still keeps them). */
 workspaceRouter.get('/:workspaceId/modules/records', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), async (req, res) => {

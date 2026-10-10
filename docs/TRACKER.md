@@ -2208,7 +2208,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 # SECTION BC — DASHBOARD WIDGETS
 
 - [x] BC-01 Configurable widget grid
-- [ ] BC-02 Per-role dashboards
+- [x] BC-02 Per-role dashboards — **done 10 Oct**: on the Overview, Customize widgets → "Starting dashboard for" a role (owners, accountants, bookkeepers, viewers) → "Give them this layout" (owners). Anyone who has not arranged their own dashboard starts from their role's; Reset layout goes back to it. Saved on the workspace by the server (`roleDashboards`, owners only, audited; no migration) (`startingLayout` in `src/lib/dashboardOverview.ts`, `roleDashboardService.ts`; tests `dashboard-widgets.test.tsx`, `role-dashboards.test.ts`)
 - [x] BC-03 Dashboard date range
 - [x] BC-04 Widget refresh — **done 10 Oct (Claude)**: the dashboard's figures follow live changes already; what Needs attention reads from the server once (bank logins, last month's close sign-offs) is now read again when the tab comes back into view and every 5 minutes (`useRefreshTick`, `NeedsAttentionCard.tsx`; tests `refresh-tick.test.tsx`).
 - [x] BC-05 Prior-period comparison

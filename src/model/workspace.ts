@@ -9,6 +9,7 @@ import type { CloseStep } from '../lib/closeSteps';
 import type { AllocationRule } from '../lib/allocationRules';
 import type { PriceList } from '../lib/priceLists';
 import type { SalesRep } from '../lib/salesReps';
+import type { RoleDashboards } from '../lib/dashboardOverview';
 import type { LedgerHealth } from '../lib/ledgerHealth';
 import type { AlertSettings, AlertsSent } from '../lib/bookAlerts';
 import type { NotificationType } from '../lib/notifications';
@@ -79,6 +80,8 @@ export interface Workspace {
   payrollApproval?: boolean;
   /** P-05: nobody approves what they prepared (src/lib/twoPersonRule.ts; set by owners, through the server). */
   twoPersonRule?: boolean;
+  /** BC-02: each role's starting dashboard layout (src/lib/dashboardOverview.ts; set by owners, through the server). */
+  roleDashboards?: RoleDashboards;
   /** W-06: refuse sales that would take an item's stock below zero (written by the server only, owners) */
   refuseNegativeStock?: boolean;
   /** BF-08 step 2: when stock leaves, with the invoice (default) or with a delivery (src/lib/deliveries.ts; server only, owners) */
