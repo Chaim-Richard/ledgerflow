@@ -1,4 +1,8 @@
 /**
+ * PLAN §6: tax code suggestions that learn from history, and unusual-code flags. Reachable here until AI #2's C-46 panel uses them.
+ */
+export { suggestTaxCode, unusualTaxCode } from './tax/taxSuggestions';
+/**
  * PLAN IL-3: Israel's VAT report figures per registration. Reachable here until AI #2's C-40 screen uses them.
  */
 export { israelVatReturn } from './tax/ilVatReturn';
