@@ -66,7 +66,7 @@ export default function CustomerCohortsReportView({ endDate = '' }: { endDate?: 
     {report && <ReportTableScroll>
       <table className="min-w-full text-sm">
         <caption>Customer cohorts through {endDate}: {mode === 'amount' ? 'invoiced totals' : mode === 'customers' ? 'active customers' : 'active customer percentage'}</caption>
-        <thead><tr>{headers.map((heading, i) => <th key={i} scope="col" className="px-3 py-2 text-right whitespace-nowrap">{heading}</th>)}</tr></thead>
+        <thead><tr>{headers.map(heading => <th key={heading} scope="col" className="px-3 py-2 text-right whitespace-nowrap">{heading}</th>)}</tr></thead>
         <tbody>{report.rows.map(row => <tr key={row.cohort} className="border-t border-[var(--line)]">
           <th scope="row" className="px-3 py-2 text-left">{row.cohort}</th>
           <td className="px-3 py-2 text-right tabular-nums">{row.customers}</td>
@@ -76,3 +76,4 @@ export default function CustomerCohortsReportView({ endDate = '' }: { endDate?: 
       {!report.rows.length && <p>No issued-invoice customer cohorts in this window.</p>}
     </ReportTableScroll>}
   </section>;
+}
