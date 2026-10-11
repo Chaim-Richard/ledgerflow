@@ -90,6 +90,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
   reports: {
     "customer-cohorts": "Group customers by their earliest observed issued-invoice month and inspect each later month's total invoicing, distinct active customers or percentage. The first invoice can predate the selected display window. Incomplete invoice history makes these cohorts provisional.",
     "asset-register": "Review fixed assets held at a chosen date, with acquisition cost, recorded depreciation and book value. See category totals or export a numeric CSV. Historical cost adjustments after the selected date are flagged because saved asset metadata is current.",
+    "one-sided-transfers": "Review internal bank transfers with a missing or unequal ledger cash side, or a confirmed statement match on only one side. Warnings are evidence to review, not proof that funds are missing. Results are provisional when bank statement or ledger history is incomplete.",
     "budget-actual": "Compare a saved account budget with posted account movement for the selected period or months. Open an actual to inspect its contributing entries. Recurring caps are spread by month; partial months keep their cap, and loaded-cache figures are provisional until full history is requested.",
     pnl: "Review posted income, cost of goods sold and expenses for the period. Compare periods and choose presentation columns. Incomplete loaded history makes the figures provisional.",
     "group-summary":
