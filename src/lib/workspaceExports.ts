@@ -5,6 +5,13 @@
  * No production download or tax submission action uses this formatter.
  */
 export { buildPcn874FixtureDraft as buildHistoricalPcn874Draft } from './tax/pcn874Draft';
+ * E-10: historical/year-specific US 1099 review helpers, intentionally not IRIS,
+ * printable IRS form output, or an automatic tax filing workflow.
+ * The existing workspace export path reaches this pure preview utility, while
+ * users must still obtain complete verified payment / W-9 data before filing.
+ */
+export { build1099Preview, threshold1099Cents, us1099ReviewCsvRows } from './tax/us1099Preview';
+
 import type {ChartAccount,Transaction} from '../types';
 import {isPostable,lineAmount,isCashAccount} from './txFilters';
 import {csvMoney,type CsvValue} from './csvExport';
