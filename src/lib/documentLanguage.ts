@@ -41,6 +41,8 @@ export interface DocumentWords {
   scanToPay: string; termsHeading: string;
   page: (n: number, of: number) => string;
   watermark: Record<'DRAFT' | 'VOID' | 'PAID', string>;
+  /** IL-2: Israeli documents say whether this print is the original or a copy */
+  copyMark: Record<'original' | 'copy', string>;
 }
 
 const NET = /^net_(\d{1,3})$/;
@@ -62,6 +64,7 @@ export const DOCUMENT_WORDS: Record<DocumentLanguage, DocumentWords> = {
     scanToPay: 'Scan to view and pay', termsHeading: 'Terms',
     page: (n, of) => `Page ${n} of ${of}`,
     watermark: { DRAFT: 'DRAFT', VOID: 'VOID', PAID: 'PAID' },
+    copyMark: { original: 'ORIGINAL', copy: 'TRUE COPY' },
   },
   he: {
     titles: {
@@ -79,5 +82,6 @@ export const DOCUMENT_WORDS: Record<DocumentLanguage, DocumentWords> = {
     scanToPay: 'סרקו לצפייה ולתשלום', termsHeading: 'תנאים',
     page: (n, of) => `עמוד ${n} מתוך ${of}`,
     watermark: { DRAFT: 'טיוטה', VOID: 'מבוטל', PAID: 'שולם' },
+    copyMark: { original: 'מקור', copy: 'העתק נאמן למקור' },
   },
 };

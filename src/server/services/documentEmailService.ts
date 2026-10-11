@@ -1,3 +1,5 @@
+import { takeCopyMark } from './copyMarkService';
+import type { TaxProfiles } from '../../lib/tax/profile';
 import crypto from 'crypto';
 import type { DocumentData, Firestore } from '../db/firestore';
 import { calculateAmountDue } from '../../lib/documentMath';
@@ -121,7 +123,8 @@ export async function emailInvoice(db: Firestore, input: EmailInvoiceInput) {
 
   let attachments;
   try {
-    const pdf = await generateDocumentPdf('invoice', { ...invoice, id: input.invoiceId }, workspace, { paymentUrl: values.link, language: documentLanguage(workspace.branding, customer), terms: contactTerms(customer) });
+    const copyMark = await takeCopyMark(db, 'invoice', input.invoiceId, workspace as { taxProfiles?: TaxProfiles });
+    const pdf = await generateDocumentPdf('invoice', { ...invoice, id: input.invoiceId }, workspace, { paymentUrl: values.link, language: documentLanguage(workspace.branding, customer), terms: contactTerms(customer), ...(copyMark ? { copyMark } : {}) });
     attachments = [{ filename: `invoice_${values.number}.pdf`, content: pdf, contentType: 'application/pdf' }];
   } catch {
     attachments = undefined;
