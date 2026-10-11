@@ -58,9 +58,6 @@ const SOURCES: Record<LocalRateState, string> = {
 const normalizeHeader = (value: string) =>
   value.replace(/^\uFEFF/, '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 const aliases = (names: readonly string[]) => names.map(normalizeHeader);
-const hasColumn = (headers: readonly string[], names: readonly string[]) =>
-  headers.some(column => aliases(names).includes(normalizeHeader(column)));
-
 const REQUIRED: Record<LocalRateState, readonly (readonly string[])[]> = {
   TX: [['Name', 'City County Name'], ['Local Code'], ['Local Rate', 'Total Rate']],
   CA: [['Location', 'City', 'City County'], ['Rate', 'Tax Rate', 'Total Rate']],
