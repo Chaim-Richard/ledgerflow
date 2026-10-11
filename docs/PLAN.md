@@ -148,3 +148,41 @@ The full list is in `docs/FOR_YOU.md`. The tax items:
 - **An accountant's check** of one real month of Israeli VAT and US payroll before the "not for
   filing" note comes off.
 - **Roll the old Stripe test key** (item 41).
+
+## 6. Tax follows the entity, not only the workspace (owner, 11 Oct evening)
+
+A set of books can hold several organisations as labels (the World / Entity label, or any label). Each
+one can sit somewhere different: an LLC in Texas, a company in Israel, a branch in New York City, a
+project in Eilat. So tax is decided by **who is selling, from where, to whom**, not by the workspace
+alone.
+
+**The model (Claude builds it first, before the US/Israel tables plug in):**
+
+1. **Tax profile.** A tax profile belongs to a set of books *or to a label value* (an entity, a location, a
+   branch). It holds the country, state, county, city, registration numbers (VAT number, sales tax
+   permits per state, EIN, Israeli company / dealer number), the filing frequency, and the accounting basis.
+2. **Inheritance.** A label value without its own profile uses its parent's (label hierarchy), then the
+   books' own. "The info comes from there": choose an entity on a line and its place, numbers and rules
+   fill in.
+3. **Resolution per line.** An invoice line's tax = the seller profile (the line's entity label, else the
+   books) + the buyer's address (ship-to) + the item's tax code + exemption certificates (T-05). The same
+   function serves Israel (one national rate, Eilat zero) and the US (state + county + city + district).
+4. **Returns per registration.** Each tax return (Israeli VAT report, each US state's sales tax return,
+   941 per EIN) is built from the lines whose seller profile carries that registration, across labels in
+   one set of books and across books in a group (DA-01).
+5. **Learning and checking (algorithms).** From the history LedgerFlow suggests the tax code per vendor,
+   item, entity and place; it learns from each correction (what the person changed it to is the next
+   suggestion); it flags a line whose tax differs from what the same entity, item and place usually get;
+   it warns when an entity's sales into a state approach nexus. Suggestions are never applied silently:
+   the person sees and accepts them, and the existing cross-label inference
+   (`src/lib/algorithms/cross-dimension-inference.ts`) is the base.
+
+Order for Claude: tax profile model and inheritance → line resolution → Israel (IL-1..7) on top →
+US (US-1..6) → local (L-1..3) → learning and checks. The other AIs build screens, tables and files on
+the published shapes (`src/lib/tax/profile.ts`, coming first).
+
+## 7. Speed: the other AIs finish fast
+
+The first "five days" of queue lasted about two hours (AI #5 shipped nine PRs). From now on each queue
+holds **20 or more tasks**, and Claude refills it at every check. AI #5 is for now a chat standing in
+until another AI's usage resets: its tasks are small, self-contained and come with fixtures.
