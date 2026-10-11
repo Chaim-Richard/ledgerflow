@@ -157,3 +157,9 @@ export { proposalProblem, proposalTotals, proposalText, proposalFromEstimate } f
 export { NOTE_MAX_LENGTH, noteProblem, addRecordNote, editRecordNote, notesForEntity, searchRecordNotes, notePreview, noteCountsByType } from './recordNotes';
 /** A-37 (CG-01): owner-defined extra fields on customers, vendors and items, with their list columns. */
 export { CUSTOM_FIELD_CSV_HEADERS, customFieldProblem, fieldValueProblem, coerceCustomField, customFieldValues, customFieldColumns, customFieldCsvRow, customFieldRequiredProblem } from './customFields';
+
+/**
+ * A-28 / PLAN US-1: when each state's sales-tax return is usually due (a planning table with the
+ * state's department as source) and the following-month due date, weekends moved to Monday.
+ */
+export { US_FILING_CALENDAR, US_FILING_CALENDAR_STATES, NO_STATE_FILING, filingCalendarRow, hasNoStateFiling, filingDueDate, filingCalendarProblems } from './tax/usFilingCalendar';
