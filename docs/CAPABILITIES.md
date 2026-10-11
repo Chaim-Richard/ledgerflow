@@ -137,3 +137,4 @@ One row per capability, with one label each (DA-05). The README, Help, onboardin
 | 127 | Time tracking, approval and billing | Available | `src/lib/timeEntries.ts`, `timeService.ts`, `TimeView.tsx`; `time-tracking.test.tsx` | With a timer (V-02) |
 | 128 | Own stages for invoices and bills | Available | `src/lib/stages.ts`, `stageService.ts`, `StageChip.tsx`; `stages.test.tsx` | A team mark only; no posting |
 | 129 | Backorders report | Available | `src/lib/backorders.ts`, `BackordersReportView.tsx`; `backorders.test.tsx` | Read-only; nothing reserved |
+| 130 | Hourly pay from approved time | Available | `src/lib/hourlyPay.ts`, `payRunService.ts`, `HourlyPayCell.tsx`; `hourly-pay.test.ts` | Same tax engine; no overtime rules yet |

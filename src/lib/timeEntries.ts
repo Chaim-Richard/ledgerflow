@@ -29,6 +29,8 @@ export interface TimeEntry {
   status: TimeStatus;
   note?: string;
   invoiceId?: string;
+  /** U-11: the pay run that paid this time (an hourly employee's); then it is locked */
+  paidRunId?: string | null;
   createdAt: string;
   approvedBy?: string;
   approvedAt?: string;

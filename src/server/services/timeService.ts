@@ -67,7 +67,7 @@ async function entryFor(db: Firestore, input: Actor & { entryId: string }) {
   return { ref, entry, approver: APPROVERS.includes(role), own: entry.person === input.uid, role };
 }
 
-const mayEdit = (e: { entry: Omit<TimeEntry, 'id'>; approver: boolean; own: boolean }) => e.entry.status !== 'invoiced' && (e.approver || (e.own && e.entry.status === 'open'));
+const mayEdit = (e: { entry: Omit<TimeEntry, 'id'>; approver: boolean; own: boolean }) => e.entry.status !== 'invoiced' && !e.entry.paidRunId && (e.approver || (e.own && e.entry.status === 'open'));
 
 export async function changeTime(db: Firestore, input: Actor & { entryId: string; entry: TimeInput }) {
   const found = await entryFor(db, input);
@@ -102,6 +102,7 @@ export async function moveTime(db: Firestore, input: Actor & { entryIds: string[
       || (to === 'approved' && found.approver && from === 'submitted')
       || (to === 'open' && found.approver && (from === 'submitted' || from === 'approved'));
     if (!ok) throw new TimeError(found.approver || found.own ? 409 : 403, `A ${found.entry.date} entry is ${from}: it cannot be made ${to === 'open' ? 'open again' : to}`);
+    if (found.entry.paidRunId) throw new TimeError(409, `The ${found.entry.date} entry was paid in a pay run: undo that run first`);
     const next = { ...found.entry, status: to, ...(to === 'approved' ? { approvedBy: input.uid, approvedAt: new Date().toISOString() } : {}), ...(to === 'open' && !found.own && note ? { note } : {}) };
     await found.ref.set(next);
     done.push({ ...next, id: String(entryId) });
