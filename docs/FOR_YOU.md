@@ -38,7 +38,10 @@ Last updated: 2026-10-07.
    simplest), then in Vercel → Environment Variables add `RESEND_API_KEY` and `EMAIL_FROM`
    (e.g. `invoices@yourdomain.com`, a domain you verified with the provider). For bounce reports,
    also add `EMAIL_WEBHOOK_SECRET` (any long random text) and in the provider's webhook settings
-   use `https://ledgerflow-one-pearl.vercel.app/api/v1/email-events?token=<that secret>`.
+   use `https://ledgerflow-one-pearl.vercel.app/api/v1/email-events` with an
+   `X-Email-Webhook-Secret` header holding the configured secret, **if the provider supports
+   custom headers**. Existing provider configurations using `?token=<secret>` continue to work,
+   but URLs may be stored by external proxies: migrate them where possible and rotate the secret.
    *Until then, "Email invoice" says email is not set up yet.*
 8. **Stripe (customers pay invoices online by card) — 2 steps left.** Claude connected your Stripe
    *sandbox* ("terranex sandbox", test mode: no real money): the webhook that tells LedgerFlow an
