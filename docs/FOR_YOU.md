@@ -119,7 +119,7 @@ Last updated: 2026-10-07.
     BE-04 (big invoices wait for approval) are on main, with the two fixes Claude made after
     reviewing it (L-191). BE-05 is left blocked with its reason; R-07 is its next item.
 
-**⚠ Start here — 7 database changes waiting (8 Oct).** The live database is behind the code: the
+~~**⚠ Start here — 7 database changes waiting (8 Oct).**~~ **Done: all applied 11 Oct** (Claude, through the Supabase connector, after your run: the helper move had already gone in; the other six were applied then). The live database is behind the code: the
 Supabase connector now times out even on a change that only adds a new table, so something in the
 database is most likely stuck (an index build waiting since item 25). Until these are in, stock
 history, groups of books, "require two-step login" in the database rules and the pay-run guard are
