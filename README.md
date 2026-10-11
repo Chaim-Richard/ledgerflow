@@ -75,6 +75,11 @@ LedgerFlow strictly separates data, computation, and rendering into three decoup
 
 ## ⚡ Quick Start & CLI Scripts
 
+**New here? Follow [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md)**: Node version, settings, the test
+database, running the app safely (without settings, signing in uses the *live* project; use guest mode or
+your own Supabase project) and a full bookkeeping round to check it all works. The commands below are the
+short version.
+
 ```bash
 # 1. Install dependencies
 npm install
@@ -88,7 +93,8 @@ npm run lint
 # 4. Run automated test suite
 npm test
 
-# 4b. Database tests (needs a local Postgres; CI starts one automatically)
+# 4b. Database tests (needs a local Postgres and an empty database; CI starts one automatically)
+createdb -h localhost -U postgres lf_test
 export LF_TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lf_test
 npm run db:test-setup   # apply supabase/migrations to the test database
 npm run test:rules      # row level security tests

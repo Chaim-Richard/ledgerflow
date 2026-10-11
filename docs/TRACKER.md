@@ -1563,7 +1563,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] K-36 Transaction enrichment — **done 6 Oct** (names): bank lines show a readable payee ("SQ *JOES COFFEE 4421 SEATTLE WA" → "Joes Coffee", "AMZN Mktp US*2K4L91TQ0" → "Amazon") with the bank's own text underneath and on hover, on the reconciliation screen. Card-processor prefixes, card numbers, dates, store numbers and codes are removed, well-known merchants named, Hebrew and other non-Latin text kept as written; `lineKind` tells fees, interest, refunds, transfers and payroll apart for hints. Display only: the stored line and the matching keep the bank's text (`src/lib/merchantNames.ts`, `src/components/ui/BankLineName.tsx`; tests `merchant-names.test.tsx`). Logos and learned names can follow
 - [x] K-37 Webhook delivery tracking — **done 6 Oct**: Settings → Incoming events (owners and accountants) lists, newest first and in words, what Stripe and the email provider told LedgerFlow about the workspace and what came of it: an online card payment recorded / waiting for the bank / refused (other currency, nothing paid, invoice not found), plan changes, and emails delivered, bounced or marked as spam (with the address). Filters for online payments / email delivery and "only problems". Every Stripe outcome is now kept with its workspace (before, only some were, and without the outcome); events that can't be tied to a workspace are shown to nobody. Read only, no database change (`stripeProcessedEvents`, `emailEvents`; `src/lib/incomingEvents.ts`, `GET /api/v1/workspaces/:id/incoming-events`; tests `incoming-events.test.ts` with the database, `incoming-events-ui.test.tsx`, `online-payments.test.ts`)
 - [x] K-38 Rule-group UI — **done 6 Oct** (AI #4, D-3): bank rules in named groups, each group on or off as a whole, the order inside a group (`rule-groups.test.tsx`, `e2e/rule-groups.spec.ts`); the rule actions are K-39 (AI #4's D-7)
-- [ ] K-39 Rule actions: accounts + type conversion — = AI #4's D-7; part of the rule family in Q-05 (roadmap 7 Oct, Later P1)
+- [x] K-39 Rule actions: accounts + type conversion — AI #4's D-7, ready for review in [PR #54](https://github.com/shmuelbiller1/ledgerflow/pull/54). Existing active accounts and expense/transfer classification through the recategorize route; standalone balanced two-line bank entries without tax, splits or document links. Bank line, amounts, currency and FX preserved; conflicts retain the preview and success reloads confirmed records. Part of the rule family in Q-05 (roadmap 7 Oct, Later P1).
 - [ ] K-40 OAuth provider
 
 # SECTION L — OPERATIONS & TRUST
@@ -1960,7 +1960,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] T-02 Tax groups (a tax code with several parts, e.g. GST + PST; tested)
 - [x] T-03 Reverse charge (bill carries no tax; posted as due and reclaimable; boxes 2 and 4; tested)
 - [x] T-04 Zero-rated vs exempt (treatment on the tax code; reported separately in the return)
-- [ ] T-05 Party exemption certificates
+- [x] T-05 Party exemption certificates (number and last day on the customer; the invoice says exempt and offers "Charge no tax", or that it ran out; tested)
 - [x] T-06 Tax return boxes (generic 9-box layout, home currency, credits included; tested)
 - [x] T-07 Filed-return copy (server keeps it, once per period, owners/accountants; tested)
 - [~] T-08 Late changes: changes after filing are shown box by box with the difference to report; carrying them into the next return automatically is later

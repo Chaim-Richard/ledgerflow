@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DOCUMENT_LANGUAGES, MAX_CONTACT_TERMS } from '../../lib/documentLanguage';
+import { taxExemptionOf } from '../../lib/taxExemption';
 import { Plus, Trash2, X } from 'lucide-react';
 import { useDialog } from '../../hooks/useDialog';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -32,7 +33,7 @@ export interface PartyFields {
   tags?: string[];
   contacts?: ContactPerson[];
   balanceCents?: number;
-  /** P-11, P-12: `documentLanguage` and `documentTerms`, the language and their own terms on their documents */
+  /** P-11, P-12: `documentLanguage` and `documentTerms`, the language and their own terms on their documents; T-05 `taxExemption` */
   metadata?: Record<string, unknown>;
 }
 type Party = PartyFields;
@@ -61,6 +62,7 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
     deliveryMethod: preferredDelivery(initial),
     language: typeof initial?.metadata?.documentLanguage === 'string' ? initial.metadata.documentLanguage : '',
     terms: typeof initial?.metadata?.documentTerms === 'string' ? initial.metadata.documentTerms : '',
+    exemptNumber: taxExemptionOf(initial)?.number || '', exemptUntil: taxExemptionOf(initial)?.expires || '',
     // each row keeps a key of its own while it is edited (cleanContacts drops it on save)
     contacts: (initial?.contacts || []).map(p => ({ ...p, rowKey: crypto.randomUUID() })) as Array<ContactPerson & { rowKey: string }>,
   });
@@ -92,10 +94,11 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
     // Email is what happened before anyone could choose, so it is only written when it was set before
     if (form.deliveryMethod !== 'email' || (editing && initial?.deliveryMethod)) party.deliveryMethod = form.deliveryMethod;
     if (tags.length || (editing && initial?.tags?.length)) party.tags = tags;
-    if (form.language || form.terms.trim() || initial?.metadata?.documentLanguage || initial?.metadata?.documentTerms) {
+    const exemption = form.exemptNumber.trim() ? { number: form.exemptNumber.trim(), ...(form.exemptUntil ? { expires: form.exemptUntil } : {}) } : null;
+    if (form.language || form.terms.trim() || exemption || initial?.metadata?.documentLanguage || initial?.metadata?.documentTerms || initial?.metadata?.taxExemption) {
       // the whole `metadata` is saved, so a choice taken back is simply left out
-      const { documentLanguage: _l, documentTerms: _t, ...rest } = initial?.metadata || {};
-      party.metadata = { ...rest, ...(form.language ? { documentLanguage: form.language } : {}), ...(form.terms.trim() ? { documentTerms: form.terms.trim() } : {}) };
+      const { documentLanguage: _l, documentTerms: _t, taxExemption: _x, ...rest } = initial?.metadata || {};
+      party.metadata = { ...rest, ...(form.language ? { documentLanguage: form.language } : {}), ...(form.terms.trim() ? { documentTerms: form.terms.trim() } : {}), ...(exemption ? { taxExemption: exemption } : {}) };
     }
     if (contacts.length || (editing && initial?.contacts?.length)) party.contacts = contacts;
     onSave(editing ? { ...party, id: initial!.id } : party);
@@ -182,6 +185,16 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
               <textarea rows={2} maxLength={MAX_CONTACT_TERMS} value={form.terms} onChange={e => set({ terms: e.target.value })} placeholder="Leave empty for the workspace's terms (Settings → Branding)" className={field} />
             </Labelled>
           </div>
+          {side === 'customer' && (
+            <div className="grid grid-cols-2 gap-3">
+              <Labelled labelClassName={labelClass} label="Tax exemption certificate">
+                <input type="text" maxLength={80} value={form.exemptNumber} onChange={e => set({ exemptNumber: e.target.value })} placeholder="Its number, if they don't pay tax" className={field} />
+              </Labelled>
+              <Labelled labelClassName={labelClass} label="Certificate good until">
+                <input type="date" value={form.exemptUntil} disabled={!form.exemptNumber.trim()} onChange={e => set({ exemptUntil: e.target.value })} className={field} />
+              </Labelled>
+            </div>
+          )}
           <div>
             <Labelled labelClassName={labelClass} label="Tags (separated by commas)">
               <input type="text" value={form.tags} onChange={e => set({ tags: e.target.value })} placeholder="wholesale, priority" className={field} />

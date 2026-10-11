@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { db } from '../firebase';
-import { collection, deleteDoc, doc, getDocs, query, setDoc, updateDoc, where, writeBatch } from '../lib/db/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch } from '../lib/db/firestore';
 import { dryRunRules, ruleGroupName } from '../lib/rulesEngine';
 import { describeError } from '../lib/errorRemedies';
 import { useCurrentRole } from './useCurrentRole';
@@ -13,8 +13,8 @@ import type { AutoRule, Transaction } from '../types';
  * Saving automation rules (Settings → Rules, "Create rule" in the transaction list). Rules used to
  * change only the copy in the open page: lost on reload and never seen by the rule engine after
  * it. Every change is now written to the database (autoRules, live), and "apply to existing"
- * saves the changed transactions through the server (POST /api/v1/transactions/batch, which
- * checks the role, the period lock and that entries still balance).
+ * saves ordinary changes through /transactions/batch and account/type changes through the
+ * authoritative /transactions/recategorize service.
  */
 
 /** Fields of a transaction a rule may change (rulesEngine applyRuleAction), sent when they differ. */
@@ -48,6 +48,8 @@ export function useAutoRules() {
   const canManageRules = role !== 'viewer';
   const pending = useRef(false);
   const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const applying = useRef(false);
   const currentContext = useCallback(() => {
     const auth = useAuthStore.getState();
     const workspace = auth.getCurrentWorkspace();
@@ -154,23 +156,50 @@ export function useAutoRules() {
    */
   const applyToExisting = useCallback(async (rules: AutoRule[], transactions: Transaction[]): Promise<number> => {
     if (!user || !workspaceId || !currentContext()) return 0;
-    const dry = dryRunRules(rules, transactions);
-    const byId = new Map(transactions.map(t => [t.id, t]));
-    const updates = dry.matches
-      .map(m => ({ id: m.transactionId, data: changedRuleFields(byId.get(m.transactionId) || m.txModified, m.txModified) }))
-      .filter(u => Object.keys(u.data).length > 0);
-    if (updates.length === 0) return 0;
+    if (applying.current) return 0;
+    applying.current = true;
+    setApplyError(null);
     try {
+      const workspace = useAuthStore.getState().getCurrentWorkspace();
+      const dry = dryRunRules(rules, transactions, { workspaceId, accounts: useLedgerStore.getState().accounts, currency: workspace?.currency });
+      if (dry.errors.length) throw new Error(dry.errors[0].message);
+      const byId = new Map(transactions.map(t => [t.id, t]));
+      const lastMatches = new Map(dry.matches.map(match => [match.transactionId, match]));
+      const financial = dry.matches.filter(match => match.recategorization);
+      const ordinary = dry.matches.filter(match => !match.recategorization);
+      if (financial.length && ordinary.length) throw new Error('Apply account/type rules separately from other actions. Select one group or pause the other groups.');
+      const changes = [...lastMatches.values()].flatMap(match => match.recategorization ? [match.recategorization] : []);
+      if (changes.length > 500) throw new Error('Account/type actions support at most 500 entries per run. Narrow the rule conditions.');
+      if (financial.some(match => match.recategorization!.bankAccountId !== lastMatches.get(match.transactionId)?.recategorization?.bankAccountId)) {
+        throw new Error('Rules on the same entry must preserve the same bank account.');
+      }
+      const updates = [...lastMatches.values()]
+        .map(m => ({ id: m.transactionId, data: changedRuleFields(byId.get(m.transactionId) || m.txModified, m.txModified) }))
+        .filter(u => Object.keys(u.data).length > 0);
+      if (!changes.length && !updates.length) return 0;
       const token = await user.getIdToken();
       if (!currentContext()) return 0;
-      const res = await fetch('/api/v1/transactions/batch', {
+      const res = await fetch(changes.length ? '/api/v1/transactions/recategorize' : '/api/v1/transactions/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ workspaceId, updates }),
+        body: JSON.stringify(changes.length ? { workspaceId, changes } : { workspaceId, updates }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.message || body.error || 'The changes were not saved');
+      if (!res.ok) throw new Error(`${body.message || body.error || 'The changes were not saved'}${body.entryId ? ` (entry ${body.entryId})` : ''}`);
       if (!currentContext()) return 0;
+      if (changes.length && body.changed !== changes.length) throw new Error('The server did not confirm every account change. Refresh before retrying.');
+      if (changes.length) {
+        // Re-read the accepted records; a preview is not authoritative saved state.
+        try {
+          const snapshots = await Promise.all(changes.map(change => getDoc(doc(db, 'transactions', change.id))));
+          if (!currentContext()) return changes.length;
+          const saved = new Map(snapshots.filter(snapshot => snapshot.exists()).map(snapshot => [snapshot.id, { ...snapshot.data(), id: snapshot.id } as Transaction]));
+          const cached = useLedgerStore.getState().transactions;
+          useLedgerStore.getState().setTransactions(cached.map(tx => saved.get(tx.id)?.workspaceId === workspaceId ? saved.get(tx.id)! : tx));
+        } catch {
+          toast.info('Account changes were saved. Reload to see the latest entries.');
+        }
+      }
       const now = new Date().toISOString();
       await Promise.all(Object.entries(dry.summary.rulesTriggered).map(([ruleId, hits]) => {
         const rule = rules.find(r => r.id === ruleId);
@@ -178,12 +207,13 @@ export function useAutoRules() {
           ? updateDoc(doc(db, 'autoRules', ruleId), { hitCount: (rule.hitCount || 0) + hits, lastTriggeredAt: now }).catch(() => undefined)
           : undefined;
       }));
-      return updates.length;
+      return changes.length || updates.length;
     } catch (err) {
+      if (currentContext()) setApplyError(err instanceof Error ? err.message : 'The changes were not saved.');
       fail(err);
       return 0;
-    }
+    } finally { applying.current = false; }
   }, [user, workspaceId, currentContext]);
 
-  return { saveRule, setRuleActive, deleteRule, applyToExisting, updateGroup, setRulePriority, isUpdatingGroup };
+  return { saveRule, setRuleActive, deleteRule, applyToExisting, updateGroup, setRulePriority, isUpdatingGroup, applyError };
 }
