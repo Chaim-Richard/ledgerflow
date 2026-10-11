@@ -347,6 +347,7 @@ export const DASHBOARD_KPI_REGISTRY: DashboardKpiDefinition[] = [
 ];
 
 export const REPORT_COMPONENTS: Record<string, ElementType> = {
+  'AssetRegisterReportView': lazy(() => import('../components/reporting/AssetRegisterReportView')),
   'BudgetActualReportView': lazy(() => import('../components/reporting/BudgetActualReportView')),
   'PNLView': lazy(() => import('../components/ledger/ProfitAndLossView')),
   'BalanceSheetReportView': lazy(() => import('../components/ledger/BalanceSheetView')),
@@ -408,6 +409,7 @@ export const LENS_COMPONENTS: Record<string, ElementType> = {
   'ToolSandbox': lazy(() => import('../components/platform/ToolsCatalog'))
 };
 export const REPORT_TABS_REGISTRY = withScreenHelp([
+  { id: 'asset-register', label: { en: 'Asset Register', he: 'רשימת רכוש קבוע' }, componentName: 'AssetRegisterReportView', icon: Building },
   { id: 'budget-actual', label: { en: 'Budget vs Actual', he: 'תקציב מול ביצוע' }, componentName: 'BudgetActualReportView', icon: Target },
   { id: 'pnl', label: { en: 'Profit & Loss', he: 'רווח והפסד' }, componentName: 'PNLView', icon: Activity },
   { id: 'balance-sheet', label: { en: 'Balance Sheet', he: 'מאזן' }, componentName: 'BalanceSheetReportView', icon: Layers },
