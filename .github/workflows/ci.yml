@@ -11,8 +11,9 @@ on:
 
 # a second run of the same branch stops the one still going (no double billing)
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'branch' }}
+  # runs on main always finish (each push is checked); a branch's older run stops
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   validate:

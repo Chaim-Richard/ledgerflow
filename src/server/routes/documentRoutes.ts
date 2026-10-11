@@ -1,3 +1,5 @@
+import { takeCopyMark } from '../services/copyMarkService';
+import type { TaxProfiles } from '../../lib/tax/profile';
 import { errorMessage, requestUser } from '../auth/requestUser';
 import express from 'express';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
@@ -97,7 +99,8 @@ export async function handleZipRequest(req: express.Request, res: express.Respon
       let name = `${base}.pdf`;
       for (let n = 2; used.has(name); n++) name = `${base}_${n}.pdf`;
       used.add(name);
-      files.push({ name, data: await generateDocumentPdf(body.type, loaded.docData, workspace, { paymentUrl: loaded.paymentUrl, ...(await contactStyle(db, workspace, loaded.docData, body.workspaceId)) }) });
+      const copyMark = await takeCopyMark(db, body.type, id, workspace as { taxProfiles?: TaxProfiles });
+      files.push({ name, data: await generateDocumentPdf(body.type, loaded.docData, workspace, { paymentUrl: loaded.paymentUrl, ...(await contactStyle(db, workspace, loaded.docData, body.workspaceId)), ...(copyMark ? { copyMark } : {}) }) });
     }
     if (files.length === 0) return res.status(404).json({ status: 'error', message: 'None of these documents were found' });
     res.setHeader('Content-Type', 'application/zip');
@@ -151,7 +154,8 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
       style = { language: documentLanguage(workspace.branding, statement.contact), terms: contactTerms(statement.contact) };
     }
 
-    const pdfBuffer = await generateDocumentPdf(type, docData, workspace, { paymentUrl, ...(style || await contactStyle(db, workspace, docData, workspaceId)) });
+    const copyMark = type === 'statement' ? undefined : await takeCopyMark(db, type, id, workspace as { taxProfiles?: TaxProfiles });
+    const pdfBuffer = await generateDocumentPdf(type, docData, workspace, { paymentUrl, ...(style || await contactStyle(db, workspace, docData, workspaceId)), ...(copyMark ? { copyMark } : {}) });
 
     if (req.query.format === 'json' || req.headers.accept?.includes('application/json')) {
       return res.json({

@@ -1,3 +1,4 @@
+import { isWithholdingAccount } from '../../lib/tax/withholding';
 import { calculateAmountDue, settledStatus } from '../../lib/documentMath';
 import { writeServerAuditLog } from './auditLogService';
 import { resolveAccountRole } from '../../lib/accountUtils';
@@ -25,6 +26,10 @@ export interface CreatePaymentPayload {
   paymentExchangeRate?: number;
   /** A deposit for this estimate (BE-05): the customer's own, not yet converted; it waits unapplied until the invoice is issued. */
   estimateId?: string;
+  /** IL-5: tax withheld at source from a payment to a vendor (home currency): the vendor gets the rest, the tax authority is owed this */
+  withheldCents?: number;
+  withholdingRatePercent?: number;
+  withholdingCertificate?: string;
   allocations: Array<{
     documentId: string;
     documentType: 'invoice' | 'bill';
@@ -272,6 +277,18 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       if (!fxAccount) throw new Error('Add an exchange gain/loss account (category "Rounding Differences") before recording a payment at a different rate');
     }
 
+    // IL-5: tax withheld at source: out of what settles the bills, the vendor is paid the rest and the
+    // withheld tax is owed (a liability) until it is paid to the tax authority
+    const withheld = Math.round(Number(payload.withheldCents || 0));
+    let withholdingAccount: { id: string } | undefined;
+    if (withheld !== 0) {
+      if (isReceipt) throw new Error('Tax is withheld at source only on payments to vendors');
+      if (!Number.isFinite(withheld) || withheld < 0 || withheld >= amountCents) throw new Error('The tax withheld is more than nothing and less than the payment');
+      if (paymentRate !== 1 || realizedFxCents !== 0) throw new Error('Tax withheld at source is in the home currency only for now');
+      withholdingAccount = (await chartAccounts()).find((a: ChartAccount) => isWithholdingAccount(a));
+      if (!withholdingAccount) throw new Error('Add a liability account for tax withheld at source (for example "Tax withheld at source") first');
+    }
+
     const ledgerTxData = {
       id: ledgerTxRef.id,
       uid,
@@ -293,9 +310,14 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       lines: [
         {
           accountId: cashAccountId,
-          amountCents: isReceipt ? cashBaseCents : -cashBaseCents,
+          amountCents: isReceipt ? cashBaseCents : -(cashBaseCents - withheld),
           description: `Cash ${isReceipt ? 'Debit' : 'Credit'} for Payment ${paymentId}`
         },
+        ...(withholdingAccount ? [{
+          accountId: withholdingAccount.id,
+          amountCents: -withheld,
+          description: `Tax withheld at source for Payment ${paymentId}`
+        }] : []),
         // (no line when all of it waits as a deposit/prepayment)
         ...(offsetBaseCents !== 0 || !advance ? [{
           accountId: resolvedOffsetAccountId,
@@ -317,6 +339,11 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     };
 
     if (realizedFxCents !== 0) Object.assign(paymentData, { paymentExchangeRate: dayRate, realizedFxCents });
+    if (withheld) Object.assign(paymentData, {
+      withheldCents: withheld,
+      ...(payload.withholdingRatePercent !== undefined ? { withholdingRatePercent: payload.withholdingRatePercent } : {}),
+      ...(payload.withholdingCertificate ? { withholdingCertificate: payload.withholdingCertificate } : {}),
+    });
     paymentNumber = await allocateInTransaction(db, tx, workspaceId, 'payment');
     paymentData.number = paymentNumber;
 

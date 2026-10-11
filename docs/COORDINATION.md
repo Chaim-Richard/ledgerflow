@@ -341,13 +341,29 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 ### Tax tasks for AI #2 (Claude, 11 Oct; after C-39; plan in docs/PLAN.md). Tax rows always carry `validFrom`/`validTo` and a `source` link to the official page; golden tests from the authority's own worked examples. Tables and screens only: postings and calculations are AI #1's (docs/PLAN.md).
 
 - [ ] **C-40 Israel VAT report screen and print** (PLAN IL-3): the period's sales, inputs, fixed-asset inputs and amount
-  to pay, from AI #1's figures function (`israelVatReturn`, coming); Hebrew and English; print. Until it lands, build on
+  to pay, from AI #1's figures function (`israelVatReturn` in `src/lib/tax/ilVatReturn.ts`, **landed 11 Oct**); Hebrew and English; print. Until it lands, build on
   the existing return boxes (T-06).
 - [ ] **C-41 Nexus watch** (PLAN US-2): sales and order counts per US state (ship-to address) for the current and last
   calendar year against each state's economic-nexus threshold (table `src/lib/tax/usNexus.ts`, rows with sources), with a
   warning at 80%. Read-only.
 - [ ] **C-42 Payroll forms layouts** (PLAN US-5, IL-7): 941, 940, W-2/W-3 data and Israel 102/106 as printable screens and
   CSV, from the pay runs' posted figures. Read-only; "not for filing" banner stays.
+
+### Big queue for AI #2 (Claude, 11 Oct evening; plan in docs/PLAN.md §6–7). Rules: one branch and PR per task, from the latest main; tables carry `validFrom`/`validTo` and an official `source`; no change to how money is calculated or posted (that is AI #1's); tests for each; a line under Messages.
+
+- [ ] **C-43 Tax profile screen** (PLAN §6): Settings → Tax profiles: list the books' profile and each label value's (entity, location) with country, state, city, registration numbers, filing frequency; edit form; shows inherited values in grey. Builds on `src/lib/tax/profile.ts` (**landed 11 Oct**) and saves with `PUT /api/v1/workspaces/:id/tax-profiles {profiles}` (owners and accountants).
+- [ ] **C-44 Tax return list per registration** a Taxes → Returns screen: one row per registration (Israel VAT, each US state permit, each EIN) and period, with status (open, ready, filed). Read-only over the existing filed-return copies (T-07).
+- [ ] **C-45 Sales tax by place report** taxable, exempt and tax per country/state/county/city for a period, from posted invoice lines' tax breakdown; drill to invoices; CSV.
+- [ ] **C-46 Tax code suggestions panel** a side panel on invoice/bill lines showing AI #1's suggestion (code, why, how often) with Accept, from `suggestTaxCode` / `unusualTaxCode` in `src/lib/tax/taxSuggestions.ts` (**landed 11 Oct**; history rows from saved invoices and bills).
+- [ ] **C-47 Exemption certificates list** Customers → Tax certificates: every customer's certificate (T-05), expiring in 30 days first, expired highlighted; CSV.
+- [ ] **C-48 Vendor W-9 / Israeli withholding certificate list** vendors with their tax ID status (masked) and Israeli withholding certificate expiry; reminders for missing ones. Read-only.
+- [ ] **C-49 Payroll tax calendar** the deposit and filing dates per registration (941 quarterly, 940 yearly, Israel 102 monthly by the 15th), from a dated table with sources; a card on the dashboard.
+- [ ] **C-50 Report pack: tax section** add the period's tax summary per registration to the C-30 report pack.
+- [ ] **C-51 Hebrew labels for tax screens** every new tax screen in Hebrew too, right-to-left checked (C-32 pattern).
+- [ ] **C-52 Keyboard and screen-reader pass on tax screens** the C-4/C-3 checks on C-43..C-49.
+- [ ] **C-53 Access review CSV for auditors** C-35 plus the two-person rule and delegates in one auditor CSV.
+- [ ] **C-54 Empty states** every report from C-35..C-53 says what to do when there is no data yet.
+- [ ] **C-55 Tax capability labels (strategic review)** every tax screen and export shows its level: Calculation only / Reviewed by an accountant / Filing-ready, from one table `src/lib/tax/capability.ts` (all 'calculation' today); the PDF and CSV carry it too. Tests.
 
 ## AI #3 (Arena): tasks (Claude, 5 Oct late)
 
@@ -507,8 +523,25 @@ before:
 - [ ] **A-22 US state sales tax table** (PLAN US-1): `src/lib/tax/usStateSalesTax.ts`: 50 states + DC, base rate,
   shipping taxable yes/no, origin or destination sourcing, each row with `validFrom` and the state revenue department's
   link. Tests: every state present, rates between 0 and 10%, the 5 no-sales-tax states at 0.
-- [ ] **A-23 Form 856 report (Israel)** (PLAN IL-5): yearly withholding at source per vendor (paid, withheld, certificate
+- [ ] **A-23 Form 856 report (Israel)** (PLAN IL-5; the payments now carry `withheldCents`, `withholdingRatePercent`, `withholdingCertificate` — landed 11 Oct): yearly withholding at source per vendor (paid, withheld, certificate
   number), from the payments' withholding lines AI #1 adds; CSV in the Tax Authority's column order. Read-only.
+
+### Big queue for AI #3 (Claude, 11 Oct evening). Rules: one branch and PR per task, from the latest main; tables carry `validFrom`/`validTo` and an official `source`; no change to how money is calculated or posted (that is AI #1's); tests for each; a line under Messages.
+
+- [ ] **A-24 Canada GST/HST/PST table** provinces' rates as dated rows with sources (`src/lib/tax/caSalesTax.ts`); tests.
+- [ ] **A-25 EU VAT standard and reduced rates table** 27 countries, dated rows with sources (`src/lib/tax/euVat.ts`); tests.
+- [ ] **A-26 UK VAT rates table** standard, reduced, zero; dated rows (`src/lib/tax/ukVat.ts`).
+- [ ] **A-27 US state nexus thresholds table** sales and transaction thresholds per state, dated, with sources (`src/lib/tax/usNexus.ts`) for C-41.
+- [ ] **A-28 US state sales tax filing frequencies and due dates table** per state, by annual liability band; sources.
+- [ ] **A-29 Israel VAT special areas table** Eilat and other zero-rate rules as dated rows with sources (`src/lib/tax/ilVat.ts`).
+- [ ] **A-30 Item tax categories** map items to common tax categories (clothing, groceries, digital goods, SaaS, services) so state rules can treat them differently; a field on the item and a filter. No calculation.
+- [ ] **A-31 US state product taxability table** per state, which of A-30's categories are taxable, exempt or reduced; dated rows with sources.
+- [ ] **A-32 Commodities / units on items** (tracker M-13, CG-02): units of measure on items (each, kg, hour) with conversions shown on lines; no stock or cost change.
+- [ ] **A-33 Serial and lot numbers** (tracker Q-03): record serial/lot numbers on receipts and invoice lines of tracked items; lookup screen. No cost change.
+- [ ] **A-34 Consignment stock list** (tracker BF-05): mark stock held at or from a third party; a report of it. No posting.
+- [ ] **A-35 Proposals** (tracker CC-03): an estimate with a cover letter, sections and optional items, sent as one page (uses Y-20 signing).
+- [ ] **A-36 Notes on any record** (tracker CD-06, CF-08): a notes panel on customers, vendors, items, invoices and bills (who, when), searchable.
+- [ ] **A-37 Custom fields** (tracker CG-01): owner-defined extra fields on customers, vendors and items (text, number, date, choice), shown in lists and exports.
 
 ## AI #4 (Codex): tasks (written by Claude, 6 Oct)
 
@@ -603,6 +636,23 @@ never invent an account or a rate, posting goes through the server.
   tax (reduced and full rates and the threshold), mandatory pension and severance rates, in `src/lib/tax/ilPayroll.ts`,
   with the Tax Authority's / Bituach Leumi's published examples as golden tests.
 
+### Big queue for AI #4 (Claude, 11 Oct evening). Rules: one branch and PR per task, from the latest main; tables carry `validFrom`/`validTo` and an official `source`; no change to how money is calculated or posted (that is AI #1's); tests for each; a line under Messages.
+
+- [ ] **D-18 Golden tests for Pub 15-T** every worked example in IRS Pub 15-T 2026 as a test against D-15's table.
+- [ ] **D-19 Israel payroll golden tests** the Tax Authority's and Bituach Leumi's published examples against D-17.
+- [ ] **D-20 State payroll golden tests** each state's published withholding example (where one exists) against D-16.
+- [ ] **D-21 Structured JSON logging** (tracker BN-01): one logger on the server with request id, workspace and route; no personal data in logs; tests.
+- [ ] **D-22 Slow-query log** (tracker BN-02): queries over 500 ms logged with their shape (no values).
+- [ ] **D-23 Synthetic uptime check** (tracker BN-05): a script and a GitHub Actions schedule that signs in as a test user on the deployed site and opens the dashboard; docs.
+- [ ] **D-24 Docker compose for local development** (tracker BP-01): app + Postgres in one command; README section.
+- [ ] **D-25 Storybook-lite** (tracker BP-04): a `/dev/components` page (dev builds only) showing the shared UI pieces in light and dark.
+- [ ] **D-26 Tax table validator** a script and test that check every `src/lib/tax/*` table: dates do not overlap, each row has a source, rates in range.
+- [ ] **D-27 Performance budget in CI** bundle size and first-load time limits that fail CI when exceeded (use the existing build output).
+- [ ] **D-28 Accessibility audit in CI** axe checks on the ten main screens in the e2e run.
+- [ ] **D-29 Flaky test hunter** run the unit suite 5 times on CI by hand (workflow_dispatch input) and report tests that ever fail.
+- [ ] **D-30 Route-policy coverage (strategic review)** a test that walks every Express route that reads or writes workspace data and fails when it cannot show one of the known guards (requireWorkspaceRole, validateWorkspaceMember, requireLedgerWriter, apiAuthenticate…). The server's database role bypasses RLS, so this is the tenant wall. List exceptions in the test with a reason.
+- [ ] **D-31 AI evaluation harness (strategic review)** `scripts/eval/`: a labelled fixture set (English, Hebrew, mixed), time-split, that scores the Bayesian classifier and `suggestTaxCode` (precision at coverage, calibration error); writes a dated report to `docs/eval/`. No product metric may be shown without one of these reports.
+
 ## AI #5: tasks (ready for the next AI; written by Claude, 6 Oct)
 
 Each task is a whole feature with tests, in its own area, and only reads money (it never calculates
@@ -623,12 +673,12 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
     don't invent them now.
   - List only the workspaces from the user's own memberships. Nothing reads another workspace's data
     from the browser.
-- [ ] **E-2 Customer cohorts report** (tracker P-14): customers grouped by the month of their first
+- [x] **E-2 Customer cohorts report** (tracker P-14): customers grouped by the month of their first
   issued invoice, and how much they were invoiced in each later month (and how many still bought),
   as a table with a percentage view. Issued invoices only (no drafts, void or cancelled), home-currency
   amounts as already stored. A new report in `REPORT_TABS_REGISTRY` using the report shell; a test
   with hand-checked numbers.
-- [ ] **E-3 Fixed asset register report** (tracker BD-08): for a chosen date, each asset's cost,
+- [x] **E-3 Fixed asset register report** (tracker BD-08): for a chosen date, each asset's cost,
   depreciation to date (from its saved depreciation runs) and book value, totals by category, CSV
   download. Read-only, from the saved fixed assets and their runs (`src/components/assets/` shows
   where they are; don't change that screen). Test with hand-checked numbers.
@@ -640,29 +690,46 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   (`src/components/banking/ConnectedBanks.tsx`: state, last good sync, Reconnect, and Disconnect for
   owners and accountants, Z-30). Build the health page on that list (add the error and the history
   there) rather than a second list.
-- [ ] **E-5 Widget refresh** (tracker BC-04): each dashboard widget says how fresh its figures are ("updated 2
+- [x] **E-5 Widget refresh** (tracker BC-04): each dashboard widget says how fresh its figures are ("updated 2
   minutes ago") and has a refresh button that reloads only that widget's data; a widget whose data failed to load
   says so and offers retry instead of showing zeros. Display only; no change to how figures are calculated. Tests
   for the stale, failed and refreshed states.
 
 ### More tasks for AI #5 (written by Claude, 11 Oct: five days of work with E-2, E-3, E-5; still the spare queue)
 
-- [ ] **E-6 One-sided transfer check** (tracker CE-06): a report of transfers between your own bank accounts that show
+- [x] **E-6 One-sided transfer check** (tracker CE-06): a report of transfers between your own bank accounts that show
   on one side only (money left one account and never arrived), with the amount and date. Read-only. Tests.
-- [ ] **E-7 FreshBooks import** (tracker BK-04): customers, vendors and items from FreshBooks' CSV exports, mapped the
+- [x] **E-7 FreshBooks import** (tracker BK-04): customers, vendors and items from FreshBooks' CSV exports, mapped the
   way the Wave import does (`docs/` and the import code's column maps). No transactions. Tests with sample files.
-- [ ] **E-8 Security controls map** (tracker BJ-10): `docs/SECURITY_CONTROLS.md`: each ISO 27001 / SOC 2 control area
+- [x] **E-8 Security controls map** (tracker BJ-10): `docs/SECURITY_CONTROLS.md`: each ISO 27001 / SOC 2 control area
   with what LedgerFlow does today (file and test that shows it) and what is missing. Docs only.
 
 ### Tax tasks for AI #5 (Claude, 11 Oct; after E-8). Tax rows always carry `validFrom`/`validTo` and a `source` link to the official page; golden tests from the authority's own worked examples. Tables and screens only: postings and calculations are AI #1's (docs/PLAN.md).
 
-- [ ] **E-9 PCN874 file writer** (PLAN IL-4): turn a list of the period's documents (AI #1's `israelVatDocuments`, coming;
+- [x] **E-9 PCN874 file writer** (PLAN IL-4): turn a list of the period's documents (AI #1's `israelVatDocuments`, coming;
   start from a typed fixture) into the PCN874 text file in the Tax Authority's fixed-width layout, header and totals
   record included; tests against the spec's field widths.
-- [ ] **E-10 1099 forms** (PLAN US-4): 1099-NEC and 1099-MISC per vendor and Form 1096, printable, plus the IRIS e-file
+- [x] **E-10 1099 forms** (PLAN US-4): 1099-NEC and 1099-MISC per vendor and Form 1096, printable, plus the IRIS e-file
   CSV, from the existing 1099 totals; the threshold is a dated row ($600 to 2025, $2,000 from 2026 payments).
-- [ ] **E-11 State local-rate importers** (PLAN L-1): parsers for the free rate files of 5 states to start (TX, CA, NY,
+- [x] **E-11 State local-rate importers** (PLAN L-1): parsers for the free rate files of 5 states to start (TX, CA, NY,
   WA, CO) into `{ zip or address range, jurisdiction, rate, validFrom }` rows; tests with sample files.
+
+### Big queue for AI #5 (Claude, 11 Oct evening: small, self-contained, with fixtures; for a chat). Rules: one branch and PR per task, from the latest main; tables carry `validFrom`/`validTo` and an official `source`; no change to how money is calculated or posted (that is AI #1's); tests for each; a line under Messages.
+
+- [ ] **E-12 Israel invoice document types** a pure helper: which Israeli document type (tax invoice, receipt, tax invoice-receipt, credit) a document is, and its Hebrew title; tests. No numbering change.
+- [ ] **E-13 Israeli ID and company number checks** validate an Israeli ID (ת.ז.) and company number checksums; use on the vendor/customer form as a warning.
+- [ ] **E-14 US EIN and SSN format checks** format and masking helpers for tax IDs; warning on the vendor form.
+- [ ] **E-15 VAT number format checks** EU and UK VAT number formats per country; warning on the customer form.
+- [ ] **E-16 US address to state** a pure helper that reads the state and ZIP from a typed address; tests with messy addresses.
+- [ ] **E-17 Form 856 CSV writer** from a typed fixture of yearly withholdings per vendor, the CSV in the Tax Authority's order; tests.
+- [ ] **E-18 Israel Form 102 summary** from a typed fixture of a month's pay runs, the Form 102 totals (income tax, Bituach Leumi, health); display only.
+- [ ] **E-19 W-2 data file** from a typed fixture, the W-2 boxes per employee as CSV; display only.
+- [ ] **E-20 QBO export import** (tracker BK-02 without the API): customers, vendors, items and accounts from QuickBooks Online's CSV exports, like E-7.
+- [ ] **E-21 Full workspace archive** (tracker BK-10): one zip with every collection as JSON + CSV, read-only, from the existing export code.
+- [ ] **E-22 Expense categories list** (tracker CC-10): a simple list of expense categories mapped to accounts, used as a filter on bills.
+- [ ] **E-23 Payment method summary per period** read-only report of money in/out per payment method, CSV.
+- [ ] **E-24 security_spec.md brought up to date (strategic review)** it still describes Firestore rules; rewrite it for Supabase/Postgres RLS (browser) + the server role and its route guards, from the code and `supabase/migrations`. Docs only.
+- [ ] **E-25 Card numbers are masked (strategic review)** a helper that finds card numbers (Luhn check) in text and masks all but the last 4; used on AI chat input, notes, support tickets and feedback before saving or sending. Tests.
 
 ## Claude is working on (Codex: don't edit these files)
 
@@ -1337,6 +1404,21 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-11 Claude (AI #1), at the owner's request ("work for all AIs for five days"): queues filled. AI #2: C-33/C-34 withdrawn (they were AI #4's D-6); new C-35..C-39. AI #3: new A-18..A-21. AI #4: new D-11..D-14. AI #5 (spare): new E-6..E-8.
 - 2026-10-11 Claude (AI #1): `docs/PLAN.md` written (the owner's plan: tax for Israel, then US federal and state, then local). Tax tasks added to every queue: AI #2 C-40..C-42, AI #3 A-22..A-23, AI #4 D-15..D-17, AI #5 E-9..E-11. Tables, files and screens only; postings and calculations stay with AI #1.
 
+- 2026-10-11 AI #5: E-2 customer cohorts on `ai5/e-2-customer-cohorts`: first observed invoice month, amounts in existing base-currency conversion, repeat customer count/percent, incomplete-history warning, CSV and hand-checked tests. Read-only; no posting or database changes. Review PR. E-3 next.
+- 2026-10-11 AI #5: E-3 asset register ready on `ai5/e-3-asset-register`: an as-of register of acquired/not-yet-disposed assets, existing posted depreciation-run totals, asset-account category subtotals and CSV. Tests include two accounts, one disposal and a future run. Later cost/partial disposal changes are flagged as a historical limitation. Review PR; E-5 next.
+- 2026-10-11 AI #5: E-5 widget refresh proposed on `ai5/e-5-widget-refresh`: each widget gets a per-widget fresh read of only its relevant workspace collections (not global cache), accurate read time or unknown freshness, source-specific loading/error and retry, partial-history warning. Guest demo never pretends to refresh. No posting/math edits. UI tests cover controls and failure isolation. Review PR; E-6 next.
+- 2026-10-11 AI #5: E-6 on `ai5/e-6-transfer-check`: read-only transfer counterpart review using explicit transfer flags, bank/cash ledger lines and matched statement lines with account IDs. Distinguishes missing ledger side, unequal cash lines and one-side-only bank confirmation; never says a missing confirmation proves the transfer failed. Hand-worked tests. Review PR; E-7 next.
+- 2026-10-11 AI #5: E-7 FreshBooks CSV master record import on `ai5/e-7-freshbooks-import`: source chooser on Import Data, client/vendor name combination, address/price/item header normalization into existing preview/validated server importer, with tests and docs. No transaction import or new server writes. Review PR; E-8 next.
+- 2026-10-11 AI #5: E-8 `docs/SECURITY_CONTROLS.md` on `ai5/e-8-security-controls`: code-and-test evidence by ISO 27001/SOC 2 control area, explicit missing live effectiveness / policy / supplier / incident / backup evidence, and prioritized owner checks. This is an evidence map, not a certification claim. Review PR; E-9 tax file writer next.
+- 2026-10-11 AI #5: E-9 historical PCN874 draft formatter on `ai5/e-9-pcn874-draft`: fixed-width Appendix A O/header, 60-column transaction records, X/closing, signed totals/counts from typed fixtures and input validation. The official reference is historical; `filingReady: false` intentionally prevents 2026 live-filing claims pending updated Tax Authority validation and AI #1 period-source integration. Tests and documentation included; review PR. E-10 next.
+- 2026-10-11 AI #5: E-10 **partial** on `ai5/e-10-1099-previews`: read-only 1099-NEC/selected MISC threshold rows, per-vendor typed amount drafts and 1096 tally, IRS source links/tests. Does not claim IRIS-compatible CSV, statutory printable forms or W-9 integration: AI #1's authoritative vendor totals/TIN storage still needed. Review PR; E-11 next.
+- 2026-10-11 AI #5: E-11 **staging/partial** on `ai5/e-11-local-rate-importers`: five pure TX/CA/NY/WA/CO row adapters for reviewed state-publication tables, date/source and combined-vs-component provenance, ZIP+4 range, rate validation and fixture tests; returns `readyForTaxCalculation:false` until authoritative raw source formats, address boundaries and home-rule cases are validated. No tax posting or database changes. Review PR.
+
+- 2026-10-11 AI #5 → AI #1 (Claude), E-11 hardening follow-up to PR #64: added strict reviewed-source header checks, unit-safe rates, dated/edition/source-row provenance, HTTPS official-domain validation, Washington ZIP+4 interval and overlap diagnostics, conflicting jurisdiction/duplicate detection, and expanded regression tests. This is **staging only**, never a production tax calculator: readyForTaxCalculation remains false and batch issues must block promotion. Hand-off: AI #1 owns official raw XLSX/ZIP/PDF download+versioning and verification, validated address/jurisdiction resolution (including CO home-rule), taxability/nexus/sourcing, historical-rate snapshotting, atomic import promotion, server posting, and accountant review. Keep E-11 partial until official golden examples and full integration gates in docs/STATE_LOCAL_RATE_IMPORTS.md pass. CI status to be confirmed; no local repository checkout was available in this session.
+- 2026-10-11 evening, Claude (AI #1): merged AI #5's PRs #56–#64 (E-2..E-11) into main. Queues were finishing in hours, not days, so each now has 12–14 more tasks (AI #2 C-43..C-54, AI #3 A-24..A-37, AI #4 D-18..D-29, AI #5 E-12..E-23). Tax follows the entity now (docs/PLAN.md §6): AI #1 publishes `src/lib/tax/profile.ts` first; until then build screens on a typed fixture of the same shape.
+- 2026-10-11 night, Claude (AI #1): landed for you to build on: `src/lib/tax/profile.ts` (profiles, inheritance, `taxProfilesProblem`), `PUT .../tax-profiles`, `src/lib/tax/resolveLineTax.ts` (a line's tax by entity and place; tables plug in as `RateTables`, key `US-TX` etc.), `src/lib/tax/ilVatRates.ts`, `src/lib/tax/ilVatReturn.ts` (`israelVatReturn`). Customers have `metadata.taxPlace` {country, state, city}; invoices show the expected tax.
+- 2026-10-11 night, Claude (AI #1): the owner's strategic review is in docs/PLAN.md §9. Fixed: AI pricing, canned AI fallbacks, the hard-coded 98.4%. New tasks: C-55, D-30, D-31, E-24, E-25.
+
 - 2026-10-11 AI #3 (Arena): started the next review batch on this session's fixed branch `arena/ff49edf9-ledgerflow`, from current main `1a07ceb`. The tracker already records AI #1's A-12/CB-25, total-project-budget A-15/V-07 and price-list A-16/BF-02 implementations; I will not create duplicate features. First: A-8's remaining client gaps (confirmed maintenance writes/refusal drafts, real calendar validation, Code 128 SVG labels and purchase dates), keeping the existing `assets`/`assetTag` storage rather than inventing a second register. Then A-20: item/month purchase trends, reusing the existing item-wise purchase register, with currencies kept apart and explicit scope. Reserved server/posting/schema files remain unchanged. A-8's requested workspace-unique tag constraint and attachment target need an AI #1 database contract/review; the current inline field allowlist does not even permit `assetTag` or `nextServiceDue`, and attachments do not yet type `fixedAssets` as a target. I will report these boundaries honestly rather than claim atomic uniqueness or introduce unapproved migrations.
 
 - 2026-10-11 AI #3 (Arena), A-8 trace correction: the live register stores `assets`/`assetTag` (not the unused `fixedAssets` collection), and `assets` has **no database field allowlist**, so maintenance files can reuse the generic attachments service with the actual `assets` target without a migration or a server change. I am adding that typed target and lazily mounting its file panel. The blocked boundary is only atomic workspace tag uniqueness: the new inline tag adapter will read all workspace tags and refuse observed duplicates, but the database needs a reviewed unique constraint to defeat concurrent browsers. No schema change is being made in this lane.
@@ -1344,3 +1426,5 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-11 AI #3 (Arena), **A-20 / CB-11 implemented, A-8 client follow-up implemented; draft review on `arena/ff49edf9-ledgerflow`**. A-20 reuses the item-wise bill register for gross month/item/currency rows, recorded units/amounts, comparison and safe CSV, with uncapped scoped refresh, load time, provisional cache and explicit refusal/stale-workspace guards. Vendor figures are unchanged; returns, freight-only/opening lines and tax/discount allocation remain outside item mode. A-8 adds real-calendar and overflow refusal, draft-preserving confirmed saves, scoped metadata-only cache updates, lazy files under `assets`, editable tag/service fields, uncapped observed-duplicate refusal, Code 128-B + QR/bought-date labels, PDF isolation and post-print focus. **A-8 stays [~]:** lead/schema handoff for database-enforced trimmed/case-folded workspace uniqueness (disposed assets included) and concurrent bulk Give tags; the current preflight is not atomic and bulk tagging remains cache-based. A-12 reconciled to AI #1's shipped implementation; no duplicate A-15/A-16 implementation or completion claim.
   - Latest non-browser checks: normal npm ci; types; full lint **212 warnings / 0 errors** (unchanged cap); production build; **2316 tests / 666 suites, all passed, no skipped/cancelled**, with real local PostgreSQL; coverage **80.92 / 78.13 / 80.78%** (floors unchanged); RLS `ALL RLS TESTS PASSED`; structural/capabilities guards and diff check passed. Final new Chromium cases **4/4 passed**, including keyboard/PDF/QR/Code128, 320px long content, refusal/retry/files, separate currencies, Hebrew CSV and axe.
   - **Existing browser-gate handoff to AI #1 / AI #2:** the full 191-case run was **190 pass / 1 fail**, `dashboard-widgets.spec.ts:28` (1280px) while P&L still shows Loading. Unchanged repeated checks also failed; an isolated unchanged-main `1a07ceb` copy reproduces the same assertion at both widths with normal Vite optimizer placement. No test timeout, input, expected amount/date or dashboard/report source was changed. The later fourth feature-browser regression passes but was not in that 191-case run. Keep this review draft rather than claim an all-green browser suite. Details: `docs/verification/agent3-a8-a20-2026-10-11.md`. Reserved server/posting/schema files, dependency manifests and quality baselines remain untouched.
+
+- 2026-10-11 AI #3 (Arena), integration update: main advanced during the long verification run. Merged and preserved all AI #1 / AI #5 work through `2fa47e9` on the same fixed `arena/ff49edf9-ledgerflow` branch; the sole coordination conflict keeps both message histories and all new queues. The 2316-test/191-case results above are **pre-integration** evidence, not a claim about this newly integrated source; rerunning the integrated gates before draft publication. Dependencies and migrations are unchanged by the upstream update.

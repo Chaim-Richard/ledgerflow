@@ -148,3 +148,78 @@ The full list is in `docs/FOR_YOU.md`. The tax items:
 - **An accountant's check** of one real month of Israeli VAT and US payroll before the "not for
   filing" note comes off.
 - **Roll the old Stripe test key** (item 41).
+
+## 6. Tax follows the entity, not only the workspace (owner, 11 Oct evening)
+
+A set of books can hold several organisations as labels (the World / Entity label, or any label). Each
+one can sit somewhere different: an LLC in Texas, a company in Israel, a branch in New York City, a
+project in Eilat. So tax is decided by **who is selling, from where, to whom**, not by the workspace
+alone.
+
+**The model (Claude builds it first, before the US/Israel tables plug in):**
+
+1. **Tax profile.** A tax profile belongs to a set of books *or to a label value* (an entity, a location, a
+   branch). It holds the country, state, county, city, registration numbers (VAT number, sales tax
+   permits per state, EIN, Israeli company / dealer number), the filing frequency, and the accounting basis.
+2. **Inheritance.** A label value without its own profile uses its parent's (label hierarchy), then the
+   books' own. "The info comes from there": choose an entity on a line and its place, numbers and rules
+   fill in.
+3. **Resolution per line.** An invoice line's tax = the seller profile (the line's entity label, else the
+   books) + the buyer's address (ship-to) + the item's tax code + exemption certificates (T-05). The same
+   function serves Israel (one national rate, Eilat zero) and the US (state + county + city + district).
+4. **Returns per registration.** Each tax return (Israeli VAT report, each US state's sales tax return,
+   941 per EIN) is built from the lines whose seller profile carries that registration, across labels in
+   one set of books and across books in a group (DA-01).
+5. **Learning and checking (algorithms).** From the history LedgerFlow suggests the tax code per vendor,
+   item, entity and place; it learns from each correction (what the person changed it to is the next
+   suggestion); it flags a line whose tax differs from what the same entity, item and place usually get;
+   it warns when an entity's sales into a state approach nexus. Suggestions are never applied silently:
+   the person sees and accepts them, and the existing cross-label inference
+   (`src/lib/algorithms/cross-dimension-inference.ts`) is the base.
+
+Order for Claude: tax profile model and inheritance → line resolution → Israel (IL-1..7) on top →
+US (US-1..6) → local (L-1..3) → learning and checks. The other AIs build screens, tables and files on
+the published shapes (`src/lib/tax/profile.ts`, coming first).
+
+## 7. Speed: the other AIs finish fast
+
+The first "five days" of queue lasted about two hours (AI #5 shipped nine PRs). From now on each queue
+holds **20 or more tasks**, and Claude refills it at every check. AI #5 is for now a chat standing in
+until another AI's usage resets: its tasks are small, self-contained and come with fixtures.
+
+## 8. Done so far (Claude, 11 Oct night)
+
+| Step | What | Where |
+|---|---|---|
+| §6 model | Tax profiles on the books and on label values, inherited from parents; saved through the server (owners, accountants), audited | `src/lib/tax/profile.ts`, `PUT .../tax-profiles` |
+| §6 lines | A sale line's tax from the selling entity, the buyer's place, the date and certificates; Israel built in; US tables plug in | `src/lib/tax/resolveLineTax.ts` |
+| §6 screens | Customers have a tax place (country, state, city); invoices show the expected tax with "Use it" | PartyModal, TaxPlaceSuggestion |
+| §6 learning | Tax code suggestions from history, learning from corrections; unusual-code flags | `src/lib/tax/taxSuggestions.ts` |
+| IL-1 | VAT 17% to 2024, 18% from 1 Jan 2025, Eilat zero, as dated rows | `src/lib/tax/ilVatRates.ts` |
+| IL-2 | Original once, then "true copy" on Israeli tax documents | `copyMarkService.ts` |
+| IL-3 | VAT report figures per registration (taxable, zero, exempt, output, fixed-asset and other inputs, to pay) | `src/lib/tax/ilVatReturn.ts` |
+| IL-5 | Withholding at source: vendor certificate, amount on the bill payment, posted as owed | `withholding.ts`, payment posting |
+
+Next: IL-6 allocation-number request, IL-7 Israeli payroll engine (on AI #4's tables), US-1 lookup on AI #3's state table, US-3 state returns, US-5 federal payroll.
+
+## 9. The strategic review (owner, 11 Oct night) — what changes
+
+An outside review of the repository agreed with the direction (deterministic accounting core; AI suggests,
+people approve, posting services commit) and found real defects. Status:
+
+| Finding | Status |
+|---|---|
+| AI price for Gemini 2.5 Flash 4×/8× too low | **Fixed**: dated price table `src/lib/ai/modelPricing.ts`; unknown models are not priced by guess |
+| Canned AI answers and confidence (85, 90) when the model fails | **Fixed**: an explicit `degraded` answer with no confidence, server and browser |
+| "Auto-fill Accuracy 98.4%" hard-coded | **Fixed**: removed; no quality number without a measurement |
+| Fixed execution times in AI traces | **Fixed**: measured |
+| One AI gateway for every model call (policy, data allowed per task, trace, budget) | AI #1, next |
+| Route-policy coverage: every server route that touches a workspace proves a guard (the server role bypasses RLS) | AI #4 D-30 |
+| AI evaluation harness (time-split, Hebrew/English slices, calibration) before any accuracy claim | AI #4 D-31 |
+| Tax capability labels in the product: calculation / reviewed / filing-ready | AI #2 C-55 |
+| `security_spec.md` still describes Firestore rules | AI #5 E-24 |
+| Card numbers pasted into chat, notes or uploads | AI #5 E-25 (detect and mask) |
+| Long imports and AI batches as background jobs, not one 60-second request | AI #1, after the gateway |
+| Licence, backups/restore drill, branch protection | owner (docs/FOR_YOU.md 44) |
+
+Order of authority when documents disagree: tests and schema > CAPABILITIES.md > PLAN.md > ROADMAP.md > AGENTS.md > README.

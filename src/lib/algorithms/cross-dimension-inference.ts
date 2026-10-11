@@ -60,9 +60,8 @@ export const CROSS_DIMENSION_INFERENCE_ALGO: AlgorithmDefinition = {
     return {
       metrics: [
         { label: 'Learned Co-occurrence Rules', value: `${rules.length}` },
-        { label: 'Avg Confidence', value: rules.length ? `${Math.round(rules.reduce((a, b) => a + b.confidence, 0) / rules.length)}%` : '100%' },
-        { label: 'Friction Saved', value: `${rules.length * 3} keystrokes / tx` },
-        { label: 'Auto-fill Accuracy', value: '98.4%' }
+        // measured from the books only: no accuracy is shown until an evaluation measures it (strategic review, 11 Oct)
+        { label: 'Avg Rule Share', value: rules.length ? `${Math.round(rules.reduce((a, b) => a + b.confidence, 0) / rules.length)}%` : '—' }
       ],
       charts: [
         {
