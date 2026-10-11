@@ -2,6 +2,7 @@ import express from "express";
 import crypto from "crypto";
 import { requestUser } from "../auth/requestUser";
 import type { ApiLog } from "./serverKit";
+import { safeRequestTarget } from "./safeRequestTarget";
 
 /**
  * Developer Hub request log (F-01, moved from server.ts): the last 100 /api/v1 calls with status,
@@ -39,7 +40,7 @@ export function apiRequestLogger(apiLogs: ApiLog[]): express.RequestHandler {
       id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
       method: req.method,
-      path: req.originalUrl || req.url,
+      path: safeRequestTarget(req.originalUrl || req.url || '/'),
       statusCode: res.statusCode,
       latencyMs: latency,
       apiKeyUsed: apiPart,
