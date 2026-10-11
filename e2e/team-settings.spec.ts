@@ -5,7 +5,8 @@ test('team inline edits and named removal work by keyboard on a phone', async ({
   const writes: { url: string; method: string }[] = [];
   await page.route('**/api/**', route => {
     const request = route.request(), url = request.url();
-    if (request.method() !== 'GET') writes.push({ url, method: request.method() });
+    // only the team's own calls: health checks and error reports also POST in the background
+    if (request.method() !== 'GET' && url.includes('/api/v1/workspaces/')) writes.push({ url, method: request.method() });
     const data = url.endsWith('/members') ? { status: 'success', members: ['member-א'], ownerUid: 'test-user' }
       : url.endsWith('/roles') ? { status: 'success', roles: { 'member-א': 'viewer' } }
       : { status: 'success', invites: [] };
