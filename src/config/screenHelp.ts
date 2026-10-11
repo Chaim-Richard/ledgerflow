@@ -125,7 +125,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     "sales-trends":
       "Review twelve months of issued-invoice item activity. Group by customer or item and compare another ending date. Credit notes and document-level tax or discount allocation are outside this item calculation.",
     "purchase-trends":
-      "Review twelve months of issued-bill totals by supplier. Inspect monthly activity and compare ending dates. This report groups bills by supplier, not by purchased item.",
+      "Review twelve months of purchases by vendor or item and compare ending dates. Vendor totals use issued bills in base currency; item mode uses the item-wise bill register with units, separate document currencies and CSV. Load full history before relying on item figures; returns and tax/discount reallocation are outside item mode.",
     "sales-payment-summary":
       "Review customer receipts grouped by stored payment method. Compare periods and inspect undated receipt counts. Unapplied receipts are not automatically sales revenue.",
     "exchange-rates-used":

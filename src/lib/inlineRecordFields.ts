@@ -1,8 +1,10 @@
+import { code128Problem } from './code128';
+
 /** C-15 edits only non-posting record fields, plus planning budget values. */
 export const INLINE_RECORD_FIELDS = {
   projects: ['name', 'metadata.client', 'budgetCents', 'status'],
   employees: ['name', 'email', 'role'],
-  assets: ['name', 'location', 'category', 'warrantyExpires', 'insuranceRenews'],
+  assets: ['name', 'assetTag', 'location', 'category', 'warrantyExpires', 'insuranceRenews', 'nextServiceDue'],
   budgets: ['name', 'amountCents'],
   estimates: ['number', 'date', 'expiryDate', 'notes'],
   dimensionNodes: ['description'],
@@ -27,8 +29,13 @@ function validate(target: InlineRecordTarget, field: string, value: string | num
     if (typeof value !== 'string' || value.length > 10000) throw new Error('Enter valid text.');
     if ((field === 'name' || target.collection === 'dimensionNodes' && field === 'description') && !value.trim()) throw new Error('Name is required.');
     if (field === 'status' && !['active', 'completed', 'archived'].includes(value)) throw new Error('Choose a project status.');
+    if (field === 'assetTag' && value) {
+      if (value !== value.trim()) throw new Error('The asset tag must not start or end with spaces.');
+      const problem = code128Problem(value);
+      if (problem) throw new Error(problem);
+    }
     if (field === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) throw new Error('Enter an email address.');
-    if (['date', 'expiryDate'].includes(field)) { const date = new Date(`${value}T00:00:00Z`); if (field === 'date' && !value || value && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value)) throw new Error('Enter a valid date.'); }
+    if (['date', 'expiryDate', 'warrantyExpires', 'insuranceRenews', 'nextServiceDue'].includes(field)) { const date = new Date(`${value}T00:00:00Z`); if (field === 'date' && !value || value && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value)) throw new Error('Enter a valid date.'); }
   }
 }
 /** Refuses an observed conflict; does not pretend this browser read/write is atomic. */

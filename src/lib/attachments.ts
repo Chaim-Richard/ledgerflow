@@ -12,7 +12,8 @@ export const MAX_FILES_AT_ONCE = 10;
 
 // supportTickets (BO-05): a screenshot kept with feedback or a support ticket
 // chartAccounts (BD-04): a file kept with one account's workpaper for a month
-export type AttachmentCollection = 'invoices' | 'bills' | 'customers' | 'vendors' | 'estimates' | 'purchaseOrders' | 'supportTickets' | 'chartAccounts';
+// assets (A-8): a file kept with the existing fixed asset register's maintenance log
+export type AttachmentCollection = 'invoices' | 'bills' | 'customers' | 'vendors' | 'estimates' | 'purchaseOrders' | 'supportTickets' | 'chartAccounts' | 'assets';
 
 /** The record a file belongs to, and how it is named in lists ("Invoice INV-12"). */
 export interface AttachmentTarget {

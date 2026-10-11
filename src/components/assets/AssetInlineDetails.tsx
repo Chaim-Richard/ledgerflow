@@ -4,6 +4,7 @@ import { RecordInlineField } from '../ui/RecordInlineField';
 import { assetRemindersDue, reminderText } from '../../lib/assetReminders';
 import { getLocalDateISO } from '../../lib/utils';
 import { MaintenanceLog } from './MaintenanceLog';
+import { assetTagAdapter } from '../../lib/assetTagAdapter';
 
 const TEXT_FIELDS = [['name', 'Name'], ['assetTag', 'Tag'], ['location', 'Location'], ['category', 'Category']] as const;
 /** X-08, X-06: the warranty, insurance and next service dates, reminded 30 days before (src/lib/assetReminders.ts). */
@@ -13,7 +14,7 @@ export function AssetInlineDetails({ asset, currency = 'USD' }: { asset: FixedAs
   const due = assetRemindersDue(asset, getLocalDateISO());
   return (
     <div className="flex flex-col gap-1">
-      {TEXT_FIELDS.map(([field, label]) => <RecordInlineField key={field} collection="assets" record={asset} field={field} label={`${label} of ${asset.name}`} placeholder={`Add ${field}`} />)}
+      {TEXT_FIELDS.map(([field, label]) => <RecordInlineField key={field} collection="assets" record={asset} field={field} adapter={field === 'assetTag' ? assetTagAdapter : undefined} label={`${label} of ${asset.name}`} placeholder={`Add ${field}`} />)}
       {DATE_FIELDS.map(([field, label, placeholder]) => (
         <div key={field} className="flex items-center gap-1 text-[11px] font-normal text-[var(--muted)]">
           <span aria-hidden="true">{label}:</span>
