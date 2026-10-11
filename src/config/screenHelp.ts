@@ -88,6 +88,9 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Inspect the developer-only administration demonstration. Explore its example panels when developer mode is enabled. Demonstration telemetry is distinct from production monitoring.",
   },
   reports: {
+    "customer-cohorts": "Group customers by their earliest observed issued-invoice month and inspect each later month's total invoicing, distinct active customers or percentage. The first invoice can predate the selected display window. Incomplete invoice history makes these cohorts provisional.",
+    "asset-register": "Review fixed assets held at a chosen date, with acquisition cost, recorded depreciation and book value. See category totals or export a numeric CSV. Historical cost adjustments after the selected date are flagged because saved asset metadata is current.",
+    "one-sided-transfers": "Review internal bank transfers with a missing or unequal ledger cash side, or a confirmed statement match on only one side. Warnings are evidence to review, not proof that funds are missing. Results are provisional when bank statement or ledger history is incomplete.",
     "budget-actual": "Compare a saved account budget with posted account movement for the selected period or months. Open an actual to inspect its contributing entries. Recurring caps are spread by month; partial months keep their cap, and loaded-cache figures are provisional until full history is requested.",
     pnl: "Review posted income, cost of goods sold and expenses for the period. Compare periods and choose presentation columns. Incomplete loaded history makes the figures provisional.",
     "group-summary":
@@ -104,6 +107,10 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "For a period, each fixed asset's cost, the depreciation it had before the period, what the monthly runs posted in it, what it has at the end, and its book value, with the totals. Assets sold or scrapped are marked.",
     "item-register":
       "Every invoice line that sold a stock item, or every bill line that bought one, in a period, for one item or all. Each row opens its document, and each item's units and amount add up at the end.",
+    "profitability-by":
+      "For a period, revenue, cost, gross margin and margin % by customer, by item or by project. Revenue is the issued invoice lines; cost is the posted cost of goods sold (an estimate is marked where none is posted). By project, bill and expense lines with that label are added to the cost. Margin % is blank where there is no revenue.",
+    "slow-moving-stock":
+      "As of a day, each stock item with units on hand: its value at cost, the day it last sold and how long ago, in age buckets (0–30, 31–90, 91–180, over 180 days, never sold). Narrow it to items with no sale in N days, then export the list. Drafts, estimates and voided invoices do not count as sales.",
     "stock-aging":
       "As of a day, each item's stock on hand split by how long ago those units came in, the latest units taken to be the ones still there. With its value and the last sale, so slow-moving stock shows first. Read from the stock history the server keeps.",
     "inventory-details":
@@ -121,7 +128,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     "sales-trends":
       "Review twelve months of issued-invoice item activity. Group by customer or item and compare another ending date. Credit notes and document-level tax or discount allocation are outside this item calculation.",
     "purchase-trends":
-      "Review twelve months of issued-bill totals by supplier. Inspect monthly activity and compare ending dates. This report groups bills by supplier, not by purchased item.",
+      "Review twelve months of purchases by vendor or item and compare ending dates. Vendor totals use issued bills in base currency; item mode uses the item-wise bill register with units, separate document currencies and CSV. Load full history before relying on item figures; returns and tax/discount reallocation are outside item mode.",
     "sales-payment-summary":
       "Review customer receipts grouped by stored payment method. Compare periods and inspect undated receipt counts. Unapplied receipts are not automatically sales revenue.",
     "exchange-rates-used":

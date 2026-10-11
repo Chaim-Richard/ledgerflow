@@ -75,8 +75,12 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
   }
 
   const reportTabs = [
+    { label: 'Customer Cohorts', componentName: 'CustomerCohortsReportView' },
+    { label: 'Asset Register', componentName: 'AssetRegisterReportView' },
+    { label: 'Transfer Check', componentName: 'OneSidedTransfersReportView' },
     { label: 'Budget vs Actual', componentName: 'BudgetActualReportView' },
     { label: 'Sales by Item', componentName: 'SalesByItemReportView' },
+    { label: 'Purchase Trends by Vendor', componentName: 'PurchaseTrendsView' },
     { label: 'Journal Sheet', componentName: 'JournalSheetReportView' },
     { label: 'Contact Balance Summary', componentName: 'ContactBalanceSummaryView' },
     { label: 'Inventory Valuation', componentName: 'InventoryValuationReportView' },
@@ -89,6 +93,8 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Sales Commission', componentName: 'CommissionReportView' },
     { label: 'Backorders', componentName: 'BackordersReportView' },
     { label: 'Stock Aging', componentName: 'StockAgingReportView' },
+    { label: 'Slow-moving Items', componentName: 'SlowMovingStockView' },
+    { label: 'Profitability by Customer, Item or Project', componentName: 'ProfitabilityByView' },
     { label: 'Item-wise Register', componentName: 'ItemRegisterReportView' },
     { label: 'Asset Depreciation Ledger', componentName: 'DepreciationLedgerReportView' },
     { label: 'Bank Clearance Summary', componentName: 'BankClearanceReportView' },

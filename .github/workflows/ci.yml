@@ -1,18 +1,19 @@
 name: CI
 
-# Owner, 5 Oct 2026: Actions minutes are limited (2,000 a month; each run of this file costs about
-# 28). Claude and Codex run every check locally before they push (docs/AGENTS.md), so pushes and
-# pull requests no longer start CI. It runs once a week as a safety net, and by hand any time:
-# GitHub → Actions → CI → "Run workflow".
+# Owner, 11 Oct 2026: the repository is public, so GitHub Actions minutes are free. CI runs on every
+# push to main and to the helper AIs' branches, on every pull request, and by hand any time
+# (GitHub → Actions → CI → "Run workflow").
 on:
+  push:
+    branches: [main, 'codex/**', 'arena/**', 'ai*/**']
+  pull_request:
   workflow_dispatch:
-  schedule:
-    - cron: '17 3 * * 1'   # Mondays 03:17 UTC
 
 # a second run of the same branch stops the one still going (no double billing)
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'branch' }}
+  # runs on main always finish (each push is checked); a branch's older run stops
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   validate:
@@ -137,7 +138,7 @@ jobs:
   e2e:
     name: Playwright E2E Smoke Suite
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     services:
       postgres:

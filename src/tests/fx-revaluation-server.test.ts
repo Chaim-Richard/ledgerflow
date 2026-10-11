@@ -159,7 +159,10 @@ describe('Month-end currency revaluation', { skip: !url && 'LF_TEST_DATABASE_URL
     assert.match(String(twice?.message), /already reversed/, 'there is nothing to undo a second time');
   });
 
-  test('a currency with no rate stops the whole run', async () => {
+  test('a currency with no rate stops the whole run', async (t) => {
+    // the exchange service is down (CI has internet, so it would otherwise answer)
+    const { FxService } = await import('../server/services/FxService');
+    t.mock.method(FxService, 'getRate', async () => { throw new Error('exchange service unavailable'); });
     const before1 = (await rows()).length;
     const onlyEur = await failure(() => revaluate(db, { workspaceId: ws, user: owner, rates: { EUR: 1.2 } }));
     assert.equal(onlyEur?.status, 503);

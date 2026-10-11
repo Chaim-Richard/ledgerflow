@@ -12,7 +12,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { stubFetch } from './helpers/dom';
 import { makeChartAccount, makeVendor } from './fixtures';
 import type { Workspace } from '../types';
-import { billedNotReceived, deliveredNotInvoiced, receivedNotBilled, totalsByCurrency } from '../lib/unbilledGoods';
+import { ageInDays, billedNotReceived, deliveredNotInvoiced, orderedNotReceived, receivedNotBilled, totalsByCurrency } from '../lib/unbilledGoods';
 import { billLinesFromOrder } from '../lib/purchaseOrders';
 import GoodsNotBilledReportView from '../components/reporting/GoodsNotBilledReportView';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -86,6 +86,49 @@ describe('Goods not yet billed', () => {
     render(<GoodsNotBilledReportView />);
     assert.match(screen.getByText(/^Delivered, not invoiced/).textContent || '', /\$150\.00/);
     await waitFor(() => assert.match(screen.getByText(/^Received, not billed/).textContent || '', /€50\.00/));
-    assert.ok(screen.getByRole('rowheader', { name: 'PO-1' }));
+    // PO-1 is in both the received list and the ordered-not-received list (A-14)
+    assert.equal(screen.getAllByRole('rowheader', { name: 'PO-1' }).length, 2);
+  });
+});
+
+// A-14 (CB-17, CB-18, CB-19): hand-worked quantities for the three lists.
+describe('Goods not yet billed: received, billed and ordered (A-14)', () => {
+  const line = (description: string, quantity: number, unitPriceCents: number, receivedQuantity: number) =>
+    ({ id: description, description, quantity, unitPriceCents, totalCents: quantity * unitPriceCents, receivedQuantity });
+  // received in full (10 of 10) and billed half (5); a line billed but not received; a line neither
+  const po14 = {
+    id: 'a', poNumber: 'PO-A', vendorName: 'Supplier', status: 'received', currency: 'EUR', issueDate: '2026-09-01',
+    items: [line('Paper', 10, 1000, 10), line('Ink', 4, 2000, 1), line('Pens', 3, 500, 0)],
+  } as unknown as PurchaseOrder;
+  const billHalf = { id: 'bill-a', status: 'approved', metadata: { poId: 'a' }, splits: [
+    { amountCents: 5000, accountId: 'x', orderLine: 0, orderQuantity: 5 },
+  ] } as unknown as Bill;
+
+  test('received not billed: the half of a fully received line that no bill bills (CB-18)', () => {
+    assert.deepEqual(receivedNotBilled([po14], [billHalf]).map(r => [r.description, r.received, r.units, r.valueCents, r.issueDate]), [
+      ['Paper', 10, 5, 5000, '2026-09-01'],
+      ['Ink', 1, 1, 2000, '2026-09-01'],
+    ]);
+    assert.deepEqual(receivedNotBilled([po14]).map(r => [r.description, r.units]), [['Paper', 10], ['Ink', 1]], 'without bills every received unit counts');
+  });
+
+  test('billed not received: a bill that bills more than arrived (CB-19)', () => {
+    const extra = { id: 'bill-b', status: 'approved', metadata: { poId: 'b' }, splits: [{ amountCents: 1500, accountId: 'x', orderLine: 0, orderQuantity: 3 }] } as unknown as Bill;
+    const po = { ...po14, id: 'b', items: [line('Pens', 3, 500, 0)] } as unknown as PurchaseOrder;
+    assert.deepEqual(billedNotReceived([po], [extra]).map(r => [r.description, r.billed, r.received, r.units, r.valueCents]), [['Pens', 3, 0, 3, 1500]]);
+  });
+
+  test('ordered not received: ordered less received, at the order price (CB-17)', () => {
+    assert.deepEqual(orderedNotReceived([po14]).map(r => [r.description, r.ordered, r.received, r.units, r.valueCents]), [
+      ['Ink', 4, 1, 3, 6000],
+      ['Pens', 3, 0, 3, 1500],
+    ]);
+    assert.deepEqual(orderedNotReceived([{ ...po14, status: 'cancelled' } as PurchaseOrder, { ...po14, status: 'closed' } as PurchaseOrder]), [], 'cancelled and closed orders are not listed');
+  });
+
+  test('age in days from the order date, and null for a date that is not a day', () => {
+    assert.equal(ageInDays('2026-09-01', '2026-10-11'), 40);
+    assert.equal(ageInDays('2026-02-28', '2026-03-01'), 1);
+    assert.equal(ageInDays(undefined, '2026-10-11'), null);
   });
 });

@@ -164,13 +164,13 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
             ))}
           </div>
 
-          <button 
+          {(basis === 'cash' || (columnMode === 'total' && !showPercent && !isComparative)) && <button
             onClick={exportBalanceSheet}
             className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
            aria-label="Export Blueprint">
             <FileSpreadsheet aria-hidden="true" size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
             <span>Export Blueprint</span>
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -194,7 +194,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
             <div className="text-right">
               <span className="block text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest leading-none mb-1">As Of {priorDate}</span>
               <span className="block text-xs font-mono font-medium text-[var(--muted)] tabular-nums">
-                {formatCurrency(prevData.totalAssets)} Assets / {formatCurrency(prevData.totalClaims)} Claims
+                <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.totalAssets)}</bdi> Assets / <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.totalClaims)}</bdi> Claims
               </span>
             </div>
           )}
@@ -302,10 +302,10 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                       </div>
                     </div>
                     <div className="flex flex-col items-end shrink-0 ml-2">
-                      <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums">{formatCurrency(curVal)}</span>
+                      <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(curVal)}</bdi></span>
                       {isComparative && (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: {formatCurrency(prVal)}</span>
+                          <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prVal)}</bdi></span>
                           {variance.pct !== null && prVal !== 0 && (
                             <span className={cn("text-[8px] font-bold", variance.pct >= 0 ? "text-emerald-500" : "text-rose-500")}>
                               {variance.pct >= 0 ? '+' : ''}{variance.pct.toFixed(1)}%
@@ -325,7 +325,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                  <span className="text-[var(--text)] font-bold uppercase tracking-wider text-[9px]">Total {labels.assetsLabel}</span>
               </div>
               <div className="text-right">
-                <span className="text-lg font-mono font-bold text-[var(--text)] tracking-tight block leading-none tabular-nums">{formatCurrency(currentData.totalAssets)}</span>
+                <span className="text-lg font-mono font-bold text-[var(--text)] tracking-tight block leading-none tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalAssets)}</bdi></span>
                 {isComparative && prevData.totalAssets !== 0 && (
                   <span className={cn("text-[9px] font-bold block mt-1", currentData.totalAssets >= prevData.totalAssets ? "text-emerald-500" : "text-rose-500")}>
                     {(((currentData.totalAssets - prevData.totalAssets) / Math.abs(prevData.totalAssets)) * 100).toFixed(1)}% vs Prior
@@ -391,10 +391,10 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                         </div>
                       </div>
                       <div className="flex flex-col items-end shrink-0 ml-2">
-                        <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums">{formatCurrency(curVal)}</span>
+                        <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(curVal)}</bdi></span>
                         {isComparative && (
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: {formatCurrency(prVal)}</span>
+                            <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prVal)}</bdi></span>
                             {variance.pct !== null && prVal !== 0 && (
                               <span className={cn("text-[8px] font-bold", variance.pct <= 0 ? "text-emerald-500" : "text-rose-500")}>
                                 {variance.pct >= 0 ? '+' : ''}{variance.pct.toFixed(1)}%
@@ -410,12 +410,12 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                 {Boolean(currentData.notApplied) && (
                   <div className="flex justify-between items-center p-3 text-xs text-[var(--text)]">
                     <span>Paid, not yet applied to an invoice or bill</span>
-                    <span className="font-mono tabular-nums">{formatCurrency(currentData.notApplied || 0)}</span>
+                    <span className="font-mono tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.notApplied || 0)}</bdi></span>
                   </div>
                 )}
                 <div className="flex justify-between items-center pt-2 text-[var(--muted)] text-[8px] font-bold uppercase tracking-wider">
                   <span>Sub-Total Liabilities</span>
-                  <span className="font-mono font-semibold tabular-nums">{formatCurrency(currentData.totalLiabilities)}</span>
+                  <span className="font-mono font-semibold tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalLiabilities)}</bdi></span>
                 </div>
               </div>
 
@@ -457,10 +457,10 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                         </div>
                       </div>
                       <div className="flex flex-col items-end shrink-0 ml-2">
-                        <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums">{formatCurrency(curVal)}</span>
+                        <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(curVal)}</bdi></span>
                         {isComparative && (
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: {formatCurrency(prVal)}</span>
+                            <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prVal)}</bdi></span>
                             {variance.pct !== null && prVal !== 0 && (
                               <span className={cn("text-[8px] font-bold", variance.pct <= 0 ? "text-emerald-500" : "text-rose-500")}>
                                 {variance.pct >= 0 ? '+' : ''}{variance.pct.toFixed(1)}%
@@ -500,11 +500,11 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                   </div>
                   <div className="flex flex-col items-end shrink-0 ml-2">
                     <span className={cn("font-mono font-bold text-xs", currentData.netIncome >= 0 ? "text-emerald-700" : "text-rose-700", "tabular-nums")}>
-                      {formatCurrency(currentData.netIncome)}
+                      <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.netIncome)}</bdi>
                     </span>
                     {isComparative && (
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="font-mono text-[8.5px] text-[var(--muted)] tabular-nums">prev: {formatCurrency(prevData.netIncome)}</span>
+                        <span className="font-mono text-[8.5px] text-[var(--muted)] tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.netIncome)}</bdi></span>
                         {prevData.netIncome !== 0 && (
                           <span className={cn("text-[8.5px] font-bold", (currentData.netIncome >= prevData.netIncome) ? "text-emerald-500" : "text-rose-500")}>
                             {(((currentData.netIncome - prevData.netIncome) / Math.abs(prevData.netIncome)) * 100).toFixed(1)}%
@@ -517,7 +517,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
 
                 <div className="flex justify-between items-center pt-2 text-[var(--muted)] text-[8px] font-bold uppercase tracking-wider">
                   <span>Sub-Total Equity</span>
-                  <span className="font-mono font-semibold tabular-nums">{formatCurrency(currentData.totalEquity + currentData.netIncome)}</span>
+                  <span className="font-mono font-semibold tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalEquity + currentData.netIncome)}</bdi></span>
                 </div>
               </div>
             </div>
@@ -538,7 +538,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
               </div>
               <div className="text-right shrink-0">
                 <span className="text-lg font-mono font-bold text-[var(--text)] tracking-tight block leading-none tabular-nums">
-                  {formatCurrency(currentData.totalClaims)}
+                  <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalClaims)}</bdi>
                 </span>
                 {isComparative && prevData.totalClaims !== 0 && (
                   <span className={cn("text-[9px] font-bold block mt-1", currentData.totalClaims >= prevData.totalClaims ? "text-emerald-500" : "text-rose-500")}>

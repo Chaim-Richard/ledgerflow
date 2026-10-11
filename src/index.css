@@ -226,7 +226,7 @@
     --ink: #FFFFFF; --surface: #FFFFFF; --panel: #FFFFFF; --elevated: #FFFFFF;
     --line: #BFC8C6; --grid: transparent;
     --text: #0E2229; --muted: #3F5655; --faint: #4F6469;
-    --brass: #7A550E; --pos: #17754A; --neg: #A9412C;
+    --brass: #7A550E; --pos: #0E2229; --neg: #0E2229;
     color-scheme: light;
   }
   body { background: #FFFFFF !important; color: #0E2229; }
@@ -234,6 +234,24 @@
   tr, img, svg { break-inside: avoid; }
   * { box-shadow: none !important; text-shadow: none !important; }
 }
+
+/* A-17 (Y-19): printing any screen gives the page only: no navigation, header, pinned-page bar,
+   buttons, toasts or banners; the screen's own content runs over as many pages as it needs. The
+   app shell is a fixed-height scroll area on screen, so it is released for print. The workspace
+   name and the date print at the top (the .print-only-title block in RootLayout). Amounts print in
+   black (--pos/--neg above). */
+@media print {
+  [role="navigation"], nav, header, [data-sonner-toaster], [data-print-hide], button { display: none !important; }
+  main > :not(#main-content) { display: none !important; }
+  html, body, #root, #root > div, #root > div > div, main, #main-content, #main-content > * {
+    height: auto !important; max-height: none !important; overflow: visible !important; position: static !important;
+  }
+  .print-only-title { display: block !important; }
+  .font-mono, .tabular-nums { color: #000 !important; }
+  a[href]::after { content: none !important; }
+  @page { margin: 12mm; }
+}
+.print-only-title { display: none; }
 
 /* E-22: every control focused from the keyboard shows a ring, whatever outline classes it has
    (many use outline-none for mouse users). */

@@ -31,3 +31,12 @@ export function assetMatches(asset: { name?: string; assetTag?: string; location
   if (!q) return true;
   return [asset.assetTag, asset.name, asset.location].some(v => String(v || '').toLocaleLowerCase().includes(q));
 }
+
+/** Observed duplicate-tag refusal; database uniqueness is still required to cover simultaneous writers. */
+export function assetTagProblem(tag: string, assets: Array<{ id: string; assetTag?: string }>, ownId: string): string | null {
+  if (!tag) return null;
+  const normalized = tag.trim().toLowerCase();
+  return assets.some(asset => asset.id !== ownId && String(asset.assetTag || '').trim().toLowerCase() === normalized)
+    ? 'That tag is already used by another asset in this workspace. Choose a different tag.'
+    : null;
+}

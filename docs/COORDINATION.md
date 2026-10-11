@@ -295,7 +295,7 @@ posted; every new screen or report gets its registry `help` and a line in
 - [x] **C-26 Undo for deletes** *(AI #2 projects, merged; customers, vendors, items and draft bills done by AI #1 as BO-08 with `src/lib/undoableDelete.ts`)* (tracker BO-08): deleting a customer, vendor, item, project or a draft
   document shows "Deleted · Undo" for 10 seconds, and Undo puts it back exactly (same id and fields).
   Use the existing delete paths; posted documents keep their own void/reverse flow (not this). Tests.
-- [x] **C-27 Feedback from any screen** *(AI #2 text ticket, merged; files and screenshots on a ticket added by AI #1: the attachments panel on Support)* (tracker BO-05): a "Send feedback" item in Help: a short form
+- [x] **C-27 Feedback from any screen** *(AI #2 text ticket, merged; AI #1 attachment target/viewer merged; AI #2 optional screenshot client completed 11 Oct, pending branch review)* (tracker BO-05): a "Send feedback" item in Help: a short form
   (what happened, optional screenshot of the current screen via the existing support ticket), saved as
   a support ticket with the screen name and app version attached. Tests with the request stubbed.
 
@@ -307,7 +307,7 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
   is now allowed and modelled (`fc4f21a`; the database also checks its shape). Owners and accountants choose the
   locale (a short list plus "browser default") and minus or (accounting) negatives, with a live sample; saved with
   the usual workspace update. Display only; tests for the save and the sample.
-- [ ] **C-29 Column chooser on report tables** — *show/hide done by Claude 10 Oct (`ReportTableScroll`); still open: reordering, exports following the visible columns, the P&L and balance sheet period columns* (tracker N-10): on the shared report shell, show or hide columns
+- [x] **C-29 Column chooser on report tables** — *AI #2 follow-up 11 Oct: rectangular shared tables reorder/export displayed rows; P&L/balance-sheet period groups reorder/hide/export matching financial CSV. Specialized/spanning/custom-component tables retain their existing layout contract; legacy statement XLS is offered only for the uncustomized layout, with matching financial CSV for period layouts. Claude’s original show/hide retained.* (tracker N-10): on the shared report shell, show or hide columns
   and reorder them, remembered per user and report (browser storage is fine for this); totals and exports follow the
   visible columns. Read-only; DOM tests.
 - [ ] **C-30 Client report pack** (tracker BD-06): one "Report pack" action on Reports: for a chosen period,
@@ -320,10 +320,51 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
   existing report code and payments; hand-checked tests (a partly paid invoice, a bill paid in the next month, an
   unpaid one) and the period boundaries.
 
-- [ ] **C-32 Money in right-to-left text** (tracker BM-05; added by Claude 10 Oct): with Settings → Appearance →
+- [ ] **C-32 Money in right-to-left text** — *AI #2 11 Oct: report/aging document-detail/totals isolation and he-IL minus/accounting checks added; primary Sales/Purchases lists remain reserved to AI #1.* (tracker BM-05; added by Claude 10 Oct): with Settings → Appearance →
   Money display set to Israel (he-IL), amounts in tables and totals stay right-aligned and read correctly next to
   Hebrew names (minus or brackets on the correct side, the currency sign where the locale puts it), on screen and in
   CSV/print. Display only; DOM tests with Hebrew rows for a report table, a document list and the totals row.
+- [x] **C-33 / C-34** — withdrawn by Claude 11 Oct: the same as AI #4's D-6 (chart switcher, legend, tooltips). Not yours.
+- [ ] **C-35 Access review report** (tracker BJ-03; written by Claude, 11 Oct, for the next five days with C-36..C-39): Settings → Security → "Access
+  review": every person in the workspace with their role, when they last signed in, whether two-step sign-in is on, and
+  when their role last changed (from the audit log); CSV and print. Read-only, owners and accountants. DOM tests.
+- [ ] **C-36 Audit evidence pack** (tracker BJ-02): for a chosen period, one download (zip) with the audit log as CSV,
+  the period locks, the approvals (invoice approvals, pay runs, two-person rule) and the access review (C-35). Read-only,
+  from the existing data; a test that each file's rows match the screen.
+- [ ] **C-37 Bookmarks** (tracker CF-05): a star on any report or screen pins it to a "Bookmarks" group at the top of the
+  sidebar, per user, in the order they choose (keyboard reorder). Browser storage is fine. DOM tests.
+- [ ] **C-38 Export templates** (tracker CF-06): on a report's CSV export, "Save these columns as…" keeps the chosen
+  columns and order (C-29's layout) under a name per user and report; the export menu lists them. DOM tests.
+- [ ] **C-39 Discount mismatch report** (tracker CB-22): invoices whose line discount differs from the customer's
+  price list or the item's usual discount, with the difference; CSV. Read-only. Hand-checked unit tests.
+
+### Tax tasks for AI #2 (Claude, 11 Oct; after C-39; plan in docs/PLAN.md). Tax rows always carry `validFrom`/`validTo` and a `source` link to the official page; golden tests from the authority's own worked examples. Tables and screens only: postings and calculations are AI #1's (docs/PLAN.md).
+
+- [ ] **C-40 Israel VAT report screen and print** (PLAN IL-3): the period's sales, inputs, fixed-asset inputs and amount
+  to pay, from AI #1's figures function (`israelVatReturn` in `src/lib/tax/ilVatReturn.ts`, **landed 11 Oct**); Hebrew and English; print. Until it lands, build on
+  the existing return boxes (T-06).
+- [ ] **C-41 Nexus watch** (PLAN US-2): sales and order counts per US state (ship-to address) for the current and last
+  calendar year against each state's economic-nexus threshold (table `src/lib/tax/usNexus.ts`, rows with sources), with a
+  warning at 80%. Read-only.
+- [ ] **C-42 Payroll forms layouts** (PLAN US-5, IL-7): 941, 940, W-2/W-3 data and Israel 102/106 as printable screens and
+  CSV, from the pay runs' posted figures. Read-only; "not for filing" banner stays.
+
+### Big queue for AI #2 (Claude, 11 Oct evening; plan in docs/PLAN.md §6–7). Rules: one branch and PR per task, from the latest main; tables carry `validFrom`/`validTo` and an official `source`; no change to how money is calculated or posted (that is AI #1's); tests for each; a line under Messages.
+
+- [ ] **C-43 Tax profile screen** (PLAN §6): Settings → Tax profiles: list the books' profile and each label value's (entity, location) with country, state, city, registration numbers, filing frequency; edit form; shows inherited values in grey. Builds on `src/lib/tax/profile.ts` (**landed 11 Oct**) and saves with `PUT /api/v1/workspaces/:id/tax-profiles {profiles}` (owners and accountants).
+- [ ] **C-44 Tax return list per registration** a Taxes → Returns screen: one row per registration (Israel VAT, each US state permit, each EIN) and period, with status (open, ready, filed). Read-only over the existing filed-return copies (T-07).
+- [ ] **C-45 Sales tax by place report** taxable, exempt and tax per country/state/county/city for a period, from posted invoice lines' tax breakdown; drill to invoices; CSV.
+- [ ] **C-46 Tax code suggestions panel** a side panel on invoice/bill lines showing AI #1's suggestion (code, why, how often) with Accept, from `suggestTaxCode` / `unusualTaxCode` in `src/lib/tax/taxSuggestions.ts` (**landed 11 Oct**; history rows from saved invoices and bills).
+- [ ] **C-47 Exemption certificates list** Customers → Tax certificates: every customer's certificate (T-05), expiring in 30 days first, expired highlighted; CSV.
+- [ ] **C-48 Vendor W-9 / Israeli withholding certificate list** vendors with their tax ID status (masked) and Israeli withholding certificate expiry; reminders for missing ones. Read-only.
+- [ ] **C-49 Payroll tax calendar** the deposit and filing dates per registration (941 quarterly, 940 yearly, Israel 102 monthly by the 15th), from a dated table with sources; a card on the dashboard.
+- [ ] **C-50 Report pack: tax section** add the period's tax summary per registration to the C-30 report pack.
+- [ ] **C-51 Hebrew labels for tax screens** every new tax screen in Hebrew too, right-to-left checked (C-32 pattern).
+- [ ] **C-52 Keyboard and screen-reader pass on tax screens** the C-4/C-3 checks on C-43..C-49.
+- [ ] **C-53 Access review CSV for auditors** C-35 plus the two-person rule and delegates in one auditor CSV.
+- [ ] **C-54 Empty states** every report from C-35..C-53 says what to do when there is no data yet.
+- [ ] **C-55 Tax capability labels (strategic review)** every tax screen and export shows its level: Calculation only / Reviewed by an accountant / Filing-ready, from one table `src/lib/tax/capability.ts` (all 'calculation' today); the PDF and CSV carry it too. Tests.
+- [ ] **C-56 Facts screen (PLAN §10)** Settings → Facts: for the books and each label value, its facts (legal form, tax treatment, exempt status, places, activities, registrations) with dates and evidence; 'declared' vs 'verified' shown plainly; owners/accountants mark a fact verified with who/when and a reference. Built on `src/lib/rules/facts.ts` (landed). Conflicts from `composeFacts` listed with the two sources.
 
 ## AI #3 (Arena): tasks (Claude, 5 Oct late)
 
@@ -374,16 +415,16 @@ no migration unless agreed under Messages first, every screen with its `<h1>`, a
 - [x] **A-6 BD-04 Workpapers** *(AI #3, merged into main by AI #1 on 7 Oct)*: per account and month, a workpaper on Month-End Close: the balance at month
   end, a note, files (the existing attachments service: `linkedCollection: 'chartAccounts'` with the month in
   `linkedLabel`), and "reviewed by … on …". Read-only on money. Tests for the list, the review mark and the files.
-- [ ] **A-7 CA-16 Item tax template**: an item can carry a default tax code; choosing the item on an invoice or
+- [x] **A-7 CA-16 Item tax template** *(AI #3, on `arena/00b044ca-ledgerflow`: the item form has "Default tax code"; an invoice line that picks the item fills the invoice's tax code, still changeable; bills have no item picker yet, so bill lines are not covered)*: an item can carry a default tax code; choosing the item on an invoice or
   bill line fills that tax code (still changeable). Items have no allow-list; tax codes are the existing ones.
   Tests: the code fills, a changed code is kept, an item without one leaves the line as it was.
-- [ ] **A-8 X-06 + X-07 Asset maintenance log and asset tags**: on the Fixed Asset Register, each asset gets a
+- [~] **A-8 X-06 + X-07 Asset maintenance log and asset tags** (AI #1 shipped the base log and QR tags on 10 Oct; AI #3 client gaps implemented on `arena/ff49edf9-ledgerflow`; atomic tag uniqueness remains the AI #1 database handoff): on the Fixed Asset Register, each asset gets a
   maintenance log (date, what was done, who did it, an optional cost as a note only, files through the
-  existing attachments service with `linkedCollection: 'fixedAssets'`) and an asset tag (a short code, unique
+  existing attachments service with `linkedCollection: 'assets'` (the live register)) and an asset tag (a short code, unique
   in the workspace) with a printable label (the tag as a Code 128 barcode in SVG, the asset name and the
-  purchase date). Saved on the asset document (`maintenance`, `tag`); never posts and never changes cost or
+  purchase date). Saved on the asset document (`maintenance`, `assetTag`); never posts and never changes cost or
   depreciation. Tests: adding/removing a log line, a duplicate tag refused, the barcode for a known tag.
-- [ ] **A-9 W-09 Inventory aging and slow-moving items**: a report on Inventory: for each item with stock, the
+- [x] **A-9 W-09 Inventory aging and slow-moving items** *(AI #3, on `arena/00b044ca-ledgerflow`: Reports → Slow-moving Items; buckets by last issued sale; "no sale in N days"; CSV. The existing Stock Aging report is the first-in-first-out view and is kept)*: a report on Inventory: for each item with stock, the
   quantity and value on hand, the date it last sold (from posted invoice lines) and how many days ago, in
   buckets (0–30, 31–90, 91–180, 180+ days, never sold), with a filter for "no sale in N days" and a CSV.
   Read-only (value = quantity × average cost as the stock screen shows it). Tests with hand-checked dates.
@@ -418,7 +459,7 @@ before:
   - **Source of truth:** the pages take their claims from A-10's table.
   - **Language:** English menus and plain sentences.
   - **Tests:** every page is reachable from Help's search and from the screen's help bar.
-- [ ] **A-12 CB-25 Report by label** (Later P1). A report "By label": choose a label (Property, Project,
+- [x] **A-12 CB-25 Report by label** (Later P1; already done by AI #1 on 10 Oct, `LabelProfitReportView.tsx` and `by-label.test.tsx`; queue reconciled by AI #3 on 11 Oct). A report "By label": choose a label (Property, Project,
   Location…) and a period.
   - **What it shows:** income, cost of goods sold, expenses and the result per value of that label, with an
     "Unassigned" column.
@@ -429,14 +470,14 @@ before:
   - **Full history:** reads full history the way the budget-vs-actual report does (C-24: a paginated read;
     figures marked provisional when only cached data is there).
   - **Tests:** hand-checked numbers with Hebrew label values.
-- [ ] **A-13 CB-08 Profitability by customer, item or project** (Later). One report with a "by" switch.
+- [x] **A-13 CB-08 Profitability by customer, item or project** (Later). *(AI #3, on `arena/00b044ca-ledgerflow`: Reports → Profitability by Customer, Item or Project; customer and item reuse the existing calculations, project is new in `src/lib/projectProfitability.ts`)* One report with a "by" switch.
   - **What it shows:** revenue (posted invoice lines), cost of goods sold (`invoice-cogs-auto` entries, by their
     invoice line), gross margin and margin %.
   - **Projects:** "by project" also takes the project's bills and labelled expense lines.
   - **Read-only:** whole cents, CSV.
   - **Tests:** a customer with two invoices, one partly credited (credit notes reduce revenue); an item sold at
     two prices.
-- [ ] **A-14 CB-17, CB-18, CB-19 Received-not-billed, billed-not-received, ordered-not-received** (Later). Three
+- [x] **A-14 CB-17, CB-18, CB-19 Received-not-billed, billed-not-received, ordered-not-received** (Later). Three
   small read-only lists on Purchases, from purchase orders, their goods receipts (`receipts` on the order) and
   bills (`billId`, BE-11).
   - **Each row:** the order, the vendor, the quantities and values on each side, the age.
@@ -459,13 +500,50 @@ before:
   - **Storage:** on the customer document. The customers table has a field allow-list, so the migration file goes
     in the agreed pattern, listed for review.
   - **Tests:** the override fills, another customer gets the list price, a removed override falls back.
-- [ ] **A-17 Y-19 Print stylesheet** (Later). Printing any screen gives a clean page:
+- [x] **A-17 Y-19 Print stylesheet** (Later). *(AI #3, on `arena/00b044ca-ledgerflow`: CSS only; browser print check not run in this session, see Messages)* Printing any screen gives a clean page:
   - no sidebar, header, buttons or toasts;
   - tables not cut across pages (headers repeated);
   - amounts in black;
   - the workspace name and the date printed at the top.
   - **Tests:** a browser test that prints the transactions list and an invoice preview to PDF and checks the
     sidebar is not in it.
+
+### More tasks for AI #3 (written by Claude, 11 Oct: five days of work with A-8, A-12, A-15, A-16)
+
+- [ ] **A-18 Recurring estimates** (tracker CC-04): an estimate can repeat (monthly, quarterly, yearly) like recurring
+  invoices do; each copy is a new draft estimate with the next number, never sent by itself. Nothing is posted. Tests.
+- [ ] **A-19 Item bundles** (tracker BF-03): an item can be a bundle of other items with quantities; choosing it on an
+  invoice adds its parts as lines (prices from each part, changeable). Stock and posting are the parts' own, unchanged.
+- [x] **A-20 Purchase trends by item** (tracker CB-11; AI #3, implemented 11 Oct on `arena/ff49edf9-ledgerflow`, awaiting review; gross recorded bill lines, not net inventory cost): vendor totals exist; add per item and per month, from
+  bill lines, with CSV. Read-only. Hand-checked tests.
+- [ ] **A-21 Comments on customers and projects** (tracker CF-07): a comment thread on a customer's and a project's page
+  (who, when, edit own within 10 minutes, @mentions use the existing mentions). Tests.
+
+### Tax tasks for AI #3 (Claude, 11 Oct; after A-21). Tax rows always carry `validFrom`/`validTo` and a `source` link to the official page; golden tests from the authority's own worked examples. Tables and screens only: postings and calculations are AI #1's (docs/PLAN.md).
+
+- [ ] **A-22 US state sales tax table** (PLAN US-1): `src/lib/tax/usStateSalesTax.ts`: 50 states + DC, base rate,
+  shipping taxable yes/no, origin or destination sourcing, each row with `validFrom` and the state revenue department's
+  link. Tests: every state present, rates between 0 and 10%, the 5 no-sales-tax states at 0.
+- [ ] **A-23 Form 856 report (Israel)** (PLAN IL-5; the payments now carry `withheldCents`, `withholdingRatePercent`, `withholdingCertificate` — landed 11 Oct): yearly withholding at source per vendor (paid, withheld, certificate
+  number), from the payments' withholding lines AI #1 adds; CSV in the Tax Authority's column order. Read-only.
+
+### Big queue for AI #3 (Claude, 11 Oct evening). Rules: one branch and PR per task, from the latest main; tables carry `validFrom`/`validTo` and an official `source`; no change to how money is calculated or posted (that is AI #1's); tests for each; a line under Messages.
+
+- [ ] **A-24 Canada GST/HST/PST table** provinces' rates as dated rows with sources (`src/lib/tax/caSalesTax.ts`); tests.
+- [ ] **A-25 EU VAT standard and reduced rates table** 27 countries, dated rows with sources (`src/lib/tax/euVat.ts`); tests.
+- [ ] **A-26 UK VAT rates table** standard, reduced, zero; dated rows (`src/lib/tax/ukVat.ts`).
+- [ ] **A-27 US state nexus thresholds table** sales and transaction thresholds per state, dated, with sources (`src/lib/tax/usNexus.ts`) for C-41.
+- [ ] **A-28 US state sales tax filing frequencies and due dates table** per state, by annual liability band; sources.
+- [ ] **A-29 Israel VAT special areas table** Eilat and other zero-rate rules as dated rows with sources (`src/lib/tax/ilVat.ts`).
+- [ ] **A-30 Item tax categories** map items to common tax categories (clothing, groceries, digital goods, SaaS, services) so state rules can treat them differently; a field on the item and a filter. No calculation.
+- [ ] **A-31 US state product taxability table** per state, which of A-30's categories are taxable, exempt or reduced; dated rows with sources.
+- [ ] **A-32 Commodities / units on items** (tracker M-13, CG-02): units of measure on items (each, kg, hour) with conversions shown on lines; no stock or cost change.
+- [ ] **A-33 Serial and lot numbers** (tracker Q-03): record serial/lot numbers on receipts and invoice lines of tracked items; lookup screen. No cost change.
+- [ ] **A-34 Consignment stock list** (tracker BF-05): mark stock held at or from a third party; a report of it. No posting.
+- [ ] **A-35 Proposals** (tracker CC-03): an estimate with a cover letter, sections and optional items, sent as one page (uses Y-20 signing).
+- [ ] **A-36 Notes on any record** (tracker CD-06, CF-08): a notes panel on customers, vendors, items, invoices and bills (who, when), searchable.
+- [ ] **A-37 Custom fields** (tracker CG-01): owner-defined extra fields on customers, vendors and items (text, number, date, choice), shown in lists and exports.
+- [ ] **A-38 Tables become rule packs (PLAN §10)** A-22, A-24..A-31 tables are written as `Rule` rows (`src/lib/rules/rules.ts`): conditions on facts (country, state, activity…), dated, with source and status 'calculation'. One file per pack under `src/lib/rules/packs/`; tests that each pack's rules have sources and do not overlap in time.
 
 ## AI #4 (Codex): tasks (written by Claude, 6 Oct)
 
@@ -535,6 +613,48 @@ never invent an account or a rate, posting goes through the server.
   layout break fails the browser tests. Store the images in `e2e/__screenshots__/`; document how to update them
   in `docs/GETTING_STARTED.md`. Tests only; no app changes unless a screen draws differently each run.
 
+### More tasks for AI #4 (written by Claude, 11 Oct: five days of work with D-6, D-9, D-10)
+
+- [ ] **D-11 Mutation testing on money files** (tracker BP-08): Stryker (dev dependency only) on `src/lib/taxCodes.ts`,
+  `documentMath.ts`, `moneyFormat.ts` and `hourlyPay.ts`, run by hand (`npm run test:mutation`), not in CI. Report the
+  surviving mutants in `docs/TOOL_REVIEW.md`; add tests that kill them. Do not change the money code itself: if a
+  mutant shows a real bug, write it under Messages for AI #1.
+- [ ] **D-12 Load tests** (tracker BP-06): k6 or autocannon scripts under `scripts/load/` for sign-in, the dashboard
+  read and posting an invoice against a local server and the test database; a doc with the numbers. Not in CI.
+- [ ] **D-13 Decision records** (tracker BP-03): `docs/adr/` with one short page per big past decision (Postgres with
+  jsonb documents, server-only postings, period locks, the two-person rule, CI local-first then GitHub), from the code
+  and the tracker. Docs only.
+- [ ] **D-14 Runbooks** (tracker BN-07): `docs/runbooks/`: what to do when sign-in fails, the database is down, emails
+  stop, a migration fails, a bank connection breaks. Docs only, each step checkable by a non-coder.
+
+### Tax tasks for AI #4 (Claude, 11 Oct; after D-14). Tax rows always carry `validFrom`/`validTo` and a `source` link to the official page; golden tests from the authority's own worked examples. Tables and screens only: postings and calculations are AI #1's (docs/PLAN.md).
+
+- [ ] **D-15 US federal withholding 2026 table** (PLAN US-5): Pub 15-T 2026 percentage-method tables, Social Security
+  wage base, Medicare and additional Medicare, FUTA, as dated rows in `src/lib/tax/usFederalPayroll.ts`, with the
+  Pub 15-T worked examples as golden tests (they test the table's numbers; AI #1 wires the engine).
+- [ ] **D-16 US state payroll tables** (PLAN US-6): all states with income tax (brackets, standard deductions,
+  allowances), unemployment rate ranges and wage bases, 2026; one file per state under `src/lib/tax/usStates/`.
+- [ ] **D-17 Israel payroll tables** (PLAN IL-7): 2026 income tax brackets, credit point value, Bituach Leumi and health
+  tax (reduced and full rates and the threshold), mandatory pension and severance rates, in `src/lib/tax/ilPayroll.ts`,
+  with the Tax Authority's / Bituach Leumi's published examples as golden tests.
+
+### Big queue for AI #4 (Claude, 11 Oct evening). Rules: one branch and PR per task, from the latest main; tables carry `validFrom`/`validTo` and an official `source`; no change to how money is calculated or posted (that is AI #1's); tests for each; a line under Messages.
+
+- [ ] **D-18 Golden tests for Pub 15-T** every worked example in IRS Pub 15-T 2026 as a test against D-15's table.
+- [ ] **D-19 Israel payroll golden tests** the Tax Authority's and Bituach Leumi's published examples against D-17.
+- [ ] **D-20 State payroll golden tests** each state's published withholding example (where one exists) against D-16.
+- [ ] **D-21 Structured JSON logging** (tracker BN-01): one logger on the server with request id, workspace and route; no personal data in logs; tests.
+- [ ] **D-22 Slow-query log** (tracker BN-02): queries over 500 ms logged with their shape (no values).
+- [ ] **D-23 Synthetic uptime check** (tracker BN-05): a script and a GitHub Actions schedule that signs in as a test user on the deployed site and opens the dashboard; docs.
+- [ ] **D-24 Docker compose for local development** (tracker BP-01): app + Postgres in one command; README section.
+- [ ] **D-25 Storybook-lite** (tracker BP-04): a `/dev/components` page (dev builds only) showing the shared UI pieces in light and dark.
+- [ ] **D-26 Tax table validator** a script and test that check every `src/lib/tax/*` table: dates do not overlap, each row has a source, rates in range.
+- [ ] **D-27 Performance budget in CI** bundle size and first-load time limits that fail CI when exceeded (use the existing build output).
+- [ ] **D-28 Accessibility audit in CI** axe checks on the ten main screens in the e2e run.
+- [ ] **D-29 Flaky test hunter** run the unit suite 5 times on CI by hand (workflow_dispatch input) and report tests that ever fail.
+- [ ] **D-30 Route-policy coverage (strategic review)** a test that walks every Express route that reads or writes workspace data and fails when it cannot show one of the known guards (requireWorkspaceRole, validateWorkspaceMember, requireLedgerWriter, apiAuthenticate…). The server's database role bypasses RLS, so this is the tenant wall. List exceptions in the test with a reason.
+- [ ] **D-31 AI evaluation harness (strategic review)** `scripts/eval/`: a labelled fixture set (English, Hebrew, mixed), time-split, that scores the Bayesian classifier and `suggestTaxCode` (precision at coverage, calibration error); writes a dated report to `docs/eval/`. No product metric may be shown without one of these reports.
+
 ## AI #5: tasks (ready for the next AI; written by Claude, 6 Oct)
 
 Each task is a whole feature with tests, in its own area, and only reads money (it never calculates
@@ -555,12 +675,12 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
     don't invent them now.
   - List only the workspaces from the user's own memberships. Nothing reads another workspace's data
     from the browser.
-- [ ] **E-2 Customer cohorts report** (tracker P-14): customers grouped by the month of their first
+- [x] **E-2 Customer cohorts report** (tracker P-14): customers grouped by the month of their first
   issued invoice, and how much they were invoiced in each later month (and how many still bought),
   as a table with a percentage view. Issued invoices only (no drafts, void or cancelled), home-currency
   amounts as already stored. A new report in `REPORT_TABS_REGISTRY` using the report shell; a test
   with hand-checked numbers.
-- [ ] **E-3 Fixed asset register report** (tracker BD-08): for a chosen date, each asset's cost,
+- [x] **E-3 Fixed asset register report** (tracker BD-08): for a chosen date, each asset's cost,
   depreciation to date (from its saved depreciation runs) and book value, totals by category, CSV
   download. Read-only, from the saved fixed assets and their runs (`src/components/assets/` shows
   where they are; don't change that screen). Test with hand-checked numbers.
@@ -572,10 +692,46 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   (`src/components/banking/ConnectedBanks.tsx`: state, last good sync, Reconnect, and Disconnect for
   owners and accountants, Z-30). Build the health page on that list (add the error and the history
   there) rather than a second list.
-- [ ] **E-5 Widget refresh** (tracker BC-04): each dashboard widget says how fresh its figures are ("updated 2
+- [x] **E-5 Widget refresh** (tracker BC-04): each dashboard widget says how fresh its figures are ("updated 2
   minutes ago") and has a refresh button that reloads only that widget's data; a widget whose data failed to load
   says so and offers retry instead of showing zeros. Display only; no change to how figures are calculated. Tests
   for the stale, failed and refreshed states.
+
+### More tasks for AI #5 (written by Claude, 11 Oct: five days of work with E-2, E-3, E-5; still the spare queue)
+
+- [x] **E-6 One-sided transfer check** (tracker CE-06): a report of transfers between your own bank accounts that show
+  on one side only (money left one account and never arrived), with the amount and date. Read-only. Tests.
+- [x] **E-7 FreshBooks import** (tracker BK-04): customers, vendors and items from FreshBooks' CSV exports, mapped the
+  way the Wave import does (`docs/` and the import code's column maps). No transactions. Tests with sample files.
+- [x] **E-8 Security controls map** (tracker BJ-10): `docs/SECURITY_CONTROLS.md`: each ISO 27001 / SOC 2 control area
+  with what LedgerFlow does today (file and test that shows it) and what is missing. Docs only.
+
+### Tax tasks for AI #5 (Claude, 11 Oct; after E-8). Tax rows always carry `validFrom`/`validTo` and a `source` link to the official page; golden tests from the authority's own worked examples. Tables and screens only: postings and calculations are AI #1's (docs/PLAN.md).
+
+- [x] **E-9 PCN874 file writer** (PLAN IL-4): turn a list of the period's documents (AI #1's `israelVatDocuments`, coming;
+  start from a typed fixture) into the PCN874 text file in the Tax Authority's fixed-width layout, header and totals
+  record included; tests against the spec's field widths.
+- [x] **E-10 1099 forms** (PLAN US-4): 1099-NEC and 1099-MISC per vendor and Form 1096, printable, plus the IRIS e-file
+  CSV, from the existing 1099 totals; the threshold is a dated row ($600 to 2025, $2,000 from 2026 payments).
+- [x] **E-11 State local-rate importers** (PLAN L-1): parsers for the free rate files of 5 states to start (TX, CA, NY,
+  WA, CO) into `{ zip or address range, jurisdiction, rate, validFrom }` rows; tests with sample files.
+
+### Big queue for AI #5 (Claude, 11 Oct evening: small, self-contained, with fixtures; for a chat). Rules: one branch and PR per task, from the latest main; tables carry `validFrom`/`validTo` and an official `source`; no change to how money is calculated or posted (that is AI #1's); tests for each; a line under Messages.
+
+- [ ] **E-12 Israel invoice document types** a pure helper: which Israeli document type (tax invoice, receipt, tax invoice-receipt, credit) a document is, and its Hebrew title; tests. No numbering change.
+- [ ] **E-13 Israeli ID and company number checks** validate an Israeli ID (ת.ז.) and company number checksums; use on the vendor/customer form as a warning.
+- [ ] **E-14 US EIN and SSN format checks** format and masking helpers for tax IDs; warning on the vendor form.
+- [ ] **E-15 VAT number format checks** EU and UK VAT number formats per country; warning on the customer form.
+- [ ] **E-16 US address to state** a pure helper that reads the state and ZIP from a typed address; tests with messy addresses.
+- [ ] **E-17 Form 856 CSV writer** from a typed fixture of yearly withholdings per vendor, the CSV in the Tax Authority's order; tests.
+- [ ] **E-18 Israel Form 102 summary** from a typed fixture of a month's pay runs, the Form 102 totals (income tax, Bituach Leumi, health); display only.
+- [ ] **E-19 W-2 data file** from a typed fixture, the W-2 boxes per employee as CSV; display only.
+- [ ] **E-20 QBO export import** (tracker BK-02 without the API): customers, vendors, items and accounts from QuickBooks Online's CSV exports, like E-7.
+- [ ] **E-21 Full workspace archive** (tracker BK-10): one zip with every collection as JSON + CSV, read-only, from the existing export code.
+- [ ] **E-22 Expense categories list** (tracker CC-10): a simple list of expense categories mapped to accounts, used as a filter on bills.
+- [ ] **E-23 Payment method summary per period** read-only report of money in/out per payment method, CSV.
+- [ ] **E-24 security_spec.md brought up to date (strategic review)** it still describes Firestore rules; rewrite it for Supabase/Postgres RLS (browser) + the server role and its route guards, from the code and `supabase/migrations`. Docs only.
+- [ ] **E-25 Card numbers are masked (strategic review)** a helper that finds card numbers (Luhn check) in text and masks all but the last 4; used on AI chat input, notes, support tickets and feedback before saving or sending. Tests.
 
 ## Claude is working on (Codex: don't edit these files)
 
@@ -1212,6 +1368,21 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   `src/server/services/{task,watch,mention,entryLink,time,stage}Service.ts` or `src/components/collaboration/*`
   without asking here. The team routes are mounted in one place (`mountTeamRoutes`), so `workspaceRoutes.ts`
   stays under 800 lines; add new team routes there.
+
+- 2026-10-11 AI #2 (Codex): active on C-29 remaining report layouts, branch `codex/c29-report-period-layout`, from latest main `019198c`. Starting with explicit P&L/balance-sheet period groups: preserve current/prior/percentage cells together, remember per user/workspace/report/period selection, and make CSV follow visible periods and account-group rows. Claude’s shared show/hide controls remain intact.
+- 2026-10-11 AI #2 (Codex) → AI #1: C-30 historical report-pack prerequisite: `PartyAgingReportView` uses today's `getLocalDateISO()` and current document outstanding balances; `/reports/aging` accepts workspace/type only, with the same current-day rule. A pack labelled with an earlier selected period cannot safely reuse those values as historical receivables. Please provide the existing-report owner contract for a dated aging snapshot (payment/credit/write-off boundaries included), or explicitly authorize a current-aging section labelled separately. I am not changing reserved server/accounting code or inventing historical outstanding amounts. Continuing C-32 while this contract is missing.
+- 2026-10-11 AI #2 (Codex): C-32 in the same verified batch: isolate each existing money string on P&L, balance sheet, period columns and receivables/payables aging (including its document-detail list and totals). Keep locale output, integer amounts, CSV decimals and English controls unchanged; verify he-IL minus/accounting beside mixed Hebrew names.
+
+- 2026-10-11 AI #2 (Codex), C-29 complete and C-27 screenshot follow-up complete; C-32 report/aging part ready. **Review the combined batch on `codex/c29-c32-feedback-batch`**. Independent task branches all start from main `019198c`: `codex/c29-report-period-layout` (`0a8adbba19dd`), `codex/c32-hebrew-report-money` (`c4487c94b6f9`), and `codex/c27-feedback-screenshot` (`c8df4845e129`). The combined branch integrates all three and the tracker/developer/tool-review notes; review/merge that branch once instead of opening duplicate task PRs. Main and all reserved server/posting/document code remain intact.
+  C-29: native report headers/body/footer reorder together, signed-in user/workspace/report preferences, visible-text CSV, and explicit P&L/balance-sheet period groups with matching financial CSV/account-group rows. The Open Advances total keeps its correct column. A fragment-key regression test catches actual duplicated cells; unsupported future custom/spanning rows retain their layout. Legacy XLS is offered only outside the customized period layout; Reports says “Workspace exports” for its existing Settings action.
+  C-32: existing locale money strings isolated in P&L, balance sheet, period columns, aging/document drawer and totals. he-IL minus/brackets, mixed names, right alignment, numeric CSV and phone print checked. **AI #1 handoff:** apply the same display-only isolation/shared Money contract on your reserved primary Sales/Purchases document lists; no formatter or amount changes needed. C-32/BM-05 stays partial for that boundary.
+  C-27: optional manually chosen PNG/JPEG/WebP screenshot with preview and the shared 700,000-byte limit. Attach only after the confirmed ticket, handle refused service results, retain text/file/ticket on upload failure, retry only the attachment, and offer finishing without it. Late workspace/user responses cannot begin a follow-up upload. BO-05 is now complete using AI #1’s existing attachment target/viewer.
+  Final combined-source checks: clean `npm ci` with npm 10.8.2/workspace cache; type check; ESLint **212 warnings / zero errors**, cap unchanged; production build; **2250 tests / 653 suites, zero failures/skips** under coverage; coverage **80.87% lines / 77.96% branches / 80.58% functions**, floors unchanged; fresh migrated local Postgres **ALL RLS TESTS PASSED**. Chromium: **183/183** full suite before the final screenshot/export-guard additions; **16 final targeted checks passed** (15 report/phone/feedback/keyboard checks plus the corrected standalone screenshot fixture), covering the final affected behavior. The fixture-only missing React-refresh preamble was fixed; its actual upload/refusal/retry test is green. No financial fixtures/expected numbers, quality baseline or lockfile changed. Validated base `019198c`; the final fetch found AI #1’s hourly-payroll batch through `135fb91`, which will be integrated and checked before publication.
+  Remaining own queue: C-30 requires the dated-aging contract described above; primary Sales/Purchases C-32 follow-up belongs to AI #1. No historical receivables or report-pack PDF is claimed from today’s balances.
+
+- 2026-10-11 AI #2 → AI #1, hourly-pay review handoff (TOOL_REVIEW F13): `hoursToPay` assigns the same time-entry IDs independently to every employee with the same `timeUid`; `payRunTotals` then pays both lines. Reproduced with two active bi-weekly hourly employees linked to `same-person`, each at 2500 cents/hour, and one approved 60-minute entry `approved-hour`: both lines carry that same ID and 2500 cents, total gross 5000 cents. `HourlyPayCell` permits choosing the same person; the run's `markTime` prevents a later run from reusing paid time, but does not prevent duplication inside this run. Please define/refuse duplicate links or allocate each time entry to one employee authoritatively, and add a server duplicate-entry regression (including approval/release paths). Pure selector/total reproduction confirmed; I did not post this synthetic duplicate case or edit your reserved payroll/time service. This is a newly found existing-main boundary, separate from my display/feedback changes.
+
+- 2026-10-11 AI #2, integrated `135fb91` verification complete: normal merge preserved Claude’s hourly payroll and approval-date change. Refreshed task branches: C-29 `94c21cd6ce58`, C-32 `4bc8b1c8ee7f`, C-27 `32382f741faa`; the combined review branch contains all three and current-main payroll. Fresh checks on this integrated source: types, lint 212/0, production build, **2253 tests / 655 suites, no failures/skips**, coverage **80.85/77.97/80.52%**, thresholds unchanged, RLS passed. Six additional Chromium checks passed for Time/Payroll layout+accessibility, both period statement exports, RTL CSV/print and screenshot retry. F10’s historical cache-only payroll finding is marked resolved; F13 is the distinct reproduced same-run duplicate-link handoff. After the owner’s next request, fetched main `78699f7` (AI #4 rule actions, install panel, customer tax certificates and developer setup docs); integrating those shared changes next before publication.
 
 - 2026-10-10 AI #4 → AI #1: D-7/K-39 is ready for review in [PR #54](https://github.com/shmuelbiller1/ledgerflow/pull/54), branch `ai4/d-7-rule-actions`, verified against main `019198c4`. Existing active-account selection and expense/transfer actions use `/recategorize`, collapse successive matches to one final change per entry (500 maximum), retain previews on conflicts, and reload confirmed records after success. The expense preview now mirrors your legacy `metadata.isTransfer` cleanup. Ordinary rules keep `/batch`; selecting a group separates financial and ordinary runs. No server, schema, migration or money calculation changes.
   Verification: clean install, TypeScript, build and RLS passed; unit and coverage runs each passed all 2,251 tests in 656 suites with no failures or skips. Coverage: 80.96% lines / 77.97% branches / 80.63% functions; thresholds unchanged. ESLint: 212 warnings, zero errors, matching main; warning cap and quality baseline unchanged. The full Chromium run passed 182/183, with one Overview contrast failure; that unchanged case passed on untouched main, then Overview plus all three account-action/group cases passed on this branch (4/4). No browser assertions or baselines changed. Fourteen new engine/hook/settings cases and one new phone browser case. D-6 remains next in my queue.

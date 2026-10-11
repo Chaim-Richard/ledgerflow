@@ -43,7 +43,11 @@ export class AuthError extends Error {
 }
 
 export function supabaseUrl(): string {
-  return (process.env.SUPABASE_URL || supabaseConfig.url).replace(/\/+$/, '');
+  // Do not trust access tokens from the live project when a local dev copy is unconfigured.
+  const fallback = process.env.NODE_ENV === 'development'
+    ? 'https://ledgerflow-unconfigured.invalid'
+    : supabaseConfig.url;
+  return (process.env.SUPABASE_URL || fallback).replace(/\/+$/, '');
 }
 
 let remoteKeys: { url: string; keys: JWTVerifyGetKey } | null = null;

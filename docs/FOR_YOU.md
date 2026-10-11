@@ -38,7 +38,10 @@ Last updated: 2026-10-07.
    simplest), then in Vercel → Environment Variables add `RESEND_API_KEY` and `EMAIL_FROM`
    (e.g. `invoices@yourdomain.com`, a domain you verified with the provider). For bounce reports,
    also add `EMAIL_WEBHOOK_SECRET` (any long random text) and in the provider's webhook settings
-   use `https://ledgerflow-one-pearl.vercel.app/api/v1/email-events?token=<that secret>`.
+   use `https://ledgerflow-one-pearl.vercel.app/api/v1/email-events` with an
+   `X-Email-Webhook-Secret` header holding the configured secret, **if the provider supports
+   custom headers**. Existing provider configurations using `?token=<secret>` continue to work,
+   but URLs may be stored by external proxies: migrate them where possible and rotate the secret.
    *Until then, "Email invoice" says email is not set up yet.*
 8. **Stripe (customers pay invoices online by card) — 2 steps left.** Claude connected your Stripe
    *sandbox* ("terranex sandbox", test mode: no real money): the webhook that tells LedgerFlow an
@@ -295,6 +298,29 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
 40. **Hourly pay from approved time (11 Oct, decided by default).** An hourly employee is paid, in each
    pay run, for their approved time up to the pay date that no earlier run paid, at one hourly rate.
    There is no overtime rate (e.g. time and a half over 40 hours a week) yet. Say if you need overtime.
+
+41. **Repository made public (11 Oct): roll one old Stripe test key — needs you, 2 minutes.** An early
+   commit (5 Jul, removed on 22 Jul) had a Stripe *test-mode* secret key starting `sk_test_51Th0cy…`.
+   It cannot move real money, but anyone can now read it. In Stripe → Developers → API keys (test mode)
+   → "Roll key", then put the new one in Vercel's `STRIPE_SECRET_KEY` if you use test mode there. No
+   other secrets were found in the history (no database passwords, service keys or live keys). CI now
+   runs on GitHub on every push to main, every helper-AI branch and every pull request.
+
+42. **Tax: what only you can do (11 Oct; plan in docs/PLAN.md).** (a) Register with the Israel Tax Authority
+   for allocation numbers (free) when you want LedgerFlow to fetch them; until then it prepares the request. (b) Before
+   the "not for filing" note comes off payroll and returns, have an accountant check one real month of Israeli VAT and
+   one US pay run. Default meanwhile: the note stays.
+
+43. **Israel allocation numbers (11 Oct, decided by default).** A tax invoice to a business buyer (their VAT / dealer
+   number on the customer) above the threshold before VAT asks for an allocation number, typed on the invoice and
+   printed on the PDF. Thresholds used: ₪25,000 from 5 May 2024, ₪20,000 in 2025, ₪10,000 from 1 Jan 2026, ₪5,000 from
+   1 Jun 2026 (src/lib/tax/ilAllocation.ts). Please have your accountant confirm these dates; a wrong row is a one-line
+   change. Fetching the number automatically needs your Tax Authority registration (item 42).
+
+44. **From the strategic review (11 Oct): three things only you can decide or do.** (a) A licence: the repository is
+   public with no LICENSE file, which means "all rights reserved" (nobody may reuse it), not open source. **Updated 11 Oct:** added `LICENSE.md` (PolyForm Strict 1.0.0), allowing only the limited noncommercial uses it describes, with no permission to distribute or make derivative works. Commercial use requires separate permission. The project is source-available, not open source. Before accepting outside contributions, set up a separate contribution process. (b) Backups:
+   check that Supabase point-in-time recovery is on for the live project, and let me run one restore drill to a copy.
+   (c) Branch protection on GitHub (Settings → Branches → main: require CI to pass) — it also covers L-67.
 
 ## C. Good to know (no action needed)
 

@@ -43,3 +43,36 @@ test('on screen: Columns lists the headings; a hidden one stays hidden next time
   render(<Report />);
   await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Columns (1 hidden)' })));
 });
+
+test('moving a column moves real headers and cells, keeps the label first and survives reopening', async () => {
+  let view = render(<Report />);
+  await waitFor(() => assert.ok(view.getByRole('button', { name: 'Columns' })));
+  fireEvent.click(view.getByRole('button', { name: 'Columns' }));
+  await waitFor(() => assert.ok(view.getByRole('button', { name: 'Move Amount earlier' })));
+  fireEvent.click(view.getByRole('button', { name: 'Move Amount earlier' }));
+  assert.deepEqual(Array.from(view.container.querySelectorAll('thead th')).map(cell => cell.textContent), ['Item', 'Amount', 'Units']);
+  assert.deepEqual(Array.from(view.container.querySelectorAll('tbody td')).map(cell => cell.textContent), ['Chair', '$100.00', '2']);
+  fireEvent.click(view.getByRole('checkbox', { name: 'Units' }));
+  assert.match(view.container.querySelector('style')!.textContent || '', /nth-child\(3\)/);
+  view.unmount();
+  view = render(<Report />);
+  await waitFor(() => assert.deepEqual(Array.from(view.container.querySelectorAll('thead th')).map(cell => cell.textContent), ['Item', 'Amount', 'Units']));
+});
+
+test('fragment groups keep every header and value without duplicate React keys when reordered', async () => {
+  const errors: unknown[] = [];
+  const originalError = console.error;
+  console.error = (...args: unknown[]) => { errors.push(args[0]); };
+  try {
+    const view = render(<ReportTableScroll><table><caption>Grouped cells</caption>
+      <thead><tr><><th>Record</th><th>Count</th></><><th>Amount</th><th>Notes</th></></tr></thead>
+      <tbody><tr><><td>אחד One</td><td>2</td></><><td>$30.00</td><td>Note</td></></tr></tbody>
+    </table></ReportTableScroll>);
+    await waitFor(() => assert.ok(view.getByRole('button', { name: 'Columns' })));
+    fireEvent.click(view.getByRole('button', { name: 'Columns' }));
+    fireEvent.click(view.getByRole('button', { name: 'Move Amount earlier' }));
+    assert.deepEqual(Array.from(view.container.querySelectorAll('thead th')).map(cell => cell.textContent), ['Record', 'Amount', 'Count', 'Notes']);
+    assert.deepEqual(Array.from(view.container.querySelectorAll('tbody td')).map(cell => cell.textContent), ['אחד One', '$30.00', '2', 'Note']);
+    assert.equal(errors.length, 0, 'reconciliation must retain distinct fragment-cell identities');
+  } finally { console.error = originalError; }
+});

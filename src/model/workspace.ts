@@ -81,6 +81,8 @@ export interface Workspace {
   payrollApproval?: boolean;
   /** P-05: nobody approves what they prepared (src/lib/twoPersonRule.ts; set by owners, through the server). */
   twoPersonRule?: boolean;
+  /** PLAN §6: tax profiles of the books and of label values (src/lib/tax/profile.ts; set through the server, coming). */
+  taxProfiles?: import('../lib/tax/profile').TaxProfiles;
   /** BC-02: each role's starting dashboard layout (src/lib/dashboardOverview.ts; set by owners, through the server). */
   roleDashboards?: RoleDashboards;
   /** BG-07: who approves invoices in an owner's or accountant's place, until when (set through the server). */

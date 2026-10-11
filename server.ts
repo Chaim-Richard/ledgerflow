@@ -75,14 +75,14 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   // Stripe Webhook needs raw body
   registerStripeWebhookRoutes(app, routeContext);
 
-  app.use(express.json({ limit: "50mb" })); // Increased limit to securely support ~100,000 transaction bulk imports
-  app.use((req, _res, next) => { req.body ??= {}; next(); }); // Express 5 leaves req.body undefined without a body
-  app.use(csrfProtection({ isAllowedOrigin }));
-
-  // Apply to API routes
+  // Stripe receives its raw body first; other API traffic is checked before JSON parsing.
   app.use("/api/", limiter);
   app.use("/api/v1/brain", brainRateLimiter);
   app.use("/api/v1/documents", pdfGenerationLimiter);
+  // Only email callbacks bypass CSRF; their router verifies the provider credential.
+  app.use(csrfProtection({ isAllowedOrigin, ignoredPaths: [/^\/api\/v1\/email-events\/?$/] }));
+  app.use(express.json({ limit: "50mb" })); // Bulk JSON/restore support; narrow per-route limits are tracked separately.
+  app.use((req, _res, next) => { req.body ??= {}; next(); }); // Express 5 leaves req.body undefined without a body
 
   // Secure Server-Side Transaction Matching Engine API
   registerLedgerMatchRoutes(app, routeContext);
@@ -116,8 +116,6 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
 
   // --- Corporate Billing and Compute Metering Endpoints ---
   app.use("/api/v1/billing", apiAuthenticate, billingRouter);
-
-  // stress-test route removed in favor of real client-side load testing
 
   registerLogsUploadRoutes(app, routeContext);
 
@@ -176,6 +174,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (error) => {
   console.error('💥 [Server] Uncaught Exception caught:', error);
+  process.exit(1);
 });
 
 // On Vercel the function in api/index.mjs imports createApp() instead of starting a server.

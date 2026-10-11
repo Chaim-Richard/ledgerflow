@@ -76,7 +76,8 @@ export default function OpenAdvancesView({ endDate = '' }: { startDate?: string;
                 <tfoot>
                   {Object.entries(result.totals).map(([currency, cents]) => (
                     <tr key={currency || 'home'}>
-                      <th scope="row" colSpan={5} className="text-left">Total still open{Object.keys(result.totals).length > 1 ? ` (${currency || home})` : ''}</th>
+                      <th scope="row" className="text-left">Total still open{Object.keys(result.totals).length > 1 ? ` (${currency || home})` : ''}</th>
+                      <td /><td /><td /><td />
                       <td className="text-right tabular-nums font-bold">{money(cents, currency)}</td>
                       <td />
                     </tr>
