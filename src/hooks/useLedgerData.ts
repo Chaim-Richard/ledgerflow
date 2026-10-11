@@ -164,7 +164,7 @@ export function useLedgerData() {
     }
 
     // Clear data immediately to prevent ghosting between workspaces
-    useDataNeedsStore.getState().resetLoaded();
+    useDataNeedsStore.getState().resetLoaded(currentWorkspaceId);
     useUIStore.getState().loadHiddenTabs(currentWorkspaceId);
     useLedgerStore.setState({
       ...Object.fromEntries(Object.keys(LEDGER_COLLECTIONS).filter(k => k !== 'scenarios').map(k => [k, []])),
@@ -222,7 +222,7 @@ export function useLedgerData() {
       }
     };
     loadReferenceData();
-  }, [user, currentWorkspaceId]);
+  }, [user?.uid, currentWorkspaceId]);
 
   // Live collections (src/lib/ledgerCollections.ts): the core ones as soon as a workspace opens,
   // the others the first time a screen asks for them (useLedgerCollections). Each stays live until
@@ -236,7 +236,7 @@ export function useLedgerData() {
       subscriptions.forEach(unsubscribe => unsubscribe());
       subscriptions.clear();
     };
-  }, [user, currentWorkspaceId]);
+  }, [user?.uid, currentWorkspaceId]);
   useEffect(() => {
     if (!user || !currentWorkspaceId) return;
     // a failed collection waits for "Try again" (useDataNeedsStore.retry) before starting over
@@ -248,7 +248,7 @@ export function useLedgerData() {
         subscriptions.delete(key);
       }));
     }
-  }, [user, currentWorkspaceId, asked, failed]);
+  }, [user?.uid, currentWorkspaceId, asked, failed]);
 
   return null;
 }
