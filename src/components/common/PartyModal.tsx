@@ -71,6 +71,7 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
     terms: typeof initial?.metadata?.documentTerms === 'string' ? initial.metadata.documentTerms : '',
     exemptNumber: taxExemptionOf(initial)?.number || '', exemptUntil: taxExemptionOf(initial)?.expires || '',
     ...placeFields(initial),
+    vatNumber: typeof initial?.metadata?.vatNumber === 'string' ? initial.metadata.vatNumber : '',
     whtRate: withholdingOf(initial) ? String(withholdingOf(initial)!.ratePercent) : '', whtNumber: withholdingOf(initial)?.number || '', whtUntil: withholdingOf(initial)?.expires || '',
     // each row keeps a key of its own while it is edited (cleanContacts drops it on save)
     contacts: (initial?.contacts || []).map(p => ({ ...p, rowKey: crypto.randomUUID() })) as Array<ContactPerson & { rowKey: string }>,
@@ -107,10 +108,10 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
     const whtRate = form.whtRate.trim() === '' ? NaN : Number(form.whtRate);
     const withholding = Number.isFinite(whtRate) && whtRate >= 0 && whtRate <= 100 ? { ratePercent: whtRate, ...(form.whtNumber.trim() ? { number: form.whtNumber.trim() } : {}), ...(form.whtUntil ? { expires: form.whtUntil } : {}) } : null;
     const exemption = form.exemptNumber.trim() ? { number: form.exemptNumber.trim(), ...(form.exemptUntil ? { expires: form.exemptUntil } : {}) } : null;
-    if (form.language || form.terms.trim() || exemption || taxPlace || withholding || initial?.metadata?.withholding || initial?.metadata?.documentLanguage || initial?.metadata?.documentTerms || initial?.metadata?.taxExemption || initial?.metadata?.taxPlace) {
+    if (form.language || form.terms.trim() || exemption || taxPlace || withholding || form.vatNumber.trim() || initial?.metadata?.vatNumber || initial?.metadata?.withholding || initial?.metadata?.documentLanguage || initial?.metadata?.documentTerms || initial?.metadata?.taxExemption || initial?.metadata?.taxPlace) {
       // the whole `metadata` is saved, so a choice taken back is simply left out
-      const { documentLanguage: _l, documentTerms: _t, taxExemption: _x, taxPlace: _p, withholding: _w, ...rest } = initial?.metadata || {};
-      party.metadata = { ...rest, ...(form.language ? { documentLanguage: form.language } : {}), ...(form.terms.trim() ? { documentTerms: form.terms.trim() } : {}), ...(exemption ? { taxExemption: exemption } : {}), ...(taxPlace ? { taxPlace } : {}), ...(withholding ? { withholding } : {}) };
+      const { documentLanguage: _l, documentTerms: _t, taxExemption: _x, taxPlace: _p, withholding: _w, vatNumber: _v, ...rest } = initial?.metadata || {};
+      party.metadata = { ...rest, ...(form.language ? { documentLanguage: form.language } : {}), ...(form.terms.trim() ? { documentTerms: form.terms.trim() } : {}), ...(exemption ? { taxExemption: exemption } : {}), ...(taxPlace ? { taxPlace } : {}), ...(withholding ? { withholding } : {}), ...(form.vatNumber.trim() ? { vatNumber: form.vatNumber.trim() } : {}) };
     }
     if (contacts.length || (editing && initial?.contacts?.length)) party.contacts = contacts;
     onSave(editing ? { ...party, id: initial!.id } : party);
@@ -220,6 +221,9 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
               </Labelled>
               <Labelled labelClassName={labelClass} label="Tax city">
                 <input type="text" maxLength={80} value={form.placeCity} onChange={e => set({ placeCity: e.target.value })} className={field} />
+              </Labelled>
+              <Labelled labelClassName={labelClass} label="Their VAT / dealer number">
+                <input type="text" maxLength={20} value={form.vatNumber} onChange={e => set({ vatNumber: e.target.value })} placeholder="When they are a business" className={field} />
               </Labelled>
             </div>
           )}

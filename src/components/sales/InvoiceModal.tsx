@@ -461,7 +461,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                    />
                  )}
                  {salesCodes.length === 0 && <p className="text-[11px] text-[var(--muted)]">Add tax codes in Taxes.</p>}
-                 <TaxExemptionNotice customer={safeCustomers.find(c => c.id === invoice.customerId)} date={invoice.date || ''} charging={totals.taxCents > 0} onNoTax={() => setInvoice({ ...invoice, taxCodeId: salesCodes.find(c => c.treatment === 'exempt')?.id, taxRate: 0 })} lineLabels={items[0]?.dimensions} currentRate={taxCode ? effectiveRate(taxCode.components) : 0} onUseRate={rate => setInvoice({ ...invoice, ...taxChoiceFor(rate, salesCodes, effectiveRate) })} />
+                 <TaxExemptionNotice customer={safeCustomers.find(c => c.id === invoice.customerId)} date={invoice.date || ''} charging={totals.taxCents > 0} onNoTax={() => setInvoice({ ...invoice, taxCodeId: salesCodes.find(c => c.treatment === 'exempt')?.id, taxRate: 0 })} lineLabels={items[0]?.dimensions} currentRate={taxCode ? effectiveRate(taxCode.components) : 0} onUseRate={rate => setInvoice({ ...invoice, ...taxChoiceFor(rate, salesCodes, effectiveRate) })} allocation={{ netCents: totals.netCents, taxCents: totals.taxCents, currency, exchangeRate: invoice.exchangeRate, value: String(invoice.metadata?.ilAllocationNumber || ''), onChange: v => setInvoice({ ...invoice, metadata: { ...invoice.metadata, ilAllocationNumber: v || undefined } }) }} />
              </div>
              <div className="space-y-2 flex flex-col justify-end pb-3">
                <label htmlFor="inv-tax-inclusive" className="flex items-center gap-2 cursor-pointer">

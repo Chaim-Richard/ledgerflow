@@ -308,6 +308,12 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
    the "not for filing" note comes off payroll and returns, have an accountant check one real month of Israeli VAT and
    one US pay run. Default meanwhile: the note stays.
 
+43. **Israel allocation numbers (11 Oct, decided by default).** A tax invoice to a business buyer (their VAT / dealer
+   number on the customer) above the threshold before VAT asks for an allocation number, typed on the invoice and
+   printed on the PDF. Thresholds used: ₪25,000 from 5 May 2024, ₪20,000 in 2025, ₪10,000 from 1 Jan 2026, ₪5,000 from
+   1 Jun 2026 (src/lib/tax/ilAllocation.ts). Please have your accountant confirm these dates; a wrong row is a one-line
+   change. Fetching the number automatically needs your Tax Authority registration (item 42).
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of
