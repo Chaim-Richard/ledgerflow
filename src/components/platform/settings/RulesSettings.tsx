@@ -4,7 +4,8 @@ import { AutoRule, Transaction } from '../../../types';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useCurrentRole } from '../../../hooks/useCurrentRole';
-import { disabledRuleGroups, dryRunRules, sortRulesByPriority, evaluateRuleCondition } from '../../../lib/rulesEngine';
+import { isCashAccount } from '../../../lib/txFilters';
+import { hasFinancialRuleAction, hasOrdinaryRuleAction, disabledRuleGroups, dryRunRules, sortRulesByPriority, evaluateRuleCondition } from '../../../lib/rulesEngine';
 import { useTimeout } from '../../../hooks/useTimeout';
 import { aiService } from '../../../services/aiService';
 import { AutoRuleSchema } from '../../../schemas';
@@ -30,7 +31,7 @@ function useRulesSettingsModel() {
   const isGuest = useAuthStore(s => s.isGuest);
   const cachedRules = useLedgerStore(s => (s.autoRules || []) as AutoRule[]);
   const autoRules = useMemo(() => cachedRules.filter(rule => isGuest || rule.workspaceId === workspaceId), [cachedRules, workspaceId, isGuest]);
-  const { saveRule, setRuleActive, deleteRule, applyToExisting, updateGroup, setRulePriority, isUpdatingGroup } = useAutoRules();
+  const { saveRule, setRuleActive, deleteRule, applyToExisting, updateGroup, setRulePriority, isUpdatingGroup, applyError } = useAutoRules();
   const cachedTransactions = useLedgerStore(s => s.transactions);
   const transactions = useMemo(() => cachedTransactions.filter(tx => isGuest || tx.workspaceId === workspaceId), [cachedTransactions, workspaceId, isGuest]);
   useLedgerStore(s => s.setTransactions);
@@ -66,6 +67,15 @@ function useRulesSettingsModel() {
   const [formVendor, setFormVendor] = useState('');
   const [formCategory, setFormCategory] = useState('');
   const [formAmountThreshold, setFormAmountThreshold] = useState<string>('');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [draftActionPreview, setDraftActionPreview] = useState<ReturnType<typeof dryRunRules> | null>(null);
+  const [formTargetAccountId, setFormTargetAccountId] = useState('');
+  const [formBankAccountId, setFormBankAccountId] = useState('');
+  const [formTransactionKind, setFormTransactionKind] = useState<'' | 'expense' | 'transfer'>('');
+  const accounts = useLedgerStore(s => s.accounts);
+  const chartAccounts = useMemo(() => accounts.filter(account => account.workspaceId === workspaceId && !account.isArchived && !account.archived), [accounts, workspaceId]);
+  const bankAccounts = useMemo(() => chartAccounts.filter(isCashAccount), [chartAccounts]);
+  const ruleContext = { workspaceId: workspaceId || '', accounts: chartAccounts, currency: currentWorkspace?.currency };
   const [formTargetCategory, setFormTargetCategory] = useState('');
   const [formTargetClass, setFormTargetClass] = useState('');
   const [formTargetLocation, setFormTargetLocation] = useState('');
@@ -139,6 +149,7 @@ function useRulesSettingsModel() {
 
   const openCreateModal = () => {
     if (!canEditRules) return;
+    setFormError(null); setDraftActionPreview(null);
     setEditingRule(null);
     setFormName('');
     setFormGroup('General');
@@ -147,6 +158,7 @@ function useRulesSettingsModel() {
     setFormVendor('');
     setFormCategory('');
     setFormAmountThreshold('');
+    setFormTargetAccountId(''); setFormBankAccountId(''); setFormTransactionKind('');
     setFormTargetCategory('');
     setFormTargetClass('');
     setFormTargetLocation('');
@@ -160,6 +172,7 @@ function useRulesSettingsModel() {
 
   const openEditModal = (rule: AutoRule) => {
     if (!canEditRules) return;
+    setFormError(null); setDraftActionPreview(null);
     setEditingRule(rule);
     setFormName(rule.name || '');
     setFormGroup(rule.groupName || 'General');
@@ -168,6 +181,9 @@ function useRulesSettingsModel() {
     setFormVendor(rule.condition.vendor || '');
     setFormCategory(rule.condition.category || '');
     setFormAmountThreshold(rule.condition.amountThreshold ? String(rule.condition.amountThreshold) : '');
+    setFormTargetAccountId(rule.action.targetAccountId || '');
+    setFormBankAccountId(rule.action.bankAccountId || '');
+    setFormTransactionKind(rule.action.targetTransactionKind || '');
     setFormTargetCategory(rule.action.targetCategory || '');
     setFormTargetClass(rule.action.targetClass || '');
     setFormTargetLocation(rule.action.targetLocation || '');
@@ -207,6 +223,9 @@ function useRulesSettingsModel() {
       },
       action: {
         ...editingRule?.action,
+        targetAccountId: formTargetAccountId || undefined,
+        bankAccountId: formBankAccountId || undefined,
+        targetTransactionKind: formTransactionKind || undefined,
         targetCategory: formTargetCategory || undefined,
         targetClass: formTargetClass || undefined,
         targetLocation: formTargetLocation || undefined,
@@ -216,6 +235,12 @@ function useRulesSettingsModel() {
       }
     };
 
+    if (hasFinancialRuleAction(ruleData)) {
+      if (hasOrdinaryRuleAction(ruleData)) { setFormError('Keep account/type actions in a separate rule from tagging and other actions.'); return; }
+      if (formTargetAccountId && !chartAccounts.some(account => account.id === formTargetAccountId)) { setFormError('Choose an active account from this workspace chart.'); return; }
+      if (formBankAccountId && !bankAccounts.some(account => account.id === formBankAccountId)) { setFormError('Choose an existing bank/cash account to preserve.'); return; }
+    }
+    setFormError(null);
     if (await saveRule(ruleData)) setIsCreatingRule(false);
   };
 
@@ -237,6 +262,9 @@ function useRulesSettingsModel() {
         amountThreshold: isNaN(amountThresh as number) ? undefined : amountThresh
       },
       action: {
+        targetAccountId: formTargetAccountId || undefined,
+        bankAccountId: formBankAccountId || undefined,
+        targetTransactionKind: formTransactionKind || undefined,
         targetCategory: formTargetCategory || undefined,
         targetClass: formTargetClass || undefined,
         targetLocation: formTargetLocation || undefined,
@@ -246,6 +274,7 @@ function useRulesSettingsModel() {
       }
     };
 
+    setDraftActionPreview(dryRunRules([tempRule], transactions, ruleContext));
     const matches = transactions.filter(t => evaluateRuleCondition(tempRule, t));
     setSingleRuleTestResult(matches);
   };
@@ -279,7 +308,7 @@ function useRulesSettingsModel() {
       }
 
       const generatedRule = validated.data as AutoRule;
-      const dryRunRes = dryRunRules([generatedRule], transactions);
+      const dryRunRes = dryRunRules([generatedRule], transactions, ruleContext);
 
       setAiPreview({
         rule: generatedRule,
@@ -304,7 +333,7 @@ function useRulesSettingsModel() {
   };
 
   const handleRunDryRun = () => {
-    const result = dryRunRules(autoRules, transactions);
+    const result = dryRunRules(selectedGroup === null ? autoRules : autoRules.filter(rule => (rule.groupName || 'General') === selectedGroup), transactions, ruleContext);
     setDryRunResult(result);
     setIsTestingRule(true);
   };
@@ -312,7 +341,7 @@ function useRulesSettingsModel() {
   const handleApplyToExisting = async () => {
     setIsApplyingExisting(true);
     try {
-      const modified = await applyToExisting(autoRules, transactions);
+      const modified = await applyToExisting(selectedGroup === null ? autoRules : autoRules.filter(rule => (rule.groupName || 'General') === selectedGroup), transactions);
       if (modified === 0) return;
       setApplySuccessMessage(`Applied the rules to ${modified} transactions (saved).`);
       setIsTestingRule(false);
@@ -322,7 +351,7 @@ function useRulesSettingsModel() {
     }
   };
 
-  return { canEditRules, disabledGroups, groupError, handleToggleGroup, handleRenameGroup, setRulePriority, isUpdatingGroup, formPriority, setFormPriority, withOccurrenceKeys, formId, currentRole, canBuildRules, autoRules, selectedGroup, setSelectedGroup, searchQuery, setSearchQuery, isCreatingRule, setIsCreatingRule, overlay2DialogProps, overlay2TitleId, editingRule, aiSentence, setAiSentence, isGeneratingAiRule, aiError, aiPreview, setAiPreview, dryRunResult, isTestingRule, setIsTestingRule, overlay1DialogProps, overlay1TitleId, isApplyingExisting, applySuccessMessage, setApplySuccessMessage, formName, setFormName, formGroup, setFormGroup, formDescContains, setFormDescContains, formVendor, setFormVendor, formCategory, setFormCategory, formAmountThreshold, setFormAmountThreshold, formTargetCategory, setFormTargetCategory, formTargetClass, setFormTargetClass, formTargetLocation, setFormTargetLocation, formAddTags, setFormAddTags, formFlagForReview, setFormFlagForReview, formStopOnMatch, setFormStopOnMatch, singleRuleTestResult, groups, filteredRules, handleToggleActive, handleDeleteRule, handleDuplicateRule, openCreateModal, openEditModal, handleSaveRule, handleTestSingleRule, handleGenerateAiRule, handleSaveAiRule, handleRunDryRun, handleApplyToExisting };
+  return { formError, draftActionPreview, formTargetAccountId, setFormTargetAccountId, formBankAccountId, setFormBankAccountId, formTransactionKind, setFormTransactionKind, chartAccounts, bankAccounts, applyError, canEditRules, disabledGroups, groupError, handleToggleGroup, handleRenameGroup, setRulePriority, isUpdatingGroup, formPriority, setFormPriority, withOccurrenceKeys, formId, currentRole, canBuildRules, autoRules, selectedGroup, setSelectedGroup, searchQuery, setSearchQuery, isCreatingRule, setIsCreatingRule, overlay2DialogProps, overlay2TitleId, editingRule, aiSentence, setAiSentence, isGeneratingAiRule, aiError, aiPreview, setAiPreview, dryRunResult, isTestingRule, setIsTestingRule, overlay1DialogProps, overlay1TitleId, isApplyingExisting, applySuccessMessage, setApplySuccessMessage, formName, setFormName, formGroup, setFormGroup, formDescContains, setFormDescContains, formVendor, setFormVendor, formCategory, setFormCategory, formAmountThreshold, setFormAmountThreshold, formTargetCategory, setFormTargetCategory, formTargetClass, setFormTargetClass, formTargetLocation, setFormTargetLocation, formAddTags, setFormAddTags, formFlagForReview, setFormFlagForReview, formStopOnMatch, setFormStopOnMatch, singleRuleTestResult, groups, filteredRules, handleToggleActive, handleDeleteRule, handleDuplicateRule, openCreateModal, openEditModal, handleSaveRule, handleTestSingleRule, handleGenerateAiRule, handleSaveAiRule, handleRunDryRun, handleApplyToExisting };
 }
 
 export type RulesSettingsModel = NonNullable<ReturnType<typeof useRulesSettingsModel>>;
