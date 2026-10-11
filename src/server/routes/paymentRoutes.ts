@@ -37,6 +37,10 @@ const paymentInputSchema = z.object({
   paymentExchangeRate: z.number().positive().max(1e6).optional(),
   /** BE-05: a deposit for this estimate */
   estimateId: z.string().min(1).max(200).optional(),
+  /** IL-5: tax withheld at source from a payment to a vendor, its rate and certificate */
+  withheldCents: z.number().int().nonnegative().optional(),
+  withholdingRatePercent: z.number().min(0).max(100).optional(),
+  withholdingCertificate: z.string().max(40).optional(),
 });
 
 export async function handleCreatePayment(req: express.Request, res: express.Response, dbOverride?: Firestore) {
