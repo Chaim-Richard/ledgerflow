@@ -81,8 +81,13 @@ function validateHeaders(state: LocalRateState, headers: readonly string[]): voi
     seen.add(normalized);
   }
   for (const group of REQUIRED[state]) {
-    if (!hasColumn(headers, group)) {
+    const hits = headers.filter(column => aliases(group).includes(normalizeHeader(column))).length;
+    if (hits === 0) {
       throw new Error('Unrecognized source headings: expected ' + group.join(' / ') + '. Review the publication layout.');
+    }
+    // Texas rate tables may legitimately include both a local component and a total.
+    if (hits > 1 && !(state === 'TX' && group.includes('Total Rate'))) {
+      throw new Error('Ambiguous source headings for ' + group.join(' / ') + '; review column mapping.');
     }
   }
 }
@@ -103,6 +108,8 @@ function validDate(value: string): boolean {
  */
 export function parseRateFraction(raw: string, mode: 'decimal' | 'percentage' | 'auto'): number {
   let text = raw.trim().replace(/,/g, '');
+  const pct = text.endsWith('%');
+  if (pct) text = text.slice(0, -1).trim();
   const mixedVulgar = text.match(/^(\d+)\s*([¼½¾])$/);
   const vulgar: Record<string, string> = { '¼': '.25', '½': '.5', '¾': '.75' };
   if (mixedVulgar) text = mixedVulgar[1] + vulgar[mixedVulgar[2]];
@@ -112,8 +119,6 @@ export function parseRateFraction(raw: string, mode: 'decimal' | 'percentage' | 
     if (denominator === 0 || numerator >= denominator) throw new Error('Invalid fractional rate.');
     text = String(Number(mixedAscii[1]) + numerator / denominator);
   }
-  const pct = text.endsWith('%');
-  if (pct) text = text.slice(0, -1).trim();
   if (!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(text)) throw new Error('Rate is not numeric or has an unsupported format.');
   const value = Number(text);
   if (mode === 'auto' && !pct) {
@@ -169,7 +174,9 @@ export function parseStateLocalRateRows(
   if (options.publicationUrl !== undefined) {
     try {
       const url = new URL(options.publicationUrl);
-      if (url.protocol !== 'https:' || !url.hostname) throw new Error('Invalid protocol.');
+      const expectedHost = new URL(SOURCES[state]).hostname;
+      if (url.protocol !== 'https:' || url.hostname !== expectedHost ||
+          url.username || url.password) throw new Error('Invalid authority URL.');
       source = url.toString();
     } catch {
       throw new Error('The source publication must have an HTTPS URL.');
@@ -181,6 +188,7 @@ export function parseStateLocalRateRows(
   const rows: StateLocalRateRow[] = [];
   const issues: LocalRateImport['issues'] = [];
   const distinctRows = new Set<string>();
+  const ratesByJurisdiction = new Map<string, { rate: number; sourceRow: number }>();
 
   for (let i = 0; i < data.length; i++) {
     const cells = data[i];
@@ -243,6 +251,16 @@ export function parseStateLocalRateRows(
       const identity = JSON.stringify([row.jurisdiction, row.rate, row.basis, row.code, row.zip, row.zip4Low, row.zip4High]);
       if (distinctRows.has(identity)) throw new Error('Duplicate row in this publication edition.');
       distinctRows.add(identity);
+      const locationKey = JSON.stringify([row.jurisdiction.toLowerCase(), row.code,
+        row.zip, row.zip4Low, row.zip4High, row.basis]);
+      const previousRate = ratesByJurisdiction.get(locationKey);
+      if (previousRate && previousRate.rate !== row.rate) {
+        issues.push({ row: row.sourceRow,
+          reason: 'Conflicting rates for the same location key (source rows ' +
+            previousRate.sourceRow + ', ' + row.sourceRow + '); location must be adjudicated.' });
+      } else if (!previousRate) {
+        ratesByJurisdiction.set(locationKey, { rate: row.rate, sourceRow: row.sourceRow });
+      }
       rows.push(row);
     } catch (error) {
       issues.push({ row: i + 2, reason: error instanceof Error ? error.message : String(error) });
