@@ -141,8 +141,6 @@ function previewFinancialAction(rule: AutoRule, tx: Transaction, context?: RuleA
   const currentCounter = accounts.get(counter.accountId);
   const unit = (account: ChartAccount) => account.currency || context.currency || 'USD';
   if (!currentCounter || unit(currentCounter) !== unit(target) || (transfer && unit(bank) !== unit(target))) return refuse('Choose an account in the same currency; a rule does not convert money.');
-  // The current server contract retains this legacy marker; refuse rather than show a false expense.
-  if (!transfer && tx.metadata?.isTransfer) return refuse('This entry has a legacy transfer marker. Clear it through the financial editor before applying an expense rule.');
   const lines = tx.lines.map(line => {
     if (line.accountId === bank.id) return line;
     const moved = { ...line, accountId: target.id, accountName: target.name };
@@ -154,7 +152,13 @@ function previewFinancialAction(rule: AutoRule, tx: Transaction, context?: RuleA
   if (transfer) {
     modifiedTx.isTransfer = true;
     modifiedTx.transferDetails = bankLine.amountCents < 0 ? { fromAccountId: bank.id, toAccountId: target.id } : { fromAccountId: target.id, toAccountId: bank.id };
-  } else { delete modifiedTx.isTransfer; delete modifiedTx.transferDetails; }
+  } else {
+    delete modifiedTx.isTransfer; delete modifiedTx.transferDetails;
+    if (tx.metadata && 'isTransfer' in tx.metadata) {
+      modifiedTx.metadata = { ...tx.metadata };
+      delete modifiedTx.metadata.isTransfer;
+    }
+  }
   if (JSON.stringify(modifiedTx) === JSON.stringify(tx)) return { modifiedTx: tx, changes: [] };
   return { modifiedTx, changes: [`Counterparty account: ${target.name}`, transfer ? 'Classified as transfer' : 'Transfer classification cleared'],
     recategorization: { id: tx.id, bankAccountId: bank.id, toAccountId: target.id, ...(tx.updatedAt ? { expectedUpdatedAt: tx.updatedAt } : {}) } };

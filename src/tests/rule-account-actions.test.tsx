@@ -69,9 +69,18 @@ describe('Safe account/type rule previews', () => {
       transaction({ lines: [base.lines[0], { ...base.lines[1], amountCents: 12344 }] }),
       transaction({ lines: [{ ...base.lines[0], amountCents: -0.5 }, { ...base.lines[1], amountCents: 0.5 }] })];
     for (const tx of cases) { const result = applyRuleAction(rule(), tx, context); assert.ok(result.error); assert.strictEqual(result.modifiedTx, tx); assert.deepEqual(result.changes, []); }
-    assert.match(applyRuleAction(rule(), transaction({ metadata: { isTransfer: true } }), context).error!, /legacy transfer marker/);
     const dry = dryRunRules([rule()], [transaction({ taxAmountCents: 10 })], context);
     assert.equal(dry.matches.length, 0); assert.equal(dry.errors.length, 1);
+  });
+
+  it('clears the legacy transfer marker on expense conversion while retaining other metadata', () => {
+    const tx = transaction({ isTransfer: true, metadata: { isTransfer: true, memo: 'הערה / note' } });
+    const result = applyRuleAction(rule(), tx, context);
+    assert.equal(result.error, undefined);
+    assert.deepEqual(result.modifiedTx.metadata, { memo: 'הערה / note' });
+    assert.equal(isTransferTransaction(result.modifiedTx), false);
+    assert.deepEqual(result.modifiedTx.lines.map(line => line.amountCents), [-12345, 12345]);
+    assert.equal(tx.metadata?.isTransfer, true);
   });
 
   it('honors group/priority/stop and refuses combining financial and legacy actions in one rule', async () => {
@@ -111,7 +120,10 @@ beforeEach(() => {
           return next;
         }) };
         if (transfer) { saved.isTransfer = true; saved.transferDetails = { fromAccountId: change.bankAccountId, toAccountId: target.id }; }
-        else { delete saved.isTransfer; delete saved.transferDetails; }
+        else {
+          delete saved.isTransfer; delete saved.transferDetails;
+          if (saved.metadata && 'isTransfer' in saved.metadata) { saved.metadata = { ...saved.metadata }; delete saved.metadata.isTransfer; }
+        }
         records.set(change.id, saved);
       }
       return Response.json({ status: 'success', changed: body.changes.length });
