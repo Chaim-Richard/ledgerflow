@@ -338,6 +338,17 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 - [ ] **C-39 Discount mismatch report** (tracker CB-22): invoices whose line discount differs from the customer's
   price list or the item's usual discount, with the difference; CSV. Read-only. Hand-checked unit tests.
 
+### Tax tasks for AI #2 (Claude, 11 Oct; after C-39; plan in docs/PLAN.md). Tax rows always carry `validFrom`/`validTo` and a `source` link to the official page; golden tests from the authority's own worked examples. Tables and screens only: postings and calculations are AI #1's (docs/PLAN.md).
+
+- [ ] **C-40 Israel VAT report screen and print** (PLAN IL-3): the period's sales, inputs, fixed-asset inputs and amount
+  to pay, from AI #1's figures function (`israelVatReturn`, coming); Hebrew and English; print. Until it lands, build on
+  the existing return boxes (T-06).
+- [ ] **C-41 Nexus watch** (PLAN US-2): sales and order counts per US state (ship-to address) for the current and last
+  calendar year against each state's economic-nexus threshold (table `src/lib/tax/usNexus.ts`, rows with sources), with a
+  warning at 80%. Read-only.
+- [ ] **C-42 Payroll forms layouts** (PLAN US-5, IL-7): 941, 940, W-2/W-3 data and Israel 102/106 as printable screens and
+  CSV, from the pay runs' posted figures. Read-only; "not for filing" banner stays.
+
 ## AI #3 (Arena): tasks (Claude, 5 Oct late)
 
 Your R-07 fix, BA-17 and BB-06 are merged into main (9c77cde): Claude ran the database tests on the
@@ -491,6 +502,14 @@ before:
 - [ ] **A-21 Comments on customers and projects** (tracker CF-07): a comment thread on a customer's and a project's page
   (who, when, edit own within 10 minutes, @mentions use the existing mentions). Tests.
 
+### Tax tasks for AI #3 (Claude, 11 Oct; after A-21). Tax rows always carry `validFrom`/`validTo` and a `source` link to the official page; golden tests from the authority's own worked examples. Tables and screens only: postings and calculations are AI #1's (docs/PLAN.md).
+
+- [ ] **A-22 US state sales tax table** (PLAN US-1): `src/lib/tax/usStateSalesTax.ts`: 50 states + DC, base rate,
+  shipping taxable yes/no, origin or destination sourcing, each row with `validFrom` and the state revenue department's
+  link. Tests: every state present, rates between 0 and 10%, the 5 no-sales-tax states at 0.
+- [ ] **A-23 Form 856 report (Israel)** (PLAN IL-5): yearly withholding at source per vendor (paid, withheld, certificate
+  number), from the payments' withholding lines AI #1 adds; CSV in the Tax Authority's column order. Read-only.
+
 ## AI #4 (Codex): tasks (written by Claude, 6 Oct)
 
 Each task is a whole feature with tests, in its own area. **Don't edit** AI #1's files (the table
@@ -573,6 +592,17 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-14 Runbooks** (tracker BN-07): `docs/runbooks/`: what to do when sign-in fails, the database is down, emails
   stop, a migration fails, a bank connection breaks. Docs only, each step checkable by a non-coder.
 
+### Tax tasks for AI #4 (Claude, 11 Oct; after D-14). Tax rows always carry `validFrom`/`validTo` and a `source` link to the official page; golden tests from the authority's own worked examples. Tables and screens only: postings and calculations are AI #1's (docs/PLAN.md).
+
+- [ ] **D-15 US federal withholding 2026 table** (PLAN US-5): Pub 15-T 2026 percentage-method tables, Social Security
+  wage base, Medicare and additional Medicare, FUTA, as dated rows in `src/lib/tax/usFederalPayroll.ts`, with the
+  Pub 15-T worked examples as golden tests (they test the table's numbers; AI #1 wires the engine).
+- [ ] **D-16 US state payroll tables** (PLAN US-6): all states with income tax (brackets, standard deductions,
+  allowances), unemployment rate ranges and wage bases, 2026; one file per state under `src/lib/tax/usStates/`.
+- [ ] **D-17 Israel payroll tables** (PLAN IL-7): 2026 income tax brackets, credit point value, Bituach Leumi and health
+  tax (reduced and full rates and the threshold), mandatory pension and severance rates, in `src/lib/tax/ilPayroll.ts`,
+  with the Tax Authority's / Bituach Leumi's published examples as golden tests.
+
 ## AI #5: tasks (ready for the next AI; written by Claude, 6 Oct)
 
 Each task is a whole feature with tests, in its own area, and only reads money (it never calculates
@@ -623,6 +653,16 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   way the Wave import does (`docs/` and the import code's column maps). No transactions. Tests with sample files.
 - [ ] **E-8 Security controls map** (tracker BJ-10): `docs/SECURITY_CONTROLS.md`: each ISO 27001 / SOC 2 control area
   with what LedgerFlow does today (file and test that shows it) and what is missing. Docs only.
+
+### Tax tasks for AI #5 (Claude, 11 Oct; after E-8). Tax rows always carry `validFrom`/`validTo` and a `source` link to the official page; golden tests from the authority's own worked examples. Tables and screens only: postings and calculations are AI #1's (docs/PLAN.md).
+
+- [ ] **E-9 PCN874 file writer** (PLAN IL-4): turn a list of the period's documents (AI #1's `israelVatDocuments`, coming;
+  start from a typed fixture) into the PCN874 text file in the Tax Authority's fixed-width layout, header and totals
+  record included; tests against the spec's field widths.
+- [ ] **E-10 1099 forms** (PLAN US-4): 1099-NEC and 1099-MISC per vendor and Form 1096, printable, plus the IRIS e-file
+  CSV, from the existing 1099 totals; the threshold is a dated row ($600 to 2025, $2,000 from 2026 payments).
+- [ ] **E-11 State local-rate importers** (PLAN L-1): parsers for the free rate files of 5 states to start (TX, CA, NY,
+  WA, CO) into `{ zip or address range, jurisdiction, rate, validFrom }` rows; tests with sample files.
 
 ## Claude is working on (Codex: don't edit these files)
 
@@ -1295,3 +1335,4 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   - **A-17** CSS in `src/index.css` and one line in `RootLayout.tsx` (print-only title). **Not verified in Chromium** (no browser in this sandbox): please run the print check. Amount colours print black by changing `--pos`/`--neg` for print only.
   - **Not started, need a migration or decision:** A-8 (asset maintenance log and tags: `fixedAssets` allow-list), A-15 (project budget: `projects` allow-list), A-16 (customer price overrides: `customers` allow-list). Next for me: A-8, then A-15 and A-16 with migration files listed for review; A-7 bill side waits for a bill item picker.
 - 2026-10-11 Claude (AI #1), at the owner's request ("work for all AIs for five days"): queues filled. AI #2: C-33/C-34 withdrawn (they were AI #4's D-6); new C-35..C-39. AI #3: new A-18..A-21. AI #4: new D-11..D-14. AI #5 (spare): new E-6..E-8.
+- 2026-10-11 Claude (AI #1): `docs/PLAN.md` written (the owner's plan: tax for Israel, then US federal and state, then local). Tax tasks added to every queue: AI #2 C-40..C-42, AI #3 A-22..A-23, AI #4 D-15..D-17, AI #5 E-9..E-11. Tables, files and screens only; postings and calculations stay with AI #1.

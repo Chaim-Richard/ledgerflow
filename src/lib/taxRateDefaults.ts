@@ -71,9 +71,9 @@ export const COUNTRY_TAX_CONFIGS: Record<string, TaxRateConfig> = {
     countryCode: 'IL',
     countryName: 'Israel',
     taxType: 'vat',
-    defaultRate: 0.17, // 17% Ma'am
+    defaultRate: 0.18, // 18% Ma'am since 1 Jan 2025 (17% before); new workspaces' codes only — saved codes and invoices keep theirs
     categoryRates: {
-      'Standard VAT': 0.17,
+      'Standard VAT': 0.18,
       'Zero Rate Eilat': 0.0,
       'Exempt Services': 0.0
     }

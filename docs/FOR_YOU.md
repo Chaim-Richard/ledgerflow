@@ -303,6 +303,11 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
    other secrets were found in the history (no database passwords, service keys or live keys). CI now
    runs on GitHub on every push to main, every helper-AI branch and every pull request.
 
+42. **Tax: what only you can do (11 Oct; plan in docs/PLAN.md).** (a) Register with the Israel Tax Authority
+   for allocation numbers (free) when you want LedgerFlow to fetch them; until then it prepares the request. (b) Before
+   the "not for filing" note comes off payroll and returns, have an accountant check one real month of Israeli VAT and
+   one US pay run. Default meanwhile: the note stays.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of
