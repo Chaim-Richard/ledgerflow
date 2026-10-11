@@ -5,6 +5,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { supabaseUrl } from "../auth/supabaseAuth";
 import { isAiStudioProxy } from "./origins";
+import { safeRequestTarget } from "./safeRequestTarget";
 
 /** CORS, proxy trust, compression, security headers and request logging (F-01, moved from server.ts). */
 export function applySecurityMiddleware(app: express.Express, isAllowedOrigin: (origin: string) => boolean): void {
@@ -41,7 +42,9 @@ export function applySecurityMiddleware(app: express.Express, isAllowedOrigin: (
     hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   }));
-  app.use(morgan("tiny", {
+  // The default :url token includes query parameters, which may contain credentials.
+  morgan.token("safe-url", req => safeRequestTarget(req.url || '/'));
+  app.use(morgan(":method :safe-url :status :res[content-length] - :response-time ms", {
     skip: (req) => !req.url || !req.url.startsWith("/api")
   }));
 }
