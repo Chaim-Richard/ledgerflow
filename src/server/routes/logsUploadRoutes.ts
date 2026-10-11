@@ -1,4 +1,5 @@
 import { errorMessage, requestUser } from "../auth/requestUser";
+import { apiLogsForWorkspace } from "../http/apiRequestLog";
 import { formatTzDate, sendError, authorizeWorkspace, authenticate, upload } from "../http/serverKit";
 import type { AuthenticatedRequest, ServerContext } from "../http/serverKit";
 import { apiAuthenticate } from "../auth/apiAuthenticate";
@@ -21,12 +22,8 @@ export function registerLogsUploadRoutes(app: express.Express, ctx: ServerContex
       const authReq = req as AuthenticatedRequest;
       await authorizeWorkspace(authReq, workspaceId);
 
-      const filtered = apiLogs.filter(log => {
-        const isPathMatch = typeof log.path === "string" && (log.path.includes(workspaceId) || log.path.includes("workspaceId=" + workspaceId));
-        const isKeyMatch = typeof log.apiKeyUsed === "string" && log.apiKeyUsed.includes(workspaceId.substring(0, 5));
-        const isDeveloperWsMatch = requestUser(req).developerWorkspaceId === workspaceId;
-        return isPathMatch || isKeyMatch || isDeveloperWsMatch;
-      });
+      // A scoped API key must never receive the global process log.
+      const filtered = apiLogsForWorkspace(apiLogs, workspaceId);
 
       res.json(filtered);
     } catch (err) {
