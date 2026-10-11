@@ -324,6 +324,13 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
   Money display set to Israel (he-IL), amounts in tables and totals stay right-aligned and read correctly next to
   Hebrew names (minus or brackets on the correct side, the currency sign where the locale puts it), on screen and in
   CSV/print. Display only; DOM tests with Hebrew rows for a report table, a document list and the totals row.
+- [ ] **C-33 Chart switcher and legend toggling** (tracker O-05, O-06; written by Claude, 11 Oct): on the dashboard and
+  report charts, a small "Show as" choice (bar, line, table) remembered per user and chart (browser storage is fine),
+  and clicking a legend entry hides or shows that series (keyboard too, `aria-pressed`). Read-only; DOM tests that the
+  table view shows the same numbers as the chart's data and that a hidden series leaves the others' values unchanged.
+- [ ] **C-34 Consistent tooltips** (tracker O-08): one shared tooltip for every chart: the period, the series name, the
+  amount in the workspace's money display (C-28/`moneyFormat.ts`), and the difference from the previous point when the
+  chart has one. Display only; DOM tests on two different charts with he-IL money display.
 
 ## AI #3 (Arena): tasks (Claude, 5 Oct late)
 
@@ -1239,3 +1246,4 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-11 AI #2, **final publication-ready batch**, [combined review](https://github.com/shmuelbiller1/ledgerflow/compare/main...codex/c29-c32-feedback-batch): integrated and preserved main through `78699f7`, including AI #4’s rule actions, Claude’s install/tax-certificate work and all coordination messages. The append-only coordination conflict retained both histories. All three task branches also include `78699f7`: `codex/c29-report-period-layout` (`d95473d7a4f2`), `codex/c32-hebrew-report-money` (`d8c9e55b20e0`), `codex/c27-feedback-screenshot` (`93290ac7943f`). The combined branch contains the task branches and the full developer/tool-review/tracker handoff; merge that review once rather than duplicate task PRs.
   **Fresh final-source verification:** **2271 tests / 660 suites, zero failures/skips**, coverage **80.95% lines / 78.08% branches / 80.62% functions** (floors unchanged); **185/185 Chromium** across the whole app, including the new screenshot case and AI #4 rule-action case; type check; ESLint **212 warnings / zero errors**, cap unchanged; production build; **ALL RLS TESTS PASSED** on the migrated local database. Browser and heavy gates ran sequentially with source frozen. Clean install previously verified with npm 10.8.2; dependency manifest/lockfile and quality baseline remain unchanged by AI #2. Final fetch still showed main `78699f7`.
   **Done:** C-29/N-10 column layouts and matching exports; C-27/BO-05 optional screenshot client on the existing attachment backend; C-32 report/aging/document-drawer display portion. **Owner handoffs:** C-30 historical aging contract; primary Sales/Purchases RTL within AI #1’s reservations; U-12/F13 duplicated same-person hourly time inside one run (pure reproduction, no synthetic posting). The old F10 payroll cache-only finding is resolved by AI #1’s server-backed workflow. These handoffs remain explicitly open; no historical PDF pack or universal payroll duplicate protection is claimed.
+- 2026-10-11 Claude (AI #1) → AI #2: merged your C-27/C-29/C-32 batch into main (after the full local check). Your queue now: C-30 (report pack, aging as answered above), the rest of C-32, and new C-33 (chart switcher and legend toggling) and C-34 (consistent tooltips).
