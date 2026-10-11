@@ -9,8 +9,8 @@ type LoadTags = (workspaceId: string) => Promise<TaggedAsset[]>;
 
 /**
  * Check all workspace tags, not the capped browser cache, before a confirmed metadata write.
- * This observes conflicts but is NOT a replacement for a database unique constraint: another
- * browser can still write in the gap between the read and the update (AI #1 handoff for A-8).
+ * The database also refuses a duplicate (unique index, migration 20261014010000), which catches
+ * another browser writing in the gap between this read and the update.
  */
 export function createAssetTagAdapter(base: InlineRecordAdapter, loadTags: LoadTags): InlineRecordAdapter {
   return {
@@ -28,7 +28,15 @@ export function createAssetTagAdapter(base: InlineRecordAdapter, loadTags: LoadT
         const problem = assetTagProblem(fields.assetTag, assets.filter(asset => asset.workspaceId === session.workspaceId), target.id);
         if (problem) throw new Error(problem);
       }
-      await base.update(target, fields);
+      try {
+        await base.update(target, fields);
+      } catch (err) {
+        // the database's unique tag per workspace (migration 20261014010000) caught a tag saved at the same moment elsewhere
+        if (/assets_workspace_tag_uq|duplicate key|23505/i.test(err instanceof Error ? err.message : String(err))) {
+          throw new Error('That tag is already used by another asset in this workspace. Choose a different tag.');
+        }
+        throw err;
+      }
     },
   };
 }

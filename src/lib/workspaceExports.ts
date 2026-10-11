@@ -4,6 +4,11 @@
  * Claude owns the customer/vendor PartyModal wiring.
  */
 export { checkIsraeliIdentifier, israeliIdentifierWarning } from './tax/israeliIdentifiers';
+ * E-12: pure Israeli document-title classification for explicitly issued,
+ * reviewed documents only. Not wired to issuance, numbering, VAT posting,
+ * allocations or tax returns until Claude supplies the issuance evidence.
+ */
+export { classifyIsraeliDocument, israeliDocumentTitle } from './tax/israeliDocumentTypes';
 
 /**
  * PLAN §10: the rule graph (facts from every dimension, dated rules that accumulate, override or exclude, evidence).
