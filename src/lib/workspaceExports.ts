@@ -1,3 +1,10 @@
+/**
+ * E-9: opt-in historical fixture formatter, deliberately NOT a filing workflow.
+ * Re-export from an application-reachable, read-only exports module so the
+ * repository's import/reachability guards can verify the draft stays connected.
+ * No production download or tax submission action uses this formatter.
+ */
+export { buildPcn874FixtureDraft as buildHistoricalPcn874Draft } from './tax/pcn874Draft';
 import type {ChartAccount,Transaction} from '../types';
 import {isPostable,lineAmount,isCashAccount} from './txFilters';
 import {csvMoney,type CsvValue} from './csvExport';
