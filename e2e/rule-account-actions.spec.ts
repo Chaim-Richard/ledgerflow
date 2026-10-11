@@ -37,6 +37,9 @@ test('account conversion uses the financial endpoint, retains refused preview, a
     useLedgerStore.setState({ accounts, transactions: [entry], autoRules: [rule] }); useUIStore.setState({ activeSettingsTab: 'rules' });
   }, { workspaceId, accounts, entry, rule });
   await page.setViewportSize({ width: 390, height: 844 });
+  // the cookie banner sits over the dialog's buttons at phone width
+  const cookie = page.getByRole('button', { name: 'Dismiss cookie banner' });
+  if (await cookie.isVisible()) await cookie.click();
   await page.getByRole('button', { name: 'Test Against Ledger' }).click();
   await expect(page.getByText('Counterparty account: Savings', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Apply 1 Updates/ }).click();
