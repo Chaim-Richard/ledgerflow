@@ -324,13 +324,19 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
   Money display set to Israel (he-IL), amounts in tables and totals stay right-aligned and read correctly next to
   Hebrew names (minus or brackets on the correct side, the currency sign where the locale puts it), on screen and in
   CSV/print. Display only; DOM tests with Hebrew rows for a report table, a document list and the totals row.
-- [ ] **C-33 Chart switcher and legend toggling** (tracker O-05, O-06; written by Claude, 11 Oct): on the dashboard and
-  report charts, a small "Show as" choice (bar, line, table) remembered per user and chart (browser storage is fine),
-  and clicking a legend entry hides or shows that series (keyboard too, `aria-pressed`). Read-only; DOM tests that the
-  table view shows the same numbers as the chart's data and that a hidden series leaves the others' values unchanged.
-- [ ] **C-34 Consistent tooltips** (tracker O-08): one shared tooltip for every chart: the period, the series name, the
-  amount in the workspace's money display (C-28/`moneyFormat.ts`), and the difference from the previous point when the
-  chart has one. Display only; DOM tests on two different charts with he-IL money display.
+- [x] **C-33 / C-34** — withdrawn by Claude 11 Oct: the same as AI #4's D-6 (chart switcher, legend, tooltips). Not yours.
+- [ ] **C-35 Access review report** (tracker BJ-03; written by Claude, 11 Oct, for the next five days with C-36..C-39): Settings → Security → "Access
+  review": every person in the workspace with their role, when they last signed in, whether two-step sign-in is on, and
+  when their role last changed (from the audit log); CSV and print. Read-only, owners and accountants. DOM tests.
+- [ ] **C-36 Audit evidence pack** (tracker BJ-02): for a chosen period, one download (zip) with the audit log as CSV,
+  the period locks, the approvals (invoice approvals, pay runs, two-person rule) and the access review (C-35). Read-only,
+  from the existing data; a test that each file's rows match the screen.
+- [ ] **C-37 Bookmarks** (tracker CF-05): a star on any report or screen pins it to a "Bookmarks" group at the top of the
+  sidebar, per user, in the order they choose (keyboard reorder). Browser storage is fine. DOM tests.
+- [ ] **C-38 Export templates** (tracker CF-06): on a report's CSV export, "Save these columns as…" keeps the chosen
+  columns and order (C-29's layout) under a name per user and report; the export menu lists them. DOM tests.
+- [ ] **C-39 Discount mismatch report** (tracker CB-22): invoices whose line discount differs from the customer's
+  price list or the item's usual discount, with the difference; CSV. Read-only. Hand-checked unit tests.
 
 ## AI #3 (Arena): tasks (Claude, 5 Oct late)
 
@@ -474,6 +480,17 @@ before:
   - **Tests:** a browser test that prints the transactions list and an invoice preview to PDF and checks the
     sidebar is not in it.
 
+### More tasks for AI #3 (written by Claude, 11 Oct: five days of work with A-8, A-12, A-15, A-16)
+
+- [ ] **A-18 Recurring estimates** (tracker CC-04): an estimate can repeat (monthly, quarterly, yearly) like recurring
+  invoices do; each copy is a new draft estimate with the next number, never sent by itself. Nothing is posted. Tests.
+- [ ] **A-19 Item bundles** (tracker BF-03): an item can be a bundle of other items with quantities; choosing it on an
+  invoice adds its parts as lines (prices from each part, changeable). Stock and posting are the parts' own, unchanged.
+- [ ] **A-20 Purchase trends by item** (tracker CB-11, the rest): vendor totals exist; add per item and per month, from
+  bill lines, with CSV. Read-only. Hand-checked tests.
+- [ ] **A-21 Comments on customers and projects** (tracker CF-07): a comment thread on a customer's and a project's page
+  (who, when, edit own within 10 minutes, @mentions use the existing mentions). Tests.
+
 ## AI #4 (Codex): tasks (written by Claude, 6 Oct)
 
 Each task is a whole feature with tests, in its own area. **Don't edit** AI #1's files (the table
@@ -542,6 +559,20 @@ never invent an account or a rate, posting goes through the server.
   layout break fails the browser tests. Store the images in `e2e/__screenshots__/`; document how to update them
   in `docs/GETTING_STARTED.md`. Tests only; no app changes unless a screen draws differently each run.
 
+### More tasks for AI #4 (written by Claude, 11 Oct: five days of work with D-6, D-9, D-10)
+
+- [ ] **D-11 Mutation testing on money files** (tracker BP-08): Stryker (dev dependency only) on `src/lib/taxCodes.ts`,
+  `documentMath.ts`, `moneyFormat.ts` and `hourlyPay.ts`, run by hand (`npm run test:mutation`), not in CI. Report the
+  surviving mutants in `docs/TOOL_REVIEW.md`; add tests that kill them. Do not change the money code itself: if a
+  mutant shows a real bug, write it under Messages for AI #1.
+- [ ] **D-12 Load tests** (tracker BP-06): k6 or autocannon scripts under `scripts/load/` for sign-in, the dashboard
+  read and posting an invoice against a local server and the test database; a doc with the numbers. Not in CI.
+- [ ] **D-13 Decision records** (tracker BP-03): `docs/adr/` with one short page per big past decision (Postgres with
+  jsonb documents, server-only postings, period locks, the two-person rule, CI local-first then GitHub), from the code
+  and the tracker. Docs only.
+- [ ] **D-14 Runbooks** (tracker BN-07): `docs/runbooks/`: what to do when sign-in fails, the database is down, emails
+  stop, a migration fails, a bank connection breaks. Docs only, each step checkable by a non-coder.
+
 ## AI #5: tasks (ready for the next AI; written by Claude, 6 Oct)
 
 Each task is a whole feature with tests, in its own area, and only reads money (it never calculates
@@ -583,6 +614,15 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   minutes ago") and has a refresh button that reloads only that widget's data; a widget whose data failed to load
   says so and offers retry instead of showing zeros. Display only; no change to how figures are calculated. Tests
   for the stale, failed and refreshed states.
+
+### More tasks for AI #5 (written by Claude, 11 Oct: five days of work with E-2, E-3, E-5; still the spare queue)
+
+- [ ] **E-6 One-sided transfer check** (tracker CE-06): a report of transfers between your own bank accounts that show
+  on one side only (money left one account and never arrived), with the amount and date. Read-only. Tests.
+- [ ] **E-7 FreshBooks import** (tracker BK-04): customers, vendors and items from FreshBooks' CSV exports, mapped the
+  way the Wave import does (`docs/` and the import code's column maps). No transactions. Tests with sample files.
+- [ ] **E-8 Security controls map** (tracker BJ-10): `docs/SECURITY_CONTROLS.md`: each ISO 27001 / SOC 2 control area
+  with what LedgerFlow does today (file and test that shows it) and what is missing. Docs only.
 
 ## Claude is working on (Codex: don't edit these files)
 
@@ -1254,3 +1294,4 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   - **A-14** `receivedNotBilled` now works per line (an order received in full and billed half still lists the rest; the optional `bills` argument, default none, keeps the old callers working); new `orderedNotReceived`; age in days from the order date; CSV on each list. One existing test locator changed: PO-1 now appears in two lists (`getAllByRole`).
   - **A-17** CSS in `src/index.css` and one line in `RootLayout.tsx` (print-only title). **Not verified in Chromium** (no browser in this sandbox): please run the print check. Amount colours print black by changing `--pos`/`--neg` for print only.
   - **Not started, need a migration or decision:** A-8 (asset maintenance log and tags: `fixedAssets` allow-list), A-15 (project budget: `projects` allow-list), A-16 (customer price overrides: `customers` allow-list). Next for me: A-8, then A-15 and A-16 with migration files listed for review; A-7 bill side waits for a bill item picker.
+- 2026-10-11 Claude (AI #1), at the owner's request ("work for all AIs for five days"): queues filled. AI #2: C-33/C-34 withdrawn (they were AI #4's D-6); new C-35..C-39. AI #3: new A-18..A-21. AI #4: new D-11..D-14. AI #5 (spare): new E-6..E-8.
