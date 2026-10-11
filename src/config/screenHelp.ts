@@ -88,6 +88,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Inspect the developer-only administration demonstration. Explore its example panels when developer mode is enabled. Demonstration telemetry is distinct from production monitoring.",
   },
   reports: {
+    "customer-cohorts": "Group customers by their earliest observed issued-invoice month and inspect each later month's total invoicing, distinct active customers or percentage. The first invoice can predate the selected display window. Incomplete invoice history makes these cohorts provisional.",
     "budget-actual": "Compare a saved account budget with posted account movement for the selected period or months. Open an actual to inspect its contributing entries. Recurring caps are spread by month; partial months keep their cap, and loaded-cache figures are provisional until full history is requested.",
     pnl: "Review posted income, cost of goods sold and expenses for the period. Compare periods and choose presentation columns. Incomplete loaded history makes the figures provisional.",
     "group-summary":
