@@ -9,6 +9,8 @@ interface InventoryItemDialogProps {
   open: boolean;
   editingItem: InventoryItem | null;
   categories: string[];
+  /** A-7: the sales tax codes an item may default to (Settings → Taxes) */
+  taxCodes?: Array<{ id: string; name: string }>;
   canChangeStock: boolean;
   onClose: () => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -17,7 +19,7 @@ interface InventoryItemDialogProps {
 }
 
 /** The add / edit item form of the Inventory screen (F-16: moved out of Inventory.tsx). */
-export default function InventoryItemDialog({ open, editingItem, categories, canChangeStock, onClose, onSubmit, onAdjust }: InventoryItemDialogProps) {
+export default function InventoryItemDialog({ open, editingItem, categories, taxCodes = [], canChangeStock, onClose, onSubmit, onAdjust }: InventoryItemDialogProps) {
   const { dialogProps: itemDialogProps, titleId: itemTitleId } = useDialog(onClose, open);
   return (
     <AnimatePresence>
@@ -142,6 +144,15 @@ export default function InventoryItemDialog({ open, editingItem, categories, can
                     <p id="inv-quantity-help" className="text-[10px] text-[var(--muted)]">Recorded at the unit cost against Opening Balance Equity.</p>
                   </div>
                 )}
+                <div className="space-y-2">
+                  <label htmlFor="inv-default-tax" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Default tax code</label>
+                  <select id="inv-default-tax" name="defaultTaxCodeId" defaultValue={editingItem?.defaultTaxCodeId || ''}
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold">
+                    <option value="">No default (the invoice's tax choice)</option>
+                    {taxCodes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <p className="text-[10px] text-[var(--muted)]">Choosing this item on an invoice fills this tax code; it can still be changed there.</p>
+                </div>
                 <div className="space-y-2">
                   <label htmlFor="inv-reorder-point" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Reorder Point</label>
                   <input 
