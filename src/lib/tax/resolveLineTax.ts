@@ -85,3 +85,9 @@ export function resolveLineTax(input: {
   const rate = total(components);
   return { reason: rate === 0 && buyer.district ? 'zero-area' : 'taxed', components, rate, registration: key };
 }
+
+/** The invoice's tax choice for a rate: the sales code with that rate (an exempt one for 0), else a custom rate in percent. */
+export function taxChoiceFor<C>(rate: number, codes: Array<{ id: string; treatment?: string; components: C }>, effective: (components: C) => number): { taxCodeId?: string; taxRate: number } {
+  const match = rate === 0 ? codes.find(c => c.treatment === 'exempt') || codes.find(c => effective(c.components) === 0) : codes.find(c => Math.abs(effective(c.components) - rate) < 1e-6);
+  return match ? { taxCodeId: match.id, taxRate: 0 } : { taxCodeId: undefined, taxRate: Math.round(rate * 100000) / 1000 };
+}

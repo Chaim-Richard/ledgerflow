@@ -32,3 +32,12 @@ test('The Texas entity: taxed in Texas with its permit, from the permit date; no
   assert.equal(resolveLineTax({ seller: texas, buyer: { country: 'US', state: 'TX' }, date: '2026-03-01' }).reason, 'no-rate-table');
   assert.equal(resolveLineTax({ seller: texas, buyer: { country: 'IL' }, date: '2026-03-01' }).reason, 'export');
 });
+
+test('the tax choice for a rate: the matching code, an exempt one for zero, else a custom percent', async () => {
+  const { taxChoiceFor } = await import('../lib/tax/resolveLineTax');
+  const codes = [{ id: 'vat18', treatment: 'standard', components: [{ rate: 0.18 }] }, { id: 'ex', treatment: 'exempt', components: [] as Array<{ rate: number }> }];
+  const eff = (c: Array<{ rate: number }>) => c.reduce((s, x) => s + x.rate, 0);
+  assert.deepEqual(taxChoiceFor(0.18, codes, eff), { taxCodeId: 'vat18', taxRate: 0 });
+  assert.deepEqual(taxChoiceFor(0, codes, eff), { taxCodeId: 'ex', taxRate: 0 });
+  assert.deepEqual(taxChoiceFor(0.0825, codes, eff), { taxCodeId: undefined, taxRate: 8.25 });
+});

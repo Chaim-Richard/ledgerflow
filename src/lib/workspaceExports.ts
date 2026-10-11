@@ -1,9 +1,4 @@
 /**
- * PLAN §6: a sale line's tax from the seller entity's profile, the buyer's place, the date and certificates.
- * Reachable here while AI #1 wires it into the invoice form and the server's postings (next step).
- */
-export { resolveLineTax } from './tax/resolveLineTax';
-/**
  * E-9: opt-in historical fixture formatter, deliberately NOT a filing workflow.
  * Re-export from an application-reachable, read-only exports module so the
  * repository's import/reachability guards can verify the draft stays connected.
