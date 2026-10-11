@@ -522,7 +522,7 @@ before:
 - [ ] **A-22 US state sales tax table** (PLAN US-1): `src/lib/tax/usStateSalesTax.ts`: 50 states + DC, base rate,
   shipping taxable yes/no, origin or destination sourcing, each row with `validFrom` and the state revenue department's
   link. Tests: every state present, rates between 0 and 10%, the 5 no-sales-tax states at 0.
-- [ ] **A-23 Form 856 report (Israel)** (PLAN IL-5): yearly withholding at source per vendor (paid, withheld, certificate
+- [ ] **A-23 Form 856 report (Israel)** (PLAN IL-5; the payments now carry `withheldCents`, `withholdingRatePercent`, `withholdingCertificate` — landed 11 Oct): yearly withholding at source per vendor (paid, withheld, certificate
   number), from the payments' withholding lines AI #1 adds; CSV in the Tax Authority's column order. Read-only.
 
 ### Big queue for AI #3 (Claude, 11 Oct evening). Rules: one branch and PR per task, from the latest main; tables carry `validFrom`/`validTo` and an official `source`; no change to how money is calculated or posted (that is AI #1's); tests for each; a line under Messages.

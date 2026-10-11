@@ -69,3 +69,35 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.equal((await db.collection('bills').doc(id('b2')).get()).data()?.status, 'unpaid', 'nothing half-done');
   });
 });
+
+describe('On screen', () => {
+  test('the vendor form keeps the certificate; the payment shows what is withheld and sends it', async () => {
+    await import('./helpers/dom');
+    const React = (await import('react')).default;
+    const { cleanup, fireEvent, render, screen } = await import('@testing-library/react');
+    const { default: PartyModal } = await import('../components/common/PartyModal');
+    const { default: WithholdingField } = await import('../components/purchases/WithholdingField');
+    const { setComponentWorkspace } = await import('./helpers/componentFixtures');
+    const { getSupabase } = await import('../lib/db/client');
+    try {
+      setComponentWorkspace('owner');
+      const saved: Array<{ metadata?: Record<string, unknown> }> = [];
+      render(React.createElement(PartyModal, { side: 'vendor', isOpen: true, initial: { id: 'v1', name: 'Supplier' }, onClose: () => {}, onSave: (p: { metadata?: Record<string, unknown> }) => { saved.push(p); } }));
+      fireEvent.change(screen.getByLabelText('Tax withheld at source, %'), { target: { value: '5' } });
+      fireEvent.change(screen.getByLabelText('Withholding certificate'), { target: { value: 'W-77' } });
+      fireEvent.change(screen.getByLabelText('Withholding certificate good until'), { target: { value: '2026-12-31' } });
+      fireEvent.submit(screen.getByLabelText('Vendor Name').closest('form')!);
+      assert.deepEqual(saved[0].metadata, { withholding: { ratePercent: 5, number: 'W-77', expires: '2026-12-31' } });
+      cleanup();
+      const sent: unknown[] = [];
+      render(React.createElement(WithholdingField, {
+        vendor: { metadata: saved[0].metadata }, date: '2026-10-11', currency: 'ILS',
+        bills: [{ id: 'b1', taxVersion: 2, amountCents: 1180000, taxAmountCents: 180000 }], allocations: { b1: 1180000 }, onChange: (w: unknown) => { sent.push(w); },
+      }));
+      assert.match(screen.getByRole('status').textContent || '', /Withheld ₪500\.00 on ₪10,000\.00 before VAT; the vendor gets ₪11,300\.00/);
+      assert.deepEqual(sent.at(-1), { withheldCents: 50000, ratePercent: 5, certificate: 'W-77' });
+    } finally {
+      cleanup(); getSupabase().realtime.disconnect(); await getSupabase().auth.dispose();
+    }
+  });
+});
