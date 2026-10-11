@@ -12,9 +12,16 @@ function readEnv(name: string): string | undefined {
   }
 }
 
-export const SUPABASE_URL = readEnv('VITE_SUPABASE_URL') || supabaseConfig.url;
-export const SUPABASE_PUBLISHABLE_KEY =
-  readEnv('VITE_SUPABASE_PUBLISHABLE_KEY') || supabaseConfig.publishableKey;
+// A local dev copy without its own project must never authenticate against the live project.
+// Keep an inert valid URL so the guest/demo experience can start without remote credentials.
+const unconfiguredLocalDev = readEnv('MODE') === 'development' &&
+  (!readEnv('VITE_SUPABASE_URL') || !readEnv('VITE_SUPABASE_PUBLISHABLE_KEY'));
+export const SUPABASE_URL = unconfiguredLocalDev
+  ? 'https://ledgerflow-unconfigured.invalid'
+  : (readEnv('VITE_SUPABASE_URL') || supabaseConfig.url);
+export const SUPABASE_PUBLISHABLE_KEY = unconfiguredLocalDev
+  ? 'ledgerflow-dev-not-configured'
+  : (readEnv('VITE_SUPABASE_PUBLISHABLE_KEY') || supabaseConfig.publishableKey);
 
 let client: SupabaseClient | null = null;
 
