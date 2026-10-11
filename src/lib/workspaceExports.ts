@@ -1,4 +1,10 @@
 /**
+ * E-13: local Israeli identity/company-number format warnings only.
+ * Read-only; does not query a registry, collect a taxpayer ID or block saving.
+ * Claude owns the customer/vendor PartyModal wiring.
+ */
+export { checkIsraeliIdentifier, israeliIdentifierWarning } from './tax/israeliIdentifiers';
+/**
  * E-12: pure Israeli document-title classification for explicitly issued,
  * reviewed documents only. Not wired to issuance, numbering, VAT posting,
  * allocations or tax returns until Claude supplies the issuance evidence.
