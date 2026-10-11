@@ -10,6 +10,7 @@ import { z } from "zod";
 import crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
 import { BayesianClassifier } from "../../lib/algorithms";
+import { callCostCents } from "../../lib/ai/modelPricing";
 import { getDb } from "../db/firestore";
 
 /** Routes moved out of server.ts (F-01), registered in the same place and order. */
@@ -117,6 +118,7 @@ You MUST output a valid JSON object matching this schema exactly:
       }
 
       const genAI = new GoogleGenAI({ apiKey, httpOptions: { headers: { "User-Agent": "aistudio-build" } } });
+      const startedAt = performance.now();
       const result = await genAI.models.generateContent({
         model: "gemini-2.5-flash",
         contents,
@@ -142,9 +144,10 @@ You MUST output a valid JSON object matching this schema exactly:
       const outputTokens = usage?.candidatesTokenCount || Math.floor((result.text || "").length / 4);
       const totalTokens = usage?.totalTokenCount || (promptTokens + outputTokens);
 
-      // Gemini Pricing Model True Alignment ($0.075 / 1M input, $0.30 / 1M output)
-      const baseCentsExact = (promptTokens * 7.5 / 1000000) + (outputTokens * 30 / 1000000);
-      const baseCents = baseCentsExact;
+      const executionTimeMs = Math.round(performance.now() - startedAt);
+      // the model's dated price (src/lib/ai/modelPricing.ts); a model without one is recorded at no cost, never guessed
+      const priced = callCostCents("gemini-2.5-flash", new Date().toISOString().slice(0, 10), promptTokens, outputTokens);
+      const baseCents = priced ?? 0;
       
       // Compute Credits = exact token proxy
       const baseWeight = totalTokens;
@@ -177,7 +180,11 @@ You MUST output a valid JSON object matching this schema exactly:
           complexityFormat: 'O(Tokens)',
           weightScore,
           isSelfFunded: isCustomKeyUsed,
-          executionTimeMs: 1200,
+          executionTimeMs,
+          model: "gemini-2.5-flash",
+          inputTokens: promptTokens,
+          outputTokens,
+          ...(priced === undefined ? { costUnknown: true } : { costCents: priced }),
           timestamp: new Date().toISOString()
         });
       } catch (billingErr) {
@@ -220,6 +227,7 @@ You MUST output a valid JSON object matching this schema exactly:
       }
 
       const activeApiKeyId = requestUser(req)?.usedApiKeyId || "human_web_console";
+      const classifyStartedAt = performance.now();
       const classifier = new BayesianClassifier();
       let trainedCount = await trainClassifierWithWorkspaceData(classifier, workspaceId, activeApiKeyId);
 
@@ -271,7 +279,7 @@ You MUST output a valid JSON object matching this schema exactly:
             algorithmName: 'ALGO_CLASSIFIER_BAYESIAN_SINGLE',
             complexityFormat: 'O(V*C)',
             weightScore,
-            executionTimeMs: 45,
+            executionTimeMs: Math.round(performance.now() - classifyStartedAt),
             timestamp: new Date().toISOString()
           });
         }

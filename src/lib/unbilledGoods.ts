@@ -29,9 +29,28 @@ export interface ReceivedNotBilled {
   orderId: string;
   number: string;
   vendorName: string;
+  /** the order's date: the age of the row is counted from it */
+  issueDate: string;
   currency?: string;
   description: string;
+  /** units received on this line */
   received: number;
+  /** units received and not yet on a bill (received less billed on this line) */
+  units: number;
+  valueCents: number;
+}
+
+export interface OrderedNotReceived {
+  orderId: string;
+  number: string;
+  vendorName: string;
+  issueDate: string;
+  currency?: string;
+  description: string;
+  ordered: number;
+  received: number;
+  /** units ordered and not yet received */
+  units: number;
   valueCents: number;
 }
 
@@ -57,15 +76,63 @@ export function deliveredNotInvoiced(orders: Estimate[], invoices: Invoice[], en
   return rows;
 }
 
-export function receivedNotBilled(orders: PurchaseOrder[]): ReceivedNotBilled[] {
+const NOT_COUNTED_BILL = new Set(['void', 'draft', 'cancelled', 'rejected']);
+
+/** The bills that bill an order: the ones made from it (metadata.poId) or linked by billId. */
+function billsOfOrder(po: PurchaseOrder, bills: Bill[]): Bill[] {
+  return bills.filter(b => !NOT_COUNTED_BILL.has(String(b.status)) && ((b.metadata as { poId?: string } | undefined)?.poId === po.id || b.id === po.billId));
+}
+
+/** Units billed on one order line, from the bills' splits that point at that line (BE-11, A-14). */
+function billedOnLine(bills: Bill[], line: number): number {
+  return round2(bills.flatMap(b => b.splits || []).filter(s => s.orderLine === line).reduce((s, x) => s + (Number(x.orderQuantity) || 0), 0));
+}
+
+/**
+ * Received, not billed (CB-18, A-14): per order line, the units received above the units its bills
+ * bill. An order received in full and billed half still lists the other half. Billed and cancelled
+ * orders are not listed. `bills` is optional: without them every received unit counts.
+ */
+export function receivedNotBilled(orders: PurchaseOrder[], bills: Bill[] = []): ReceivedNotBilled[] {
   return orders
-    .filter(po => !po.billId && po.status !== 'billed' && po.status !== 'cancelled')
-    .flatMap(po => po.items
-      .filter(item => (item.receivedQuantity || 0) > 0)
-      .map(item => ({
-        orderId: po.id, number: po.poNumber, vendorName: po.vendorName || '', currency: po.currency,
-        description: item.description, received: item.receivedQuantity || 0, valueCents: Math.round((item.receivedQuantity || 0) * item.unitPriceCents),
-      })));
+    .filter(po => po.status !== 'billed' && po.status !== 'cancelled')
+    .flatMap(po => {
+      const mine = billsOfOrder(po, bills);
+      return po.items.flatMap((item, line) => {
+        const received = item.receivedQuantity || 0;
+        const units = round2(received - billedOnLine(mine, line));
+        if (received <= 0 || units <= 0) return [];
+        return [{
+          orderId: po.id, number: po.poNumber, vendorName: po.vendorName || '', issueDate: po.issueDate, currency: po.currency,
+          description: item.description, received, units, valueCents: Math.round(units * item.unitPriceCents),
+        }];
+      });
+    });
+}
+
+/**
+ * Ordered, not received (A-14): per order line, the units ordered above the units received, at the
+ * order's price. Billed, cancelled and closed orders are not listed.
+ */
+export function orderedNotReceived(orders: PurchaseOrder[]): OrderedNotReceived[] {
+  return orders
+    .filter(po => po.status !== 'billed' && po.status !== 'cancelled' && po.status !== 'closed')
+    .flatMap(po => po.items.flatMap(item => {
+      const received = item.receivedQuantity || 0;
+      const units = round2(item.quantity - received);
+      if (units <= 0) return [];
+      return [{
+        orderId: po.id, number: po.poNumber, vendorName: po.vendorName || '', issueDate: po.issueDate, currency: po.currency,
+        description: item.description, ordered: item.quantity, received, units, valueCents: Math.round(units * item.unitPriceCents),
+      }];
+    }));
+}
+
+/** Whole days from the order date to the day shown; null when either is not a day. */
+export function ageInDays(issueDate: string | undefined, asOf: string): number | null {
+  const day = /^\d{4}-\d{2}-\d{2}$/;
+  if (!issueDate || !day.test(issueDate) || !day.test(asOf)) return null;
+  return Math.round((Date.parse(`${asOf}T00:00:00Z`) - Date.parse(`${issueDate}T00:00:00Z`)) / 86_400_000);
 }
 
 export interface BilledNotReceived {
@@ -80,13 +147,11 @@ export interface BilledNotReceived {
   valueCents: number;
 }
 
-const NOT_COUNTED_BILL = new Set(['void', 'draft', 'cancelled', 'rejected']);
-
 export function billedNotReceived(orders: PurchaseOrder[], bills: Bill[]): BilledNotReceived[] {
   return orders.filter(po => po.status !== 'cancelled').flatMap(po => {
-    const mine = bills.filter(b => !NOT_COUNTED_BILL.has(String(b.status)) && ((b.metadata as { poId?: string } | undefined)?.poId === po.id || b.id === po.billId));
+    const mine = billsOfOrder(po, bills);
     return po.items.flatMap((item, line) => {
-      const billed = round2(mine.flatMap(b => b.splits || []).filter(s => s.orderLine === line).reduce((s, x) => s + (Number(x.orderQuantity) || 0), 0));
+      const billed = billedOnLine(mine, line);
       const received = item.receivedQuantity || 0;
       const units = round2(billed - received);
       if (units <= 0) return [];

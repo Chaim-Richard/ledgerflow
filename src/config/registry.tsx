@@ -347,6 +347,9 @@ export const DASHBOARD_KPI_REGISTRY: DashboardKpiDefinition[] = [
 ];
 
 export const REPORT_COMPONENTS: Record<string, ElementType> = {
+  'CustomerCohortsReportView': lazy(() => import('../components/reporting/CustomerCohortsReportView')),
+  'AssetRegisterReportView': lazy(() => import('../components/reporting/AssetRegisterReportView')),
+  'OneSidedTransfersReportView': lazy(() => import('../components/reporting/OneSidedTransfersReportView')),
   'BudgetActualReportView': lazy(() => import('../components/reporting/BudgetActualReportView')),
   'PNLView': lazy(() => import('../components/ledger/ProfitAndLossView')),
   'BalanceSheetReportView': lazy(() => import('../components/ledger/BalanceSheetView')),
@@ -357,6 +360,8 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'CommissionReportView': lazy(() => import('../components/reporting/CommissionReportView')),
   'BackordersReportView': lazy(() => import('../components/reporting/BackordersReportView')),
   'StockAgingReportView': lazy(() => import('../components/reporting/StockAgingReportView')),
+  'SlowMovingStockView': lazy(() => import('../components/reporting/SlowMovingStockView')),
+  'ProfitabilityByView': lazy(() => import('../components/reporting/ProfitabilityByView')),
   'ItemRegisterReportView': lazy(() => import('../components/reporting/ItemRegisterReportView')),
   'DepreciationLedgerReportView': lazy(() => import('../components/reporting/DepreciationLedgerReportView')),
   'BankClearanceReportView': lazy(() => import('../components/reporting/BankClearanceReportView')),
@@ -406,6 +411,9 @@ export const LENS_COMPONENTS: Record<string, ElementType> = {
   'ToolSandbox': lazy(() => import('../components/platform/ToolsCatalog'))
 };
 export const REPORT_TABS_REGISTRY = withScreenHelp([
+  { id: 'customer-cohorts', label: { en: 'Customer Cohorts', he: 'קבוצות לקוחות לפי חודש' }, componentName: 'CustomerCohortsReportView', icon: Users },
+  { id: 'asset-register', label: { en: 'Asset Register', he: 'רשימת רכוש קבוע' }, componentName: 'AssetRegisterReportView', icon: Building },
+  { id: 'one-sided-transfers', label: { en: 'Transfer Check', he: 'בדיקת העברות' }, componentName: 'OneSidedTransfersReportView', icon: ArrowLeftRight },
   { id: 'budget-actual', label: { en: 'Budget vs Actual', he: 'תקציב מול ביצוע' }, componentName: 'BudgetActualReportView', icon: Target },
   { id: 'pnl', label: { en: 'Profit & Loss', he: 'רווח והפסד' }, componentName: 'PNLView', icon: Activity },
   { id: 'balance-sheet', label: { en: 'Balance Sheet', he: 'מאזן' }, componentName: 'BalanceSheetReportView', icon: Layers },
@@ -439,6 +447,8 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'depreciation-ledger', label: { en: 'Asset Depreciation Ledger', he: 'כרטסת פחת נכסים' }, componentName: 'DepreciationLedgerReportView', icon: Layers },
   { id: 'item-register', label: { en: 'Item-wise Register', he: 'יומן לפי פריט' }, componentName: 'ItemRegisterReportView', icon: Package },
   { id: 'stock-aging', label: { en: 'Stock Aging', he: 'גיול מלאי' }, componentName: 'StockAgingReportView', icon: Package },
+  { id: 'slow-moving-stock', label: { en: 'Slow-moving Items', he: 'פריטים נעים לאט' }, componentName: 'SlowMovingStockView', icon: Package },
+  { id: 'profitability-by', label: { en: 'Profitability by Customer, Item or Project', he: 'רווחיות לפי לקוח, פריט או פרויקט' }, componentName: 'ProfitabilityByView', icon: BarChart3 },
   { id: 'commissions', label: { en: 'Sales Commission', he: 'עמלות מכירה' }, componentName: 'CommissionReportView', icon: UserCheck },
   { id: 'backorders', label: { en: 'Backorders', he: 'הזמנות ממתינות למלאי' }, componentName: 'BackordersReportView', icon: Package },
   { id: 'inventory-details', label: { en: 'Inventory Item Details', he: 'פירוט תנועות מלאי' }, componentName: 'InventoryDetailsReportView', icon: Package },

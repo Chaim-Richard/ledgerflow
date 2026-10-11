@@ -57,3 +57,34 @@ describe('Tax exemption certificates', () => {
     assert.match(screen.getByRole('status').textContent || '', /ran out on 2026-12-31/);
   });
 });
+
+describe('Expected tax from the selling entity and the customer\'s place (PLAN §6)', () => {
+  afterEach(() => cleanup());
+
+  test('a customer in Haifa: 18%, with a button while the invoice charges 17%; a customer abroad: no tax', async () => {
+    const { useAuthStore } = await import('../stores/useAuthStore');
+    const ws = setComponentWorkspace('owner');
+    useAuthStore.setState({ workspaces: [{ ...ws, taxProfiles: { books: { name: 'Acme Ltd', place: { country: 'IL' }, registrations: [{ kind: 'vat', number: '514000000', place: { country: 'IL' } }] } } }] });
+    const used: number[] = [];
+    render(<TaxExemptionNotice customer={{ metadata: { taxPlace: { country: 'IL', city: 'Haifa' } } }} date="2026-10-11" charging onNoTax={() => {}} currentRate={0.17} onUseRate={r => { used.push(r); }} />);
+    assert.match(screen.getByRole('status').textContent || '', /Acme Ltd: expected tax 18%/);
+    fireEvent.click(screen.getByRole('button', { name: 'Use 18%' }));
+    assert.deepEqual(used, [0.18]);
+    cleanup();
+    render(<TaxExemptionNotice customer={{ metadata: { taxPlace: { country: 'DE' } } }} date="2026-10-11" charging onNoTax={() => {}} currentRate={0.18} onUseRate={r => { used.push(r); }} />);
+    assert.match(screen.getByRole('status').textContent || '', /sold to another country/);
+    fireEvent.click(screen.getByRole('button', { name: 'Use no tax' }));
+    assert.deepEqual(used, [0.18, 0]);
+  });
+
+  test('the customer form keeps their tax place', () => {
+    setComponentWorkspace('owner');
+    const saved: PartyFields[] = [];
+    render(<PartyModal side="customer" isOpen initial={{ id: 'c1', name: 'Bolt Inc' }} onClose={() => {}} onSave={p => { saved.push(p); }} />);
+    fireEvent.change(screen.getByLabelText('Tax country'), { target: { value: 'us' } });
+    fireEvent.change(screen.getByLabelText('Tax state'), { target: { value: 'tx' } });
+    fireEvent.change(screen.getByLabelText('Tax city'), { target: { value: 'Austin' } });
+    fireEvent.submit(screen.getByLabelText('Customer Name').closest('form')!);
+    assert.deepEqual(saved[0].metadata, { taxPlace: { country: 'US', state: 'TX', city: 'Austin' } });
+  });
+});

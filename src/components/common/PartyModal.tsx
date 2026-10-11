@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DOCUMENT_LANGUAGES, MAX_CONTACT_TERMS } from '../../lib/documentLanguage';
 import { taxExemptionOf } from '../../lib/taxExemption';
+import { withholdingOf } from '../../lib/tax/withholding';
 import { Plus, Trash2, X } from 'lucide-react';
 import { useDialog } from '../../hooks/useDialog';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -51,6 +52,12 @@ const COMMON_CURRENCIES = ['USD', 'EUR', 'GBP', 'ILS', 'CAD', 'AUD', 'JPY', 'CHF
 const field = 'w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white';
 const labelClass = 'block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1';
 
+/** PLAN §6: where the customer is for tax (`taxPlace` in their metadata): country, state, city. */
+function placeFields(initial?: { metadata?: Record<string, unknown> } | null) {
+  const place = initial?.metadata?.taxPlace as { country?: string; state?: string; city?: string } | undefined;
+  return { placeCountry: place?.country || '', placeState: place?.state || '', placeCity: place?.city || '' };
+}
+
 export default function PartyModal({ side, isOpen, initial, onClose, onSave }: PartyModalProps) {
   const noun = side === 'customer' ? 'Customer' : 'Vendor';
   const editing = Boolean(initial?.id);
@@ -63,6 +70,9 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
     language: typeof initial?.metadata?.documentLanguage === 'string' ? initial.metadata.documentLanguage : '',
     terms: typeof initial?.metadata?.documentTerms === 'string' ? initial.metadata.documentTerms : '',
     exemptNumber: taxExemptionOf(initial)?.number || '', exemptUntil: taxExemptionOf(initial)?.expires || '',
+    ...placeFields(initial),
+    vatNumber: typeof initial?.metadata?.vatNumber === 'string' ? initial.metadata.vatNumber : '',
+    whtRate: withholdingOf(initial) ? String(withholdingOf(initial)!.ratePercent) : '', whtNumber: withholdingOf(initial)?.number || '', whtUntil: withholdingOf(initial)?.expires || '',
     // each row keeps a key of its own while it is edited (cleanContacts drops it on save)
     contacts: (initial?.contacts || []).map(p => ({ ...p, rowKey: crypto.randomUUID() })) as Array<ContactPerson & { rowKey: string }>,
   });
@@ -94,11 +104,14 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
     // Email is what happened before anyone could choose, so it is only written when it was set before
     if (form.deliveryMethod !== 'email' || (editing && initial?.deliveryMethod)) party.deliveryMethod = form.deliveryMethod;
     if (tags.length || (editing && initial?.tags?.length)) party.tags = tags;
+    const taxPlace = form.placeCountry.trim() ? { country: form.placeCountry.trim().toUpperCase(), ...(form.placeState.trim() ? { state: form.placeState.trim().toUpperCase() } : {}), ...(form.placeCity.trim() ? { city: form.placeCity.trim() } : {}) } : null;
+    const whtRate = form.whtRate.trim() === '' ? NaN : Number(form.whtRate);
+    const withholding = Number.isFinite(whtRate) && whtRate >= 0 && whtRate <= 100 ? { ratePercent: whtRate, ...(form.whtNumber.trim() ? { number: form.whtNumber.trim() } : {}), ...(form.whtUntil ? { expires: form.whtUntil } : {}) } : null;
     const exemption = form.exemptNumber.trim() ? { number: form.exemptNumber.trim(), ...(form.exemptUntil ? { expires: form.exemptUntil } : {}) } : null;
-    if (form.language || form.terms.trim() || exemption || initial?.metadata?.documentLanguage || initial?.metadata?.documentTerms || initial?.metadata?.taxExemption) {
+    if (form.language || form.terms.trim() || exemption || taxPlace || withholding || form.vatNumber.trim() || initial?.metadata?.vatNumber || initial?.metadata?.withholding || initial?.metadata?.documentLanguage || initial?.metadata?.documentTerms || initial?.metadata?.taxExemption || initial?.metadata?.taxPlace) {
       // the whole `metadata` is saved, so a choice taken back is simply left out
-      const { documentLanguage: _l, documentTerms: _t, taxExemption: _x, ...rest } = initial?.metadata || {};
-      party.metadata = { ...rest, ...(form.language ? { documentLanguage: form.language } : {}), ...(form.terms.trim() ? { documentTerms: form.terms.trim() } : {}), ...(exemption ? { taxExemption: exemption } : {}) };
+      const { documentLanguage: _l, documentTerms: _t, taxExemption: _x, taxPlace: _p, withholding: _w, vatNumber: _v, ...rest } = initial?.metadata || {};
+      party.metadata = { ...rest, ...(form.language ? { documentLanguage: form.language } : {}), ...(form.terms.trim() ? { documentTerms: form.terms.trim() } : {}), ...(exemption ? { taxExemption: exemption } : {}), ...(taxPlace ? { taxPlace } : {}), ...(withholding ? { withholding } : {}), ...(form.vatNumber.trim() ? { vatNumber: form.vatNumber.trim() } : {}) };
     }
     if (contacts.length || (editing && initial?.contacts?.length)) party.contacts = contacts;
     onSave(editing ? { ...party, id: initial!.id } : party);
@@ -185,6 +198,35 @@ export default function PartyModal({ side, isOpen, initial, onClose, onSave }: P
               <textarea rows={2} maxLength={MAX_CONTACT_TERMS} value={form.terms} onChange={e => set({ terms: e.target.value })} placeholder="Leave empty for the workspace's terms (Settings → Branding)" className={field} />
             </Labelled>
           </div>
+          {side === 'vendor' && (
+            <div className="grid grid-cols-3 gap-3">
+              <Labelled labelClassName={labelClass} label="Tax withheld at source, %">
+                <input type="number" min="0" max="100" step="0.01" value={form.whtRate} onChange={e => set({ whtRate: e.target.value })} placeholder="From their certificate" className={field} />
+              </Labelled>
+              <Labelled labelClassName={labelClass} label="Withholding certificate">
+                <input type="text" maxLength={40} value={form.whtNumber} onChange={e => set({ whtNumber: e.target.value })} className={field} />
+              </Labelled>
+              <Labelled labelClassName={labelClass} label="Withholding certificate good until">
+                <input type="date" value={form.whtUntil} onChange={e => set({ whtUntil: e.target.value })} className={field} />
+              </Labelled>
+            </div>
+          )}
+          {side === 'customer' && (
+            <div className="grid grid-cols-3 gap-3">
+              <Labelled labelClassName={labelClass} label="Tax country">
+                <input type="text" maxLength={2} value={form.placeCountry} onChange={e => set({ placeCountry: e.target.value })} placeholder="US, IL" className={field} />
+              </Labelled>
+              <Labelled labelClassName={labelClass} label="Tax state">
+                <input type="text" maxLength={3} value={form.placeState} onChange={e => set({ placeState: e.target.value })} placeholder="TX" className={field} />
+              </Labelled>
+              <Labelled labelClassName={labelClass} label="Tax city">
+                <input type="text" maxLength={80} value={form.placeCity} onChange={e => set({ placeCity: e.target.value })} className={field} />
+              </Labelled>
+              <Labelled labelClassName={labelClass} label="Their VAT / dealer number">
+                <input type="text" maxLength={20} value={form.vatNumber} onChange={e => set({ vatNumber: e.target.value })} placeholder="When they are a business" className={field} />
+              </Labelled>
+            </div>
+          )}
           {side === 'customer' && (
             <div className="grid grid-cols-2 gap-3">
               <Labelled labelClassName={labelClass} label="Tax exemption certificate">

@@ -23,14 +23,8 @@ export class AIBackendService {
       case 'strategic-analysis': {
         const mode = (payload.mode as string) || 'growth';
         if (!ai) {
-          return {
-            directives: [
-              `Accelerated ${mode} execution plan initialized.`,
-              `Working capital buffer maintained for 60-day cycle.`
-            ],
-            scenarios: [`Scenario ${mode}: Simulated 20% revenue drift with operational safety margin.`],
-            confidence: 90
-          };
+          // no AI configured: say so, with no made-up plan or confidence (strategic review, 11 Oct)
+          return { directives: [], scenarios: [], confidence: null, degraded: true, source: 'unavailable', message: 'AI analysis is not available right now.' };
         }
         try {
           const prompt = `Analyze financial strategy for mode "${mode}" given data: ${JSON.stringify(payload.data)}. Return a detailed roadmap of strategic directives, risk scenarios, and confidence rating.`;
@@ -64,11 +58,7 @@ export class AIBackendService {
           return JSON.parse(response.text || '{}');
         } catch (err: unknown) {
           console.warn("Gemini strategic-analysis failed, falling back", err);
-          return {
-            directives: [`Deterministic strategic alignment for ${mode}.`],
-            scenarios: [`Base scenario for ${mode}.`],
-            confidence: 85
-          };
+          return { directives: [], scenarios: [], confidence: null, degraded: true, source: 'failed', message: 'AI analysis failed; nothing was inferred.' };
         }
       }
 
@@ -116,7 +106,9 @@ export class AIBackendService {
           console.warn("Gemini generate-forecast failed, falling back", err);
           return {
             points: txs.map((t) => ({ date: t.date, value: (t.totalAmountCents || 0) / 100 })),
-            confidence: 50,
+            confidence: null,
+            degraded: true,
+            source: 'failed',
             anomalies: []
           };
         }

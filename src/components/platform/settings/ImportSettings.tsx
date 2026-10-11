@@ -13,6 +13,7 @@ import {
 } from '../../../lib/recordImport';
 import type { FieldMapping, ImportIssue, ImportKind } from '../../../lib/recordImport';
 import { downloadCsv } from '../../../lib/csvExport';
+import { normalizeFreshBooksCsv } from '../../../lib/freshBooksImport';
 
 /**
  * Settings → Import data (K-01): customers, vendors, items or accounts from a CSV or Excel file.
@@ -82,8 +83,10 @@ export default function ImportSettings() {
   const canImportAccounts = role === 'owner' || role === 'accountant';
 
   const [kind, setKind] = useState<ImportKind>('customers');
+  const [source, setSource] = useState<'generic' | 'freshbooks'>('generic');
   const [fileName, setFileName] = useState('');
-  const [table, setTable] = useState<string[][]>([]);
+  const [rawTable, setRawTable] = useState<string[][]>([]);
+  const table = useMemo(() => source === 'freshbooks' ? normalizeFreshBooksCsv(kind, rawTable) : rawTable, [kind, source, rawTable]);
   const [mapping, setMapping] = useState<FieldMapping>({});
   const [openingDate, setOpeningDate] = useState(() => getLocalDateISO());
   const [busy, setBusy] = useState(false);
@@ -94,7 +97,6 @@ export default function ImportSettings() {
   const [recentVersion, setRecentVersion] = useState(0);
 
   const definition = IMPORT_DEFINITIONS[kind];
-  const header = table[0] || [];
   const columns = useMemo(() => (table[0] || []).map((name, position) => ({ name, position })), [table]);
   const rows = useMemo(() => applyMapping(kind, table.slice(1), mapping), [kind, table, mapping]);
   const prepared = useMemo(() => prepareImport(kind, rows), [kind, rows]);
@@ -118,7 +120,8 @@ export default function ImportSettings() {
 
   const chooseKind = (next: ImportKind) => {
     setKind(next);
-    setMapping(header.length ? guessMapping(next, header) : {});
+    const preview = source === 'freshbooks' ? normalizeFreshBooksCsv(next, rawTable) : rawTable;
+    setMapping(preview.length ? guessMapping(next, preview[0]) : {});
     resetResults();
   };
 
@@ -135,8 +138,9 @@ export default function ImportSettings() {
         return;
       }
       setFileName(file.name);
-      setTable(cells);
-      setMapping(guessMapping(kind, cells[0]));
+      setRawTable(cells);
+      const converted = source === 'freshbooks' ? normalizeFreshBooksCsv(kind, cells) : cells;
+      setMapping(guessMapping(kind, converted[0]));
     } catch (err) {
       toast.error(`The file could not be read: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -153,7 +157,7 @@ export default function ImportSettings() {
       } else {
         setResult(res);
         setCheck(null);
-        setTable([]);
+        setRawTable([]);
         setFileName('');
         toast.success(`Imported ${res.created} ${definition.label.toLowerCase()}${res.skipped.length ? ` (${res.skipped.length} already existed)` : ''}.`);
         loadRecent();
@@ -202,6 +206,20 @@ export default function ImportSettings() {
           </div>
         </div>
 
+        <div className="flex flex-wrap gap-3 items-end">
+          <label className="text-xs font-bold flex flex-col gap-1">CSV source
+            <select aria-label="CSV source" value={source} onChange={e => {
+              const next = e.target.value === 'freshbooks' ? 'freshbooks' : 'generic';
+              setSource(next);
+              const converted = next === 'freshbooks' ? normalizeFreshBooksCsv(kind, rawTable) : rawTable;
+              setMapping(converted.length ? guessMapping(kind, converted[0]) : {});
+              resetResults();
+            }} className="min-h-11 border rounded px-3 bg-[var(--panel)] text-sm">
+              <option value="generic">Standard spreadsheet / Wave</option><option value="freshbooks">FreshBooks CSV</option>
+            </select>
+          </label>
+          {source === 'freshbooks' && <p className="text-xs text-[var(--muted)]">Choose a FreshBooks Clients, Vendors, or Items export. We combine name and address columns for preview, then use the normal validated import. No transactions are imported. <a className="underline" href="https://support.freshbooks.com/hc/en-us/articles/360032628152-How-do-I-export-my-data" target="_blank" rel="noopener noreferrer">Export instructions</a>.</p>}
+        </div>
         <fieldset className="space-y-3">
           <legend className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">1. What are you importing?</legend>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

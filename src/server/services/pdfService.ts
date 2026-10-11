@@ -49,7 +49,7 @@ export interface PdfDocument {
   pricesIncludeTax?: boolean;
   depositCents?: number;
   /** `saleReceipt` (K-03): an invoice paid on the spot, titled as a receipt */
-  metadata?: { saleReceipt?: boolean };
+  metadata?: { saleReceipt?: boolean; /** IL-6 */ ilAllocationNumber?: string };
   /** K-04: an estimate the customer accepted prints as a sales order, with their reference */
   orderedAt?: string;
   customerReference?: string;
@@ -66,6 +66,8 @@ export interface PdfOptions {
   language?: DocumentLanguage;
   /** P-12: the customer's own terms, printed in place of the workspace's */
   terms?: string;
+  /** IL-2: an Israeli tax document's first print is the original, later ones are copies */
+  copyMark?: 'original' | 'copy';
 }
 
 export interface PdfLayout {
@@ -139,6 +141,7 @@ export function layoutDocumentPdf(
     meta.push([type === 'estimate' ? words.validUntil : type === 'purchaseOrder' ? words.deliverBy : words.due, clean(doc.dueDate, 10)]);
   }
   if (type === 'invoice' && doc.paymentTerms) meta.push([words.terms, words.paymentTerms(doc.paymentTerms) || clean(doc.paymentTerms, 40)]);
+  if (type === 'invoice' && doc.metadata?.ilAllocationNumber) meta.push([words.allocationNumber, clean(doc.metadata.ilAllocationNumber, 12)]);
   const salesOrder = type === 'estimate' && Boolean(doc.orderedAt);
   if (salesOrder && doc.customerReference) meta.push([words.yourReference, clean(doc.customerReference, 60)]);
   if (type === 'estimate' && doc.signature?.name) meta.push([words.signedBy, `${clean(doc.signature.name, 120)}, ${clean(doc.signature.signedAt, 10)}`]);
@@ -177,7 +180,7 @@ export function layoutDocumentPdf(
   const saleReceipt = type === 'invoice' && Boolean(doc.metadata?.saleReceipt);
   const qrWanted = type === 'invoice' && !saleReceipt && branding.showPaymentQr !== false && /^https?:\/\//.test(options.paymentUrl || '') && totalCents - depositCents > 0;
   return {
-    title: saleReceipt ? words.titles.saleReceipt : salesOrder ? words.titles.salesOrder : words.titles[type],
+    title: `${saleReceipt ? words.titles.saleReceipt : salesOrder ? words.titles.salesOrder : words.titles[type]}${options.copyMark ? ` · ${words.copyMark[options.copyMark]}` : ''}`,
     company: {
       name: clean(workspace?.name || workspace?.companyName || 'LedgerFlow Workspace', 120),
       addressLines: clean(branding.address, 300).split(/\s*\n\s*/).filter(Boolean).slice(0, 5),

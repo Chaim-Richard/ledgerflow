@@ -10,6 +10,7 @@ import { calculateAmountDue } from '../../lib/documentMath';
 import { describeError } from '../../lib/errorRemedies';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { useSuggestedRate } from '../../hooks/useSuggestedRate';
+import WithholdingField, { type Withholding } from '../purchases/WithholdingField';
 
 const cn = (...classes: (string | false | null | undefined)[]) => classes.filter(Boolean).join(' ');
 
@@ -50,6 +51,7 @@ export default function ReceivePaymentModal({
   const homeCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   // L-192: the rate on the payment day for a foreign document (what really reached the bank)
   const [dayRate, setDayRate] = useState<number | null>(null);
+  const [withholding, setWithholding] = useState<Withholding | null>(null); // IL-5
   const [rateTyped, setRateTyped] = useState(false);
 
   // Filter bank/cash accounts
@@ -226,6 +228,7 @@ export default function ReceivePaymentModal({
           entityName: contactName,
           cashAccountId: depositAccountId,
           ...(isForeign && dayRate ? { paymentExchangeRate: dayRate } : {}),
+          ...(direction === 'made' && withholding ? { withheldCents: withholding.withheldCents, withholdingRatePercent: withholding.ratePercent, ...(withholding.certificate ? { withholdingCertificate: withholding.certificate } : {}) } : {}),
           allocations: allocations.map(a => ({
             documentId: a.documentId,
             documentType: a.documentType,
@@ -501,6 +504,11 @@ export default function ReceivePaymentModal({
               </div>
             )}
           </div>
+
+          {direction === 'made' && !isForeign && contactId && (
+            <WithholdingField vendor={vendors.find(v => v.id === contactId)} date={date} bills={bills || []} currency={payCurrency}
+              allocations={Object.fromEntries(Object.entries(allocationsMap).map(([k, v]) => [k, Math.round((parseFloat(v) || 0) * 100)]))} onChange={setWithholding} />
+          )}
 
           {/* Payment Summary Footer */}
           <div className="flex flex-wrap items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-800 text-xs gap-4">

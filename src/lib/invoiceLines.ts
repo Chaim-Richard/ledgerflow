@@ -1,5 +1,6 @@
 import type { InventoryItem } from '../types';
 export { customerPricer } from './priceLists';
+export { taxCodeToFillFromItem } from './itemTaxCode';
 
 /** One line of the invoice form (amounts in integer cents). */
 export interface InvoiceLineDraft {

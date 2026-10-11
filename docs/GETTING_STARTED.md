@@ -68,8 +68,10 @@ Choose **Continue as Guest**. Everything works in the browser with sample books 
 to a server, so it is safe to try anything. The server prints "No database configured" for its
 background jobs; that is expected here.
 
-> **Careful:** without settings, signing in (instead of guest mode) uses `supabase-config.json`,
-> which points at the **live** LedgerFlow project. For your own copy, do b) first.
+> **Safe default:** without your own Supabase variables, local development uses an inert project
+> address, **not** the live LedgerFlow project. Sign-in cannot work until you configure your own
+> `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` and matching server `SUPABASE_URL`.
+> Production builds still use the published project defaults unless overridden.
 
 ### b) With your own data: your own Supabase project
 
