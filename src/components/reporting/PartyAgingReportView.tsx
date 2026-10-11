@@ -129,14 +129,14 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block">Total Outstanding</span>
           <span className="text-xl font-mono font-black text-slate-900 dark:text-white tracking-tight block mt-1">
-            {formatCurrency(grandTotal)}
+            <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(grandTotal)}</bdi>
           </span>
         </div>
         {AGING_BUCKETS.map((b, i) => (
           <div key={b.key} className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
             <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider block">{b.key === 'current' ? 'Not yet due' : `${b.label} overdue`}</span>
             <span className={`text-xl font-mono font-black tracking-tight block mt-1 ${['text-emerald-600 dark:text-emerald-400', 'text-amber-600', 'text-amber-600', 'text-orange-600', 'text-rose-600 dark:text-rose-400'][i]}`}>
-              {formatCurrency(bucketTotals[b.key])}
+              <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(bucketTotals[b.key])}</bdi>
             </span>
           </div>
         ))}
@@ -200,11 +200,11 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                   </td>
                   {AGING_BUCKETS.map(b => (
                     <td key={b.key} className="p-4 text-right font-mono text-slate-600 dark:text-slate-400">
-                      {row.buckets[b.key] > 0 ? formatCurrency(row.buckets[b.key]) : '-'}
+                      <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{row.buckets[b.key] > 0 ? formatCurrency(row.buckets[b.key]) : '-'}</bdi>
                     </td>
                   ))}
                   <td className="p-4 text-right font-mono font-bold text-slate-900 dark:text-white">
-                    {formatCurrency(row.total)}
+                    <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(row.total)}</bdi>
                   </td>
                   <td className="p-4 text-right">
                     <button type="button" aria-label={`Open ${row.partyName}`} onClick={e => { e.stopPropagation(); setSelectedPartyId(row.partyId); }} className="p-1 rounded-md">
@@ -226,8 +226,8 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
               <tfoot>
                 <tr className="bg-slate-50 dark:bg-slate-800/30 font-bold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-800">
                   <td className="p-4">Grand Total</td>
-                  {AGING_BUCKETS.map(b => <td key={b.key} className="p-4 text-right font-mono">{formatCurrency(bucketTotals[b.key])}</td>)}
-                  <td className="p-4 text-right font-mono text-lg">{formatCurrency(grandTotal)}</td>
+                  {AGING_BUCKETS.map(b => <td key={b.key} className="p-4 text-right font-mono"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(bucketTotals[b.key])}</bdi></td>)}
+                  <td className="p-4 text-right font-mono text-lg"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(grandTotal)}</bdi></td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -289,14 +289,14 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-mono font-black text-slate-900 dark:text-white">
-                        {formatCurrency(owed, doc.currency)}
+                        <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(owed, doc.currency)}</bdi>
                       </div>
                       <button type="button" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
                         onClick={() => { setSelectedPartyId(null); openRecord({ type: isCustomer ? 'invoice' : 'bill', id: doc.id }); }}>
                         Open<span className="sr-only"> {isCustomer ? 'invoice' : 'bill'} {doc.number || doc.id}</span>
                       </button>
                       <div className="text-xs text-[var(--muted)]">
-                        Total {formatCurrency(docTotal, doc.currency)} | Still owed {formatCurrency(owed, doc.currency)}
+                        Total <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(docTotal, doc.currency)}</bdi> | Still owed <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(owed, doc.currency)}</bdi>
                       </div>
                     </div>
                   </div>
@@ -311,7 +311,7 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
               {selectedPartyDocs.length > 0 && (
                 <div className="flex items-center justify-between border-t border-[var(--line)] pt-3 text-sm font-semibold">
                   <span>Still owed in all ({selectedPartyDocs.length} document{selectedPartyDocs.length === 1 ? '' : 's'}, in the base currency)</span>
-                  <span className="font-mono">{formatCurrency(selectedPartyDocs.reduce((sum, d) => sum + outstandingBaseCents(d, side), 0))}</span>
+                  <span className="font-mono"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(selectedPartyDocs.reduce((sum, d) => sum + outstandingBaseCents(d, side), 0))}</bdi></span>
                 </div>
               )}
               {docsPartial && <p role="status" className="text-xs text-amber-700 dark:text-amber-400">Only part of the {isCustomer ? 'invoices' : 'bills'} is loaded on this screen, so this list and the row may be short. Load the full history to be sure.</p>}

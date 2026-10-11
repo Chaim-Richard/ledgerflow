@@ -104,6 +104,7 @@ for (const kind of ["pl", "bs"] as const) {
     const columns = screen.getByLabel("Columns:");
     await expect(columns).toHaveValue("total");
     await columns.selectOption("months");
+    await expect(screen.getByRole("button", { name: kind === "pl" ? "Export Synthesis" : "Export Blueprint", exact: true })).toHaveCount(0);
     await expect(
       screen.getByRole("columnheader", { name: /Feb 2024/ }),
     ).toBeVisible();
@@ -134,6 +135,19 @@ for (const kind of ["pl", "bs"] as const) {
     await expect(
       screen.getByRole("columnheader", { name: "Variance", exact: true }),
     ).toHaveCount(0);
+    await screen.getByText("Choose and order periods", { exact: true }).click();
+    const earlier = screen.getByRole("button", { name: "Move Mar 2024 earlier" });
+    await earlier.focus();
+    await earlier.press("Enter");
+    await expect(screen.locator('th[scope="colgroup"]').first()).toContainText('Mar 2024');
+    const feb = screen.getByRole('checkbox', { name: 'Feb 2024', exact: true });
+    await feb.focus(); await feb.press('Space');
+    await expect(screen.locator('th[scope="colgroup"]')).toHaveCount(1);
+    await expect(screen.getByRole('checkbox', { name: 'Mar 2024', exact: true })).toBeDisabled();
+    const geometry = await earlier.boundingBox();
+    expect(geometry!.height).toBeGreaterThanOrEqual(44);
+    await screen.getByRole('button', { name: 'Reset period columns' }).click();
+    await expect(screen.locator('th[scope="colgroup"]').first()).toContainText('Feb 2024');
     const download = page.waitForEvent("download");
     await screen.getByRole("button", { name: "Export columns CSV" }).click();
     expect((await download).suggestedFilename()).toContain("_months.csv");

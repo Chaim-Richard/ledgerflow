@@ -398,13 +398,13 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             </div>
           </label>
         </div>
-        <button 
+        {(basis === 'cash' || !columnsActive) && <button
           onClick={exportToExcel}
           className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider hover:bg-slate-800 transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
          aria-label="Export Synthesis">
           <FileSpreadsheet aria-hidden="true" size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
           <span>Export Synthesis</span>
-        </button>
+        </button>}
       </div>
 
       {/* KPI Matrix */}
@@ -419,7 +419,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
            </div>
           <div>
             <p className="text-[9px] font-bold text-[var(--muted)] mb-2 uppercase tracking-wider">{labels.inflowLabel}</p>
-            <p className="text-xl font-black text-[var(--text)] leading-none mb-3 tabular-nums font-mono">{formatCurrency(data.income?.total || 0)}</p>
+            <p className="text-xl font-black text-[var(--text)] leading-none mb-3 tabular-nums font-mono"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(data.income?.total || 0)}</bdi></p>
           </div>
           <div className="flex items-center gap-2">
             <div className="inline-flex items-center gap-1 text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-wider w-fit">
@@ -448,7 +448,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
            </div>
           <div>
             <p className="text-[9px] font-bold text-[var(--muted)] mb-2 uppercase tracking-wider">{labels.outflowLabel}</p>
-            <p className="text-xl font-black text-[var(--text)] leading-none mb-3 tabular-nums font-mono">{formatCurrency(data.expense?.total || 0)}</p>
+            <p className="text-xl font-black text-[var(--text)] leading-none mb-3 tabular-nums font-mono"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(data.expense?.total || 0)}</bdi></p>
           </div>
           <div className="flex items-center gap-2">
             <div className="inline-flex items-center gap-1 text-rose-800 bg-rose-50 px-2.5 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-wider w-fit">
@@ -481,7 +481,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           <div>
             <p className="text-[9px] font-bold text-white/40 mb-2 uppercase tracking-wider">{labels.netLabel}</p>
             <p className="text-xl font-black italic tracking-tight font-mono leading-none mb-3 tabular-nums">
-              {formatCurrency(data.netIncome || 0)}
+              <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(data.netIncome || 0)}</bdi>
             </p>
           </div>
           <div className="flex items-center gap-2 mt-auto">
@@ -555,10 +555,10 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                  <h3 className="font-bold text-[var(--text)] uppercase tracking-wider text-xs">{labels.revenueStreams}</h3>
               </div>
               <div className="flex flex-col items-end">
-                <span className="font-mono text-base font-black text-emerald-700 tabular-nums">{formatCurrency(data.income?.total || 0)}</span>
+                <span className="font-mono text-base font-black text-emerald-700 tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(data.income?.total || 0)}</bdi></span>
                 {isComparative && prevData.income?.total !== 0 && (
                   <div className="flex items-center gap-1.5 mt-0.5">
-                     <span className="font-mono text-[9px] text-[var(--muted)] font-medium tabular-nums">prev: {formatCurrency(prevData.income?.total)}</span>
+                     <span className="font-mono text-[9px] text-[var(--muted)] font-medium tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.income?.total)}</bdi></span>
                      <span className={cn(
                        "text-[10px] font-bold", 
                        (data.income?.total || 0) >= prevData.income?.total ? "text-emerald-500" : "text-rose-500"
@@ -610,10 +610,10 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       </span>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
-                      <span className="font-mono text-[var(--text)] text-xs font-semibold tabular-nums">{formatCurrency(balance)}</span>
+                      <span className="font-mono text-[var(--text)] text-xs font-semibold tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(balance)}</bdi></span>
                       {isComparative && (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: {formatCurrency(prevBalance)}</span>
+                          <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevBalance)}</bdi></span>
                           {variance !== null && (
                             <span className={cn("text-[9px] font-bold", variance >= 0 ? "text-emerald-500" : "text-rose-500")}>
                               {variance >= 0 ? '+' : ''}{variance.toFixed(1)}%
@@ -637,10 +637,10 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                   <h3 className="font-bold text-[var(--text)] uppercase tracking-wider text-xs">{labels.expenseClusters}</h3>
                </div>
                <div className="flex flex-col items-end">
-                 <span className="font-mono text-base font-black text-rose-700 tabular-nums">{formatCurrency(data.expense?.total || 0)}</span>
+                 <span className="font-mono text-base font-black text-rose-700 tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(data.expense?.total || 0)}</bdi></span>
                  {isComparative && prevData.expense?.total !== 0 && (
                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="font-mono text-[9px] text-[var(--muted)] font-medium tabular-nums">prev: {formatCurrency(prevData.expense?.total)}</span>
+                      <span className="font-mono text-[9px] text-[var(--muted)] font-medium tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.expense?.total)}</bdi></span>
                       <span className={cn(
                         "text-[10px] font-bold", 
                         (data.expense?.total || 0) <= prevData.expense?.total ? "text-emerald-500" : "text-rose-500"
@@ -692,10 +692,10 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       </span>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
-                      <span className="font-mono text-[var(--text)] text-xs font-semibold tabular-nums">{formatCurrency(balance)}</span>
+                      <span className="font-mono text-[var(--text)] text-xs font-semibold tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(balance)}</bdi></span>
                       {isComparative && (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: {formatCurrency(prevBalance)}</span>
+                          <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevBalance)}</bdi></span>
                           {variance !== null && (
                             <span className={cn("text-[9px] font-bold", variance <= 0 ? "text-emerald-500" : "text-rose-500")}>
                               {variance >= 0 ? '+' : ''}{variance.toFixed(1)}%
@@ -722,7 +722,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                 <div className="flex flex-col sm:items-end items-end mr-4">
                   <span className="text-[9px] font-bold text-[var(--muted)] font-medium tracking-wider mb-1">PRIOR PERIOD</span>
                   <span className="font-mono text-sm text-slate-300 line-through opacity-70">
-                    {formatCurrency(prevData.netIncome)}
+                    <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.netIncome)}</bdi>
                   </span>
                   <span className={cn(
                     "text-[10px] font-bold mt-0.5 px-1.5 py-0.5 rounded", 
@@ -736,7 +736,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                 "text-lg font-mono font-bold tracking-tight",
                 (data.netIncome || 0) >= 0 ? "text-white" : "text-rose-400"
               )}>
-                {formatCurrency(data.netIncome || 0)}
+                <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(data.netIncome || 0)}</bdi>
               </span>
             </div>
           </div>

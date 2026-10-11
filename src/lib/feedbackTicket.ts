@@ -3,6 +3,14 @@ import { db } from '../firebase';
 import { useAuthStore } from '../stores/useAuthStore';
 import type { SupportTicket, SupportMessage } from '../types';
 import appPackage from '../../package.json';
+import { attachmentProblem, MAX_ATTACHMENT_BYTES, formatBytes } from './attachments';
+
+/** Validate before creating a ticket; the attachment service retains its own size check. */
+export function feedbackScreenshotProblem(file: Pick<File, 'name' | 'size' | 'type'>): string | null {
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return 'Choose a PNG, JPEG or WebP screenshot.';
+  if (file.size > MAX_ATTACHMENT_BYTES) return `Choose a screenshot no larger than ${formatBytes(MAX_ATTACHMENT_BYTES)}.`;
+  return attachmentProblem(file);
+}
 
 export const FEEDBACK_APP_VERSION = appPackage.version;
 export function feedbackRecords(input: { id: string; workspaceId: string; uid: string; screen: string; body: string; date: string }) {
