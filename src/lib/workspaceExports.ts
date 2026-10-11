@@ -139,3 +139,21 @@ export function generateQIF(transactions:Transaction[]):string{
   return `D${month}/${day}/${year}\nT${csvMoney(lineAmount(tx.lines[0],tx))}\nP${text(tx.payee||tx.description||'Transaction')}\nM${text(tx.description||'')}\nN${text(tx.id)}\n^`;
  }).join('\n')+'\n';
 }
+
+/**
+ * A-18 (CC-04): recurring estimates — the schedule saved on a repeating estimate and the drafts it
+ * owes. Reachable here until the estimates screen and the daily job use it; nothing is sent or posted.
+ */
+export { ESTIMATE_FREQUENCIES, estimateValidityDays, estimateDraftsDue, nextEstimateDraft, recurringEstimateProblem, recurringEstimateSchedule } from './recurringEstimates';
+/** A-21 (CF-07): comment threads on a record — who, when, ten-minute own-edit, @mentions. */
+export { COMMENT_EDIT_WINDOW_MS, COMMENT_MAX_LENGTH, commentProblem, commentEditProblem, newThreadComment, editedThreadComment, threadComments, threadParticipants, commentWhen } from './commentThreads';
+/** A-23 (PLAN IL-5): the yearly withholding report (Form 856) over recorded vendor payments. */
+export { FORM_856_CSV_HEADERS, form856Year, isForm856Payment, form856Rows, form856Summary, form856Notes, form856CsvRows } from './tax/form856';
+/** A-33 (Q-03): serial and lot numbers on document lines and the serial lookup. */
+export { SERIAL_LOOKUP_CSV_HEADERS, normalizeSerial, lineSerials, serialAlreadyUsed, serialProblem, withSerial, withoutSerial, serialsForItem, findSerial, lotRows, duplicateSerials, serialLookupCsvRows } from './serialNumbers';
+/** A-35 (CC-03): a proposal's sections, optional items and one-page text. */
+export { proposalProblem, proposalTotals, proposalText, proposalFromEstimate } from './proposals';
+/** A-36 (CD-06/CF-08): notes on any record, newest first and searchable. */
+export { NOTE_MAX_LENGTH, noteProblem, addRecordNote, editRecordNote, notesForEntity, searchRecordNotes, notePreview, noteCountsByType } from './recordNotes';
+/** A-37 (CG-01): owner-defined extra fields on customers, vendors and items, with their list columns. */
+export { CUSTOM_FIELD_CSV_HEADERS, customFieldProblem, fieldValueProblem, coerceCustomField, customFieldValues, customFieldColumns, customFieldCsvRow, customFieldRequiredProblem } from './customFields';
