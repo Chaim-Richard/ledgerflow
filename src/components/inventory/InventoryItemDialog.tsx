@@ -4,6 +4,10 @@ import { X } from 'lucide-react';
 import AsyncButton from '../ui/AsyncButton';
 import { useDialog } from '../../hooks/useDialog';
 import { TAX_CATEGORIES } from '../../lib/tax/taxCategories';
+import { useState, useMemo } from 'react';
+import { bundlePartChoices, bundleProblem, type BundlePart } from '../../lib/itemBundles';
+import { UNITS } from '../../lib/units';
+import { CONSIGNMENT_OPTIONS } from '../../lib/consignmentStock';
 import type { InventoryItem } from '../../types';
 
 interface InventoryItemDialogProps {
@@ -12,6 +16,8 @@ interface InventoryItemDialogProps {
   categories: string[];
   /** A-7: the sales tax codes an item may default to (Settings → Taxes) */
   taxCodes?: Array<{ id: string; name: string }>;
+  /** A-19: every item, so a bundle can pick its parts */
+  allItems?: InventoryItem[];
   canChangeStock: boolean;
   onClose: () => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -20,8 +26,21 @@ interface InventoryItemDialogProps {
 }
 
 /** The add / edit item form of the Inventory screen (F-16: moved out of Inventory.tsx). */
-export default function InventoryItemDialog({ open, editingItem, categories, taxCodes = [], canChangeStock, onClose, onSubmit, onAdjust }: InventoryItemDialogProps) {
+export default function InventoryItemDialog({ open, editingItem, categories, taxCodes = [], allItems = [], canChangeStock, onClose, onSubmit, onAdjust }: InventoryItemDialogProps) {
   const { dialogProps: itemDialogProps, titleId: itemTitleId } = useDialog(onClose, open);
+  // A-19: the bundle's parts, held here and written into the form as JSON. The parent keys this
+  // dialog by item id, so switching items gives fresh state without an effect.
+  const [parts, setParts] = useState<BundlePart[]>(editingItem?.bundleParts || []);
+  const [partToAdd, setPartToAdd] = useState('');
+  const [partQuantity, setPartQuantity] = useState('1');
+  const choices = useMemo(() => bundlePartChoices(editingItem?.id || '', allItems), [allItems, editingItem?.id]);
+  const partsProblem = parts.length ? bundleProblem({ id: editingItem?.id || '', name: '' }, parts, allItems) : undefined;
+  const addPart = () => {
+    const quantity = Number(partQuantity);
+    if (!partToAdd || !Number.isInteger(quantity) || quantity < 1) return;
+    setParts(prev => (prev.some(p => p.itemId === partToAdd) ? prev.map(p => (p.itemId === partToAdd ? { ...p, quantity } : p)) : [...prev, { itemId: partToAdd, quantity }]));
+    setPartToAdd(''); setPartQuantity('1');
+  };
   return (
     <AnimatePresence>
         {open && (
@@ -163,6 +182,43 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                   </select>
                   <p className="text-[10px] text-[var(--muted)]">Which kind of thing this is, so a state's taxability table (Reports → Tax) can treat it correctly. It never changes a price or a posting.</p>
                 </div>
+                <div className="space-y-2 md:col-span-2">
+                  <span id="inv-bundle-label" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Bundle parts</span>
+                  <input type="hidden" name="bundleParts" value={JSON.stringify(parts)} />
+                  <div className="flex flex-wrap items-center gap-2" role="group" aria-labelledby="inv-bundle-label">
+                    <label htmlFor="inv-bundle-part" className="sr-only">Item to add as a bundle part</label>
+                    <select id="inv-bundle-part" value={partToAdd} onChange={e => setPartToAdd(e.target.value)}
+                      className="px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-2xl font-bold text-sm">
+                      <option value="">Choose an item…</option>
+                      {choices.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                    </select>
+                    <label htmlFor="inv-bundle-qty" className="sr-only">How many of the part one bundle holds</label>
+                    <input id="inv-bundle-qty" type="number" min={1} step={1} value={partQuantity} onChange={e => setPartQuantity(e.target.value)}
+                      className="w-24 px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-2xl font-bold text-sm" />
+                    <button type="button" onClick={addPart} className="px-4 py-3 rounded-2xl bg-[var(--text)] text-[var(--surface)] text-xs font-black uppercase tracking-widest">Add part</button>
+                  </div>
+                  {parts.length > 0 && (
+                    <ul className="flex flex-wrap gap-2" aria-label="Bundle parts chosen">
+                      {parts.map(part => (
+                        <li key={part.itemId} className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--line)] text-xs font-semibold">
+                          <span>{part.quantity} × {allItems.find(i => i.id === part.itemId)?.name || 'a removed item'}</span>
+                          <button type="button" aria-label={`Remove ${allItems.find(i => i.id === part.itemId)?.name || 'the removed part'}`}
+                            onClick={() => setParts(prev => prev.filter(p => p.itemId !== part.itemId))} className="text-[var(--muted)] hover:text-[var(--text)]">×</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {partsProblem && <p role="alert" className="text-[10px] text-amber-600">{partsProblem}</p>}
+                  <p className="text-[10px] text-[var(--muted)]">With parts here this item is a bundle: choosing it on an invoice adds the parts as lines at each part&rsquo;s price. A bundle keeps no stock itself.</p>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label htmlFor="inv-consignment" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Consignment</label>
+                  <select id="inv-consignment" name="consignment" defaultValue={editingItem?.consignment || ''}
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold">
+                    {CONSIGNMENT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  <p className="text-[10px] text-[var(--muted)]">Consignment stock is reported on Inventory at the item&rsquo;s cost; it never posts to the books by itself.</p>
+                </div>
                 <div className="space-y-2">
                   <label htmlFor="inv-reorder-point" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Reorder Point</label>
                   <input 
@@ -180,10 +236,14 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                     id="inv-uom"
                     name="measurementUnit" 
                     type="text" 
+                    list="inv-uom-options"
                     defaultValue={editingItem?.measurementUnit}
                     placeholder="Optional"
                     className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
+                  <datalist id="inv-uom-options">
+                    {UNITS.map(u => <option key={u.id} value={u.id}>{u.label}</option>)}
+                  </datalist>
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="inv-units-per-pkg" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Units per Package</label>

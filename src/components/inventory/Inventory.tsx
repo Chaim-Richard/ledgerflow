@@ -57,6 +57,23 @@ import StockCountDialog from './StockCountDialog';
 import CategoryManagerDialog from './CategoryManagerDialog';
 import { categoryCounts } from '../../lib/itemCategories';
 import { TAX_CATEGORIES, taxCategoryLabel, effectiveTaxCategory } from '../../lib/tax/taxCategories';
+import { isBundle, bundleSummary, type BundlePart } from '../../lib/itemBundles';
+import ConsignmentStockPanel from './ConsignmentStockPanel';
+import { isConsignment } from '../../lib/consignmentStock';
+
+/** A-19: the bundle parts the item dialog wrote into the form (a bad value means no parts, never a crash). */
+const parseBundleParts = (raw: FormDataEntryValue | null): BundlePart[] | undefined => {
+  if (typeof raw !== 'string' || !raw) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return undefined;
+    const parts = parsed
+      .filter((p): p is { itemId: string; quantity: number } => typeof p === 'object' && p !== null
+        && typeof (p as { itemId?: unknown }).itemId === 'string' && Number.isInteger((p as { quantity?: unknown }).quantity))
+      .map(p => ({ itemId: p.itemId, quantity: p.quantity }));
+    return parts.length ? parts : undefined;
+  } catch { return undefined; }
+};
 import { deleteWithUndo, isDeletePending } from '../../lib/undoableDelete';
 
 export default function Inventory() {
@@ -140,6 +157,10 @@ export default function Inventory() {
       defaultTaxCodeId: (formData.get('defaultTaxCodeId') as string) || undefined,
       // A-30: the item tax category the state taxability table reads
       productTaxCategory: (formData.get('productTaxCategory') as string) || undefined,
+      // A-19: the bundle's parts (empty = an ordinary item)
+      bundleParts: parseBundleParts(formData.get('bundleParts')),
+      // A-34: the consignment mark (empty = ordinary stock)
+      consignment: (formData.get('consignment') as string) || undefined,
     };
 
     try {
@@ -171,6 +192,8 @@ export default function Inventory() {
       itemType: formData.get('itemType') === 'service' ? 'service' : 'stock',
       defaultTaxCodeId: (formData.get('defaultTaxCodeId') as string) || undefined,
       productTaxCategory: (formData.get('productTaxCategory') as string) || undefined,
+      bundleParts: parseBundleParts(formData.get('bundleParts')),
+      consignment: (formData.get('consignment') as string) || undefined,
       createdAt: new Date().toISOString()
     };
 
@@ -453,6 +476,11 @@ export default function Inventory() {
                     <InlineEdit value={item.name} label={`Name of ${item.name}`} canEdit={canChangeStock}
                       validate={v => String(v) ? null : 'An item needs a name'} onSave={v => saveItemField(item, 'name', v)}
                       className="text-sm font-black text-[var(--text)] block" />
+                    {isBundle(item) && (
+                      <p className="text-[10px] text-[var(--muted)] font-semibold" title={bundleSummary(item, items)}>
+                        Bundle · {bundleSummary(item, items)}
+                      </p>
+                    )}
                     <InlineEdit value={item.sku} label={`SKU of ${item.name}`} placeholder="Add SKU" canEdit={canChangeStock}
                       onSave={v => saveItemField(item, 'sku', v)} className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest block" />
                   </div>
@@ -643,7 +671,13 @@ export default function Inventory() {
         )}
       </div>
 
-      <InventoryItemDialog open={isAdding || !!editingItem} editingItem={editingItem} categories={categories} canChangeStock={canChangeStock} taxCodes={salesTaxCodes}
+      {items.some(isConsignment) && (
+        <div className="mt-10">
+          <ConsignmentStockPanel items={items} currency={baseCurrency} />
+        </div>
+      )}
+
+      <InventoryItemDialog key={editingItem?.id || 'new-item'} open={isAdding || !!editingItem} editingItem={editingItem} categories={categories} canChangeStock={canChangeStock} taxCodes={salesTaxCodes} allItems={items}
         onClose={closeItemDialog} onSubmit={editingItem ? handleUpdate : handleAdd}
         onAdjust={it => { setEditingItem(null); setAdjustItem(it); }} />
 
