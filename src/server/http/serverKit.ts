@@ -395,6 +395,8 @@ export interface ApiLog {
   timestamp: string;
   method: string;
   path: string;
+  /** Exact workspace context when known; do not infer from masked keys at read time. */
+  workspaceId?: string;
   statusCode: number;
   latencyMs: number;
   apiKeyUsed: string;
