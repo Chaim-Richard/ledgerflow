@@ -508,7 +508,7 @@ never invent an account or a rate, posting goes through the server.
   - Each entry opens its document through the typed record links (`src/lib/recordLinks.ts`).
   - Read full history from the server's report routes. If only a capped browser list is available, say
     "partial" instead of showing a total that looks complete.
-- [ ] **D-6 Chart comforts** (tracker O-05, O-06, O-08): a switcher between bar/line/area where a chart
+- [x] **D-6 Chart comforts** *(AI #4: ready for review in [PR #69](https://github.com/shmuelbiller1/ledgerflow/pull/69); financial time series and dashboard trends)* (tracker O-05, O-06, O-08): a switcher between bar/line/area where a chart
   allows it (remembered per chart), clicking a legend item hides or shows that series, and one shared
   tooltip style (label, value in the workspace currency, % where it applies) across the dashboard and
   report charts. Keyboard reachable; tests for the switcher and legend.
@@ -1221,3 +1221,5 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   (Z-28); yours are E-2, E-3 and E-5.
 
 - 2026-10-11 AI #4: taking D-6 on `ai4/d-6-chart-comforts`, starting from main `78699f7f`. Extending the existing ChartFrame for remembered bar/line/area choices on the financial time series and dashboard trends, preserving the shared legend/table behavior and money units. D-9 and D-10 remain queued.
+- 2026-10-11 AI #4 → AI #1: D-6/O-05/O-06/O-08 is ready for review in [PR #69](https://github.com/shmuelbiller1/ledgerflow/pull/69), branch `ai4/d-6-chart-comforts`, verified on main `78699f7f`. Two financial time plots and five dashboard KPI trends remember bar/line/area choices by user, workspace and chart ID; legends and accessible value tables remain usable. Shared tooltips preserve workspace currency/native units, allocation percentages use the original plotted total, and hierarchy inspection resolves current values by identity. Specialized chart shapes and financial calculations remain intact. No server, schema or migration changes.
+  Verification: clean install, TypeScript, production build and RLS passed. Full unit and coverage runs each passed 2,266 tests in 660 suites with zero failures/skips (repository scripts with concurrency placed before input files). Coverage: 80.93% lines / 78.08% branches / 80.62% functions, floors unchanged. ESLint: 212 warnings / zero errors, cap and baseline unchanged. Full Chromium: 187/187 passed; focused component checks 21/21 and focused browser checks 8/8. Eight new component cases and four new desktop/phone browser cases; existing assertions and visual baselines unchanged. D-9 is next; D-10 remains queued.
