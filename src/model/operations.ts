@@ -43,11 +43,17 @@ export interface InventoryItem {
   reorderPoint: number;
   measurementUnit?: string; // e.g. 'pack', 'kg', 'box'
   unitsPerPackage?: number; // e.g. 100
+  /** A-34 (BF-05): consignment mark — 'from-supplier' (theirs, here) or 'at-customer' (ours, elsewhere) */
+  consignment?: string;
   category?: string;
   /** BF-01: a service fills an invoice line's name and price but never moves stock or books a cost (none = stock) */
   itemType?: 'stock' | 'service';
   /** A-7 (CA-16): the sales tax code an invoice line for this item fills in (still changeable on the invoice) */
   defaultTaxCodeId?: string;
+  /** A-30: the item tax category (clothing, groceries, SaaS …) the state taxability table reads; none = general */
+  productTaxCategory?: string;
+  /** A-19 (BF-03): the items this one is a bundle of, with quantities; none = an ordinary item */
+  bundleParts?: Array<{ itemId: string; quantity: number }>;
   createdAt: string;
   /** Set when the item came from a spreadsheet import; lets the import be undone. */
   importBatchId?: string;
