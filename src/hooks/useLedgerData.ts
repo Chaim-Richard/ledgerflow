@@ -31,6 +31,7 @@ import { effectiveLockDate } from '../lib/periodLock';
 
 export function useLedgerData() {
   const user = useAuthStore(s => s.user);
+  const userUid = user?.uid;
   const isGuest = useAuthStore(s => s.isGuest);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const setWorkspaces = useAuthStore(s => s.setWorkspaces);
@@ -146,25 +147,25 @@ export function useLedgerData() {
 
   // Main Entities (Workspace Scoped)
   useEffect(() => {
-    if (!user || !currentWorkspaceId) return;
+    if (!userUid || !currentWorkspaceId) return;
 
     // Login Audit
-    const sessionLoginKey = `login_logged_${currentWorkspaceId}_${user.uid}`;
+    const sessionLoginKey = `login_logged_${currentWorkspaceId}_${userUid}`;
     if (!sessionStorage.getItem(sessionLoginKey)) {
       sessionStorage.setItem(sessionLoginKey, 'true');
       addDoc(collection(db, 'auditLogs'), {
         action: 'USER_LOGIN',
         details: { description: 'User authenticated and entered workspace session' },
         severity: 'info',
-        uid: user.uid,
-        userEmail: user.email,
+        uid: userUid,
+        userEmail: useAuthStore.getState().user?.email,
         workspaceId: currentWorkspaceId,
         timestamp: new Date().toISOString()
       }).catch(err => console.error('Failed to write login audit:', err));
     }
 
     // Clear data immediately to prevent ghosting between workspaces
-    useDataNeedsStore.getState().resetLoaded();
+    useDataNeedsStore.getState().resetLoaded(currentWorkspaceId);
     useUIStore.getState().loadHiddenTabs(currentWorkspaceId);
     useLedgerStore.setState({
       ...Object.fromEntries(Object.keys(LEDGER_COLLECTIONS).filter(k => k !== 'scenarios').map(k => [k, []])),
@@ -183,7 +184,7 @@ export function useLedgerData() {
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
     const loadReferenceData = async () => {
       try {
-        const snapTemplates = await getDocs(query(collection(db, 'customTemplates'), where('uid', '==', user.uid), limit(500)));
+        const snapTemplates = await getDocs(query(collection(db, 'customTemplates'), where('uid', '==', userUid), limit(500)));
         useLedgerStore.getState().setCollectionTruncated('customTemplates', snapTemplates.docs.length >= 500);
         useLedgerStore.getState().setCustomTemplates(snapTemplates.docs.map(d => ({ id: d.id, ...d.data() } as CustomTemplate)));
 
@@ -222,7 +223,7 @@ export function useLedgerData() {
       }
     };
     loadReferenceData();
-  }, [user, currentWorkspaceId]);
+  }, [userUid, currentWorkspaceId]);
 
   // Live collections (src/lib/ledgerCollections.ts): the core ones as soon as a workspace opens,
   // the others the first time a screen asks for them (useLedgerCollections). Each stays live until
@@ -236,9 +237,9 @@ export function useLedgerData() {
       subscriptions.forEach(unsubscribe => unsubscribe());
       subscriptions.clear();
     };
-  }, [user, currentWorkspaceId]);
+  }, [user?.uid, currentWorkspaceId]);
   useEffect(() => {
-    if (!user || !currentWorkspaceId) return;
+    if (!userUid || !currentWorkspaceId) return;
     // a failed collection waits for "Try again" (useDataNeedsStore.retry) before starting over
     const skip = new Set([...active.current.keys(), ...Object.keys(failed)]);
     for (const key of keysToStart(asked, skip)) {
@@ -248,7 +249,7 @@ export function useLedgerData() {
         subscriptions.delete(key);
       }));
     }
-  }, [user, currentWorkspaceId, asked, failed]);
+  }, [userUid, currentWorkspaceId, asked, failed]);
 
   return null;
 }
