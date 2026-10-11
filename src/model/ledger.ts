@@ -288,6 +288,10 @@ export interface AutoRule {
     dateRange?: { start: string, end: string };
   };
   action: {
+    /** Validated counterparty action; separate from the legacy targetNodeId behavior. */
+    targetAccountId?: string;
+    targetTransactionKind?: 'expense' | 'transfer';
+    bankAccountId?: string;
     targetNodeId?: string;
     targetProject?: string;
     targetCategory?: string;

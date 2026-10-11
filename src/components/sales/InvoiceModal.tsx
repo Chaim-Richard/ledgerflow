@@ -19,6 +19,7 @@ import AsyncButton from '../ui/AsyncButton';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { formatCurrency, safeConfirm } from '../../lib/utils';
 import { customerPricer, lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
+import TaxExemptionNotice from './TaxExemptionNotice';
 import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import { depositAppliedCents } from '../../lib/documentMath';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
@@ -123,9 +124,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const [emailBody, setEmailBody] = useState(() => savedText('emailBody'));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
-
   const total = items.reduce((sum, item) => sum + item.amountCents, 0);
-
   // Tax: a saved tax code (Settings → Tax), or a custom rate typed here (older invoices)
   const taxRates = useLedgerStore(s => s.taxRates || []);
   const salesCodes = useMemo(() => taxRates.filter(r => r.type === 'Sales' && r.appliesTo !== 'purchases').map(taxCodeFromRate), [taxRates]);
@@ -462,6 +461,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                    />
                  )}
                  {salesCodes.length === 0 && <p className="text-[11px] text-[var(--muted)]">Add tax codes in Taxes.</p>}
+                 <TaxExemptionNotice customer={safeCustomers.find(c => c.id === invoice.customerId)} date={invoice.date || ''} charging={totals.taxCents > 0} onNoTax={() => setInvoice({ ...invoice, taxCodeId: salesCodes.find(c => c.treatment === 'exempt')?.id, taxRate: 0 })} />
              </div>
              <div className="space-y-2 flex flex-col justify-end pb-3">
                <label htmlFor="inv-tax-inclusive" className="flex items-center gap-2 cursor-pointer">
