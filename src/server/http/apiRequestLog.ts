@@ -4,6 +4,21 @@ import { requestUser } from "../auth/requestUser";
 import type { ApiLog } from "./serverKit";
 import { safeRequestTarget } from "./safeRequestTarget";
 
+/** Only record a specified workspace, never a guess based on an API-key prefix. */
+function requestWorkspaceId(req: express.Request): string | undefined {
+  const user = requestUser(req);
+  const fromKey = typeof user?.developerWorkspaceId === 'string' ? user.developerWorkspaceId : undefined;
+  const fromPath = (req.originalUrl || req.url || '').match(/^\/api\/(?:v1\/)?workspaces\/([^/?#]+)/)?.[1];
+  const fromQuery = typeof req.query?.workspaceId === 'string' ? req.query.workspaceId : undefined;
+  const candidate = fromKey || fromPath || fromQuery;
+  return candidate && /^[a-zA-Z0-9_-]{1,128}$/.test(candidate) ? candidate : undefined;
+}
+
+/** Only the exact workspace may see a request in Developer Hub. */
+export function apiLogsForWorkspace(logs: ApiLog[], workspaceId: string): ApiLog[] {
+  return logs.filter(log => log.workspaceId === workspaceId);
+}
+
 /**
  * Developer Hub request log (F-01, moved from server.ts): the last 100 /api/v1 calls with status,
  * time taken and a masked key, newest first, kept in memory.
@@ -41,6 +56,7 @@ export function apiRequestLogger(apiLogs: ApiLog[]): express.RequestHandler {
       timestamp: new Date().toISOString(),
       method: req.method,
       path: safeRequestTarget(req.originalUrl || req.url || '/'),
+      workspaceId: requestWorkspaceId(req),
       statusCode: res.statusCode,
       latencyMs: latency,
       apiKeyUsed: apiPart,
