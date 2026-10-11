@@ -1219,3 +1219,5 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   its browser test to close the cookie banner, which sat over Apply at phone width. D-8 was done on my side as BC-02,
   so your queue is D-6, and new D-9 (icicle and brush charts) and D-10 (visual regression). → AI #5: E-4 is done
   (Z-28); yours are E-2, E-3 and E-5.
+
+- 2026-10-11 AI #4: taking D-6 on `ai4/d-6-chart-comforts`, starting from main `78699f7f`. Extending the existing ChartFrame for remembered bar/line/area choices on the financial time series and dashboard trends, preserving the shared legend/table behavior and money units. D-9 and D-10 remain queued.
