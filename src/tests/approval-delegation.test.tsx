@@ -17,6 +17,7 @@ import { InvoiceApprovalFlag } from '../components/sales/InvoiceApprovalFlag';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import { useAuthStore } from '../stores/useAuthStore';
 import { getLocalDateISO } from '../lib/utils';
+import { addDaysYMD } from '../lib/fiscalCalendar';
 
 const ws = { uid: 'owner', members: ['owner', 'acc', 'book', 'view'], roles: { acc: 'accountant', book: 'bookkeeper', view: 'viewer' }, invoiceApproval: { enabled: true, thresholdCents: 100000 } };
 const waiting = { amountCents: 150000, status: 'pending', approval: { state: 'awaiting' as const, thresholdCents: 100000, requestedBy: 'acc' } };
@@ -73,7 +74,8 @@ describe('Handing over (database)', { skip: !process.env.LF_TEST_DATABASE_URL &&
   });
 
   test('handed over, told, taken back; a bookkeeper cannot hand over', async () => {
-    const until = getLocalDateISO();
+    // a week ahead: the server counts days in the workspace's time zone, not the computer's
+    const until = addDaysYMD(getLocalDateISO(), 7);
     assert.equal((await put('book', { to: 'acc', until })).status, 403);
     assert.equal((await put('owner', { to: 'view', until })).status, 400);
     const saved = await put('owner', { to: 'book', until });

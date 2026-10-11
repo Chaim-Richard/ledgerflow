@@ -4,7 +4,7 @@ import { doc, setDoc } from '../../lib/db/firestore';
 import { db, getIdToken } from '../../firebase';
 import { EmployeeInlineDetails } from './EmployeeInlineDetails';
 import { useDialog } from '../../hooks/useDialog';
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { ChartAccount, Employee, PayRun } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -29,6 +29,8 @@ import PayRunApprovals from './PayRunApprovals';
 import { TimeOffCell } from './TimeOffCell';
 import { DeductionsCell } from './DeductionsCell';
 import { PayRunHistory } from './PayRunHistory';
+import { HourlyPayCell } from './HourlyPayCell';
+import { asPaidFor, hoursToPay, isHourly, type PayableTime } from '../../lib/hourlyPay';
 
 const PayrollViewContent: React.FC = () => {
   const employees = useLedgerStore(s => (s.employees || []) as Employee[]);
@@ -99,9 +101,23 @@ const PayrollViewContent: React.FC = () => {
     setIsGeneratingRun(true);
   };
 
+  // U-11: approved time not paid yet, for hourly employees (read when there are any)
+  const anyHourly = employees.some(isHourly);
+  const [payableTime, setPayableTime] = useState<PayableTime[]>([]);
+  useEffect(() => {
+    if (!anyHourly || !currentWorkspace?.id || !canRunPayroll) return;
+    let live = true;
+    (async () => {
+      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(currentWorkspace.id)}/time`, { headers: { Authorization: `Bearer ${await getIdToken()}` } });
+      return res.ok ? ((await res.json()).entries || []) as PayableTime[] : [];
+    })().then(list => { if (live) setPayableTime(list); }).catch(() => {});
+    return () => { live = false; };
+  }, [anyHourly, currentWorkspace?.id, canRunPayroll]);
+
   // Auto-calculated pay run preview
   const calculatedPayRun = useMemo(() => {
-    const activeEmployees = employees.filter(e => e.status !== 'Terminated' && (runSchedule === 'all' || e.payFrequency === runSchedule));
+    const hours = hoursToPay(employees, payableTime, runPayDate);
+    const activeEmployees = employees.filter(e => e.status !== 'Terminated' && (runSchedule === 'all' || e.payFrequency === runSchedule) && (!isHourly(e) || (hours.get(e.id)?.minutes || 0) > 0));
     let totalGrossCents = 0;
     let totalNetCents = 0;
     let totalTaxWithheldCents = 0;
@@ -110,7 +126,7 @@ const PayrollViewContent: React.FC = () => {
     const breakdownItems = [];
     const year = Number(runPayDate.slice(0, 4)) || new Date().getFullYear();
     for (const emp of activeEmployees) {
-      const calc = computePeriodPayroll(emp, year);
+      const calc = computePeriodPayroll(isHourly(emp) ? asPaidFor(emp, hours.get(emp.id)?.minutes || 0) : emp, year);
       totalGrossCents += calc.grossPayCents;
       totalNetCents += calc.netPayCents;
       totalTaxWithheldCents += calc.totalWithholdingCents;
@@ -130,7 +146,7 @@ const PayrollViewContent: React.FC = () => {
       totalEmployerTaxesCents,
       totalCostCents: totalGrossCents + totalEmployerTaxesCents
     };
-  }, [employees, runPayDate, runSchedule]);
+  }, [employees, runPayDate, runSchedule, payableTime]);
 
   const handleSaveEmployee = async () => {
     if (!empName || !empSalary || employeeBusy.current) return;
@@ -364,7 +380,8 @@ const PayrollViewContent: React.FC = () => {
                         {emp.payFrequency}
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-medium text-neutral-900">
-                        {formatCurrency(emp.salaryCents || 0)}
+                        {isHourly(emp) ? '' : formatCurrency(emp.salaryCents || 0)}
+                        <div><HourlyPayCell employee={emp} canWrite={canWrite} /></div>
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600">
                         {formatCurrency(est.netPayCents)}

@@ -10,6 +10,7 @@
  * Before, deductions were left out of the entry and it did not balance when an employee had any.
  */
 import type { Employee } from '../types';
+import { asPaidFor, isHourly } from './hourlyPay';
 import { computePeriodPayroll } from './payroll-engine';
 import type { DeductionKind } from './payrollDeductions';
 
@@ -24,6 +25,9 @@ export interface PayRunEmployeeLine {
   netCents: number;
   /** U-08: paid as a contractor (nothing withheld; 1099-NEC) */
   contractor?: boolean;
+  /** U-11: an hourly employee's minutes paid, and which time entries */
+  minutes?: number;
+  timeEntryIds?: string[];
   /** U-01: what was withheld, by kind, for the payslip (runs posted before 7 Oct have none) */
   taxes?: { federalCents: number; stateCents: number; localCents: number; socialSecurityCents: number; medicareCents: number };
   /** U-05, U-06: each deduction by name, for the payslip (runs before 7 Oct have none) */
@@ -43,12 +47,15 @@ export interface PayRunTotals {
 
 export type PaySchedule = Employee['payFrequency'] | 'all';
 
-export function payRunTotals(employees: Employee[], year: number, schedule: PaySchedule = 'all'): PayRunTotals {
+export function payRunTotals(employees: Employee[], year: number, schedule: PaySchedule = 'all', hours?: Map<string, { minutes: number; entryIds: string[] }>): PayRunTotals {
   // U-07: a run pays one schedule (weekly, every two weeks, monthly) or everyone
-  const lines = employees.filter(e => e.status !== 'Terminated' && (schedule === 'all' || e.payFrequency === schedule)).map(e => {
-    const calc = computePeriodPayroll(e, year);
+  // U-11: hourly employees are paid for their approved time, and only when they have some
+  const lines = employees.filter(e => e.status !== 'Terminated' && (schedule === 'all' || e.payFrequency === schedule) && (!isHourly(e) || (hours?.get(e.id)?.minutes || 0) > 0)).map(e => {
+    const worked = isHourly(e) ? hours?.get(e.id) : undefined;
+    const calc = computePeriodPayroll(worked ? asPaidFor(e, worked.minutes) : e, year);
     return {
       employeeId: e.id, name: e.name, ...(e.workerType === 'contractor' ? { contractor: true } : {}), grossCents: calc.grossPayCents,
+      ...(worked ? { minutes: worked.minutes, timeEntryIds: worked.entryIds } : {}),
       deductionsCents: calc.preTaxDeductionsCents + calc.garnishmentsCents + calc.postTaxDeductionsCents,
       ...(calc.deductionLines.some(l => l.cents) ? { deductions: calc.deductionLines.filter(l => l.cents).map(l => ({ name: l.name, kind: l.kind, cents: l.cents })) } : {}),
       withheldCents: calc.totalWithholdingCents, employerTaxCents: calc.totalEmployerTaxCents, netCents: calc.netPayCents,
