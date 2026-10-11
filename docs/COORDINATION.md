@@ -364,6 +364,7 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 - [ ] **C-53 Access review CSV for auditors** C-35 plus the two-person rule and delegates in one auditor CSV.
 - [ ] **C-54 Empty states** every report from C-35..C-53 says what to do when there is no data yet.
 - [ ] **C-55 Tax capability labels (strategic review)** every tax screen and export shows its level: Calculation only / Reviewed by an accountant / Filing-ready, from one table `src/lib/tax/capability.ts` (all 'calculation' today); the PDF and CSV carry it too. Tests.
+- [ ] **C-56 Facts screen (PLAN §10)** Settings → Facts: for the books and each label value, its facts (legal form, tax treatment, exempt status, places, activities, registrations) with dates and evidence; 'declared' vs 'verified' shown plainly; owners/accountants mark a fact verified with who/when and a reference. Built on `src/lib/rules/facts.ts` (landed). Conflicts from `composeFacts` listed with the two sources.
 
 ## AI #3 (Arena): tasks (Claude, 5 Oct late)
 
@@ -542,6 +543,7 @@ before:
 - [ ] **A-35 Proposals** (tracker CC-03): an estimate with a cover letter, sections and optional items, sent as one page (uses Y-20 signing).
 - [ ] **A-36 Notes on any record** (tracker CD-06, CF-08): a notes panel on customers, vendors, items, invoices and bills (who, when), searchable.
 - [ ] **A-37 Custom fields** (tracker CG-01): owner-defined extra fields on customers, vendors and items (text, number, date, choice), shown in lists and exports.
+- [ ] **A-38 Tables become rule packs (PLAN §10)** A-22, A-24..A-31 tables are written as `Rule` rows (`src/lib/rules/rules.ts`): conditions on facts (country, state, activity…), dated, with source and status 'calculation'. One file per pack under `src/lib/rules/packs/`; tests that each pack's rules have sources and do not overlap in time.
 
 ## AI #4 (Codex): tasks (written by Claude, 6 Oct)
 
@@ -1418,3 +1420,4 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-11 evening, Claude (AI #1): merged AI #5's PRs #56–#64 (E-2..E-11) into main. Queues were finishing in hours, not days, so each now has 12–14 more tasks (AI #2 C-43..C-54, AI #3 A-24..A-37, AI #4 D-18..D-29, AI #5 E-12..E-23). Tax follows the entity now (docs/PLAN.md §6): AI #1 publishes `src/lib/tax/profile.ts` first; until then build screens on a typed fixture of the same shape.
 - 2026-10-11 night, Claude (AI #1): landed for you to build on: `src/lib/tax/profile.ts` (profiles, inheritance, `taxProfilesProblem`), `PUT .../tax-profiles`, `src/lib/tax/resolveLineTax.ts` (a line's tax by entity and place; tables plug in as `RateTables`, key `US-TX` etc.), `src/lib/tax/ilVatRates.ts`, `src/lib/tax/ilVatReturn.ts` (`israelVatReturn`). Customers have `metadata.taxPlace` {country, state, city}; invoices show the expected tax.
 - 2026-10-11 night, Claude (AI #1): the owner's strategic review is in docs/PLAN.md §9. Fixed: AI pricing, canned AI fallbacks, the hard-coded 98.4%. New tasks: C-55, D-30, D-31, E-24, E-25.
+- 2026-10-11 night, Claude (AI #1): the owner's rule graph is adopted (docs/PLAN.md §10): facts on any label value, composed from every dimension; rules that accumulate/override/exclude, dated, with sources; evidence and verification. Landed: `src/lib/rules/facts.ts`, `rules.ts`, `fromTaxProfiles.ts`. **All new tax content is written as rules over facts**, not as country modules. New: C-56 (Facts screen), A-38 (tables as rule packs).

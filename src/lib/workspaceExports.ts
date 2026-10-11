@@ -1,4 +1,11 @@
 /**
+ * PLAN §10: the rule graph (facts from every dimension, dated rules that accumulate, override or exclude, evidence).
+ * Reachable here until the tax resolution and the Facts screen use it.
+ */
+export { composeFacts } from './rules/facts';
+export { evaluateRules } from './rules/rules';
+export { factSources } from './rules/fromTaxProfiles';
+/**
  * PLAN §6: tax code suggestions that learn from history, and unusual-code flags. Reachable here until AI #2's C-46 panel uses them.
  */
 export { suggestTaxCode, unusualTaxCode } from './tax/taxSuggestions';

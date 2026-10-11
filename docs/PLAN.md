@@ -223,3 +223,38 @@ people approve, posting services commit) and found real defects. Status:
 | Licence, backups/restore drill, branch protection | owner (docs/FOR_YOU.md 44) |
 
 Order of authority when documents disagree: tests and schema > CAPABILITIES.md > PLAN.md > ROADMAP.md > AGENTS.md > README.
+
+## 10. The rule graph: tax and law on the same dimensions (owner, 11 Oct night) — adopted
+
+The owner's direction, adopted before any more country-by-country work: tax laws, legal structures and
+organisational classifications use the same multi-dimensional labels as everything else. Books →
+dimensions → a rule graph → accounting, tax, legal and reporting results. Four layers, kept apart:
+
+1. **Facts** (`src/lib/rules/facts.ts`): what is true, kept on the books or on any label value: legal form,
+   tax treatment, exempt status (three independent attributes: an LLC can be taxed as an S corporation; a
+   nonprofit corporation is not tax-exempt until recognised), country, state, county, city, district,
+   activity, accounting method, registrations. Each fact has dates and evidence.
+2. **Composition** (`composeFacts`): the facts of a line, document or entity are gathered from **every**
+   dimension (each with its parents), then the books. This replaces the old first-match
+   `resolveSellerProfile`, which stopped at the first dimension with a profile (the owner found it).
+   Set attributes (activities, registrations) accumulate; a single attribute stated differently by two
+   dimensions is a **conflict**, reported and never silently chosen.
+3. **Rules** (`src/lib/rules/rules.ts`): when a rule applies (conditions on facts), its scope (line,
+   document, entity for a period), dates, authority and source, its status (calculation / reviewed /
+   filing-ready), and how it combines: accumulate (state + city rate), override (a reduced rate replaces
+   the standard), exclude (osek patur: no VAT).
+4. **Evidence** (the outcome): which rules applied and why, which were displaced and by what, which are
+   **blocked** because a fact is only declared, and which are **undecided** because facts conflict.
+
+**The safeguard:** a label only declares. A fact is verified only with evidence someone checked (a
+registration, an authority's letter, a document). Rules that depend on a legal status require verified
+facts, so choosing a label never by itself creates a legal status or proves compliance.
+
+**How the existing work fits:** saved tax profiles become facts (`fromTaxProfiles.ts`); the Israeli and
+US tables become rule packs (rules whose effects are the dated rates); `resolveLineTax` moves onto
+`evaluateRules` next. Tests: `src/tests/rule-graph.test.ts` (the owner's companies A, C and D, and a
+conflict).
+
+**Order (AI #1):** line tax on the rule graph → Israel and US as rule packs (data, with sources) →
+entity-period rules (returns and filings per entity per year) → the Facts screen (AI #2) → learning
+suggests facts and rules, never sets them.
