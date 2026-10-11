@@ -104,6 +104,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "For a period, each fixed asset's cost, the depreciation it had before the period, what the monthly runs posted in it, what it has at the end, and its book value, with the totals. Assets sold or scrapped are marked.",
     "item-register":
       "Every invoice line that sold a stock item, or every bill line that bought one, in a period, for one item or all. Each row opens its document, and each item's units and amount add up at the end.",
+    "slow-moving-stock":
+      "As of a day, each stock item with units on hand: its value at cost, the day it last sold and how long ago, in age buckets (0–30, 31–90, 91–180, over 180 days, never sold). Narrow it to items with no sale in N days, then export the list. Drafts, estimates and voided invoices do not count as sales.",
     "stock-aging":
       "As of a day, each item's stock on hand split by how long ago those units came in, the latest units taken to be the ones still there. With its value and the last sale, so slow-moving stock shows first. Read from the stock history the server keeps.",
     "inventory-details":
