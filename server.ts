@@ -75,14 +75,14 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   // Stripe Webhook needs raw body
   registerStripeWebhookRoutes(app, routeContext);
 
-  app.use(express.json({ limit: "50mb" })); // Increased limit to securely support ~100,000 transaction bulk imports
-  app.use((req, _res, next) => { req.body ??= {}; next(); }); // Express 5 leaves req.body undefined without a body
-  app.use(csrfProtection({ isAllowedOrigin }));
-
-  // Apply to API routes
+  // Reject excess API traffic and invalid origins before parsing large JSON bodies.
+  // The Stripe webhook above still receives its required raw body first.
   app.use("/api/", limiter);
   app.use("/api/v1/brain", brainRateLimiter);
   app.use("/api/v1/documents", pdfGenerationLimiter);
+  app.use(csrfProtection({ isAllowedOrigin }));
+  app.use(express.json({ limit: "50mb" })); // Bulk JSON/restore support; narrow per-route limits are tracked separately.
+  app.use((req, _res, next) => { req.body ??= {}; next(); }); // Express 5 leaves req.body undefined without a body
 
   // Secure Server-Side Transaction Matching Engine API
   registerLedgerMatchRoutes(app, routeContext);
@@ -176,6 +176,8 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (error) => {
   console.error('💥 [Server] Uncaught Exception caught:', error);
+  // Continuing after an unexpected exception risks using inconsistent process state.
+  process.exit(1);
 });
 
 // On Vercel the function in api/index.mjs imports createApp() instead of starting a server.
