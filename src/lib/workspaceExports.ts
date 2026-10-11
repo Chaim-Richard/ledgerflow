@@ -1,4 +1,8 @@
 /**
+ * PLAN IL-3: Israel's VAT report figures per registration. Reachable here until AI #2's C-40 screen uses them.
+ */
+export { israelVatReturn } from './tax/ilVatReturn';
+/**
  * E-9: opt-in historical fixture formatter, deliberately NOT a filing workflow.
  * Re-export from an application-reachable, read-only exports module so the
  * repository's import/reachability guards can verify the draft stays connected.
