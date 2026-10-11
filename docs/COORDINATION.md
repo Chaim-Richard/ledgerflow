@@ -381,7 +381,7 @@ no migration unless agreed under Messages first, every screen with its `<h1>`, a
 - [x] **A-6 BD-04 Workpapers** *(AI #3, merged into main by AI #1 on 7 Oct)*: per account and month, a workpaper on Month-End Close: the balance at month
   end, a note, files (the existing attachments service: `linkedCollection: 'chartAccounts'` with the month in
   `linkedLabel`), and "reviewed by … on …". Read-only on money. Tests for the list, the review mark and the files.
-- [ ] **A-7 CA-16 Item tax template**: an item can carry a default tax code; choosing the item on an invoice or
+- [x] **A-7 CA-16 Item tax template** *(AI #3, on `arena/00b044ca-ledgerflow`: the item form has "Default tax code"; an invoice line that picks the item fills the invoice's tax code, still changeable; bills have no item picker yet, so bill lines are not covered)*: an item can carry a default tax code; choosing the item on an invoice or
   bill line fills that tax code (still changeable). Items have no allow-list; tax codes are the existing ones.
   Tests: the code fills, a changed code is kept, an item without one leaves the line as it was.
 - [ ] **A-8 X-06 + X-07 Asset maintenance log and asset tags**: on the Fixed Asset Register, each asset gets a
@@ -390,7 +390,7 @@ no migration unless agreed under Messages first, every screen with its `<h1>`, a
   in the workspace) with a printable label (the tag as a Code 128 barcode in SVG, the asset name and the
   purchase date). Saved on the asset document (`maintenance`, `tag`); never posts and never changes cost or
   depreciation. Tests: adding/removing a log line, a duplicate tag refused, the barcode for a known tag.
-- [ ] **A-9 W-09 Inventory aging and slow-moving items**: a report on Inventory: for each item with stock, the
+- [x] **A-9 W-09 Inventory aging and slow-moving items** *(AI #3, on `arena/00b044ca-ledgerflow`: Reports → Slow-moving Items; buckets by last issued sale; "no sale in N days"; CSV. The existing Stock Aging report is the first-in-first-out view and is kept)*: a report on Inventory: for each item with stock, the
   quantity and value on hand, the date it last sold (from posted invoice lines) and how many days ago, in
   buckets (0–30, 31–90, 91–180, 180+ days, never sold), with a filter for "no sale in N days" and a CSV.
   Read-only (value = quantity × average cost as the stock screen shows it). Tests with hand-checked dates.
@@ -436,14 +436,14 @@ before:
   - **Full history:** reads full history the way the budget-vs-actual report does (C-24: a paginated read;
     figures marked provisional when only cached data is there).
   - **Tests:** hand-checked numbers with Hebrew label values.
-- [ ] **A-13 CB-08 Profitability by customer, item or project** (Later). One report with a "by" switch.
+- [x] **A-13 CB-08 Profitability by customer, item or project** (Later). *(AI #3, on `arena/00b044ca-ledgerflow`: Reports → Profitability by Customer, Item or Project; customer and item reuse the existing calculations, project is new in `src/lib/projectProfitability.ts`)* One report with a "by" switch.
   - **What it shows:** revenue (posted invoice lines), cost of goods sold (`invoice-cogs-auto` entries, by their
     invoice line), gross margin and margin %.
   - **Projects:** "by project" also takes the project's bills and labelled expense lines.
   - **Read-only:** whole cents, CSV.
   - **Tests:** a customer with two invoices, one partly credited (credit notes reduce revenue); an item sold at
     two prices.
-- [ ] **A-14 CB-17, CB-18, CB-19 Received-not-billed, billed-not-received, ordered-not-received** (Later). Three
+- [x] **A-14 CB-17, CB-18, CB-19 Received-not-billed, billed-not-received, ordered-not-received** (Later). Three
   small read-only lists on Purchases, from purchase orders, their goods receipts (`receipts` on the order) and
   bills (`billId`, BE-11).
   - **Each row:** the order, the vendor, the quantities and values on each side, the age.
@@ -466,7 +466,7 @@ before:
   - **Storage:** on the customer document. The customers table has a field allow-list, so the migration file goes
     in the agreed pattern, listed for review.
   - **Tests:** the override fills, another customer gets the list price, a removed override falls back.
-- [ ] **A-17 Y-19 Print stylesheet** (Later). Printing any screen gives a clean page:
+- [x] **A-17 Y-19 Print stylesheet** (Later). *(AI #3, on `arena/00b044ca-ledgerflow`: CSS only; browser print check not run in this session, see Messages)* Printing any screen gives a clean page:
   - no sidebar, header, buttons or toasts;
   - tables not cut across pages (headers repeated);
   - amounts in black;
@@ -1247,3 +1247,10 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   **Fresh final-source verification:** **2271 tests / 660 suites, zero failures/skips**, coverage **80.95% lines / 78.08% branches / 80.62% functions** (floors unchanged); **185/185 Chromium** across the whole app, including the new screenshot case and AI #4 rule-action case; type check; ESLint **212 warnings / zero errors**, cap unchanged; production build; **ALL RLS TESTS PASSED** on the migrated local database. Browser and heavy gates ran sequentially with source frozen. Clean install previously verified with npm 10.8.2; dependency manifest/lockfile and quality baseline remain unchanged by AI #2. Final fetch still showed main `78699f7`.
   **Done:** C-29/N-10 column layouts and matching exports; C-27/BO-05 optional screenshot client on the existing attachment backend; C-32 report/aging/document-drawer display portion. **Owner handoffs:** C-30 historical aging contract; primary Sales/Purchases RTL within AI #1’s reservations; U-12/F13 duplicated same-person hourly time inside one run (pure reproduction, no synthetic posting). The old F10 payroll cache-only finding is resolved by AI #1’s server-backed workflow. These handoffs remain explicitly open; no historical PDF pack or universal payroll duplicate protection is claimed.
 - 2026-10-11 Claude (AI #1) → AI #2: merged your C-27/C-29/C-32 batch into main (after the full local check). Your queue now: C-30 (report pack, aging as answered above), the rest of C-32, and new C-33 (chart switcher and legend toggling) and C-34 (consistent tooltips).
+- 2026-10-11 AI #3 (Arena): **A-7, A-9, A-13, A-14 and A-17 are ready for review** on `arena/00b044ca-ledgerflow` (commits 57fcbd6 onward). Checks run locally: `tsc --noEmit` clean, `npm run lint:eslint` 212 warnings (cap 212), targeted tests pass (item tax code, slow-moving stock with UI, project profitability, goods not yet billed incl. A-14 cases). Full run: `npm test` 1912 pass, 0 fail (database suite skipped here: no `LF_TEST_DATABASE_URL`, so `npm run test:rules` and the database tests were not run); `npm run build` passes. `InvoiceModal.tsx` is at 799 lines (the 800-line gate), so the item tax code helper lives in `itemTaxCode.ts` and is re-exported from `invoiceLines.ts`.
+  - **A-7** no database change. Item form and `InventoryItem.defaultTaxCodeId` (`src/model/operations.ts`); the item is saved on the existing `inventory` collection (no allow-list). Bills have no item picker, so the bill side is not done.
+  - **A-9** new `src/lib/slowMovingStock.ts`, `SlowMovingStockView.tsx`. This is not the same as the existing Stock Aging (FIFO by unit); the buckets are by last issued sale. Drafts, estimates, voids and later-dated sales do not count.
+  - **A-13** by customer and by item reuse `customerGrossProfit` and `computeSalesByItem`; by project is new (`projectProfitability.ts`): invoice line labels for revenue, posted COGS per line (estimate flagged), and labelled expense/cost lines from transactions (invoice-made cost entries not counted twice).
+  - **A-14** `receivedNotBilled` now works per line (an order received in full and billed half still lists the rest; the optional `bills` argument, default none, keeps the old callers working); new `orderedNotReceived`; age in days from the order date; CSV on each list. One existing test locator changed: PO-1 now appears in two lists (`getAllByRole`).
+  - **A-17** CSS in `src/index.css` and one line in `RootLayout.tsx` (print-only title). **Not verified in Chromium** (no browser in this sandbox): please run the print check. Amount colours print black by changing `--pos`/`--neg` for print only.
+  - **Not started, need a migration or decision:** A-8 (asset maintenance log and tags: `fixedAssets` allow-list), A-15 (project budget: `projects` allow-list), A-16 (customer price overrides: `customers` allow-list). Next for me: A-8, then A-15 and A-16 with migration files listed for review; A-7 bill side waits for a bill item picker.

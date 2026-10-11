@@ -111,6 +111,9 @@ export default function Inventory() {
   }, [items, activeTransactions, accounts]);
 
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  // A-7: the sales tax codes an item can default to (the same list the invoice offers)
+  const taxRatesForItems = useLedgerStore(s => s.taxRates || []);
+  const salesTaxCodes = useMemo(() => taxRatesForItems.filter(r => r.type === 'Sales' && r.appliesTo !== 'purchases').map(r => ({ id: r.id, name: r.name })), [taxRatesForItems]);
 
   const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -130,6 +133,8 @@ export default function Inventory() {
       category: formData.get('category') as string,
       // BF-01: an item with stock on hand stays a stock item
       itemType: formData.get('itemType') === 'service' && !editingItem.quantityAtHand ? 'service' : (editingItem.quantityAtHand ? editingItem.itemType || 'stock' : 'stock'),
+      // A-7 (CA-16): the default tax code an invoice line for this item fills in
+      defaultTaxCodeId: (formData.get('defaultTaxCodeId') as string) || undefined,
     };
 
     try {
@@ -159,6 +164,7 @@ export default function Inventory() {
       unitsPerPackage: formData.get('unitsPerPackage') ? parseInt(formData.get('unitsPerPackage') as string, 10) || 1 : undefined,
       category: formData.get('category') as string,
       itemType: formData.get('itemType') === 'service' ? 'service' : 'stock',
+      defaultTaxCodeId: (formData.get('defaultTaxCodeId') as string) || undefined,
       createdAt: new Date().toISOString()
     };
 
@@ -620,7 +626,7 @@ export default function Inventory() {
         )}
       </div>
 
-      <InventoryItemDialog open={isAdding || !!editingItem} editingItem={editingItem} categories={categories} canChangeStock={canChangeStock}
+      <InventoryItemDialog open={isAdding || !!editingItem} editingItem={editingItem} categories={categories} canChangeStock={canChangeStock} taxCodes={salesTaxCodes}
         onClose={closeItemDialog} onSubmit={editingItem ? handleUpdate : handleAdd}
         onAdjust={it => { setEditingItem(null); setAdjustItem(it); }} />
 

@@ -18,7 +18,7 @@ import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { formatCurrency, safeConfirm } from '../../lib/utils';
-import { customerPricer, lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
+import { customerPricer, findInventoryItem, lineAmountCents, setLineDescription, taxCodeToFillFromItem } from '../../lib/invoiceLines';
 import TaxExemptionNotice from './TaxExemptionNotice';
 import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import { depositAppliedCents } from '../../lib/documentMath';
@@ -523,9 +523,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                         list={`invoice-inventory-list-${idx}`}
                         value={item.description}
                         onChange={(e) => {
-                          const newItems = [...items];
+                          const newItems = [...items]; const fillCode = taxCodeToFillFromItem(newItems[idx].itemId, findInventoryItem(inventoryItems, e.target.value), salesCodes.map(c => c.id)); // A-7: a newly chosen item fills its tax code
                           newItems[idx] = setLineDescription(newItems[idx], e.target.value, inventoryItems, customerPricer(useAuthStore.getState().getCurrentWorkspace()?.priceLists, invoice.customerId));
-                          setItems(newItems);
+                          setItems(newItems); if (fillCode) setInvoice(prev => ({ ...prev, taxCodeId: fillCode, taxRate: 0 }));
                         }}
                         placeholder="Service or Product"
                         className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
