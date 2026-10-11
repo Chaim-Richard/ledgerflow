@@ -11,7 +11,10 @@ import { useAuthStore } from "../stores/useAuthStore";
 export interface StrategicDirectives {
   directives: string[];
   scenarios: string[];
-  confidence: number;
+  /** null when no model answered */
+  confidence: number | null;
+  /** true when the AI was unavailable or failed: nothing was inferred */
+  degraded?: boolean;
 }
 
 class AIService {
@@ -70,70 +73,20 @@ class AIService {
     try {
       return await this.callBackend<StrategicDirectives>('strategic-analysis', { mode, data });
     } catch (error) {
-      console.warn(`[AI Saturation] Reverting to deterministic expert strategy model for '${mode}':`, error);
-      
-      const fallbacks: Record<'growth' | 'stability' | 'tax-optimization' | 'exit', StrategicDirectives> = {
-        growth: {
-          directives: [
-            "Accelerated Expansion: Allocate 40% of surplus cash toward scaling profitable channels (CAC < LTV validation path).",
-            "Working Capital Calibration: Maintain a 60-day buffer to support higher payroll and procurement cycles.",
-            "R&D Alignment: Channel capital toward active project pipelines to maximize future tax credits."
-          ],
-          scenarios: [
-            "Model High-Growth: Simulated increase of 30% revenue with 12% rise in operational expense clusters.",
-            "Venture Runway Target: Optimize cash burn to maintain 18+ months of comfortable operation."
-          ],
-          confidence: 92
-        },
-        stability: {
-          directives: [
-            "Burn Reduction Protocol: Audit vendors showing high price volatility to trim recurring overhead by 15%.",
-            "Receivables Acceleration: Offer a 2% early payment discount to shorten outstanding aging invoice cycles.",
-            "Inventory Consolidation: Halt non-essential procurement to preserve cash reserves."
-          ],
-          scenarios: [
-            "Model High-Stress: Simulated 30% revenue shock with immediate vendor consolidation.",
-            "Cash Reserves Focus: Target a positive unit-economic equilibrium with zero debt accumulation."
-          ],
-          confidence: 95
-        },
-        'tax-optimization': {
-          directives: [
-            "R&D Tax Shield: Categorize qualifying developer and design hours to maximize current year tax credits.",
-            "Nexus Validation: Review sales tax obligations across multiple active jurisdictions to avoid audit penalties.",
-            "Depreciation Acceleration: Claim Section 179 depreciation on all newly capitalised fixed assets."
-          ],
-          scenarios: [
-            "Accelerated Deductions: Simulated 8% reduction in overall federal and state tax liability.",
-            "Nexus Calibration: Ensure compliance across all online operating channels."
-          ],
-          confidence: 90
-        },
-        exit: {
-          directives: [
-            "EBITDA Optimization: Shift operational expenses and streamline staffing logs to showcase clean quarterly profit margins.",
-            "Liability Remediation: Settle outstanding vendor bills to lower leverage ratios on the balance sheet.",
-            "Audit Readiness: Verify hash chain logs and lock all past reconciliations to provide immutable books."
-          ],
-          scenarios: [
-            "Buyout Readiness Map: Present pristine 3-year trailing P&L and Balance Sheet reports for valuation multiple optimization.",
-            "Recapitalization Model: Align equity structures to support prospective transition of operations."
-          ],
-          confidence: 94
-        }
-      };
-
-      return fallbacks[mode] || fallbacks.growth;
+      console.warn(`[AI] strategic analysis for '${mode}' unavailable:`, error);
+      // say it failed: no canned advice or confidence (strategic review, 11 Oct)
+      return { directives: [], scenarios: [], confidence: null, degraded: true };
     }
   }
 
   async generateForecast(transactions: Transaction[], horizon: number, userApiKey?: string) {
     try {
-      return await this.callBackend<{ points: { date: string; value: number }[]; confidence: number; anomalies: unknown[] }>('generate-forecast', { transactions, horizon });
+      return await this.callBackend<{ points: { date: string; value: number }[]; confidence: number | null; degraded?: boolean; anomalies: unknown[] }>('generate-forecast', { transactions, horizon });
     } catch (error) {
       return {
         points: transactions.map(t => ({ date: t.date, value: t.totalAmountCents / 100 })),
-        confidence: 0,
+        confidence: null,
+        degraded: true,
         anomalies: []
       };
     }
