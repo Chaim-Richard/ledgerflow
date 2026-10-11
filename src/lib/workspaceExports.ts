@@ -1,4 +1,11 @@
 /**
+ * E-13: local Israeli identity/company-number format warnings only.
+ * Read-only; does not query a registry, collect a taxpayer ID or block saving.
+ * Claude owns the customer/vendor PartyModal wiring.
+ */
+export { checkIsraeliIdentifier, israeliIdentifierWarning } from './tax/israeliIdentifiers';
+
+/**
  * PLAN §10: the rule graph (facts from every dimension, dated rules that accumulate, override or exclude, evidence).
  * Reachable here until the tax resolution and the Facts screen use it.
  */
