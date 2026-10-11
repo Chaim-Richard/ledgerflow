@@ -1,15 +1,17 @@
 import { inlineRecordAdapter } from '../../lib/inlineRecordAdapter';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { doc, setDoc } from '../../lib/db/firestore';
-import { db } from '../../firebase';
+import { db, getIdToken } from '../../firebase';
 import { EmployeeInlineDetails } from './EmployeeInlineDetails';
 import { useDialog } from '../../hooks/useDialog';
 import React, { useState, useMemo, useRef } from 'react';
-import { Employee, PayRun, Transaction, TransactionLine } from '../../types';
+import { ChartAccount, Employee, PayRun } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { computePeriodPayroll, PAYROLL_DISCLAIMER } from '../../lib/payroll-engine';
 import { formatCurrency, formatDate, getLocalDateISO } from '../../lib/utils';
+import { isCashAccount } from '../../lib/txFilters';
+import { contractorsToReport, yearToDate } from '../../lib/payRunPosting';
 import { useTimeout } from '../../hooks/useTimeout';
 import { 
   Users, 
@@ -23,14 +25,16 @@ import {
 } from 'lucide-react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { Labelled } from '../ui/Labelled';
+import PayRunApprovals from './PayRunApprovals';
+import { TimeOffCell } from './TimeOffCell';
+import { DeductionsCell } from './DeductionsCell';
+import { PayRunHistory } from './PayRunHistory';
 
 const PayrollViewContent: React.FC = () => {
   const employees = useLedgerStore(s => (s.employees || []) as Employee[]);
   const payRuns = useLedgerStore(s => (s.payRuns || []) as PayRun[]);
   const setPayRuns = useLedgerStore(s => s.setPayRuns);
-  const accounts = useLedgerStore(s => s.accounts);
-  const transactions = useLedgerStore(s => s.transactions);
-  const setTransactions = useLedgerStore(s => s.setTransactions);
+  const accounts = useLedgerStore(s => s.accounts) as ChartAccount[];
   useLedgerCollections('employees', 'payRuns');
   const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
   const user = useAuthStore(s => s.user);
@@ -44,7 +48,12 @@ const PayrollViewContent: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { setSafeTimeout } = useTimeout();
 
-  const canWrite = useCurrentRole() !== 'viewer';
+  const role = useCurrentRole();
+  const canWrite = role !== 'viewer';
+  // U-02: owners and accountants post pay runs (the server checks too)
+  const canRunPayroll = role === 'owner' || role === 'accountant';
+  // U-10: with approval on, an accountant's run waits for an owner instead of posting
+  const needsApproval = (currentWorkspace?.payrollApproval === true && role !== 'owner') || currentWorkspace?.twoPersonRule === true;
   const [employeeSaving, setEmployeeSaving] = useState(false);
   const [employeeError, setEmployeeError] = useState('');
   const employeeBusy = useRef(false);
@@ -57,23 +66,51 @@ const PayrollViewContent: React.FC = () => {
   const [empSalary, setEmpSalary] = useState('');
   const [empFrequency, setEmpFrequency] = useState<Employee['payFrequency']>('Monthly');
   const [empStatus, setEmpStatus] = useState<Employee['filingStatus']>('Single');
+  const [empWorkerType, setEmpWorkerType] = useState<'employee' | 'contractor'>('employee');
   const [empState, setEmpState] = useState('CA');
 
   // Pay run generation form
   const [runPayDate, setRunPayDate] = useState(getLocalDateISO());
   const [selectedBankAccountId, setSelectedBankAccountId] = useState<string>('');
+  // U-07: whom this run pays
+  const [runSchedule, setRunSchedule] = useState<'all' | Employee['payFrequency']>('all');
+  const [wagesAccountId, setWagesAccountId] = useState('');
+  const [taxExpenseAccountId, setTaxExpenseAccountId] = useState('');
+  const [liabilitiesAccountId, setLiabilitiesAccountId] = useState('');
+  const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState('');
+  // U-03: what this year's posted pay runs paid each employee
+  const thisYear = getLocalDateISO().slice(0, 4);
+  const ytd = useMemo(() => yearToDate(payRuns as Parameters<typeof yearToDate>[0], thisYear), [payRuns, thisYear]);
+  const necList = useMemo(() => contractorsToReport(payRuns as Parameters<typeof contractorsToReport>[0], thisYear), [payRuns, thisYear]);
+  const usable = accounts.filter(a => !a.isArchived);
+  const typeOf = (a: ChartAccount) => String(a.type).toLowerCase();
+  const bankAccounts = usable.filter(a => typeOf(a) === 'asset' && isCashAccount(a));
+  const expenseAccounts = usable.filter(a => ['expense', 'cost_of_goods'].includes(typeOf(a)));
+  const liabilityAccounts = usable.filter(a => typeOf(a) === 'liability');
+  const openRun = () => {
+    // suggested by name; every one can be changed, none is invented
+    const named = (list: ChartAccount[], pattern: RegExp) => list.find(a => pattern.test(a.name))?.id || '';
+    setSelectedBankAccountId(id => id || bankAccounts[0]?.id || '');
+    setWagesAccountId(id => id || named(expenseAccounts, /wage|salar|payroll(?!.*tax)/i));
+    setTaxExpenseAccountId(id => id || named(expenseAccounts, /payroll tax|employer tax/i) || named(expenseAccounts, /wage|salar|payroll/i));
+    setLiabilitiesAccountId(id => id || named(liabilityAccounts, /payroll|wage|withhold|tax payable/i));
+    setPostError('');
+    setIsGeneratingRun(true);
+  };
 
   // Auto-calculated pay run preview
   const calculatedPayRun = useMemo(() => {
-    const activeEmployees = employees.filter(e => e.status !== 'Terminated');
+    const activeEmployees = employees.filter(e => e.status !== 'Terminated' && (runSchedule === 'all' || e.payFrequency === runSchedule));
     let totalGrossCents = 0;
     let totalNetCents = 0;
     let totalTaxWithheldCents = 0;
     let totalEmployerTaxesCents = 0;
 
     const breakdownItems = [];
+    const year = Number(runPayDate.slice(0, 4)) || new Date().getFullYear();
     for (const emp of activeEmployees) {
-      const calc = computePeriodPayroll(emp);
+      const calc = computePeriodPayroll(emp, year);
       totalGrossCents += calc.grossPayCents;
       totalNetCents += calc.netPayCents;
       totalTaxWithheldCents += calc.totalWithholdingCents;
@@ -93,7 +130,7 @@ const PayrollViewContent: React.FC = () => {
       totalEmployerTaxesCents,
       totalCostCents: totalGrossCents + totalEmployerTaxesCents
     };
-  }, [employees]);
+  }, [employees, runPayDate, runSchedule]);
 
   const handleSaveEmployee = async () => {
     if (!empName || !empSalary || employeeBusy.current) return;
@@ -114,6 +151,7 @@ const PayrollViewContent: React.FC = () => {
       salaryCents,
       payFrequency: empFrequency,
       filingStatus: empStatus,
+      workerType: empWorkerType,
       state: empState,
       status: 'Active',
       createdAt: identity.createdAt
@@ -134,87 +172,45 @@ const PayrollViewContent: React.FC = () => {
     finally { employeeBusy.current = false; setEmployeeSaving(false); }
   };
 
-  const handlePostPayRunToLedger = () => {
-    if (calculatedPayRun.items.length === 0) return;
-
-    // Find cash/bank account
-    const bankAcc = accounts.find(a => a.id === selectedBankAccountId) || 
-      accounts.find(a => a.category === 'Cash' || a.name.toLowerCase().includes('checking') || a.name.toLowerCase().includes('bank')) ||
-      accounts[0] || { id: 'acc_cash_default', name: 'Operating Cash' };
-
-    // Find or fallback payroll expense & liability accounts
-    const wageExpenseAcc = accounts.find(a => a.name.toLowerCase().includes('wage') || a.name.toLowerCase().includes('payroll') || a.category === 'COGS' || a.category === 'Operating Expense') || 
-      accounts[0] || { id: 'acc_wages_default', name: 'Wages Expense' };
-    const taxExpenseAcc = accounts.find(a => a.name.toLowerCase().includes('payroll tax')) || wageExpenseAcc;
-    const taxPayableAcc = accounts.find(a => a.name.toLowerCase().includes('payroll tax payable') || a.category === 'Payables') || 
-      accounts[0] || { id: 'acc_tax_payable_default', name: 'Payroll Taxes Payable' };
-
-    // Construct Balanced Double-Entry Journal Lines
-    const lines: TransactionLine[] = [
-      // 1. Debit Gross Wages Expense
-      {
-        accountId: wageExpenseAcc.id,
-        accountName: wageExpenseAcc.name,
-        amountCents: calculatedPayRun.totalGrossCents,
-        category: 'Payroll & Wages',
-        description: `Gross Wages (${calculatedPayRun.items.length} employees)`
-      },
-      // 2. Debit Employer Payroll Taxes Expense
-      {
-        accountId: taxExpenseAcc.id,
-        accountName: taxExpenseAcc.name,
-        amountCents: calculatedPayRun.totalEmployerTaxesCents,
-        category: 'Employer Payroll Taxes',
-        description: 'Employer FICA / FUTA / SUTA Tax Liability'
-      },
-      // 3. Credit Cash / Bank (Net Pay distributed to employees)
-      {
-        accountId: bankAcc.id,
-        accountName: bankAcc.name,
-        amountCents: -calculatedPayRun.totalNetCents,
-        description: 'Net Pay Direct Deposits'
-      },
-      // 4. Credit Payroll Taxes Payable (Employee withholding + Employer tax obligation)
-      {
-        accountId: taxPayableAcc.id,
-        accountName: taxPayableAcc.name,
-        amountCents: -(calculatedPayRun.totalTaxWithheldCents + calculatedPayRun.totalEmployerTaxesCents),
-        description: 'Federal & State Payroll Taxes Withheld & Due'
+  const handlePostPayRunToLedger = async (again = false) => {
+    if (calculatedPayRun.items.length === 0 || !currentWorkspace?.id) return;
+    if (!selectedBankAccountId || !wagesAccountId || !taxExpenseAccountId || !liabilitiesAccountId) {
+      setPostError('Choose the bank account, the wages and payroll tax expense accounts and the payroll liabilities account.');
+      return;
+    }
+    setPosting(true);
+    setPostError('');
+    try {
+      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(currentWorkspace.id)}/pay-runs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` },
+        body: JSON.stringify({ date: runPayDate, bankAccountId: selectedBankAccountId, wagesAccountId, taxExpenseAccountId, liabilitiesAccountId, ...(runSchedule !== 'all' ? { schedule: runSchedule } : {}), ...(again ? { again } : {}) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409 && !again && /already (posted|waiting)/.test(String(data.message))) {
+        if (window.confirm(`${data.message}. ${needsApproval ? 'Prepare' : 'Post'} another pay run on ${runPayDate}?`)) { setPosting(false); await handlePostPayRunToLedger(true); }
+        return;
       }
-    ];
-
-    const runId = `payrun_${Date.now()}`;
-    const newTx: Transaction = {
-      id: `tx_${runId}`,
-      uid: user?.uid || 'system',
-      workspaceId: currentWorkspace?.id || 'default',
-      date: runPayDate,
-      description: `Payroll Run — ${calculatedPayRun.items.length} Employees (${runPayDate})`,
-      totalAmountCents: calculatedPayRun.totalCostCents,
-      currency: 'USD',
-      status: 'completed',
-      type: 'journal',
-      lines,
-      createdAt: new Date().toISOString()
-    };
-
-    setTransactions([...transactions, newTx]);
-
-    const record: PayRun = {
-      id: runId,
-      uid: user?.uid || 'system',
-      workspaceId: currentWorkspace?.id || 'default',
-      date: runPayDate,
-      totalAmountCents: calculatedPayRun.totalCostCents,
-      employeeCount: calculatedPayRun.items.length,
-      status: 'processed',
-      createdAt: new Date().toISOString()
-    };
-
-    setPayRuns([...payRuns, record]);
-    setIsGeneratingRun(false);
-    setSuccessMessage(`Pay Run posted to General Ledger: ${formatCurrency(calculatedPayRun.totalCostCents)} total employer cost.`);
-    setSafeTimeout(() => setSuccessMessage(null), 5000);
+      if (!res.ok) throw new Error(data.message || 'The pay run could not be posted');
+      const waits = data.awaitingApproval === true;
+      const record: PayRun = {
+        id: data.payRunId, uid: user?.uid || '', workspaceId: currentWorkspace.id, date: runPayDate, totalAmountCents: data.costCents,
+        employeeCount: data.employees.length, status: waits ? 'awaiting_approval' : 'processed', createdAt: new Date().toISOString(),
+        ...(waits ? { submittedByEmail: user?.email || '' } : { transactionId: data.transactionId }),
+        schedule: runSchedule, employees: data.employees, grossCents: data.grossCents, netCents: data.netCents, withheldCents: data.withheldCents,
+        employerTaxCents: data.employerTaxCents, deductionsCents: data.deductionsCents,
+      };
+      setPayRuns([...payRuns.filter(r => r.id !== record.id), record]);
+      setIsGeneratingRun(false);
+      setSuccessMessage(waits
+        ? `Pay run of ${formatDate(runPayDate)} sent for approval: an owner approves it before it is posted (${formatCurrency(data.costCents)} total cost).`
+        : `Pay run of ${formatDate(runPayDate)} posted: ${formatCurrency(data.costCents)} total cost, ${formatCurrency(data.netCents)} paid out.`);
+      setSafeTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err) {
+      setPostError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPosting(false);
+    }
   };
 
   return (
@@ -241,7 +237,7 @@ const PayrollViewContent: React.FC = () => {
             Add Employee
           </button>
           <button
-            onClick={() => setIsGeneratingRun(true)}
+            onClick={openRun}
             disabled={employees.length === 0}
             className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
             id="create-pay-run-btn"
@@ -293,6 +289,8 @@ const PayrollViewContent: React.FC = () => {
         </button>
       </div>
 
+      {activeTab === 'runs' && <PayRunApprovals />}
+
       {/* Main Content */}
       {activeTab === 'runs' ? (
         payRuns.length === 0 ? (
@@ -303,7 +301,7 @@ const PayrollViewContent: React.FC = () => {
               Add employees to your roster and execute your first automated pay run to calculate deductions and post wages to the ledger.
             </p>
             <button
-              onClick={() => setIsGeneratingRun(true)}
+              onClick={openRun}
               disabled={employees.length === 0}
               className="mt-4 px-4 py-2 text-xs font-semibold bg-neutral-900 text-white rounded-lg inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
             >
@@ -312,40 +310,9 @@ const PayrollViewContent: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-xs">
-            <table className="w-full text-left text-xs">
-              <caption className="sr-only">Pay runs</caption>
-              <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-600 font-semibold uppercase tracking-wider">
-                <tr>
-                  <th scope="col" className="py-3 px-4">Pay Run Date</th>
-                  <th scope="col" className="py-3 px-4 text-center">Employees</th>
-                  <th scope="col" className="py-3 px-4 text-right">Total Employer Cost</th>
-                  <th scope="col" className="py-3 px-4 text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100">
-                {payRuns.map((run) => (
-                  <tr key={run.id} className="hover:bg-neutral-50/80 transition-colors">
-                    <td className="py-3 px-4 font-medium text-neutral-900 font-mono">
-                      {formatDate(run.date)}
-                    </td>
-                    <td className="py-3 px-4 text-center text-neutral-600">
-                      {run.employeeCount} team members
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-neutral-900">
-                      {formatCurrency(run.totalAmountCents)}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-semibold">
-                        <CheckCircle2 aria-hidden="true" className="w-3 h-3 text-emerald-600" />
-                        {run.status === 'processed' ? 'Posted to Ledger' : run.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PayRunHistory payRuns={payRuns} canRunPayroll={canRunPayroll}
+            onDone={message => { setPostError(''); setSuccessMessage(message); setSafeTimeout(() => setSuccessMessage(null), 5000); }}
+            onError={message => { setSuccessMessage(null); setPostError(message); }} />
         )
       ) : (
         employees.length === 0 ? (
@@ -375,6 +342,8 @@ const PayrollViewContent: React.FC = () => {
                   <th scope="col" className="py-3 px-4">Frequency</th>
                   <th scope="col" className="py-3 px-4 text-right">Annual Gross</th>
                   <th scope="col" className="py-3 px-4 text-right">Period Net Pay</th>
+                  <th scope="col" className="py-3 px-4 text-right">Paid in {thisYear}</th>
+                  <th scope="col" className="py-3 px-4 text-right">Time off</th>
                   <th scope="col" className="py-3 px-4 text-center">Status</th>
                 </tr>
               </thead>
@@ -389,7 +358,7 @@ const PayrollViewContent: React.FC = () => {
                       </td>
                       <td className="py-3 px-4 text-neutral-700">
                         <span className="sr-only">Role is editable beside the employee name</span>
-                        <div className="text-[11px] text-neutral-400">{emp.state || 'CA'} &bull; {emp.filingStatus || 'Single'}</div>
+                        <div className="text-[11px] text-neutral-400">{emp.workerType === 'contractor' ? 'Contractor · nothing withheld' : <>{emp.state || 'CA'} &bull; {emp.filingStatus || 'Single'}</>}</div>
                       </td>
                       <td className="py-3 px-4 text-neutral-600">
                         {emp.payFrequency}
@@ -399,6 +368,20 @@ const PayrollViewContent: React.FC = () => {
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600">
                         {formatCurrency(est.netPayCents)}
+                        <div className="font-normal"><DeductionsCell employee={emp} canWrite={canWrite} /></div>
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-neutral-700">
+                        {ytd.get(emp.id) ? (
+                          <>
+                            <div>{formatCurrency(ytd.get(emp.id)!.grossCents)} gross</div>
+                            <div className="text-[10px] text-neutral-500">
+                              {formatCurrency(ytd.get(emp.id)!.withheldCents)} withheld · {formatCurrency(ytd.get(emp.id)!.netCents)} net · {ytd.get(emp.id)!.runs} run{ytd.get(emp.id)!.runs === 1 ? '' : 's'}
+                            </div>
+                          </>
+                        ) : <span className="text-neutral-400">nothing yet</span>}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <TimeOffCell employee={emp} runs={payRuns} canWrite={canWrite} />
                       </td>
                       <td className="py-3 px-4 text-center">
                         <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-semibold">
@@ -410,6 +393,17 @@ const PayrollViewContent: React.FC = () => {
                 })}
               </tbody>
             </table>
+          {necList.length > 0 && (
+            <section aria-labelledby="nec-title" className="border-t border-neutral-200 p-4 text-xs">
+              <h2 id="nec-title" className="text-sm font-semibold text-neutral-900">1099-NEC for {thisYear}</h2>
+              <p className="text-neutral-500 mt-0.5">Contractors paid $600 or more this year by posted pay runs; each needs a 1099-NEC.</p>
+              <ul className="mt-2 divide-y divide-neutral-100">
+                {necList.map(c => (
+                  <li key={c.employeeId} className="py-1.5 flex justify-between"><span>{c.name}</span><span className="font-mono">{formatCurrency(c.paidCents)}</span></li>
+                ))}
+              </ul>
+            </section>
+          )}
           </div>
         )
       )}
@@ -490,7 +484,17 @@ const PayrollViewContent: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Worker type">
+                  <select value={empWorkerType} onChange={e => setEmpWorkerType(e.target.value === 'contractor' ? 'contractor' : 'employee')}
+                    className="w-full p-2.5 bg-white border border-neutral-300 rounded-lg focus:ring-1 focus:ring-neutral-500 focus:outline-hidden">
+                    <option value="employee">Employee on the payroll (taxes withheld)</option>
+                    <option value="contractor">Contractor (paid in full, nothing withheld; 1099-NEC)</option>
+                  </select>
+                </Labelled>
+              </div>
+
+              {empWorkerType === 'employee' && <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Filing Status">
                     <select
@@ -516,7 +520,7 @@ const PayrollViewContent: React.FC = () => {
                     />
                   </Labelled>
                 </div>
-              </div>
+              </div>}
 
               {employeeError && <p role="alert" className="text-sm text-red-700">{employeeError}</p>}
               <div className="pt-2 flex items-center justify-end gap-2">
@@ -572,20 +576,32 @@ const PayrollViewContent: React.FC = () => {
                   </Labelled>
                 </div>
                 <div>
-                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Disbursement Bank Account">
-                    <select
-                      value={selectedBankAccountId}
-                      onChange={e => setSelectedBankAccountId(e.target.value)}
-                      className="w-full p-2 bg-white border border-neutral-300 rounded-lg"
-                    >
-                      <option value="">Default Operating Account</option>
-                      {accounts.map(acc => (
-                        <option key={acc.id} value={acc.id}>{acc.name} ({acc.code || acc.category})</option>
-                      ))}
+                  <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label="Who is paid">
+                    <select value={runSchedule} onChange={e => setRunSchedule(e.target.value as typeof runSchedule)} className="w-full p-2 bg-white border border-neutral-300 rounded-lg">
+                      <option value="all">Everyone (each one period of their own schedule)</option>
+                      <option value="Monthly">Monthly-paid people</option>
+                      <option value="Bi-Weekly">People paid every two weeks</option>
+                      <option value="Weekly">Weekly-paid people</option>
                     </select>
                   </Labelled>
                 </div>
+                {([
+                  ['Bank account the pay goes out of', selectedBankAccountId, setSelectedBankAccountId, bankAccounts],
+                  ['Wages expense account', wagesAccountId, setWagesAccountId, expenseAccounts],
+                  ['Payroll tax expense account', taxExpenseAccountId, setTaxExpenseAccountId, expenseAccounts],
+                  ['Payroll liabilities account (taxes and deductions to pay over)', liabilitiesAccountId, setLiabilitiesAccountId, liabilityAccounts],
+                ] as const).map(([label, value, set, options]) => (
+                  <div key={label}>
+                    <Labelled labelClassName="block font-semibold text-neutral-700 mb-1" label={label}>
+                      <select value={value} onChange={e => set(e.target.value)} className="w-full p-2 bg-white border border-neutral-300 rounded-lg">
+                        <option value="">Choose…</option>
+                        {options.map(acc => <option key={acc.id} value={acc.id}>{acc.code ? `${acc.code} · ` : ''}{acc.name}</option>)}
+                      </select>
+                    </Labelled>
+                  </div>
+                ))}
               </div>
+              {postError && <p role="alert" className="text-rose-700">{postError}</p>}
 
               {/* Calculation Summary KPIs */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-neutral-50 p-3 rounded-lg border border-neutral-200">
@@ -649,11 +665,14 @@ const PayrollViewContent: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={handlePostPayRunToLedger}
-                className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                type="button"
+                onClick={() => void handlePostPayRunToLedger()}
+                disabled={posting || !canRunPayroll}
+                title={canRunPayroll ? undefined : 'Owners and accountants post pay runs'}
+                className="px-4 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Check aria-hidden="true" className="w-3.5 h-3.5" />
-                Approve & Post to General Ledger
+                {posting ? (needsApproval ? 'Sending…' : 'Posting…') : needsApproval ? 'Send the pay run for approval' : 'Post the pay run to the ledger'}
               </button>
             </div>
           </div>

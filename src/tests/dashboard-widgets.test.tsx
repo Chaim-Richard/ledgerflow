@@ -56,3 +56,40 @@ test('a late bank status response cannot populate another workspace', async () =
   assert.equal(screen.queryByText('Old private bank'), null);
   assert.match(requests[0], /workspaceId=component-workspace/); assert.match(requests[1], /workspaceId=new-workspace/);
 });
+test('BC-02: someone who has not arranged their own starts from their role\'s layout; an owner gives a role theirs', async () => {
+  const { roleDashboardProblem, startingLayout } = await import('../lib/dashboardOverview');
+  assert.equal(roleDashboardProblem('bookkeeper', { order: ['cash'], hidden: [] }), null);
+  assert.equal(roleDashboardProblem('bookkeeper', null), null);
+  assert.match(String(roleDashboardProblem('boss', null)), /roles/);
+  assert.match(String(roleDashboardProblem('viewer', { order: ['nope'], hidden: [] })), /does not exist/);
+  assert.equal(startingLayout({ order: ['recent'], hidden: [] }, { viewer: { order: ['cash'], hidden: [] } }, 'viewer').order[0], 'recent', 'their own wins');
+  assert.equal(startingLayout(null, { viewer: { order: ['cash'], hidden: [] } }, 'viewer').order[0], 'cash');
+  assert.equal(startingLayout(null, {}, 'viewer').order[0], 'networth');
+
+  const viewer = setComponentWorkspace('viewer');
+  markComponentCollectionsLoaded('transactions', 'accounts', 'invoices', 'bills', 'customers', 'vendors');
+  useLedgerStore.setState({ accounts: [], transactions: [], invoices: [], bills: [], customers: [], vendors: [], truncatedCollections: {} });
+  useAuthStore.setState({ workspaces: [{ ...viewer, roleDashboards: { viewer: { order: ['cash'], hidden: ['revenue'] } } }] });
+  localStorage.clear(); globalThis.fetch = (async () => new Response(JSON.stringify({ banks: [] }), { status: 200 })) as typeof fetch;
+  render(<DashboardWidgets />);
+  assert.equal(screen.getAllByRole('article')[0].getAttribute('aria-label'), 'Cash balance');
+  assert.equal(screen.queryByRole('article', { name: 'Revenue' }), null);
+  assert.equal(screen.queryByRole('button', { name: 'Give them this layout' }), null, 'only owners give layouts');
+  cleanup();
+
+  const owner = setComponentWorkspace('owner');
+  localStorage.clear();
+  const sent: unknown[] = [];
+  globalThis.fetch = (async (url: string, init?: RequestInit) => {
+    if (String(url).includes('/role-dashboards')) { sent.push(JSON.parse(String(init?.body))); return new Response(JSON.stringify({ status: 'success', roleDashboards: { accountant: { order: [], hidden: ['revenue'] } } }), { status: 200 }); }
+    return new Response(JSON.stringify({ banks: [] }), { status: 200 });
+  }) as typeof fetch;
+  render(<DashboardWidgets />);
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Revenue' }));
+  fireEvent.change(screen.getByLabelText('Starting dashboard for'), { target: { value: 'accountant' } });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Give them this layout' })); });
+  assert.equal((sent[0] as { role: string }).role, 'accountant');
+  assert.deepEqual((sent[0] as { layout: { hidden: string[] } }).layout.hidden, ['revenue']);
+  await waitFor(() => assert.ok(screen.getByText(/accountants who have not arranged their own start from this layout/)));
+  assert.ok(useAuthStore.getState().workspaces.find(w => w.id === owner.id)?.roleDashboards?.accountant);
+});

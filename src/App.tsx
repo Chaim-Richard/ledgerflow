@@ -1,7 +1,8 @@
+import FeedbackWidget from './components/support/FeedbackWidget';
 import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import { usePerformanceTrace } from './hooks/usePerformanceTrace';
 import { auth } from './firebase';
-import { onAuthStateChanged, onSecondFactorRequired, verifySecondFactor, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from './lib/db/auth';
+import { onAuthStateChanged, onSecondFactorRequired, onPasswordRecovery, setNewPassword, verifySecondFactor, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from './lib/db/auth';
 import { Toaster, toast } from 'sonner';
 import { motion } from 'motion/react';
 
@@ -24,13 +25,19 @@ import { useBillingStore } from './modules/billing/BillingService';
 import { AuthScreen } from './core/auth/AuthScreen';
 import { InitializationScreen } from './core/auth/InitializationScreen';
 import { SecondFactorScreen } from './core/auth/SecondFactorScreen';
+import { redeemRecoveryCode } from './core/auth/recoveryCode';
+import { useTwoStepSetup } from './core/auth/twoStepSetup';
 import { RootLayout } from './core/layout/RootLayout';
 import { lazy, Suspense } from 'react';
 const LedgerAutoAuditor = lazy(() => import('./components/forensics/LedgerAutoAuditor').then(m => ({ default: m.LedgerAutoAuditor })));
 
 import { FallbackBoundary } from './components/FallbackBoundary';
 import PublicInvoicePage from './components/sales/PublicInvoicePage';
+import PublicEstimatePage from './components/sales/PublicEstimatePage';
+import CustomerPortalPage from './components/sales/CustomerPortalPage';
 const StatusPage = lazy(() => import('./components/system/StatusPage'));
+const TwoStepSetupScreen = lazy(() => import('./core/auth/TwoStepSetupScreen'));
+const NewPasswordScreen = lazy(() => import('./core/auth/NewPasswordScreen'));
 import CookieConsent from './components/legal/CookieConsent';
 import LegalModal from './components/legal/LegalModal';
 
@@ -192,6 +199,9 @@ export default function App() {
   }, [setUser]);
 
   useEffect(() => onSecondFactorRequired(auth, setPendingSecondFactor), []);
+  // Y-31: arrived from a password-reset link; a new password is chosen first
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
+  useEffect(() => onPasswordRecovery(auth, setPasswordRecovery), []);
 
   // Operational Keyboard Shortcuts
 const shortcutMap = useMemo(() => {
@@ -243,6 +253,8 @@ const shortcutMap = useMemo(() => {
 
   const isGuest = useAuthStore(state => state.isGuest);
   const setIsGuest = useAuthStore(state => state.setIsGuest);
+  // Y-30: a workspace this person is in may require two-step login this session has not passed
+  const twoStep = useTwoStepSetup(user?.uid ?? null, !user || user.isAnonymous || isGuest || Boolean(pendingSecondFactor));
 
   const handleGuest = () => {
     setIsGuest(true);
@@ -335,6 +347,16 @@ const shortcutMap = useMemo(() => {
     );
   }
 
+  // the customer portal (K-27): a customer's invoices, no sign-in
+  if (window.location.pathname.startsWith('/c/')) {
+    return <CustomerPortalPage />;
+  }
+
+  // signing an estimate (Y-20): no sign-in
+  if (window.location.pathname.startsWith('/e/')) {
+    return <PublicEstimatePage />;
+  }
+
   const isPublicInvoice = window.location.pathname.startsWith('/i/');
   if (isPublicInvoice) {
     return <PublicInvoicePage />;
@@ -345,6 +367,7 @@ const shortcutMap = useMemo(() => {
     return (
       <Suspense fallback={<InitializationScreen language={language} />}>
         <RootLayout />
+        <FeedbackWidget />
       </Suspense>
     );
   }
@@ -358,7 +381,28 @@ const shortcutMap = useMemo(() => {
       <SecondFactorScreen
         onVerify={(code) => verifySecondFactor(auth, code)}
         onCancel={() => { void signOut(auth); }}
+        onRecover={redeemRecoveryCode}
       />
+    );
+  }
+
+  if (passwordRecovery && user) {
+    return (
+      <Suspense fallback={<InitializationScreen language={language} />}>
+        <NewPasswordScreen email={user.email || ''} onSave={async (password) => { await setNewPassword(auth, password); toast.success('New password saved'); }} onSignOut={() => { void signOut(auth); }} />
+      </Suspense>
+    );
+  }
+
+  if (!twoStep.checked) {
+    return <InitializationScreen language={language} />;
+  }
+
+  if (twoStep.setupRequired) {
+    return (
+      <Suspense fallback={<InitializationScreen language={language} />}>
+        <TwoStepSetupScreen workspaces={twoStep.workspaces} onContinue={twoStep.recheck} onSignOut={() => { void signOut(auth); }} />
+      </Suspense>
     );
   }
 
@@ -383,6 +427,7 @@ const shortcutMap = useMemo(() => {
         )}
         <Suspense fallback={null}><LedgerAutoAuditor /></Suspense>
         <RootLayout />
+        <FeedbackWidget />
         <CookieConsent onOpenPrivacyPolicy={() => { setLegalModalTab('privacy'); setIsLegalModalOpen(true); }} />
         <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} initialTab={legalModalTab} />
       </div>

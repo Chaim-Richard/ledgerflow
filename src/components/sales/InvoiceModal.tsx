@@ -6,7 +6,7 @@ import { calculateDueDate, isFixedTerm, termsForCustomer } from '../../lib/payme
 import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo } from 'react';
-import { isUndepositedFundsAccount, resolveAccountRole } from '../../lib/accountUtils';
+import { isIncomeAccount, isUndepositedFundsAccount, resolveAccountRole } from '../../lib/accountUtils';
 import { X, Plus, Trash2, Save, Download, Eye } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Invoice, Customer, ChartAccount } from '../../types';
@@ -18,11 +18,12 @@ import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { formatCurrency, safeConfirm } from '../../lib/utils';
-import { lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
+import { customerPricer, lineAmountCents, setLineDescription } from '../../lib/invoiceLines';
 import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import { depositAppliedCents } from '../../lib/documentMath';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import AttachmentsPanel from '../common/AttachmentsPanel';
+import { LineLabels } from '../common/LineLabels';
 import { attachmentProblem } from '../../lib/attachments';
 
 interface InvoiceModalProps {
@@ -44,7 +45,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   // Ensure we have arrays even if props were passed as null
   // archived contacts aren't offered for new documents; one already on this document stays (I-22)
   const safeCustomers = (Array.isArray(customers) ? customers : []).filter(c => !isArchivedParty(c) || c.id === initialInvoice?.customerId);
-  const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => a?.type === 'income') : [];
+  const safeAccounts = Array.isArray(accounts) ? accounts.filter(a => isIncomeAccount(a)) : [];
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const inventoryItems = useLedgerStore(s => s.inventory || []);
@@ -66,7 +67,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     amountCents: 0
   }));
 
-  const [items, setItems] = useState<Array<{ id: string, itemId?: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string, taxRate?: number, unitCostCents?: number }>>([
+  const [items, setItems] = useState<Array<{ id: string, itemId?: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string, taxRate?: number, unitCostCents?: number, dimensions?: Record<string, string> }>>([
     { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }
   ]);
 
@@ -523,7 +524,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                         value={item.description}
                         onChange={(e) => {
                           const newItems = [...items];
-                          newItems[idx] = setLineDescription(newItems[idx], e.target.value, inventoryItems);
+                          newItems[idx] = setLineDescription(newItems[idx], e.target.value, inventoryItems, customerPricer(useAuthStore.getState().getCurrentWorkspace()?.priceLists, invoice.customerId));
                           setItems(newItems);
                         }}
                         placeholder="Service or Product"
@@ -609,6 +610,8 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                       <Trash2 size={18} />
                     </button>
                   </div>
+                  <div className="col-span-12"><LineLabels value={item.dimensions} lineNumber={idx + 1} accountId={item.accountId} date={invoice.date || ''}
+                    onChange={dimensions => setItems(items.map((it, i) => (i === idx ? { ...it, dimensions } : it)))} /></div>{/* BF-09 */}
                 </div>
               ))}
             </div>

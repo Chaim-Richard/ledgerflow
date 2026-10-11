@@ -6,8 +6,10 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { getLocalDateISO } from '../../lib/utils';
 import { DATA_CHECKS, runDataChecks } from '../../lib/dataChecks';
 import type { CheckSeverity } from '../../lib/dataChecks';
+import type { LedgerHealth } from '../../lib/ledgerHealth';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
+import BalanceBreakPanel from './BalanceBreakPanel';
 
 /**
  * Data Health (launch step 8): runs every check in the registry (src/lib/dataChecks.ts) over the
@@ -21,6 +23,16 @@ const SEVERITY: Record<CheckSeverity, { label: string; className: string }> = {
   low: { label: 'Worth a look', className: 'text-[var(--muted)] border-[var(--line)]' },
 };
 
+/** CA-32: what the nightly check found last time (the whole ledger, on the server). */
+function nightlyLine(health: LedgerHealth | undefined): string {
+  const told = 'Owners and accountants are told about new serious problems.';
+  if (!health?.checkedAt) return `The server also checks the whole ledger every night. ${told}`;
+  const when = new Date(health.checkedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  const { high, medium, low } = health.counts;
+  const found = high + medium + low === 0 ? 'nothing to fix' : `${high} serious, ${medium} to look at, ${low} minor`;
+  return `Last nightly check of the whole ledger: ${when}, ${found}. ${told}`;
+}
+
 export default function DataHealthView() {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
@@ -29,15 +41,18 @@ export default function DataHealthView() {
   const recurring = useLedgerStore(s => s.recurring);
   const inventory = useLedgerStore(s => s.inventory);
   const bankLines = useLedgerStore(s => s.bankLines);
-  const { loading } = useLedgerCollections('bankLines', 'bills', 'inventory', 'invoices', 'recurring');
+  const payments = useLedgerStore(s => s.payments);
+  const { loading } = useLedgerCollections('bankLines', 'bills', 'inventory', 'invoices', 'recurring', 'payments');
   const baseCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
+  const dimensions = useAuthStore(s => s.getCurrentWorkspace()?.dimensions);
+  const nightly = useAuthStore(s => s.getCurrentWorkspace()?.ledgerHealth);
   const openRecord = useUIStore(s => s.openRecord);
   const [only, setOnly] = useState<string>('all');
 
   const findings = useMemo(() => runDataChecks({
     transactions: transactions || [], accounts: accounts || [], invoices: invoices || [], bills: bills || [],
-    recurring: recurring || [], inventory: inventory || [], bankLines: bankLines || [], today: getLocalDateISO(), baseCurrency,
-  }), [transactions, accounts, invoices, bills, recurring, inventory, bankLines, baseCurrency]);
+    recurring: recurring || [], inventory: inventory || [], bankLines: bankLines || [], payments: payments || [], today: getLocalDateISO(), baseCurrency, dimensions,
+  }), [transactions, accounts, invoices, bills, recurring, inventory, bankLines, payments, baseCurrency, dimensions]);
 
   const byCheck = useMemo(() => DATA_CHECKS.map(check => ({ check, findings: findings.filter(f => f.checkId === check.id) })), [findings]);
   const shown = byCheck.filter(g => g.findings.length > 0 && (only === 'all' || g.check.id === only));
@@ -50,8 +65,11 @@ export default function DataHealthView() {
         <div>
           <h1 className="text-2xl font-bold">Data health</h1>
           <p className="text-xs text-[var(--muted)]">{DATA_CHECKS.length} checks on your books: entries that don't balance, duplicate numbers, missing accounts, wrong dates and more. Updated as you work.</p>
+          <p className="text-xs text-[var(--muted)] mt-1">{nightlyLine(nightly)}</p>
         </div>
       </div>
+
+      <BalanceBreakPanel />
 
       <div className="grid grid-cols-3 gap-4" role="status">
         {(['high', 'medium', 'low'] as CheckSeverity[]).map(s => (

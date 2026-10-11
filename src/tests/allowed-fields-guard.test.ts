@@ -37,15 +37,15 @@ function interfaceFields(name: string): string[] {
 
 // table → [model, fields written only through the server]
 const TABLES: Record<string, [string, string[]]> = {
-  customers: ['Customer', []],
+  customers: ['Customer', ['portalToken', 'portalTokenAt']],
   chartAccounts: ['ChartAccount', []],
   projects: ['Project', []],
   supportTickets: ['SupportTicket', []],
   // credit notes and vendor credits are saved through POST /api/v1/transactions/bulk
-  creditNotes: ['CreditNote', ['exchangeRate', 'tags', 'metadata', 'taxAmountCents', 'taxInclusive', 'taxVersion', 'taxTreatment', 'refundedCents']],
-  vendorCredits: ['VendorCredit', ['exchangeRate', 'tags', 'metadata', 'taxAmountCents', 'taxInclusive', 'taxVersion', 'taxTreatment', 'refundedCents']],
+  creditNotes: ['CreditNote', ['exchangeRate', 'tags', 'metadata', 'taxAmountCents', 'taxInclusive', 'taxVersion', 'taxTreatment', 'refundedCents', 'returnedGoods']],
+  vendorCredits: ['VendorCredit', ['exchangeRate', 'tags', 'metadata', 'taxAmountCents', 'taxInclusive', 'taxVersion', 'taxTreatment', 'refundedCents', 'returnedGoods']],
   // numberingSeries lives in its own collection; the field on the model is a legacy read path
-  workspaces: ['Workspace', ['numberingSeries', 'retention', 'setupCompletedAt', 'openingBalanceDate', 'branding']],
+  workspaces: ['Workspace', ['numberingSeries', 'retention', 'setupCompletedAt', 'openingBalanceDate', 'branding', 'scheduledReportsSent', 'closeSteps', 'ledgerHealth', 'alerts', 'alertsSent', 'payrollApproval', 'requireTwoStep', 'refuseNegativeStock', 'modules', 'goodsLeaveWith', 'allocationRules', 'priceLists', 'salesReps', 'twoPersonRule', 'roleDashboards', 'approvalDelegates']],
   notifications: ['AppNotification', []],
   purchaseOrders: ['PurchaseOrder', []],
 };
@@ -54,7 +54,7 @@ const TABLES: Record<string, [string, string[]]> = {
 // discount, "tax inclusive" and a bill's currency were silently lost). Every model field must be
 // in the schema, except those only the server writes.
 const SCHEMA_MODELS: Array<[string, () => Promise<Record<string, unknown>>, string[]]> = [
-  ['Invoice', async () => (await import('../schemas')).InvoiceSchema.shape, ['writtenOffCents', 'writeOffTransactionId', 'writeOffReason', 'writtenOffAt', 'writeOffReversalTransactionId', 'revenueSchedule', 'createdAt', 'updatedAt']],
+  ['Invoice', async () => (await import('../schemas')).InvoiceSchema.shape, ['writtenOffCents', 'writeOffTransactionId', 'writeOffReason', 'writtenOffAt', 'writeOffReversalTransactionId', 'revenueSchedule', 'createdAt', 'updatedAt', 'viewedAt', 'lastViewedAt', 'viewCount']],
   ['Bill', async () => (await import('../schemas')).BillSchema.shape, ['prepaidSchedule', 'createdAt', 'updatedAt']],
   ['CreditNote', async () => (await import('../schemas')).CreditNoteSchema.shape, ['createdAt', 'updatedAt', 'refundedCents']],
   ['VendorCredit', async () => (await import('../schemas')).VendorCreditSchema.shape, ['createdAt', 'updatedAt', 'refundedCents']],

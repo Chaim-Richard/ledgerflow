@@ -1,4 +1,5 @@
 import { resolveAccountRole } from '../../lib/accountUtils';
+import { learnedPatternId } from '../../lib/learnedPatterns';
 import { normalizeLabel } from '../../lib/dimensionUtils';
 import { collection, doc, setDoc, addDoc as firestoreAddDoc } from '../../lib/db/firestore';
 import { db } from '../../firebase';
@@ -30,7 +31,8 @@ export function createPostingHelpers(ctx: ActionContext) {
     
     if (cleanDesc.length < 3) return;
 
-    const patternId = cleanDesc.replace(/[^a-z0-9]/g, '_');
+    // N-14: collision-free (Hebrew included), same id as before for plain Latin text
+    const patternId = learnedPatternId(cleanDesc);
     
     try {
       const patternRef = doc(db, 'rulePatterns', `${currentWorkspaceId}_${patternId}`);

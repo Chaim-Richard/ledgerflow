@@ -2,7 +2,6 @@ import { useDialog } from '../../hooks/useDialog';
 import { motion } from 'motion/react';
 import { X } from 'lucide-react';
 import React, { useState, useId } from 'react';
-import { useUIStore } from '../../stores/useUIStore';
 import FxRevaluationPanel from './FxRevaluationPanel';
 
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -17,7 +16,6 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
   const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => onClose?.(), !!isOpen);
   const formId = useId();
 
-  const language = useUIStore(s => s.language);
   const [amount, setAmount] = useState<number>(100);
   const [fromCurrency, setFromCurrency] = useState<string>('USD');
   const [toCurrency, setToCurrency] = useState<string>('EUR');
@@ -54,13 +52,13 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
   const innerContent = (
     <div className="p-6 w-full max-w-xl mx-auto bg-[var(--surface)] dark:bg-slate-900 border border-[var(--line)] dark:border-slate-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
       <h2 className="text-xl font-medium text-[var(--text)] dark:text-white mb-6">
-        {language === 'he' ? 'המרת מטבעות' : 'Currency Converter'}
+        Currency Converter
       </h2>
 
       <div className="space-y-4">
         <div>
           <label htmlFor={`${formId}-amount`} className="block text-sm font-medium text-[var(--muted)] mb-1">
-            {language === 'he' ? 'סכום' : 'Amount'}
+            Amount
           </label>
           <input
             id={`${formId}-amount`}
@@ -74,7 +72,7 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label htmlFor={`${formId}-from`} className="block text-sm font-medium text-[var(--muted)] mb-1">
-              {language === 'he' ? 'ממטבע' : 'From'}
+              From
             </label>
             <select
               id={`${formId}-from`}
@@ -90,7 +88,7 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
 
           <div>
             <label htmlFor={`${formId}-to`} className="block text-sm font-medium text-[var(--muted)] mb-1">
-              {language === 'he' ? 'למטבע' : 'To'}
+              To
             </label>
             <select
               id={`${formId}-to`}
@@ -107,7 +105,7 @@ export default function CurrencyConverter({ isOpen, onClose }: CurrencyConverter
 
         <div className="pt-4 border-t border-[var(--line)] mt-6">
           <p className="text-sm text-[var(--muted)] mb-1">
-            {language === 'he' ? 'תוצאה' : 'Converted Amount'}
+            Converted Amount
           </p>
           <div className="text-3xl font-medium text-[var(--text)]">
             {calculateConversion()} {toCurrency}

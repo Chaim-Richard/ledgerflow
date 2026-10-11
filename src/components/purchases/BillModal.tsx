@@ -11,6 +11,10 @@ import { Bill, Vendor, ChartAccount } from '../../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { BudgetLeft } from '../common/BudgetLeft';
+import { LineLabels } from '../common/LineLabels';
+import { applyRule, suggestRule } from '../../lib/allocationRules';
+import { billItemProblem } from '../../lib/billStock';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
@@ -34,6 +38,16 @@ interface BillModalProps {
   /** Pre-filled bill, e.g. from a purchase order (BE-11). */
   initialBill?: Partial<Bill>;
 }
+
+/** A bill line as the dialog edits it: everything it carries (labels, J-08 stock item and units, BA-03 landed cost). */
+const copyLine = (s: NonNullable<Bill['splits']>[number], keepOrder = true) => ({
+  id: crypto.randomUUID(), amountCents: s.amountCents, accountId: s.accountId || '', description: s.description || '',
+  ...(s.dimensions ? { dimensions: { ...s.dimensions } } : {}),
+  ...(s.itemId ? { itemId: s.itemId, ...(s.quantity !== undefined ? { quantity: s.quantity } : {}) } : {}),
+  ...(s.landedCost ? { landedCost: true } : {}),
+  // CB-17: the order line it bills stays with the bill (not with a copy for a new bill)
+  ...(keepOrder && s.orderLine !== undefined ? { orderLine: s.orderLine, ...(s.orderQuantity !== undefined ? { orderQuantity: s.orderQuantity } : {}) } : {}),
+});
 
 export default function BillModal({ isOpen, onClose, onSave, vendors = [], accounts = [], initialBill }: BillModalProps) {
   // Ensure we have arrays even if props were passed as null
@@ -86,7 +100,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     }
   }, [isOpen, editingExisting]);
 
-  const [splits, setSplits] = useState<Array<{ id: string, amountCents: number, accountId: string, description: string }>>([
+  const [splits, setSplits] = useState<Array<{ id: string, amountCents: number, accountId: string, description: string, dimensions?: Record<string, string>, itemId?: string, quantity?: number, landedCost?: boolean }>>([
     { id: crypto.randomUUID(), amountCents: 0, accountId: '', description: '' }
   ]);
 
@@ -99,7 +113,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     setFilledFrom(initialBill);
     const { splits: initialSplits, ...fields } = initialBill;
     setBill(prev => ({ ...prev, ...fields }));
-    if (initialSplits?.length) setSplits(initialSplits.map(s => ({ id: crypto.randomUUID(), amountCents: s.amountCents, accountId: s.accountId || '', description: s.description || '' })));
+    if (initialSplits?.length) setSplits(initialSplits.map(s => copyLine(s)));
   }
 
   const total = splits.reduce((sum, split) => sum + split.amountCents, 0);
@@ -107,6 +121,15 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   // Tax: a purchase tax code (Settings → Tax); reverse charge means the vendor charges none
   const taxRates = useLedgerStore(s => s.taxRates || []);
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
+  // Q-05: a saved split rule whose text the vendor or a line contains is suggested, with why; applying it
+  // only changes the lines here (each line split by the rule's shares, in whole cents)
+  const allocationRules = useAuthStore(s => s.getCurrentWorkspace()?.allocationRules);
+  useLedgerCollections('inventory');
+  // BF-01: services are not bought into stock
+  const stockItems = (useLedgerStore(s => s.inventory) || []).filter(i => i.itemType !== 'service');
+  const [ruleApplied, setRuleApplied] = useState('');
+  const suggested = suggestRule(allocationRules, { vendorName: bill.vendorName, description: splits.map(sp => sp.description).join(' ') });
+  const canSplit = Boolean(suggested && suggested.rule.id !== ruleApplied && splits.some(sp => sp.amountCents));
   const purchaseCodes = useMemo(() => taxRates.filter(r => r.type === 'Sales' && r.appliesTo !== 'sales').map(taxCodeFromRate), [taxRates]);
   const taxCode = purchaseCodes.find(c => c.id === bill.taxCodeId) || null;
   const pricesIncludeTax = bill.pricesIncludeTax ?? true;
@@ -119,7 +142,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   const splitsEmpty = splits.every(sp => !sp.amountCents);
   const repeatLast = () => {
     if (!lastForVendor?.splits) return;
-    setSplits(lastForVendor.splits.map(sp => ({ id: crypto.randomUUID(), amountCents: sp.amountCents, accountId: sp.accountId || '', description: sp.description || '' })));
+    setSplits(lastForVendor.splits.map(s => copyLine(s, false)));
     setBill(prev => ({
       ...prev,
       ...(lastForVendor.taxCodeId ? { taxCodeId: lastForVendor.taxCodeId } : {}),
@@ -420,6 +443,15 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
           </div>
 
           <div className="space-y-4">
+            {canSplit && suggested && (
+              <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--line)] px-3 py-2 text-xs text-[var(--text)]">
+                <span>Split rule suggested: {suggested.why} ({suggested.rule.shares.map(sh => `${sh.percent}%`).join(' / ')}).</span>
+                <button type="button" onClick={() => { setSplits(applyRule(suggested.rule, splits.filter(sp => sp.amountCents), () => crypto.randomUUID())); setRuleApplied(suggested.rule.id); }}
+                  className="rounded-lg border border-[var(--line)] px-2.5 py-1 font-semibold hover:border-[var(--brass-line)]">
+                  Apply {suggested.rule.name}
+                </button>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <h3 className="micro-label">Expense Allocation</h3>
               {lastForVendor && splitsEmpty && (
@@ -472,6 +504,8 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                       <option value="">Select Account</option>
                       {safeAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
+                    {/* M-20: what is left of this account's budget for the bill's date */}
+                    <BudgetLeft accountId={split.accountId} date={bill.date || ''} addingCents={Math.round(split.amountCents * (billCurrency === workspaceCurrency ? 1 : (bill.exchangeRate || 1)))} excludeDocumentId={bill.id} currency={workspaceCurrency} />
                   </div>
                   <div className="col-span-3 space-y-1">
                     <label htmlFor={`bill-split-amount-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Amount ({billCurrency})</label>
@@ -497,6 +531,39 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                     >
                       <Trash2 size={18} />
                     </button>
+                  </div>
+                  {/* J-08: stock bought on this line (it then posts to Inventory and the units come in) */}
+                  {stockItems.length > 0 && (
+                    <div className="col-span-12 flex flex-wrap items-end gap-3 text-xs">
+                      <label className="flex flex-col gap-1 text-zinc-400">Stock item (optional)
+                        <select aria-label={`Stock item on line ${idx + 1}`} value={split.itemId || ''}
+                          onChange={e => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, itemId: e.target.value || undefined, ...(e.target.value ? {} : { quantity: undefined }) } : sp)))}
+                          className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl">
+                          <option value="">None</option>
+                          {stockItems.map(it => <option key={it.id} value={it.id}>{it.name}</option>)}
+                        </select>
+                      </label>
+                      {split.itemId && (
+                        <label className="flex flex-col gap-1 text-zinc-400">Units
+                          <input aria-label={`Units on line ${idx + 1}`} type="number" min="0" step="any" value={split.quantity ?? ''}
+                            onChange={e => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, quantity: e.target.value === '' ? undefined : Number(e.target.value) } : sp)))}
+                            className="w-24 px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-mono" />
+                        </label>
+                      )}
+                      {split.itemId && <span className="pb-2 text-[var(--muted)]">{billItemProblem(split) || 'Posts to Inventory; the units come in with the bill.'}</span>}
+                      {!split.itemId && splits.some(sp => sp.itemId) && (
+                        <label className="flex items-center gap-2 pb-2 text-[var(--muted)]">
+                          <input type="checkbox" checked={Boolean(split.landedCost)} aria-label={`Spread line ${idx + 1} over the items`}
+                            onChange={e => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, landedCost: e.target.checked || undefined } : sp)))} />
+                          Spread over the items (freight, duty): adds to what they cost
+                        </label>
+                      )}
+                    </div>
+                  )}
+                  {/* BF-09: Property, Project… on this line, posted with its expense */}
+                  <div className="col-span-12">
+                    <LineLabels value={split.dimensions} lineNumber={idx + 1} accountId={split.accountId} date={bill.date || ''}
+                      onChange={dimensions => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, dimensions } : sp)))} />
                   </div>
                 </div>
               ))}

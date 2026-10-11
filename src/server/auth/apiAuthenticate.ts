@@ -4,6 +4,7 @@ import { getDb, FieldValue } from "../db/firestore";
 import { getShardedCounterValue } from "../services/shardedCounterService";
 import { verifyIdToken } from "./supabaseAuth";
 import { globalAdminConfig } from "../http/serverKit";
+import { apiKeyLimit, apiKeyRateLimiter } from "../middleware/rateLimiters";
 import type { AuthenticatedRequest, AuthUser } from "../http/serverKit";
 
 // Deep API Key Authentication Middleware
@@ -147,7 +148,8 @@ export const apiAuthenticate = async (req: express.Request, res: express.Respons
         developerWorkspaceId: workspaceIdPattern,
         apiKeyName: docData?.name || "Production Integration Key",
         firebase: { sign_in_provider: "custom" },
-        usedApiKeyId: keyId
+        usedApiKeyId: keyId,
+        apiKeyRateLimit: apiKeyLimit(docData?.rateLimitPerMinute)
       } as any;
 
       // Background metrics update (does not block original request response)
@@ -160,7 +162,8 @@ export const apiAuthenticate = async (req: express.Request, res: express.Respons
         // stats silently fail with safety
       }
 
-      return next();
+      // Z-02: each key has its own limit a minute
+      return apiKeyRateLimiter(req, res, next);
     } catch (err) {
       console.error("[Deep Auth] Token verification failure:", err);
       return res.status(500).json({ status: "error", message: "Authentication / Verification failure within LedgerFlow core." });
@@ -170,7 +173,11 @@ export const apiAuthenticate = async (req: express.Request, res: express.Respons
   if (authHeader.startsWith("Bearer ")) {
     const idToken = authHeader.split("Bearer ")[1];
     try {
-      const decodedToken = await verifyIdToken(idToken) as AuthUser;
+      // L-85: someone who lost the authenticator signs in with the password and uses a recovery code
+      const firstStepOnly = req.method === 'POST' && req.originalUrl.split('?')[0] === '/api/v1/account/recovery-codes/use';
+      // Y-30: someone who must still set up two-step login can ask why
+      const setupCheck = req.method === 'GET' && req.originalUrl.split('?')[0] === '/api/v1/account/two-step';
+      const decodedToken = await verifyIdToken(idToken, { firstStepOnly, setupCheck }) as AuthUser;
       const isAnonymous = decodedToken.firebase?.sign_in_provider === 'anonymous';
       if (!decodedToken.email_verified && !isAnonymous) {
         return res.status(403).json({ status: "error", message: "Access Denied: Please verify your email protocol." });
@@ -181,6 +188,9 @@ export const apiAuthenticate = async (req: express.Request, res: express.Respons
       (req as AuthenticatedRequest).user = decodedToken;
       return next();
     } catch (error) {
+      if (error instanceof Error && (error as { code?: string }).code === 'auth/two-step-setup-required') {
+        return res.status(403).json({ status: "error", code: "two_step_setup_required", message: error.message });
+      }
       return res.status(401).json({ status: "error", message: "Unauthorized: Invalid bearer token" });
     }
   }

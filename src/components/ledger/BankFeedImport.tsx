@@ -101,6 +101,9 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
       if (Array.isArray(data.needsReconnect) && data.needsReconnect.length > 0) {
         toast.warning(`${data.needsReconnect.length} bank connection(s) need you to log in again: open Banking → Reconnect.`);
       }
+      if (Array.isArray(data.failed) && data.failed.length > 0) {
+        toast.warning(`${data.failed.length} bank connection(s) could not be synced: see Banking → Connected banks for why.`);
+      }
       
       const mappedFormat = (data.transactions || []).map((t: PlaidFeedRow) => ({
         date: t.date,

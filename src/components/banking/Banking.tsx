@@ -14,6 +14,7 @@ import { scoreReceiptMatches as _scoreReceiptMatches } from '../../lib/receiptMa
 import { TransferModal } from './TransferModal';
 import MakeDepositDialog from './MakeDepositDialog';
 import CashMovementDialog from './CashMovementDialog';
+import ConnectedBanks from './ConnectedBanks';
 
 export default function Banking() {
   const canImport = hasRoleAtLeast(useCurrentRole(), 'bookkeeper');
@@ -47,6 +48,7 @@ export default function Banking() {
       });
       const data = await res.json();
       setNeedsReconnect(Array.isArray(data.needsReconnect) ? data.needsReconnect : []);
+      if (res.ok && Array.isArray(data.failed) && data.failed.length > 0) toast.warning(`${data.failed.length} bank connection(s) could not be synced: see Connected banks for why.`);
       if (res.ok && data.success) {
         toast.success(`Synchronized ${accountName} with bank feed.`);
       } else if (res.ok) {
@@ -118,6 +120,8 @@ export default function Banking() {
             ))}
           </div>
         </div>
+
+        <ConnectedBanks />
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {accounts.map(account => (

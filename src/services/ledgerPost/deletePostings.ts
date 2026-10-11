@@ -2,7 +2,7 @@ import { getLocalDateISO } from '../../lib/utils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { isPostable } from '../../lib/txFilters';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
-import { getTransactions, verifyLockDate, postTxsServerApi } from './postingKit';
+import { getTransactions, verifyLockDate, postTxsServerApi, reversalDate } from './postingKit';
 import type { EntityMutation, LedgerPostContext } from './postingKit';
 
 /**
@@ -36,7 +36,7 @@ export async function deletePostings(
     return {
       uid,
       workspaceId,
-      date: today,
+      date: reversalDate(prevTx.date, today, context),
       description: `Reversal: ${prevTx.description}`,
       totalAmountCents: prevTx.totalAmountCents,
       currency: prevTx.currency || 'USD',

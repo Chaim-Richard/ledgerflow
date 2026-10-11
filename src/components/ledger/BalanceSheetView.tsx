@@ -1,4 +1,5 @@
 import { usePageSyncedState } from '../../hooks/usePageSyncedState';
+import type { ExplainRequest } from '../layout/DrillDownModal';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useId, useState, useMemo, useCallback, useEffect } from 'react';
 import { ChartAccount, Transaction } from '../../types';
@@ -7,6 +8,7 @@ import { exportToExcel } from '../../lib/excelExport';
 import { isPostable, isTransactionInDateRange, lineAmount, calculateNetIncome } from '../../lib/txFilters';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useFinancialReporting, ServerBalanceSheetData } from '../../hooks/useFinancialReporting';
+import { toast } from 'sonner';
 import { BalanceSheetReport } from './BalanceSheetReport';
 import type { ReportColumnMode } from '../../lib/reportColumns';
 import { getFiscalYearBounds } from '../../lib/fiscalCalendar';
@@ -35,7 +37,7 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
   );
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('code');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[] } | null>(null);
+  const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[]; explain?: ExplainRequest } | null>(null);
 
   const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
   const { fetchBalanceSheet, loadingStates } = useFinancialReporting();
@@ -43,15 +45,17 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
   const [serverPrevData, setServerPrevData] = useState<ServerBalanceSheetData | null>(null);
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
 
+  // N-08: accrual (as posted) or cash (without trade receivables and payables; from the server only)
+  const [basis, setBasis] = useState<'accrual' | 'cash'>('accrual');
   const loadServerReport = useCallback(async () => {
     try {
-      const res = await fetchBalanceSheet(asOfDate);
+      const res = await fetchBalanceSheet(asOfDate, basis === 'cash' ? 'cash' : undefined);
       if (res) {
         setServerData(res);
         setIsServerAuthoritative(true);
       }
       if (isComparative) {
-        const prevRes = await fetchBalanceSheet(priorDate);
+        const prevRes = await fetchBalanceSheet(priorDate, basis === 'cash' ? 'cash' : undefined);
         if (prevRes) {
           setServerPrevData(prevRes);
         }
@@ -59,7 +63,7 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
     } catch {
       setIsServerAuthoritative(false);
     }
-  }, [fetchBalanceSheet, asOfDate, priorDate, isComparative]);
+  }, [fetchBalanceSheet, asOfDate, priorDate, isComparative, basis]);
 
   useEffect(() => {
     loadServerReport();
@@ -213,8 +217,23 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
     return { currentData: current, prevData: prev };
   }, [getPeriodBalances, asOfDate, priorDate, isComparative]);
 
-  const currentData = isServerAuthoritative && serverData ? serverData : localCalculation.currentData;
-  const prevData = isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;
+  // on cash basis only the server's figures are shown (never the accrual figures computed here)
+  const cashReady = basis === 'cash' && isServerAuthoritative && serverData?.basis === 'cash';
+  const emptyBs: ServerBalanceSheetData = { assets: {}, liabilities: {}, equity: {}, totalAssets: 0, totalLiabilities: 0, totalEquity: 0, netIncome: 0, totalClaims: 0, isBalanced: true };
+  const currentData: ServerBalanceSheetData = basis === 'cash' ? (cashReady ? serverData! : emptyBs) : isServerAuthoritative && serverData ? serverData : localCalculation.currentData;
+  const prevData: ServerBalanceSheetData = basis === 'cash' ? currentData : isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;
+  const chooseBasis = (next: 'accrual' | 'cash') => {
+    setBasis(next);
+    setServerData(null);
+    setServerPrevData(null);
+    setIsServerAuthoritative(false);
+    if (next === 'cash') { setColumnMode('total'); setShowPercent(false); setIsComparative(false); }
+  };
+  /** the entries behind a figure are those as posted, so on cash basis they are not listed */
+  const openDrill = (target: { accountName: string; transactions: Transaction[]; explain?: ExplainRequest } | null) => {
+    if (target && basis === 'cash') { toast.info('On cash basis the entries behind a figure are not listed yet: switch to accrual to see them'); return; }
+    setDrillDownTarget(target);
+  };
 
   const exportBalanceSheet = async () => {
     const columns = [
@@ -331,7 +350,7 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
     return { diff, pct };
   };
 
-  return { columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, isDataTruncated, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct };
+  return { columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget: openDrill, basis, chooseBasis, cashReady, isDataTruncated, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct };
 }
 
 export type BalanceSheetModel = ReturnType<typeof useBalanceSheetModel>;

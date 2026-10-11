@@ -3,6 +3,16 @@ import type { EmailTemplates } from '../lib/emailTemplates';
 import type { WorkspaceBranding } from '../lib/branding';
 import type { ReminderSettings } from '../lib/reminders';
 import type { InvoiceApprovalSettings } from '../lib/invoiceApproval';
+import type { MoneyDisplaySettings } from '../lib/moneyFormat';
+import type { ScheduledReport } from '../lib/scheduledReports';
+import type { CloseStep } from '../lib/closeSteps';
+import type { AllocationRule } from '../lib/allocationRules';
+import type { PriceList } from '../lib/priceLists';
+import type { SalesRep } from '../lib/salesReps';
+import type { RoleDashboards } from '../lib/dashboardOverview';
+import type { ApprovalDelegate } from '../lib/approvalDelegation';
+import type { LedgerHealth } from '../lib/ledgerHealth';
+import type { AlertSettings, AlertsSent } from '../lib/bookAlerts';
 import type { NotificationType } from '../lib/notifications';
 import type { EntityMetadata, DimensionDefinition, Transaction } from './ledger';
 
@@ -47,6 +57,42 @@ export interface Workspace {
   reminderSettings?: ReminderSettings;
   /** Invoice approval (BE-04, src/lib/invoiceApproval.ts): invoices over the limit wait for a signature. */
   invoiceApproval?: InvoiceApprovalSettings;
+  /** How money is shown (C-25, src/lib/moneyFormat.ts): display only, never changes an amount. */
+  moneyDisplay?: MoneyDisplaySettings;
+  /** Scheduled reports (K-28, src/lib/scheduledReports.ts): emailed after each finished week or month. */
+  scheduledReports?: ScheduledReport[];
+  /** Which period each schedule last sent (written by the server only). */
+  scheduledReportsSent?: Record<string, string>;
+  /** The client's own month-end steps (BD-10, src/lib/closeSteps.ts); saved by the server for owners and accountants. */
+  closeSteps?: CloseStep[];
+  /** Q-05: saved split (cost allocation) rules, suggested on bills (src/lib/allocationRules.ts); saved by the server. */
+  allocationRules?: AllocationRule[];
+  /** M-11: price lists for some customers, filled on invoice and estimate lines (src/lib/priceLists.ts); saved by the server. */
+  priceLists?: PriceList[];
+  /** P-13: sales reps, their commission and customers (src/lib/salesReps.ts); saved by the server. */
+  salesReps?: SalesRep[];
+  /** The nightly ledger health check (CA-32, src/lib/ledgerHealth.ts); written by the server only. */
+  ledgerHealth?: LedgerHealth;
+  /** Alerts about the books (S-08, S-10, S-11, src/lib/bookAlerts.ts); saved by the server for owners and accountants. */
+  alerts?: AlertSettings;
+  /** What the alerts already told (written by the server only). */
+  alertsSent?: AlertsSent;
+  /** U-10: pay runs prepared by others wait for an owner's approval (set by owners, through the server). */
+  payrollApproval?: boolean;
+  /** P-05: nobody approves what they prepared (src/lib/twoPersonRule.ts; set by owners, through the server). */
+  twoPersonRule?: boolean;
+  /** BC-02: each role's starting dashboard layout (src/lib/dashboardOverview.ts; set by owners, through the server). */
+  roleDashboards?: RoleDashboards;
+  /** BG-07: who approves invoices in an owner's or accountant's place, until when (set through the server). */
+  approvalDelegates?: ApprovalDelegate[];
+  /** W-06: refuse sales that would take an item's stock below zero (written by the server only, owners) */
+  refuseNegativeStock?: boolean;
+  /** BF-08 step 2: when stock leaves, with the invoice (default) or with a delivery (src/lib/deliveries.ts; server only, owners) */
+  goodsLeaveWith?: 'invoice' | 'delivery';
+  /** BB-07: which modules are on (src/lib/modules.ts; written by the server only, owners and accountants) */
+  modules?: Record<string, boolean>;
+  /** Y-30: everyone in the workspace must use two-step login (set by owners, through the server). */
+  requireTwoStep?: boolean;
   /** Set by the daily job: the month (YYYY-MM) monthly statements were last sent (Y-28). */
   lastStatementsMonth?: string;
   strategicAdvice?: string[];

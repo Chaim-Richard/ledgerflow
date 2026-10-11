@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, cn } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 
@@ -23,6 +24,9 @@ export const Money: React.FC<MoneyProps> = ({
   suffix = '',
   isPrivacyMode: explicitPrivacyMode
 }) => {
+  // Reformat when workspace preferences change, including memoized list cells.
+  useAuthStore(s => s.workspaces);
+  useAuthStore(s => s.currentWorkspaceId);
   const storePrivacyMode = useLedgerStore(s => s.isPrivacyMode);
   const isPrivacyMode = explicitPrivacyMode !== undefined ? explicitPrivacyMode : (storePrivacyMode || false);
 
@@ -42,7 +46,7 @@ export const Money: React.FC<MoneyProps> = ({
   const signPrefix = sign && isPositive ? '+' : '';
 
   return (
-    <span
+    <span dir="auto" style={{ unicodeBidi: 'isolate' }}
       className={cn(
         'tabular-nums font-mono',
         colorClass,

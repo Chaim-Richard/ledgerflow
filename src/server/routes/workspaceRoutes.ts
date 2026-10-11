@@ -18,6 +18,18 @@ import { attachmentRouter } from './attachmentRoutes';
 import { incomingEventRouter } from './incomingEventRoutes';
 import { tagRouter } from './tagRoutes';
 import { journalTemplateRouter } from './journalTemplateRoutes';
+import { ScheduledReportError, sendScheduleNow } from '../services/scheduledReportService';
+import { portalLinkRouter } from './customerPortalRoutes';
+import { signLinkRouter } from './estimateSignRoutes';
+import { mountTeamRoutes } from './taskRoutes';
+import { clientQueryRouter } from './clientQueryRoutes';
+import { accountMergeRouter } from './accountMergeRoutes';
+import { assetDisposalRouter } from './assetDisposalRoutes';
+import { assetTransferRouter } from './assetTransferRoutes';
+import { placeInServiceRouter } from './placeInServiceRoutes';
+import { payRunRouter } from './payRunRoutes';
+import { twoStepPolicyRouter } from './twoStepPolicyRoutes';
+import { AlertSettingsError, saveAlertSettings } from '../services/bookAlertService';
 import { emailRouter } from './emailRoutes';
 import { taxRouter } from './taxRoutes';
 import { brandingRouter } from './brandingRoutes';
@@ -27,6 +39,9 @@ import { allocateNextNumber, NUMBERED_TYPES, type NumberedType } from '../servic
 import { retentionFor, RetentionSettingsSchema, scheduledPurgeAt as purgeDate } from '../../lib/retention';
 import { RetentionError, updateRetention } from '../services/retentionService';
 import { completeSetup, recordOpeningBalances, SetupError } from '../services/openingBalanceService';
+import { ModuleSettingError, moduleRecords, setModules } from '../services/moduleService';
+import { allocationRuleRouter, priceListRouter, salesRepRouter, roleDashboardRouter, approvalDelegateRouter } from './savedListRoutes';
+import { workspaceUsage } from '../middleware/planCapacity';
 
 export const workspaceRouter = express.Router();
 
@@ -61,7 +76,7 @@ export async function getWorkspaceUserRole(db: Firestore, workspaceId: string, u
 export function requireWorkspaceRole(allowedRoles: string[]) {
   return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authReq = req as AuthenticatedRequest;
-    const workspaceId = req.params.workspaceId || req.body.workspaceId || req.query.workspaceId;
+    const workspaceId = req.params.workspaceId || req.body?.workspaceId || req.query.workspaceId;
     if (!workspaceId) return sendError(res, "Workspace ID required", 400);
 
     try {
@@ -160,8 +175,51 @@ workspaceRouter.use('/:workspaceId/attachments', requireWorkspaceRole(['owner', 
 workspaceRouter.use('/:workspaceId/incoming-events', requireWorkspaceRole(['owner', 'accountant']), incomingEventRouter);
 // Tags for the whole workspace (K-15): members read; writers rename, merge and remove (checked in the route)
 workspaceRouter.use('/:workspaceId/tags', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), tagRouter);
+// Customer portal links (K-27): writers create or turn them off (checked in the service)
+workspaceRouter.use('/:workspaceId/customers/:customerId/portal-link', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), portalLinkRouter);
+workspaceRouter.use('/:workspaceId/estimates/:estimateId/sign-link', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), signLinkRouter);
+mountTeamRoutes(workspaceRouter, requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']));
+// Scheduled reports (K-28): send one now (owners and accountants); the daily job sends the rest
+workspaceRouter.post('/:workspaceId/report-schedules/:scheduleId/send-now', requireWorkspaceRole(['owner', 'accountant']), async (req, res) => {
+  try {
+    const { workspaceId, scheduleId } = req.params as Record<string, string>;
+    const result = await sendScheduleNow(getDb(), { workspaceId, scheduleId });
+    res.json({ status: 'success', ...result });
+  } catch (err) {
+    if (err instanceof ScheduledReportError) return res.status(err.status).json({ status: 'error', message: err.message });
+    res.status(500).json({ status: 'error', message: 'The report could not be sent', details: err instanceof Error ? err.message : String(err) });
+  }
+});
 // Journal entry templates (BD-09 / CA-27): members read; writers save and remove (checked in the route)
 workspaceRouter.use('/:workspaceId/journal-templates', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), journalTemplateRouter);
+// Questions about entries (BD-07): writers ask, every member answers (checked in the service)
+workspaceRouter.use('/:workspaceId/queries', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), clientQueryRouter);
+// Merging two accounts (CA-33): owners and accountants
+workspaceRouter.use('/:workspaceId/chart-accounts', requireWorkspaceRole(['owner', 'accountant']), accountMergeRouter);
+// Selling or scrapping a fixed asset (X-03): writers
+workspaceRouter.use('/:workspaceId/assets/:assetId/disposal', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), assetDisposalRouter);
+workspaceRouter.use('/:workspaceId/assets/:assetId/transfer', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), assetTransferRouter);
+workspaceRouter.use('/:workspaceId/assets/:assetId/in-service', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), placeInServiceRouter);
+// Pay runs posted by the server (U-02): owners and accountants
+workspaceRouter.use('/:workspaceId/pay-runs', requireWorkspaceRole(['owner', 'accountant']), payRunRouter);
+workspaceRouter.use('/:workspaceId/security', requireWorkspaceRole(['owner']), twoStepPolicyRouter);
+// Settings → Alerts (S-08, S-10, S-11): owners and accountants
+const alertsSchema = z.object({
+  cashLowCents: z.number().int().nullable().optional(),
+  closeReminderDay: z.number().int().nullable().optional(),
+  budgetAlerts: z.boolean().optional(),
+}).strict();
+workspaceRouter.put('/:workspaceId/alerts', requireWorkspaceRole(['owner', 'accountant']), async (req, res) => {
+  const user = (req as AuthenticatedRequest).user;
+  try {
+    const alerts = await saveAlertSettings(getDb(), { workspaceId: String(req.params.workspaceId), uid: user.uid, email: user.email, alerts: alertsSchema.parse(req.body) });
+    res.json({ status: 'success', alerts });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ status: 'error', message: 'Those alert settings are not in the expected form' });
+    if (err instanceof AlertSettingsError) return res.status(err.status).json({ status: 'error', message: err.message });
+    res.status(500).json({ status: 'error', message: 'The alerts could not be saved', details: err instanceof Error ? err.message : String(err) });
+  }
+});
 
 // Bulk import of customers, vendors, items or accounts from a spreadsheet (K-01; rules in
 // src/lib/recordImport.ts). Writers may import; the chart of accounts is owner/accountant only.
@@ -173,6 +231,47 @@ const importRecordsSchema = z.object({
 }).strict();
 const LEDGER_ADMIN_ROLES = ['owner', 'accountant'];
 const roleOf = (req: express.Request) => String((req as unknown as { userRole?: string }).userRole || '');
+
+/** L-15: what the workspace uses against its plan (entries, people, storage), for any member. */
+workspaceRouter.get('/:workspaceId/usage', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), async (req, res) => {
+  try {
+    const usage = await workspaceUsage(getDb(), String(req.params.workspaceId));
+    if (!usage) return sendError(res, 'Workspace not found', 404);
+    res.json({ status: 'success', usage });
+  } catch (err) {
+    sendError(res, 'Could not read the usage', 500, err instanceof Error ? errorMessage(err) : String(err));
+  }
+});
+
+// Q-05 split rules and M-11 price lists: owners and accountants (savedListRoutes.ts)
+workspaceRouter.use('/:workspaceId/allocation-rules', requireWorkspaceRole(LEDGER_ADMIN_ROLES), allocationRuleRouter);
+workspaceRouter.use('/:workspaceId/price-lists', requireWorkspaceRole(LEDGER_ADMIN_ROLES), priceListRouter);
+workspaceRouter.use('/:workspaceId/sales-reps', requireWorkspaceRole(LEDGER_ADMIN_ROLES), salesRepRouter);
+workspaceRouter.use('/:workspaceId/role-dashboards', requireWorkspaceRole(['owner']), roleDashboardRouter);
+workspaceRouter.use('/:workspaceId/approval-delegate', requireWorkspaceRole(LEDGER_ADMIN_ROLES), approvalDelegateRouter);
+
+/** BB-07: how many records each module holds (so a module turned off can say it still keeps them). */
+workspaceRouter.get('/:workspaceId/modules/records', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), async (req, res) => {
+  try {
+    res.json({ status: 'success', records: await moduleRecords(getDb(), String(req.params.workspaceId)) });
+  } catch (err) {
+    sendError(res, 'Could not count the modules\' records', 500, err instanceof Error ? errorMessage(err) : String(err));
+  }
+});
+
+/** BB-07: owners and accountants turn modules on or off (moduleService.ts); nothing is deleted. */
+workspaceRouter.put('/:workspaceId/modules', requireWorkspaceRole(LEDGER_ADMIN_ROLES), async (req, res) => {
+  try {
+    const { workspaceId } = req.params as Record<string, string>;
+    const { modules } = z.object({ modules: z.record(z.string(), z.boolean()) }).strict().parse(req.body);
+    const { user } = req as AuthenticatedRequest;
+    res.json({ status: 'success', ...(await setModules(getDb(), { workspaceId, uid: user.uid, email: user.email, modules })) });
+  } catch (err) {
+    if (err instanceof z.ZodError) return sendError(res, 'Send which modules are on (true or false)', 400, err.issues);
+    if (err instanceof ModuleSettingError) return sendError(res, errorMessage(err), err.status);
+    sendError(res, 'Could not save the modules', 500, err instanceof Error ? errorMessage(err) : String(err));
+  }
+});
 
 workspaceRouter.post('/:workspaceId/import-records', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), async (req, res) => {
   try {
@@ -270,6 +369,8 @@ workspaceRouter.get('/:workspaceId/roles', async (req, res) => {
 /**
  * Update workspace user role (Owner only) - Supports POST and PATCH /:workspaceId/roles/:uid
  */
+const ROLE_LABEL: Record<string, string> = { owner: 'Owner', accountant: 'Accountant', bookkeeper: 'Bookkeeper', viewer: 'Viewer' };
+
 const handleUpdateRole = async (req: express.Request, res: express.Response) => {
   const { workspaceId } = req.params as Record<string, string>;
   const targetUid = req.params.uid || req.body.targetUid;
@@ -321,6 +422,15 @@ const handleUpdateRole = async (req: express.Request, res: express.Response) => 
       }, { db, tx });
     });
 
+    // S-15: the person is told their new role (not when they changed it themselves)
+    if (previousRole !== role) {
+      const label = (r: string) => ROLE_LABEL[r] || r;
+      await notify(db, {
+        workspaceId, kind: 'member.role_changed', title: `Your role is now ${label(role)}`,
+        message: `In this workspace you are now ${label(role)} (before: ${label(previousRole)}). What you can see and change follows the new role.`,
+        eventKey: `role:${targetUid}:${previousRole}:${role}:${Date.now()}`, actorUid: requestUser(req).uid, onlyUids: [String(targetUid)],
+      });
+    }
     res.json({ status: 'success', targetUid, role, previousRole });
   } catch (err) {
     if (errorMessage(err) === 'LAST_OWNER_PROTECTION') {

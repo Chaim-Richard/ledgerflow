@@ -1,5 +1,6 @@
 import { APP_TABS, REPORT_TABS_REGISTRY, SETTINGS_TABS_REGISTRY } from './registry';
 import type { PinnedPage } from '../lib/pinnedPages';
+import { isModuleOn, moduleOfTab, type Modules } from '../lib/modules';
 
 /** Words people type when looking for a setting (BB-09 settings search). */
 const SETTINGS_KEYWORDS: Record<string, string> = {
@@ -20,6 +21,10 @@ const SETTINGS_KEYWORDS: Record<string, string> = {
   schedule: 'cron jobs daily run reminders statements recurring when next time',
   'incoming-events': 'webhooks stripe online payment card email bounced delivered spam events log',
   tags: 'labels tag rename merge remove categories groups',
+  'scheduled-reports': 'email reports schedule weekly monthly automatic send profit loss balance sheet aging',
+  alerts: 'notify warn reminder close month budget overspent over budget cash low balance threshold',
+  modules: 'features turn on off hide show payroll assets loans purchase orders petty cash intercompany forecasting quotes simple advanced',
+  groups: 'group portfolio holding companies clients workspaces entities related folders',
   export: 'backup download restore data archive',
   shortcuts: 'keyboard keys speed dial hotkeys',
 };
@@ -30,8 +35,9 @@ type Labelled = { id: string; label: Record<string, string>; developerOnly?: boo
 const name = (entry: Labelled, language: string) => entry.label[language] || entry.label.en;
 
 /** Every page someone can go to: main screens, each report and each settings tab. */
-export function pageIndex(language = 'en', opts: { developerMode?: boolean } = {}): PageEntry[] {
-  const main = (APP_TABS as Labelled[]).filter(t => !t.developerOnly || opts.developerMode)
+export function pageIndex(language = 'en', opts: { developerMode?: boolean; modules?: Modules } = {}): PageEntry[] {
+  // BB-07: a module turned off leaves the page search too (Settings → Modules turns it back on)
+  const main = (APP_TABS as Labelled[]).filter(t => (!t.developerOnly || opts.developerMode) && (!moduleOfTab(t.id) || isModuleOn(opts.modules, moduleOfTab(t.id)!)))
     .map(t => ({ page: { tab: t.id }, label: name(t, language), keywords: t.id }));
   const reports = (REPORT_TABS_REGISTRY as Labelled[]).map(r => ({ page: { tab: 'reports', sub: r.id }, label: `Report: ${name(r, language)}`, keywords: 'report' }));
   const settings = (SETTINGS_TABS_REGISTRY as Labelled[]).map(s => ({ page: { tab: 'settings', sub: s.id }, label: `Settings: ${name(s, language)}`, keywords: `settings ${SETTINGS_KEYWORDS[s.id] || ''}` }));

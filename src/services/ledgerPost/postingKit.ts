@@ -19,6 +19,8 @@ export interface EntityMutation {
 
 export interface LedgerPostContext {
   accounts?: ChartAccount[];
+  /** the invoices a credit note's returned goods are checked against (BF-06) */
+  invoices?: Invoice[];
   lockDate?: string | null;
   transactions?: Transaction[];
   workspaces?: Workspace[];
@@ -51,6 +53,10 @@ export function getLockDate(context?: LedgerPostContext): string | null {
 
 export function getTransactions(context?: LedgerPostContext): Transaction[] {
   return context?.transactions || useLedgerStore.getState().transactions || [];
+}
+
+export function getInvoices(context?: LedgerPostContext): Invoice[] {
+  return context?.invoices || useLedgerStore.getState().invoices || [];
 }
 
 export function getWorkspaces(context?: LedgerPostContext): Workspace[] {
@@ -106,6 +112,20 @@ export function verifyLockDate(dateStr: string, context?: LedgerPostContext): vo
   }
 }
 
+/**
+ * The day to reverse a document's earlier entry when the document is edited, voided or deleted: the
+ * earlier entry's own date while that day is open, so its month nets to the corrected amount (dated
+ * today, the old amount stayed in the document's month next to the new one and the month's reports
+ * were wrong; found by the main-path test, DA-08); today when that day is closed, so closed books are
+ * corrected in the current period instead.
+ */
+export function reversalDate(originalDate: string | undefined, today: string, context?: LedgerPostContext): string {
+  if (!originalDate) return today;
+  const day = originalDate.slice(0, 10);
+  const exception = context && context.lockDate !== undefined ? null : useLedgerStore.getState().lockException;
+  return isLockedDate(day, getLockDate(context), exception) ? today : day;
+}
+
 /** Workspace mapping first, then the first chart account matching the predicate. */
 export function findAccount(
   accounts: ChartAccount[],
@@ -145,7 +165,7 @@ export function resolveAccount(
  * document's default account. Returns undefined when there are no lines.
  */
 export function lineAccounts(
-  lines: Array<{ accountId?: string; amountCents?: number }> | undefined,
+  lines: Array<{ accountId?: string; amountCents?: number; dimensions?: Record<string, string> }> | undefined,
   accounts: ChartAccount[],
   fallback: { id: string; name: string },
   usable: (a: ChartAccount) => boolean
@@ -154,9 +174,13 @@ export function lineAccounts(
   return lines.map(line => {
     const key = String(line.accountId || '').trim();
     const account = key ? accounts.find(a => a.id === key) || accounts.find(a => (a.name || '').toLowerCase() === key.toLowerCase()) : undefined;
+    // the line's labels (BF-09), without empty ones
+    const labels = Object.fromEntries(Object.entries(line.dimensions || {})
+      .filter(([k, v]) => k && typeof v === 'string' && v.trim() !== '').map(([k, v]) => [k, v.trim()]));
     return {
       account: account && usable(account) ? { id: account.id, name: account.name } : fallback,
       weightCents: Number(line.amountCents) || 0,
+      ...(Object.keys(labels).length > 0 ? { dimensions: labels } : {}),
     };
   });
 }

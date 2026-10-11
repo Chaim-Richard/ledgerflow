@@ -2,7 +2,8 @@
  * Attachments on screen (K-07): the files panel lists a record's files, attaches new ones (saved one
  * by one, a too-big one refused with the reason and nothing written), and removes through the server
  * (writers any file, others their own). A new invoice keeps the picked files and hands them over on
- * save; the old box that said "2 file(s) attached" without saving anything is gone.
+ * save; the old box that said "2 file(s) attached" without saving anything is gone. A support ticket's
+ * files (BO-05) are read from the ticket's own workspace.
  */
 import './helpers/dom';
 import test, { afterEach, beforeEach, describe } from 'node:test';
@@ -59,6 +60,17 @@ describe('The files panel', () => {
     assert.equal(writes.length, 1, 'only the file that fits is written');
     assert.deepEqual([writes[0].p_table, writes[0].p_data.name, writes[0].p_data.linkedCollection, writes[0].p_data.linkedId, writes[0].p_data.uid], ['documents', 'contract.pdf', 'invoices', 'inv1', 'test-user']);
     assert.match(String(writes[0].p_data.fileUrl), /^data:application\/pdf;base64,/);
+  });
+
+  test('a support ticket\'s files are read from the ticket\'s own workspace (a platform admin reading feedback)', async () => {
+    setComponentWorkspace('viewer');
+    const row = stored('s1', 'screen.png', 'someone', '2026-10-06T00:00:00Z');
+    rows = [{ ...row, data: { ...row.data, workspaceId: 'their-workspace', linkedCollection: 'supportTickets', linkedId: 't1', linkedLabel: 'Ticket "It broke"' } } as never];
+    render(<AttachmentsPanel target={{ collection: 'supportTickets', id: 't1', label: 'Ticket "It broke"' }} workspaceId="their-workspace" />);
+    await waitFor(() => assert.equal(screen.getAllByRole('listitem').length, 1));
+    const query = calls.find(c => c.url.includes('/rest/v1/documents'))!.url;
+    assert.match(query, /their-workspace/);
+    assert.doesNotMatch(query, /component-workspace/);
   });
 
   test('removing goes through the server; a viewer only sees Remove on their own file and cannot attach', async () => {

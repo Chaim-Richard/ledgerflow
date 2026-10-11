@@ -33,11 +33,16 @@ export default function IntercompanyManager() {
     description: '',
     date: getLocalDateISO(),
     sourceAccountId: '',
-    targetAccountId: ''
+    targetAccountId: '',
+    targetAmountCents: 0
   });
 
   const activeWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
   const otherWorkspaces = workspaces.filter(w => w.id !== currentWorkspaceId);
+  // Z-19: between companies in different currencies, say what arrives (never a guessed rate)
+  const targetCurrency = workspaces.find(w => w.id === formData.targetWorkspaceId)?.currency || 'USD';
+  const sourceCurrency = activeWorkspace?.currency || 'USD';
+  const crossCurrency = Boolean(formData.targetWorkspaceId) && targetCurrency !== sourceCurrency;
 
   const intercompanyTransactions = useMemo(() => {
     return transactions.filter(t => t.metadata?.isIntercompany);
@@ -66,7 +71,8 @@ export default function IntercompanyManager() {
           description: formData.description,
           date: formData.date,
           sourceAccountId: formData.sourceAccountId,
-          targetAccountId: formData.targetAccountId
+          targetAccountId: formData.targetAccountId,
+          ...(crossCurrency ? { targetAmountCents: formData.targetAmountCents } : {})
         })
       });
 
@@ -81,7 +87,8 @@ export default function IntercompanyManager() {
         description: '',
         date: getLocalDateISO(),
         sourceAccountId: '',
-        targetAccountId: ''
+        targetAccountId: '',
+        targetAmountCents: 0
       });
     } catch (err) {
       toast.error((err as Error).message);
@@ -290,6 +297,17 @@ export default function IntercompanyManager() {
                         className="w-full p-4 bg-white rounded-2xl border-2 border-[var(--line)] font-black text-2xl font-mono focus:border-[#0047AB] outline-none transition-all"
                       />
                     </Labelled>
+                    {crossCurrency && (
+                      <Labelled labelClassName="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest" label={`Arrives as (${targetCurrency})`}>
+                        <input
+                          type="number"
+                          placeholder="0.00"
+                          value={formData.targetAmountCents / 100}
+                          onChange={e => setFormData({...formData, targetAmountCents: Math.round(parseFloat(e.target.value || '0') * 100)})}
+                          className="w-full p-3 bg-white rounded-2xl border-2 border-[var(--line)] font-mono focus:border-[#0047AB] outline-none transition-all"
+                        />
+                      </Labelled>
+                    )}
                   </div>
 
                   <div className="space-y-3">

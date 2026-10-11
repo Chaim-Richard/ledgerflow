@@ -16,6 +16,8 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
   const isOwner = useAuthStore(s => s.isAdmin);
   const isProMode = useUIStore(s => s.isProMode);
   const developerMode = useUIStore(s => s.developerMode);
+  // BB-07: a module turned off leaves the menu
+  const modules = useAuthStore(s => s.getCurrentWorkspace()?.modules);
   
   useEffect(() => {
     if (scrollRef.current) {
@@ -32,7 +34,7 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
   const currentTabDef = APP_TABS.find(t => t.id === activeTab);
   if (!currentTabDef || !currentTabDef.groupId) return null;
   
-  const groupTabs = APP_TABS.filter(t => t.groupId === currentTabDef.groupId && isTabVisible(t, { isOwner, isProMode, developerMode }));
+  const groupTabs = APP_TABS.filter(t => t.groupId === currentTabDef.groupId && isTabVisible(t, { isOwner, isProMode, developerMode, modules }));
   
   if (groupTabs.length <= 1) return null;
 

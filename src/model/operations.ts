@@ -1,4 +1,6 @@
 import type { EntityMetadata } from './ledger';
+import type { PayRunEmployeeLine } from '../lib/payRunPosting';
+import type { EmployeeDeduction } from '../lib/payrollDeductions';
 
 // Running the business: projects, inventory, fixed assets, payroll, documents, expense claims, support.
 // Part of src/types.ts (F-10): import from '../types' as before; it re-exports this file.
@@ -42,9 +44,41 @@ export interface InventoryItem {
   measurementUnit?: string; // e.g. 'pack', 'kg', 'box'
   unitsPerPackage?: number; // e.g. 100
   category?: string;
+  /** BF-01: a service fills an invoice line's name and price but never moves stock or books a cost (none = stock) */
+  itemType?: 'stock' | 'service';
   createdAt: string;
   /** Set when the item came from a spreadsheet import; lets the import be undone. */
   importBatchId?: string;
+}
+
+export interface PartialDisposal {
+  date: string;
+  percent: number;
+  costCents: number;
+  salvageCents: number;
+  accumulatedCents: number;
+  proceedsCents: number;
+  gainLossCents: number;
+  transactionId: string;
+  /** what the asset carried before, to undo it */
+  before: { purchasePriceCents: number; salvageValueCents: number; accumulatedDepreciationCents: number; depreciatedThrough: string | null };
+}
+
+export interface AssetTransfer {
+  date: string;
+  description: string;
+  /** the entry moving cost and depreciation between accounts; none for a move of place only */
+  transactionId?: string;
+  before: { location: string | null; assetAccountId: string | null; accumulatedAccountId: string | null };
+}
+
+/** X-06: one service, repair or inspection of a fixed asset (a note: the cost is posted on its bill). */
+export interface AssetMaintenance {
+  id: string;
+  date: string;
+  description: string;
+  costCents?: number;
+  by?: string;
 }
 
 export interface FixedAsset {
@@ -58,7 +92,8 @@ export interface FixedAsset {
   usefulLifeYears: number;
   depreciationMethod: 'straight-line' | 'declining-balance';
   accumulatedDepreciationCents: number;
-  status: 'active' | 'disposed';
+  /** X-09: in_progress = still being built (construction in progress): costs are added, nothing depreciates. */
+  status: 'active' | 'disposed' | 'in_progress';
   createdAt: string;
   /** Balance sheet account the asset's cost is in (e.g. Equipment). */
   assetAccountId?: string;
@@ -68,6 +103,31 @@ export interface FixedAsset {
   /** Last month (YYYY-MM) the depreciation run covered, and its ledger entry. */
   depreciatedThrough?: string;
   lastDepreciationTransactionId?: string;
+  /** Sold or scrapped (X-03, src/server/services/assetDisposalService.ts): the day, the money received, the gain (+) or loss (−) and its entry. */
+  disposedOn?: string;
+  disposalProceedsCents?: number;
+  disposalGainLossCents?: number;
+  disposalTransactionId?: string;
+  /** X-09: costs added while it was being built, and placing it in service (the entry moving the cost
+   * out of the construction-in-progress account; depreciation starts from that day). */
+  costAdditions?: Array<{ date: string; amountCents: number; note?: string }>;
+  placedInService?: { date: string; transactionId: string; cipAccountId: string; startedOn: string };
+  /** X-07: its tag (AT-0001…), printed on its label with a QR code (src/lib/assetTags.ts) */
+  assetTag?: string;
+  /** X-05: where it is, and its moves (newest last) */
+  location?: string;
+  transfers?: AssetTransfer[];
+  /** X-08: the day the warranty ends and the day the insurance renews (YYYY-MM-DD); reminded 30 days before. */
+  warrantyExpires?: string;
+  insuranceRenews?: string;
+  /** X-06: what was done to it (newest first; src/lib/assetMaintenance.ts) and the day its next service is due, reminded 30 days before. */
+  maintenance?: AssetMaintenance[];
+  nextServiceDue?: string;
+  /** X-04: shares sold or scrapped while the rest is kept (newest last); cost and salvage above are what is left. */
+  partialDisposals?: PartialDisposal[];
+  /** X-01: the bill line it was bought on (bill id and line number), when added from a bill. */
+  sourceBillId?: string;
+  sourceBillLine?: number;
 }
 
 export interface Employee {
@@ -87,6 +147,18 @@ export interface Employee {
   allowances?: number;
   lastPayDate?: string;
   createdAt: string;
+  /** U-08: a contractor is paid in full, nothing withheld and no employer taxes, and reported on a 1099-NEC. */
+  workerType?: 'employee' | 'contractor';
+  /** U-04: paid time off earned in a year (hours, spread over the pay runs), the hours brought in, and the time taken */
+  ptoHoursPerYear?: number;
+  ptoOpeningHours?: number;
+  ptoTaken?: Array<{ date: string; hours: number; note?: string }>;
+  /** U-05, U-06: named deductions each pay period (pre-tax, after-tax, garnishments): src/lib/payrollDeductions.ts */
+  deductions?: EmployeeDeduction[];
+  /** U-09: where their net pay is deposited (the direct deposit file, src/lib/nacha.ts) */
+  bankRouting?: string;
+  bankAccount?: string;
+  bankAccountType?: 'checking' | 'savings';
 }
 
 export interface PayRun {
@@ -96,8 +168,30 @@ export interface PayRun {
   date: string;
   totalAmountCents: number;
   employeeCount: number;
-  status: 'draft' | 'processed' | 'failed';
+  /** U-10: awaiting_approval → processed (approved), rejected (sent back) or withdrawn */
+  status: 'draft' | 'processed' | 'failed' | 'undone' | 'awaiting_approval' | 'rejected' | 'withdrawn';
   createdAt: string;
+  /** U-02: posted by the server; its entry and the amounts behind it. */
+  transactionId?: string;
+  /** U-07: whom it paid: one pay schedule, or everyone */
+  schedule?: 'all' | Employee['payFrequency'];
+  grossCents?: number;
+  netCents?: number;
+  withheldCents?: number;
+  employerTaxCents?: number;
+  deductionsCents?: number;
+  employees?: PayRunEmployeeLine[];
+  undoneAt?: string;
+  /** U-10: who prepared it (uid is theirs), who approved or sent it back, and why */
+  submittedByEmail?: string;
+  approvedBy?: string;
+  approvedByEmail?: string;
+  approvedAt?: string;
+  rejectedBy?: string;
+  rejectedByEmail?: string;
+  rejectedAt?: string;
+  rejectionNote?: string;
+  withdrawnAt?: string;
 }
 
 export interface CloudDocument {

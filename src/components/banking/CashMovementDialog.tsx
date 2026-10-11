@@ -13,6 +13,7 @@ import {
   CASH_MOVEMENT_LABELS, cashAccountOptions, cashMovementProblem, cashMovementSentence, counterAccountChoices, createCashMovement,
   type CashMovementDirection,
 } from '../../lib/cashMovement';
+import { BudgetLeft } from '../common/BudgetLeft';
 import { Labelled } from '../ui/Labelled';
 import { ArrowDownToLine, ArrowUpFromLine, X } from 'lucide-react';
 
@@ -142,6 +143,7 @@ const CashMovementDialog: React.FC<CashMovementDialogProps> = ({ isOpen, onClose
               {counterAccounts.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
             </select>
           </Labelled>
+          {direction === 'out' && <BudgetLeft accountId={counterAccountId} date={date} addingCents={amountCents} />}
 
           <div className="grid grid-cols-2 gap-3">
             <Labelled label={direction === 'in' ? 'Who paid it (optional)' : 'Who you paid (optional)'}>

@@ -31,6 +31,7 @@ import { isLockedDate } from '../../lib/periodLock';
 import { formLines, templateLines, templateProblem, templateSummary, type JournalTemplate } from '../../lib/journalTemplates';
 import { listJournalTemplates, removeJournalTemplate, saveJournalTemplate } from '../../services/journalTemplateActions';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { requiredLabelRules, requiredLabelWarnings } from '../../lib/requiredLabels';
 
 interface JournalEntryModalProps {
   isOpen: boolean;
@@ -207,6 +208,10 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
     const credit = lines.reduce((sum, l) => sum + (l.credit || 0), 0);
     return { debit, credit, isBalanced: debit === credit && (debit > 0 || (lines.length >= 2 && lines.some(l => l.accountId))) };
   }, [lines]);
+  const labelWarnings = requiredLabelWarnings(lines, date, workspace?.dimensions, accounts);
+  // a line on an account that needs a label shows the label columns, so the warning can be acted on
+  const labelRuleAccounts = useMemo(() => new Set(requiredLabelRules(workspace?.dimensions).flatMap(r => [...r.accountIds])), [workspace?.dimensions]);
+  const dimensionsShown = showDimensions || lines.some(l => labelRuleAccounts.has(l.accountId));
 
   const handleAddLine = () => {
     setLines([...lines, { accountId: '', accountName: '', debit: 0, credit: 0, class: '', location: '', project: '', dimensions: {} }]);
@@ -598,7 +603,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                     <thead>
                       <tr className="text-left border-b border-[var(--line)] bg-[var(--ink)]/50">
                         <th scope="col" className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px]">Account</th>
-                        {showDimensions && activeDimensions.map(dim => (
+                        {dimensionsShown && activeDimensions.map(dim => (
                           <th scope="col" key={dim.id} className={cn("p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px]", dim.isWorld && "text-[var(--brass)]")}>
                             {dim.name}
                           </th>
@@ -633,7 +638,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                               </datalist>
                             </div>
                           </td>
-                          {showDimensions && activeDimensions.map(dim => (
+                          {dimensionsShown && activeDimensions.map(dim => (
                             <td key={dim.id} className="p-2.5">
                               <div className="relative">
                                 <input 
@@ -686,7 +691,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                     </tbody>
                     <tfoot>
                       <tr className="bg-[var(--ink)]/50 font-bold">
-                        <td className="p-4 text-right uppercase tracking-widest text-[10px] text-[var(--muted)]" colSpan={showDimensions ? 4 : 1}>Totals</td>
+                        <td className="p-4 text-right uppercase tracking-widest text-[10px] text-[var(--muted)]" colSpan={dimensionsShown ? 4 : 1}>Totals</td>
                         <td className="p-4 text-right font-mono text-[var(--text)] tabular-nums">{formatCurrency(totals.debit, activeCurrency)}</td>
                         <td className="p-4 text-right font-mono text-[var(--text)] tabular-nums">{formatCurrency(totals.credit, activeCurrency)}</td>
                         <td></td>
@@ -719,6 +724,12 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
                   <p className="text-lg font-bold font-mono tracking-tight tabular-nums">{formatCurrency(Math.abs(totals.debit - totals.credit), activeCurrency)}</p>
                 </div>
               </div>
+              {/* Z-12: labels the workspace requires on these accounts (a warning; saving still works) */}
+              {labelWarnings.length > 0 && (
+                <ul role="status" aria-label="Required labels missing" className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-400 space-y-0.5">
+                  {labelWarnings.map(w => <li key={w}>{w}</li>)}
+                </ul>
+              )}
             </form>
 
             {/* Footer Actions */}

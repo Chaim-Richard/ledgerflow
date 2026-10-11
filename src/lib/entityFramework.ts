@@ -66,7 +66,7 @@ export function generateEntitySql(): string {
       `create policy writer_insert on ${table} for insert to authenticated with check (public.lf_can_write(workspace_id));`,
       `create policy writer_update on ${table} for update to authenticated using (public.lf_can_write(workspace_id)) with check (public.lf_can_write(workspace_id));`,
       `create policy writer_delete on ${table} for delete to authenticated using (public.lf_can_write(workspace_id));`,
-      `create policy two_step_login on ${table} as restrictive for all to authenticated using ((select public.lf_mfa_ok())) with check ((select public.lf_mfa_ok()));`,
+      `create policy two_step_login on ${table} as restrictive for all to authenticated using ((select private.lf_mfa_ok())) with check ((select private.lf_mfa_ok()));`,
       `grant select, insert, update, delete on ${table} to authenticated;`,
       '',
     ].join('\n'));

@@ -1,4 +1,5 @@
 import { collection, updateDoc, deleteDoc, doc, setDoc, query, where, getDocs, getDoc } from '../lib/db/firestore';
+import { learnedPatternId } from '../lib/learnedPatterns';
 import { db, getIdToken } from '../firebase';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -94,7 +95,8 @@ export function useEntityOperations() {
     const cleanDesc = description.toLowerCase().trim();
     if (cleanDesc.length < 3) return;
     
-    const patternId = cleanDesc.replace(/[^a-z0-9]/g, '_');
+    // N-14: collision-free (Hebrew included), same id as before for plain Latin text
+    const patternId = learnedPatternId(cleanDesc);
     try {
       const patternRef = doc(db, 'rulePatterns', `${currentWorkspaceId}_${patternId}`);
       const existing = analyticalPatternCache[cleanDesc];
@@ -134,10 +136,11 @@ export function useEntityOperations() {
    * list) is left exactly as it is. Returns the field to write, or nothing at all.
    */
   const approvalStamp = (merged: Invoice, wasIssued: boolean): { approval?: InvoiceApprovalRecord } => {
-    const settings = normalizeInvoiceApproval(useAuthStore.getState().getCurrentWorkspace()?.invoiceApproval);
+    const ws = useAuthStore.getState().getCurrentWorkspace();
+    const settings = normalizeInvoiceApproval(ws?.invoiceApproval);
     if (!settings.enabled) return {};
     if (wasIssued || 'approval' in merged) return {};
-    const stamp = approvalForSave(merged, settings, { role, uid: user?.uid, now: new Date().toISOString() });
+    const stamp = approvalForSave(merged, settings, { role, uid: user?.uid, now: new Date().toISOString(), twoPerson: ws?.twoPersonRule === true });
     return stamp ? { approval: stamp } : {};
   };
 

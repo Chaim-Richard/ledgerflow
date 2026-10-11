@@ -33,6 +33,12 @@ export const DAILY_JOBS: DailyJobDescriptor[] = [
   { id: 'notifications', name: 'Team notices and overdue letters', what: 'Customers are told about invoices that have just gone past their due date, and notices the team has read are cleared away.' },
   { id: 'reminders', name: 'Invoice reminders', what: 'The reminders each workspace asked for, at the spacing it set, to the address the customer prefers (Y-27). An invoice waiting on an approval is left out and resumes when it is signed.' },
   { id: 'statements', name: 'Monthly statements', what: 'Once a month, every customer with something open who is set to receive one.' },
+  { id: 'scheduledReports', name: 'Scheduled reports', what: 'Each report set in Settings → Scheduled reports, once per finished week or month, to its addresses.' },
+  { id: 'ledgerHealth', name: 'Ledger health check', what: 'The Data Health checks on every workspace whose books changed; owners and accountants are told about serious problems that are new since the night before.' },
+  { id: 'bookAlerts', name: 'Alerts about the books', what: 'From the chosen day, a reminder to close last month; a budget overspent; cash below the amount set in Settings → Alerts. Each told once.' },
+  { id: 'assetReminders', name: 'Warranty and insurance reminders', what: 'Fixed assets whose warranty ends or whose insurance renews within 30 days: the people who keep the books are told once for each date.' },
+  { id: 'watches', name: 'Watched records', what: 'Each person watching an invoice, bill, entry, account or item is told once about each change since they were last told, and when it was deleted.' },
+  { id: 'notificationDigest', name: 'Daily summary of notices by email', what: 'People who chose one email a day get the notices they have not read since the last one (bell → gear).' },
   { id: 'retention', name: 'What you asked to keep for less time', what: 'Email receipts, error logs and other records past the retention period each workspace sets are pruned.' },
 ];
 

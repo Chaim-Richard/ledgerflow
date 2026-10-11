@@ -55,10 +55,10 @@ describe('Sales Tax Liability Summary: tax by rate (J-11)', () => {
   });
 });
 
-test('the tax liability endpoint adds foreign documents in the home currency', async () => {
-  const { computeTaxLiability } = await import('../server/reports/computeReports');
+test('the tax return adds foreign documents in the home currency', async () => {
+  const { taxTotals } = await import('./helpers/taxTotals');
   const eur = { id: 'e', date: '2026-07-10', status: 'sent', amountCents: 12000, taxAmountCents: 2000, taxInclusive: true, taxVersion: 2, currency: 'EUR', exchangeRate: 1.1 };
-  const report = computeTaxLiability([eur] as never, [], '2026-07-01', '2026-07-31');
+  const report = taxTotals([eur], [], '2026-07-01', '2026-07-31');
   assert.equal(report.taxCollectedCents, 2200); // €20 at 1.1, not 2000
   assert.equal(report.taxableSalesCents, 11000);
 });

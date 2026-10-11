@@ -4,7 +4,8 @@ import React, { useId, useState, useMemo, useEffect, useCallback } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn, getLocalDateISO, monthBoundsISO, formatCurrency } from '../../lib/utils';
-import { exportToExcel as exportToExcelHelper } from '../../lib/excelExport';
+import { toast } from 'sonner';
+import { exportPlToExcel } from '../../lib/plExport';
 import { isPostable, lineAmount, calculateNetIncome, isTransactionInDateRange } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -14,9 +15,15 @@ import { getComparePeriod } from '../../lib/fiscalCalendar';
 import MonthNavigator from '../ui/MonthNavigator';
 import { StatementColumns } from './StatementColumns';
 import type { ReportColumnMode } from '../../lib/reportColumns';
-import DrillDownModal from '../layout/DrillDownModal';
+import DrillDownModal, { type ExplainRequest } from '../layout/DrillDownModal';
+import { accountGroupLayout, groupSubtotals, hasAccountGroups, toggleAccountGroup, visibleGroupRows } from '../../lib/accountGroups';
+import { AccountGroupRow, AccountGroupSubtotal } from './AccountGroupControls';
 
-interface PLAccount { name: string; code?: string; balance: number }
+/** A P&L line as the report holds it; `parentId` is only for account groups (K-14). */
+interface PLAccount { name: string; code?: string; balance: number; parentId?: string }
+
+/** A P&L line with its own id, the shape the account-group helpers want. */
+interface PLRow { id: string; name: string; code?: string; type: string; parentId?: string; balance: number }
 
 interface PLData {
   income: { total: number; accounts: Record<string, PLAccount> };
@@ -25,6 +32,10 @@ interface PLData {
   grossProfit: number;
   netIncome: number;
   orphanedLines?: Array<{ accountId: string; transactionId?: string; date?: string; amountCents: number }>;
+  /** N-08: present on the server's cash-basis answer */
+  basis?: 'cash';
+  /** entries on receivables or payables without cash, left out on cash basis */
+  leftOut?: number;
 }
 
 interface ProfitAndLossViewProps {
@@ -54,7 +65,9 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   const columnsActive = columnMode !== 'total' || showPercent || isComparative;
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'balance'>('balance');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[] } | null>(null);
+  const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[]; explain?: ExplainRequest } | null>(null);
+  // N-08: accrual (as posted) or cash (invoices and bills when paid, from the server only)
+  const [basis, setBasis] = useState<'accrual' | 'cash'>('accrual');
 
   const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
   const { fetchPL, loadingStates } = useFinancialReporting();
@@ -74,13 +87,14 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
 
   const loadServerReport = useCallback(async () => {
     try {
-      const res = await fetchPL(dateRange.start, dateRange.end);
+      const cashBasis = basis === 'cash' ? 'cash' as const : undefined;
+      const res = await fetchPL(dateRange.start, dateRange.end, cashBasis);
       if (res) {
         setServerData(res);
         setIsServerAuthoritative(true);
       }
       if (isComparative) {
-        const prevRes = await fetchPL(prevRange.start, prevRange.end);
+        const prevRes = await fetchPL(prevRange.start, prevRange.end, cashBasis);
         if (prevRes) {
           setServerPrevData(prevRes);
         }
@@ -88,7 +102,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
     } catch {
       setIsServerAuthoritative(false);
     }
-  }, [fetchPL, dateRange.start, dateRange.end, isComparative, prevRange]);
+  }, [fetchPL, dateRange.start, dateRange.end, isComparative, prevRange, basis]);
 
   useEffect(() => {
     loadServerReport();
@@ -197,21 +211,21 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             const amount = -amt;
             pl.income.total += amount;
             if (!pl.income.accounts[acc.id]) {
-              pl.income.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0 };
+              pl.income.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0, parentId: acc.parentId };
             }
             pl.income.accounts[acc.id].balance += amount;
           } else if (isCogs) {
             const amount = amt;
             pl.cogs.total += amount;
             if (!pl.cogs.accounts[acc.id]) {
-              pl.cogs.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0 };
+              pl.cogs.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0, parentId: acc.parentId };
             }
             pl.cogs.accounts[acc.id].balance += amount;
           } else if (acc.type === 'expense') {
             const amount = amt;
             pl.expense.total += amount;
             if (!pl.expense.accounts[acc.id]) {
-              pl.expense.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0 };
+              pl.expense.accounts[acc.id] = { name: acc.name, code: acc.code, balance: 0, parentId: acc.parentId };
             }
             pl.expense.accounts[acc.id].balance += amount;
           }
@@ -237,75 +251,49 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
     return { data: currentPl, prevData: prevPl };
   }, [transactions, accounts, dateRange, isComparative, prevRange]);
 
-  const data = isServerAuthoritative && serverData ? serverData : localCalculation.data;
-  const prevData = isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;
-
-  const exportToExcel = async () => {
-    if (!data) return;
-    const isComp = isComparative;
-
-    const columns = [
-      { header: 'Account', key: 'account', width: 30 },
-      { header: 'Amount', key: 'amount', width: 20 },
-      { header: isComp ? 'Prior Amount' : '', key: 'priorAmount', width: 20 },
-      { header: isComp ? 'Variance %' : '', key: 'variance', width: 20 },
-    ];
-
-    const titleRows = [
-      [labels.title],
-      [`Period: ${dateRange.start} to ${dateRange.end}`]
-    ];
-
-    const rows: (Record<string, string | number | null> | string[])[] = [];
-
-    rows.push([labels.revenueStreams.toUpperCase()]);
-    Object.entries(data.income?.accounts || {}).forEach(([id, acc]: [string, PLAccount]) => {
-      const pBal = (prevData?.income?.accounts as Record<string, PLAccount>)[id]?.balance || 0;
-      const varPct = pBal !== 0 ? (((acc.balance || 0) - pBal) / Math.abs(pBal)) * 100 : 0;
-      rows.push({
-        account: acc.name,
-        amount: (acc.balance || 0) / 100,
-        priorAmount: isComp ? pBal / 100 : null,
-        variance: isComp && pBal !== 0 ? varPct.toFixed(2) + '%' : null
-      });
-    });
-    rows.push({
-      account: `Total ${labels.revenueStreams}`,
-      amount: (data.income?.total || 0) / 100,
-      priorAmount: isComp ? (prevData?.income?.total || 0) / 100 : null
-    });
-
-    rows.push([]);
-    rows.push([labels.expenseClusters.toUpperCase()]);
-    Object.entries(data.expense?.accounts || {}).forEach(([id, acc]: [string, PLAccount]) => {
-      const pBal = (prevData?.expense?.accounts as Record<string, PLAccount>)[id]?.balance || 0;
-      const varPct = pBal !== 0 ? (((acc.balance || 0) - pBal) / Math.abs(pBal)) * 100 : 0;
-      rows.push({
-        account: acc.name,
-        amount: (acc.balance || 0) / 100,
-        priorAmount: isComp ? pBal / 100 : null,
-        variance: isComp && pBal !== 0 ? varPct.toFixed(2) + '%' : null
-      });
-    });
-    rows.push({
-      account: `Total ${labels.expenseClusters}`,
-      amount: (data.expense?.total || 0) / 100,
-      priorAmount: isComp ? (prevData?.expense?.total || 0) / 100 : null
-    });
-
-    rows.push([]);
-    rows.push({
-      account: labels.netLabel.toUpperCase(),
-      amount: (data.netIncome || 0) / 100,
-      priorAmount: isComp ? (prevData?.netIncome || 0) / 100 : null
-    });
-
-    await exportToExcelHelper(columns, rows, {
-      sheetName: 'Statement',
-      fileName: `${labels.exportName}_${dateRange.start}_${dateRange.end}.xlsx`,
-      titleRows
-    });
+  // on cash basis only the server's figures are shown (never the accrual figures computed here)
+  const cashReady = basis === 'cash' && isServerAuthoritative && serverData?.basis === 'cash';
+  const emptyPl: PLData = { income: { total: 0, accounts: {} }, cogs: { total: 0, accounts: {} }, expense: { total: 0, accounts: {} }, grossProfit: 0, netIncome: 0 };
+  const data = basis === 'cash' ? (cashReady ? serverData! : emptyPl) : isServerAuthoritative && serverData ? serverData : localCalculation.data;
+  const prevData = basis === 'cash' ? (cashReady && serverPrevData?.basis === 'cash' ? serverPrevData : emptyPl) : isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;
+  const chooseBasis = (next: 'accrual' | 'cash') => {
+    setBasis(next);
+    setServerData(null);
+    setServerPrevData(null);
+    setIsServerAuthoritative(false);
+    // the period columns are read from the entries as posted: on cash basis the one total is shown
+    if (next === 'cash') { setColumnMode('total'); setShowPercent(false); setIsComparative(false); }
   };
+  /** the entries behind a figure are those as posted, so on cash basis they are not listed */
+  const drill = (target: { accountName: string; transactions: Transaction[]; explain?: ExplainRequest }) => {
+    if (basis === 'cash') { toast.info('On cash basis the entries behind a figure are not listed yet: switch to accrual to see them'); return; }
+    setDrillDownTarget(target);
+  };
+
+  // Account groups (K-14): the same P&L lines, a group's children indented under their parent with
+  // a subtotal under them. A group starts open and no figure here is the report's own total.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
+  const groupedSection = (entries: Record<string, PLAccount> | undefined, type: string) => {
+    const members: PLRow[] = Object.entries(entries || {}).map(([id, account]) => ({
+      id, name: account.name, code: account.code, type, parentId: account.parentId, balance: account.balance || 0,
+    }));
+    const compare = (a: PLRow, b: PLRow) => {
+      const comp = sortBy === 'code' ? (a.code || '').localeCompare(b.code || '')
+        : sortBy === 'name' ? (a.name || '').localeCompare(b.name || '')
+        : (a.balance || 0) - (b.balance || 0);
+      return sortDir === 'asc' ? comp : -comp;
+    };
+    return {
+      rows: visibleGroupRows(accountGroupLayout(members, compare), collapsedGroups),
+      subtotals: groupSubtotals(members, member => ({ amount: member.balance })),
+      // a hierarchy needs one column, so the two-column cards stay for a chart without groups
+      grouped: hasAccountGroups(members),
+    };
+  };
+  const incomeGroups = groupedSection(data?.income?.accounts, 'income');
+  const expenseGroups = groupedSection(data?.expense?.accounts, 'expense');
+
+  const exportToExcel = () => exportPlToExcel({ data, prevData, isComparative, labels, start: dateRange.start, end: dateRange.end, cash: basis === 'cash' });
 
   if (!data) return null;
 
@@ -378,12 +366,19 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             </div>
           </div>
           <div className="hidden sm:block w-px h-8 bg-slate-200" />
+          <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-700">Basis
+            <select value={basis} onChange={e => chooseBasis(e.target.value === 'cash' ? 'cash' : 'accrual')} className="bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal">
+              <option value="accrual">Accrual (as posted)</option>
+              <option value="cash">Cash (when paid)</option>
+            </select>
+          </label>
           <label htmlFor={`${formId}-comparative`} aria-label="Comparative Mode" className="flex min-h-11 items-center gap-2 cursor-pointer group/toggle rounded focus-within:outline focus-within:outline-2 focus-within:outline-indigo-500">
             <input 
                id={`${formId}-comparative`}
                type="checkbox" 
                className="sr-only"
                checked={isComparative} 
+               disabled={basis === 'cash'}
                onChange={(e) => setIsComparative(e.target.checked)} 
             />
             <div className={cn(
@@ -505,15 +500,22 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
         </motion.div>
       </div>
 
-      <StatementColumns kind="pl" title={labels.title} accounts={accounts} transactions={transactions}
+      {basis === 'cash' && (
+        <p role="status" className="text-xs text-[var(--muted)]">
+          {cashReady
+            ? <>Cash basis: invoices count when they are paid and bills when they are paid, in proportion to what was paid, on the payment's date; other entries count as posted.{serverData?.leftOut ? ` ${serverData.leftOut} ${serverData.leftOut === 1 ? 'entry' : 'entries'} on receivables or payables without cash (credit notes, write-offs) ${serverData.leftOut === 1 ? 'is' : 'are'} left out.` : ''} Payments not yet applied to an invoice or bill are not counted.</>
+            : loadingStates.pl ? 'Calculating on cash basis…' : 'Cash basis is calculated by the server, and it could not be reached: try again in a moment.'}
+        </p>
+      )}
+      {basis === 'accrual' && <StatementColumns kind="pl" title={labels.title} accounts={accounts} transactions={transactions}
         startDate={dateRange.start} endDate={dateRange.end} compare={isComparative}
         compareStartDate={prevRange.start} compareEndDate={prevRange.end}
         mode={columnMode} onModeChange={setColumnMode} showPercent={showPercent} onPercentChange={setShowPercent}
         totalData={data} previousTotalData={prevData} totalAuthoritative={isServerAuthoritative}
         formatMoney={formatCurrency} sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}
-        onDrillDown={(accountName, selectedTransactions) => setDrillDownTarget({ accountName, transactions: selectedTransactions })} />
+        onDrillDown={(accountName, selectedTransactions) => drill({ accountName, transactions: selectedTransactions })} />}
       {/* Detail Core */}
-      {!columnsActive && (
+      {(!columnsActive || basis === 'cash') && (
       <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative">
         <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
         <div className="p-4 border-b border-slate-150 bg-[var(--ink)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -567,32 +569,34 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(data.income?.accounts || {})
-                .sort(([, a]: [string, PLAccount], [, b]: [string, PLAccount]) => {
-                  let comp: number;
-                  if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
-                  else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
-                  else comp = (a.balance || 0) - (b.balance || 0);
-                  return sortDir === 'asc' ? comp : -comp;
-                })
-                .map(([id, acc]: [string, PLAccount]) => {
+            <div className={cn("grid gap-4", incomeGroups.grouped ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
+              {incomeGroups.rows.map(row => {
+                if (row.kind === 'subtotal') return (
+                  <AccountGroupSubtotal key={row.key} label={row.label} depth={row.depth}
+                    amount={incomeGroups.subtotals.get(row.member.id)?.amount || 0} formatMoney={formatCurrency} />
+                );
+                const id = row.member.id;
+                const acc = row.member;
                 const prevAcc = (prevData.income?.accounts as Record<string, PLAccount>)[id];
                 const prevBalance = prevAcc ? prevAcc.balance : 0;
                 const balance = acc.balance || 0;
                 const variance = isComparative && prevBalance !== 0 ? ((balance - prevBalance) / Math.abs(prevBalance)) * 100 : null;
 
                 return (
+                  <AccountGroupRow key={row.key} depth={row.depth} hasChildren={row.hasChildren} label={acc.name}
+                    expanded={!collapsedGroups.has(id)}
+                    onToggle={() => setCollapsedGroups(collapsed => toggleAccountGroup(collapsed, id))}>
                   <button
-                    key={id} 
                     type="button" onClick={() => {
                       const matchedTxs = transactions.filter(t => 
                         isTransactionInDateRange(t, dateRange.start, dateRange.end) && 
                         t.lines?.some(l => l.accountId === id || l.accountName === acc.name)
                       );
-                      setDrillDownTarget({
+                      drill({
                         accountName: acc.name,
-                        transactions: matchedTxs
+                        transactions: matchedTxs,
+                        // N-12: explained from the server, adding up to this figure
+                        explain: { accountIds: [id], startDate: dateRange.start || undefined, endDate: dateRange.end || undefined, expectedCents: balance, sign: -1 }
                       });
                     }}
                     title={`Click to drill down into ${acc.name}`}
@@ -619,6 +623,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       )}
                     </div>
                   </button>
+                  </AccountGroupRow>
                 );
               })}
             </div>
@@ -646,32 +651,34 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                  )}
                </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(data.expense?.accounts || {})
-                .sort(([, a]: [string, PLAccount], [, b]: [string, PLAccount]) => {
-                  let comp: number;
-                  if (sortBy === 'code') comp = (a.code || '').localeCompare(b.code || '');
-                  else if (sortBy === 'name') comp = (a.name || '').localeCompare(b.name || '');
-                  else comp = (a.balance || 0) - (b.balance || 0);
-                  return sortDir === 'asc' ? comp : -comp;
-                })
-                .map(([id, acc]: [string, PLAccount]) => {
+            <div className={cn("grid gap-4", expenseGroups.grouped ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
+              {expenseGroups.rows.map(row => {
+                if (row.kind === 'subtotal') return (
+                  <AccountGroupSubtotal key={row.key} label={row.label} depth={row.depth}
+                    amount={expenseGroups.subtotals.get(row.member.id)?.amount || 0} formatMoney={formatCurrency} />
+                );
+                const id = row.member.id;
+                const acc = row.member;
                 const prevAcc = (prevData.expense?.accounts as Record<string, PLAccount>)[id];
                 const prevBalance = prevAcc ? prevAcc.balance : 0;
                 const balance = acc.balance || 0;
                 const variance = isComparative && prevBalance !== 0 ? ((balance - prevBalance) / Math.abs(prevBalance)) * 100 : null;
 
                 return (
+                  <AccountGroupRow key={row.key} depth={row.depth} hasChildren={row.hasChildren} label={acc.name}
+                    expanded={!collapsedGroups.has(id)}
+                    onToggle={() => setCollapsedGroups(collapsed => toggleAccountGroup(collapsed, id))}>
                   <button
-                    key={id} 
                     type="button" onClick={() => {
                       const matchedTxs = transactions.filter(t => 
                         isTransactionInDateRange(t, dateRange.start, dateRange.end) && 
                         t.lines?.some(l => l.accountId === id || l.accountName === acc.name)
                       );
-                      setDrillDownTarget({
+                      drill({
                         accountName: acc.name,
-                        transactions: matchedTxs
+                        transactions: matchedTxs,
+                        // N-12: explained from the server, adding up to this figure
+                        explain: { accountIds: [id], startDate: dateRange.start || undefined, endDate: dateRange.end || undefined, expectedCents: balance, sign: 1 }
                       });
                     }}
                     title={`Click to drill down into ${acc.name}`}
@@ -698,6 +705,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                       )}
                     </div>
                   </button>
+                  </AccountGroupRow>
                 );
               })}
             </div>
@@ -747,6 +755,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           from="Profit & Loss"
           transactions={drillDownTarget.transactions}
           formatCurrency={formatCurrency}
+          explain={drillDownTarget.explain}
         />
       )}
     </div>

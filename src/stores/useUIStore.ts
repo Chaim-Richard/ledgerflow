@@ -109,7 +109,6 @@ interface UIState {
   setSidebarOpen: (val: boolean) => void;
   toggleQuietMode: () => void;
   toggleFocusMode: () => void;
-  setLanguage: (lang: 'en' | 'he') => void;
   setCompactMode: (val: boolean) => void;
   setProMode: (val: boolean) => void;
   setQuickEntryOpen: (val: boolean) => void;
@@ -370,7 +369,6 @@ export const useUIStore = create<UIState>((set) => ({
     isFocusMode: !state.isFocusMode,
     isSidebarOpen: state.isFocusMode // Open sidebar when leaving focus mode
   })),
-  setLanguage: (language) => set({ language }),
   setCompactMode: (isCompactMode) => set({ isCompactMode }),
   setProMode: (isProMode) => set({ isProMode }),
   setDeveloperMode: (developerMode) => {

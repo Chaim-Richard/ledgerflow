@@ -8,6 +8,7 @@ import { FileText, ArrowLeft, Download, ChevronRight, Users, Clock, Search, Arro
 import { toast } from 'sonner';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { csvMoney, downloadCsv } from '../../lib/csvExport';
+import { useUIStore } from '../../stores/useUIStore';
 
 interface PartyAgingReportViewProps {
   side: 'customer' | 'vendor';
@@ -23,6 +24,9 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
   const rawInvoices = useLedgerStore(s => s.invoices) || [];
   const rawBills = useLedgerStore(s => s.bills) || [];
   useLedgerCollections('bills', 'customers', 'invoices', 'vendors');
+  // N-12: the documents behind an aging row open themselves, add up to the row, and say when the list is partial
+  const openRecord = useUIStore(s => s.openRecord);
+  const docsPartial = useLedgerStore(s => Boolean(s.truncatedCollections?.[side === 'customer' ? 'invoices' : 'bills']));
 
   const parties = isCustomer ? rawCustomers : rawVendors;
   const documents = isCustomer ? rawInvoices : rawBills;
@@ -287,6 +291,10 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                       <div className="text-lg font-mono font-black text-slate-900 dark:text-white">
                         {formatCurrency(owed, doc.currency)}
                       </div>
+                      <button type="button" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                        onClick={() => { setSelectedPartyId(null); openRecord({ type: isCustomer ? 'invoice' : 'bill', id: doc.id }); }}>
+                        Open<span className="sr-only"> {isCustomer ? 'invoice' : 'bill'} {doc.number || doc.id}</span>
+                      </button>
                       <div className="text-xs text-[var(--muted)]">
                         Total {formatCurrency(docTotal, doc.currency)} | Still owed {formatCurrency(owed, doc.currency)}
                       </div>
@@ -300,6 +308,13 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
                   No unpaid records found.
                 </div>
               )}
+              {selectedPartyDocs.length > 0 && (
+                <div className="flex items-center justify-between border-t border-[var(--line)] pt-3 text-sm font-semibold">
+                  <span>Still owed in all ({selectedPartyDocs.length} document{selectedPartyDocs.length === 1 ? '' : 's'}, in the base currency)</span>
+                  <span className="font-mono">{formatCurrency(selectedPartyDocs.reduce((sum, d) => sum + outstandingBaseCents(d, side), 0))}</span>
+                </div>
+              )}
+              {docsPartial && <p role="status" className="text-xs text-amber-700 dark:text-amber-400">Only part of the {isCustomer ? 'invoices' : 'bills'} is loaded on this screen, so this list and the row may be short. Load the full history to be sure.</p>}
             </div>
           </div>
         </div>

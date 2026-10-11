@@ -5,9 +5,9 @@ import {
   computeBalanceSheet,
   computeTrialBalance,
   computeCashFlow,
-  computeTaxLiability,
   computeStatement
 } from '../server/reports/computeReports';
+import { taxTotals } from './helpers/taxTotals';
 import type { ChartAccount, Transaction, Invoice, Bill, Payment, Customer } from '../types';
 import {
   makeChartAccount,
@@ -176,7 +176,7 @@ describe('Report Contract Structural Guard Suite', () => {
         taxInclusive: false
       })
     ];
-    const report = computeTaxLiability(invoices, [], '2026-01-01', '2026-12-31');
+    const report = taxTotals(invoices, [], '2026-01-01', '2026-12-31');
     assert.equal(report.taxCollectedCents, 10000, 'Tax collected on $1000 @ 10% tax-exclusive must be exactly 10000 cents');
     assert.equal(report.taxableSalesCents, 100000, 'Taxable base for tax-exclusive invoice must equal total net sales ($1000)');
   });
@@ -192,7 +192,7 @@ describe('Report Contract Structural Guard Suite', () => {
         taxInclusive: true
       })
     ];
-    const report = computeTaxLiability(invoices, [], '2026-01-01', '2026-12-31');
+    const report = taxTotals(invoices, [], '2026-01-01', '2026-12-31');
     assert.equal(report.taxCollectedCents, 10000, 'Tax collected on $1100 @ 10% tax-inclusive must be exactly 10000 cents');
     assert.equal(report.taxableSalesCents, 100000, 'Taxable base for tax-inclusive invoice must back out tax ($1000)');
   });
@@ -208,7 +208,7 @@ describe('Report Contract Structural Guard Suite', () => {
         taxInclusive: false
       })
     ];
-    const report = computeTaxLiability([], bills, '2026-01-01', '2026-12-31');
+    const report = taxTotals([], bills, '2026-01-01', '2026-12-31');
     assert.equal(report.taxPaidCents, 10000, 'Tax paid on $1000 @ 10% tax-exclusive must be exactly 10000 cents');
     assert.equal(report.taxablePurchasesCents, 100000, 'Taxable purchases for tax-exclusive bill must equal total net ($1000)');
   });
@@ -234,7 +234,7 @@ describe('Report Contract Structural Guard Suite', () => {
         taxInclusive: false
       })
     ];
-    const report = computeTaxLiability(invoices, bills, '2026-01-01', '2026-12-31');
+    const report = taxTotals(invoices, bills, '2026-01-01', '2026-12-31');
     assert.equal(report.taxCollectedCents, 0, 'Draft invoice must not count towards taxCollectedCents');
     assert.equal(report.taxPaidCents, 0, 'Draft bill must not count towards taxPaidCents');
   });
@@ -262,7 +262,7 @@ describe('Report Contract Structural Guard Suite', () => {
           taxInclusive: false
         })
       ];
-      const report = computeTaxLiability([], bills, '2026-01-01', '2026-12-31');
+      const report = taxTotals([], bills, '2026-01-01', '2026-12-31');
       assert.equal(
         report.taxPaidCents,
         want,

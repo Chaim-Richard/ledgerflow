@@ -98,9 +98,19 @@ export async function deleteAccount(db: Firestore, user: { uid: string; email?: 
 
   // personal data
   await db.collection('users').doc(user.uid).delete().catch(() => {});
+  await db.collection('recoveryCodes').doc(user.uid).delete().catch(() => {});
   for (const table of ['customTemplates', 'notifications', 'loginAudits']) {
     const snap = await db.collection(table).where('uid', '==', user.uid).get();
     for (const d of snap.docs) await d.ref.delete();
+  }
+  // DA-01: their own groups of books (the workspaces in them are not touched)
+  for (const d of (await db.collection('workspaceGroups').where('ownerUid', '==', user.uid).get()).docs) await d.ref.delete();
+  // DA-01: groups others shared with this person no longer name them
+  for (const d of (await db.collection('workspaceGroups').where('sharedWith', 'array-contains', user.uid).get()).docs) {
+    const data = d.data() || {};
+    const emails = { ...((data.sharedEmails as Record<string, string>) || {}) };
+    delete emails[user.uid];
+    await d.ref.update({ sharedWith: (data.sharedWith as string[]).filter(u => u !== user.uid), sharedEmails: emails });
   }
   await deleteSignIn(user.uid);
   return { scheduledForDeletion: plan.scheduleDeletion.map(w => w.id), left: plan.leave.map(w => w.id) };

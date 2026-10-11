@@ -9,7 +9,12 @@ export interface AccountRef {
 export interface LineAccountWeight {
   account: AccountRef;
   weightCents: number;
+  /** the line's labels (BF-09): posted on its share, so reports by label include it */
+  dimensions?: Record<string, string>;
 }
+
+const labelKey = (dimensions?: Record<string, string>) =>
+  dimensions && Object.keys(dimensions).length > 0 ? JSON.stringify(Object.entries(dimensions).sort(([a], [b]) => a.localeCompare(b))) : '';
 
 /**
  * Splits an amount over weights so the parts add up exactly (largest remainder). Used to post
@@ -27,15 +32,19 @@ export function allocateCents(totalCents: number, weights: number[]): number[] {
   return parts;
 }
 
-/** One posting line per account (lines on the same account are added together). */
-function splitByAccount(totalCents: number, fallback: AccountRef, lineAccounts: LineAccountWeight[] | undefined): Array<{ account: AccountRef; amountCents: number }> {
+/**
+ * One posting line per account and labels: lines on the same account with the same labels are added
+ * together; the same account with different labels (Property 5, Property 6) stays two lines (BF-09).
+ */
+function splitByAccount(totalCents: number, fallback: AccountRef, lineAccounts: LineAccountWeight[] | undefined): Array<{ account: AccountRef; amountCents: number; dimensions?: Record<string, string> }> {
   if (!lineAccounts || lineAccounts.length === 0) return [{ account: fallback, amountCents: totalCents }];
   const parts = allocateCents(totalCents, lineAccounts.map(l => l.weightCents));
-  const byAccount = new Map<string, { account: AccountRef; amountCents: number }>();
+  const byAccount = new Map<string, { account: AccountRef; amountCents: number; dimensions?: Record<string, string> }>();
   lineAccounts.forEach((l, i) => {
-    const entry = byAccount.get(l.account.id) || { account: l.account, amountCents: 0 };
+    const key = `${l.account.id}|${labelKey(l.dimensions)}`;
+    const entry = byAccount.get(key) || { account: l.account, amountCents: 0, ...(labelKey(l.dimensions) ? { dimensions: { ...l.dimensions } } : {}) };
     entry.amountCents += parts[i];
-    byAccount.set(l.account.id, entry);
+    byAccount.set(key, entry);
   });
   return [...byAccount.values()].filter(e => e.amountCents !== 0);
 }
@@ -134,7 +143,8 @@ export class TransactionTemplates {
         accountName: part.account.name,
         amountCents: -part.amountCents, // Credit Sales Revenue
         description: `Sales Revenue for Invoice ${params.invoiceNumber} (${params.customerName})`,
-        exchangeRate: rate
+        exchangeRate: rate,
+        ...(part.dimensions ? { dimensions: part.dimensions } : {})
       });
     }
 
@@ -169,7 +179,8 @@ export class TransactionTemplates {
       accountName: part.account.name,
       amountCents: part.amountCents, // Debit Expense/COGS
       description: `Expense posting for Bill ${params.billNumber} (${params.vendorName})`,
-      exchangeRate: rate
+      exchangeRate: rate,
+      ...(part.dimensions ? { dimensions: part.dimensions } : {})
     }));
 
     if (taxCents > 0 && params.taxAccount) {

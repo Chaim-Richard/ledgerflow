@@ -1,8 +1,10 @@
 import { getLocalDateISO, roundCents } from '../../lib/utils';
+import { planReturnEntries, returnableLines, returnProblem } from '../../lib/salesReturns';
+import { isIncomeAccount, resolveAccountRole } from '../../lib/accountUtils';
 import { CreditNote, VendorCredit } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
-import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi } from './postingKit';
+import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi, reversalDate, findAccount, getInvoices } from './postingKit';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
 
 /**
@@ -38,7 +40,7 @@ export async function postCreditNoteLedger(
     accounts,
     mappings,
     ['revenue', 'sales', 'income', 'sales returns'],
-    a => a.type === 'income' || a.category === 'Revenue',
+    a => isIncomeAccount(a) || a.category === 'Revenue',
     'Sales Returns / Revenue'
   );
 
@@ -59,7 +61,7 @@ export async function postCreditNoteLedger(
     txsToPost.push({
       uid,
       workspaceId,
-      date: today,
+      date: reversalDate(prevTx.date, today, context),
       description: `Reversal of prior credit note posting (CN ${creditNoteId})`,
       totalAmountCents: prevTx.totalAmountCents,
       currency: prevTx.currency || 'USD',
@@ -71,7 +73,9 @@ export async function postCreditNoteLedger(
         creditNoteId,
         type: 'credit-note-reversal',
         reversesTxId: prevTx.id,
-        isReversal: true
+        isReversal: true,
+        // a returned-goods entry's reversal names its invoice too (BF-06)
+        ...(prevTx.metadata?.invoiceId ? { invoiceId: prevTx.metadata.invoiceId } : {})
       },
       lines: TransactionTemplates.buildReversalLines(prevTx.lines || [], prevTx.description)
     });
@@ -125,6 +129,24 @@ export async function postCreditNoteLedger(
     ]
   };
   txsToPost.push(inBaseCurrency(cnTx, workspaceId, context));
+
+  // BF-06: goods the customer sent back go back into stock, at the cost they left at
+  const goods = (creditNoteData.returnedGoods || []).filter(g => g.quantity > 0);
+  if (goods.length > 0) {
+    const invoice = getInvoices(context).find(i => i.id === creditNoteData.invoiceId);
+    if (!invoice) throw new Error('Returned goods need the credited invoice: link the credit note to it, or open Sales and try again.');
+    // the credit note's own earlier returns are reversed above, so they don't count against it
+    const lines = returnableLines(invoice, getTransactions(context), creditNoteId);
+    const problem = returnProblem(goods, lines);
+    if (problem) throw new Error(problem);
+    const inventoryAccount = findAccount(accounts, mappings, ['inventory', 'stock', 'inventory asset'], a => resolveAccountRole(a) === 'inventory');
+    const cogsAccount = findAccount(accounts, mappings, ['cogs', 'cost of goods sold', 'direct costs'], a => resolveAccountRole(a) === 'cogs');
+    if (!inventoryAccount || !cogsAccount) throw new Error('Returned goods need an Inventory account and a Cost of Goods Sold account in the chart of accounts.');
+    txsToPost.push(...planReturnEntries({
+      creditNote: { id: creditNoteId, number: creditNoteData.number, invoiceId: creditNoteData.invoiceId, date: cnDate, returnedGoods: goods },
+      lines, uid, workspaceId, baseCurrency: currentWs?.currency || 'USD', inventoryAccount, cogsAccount,
+    }) as PostableTransaction[]);
+  }
 
   await postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
 }
@@ -183,7 +205,7 @@ export async function postVendorCreditLedger(
     txsToPost.push({
       uid,
       workspaceId,
-      date: today,
+      date: reversalDate(prevTx.date, today, context),
       description: `Reversal of prior vendor credit posting (VC ${vendorCreditId})`,
       totalAmountCents: prevTx.totalAmountCents,
       currency: prevTx.currency || 'USD',
@@ -226,6 +248,16 @@ export async function postVendorCreditLedger(
     'Tax Paid'
   ) : null;
 
+  // BF-07: stock sent back to the vendor comes off Inventory (at the bill line's cost) instead of the
+  // expense, and the entry says which units leave stock (the server takes them out)
+  const goods = (vendorCreditData.returnedGoods || []).filter(g => g.quantity > 0);
+  const goodsBase = goods.map(g => roundCents(g.valueCents * rate));
+  const goodsTotal = goodsBase.reduce((s, c) => s + c, 0);
+  if (goodsTotal > amount - vcTax) throw new Error('The goods sent back are worth more than the credit (before tax): raise the credit, or send back fewer');
+  const inventoryAccount = goods.length ? findAccount(accounts, mappings, ['inventory', 'stock', 'inventory asset'], a => resolveAccountRole(a) === 'inventory') : null;
+  if (goods.length && !inventoryAccount) throw new Error('Add an Inventory account (an asset) to the chart of accounts to send stock back to a vendor');
+  const rebate = amount - vcTax - goodsTotal;
+
   const vcTx = {
     uid,
     workspaceId,
@@ -240,11 +272,13 @@ export async function postVendorCreditLedger(
     metadata: {
       vendorCreditId,
       vendorId: vendorCreditData.vendorId,
-      type: 'vendor-credit-issuance'
+      type: 'vendor-credit-issuance',
+      ...(goods.length ? { stockOut: goods.map((g, i) => ({ itemId: g.itemId, quantity: g.quantity, valueCents: goodsBase[i] })) } : {}),
     },
     lines: [
       { accountId: apAccount.id, accountName: apAccount.name, amountCents: amount, debitCents: amount, creditCents: 0, description: 'Accounts Payable Reduction' },
-      { accountId: expenseAccount.id, accountName: expenseAccount.name, amountCents: -(amount - vcTax), debitCents: 0, creditCents: amount - vcTax, description: 'Purchase Rebate / Expense Discount' },
+      ...(goodsTotal > 0 && inventoryAccount ? [{ accountId: inventoryAccount.id, accountName: inventoryAccount.name, amountCents: -goodsTotal, debitCents: 0, creditCents: goodsTotal, description: 'Stock sent back to the vendor' }] : []),
+      ...(rebate !== 0 ? [{ accountId: expenseAccount.id, accountName: expenseAccount.name, amountCents: -rebate, debitCents: 0, creditCents: rebate, description: 'Purchase Rebate / Expense Discount' }] : []),
       ...(vcTax > 0 && vcTaxAccount ? [{ accountId: vcTaxAccount.id, accountName: vcTaxAccount.name, amountCents: -vcTax, debitCents: 0, creditCents: vcTax, description: 'Input tax reversed by the credit' }] : [])
     ]
   };

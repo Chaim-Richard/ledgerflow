@@ -68,6 +68,7 @@ describe('Route Contract Guard Suite (§0c Route Contract)', () => {
       '/api/v1/email-events',
       '/api/v1/invites',
       '/api/v1/plaid',
+      '/api/v1/currency', // rates (server.ts currencyRouter), used by the group summary's translation (Z-17)
       '/api/v1/math',
       '/api/v1/system',
       '/api/v1/public/status',

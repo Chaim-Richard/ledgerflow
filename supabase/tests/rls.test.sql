@@ -291,7 +291,7 @@ begin
     'transactions','journalEntries','invoices','payments','bills','creditNotes','vendorCredits',
     'projects','estimates','inventory','recurring','budgets','autoRules','fixedAssets','assets',
     'taxRates','dimensionNodes','vendors','customers','rulePatterns','scenarios','loans',
-    'employees','payRuns','partners','reconciliations','workspaceShards'
+    'employees','partners','reconciliations','workspaceShards'
   ] loop
     doc := case when t = 'transactions' then '{"workspaceId":"ws1","date":"2026-02-15","status":"draft"}'
                 else '{"workspaceId":"ws1"}' end;
@@ -430,6 +430,40 @@ select pg_temp.expect_denied('owner changes a filed return', 'u-owner', $$select
 select pg_temp.expect_denied('owner files a return from the browser', 'u-owner',
   $$insert into "taxReturns"(id,data) values ('tr2', '{"workspaceId":"ws1","startDate":"2026-01-01","endDate":"2026-03-31"}')$$);
 
+-- recovery codes (L-85): server only; nobody reads or writes them from the browser, not even their owner
+select set_config('request.jwt.claims', '', true);
+insert into "recoveryCodes" (id, data) values ('u-owner', '{"uid":"u-owner","codes":[]}');
+select pg_temp.expect_denied('owner reads their recovery codes', 'u-owner', $$select count(*) from "recoveryCodes"$$);
+select pg_temp.expect_denied('owner writes recovery codes', 'u-owner', $$select lf_set('recoveryCodes','u-owner','{"uid":"u-owner","codes":[]}'::jsonb)$$);
+
+-- questions about entries (BD-07): written only by the server; members read; nobody writes them from the browser
+select set_config('request.jwt.claims', '', true);
+insert into "clientQueries" (id, data) values ('cq1', '{"workspaceId":"ws1","transactionId":"t1","status":"open","messages":[]}');
+select pg_temp.expect_count('viewer reads questions', 'u-view', $$select count(*) from "clientQueries"$$, 1);
+select pg_temp.expect_count('outsider reads questions', 'u-out', $$select count(*) from "clientQueries"$$, 0);
+select pg_temp.expect_denied('owner answers from the browser', 'u-owner', $$select lf_update('clientQueries','cq1','{"status":"answered"}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper asks from the browser', 'u-book',
+  $$insert into "clientQueries"(id,data) values ('cq2', '{"workspaceId":"ws1","transactionId":"t1","status":"open"}')$$);
+
+-- stock moves (W-02): the history of each item's quantity, written only by the server with the change; members read
+select set_config('request.jwt.claims', '', true);
+insert into "stockMoves" (id, data) values ('sm1', '{"workspaceId":"ws1","itemId":"i1","kind":"sale","quantity":-2,"quantityBefore":5,"quantityAfter":3,"seq":"1"}');
+select pg_temp.expect_count('viewer reads the stock history', 'u-view', $$select count(*) from "stockMoves"$$, 1);
+select pg_temp.expect_count('outsider reads no stock history', 'u-out', $$select count(*) from "stockMoves"$$, 0);
+select pg_temp.expect_denied('owner rewrites the stock history from the browser', 'u-owner', $$select lf_update('stockMoves','sm1','{"quantityAfter":30}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper adds a stock move from the browser', 'u-book',
+  $$insert into "stockMoves"(id,data) values ('sm2', '{"workspaceId":"ws1","itemId":"i1","kind":"adjustment","quantity":5}')$$);
+
+-- pay runs (U-02, U-10): posted, approved and undone only by the server; members read
+select set_config('request.jwt.claims', '', true);
+insert into "payRuns" (id, data) values ('pr1', '{"workspaceId":"ws1","date":"2026-02-15","status":"awaiting_approval"}');
+select pg_temp.expect_count('viewer reads pay runs', 'u-view', $$select count(*) from "payRuns"$$, 1);
+select pg_temp.expect_count('outsider reads pay runs', 'u-out', $$select count(*) from "payRuns"$$, 0);
+select pg_temp.expect_denied('owner approves a pay run from the browser', 'u-owner', $$select lf_update('payRuns','pr1','{"status":"processed"}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper adds a pay run from the browser', 'u-book',
+  $$insert into "payRuns"(id,data) values ('pr2', '{"workspaceId":"ws1","date":"2026-02-15","status":"processed"}')$$);
+select pg_temp.expect_denied('owner deletes a pay run from the browser', 'u-owner', $$delete from "payRuns" where id = 'pr1'$$);
+
 -- purchase orders: members read; owners, accountants and bookkeepers write
 select pg_temp.expect_ok('bookkeeper saves a purchase order', 'u-book',
   $$insert into "purchaseOrders"(id,data) values ('po1', '{"workspaceId":"ws1","poNumber":"PO-2026-001","vendorId":"v1","vendorName":"V","status":"approved","items":[],"totalAmountCents":1000,"receipts":[]}')$$);
@@ -509,6 +543,31 @@ begin
   execute 'reset role';
   if not refused then raise exception 'FAIL password-only session wrote a document'; end if;
 end $$;
+
+-- Y-30: a workspace that requires two-step login: its members without an authenticator see nothing
+-- until they set one up (a code-verified session); people in other workspaces are unaffected
+select set_config('request.jwt.claims', '', true);
+insert into workspaces (id, data) values ('ws-2fa', '{"uid":"u-strict","name":"Strict","requireTwoStep":true,"roles":{"u-strict-book":"bookkeeper"}}');
+insert into customers (id, data) values ('c-2fa', '{"workspaceId":"ws-2fa","name":"Kept"}');
+select pg_temp.expect_value('a member without two-step login sees nothing',
+  $$select pg_temp.count_as('u-strict-book', 'aal1', 'select count(*) from customers')::text$$, '0');
+select pg_temp.expect_value('the same member, code-verified, sees the books',
+  $$select pg_temp.count_as('u-strict-book', 'aal2', 'select count(*) from customers')::text$$, '1');
+select pg_temp.expect_value('the owner too',
+  $$select pg_temp.count_as('u-strict', 'aal1', 'select count(*) from workspaces')::text$$, '0');
+select pg_temp.expect_count('someone in another workspace is unaffected', 'u-owner', $$select count(*) from workspaces where id = 'ws1'$$, 1);
+select pg_temp.expect_denied('a member cannot switch the requirement off from the browser', 'u-strict',
+  $$select lf_update('workspaces','ws-2fa','{"requireTwoStep":false}'::jsonb)$$);
+
+-- groups of books (DA-01): each person reads only their own; only the server writes them
+select set_config('request.jwt.claims', '', true);
+insert into "workspaceGroups" (id, data) values ('grp_owner1', '{"ownerUid":"u-owner","name":"Holding","workspaceIds":["ws1"]}');
+select pg_temp.expect_count('the owner reads their group', 'u-owner', $$select count(*) from "workspaceGroups"$$, 1);
+select pg_temp.expect_count('a member of the same workspace does not', 'u-view', $$select count(*) from "workspaceGroups"$$, 0);
+select pg_temp.expect_count('an outsider does not', 'u-out', $$select count(*) from "workspaceGroups"$$, 0);
+select pg_temp.expect_denied('the owner renames it from the browser', 'u-owner', $$select lf_update('workspaceGroups','grp_owner1','{"name":"Mine"}'::jsonb)$$);
+select pg_temp.expect_denied('someone adds a group from the browser', 'u-out',
+  $$insert into "workspaceGroups"(id,data) values ('grp_out1', '{"ownerUid":"u-out","name":"Theirs","workspaceIds":["ws1"]}')$$);
 
 select 'ALL RLS TESTS PASSED' as result;
 rollback;

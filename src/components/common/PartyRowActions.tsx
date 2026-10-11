@@ -6,14 +6,15 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { getIdToken } from '../../firebase';
 import { isArchivedParty } from '../../lib/contacts';
-import { safeConfirm } from '../../lib/utils';
+import { deleteWithUndo } from '../../lib/undoableDelete';
 import type { Customer, Vendor } from '../../types';
 import type { PartySide } from './PartyModal';
 
 /**
- * Archive, restore or delete a customer or vendor right in the list (I-22). Delete asks the server,
- * which refuses when anything refers to the contact (invoices, payments, schedules…) and says what;
- * then "Archive" keeps it on those records and out of the list.
+ * Archive, restore or delete a customer or vendor right in the list (I-22). Delete asks the server
+ * first, which refuses when anything refers to the contact (invoices, payments, schedules…) and says
+ * what; then "Archive" keeps it on those records and out of the list. Otherwise the contact leaves the
+ * list with an Undo for a few seconds before it is really deleted (BO-08).
  */
 export default function PartyRowActions({ side, party }: { side: PartySide; party: Customer | Vendor }) {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -26,25 +27,35 @@ export default function PartyRowActions({ side, party }: { side: PartySide; part
     updateEntity(path, party.id, { status: on ? 'inactive' : 'active' }, on ? `"${party.name}" archived` : `"${party.name}" restored`);
 
   const remove = async () => {
-    if (!workspaceId || !safeConfirm(`Delete ${side} "${party.name}"? This cannot be undone.`)) return;
+    if (!workspaceId) return;
     setBusy(true);
-    try {
-      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}/contacts/${side}/${encodeURIComponent(party.id)}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${await getIdToken()}` },
-      });
+    const url = `/api/v1/workspaces/${encodeURIComponent(workspaceId)}/contacts/${side}/${encodeURIComponent(party.id)}`;
+    const send = async (check: boolean) => {
+      const res = await fetch(check ? `${url}?check=1` : url, { method: 'DELETE', headers: { Authorization: `Bearer ${await getIdToken()}` } });
       const data = await res.json().catch(() => ({}));
-      if (res.status === 409) {
-        toast.error(data.message || 'This contact is in use', archived ? undefined : { action: { label: 'Archive', onClick: () => { void setArchived(true); } } });
-        return;
-      }
-      if (!res.ok) throw new Error(data.message || 'The contact was not deleted');
-      useLedgerStore.setState(s => (side === 'customer'
-        ? { customers: s.customers.filter(c => c.id !== party.id) }
-        : { vendors: s.vendors.filter(v => v.id !== party.id) }));
-      toast.success(`"${party.name}" deleted`);
+      if (!res.ok) throw Object.assign(new Error(data.message || 'The contact was not deleted'), { status: res.status });
+    };
+    try {
+      // ask first, so a contact in use is never hidden and then brought back
+      await send(true);
+      const list = side === 'customer' ? 'customers' : 'vendors';
+      const keep = useLedgerStore.getState()[list] as Array<Customer | Vendor>;
+      const at = keep.findIndex(p => p.id === party.id);
+      deleteWithUndo({
+        key: `${path}/${party.id}`,
+        label: `${side === 'customer' ? 'Customer' : 'Vendor'} "${party.name}"`,
+        hide: () => useLedgerStore.setState(s => ({ [list]: (s[list] as Array<Customer | Vendor>).filter(p => p.id !== party.id) })),
+        restore: () => useLedgerStore.setState(s => {
+          const rows = (s[list] as Array<Customer | Vendor>).filter(p => p.id !== party.id);
+          rows.splice(at < 0 ? rows.length : Math.min(at, rows.length), 0, party);
+          return { [list]: rows };
+        }),
+        commit: () => send(false),
+      });
     } catch (err) {
-      toast.error((err as Error).message);
+      const status = (err as { status?: number }).status;
+      if (status === 409) toast.error((err as Error).message, archived ? undefined : { action: { label: 'Archive', onClick: () => { void setArchived(true); } } });
+      else toast.error((err as Error).message);
     } finally {
       setBusy(false);
     }

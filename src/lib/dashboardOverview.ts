@@ -54,6 +54,25 @@ export function dashboardLayout(value?: unknown): DashboardLayout {
   const order = allowed(record.order);
   return { order: [...order, ...DASHBOARD_WIDGETS.filter(id => !order.includes(id))], hidden: allowed(record.hidden) };
 }
+/** BC-02: the roles an owner can give a starting layout. */
+export const DASHBOARD_ROLES = ['owner', 'accountant', 'bookkeeper', 'viewer'] as const;
+export type DashboardRole = typeof DASHBOARD_ROLES[number];
+export type RoleDashboards = Partial<Record<DashboardRole, DashboardLayout>>;
+/** What an owner sends for one role's starting layout (null takes it away); null when it is fine. */
+export function roleDashboardProblem(role: unknown, layout: unknown): string | null {
+  if (!DASHBOARD_ROLES.includes(role as DashboardRole)) return 'Choose one of the roles';
+  if (layout === null) return null;
+  const record = layout && typeof layout === 'object' ? layout as Record<string, unknown> : null;
+  if (!record || !Array.isArray(record.order) || !Array.isArray(record.hidden)) return 'The layout needs the widgets in order and the hidden ones';
+  const known = (items: unknown[]) => items.length <= DASHBOARD_WIDGETS.length && items.every(item => DASHBOARD_WIDGETS.includes(item as DashboardWidget));
+  return known(record.order) && known(record.hidden) ? null : 'The layout names a widget that does not exist';
+}
+/** BC-02: the person's own arrangement when they made one, else their role's starting layout, else the default. */
+export function startingLayout(own: unknown, roleLayouts: unknown, role: string | null | undefined): DashboardLayout {
+  if (own) return dashboardLayout(own);
+  const forRole = roleLayouts && typeof roleLayouts === 'object' ? (roleLayouts as Record<string, unknown>)[String(role)] : undefined;
+  return dashboardLayout(forRole);
+}
 export function dashboardReportHref(report: string, startDate: string, endDate: string, fiscalStart: number): string {
   const query = new URLSearchParams({ report, start: startDate, end: endDate, y: String(getFiscalYearBounds(endDate, fiscalStart).fiscalYear), t: 'month', m: String(Number(endDate.slice(5, 7))) });
   return `?${query.toString()}#reports`;

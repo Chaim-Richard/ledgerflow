@@ -1,4 +1,6 @@
 import { ApprovalRefused, serverApproval } from '../../services/invoiceApprovalGuard';
+import { approvalEvent, notifyApproval, type ApprovalEvent } from '../../services/approvalNotifications';
+import type { InvoiceApprovalRecord } from '../../../lib/invoiceApproval';
 import express from 'express';
 import { FieldValue } from '../../db/firestore';
 import { DoubleEntryValidator } from '../../../kernel/validation/DoubleEntryValidator';
@@ -15,6 +17,8 @@ import { writeServerAuditLog } from '../../services/auditLogService';
 import { deletionSentence, deletionSnapshot } from '../../services/deletionRecord';
 import { MAX_RECATEGORIZE, RecategorizeError, recategorize } from '../../services/recategorizeService';
 import { workspaceRole } from '../../../lib/periodLock';
+import { refusedLabels, refusedLabelsMessage } from '../../../lib/requiredLabels';
+import { DELIVERY_COGS_TYPE, DELIVERY_RETURN_TYPE } from '../../../lib/deliveries';
 
 
 /** Many entries at once: posting in bulk and batch updates. Part of /api/v1/transactions (F-06), registered in the original order. */
@@ -89,10 +93,25 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
         validatedTransactions.push(validatedTx);
       }
 
+      // BF-08 step 2: a delivery's cost entries are made by the delivery (Deliver on the order), never posted directly
+      const delivery = validatedTransactions.find(tx => tx.metadata?.type === DELIVERY_COGS_TYPE || tx.metadata?.type === DELIVERY_RETURN_TYPE);
+      if (delivery) return res.status(400).json({ error: 'Deliver goods from the order (Deliver), not as an entry', transactionId: delivery.id });
+
+      // Z-12: a required label whose rule refuses stops an entry a person typed without it. Entries
+      // made with bank lines imported in this request are saved and listed instead: an import never stops.
+      const imported = new Set(bankLines.map(b => b.matchedTransactionId).filter(Boolean));
+      for (const tx of validatedTransactions) {
+        const missing = imported.has(tx.id) ? [] : refusedLabels(tx, wsData?.dimensions);
+        if (missing.length > 0) return res.status(400).json({ error: refusedLabelsMessage(missing), transactionId: tx.id, missingLabels: missing });
+      }
+
       // ONE database transaction: the document change, the ledger entries, stock moved by cost of
       // goods sold entries, and the idempotency record all commit together or not at all.
       let body: Record<string, unknown> = { status: 'ok', count: validatedTransactions.length };
+      // S-09: an approval asked for or decided with this save, told after it commits
+      let approvalNotice: { invoiceId: string; invoice: Record<string, unknown>; event: ApprovalEvent } | null = null;
       await db.runTransaction(async (t) => {
+        approvalNotice = null;
         // Reads first
         const entityRef = entityMutation ? db.collection(entityMutation.collection).doc(entityMutation.docId) : null;
         let existingEntity: Record<string, unknown> | undefined;
@@ -137,6 +156,8 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
           if (entityMutation.collection === 'invoices') {
             try {
               Object.assign(validatedData, serverApproval(existingEntity, validatedData, wsData || {}, user.uid, new Date().toISOString()));
+              const event = approvalEvent(existingEntity?.approval as InvoiceApprovalRecord | undefined, validatedData.approval as InvoiceApprovalRecord | undefined);
+              if (event && entityRef) approvalNotice = { invoiceId: entityRef.id, invoice: { ...(existingEntity || {}), ...validatedData }, event };
             } catch (err) {
               if (err instanceof ApprovalRefused) throw new LedgerPostingError(403, err.message);
               throw err;
@@ -161,6 +182,8 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
         if (idempotencyRef) t.set(idempotencyRef, { createdAt: FieldValue.serverTimestamp(), code: 200, body, workspaceId: wsId });
       });
 
+      const notice = approvalNotice as { invoiceId: string; invoice: Record<string, unknown>; event: ApprovalEvent } | null;
+      if (notice) await notifyApproval(db, { workspaceId: wsId, ...notice, actorUid: user.uid });
       res.json(body);
     } catch (e) {
       console.error('[BULK TRANSACTIONS ERROR]', e);

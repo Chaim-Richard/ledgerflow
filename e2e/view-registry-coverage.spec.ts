@@ -75,11 +75,23 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
   }
 
   const reportTabs = [
+    { label: 'Budget vs Actual', componentName: 'BudgetActualReportView' },
     { label: 'Sales by Item', componentName: 'SalesByItemReportView' },
     { label: 'Journal Sheet', componentName: 'JournalSheetReportView' },
     { label: 'Contact Balance Summary', componentName: 'ContactBalanceSummaryView' },
     { label: 'Inventory Valuation', componentName: 'InventoryValuationReportView' },
+    { label: 'Inventory Item Details', componentName: 'InventoryDetailsReportView' },
     { label: 'Transactions by Reference', componentName: 'TransactionsByReferenceView' },
+    { label: 'Group Summary', componentName: 'GroupSummaryReportView' },
+    { label: 'Ask the Books', componentName: 'AskBooksView' },
+    { label: 'Profit by Label', componentName: 'LabelProfitReportView' },
+    { label: 'Goods Not Yet Billed', componentName: 'GoodsNotBilledReportView' },
+    { label: 'Sales Commission', componentName: 'CommissionReportView' },
+    { label: 'Backorders', componentName: 'BackordersReportView' },
+    { label: 'Stock Aging', componentName: 'StockAgingReportView' },
+    { label: 'Item-wise Register', componentName: 'ItemRegisterReportView' },
+    { label: 'Asset Depreciation Ledger', componentName: 'DepreciationLedgerReportView' },
+    { label: 'Bank Clearance Summary', componentName: 'BankClearanceReportView' },
   ];
 
   for (const report of reportTabs) {
@@ -106,6 +118,15 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Schedule', componentName: 'ScheduleSettingsView' },
     { label: 'Incoming events', componentName: 'IncomingEventsSettingsView' },
     { label: 'Tags', componentName: 'TagsSettingsView' },
+    { label: 'Scheduled reports', componentName: 'ScheduledReportsSettingsView' },
+    { label: 'Alerts', componentName: 'AlertsSettingsView' },
+    { label: 'Modules', componentName: 'ModulesSettingsView' },
+    { label: 'Split rules', componentName: 'AllocationRulesSettingsView' },
+    { label: 'Price lists', componentName: 'PriceListsSettingsView' },
+    { label: 'Sales reps', componentName: 'SalesRepsSettingsView' },
+    { label: 'Stages', componentName: 'StagesSettingsView' },
+    { label: 'Currencies', componentName: 'CurrenciesSettingsView' },
+    { label: 'Groups of books', componentName: 'GroupsSettingsView' },
   ];
 
   for (const tab of settingsTabs) {

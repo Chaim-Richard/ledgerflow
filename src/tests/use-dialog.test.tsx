@@ -95,6 +95,7 @@ describe('useDialog', () => {
       'src/components/ledger/JournalEntryModal.tsx', 'src/components/purchases/PurchaseOrdersView.tsx', 'src/components/finance/CreditNotesView.tsx',
       'src/components/inventory/InventoryItemDialog.tsx', 'src/components/inventory/StockAdjustDialog.tsx', 'src/components/inventory/StockCountDialog.tsx',
       'src/components/inventory/CogsDialog.tsx', 'src/components/sales/WriteOffModal.tsx', 'src/components/common/MergePartyDialog.tsx',
+      'src/components/ledger/MergeAccountDialog.tsx', 'src/components/assets/DisposeAssetDialog.tsx',
     ];
     for (const f of files) assert.match(fs.readFileSync(f, 'utf8'), /useDialog\(/, f);
   });

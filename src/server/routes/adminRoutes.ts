@@ -28,7 +28,7 @@ export function registerAdminRoutes(app: express.Express, ctx: ServerContext): v
       
       const workspacesSnap = await db.collection("workspaces").limit(100).get();
       const wsIds = workspacesSnap.docs.map(d => d.id).slice(0, 30);
-      let transactionsSnap: { docs: Array<{ data: () => DocumentData }> } = { docs: [] };
+      let transactionsSnap: { docs: Array<{ id: string; data: () => DocumentData }> } = { docs: [] };
       if (wsIds.length > 0) {
           transactionsSnap = await db.collection("transactions").where("workspaceId", "in", wsIds).get();
       }
@@ -56,7 +56,7 @@ export function registerAdminRoutes(app: express.Express, ctx: ServerContext): v
         }
       });
       
-      const transactions = transactionsSnap.docs.map(doc => doc.data() as LedgerTransaction);
+      const transactions = transactionsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }) as LedgerTransaction);
       
       const tenants: Record<string, { 
         id: string, 

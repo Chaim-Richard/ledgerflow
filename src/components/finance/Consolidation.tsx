@@ -4,13 +4,14 @@ import { Layers, Download, BarChart3, TrendingUp, Globe } from 'lucide-react';
 import { cn, formatCurrency } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { IntercompanyEliminationEngine } from '../../lib/intercompanyElimination';
+import { isIncomeAccount } from '../../lib/accountUtils';
 
 export default function Consolidation() {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   
   const summary = useMemo(() => {
-    const incomeAccountIds = new Set(accounts.filter(a => a.type === 'income').map(a => a.id));
+    const incomeAccountIds = new Set(accounts.filter(a => isIncomeAccount(a)).map(a => a.id));
     const expenseAccountIds = new Set(accounts.filter(a => a.type === 'expense').map(a => a.id));
 
     const isIncomeLine = (l: TransactionLine) => incomeAccountIds.has(l.accountId) || l.category?.toLowerCase().includes('income') || l.category?.toLowerCase().includes('revenue');

@@ -11,6 +11,7 @@ import { writeServerAuditLog } from '../../services/auditLogService';
 import { lockMessage, postingLock } from '../../../lib/periodLock';
 import { errorMessage, HttpError, requestUser } from '../../auth/requestUser';
 import { formatTzDate } from './helpers';
+import { refusedLabels, refusedLabelsMessage } from '../../../lib/requiredLabels';
 
 /** Reversing an entry and intercompany transfers. Part of /api/v1/transactions (F-06), registered in the original order. */
 export function registerReverseRoutes(transactionRouter: express.Router): void {
@@ -193,6 +194,9 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
             wsData,
             accountsMap: accMap
           }, undefined, t);
+          // Z-12: the corrected entry needs the labels a refusing rule asks for (voiding never does)
+          const missing = refusedLabels(validatedReplacement, wsData?.dimensions);
+          if (missing.length > 0) throw new LedgerPostingError(400, refusedLabelsMessage(missing));
         }
 
         // Reversing a cost-of-goods-sold entry puts the stock back (and no entry is reversed twice).
@@ -269,7 +273,8 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
         description, 
         date,
         sourceAccountId, // e.g. Cash account in Source
-        targetAccountId  // e.g. Inventory/Expense in Target
+        targetAccountId,  // e.g. Inventory/Expense in Target
+        targetAmountCents: givenTargetCents // what arrives, in the target's currency (needed when the currencies differ)
       } = req.body;
     
       if (!sourceWorkspaceId || !targetWorkspaceId || !amountCents) {
@@ -287,6 +292,17 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
     
       const sourceWsData = sourceAuth.data;
       const targetWsData = targetAuth.data;
+      // Z-19 (found by DA-09): companies in different currencies need the amount that arrives; it is
+      // never converted with a guessed rate
+      const sourceCurrency = String(sourceWsData.currency || 'USD');
+      const targetCurrency = String(targetWsData.currency || 'USD');
+      let targetCents = amountCents;
+      if (sourceCurrency !== targetCurrency) {
+        if (!Number.isSafeInteger(givenTargetCents) || givenTargetCents <= 0) {
+          return res.status(400).json({ error: `${sourceWsData.name || 'One company'} keeps its books in ${sourceCurrency} and ${targetWsData.name || 'the other'} in ${targetCurrency}: say how much arrives in ${targetCurrency} (targetAmountCents).` });
+        }
+        targetCents = givenTargetCents;
+      }
 
       // 2. Resolve Reciprocal Clearing Accounts
       // We look for accounts marked as 'intercompany' role or named 'Intercompany'
@@ -375,7 +391,7 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
         workspaceId: targetWorkspaceId,
         date: date || formatTzDate(new Date(), targetWsData?.timezone),
         description: description || `Intercompany Receipt from ${sourceWsData.name}`,
-        totalAmountCents: amountCents,
+        totalAmountCents: targetCents,
         currency: targetWsData.currency || 'USD',
         exchangeRate: 1,
         status: 'completed',
@@ -385,22 +401,26 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
           {
             accountId: targetAccountId || targetAccounts.find(a => a.type === 'expense' || a.type === 'asset')?.id,
             accountName: 'Target Account',
-            amountCents: amountCents, // Debit Asset/Expense (Asset Up / Expense Up)
+            amountCents: targetCents, // Debit Asset/Expense (Asset Up / Expense Up)
             description: `Intercompany Receipt`
           },
           {
             accountId: targetClearing.id,
             accountName: targetClearing.name,
-            amountCents: -amountCents, // Credit Due To (Liability Up)
+            amountCents: -targetCents, // Credit Due To (Liability Up)
             description: `Due To ${sourceWsData.name}`
           }
         ]
       };
 
       // 4. Validate both transactions before posting
+      // the clearing accounts made above are written in the same batch as the entries, so the check
+      // is given each company's accounts including them (DA-09 found the first post always refused)
+      const accountsOf = (list: Array<DocumentData & { id: string }>, clearing: DocumentData & { id: string }) =>
+        new Map<string, { workspaceId?: string; name?: string }>([...list, clearing].map(a => [a.id, { workspaceId: a.workspaceId, name: a.name }]));
       const [validSource, validTarget] = await Promise.all([
-        TransactionValidator.validateAndPrepare(sourceTx, { workspaceId: sourceWorkspaceId, user, wsData: sourceWsData }),
-        TransactionValidator.validateAndPrepare(targetTx, { workspaceId: targetWorkspaceId, user, wsData: targetWsData })
+        TransactionValidator.validateAndPrepare(sourceTx, { workspaceId: sourceWorkspaceId, user, wsData: sourceWsData, accountsMap: accountsOf(sourceAccounts, sourceClearing as DocumentData & { id: string }) }),
+        TransactionValidator.validateAndPrepare(targetTx, { workspaceId: targetWorkspaceId, user, wsData: targetWsData, accountsMap: accountsOf(targetAccounts, targetClearing as DocumentData & { id: string }) })
       ]);
 
       // 5. Commit Atomically

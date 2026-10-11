@@ -30,7 +30,7 @@ describe('The snapshot rule', () => {
     assert.deepEqual(balances, { cash: 17500, sales: -7500 }, 'rent is zero and left out; a time on the last day still counts');
     assert.equal(entries, 2);
     const snapshot = takeClosingSnapshot(accounts, ledger, '2026-03-31', '2026-04-02T09:00:00Z');
-    assert.deepEqual(snapshot, { asOfDate: '2026-03-31', takenAt: '2026-04-02T09:00:00Z', entries: 2, accounts: [{ accountId: 'cash', cents: 17500 }, { accountId: 'sales', cents: -7500 }] });
+    assert.deepEqual(snapshot, { asOfDate: '2026-03-31', takenAt: '2026-04-02T09:00:00Z', entries: 2, openingRule: 'own-direction', accounts: [{ accountId: 'cash', cents: 17500 }, { accountId: 'sales', cents: -7500 }] });
   });
 
   test('changes: only the accounts that moved, with then, now and the difference; a removed account is named as such', () => {

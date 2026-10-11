@@ -70,6 +70,28 @@ describe('What the PDF prints (layoutDocumentPdf)', () => {
   });
 });
 
+describe('Page styles (Y-11)', () => {
+  test('classic by default; bold and minimal when chosen; the quantity column can be left out', () => {
+    const doc = { number: 'INV-1', items: items(2), amountCents: 300 };
+    assert.equal(layoutDocumentPdf('invoice', doc, {}).style, 'classic');
+    assert.equal(layoutDocumentPdf('invoice', doc, { branding: { style: 'bold' } }).style, 'bold');
+    assert.equal(layoutDocumentPdf('invoice', doc, { branding: { style: 'minimal' } }).style, 'minimal');
+    const plain = layoutDocumentPdf('invoice', doc, { branding: { hideQuantity: true } });
+    assert.equal(plain.quantityColumn, false);
+    assert.deepEqual(plain.rows.map(r => r.quantity), ['', '']);
+    assert.equal(layoutDocumentPdf('invoice', doc, {}).quantityColumn, true);
+    assert.equal(layoutDocumentPdf('statement', doc, {}).quantityColumn, false);
+  });
+
+  test('each style draws a whole invoice with its texts', async () => {
+    for (const style of ['classic', 'bold', 'minimal'] as const) {
+      const text = pdfText(await generateDocumentPdf('invoice', { number: 'INV-5', customerName: 'Acme', items: items(3), amountCents: 600 }, { name: 'Style Co', branding: { style, hideQuantity: style === 'minimal', logoDataUrl: png() } }));
+      for (const shown of ['Style Co', 'INV-5', 'Acme', 'Line 3', 'Page 1 of 1']) assert.ok(text.includes(shown), `${style}: ${shown}`);
+      assert.equal(text.includes('QTY'), style !== 'minimal', `${style}: the quantity column`);
+    }
+  });
+});
+
 describe('The PDF file', () => {
   test('long invoices run over several pages, each numbered, with the footer on every page', async () => {
     const pdf = await generateDocumentPdf('invoice', { number: 'INV-77', items: items(60), amountCents: 183000 }, { name: 'Shop', branding: { footer: 'Bank 12-345', logoDataUrl: png() } });
@@ -151,6 +173,14 @@ describe('Branding routes', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, ()
     assert.deepEqual({ ...saved, logoDataUrl: Boolean(saved.logoDataUrl) }, { color: '#00AA55', footer: 'Thanks!', terms: { invoice: 'Net 30' }, logoDataUrl: true });
     const audit = await db.collection('auditLogs').where('workspaceId', '==', ws).get();
     assert.ok(audit.docs.some(d => d.data().action === 'BRANDING_UPDATED'));
+  });
+
+  test('the page style, the quantity column and the documents\' language are kept (Y-11, P-11); the defaults are not written', async () => {
+    assert.equal((await call('owner', '', 'PUT', { style: 'bold', hideQuantity: true, language: 'he', footer: 'F' })).status, 200);
+    assert.deepEqual((await db.collection('workspaces').doc(ws).get()).data()?.branding, { footer: 'F', style: 'bold', hideQuantity: true, language: 'he' });
+    assert.equal((await call('owner', '', 'PUT', { style: 'classic', hideQuantity: false, language: 'en', footer: 'F' })).status, 200);
+    assert.deepEqual((await db.collection('workspaces').doc(ws).get()).data()?.branding, { footer: 'F' });
+    assert.equal((await call('owner', '', 'PUT', { style: 'fancy' })).status, 400);
   });
 
   test('a bookkeeper cannot; a non-image logo is refused with the reason', async () => {

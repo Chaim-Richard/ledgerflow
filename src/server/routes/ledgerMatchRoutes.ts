@@ -41,7 +41,7 @@ export function registerLedgerMatchRoutes(app: express.Express, ctx: ServerConte
         .where("workspaceId", "==", workspaceId)
         .limit(200)
         .get();
-      const transactions = transactionsSnap.docs.map(doc => doc.data() as LedgerTransaction);
+      const transactions = transactionsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }) as LedgerTransaction);
 
       // Dyn Salt Entropy combines Server Secret with client workspace signature to prevent side-channel inference
       const serverSecret = process.env.SESSION_SECRET as string;

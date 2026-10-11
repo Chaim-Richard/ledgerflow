@@ -1,5 +1,5 @@
 import { AlgorithmDefinition, AlgoResult } from './types';
-import { formatCurrency } from '../../lib/utils';
+import { currencyChartValue, formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
@@ -40,6 +40,7 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
       };
     }
 
+    const chartData: { account: string; budget: number; actual: number }[] = [];
     const rows: ({ id: string; account: string; budget: string; actual: string; variance: string; variancePct: string })[] = [];
     const sourceTransactionIds = new Set<string>();
     let totalBudget = 0;
@@ -78,6 +79,7 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
       totalBudget += budgetAmount;
       totalActual += actualCents;
 
+      chartData.push({ account: account ? `${account.code} - ${account.name}` : accountId, budget: currencyChartValue(budgetAmount), actual: currencyChartValue(actualCents) });
       rows.push({
         id: budget.id,
         account: account ? `${account.code} - ${account.name}` : accountId,
@@ -105,11 +107,7 @@ export const BUDGET_VS_ACTUAL_ALGO: AlgorithmDefinition = {
               { key: 'actual', name: 'Actual', color: '#10b981', type: 'bar' }
             ]
           },
-          data: rows.map(r => ({
-            account: r.account,
-            budget: parseFloat(r.budget.replace(/[^0-9.-]+/g,"")),
-            actual: parseFloat(r.actual.replace(/[^0-9.-]+/g,""))
-          }))
+          data: chartData
         }
       ],
       insights: [

@@ -1,6 +1,14 @@
 /** Screen descriptions are part of the registry contract; no generic fallback hides missing help. */
 export const SCREEN_HELP: Record<string, Record<string, string>> = {
   main: {
+    practice:
+      "Every set of books you can open, with what is waiting there: bank lines to review, banks to log in to again, questions, drafts, last month not closed and the next recurring item, most work first. A number opens that workspace on that screen.",
+    inventory:
+      "Review items, quantities and stock workflows. Edit supported metadata or inspect counts and adjustments. Use the stock adjustment workflow to change quantities or values.",
+    projects:
+      "Manage projects and inspect their pipeline or profitability. Edit metadata and inspect associated records. Profitability uses the included posted activity.",
+    budgets:
+      "Maintain budgets and compare them with actual activity. Edit supported metadata and review dates. A budget is a plan rather than a posted transaction.",
     dashboard:
       "Review the workspace overview for a chosen period. Arrange widgets, inspect balances and follow their report links. Forecast estimates and incomplete loaded history are labelled separately.",
     inbox:
@@ -27,6 +35,12 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Manage existing bank connections and imported activity. Reconnect expired logins and inspect connection health. Provider setup determines which live services are available.",
     "audit-trail":
       "Review the recorded history of workspace actions. Find a record and inspect who changed it and when. An audit log is not an independent financial reconciliation.",
+    "client-queries":
+      "Questions the bookkeeper or accountant asked about entries, and the answers. Ask from an entry's edit window with \"Ask about this entry\"; answer, follow up or close the question here. Each side gets a notification; a question changes nothing in the books.",
+    time:
+      "Log what you worked on, for which customer or project and whether it is billable, then submit it. Owners and accountants approve it or send it back and keep the hourly rates (a project's, else a customer's, else a person's). Approved billable time becomes a draft invoice for its customer; nothing is posted until that invoice is.",
+    tasks:
+      "What each person in the workspace has to do, the late ones flagged. Owners, accountants and bookkeepers give a task to anyone here, optionally about an invoice, bill, entry, account or item, which opens from the list. The person given it is told, and ticking it done tells whoever gave it.",
     reconciliation:
       "Match bank activity with ledger entries. Review differences before accepting matches or completing reconciliation. Inspect the underlying documents when a match is uncertain.",
     "month-end-close":
@@ -45,8 +59,10 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Prepare and track purchase orders. Inspect ordered items and use the existing receiving and bill workflows. A purchase order is not a posted bill.",
     loans:
       "Maintain loans the workspace owes: the lender, the principal, the rate, the term and the repayment schedule to the cent. Recording the money arriving or a payment posts one balanced entry through the ordinary posting path, so the period lock applies; a closed period refuses it. The screen never invents an account: it asks for the liability, interest and bank accounts it already has.",
+    "petty-cash":
+      "Run the petty cash box: one of the workspace's own cash-type accounts, with its balance read straight from the ledger. Spend from the box against an expense category, top it up from a bank account, or count the cash and post the difference to a chosen over/short account. Every movement is one balanced entry through the ordinary posting path, so the period lock applies; the screen never invents an account.",
     payroll:
-      "Maintain employee information and inspect pay runs. Edit supported metadata and review the existing payroll workflow. A displayed calculation does not prove that a pay run was posted.",
+      "Keep the employee list, their deductions and time off, and post pay runs. The server posts one balanced entry on the pay date: wages and the employer's taxes as expenses, net pay out of the bank, and withholding and deductions as payroll liabilities; Undo voids it while the date is open. An owner can require approval, so an accountant's run waits until an owner approves it or sends it back. The tax figures are estimates, so check them before paying.",
     reports:
       "Choose a financial report and its dates. Compare periods, print or copy an exact report link. Each report explains its timing and loaded-history limits.",
     charts:
@@ -61,7 +77,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Inspect consistency and data-quality findings. Follow record links and review corrections in their normal editors. Findings cover the records currently loaded, which may be incomplete.",
     support:
       "Review support requests and conversations. Create a ticket using the existing support workflow. Availability depends on the configured service and access.",
-    help: "Find workflow guidance and registered screen descriptions. Search All screens using English or Hebrew names and inspect release notes. Help describes the implemented workflow and its limits.",
+    help: "Find workflow guidance and registered screen descriptions. Search All screens using English or Hebrew names and inspect release notes. Send feedback from any screen to save a support ticket with screen and app version. Help describes the implemented workflow and its limits.",
     vault:
       "Manage supporting documents for financial work. Browse files and inspect their record associations. Upload availability depends on the configured document service.",
     pricing:
@@ -72,7 +88,30 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Inspect the developer-only administration demonstration. Explore its example panels when developer mode is enabled. Demonstration telemetry is distinct from production monitoring.",
   },
   reports: {
+    "budget-actual": "Compare a saved account budget with posted account movement for the selected period or months. Open an actual to inspect its contributing entries. Recurring caps are spread by month; partial months keep their cap, and loaded-cache figures are provisional until full history is requested.",
     pnl: "Review posted income, cost of goods sold and expenses for the period. Compare periods and choose presentation columns. Incomplete loaded history makes the figures provisional.",
+    "group-summary":
+      "Choose one of your groups of books (Settings → Groups of books) and a period: each company's income, costs, profit, assets, liabilities and equity side by side, with the group's total when all keep their books in one currency (or translated into one). Each figure opens that company's own report. Balances and sales between the companies are taken out of the total; with a parent, the other owners' part is shown. Account by account lists each account across the companies, matched by code or name.",
+    backorders:
+      "Items sold on sales orders and not delivered yet, the oldest order first, against the stock on hand: what each line can take from stock and what it is short. Above, each short item in all with what is already on order from vendors and what is still to buy. Nothing is reserved or posted.",
+    commissions:
+      "Choose a period: for each sales rep, every payment their customers made against an invoice, the part before tax, and the rep's commission on it, with their total. Commission follows what was paid, not what was invoiced. Reps, their percentages and customers are kept in Settings → Sales reps; nothing is posted.",
+    "goods-not-billed":
+      "Goods delivered to customers that are not invoiced yet, and goods received on purchase orders that have no bill yet, at each order's price. The first is income still to invoice; the second, costs still to come.",
+    "bank-clearance":
+      "For a bank account and a period, each entry on it and the day the bank cleared it, from the matched statement lines. At the end, the deposits not yet on the statement and the payments not yet taken, and the balance the bank should show.",
+    "depreciation-ledger":
+      "For a period, each fixed asset's cost, the depreciation it had before the period, what the monthly runs posted in it, what it has at the end, and its book value, with the totals. Assets sold or scrapped are marked.",
+    "item-register":
+      "Every invoice line that sold a stock item, or every bill line that bought one, in a period, for one item or all. Each row opens its document, and each item's units and amount add up at the end.",
+    "stock-aging":
+      "As of a day, each item's stock on hand split by how long ago those units came in, the latest units taken to be the ones still there. With its value and the last sale, so slow-moving stock shows first. Read from the stock history the server keeps.",
+    "inventory-details":
+      "For a period, each item's opening quantity and value, every movement (sold, bought, returned, adjusted, counted, moved) with its entry, and the closing quantity and value. Read from the stock history the server keeps with each change.",
+    "by-label":
+      "Choose a label (Property, Project, Location…) and a period: the income, costs and result of each of its values, and of the lines without one, account by account. Together the columns add up to the profit and loss of the period. Each figure opens the entries behind it.",
+    "ask-books":
+      "Ask about an account, a label and a period in words. The question is read into filters you can see and change; the figure is calculated from all posted entries in the workspace's currency, and the entries behind it are listed. It reads names and dates, not any sentence.",
     "balance-sheet":
       "Review assets, liabilities and equity at the end date. Compare snapshots and inspect account detail. The start date does not erase earlier activity.",
     "cash-flow":
@@ -145,6 +184,24 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review the existing sales-tax liability report. Select dates and inspect taxable amounts and tax totals. Review the report scope before using it for a tax filing.",
   },
   settings: {
+    "scheduled-reports":
+      "Choose a report to be emailed by itself after each finished week or month: the profit and loss, the balance sheet or receivables aging. The figures are in the email with a spreadsheet attached, and each period is sent once. Send now emails the last finished period straight away.",
+    alerts:
+      "Choose what the nightly check tells owners and accountants about the books: a reminder to close last month from a chosen day, an account over its budget, and cash below a chosen amount. Each is told once, in the bell. Alerts never change the books.",
+    groups:
+      "Group the workspaces you can open, such as a holding and its companies or your clients by kind. Only you see your groups, and a workspace in a group stays exactly as it is: its books, people and rules do not change. Removing a group never removes a workspace.",
+    currencies:
+      "The workspace's own currency and every other currency its invoices and bills use: how many, how many are still open, and the last rate posted and when. Each document keeps the rate it was posted at. The month-end revaluation of what is still open is here too.",
+    "price-lists":
+      "Prices for some customers, such as wholesale: a discount on every item, or a price of its own for some items, and the customers on the list (one list each). On their invoices and estimates, picking an item fills the list's price, which can still be changed on the line; nothing already posted changes. Owners and accountants keep them.",
+    "sales-reps":
+      "Each sales rep's commission percentage and the customers they look after, one rep per customer. Their commission on what those customers pay, before tax, is in the Sales commission report. Nothing is posted. Owners and accountants keep them.",
+    stages:
+      "Your own steps for invoices and bills, one per line in order, such as bills: Received, Checked, Ready to pay. Each invoice and bill then shows its stage on its row, where owners, accountants and bookkeepers change it. A stage changes nothing in the books or in what is paid. Owners and accountants keep the stages.",
+    "split-rules":
+      "Saved ways to split a cost between accounts or labels, e.g. rent 60/40 between two properties. A rule is suggested on a bill whose vendor or description contains its text, says why, and only changes the lines on screen when applied; nothing is posted by a rule. Owners and accountants keep them.",
+    modules:
+      "Choose which sets of screens this workspace uses: quotes, purchase orders, payroll, fixed assets, loans, petty cash, intercompany, forecasting and the query builder. A module turned off leaves the menu and the page search; nothing in it is deleted, and turning it back on shows everything again. Owners and accountants change them.",
     tags:
       "Review every tag used in the workspace and how many customers, vendors, projects, documents and entries carry it. Rename a tag everywhere at once, merge two by giving one the other's name, or remove a tag from every record. Only the tags change; amounts and entries stay as they are.",
     "incoming-events":
@@ -193,16 +250,10 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Explore categorization checks in the shared catalog. Review algorithm suggestions against source records. A suggested category does not authorize a posting change.",
   },
   extra: {
-    inventory:
-      "Review items, quantities and stock workflows. Edit supported metadata or inspect counts and adjustments. Use the stock adjustment workflow to change quantities or values.",
-    projects:
-      "Manage projects and inspect their pipeline or profitability. Edit metadata and inspect associated records. Profitability uses the included posted activity.",
     architecture:
       "Explore the application architecture map. Inspect data, algorithm and view layers. The map describes software structure rather than financial results.",
     audit:
       "Inspect the forensic audit presentation. Review source activity and signal explanations. A finding is a reason to investigate rather than proof of fraud.",
-    budgets:
-      "Maintain budgets and compare them with actual activity. Edit supported metadata and review dates. A budget is a plan rather than a posted transaction.",
     "time-machine":
       "Explore the historical ledger presentation. Choose available dates and inspect included activity. Missing loaded records can leave the view incomplete.",
     ask: "Explore the question-driven ledger workflow. Review interpreted requests and source records. Financial changes require their normal authorized action.",

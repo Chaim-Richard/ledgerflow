@@ -4,8 +4,10 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
-import { dashboardReportHref, dashboardComparison, dashboardPeriod, dashboardLayout, dashboardAging, validDashboardPeriod, DASHBOARD_WIDGETS } from '../../lib/dashboardOverview';
-import type { DashboardRange, DashboardWidget, DashboardLayout } from '../../lib/dashboardOverview';
+import { dashboardReportHref, dashboardComparison, dashboardPeriod, dashboardAging, validDashboardPeriod, startingLayout, DASHBOARD_ROLES, DASHBOARD_WIDGETS } from '../../lib/dashboardOverview';
+import type { DashboardRange, DashboardRole, DashboardWidget, DashboardLayout } from '../../lib/dashboardOverview';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { getIdToken } from '../../firebase';
 import { AGING_BUCKETS } from '../../lib/aging';
 import { reportVariance, reportPercent } from '../../lib/reportColumns';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
@@ -15,7 +17,8 @@ import BankFeedHealth from './BankFeedHealth';
 
 const LABELS: Record<DashboardWidget, string> = { revenue: 'Revenue', expenses: 'Expenses', profit: 'Net income', networth: 'Net worth', scenario: 'Scenario preview', summary: 'Account summary', cash: 'Cash balance', receivables: 'Receivables', payables: 'Payables', banks: 'Bank and cash accounts', feeds: 'Bank feed health', recent: 'Recent transactions', integrity: 'Books balance' };
 const KPIS = ['networth', 'revenue', 'expenses', 'profit', 'cash'] as const;
-function readLayout(key: string): DashboardLayout { try { return dashboardLayout(JSON.parse(localStorage.getItem(key) || 'null')); } catch { return dashboardLayout(); } }
+/** The person's own arrangement in this browser, or null (BC-02: then their role's starting layout). */
+function readOwn(key: string): unknown { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; } }
 function Sparkline({ values, label }: { values: number[]; label: string }) {
   const min = Math.min(...values), span = Math.max(...values) - min;
   const points = values.map((value, index) => `${index * 100 / 11},${span ? 30 - (value - min) * 28 / span : 16}`).join(' ');
@@ -42,9 +45,22 @@ function ScopedDashboardWidgets() {
   const period = useMemo(() => range === 'custom' ? custom : dashboardPeriod(range, today, fiscalStart), [range, custom, today, fiscalStart]);
   const valid = validDashboardPeriod(period);
   const preferenceKey = `lf_dashboard_layout_v1:${uid || 'guest'}:${workspaceId || 'none'}`;
-  const [layout, setLayout] = useState(() => readLayout(preferenceKey));
+  const role = useCurrentRole();
+  const [layout, setLayout] = useState(() => startingLayout(readOwn(preferenceKey), workspace?.roleDashboards, role));
   const [storageError, setStorageError] = useState(false);
   const changeLayout = (next: DashboardLayout) => { setLayout(next); try { localStorage.setItem(preferenceKey, JSON.stringify(next)); setStorageError(false); } catch { setStorageError(true); } };
+  const resetLayout = () => { setLayout(startingLayout(null, workspace?.roleDashboards, role)); try { localStorage.removeItem(preferenceKey); } catch { /* nothing kept to remove */ } };
+  // BC-02: an owner gives a role this arrangement as its starting dashboard
+  const [forRole, setForRole] = useState<DashboardRole>('bookkeeper');
+  const [roleNote, setRoleNote] = useState('');
+  const giveToRole = async () => {
+    if (!workspace) return;
+    const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspace.id)}/role-dashboards`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` }, body: JSON.stringify({ role: forRole, layout }) }).catch(() => null);
+    const body = res ? await res.json().catch(() => ({})) : {};
+    if (!res?.ok) { setRoleNote(body.message || 'The starting dashboard was not saved'); return; }
+    useAuthStore.setState(state => ({ workspaces: state.workspaces.map(w => (w.id === workspace.id ? { ...w, roleDashboards: body.roleDashboards } : w)) }));
+    setRoleNote(`Saved: ${forRole === 'owner' ? 'owners' : `${forRole}s`} who have not arranged their own start from this layout.`);
+  };
   const move = (id: DashboardWidget, direction: number) => {
     const order = [...layout.order], index = order.indexOf(id), target = index + direction;
     if (target < 0 || target >= order.length) return;
@@ -97,7 +113,8 @@ function ScopedDashboardWidgets() {
     {valid && <p>{period.startDate} to {period.endDate}. Previous period: {data?.previousPeriod.startDate} to {data?.previousPeriod.endDate}. Sparklines show 12 calendar months ending at the selected date.</p>}
     {loading && <p role="status">Loading dashboard collections…</p>}
     {partial && partial.length > 0 && <p role="alert">Incomplete data: {partial.join(', ')}. These loaded-data figures may omit history; use authoritative reports before relying on totals.</p>}
-    <details><summary className="cursor-pointer min-h-11 flex items-center">Customize widgets</summary><div className="space-y-1">{layout.order.map((id, index) => <div key={id} className="flex flex-wrap items-center gap-2"><label className="min-h-11 flex items-center gap-2 flex-1"><input type="checkbox" checked={!layout.hidden.includes(id)} onChange={event => changeLayout({ ...layout, hidden: event.target.checked ? layout.hidden.filter(key => key !== id) : [...layout.hidden, id] })} />{LABELS[id]}</label><button type="button" aria-label={`Move ${LABELS[id]} up`} disabled={index === 0} onClick={() => move(id, -1)} className="min-h-11 min-w-11 underline disabled:opacity-40">Up</button><button type="button" aria-label={`Move ${LABELS[id]} down`} disabled={index === layout.order.length - 1} onClick={() => move(id, 1)} className="min-h-11 min-w-11 underline disabled:opacity-40">Down</button></div>)}</div><button type="button" onClick={() => changeLayout(dashboardLayout())} className="min-h-11 underline">Reset layout</button></details>
+    <details><summary className="cursor-pointer min-h-11 flex items-center">Customize widgets</summary><div className="space-y-1">{layout.order.map((id, index) => <div key={id} className="flex flex-wrap items-center gap-2"><label className="min-h-11 flex items-center gap-2 flex-1"><input type="checkbox" checked={!layout.hidden.includes(id)} onChange={event => changeLayout({ ...layout, hidden: event.target.checked ? layout.hidden.filter(key => key !== id) : [...layout.hidden, id] })} />{LABELS[id]}</label><button type="button" aria-label={`Move ${LABELS[id]} up`} disabled={index === 0} onClick={() => move(id, -1)} className="min-h-11 min-w-11 underline disabled:opacity-40">Up</button><button type="button" aria-label={`Move ${LABELS[id]} down`} disabled={index === layout.order.length - 1} onClick={() => move(id, 1)} className="min-h-11 min-w-11 underline disabled:opacity-40">Down</button></div>)}</div><button type="button" onClick={resetLayout} className="min-h-11 underline">Reset layout</button>
+      {role === 'owner' && <div className="flex flex-wrap items-center gap-2"><label className="min-h-11 flex items-center gap-2">Starting dashboard for<select value={forRole} onChange={event => setForRole(event.target.value as DashboardRole)} className="border border-[var(--line)] rounded bg-[var(--panel)] px-2 py-1">{DASHBOARD_ROLES.map(r => <option key={r} value={r}>{r === 'owner' ? 'owners' : `${r}s`}</option>)}</select></label><button type="button" onClick={() => void giveToRole()} className="min-h-11 underline">Give them this layout</button>{roleNote && <p role="status">{roleNote}</p>}</div>}</details>
     {storageError && <p role="status">Layout changed for this visit; this browser could not save it.</p>}
     {valid && !loading && <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">{layout.order.filter(id => !layout.hidden.includes(id)).map(id => <article key={id} aria-label={LABELS[id]} className="min-w-0 border border-[var(--line)] rounded-xl bg-[var(--panel)] p-4"><h2 className="font-semibold mb-3">{LABELS[id]}</h2>{renderWidget(id)}</article>)}</div>}
     {layout.hidden.length === DASHBOARD_WIDGETS.length && <p>All widgets are hidden. Use Customize widgets or Reset layout to show them.</p>}

@@ -8,6 +8,8 @@ import CategoryWhyPopover from '../common/CategoryWhyPopover';
 import { getLineDimension, setLineDimension, extractUniqueDimensionPaths } from '../../lib/dimensionUtils';
 import TagInput from './TagInput';
 import AsyncButton from '../ui/AsyncButton';
+import EntryLinks from './EntryLinks';
+import EntryQuestions from './EntryQuestions';
 import type { TransactionEditModalModel } from './TransactionEditModal';
 
 export function TransactionEditModalView({ transaction, accounts, lockDate, onClose, onReverseAndCorrect, withOccurrenceKeys, formId, dimensionNodes, isReverseMode, setIsReverseMode, reversalDate, setReversalDate, correctionReason, setCorrectionReason, date, setDate, description, setDescription, payee, setPayee, type, setType, status, setStatus, project, setProject, isCleared, setIsCleared, isFlagged, setIsFlagged, fileUrls, setFileUrls, originalCurrency, setOriginalCurrency, exchangeRate, setExchangeRate, isFetchingRate, setIsFetchingRate, transactions, activeDimensions, lines, lineKeys, isLocked, totalAmountCents, sumLines, handleAddLine, handleRemoveLine, handleLineChange, handleSave, dialogProps, titleId }: TransactionEditModalModel) {
@@ -582,6 +584,8 @@ export function TransactionEditModalView({ transaction, accounts, lockDate, onCl
               )}
             </div>
 
+            {!isReverseMode && transaction.id && <EntryQuestions transactionId={transaction.id} />}
+            {!isReverseMode && transaction.id && <EntryLinks transactionId={transaction.id} />}
           </div>
 
           {/* Actions footer */}

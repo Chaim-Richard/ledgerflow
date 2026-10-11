@@ -12,6 +12,7 @@
  * Live updates use Supabase Realtime plus an immediate local refresh after our own writes.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { recordRead } from './readCounter';
 import { getSupabase } from './client';
 import { changedSince, latestUpdate, mergeChanges } from './liveQuery';
 import type { LiveRow } from './liveQuery';
@@ -364,12 +365,14 @@ const PAGE_SIZE = 1000;
 
 interface Row { id: string; data: DocumentData; updated_at?: string }
 
+/** Pages asked for at once after the first (C-20): 20 pages took 20 round trips one after another. */
+const PAGES_AT_ONCE = 4;
+
 async function fetchRows(q: Query): Promise<Row[]> {
   const client = q.firestore.client();
-  const rows: Row[] = [];
   const max = q.limitCount ?? Number.POSITIVE_INFINITY;
-  for (let from = 0; rows.length < max; from += PAGE_SIZE) {
-    const to = Math.min(from + PAGE_SIZE, from + (max - rows.length)) - 1;
+  const page = async (from: number): Promise<Row[]> => {
+    const to = Math.min(from + PAGE_SIZE, max) - 1;
     let b = client.from(q.collectionId).select('id,data,updated_at') as unknown as FilterBuilder;
     for (const f of q.filters) b = applyFilter(b, f);
     for (const o of q.orders) {
@@ -377,20 +380,39 @@ async function fetchRows(q: Query): Promise<Row[]> {
       b = b.not(jsonPath(o.field, true), 'is', null);
       b = b.order(jsonPath(o.field, false), { ascending: o.direction === 'asc' });
     }
-    if (q.orders.length === 0) b = b.order('id', { ascending: true });
+    // a unique last key keeps the order the same on every page (rows with equal dates would otherwise shift between pages)
+    b = b.order('id', { ascending: true });
     const { data, error } = await b.range(from, to);
     if (error) throw toFirestoreError(error, q.collectionId);
-    const page = (data || []) as Row[];
-    rows.push(...page);
-    if (page.length < to - from + 1) break;
+    return (data || []) as Row[];
+  };
+  const rows: Row[] = [];
+  const first = await page(0);
+  rows.push(...first);
+  // most lists fit in one page; a longer one is fetched a few pages at a time instead of one after another
+  let more = first.length === Math.min(PAGE_SIZE, max);
+  for (let from = PAGE_SIZE; more && from < max;) {
+    const starts: number[] = [];
+    for (let i = 0; i < PAGES_AT_ONCE && from + i * PAGE_SIZE < max; i++) starts.push(from + i * PAGE_SIZE);
+    const pages = await Promise.all(starts.map(page));
+    for (let i = 0; i < pages.length; i++) {
+      rows.push(...pages[i]);
+      if (pages[i].length < Math.min(PAGE_SIZE, max - starts[i])) { more = false; break; }
+    }
+    from += starts.length * PAGE_SIZE;
   }
-  return rows;
+  // a row written while the pages were read can show up twice: keep the first
+  const seen = new Set<string>();
+  const out = rows.filter(r => (seen.has(r.id) ? false : (seen.add(r.id), true))).slice(0, Number.isFinite(max) ? max : undefined);
+  recordRead(q.collectionId, rows.length);
+  return out;
 }
 
 export async function getDoc<T = DocumentData>(ref: DocumentReference<T>): Promise<DocumentSnapshot<T>> {
   const { data, error } = await ref.firestore.client()
     .from(ref.collectionId).select('id,data').eq('id', ref.id).maybeSingle();
   if (error) throw toFirestoreError(error, ref.path);
+  recordRead(ref.collectionId, data ? 1 : 0);
   return new DocumentSnapshot<T>(ref, data ? ((data as Row).data as T) : undefined);
 }
 

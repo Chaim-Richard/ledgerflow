@@ -64,6 +64,27 @@ export const brainRateLimiter = rateLimit({
   }
 });
 
+/** Z-02: an API key's own limit a minute (set when the key is made; 120 unless chosen). */
+export const API_KEY_DEFAULT_PER_MINUTE = 120;
+export function apiKeyLimit(raw: unknown): number {
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 10 && n <= 10_000 ? n : API_KEY_DEFAULT_PER_MINUTE;
+}
+
+/**
+ * Z-02: requests made with an API key count against that key, not the caller's IP: each key has
+ * its own limit a minute (`rateLimitPerMinute` on the key), so one busy integration does not slow
+ * the others. Only API-key requests pass through it (apiAuthenticate).
+ */
+export const apiKeyRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: (req) => apiKeyLimit((req as unknown as { user?: { apiKeyRateLimit?: number } }).user?.apiKeyRateLimit),
+  keyGenerator: (req) => `api-key:${String((req as unknown as { user?: { usedApiKeyId?: string } }).user?.usedApiKeyId || 'none')}`,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: 'error', code: 'RATE_LIMIT_EXCEEDED', message: 'This API key has made too many requests this minute. Please wait and try again.' },
+});
+
 /**
  * The app-wide limiters (F-01, moved from server.ts). A new set per app, so each app (and each
  * test) counts on its own.

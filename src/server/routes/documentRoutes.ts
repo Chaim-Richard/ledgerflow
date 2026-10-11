@@ -5,6 +5,7 @@ import type { Firestore } from '../db/firestore';
 import { generateDocumentPdf } from '../services/pdfService';
 import type { PdfDocument, PdfDocumentType, PdfWorkspace } from '../services/pdfService';
 import { loadStatement } from '../services/statementService';
+import { contactTerms, documentLanguage, type DocumentLanguage } from '../../lib/documentLanguage';
 import { ChequeError, generateChequePdf, layoutCheque } from '../services/chequePdf';
 import { getTrustedAppUrl } from '../utils/urlHelper';
 import { zipStore } from '../utils/zip';
@@ -43,6 +44,18 @@ function purchaseOrderForPdf(po: Record<string, unknown>): PdfDocument {
 const isPdfType = (t: string): t is PdfDocumentType => (PDF_TYPES as readonly string[]).includes(t);
 
 type DocType = keyof typeof PDF_SOURCES;
+
+/** P-11, P-12: the printed words in the document's customer's (or vendor's) language, else the
+ * workspace's, and their own terms when they have some. */
+async function contactStyle(db: Firestore, workspace: PdfWorkspace, docData: PdfDocument, workspaceId: string): Promise<{ language: DocumentLanguage; terms?: string }> {
+  const ref = docData as { customerId?: unknown; vendorId?: unknown; contactId?: unknown; direction?: unknown };
+  const [collection, id] = typeof ref.customerId === 'string' && ref.customerId ? ['customers', ref.customerId]
+    : typeof ref.vendorId === 'string' && ref.vendorId ? ['vendors', ref.vendorId]
+      : typeof ref.contactId === 'string' && ref.contactId ? [ref.direction === 'made' ? 'vendors' : 'customers', ref.contactId] : ['', ''];
+  const contact = collection ? (await db.collection(collection).doc(id).get()).data() : undefined;
+  const own = contact && contact.workspaceId === workspaceId ? contact : null;
+  return { language: documentLanguage(workspace.branding, own), terms: contactTerms(own) };
+}
 
 /** A document of this workspace ready for the PDF (null when missing or another workspace's). */
 async function loadDocumentForPdf(db: Firestore, type: DocType, id: string, workspaceId: string, req: express.Request): Promise<{ docData: PdfDocument; paymentUrl?: string } | null> {
@@ -84,7 +97,7 @@ export async function handleZipRequest(req: express.Request, res: express.Respon
       let name = `${base}.pdf`;
       for (let n = 2; used.has(name); n++) name = `${base}_${n}.pdf`;
       used.add(name);
-      files.push({ name, data: await generateDocumentPdf(body.type, loaded.docData, workspace, { paymentUrl: loaded.paymentUrl }) });
+      files.push({ name, data: await generateDocumentPdf(body.type, loaded.docData, workspace, { paymentUrl: loaded.paymentUrl, ...(await contactStyle(db, workspace, loaded.docData, body.workspaceId)) }) });
     }
     if (files.length === 0) return res.status(404).json({ status: 'error', message: 'None of these documents were found' });
     res.setHeader('Content-Type', 'application/zip');
@@ -123,6 +136,7 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
 
     let docData: PdfDocument | null = null;
     let paymentUrl: string | undefined;
+    let style: { language: DocumentLanguage; terms?: string } | undefined;
 
     if (type !== 'statement') {
       const loaded = await loadDocumentForPdf(db, type, id, workspaceId, req);
@@ -134,9 +148,10 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
       const statement = await loadStatement(db, workspaceId, id);
       if (!statement) return res.status(404).json({ status: 'error', message: 'Contact not found' });
       docData = statement.pdf;
+      style = { language: documentLanguage(workspace.branding, statement.contact), terms: contactTerms(statement.contact) };
     }
 
-    const pdfBuffer = await generateDocumentPdf(type, docData, workspace, { paymentUrl });
+    const pdfBuffer = await generateDocumentPdf(type, docData, workspace, { paymentUrl, ...(style || await contactStyle(db, workspace, docData, workspaceId)) });
 
     if (req.query.format === 'json' || req.headers.accept?.includes('application/json')) {
       return res.json({

@@ -24,7 +24,8 @@ import {
   TrendingDown,
   ShoppingCart,
   SlidersHorizontal,
-  ClipboardList
+  ClipboardList,
+  History
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTimeout } from '../../hooks/useTimeout';
@@ -48,11 +49,14 @@ import { adjustStockRequest, countStockRequest } from '../../services/stockReque
 import InlineEdit from '../ui/InlineEdit';
 import InlineAdd from '../ui/InlineAdd';
 import CogsDialog from './CogsDialog';
+import StockPolicySwitch from './StockPolicySwitch';
+import StockHistoryDialog from './StockHistoryDialog';
 import InventoryItemDialog from './InventoryItemDialog';
 import StockAdjustDialog from './StockAdjustDialog';
 import StockCountDialog from './StockCountDialog';
 import CategoryManagerDialog from './CategoryManagerDialog';
 import { categoryCounts } from '../../lib/itemCategories';
+import { deleteWithUndo, isDeletePending } from '../../lib/undoableDelete';
 
 export default function Inventory() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -66,6 +70,7 @@ export default function Inventory() {
   const [showRuleIntel, setShowRuleIntel] = useState(false);
   const [cogsItem, setCogsItem] = useState<InventoryItem | null>(null);
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
+  const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null);
   const [isCounting, setIsCounting] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [isManagingCategories, setIsManagingCategories] = useState(false);
@@ -87,7 +92,8 @@ export default function Inventory() {
 
     const unsubInventory = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
-      setItems(data);
+      // an item waiting out its Undo stays hidden when the live list refreshes (BO-08)
+      setItems(data.filter(i => !isDeletePending(`inventory/${i.id}`)));
       setLoading(false);
     }, () => setLoading(false));
 
@@ -122,6 +128,8 @@ export default function Inventory() {
       measurementUnit: formData.get('measurementUnit') as string || undefined,
       unitsPerPackage: formData.get('unitsPerPackage') ? parseInt(formData.get('unitsPerPackage') as string, 10) || 1 : undefined,
       category: formData.get('category') as string,
+      // BF-01: an item with stock on hand stays a stock item
+      itemType: formData.get('itemType') === 'service' && !editingItem.quantityAtHand ? 'service' : (editingItem.quantityAtHand ? editingItem.itemType || 'stock' : 'stock'),
     };
 
     try {
@@ -150,10 +158,11 @@ export default function Inventory() {
       measurementUnit: formData.get('measurementUnit') as string || undefined,
       unitsPerPackage: formData.get('unitsPerPackage') ? parseInt(formData.get('unitsPerPackage') as string, 10) || 1 : undefined,
       category: formData.get('category') as string,
+      itemType: formData.get('itemType') === 'service' ? 'service' : 'stock',
       createdAt: new Date().toISOString()
     };
 
-    const openingQty = Number(formData.get('quantity')) || 0;
+    const openingQty = newItem.itemType === 'service' ? 0 : Number(formData.get('quantity')) || 0;
     try {
       const ref = await addDoc(collection(db, 'inventory'), newItem);
       setIsAdding(false);
@@ -206,22 +215,21 @@ export default function Inventory() {
 
   const handleDelete = async (id: string) => {
     const item = items.find(i => i.id === id);
-    if (item && item.quantityAtHand > 0) {
-      if (!safeConfirm(`WARNING: "${item.name}" currently has ${item.quantityAtHand} units on hand representing active asset value. Are you sure you want to delete this inventory record?`)) {
-        return;
-      }
-    } else {
-      if (!safeConfirm('Are you sure you want to delete this inventory item?')) {
-        return;
-      }
-    }
-
-    try {
-      await deleteDoc(doc(db, 'inventory', id));
-      toast.success('Item removed');
-    } catch {
-      toast.error('Failed to remove item');
-    }
+    if (!item) return;
+    // stock on hand is asset value: that still needs a clear yes; otherwise Undo is enough (BO-08)
+    if (item.quantityAtHand > 0 && !safeConfirm(`"${item.name}" has ${item.quantityAtHand} units on hand representing asset value. Delete this item anyway?`)) return;
+    const at = items.findIndex(i => i.id === id);
+    deleteWithUndo({
+      key: `inventory/${id}`,
+      label: `Item "${item.name}"`,
+      hide: () => setItems(prev => prev.filter(i => i.id !== id)),
+      restore: () => setItems(prev => {
+        const rows = prev.filter(i => i.id !== id);
+        rows.splice(at < 0 ? rows.length : Math.min(at, rows.length), 0, item);
+        return rows;
+      }),
+      commit: () => deleteDoc(doc(db, 'inventory', id)),
+    });
   };
 
   const categories = useMemo(() => categoryCounts(items).map(c => c.name), [items]);
@@ -253,6 +261,7 @@ export default function Inventory() {
                 </div>
              </div>
           </div>
+          <StockPolicySwitch />
         </div>
 
         <div className="flex flex-wrap items-center gap-8">
@@ -578,6 +587,12 @@ export default function Inventory() {
                         <SlidersHorizontal aria-hidden="true" size={14} className="text-[var(--muted)]" />
                       </button>
                     )}
+                    <button type="button" aria-label={`Stock history of ${item.name}`} title="Stock history"
+                      onClick={() => setHistoryItem(item)}
+                      className="p-2 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
+                    >
+                      <History aria-hidden="true" size={14} className="text-[var(--muted)]" />
+                    </button>
                     <button aria-label={`Edit item ${item.name}`}
                       onClick={() => setEditingItem(item)}
                       className="p-2 hover:bg-[var(--surface)] rounded-xl border border-transparent hover:border-[var(--line)] transition-all"
@@ -614,6 +629,9 @@ export default function Inventory() {
       )}
       {adjustItem && workspaceId && (
         <StockAdjustDialog item={adjustItem} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setAdjustItem(null)} />
+      )}
+      {historyItem && workspaceId && (
+        <StockHistoryDialog item={historyItem} workspaceId={workspaceId} currency={baseCurrency} onClose={() => setHistoryItem(null)} />
       )}
       {isManagingCategories && (
         <CategoryManagerDialog items={items} onClose={() => setIsManagingCategories(false)} />

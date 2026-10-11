@@ -2,7 +2,7 @@
 export const INLINE_RECORD_FIELDS = {
   projects: ['name', 'metadata.client', 'budgetCents', 'status'],
   employees: ['name', 'email', 'role'],
-  assets: ['name', 'location', 'category'],
+  assets: ['name', 'location', 'category', 'warrantyExpires', 'insuranceRenews'],
   budgets: ['name', 'amountCents'],
   estimates: ['number', 'date', 'expiryDate', 'notes'],
   dimensionNodes: ['description'],

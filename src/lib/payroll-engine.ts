@@ -1,6 +1,7 @@
 import { Employee, TemporalValidity } from '../types';
 import { TruthEngine } from '../modules/integrity/TruthEngine';
 import { getLocalDateISO } from './utils';
+import { afterTaxLines, preTaxLines, type DeductionLine } from './payrollDeductions';
 
 export const PAYROLL_DISCLAIMER = 'Estimations for financial forecasting, budgeting, and enterprise liability planning only. Not a certified tax calculation for official IRS/state tax returns.';
 
@@ -23,6 +24,11 @@ export interface PayPeriodBreakdown {
   totalWithholdingCents: number;
   totalEmployerTaxCents: number;
   totalPeriodLiabilityCents: number;
+  /** U-05, U-06: taken after taxes (garnishments first, then after-tax deductions) */
+  postTaxDeductionsCents: number;
+  garnishmentsCents: number;
+  /** every deduction taken this period, by name (the one pre-tax amount kept before is "Pre-tax deductions") */
+  deductionLines: DeductionLine[];
   disclaimer: string;
 }
 
@@ -300,10 +306,24 @@ export function computeFederalIncomeTaxWithholding(
 export function computePeriodPayroll(employee: Employee, year: number = 2026): PayPeriodBreakdown {
   const payPeriods = getPeriodsPerYear(employee.payFrequency);
   const grossPayCents = Math.round(employee.salaryCents / payPeriods);
+  // U-08: a contractor is paid the agreed amount in full: nothing withheld, no employer taxes
+  if (employee.workerType === 'contractor') {
+    return {
+      grossPayCents, preTaxDeductionsCents: 0, taxableGrossCents: grossPayCents,
+      employeeFicaSocialSecurityCents: 0, employeeFicaMedicareCents: 0, employeeAdditionalMedicareCents: 0,
+      employeeFederalTaxCents: 0, employeeStateTaxCents: 0, employeeCityTaxCents: 0, employeeCountyTaxCents: 0,
+      netPayCents: grossPayCents, employerFicaSocialSecurityCents: 0, employerFicaMedicareCents: 0, employerFutaCents: 0, employerSutaCents: 0,
+      totalWithholdingCents: 0, totalEmployerTaxCents: 0, totalPeriodLiabilityCents: grossPayCents,
+      postTaxDeductionsCents: 0, garnishmentsCents: 0, deductionLines: [], disclaimer: PAYROLL_DISCLAIMER,
+    };
+  }
   const config = getFederalTaxYearConfig(year);
 
-  // Pre-tax deductions (401k, health, HSA)
-  const preTaxPeriodCents = employee.preTaxDeductionsCents || 0;
+  // Pre-tax deductions (401k, health, HSA): the one amount kept before, plus the named ones (U-05)
+  const legacyPreTaxCents = employee.preTaxDeductionsCents || 0;
+  const named = employee.deductions || [];
+  const preTaxNamed = preTaxLines(named, grossPayCents, legacyPreTaxCents);
+  const preTaxPeriodCents = legacyPreTaxCents + preTaxNamed.reduce((s, l) => s + l.cents, 0);
   const annualPreTaxDeductionsCents = preTaxPeriodCents * payPeriods;
   const taxableGrossAnnualCents = Math.max(0, employee.salaryCents - annualPreTaxDeductionsCents);
   const taxableGrossCents = Math.max(0, grossPayCents - preTaxPeriodCents);
@@ -364,7 +384,16 @@ export function computePeriodPayroll(employee: Employee, year: number = 2026): P
     employeeCityTaxCents + 
     employeeCountyTaxCents;
 
-  const netPayCents = grossPayCents - preTaxPeriodCents - totalWithholdingCents;
+  // U-06 garnishments, then U-05 after-tax deductions, from what is left (disposable earnings: gross less taxes)
+  const afterTaxesCents = grossPayCents - preTaxPeriodCents - totalWithholdingCents;
+  const afterTax = afterTaxLines(named, afterTaxesCents, grossPayCents, Math.max(0, grossPayCents - totalWithholdingCents));
+  const garnishmentsCents = afterTax.filter(l => l.kind === 'garnishment').reduce((s, l) => s + l.cents, 0);
+  const postTaxDeductionsCents = afterTax.filter(l => l.kind === 'post_tax').reduce((s, l) => s + l.cents, 0);
+  const netPayCents = afterTaxesCents - garnishmentsCents - postTaxDeductionsCents;
+  const deductionLines: DeductionLine[] = [
+    ...(legacyPreTaxCents ? [{ id: 'pre-tax', name: 'Pre-tax deductions', kind: 'pre_tax' as const, cents: legacyPreTaxCents, requestedCents: legacyPreTaxCents }] : []),
+    ...preTaxNamed, ...afterTax,
+  ].filter(l => l.requestedCents > 0);
 
   const totalEmployerTaxCents = 
     employerFicaSocialSecurityCents + 
@@ -394,6 +423,9 @@ export function computePeriodPayroll(employee: Employee, year: number = 2026): P
     totalWithholdingCents,
     totalEmployerTaxCents,
     totalPeriodLiabilityCents,
+    postTaxDeductionsCents,
+    garnishmentsCents,
+    deductionLines,
     disclaimer: PAYROLL_DISCLAIMER
   };
 }

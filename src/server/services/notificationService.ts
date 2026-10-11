@@ -8,6 +8,7 @@
  */
 import crypto from 'crypto';
 import type { DocumentData, Firestore } from '../db/firestore';
+import { emailNoticeNow } from './notificationEmailService';
 import { logger } from '../utils/logger';
 import { NOTIFICATION_TYPES, notificationRecipients } from '../../lib/notifications';
 import type { NotificationPrefs, NotificationType } from '../../lib/notifications';
@@ -27,6 +28,10 @@ export interface NotifyInput {
   actorUid?: string;
   /** Pass the workspace when it is already loaded. */
   workspace?: DocumentData;
+  /** Only these people (still only if their role gets this kind and they want it): news about them. */
+  onlyUids?: string[];
+  /** BG-04: the screen the notice opens, when it is not the kind's own (a watched record's screen) */
+  linkTab?: string;
 }
 
 export function notificationId(workspaceId: string, eventKey: string, uid: string): string {
@@ -38,14 +43,17 @@ export async function notify(db: Firestore, input: NotifyInput): Promise<number>
   try {
     const workspace = input.workspace || (await db.collection('workspaces').doc(input.workspaceId).get()).data();
     if (!workspace) return 0;
-    const everyone = notificationRecipients(workspace, input.kind, new Map(), input.actorUid);
+    const everyone = notificationRecipients(workspace, input.kind, new Map(), input.actorUid)
+      .filter(uid => !input.onlyUids || input.onlyUids.includes(uid));
     if (!everyone.length) return 0;
     const profiles = await Promise.all(everyone.map(uid => db.collection('users').doc(uid).get()));
     const prefs = new Map<string, NotificationPrefs | undefined>(
       profiles.map((p, i) => [everyone[i], (p.data()?.notificationPrefs as NotificationPrefs | undefined)]));
-    const recipients = notificationRecipients(workspace, input.kind, prefs, input.actorUid);
+    const recipients = notificationRecipients(workspace, input.kind, prefs, input.actorUid)
+      .filter(uid => !input.onlyUids || input.onlyUids.includes(uid));
     const createdAt = new Date().toISOString();
     let sent = 0;
+    const told: string[] = [];
     for (const uid of recipients) {
       try {
         await db.collection('notifications').doc(notificationId(input.workspaceId, input.eventKey, uid)).create({
@@ -54,16 +62,22 @@ export async function notify(db: Firestore, input: NotifyInput): Promise<number>
           kind: input.kind,
           title: input.title.slice(0, 140),
           message: input.message.slice(0, 400),
-          linkTab: NOTIFICATION_TYPES[input.kind].tab,
+          linkTab: input.linkTab || NOTIFICATION_TYPES[input.kind].tab,
           ...(input.recordId ? { recordId: input.recordId } : {}),
           eventKey: input.eventKey.slice(0, 200),
           read: false,
           createdAt,
         });
         sent++;
+        told.push(uid);
       } catch (err) {
         if ((err as { code?: number }).code !== 6) throw err; // 6 = already notified
       }
+    }
+    // S-18: those who chose an email for each notice get one (a notice told before is not emailed again)
+    if (told.length) {
+      const users = new Map(profiles.map((p, i) => [everyone[i], p.data() as Record<string, unknown> | undefined]));
+      await emailNoticeNow(told.map(uid => ({ uid, user: users.get(uid) })), { workspaceName: String(workspace.name || ''), title: input.title, message: input.message });
     }
     return sent;
   } catch (err) {

@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   computeStatement,
-  computeTaxLiability,
   computeCustomerBalanceSummary,
   computeVendorBalanceSummary,
   computeTransactionsByCustomer,
   computeTransactionsByVendor
 } from '../server/reports/computeReports.js';
+import { taxTotals } from './helpers/taxTotals';
 import type { Customer, Vendor, Invoice, Bill, Payment, CreditNote, VendorCredit } from '../types';
 import {
   makeCustomer,
@@ -172,7 +172,7 @@ describe('Financial Report Math & Business Rules', () => {
       makeBill({ id: 'bill-1', amountCents: 5500, taxCents: 500, status: 'pending', date: '2026-03-02' })
     ];
 
-    const tax = computeTaxLiability(invoices, bills, '2026-03-01', '2026-03-31');
+    const tax = taxTotals(invoices, bills, '2026-03-01', '2026-03-31');
     assert.equal(tax.taxCollectedCents, 1000);
     assert.equal(tax.taxPaidCents, 500);
     assert.equal(tax.netTaxLiabilityCents, 500);

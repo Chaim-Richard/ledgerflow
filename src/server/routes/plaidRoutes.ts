@@ -4,20 +4,22 @@ import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
 import { getDb, validateWorkspaceMember } from "../db/firestore.ts";
 import { SecurityService } from "../../services/securityService.ts";
 import { getLocalDateISO } from "../../lib/utils.ts";
+import { appendSyncLog, readSyncLog } from "../../lib/bankFeedStatus.ts";
 import { requireWorkspaceRole } from "./workspaceRoutes.ts";
 import { notify } from "../services/notificationService.ts";
+import { writeServerAuditLog } from "../services/auditLogService.ts";
 
 /**
  * Bank feeds through Plaid. A connection (collection `banks`) belongs to one workspace: only its
  * owner/accountant/bookkeeper can connect or reconnect it, and a sync returns only that
  * workspace's banks. When a bank asks the user to log in again, the connection is marked
  * `login_required` and the sync carries on with the others; the screen offers "Reconnect"
- * (Plaid update mode).
+ * (Plaid update mode). Owners and accountants can disconnect a bank (Z-30).
  */
 export const plaidRouter = express.Router();
 
 /** The Plaid calls this router makes (tests swap in a fake). */
-export type PlaidClientLike = Pick<PlaidApi, 'linkTokenCreate' | 'itemPublicTokenExchange' | 'transactionsGet'>;
+export type PlaidClientLike = Pick<PlaidApi, 'linkTokenCreate' | 'itemPublicTokenExchange' | 'transactionsGet'> & Partial<Pick<PlaidApi, 'itemRemove'>>;
 
 let plaidClient: PlaidClientLike = new PlaidApi(new Configuration({
   basePath: PlaidEnvironments[process.env.PLAID_ENV || "sandbox"],
@@ -121,6 +123,43 @@ plaidRouter.post("/reconnected", ledgerWriters, async (req, res) => {
   }
 });
 
+/**
+ * Z-30: disconnect a bank (owners and accountants). The bank is told to stop (Plaid removes the
+ * connection, so nothing more is downloaded or billed), then the stored connection and its token are
+ * deleted. The bank lines already imported stay, matched or not, with everything posted from them.
+ * If the bank can't be told, nothing is deleted and the answer says to try again; a connection the
+ * bank no longer knows is simply removed here.
+ */
+plaidRouter.post("/disconnect", requireWorkspaceRole(['owner', 'accountant']), async (req, res) => {
+  try {
+    const { workspaceId, bankId } = linkTokenSchema.required({ bankId: true }).parse(req.body);
+    const db = getDb();
+    const ref = db.collection("banks").doc(bankId);
+    const bank = (await ref.get()).data();
+    if (!bank || bank.workspaceId !== workspaceId) return sendError(res, "Bank connection not found", 404);
+    try {
+      if (!plaidClient.itemRemove) throw new Error('The bank service is not available');
+      await plaidClient.itemRemove({ access_token: SecurityService.decryptSensitiveField(bank.access_token) });
+    } catch (err) {
+      // already gone at the bank: nothing to stop there
+      if (!['ITEM_NOT_FOUND', 'INVALID_ACCESS_TOKEN'].includes(String(plaidErrorCode(err)))) {
+        console.error("[Plaid] disconnect:", plaidErrorCode(err) || err);
+        return sendError(res, "The bank could not be told to stop, so nothing was removed: try again in a moment", 502);
+      }
+    }
+    await ref.delete();
+    const name = bank.institutionName || 'A bank';
+    await writeServerAuditLog({
+      workspaceId, uid: (req as AuthedRequest).user.uid, action: 'BANK_DISCONNECTED', entityType: 'banks', entityId: bankId,
+      details: { description: `${name} disconnected; its imported bank lines are kept` },
+    }, { db });
+    res.json({ success: true });
+  } catch (error) {
+    if (error instanceof z.ZodError) return sendError(res, "workspaceId and bankId are required", 400);
+    sendError(res, "Could not disconnect the bank");
+  }
+});
+
 /** The workspace's connections (never the tokens). */
 plaidRouter.get("/banks", async (req, res) => {
   try {
@@ -129,7 +168,7 @@ plaidRouter.get("/banks", async (req, res) => {
     const db = getDb();
     await validateWorkspaceMember(db, workspaceId, (req as AuthedRequest).user);
     const snap = await db.collection("banks").where("workspaceId", "==", workspaceId).get();
-    res.json({ banks: snap.docs.map(d => ({ id: d.id, institutionName: d.data().institutionName || '', accountId: d.data().accountId || null, status: d.data().status || 'active', createdAt: d.data().createdAt, lastSyncedAt: d.data().lastSyncedAt || null })) });
+    res.json({ banks: snap.docs.map(d => ({ id: d.id, institutionName: d.data().institutionName || '', accountId: d.data().accountId || null, status: d.data().status || 'active', createdAt: d.data().createdAt, lastSyncedAt: d.data().lastSyncedAt || null, syncLog: readSyncLog(d.data().syncLog) })) });
   } catch (error) {
     sendError(res, error instanceof Error ? error.message : "Could not list bank connections", 403);
   }
@@ -157,6 +196,9 @@ plaidRouter.post("/sync", async (req, res) => {
     thirtyDaysAgo.setDate(today.getDate() - 30);
     const transactions: unknown[] = [];
     const needsReconnect: { bankId: string; institutionName: string }[] = [];
+    // Z-28: a bank that fails another way is said and kept in its log; the others still sync
+    const failed: { bankId: string; institutionName: string; error: string }[] = [];
+    let answered = 0;
     for (const doc of banksSnap.docs) {
       const bank = doc.data();
       try {
@@ -166,15 +208,23 @@ plaidRouter.post("/sync", async (req, res) => {
           end_date: getLocalDateISO(today),
         });
         transactions.push(...response.data.transactions);
+        answered += 1;
         // the last time this connection answered (BC-11: the dashboard's bank feed health); a failed or
-        // expired sync leaves it where it was
+        // expired sync leaves it where it was. Z-29: each attempt goes in the connection's sync log
         const syncedAt = new Date().toISOString();
-        await doc.ref.update({ status: 'active', lastSyncedAt: syncedAt, updatedAt: syncedAt });
+        await doc.ref.update({ status: 'active', lastSyncedAt: syncedAt, updatedAt: syncedAt, syncLog: appendSyncLog(bank.syncLog, { at: syncedAt, result: 'ok', lines: response.data.transactions.length }) });
       } catch (err) {
-        if (plaidErrorCode(err) !== 'ITEM_LOGIN_REQUIRED') throw err;
-        needsReconnect.push({ bankId: doc.id, institutionName: bank.institutionName || '' });
+        const code = plaidErrorCode(err);
         const now = new Date().toISOString();
-        await doc.ref.update({ status: 'login_required', updatedAt: now });
+        if (code !== 'ITEM_LOGIN_REQUIRED') {
+          console.error("[Plaid] sync of one bank:", code || err);
+          const error = code || 'UNKNOWN_ERROR';
+          failed.push({ bankId: doc.id, institutionName: bank.institutionName || '', error });
+          await doc.ref.update({ status: 'error', updatedAt: now, syncLog: appendSyncLog(bank.syncLog, { at: now, result: 'error', error }) });
+          continue;
+        }
+        needsReconnect.push({ bankId: doc.id, institutionName: bank.institutionName || '' });
+        await doc.ref.update({ status: 'login_required', updatedAt: now, syncLog: appendSyncLog(bank.syncLog, { at: now, result: 'login_required' }) });
         if (bank.status !== 'login_required') {
           const name = bank.institutionName || 'A bank';
           await notify(db, {
@@ -186,7 +236,9 @@ plaidRouter.post("/sync", async (req, res) => {
         }
       }
     }
-    res.json({ success: transactions.length > 0, transactions, needsReconnect, banks: banksSnap.size });
+    // every connection failed: the sync failed (as before), with each one's reason kept in its log
+    if (failed.length > 0 && answered === 0 && needsReconnect.length === 0) return sendError(res, "Could not sync the bank feed", 502);
+    res.json({ success: transactions.length > 0, transactions, needsReconnect, failed, banks: banksSnap.size });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (/not a member|Unauthorized|not found/i.test(message)) return sendError(res, message, 403);

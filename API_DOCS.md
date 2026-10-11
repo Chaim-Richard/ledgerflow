@@ -939,3 +939,37 @@ Generates deterministic, pixel-perfect binary PDF documents (`application/pdf`) 
 - `payment` — Official payment receipts with document allocation tables.
 - `statement` — Chronological customer/vendor balance statements with running balances.
 
+
+## ETags and conditional requests (Z-05)
+
+- Every `GET` answer carries an `ETag` header. Send it back as `If-None-Match` and an unchanged answer comes back as `304 Not Modified` with no body.
+- An entry's version is its `updatedAt`. To update it only if nobody changed it since you read it, send `If-Match: "<updatedAt>"` with `PUT /api/v1/transactions/:id` (a full update or a `partialUpdate`). If it changed, the answer is `412 Precondition Failed` with `{"error": "version_conflict", "currentTransaction": {...}}` and nothing is saved. `If-Match: *` checks nothing. Sending `expectedUpdatedAt` in the body still works and answers `409` on a conflict.
+
+## Sparse fieldsets (Z-04)
+
+`GET /api/v1/transactions?workspaceId=…&fields=date,description,totalAmountCents` returns only those fields of each entry, plus its `id`. A field can name one level inside an object (`metadata.invoiceId`). At most 50 fields; a name that is not a field name answers `400`. Without `fields`, whole entries come back as before.
+
+## Rate limits per API key (Z-02)
+
+Requests made with an API key count against that key's own limit a minute (chosen when the key is made: 30 to 1,200 on the screen, 10 to 10,000 through `POST /api/v1/keys/provision` with `rateLimitPerMinute`; 120 otherwise), not against your IP address. Every answer carries `RateLimit-*` headers; over the limit, the answer is `429` with `{"code": "RATE_LIMIT_EXCEEDED"}` until the minute is over.
+
+## Batch create (Z-03)
+
+`POST /api/v1/transactions/batch-create` with `{"workspaceId": "...", "transactions": [ {...}, {...} ]}` creates up to 500 entries in one request, all or none. Each entry is checked exactly as `POST /api/v1/transactions` checks one (the schema, balanced lines, accounts in the workspace, the period lock, a unique id). The answer is `{"status": "success", "data": {"created": 3, "ids": [...]}}` with the ids in the order sent. If one entry is refused, nothing is written and the message names it by its index (`"Entry 1: ..."`: `400`, or `409` for a closed period or an id that already exists). A batch counts in full against the plan's entry limit (`402` when it would go over). Send an `Idempotency-Key` header to retry safely.
+
+## OpenAPI description (Z-01)
+
+`GET /api/v1/openapi.json` (no key needed) is an OpenAPI 3.1 description of the transaction endpoints, for Postman, code generators and other tools. The entry shape in it is generated from the schema the server checks requests with, so it always matches.
+
+## TypeScript client (Z-06)
+
+`sdk/ledgerflowClient.ts` is a small client with no dependencies (Node 18+ or a browser): copy the file into your project.
+
+```ts
+const lf = new LedgerFlowClient({ apiKey: process.env.LEDGERFLOW_KEY!, baseUrl: 'https://your-ledgerflow-address' });
+for await (const entry of lf.listTransactions(workspaceId, { startDate: '2026-01-01', fields: ['date', 'totalAmountCents'] })) { /* every page */ }
+const { ids } = await lf.createTransactions(workspaceId, [entryA, entryB]);   // all or none
+await lf.updateTransaction(ids[0], { memo: 'Checked' }, { ifUpdatedAt: entry.updatedAt });  // 412 if changed since
+```
+
+It follows pages for you, sends an `Idempotency-Key` with every create (a retried request never creates twice), waits and retries when your key's limit a minute is reached, and throws `LedgerFlowError` (with `status` and the server's message) when a request is refused.

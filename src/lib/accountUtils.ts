@@ -2,6 +2,16 @@ import { ChartAccount } from '../types';
 
 export type AccountRole = 'cash' | 'ar' | 'ap' | 'inventory' | 'revenue' | 'expense' | 'cogs' | 'equity' | 'liability' | 'asset' | 'fx_rounding' | 'unknown';
 
+/**
+ * An income account. Both spellings are saved: 'income' (the chart's own form) and 'revenue'
+ * (spreadsheet imports, `parseAccountType`); code that looks for income accounts must accept both,
+ * or an imported "Sales" account is missed (found by the main-path test, DA-07).
+ */
+export function isIncomeAccount(account: { type?: string } | undefined | null): boolean {
+  const type = String(account?.type || '').toLowerCase();
+  return type === 'income' || type === 'revenue';
+}
+
 export function resolveAccountRole(account: ChartAccount | undefined | null): AccountRole {
   if (!account) return 'unknown';
 
@@ -71,3 +81,15 @@ export function isUndepositedFundsAccount(account: ChartAccount | undefined | nu
   if (!account || (account.type || '').toLowerCase() !== 'asset') return false;
   return (account.subtype || '').toLowerCase() === 'undeposited_funds' || /undeposited/i.test(account.name || '');
 }
+
+/**
+ * N-13: an account's opening balance is kept in its own direction, as the new-account form asks for
+ * it (a 10,000 loan is 10,000; an overdrawn bank is negative). The books are debit-positive, so a
+ * credit account's opening balance is turned around before it is added to its entries.
+ */
+export const isDebitNatureType = (type: string | undefined) => ['asset', 'expense', 'cost_of_goods', 'cogs'].includes(String(type || ''));
+export function openingDebitCents(account: { type?: string; openingBalanceCents?: number | null }): number {
+  const opening = Number(account.openingBalanceCents) || 0;
+  return isDebitNatureType(account.type) ? opening : -opening;
+}
+

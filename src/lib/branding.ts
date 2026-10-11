@@ -25,7 +25,19 @@ export const BrandingSchema = z.object({
   terms: z.object(Object.fromEntries(BRANDED_DOCUMENTS.map(d => [d, z.string().max(2000).optional()])) as Record<BrandedDocument, z.ZodOptional<z.ZodString>>).partial().strict().optional(),
   /** Print a QR code to the invoice's payment page (default on). */
   showPaymentQr: z.boolean().optional(),
+  /** P-11: the language of the printed words on documents (a customer can have their own; src/lib/documentLanguage.ts) */
+  language: z.enum(['en', 'he']).optional(),
+  /** Y-11: the page's look: classic (the default), a bold coloured band across the top, or minimal (no coloured fills) */
+  style: z.enum(['classic', 'bold', 'minimal']).optional(),
+  /** Y-11: leave out the quantity column (a service business billing amounts) */
+  hideQuantity: z.boolean().optional(),
 }).strict();
+
+export const DOCUMENT_STYLES = [
+  { value: 'classic', label: 'Classic' },
+  { value: 'bold', label: 'Bold header band' },
+  { value: 'minimal', label: 'Minimal (no coloured fills)' },
+] as const;
 
 export type WorkspaceBranding = z.infer<typeof BrandingSchema>;
 

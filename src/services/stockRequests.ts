@@ -24,6 +24,8 @@ interface StockAccounts {
   offsetAccountId: string;
   reason?: string;
   date?: string;
+  /** W-01: where the change happened (a Location label value) */
+  locationId?: string;
 }
 
 export interface AdjustStockBody extends StockAccounts {

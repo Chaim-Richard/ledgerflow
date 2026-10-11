@@ -22,6 +22,10 @@ import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { nextDocumentNumber } from '../../services/documentNumbers';
 import { suggestionsFrom } from '../../lib/inlineEdit';
 import { creditDateEditable, duplicateNumber } from '../../lib/creditEdits';
+import { returnableLines, returnProblem } from '../../lib/salesReturns';
+import ReturnedGoodsFields from './ReturnedGoodsFields';
+import VendorReturnFields from './VendorReturnFields';
+import { returnableBillLines, vendorReturnLines, vendorReturnProblem } from '../../lib/vendorReturns';
 
 export default function CreditNotesView() {
   const [activeTab, setActiveTab] = useState<'customer' | 'vendor'>('customer');
@@ -34,6 +38,7 @@ export default function CreditNotesView() {
   const creditNotes = useLedgerStore(s => s.creditNotes || []);
   const vendorCredits = useLedgerStore(s => s.vendorCredits || []);
   const invoices = useLedgerStore(s => s.invoices || []);
+  const transactions = useLedgerStore(s => s.transactions || []);
   const bills = useLedgerStore(s => s.bills || []);
   const { loading } = useLedgerCollections('bills', 'creditNotes', 'customers', 'invoices', 'vendorCredits', 'vendors');
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
@@ -58,7 +63,11 @@ export default function CreditNotesView() {
   const [customerId, setCustomerId] = useState('');
   const [vendorId, setVendorId] = useState('');
   const [invoiceId, setInvoiceId] = useState('');
+  // BF-06: how many of each stock line of the credited invoice came back
+  const [returned, setReturned] = useState<Record<string, string>>({});
   const [billId, setBillId] = useState('');
+  // BF-07: units sent back per line of the credited bill
+  const [sentBack, setSentBack] = useState<Record<number, string>>({});
   const [amountStr, setAmountStr] = useState('');
   const [reason, setReason] = useState('');
   const [dateStr, setDateStr] = useState(getLocalDateISO(new Date()));
@@ -88,6 +97,13 @@ export default function CreditNotesView() {
     const customer = customers.find(c => c.id === customerId);
     // A credit for an invoice is in its currency and reverses its share of the tax (L-118)
     const invoice = invoiceId ? invoices.find(i => i.id === invoiceId) : undefined;
+    const lines = invoice ? returnableLines(invoice, transactions) : [];
+    const returnedGoods = lines.flatMap(l => (Number(returned[l.invoiceLineId]) > 0 ? [{ invoiceLineId: l.invoiceLineId, itemId: l.itemId, quantity: Number(returned[l.invoiceLineId]) }] : []));
+    const problem = returnProblem(returnedGoods, lines);
+    if (problem) {
+      toast.error(problem);
+      return;
+    }
     const newCreditNote: Partial<CreditNote> = {
       customerId,
       customerName: customer?.name || 'Customer',
@@ -101,6 +117,7 @@ export default function CreditNotesView() {
       currency: invoice?.currency || workspaceCurrency,
       ...(invoice?.exchangeRate ? { exchangeRate: invoice.exchangeRate } : {}),
       ...(invoice ? creditTaxFrom(amountCents, invoice) : {}),
+      ...(returnedGoods.length > 0 ? { returnedGoods } : {}),
     };
 
     await addEntity('creditNotes', newCreditNote, `Credit Note ${newCreditNote.number} issued successfully!`);
@@ -119,10 +136,17 @@ export default function CreditNotesView() {
       return;
     }
 
+    const bill = billId ? bills.find(b => b.id === billId) : undefined;
+    const returnable = bill ? returnableBillLines(bill, vendorCredits) : [];
+    const returnedGoods = vendorReturnLines(returnable, Object.fromEntries(Object.entries(sentBack).map(([k, v]) => [Number(k), Number(v) || 0])));
+    const goodsProblem = returnedGoods.length ? vendorReturnProblem(returnable, returnedGoods, amountCents, bill ? creditTaxFrom(amountCents, bill).taxAmountCents || 0 : 0) : null;
+    if (goodsProblem) {
+      toast.error(goodsProblem);
+      return;
+    }
     const number = await allocate('vendorCredit');
     if (!number) return;
     const vendor = vendors.find(v => v.id === vendorId);
-    const bill = billId ? bills.find(b => b.id === billId) : undefined;
     const newVendorCredit: Partial<VendorCredit> = {
       vendorId,
       vendorName: vendor?.name || 'Vendor',
@@ -136,6 +160,7 @@ export default function CreditNotesView() {
       currency: bill?.currency || workspaceCurrency,
       ...(bill?.exchangeRate ? { exchangeRate: bill.exchangeRate } : {}),
       ...(bill ? creditTaxFrom(amountCents, bill) : {}),
+      ...(returnedGoods.length ? { returnedGoods } : {}),
     };
 
     await addEntity('vendorCredits', newVendorCredit, `Vendor Credit ${newVendorCredit.number} logged successfully!`);
@@ -146,7 +171,9 @@ export default function CreditNotesView() {
     setCustomerId('');
     setVendorId('');
     setInvoiceId('');
+    setReturned({});
     setBillId('');
+    setSentBack({});
     setAmountStr('');
     setReason('');
     setShowCreateModal(false);
@@ -386,13 +413,34 @@ export default function CreditNotesView() {
                       ))}
                     </select>
                   </Labelled>
+                  {/* BF-06: the invoice the credit is for, and the goods that came back from it */}
+                  {customerId && (
+                    <div className="mt-3 space-y-3">
+                      <Labelled labelClassName="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" label="For invoice (optional)">
+                        <select value={invoiceId} onChange={(e) => { setInvoiceId(e.target.value); setReturned({}); }}
+                          className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white">
+                          <option value="">-- Not for one invoice --</option>
+                          {invoices.filter(i => i.customerId === customerId && !['draft', 'void', 'cancelled'].includes(String(i.status))).map(i => (
+                            <option key={i.id} value={i.id}>{i.number || i.id} · {i.date}</option>
+                          ))}
+                        </select>
+                      </Labelled>
+                      {invoiceId && (() => {
+                        const invoice = invoices.find(i => i.id === invoiceId);
+                        return invoice ? (
+                          <ReturnedGoodsFields lines={returnableLines(invoice, transactions)} value={returned} onChange={setReturned}
+                            currency={invoice.currency || workspaceCurrency} onUsePrice={cents => setAmountStr((cents / 100).toFixed(2))} />
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>
                   <Labelled labelClassName="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" label="Select Vendor">
                     <select
                       value={vendorId}
-                      onChange={(e) => setVendorId(e.target.value)}
+                      onChange={(e) => { setVendorId(e.target.value); setBillId(''); setSentBack({}); }}
                       required
                       className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white"
                     >
@@ -402,6 +450,26 @@ export default function CreditNotesView() {
                       ))}
                     </select>
                   </Labelled>
+                  {vendorId && (
+                    <Labelled labelClassName="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-3 mb-1" label="Credited bill (optional)">
+                      <select value={billId} onChange={e => { setBillId(e.target.value); setSentBack({}); }}
+                        className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white">
+                        <option value="">None</option>
+                        {bills.filter(b => b.vendorId === vendorId && !['void', 'draft', 'cancelled', 'rejected'].includes(String(b.status))).map(b => (
+                          <option key={b.id} value={b.id}>{b.number || b.id} · {b.date || ''}</option>
+                        ))}
+                      </select>
+                    </Labelled>
+                  )}
+                  {billId && (() => {
+                    const bill = bills.find(b => b.id === billId);
+                    return bill ? (
+                      <div className="mt-3">
+                        <VendorReturnFields lines={returnableBillLines(bill, vendorCredits)} value={sentBack} onChange={setSentBack}
+                          currency={bill.currency || workspaceCurrency} onUseCost={cents => setAmountStr((cents / 100).toFixed(2))} />
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
               )}
 

@@ -7,6 +7,12 @@ import { runNotificationJobs } from '../services/notificationService';
 import { runDailyReminders, runDailyStatements } from '../services/reminderService';
 import { recordDailyJobRun } from '../services/statusService';
 import { runDailyRetention } from '../services/retentionService';
+import { runDailyScheduledReports } from '../services/scheduledReportService';
+import { runDailyLedgerHealth } from '../services/ledgerHealthService';
+import { runDailyBookAlerts } from '../services/bookAlertService';
+import { runDailyAssetReminders } from '../services/assetReminderService';
+import { runDailyWatches } from '../services/watchService';
+import { runDailyNotificationDigest } from '../services/notificationEmailService';
 import { getDb } from '../db/firestore';
 
 /**
@@ -30,6 +36,12 @@ const DAILY_JOBS: [string, () => Promise<unknown>][] = [
   ['notifications', runNotificationJobs],
   ['reminders', runDailyReminders],
   ['statements', runDailyStatements],
+  ['scheduledReports', runDailyScheduledReports],
+  ['ledgerHealth', runDailyLedgerHealth],
+  ['bookAlerts', runDailyBookAlerts],
+  ['assetReminders', runDailyAssetReminders],
+  ['watches', runDailyWatches],
+  ['notificationDigest', runDailyNotificationDigest],
   ['retention', runDailyRetention],
 ];
 

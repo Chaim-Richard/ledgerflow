@@ -1,7 +1,8 @@
 /**
  * Plaid bank connections (src/server/routes/plaidRoutes.ts) with a fake Plaid client and a real
  * database: connections belong to one workspace, only writers connect, a sync returns only that
- * workspace's banks, and an expired login is flagged for "Reconnect" instead of failing the sync.
+ * workspace's banks, an expired login is flagged for "Reconnect" instead of failing the sync, and a
+ * disconnect tells the bank to stop and removes the token but keeps the imported lines.
  * Runs when LF_TEST_DATABASE_URL is set.
  */
 import test, { after, before, describe } from 'node:test';
@@ -22,6 +23,7 @@ describe('Plaid bank connections', { skip: !url && 'LF_TEST_DATABASE_URL not set
   let db: Firestore;
   const linkCalls: Record<string, unknown>[] = [];
   let nextAccessToken = 'access-good';
+  const removed: string[] = [];
 
   const call = async (uid: string, method: 'GET' | 'POST', path: string, body?: Record<string, unknown>) => {
     const res = await fetch(`${base}/api/v1/plaid/${path}`, {
@@ -40,12 +42,19 @@ describe('Plaid bank connections', { skip: !url && 'LF_TEST_DATABASE_URL not set
     setPlaidClientForTests({
       linkTokenCreate: (async (args: Record<string, unknown>) => { linkCalls.push(args); return { data: { link_token: 'link-1' } }; }) as never,
       itemPublicTokenExchange: (async () => ({ data: { access_token: nextAccessToken, item_id: `item-${nextAccessToken}` } })) as never,
+      itemRemove: (async ({ access_token }: { access_token: string }) => {
+        removed.push(access_token);
+        if (access_token === 'access-down') throw Object.assign(new Error('down'), { response: { data: { error_code: 'INTERNAL_SERVER_ERROR' } } });
+        if (access_token === 'access-gone') throw Object.assign(new Error('gone'), { response: { data: { error_code: 'ITEM_NOT_FOUND' } } });
+        return { data: {} };
+      }) as never,
       transactionsGet: (async ({ access_token }: { access_token: string }) => {
         if (access_token === 'access-expired') throw Object.assign(new Error('login'), { response: { data: { error_code: 'ITEM_LOGIN_REQUIRED' } } });
+        if (access_token === 'access-broken') throw Object.assign(new Error('down'), { response: { data: { error_code: 'INSTITUTION_DOWN' } } });
         return { data: { transactions: [{ transaction_id: `tx-${access_token}` }] } };
       }) as never,
     });
-    await db.collection('workspaces').doc(ws).set({ uid: 'owner-1', name: 'Mine', members: ['owner-1', 'view-1'], roles: { 'view-1': 'viewer' } });
+    await db.collection('workspaces').doc(ws).set({ uid: 'owner-1', name: 'Mine', members: ['owner-1', 'view-1', 'book-1'], roles: { 'view-1': 'viewer', 'book-1': 'bookkeeper' } });
     await db.collection('workspaces').doc(other).set({ uid: 'owner-2', name: 'Theirs', members: ['owner-2'] });
 
     const app = express();
@@ -58,7 +67,7 @@ describe('Plaid bank connections', { skip: !url && 'LF_TEST_DATABASE_URL not set
 
   after(async () => {
     server?.close();
-    for (const table of ['banks', 'workspaces']) {
+    for (const table of ['banks', 'bankLines', 'auditLogs', 'workspaces']) {
       await db.pool.query(`delete from public."${table}" where workspace_id in ($1, $2) or id in ($1, $2)`, [ws, other]);
     }
     await db.terminate();
@@ -119,5 +128,53 @@ describe('Plaid bank connections', { skip: !url && 'LF_TEST_DATABASE_URL not set
     assert.ok(banks.every(b => !('access_token' in b)));
     assert.deepEqual(banks.map(b => typeof b.lastSyncedAt).sort(), ['object', 'string'], 'last successful sync shown (null for the expired one)');
     assert.equal(goodBankId.length > 0, true);
+  });
+
+  test('each sync is kept in the connection\'s log; a bank that fails is said and the others still sync (Z-28, Z-29)', async () => {
+    nextAccessToken = 'access-broken';
+    const broken = String((await call('owner-1', 'POST', 'exchange_public_token', { workspaceId: ws, public_token: 'p6', institutionName: 'Broken Bank', accountId: 'acc-broken' })).body.bankId);
+    const res = await call('owner-1', 'POST', 'sync', { workspaceId: ws });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.deepEqual(res.body.failed, [{ bankId: broken, institutionName: 'Broken Bank', error: 'INSTITUTION_DOWN' }]);
+    assert.deepEqual((res.body.transactions as { transaction_id: string }[]).map(t => t.transaction_id), ['tx-access-good'], 'the good one still came');
+    const list = (await call('view-1', 'GET', `banks?workspaceId=${ws}`)).body.banks as Array<{ id: string; status: string; syncLog: Array<{ result: string; lines?: number; error?: string }> }>;
+    const good = list.find(b => b.id === goodBankId)!;
+    assert.deepEqual(good.syncLog.map(e => [e.result, e.lines]), [['ok', 1], ['ok', 1]], 'newest first');
+    const bad = list.find(b => b.id === broken)!;
+    assert.equal(bad.status, 'error');
+    assert.deepEqual(bad.syncLog.map(e => [e.result, e.error]), [['error', 'INSTITUTION_DOWN']]);
+    assert.deepEqual(list.find(b => b.id === expiredBankId)!.syncLog.map(e => e.result), ['login_required', 'login_required']);
+    // only the failing one asked for: the sync fails, and says so in the log
+    assert.equal((await call('owner-1', 'POST', 'sync', { workspaceId: ws, accountId: 'acc-broken' })).status, 502);
+    assert.equal(((await db.collection('banks').doc(broken).get()).data()?.syncLog as unknown[]).length, 2);
+    await db.collection('banks').doc(broken).delete();
+  });
+
+  test('disconnecting tells the bank to stop, deletes the connection and its token, and keeps the imported lines (Z-30)', async () => {
+    await db.collection('bankLines').doc(`${ws}_line1`).set({ workspaceId: ws, date: '2026-10-01', amountCents: 500, description: 'Imported', status: 'pending', bankId: goodBankId });
+    assert.equal((await call('book-1', 'POST', 'disconnect', { workspaceId: ws, bankId: goodBankId })).status, 403, 'owners and accountants only');
+    assert.equal((await call('owner-2', 'POST', 'disconnect', { workspaceId: other, bankId: goodBankId })).status, 404, 'not another workspace\'s');
+    assert.equal((await call('owner-1', 'POST', 'disconnect', { workspaceId: ws })).status, 400);
+    const res = await call('owner-1', 'POST', 'disconnect', { workspaceId: ws, bankId: goodBankId });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(removed.at(-1), 'access-good', 'the bank was told with the real token');
+    assert.equal((await db.collection('banks').doc(goodBankId).get()).exists, false);
+    assert.equal((await db.collection('bankLines').doc(`${ws}_line1`).get()).exists, true, 'imported lines stay');
+    const audit = await db.pool.query(`select data->'details'->>'description' as d from public."auditLogs" where workspace_id = $1 and data->>'action' = 'BANK_DISCONNECTED'`, [ws]);
+    assert.deepEqual(audit.rows.map(r => r.d), ['First Bank disconnected; its imported bank lines are kept']);
+    assert.deepEqual(((await call('view-1', 'GET', `banks?workspaceId=${ws}`)).body.banks as unknown[]).length, 1);
+  });
+
+  test('if the bank can\'t be told, nothing is removed; one the bank no longer knows is removed here', async () => {
+    nextAccessToken = 'access-down';
+    const down = String((await call('owner-1', 'POST', 'exchange_public_token', { workspaceId: ws, public_token: 'p4', institutionName: 'Down Bank' })).body.bankId);
+    const res = await call('owner-1', 'POST', 'disconnect', { workspaceId: ws, bankId: down });
+    assert.equal(res.status, 502);
+    assert.match(String(res.body.message), /nothing was removed/);
+    assert.equal((await db.collection('banks').doc(down).get()).exists, true);
+    nextAccessToken = 'access-gone';
+    const gone = String((await call('owner-1', 'POST', 'exchange_public_token', { workspaceId: ws, public_token: 'p5', institutionName: 'Gone Bank' })).body.bankId);
+    assert.equal((await call('owner-1', 'POST', 'disconnect', { workspaceId: ws, bankId: gone })).status, 200);
+    assert.equal((await db.collection('banks').doc(gone).get()).exists, false);
   });
 });

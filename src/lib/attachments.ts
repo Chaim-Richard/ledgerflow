@@ -10,13 +10,17 @@
 export const MAX_ATTACHMENT_BYTES = 700_000;
 export const MAX_FILES_AT_ONCE = 10;
 
-export type AttachmentCollection = 'invoices' | 'bills' | 'customers' | 'vendors' | 'estimates' | 'purchaseOrders';
+// supportTickets (BO-05): a screenshot kept with feedback or a support ticket
+// chartAccounts (BD-04): a file kept with one account's workpaper for a month
+export type AttachmentCollection = 'invoices' | 'bills' | 'customers' | 'vendors' | 'estimates' | 'purchaseOrders' | 'supportTickets' | 'chartAccounts';
 
 /** The record a file belongs to, and how it is named in lists ("Invoice INV-12"). */
 export interface AttachmentTarget {
   collection: AttachmentCollection;
   id: string;
   label: string;
+  /** Only the record's files whose name starts with this (e.g. "Workpaper 2026-09": one month of an account). */
+  scope?: string;
 }
 
 /** A file as stored (one row of `documents`). */
@@ -66,9 +70,10 @@ export function attachmentRecord(
 }
 
 /** The files of one record, newest first. */
-export function attachmentsOf(docs: Attachment[], target: Pick<AttachmentTarget, 'collection' | 'id'>): Attachment[] {
+export function attachmentsOf(docs: Attachment[], target: Pick<AttachmentTarget, 'collection' | 'id' | 'scope'>): Attachment[] {
   return docs
     .filter(d => d.linkedCollection === target.collection && d.linkedId === target.id)
+    .filter(d => !target.scope || String(d.linkedLabel || '').startsWith(target.scope))
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 

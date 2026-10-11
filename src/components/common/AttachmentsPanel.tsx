@@ -12,8 +12,10 @@ import { safeConfirm } from '../../lib/utils';
  * person who added it, or owners, accountants and bookkeepers), and "Attach files" for anyone who
  * can write. Each file is saved on its own and only reported as attached once the database has it.
  */
-export default function AttachmentsPanel({ target, className = '' }: { target: AttachmentTarget; className?: string }) {
-  const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
+/** `workspaceId`: the record's own workspace when it isn't the current one (a platform admin reading a support ticket). */
+export default function AttachmentsPanel({ target, className = '', workspaceId: forWorkspace }: { target: AttachmentTarget; className?: string; workspaceId?: string }) {
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
+  const workspaceId = forWorkspace || currentWorkspaceId;
   const uid = useAuthStore(s => s.user?.uid);
   const role = useCurrentRole();
   const canAttach = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
@@ -22,18 +24,18 @@ export default function AttachmentsPanel({ target, className = '' }: { target: A
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState('');
 
-  const { collection: targetCollection, id: targetId } = target;
+  const { collection: targetCollection, id: targetId, scope: targetScope } = target;
   // loads again only when the record changes, not on every render of the form around it
   const refresh = useCallback(async () => {
     if (!workspaceId || !targetId) return;
     try {
-      setFiles(await loadAttachments(workspaceId, { collection: targetCollection, id: targetId }));
+      setFiles(await loadAttachments(workspaceId, { collection: targetCollection, id: targetId, scope: targetScope }));
       setLoadError('');
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : String(err));
       setFiles([]);
     }
-  }, [workspaceId, targetCollection, targetId]);
+  }, [workspaceId, targetCollection, targetId, targetScope]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const add = async (list: FileList | null) => {

@@ -1,7 +1,9 @@
 import type { DocumentData, Firestore, Transaction } from '../db/firestore';
 import { CLOSE_ROLES, dayBefore, monthCloseState, monthEnd, workspaceRole } from '../../lib/periodLock';
 import type { PeriodLockSettings } from '../../lib/periodLock';
+import crypto from 'crypto';
 import { CLOSE_ITEM_IDS } from '../../lib/closeChecklist';
+import { closeStepsProblem, STEP_PREFIX, type CloseStep } from '../../lib/closeSteps';
 import { formatTzDate } from '../../lib/utils';
 import { dayNumber } from '../../lib/fiscalCalendar';
 import { writeServerAuditLog } from './auditLogService';
@@ -133,7 +135,7 @@ export async function closingBalanceCheck(db: Firestore, input: Actor & { month:
   const snapshot = period?.closingSnapshot as ClosingSnapshot | undefined;
   if (!snapshot?.asOfDate || !Array.isArray(snapshot.accounts)) return { snapshot: null, changes: [] };
   const ledger = await ledgerThrough(db, input.workspaceId, snapshot.asOfDate);
-  const now = balancesAsOf(ledger.accounts, ledger.entries, snapshot.asOfDate);
+  const now = balancesAsOf(ledger.accounts, ledger.entries, snapshot.asOfDate, { openingAsStored: snapshot.openingRule !== 'own-direction' });
   return {
     snapshot: { asOfDate: snapshot.asOfDate, takenAt: snapshot.takenAt, entries: snapshot.entries, accounts: snapshot.accounts.length },
     entriesNow: now.entries,
@@ -201,11 +203,15 @@ export async function relock(db: Firestore, input: Actor) {
 
 export async function signOff(db: Firestore, input: Actor & { month: string; itemId: string; note?: string; remove?: boolean }) {
   if (!MONTH.test(input.month)) throw new PeriodCloseError(400, 'Month must be YYYY-MM');
-  if (!CLOSE_ITEM_IDS.includes(input.itemId)) throw new PeriodCloseError(400, 'Unknown checklist item');
+  const isStep = input.itemId.startsWith(STEP_PREFIX);
+  if (!CLOSE_ITEM_IDS.includes(input.itemId) && !isStep) throw new PeriodCloseError(400, 'Unknown checklist item');
   const note = String(input.note || '').trim().slice(0, 500);
 
   return db.runTransaction(async (t) => {
     const { ws } = await loadWorkspace(db, t, input, WRITER_ROLES, 'sign off checklist items');
+    // the client's own steps (BD-10): only one of this workspace's; a removed step's sign-off may still be taken back
+    const steps = Array.isArray(ws.closeSteps) ? (ws.closeSteps as CloseStep[]) : [];
+    if (isStep && !input.remove && !steps.some(s => `${STEP_PREFIX}${s.id}` === input.itemId)) throw new PeriodCloseError(400, 'Unknown checklist item');
     if (monthCloseState(input.month, { ...ws, lockException: null }) === 'hard') throw new PeriodCloseError(409, `${input.month} is hard-closed; its sign-offs are final`);
     const ref = periodRef(db, input.workspaceId, input.month);
     const existing = (await t.get(ref)).data();
@@ -219,5 +225,29 @@ export async function signOff(db: Firestore, input: Actor & { month: string; ite
     }, { merge: true });
     await audit(db, t, input, 'PERIOD_SIGN_OFF', `${input.remove ? 'Removed the sign-off of' : 'Signed off'} "${input.itemId}" for ${input.month}${note ? `: ${note}` : ''}`, { month: input.month, itemId: input.itemId });
     return { signOffs };
+  });
+}
+
+/**
+ * A checklist per client (BD-10): owners and accountants keep the workspace's own month-end steps.
+ * The whole list is sent; new steps get an id here. Sign-offs already given stay with their months.
+ */
+export async function saveCloseSteps(db: Firestore, input: Actor & { steps: Array<{ id?: string; title: string; frequency: string }> }) {
+  const problem = closeStepsProblem(input.steps);
+  if (problem) throw new PeriodCloseError(400, problem);
+  const steps: CloseStep[] = input.steps.map(s => ({
+    id: s.id || `cs_${crypto.randomBytes(6).toString('hex')}`,
+    title: String(s.title).trim(),
+    frequency: s.frequency as CloseStep['frequency'],
+  }));
+  return db.runTransaction(async (t) => {
+    const { ref, ws } = await loadWorkspace(db, t, input, CLOSE_ROLES, 'change the month-end steps');
+    const before = Array.isArray(ws.closeSteps) ? (ws.closeSteps as CloseStep[]) : [];
+    const added = steps.filter(s => !before.some(b => b.id === s.id)).map(s => s.title);
+    const removed = before.filter(b => !steps.some(s => s.id === b.id)).map(b => b.title);
+    t.update(ref, { closeSteps: steps, updatedAt: new Date().toISOString() });
+    const what = [added.length ? `added ${added.map(a => `"${a}"`).join(', ')}` : '', removed.length ? `removed ${removed.map(r => `"${r}"`).join(', ')}` : ''].filter(Boolean).join('; ');
+    await audit(db, t, input, 'CLOSE_STEPS_SAVED', `Month-end steps saved (${steps.length})${what ? `: ${what}` : ''}`, { count: steps.length });
+    return { closeSteps: steps };
   });
 }

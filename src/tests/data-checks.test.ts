@@ -131,4 +131,33 @@ describe('Data-health checks added later', () => {
     assert.match(found[0].title, /2 bank line\(s\) in Checking/);
     assert.equal(RECORD_TABS.bankLine, 'reconciliation');
   });
+
+  test('an entry the bank cleared more than 3 days before it was made (CB-21)', () => {
+    const ctx = base();
+    const tx = (id: string, date: string) => makeTransaction({ id, date, description: id, lines: [{ accountId: 'cash', amountCents: -500 }, { accountId: 'rev', amountCents: 500 }] });
+    ctx.transactions = [tx('cheque', '2026-09-20'), tx('ok', '2026-09-20'), tx('near', '2026-09-20')];
+    const line = (id: string, date: string, matched: string) => ({ id, uid: 'u', workspaceId: 'w', accountId: 'cash', date, description: id, amountCents: -500, status: 'matched' as const, matchedTransactionId: matched });
+    ctx.bankLines = [line('l1', '2026-09-10', 'cheque'), line('l2', '2026-09-22', 'ok'), line('l3', '2026-09-17', 'near')];
+    const found = runDataChecks(ctx).filter(f => f.checkId === 'cleared-before-issued');
+    assert.deepEqual(found.map(f => f.record?.id), ['cheque'], 'three days apart is how banks and books date the same payment');
+    assert.match(found[0].title, /\(2026-09-20\) was cleared by a statement line of 2026-09-10/);
+  });
+
+  test('a payment without its entry, or with another amount; void and older payments are not checked (CB-23)', () => {
+    const ctx = base();
+    const posting = (id: string, paymentId: string, cents: number, extra = {}) => makeTransaction({ id, date: '2026-09-05', totalAmountCents: cents, metadata: { type: 'payment-posting', paymentId }, lines: [{ accountId: 'cash', amountCents: cents }, { accountId: 'rev', amountCents: -cents }], ...extra });
+    ctx.transactions = [posting('t1', 'p1', 50_000), posting('t2', 'p2', 30_000), posting('t3', 'p3', 10_000, { reversalEventId: 'r' }), posting('t5', 'p5', 11_000)];
+    ctx.payments = [
+      { id: 'p1', number: 'PAY-1', amountCents: 50_000, paymentDate: '2026-09-05' },
+      { id: 'p2', number: 'PAY-2', amountCents: 25_000, paymentDate: '2026-09-05', contactName: 'Acme' },
+      { id: 'p3', number: 'PAY-3', amountCents: 10_000, paymentDate: '2026-09-05' },
+      { id: 'p4', number: 'PAY-4', amountCents: 10_000, paymentDate: '2026-09-06', status: 'void' },
+      { id: 'p5', number: 'PAY-5', amountCents: 10_000, exchangeRate: 1.1, paymentDate: '2026-09-06' },
+      { id: 'p6', number: 'PAY-6', amountCents: 10_000, paymentDate: '2020-01-01' },
+    ];
+    const found = runDataChecks(ctx).filter(f => f.checkId === 'payment-ledger');
+    assert.deepEqual(found.map(f => f.title), ['Payment PAY-2 (Acme) is $250.00, its entry $300.00', 'Payment PAY-3 has no entry in the ledger']);
+    assert.deepEqual(found[0].record, { type: 'transaction', id: 't2' });
+    assert.deepEqual(runDataChecks({ ...ctx, payments: undefined }).filter(f => f.checkId === 'payment-ledger'), [], 'not checked without the payments');
+  });
 });

@@ -13,7 +13,9 @@ import { writeServerAuditLog } from '../../services/auditLogService';
 import { deletionSentence, deletionSnapshot } from '../../services/deletionRecord';
 import { assertPostingOpen, lockMessage, postingLock } from '../../../lib/periodLock';
 import { errorMessage, HttpError, requestUser } from '../../auth/requestUser';
-import { enforceDoubleEntrySafety, isUpdatedAtMismatch } from './helpers';
+import { enforceDoubleEntrySafety, ifMatchVersion, isUpdatedAtMismatch } from './helpers';
+import { FieldsError, parseFields, pickFields } from '../../http/sparseFields';
+import { refusedLabels, refusedLabelsMessage } from '../../../lib/requiredLabels';
 
 /** Read, create, edit and delete one entry. Part of /api/v1/transactions (F-06), registered in the original order. */
 export function registerTransactionCrudRoutes(transactionRouter: express.Router): void {
@@ -34,6 +36,12 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
       }
 
       const { startDate, endDate, accountId, limit, cursor } = req.query;
+      // Z-04: ?fields=date,description,… returns only those fields (and the id)
+      let fields: string[] | null;
+      try { fields = parseFields(req.query.fields); } catch (err) {
+        if (err instanceof FieldsError) return res.status(400).json({ error: err.message });
+        throw err;
+      }
 
       let queryFn = db.collection("transactions").where("workspaceId", "==", workspaceId);
     
@@ -70,7 +78,7 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
         workspaceId,
         transactionsCount: transactions.length,
         nextCursor,
-        transactions
+        transactions: pickFields(transactions as Array<Record<string, unknown>>, fields)
       });
     } catch (err) {
       if (errorMessage(err) === "FORBIDDEN") return res.status(403).json({ error: "Forbidden workspace access" });
@@ -122,6 +130,9 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
         user: { uid: user.uid, admin: user.admin },
         wsData
       });
+      // Z-12: a required label whose rule refuses
+      const missing = refusedLabels(validatedTx, wsData?.dimensions);
+      if (missing.length > 0) throw new HttpError(refusedLabelsMessage(missing), 400);
 
       // Execute atomic validation and create inside the single command transaction boundary
       const txRef = db.collection('transactions').doc(transactionToSave.id);
@@ -137,6 +148,49 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
       });
 
       return validatedTx;
+    });
+  });
+
+  /**
+   * Z-03: several entries in one request (at most 500), all or none: each is checked as one entry is
+   * (schema, balanced lines, accounts in the workspace, the period lock), then all are created in one
+   * database transaction. The answer lists their ids in order; a refusal names the entry (by index).
+   */
+  transactionRouter.post('/batch-create', requirePlanCapacity('transactions'), async (req, res) => {
+    const { workspaceId, transactions } = req.body || {};
+    if (!workspaceId || typeof workspaceId !== 'string') return res.status(400).json({ status: 'error', message: 'Workspace ID is required' });
+    if (!Array.isArray(transactions) || transactions.length === 0) return res.status(400).json({ status: 'error', message: 'Send the entries as "transactions": [...]' });
+    if (transactions.length > 500) return res.status(400).json({ status: 'error', message: 'At most 500 entries a request' });
+
+    return executeCommand(req, res, workspaceId, 'TRANSACTION_BATCH_CREATE', async (_ctx, t) => {
+      const user = requestUser(req);
+      const db = getDb();
+      const wsDoc = await t.get(db.collection('workspaces').doc(workspaceId));
+      const wsData = wsDoc.data();
+      if (!wsDoc.exists || (wsData?.uid !== user.uid && !wsData?.members?.includes(user.uid) && !user.admin)) throw new HttpError('Not a member', 403);
+      const prepared: Transaction[] = [];
+      const ids = new Set<string>();
+      for (const [index, raw] of (transactions as Array<Record<string, unknown>>).entries()) {
+        const entry: Record<string, unknown> = { ...(raw || {}), workspaceId, uid: user.uid };
+        if (!entry.totalAmountCents) entry.totalAmountCents = getAbsoluteTotal(entry as unknown as Transaction);
+        const parsed = TransactionSchema.safeParse(entry);
+        if (!parsed.success) throw Object.assign(new HttpError(`Entry ${index}: schema validation failed`, 400), { details: parsed.error.issues });
+        const id = parsed.data.id || db.collection('transactions').doc().id;
+        if (ids.has(id)) throw new HttpError(`Entry ${index}: the id ${id} is used twice in this request`, 400);
+        ids.add(id);
+        try {
+          prepared.push(await TransactionValidator.validateAndPrepare({ ...parsed.data, id } as Transaction, { workspaceId, user: { uid: user.uid, admin: user.admin }, wsData }, undefined, t));
+        } catch (err) {
+          throw new HttpError(`Entry ${index}: ${errorMessage(err)}`, /Period Locked/i.test(errorMessage(err)) ? 409 : 400);
+        }
+        const missing = refusedLabels(prepared[prepared.length - 1], wsData?.dimensions);
+        if (missing.length > 0) throw new HttpError(`Entry ${index}: ${refusedLabelsMessage(missing)}`, 400);
+        if ((await t.get(db.collection('transactions').doc(id))).exists) throw new HttpError(`Entry ${index}: an entry with the id ${id} already exists`, 409);
+      }
+      for (const tx of prepared) {
+        t.create(db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      }
+      return { created: prepared.length, ids: prepared.map(tx => tx.id) };
     });
   });
 
@@ -163,7 +217,7 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
            const txData = doc.data();
 
            // Optimistic concurrency check
-           const expectedUpdatedAt = req.body.expectedUpdatedAt || partialUpdate.expectedUpdatedAt;
+           const expectedUpdatedAt = req.body.expectedUpdatedAt || partialUpdate.expectedUpdatedAt || ifMatchVersion(req.header('if-match'));
            if (isUpdatedAtMismatch(expectedUpdatedAt, txData?.updatedAt)) {
              throw Object.assign(new Error('version_conflict'), { currentTransaction: { ...txData, id: doc.id } });
            }
@@ -232,6 +286,9 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
         user: { uid: user.uid, admin: user.admin },
         wsData
       }, existingTx);
+      // Z-12: a required label whose rule refuses
+      const missing = refusedLabels(validatedTx, wsData?.dimensions);
+      if (missing.length > 0) return res.status(400).json({ error: refusedLabelsMessage(missing), missingLabels: missing });
 
       await db.runTransaction(async (t) => {
         const txRef = db.collection('transactions').doc(id);
@@ -239,7 +296,7 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
         if (!doc.exists) throw new Error('Not found');
 
         // Optimistic concurrency check
-        const expectedUpdatedAt = req.body.expectedUpdatedAt || transaction?.expectedUpdatedAt;
+        const expectedUpdatedAt = req.body.expectedUpdatedAt || transaction?.expectedUpdatedAt || ifMatchVersion(req.header('if-match'));
         if (isUpdatedAtMismatch(expectedUpdatedAt, doc.data()?.updatedAt)) {
           throw Object.assign(new Error('version_conflict'), { currentTransaction: { ...doc.data(), id: doc.id } });
         }
@@ -271,7 +328,8 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
       res.json({ status: 'ok', transactionId: id, data: transaction });
     } catch (e) {
       if (errorMessage(e) === 'version_conflict') {
-         return res.status(409).json({
+         // Z-05: a stale If-Match is a failed precondition (412); a stale expectedUpdatedAt stays 409
+         return res.status(ifMatchVersion(req.header('if-match')) ? 412 : 409).json({
            error: 'version_conflict',
            message: 'This transaction was modified by another user.',
            currentTransaction: (e as { currentTransaction?: unknown }).currentTransaction

@@ -1,3 +1,9 @@
+# Status: moved
+
+This page was a generated snapshot from late September and is out of date. **What works today is in [`CAPABILITIES.md`](CAPABILITIES.md)** (one row per capability, its label, its evidence and its limit, checked by `src/tests/capabilities-guard.test.ts`). The old snapshot is kept below for history only.
+
+---
+
 > Historical generated snapshot: several missing/engine-only labels below are stale. See [Tool review](TOOL_REVIEW.md) for code-linked evidence against main `5bce9cb` and [Tracker](TRACKER.md) for the working roadmap. This notice preserves the original snapshot.
 
 # LedgerFlow Domain Status Report

@@ -2,6 +2,8 @@ import type { TaxTreatment } from '../lib/taxCodes';
 import type { ContactNote, ContactPerson } from '../lib/contacts';
 import type { DeliveryMethod } from '../lib/delivery';
 import type { InvoiceApprovalRecord } from '../lib/invoiceApproval';
+import type { EstimateSignature } from '../lib/estimateSignature';
+import type { Milestone } from '../lib/milestones';
 import type { EntityMetadata } from './ledger';
 import type { DashboardSchema } from './workspace';
 
@@ -92,6 +94,16 @@ export interface Bill {
     accountId: string;
     taxRate?: number;
     description?: string;
+    /** BF-09: the line's labels (Property, Project…), posted with its expense */
+    dimensions?: Record<string, string>;
+    /** J-08: an inventory item bought on this line, and how many units (src/lib/billStock.ts) */
+    itemId?: string;
+    quantity?: number;
+    /** BA-03: freight, duty… spread over the bill's stock items (posts to Inventory) */
+    landedCost?: boolean;
+    /** CB-17: on a bill made from a purchase order, the order's line and the units this line bills */
+    orderLine?: number;
+    orderQuantity?: number;
   }>;
   projectId?: string;
   issueDate?: string;
@@ -168,6 +180,8 @@ export interface Invoice {
     accountId: string;
     taxRate?: number;
     unitCostCents?: number;
+    /** BF-09: the line's labels (Project, Location…), posted with its revenue */
+    dimensions?: Record<string, string>;
     metadata?: EntityMetadata;
   }>;
   progressPercentage?: number;
@@ -203,6 +217,10 @@ export interface Invoice {
   /** set when saved (database row times) */
   createdAt?: string;
   updatedAt?: string;
+  /** S-02: when the customer first and last opened the invoice's own page, and how often (an hour apart at most). Set by the server. */
+  viewedAt?: string;
+  lastViewedAt?: string;
+  viewCount?: number;
 }
 
 export interface PaymentAllocation {
@@ -252,7 +270,15 @@ export interface Estimate {
   orderedBy?: string;
   /** the customer's own reference for the order (their purchase order number) */
   customerReference?: string;
+  /** Y-20: the private signing link (server only) and the customer's signature (src/lib/estimateSignature.ts) */
+  signToken?: string;
+  signTokenAt?: string;
+  signature?: EstimateSignature;
+  /** V-09: the order's milestone schedule (src/lib/milestones.ts) */
+  milestones?: Milestone[];
   lines: Array<{
+    /** the stock item this line sells (BF-08): the order is then invoiced by quantity */
+    itemId?: string;
     description: string;
     quantity: number;
     unitPriceCents: number;
@@ -289,6 +315,8 @@ export interface CreditNote {
   taxInclusive?: boolean;
   taxVersion?: number;
   taxTreatment?: TaxTreatment;
+  /** BF-06: goods the customer sent back, per stock line of the credited invoice (src/lib/salesReturns.ts) */
+  returnedGoods?: Array<{ invoiceLineId: string; itemId: string; quantity: number }>;
 }
 
 export interface VendorCredit {
@@ -317,6 +345,16 @@ export interface VendorCredit {
   taxInclusive?: boolean;
   taxVersion?: number;
   taxTreatment?: TaxTreatment;
+  /** BF-07: stock sent back to the vendor, by line of the credited bill (src/lib/vendorReturns.ts) */
+  returnedGoods?: VendorReturnLine[];
+}
+
+/** BF-07: units of one stock line of a bill sent back, at that line's cost (the credit's currency) */
+export interface VendorReturnLine {
+  billLine: number;
+  itemId: string;
+  quantity: number;
+  valueCents: number;
 }
 
 export interface Customer {
@@ -352,6 +390,9 @@ export interface Customer {
   noStatements?: boolean;
   /** Set when the customer came from a spreadsheet import; lets the import be undone. */
   importBatchId?: string;
+  /** Customer portal (K-27): the private link's token and when it was made; written by the server only. */
+  portalToken?: string | null;
+  portalTokenAt?: string | null;
 }
 
 export interface CustomTemplate {
@@ -378,6 +419,8 @@ export interface PurchaseOrderItem {
   totalCents: number;
   receivedQuantity?: number;
   accountId?: string;
+  /** J-08: the stock item ordered; the bill made from the order brings its units in */
+  itemId?: string;
 }
 
 export interface PurchaseOrder {

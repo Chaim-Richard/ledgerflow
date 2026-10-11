@@ -64,6 +64,7 @@ export function ruleArrays(table: string, sql = migrationsSql()): { allowed: str
 /** True when an index covers (workspace_id, (data->>'field')) on the table. */
 export function hasWorkspaceFieldIndex(table: string, field: string, sql = migrationsSql()): boolean {
   const quoted = table === table.toLowerCase() ? `(?:"${table}"|${table})` : `"${table}"`;
-  const re = new RegExp(`create index[^;]*on public\\.${quoted}\\s*\\(\\s*workspace_id\\s*,\\s*\\(data->>'${field}'\\)\\s*\\)`, 'i');
+  // (workspace_id, (data->>'date')) or, since C-20, (workspace_id, (data->>'date') desc, id)
+  const re = new RegExp(`create index[^;]*on public\\.${quoted}\\s*\\(\\s*workspace_id\\s*,\\s*\\(data->>'${field}'\\)(?:\\s+desc)?(?:\\s*,\\s*id)?\\s*\\)`, 'i');
   return re.test(sql);
 }

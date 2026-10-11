@@ -53,12 +53,12 @@ import { useCurrentRole } from '../../hooks/useCurrentRole';
 import InlineEdit from '../ui/InlineEdit';
 import InlineAdd from '../ui/InlineAdd';
 import DocumentBulkBar from '../ui/DocumentBulkBar';
-import { printInvoice } from '../../lib/printInvoice';
 import { getDefaultTaxConfig, generateDefaultTaxRates } from '../../lib/taxRateDefaults';
 import { calculateNextOccurrence } from '../../lib/recurringEngine';
 
 import CustomerDetailView from './CustomerDetailView';
 import InvoiceApprovalFlag from './InvoiceApprovalFlag';
+import { StageChip } from '../collaboration/StageChip';
 import { approvalDecision, isApproverRole } from '../../lib/invoiceApproval';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
@@ -457,7 +457,13 @@ export default function Sales() {
                           <span className="text-[10px] text-amber-600 font-bold" title={inv.writeOffReason || undefined}>written off {formatCurrency(inv.writtenOffCents || 0)}</span>
                         )}
                       </div>
+                      {inv.viewedAt && inv.status !== 'paid' && (
+                        <div className="mt-1 text-center text-[10px] text-[var(--muted)]" title={inv.lastViewedAt ? `Last opened ${formatDate(inv.lastViewedAt.slice(0, 10))}${(inv.viewCount || 0) > 1 ? `, ${inv.viewCount} times` : ''}` : undefined}>
+                          Opened by the customer {formatDate(inv.viewedAt.slice(0, 10))}
+                        </div>
+                      )}
                       {inv.revenueSchedule && <div className="mt-1 text-center text-[10px] text-[var(--muted)]">{spreadProgress(inv.revenueSchedule, getLocalDateISO())}</div>}
+                      <StageChip kind="invoice" id={inv.id} label={`invoice ${inv.number || ''}`.trim()} />
                       <InvoiceApprovalFlag invoice={inv} settings={approvalSettings} currency={homeCurrency}
                         canDecide={canDecideApproval} onDecide={d => decideApproval(inv, d)} />
                       {inv.metadata?.cogsPending && (

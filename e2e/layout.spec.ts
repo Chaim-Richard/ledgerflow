@@ -9,10 +9,10 @@ import AxeBuilder from '@axe-core/playwright';
  * own test).
  */
 const screens = [
-  'dashboard', 'inbox', 'copilot', 'transactions', 'credit-notes', 'assets', 'register', 'ledger',
-  'intercompany', 'recurring', 'query-builder', 'banking', 'audit-trail', 'reconciliation',
+  'dashboard', 'inbox', 'practice', 'copilot', 'transactions', 'credit-notes', 'assets', 'register', 'ledger',
+  'intercompany', 'recurring', 'query-builder', 'banking', 'audit-trail', 'client-queries', 'tasks', 'time', 'reconciliation',
   'month-end-close', 'fiscal-periods', 'sales', 'estimates', 'payments', 'purchases',
-  'purchase-orders', 'loans', 'payroll', 'reports', 'charts', 'forecaster', 'intelligence', 'settings',
+  'purchase-orders', 'loans', 'petty-cash', 'payroll', 'reports', 'charts', 'forecaster', 'intelligence', 'settings',
   'data-health', 'support', 'help', 'vault', 'pricing', 'api-hub',
 ];
 

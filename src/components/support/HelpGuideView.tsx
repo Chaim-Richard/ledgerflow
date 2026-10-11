@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import { startTour } from "../../lib/productTour";
 import React, { useState } from "react";
 import { 
   BookOpen, 
@@ -19,6 +20,7 @@ import { motion } from "motion/react";
 import { useUIStore } from "../../stores/useUIStore";
 import ReleaseNotes from "./ReleaseNotes";
 import AllScreensHelp from "./AllScreensHelp";
+import MainPathGuide from "./MainPathGuide";
 
 interface SectionDoc {
   id: string;
@@ -160,7 +162,7 @@ const GUIDE_SECTIONS: SectionDoc[] = [
       "Tax Liability (tax-liability): Real-time sales tax and VAT reporting with tax-inclusive / exclusive breakdowns.",
       "Projects (projects): Assign revenue, costs, and billable hours to project dimension codes for job costing.",
       "Budgets (budgets): Establish department and account fiscal budgets and track real-time variance against actuals.",
-      "Consolidation (consolidation): Multi-entity financial roll-up with automated intercompany transaction eliminations.",
+      "Consolidation (consolidation): A view across entities. For your groups of companies side by side, in one currency, with what they owe each other taken out, use Reports → Group Summary; dealings between them are checked, not yet eliminated from sales (docs/CAPABILITIES.md).",
       "Time Machine (time-machine): Inspect the exact historical state of the entire financial ledger at any prior timestamp.",
       "Vault (vault): Secure, tamper-proof repository for invoices, bill receipts, tax forms, and compliance documents.",
       "Forecaster (forecaster): Monte Carlo cash flow simulation and runway projection engine.",
@@ -176,7 +178,7 @@ const GUIDE_SECTIONS: SectionDoc[] = [
 ];
 
 export default function HelpGuideView() {
-  const [mode, setMode] = useState<"workflows" | "screens">("workflows");
+  const [mode, setMode] = useState<"workflows" | "screens" | "main-path">("workflows");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedSection, setSelectedSection] = useState(GUIDE_SECTIONS[0]);
@@ -223,9 +225,12 @@ export default function HelpGuideView() {
         </div>
 
         <ReleaseNotes />
+        <button type="button" className="min-h-11 px-4 border rounded-lg mt-4" onClick={() => window.dispatchEvent(new Event('ledgerflow:feedback'))}>Send feedback</button>
         <div className="max-w-7xl mx-auto flex gap-2 mt-4">
           <button type="button" aria-pressed={mode === 'workflows'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('workflows')}>Workflows</button>
           <button type="button" aria-pressed={mode === 'screens'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('screens')}>All screens</button>
+          <button type="button" aria-pressed={mode === 'main-path'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('main-path')}>Main path</button>
+          <button type="button" className="min-h-11 px-4 border rounded-lg" onClick={startTour}>Take the tour</button>
         </div>
 
         {mode === 'workflows' && (
@@ -248,7 +253,7 @@ export default function HelpGuideView() {
       </div>
 
       <div className="flex-1 overflow-hidden flex flex-col md:flex-row max-w-7xl mx-auto w-full">
-        {mode === 'screens' ? <AllScreensHelp /> : <>
+        {mode === 'main-path' ? <MainPathGuide /> : mode === 'screens' ? <AllScreensHelp /> : <>
         <div className="w-full md:w-80 border-r border-[var(--line)] overflow-y-auto p-4 space-y-2 shrink-0 custom-scrollbar">
           {filteredSections.map(section => {
             const Icon = section.icon;

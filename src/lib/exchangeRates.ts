@@ -68,3 +68,33 @@ export function rateHistory(currency: string, docs: RatedDoc[]): RateUse[] {
 export function rateOn(currency: string, date: string, docs: RatedDoc[]): RateUse | null {
   return rateHistory(currency, docs).find(u => u.date <= date.slice(0, 10)) ?? null;
 }
+
+/** BB-02: one currency the workspace's documents use besides its own. */
+export interface CurrencyInUse {
+  currency: string;
+  /** invoices and bills in it */
+  documents: number;
+  /** of them, still open (owed to or by the business) */
+  open: number;
+  /** the newest rate a document was posted at, and its day */
+  lastRate: number | null;
+  lastDate: string | null;
+}
+
+/** The currencies the workspace's invoices and bills use other than its own, most used first. */
+export function currenciesInUse(home: string, docs: Array<RatedDoc & { open?: boolean }>): CurrencyInUse[] {
+  const byCurrency = new Map<string, CurrencyInUse>();
+  for (const d of docs) {
+    const currency = (d.currency || '').toUpperCase();
+    if (!/^[A-Z]{3}$/.test(currency) || currency === home) continue;
+    const row = byCurrency.get(currency) || { currency, documents: 0, open: 0, lastRate: null, lastDate: null };
+    row.documents += 1;
+    if (d.open) row.open += 1;
+    byCurrency.set(currency, row);
+  }
+  for (const row of byCurrency.values()) {
+    const last = rateHistory(row.currency, docs)[0];
+    if (last) { row.lastRate = last.rate; row.lastDate = last.date; }
+  }
+  return [...byCurrency.values()].sort((a, b) => b.documents - a.documents || a.currency.localeCompare(b.currency));
+}

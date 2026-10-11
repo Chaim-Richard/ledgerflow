@@ -4,6 +4,9 @@ import { getDb } from '../db/firestore';
 import { getTrustedAppUrl } from '../utils/urlHelper';
 import { calculateAmountDue, depositAppliedCents } from '../../lib/documentMath';
 import Stripe from 'stripe';
+import { publicPortalRouter } from './customerPortalRoutes';
+import { publicEstimateRouter } from './estimateSignRoutes';
+import { recordInvoiceView } from '../services/invoiceViewService';
 
 let stripeClient: Stripe | null = null;
 function getStripe(): Stripe {
@@ -16,6 +19,10 @@ function getStripe(): Stripe {
 }
 
 export const publicInvoiceRouter = express.Router();
+// the customer portal (K-27) shares this public route and its rate limit: /api/v1/invoices/public/portal/<token>
+publicInvoiceRouter.use('/portal', publicPortalRouter);
+// signing an estimate (Y-20): /api/v1/invoices/public/estimate/<token>
+publicInvoiceRouter.use('/estimate', publicEstimateRouter);
 
 const publicInvoiceTokenParamsSchema = z.object({
   token: z.string().regex(/^pay_[a-zA-Z0-9_-]{10,128}$/, 'Invalid payment token format')
@@ -64,6 +71,8 @@ publicInvoiceRouter.get('/:token', async (req, res) => {
       : 0;
     // What is still due, by the one money rule (discounts, retainage, credits, payments)
     const remainingBalance = calculateAmountDue(invoice);
+    // S-02: the customer opened it (recorded before answering: work after the answer may not run on the host)
+    if (!['draft', 'void', 'voided'].includes(String(invoice.status || '').toLowerCase())) await recordInvoiceView(db, doc.ref, invoice);
 
     res.json({
       invoice: {

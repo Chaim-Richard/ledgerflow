@@ -3,11 +3,16 @@ import { CheckCircle2, CheckSquare, Zap, AlertCircle, HelpCircle, Check, BrainCi
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { HandOver } from '../collaboration/HandOver';
+import { useHandOvers } from '../collaboration/useHandOvers';
 
 export default function InboxView() {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   const { updateEntity } = useEntityOperations();
+  // BG-05: who has each entry, and "Give to…" (a task about it)
+  const hand = useHandOvers();
+  const entry = (t: { id: string; date: string; description?: string }) => ({ type: 'transaction' as const, id: t.id, label: `Entry ${t.date} · ${t.description || ''}`.trim() });
 
   const [showAllHighConfidence, setShowAllHighConfidence] = useState(false);
   const pendingTransactions = useMemo(() => 
@@ -209,6 +214,7 @@ export default function InboxView() {
                       <p className="text-sm font-medium text-[#0047AB] bg-blue-50 px-2 py-0.5 rounded-md">Software / SaaS</p>
                     </div>
                     <p className="font-mono font-bold text-[var(--text)] tabular-nums">{formatCurrency(t.totalAmountCents)}</p>
+                    <HandOver record={entry(t)} hand={hand} />
                   </div>
                 </div>
               ))}
@@ -243,6 +249,7 @@ export default function InboxView() {
                       </span>
                     </div>
                     
+                    <div className="mb-2"><HandOver record={entry(t)} hand={hand} /></div>
                     <p className="text-sm font-medium text-slate-700 mb-3">Was this charge for business or personal use?</p>
                     
                     <div className="flex gap-2">

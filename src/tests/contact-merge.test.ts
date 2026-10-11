@@ -148,6 +148,14 @@ describe('Merging contacts (database)', { skip: !url && 'LF_TEST_DATABASE_URL no
     assert.equal((await del('owner', 'nobody', id('unused'))).status, 400);
     assert.ok(await get('customers', 'unused'), 'nothing deleted yet');
 
+    // ?check=1 (BO-08): the same checks, nothing deleted, no audit line
+    const inUseCheck = await del('owner', 'customer', `${id('keep')}?check=1`);
+    assert.equal(inUseCheck.status, 409);
+    const check = await del('book', 'customer', `${id('unused')}?check=1`);
+    assert.deepEqual([check.status, (await check.json()).deletable], [200, true]);
+    assert.ok(await get('customers', 'unused'), 'the check deletes nothing');
+    assert.equal((await db.collection('auditLogs').where('workspaceId', '==', ws).get()).docs.filter(d => d.data().action === 'CUSTOMER_DELETED').length, 0);
+
     const ok = await del('book', 'customer', id('unused'));
     assert.equal(ok.status, 200, await ok.clone().text());
     assert.equal(await get('customers', 'unused'), undefined);

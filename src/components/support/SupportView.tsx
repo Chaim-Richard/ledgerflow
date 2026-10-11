@@ -28,6 +28,7 @@ import { useTimeout } from '../../hooks/useTimeout';
 import { db } from '../../firebase';
 import { doc, setDoc, updateDoc } from '../../lib/db/firestore';
 import { Labelled } from '../ui/Labelled';
+import AttachmentsPanel from '../common/AttachmentsPanel';
 
 export default function SupportView() {
   const formId = useId();
@@ -545,6 +546,9 @@ export default function SupportView() {
                   )}
                 </div>
               )}
+
+              {/* BO-05: screenshots and files kept with the ticket (feedback adds its screenshot here) */}
+              <AttachmentsPanel target={{ collection: 'supportTickets', id: selectedTicket.id, label: `Ticket "${selectedTicket.subject}"` }} workspaceId={selectedTicket.workspaceId} className="mx-4 mt-3" />
 
               {/* Chat Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">

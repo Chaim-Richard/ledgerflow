@@ -139,6 +139,7 @@ function pendingFactorId(session: Session): string | null {
 
 type Listener = (user: User | null) => void;
 type FactorListener = (factorId: string | null) => void;
+type RecoveryListener = (recovering: boolean) => void;
 
 export class Auth {
   currentUser: User | null = null;
@@ -146,6 +147,9 @@ export class Auth {
   pendingSecondFactor: string | null = null;
   private listeners = new Set<Listener>();
   private factorListeners = new Set<FactorListener>();
+  /** Y-31: signed in from a password-reset link; a new password is still to be chosen. */
+  passwordRecovery = false;
+  private recoveryListeners = new Set<RecoveryListener>();
   private ready = false;
   private started = false;
 
@@ -166,6 +170,7 @@ export class Auth {
     void supabase.auth.getSession().then(({ data }) => apply(data.session));
     supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'INITIAL_SESSION') return;
+      if (event === 'PASSWORD_RECOVERY') this.setRecovery(true);
       apply(session);
     });
   }
@@ -182,6 +187,18 @@ export class Auth {
     this.factorListeners.add(listener);
     if (this.ready) listener(this.pendingSecondFactor);
     return () => { this.factorListeners.delete(listener); };
+  }
+
+  setRecovery(value: boolean) {
+    this.passwordRecovery = value;
+    this.recoveryListeners.forEach(l => l(value));
+  }
+
+  onPasswordRecovery(listener: RecoveryListener): () => void {
+    this.start();
+    this.recoveryListeners.add(listener);
+    listener(this.passwordRecovery);
+    return () => { this.recoveryListeners.delete(listener); };
   }
 
   async signOut(): Promise<void> {
@@ -236,6 +253,17 @@ export async function sendEmailVerification(user: User): Promise<void> {
   const { error } = await getSupabase().auth.resend({ type: 'signup', email: user.email });
   // Re-sending right after sign-up is rate limited; the first email is already on its way.
   if (error && !/rate limit|seconds/i.test(error.message)) fail(error, 'verification-failed');
+}
+
+/** Y-31: someone arriving from a password-reset link chooses a new password (rules: src/lib/passwordPolicy.ts). */
+export function onPasswordRecovery(auth: Auth, listener: RecoveryListener): () => void {
+  return auth.onPasswordRecovery(listener);
+}
+
+export async function setNewPassword(auth: Auth, password: string): Promise<void> {
+  const { error } = await getSupabase().auth.updateUser({ password });
+  if (error) fail(error, 'password-update-failed');
+  auth.setRecovery(false);
 }
 
 export async function sendPasswordResetEmail(_auth: Auth, email: string): Promise<void> {

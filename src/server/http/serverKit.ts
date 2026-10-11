@@ -348,8 +348,9 @@ export async function getReportContext(req: AuthenticatedRequest, workspaceId: s
   const transactions: LedgerTransaction[] = [];
   const txStream = db.collection("transactions").where("workspaceId", "==", workspaceId).stream();
   
-  for await (const chunk of txStream as AsyncIterable<{ data: () => DocumentData }>) {
-    transactions.push(chunk.data() as LedgerTransaction);
+  // the row's own id: a restored entry's data does not repeat it (DA-07)
+  for await (const chunk of txStream as AsyncIterable<{ id: string; data: () => DocumentData }>) {
+    transactions.push({ ...chunk.data(), id: chunk.id } as LedgerTransaction);
   }
   
   return {

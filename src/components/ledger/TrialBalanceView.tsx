@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { isDebitNatureType } from '../../lib/accountUtils';
 import { ChartAccount } from '../../types';
 import { format, subMonths, endOfMonth, endOfQuarter, subQuarters, subYears, endOfYear } from 'date-fns';
 import { 
@@ -14,11 +15,14 @@ import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFi
 import { useFinancialReporting, ServerTrialBalanceData } from '../../hooks/useFinancialReporting';
 import MonthNavigator from '../ui/MonthNavigator';
 import { csvMoney, downloadCsv } from '../../lib/csvExport';
+import { ACCOUNT_GROUP_INDENT_PX, accountGroupLayout, groupSubtotals, toggleAccountGroup, visibleGroupRows } from '../../lib/accountGroups';
+import { AccountGroupToggle } from './AccountGroupControls';
 
 interface TrialBalanceViewProps {
   accounts: ChartAccount[];
   formatCurrency: (val: number) => string;
-  onDrillDown: (accountId: string) => void;
+  /** N-12: with the account's figure, so the drill-down explains it from the server */
+  onDrillDown: (accountId: string, figure?: { asOfDate: string; expectedCents: number; sign: 1 | -1 }) => void;
 }
 
 type SortField = 'code' | 'name' | 'type' | 'debit' | 'credit';
@@ -234,6 +238,34 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
     return localTrialBalance;
   }, [isServerAuthoritative, serverData, localTrialBalance, sortField, sortDir]);
 
+  // Account groups (K-14): the same lines, a group's children indented under their parent with a
+  // subtotal under them. The footer total stays the trial balance's own; a subtotal is only the
+  // lines inside it added up, so debits and credits still agree.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
+  const chartById = useMemo(() => new Map(accounts.map(account => [account.id, account])), [accounts]);
+  const groupedLines = useMemo(() => {
+    const members = trialBalance.lines.map(line => ({
+      ...line,
+      // a server line carries no parent of its own, so it is read from the loaded chart
+      parentId: (line as { parentId?: string }).parentId ?? chartById.get(line.id)?.parentId,
+    }));
+    const compare = (a: (typeof members)[number], b: (typeof members)[number]) => {
+      let comp = 0;
+      if (sortField === 'code') comp = (a.code || '').localeCompare(b.code || '');
+      else if (sortField === 'name') comp = (a.name || '').localeCompare(b.name || '');
+      else if (sortField === 'type') comp = (a.type || '').localeCompare(b.type || '');
+      else if (sortField === 'debit') comp = a.debit - b.debit;
+      else if (sortField === 'credit') comp = a.credit - b.credit;
+      return sortDir === 'asc' ? comp : -comp;
+    };
+    return {
+      rows: visibleGroupRows(accountGroupLayout(members, compare), collapsedGroups),
+      subtotals: groupSubtotals(members, line => ({ debit: line.debit, credit: line.credit })),
+    };
+  }, [trialBalance.lines, chartById, sortField, sortDir, collapsedGroups]);
+
+  // The export keeps the trial balance's own lines: a group's subtotal would count those lines twice,
+  // and the file's debits and credits would no longer agree (K-14).
   const handleExportCSV = () => {
     downloadCsv(`trial_balance_as_of_${asOfDate}.csv`,
       ['Account Code', 'Account Name', 'Classification', 'Debit', 'Credit'],
@@ -460,36 +492,67 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {trialBalance.lines.map((line) => (
+            {groupedLines.rows.map((row) => {
+              // a subtotal row is not an account: nothing to drill into, and the footer total is unchanged
+              if (row.kind === 'subtotal') {
+                const subtotal = groupedLines.subtotals.get(row.member.id);
+                const debit = subtotal?.debit || 0;
+                const credit = subtotal?.credit || 0;
+                return (
+                  <tr key={row.key} className="bg-[var(--ink)]/40">
+                    <td className="px-5 py-2" />
+                    <th scope="row" className="px-5 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                      <span style={{ paddingLeft: `${row.depth * ACCOUNT_GROUP_INDENT_PX}px` }}>{row.label}</span>
+                    </th>
+                    <td className="px-5 py-2 text-right font-mono text-[10px] font-bold text-[var(--text)] tabular-nums">
+                      {debit > 0 ? formatCurrency(debit) : '—'}
+                    </td>
+                    <td className="px-5 py-2 text-right font-mono text-[10px] font-bold text-[var(--text)] tabular-nums">
+                      {credit > 0 ? formatCurrency(credit) : '—'}
+                    </td>
+                  </tr>
+                );
+              }
+              return (
               <motion.tr 
-                key={line.id} 
+                key={row.key} 
                 whileHover={{ backgroundColor: "var(--ink)" }}
-                onClick={() => onDrillDown(line.id)}
+                onClick={() => onDrillDown(row.member.id, { asOfDate, expectedCents: row.member.netBalance, sign: isDebitNatureType(row.member.type) ? 1 : -1 })}
                 className="group/row cursor-pointer transition-colors"
               >
                 <td className="px-5 py-3 font-mono">
                   <span className="font-mono text-[9px] font-bold text-[var(--muted)] bg-[var(--ink)] px-2 py-0.5 rounded border border-[var(--line)]">
-                    {line.code || '—'}
+                    {row.member.code || '—'}
                   </span>
                 </td>
                 <td className="px-5 py-3">
-                  <div>
-                    <p className="text-xs font-bold text-[var(--text)] group-hover/row:text-indigo-600 transition-colors uppercase">
-                      {line.name}
-                    </p>
-                    <p className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-wider">
-                      {line.type} Classification • {((line as typeof line & { category?: string }).category) || 'Standard'}
-                    </p>
+                  <div className="flex items-start gap-1" style={{ paddingLeft: `${row.depth * ACCOUNT_GROUP_INDENT_PX}px` }}>
+                    {row.hasChildren && (
+                      <AccountGroupToggle label={row.member.name} expanded={!collapsedGroups.has(row.member.id)}
+                        onToggle={(event) => {
+                          event.stopPropagation();
+                          setCollapsedGroups(collapsed => toggleAccountGroup(collapsed, row.member.id));
+                        }} />
+                    )}
+                    <div>
+                      <p className="text-xs font-bold text-[var(--text)] group-hover/row:text-indigo-600 transition-colors uppercase">
+                        {row.member.name}
+                      </p>
+                      <p className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-wider">
+                        {row.member.type} Classification • {((row.member as typeof row.member & { category?: string }).category) || 'Standard'}
+                      </p>
+                    </div>
                   </div>
                 </td>
                 <td className="px-5 py-3 text-right font-mono text-[var(--text)] font-bold tabular-nums">
-                  {line.debit > 0 ? formatCurrency(line.debit) : '—'}
+                  {row.member.debit > 0 ? formatCurrency(row.member.debit) : '—'}
                 </td>
                 <td className="px-5 py-3 text-right font-mono text-[var(--text)] font-bold tabular-nums">
-                  {line.credit > 0 ? formatCurrency(line.credit) : '—'}
+                  {row.member.credit > 0 ? formatCurrency(row.member.credit) : '—'}
                 </td>
               </motion.tr>
-            ))}
+              );
+            })}
             {trialBalance.lines.length === 0 && (
               <tr>
                 <td colSpan={4} className="py-12 text-center text-[var(--muted)] text-xs">

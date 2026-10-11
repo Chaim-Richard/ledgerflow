@@ -1,8 +1,10 @@
 import { RecordInlineField } from '../ui/RecordInlineField';
+import { EstimateSignLink, EstimateSignedNote } from './EstimateSignLink';
+import { dueMilestones } from '../../lib/milestones';
 import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { formatCurrency, formatDate, getLocalDateISO } from '../../lib/utils';
 import { Plus, ArrowRight, FileText, Eye, Download } from 'lucide-react';
 import { collection, addDoc, doc, updateDoc } from '../../lib/db/firestore';
 import { db, getIdToken } from '../../firebase';
@@ -18,7 +20,11 @@ import { estimateDeposits } from '../../lib/advancePayments';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import EstimateDepositDialog from './EstimateDepositDialog';
 import OrderInvoiceDialog from './OrderInvoiceDialog';
-import { type OrderPart, type OrderStage, isOrder, orderPartInvoice, orderProgress, orderStage, partCents, partLabel } from '../../lib/salesOrders';
+import OrderDeliveryDialog from './OrderDeliveryDialog';
+import { goodsLeaveWith } from '../../lib/deliveries';
+import { EstimateLinesEditor } from './EstimateLinesEditor';
+import { blankEstimateLine, estimateLinesProblem, type EstimateLineDraft, toEstimateLines } from '../../lib/estimateLines';
+import { type OrderPart, type OrderStage, hasItemLines, isOrder, orderPartInvoice, orderProgress, orderStage, partCents, partLabel, resolvePart } from '../../lib/salesOrders';
 import type { Estimate } from '../../types';
 
 type EstimateRow = Estimate & { currency?: string; description?: string };
@@ -40,6 +46,8 @@ const STAGE_STYLE: Record<OrderStage, string> = {
 export default function EstimatesView() {
   const user = useAuthStore(s => s.user);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  // quotes are in the workspace's currency (they were all saved as USD)
+  const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const { addEntity } = useEntityOperations();
 
   const estimates = useLedgerStore(s => s.estimates);
@@ -54,6 +62,9 @@ export default function EstimatesView() {
   const canWrite = canTakeDeposit;
   const [depositFor, setDepositFor] = useState<import("../../types").Estimate | null>(null);
   const [invoicing, setInvoicing] = useState<EstimateRow | null>(null);
+  // BF-08 step 2: where stock leaves with deliveries, orders of stock items are delivered apart from invoicing
+  const deliveriesShip = useAuthStore(s => goodsLeaveWith(s.getCurrentWorkspace()) === 'delivery');
+  const [delivering, setDelivering] = useState<EstimateRow | null>(null);
   const [ordering, setOrdering] = useState<string | null>(null);
   const [customerReference, setCustomerReference] = useState('');
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('all');
@@ -67,6 +78,8 @@ export default function EstimatesView() {
   const [customerId, setCustomerId] = useState('');
   const [description, setDescription] = useState('');
   const [amountDollars, setAmountDollars] = useState('');
+  // BF-08: a quote can have lines (items, quantities, prices) instead of one amount
+  const [lines, setLines] = useState<EstimateLineDraft[]>([]);
   const [expiryDate, setExpiryDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewEstimate, setPreviewEstimate] = useState<import("../../types").Estimate | null>(null);
@@ -74,8 +87,13 @@ export default function EstimatesView() {
   const handleCreateEstimate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentWorkspaceId || !user) return;
+    const linesProblem = lines.length > 0 ? estimateLinesProblem(lines) : null;
+    if (linesProblem) {
+      toast.error(linesProblem);
+      return;
+    }
     const dollars = parseFloat(amountDollars);
-    if (isNaN(dollars) || dollars <= 0) {
+    if (lines.length === 0 && (isNaN(dollars) || dollars <= 0)) {
       toast.error('Please enter a valid amount');
       return;
     }
@@ -104,8 +122,9 @@ export default function EstimatesView() {
         customerName: customerObj?.name || 'Customer',
         date: getLocalDateISO(),
         expiryDate: expiryDate || getLocalDateISO(),
-        amountCents: Math.round(dollars * 100),
-        currency: 'USD',
+        amountCents: lines.length > 0 ? lines.reduce((sum, l) => sum + l.amountCents, 0) : Math.round(dollars * 100),
+        ...(lines.length > 0 ? { lines: toEstimateLines(lines) } : {}),
+        currency: workspaceCurrency,
         status: 'draft' as const,
         description: description || 'Quote / Estimate',
         createdAt: new Date().toISOString()
@@ -117,6 +136,7 @@ export default function EstimatesView() {
       setCustomerId('');
       setDescription('');
       setAmountDollars('');
+      setLines([]);
     } catch (err) {
       toast.error((err as Error).message || 'Failed to create estimate');
     } finally {
@@ -207,13 +227,14 @@ export default function EstimatesView() {
     }
   };
 
-  const invoiceOrderPart = async (est: EstimateRow, part: OrderPart) => {
+  const invoiceOrderPart = async (est: EstimateRow, chosen: OrderPart) => {
     const progress = orderProgress(est, invoices || []);
-    const cents = partCents(part, progress);
+    const part = resolvePart(chosen, est, progress);
+    const cents = partCents(part, progress, est);
     const invoiceNumber = await nextInvoiceNumber();
     if (!invoiceNumber) return;
     const invRef = await addEntity('invoices', {
-      ...orderPartInvoice(est, progress, cents, partLabel(part, est, progress)),
+      ...orderPartInvoice(est, progress, cents, partLabel(part, est, progress), part),
       number: invoiceNumber,
       currency: est.currency || 'USD',
     });
@@ -268,18 +289,23 @@ export default function EstimatesView() {
               </Labelled>
             </div>
             <div>
-              <Labelled labelClassName="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" label="Amount ($) *">
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  placeholder="0.00"
-                  value={amountDollars}
-                  onChange={e => setAmountDollars(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono"
-                />
-              </Labelled>
+              {lines.length === 0 ? (
+                <Labelled labelClassName="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" label={`Amount (${workspaceCurrency === 'USD' ? '$' : workspaceCurrency}) *`}>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="0.00"
+                    value={amountDollars}
+                    onChange={e => setAmountDollars(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono"
+                  />
+                </Labelled>
+              ) : (
+                <p className="text-xs"><span className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Amount</span>
+                  <span className="font-mono font-bold">{formatCurrency(lines.reduce((sum, l) => sum + l.amountCents, 0), workspaceCurrency)}</span> from the lines</p>
+              )}
             </div>
             <div>
               <Labelled labelClassName="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1" label="Expiration Date">
@@ -303,10 +329,18 @@ export default function EstimatesView() {
               />
             </Labelled>
           </div>
+          {lines.length > 0 ? (
+            <EstimateLinesEditor lines={lines} onChange={setLines} currency={workspaceCurrency} customerId={customerId} />
+          ) : (
+            <button type="button" onClick={() => setLines([blankEstimateLine(description, amountDollars)])}
+              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+              Add lines (items, quantities, prices)
+            </button>
+          )}
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => setIsCreating(false)}
+              onClick={() => { setIsCreating(false); setLines([]); }}
               className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg"
             >
               Cancel
@@ -417,12 +451,20 @@ export default function EstimatesView() {
                             aria-label={`Make estimate ${est.number || est.id} an order`} title="The customer said yes: invoice it in one go or in parts">
                             Order
                           </button>
+                          {currentWorkspaceId && <EstimateSignLink workspaceId={currentWorkspaceId} estimate={est} />}
                           <button type="button" onClick={() => void declineEstimate(est)}
                             className="px-2.5 py-1 text-xs text-[var(--muted)] hover:text-[var(--text)] hover:underline"
                             aria-label={`Mark estimate ${est.number || est.id} declined`}>
                             Declined
                           </button>
                         </>
+                      )}
+                      {deliveriesShip && isOrder(est) && hasItemLines(est) && stage !== 'declined' && (
+                        <button type="button" onClick={() => setDelivering(est)}
+                          className="px-2.5 py-1 text-xs font-semibold border border-indigo-500/40 text-indigo-600 dark:text-indigo-400 rounded-md hover:bg-indigo-500/10 ml-1"
+                          aria-label={`Deliver order ${est.number || ''}`.trim()} title="Goods leaving: stock goes down and their cost is booked">
+                          Deliver
+                        </button>
                       )}
                       {canWrite && isOrder(est) && progress.leftCents > 0 && stage !== 'declined' && (
                         <button type="button" onClick={() => setInvoicing(est)}
@@ -442,6 +484,8 @@ export default function EstimatesView() {
                         </button>
                       )}
                     </div>
+                    <EstimateSignedNote signature={est.signature} />
+                    {dueMilestones(est.milestones, getLocalDateISO()).slice(0, 1).map(m => <p key={m.id} className="mt-1 text-right text-xs font-semibold text-amber-700 dark:text-amber-400">Milestone due: <bdi>{m.label}</bdi> ({m.percent}%), {formatDate(m.due!)}</p>)}
                     {ordering === est.id && (
                       <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
                         <label className="flex items-center gap-1 text-[var(--muted)]">Customer&apos;s reference
@@ -461,9 +505,10 @@ export default function EstimatesView() {
       </div>
 
       {depositFor && <EstimateDepositDialog estimate={depositFor} onClose={() => setDepositFor(null)} />}
+      {delivering && <OrderDeliveryDialog order={delivering} canWrite={canWrite} onClose={() => setDelivering(null)} />}
       {invoicing && (
         <OrderInvoiceDialog estimate={invoicing} progress={orderProgress(invoicing, invoices || [])} currency={invoicing.currency || 'USD'}
-          onCreate={part => invoiceOrderPart(invoicing, part)} onClose={() => setInvoicing(null)} />
+          onCreate={part => invoiceOrderPart(invoicing, part)} onClose={() => setInvoicing(null)} canWrite={canWrite} />
       )}
       {previewEstimate && (
         <PdfPreviewModal

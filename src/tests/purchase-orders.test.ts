@@ -36,6 +36,16 @@ describe('Purchase orders', () => {
     assert.deepEqual(lines.map(l => l.amountCents), [135000]);
   });
 
+  test('a stock item ordered: the bill brings in the units received, or ordered when none came yet (J-08)', () => {
+    const received = billLinesFromOrder(order([
+      { id: 'a', description: 'Desks', quantity: 5, unitPriceCents: 45000, totalCents: 225000, receivedQuantity: 3, itemId: 'desk' },
+      { id: 'b', description: 'Install', quantity: 1, unitPriceCents: 5000, totalCents: 5000, receivedQuantity: 1 },
+    ]));
+    assert.deepEqual(received.map(l => [l.itemId, l.quantity, l.amountCents]), [['desk', 3, 135000], [undefined, undefined, 5000]]);
+    const ordered = billLinesFromOrder(order([{ id: 'a', description: 'Desks', quantity: 5, unitPriceCents: 45000, totalCents: 225000, itemId: 'desk' }]));
+    assert.deepEqual(ordered.map(l => [l.itemId, l.quantity]), [['desk', 5]]);
+  });
+
   test('a bill made from the order matches it in the 3-way match', () => {
     const po = order([{ id: 'a', description: 'Desks', quantity: 2, unitPriceCents: 1000, totalCents: 2000, receivedQuantity: 2 }]);
     const receipt = { id: 'r1', uid: 'u', workspaceId: 'w', receiptNumber: 'GR-1', poId: 'po1', poNumber: po.poNumber, vendorId: 'v1', receivedDate: '2026-09-05', status: 'verified' as const, createdAt: '',
@@ -72,7 +82,7 @@ describe('Changing an order in place (I-22)', () => {
     const older = { ...order([desks]), id: 'o1', poNumber: 'PO-2026-001', issueDate: '2026-08-01' };
     const newer = { ...order([chairs]), id: 'o2', poNumber: 'PO-2026-002', issueDate: '2026-09-02' };
     const other = { ...order([desks]), id: 'o3', vendorId: 'v2', issueDate: '2026-10-01' };
-    assert.deepEqual(lastOrderLines([older, newer, other], 'v1'), { poNumber: 'PO-2026-002', lines: [{ desc: 'Chairs', qty: '2', unitPrice: '120.50' }] });
+    assert.deepEqual(lastOrderLines([older, newer, other], 'v1'), { poNumber: 'PO-2026-002', lines: [{ desc: 'Chairs', qty: '2', unitPrice: '120.50', itemId: '' }] });
     assert.equal(lastOrderLines([older], 'nobody'), null);
     const vendors = [{ id: 'v0', name: 'Alpha' }, { id: 'v2', name: 'Zed' }, { id: 'v1', name: 'Mid' }];
     assert.deepEqual(vendorsByOrders(vendors, [older, newer, other]).map(v => v.id), ['v1', 'v2', 'v0']);

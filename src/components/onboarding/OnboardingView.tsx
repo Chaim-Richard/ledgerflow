@@ -76,10 +76,10 @@ export default function OnboardingView() {
               <Sparkles className="w-4 h-4 text-amber-500" />
             </div>
             <h2 className="font-bold text-xs uppercase tracking-wider mb-1 text-[var(--text)]">
-              3. {language === 'he' ? 'אימון התאמות AI' : '3. Train AI Matching'}
+              3. 3. Train AI Matching
             </h2>
             <p className="text-[11px] text-[var(--muted)] leading-relaxed">
-              {language === 'he' ? 'בדיקת סיווגים. שכבת הבינה לומדת כללים באופן אוטומטי.' : 'Review categorizations. The intelligence layer learns rules automatically.'}
+              Review categorizations. The intelligence layer learns rules automatically.
             </p>
           </button>
 
@@ -109,7 +109,7 @@ export default function OnboardingView() {
             className="w-full sm:w-auto px-6 py-3 bg-[var(--brass)] text-[var(--ink)] font-semibold rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            {language === 'he' ? 'רישום תנועה ראשונה ידנית' : 'Record First Entry Manually'}
+            Record First Entry Manually
           </button>
           
         </div>

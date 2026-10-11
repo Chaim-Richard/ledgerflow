@@ -28,6 +28,9 @@ function compact(branding: WorkspaceBranding): WorkspaceBranding {
   if (branding.footer?.trim()) out.footer = branding.footer.trim();
   if (Object.keys(terms).length) out.terms = terms;
   if (branding.showPaymentQr === false) out.showPaymentQr = false;
+  if (branding.language && branding.language !== 'en') out.language = branding.language;
+  if (branding.style && branding.style !== 'classic') out.style = branding.style;
+  if (branding.hideQuantity === true) out.hideQuantity = true;
   return out;
 }
 

@@ -4,6 +4,7 @@ import { CreditCard, ChevronRight, CheckCircle2, AlertTriangle } from 'lucide-re
 import { toast } from 'sonner';
 import { auth } from '../../../firebase';
 import { RequireRole } from '../../ui/RequireRole';
+import UsagePanel from './UsagePanel';
 
 export default function BillingSettings() {
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
@@ -194,6 +195,7 @@ export default function BillingSettings() {
 
   return (
     <div className="space-y-8">
+      <UsagePanel />
       {/* Payment Warning Banner */}
       {isPastDue && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-amber-900 shadow-sm">

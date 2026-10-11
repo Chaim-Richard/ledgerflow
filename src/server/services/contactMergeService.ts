@@ -167,7 +167,7 @@ export async function mergeContacts(db: Firestore, input: MergeInput): Promise<{
   });
 }
 
-export interface DeleteInput { workspaceId: string; uid: string; email?: string; side: PartySide; id: string }
+export interface DeleteInput { workspaceId: string; uid: string; email?: string; side: PartySide; id: string; checkOnly?: boolean }
 
 /** "2 invoices and 1 payment" from counts per collection. */
 export function describeUsage(used: Record<string, number>): string {
@@ -203,6 +203,8 @@ export async function deleteContact(db: Firestore, input: DeleteInput): Promise<
     if (Object.keys(counts).length) {
       throw new ContactMergeError(409, `"${String(party.name || input.id)}" is used by ${describeUsage(counts)}: archive it instead (those records keep it)`);
     }
+    // checkOnly: the same checks without deleting, so the screen can offer Undo before it deletes
+    if (input.checkOnly) return;
     t.delete(ref);
     await writeServerAuditLog({
       workspaceId: input.workspaceId, uid: input.uid, email: input.email,

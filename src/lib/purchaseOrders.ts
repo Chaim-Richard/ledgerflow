@@ -9,10 +9,16 @@ import { formatCurrency } from './utils';
 export function billLinesFromOrder(po: PurchaseOrder): NonNullable<Bill['splits']> {
   const anyReceived = po.items.some(i => (i.receivedQuantity || 0) > 0);
   return po.items
-    .map(item => {
+    .map((item, orderLine) => {
       const qty = anyReceived ? item.receivedQuantity || 0 : item.quantity;
       const detail = qty !== 1 ? ` (${qty} × ${formatCurrency(item.unitPriceCents, po.currency)})` : '';
-      return { amountCents: Math.round(qty * item.unitPriceCents), accountId: item.accountId || '', description: `${po.poNumber}: ${item.description}${detail}` };
+      // J-08: a stock item's line brings the units received (or ordered) in with the bill
+      return {
+        amountCents: Math.round(qty * item.unitPriceCents), accountId: item.accountId || '', description: `${po.poNumber}: ${item.description}${detail}`,
+        // CB-17: which order line and how many units this bills (what is billed but not yet received)
+        orderLine, orderQuantity: qty,
+        ...(item.itemId && qty > 0 ? { itemId: item.itemId, quantity: qty } : {}),
+      };
     })
     .filter(line => line.amountCents !== 0);
 }
@@ -67,14 +73,14 @@ function withTotals(items: PurchaseOrderItem[]): Pick<PurchaseOrder, 'items' | '
 }
 
 /** "Same as last order" (I-23): the lines of the vendor's latest order, ready to edit; null when none. */
-export function lastOrderLines(orders: PurchaseOrder[], vendorId: string): { poNumber: string; lines: { desc: string; qty: string; unitPrice: string }[] } | null {
+export function lastOrderLines(orders: PurchaseOrder[], vendorId: string): { poNumber: string; lines: { desc: string; qty: string; unitPrice: string; itemId: string }[] } | null {
   const latest = orders
     .filter(o => o.vendorId === vendorId && o.items.length > 0)
     .sort((a, b) => String(b.issueDate || '').localeCompare(String(a.issueDate || '')) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')))[0];
   if (!latest) return null;
   return {
     poNumber: latest.poNumber,
-    lines: latest.items.map(i => ({ desc: i.description, qty: String(i.quantity), unitPrice: (i.unitPriceCents / 100).toFixed(2) })),
+    lines: latest.items.map(i => ({ desc: i.description, qty: String(i.quantity), unitPrice: (i.unitPriceCents / 100).toFixed(2), itemId: i.itemId || '' })),
   };
 }
 

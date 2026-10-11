@@ -63,6 +63,8 @@ export const WORKSPACE_PURGE_EXTRA = [
   'presence',
   'deepAuditJobs',
   'errorLogs',
+  'clientQueries',
+  'stockMoves',
 ] as const;
 
 /** Everything a workspace purge deletes, in order (the job resumes by position in this list). */
@@ -76,6 +78,8 @@ export const KEPT_AFTER_WORKSPACE_PURGE: Record<string, string> = {
   users: 'people, not workspace data; deleted with the account (L-09)',
   admins: 'platform administrators',
   loginAudits: 'per-person sign-in security log',
+  recoveryCodes: 'a person\'s own two-step login recovery codes, not workspace data; deleted with the account',
+  workspaceGroups: 'a person\'s own groups of workspaces (DA-01), not workspace data; a purged workspace drops out of sight because nobody can open it, and the groups go with the account',
   stripeProcessedEvents: 'payment webhook de-duplication across all workspaces',
   external_api_cache: 'shared cache of public data (exchange rates)',
 };

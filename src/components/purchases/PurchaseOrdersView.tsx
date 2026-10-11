@@ -25,16 +25,18 @@ import { useLedgerCollections } from '../../hooks/useLedgerCollections';
  */
 
 type Tab = 'pos' | 'match' | 'receipts';
-interface DraftLine { key: string; desc: string; qty: string; unitPrice: string }
+interface DraftLine { key: string; desc: string; qty: string; unitPrice: string; itemId: string }
 
-const newLine = (): DraftLine => ({ key: crypto.randomUUID(), desc: '', qty: '1', unitPrice: '' });
+const newLine = (): DraftLine => ({ key: crypto.randomUUID(), desc: '', qty: '1', unitPrice: '', itemId: '' });
 const inputClass = 'w-full p-2 bg-[var(--panel)] border border-[var(--line)] rounded-lg text-[var(--text)]';
 
 export const PurchaseOrdersView: React.FC = () => {
   const bills = useLedgerStore(s => (s.bills || []) as Bill[]);
   const vendors = useLedgerStore(s => (s.vendors || []) as Vendor[]);
   const accounts = useLedgerStore(s => s.accounts || []);
-  useLedgerCollections('bills', 'vendors');
+  useLedgerCollections('bills', 'inventory', 'vendors');
+  // J-08: an order line can be a stock item; the bill made from the order brings its units in
+  const stockItems = (useLedgerStore(s => s.inventory) || []).filter(i => i.itemType !== 'service');
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const role = useCurrentRole();
   const canEdit = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
@@ -80,7 +82,7 @@ export const PurchaseOrdersView: React.FC = () => {
     const items: PurchaseOrderItem[] = poItems.map(line => {
       const quantity = Number(line.qty);
       const unitPriceCents = Math.round(Number(line.unitPrice) * 100);
-      return { id: line.key, description: line.desc.trim(), quantity, unitPriceCents, totalCents: Math.round(quantity * unitPriceCents), receivedQuantity: 0 };
+      return { id: line.key, description: line.desc.trim(), quantity, unitPriceCents, totalCents: Math.round(quantity * unitPriceCents), receivedQuantity: 0, ...(line.itemId ? { itemId: line.itemId } : {}) };
     });
     setSaving(true);
     const poNumber = nextPoNumber(purchaseOrders, today.slice(0, 4));
@@ -385,6 +387,21 @@ export const PurchaseOrdersView: React.FC = () => {
                 )}
                 {poItems.map((line, n) => (
                   <div key={line.key} className="grid grid-cols-6 gap-2">
+                    {stockItems.length > 0 && (
+                      <select aria-label={`Item ${n + 1} stock item`} value={line.itemId}
+                        onChange={e => {
+                          const stock = stockItems.find(it => it.id === e.target.value);
+                          setPoItems(lines => lines.map(l => (l.key === line.key ? {
+                            ...l, itemId: e.target.value,
+                            ...(stock && !l.desc.trim() ? { desc: stock.name } : {}),
+                            ...(stock && !l.unitPrice && stock.unitCostCents ? { unitPrice: (stock.unitCostCents / 100).toFixed(2) } : {}),
+                          } : l)));
+                        }}
+                        className={`${inputClass} col-span-6`}>
+                        <option value="">Not a stock item</option>
+                        {stockItems.map(it => <option key={it.id} value={it.id}>{it.name}</option>)}
+                      </select>
+                    )}
                     <input aria-label={`Item ${n + 1} description`} placeholder="Description" value={line.desc} onChange={e => setLine(line.key, 'desc', e.target.value)} className={`${inputClass} col-span-3`} />
                     <input aria-label={`Item ${n + 1} quantity`} type="number" min="0" step="any" value={line.qty} onChange={e => setLine(line.key, 'qty', e.target.value)} className={`${inputClass} col-span-1 text-center`} />
                     <input aria-label={`Item ${n + 1} unit price`} type="number" min="0" step="0.01" placeholder="Unit price" value={line.unitPrice} onChange={e => setLine(line.key, 'unitPrice', e.target.value)} className={`${inputClass} col-span-2 text-right font-mono`} />

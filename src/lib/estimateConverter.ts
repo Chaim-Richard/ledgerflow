@@ -21,6 +21,8 @@ export function convertEstimateToInvoice(estimate: Estimate): Invoice {
     : [{ description: `Estimate ${estimate.number || ''}`.trim(), quantity: 1, unitPriceCents: estimate.amountCents, amountCents: estimate.amountCents }];
   const invoiceItems = lines.map((line, i) => ({
     id: `${estimate.id}-${i}`,
+    // a stock item stays linked, so the invoice lowers stock and books its cost (BF-08)
+    ...(line.itemId ? { itemId: line.itemId } : {}),
     description: line.description || '',
     quantity: line.quantity || 1,
     rateCents: line.unitPriceCents || 0,

@@ -7,6 +7,7 @@ import { IMPORT_DEFINITIONS, MAX_IMPORT_ROWS, identityKeys, openingStockCents, p
 import type { ImportIssue, ImportKind, ImportRow } from '../../lib/recordImport';
 import type { ChartAccount } from '../../types';
 import { writeServerAuditLog } from './auditLogService';
+import { stockMovesReady, writeStockMoves } from './stockMoveService';
 
 /**
  * Bulk import of customers, vendors, items or accounts (K-01), all rows in one database
@@ -67,6 +68,7 @@ export async function importRecords(db: Firestore, input: ImportRecordsInput) {
   }
 
   const workspaceRef = db.collection('workspaces').doc(input.workspaceId);
+  if (input.kind === 'items') await stockMovesReady(db);
   return db.runTransaction(async (t) => {
     const workspace = (await t.get(workspaceRef)).data();
     if (!workspace) throw new ImportError(404, 'Workspace not found');
@@ -131,6 +133,19 @@ export async function importRecords(db: Firestore, input: ImportRecordsInput) {
     if (openingTx) {
       t.create(db.collection('transactions').doc(String(openingTx.id)), { ...openingTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     }
+    // W-02: each imported item's opening quantity starts its stock history
+    if (input.kind === 'items') {
+      writeStockMoves(db, t, toCreate.flatMap((record, i) => {
+        const quantity = Number(record.data.quantityAtHand) || 0;
+        if (quantity === 0) return [];
+        const unitCostCents = Number(record.data.unitCostCents) || 0;
+        return [{
+          workspaceId: input.workspaceId, itemId: itemRefs[i].id, itemName: String(record.data.name || ''), date: input.openingDate || now.slice(0, 10),
+          kind: 'opening' as const, quantity, quantityBefore: 0, quantityAfter: quantity, unitCostCents, valueCents: Math.round(quantity * unitCostCents),
+          transactionId: openingTx ? String(openingTx.id) : null, documentType: 'import' as const, documentId: batchId, uid: input.uid,
+        }];
+      }));
+    }
     await writeServerAuditLog({
       workspaceId: input.workspaceId,
       uid: input.uid,
@@ -153,7 +168,7 @@ export async function importRecords(db: Firestore, input: ImportRecordsInput) {
 // ----- undo -----
 
 /** Where each kind of record can be used; an imported record that is used is kept on undo. */
-async function usedIds(db: Firestore, t: Transaction, workspaceId: string, kind: ImportKind, ids: string[]): Promise<Set<string>> {
+async function usedIds(db: Firestore, t: Transaction, workspaceId: string, kind: ImportKind, ids: string[], historyKept: boolean): Promise<Set<string>> {
   const used = new Set<string>();
   const inWorkspace = (collection: string) => db.collection(collection).where('workspaceId', '==', workspaceId);
   const byField = async (collection: string, field: string) => {
@@ -183,9 +198,16 @@ async function usedIds(db: Firestore, t: Transaction, workspaceId: string, kind:
     await byField('payments', 'contactId');
     await byField('payments', 'vendorId');
   } else if (kind === 'items') {
+    // invoices keep their lines under `items` (checking only `lines` let an item already sold be removed)
+    await byLine('invoices', 'items', 'itemId');
     await byLine('invoices', 'lines', 'itemId');
     await byLine('estimates', 'lines', 'itemId');
     await byField('transactions', 'metadata.inventoryItemId');
+    // W-02: a stock move other than the import's own opening stock (a sale, an adjustment, a count) means in use
+    for (let i = 0; historyKept && i < ids.length; i += 200) {
+      const snap = await t.get(inWorkspace('stockMoves').where('itemId', 'in', ids.slice(i, i + 200)));
+      snap.docs.forEach(d => { if (d.get('documentType') !== 'import') used.add(String(d.get('itemId'))); });
+    }
   } else {
     await byLine('transactions', 'lines', 'accountId');
     await byLine('bills', 'splits', 'accountId');
@@ -197,6 +219,7 @@ async function usedIds(db: Firestore, t: Transaction, workspaceId: string, kind:
 
 export async function undoImport(db: Firestore, input: { workspaceId: string; uid: string; email?: string; batchId: string; allowAccounts: boolean }) {
   if (!/^imp_[0-9a-f]{16}$/.test(input.batchId)) throw new ImportError(400, 'Unknown import');
+  const historyKept = await stockMovesReady(db);
   return db.runTransaction(async (t) => {
     const workspace = (await t.get(db.collection('workspaces').doc(input.workspaceId))).data();
     if (!workspace) throw new ImportError(404, 'Workspace not found');
@@ -214,7 +237,7 @@ export async function undoImport(db: Firestore, input: { workspaceId: string; ui
     if (!kind || docs.length === 0) throw new ImportError(404, 'Nothing is left from this import');
     if (kind === 'accounts' && !input.allowAccounts) throw new ImportError(403, 'Only owners and accountants can change the chart of accounts');
 
-    const used = await usedIds(db, t, input.workspaceId, kind, docs.map(d => d.id));
+    const used = await usedIds(db, t, input.workspaceId, kind, docs.map(d => d.id), historyKept);
     const removable = docs.filter(d => !used.has(d.id) && d.get('isSystem') !== true);
     const kept = docs.filter(d => !removable.includes(d)).map(d => String(d.get('name') || d.id));
 
@@ -245,7 +268,14 @@ export async function undoImport(db: Firestore, input: { workspaceId: string; ui
       }
     }
 
+    // W-02: the removed items' history (only their imported opening stock, or they would be in use)
+    const removedHistory = kind === 'items' && historyKept && removable.length > 0
+      ? (await Promise.all(Array.from({ length: Math.ceil(removable.length / 200) }, (_, n) => t.get(db.collection('stockMoves')
+          .where('workspaceId', '==', input.workspaceId).where('itemId', 'in', removable.slice(n * 200, n * 200 + 200).map(d => d.id)))))).flatMap(s => s.docs)
+      : [];
+
     removable.forEach(d => t.delete(d.ref));
+    removedHistory.forEach(d => t.delete(d.ref));
     if (reversal) t.create(db.collection('transactions').doc(String(reversal.id)), { ...reversal, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     const label = IMPORT_DEFINITIONS[kind].label.toLowerCase();
     await writeServerAuditLog({

@@ -22,7 +22,7 @@ import {
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag, ArrowLeftRight
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash } from 'lucide-react';
+, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText, Split, BadgePercent, UserCheck, ListChecks } from 'lucide-react';
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
@@ -56,6 +56,7 @@ for (const path in pluginModules) {
 // 1. Definition of all View Components
 export const VIEW_COMPONENTS: Record<string, ElementType> = {
   'inventory': lazy(() => import('../components/inventory/Inventory')),
+  'practice': lazy(() => import('../components/dashboard/PracticeView')),
   'accept-invite': lazy(() => import('../components/auth/AcceptInviteView')),
   ...dynamicComponents,
   'dashboard': lazy(() => import('../components/Dashboard')),
@@ -77,6 +78,7 @@ export const VIEW_COMPONENTS: Record<string, ElementType> = {
   'purchases': lazy(() => import('../components/purchases/Purchases')),
   'purchase-orders': lazy(() => import('../components/purchases/PurchaseOrdersView')),
   'loans': lazy(() => import('../components/finance/LoansView')),
+  'petty-cash': lazy(() => import('../components/finance/PettyCashView')),
   'payroll': lazy(() => import('../components/hr/PayrollView')),
   'assets': lazy(() => import('../components/assets/FixedAssetsView')),
   'settings': lazy(() => import('../components/platform/Settings')),
@@ -93,6 +95,9 @@ export const VIEW_COMPONENTS: Record<string, ElementType> = {
   'magic': lazy(() => import('../components/ledger/MagicEntry')),
   'vault': lazy(() => import('../components/forensics/Vault')),
   'audit-trail': lazy(() => import('../components/forensics/AuditTrail')),
+  'client-queries': lazy(() => import('../components/ledger/ClientQueriesView')),
+  'tasks': lazy(() => import('../components/collaboration/TasksView')),
+  'time': lazy(() => import('../components/collaboration/TimeView')),
   'recurring': lazy(() => import('../components/ledger/RecurringTransactionsView')),
   'system-command-center': lazy(() => import('../components/platform/SystemCommandCenter')),
   'consolidation': lazy(() => import('../components/finance/Consolidation')),
@@ -124,6 +129,7 @@ export { isTabVisible } from './tabVisibility';
 export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition, 'help'>>([
   { id: 'dashboard', label: { en: 'Overview', he: 'סקירה' }, icon: Home, groupId: 'dashboard' },
   { id: 'inbox', label: { en: 'To Review', he: 'לסקירה' }, icon: Inbox, groupId: 'dashboard' },
+  { id: 'practice', label: { en: 'All my books', he: 'כל הספרים שלי' }, icon: Briefcase, groupId: 'dashboard' },
   { id: 'copilot', label: { en: 'AI Co-pilot', he: 'טייס משנה' }, icon: Sparkles, groupId: 'dashboard' },
 
   { id: 'transactions', label: { en: 'Transactions', he: 'תנועות' }, icon: Layers, groupId: 'transactions' },
@@ -136,6 +142,8 @@ export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition
   { id: 'query-builder', label: { en: 'BQL Query Builder', he: 'בונה שאילתות' }, icon: Filter, groupId: 'transactions' },
   { id: 'banking', label: { en: 'Bank Connections', he: 'חיבורי בנק' }, icon: Building, groupId: 'transactions' },
   { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת' }, icon: Search, groupId: 'transactions' },
+  { id: 'client-queries', label: { en: 'Questions about Entries', he: 'שאלות על תנועות' }, icon: MessageCircleQuestion, groupId: 'transactions' },
+  { id: 'tasks', label: { en: 'Tasks', he: 'משימות' }, icon: ListChecks, groupId: 'transactions' },
 
   { id: 'reconciliation', label: { en: 'Reconcile', he: 'התאמות' }, icon: RefreshCw, groupId: 'reconcile' },
   { id: 'month-end-close', label: { en: 'Month-End Close', he: 'סגירת חודש' }, icon: ClipboardCheck, groupId: 'reconcile' },
@@ -144,15 +152,21 @@ export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition
   { id: 'sales', label: { en: 'Sales', he: 'כסף נכנס' }, icon: ArrowUpRight, groupId: 'money_in' },
   { id: 'estimates', label: { en: 'Estimates & Quotes', he: 'הצעות מחיר' }, icon: FileSignature, groupId: 'money_in' },
   { id: 'payments', label: { en: 'Payments', he: 'תשלומים' }, icon: DollarSign, groupId: 'money_in' },
+  { id: 'time', label: { en: 'Time', he: 'שעות עבודה' }, icon: Clock, groupId: 'money_in' },
   
   { id: 'purchases', label: { en: 'Purchases', he: 'כסף יוצא' }, icon: ArrowDownRight, groupId: 'money_out' },
   { id: 'purchase-orders', label: { en: 'Purchase Orders', he: 'הזמנות רכש' }, icon: ShoppingCart, groupId: 'money_out' },
+  // BB-07: in the menu when their module is on (Settings → Modules)
+  { id: 'inventory', label: { en: 'Inventory', he: 'מלאי' }, icon: Package, groupId: 'money_out' },
   { id: 'loans', label: { en: 'Loans', he: 'הלוואות' }, icon: Coins, groupId: 'money_out' },
+  { id: 'petty-cash', label: { en: 'Petty Cash', he: 'קופה קטנה' }, icon: Wallet, groupId: 'money_out' },
   { id: 'payroll', label: { en: 'Payroll & Wages', he: 'שכר עובדים' }, icon: Users, groupId: 'money_out' },
 
   { id: 'reports', label: { en: 'Reports', he: 'דוחות' }, icon: FileText, groupId: 'reports' },
   { id: 'charts', label: { en: 'Visual Analytics', he: 'ניתוח חזותי' }, icon: PieChart, groupId: 'reports' },
   { id: 'forecaster', label: { en: 'Forecasting', he: 'תחזית תזרים' }, icon: TrendingUp, groupId: 'reports' },
+  { id: 'budgets', label: { en: 'Budgets', he: 'תקציבים' }, icon: Target, groupId: 'reports' },
+  { id: 'projects', label: { en: 'Projects', he: 'פרויקטים' }, icon: Briefcase, groupId: 'reports' },
   { id: 'intelligence', label: { en: 'Insights', he: 'תובנות' }, icon: BarChart3, groupId: 'reports' },
 
   { id: 'settings', label: { en: 'Preferences', he: 'הגדרות' }, icon: Settings, groupId: 'settings' },
@@ -333,8 +347,20 @@ export const DASHBOARD_KPI_REGISTRY: DashboardKpiDefinition[] = [
 ];
 
 export const REPORT_COMPONENTS: Record<string, ElementType> = {
+  'BudgetActualReportView': lazy(() => import('../components/reporting/BudgetActualReportView')),
   'PNLView': lazy(() => import('../components/ledger/ProfitAndLossView')),
   'BalanceSheetReportView': lazy(() => import('../components/ledger/BalanceSheetView')),
+  'GroupSummaryReportView': lazy(() => import('../components/reporting/GroupSummaryReportView')),
+  'AskBooksView': lazy(() => import('../components/reporting/AskBooksView')),
+  'LabelProfitReportView': lazy(() => import('../components/reporting/LabelProfitReportView')),
+  'GoodsNotBilledReportView': lazy(() => import('../components/reporting/GoodsNotBilledReportView')),
+  'CommissionReportView': lazy(() => import('../components/reporting/CommissionReportView')),
+  'BackordersReportView': lazy(() => import('../components/reporting/BackordersReportView')),
+  'StockAgingReportView': lazy(() => import('../components/reporting/StockAgingReportView')),
+  'ItemRegisterReportView': lazy(() => import('../components/reporting/ItemRegisterReportView')),
+  'DepreciationLedgerReportView': lazy(() => import('../components/reporting/DepreciationLedgerReportView')),
+  'BankClearanceReportView': lazy(() => import('../components/reporting/BankClearanceReportView')),
+  'InventoryDetailsReportView': lazy(() => import('../components/reporting/InventoryDetailsReportView')),
   'CashFlowView': lazy(() => import('../components/ledger/CashFlowView')),
   'ARAgingReportView': lazy(() => import('../components/reporting/ARAgingReportView')),
   'APAgingReportView': lazy(() => import('../components/reporting/APAgingReportView')),
@@ -380,8 +406,11 @@ export const LENS_COMPONENTS: Record<string, ElementType> = {
   'ToolSandbox': lazy(() => import('../components/platform/ToolsCatalog'))
 };
 export const REPORT_TABS_REGISTRY = withScreenHelp([
+  { id: 'budget-actual', label: { en: 'Budget vs Actual', he: 'תקציב מול ביצוע' }, componentName: 'BudgetActualReportView', icon: Target },
   { id: 'pnl', label: { en: 'Profit & Loss', he: 'רווח והפסד' }, componentName: 'PNLView', icon: Activity },
   { id: 'balance-sheet', label: { en: 'Balance Sheet', he: 'מאזן' }, componentName: 'BalanceSheetReportView', icon: Layers },
+  { id: 'group-summary', label: { en: 'Group Summary', he: 'סיכום קבוצה' }, componentName: 'GroupSummaryReportView', icon: FolderTree },
+  { id: 'ask-books', label: { en: 'Ask the Books', he: 'שאלה לספרים' }, componentName: 'AskBooksView', icon: MessageSquareText },
   { id: 'cash-flow', label: { en: 'Cash Flow', he: 'תזרים' }, componentName: 'CashFlowView', icon: RefreshCw },
   { id: 'party-linked-trial-balance', label: { en: 'Party Linked Trial Balance', he: 'מאזן בוחן רישומים מקושרים' }, componentName: 'PartyLinkedTrialBalanceView', icon: BookOpen },
   { id: 'sales-trends', label: { en: 'Sales Trends', he: 'מגמות מכירה' }, componentName: 'SalesTrendsView', icon: TrendingUp },
@@ -405,11 +434,20 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'transactions-by-reference', label: { en: 'Transactions by Reference', he: 'עסקאות לפי אסמכתא' }, componentName: 'TransactionsByReferenceView', icon: FileText },
   { id: 'sales-by-item', label: { en: 'Sales by Item', he: 'מכירות לפי פריט' }, componentName: 'SalesByItemReportView', icon: Package },
   { id: 'inventory-valuation', label: { en: 'Inventory Valuation', he: 'שווי מלאי' }, componentName: 'InventoryValuationReportView', icon: Package },
+  { id: 'goods-not-billed', label: { en: 'Goods Not Yet Billed', he: 'סחורה שטרם חויבה' }, componentName: 'GoodsNotBilledReportView', icon: Package },
+  { id: 'bank-clearance', label: { en: 'Bank Clearance Summary', he: 'סיכום סליקה בבנק' }, componentName: 'BankClearanceReportView', icon: BookOpen },
+  { id: 'depreciation-ledger', label: { en: 'Asset Depreciation Ledger', he: 'כרטסת פחת נכסים' }, componentName: 'DepreciationLedgerReportView', icon: Layers },
+  { id: 'item-register', label: { en: 'Item-wise Register', he: 'יומן לפי פריט' }, componentName: 'ItemRegisterReportView', icon: Package },
+  { id: 'stock-aging', label: { en: 'Stock Aging', he: 'גיול מלאי' }, componentName: 'StockAgingReportView', icon: Package },
+  { id: 'commissions', label: { en: 'Sales Commission', he: 'עמלות מכירה' }, componentName: 'CommissionReportView', icon: UserCheck },
+  { id: 'backorders', label: { en: 'Backorders', he: 'הזמנות ממתינות למלאי' }, componentName: 'BackordersReportView', icon: Package },
+  { id: 'inventory-details', label: { en: 'Inventory Item Details', he: 'פירוט תנועות מלאי' }, componentName: 'InventoryDetailsReportView', icon: Package },
   { id: 'journal-sheet', label: { en: 'Journal Sheet', he: 'גיליון יומן' }, componentName: 'JournalSheetReportView', icon: BookOpen },
   { id: 'expense-by-category', label: { en: 'Expense by Category', he: 'הוצאות לפי קטגוריה' }, componentName: 'ExpenseByCategoryReportView', icon: PieChart },
   { id: 'income-by-source', label: { en: 'Income by Source', he: 'הכנסות לפי מקור' }, componentName: 'IncomeBySourceReportView', icon: TrendingUp },
   { id: 'top-expenses-income', label: { en: 'Top Line Items', he: 'הוצאות והכנסות מובילות' }, componentName: 'TopExpensesIncomeReportView', icon: BarChart3 },
   { id: 'monthly-averages', label: { en: 'Monthly Averages', he: 'ממוצעים חודשיים' }, componentName: 'AverageMonthlyReportView', icon: Calendar },
+  { id: 'by-label', label: { en: 'Profit by Label', he: 'רווח לפי תגית' }, componentName: 'LabelProfitReportView', icon: Tag },
   { id: 'tag-breakdown', label: { en: 'Tag Breakdown', he: 'דוח תגיות' }, componentName: 'TagBreakdownReportView', icon: Tag },
   { id: 'ar-aging', label: { en: 'A/R Aging', he: 'גיול לקוחות' }, componentName: 'ARAgingReportView', icon: Users },
   { id: 'ap-aging', label: { en: 'A/P Aging', he: 'גיול ספקים' }, componentName: 'APAgingReportView', icon: Building },
@@ -436,6 +474,15 @@ export const SETTINGS_TABS_REGISTRY = withScreenHelp([
   { id: 'schedule', label: { en: 'Schedule', he: 'לוח זמנים' }, componentName: 'ScheduleSettingsView', icon: CalendarClock },
   { id: 'incoming-events', label: { en: 'Incoming events', he: 'אירועים נכנסים' }, componentName: 'IncomingEventsSettingsView', icon: CalendarClock },
   { id: 'tags', label: { en: 'Tags', he: 'תגיות' }, componentName: 'TagsSettingsView', icon: Tag },
+  { id: 'scheduled-reports', label: { en: 'Scheduled reports', he: 'דוחות מתוזמנים' }, componentName: 'ScheduledReportsSettingsView', icon: CalendarClock },
+  { id: 'alerts', label: { en: 'Alerts', he: 'התראות' }, componentName: 'AlertsSettingsView', icon: BellRing },
+  { id: 'modules', label: { en: 'Modules', he: 'מודולים' }, componentName: 'ModulesSettingsView', icon: Blocks },
+  { id: 'groups', label: { en: 'Groups of books', he: 'קבוצות ספרים' }, componentName: 'GroupsSettingsView', icon: FolderTree },
+  { id: 'split-rules', label: { en: 'Split rules', he: 'כללי פיצול' }, componentName: 'AllocationRulesSettingsView', icon: Split },
+  { id: 'price-lists', label: { en: 'Price lists', he: 'מחירונים' }, componentName: 'PriceListsSettingsView', icon: BadgePercent },
+  { id: 'sales-reps', label: { en: 'Sales reps', he: 'אנשי מכירות' }, componentName: 'SalesRepsSettingsView', icon: UserCheck },
+  { id: 'stages', label: { en: 'Stages', he: 'שלבים' }, componentName: 'StagesSettingsView', icon: ListChecks },
+  { id: 'currencies', label: { en: 'Currencies', he: 'מטבעות' }, componentName: 'CurrenciesSettingsView', icon: Coins },
   { id: 'export', label: { en: 'Backup & Export', he: 'גיבוי וייצוא' }, componentName: 'ExportView', icon: Database },
   { id: 'shortcuts', label: { en: 'Shortcuts', he: 'קיצורי דרך' }, componentName: 'ShortcutsView', icon: Zap }
 ], 'settings');
@@ -459,6 +506,15 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'ScheduleSettingsView': lazy(() => import('../components/platform/settings/ScheduleSettings')),
   'IncomingEventsSettingsView': lazy(() => import('../components/platform/settings/IncomingEventsSettings')),
   'TagsSettingsView': lazy(() => import('../components/platform/settings/TagsSettings')),
+  'ScheduledReportsSettingsView': lazy(() => import('../components/platform/settings/ScheduledReportsSettings')),
+  'AlertsSettingsView': lazy(() => import('../components/platform/settings/AlertsSettings')),
+  'ModulesSettingsView': lazy(() => import('../components/platform/settings/ModulesSettings')),
+  'GroupsSettingsView': lazy(() => import('../components/platform/settings/GroupsSettings')),
+  'AllocationRulesSettingsView': lazy(() => import('../components/platform/settings/AllocationRulesSettings')),
+  'PriceListsSettingsView': lazy(() => import('../components/platform/settings/PriceListsSettings')),
+  'SalesRepsSettingsView': lazy(() => import('../components/platform/settings/SalesRepsSettings')),
+  'StagesSettingsView': lazy(() => import('../components/platform/settings/StagesSettings')),
+  'CurrenciesSettingsView': lazy(() => import('../components/platform/settings/CurrenciesSettings')),
   'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
 };
 
@@ -470,11 +526,8 @@ export const INTELLIGENCE_TABS_REGISTRY = withScreenHelp([
 export const SCREEN_TABS_REGISTRY = [
   ...APP_TABS,
   ...withScreenHelp([
-    { id: 'inventory', label: { en: 'Inventory', he: 'מלאי' } },
-    { id: 'projects', label: { en: 'Projects', he: 'פרויקטים' } },
     { id: 'architecture', label: { en: 'Architecture Map', he: 'מפת ארכיטקטורה' } },
     { id: 'audit', label: { en: 'Forensic Audit', he: 'ביקורת' } },
-    { id: 'budgets', label: { en: 'Budgets', he: 'תקציבים' } },
     { id: 'time-machine', label: { en: 'Time Machine', he: 'מכונת זמן' } },
     { id: 'ask', label: { en: 'Ask Ledger', he: 'שאלות' } },
     { id: 'magic', label: { en: 'Assisted Entry', he: 'הזנה חכמה' } },

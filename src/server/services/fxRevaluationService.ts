@@ -1,7 +1,7 @@
 import { FieldValue } from '../db/firestore';
 import type { DocumentData, Firestore, Transaction as DbTransaction } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
-import { resolveAccountRole } from '../../lib/accountUtils';
+import { isIncomeAccount, resolveAccountRole } from '../../lib/accountUtils';
 import { formatCurrency, formatTzDate } from '../../lib/utils';
 import {
   planFxRevaluation, revaluationDateProblem, reversalLines, REVALUATION_SIDES, revaluationReversalDate, revaluationSummary,
@@ -197,7 +197,7 @@ export async function revaluateForeignBalances(db: Firestore, input: Revaluation
 
     const accounts = (await t.get(db.collection('chartAccounts').where('workspaceId', '==', input.workspaceId)))
       .docs.map(d => ({ ...d.data(), id: d.id }) as ChartAccount);
-    const gainLoss = accounts.find(a => !a.isArchived && (a.type === 'income' || a.type === 'expense') && FX_ACCOUNT_NAME.test(String(a.name || '')));
+    const gainLoss = accounts.find(a => !a.isArchived && (isIncomeAccount(a) || a.type === 'expense') && FX_ACCOUNT_NAME.test(String(a.name || '')));
     if (!gainLoss) {
       throw new FxRevaluationError(400, 'Add an "Unrealized FX Gain/Loss" account (income or expense) in the chart of accounts first — the difference has to go somewhere.');
     }

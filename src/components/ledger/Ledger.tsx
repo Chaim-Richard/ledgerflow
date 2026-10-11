@@ -8,6 +8,7 @@ import type { ChartAccount } from '../../types';
 import type { ReconciliationResult } from './ReconciliationWizard';
 import { cn, reportError, OperationType, formatCurrency } from '../../lib/utils';
 import { isPostable, lineAmount } from '../../lib/txFilters';
+import { accountParentProblem, allowedParentAccounts } from '../../lib/accountGroups';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { addDoc, collection } from '../../lib/db/firestore';
@@ -21,6 +22,7 @@ const ChartOfAccountsView = React.lazy(() => import('./ChartOfAccountsView'));
 const JournalView = React.lazy(() => import('./JournalView'));
 import type { JournalListEntry } from './JournalView';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { isIncomeAccount } from '../../lib/accountUtils';
 const TrialBalanceView = React.lazy(() => import('./TrialBalanceView'));
 // Keep legacy views reachable for the structural component guard.
 const _ProjectProfitabilityView = React.lazy(() => import('./ProjectProfitabilityView'));
@@ -176,6 +178,12 @@ const Ledger = React.memo(() => {
       toast.error('Workspace context required');
       return;
     }
+    // K-14: the parent offered by the form is checked again here (same type, no loop, three levels)
+    const parentProblem = accountParentProblem(accounts, { id: '', name: newAccount.name, type: newAccount.type }, newAccount.parentId);
+    if (parentProblem) {
+      toast.error('Parent account refused', { description: parentProblem });
+      return;
+    }
     try {
       await addDoc(collection(db, 'chartAccounts'), {
         workspaceId,
@@ -185,6 +193,7 @@ const Ledger = React.memo(() => {
         type: newAccount.type,
         category: newAccount.category || newAccount.type,
         description: newAccount.description || "",
+        parentId: newAccount.parentId || null,
         openingBalanceCents: newAccount.openingBalanceCents || 0,
         asOfDate: newAccount.asOfDate || new Date().toISOString(),
         balanceCents: 0,
@@ -209,8 +218,8 @@ const Ledger = React.memo(() => {
 
   const totalProfitCents = useMemo(() => {
     return accounts
-      .filter(a => a.type === 'income' || a.type === 'expense')
-      .reduce((sum, a) => a.type === 'income' ? sum + a.balanceCents : sum - a.balanceCents, 0);
+      .filter(a => isIncomeAccount(a) || a.type === 'expense')
+      .reduce((sum, a) => isIncomeAccount(a) ? sum + a.balanceCents : sum - a.balanceCents, 0);
   }, [accounts]);
 
   return (
@@ -517,8 +526,9 @@ const Ledger = React.memo(() => {
                         placeholder="None (Root)"
                         className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-bold text-[var(--text)]"
                       />
+                      {/* K-14: only the accounts this one may sit inside are offered */}
                       <datalist id={`${formId}-parent-account-options`}>
-                        {accounts.map(acc => (
+                        {allowedParentAccounts(accounts.filter(acc => !acc.isArchived), { id: '', name: newAccount.name, type: newAccount.type }).map(acc => (
                           <option key={acc.id} value={acc.name}>{acc.code}</option>
                         ))}
                       </datalist>
@@ -537,6 +547,8 @@ const Ledger = React.memo(() => {
                         className="w-full px-5 py-3.5 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-[var(--ink)] transition-all font-mono text-[var(--text)] text-right"
                       />
                     </Labelled>
+                    {/* N-13: the rule every report uses (src/lib/accountUtils.ts openingDebitCents) */}
+                    <p className="text-[10px] text-[var(--muted)] px-2">As the account shows it: what a loan owes, what a bank holds (negative if overdrawn).</p>
                   </div>
                 </div>
 
