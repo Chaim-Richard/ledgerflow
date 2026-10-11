@@ -33,7 +33,7 @@ export function createAssetTagAdapter(base: InlineRecordAdapter, loadTags: LoadT
       } catch (err) {
         // the database's unique tag per workspace (migration 20261014010000) caught a tag saved at the same moment elsewhere
         if (/assets_workspace_tag_uq|duplicate key|23505/i.test(err instanceof Error ? err.message : String(err))) {
-          throw new Error('That tag is already used by another asset in this workspace. Choose a different tag.');
+          throw new Error('That tag is already used by another asset in this workspace. Choose a different tag.', { cause: err });
         }
         throw err;
       }
