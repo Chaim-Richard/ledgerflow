@@ -419,7 +419,7 @@ export function StatementColumns(props: StatementColumnsProps) {
                       return (
                         <React.Fragment key={column.period.id}>
                           <td className="p-3 text-right whitespace-nowrap">
-                            {!row.heading &&
+                            <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{!row.heading &&
                               (row.accountId ? (
                                 <button
                                   type="button"
@@ -427,11 +427,11 @@ export function StatementColumns(props: StatementColumnsProps) {
                                   className="min-h-11 underline decoration-dotted"
                                   aria-label={`${row.label}, ${column.period.label}, open ledger`}
                                 >
-                                  {formatMoney(amount)}
+                                  <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatMoney(amount)}</bdi>
                                 </button>
                               ) : (
                                 formatMoney(amount)
-                              ))}
+                              ))}</bdi>
                           </td>
                           {showPercent && (
                             <td className="p-3 text-right whitespace-nowrap">
@@ -447,16 +447,16 @@ export function StatementColumns(props: StatementColumnsProps) {
                           {compare && (
                             <>
                               <td className="p-3 text-right whitespace-nowrap">
-                                {!row.heading &&
+                                <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{!row.heading &&
                                   (column.previous
                                     ? formatMoney(previous)
-                                    : "—")}
+                                    : "—")}</bdi>
                               </td>
                               <td className="p-3 text-right whitespace-nowrap">
-                                {!row.heading &&
+                                <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{!row.heading &&
                                   (variance
                                     ? formatMoney(variance.amount)
-                                    : "—")}
+                                    : "—")}</bdi>
                               </td>
                               <td className="p-3 text-right whitespace-nowrap">
                                 {!row.heading &&
