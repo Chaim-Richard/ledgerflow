@@ -138,3 +138,30 @@ test('E-11: missing key identifiers reject the affected rows, not the whole revi
   assert.equal(ny.rows[0].code, '0070');
   assert.equal(ny.issues[0].row, 2);
 });
+
+test('E-11: alternate accepted columns must not silently compete', () => {
+  assert.throws(
+    () => parseCaliforniaLocalRates([['Location', 'Rate', 'Tax Rate'], ['City', '8%', '9%']], '2026-10-01'),
+    /Ambiguous source headings/,
+  );
+});
+test('E-11: fractional percentage notation and official-domain source protection', () => {
+  assert.equal(parseRateFraction('8¼%', 'percentage'), 0.0825);
+  assert.throws(
+    () => parseNewYorkLocalRates([['Jurisdiction', 'Rate', 'Code']], '2026-10-01', {
+      publicationUrl: 'https://unverified.example/rates.pdf',
+    }),
+    /HTTPS/,
+  );
+});
+test('E-11: different rates for one jurisdiction/code/interval are never silently reconciled', () => {
+  const r = parseTexasLocalRates([
+    ['Name', 'Local Code', 'Local Rate', 'Total Rate'],
+    ['City', '12345', '.02', '.0825'],
+    ['City', '12345', '.02', '.0875'],
+  ], '2026-10-01');
+  assert.equal(r.rows.length, 2);
+  assert.equal(r.issues[0].row, 3);
+  assert.match(r.issues[0].reason, /Conflicting rates/);
+  assert.equal(r.readyForTaxCalculation, false);
+});
