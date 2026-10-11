@@ -36,6 +36,9 @@ test('the packs carry the tables row for row', () => {
   assert.equal(usNexusPack().rules.length, US_NEXUS_THRESHOLDS.length);
   assert.equal(ilVatPack().rules.length, IL_VAT_STANDARD.length + 4, 'the standard rows plus the four zero areas');
   assert.equal(canadaVatPack().rules.length, 24, '13 GST rows + 11 provincial/HST rows');
+  assert.equal(ukVatPack().id, 'uk-vat');
+  assert.ok(ukVatPack().rules.length >= 4, 'the standard-rate history plus the reduced rows whose words name a category');
+
   assert.equal(productTaxabilityPack().rules.length, US_PRODUCT_TAXABILITY.filter(r => r.treatment === 'exempt' || r.treatment === 'reduced').length);
 });
 
