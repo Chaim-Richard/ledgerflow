@@ -1,3 +1,5 @@
+import { IL_VAT_STANDARD, rateOn } from './tax/ilVatRates';
+import { getLocalDateISO } from './utils';
 export interface TaxRateConfig {
   countryCode: string;
   countryName: string;
@@ -71,9 +73,10 @@ export const COUNTRY_TAX_CONFIGS: Record<string, TaxRateConfig> = {
     countryCode: 'IL',
     countryName: 'Israel',
     taxType: 'vat',
-    defaultRate: 0.18, // 18% Ma'am since 1 Jan 2025 (17% before); new workspaces' codes only — saved codes and invoices keep theirs
+    // today's Ma'am rate from the dated table (18% since 1 Jan 2025); new workspaces' codes only — saved codes and invoices keep theirs
+    defaultRate: rateOn(IL_VAT_STANDARD, getLocalDateISO())?.rate ?? 0.18,
     categoryRates: {
-      'Standard VAT': 0.18,
+      'Standard VAT': rateOn(IL_VAT_STANDARD, getLocalDateISO())?.rate ?? 0.18,
       'Zero Rate Eilat': 0.0,
       'Exempt Services': 0.0
     }
