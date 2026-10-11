@@ -186,3 +186,18 @@ the published shapes (`src/lib/tax/profile.ts`, coming first).
 The first "five days" of queue lasted about two hours (AI #5 shipped nine PRs). From now on each queue
 holds **20 or more tasks**, and Claude refills it at every check. AI #5 is for now a chat standing in
 until another AI's usage resets: its tasks are small, self-contained and come with fixtures.
+
+## 8. Done so far (Claude, 11 Oct night)
+
+| Step | What | Where |
+|---|---|---|
+| §6 model | Tax profiles on the books and on label values, inherited from parents; saved through the server (owners, accountants), audited | `src/lib/tax/profile.ts`, `PUT .../tax-profiles` |
+| §6 lines | A sale line's tax from the selling entity, the buyer's place, the date and certificates; Israel built in; US tables plug in | `src/lib/tax/resolveLineTax.ts` |
+| §6 screens | Customers have a tax place (country, state, city); invoices show the expected tax with "Use it" | PartyModal, TaxPlaceSuggestion |
+| §6 learning | Tax code suggestions from history, learning from corrections; unusual-code flags | `src/lib/tax/taxSuggestions.ts` |
+| IL-1 | VAT 17% to 2024, 18% from 1 Jan 2025, Eilat zero, as dated rows | `src/lib/tax/ilVatRates.ts` |
+| IL-2 | Original once, then "true copy" on Israeli tax documents | `copyMarkService.ts` |
+| IL-3 | VAT report figures per registration (taxable, zero, exempt, output, fixed-asset and other inputs, to pay) | `src/lib/tax/ilVatReturn.ts` |
+| IL-5 | Withholding at source: vendor certificate, amount on the bill payment, posted as owed | `withholding.ts`, payment posting |
+
+Next: IL-6 allocation-number request, IL-7 Israeli payroll engine (on AI #4's tables), US-1 lookup on AI #3's state table, US-3 state returns, US-5 federal payroll.
