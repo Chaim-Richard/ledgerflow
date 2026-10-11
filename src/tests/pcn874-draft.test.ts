@@ -15,9 +15,9 @@ test('E-9 PCN874 historical Appendix A record widths and header counts from iden
  assert.ok(draft.transactions.every(row=>row.length===PCN874_DRAFT_TRANSACTION_WIDTH));
  assert.equal(draft.closing.length,PCN874_DRAFT_CLOSING_WIDTH);
  assert.equal(draft.transactions[0].slice(0,10),'S123456789');
- assert.equal(draft.transactions[0].slice(32,41),'000000180');
- assert.equal(draft.transactions[0][41],'+');
- assert.equal(draft.transactions[0].slice(42,52),'0000001000');
+ assert.equal(draft.transactions[0].slice(31,40),'000000180');
+ assert.equal(draft.transactions[0][40],'+');
+ assert.equal(draft.transactions[0].slice(41,51),'0000001000');
  assert.equal(draft.header.slice(25,37),'+00000001000');
  assert.equal(draft.header.slice(37,47),'+000000180');
  assert.ok(draft.text.endsWith('\r\n'));
