@@ -3,6 +3,7 @@ import { getDb } from '../db/firestore';
 import { AllocationRuleError, setAllocationRules } from '../services/allocationRuleService';
 import { PriceListError, setPriceLists } from '../services/priceListService';
 import { SalesRepError, setSalesReps } from '../services/salesRepService';
+import { setTaxProfiles, TaxProfileError } from '../services/taxProfileService';
 import { RoleDashboardError, setRoleDashboard } from '../services/roleDashboardService';
 import { DelegateError, setApprovalDelegate } from '../services/approvalDelegateService';
 
@@ -41,6 +42,15 @@ salesRepRouter.put('/', async (req, res) => {
   try {
     res.json({ status: 'success', ...(await setSalesReps(getDb(), { workspaceId: String((req.params as Record<string, string>).workspaceId), uid: user.uid, email: user.email, reps: req.body?.reps })) });
   } catch (err) { fail(res, err, (e): e is SalesRepError => e instanceof SalesRepError, 'sales reps'); }
+});
+
+// PLAN §6: the tax profiles of the books and of label values, PUT .../tax-profiles {profiles}
+export const taxProfileRouter = express.Router({ mergeParams: true });
+taxProfileRouter.put('/', async (req, res) => {
+  const user = (req as AuthedRequest).user;
+  try {
+    res.json({ status: 'success', ...(await setTaxProfiles(getDb(), { workspaceId: String((req.params as Record<string, string>).workspaceId), uid: user.uid, email: user.email, profiles: req.body?.profiles })) });
+  } catch (err) { fail(res, err, (e): e is TaxProfileError => e instanceof TaxProfileError, 'tax profiles'); }
 });
 
 export const roleDashboardRouter = express.Router({ mergeParams: true });

@@ -40,7 +40,7 @@ import { retentionFor, RetentionSettingsSchema, scheduledPurgeAt as purgeDate } 
 import { RetentionError, updateRetention } from '../services/retentionService';
 import { completeSetup, recordOpeningBalances, SetupError } from '../services/openingBalanceService';
 import { ModuleSettingError, moduleRecords, setModules } from '../services/moduleService';
-import { allocationRuleRouter, priceListRouter, salesRepRouter, roleDashboardRouter, approvalDelegateRouter } from './savedListRoutes';
+import { allocationRuleRouter, priceListRouter, salesRepRouter, roleDashboardRouter, approvalDelegateRouter, taxProfileRouter } from './savedListRoutes';
 import { workspaceUsage } from '../middleware/planCapacity';
 
 export const workspaceRouter = express.Router();
@@ -247,6 +247,7 @@ workspaceRouter.get('/:workspaceId/usage', requireWorkspaceRole(['owner', 'accou
 workspaceRouter.use('/:workspaceId/allocation-rules', requireWorkspaceRole(LEDGER_ADMIN_ROLES), allocationRuleRouter);
 workspaceRouter.use('/:workspaceId/price-lists', requireWorkspaceRole(LEDGER_ADMIN_ROLES), priceListRouter);
 workspaceRouter.use('/:workspaceId/sales-reps', requireWorkspaceRole(LEDGER_ADMIN_ROLES), salesRepRouter);
+workspaceRouter.use('/:workspaceId/tax-profiles', requireWorkspaceRole(LEDGER_ADMIN_ROLES), taxProfileRouter);
 workspaceRouter.use('/:workspaceId/role-dashboards', requireWorkspaceRole(['owner']), roleDashboardRouter);
 workspaceRouter.use('/:workspaceId/approval-delegate', requireWorkspaceRole(LEDGER_ADMIN_ROLES), approvalDelegateRouter);
 
