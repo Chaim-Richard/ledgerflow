@@ -3,6 +3,8 @@ import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { lockMessage, postingLock, workspaceRole } from '../../lib/periodLock';
 import { mayApprove, TWO_PERSON_REFUSAL, twoPersonOn } from '../../lib/twoPersonRule';
+import { hoursToPay, type PayableTime } from '../../lib/hourlyPay';
+import { TIME_KIND } from '../../lib/timeEntries';
 import { payRunLines, payRunTotals, totalsOfLines, type PayRunAccounts, type PayRunEmployeeLine, type PayRunTotals, type PaySchedule } from '../../lib/payRunPosting';
 import { isCashAccount } from '../../lib/txFilters';
 import { formatCurrency, formatTzDate } from '../../lib/utils';
@@ -119,6 +121,17 @@ const runAmounts = (totals: PayRunTotals) => ({
   employerTaxCents: totals.employerTaxCents, deductionsCents: totals.deductionsCents, employees: totals.employees,
 });
 
+/** U-11: the workspace's time entries that could be paid (read before anything is written). */
+async function payableTime(t: Tx, db: Firestore, workspaceId: string): Promise<PayableTime[]> {
+  const snap = await t.get(db.collection('documents').where('workspaceId', '==', workspaceId).where('kind', '==', TIME_KIND));
+  return snap.docs.map(d => ({ ...(d.data() as Omit<PayableTime, 'id'>), id: d.id }));
+}
+
+/** U-11: the time a run pays is marked with it, so no later run pays it again; freed when the run does not stand. */
+function markTime(t: Tx, db: Firestore, lines: PayRunEmployeeLine[], runId: string | null) {
+  for (const line of lines) for (const id of line.timeEntryIds || []) t.update(db.collection('documents').doc(id), { paidRunId: runId });
+}
+
 export async function postPayRun(db: Firestore, input: PostPayRunInput) {
   if (!DAY.test(input.date)) throw new PayRunError(400, 'Choose the pay date');
   const result = await db.runTransaction(async t => {
@@ -129,7 +142,8 @@ export async function postPayRun(db: Firestore, input: PostPayRunInput) {
     const chosen = await chooseAccounts(t, db, input.workspaceId, input);
     const employees = (await t.get(db.collection('employees').where('workspaceId', '==', input.workspaceId))).docs.map(d => ({ ...d.data(), id: d.id }) as Employee);
     const schedule: PaySchedule = input.schedule || 'all';
-    const totals = payRunTotals(employees, Number(input.date.slice(0, 4)), schedule);
+    const hours = hoursToPay(employees, await payableTime(t, db, input.workspaceId), input.date);
+    const totals = payRunTotals(employees, Number(input.date.slice(0, 4)), schedule, hours);
     if (totals.employees.length === 0) throw new PayRunError(400, schedule === 'all' ? 'There is nobody on the payroll' : `Nobody is paid ${schedule.toLowerCase()}`);
     await refuseSameDay(t, db, input.workspaceId, input.date, totals, Boolean(input.again));
     const today = formatTzDate(new Date(), typeof workspace.timezone === 'string' ? workspace.timezone : 'UTC');
@@ -146,6 +160,7 @@ export async function postPayRun(db: Firestore, input: PostPayRunInput) {
         accountIds: { bankAccountId: chosen.bank.id, wagesAccountId: chosen.wages.id, taxExpenseAccountId: chosen.taxExpense.id, liabilitiesAccountId: chosen.liabilities.id },
         ...runAmounts(totals),
       });
+      markTime(t, db, totals.employees, runRef.id);
       const currency = String(workspace.currency || 'USD');
       await writeServerAuditLog({
         workspaceId: input.workspaceId, uid: input.uid, email: input.email, action: 'PAY_RUN_SUBMITTED', entityType: 'payRuns', entityId: runRef.id,
@@ -153,7 +168,9 @@ export async function postPayRun(db: Firestore, input: PostPayRunInput) {
       }, { db, tx: t });
       return { awaitingApproval: true as const, payRunId: runRef.id, currency, ...totals };
     }
-    return { ...(await postRun(t, db, workspace, { ...input, schedule, chosen, totals, runRef, action: 'PAY_RUN_POSTED' })), ...totals };
+    const posted = await postRun(t, db, workspace, { ...input, schedule, chosen, totals, runRef, action: 'PAY_RUN_POSTED' });
+    markTime(t, db, totals.employees, runRef.id);
+    return { ...posted, ...totals };
   });
   if ('awaitingApproval' in result) {
     await notifyPayRun(db, { workspaceId: input.workspaceId, payRunId: result.payRunId, event: 'requested', date: input.date, costCents: result.costCents, currency: result.currency, actorUid: input.uid });
@@ -206,6 +223,7 @@ export async function rejectPayRun(db: Firestore, input: Actor & { payRunId: str
     const { workspace, runRef, run } = await waitingRun(t, db, input);
     const now = new Date().toISOString();
     t.update(runRef, { status: 'rejected', rejectedBy: input.uid, rejectedByEmail: input.email || '', rejectedAt: now, rejectionNote: note });
+    markTime(t, db, run.employees || [], null);
     await writeServerAuditLog({
       workspaceId: input.workspaceId, uid: input.uid, email: input.email, action: 'PAY_RUN_REJECTED', entityType: 'payRuns', entityId: input.payRunId,
       details: { description: `Sent back the pay run of ${run.date} prepared by ${run.submittedByEmail || 'a teammate'}${note ? `: ${note}` : ''}` },
@@ -266,6 +284,7 @@ export async function undoPayRun(db: Firestore, input: Actor & { payRunId: strin
       // U-10: whoever prepared it, or an owner, withdraws it while it waits; nothing was posted
       if (run.uid !== input.uid && workspaceRole(workspace, input.uid) !== 'owner') throw new PayRunError(403, 'Only whoever prepared this pay run, or an owner, can withdraw it');
       t.update(runRef, { status: 'withdrawn', withdrawnAt: new Date().toISOString() });
+      markTime(t, db, (run.employees || []) as PayRunEmployeeLine[], null);
       await writeServerAuditLog({
         workspaceId: input.workspaceId, uid: input.uid, email: input.email, action: 'PAY_RUN_WITHDRAWN', entityType: 'payRuns', entityId: input.payRunId,
         details: { description: `Withdrew the pay run of ${String(run.date)} before it was approved` },
@@ -278,6 +297,7 @@ export async function undoPayRun(db: Firestore, input: Actor & { payRunId: strin
     const now = new Date().toISOString();
     t.update(db.collection('transactions').doc(String(run.transactionId)), { status: 'void', voidedReason: 'Pay run undone', voidedAt: now, updatedAt: now });
     t.update(runRef, { status: 'undone', undoneAt: now });
+    markTime(t, db, (run.employees || []) as PayRunEmployeeLine[], null);
     await writeServerAuditLog({
       workspaceId: input.workspaceId, uid: input.uid, email: input.email, action: 'PAY_RUN_UNDONE', entityType: 'payRuns', entityId: input.payRunId,
       details: { description: `Undid the pay run of ${String(run.date)}; its entry is void`, transactionId: run.transactionId },
