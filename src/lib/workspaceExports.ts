@@ -1,3 +1,18 @@
+/**
+ * E-11: read-only state/local rate table staging helpers, not a tax calculator.
+ * Exposed from an application-reachable export module for preview/integration
+ * review only. Each result explicitly carries readyForTaxCalculation: false.
+ * No live tax lookup, posting, or database update uses these functions.
+ */
+export {
+  parseStateLocalRateRows,
+  parseTexasLocalRates,
+  parseCaliforniaLocalRates,
+  parseNewYorkLocalRates,
+  parseWashingtonLocalRates,
+  parseColoradoLocalRates,
+} from './tax/stateLocalRateImporters';
+
 import type {ChartAccount,Transaction} from '../types';
 import {isPostable,lineAmount,isCashAccount} from './txFilters';
 import {csvMoney,type CsvValue} from './csvExport';
