@@ -16,7 +16,7 @@ LedgerFlow is double-entry bookkeeping for small businesses and their accountant
 - **Frontend:** React `^19.0.0`, Vite `^6.2.0`, TypeScript `~5.8.2`, Tailwind CSS `^4.1.14`
 - **State Management:** Zustand `^5.0.14`
 - **Database & Auth:** Supabase — Postgres with row level security, Supabase Auth (email + password, Google, authenticator-app two-step login), Realtime. The app keeps a Firestore-style data API on top (`src/lib/db/` in the browser, `src/server/db/pgFirestore.ts` on the server).
-- **Backend Server:** Express `^4.21.2`, Node.js (TypeScript via `tsx` and bundled with `esbuild`)
+- **Backend Server:** Express `^5.2.1`, Node.js (TypeScript via `tsx` and bundled with `esbuild`)
 - **Payments & Billing:** Stripe `^22.2.1`
 - **Banking Integrations:** Plaid `^42.2.0`, `react-plaid-link` `^4.1.1`
 - **Document Generation:** PDFKit `^0.20.2` (custom native PDF stream engine with `/api/v1/workspaces/:workspaceId/documents/:type/:id/pdf`)
@@ -81,8 +81,8 @@ LedgerFlow strictly separates data, computation, and rendering into three decoup
 ## ⚡ Quick Start & CLI Scripts
 
 **New here? Follow [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md)**: Node version, settings, the test
-database, running the app safely (without settings, signing in uses the *live* project; use guest mode or
-your own Supabase project) and a full bookkeeping round to check it all works. The commands below are the
+database, running the app safely (without settings, local development stays in isolated guest mode;
+configure your own Supabase project to sign in) and a full bookkeeping round to check it all works. The commands below are the
 short version.
 
 ```bash

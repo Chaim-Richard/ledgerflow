@@ -62,7 +62,8 @@ emailRouter.get('/log/:documentId', async (req, res) => {
 /**
  * Delivery reports from the email provider (BL-01): bounces and spam complaints are logged, and
  * that address is then skipped (suppression list). Public URL, protected by a secret token:
- *   https://<site>/api/v1/email-events?token=<EMAIL_WEBHOOK_SECRET>
+ *   Preferred: X-Email-Webhook-Secret request header (EMAIL_WEBHOOK_SECRET).
+ *   Legacy query tokens remain supported for existing provider configurations; never log their values.
  * Understands Resend, Postmark and SendGrid report formats.
  */
 export const emailWebhookRouter = express.Router();
@@ -107,7 +108,8 @@ function tokenOk(provided: unknown): boolean {
 }
 
 emailWebhookRouter.post('/', async (req, res) => {
-  if (!tokenOk(req.query.token)) return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  // Prefer a header: URLs with tokens may also be recorded by upstream HTTP proxies.
+  if (!tokenOk(req.get('x-email-webhook-secret') || req.query.token)) return res.status(401).json({ status: 'error', message: 'Unauthorized' });
   const db = getDb();
   const reports = parseProviderReports(req.body);
   for (const r of reports) {
