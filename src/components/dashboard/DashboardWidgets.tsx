@@ -35,7 +35,7 @@ interface WidgetSnapshot {
   bills?: Bill[]; customers?: Customer[]; vendors?: Vendor[];
   scenarios?: ReturnType<typeof useScenarioStore.getState>['scenarios'];
 }
-interface WidgetRefreshState { at: number; values: WidgetSnapshot; truncated: string[] }
+interface WidgetRefreshState { workspaceId: string; at: number; values: WidgetSnapshot; truncated: string[] }
 
 /** The person's own arrangement in this browser, or null (BC-02: then their role's starting layout). */
 function readOwn(key: string): unknown { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; } }
@@ -71,12 +71,12 @@ function ScopedDashboardWidgets() {
   const [layout, setLayout] = useState(() => startingLayout(readOwn(preferenceKey), workspace?.roleDashboards, role));
   const [storageError, setStorageError] = useState(false);
   const [widgetSnapshots, setWidgetSnapshots] = useState<Partial<Record<DashboardWidget, WidgetRefreshState>>>({});
-  const [refreshErrors, setRefreshErrors] = useState<Partial<Record<DashboardWidget, string>>>({});
+  const [refreshErrors, setRefreshErrors] = useState<Partial<Record<DashboardWidget, { workspaceId: string; message: string }>>>({});
   const [refreshing, setRefreshing] = useState<DashboardWidget | null>(null);
   const refreshWidget = async (id: DashboardWidget) => {
     if (isGuest || !workspaceId || refreshing !== null) return;
     setRefreshing(id);
-    setRefreshErrors(state => ({ ...state, [id]: '' }));
+    setRefreshErrors(state => ({ ...state, [id]: undefined }));
     try {
       const values: WidgetSnapshot = {}, truncated: string[] = [];
       // These are workspace-scoped client reads with the existing RLS enforcement.
@@ -90,11 +90,11 @@ function ScopedDashboardWidgets() {
         (values as Record<string, unknown>)[key] = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       }
       if (useAuthStore.getState().currentWorkspaceId !== workspaceId) return;
-      setWidgetSnapshots(state => ({ ...state, [id]: { values, truncated, at: Date.now() } }));
+      setWidgetSnapshots(state => ({ ...state, [id]: { workspaceId, values, truncated, at: Date.now() } }));
       // A failed global live listener stays failed; this widget can show its verified one-shot read.
     } catch (error) {
       if (useAuthStore.getState().currentWorkspaceId === workspaceId)
-        setRefreshErrors(state => ({ ...state, [id]: error instanceof Error ? error.message : 'Refresh failed' }));
+        setRefreshErrors(state => ({ ...state, [id]: { workspaceId, message: error instanceof Error ? error.message : 'Refresh failed' } }));
     } finally {
       if (useAuthStore.getState().currentWorkspaceId === workspaceId) setRefreshing(null);
     }
@@ -135,7 +135,7 @@ function ScopedDashboardWidgets() {
     <a className="inline-flex min-h-11 items-center underline" href={reportLink(side === 'customer' ? 'ar-aging' : 'ap-aging')}>Open aging report</a>
   </>;
   const renderWidget = (id: DashboardWidget) => {
-    const snapshot = widgetSnapshots[id]?.values;
+    const snapshot = widgetSnapshots[id]?.workspaceId === workspaceId ? widgetSnapshots[id]?.values : undefined;
     const currentAccounts = snapshot?.accounts || scoped.accounts, currentTransactions = snapshot?.transactions || scoped.transactions;
     const currentInvoices = snapshot?.invoices || scoped.invoices, currentCustomers = snapshot?.customers || scoped.customers;
     const currentBills = snapshot?.bills || scoped.bills, currentVendors = snapshot?.vendors || scoped.vendors;
@@ -159,7 +159,7 @@ function ScopedDashboardWidgets() {
       const ghosts = scenario?.ghosts.filter(ghost => ghost.isActive && ghost.date >= period.startDate && ghost.date <= period.endDate) || [];
       return <><p className="text-sm">Forecast preview only; excluded from posted figures. {scenario?.name}</p><ul>{ghosts.map(ghost => <li key={ghost.id} className="py-2"><bdi>{ghost.description}</bdi><span className="block text-sm">{ghost.date} · {ghost.type} · {formatCurrency(Math.abs(ghost.amountCents), 'USD')}</span></li>)}</ul>{ghosts.length === 0 && <p>No active scenario entries in this range.</p>}</>;
     }
-    if (id === 'feeds') return <BankFeedHealth key={widgetSnapshots[id]?.at || 0} />;
+    if (id === 'feeds') return <BankFeedHealth key={widgetSnapshots[id]?.workspaceId === workspaceId ? widgetSnapshots[id]?.at || 0 : 0} />;
     if (id === 'banks') return <><p className="text-sm">Posted ledger balances including opening balances, as of {period.endDate}, in base currency.</p><ul>{widgetData.current.banks.map(bank => <li key={bank.id}><button type="button" onClick={() => useUIStore.getState().openRecord({ type: 'account', id: bank.id })} className="min-h-11 flex justify-between gap-3 w-full text-start"><bdi className="min-w-0 break-words">{bank.name}</bdi><span className="shrink-0 tabular-nums">{formatCurrency(bank.cents, currency)}</span></button></li>)}</ul>{widgetData.current.banks.length === 0 && <p>No cash-role accounts.</p>}</>;
     if (id === 'summary') return <dl>{widgetData.current.summary.map(row => <div key={row.label} className="flex justify-between gap-2 py-2"><dt>{row.label}<span className="block text-xs text-[var(--muted)]">{row.scope}</span></dt><dd className="tabular-nums">{formatCurrency(row.cents, currency)}</dd></div>)}</dl>;
     if (id === 'recent') return <ul>{widgetRecent.map(tx => <li key={tx.id}><button type="button" onClick={() => useUIStore.getState().openRecord({ type: 'transaction', id: tx.id })} className="min-h-11 w-full text-start py-2"><bdi className="break-words">{tx.description || 'Transaction'}</bdi><span className="block text-sm text-[var(--muted)]">{tx.date} · {formatCurrency(tx.totalAmountCents, tx.currency)}</span></button></li>)}{widgetRecent.length === 0 && <li>No posted transactions in this range.</li>}</ul>;
@@ -177,18 +177,18 @@ function ScopedDashboardWidgets() {
       {role === 'owner' && <div className="flex flex-wrap items-center gap-2"><label className="min-h-11 flex items-center gap-2">Starting dashboard for<select value={forRole} onChange={event => setForRole(event.target.value as DashboardRole)} className="border border-[var(--line)] rounded bg-[var(--panel)] px-2 py-1">{DASHBOARD_ROLES.map(r => <option key={r} value={r}>{r === 'owner' ? 'owners' : `${r}s`}</option>)}</select></label><button type="button" onClick={() => void giveToRole()} className="min-h-11 underline">Give them this layout</button>{roleNote && <p role="status">{roleNote}</p>}</div>}</details>
     {storageError && <p role="status">Layout changed for this visit; this browser could not save it.</p>}
     {valid && <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">{layout.order.filter(id => !layout.hidden.includes(id)).map(id => {
-      const widget = widgetSnapshots[id];
+      const widget = widgetSnapshots[id]?.workspaceId === workspaceId ? widgetSnapshots[id] : undefined;
       const sources = WIDGET_SOURCES[id];
       const sourceFailures = sources.filter(key => failed[key] && !widget?.values[key as keyof WidgetSnapshot]);
       const pending = sources.filter(key => !loaded[key] && !widget?.values[key as keyof WidgetSnapshot]);
-      const refreshFailure = refreshErrors[id];
+      const refreshFailure = refreshErrors[id]?.workspaceId === workspaceId ? refreshErrors[id]?.message : '';
       return <article key={id} aria-label={LABELS[id]} className="min-w-0 border border-[var(--line)] rounded-xl bg-[var(--panel)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h2 className="font-semibold">{LABELS[id]}</h2>
           <button type="button" className="min-h-11 px-2 underline text-xs" disabled={isGuest || refreshing !== null}
             aria-label={`Refresh ${LABELS[id]}`} onClick={() => void refreshWidget(id)}>{refreshing === id ? 'Refreshing…' : sourceFailures.length || refreshFailure ? 'Retry' : 'Refresh'}</button>
         </div>
         <p className="text-xs text-[var(--muted)] mb-2">{isGuest ? 'Demo data — no live refresh' : widget ? `Refreshed at ${new Date(widget.at).toLocaleTimeString()}` : id === 'feeds' ? 'Latest server response; sync date shown below' : 'Live data; update time not tracked'}</p>
-        {(sourceFailures.length > 0 || refreshFailure) ? <p role="alert">Could not load ${sourceFailures.join(', ') || LABELS[id]}. {refreshFailure || 'Use Retry to load only this widget.'}</p> : <>
+        {(sourceFailures.length > 0 || refreshFailure) ? <p role="alert">Could not load {sourceFailures.join(', ') || LABELS[id]}. {refreshFailure || 'Use Retry to load only this widget.'}</p> : <>
           {pending.length ? <p role="status">Loading {pending.join(', ')}…</p> : <>
           {widget?.truncated.length ? <p role="status">Partial history: {widget.truncated.join(', ')}</p> : null}
           {renderWidget(id)}</>}
