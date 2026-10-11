@@ -180,7 +180,7 @@ function ScopedDashboardWidgets() {
       const widget = widgetSnapshots[id]?.workspaceId === workspaceId ? widgetSnapshots[id] : undefined;
       const sources = WIDGET_SOURCES[id];
       const sourceFailures = sources.filter(key => failed[key] && !widget?.values[key as keyof WidgetSnapshot]);
-      const pending = sources.filter(key => !loaded[key] && !widget?.values[key as keyof WidgetSnapshot]);
+      const pending = isGuest ? [] : sources.filter(key => !loaded[key] && !widget?.values[key as keyof WidgetSnapshot]);
       const refreshFailure = refreshErrors[id]?.workspaceId === workspaceId ? refreshErrors[id]?.message : '';
       return <article key={id} aria-label={LABELS[id]} className="min-w-0 border border-[var(--line)] rounded-xl bg-[var(--panel)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h2 className="font-semibold">{LABELS[id]}</h2>
