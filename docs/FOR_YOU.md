@@ -296,6 +296,13 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
    pay run, for their approved time up to the pay date that no earlier run paid, at one hourly rate.
    There is no overtime rate (e.g. time and a half over 40 hours a week) yet. Say if you need overtime.
 
+41. **Repository made public (11 Oct): roll one old Stripe test key — needs you, 2 minutes.** An early
+   commit (5 Jul, removed on 22 Jul) had a Stripe *test-mode* secret key starting `sk_test_51Th0cy…`.
+   It cannot move real money, but anyone can now read it. In Stripe → Developers → API keys (test mode)
+   → "Roll key", then put the new one in Vercel's `STRIPE_SECRET_KEY` if you use test mode there. No
+   other secrets were found in the history (no database passwords, service keys or live keys). CI now
+   runs on GitHub on every push to main, every helper-AI branch and every pull request.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of
