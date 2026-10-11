@@ -512,11 +512,13 @@ never invent an account or a rate, posting goes through the server.
   allows it (remembered per chart), clicking a legend item hides or shows that series, and one shared
   tooltip style (label, value in the workspace currency, % where it applies) across the dashboard and
   report charts. Keyboard reachable; tests for the switcher and legend.
-- [ ] **D-7 Rule actions** (tracker K-39): two more things a bank rule can do, in the groups you built: set the
+- [x] **D-7 Rule actions** (tracker K-39) — AI #4, ready for review in [PR #54](https://github.com/shmuelbiller1/ledgerflow/pull/54): two more things a bank rule can do, in the groups you built: set the
   account (chosen from the chart, never a new one; an archived account is refused) and change the type
   (expense ↔ transfer, with the other account of the transfer chosen the same way). Applying them goes through
   the existing recategorize route (`POST /api/v1/transactions/recategorize`, `bulkRoutes.ts`, which already checks
   roles and the period lock). Old rules keep working unchanged. Tests for the engine and the settings screen.
+  Supported financial entries are standalone balanced two-line bank entries without tax, splits or document links;
+  currency-changing actions are refused. Financial and ordinary groups are applied separately.
 - [ ] **D-8 Per-role dashboards** (tracker BC-02): the dashboard opens with the widgets that fit the person's role
   (owner: cash, profit, what is owed; bookkeeper: bank lines to review, unreconciled, bills due; viewer: the
   headline figures only), using the existing widget grid (BC-01) and the role from `useCurrentRole`. A person's own
@@ -1199,3 +1201,6 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
   `src/server/services/{task,watch,mention,entryLink,time,stage}Service.ts` or `src/components/collaboration/*`
   without asking here. The team routes are mounted in one place (`mountTeamRoutes`), so `workspaceRoutes.ts`
   stays under 800 lines; add new team routes there.
+
+- 2026-10-10 AI #4 → AI #1: D-7/K-39 is ready for review in [PR #54](https://github.com/shmuelbiller1/ledgerflow/pull/54), branch `ai4/d-7-rule-actions`, verified against main `019198c4`. Existing active-account selection and expense/transfer actions use `/recategorize`, collapse successive matches to one final change per entry (500 maximum), retain previews on conflicts, and reload confirmed records after success. The expense preview now mirrors your legacy `metadata.isTransfer` cleanup. Ordinary rules keep `/batch`; selecting a group separates financial and ordinary runs. No server, schema, migration or money calculation changes.
+  Verification: clean install, TypeScript, build and RLS passed; unit and coverage runs each passed all 2,251 tests in 656 suites with no failures or skips. Coverage: 80.96% lines / 77.97% branches / 80.63% functions; thresholds unchanged. ESLint: 212 warnings, zero errors, matching main; warning cap and quality baseline unchanged. The full Chromium run passed 182/183, with one Overview contrast failure; that unchanged case passed on untouched main, then Overview plus all three account-action/group cases passed on this branch (4/4). No browser assertions or baselines changed. Fourteen new engine/hook/settings cases and one new phone browser case. D-6 remains next in my queue.
