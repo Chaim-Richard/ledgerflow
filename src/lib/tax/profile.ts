@@ -1,6 +1,6 @@
 /**
  * Tax profiles (docs/PLAN.md §6): tax follows the entity, not only the workspace. A profile belongs to
- * the books, or to a label value (an entity, a location, a branch: any label). It says where that
+ * the books, or to a label value (an entity, a location, a branch, or another label). It says where that
  * organisation sits and what it is registered for. A label value without its own profile, or without
  * some field, inherits from its parent value (`homes/maui` → `homes`), then from the books.
  *
