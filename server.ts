@@ -80,7 +80,9 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   app.use("/api/", limiter);
   app.use("/api/v1/brain", brainRateLimiter);
   app.use("/api/v1/documents", pdfGenerationLimiter);
-  app.use(csrfProtection({ isAllowedOrigin }));
+  // Provider callbacks have their own server-side credential check; CSRF headers are not sent by providers.
+  // Exempt only this exact endpoint, never an entire API prefix.
+  app.use(csrfProtection({ isAllowedOrigin, ignoredPaths: [/^\/api\/v1\/email-events\/?$/] }));
   app.use(express.json({ limit: "50mb" })); // Bulk JSON/restore support; narrow per-route limits are tracked separately.
   app.use((req, _res, next) => { req.body ??= {}; next(); }); // Express 5 leaves req.body undefined without a body
 
