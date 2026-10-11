@@ -97,7 +97,6 @@ export default function ImportSettings() {
   const [recentVersion, setRecentVersion] = useState(0);
 
   const definition = IMPORT_DEFINITIONS[kind];
-  const header = table[0] || [];
   const columns = useMemo(() => (table[0] || []).map((name, position) => ({ name, position })), [table]);
   const rows = useMemo(() => applyMapping(kind, table.slice(1), mapping), [kind, table, mapping]);
   const prepared = useMemo(() => prepareImport(kind, rows), [kind, rows]);
