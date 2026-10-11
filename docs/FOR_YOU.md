@@ -315,8 +315,7 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
    change. Fetching the number automatically needs your Tax Authority registration (item 42).
 
 44. **From the strategic review (11 Oct): three things only you can decide or do.** (a) A licence: the repository is
-   public with no LICENSE file, which means "all rights reserved" (nobody may reuse it), not open source. Default kept:
-   no licence (proprietary). If you want others to contribute, say which (for example source-available BSL). (b) Backups:
+   public with no LICENSE file, which means "all rights reserved" (nobody may reuse it), not open source. **Updated 11 Oct:** added `LICENSE.md` (PolyForm Strict 1.0.0), allowing only the limited noncommercial uses it describes, with no permission to distribute or make derivative works. Commercial use requires separate permission. The project is source-available, not open source. Before accepting outside contributions, set up a separate contribution process. (b) Backups:
    check that Supabase point-in-time recovery is on for the live project, and let me run one restore drill to a copy.
    (c) Branch protection on GitHub (Settings → Branches → main: require CI to pass) — it also covers L-67.
 
