@@ -6,7 +6,7 @@ import './helpers/dom';
 import test, { afterEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import OpenAdvancesView from '../components/reporting/OpenAdvancesView';
 import { ageBucket, openAdvances, type PaymentDirection } from '../lib/advancePayments';
 import { markComponentCollectionsLoaded, setComponentWorkspace } from './helpers/componentFixtures';
@@ -47,4 +47,24 @@ describe('On screen', () => {
     fireEvent.change(screen.getByLabelText('Which advances'), { target: { value: 'made' } });
     assert.match(screen.getByRole('table').textContent || '', /Paper CoPAY-6/);
   });
+});
+
+
+test('open-advance currency totals stay under their heading after moving and hiding columns', async () => {
+  localStorage.clear();
+  setComponentWorkspace('owner');
+  markComponentCollectionsLoaded('payments');
+  useLedgerStore.setState({ payments: payments as never });
+  const view = render(<OpenAdvancesView startDate="2026-09-01" endDate="2026-09-30" />);
+  await waitFor(() => assert.ok(view.getByRole('button', { name: 'Columns' })));
+  fireEvent.click(view.getByRole('button', { name: 'Columns' }));
+  fireEvent.click(view.getByRole('button', { name: 'Move Still open earlier' }));
+  const headings = Array.from(view.container.querySelectorAll('thead th')).map(cell => cell.textContent);
+  assert.equal(headings[4], 'Still open');
+  const total = view.container.querySelector('tfoot tr')!;
+  assert.equal(total.children.length, 7);
+  assert.equal(total.children[4].textContent, '$300.00');
+  fireEvent.click(view.getByRole('checkbox', { name: 'Applied' }));
+  assert.equal(total.children[4].textContent, '$300.00', 'hiding applied amounts never changes open money');
+  localStorage.clear();
 });

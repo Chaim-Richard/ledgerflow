@@ -390,7 +390,7 @@ const Reports = React.memo(() => {
           className="flex items-center gap-3 px-10 py-5 bg-[var(--surface)] border-2 border-zinc-900 rounded-full text-[var(--text)] font-medium uppercase tracking-wider text-xs hover:bg-zinc-900 hover:text-white transition-all group"
         >
           <Download size={16} className="group-hover:translate-y-0.5 transition-transform" />
-          Export Full Financial Package
+          Workspace exports
         </button>
       </div>
       <React.Suspense fallback={null}>

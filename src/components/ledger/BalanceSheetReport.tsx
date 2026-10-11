@@ -164,13 +164,13 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
             ))}
           </div>
 
-          <button 
+          {(basis === 'cash' || (columnMode === 'total' && !showPercent && !isComparative)) && <button
             onClick={exportBalanceSheet}
             className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
            aria-label="Export Blueprint">
             <FileSpreadsheet aria-hidden="true" size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
             <span>Export Blueprint</span>
-          </button>
+          </button>}
         </div>
       </div>
 

@@ -26,6 +26,7 @@ import {
   toggleAccountGroup,
   visibleGroupRows,
 } from "../../lib/accountGroups";
+import { movePeriod, readPeriodLayout, savePeriodLayout, validPeriodLayout, visiblePeriods, type ReportPeriodLayout } from "../../lib/reportPeriodLayout";
 import { AccountGroupToggle } from "./AccountGroupControls";
 
 interface StatementColumnsProps {
@@ -121,6 +122,17 @@ export function StatementColumns(props: StatementColumnsProps) {
         : report.columns,
     [mode, report.columns, totalData, previousTotalData, compare],
   );
+  const userId = useAuthStore(state => state.user?.uid || 'guest');
+  const workspaceId = useAuthStore(state => state.currentWorkspaceId || 'sample');
+  const layoutKey = JSON.stringify(['lf_report_periods_v1', userId, workspaceId, kind, mode, periods.map(period => period.id)]);
+  const [choice, setChoice] = useState<{ key: string; layout: ReportPeriodLayout } | null>(null);
+  const ids = columns.map(column => column.period.id);
+  const layout = choice?.key === layoutKey ? validPeriodLayout(choice.layout, ids) : readPeriodLayout(layoutKey, ids);
+  const displayedColumns = visiblePeriods(columns, layout);
+  const updateLayout = (next: ReportPeriodLayout) => {
+    setChoice({ key: layoutKey, layout: next });
+    savePeriodLayout(layoutKey, next);
+  };
   const active = mode !== "total" || showPercent || compare;
   const rows = useMemo(
     () =>
@@ -139,7 +151,7 @@ export function StatementColumns(props: StatementColumnsProps) {
     () => visibleGroupRows(rows, collapsedGroups),
     [rows, collapsedGroups],
   );
-  const figures = columns.map((column) => ({
+  const figures = displayedColumns.map((column) => ({
     period: column.period,
     current: statementFigures(column.data, accounts),
     previous: column.previousData
@@ -163,8 +175,8 @@ export function StatementColumns(props: StatementColumnsProps) {
     );
   const exportCsv = () => {
     const csv = statementColumnCsv(
-      rows,
-      columns,
+      visibleRows,
+      displayedColumns,
       showPercent,
       compare,
       accounts,
@@ -216,6 +228,25 @@ export function StatementColumns(props: StatementColumnsProps) {
           Export columns CSV
         </button>
       </div>
+      {active && columns.length > 1 && <details data-print-hide className="rounded-xl border p-3">
+        <summary className="min-h-11 cursor-pointer">Choose and order periods</summary>
+        <p className="text-sm">Amounts, percentages, comparisons, totals and CSV follow this order. At least one period stays visible.</p>
+        <fieldset className="space-y-2">
+          <legend className="sr-only">Visible report periods</legend>
+          {layout.order.map((id, index) => {
+            const period = columns.find(column => column.period.id === id)!.period;
+            const hidden = layout.hidden.includes(id);
+            return <div key={id} className="flex flex-wrap items-center gap-2">
+              <label className="min-h-11 flex items-center gap-2"><input type="checkbox" checked={!hidden}
+                disabled={!hidden && displayedColumns.length === 1}
+                onChange={() => updateLayout({ ...layout, hidden: hidden ? layout.hidden.filter(value => value !== id) : [...layout.hidden, id] })} />{period.label}</label>
+              <button type="button" className="min-h-11 px-3 border rounded" aria-label={`Move ${period.label} earlier`} disabled={index === 0} onClick={() => updateLayout(movePeriod(layout, id, -1))}>← Earlier</button>
+              <button type="button" className="min-h-11 px-3 border rounded" aria-label={`Move ${period.label} later`} disabled={index === layout.order.length - 1} onClick={() => updateLayout(movePeriod(layout, id, 1))}>Later →</button>
+            </div>;
+          })}
+          <button type="button" className="min-h-11 px-3 border rounded" onClick={() => updateLayout(validPeriodLayout(null, ids))}>Reset period columns</button>
+        </fieldset>
+      </details>}
       {active && (
         <>
           <p className="text-xs text-[var(--muted)]">
@@ -251,7 +282,7 @@ export function StatementColumns(props: StatementColumnsProps) {
               comparisons are shown as —.
             </p>
           )}
-          <div className="max-w-full overflow-x-auto rounded-xl border border-[var(--line)]">
+          <div role="region" aria-label={`${title} period table`} tabIndex={0} className="max-w-full overflow-x-auto rounded-xl border border-[var(--line)]">
             <table className="w-full border-collapse text-sm tabular-nums">
               <caption className="sr-only">
                 {title} by {mode} with {showPercent ? "percentages and " : ""}
@@ -279,7 +310,7 @@ export function StatementColumns(props: StatementColumnsProps) {
                       Code
                     </button>
                   </th>
-                  {columns.map((column) => (
+                  {displayedColumns.map((column) => (
                     <th
                       scope="colgroup"
                       colSpan={cellsPerColumn}
@@ -304,10 +335,10 @@ export function StatementColumns(props: StatementColumnsProps) {
                   ))}
                 </tr>
                 <tr>
-                  {columns.map((column, index) => (
+                  {displayedColumns.map((column) => (
                     <React.Fragment key={column.period.id}>
                       <th scope="col" className="p-3 text-right">
-                        {index === 0 ? (
+                        {column.period.id === columns[0]?.period.id ? (
                           <button
                             type="button"
                             onClick={() => onSort("balance")}

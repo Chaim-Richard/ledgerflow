@@ -289,3 +289,26 @@ test("balance sheet full-history requests contain only closing dates and compari
     ),
   );
 });
+
+test("period choices move headings and totals together, persist, and refuse hiding the final period", () => {
+  localStorage.clear();
+  for (const kind of ['pl', 'bs'] as const) {
+    let view = render(<Harness kind={kind} compare={false} />);
+    fireEvent.change(view.getByLabelText('Columns:'), { target: { value: 'months' } });
+    fireEvent.click(view.getByRole('button', { name: 'Move Mar 2024 earlier' }));
+    const headings = () => Array.from(view.container.querySelectorAll('th[scope="colgroup"]')).map(cell => cell.textContent);
+    assert.ok(headings()[0]?.startsWith('Mar 2024'));
+    fireEvent.click(view.getByRole('checkbox', { name: 'Feb 2024' }));
+    assert.equal(headings().length, 1);
+    assert.equal((view.getByRole('checkbox', { name: 'Mar 2024' }) as HTMLInputElement).disabled, true);
+    view.unmount();
+    view = render(<Harness kind={kind} compare={false} />);
+    fireEvent.change(view.getByLabelText('Columns:'), { target: { value: 'months' } });
+    assert.equal(headings().length, 1);
+    assert.ok(headings()[0]?.startsWith('Mar 2024'));
+    fireEvent.click(view.getByRole('button', { name: 'Reset period columns' }));
+    assert.ok(headings()[0]?.startsWith('Feb 2024'));
+    view.unmount();
+  }
+  localStorage.clear();
+});
