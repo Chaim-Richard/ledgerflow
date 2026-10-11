@@ -159,6 +159,11 @@ export interface Employee {
   bankRouting?: string;
   bankAccount?: string;
   bankAccountType?: 'checking' | 'savings';
+  /** U-11: paid by the hour from approved time (src/lib/hourlyPay.ts); `salaryCents` is not used then */
+  payType?: 'salary' | 'hourly';
+  hourlyRateCents?: number;
+  /** the workspace member whose approved time pays this employee */
+  timeUid?: string;
 }
 
 export interface PayRun {

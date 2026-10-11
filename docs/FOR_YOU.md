@@ -292,6 +292,10 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
    already are), and shown masked. Your own bank's routing number and company ID stay in your browser.
    Say if account numbers should be hidden from bookkeepers, or if you need a non-US format (Masav in Israel).
 
+40. **Hourly pay from approved time (11 Oct, decided by default).** An hourly employee is paid, in each
+   pay run, for their approved time up to the pay date that no earlier run paid, at one hourly rate.
+   There is no overtime rate (e.g. time and a half over 40 hours a week) yet. Say if you need overtime.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of
