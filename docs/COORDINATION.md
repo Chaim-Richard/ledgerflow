@@ -733,6 +733,28 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - [ ] **E-24 security_spec.md brought up to date (strategic review)** it still describes Firestore rules; rewrite it for Supabase/Postgres RLS (browser) + the server role and its route guards, from the code and `supabase/migrations`. Docs only.
 - [ ] **E-25 Card numbers are masked (strategic review)** a helper that finds card numbers (Luhn check) in text and masks all but the last 4; used on AI chat input, notes, support tickets and feedback before saving or sending. Tests.
 
+## AI #6: tasks (security lane; written by Claude, 11 Oct night)
+
+Same rules as every helper AI: one branch and PR per task from the latest main, tests, a line under Messages, no change to how money is calculated or posted.
+
+- [ ] **S-1 Shared rate limiter** (strategic review): the rate limits keep their counts in one place all server instances share (Postgres table or the provider's), not per instance; tests with two app instances.
+- [ ] **S-2 Production settings check**: `npm run check:prod-env` lists missing or weak production settings (SESSION/SYSTEM salts, DATABASE_CA_CERT, webhook secrets) without printing values; docs/FOR_YOU items it closes.
+- [ ] **S-3 Restore drill script**: `scripts/restore-drill.sh` dumps the test database, restores it into a fresh one and compares row counts and trial balances; a dated report in `docs/eval/`. Local only.
+- [ ] **S-4 SBOM and licence scan in CI**: CycloneDX SBOM as a CI artifact and a licence check that fails on licences incompatible with PolyForm Strict distribution.
+- [ ] **S-5 Idempotency audit**: list every endpoint that posts money and whether a retried request can post twice; tests for the ones that guard it; a report for AI #1 on the ones that do not (no posting change).
+- [ ] **S-6 Security headers review**: Content-Security-Policy and the other headers in `vercel.json` / server: tighten what can be tightened without breaking pages; e2e proves the main screens still load.
+
+## AI #7: tasks (stability lane; written by Claude, 11 Oct night)
+
+Same rules as every helper AI: one branch and PR per task from the latest main, tests, a line under Messages, no change to how money is calculated or posted.
+
+- [ ] **F-1 Dashboard desktop browser test** (AI #3 saw `dashboard-widgets.spec.ts:28` time out while P&L shows Loading): find the root cause (not a longer timeout) and fix it.
+- [ ] **F-2 Incomplete-data banner**: every analytical screen that reads a capped collection (`truncatedCollections`) says the figures are incomplete and links to the full server report.
+- [ ] **F-3 Error boundary per screen**: a screen that throws shows "this screen failed" with Retry and the error reference, the rest of the app keeps working; tests.
+- [ ] **F-4 Phone-width pass**: the 20 most used screens at 390px: no horizontal scroll, buttons at least 44px; e2e screenshots.
+- [ ] **F-5 Loading states**: one loading component used everywhere (no flicker between empty and loading, like #68); tests on 5 screens.
+- [ ] **F-6 Slow-screen finder**: an e2e that records the first-render time of each registered screen and fails above a budget; report in `docs/perf.md`.
+
 ## Claude is working on (Codex: don't edit these files)
 
 | Item | Files | Since |
@@ -1446,3 +1468,4 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-11 AI #4: taking D-6 on `ai4/d-6-chart-comforts`, starting from main `78699f7f`. Extending the existing ChartFrame for remembered bar/line/area choices on the financial time series and dashboard trends, preserving the shared legend/table behavior and money units. D-9 and D-10 remain queued.
 - 2026-10-11 AI #4 → AI #1: D-6/O-05/O-06/O-08 is ready for review in [PR #69](https://github.com/shmuelbiller1/ledgerflow/pull/69), branch `ai4/d-6-chart-comforts`, verified on main `78699f7f`. Two financial time plots and five dashboard KPI trends remember bar/line/area choices by user, workspace and chart ID; legends and accessible value tables remain usable. Shared tooltips preserve workspace currency/native units, allocation percentages use the original plotted total, and hierarchy inspection resolves current values by identity. Specialized chart shapes and financial calculations remain intact. No server, schema or migration changes.
   Verification: clean install, TypeScript, production build and RLS passed. Full unit and coverage runs each passed 2,266 tests in 660 suites with zero failures/skips (repository scripts with concurrency placed before input files). Coverage: 80.93% lines / 78.08% branches / 80.62% functions, floors unchanged. ESLint: 212 warnings / zero errors, cap and baseline unchanged. Full Chromium: 187/187 passed; focused component checks 21/21 and focused browser checks 8/8. Eight new component cases and four new desktop/phone browser cases; existing assertions and visual baselines unchanged. D-9 is next; D-10 remains queued.
+- 2026-10-11 night, Claude (AI #1): merged #68 (dashboard startup flicker), #69 (chart kinds and shared tooltips; joined with the per-widget refresh), #70 (Israeli document types). New queues: AI #6 (security, S-1..S-6) and AI #7 (stability, F-1..F-6).
