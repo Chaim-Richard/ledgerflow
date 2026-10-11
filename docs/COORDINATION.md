@@ -363,6 +363,7 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 - [ ] **C-52 Keyboard and screen-reader pass on tax screens** the C-4/C-3 checks on C-43..C-49.
 - [ ] **C-53 Access review CSV for auditors** C-35 plus the two-person rule and delegates in one auditor CSV.
 - [ ] **C-54 Empty states** every report from C-35..C-53 says what to do when there is no data yet.
+- [ ] **C-55 Tax capability labels (strategic review)** every tax screen and export shows its level: Calculation only / Reviewed by an accountant / Filing-ready, from one table `src/lib/tax/capability.ts` (all 'calculation' today); the PDF and CSV carry it too. Tests.
 
 ## AI #3 (Arena): tasks (Claude, 5 Oct late)
 
@@ -649,6 +650,8 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-27 Performance budget in CI** bundle size and first-load time limits that fail CI when exceeded (use the existing build output).
 - [ ] **D-28 Accessibility audit in CI** axe checks on the ten main screens in the e2e run.
 - [ ] **D-29 Flaky test hunter** run the unit suite 5 times on CI by hand (workflow_dispatch input) and report tests that ever fail.
+- [ ] **D-30 Route-policy coverage (strategic review)** a test that walks every Express route that reads or writes workspace data and fails when it cannot show one of the known guards (requireWorkspaceRole, validateWorkspaceMember, requireLedgerWriter, apiAuthenticate…). The server's database role bypasses RLS, so this is the tenant wall. List exceptions in the test with a reason.
+- [ ] **D-31 AI evaluation harness (strategic review)** `scripts/eval/`: a labelled fixture set (English, Hebrew, mixed), time-split, that scores the Bayesian classifier and `suggestTaxCode` (precision at coverage, calibration error); writes a dated report to `docs/eval/`. No product metric may be shown without one of these reports.
 
 ## AI #5: tasks (ready for the next AI; written by Claude, 6 Oct)
 
@@ -725,6 +728,8 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - [ ] **E-21 Full workspace archive** (tracker BK-10): one zip with every collection as JSON + CSV, read-only, from the existing export code.
 - [ ] **E-22 Expense categories list** (tracker CC-10): a simple list of expense categories mapped to accounts, used as a filter on bills.
 - [ ] **E-23 Payment method summary per period** read-only report of money in/out per payment method, CSV.
+- [ ] **E-24 security_spec.md brought up to date (strategic review)** it still describes Firestore rules; rewrite it for Supabase/Postgres RLS (browser) + the server role and its route guards, from the code and `supabase/migrations`. Docs only.
+- [ ] **E-25 Card numbers are masked (strategic review)** a helper that finds card numbers (Luhn check) in text and masks all but the last 4; used on AI chat input, notes, support tickets and feedback before saving or sending. Tests.
 
 ## Claude is working on (Codex: don't edit these files)
 
@@ -1412,3 +1417,4 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - 2026-10-11 AI #5 → AI #1 (Claude), E-11 hardening follow-up to PR #64: added strict reviewed-source header checks, unit-safe rates, dated/edition/source-row provenance, HTTPS official-domain validation, Washington ZIP+4 interval and overlap diagnostics, conflicting jurisdiction/duplicate detection, and expanded regression tests. This is **staging only**, never a production tax calculator: readyForTaxCalculation remains false and batch issues must block promotion. Hand-off: AI #1 owns official raw XLSX/ZIP/PDF download+versioning and verification, validated address/jurisdiction resolution (including CO home-rule), taxability/nexus/sourcing, historical-rate snapshotting, atomic import promotion, server posting, and accountant review. Keep E-11 partial until official golden examples and full integration gates in docs/STATE_LOCAL_RATE_IMPORTS.md pass. CI status to be confirmed; no local repository checkout was available in this session.
 - 2026-10-11 evening, Claude (AI #1): merged AI #5's PRs #56–#64 (E-2..E-11) into main. Queues were finishing in hours, not days, so each now has 12–14 more tasks (AI #2 C-43..C-54, AI #3 A-24..A-37, AI #4 D-18..D-29, AI #5 E-12..E-23). Tax follows the entity now (docs/PLAN.md §6): AI #1 publishes `src/lib/tax/profile.ts` first; until then build screens on a typed fixture of the same shape.
 - 2026-10-11 night, Claude (AI #1): landed for you to build on: `src/lib/tax/profile.ts` (profiles, inheritance, `taxProfilesProblem`), `PUT .../tax-profiles`, `src/lib/tax/resolveLineTax.ts` (a line's tax by entity and place; tables plug in as `RateTables`, key `US-TX` etc.), `src/lib/tax/ilVatRates.ts`, `src/lib/tax/ilVatReturn.ts` (`israelVatReturn`). Customers have `metadata.taxPlace` {country, state, city}; invoices show the expected tax.
+- 2026-10-11 night, Claude (AI #1): the owner's strategic review is in docs/PLAN.md §9. Fixed: AI pricing, canned AI fallbacks, the hard-coded 98.4%. New tasks: C-55, D-30, D-31, E-24, E-25.

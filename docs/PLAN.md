@@ -201,3 +201,25 @@ until another AI's usage resets: its tasks are small, self-contained and come wi
 | IL-5 | Withholding at source: vendor certificate, amount on the bill payment, posted as owed | `withholding.ts`, payment posting |
 
 Next: IL-6 allocation-number request, IL-7 Israeli payroll engine (on AI #4's tables), US-1 lookup on AI #3's state table, US-3 state returns, US-5 federal payroll.
+
+## 9. The strategic review (owner, 11 Oct night) — what changes
+
+An outside review of the repository agreed with the direction (deterministic accounting core; AI suggests,
+people approve, posting services commit) and found real defects. Status:
+
+| Finding | Status |
+|---|---|
+| AI price for Gemini 2.5 Flash 4×/8× too low | **Fixed**: dated price table `src/lib/ai/modelPricing.ts`; unknown models are not priced by guess |
+| Canned AI answers and confidence (85, 90) when the model fails | **Fixed**: an explicit `degraded` answer with no confidence, server and browser |
+| "Auto-fill Accuracy 98.4%" hard-coded | **Fixed**: removed; no quality number without a measurement |
+| Fixed execution times in AI traces | **Fixed**: measured |
+| One AI gateway for every model call (policy, data allowed per task, trace, budget) | AI #1, next |
+| Route-policy coverage: every server route that touches a workspace proves a guard (the server role bypasses RLS) | AI #4 D-30 |
+| AI evaluation harness (time-split, Hebrew/English slices, calibration) before any accuracy claim | AI #4 D-31 |
+| Tax capability labels in the product: calculation / reviewed / filing-ready | AI #2 C-55 |
+| `security_spec.md` still describes Firestore rules | AI #5 E-24 |
+| Card numbers pasted into chat, notes or uploads | AI #5 E-25 (detect and mask) |
+| Long imports and AI batches as background jobs, not one 60-second request | AI #1, after the gateway |
+| Licence, backups/restore drill, branch protection | owner (docs/FOR_YOU.md 44) |
+
+Order of authority when documents disagree: tests and schema > CAPABILITIES.md > PLAN.md > ROADMAP.md > AGENTS.md > README.
