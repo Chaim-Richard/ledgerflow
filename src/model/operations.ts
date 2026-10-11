@@ -48,6 +48,8 @@ export interface InventoryItem {
   itemType?: 'stock' | 'service';
   /** A-7 (CA-16): the sales tax code an invoice line for this item fills in (still changeable on the invoice) */
   defaultTaxCodeId?: string;
+  /** A-30: the item tax category (clothing, groceries, SaaS …) the state taxability table reads; none = general */
+  productTaxCategory?: string;
   createdAt: string;
   /** Set when the item came from a spreadsheet import; lets the import be undone. */
   importBatchId?: string;

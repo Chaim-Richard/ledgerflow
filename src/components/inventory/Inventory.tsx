@@ -56,6 +56,7 @@ import StockAdjustDialog from './StockAdjustDialog';
 import StockCountDialog from './StockCountDialog';
 import CategoryManagerDialog from './CategoryManagerDialog';
 import { categoryCounts } from '../../lib/itemCategories';
+import { TAX_CATEGORIES, taxCategoryLabel, effectiveTaxCategory } from '../../lib/tax/taxCategories';
 import { deleteWithUndo, isDeletePending } from '../../lib/undoableDelete';
 
 export default function Inventory() {
@@ -73,6 +74,8 @@ export default function Inventory() {
   const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null);
   const [isCounting, setIsCounting] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('');
+  /** A-30: filter the list by the item tax category ('' = every category) */
+  const [taxCategoryFilter, setTaxCategoryFilter] = useState('');
   const [isManagingCategories, setIsManagingCategories] = useState(false);
   const baseCurrency = useLedgerStore(s => s.baseCurrency) || 'USD';
   const canChangeStock = useCurrentRole() !== 'viewer';
@@ -135,6 +138,8 @@ export default function Inventory() {
       itemType: formData.get('itemType') === 'service' && !editingItem.quantityAtHand ? 'service' : (editingItem.quantityAtHand ? editingItem.itemType || 'stock' : 'stock'),
       // A-7 (CA-16): the default tax code an invoice line for this item fills in
       defaultTaxCodeId: (formData.get('defaultTaxCodeId') as string) || undefined,
+      // A-30: the item tax category the state taxability table reads
+      productTaxCategory: (formData.get('productTaxCategory') as string) || undefined,
     };
 
     try {
@@ -165,6 +170,7 @@ export default function Inventory() {
       category: formData.get('category') as string,
       itemType: formData.get('itemType') === 'service' ? 'service' : 'stock',
       defaultTaxCodeId: (formData.get('defaultTaxCodeId') as string) || undefined,
+      productTaxCategory: (formData.get('productTaxCategory') as string) || undefined,
       createdAt: new Date().toISOString()
     };
 
@@ -241,6 +247,7 @@ export default function Inventory() {
   const categories = useMemo(() => categoryCounts(items).map(c => c.name), [items]);
   const matches = (item: InventoryItem) =>
     (!categoryFilter || (item.category || '').trim() === categoryFilter) &&
+    (!taxCategoryFilter || effectiveTaxCategory(item.productTaxCategory) === taxCategoryFilter) &&
     (item.name.toLowerCase().includes(searchTerm.toLowerCase()) || (item.sku || '').toLowerCase().includes(searchTerm.toLowerCase()));
   const filteredItems = items.filter(matches);
 
@@ -392,6 +399,16 @@ export default function Inventory() {
               </div>
            </div>
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by tax category">
+        {(['', ...TAX_CATEGORIES.map(c => c.id)] as const).map(id => (
+          <button key={id || 'all-tax-categories'} type="button" aria-pressed={taxCategoryFilter === id} onClick={() => setTaxCategoryFilter(id)}
+            className={cn('px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors',
+              taxCategoryFilter === id ? 'bg-[var(--text)] text-[var(--surface)] border-[var(--text)]' : 'bg-[var(--surface)] text-[var(--text)] border-[var(--line)]')}>
+            {id ? taxCategoryLabel(id) : 'All tax categories'}
+          </button>
+        ))}
       </div>
 
       {categories.length > 0 && (

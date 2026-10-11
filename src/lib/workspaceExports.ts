@@ -13,6 +13,28 @@ export { composeFacts } from './rules/facts';
 export { evaluateRules } from './rules/rules';
 export { factSources } from './rules/fromTaxProfiles';
 /**
+ * A-38: the tax tables written as rule packs (one file per pack). Reachable here until the line
+ * resolution reads them; `taxRulePackProblems` is the guard a screen or a test runs over them.
+ */
+export { taxRulePacks, allTaxRules, unmappedTaxRows, taxRulePackProblems } from './rules/packs/index';
+/**
+ * A-22 / PLAN US-1: the US state sales-tax table (base rate, shipping treatment, sourcing) and the
+ * `RateTables['US-XX']` entry `resolveLineTax` uses. Rate tables only: nothing here posts or files.
+ */
+export { US_STATE_SALES_TAX, stateSalesTaxRate, stateSalesTaxRows, shippingTreatment, usStateSalesTaxRateTable, usShippingIsTaxable, NO_STATE_SALES_TAX, US_SALES_TAX_STATES } from './tax/usStateSalesTax';
+/**
+ * A-24…A-26 / PLAN step 4: Canada's GST/HST/PST, the EU's 27 VAT rates and the UK's VAT rates as
+ * dated rows with sources; each plugs into `resolveLineTax` as its own RateTable.
+ */
+export { CA_SALES_TAX, canadaSalesTaxRateTable, canadaVatComponents, canadaCombinedRate } from './tax/caSalesTax';
+export { EU_VAT_RATES, euVatStandardRate, euVatReducedRows, euVatRateTable } from './tax/euVat';
+export { UK_VAT_RATES, ukVatStandardRate, ukVatZeroRow, ukVatRateTable } from './tax/ukVat';
+/**
+ * A-29 / PLAN IL-1: Israel's special VAT areas (Eilat's free-trade zone, the export areas,
+ * duty-free) as dated rows, and the IL rate table that answers 0 there.
+ */
+export { IL_VAT_SPECIAL_AREAS, ilVatAreaRow, isIlZeroArea, ilVatRateTable } from './tax/ilVat';
+/**
  * PLAN §6: tax code suggestions that learn from history, and unusual-code flags. Reachable here until AI #2's C-46 panel uses them.
  */
 export { suggestTaxCode, unusualTaxCode } from './tax/taxSuggestions';

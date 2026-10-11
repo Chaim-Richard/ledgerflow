@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 import AsyncButton from '../ui/AsyncButton';
 import { useDialog } from '../../hooks/useDialog';
+import { TAX_CATEGORIES } from '../../lib/tax/taxCategories';
 import type { InventoryItem } from '../../types';
 
 interface InventoryItemDialogProps {
@@ -152,6 +153,15 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                     {taxCodes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   <p className="text-[10px] text-[var(--muted)]">Choosing this item on an invoice fills this tax code; it can still be changed there.</p>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="inv-tax-category" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Tax category</label>
+                  <select id="inv-tax-category" name="productTaxCategory" defaultValue={editingItem?.productTaxCategory || ''}
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold">
+                    <option value="">General goods (the default)</option>
+                    {TAX_CATEGORIES.filter(c => c.id !== 'general').map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                  </select>
+                  <p className="text-[10px] text-[var(--muted)]">Which kind of thing this is, so a state's taxability table (Reports → Tax) can treat it correctly. It never changes a price or a posting.</p>
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="inv-reorder-point" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Reorder Point</label>
