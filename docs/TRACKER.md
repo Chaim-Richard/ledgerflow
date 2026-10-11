@@ -1960,7 +1960,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] T-02 Tax groups (a tax code with several parts, e.g. GST + PST; tested)
 - [x] T-03 Reverse charge (bill carries no tax; posted as due and reclaimable; boxes 2 and 4; tested)
 - [x] T-04 Zero-rated vs exempt (treatment on the tax code; reported separately in the return)
-- [ ] T-05 Party exemption certificates
+- [x] T-05 Party exemption certificates (number and last day on the customer; the invoice says exempt and offers "Charge no tax", or that it ran out; tested)
 - [x] T-06 Tax return boxes (generic 9-box layout, home currency, credits included; tested)
 - [x] T-07 Filed-return copy (server keeps it, once per period, owners/accountants; tested)
 - [~] T-08 Late changes: changes after filing are shown box by box with the difference to report; carrying them into the next return automatically is later
