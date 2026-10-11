@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { collection, getDocs, limit, orderBy, query, where } from '../../lib/db/firestore';
 import { db } from '../../firebase';
 import { LEDGER_COLLECTIONS } from '../../lib/ledgerCollections';
-import type { LedgerKey } from '../../lib/ledgerCollections';
+import type { LedgerKey, LedgerCollectionSpec } from '../../lib/ledgerCollections';
 import type { ChartAccount, Transaction, Invoice, Bill, Customer, Vendor } from '../../types';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -56,6 +56,7 @@ function ScopedDashboardWidgets() {
   const invoices = useLedgerStore(state => state.invoices), bills = useLedgerStore(state => state.bills);
   const customers = useLedgerStore(state => state.customers), vendors = useLedgerStore(state => state.vendors);
   const truncated = useLedgerStore(state => state.truncatedCollections), failed = useDataNeedsStore(state => state.failed);
+  const loaded = useDataNeedsStore(state => state.loaded);
   const { loading } = useLedgerCollections('transactions', 'accounts', 'invoices', 'bills', 'customers', 'vendors');
   const scenarios = useScenarioStore(state => state.scenarios), activeScenarioId = useScenarioStore(state => state.activeScenarioId);
   const { loading: scenarioLoading } = useLedgerCollections('scenarios');
@@ -80,7 +81,7 @@ function ScopedDashboardWidgets() {
       const values: WidgetSnapshot = {}, truncated: string[] = [];
       // These are workspace-scoped client reads with the existing RLS enforcement.
       for (const key of WIDGET_SOURCES[id]) {
-        const spec = LEDGER_COLLECTIONS[key];
+        const spec: LedgerCollectionSpec = LEDGER_COLLECTIONS[key];
         const clauses = [where('workspaceId', '==', workspaceId)];
         if (spec.newestFirstBy) clauses.push(orderBy(spec.newestFirstBy, 'desc'));
         clauses.push(limit(spec.cap));
@@ -123,7 +124,7 @@ function ScopedDashboardWidgets() {
   const data = useMemo(() => valid ? dashboardComparison(scoped.accounts, scoped.transactions, period) : null, [valid, scoped, period]);
   const ar = useMemo(() => valid ? dashboardAging(scoped.customers, scoped.invoices, 'customer', period.endDate) : { rows: [], top: [] }, [scoped, valid, period.endDate]);
   const ap = useMemo(() => valid ? dashboardAging(scoped.vendors, scoped.bills, 'vendor', period.endDate) : { rows: [], top: [] }, [scoped, valid, period.endDate]);
-  const recent = scoped.transactions.filter(tx => isPostable(tx) && isTransactionInDateRange(tx, period.startDate, period.endDate)).sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id)).slice(0, 5);
+  const recent = useMemo(() => scoped.transactions.filter(tx => isPostable(tx) && isTransactionInDateRange(tx, period.startDate, period.endDate)).sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id)).slice(0, 5), [scoped, period.startDate, period.endDate]);
   const partial = (['transactions', 'accounts', 'invoices', 'bills', 'customers', 'vendors'] as const).filter(key => truncated[key] || failed[key]);
   const reportLink = (report: string) => dashboardReportHref(report, period.startDate, period.endDate, fiscalStart);
   const aging = (value: typeof ar, side: 'customer' | 'vendor') => <>
@@ -138,10 +139,10 @@ function ScopedDashboardWidgets() {
     const currentAccounts = snapshot?.accounts || scoped.accounts, currentTransactions = snapshot?.transactions || scoped.transactions;
     const currentInvoices = snapshot?.invoices || scoped.invoices, currentCustomers = snapshot?.customers || scoped.customers;
     const currentBills = snapshot?.bills || scoped.bills, currentVendors = snapshot?.vendors || scoped.vendors;
-    const widgetData = valid ? dashboardComparison(currentAccounts, currentTransactions, period) : null;
-    const widgetAr = valid ? dashboardAging(currentCustomers, currentInvoices, 'customer', period.endDate) : ar;
-    const widgetAp = valid ? dashboardAging(currentVendors, currentBills, 'vendor', period.endDate) : ap;
-    const widgetRecent = currentTransactions.filter(tx => isPostable(tx) && isTransactionInDateRange(tx, period.startDate, period.endDate)).sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id)).slice(0, 5);
+    const widgetData = snapshot?.accounts || snapshot?.transactions ? dashboardComparison(currentAccounts, currentTransactions, period) : data;
+    const widgetAr = snapshot?.customers || snapshot?.invoices ? dashboardAging(currentCustomers, currentInvoices, 'customer', period.endDate) : ar;
+    const widgetAp = snapshot?.vendors || snapshot?.bills ? dashboardAging(currentVendors, currentBills, 'vendor', period.endDate) : ap;
+    const widgetRecent = snapshot?.transactions ? currentTransactions.filter(tx => isPostable(tx) && isTransactionInDateRange(tx, period.startDate, period.endDate)).sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id)).slice(0, 5) : recent;
     const widgetScenarios = snapshot?.scenarios || scenarios;
     if (!widgetData) return null;
     if (KPIS.includes(id as typeof KPIS[number])) {
@@ -175,10 +176,11 @@ function ScopedDashboardWidgets() {
     <details><summary className="cursor-pointer min-h-11 flex items-center">Customize widgets</summary><div className="space-y-1">{layout.order.map((id, index) => <div key={id} className="flex flex-wrap items-center gap-2"><label className="min-h-11 flex items-center gap-2 flex-1"><input type="checkbox" checked={!layout.hidden.includes(id)} onChange={event => changeLayout({ ...layout, hidden: event.target.checked ? layout.hidden.filter(key => key !== id) : [...layout.hidden, id] })} />{LABELS[id]}</label><button type="button" aria-label={`Move ${LABELS[id]} up`} disabled={index === 0} onClick={() => move(id, -1)} className="min-h-11 min-w-11 underline disabled:opacity-40">Up</button><button type="button" aria-label={`Move ${LABELS[id]} down`} disabled={index === layout.order.length - 1} onClick={() => move(id, 1)} className="min-h-11 min-w-11 underline disabled:opacity-40">Down</button></div>)}</div><button type="button" onClick={resetLayout} className="min-h-11 underline">Reset layout</button>
       {role === 'owner' && <div className="flex flex-wrap items-center gap-2"><label className="min-h-11 flex items-center gap-2">Starting dashboard for<select value={forRole} onChange={event => setForRole(event.target.value as DashboardRole)} className="border border-[var(--line)] rounded bg-[var(--panel)] px-2 py-1">{DASHBOARD_ROLES.map(r => <option key={r} value={r}>{r === 'owner' ? 'owners' : `${r}s`}</option>)}</select></label><button type="button" onClick={() => void giveToRole()} className="min-h-11 underline">Give them this layout</button>{roleNote && <p role="status">{roleNote}</p>}</div>}</details>
     {storageError && <p role="status">Layout changed for this visit; this browser could not save it.</p>}
-    {valid && !loading && <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">{layout.order.filter(id => !layout.hidden.includes(id)).map(id => {
+    {valid && <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">{layout.order.filter(id => !layout.hidden.includes(id)).map(id => {
       const widget = widgetSnapshots[id];
       const sources = WIDGET_SOURCES[id];
       const sourceFailures = sources.filter(key => failed[key] && !widget?.values[key as keyof WidgetSnapshot]);
+      const pending = sources.filter(key => !loaded[key] && !widget?.values[key as keyof WidgetSnapshot]);
       const refreshFailure = refreshErrors[id];
       return <article key={id} aria-label={LABELS[id]} className="min-w-0 border border-[var(--line)] rounded-xl bg-[var(--panel)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h2 className="font-semibold">{LABELS[id]}</h2>
@@ -187,8 +189,9 @@ function ScopedDashboardWidgets() {
         </div>
         <p className="text-xs text-[var(--muted)] mb-2">{isGuest ? 'Demo data — no live refresh' : widget ? `Refreshed at ${new Date(widget.at).toLocaleTimeString()}` : id === 'feeds' ? 'Latest server response; sync date shown below' : 'Live data; update time not tracked'}</p>
         {(sourceFailures.length > 0 || refreshFailure) ? <p role="alert">Could not load ${sourceFailures.join(', ') || LABELS[id]}. {refreshFailure || 'Use Retry to load only this widget.'}</p> : <>
+          {pending.length ? <p role="status">Loading {pending.join(', ')}…</p> : <>
           {widget?.truncated.length ? <p role="status">Partial history: {widget.truncated.join(', ')}</p> : null}
-          {renderWidget(id)}
+          {renderWidget(id)}</>}
         </>}
       </article>;
     })}</div>}
