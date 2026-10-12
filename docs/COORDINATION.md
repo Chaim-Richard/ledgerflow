@@ -366,6 +366,24 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 - [ ] **C-55 Tax capability labels (strategic review)** every tax screen and export shows its level: Calculation only / Reviewed by an accountant / Filing-ready, from one table `src/lib/tax/capability.ts` (all 'calculation' today); the PDF and CSV carry it too. Tests.
 - [ ] **C-56 Facts screen (PLAN §10)** Settings → Facts: for the books and each label value, its facts (legal form, tax treatment, exempt status, places, activities, registrations) with dates and evidence; 'declared' vs 'verified' shown plainly; owners/accountants mark a fact verified with who/when and a reference. Built on `src/lib/rules/facts.ts` (landed). Conflicts from `composeFacts` listed with the two sources.
 
+### More work (Claude, 12 Oct, at the owner's request: every AI enough for days). Same rules as the queue above.
+
+- [ ] **C-57 Rule outcome viewer** for any invoice line: which rules applied, were displaced, blocked or undecided and why (evaluateRules trail), with the sources; read-only.
+- [ ] **C-58 Entity filings calendar** per entity label: the filings its facts require this year (entity-period rules), due dates, status; read-only.
+- [ ] **C-59 Tax return screen per registration** one screen listing each registration's return for a period (Israel VAT via israelVatReturn; others as packs land), with the capability label (C-55).
+- [ ] **C-60 Declared vs verified facts banner** every tax screen says when an outcome depends on facts that are only declared, with a link to verify them (C-56).
+- [ ] **C-61 Withholding at source report** per vendor and month: paid, withheld, certificate; CSV; from payments' withheldCents.
+- [ ] **C-62 Allocation number list** Israeli invoices that need an allocation number and do not have one; CSV; read-only.
+- [ ] **C-63 Original/copy print log** per Israeli document: when the original was issued and how many copies since (originalIssuedAt); read-only.
+- [ ] **C-64 Report pack: Israeli VAT section** add the VAT report figures to the C-30 report pack for Israeli registrations.
+- [ ] **C-65 Keyboard shortcuts help** one '?' overlay listing every shortcut by screen, from the registry; tests.
+- [ ] **C-66 Saved filters on every list** name and reuse a list's filters (per user); tests on invoices, bills, payments.
+- [ ] **C-67 Column chooser on lists** the C-29 chooser on the main document lists too (invoices, bills, payments, customers, vendors).
+- [ ] **C-68 Print-friendly reports** every report prints as the report only with its period and entity in the heading (Y-19 stylesheet).
+- [ ] **C-69 Hebrew pass on new screens** every screen added since 10 Oct in Hebrew too, right-to-left checked.
+- [ ] **C-70 Screen reader pass on new screens** the C-3/C-4 checks on every screen added since 10 Oct.
+- [ ] **C-71 Empty states everywhere** every list and report says what to do when there is no data yet.
+
 ## AI #3 (Arena): tasks (Claude, 5 Oct late)
 
 Your R-07 fix, BA-17 and BB-06 are merged into main (9c77cde): Claude ran the database tests on the
@@ -733,6 +751,21 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-30 Route-policy coverage (strategic review)** a test that walks every Express route that reads or writes workspace data and fails when it cannot show one of the known guards (requireWorkspaceRole, validateWorkspaceMember, requireLedgerWriter, apiAuthenticate…). The server's database role bypasses RLS, so this is the tenant wall. List exceptions in the test with a reason.
 - [ ] **D-31 AI evaluation harness (strategic review)** `scripts/eval/`: a labelled fixture set (English, Hebrew, mixed), time-split, that scores the Bayesian classifier and `suggestTaxCode` (precision at coverage, calibration error); writes a dated report to `docs/eval/`. No product metric may be shown without one of these reports.
 
+### More work (Claude, 12 Oct, at the owner's request: every AI enough for days). Same rules as the queue above.
+
+- [ ] **D-32 Golden tests for the Israeli VAT report** hand-worked periods (credits, fixed assets, exports, Eilat) against israelVatReturn; add cases, never change the money code.
+- [ ] **D-33 Golden tests for withholding** rate × net of VAT on partial payments, rounding, expired certificates.
+- [ ] **D-34 Property tests for the rule engine** random facts and rules: an exclusion never applies the excluded rule, overrides displace exactly their targets, dates respected.
+- [ ] **D-35 Property tests for line tax** resolveLineTax: never a negative rate, export always zero, not-registered never taxed.
+- [ ] **D-36 Mutation testing on the tax files** D-11 extended to src/lib/tax and src/lib/rules; kill survivors with tests.
+- [ ] **D-37 Load test the tax screens** a workspace with 50,000 invoice lines: the VAT report and line tax under a budget; numbers in docs/perf.md.
+- [ ] **D-38 Charts for tax** VAT to pay by period, sales tax by state, withholding by month — on the existing chart frame.
+- [ ] **D-39 Visual regression for tax screens** D-10 screenshots for the tax profile, facts and returns screens.
+- [ ] **D-40 Coverage report per folder** CI artifact with coverage per folder; fail if src/lib/tax or src/lib/rules falls under 90% lines.
+- [ ] **D-41 Test runtime budget** the unit suite now runs past CI's 15-minute limit on GitHub: find the slowest 20 tests and make them faster without weakening them; a report.
+- [ ] **D-42 Split the unit job** split CI's unit suite into 3 parallel shards so each finishes well within its limit (owner's CI on every push).
+- [ ] **D-43 Flaky test quarantine report** from the last 30 CI runs, which tests failed then passed; a report, no skipping.
+
 ## AI #5: tasks (ready for the next AI; written by Claude, 6 Oct)
 
 Each task is a whole feature with tests, in its own area, and only reads money (it never calculates
@@ -811,6 +844,24 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - [ ] **E-24 security_spec.md brought up to date (strategic review)** it still describes Firestore rules; rewrite it for Supabase/Postgres RLS (browser) + the server role and its route guards, from the code and `supabase/migrations`. Docs only.
 - [ ] **E-25 Card numbers are masked (strategic review)** a helper that finds card numbers (Luhn check) in text and masks all but the last 4; used on AI chat input, notes, support tickets and feedback before saving or sending. Tests.
 
+### More work (Claude, 12 Oct, at the owner's request: every AI enough for days). Same rules as the queue above.
+
+- [ ] **E-26 Israeli bank file formats** read Israeli bank statement exports (Leumi, Hapoalim, Discount CSVs) into the bank import's rows; sample files.
+- [ ] **E-27 US bank CSV formats** Chase, Bank of America, Wells Fargo CSV exports into bank import rows; sample files.
+- [ ] **E-28 Xero full import** invoices and bills (not just lists) from Xero CSV exports into drafts for review; no posting.
+- [ ] **E-29 QuickBooks Desktop IIF reader** customers, vendors, items, accounts from an IIF file.
+- [ ] **E-30 OFX/QFX reader** bank and card statements in OFX into bank import rows.
+- [ ] **E-31 CAMT.053 reader** European bank statements (ISO 20022) into bank import rows.
+- [ ] **E-32 Export to accountant** a zip with trial balance, general ledger and VAT report as CSV per period, from existing exports.
+- [ ] **E-33 Uniform file (Israel קובץ אחיד)** the 'open format' export Israeli software must produce (BKMVDATA/INI) from the books; tests against the spec's field widths (calculation status).
+- [ ] **E-34 SAF-T-like general ledger export** a generic XML ledger export with accounts, parties, entries; schema-validated.
+- [ ] **E-35 Receipt OCR fixtures** 20 receipt images with expected fields for the evaluation harness (D-31); Hebrew and English.
+- [ ] **E-36 Address parser for Israel** city, street, zip from free text; tests.
+- [ ] **E-37 Phone and email cleanup** normalise phone numbers (E.164) and emails on import; warnings only.
+- [ ] **E-38 Duplicate contact finder** customers/vendors that look the same (name, tax ID, email); merge suggestions only.
+- [ ] **E-39 Currency list** ISO 4217 table with decimals and symbols as data; tests.
+- [ ] **E-40 Country list** ISO 3166 with Hebrew names as data; used by tax place fields.
+
 ## AI #6: tasks (security lane; written by Claude, 11 Oct night)
 
 Same rules as every helper AI: one branch and PR per task from the latest main, tests, a line under Messages, no change to how money is calculated or posted.
@@ -822,6 +873,24 @@ Same rules as every helper AI: one branch and PR per task from the latest main, 
 - [ ] **S-5 Idempotency audit**: list every endpoint that posts money and whether a retried request can post twice; tests for the ones that guard it; a report for AI #1 on the ones that do not (no posting change).
 - [ ] **S-6 Security headers review**: Content-Security-Policy and the other headers in `vercel.json` / server: tighten what can be tightened without breaking pages; e2e proves the main screens still load.
 
+### More work (Claude, 12 Oct, at the owner's request: every AI enough for days). Same rules as the queue above.
+
+- [ ] **S-7 Route-policy coverage** if AI #4's D-30 is not started, take it: every workspace route proves a guard.
+- [ ] **S-8 Tenant isolation fuzz** for 30 server routes, call with another workspace's ids and expect 403/404; tests against the test database.
+- [ ] **S-9 Secrets scan in CI** gitleaks (or similar) on every push; history findings listed for the owner.
+- [ ] **S-10 Dependency update policy** Dependabot config with weekly batches and an SLA note; no auto-merge.
+- [ ] **S-11 Session hardening review** cookie flags, session lifetime, re-auth for owner actions; tests.
+- [ ] **S-12 Audit log integrity** each audit row gets a hash chained to the previous one per workspace; a verify script; migration proposal for AI #1.
+- [ ] **S-13 Login anomaly alerts** many failed sign-ins or new country → a notification to owners; tests.
+- [ ] **S-14 Data export of a person** everything stored about one user (GDPR access request) as a zip; owner-only.
+- [ ] **S-15 Deletion of a person** remove a user's personal data while keeping the books' audit facts (pseudonymise); design + tests.
+- [ ] **S-16 Prompt-injection tests** ledger descriptions and receipt text that try to instruct the AI; the AI routes must treat them as data; tests.
+- [ ] **S-17 AI data allowlists** per AI task, the fields allowed to leave for the model; enforce in the AI routes (with AI #1's gateway).
+- [ ] **S-18 PCI channel check** card numbers blocked from notes, chat, tickets and uploads' extracted text (E-25 helper everywhere).
+- [ ] **S-19 Backup verification job** a scheduled check that the latest backup/PITR window exists (provider API) and alerts if not; docs.
+- [ ] **S-20 Incident response runbook** who does what, contacts, steps, templates; docs/runbooks/incident.md.
+- [ ] **S-21 Access review export** owners download who has access, role, last sign-in, two-step; monthly reminder.
+
 ## AI #7: tasks (stability lane; written by Claude, 11 Oct night)
 
 Same rules as every helper AI: one branch and PR per task from the latest main, tests, a line under Messages, no change to how money is calculated or posted.
@@ -832,6 +901,37 @@ Same rules as every helper AI: one branch and PR per task from the latest main, 
 - [ ] **F-4 Phone-width pass**: the 20 most used screens at 390px: no horizontal scroll, buttons at least 44px; e2e screenshots.
 - [ ] **F-5 Loading states**: one loading component used everywhere (no flicker between empty and loading, like #68); tests on 5 screens.
 - [ ] **F-6 Slow-screen finder**: an e2e that records the first-render time of each registered screen and fails above a budget; report in `docs/perf.md`.
+
+### More work (Claude, 12 Oct, at the owner's request: every AI enough for days). Same rules as the queue above.
+
+- [ ] **F-7 Offline banner** when the connection drops, a banner says so and edits wait; tests.
+- [ ] **F-8 Retry on save** a failed save keeps the form and offers Retry instead of losing input; 5 forms.
+- [ ] **F-9 Unsaved changes guard** leaving a form with changes asks first; all document forms.
+- [ ] **F-10 Long list performance** virtualise lists over 500 rows (invoices, transactions); tests.
+- [ ] **F-11 Startup time** measure and cut the first screen's load (bundle split per screen); numbers in docs/perf.md.
+- [ ] **F-12 Memory leak check** navigate 50 screens in e2e and check heap growth; fix leaks found.
+- [ ] **F-13 Realtime reconnect** after the Supabase socket drops, data resubscribes; tests.
+- [ ] **F-14 Timezone sweep** every date shown and saved uses the workspace's time zone helpers; a scan test for new Date() in screens.
+- [ ] **F-15 Number input consistency** one money input component everywhere (no float drift); tests.
+- [ ] **F-16 Toast and error wording** every error toast says what happened and what to do; a lint rule for bare 'Error'.
+- [ ] **F-17 Focus after dialogs** closing any dialog returns focus to what opened it; e2e on 10 dialogs.
+- [ ] **F-18 Print stability** every PDF/print view renders under 3 seconds with 200 lines; tests.
+- [ ] **F-19 Mobile navigation** the sidebar as a bottom sheet on phones; e2e.
+- [ ] **F-20 Dark mode pass** every screen readable in dark mode (contrast check in e2e).
+- [ ] **F-21 Crash reporting** client errors grouped with screen and version (existing telemetry route), no personal data.
+
+## AI #8: tasks (spare queue for the next AI; written by Claude, 12 Oct)
+
+Same rules as every helper AI.
+
+- [ ] **G-1 Help center content** — one help page per main screen in docs/help/ (English and Hebrew), linked from the screen's help button.
+- [ ] **G-2 Guided first month** — a checklist for a new workspace's first month (bank, opening balances, first invoice, first reconciliation, first VAT report); progress saved per user.
+- [ ] **G-3 Demo workspace** — a generated sample company (Israel or US) with a year of data for trying LedgerFlow; never mixed with real books.
+- [ ] **G-4 In-app changelog** — what changed this week, from commit messages tagged for users.
+- [ ] **G-5 Feature flags screen** — owners turn optional modules on/off (existing BB-07 modules) with explanations.
+- [ ] **G-6 Translation file** — move screen strings for 10 screens into a translation table (English/Hebrew) without changing behaviour.
+- [ ] **G-7 Accessibility statement** — docs page with the WCAG level reached and known gaps.
+- [ ] **G-8 Onboarding emails** — day 1/3/7 emails for a new owner (templates only, sent through the existing mail path behind a setting).
 
 ## Claude is working on (Codex: don't edit these files)
 
@@ -1555,4 +1655,8 @@ Same rules as every helper AI: one branch and PR per task from the latest main, 
 - 2026-10-11 AI #3 (Arena): **A-23 done end to end** — the Form 856 library plus its screen on the Reports tab (`src/components/reporting/Form856ReportView.tsx` with registry help, the e2e coverage line and `form-856-view.test.tsx`), CAPABILITIES row 148 now Available with limits. Year picker over the recorded payments, per-vendor paid/base/withheld/rate, certificates and months, what is missing, CSV; nothing is filed. A-28 above it was the last open tax task, so the remaining A-queue is the `[~]` wirings that live in AI #1-reserved files (A-18/A-19/A-21/A-32/A-33/A-35/A-36/A-37): built, tested and listed in CAPABILITIES 143–153, waiting for their screens/jobs.
 - 2026-10-12, Claude (AI #1): merged #71 and #72. AI #3's queue was down to A-15 and A-16: added A-39..A-50 (registration thresholds, US local rate packs, marketplace and digital-goods rules, Israeli default withholding rates as rules; requisitions, cycle counts, delivery notes, vendor scorecard, price lists per currency, portal quote acceptance, reorder suggestions).
 - 2026-10-12, Claude (AI #1), at the owner's request: AI #3 gets A-51..A-80 (30 more): tax rule packs (Canada filing, EU reverse charge, UK schemes, US use tax, certificate types, Israeli imports/services and reporting frequency, sales tax holidays, source checker, pack diff) and product features (quote versions, blanket POs, landed cost preview, bins, pick/pack/ship, RMA, warranties, subscriptions MRR, credit limits, dunning, vendor price history, statements by entity, milestones view, expense policies, mileage, per diem, templates per entity, item images, barcode scanning, price list import).
-- 2026-10-12 AI #3 (Arena): **A-39 implemented on `arena/c52ad0b0-ledgerflow`**. Added dated threshold rules for Israel osek patur, UK VAT, Canada GST small suppliers and EU OSS-related qualifying supplies, plus the read-only Registration Threshold Watch report; explicit activity labels, Tax-profile country facts, native-currency matching, windows, official sources and statutory-scope caveats are visible, and no posting/calculation behavior changed. Checks: TypeScript, production build, ESLint 212 warnings / 0 errors, and 24/24 focused tests passed. Full `npm test` did not complete: it remained stalled in `dashboard-startup.test.tsx` after 30 minutes and was stopped; no full-suite pass claimed. The browser mount test is added but cannot run here because Playwright Chromium is absent. Publishing this assigned branch for AI #1's extended testing/review.
+- 2026-10-12, Claude (AI #1), owner's request 'every AI enough work': added C-57..C-71 (AI #2), D-32..D-43 (AI #4, incl. D-41/D-42: the unit suite runs past GitHub's 15-minute limit), E-26..E-40 (AI #5), S-7..S-21 (AI #6), F-7..F-21 (AI #7), and a spare queue AI #8 (G-1..G-8).
+
+- 2026-10-11 AI #5 → AI #1 (Claude), E-14 US EIN/SSN format-only helpers ready on `ai5/e-14-us-tax-id-format`: `src/lib/tax/usTaxIdFormat.ts` validates structural patterns and SSA impossible SSN groups, provides masked-only general results, full formatting explicitly restricted to the controlled input, plus ten regression tests. See `docs/US_TAX_ID_FORMAT.md`. The vendor form `src/components/common/PartyModal.tsx` is still in your reserved lane; please wire an explicit EIN/SSN kind and accessible nonblocking warning **without silently persisting a raw ID**. Never infer kind from nine digits, or claim a number is assigned just because it passes format. Coordinate secure W-9 / Tax ID storage separately. No financial/posting, schema or PartyModal changes in my branch. E-14 is PARTIAL until the vendor UI is wired and tested. E-15 next.
+
+- 2026-10-12 AI #3 (Arena): **A-39 implemented on `arena/c52ad0b0-ledgerflow`**. Added dated threshold rules for Israel osek patur, UK VAT, Canada GST small suppliers and EU OSS-related qualifying supplies, plus the read-only Registration Threshold Watch report; explicit activity labels, Tax-profile country facts, native-currency matching, windows, official sources and statutory-scope caveats are visible, and no posting/calculation behavior changed. TypeScript, production build, ESLint (212 warnings / 0 errors), and focused tests (24/24) passed before syncing latest main. The initial full `npm test` run stalled in `dashboard-startup.test.tsx`; the updated branch now includes main's database-client cleanup fix, but the full suite has not yet been rerun. The browser mount test is added but cannot run here because Playwright Chromium is absent. Publishing this assigned branch for AI #1's extended testing/review.
