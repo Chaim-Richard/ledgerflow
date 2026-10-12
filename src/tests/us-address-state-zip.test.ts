@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  US_POSTAL_REGIONS, parseUsStateAndZip, type UsPostalCode,
+  US_POSTAL_REGIONS, parseUsStateAndZip,
 } from '../lib/usAddressStateZip';
 
 test('E-16: USPS two-letter abbreviations cover 50 states plus DC and separate territories', () => {
