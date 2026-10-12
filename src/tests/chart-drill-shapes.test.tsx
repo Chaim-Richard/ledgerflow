@@ -44,6 +44,9 @@ test('missing parents and loops retain every balance with distinct identities', 
   assert.ok(ids.has(JSON.stringify(['account','x'])));
   assert.ok(ids.has(JSON.stringify(['account','y'])));
   assert.ok(ids.has(JSON.stringify(['account','z'])));
+  const mixed=accountIcicleTree([{id:'asset',name:'Asset',type:'asset',netSigned:100},{id:'income',name:'Income',type:'income',parentId:'asset',netSigned:200}]);
+  assert.equal(mixed.children.length,2);
+  assert.equal(mixed.cents,300);
 });
 test('month brush carries exact leap/month boundaries and rejects invalid selections', () => {
   assert.deepEqual(monthBrushPeriod(['2024-01','2024-02','2024-04'],1,1), {startDate:'2024-02-01',endDate:'2024-02-29'});
@@ -89,9 +92,35 @@ test('keyboard sliders notify the report range while legacy table and legend con
   assert.match(screen.getByRole('table').textContent || '',/2024-01/);
 });
 
-test('live account balances retain a provisional fallback on refusal and retry with full report figures', async () => {
+test('resetting a controlled report range restores every month and retains the legend choice', () => {
   setComponentWorkspace();
-  useLedgerStore.setState({accounts:[],transactions:[]});
+  const rows=[{id:'a',label:'2024-01',cents:100,other:2},{id:'b',label:'2024-02',cents:-200,other:3}];
+  const series=[{key:'cents',name:'Value'},{key:'other',name:'Other',unit:'number' as const}];
+  const view=render(<ChartFrame title="Controlled" rows={rows} series={series} selectionRange={[1,1]} onRangeChange={()=>{}}>{()=>null}</ChartFrame>);
+  fireEvent.click(screen.getByRole('button',{name:'Table'}));
+  fireEvent.click(screen.getByRole('button',{name:'Other'}));
+  assert.doesNotMatch(screen.getByRole('table').textContent || '',/2024-01/);
+  view.rerender(<ChartFrame title="Controlled" rows={rows} series={series} selectionRange={null} onRangeChange={()=>{}}>{()=>null}</ChartFrame>);
+  assert.match(screen.getByRole('table').textContent || '',/2024-01/);
+  assert.match(screen.getByRole('table').textContent || '',/2024-02/);
+  assert.equal(screen.getByRole('button',{name:'Other'}).getAttribute('aria-pressed'),'false');
+});
+
+test('legacy reset zoom continues to include later streamed rows', () => {
+  setComponentWorkspace();
+  const first=[{id:'a',label:'2024-01',cents:100},{id:'b',label:'2024-02',cents:200}];
+  const series=[{key:'cents',name:'Value'}];
+  const view=render(<ChartFrame title="Stream" time rows={first} series={series}>{()=>null}</ChartFrame>);
+  fireEvent.click(screen.getByRole('button',{name:'Table'}));
+  fireEvent.change(screen.getByLabelText('Stream brush start'),{target:{value:1}});
+  fireEvent.click(screen.getByRole('button',{name:'Reset zoom'}));
+  view.rerender(<ChartFrame title="Stream" time rows={[...first,{id:'c',label:'2024-03',cents:300}]} series={series}>{()=>null}</ChartFrame>);
+  assert.match(screen.getByRole('table').textContent || '',/2024-03/);
+});
+
+test('live account balances withhold cached amounts on refusal and retry with full report figures', async () => {
+  setComponentWorkspace();
+  useLedgerStore.setState({accounts:[makeChartAccount({id:'private-cache',name:'PRIVATE_CACHED_AMOUNT',workspaceId:'component-workspace',openingBalanceCents:999999})],transactions:[]});
   let refused=true;
   const calls:string[]=[];
   const metadata=[makeChartAccount({id:'parent',name:'Parent',workspaceId:'component-workspace'}),makeChartAccount({id:'child',name:'Server child',workspaceId:'component-workspace',parentId:'parent'})];
@@ -101,14 +130,15 @@ test('live account balances retain a provisional fallback on refusal and retry w
     return new Response(JSON.stringify(metadata.map(account=>({id:account.id,data:account}))),{status:200});
   };
   render(<AccountBalanceChart endDate="2024-02-29" currency="EUR" />);
-  await waitFor(()=>assert.ok(screen.getByText(/Provisional loaded-history preview:/)));
+  await waitFor(()=>assert.ok(screen.getByText(/Account balances unavailable:/)));
   assert.equal(screen.queryByRole('button',{name:/Server child:/}),null);
+  assert.doesNotMatch(document.body.textContent || '',/PRIVATE_CACHED_AMOUNT/);
   refused=false;
   fireEvent.click(screen.getByRole('button',{name:'Refresh account balances'}));
   await waitFor(()=>assert.ok(screen.getByRole('button',{name:/Server child:.*123\.45/})));
   assert.ok(calls.some(url=>url.includes('workspaceId=component-workspace')&&url.includes('asOfDate=2024-02-29')));
   assert.ok(calls.some(url=>url.includes('chartAccounts')&&decodeURIComponent(url).includes('component-workspace')));
-  assert.equal(screen.queryByText(/Provisional loaded-history preview:/),null);
+  assert.equal(screen.queryByText(/Account balances unavailable:/),null);
 });
 
 test('an obsolete workspace report cannot populate the new account chart', async () => {

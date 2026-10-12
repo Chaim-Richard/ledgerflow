@@ -1855,8 +1855,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [x] O-01 Sunburst
 - [x] O-02 Treemap
-- [ ] O-03 Icicle
-- [ ] O-04 Brush selector
+- [x] O-03 Icicle — AI #4, D-9: trial-balance account hierarchy, direct postings counted once, signed shares/table and keyboard zoom; full GitHub gates pending on `ai4/d-9-chart-drill-shapes`.
+- [x] O-04 Brush selector — AI #4, D-9: pointer/touch drag and native keyboard sliders share the two financial time-plot windows and exact report dates; full GitHub gates pending on `ai4/d-9-chart-drill-shapes`.
 - [x] O-05 Chart switcher — D-6, PR #69: remembered bar/line/area choices for two financial time plots and five dashboard trends; specialized shapes retained.
 - [x] O-06 Legend toggling — D-6, PR #69: shared financial series/category controls and dashboard trend legends preserve accessible values.
 - [x] O-07 Scatter plot

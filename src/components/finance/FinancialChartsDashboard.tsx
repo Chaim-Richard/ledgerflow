@@ -1,14 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
-import AccountBalanceChart from '../charts/AccountBalanceChart';
 import { monthBrushPeriod } from '../../lib/chartDrillShapes';
+import { reportStateToParams } from '../../lib/reportPermalink';
 import { validCustomReportPeriod, type CustomReportPeriod } from '../../lib/reportCustomPeriod';
 import { computeChartsData } from '../../lib/chartsData';
 import ChartExploration from '../charts/ChartExploration';
 import FinancialChartPanels from '../charts/FinancialChartPanels';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { TrendingUp, Flame, Clock } from 'lucide-react';
+const AccountBalanceChart = React.lazy(() => import('../charts/AccountBalanceChart'));
 
 export default function FinancialChartsDashboard() {
   const uid = useAuthStore(state => state.user?.uid), workspace = useAuthStore(state => state.currentWorkspaceId);
@@ -45,7 +46,7 @@ function ScopedChartsDashboard() {
     window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
   };
   const onRangeChange = ([start, end]: [number, number]) => { const next = monthBrushPeriod(months, start, end); if (next) choosePeriod(next); };
-  const reportParams = new URLSearchParams({ report: 'pnl', ...(period || {}) });
+  const reportParams = reportStateToParams({ report: 'pnl', year: Number(period.endDate.slice(0, 4)), timeframe: 'month', quarter: 0, month: Number(period.endDate.slice(5, 7)) - 1, compare: 'none', ...period });
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto">
@@ -126,7 +127,7 @@ function ScopedChartsDashboard() {
         {selectedPeriod && <button type="button" className="min-h-11 px-3 border rounded ml-2" onClick={() => choosePeriod(undefined)}>Reset report period</button>}
       </div>
       <FinancialChartPanels key={timeRange} data={data} currency={currency} selectionRange={selectionRange} onRangeChange={onRangeChange} emptyPeriod={!!selectedPeriod && !chosen.length} />
-      {period && <AccountBalanceChart endDate={period.endDate} currency={currency} />}
+      {period && <React.Suspense fallback={<p role="status">Loading account balance chart…</p>}><AccountBalanceChart endDate={period.endDate} currency={currency} /></React.Suspense>}
       <ChartExploration months={chosen.map(row => row.month)} currency={currency} />
     </div>
   );

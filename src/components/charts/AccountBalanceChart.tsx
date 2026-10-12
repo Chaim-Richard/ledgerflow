@@ -34,13 +34,13 @@ function ScopedBalanceChart({ endDate, currency }: { endDate: string; currency?:
     return () => { active = false; };
   }, [guest, workspace, endDate, accounts, transactions, fetchTrialBalance, refresh]);
   const current = result?.date === endDate && result.sourceAccounts === accounts && result.sourceTransactions === transactions ? result : undefined;
-  const records = current?.accounts || cached.accounts;
-  const report = current?.report || cached.report;
+  const records = current?.accounts || (guest ? cached.accounts : []);
+  const report = current?.report || (guest ? cached.report : { accounts: [] });
   const byId = new Map(records.map(account => [account.id, account]));
   const members = report.accounts.map(row => ({ ...row, parentId: byId.get(row.id)?.parentId }));
   return <div className="space-y-2 min-w-0"><p>Account closing balances as of {endDate}, including opening balances and earlier posted activity.</p>
-    {!current?.report && <p role="status">{!workspace && !guest ? 'Choose a workspace to read account balances.' : guest ? 'Guest demonstration using loaded history.' : current?.error ? `Provisional loaded-history preview: ${current.error}` : 'Loading full account balances; showing a provisional loaded-history preview.'}</p>}
+    {!current?.report && <p role="status">{!workspace && !guest ? 'Choose a workspace to read account balances.' : guest ? 'Guest demonstration using loaded history.' : current?.error ? `Account balances unavailable: ${current.error}` : 'Loading full account balances…'}</p>}
     {!guest && workspace && <button type="button" disabled={!current} aria-busy={!current} className="min-h-11 px-3 border rounded disabled:opacity-50" onClick={() => { setResult(undefined); setRefresh(value => value + 1); }}>Refresh account balances</button>}
-    <AccountIcicle key={endDate} members={members} currency={currency} />
+    {(guest || current?.report) && <AccountIcicle key={endDate} members={members} currency={currency} />}
   </div>;
 }

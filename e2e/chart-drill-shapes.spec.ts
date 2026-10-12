@@ -9,6 +9,7 @@ for (const width of [1280,390]) test(`account icicle zoom and report-period drag
     localStorage.setItem('ledgerflow-cookie-consent','accepted');
   });
   await page.goto('/#charts');
+  await page.getByRole('heading',{name:'Executive Financial Visualizer',exact:true}).waitFor({state:'visible',timeout:20000});
   const mix=page.getByRole('region',{name:'Monthly Profitability & Mix',exact:true});
   await expect(mix.locator('.recharts-surface')).toBeVisible();
   await page.evaluate(async () => {
@@ -71,5 +72,6 @@ for (const width of [1280,390]) test(`account icicle zoom and report-period drag
   const report=page.getByRole('link',{name:'Open P&L for selected period',exact:true});
   expect(await report.getAttribute('href')).toContain('start=2024-02-01');
   await report.click();
-  await expect(page.getByText(/Custom range.*2024-02-01 to 2024-03-31/).first()).toBeVisible();
+  await page.getByRole('heading',{name:'Financial Reports & Statements',exact:true}).waitFor({state:'visible',timeout:20000});
+  await expect(page.getByText('Custom range: 2024-02-01 to 2024-03-31',{exact:true})).toBeVisible();
 });

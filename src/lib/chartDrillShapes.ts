@@ -9,6 +9,8 @@ export interface AccountBlock { id: string; label: string; cents: number; ownCen
 export function accountIcicleTree(members: BalanceMember[]): AccountBlock {
   const listed = [...new Map(members.map(row => [row.id, row])).values()].sort(accountByCodeThenName);
   const links = accountParentLinks(listed);
+  const byId = new Map(listed.map(row => [row.id, row]));
+  for (const [id, parent] of links) if (byId.get(id)?.type !== byId.get(parent)?.type) links.delete(id);
   const children = new Map<string | undefined, BalanceMember[]>();
   for (const row of listed) {
     const parent = links.get(row.id);
