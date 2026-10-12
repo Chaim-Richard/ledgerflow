@@ -71,9 +71,7 @@ test('E-14: optional blanks are not reported as errors', () => {
 });
 
 test('E-14: characters, misplaced separators and incomplete input are refused', () => {
-  for (const input of ['12-345 6789', '12/3456789', '+123456789', '１２３４５６７８９', 'x123456789', '12.3456789', '123456789\n', '1e8']) {
-    // Trim at the edges is allowed, not arbitrary changes inside the ID.
-    if (input === '123456789\n') continue;
+  for (const input of ['12-345 6789', '12/3456789', '+123456789', '１２３４５６７８９', 'x123456789', '12.3456789', '1e8']) {
     const result = checkUsTaxId(input, 'ein');
     assert.equal(result.state, 'warning');
     assert.equal(result.masked, null);
