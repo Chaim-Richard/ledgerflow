@@ -139,6 +139,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review scheduled revenue earned by month and still deferred at the period end. Inspect each schedule and its recorded earned amounts. Future scheduled amounts remain distinct from posted earned revenue.",
     "financial-ratios":
       "Review financial ratios together with their formulas. Adjust report-only current-account groups and compare periods. Zero denominators are undefined and turnover days use labelled revenue or COGS proxies.",
+    "discount-mismatch":
+      "Compare issued invoice unit prices in the selected period with current customer price lists or item catalogue prices. Refresh complete invoice/item reads before CSV. Current prices do not prove historical discount entitlement; foreign currencies, document-wide discounts and unknown item references are excluded.",
     "gross-profit-by-customer":
       "Review sales, estimated cost and gross profit by customer. Compare periods and inspect cost provenance. The existing invoice-item margin rules remain unchanged.",
     "inactive-items":
