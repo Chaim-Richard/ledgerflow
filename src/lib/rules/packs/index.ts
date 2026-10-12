@@ -16,6 +16,7 @@ import { usNexusPack } from './usNexusPack';
 import { productTaxabilityPack } from './productTaxabilityPack';
 import { filingPack } from './filingPack';
 import { registrationThresholdPack } from './registrationThresholdPack';
+import { usLocalRatePack } from './usLocalRatePack';
 import type { TaxEffect, TaxRulePack, UnmappedRow } from './shared';
 
 export { usSalesTaxPack } from './usSalesTaxPack';
@@ -26,6 +27,10 @@ export { ilVatPack } from './ilVatPack';
 export { usNexusPack } from './usNexusPack';
 export { productTaxabilityPack, stateSalesRuleIds } from './productTaxabilityPack';
 export { registrationThresholdPack } from './registrationThresholdPack';
+export {
+  usLocalRatePack, localRateKey,
+  type LocalKeyAttribute, type LocalRateEffect, type LocalRateKeyResult,
+} from './usLocalRatePack';
 export { filingPack } from './filingPack';
 export { rateRule, where, slug, type TaxEffect, type TaxRulePack, type RateEffect, type NexusEffect, type RegistrationThresholdEffect, type RegistrationThresholdWindow, type UnmappedRow, type FilingEffect } from './shared';
 
