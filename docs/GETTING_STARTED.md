@@ -124,6 +124,23 @@ The browser tests `e2e/accounting-lifecycle.spec.ts` and `e2e/smoke.spec.ts` wal
 - Limits checked by the tests: no file over 799 lines; no new ESLint warnings (the number in
   `package.json` only goes down); `quality-baseline.json`.
 
+## Visual regression screenshots (AI #4, D-10)
+
+`npx playwright test e2e/visual-regression.spec.ts` compares ten guest screens at
+1280px and 390px widths, in light and dark themes (40 images). The fixed date is
+30 September 2026; report dates and guest financial records are deterministic.
+Images live in `e2e/__screenshots__/`. Financial values and controls are not masked.
+The allowance is 100 pixels with a 0.1 color threshold, independent of page height.
+
+For an intentional UI change, use Node 24, `npm ci`, and
+`npx playwright install --with-deps chromium` on the same Linux environment as CI.
+Run `npx playwright test e2e/visual-regression.spec.ts --update-snapshots`, inspect
+every changed image (including phone wrapping and dark contrast), then commit only
+the approved PNGs. Rerun without `--update-snapshots` before pushing. Do not update
+images just to silence a failed comparison or increase the tolerance. Different
+browser versions or operating-system fonts can produce different images; use the
+CI browser version rather than accepting those changes as product changes.
+
 ## When something goes wrong
 
 | You see | Why | Do |
