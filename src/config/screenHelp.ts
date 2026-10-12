@@ -88,6 +88,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Inspect the developer-only administration demonstration. Explore its example panels when developer mode is enabled. Demonstration telemetry is distinct from production monitoring.",
   },
   reports: {
+    "vendor-tax-records": "Review masked recorded tax/VAT IDs, withholding-certificate expiry and missing-data reminders. Refresh the complete workspace vendor list before CSV export; edited records invalidate that export until refreshed. This does not verify ID kind, W-9 receipt, registration or legal withholding obligations. Open related vendor details without leaving the report.",
     "form-856":
       "Review tax withheld at source from vendor payments, per vendor and tax year, with the certificate numbers the payments relied on. Choose the year and download the CSV for the form. Payments without a certificate number are listed as missing, never filled in; nothing is filed here.",
     "customer-cohorts": "Group customers by their earliest observed issued-invoice month and inspect each later month's total invoicing, distinct active customers or percentage. The first invoice can predate the selected display window. Incomplete invoice history makes these cohorts provisional.",

@@ -251,3 +251,7 @@ Reports can remember several named column selections and orders rather than maki
 ## Current invoice price review (C-39, partial)
 
 A bookkeeper can find invoice lines whose stored unit rate differs from the customer’s current list or item price, and open the exact invoice without searching again. Existing list-price logic supplies the expectation; missing references and foreign currency are excluded explicitly. Complete CSV requires successful full invoice/item reads; cache-only rows remain visibly provisional. The feature helps investigate current price differences, but cannot establish what discount was agreed historically: line agreements, dated list versions and separate item discount rules are not stored. Nine targeted tests/guards and a registered phone/axe case pass; integrated gates are pending.
+
+## Vendor tax-record follow-up (C-48)
+
+A single review gathers masked tax/VAT identifiers and current recorded withholding expiries, with reminders for unreadable IDs, missing certificate references, and approaching or elapsed expiry. Shared metadata can be edited in the related-record drawer while the review stays visible. CSV uses the same masking and requires a complete fresh workspace read. This reduces manual contact-by-contact follow-up, but is not a W-9 receipt register, identifier verification service or tax-rate decision. `vendorTaxRecords.ts` reads the existing canonical vendor metadata; no guessed legal evidence is added.
