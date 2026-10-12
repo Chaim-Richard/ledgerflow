@@ -2397,7 +2397,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BP-02 Emulator setup docs
 - [ ] BP-03 ADRs
 - [ ] BP-04 Storybook
-- [ ] BP-05 Visual regression
+- [x] BP-05 Visual regression *(AI #4: 40 comparisons on `ai4/d-10-visual-regression`; full GitHub gates pending)*
 - [ ] BP-06 Load tests
 - [ ] BP-07 Canary rollout
 - [ ] BP-08 Mutation testing on money files
