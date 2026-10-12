@@ -19,11 +19,12 @@ export type FactAttribute =
   | 'exemptStatus'        // not_exempt, recognized_exempt, pending (separate from legal form: a nonprofit corporation is not exempt until recognised)
   | 'country' | 'state' | 'county' | 'city' | 'district'
   | 'activity'            // retail, services, manufacturing … (a set: a business can do several)
+  | 'productCategory'     // A-30's item tax categories (clothing, groceries, SaaS …): what is being sold
   | 'accountingMethod'    // accrual, cash
   | 'registration';       // a set of keys from src/lib/tax/profile.ts registrationKey
 
 /** Single-valued attributes may conflict between dimensions; set-valued ones accumulate. */
-export const SET_ATTRIBUTES: ReadonlySet<FactAttribute> = new Set(['activity', 'registration']);
+export const SET_ATTRIBUTES: ReadonlySet<FactAttribute> = new Set(['activity', 'registration', 'productCategory']);
 
 export interface Evidence {
   kind: 'declared' | 'document' | 'registration' | 'authority';

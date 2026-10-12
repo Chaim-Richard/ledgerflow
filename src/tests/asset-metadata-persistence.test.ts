@@ -80,4 +80,15 @@ describe('Asset maintenance metadata persistence', { skip: !process.env.LF_TEST_
     const before = await saved();
     assert.equal(before.purchasePriceCents, 1200000); assert.equal(before.accumulatedDepreciationCents, 20000);
   });
+
+  test('the database refuses a second asset with the same tag in the workspace, trimmed and case-folded; other workspaces may reuse it', async () => {
+    await client.query("update public.assets set data = data || '{\"assetTag\": \"VAN-1\"}'::jsonb where id = $1", [assetId]);
+    await assert.rejects(
+      client.query('insert into public.assets (id, data) values ($1, $2)', [`${assetId}_2`, { ...original, assetTag: ' van-1 ' }]),
+      /assets_workspace_tag_uq/,
+    );
+    await client.query('insert into public.assets (id, data) values ($1, $2)', [`${assetId}_3`, { ...original, assetTag: '' }]);
+    await client.query('insert into public.assets (id, data) values ($1, $2)', [`${assetId}_4`, { ...original, workspaceId: `${workspaceId}_other`, assetTag: 'VAN-1' }]);
+    await client.query('delete from public.assets where id = $1', [`${assetId}_4`]);
+  });
 });

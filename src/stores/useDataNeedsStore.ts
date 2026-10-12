@@ -10,6 +10,8 @@ import type { LedgerKey } from '../lib/ledgerCollections';
 interface DataNeedsState {
   asked: LedgerKey[];
   loaded: Partial<Record<LedgerKey, boolean>>;
+  /** Workspace whose subscriptions produced these loaded flags. */
+  loadedWorkspaceId: string | null;
   /** why a collection couldn't be loaded */
   failed: Partial<Record<LedgerKey, string>>;
   ask: (keys: readonly LedgerKey[]) => void;
@@ -18,12 +20,13 @@ interface DataNeedsState {
   /** clear a failure; useLedgerData subscribes again */
   retry: (key: LedgerKey) => void;
   /** a new workspace: everything loads again */
-  resetLoaded: () => void;
+  resetLoaded: (workspaceId?: string) => void;
 }
 
 export const useDataNeedsStore = create<DataNeedsState>((set) => ({
   asked: [],
   loaded: {},
+  loadedWorkspaceId: null,
   failed: {},
   ask: (keys) => set((state) => {
     const missing = keys.filter(k => !state.asked.includes(k));
@@ -39,5 +42,5 @@ export const useDataNeedsStore = create<DataNeedsState>((set) => ({
     const { [key]: _gone, ...failed } = state.failed;
     return { failed };
   }),
-  resetLoaded: () => set({ loaded: {}, failed: {} }),
+  resetLoaded: (workspaceId) => set({ loaded: {}, loadedWorkspaceId: workspaceId ?? null, failed: {} }),
 }));
