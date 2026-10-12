@@ -130,6 +130,8 @@ The browser tests `e2e/accounting-lifecycle.spec.ts` and `e2e/smoke.spec.ts` wal
 1280px and 390px widths, in light and dark themes (40 images). The fixed date is
 30 September 2026; report dates and guest financial records are deterministic.
 Images live in `e2e/__screenshots__/`. Financial values and controls are not masked.
+Capture height expands to include the application's internally scrolling content;
+the responsive width stays fixed, so the report body is compared as well as its header.
 The allowance is 100 pixels with a 0.1 color threshold, independent of page height.
 
 For an intentional UI change, use Node 24, `npm ci`, and
