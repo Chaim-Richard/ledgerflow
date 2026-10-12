@@ -117,7 +117,11 @@ export function checkVatNumber(value: unknown, selectedCountry: unknown): VatFor
   if (prefixed && embedded !== country) {
     return { status: 'warning', country, problem: 'country-mismatch', masked: null };
   }
-  const local = prefixed && embedded === country ? compact.slice(2) : compact;
+  // Some countries allow initial letters as part of the national portion
+  // (for example France). Prefer a matching local form rather than erasing
+  // those letters as if they must be a country prefix.
+  const local = VAT_COUNTRY_FORMATS[country].pattern.test(compact)
+    ? compact : prefixed && embedded === country ? compact.slice(2) : compact;
   if (!VAT_COUNTRY_FORMATS[country].pattern.test(local)) {
     return { status: 'warning', country, problem: 'format', masked: null };
   }
@@ -127,7 +131,7 @@ export function checkVatNumber(value: unknown, selectedCountry: unknown): VatFor
   }
   return {
     status: 'valid-format', country, problem: null,
-    masked: country + '••••' + local.slice(-4),
+    masked: country + '••••' + (local.length > 4 ? local.slice(-4) : ''),
   };
 }
 
