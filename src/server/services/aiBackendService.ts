@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SecurityService } from "../../services/securityService";
 import { AutoRuleSchema } from "../../schemas";
+import { tracedClient, type AiCallTrace } from "./aiGateway";
 
 export class AIBackendService {
   private static getAiClient() {
@@ -16,8 +17,9 @@ export class AIBackendService {
     });
   }
 
-  static async processTask(task: string, payload: Record<string, unknown>): Promise<unknown> {
-    const ai = this.getAiClient();
+  /** `traces` collects each model call (src/server/services/aiGateway.ts); the route stores them. */
+  static async processTask(task: string, payload: Record<string, unknown>, traces: AiCallTrace[] = []): Promise<unknown> {
+    const ai = tracedClient(this.getAiClient(), traces);
 
     switch (task) {
       case 'strategic-analysis': {

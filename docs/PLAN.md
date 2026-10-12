@@ -213,7 +213,7 @@ people approve, posting services commit) and found real defects. Status:
 | Canned AI answers and confidence (85, 90) when the model fails | **Fixed**: an explicit `degraded` answer with no confidence, server and browser |
 | "Auto-fill Accuracy 98.4%" hard-coded | **Fixed**: removed; no quality number without a measurement |
 | Fixed execution times in AI traces | **Fixed**: measured |
-| One AI gateway for every model call (policy, data allowed per task, trace, budget) | AI #1, next |
+| One AI gateway for every model call (policy, data allowed per task, trace, budget) | **Done 12 Oct** for `/api/v1/ai/process`: fields per task, a trace per call (model, tokens, time, cost from the table) in `billingLedgerTraces` (`src/server/services/aiGateway.ts`); the brain route keeps its own trace for now |
 | Route-policy coverage: every server route that touches a workspace proves a guard (the server role bypasses RLS) | AI #4 D-30 |
 | AI evaluation harness (time-split, Hebrew/English slices, calibration) before any accuracy claim | AI #4 D-31 |
 | Tax capability labels in the product: calculation / reviewed / filing-ready | AI #2 C-55 |

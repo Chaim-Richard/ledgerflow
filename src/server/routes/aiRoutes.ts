@@ -3,6 +3,7 @@ import express from "express";
 import { z } from "zod";
 import { verifyIdToken } from "../auth/supabaseAuth";
 import { AIBackendService } from "../services/aiBackendService";
+import { allowedPayload, type AiCallTrace } from "../services/aiGateway";
 import { SecurityService } from "../../services/securityService";
 import { getDb, validateWorkspaceMember } from "../db/firestore";
 import { incrementShardedCounter, getShardedCounterValue } from "../services/shardedCounterService";
@@ -79,10 +80,11 @@ aiRouter.post("/process", async (req: express.Request, res: express.Response) =>
     });
   }
 
-  const { task, payload } = parsed.data;
+  const { task } = parsed.data;
+  const rawPayload = parsed.data.payload;
   const workspaceId =
-    typeof payload.workspaceId === 'string' && payload.workspaceId.trim().length > 0
-      ? payload.workspaceId.trim()
+    typeof rawPayload.workspaceId === 'string' && rawPayload.workspaceId.trim().length > 0
+      ? rawPayload.workspaceId.trim()
       : typeof req.headers['x-workspace-id'] === 'string' && (req.headers['x-workspace-id'] as string).trim().length > 0
       ? (req.headers['x-workspace-id'] as string).trim()
       : null;
@@ -121,6 +123,9 @@ aiRouter.post("/process", async (req: express.Request, res: express.Response) =>
     }
   }
 
+  // only the fields this task declares reach the model (src/server/services/aiGateway.ts)
+  const payload = allowedPayload(task, rawPayload);
+
   // Scrub PII on chat or textual inputs
   if (payload.query && typeof payload.query === 'string') {
     payload.query = SecurityService.scrubPII(payload.query);
@@ -141,7 +146,9 @@ aiRouter.post("/process", async (req: express.Request, res: express.Response) =>
     }
 
     // 7. Process task
-    const result = await AIBackendService.processTask(task, payload);
+    const traces: AiCallTrace[] = [];
+    const result = await AIBackendService.processTask(task, payload, traces);
+    await recordAiTraces(db, workspaceId, String(decodedToken?.uid || ''), task, traces, result);
     return res.json(result);
   } catch (err) {
     // Refund credits on failure so user is never charged for failed tasks
@@ -154,3 +161,18 @@ aiRouter.post("/process", async (req: express.Request, res: express.Response) =>
     });
   }
 });
+
+/** One trace record per AI request: the task, each model call, and whether the answer was degraded. */
+async function recordAiTraces(db: ReturnType<typeof getDb>, workspaceId: string, uid: string, task: string, traces: AiCallTrace[], result: unknown) {
+  try {
+    const id = `trace-${crypto.randomUUID()}`;
+    await db.collection('billingLedgerTraces').doc(id).set({
+      id, workspaceId, uid, algorithmName: `AI_TASK_${task}`, calls: traces,
+      executionTimeMs: traces.reduce((s, t) => s + t.ms, 0),
+      degraded: Boolean((result as { degraded?: boolean } | null)?.degraded) || traces.length === 0,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[AI trace not recorded]', err);
+  }
+}
