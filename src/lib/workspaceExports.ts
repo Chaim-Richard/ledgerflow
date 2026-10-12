@@ -3,6 +3,10 @@
  * They do not check VIES/HMRC registration or change live tax calculation.
  */
 export { checkVatNumber, vatFormatWarning, maskVatNumber, VAT_COUNTRIES, VAT_COUNTRY_FORMATS } from './tax/vatNumberFormat';
+ * E-16: read-only USPS region and ZIP+4 recognition; never proof of tax
+ * jurisdiction or deliverable address. Needs authoritative geocoding/lookup.
+ */
+export { parseUsStateAndZip, US_POSTAL_REGIONS } from './usAddressStateZip';
 
 /**
  * E-14: US tax-ID formatting, masked display and warning helpers.
