@@ -322,6 +322,10 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
    check that Supabase point-in-time recovery is on for the live project, and let me run one restore drill to a copy.
    (c) Branch protection on GitHub (Settings → Branches → main: require CI to pass) — it also covers L-67.
 
+45. **For your accountant (11 Oct): one Israeli VAT row to confirm.** AI #3's table (src/lib/tax/ilVat.ts) treats
+   supplies in Judea and Samaria as zero-rated from 1968. Default kept: the row stays, marked "calculation only", so no
+   filing relies on it. Please confirm or correct it; it is one row.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

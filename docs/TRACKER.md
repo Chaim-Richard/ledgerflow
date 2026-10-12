@@ -1857,10 +1857,10 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] O-02 Treemap
 - [ ] O-03 Icicle
 - [ ] O-04 Brush selector
-- [ ] O-05 Chart switcher
-- [ ] O-06 Legend toggling
+- [x] O-05 Chart switcher — D-6, PR #69: remembered bar/line/area choices for two financial time plots and five dashboard trends; specialized shapes retained.
+- [x] O-06 Legend toggling — D-6, PR #69: shared financial series/category controls and dashboard trend legends preserve accessible values.
 - [x] O-07 Scatter plot
-- [ ] O-08 Consistent tooltips
+- [x] O-08 Consistent tooltips — D-6, PR #69: shared full-label tooltips use workspace currency/native units, original-total allocation percentages and current hierarchy values.
 
 # SECTION P — PLATFORM & ENTERPRISE
 

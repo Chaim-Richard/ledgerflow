@@ -19,6 +19,7 @@ import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { isPostable, isTransactionInDateRange } from '../../lib/txFilters';
 import { useScenarioStore } from '../../lib/scenarioStore';
 import BankFeedHealth from './BankFeedHealth';
+import DashboardTrendChart from './DashboardTrendChart';
 
 const LABELS: Record<DashboardWidget, string> = { revenue: 'Revenue', expenses: 'Expenses', profit: 'Net income', networth: 'Net worth', scenario: 'Scenario preview', summary: 'Account summary', cash: 'Cash balance', receivables: 'Receivables', payables: 'Payables', banks: 'Bank and cash accounts', feeds: 'Bank feed health', recent: 'Recent transactions', integrity: 'Books balance' };
 const KPIS = ['networth', 'revenue', 'expenses', 'profit', 'cash'] as const;
@@ -39,11 +40,6 @@ interface WidgetRefreshState { workspaceId: string; at: number; values: WidgetSn
 
 /** The person's own arrangement in this browser, or null (BC-02: then their role's starting layout). */
 function readOwn(key: string): unknown { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; } }
-function Sparkline({ values, label }: { values: number[]; label: string }) {
-  const min = Math.min(...values), span = Math.max(...values) - min;
-  const points = values.map((value, index) => `${index * 100 / 11},${span ? 30 - (value - min) * 28 / span : 16}`).join(' ');
-  return <svg viewBox="0 0 100 32" role="img" aria-label={`${label}, last 12 months; values available below`} className="w-full h-12 text-[var(--brass)]"><polyline points={points} fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>;
-}
 export default function DashboardWidgets() {
   const uid = useAuthStore(state => state.user?.uid), workspaceId = useAuthStore(state => state.currentWorkspaceId);
   return <ScopedDashboardWidgets key={`${uid || 'guest'}:${workspaceId}`} />;
@@ -149,7 +145,7 @@ function ScopedDashboardWidgets() {
       const metric = id as typeof KPIS[number], delta = reportVariance(widgetData.current[metric], widgetData.previous[metric]);
       return <><a href={reportLink(['cash', 'networth'].includes(metric) ? 'balance-sheet' : 'pnl')} className="min-h-11 flex items-center text-2xl font-bold tabular-nums">{formatCurrency(widgetData.current[metric], currency)}<span className="sr-only"> Open {LABELS[id]} report</span></a>
         <p className="text-sm">{['cash', 'networth'].includes(metric) ? `As of ${period.endDate}` : 'Selected period activity'}</p><p className="text-sm">Vs previous period: {formatCurrency(delta.amount, currency)} ({reportPercent(delta.percent)})</p>
-        <Sparkline values={widgetData.months.map(month => month[metric])} label={LABELS[id]} /><details><summary className="cursor-pointer min-h-11 flex items-center">Monthly values</summary><table className="w-full text-sm"><caption className="sr-only">{LABELS[id]} last 12 months, last month through {period.endDate}</caption><thead><tr><th scope="col" className="text-left">Month</th><th scope="col" className="text-right">Amount</th></tr></thead><tbody>{widgetData.months.map(month => <tr key={month.label}><th scope="row" className="text-left font-normal">{month.label}</th><td className="text-right tabular-nums">{formatCurrency(month[metric], currency)}</td></tr>)}</tbody></table></details></>;
+        <DashboardTrendChart chartId={`dashboard-${metric}`} rows={widgetData.months.map(month => ({ label: month.label, cents: month[metric] }))} label={LABELS[id]} currency={currency} /><details><summary className="cursor-pointer min-h-11 flex items-center">Monthly values</summary><table className="w-full text-sm"><caption className="sr-only">{LABELS[id]} last 12 months, last month through {period.endDate}</caption><thead><tr><th scope="col" className="text-left">Month</th><th scope="col" className="text-right">Amount</th></tr></thead><tbody>{widgetData.months.map(month => <tr key={month.label}><th scope="row" className="text-left font-normal">{month.label}</th><td className="text-right tabular-nums">{formatCurrency(month[metric], currency)}</td></tr>)}</tbody></table></details></>;
     }
     if (id === 'receivables') return aging(widgetAr, 'customer');
     if (id === 'payables') return aging(widgetAp, 'vendor');

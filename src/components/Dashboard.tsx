@@ -38,10 +38,15 @@ export default function Dashboard() {
   const isGuest = useAuthStore(s => s.isGuest);
   const transactionsLoaded = useDataNeedsStore(s => Boolean(s.loaded.transactions));
   const accountsLoaded = useDataNeedsStore(s => Boolean(s.loaded.accounts));
+  const loadedWorkspaceId = useDataNeedsStore(s => s.loadedWorkspaceId);
+  const loadFailure = useDataNeedsStore(s => s.failed.transactions || s.failed.accounts);
   const workspaceForSetup = workspaces.find(w => w.id === currentWorkspaceId);
-  const needsSetup = !isGuest && Boolean(workspaceForSetup) && !workspaceForSetup?.setupCompletedAt && transactionsLoaded && rawTransactions.length === 0;
-  const [setupStarted, setSetupStarted] = useState(false);
-  const [setupClosed, setSetupClosed] = useState(false);
+  const needsSetup = !isGuest && Boolean(workspaceForSetup) && !workspaceForSetup?.setupCompletedAt && rawTransactions.length === 0;
+  // Setup activity belongs to one workspace. Switching books must not reuse another draft.
+  const [setupStartedFor, setSetupStartedFor] = useState<string | null>(null);
+  const [setupClosedFor, setSetupClosedFor] = useState<string | null>(null);
+  const setupStarted = Boolean(currentWorkspaceId && setupStartedFor === currentWorkspaceId);
+  const setupClosed = Boolean(currentWorkspaceId && setupClosedFor === currentWorkspaceId);
 
   // Lens state: 'owner' vs 'accountant'
   const [lens, setLens] = useState<'owner' | 'accountant'>('owner');
@@ -74,17 +79,23 @@ export default function Dashboard() {
   const setupStepCount = [hasSelectedTemplate, hasAccounts, hasTransactions].filter(Boolean).length;
   const isSetupIncomplete = setupStepCount < 3 && !isChecklistDismissed;
 
-  // until the entries and accounts are in, a workspace looks empty: deciding then flipped the page
-  // between the dashboard, the welcome page and setup while it loaded
-  if (!isGuest && !(transactionsLoaded && accountsLoaded) && !setupStarted) {
-    return <LoadingState what="your books" />;
+  // Never interpret a cleared cache or an old workspace's ready flags as a new set of books.
+  // Wait for the actual workspace and both core snapshots before choosing the first-run screen.
+  if (!isGuest && !setupStarted && (
+    !workspaceForSetup || loadedWorkspaceId !== currentWorkspaceId || !transactionsLoaded || !accountsLoaded
+  )) {
+    return loadFailure && loadedWorkspaceId === currentWorkspaceId
+      ? <div role="alert" className="p-8 text-center text-sm text-[var(--text)]">Could not load your books. Use Data Status to retry the failed collection.</div>
+      : <LoadingState what="your books" />;
   }
 
   if ((needsSetup || setupStarted) && !setupClosed) {
-    return <SetupWizard onStarted={() => setSetupStarted(true)} onDone={() => setSetupClosed(true)} />;
+    return <SetupWizard onStarted={() => setSetupStartedFor(currentWorkspaceId)} onDone={() => setSetupClosedFor(currentWorkspaceId)} />;
   }
 
-  if (isCompletelyEmpty) {
+  // Only guest/demo books show the generic welcome screen. Signed-in workspaces use
+  // their persisted setupCompletedAt and do not become 'new' when their history is empty.
+  if (isGuest && isCompletelyEmpty) {
     return <OnboardingView />;
   }
 
