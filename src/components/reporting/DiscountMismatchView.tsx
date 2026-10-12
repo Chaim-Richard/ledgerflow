@@ -19,7 +19,7 @@ export default function DiscountMismatchView(props: Props) {
 }
 function ScopedDiscountMismatch({startDate='',endDate=''}: Props) {
   const workspaceId = useAuthStore(state=>state.currentWorkspaceId), uid = useAuthStore(state=>state.user?.uid), guest = useAuthStore(state=>state.isGuest);
-  const workspace = useAuthStore(state=>state.getCurrentWorkspace()), currency = workspace?.currency || 'USD';
+  const workspace = useAuthStore(state=>state.getCurrentWorkspace()), currency = workspace?.currency || 'USD', priceLists = workspace?.priceLists;
   const invoices = useLedgerStore(state=>state.invoices), items = useLedgerStore(state=>state.inventory);
   const {loading} = useLedgerCollections('invoices','inventory');
   const [snapshot,setSnapshot] = useState<Snapshot|null>(null), [busy,setBusy] = useState(false), [error,setError] = useState('');
@@ -27,9 +27,9 @@ function ScopedDiscountMismatch({startDate='',endDate=''}: Props) {
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   const current = ()=>mounted.current && useAuthStore.getState().currentWorkspaceId===workspaceId && useAuthStore.getState().user?.uid===uid;
   const report = useMemo(()=>{
-    try { return { ...discountMismatches({invoices:snapshot?.invoices||invoices,items:snapshot?.items||items,lists:snapshot?.lists||workspace?.priceLists||[],workspaceId:workspaceId||'',currency,startDate,endDate}),problem:'' }; }
+    try { return { ...discountMismatches({invoices:snapshot?.invoices||invoices,items:snapshot?.items||items,lists:snapshot?.lists||priceLists||[],workspaceId:workspaceId||'',currency,startDate,endDate}),problem:'' }; }
     catch (reason) { return {rows:[],uncomparableLines:0,problem:reason instanceof Error?reason.message:'Could not compare current prices.'}; }
-  },[snapshot,invoices,items,workspace?.priceLists,workspaceId,currency,startDate,endDate]);
+  },[snapshot,invoices,items,priceLists,workspaceId,currency,startDate,endDate]);
   async function refresh() {
     if (!workspaceId || !uid || guest || pending.current) return;
     pending.current=true;setBusy(true);setError('');
