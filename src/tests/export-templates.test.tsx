@@ -23,8 +23,8 @@ function Report() { return <ReportTableScroll><table><caption>Sales by item</cap
 test('named column choice restores actual order and visibility after reopening the report', async () => {
   setComponentWorkspace(); localStorage.clear();
   let view = render(<Report />);
-  await waitFor(() => assert.ok(view.getByRole('button', { name: 'Columns', exact: true })));
-  fireEvent.click(view.getByRole('button', { name: 'Columns', exact: true }));
+  await waitFor(() => assert.ok(view.getByRole('button', { name: 'Columns' })));
+  fireEvent.click(view.getByRole('button', { name: 'Columns' }));
   await waitFor(() => assert.ok(view.getByRole('button', { name: 'Move Amount earlier' })));
   fireEvent.click(view.getByRole('button', { name: 'Move Amount earlier' }));
   fireEvent.click(view.getByRole('checkbox', { name: 'Units' }));
@@ -34,8 +34,8 @@ test('named column choice restores actual order and visibility after reopening t
   fireEvent.click(view.getByRole('checkbox', { name: 'Units' }));
   fireEvent.click(view.getByRole('button', { name: 'Move Amount later' }));
   view.unmount(); view = render(<Report />);
-  await waitFor(() => assert.ok(view.getByRole('button', { name: 'Columns', exact: true })));
-  fireEvent.click(view.getByRole('button', { name: 'Columns', exact: true }));
+  await waitFor(() => assert.ok(view.getByRole('button', { name: 'Columns' })));
+  fireEvent.click(view.getByRole('button', { name: 'Columns' }));
   fireEvent.click(view.getByText('Export templates', { exact: true }));
   fireEvent.click(view.getByRole('button', { name: 'Use template דוח Summary' }));
   assert.deepEqual(Array.from(view.container.querySelectorAll('thead th')).map(cell=>cell.textContent), ['Item','Amount','Units']);
