@@ -44,8 +44,13 @@ for (const width of [1280, 390]) for (const theme of ['light', 'dark'] as const)
       // Keep the real responsive width and expand only the capture height to fit it.
       if (screen === 'transactions') {
         // A virtual grid grows with its viewport; use a fixed height and require a real row.
-        await page.setViewportSize({ width, height: 1250 });
-        await expect(main.locator('[role="presentation"] > [data-column="description"]').first()).toBeVisible();
+        await page.setViewportSize({ width, height: 1600 });
+        const descriptions = main.locator('[role="presentation"] > [data-column="description"]');
+        await expect(descriptions).toHaveCount(2);
+        await expect.poll(async () => {
+          const cell = await descriptions.last().boundingBox(), frame = await main.boundingBox();
+          return !!cell && !!frame && cell.y >= frame.y && cell.y + cell.height <= frame.y + frame.height;
+        }).toBe(true);
       } else for (let attempt = 0; attempt < 3; attempt++) {
         const overflow = await main.evaluate(element => element.scrollHeight - element.clientHeight);
         if (overflow <= 1) break;

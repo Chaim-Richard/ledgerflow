@@ -18,9 +18,12 @@ jobs:
         env:
           HUSKY: 0
       - run: npx playwright install --with-deps chromium
-      - name: Refuse to replace an existing reviewed baseline
-        run: test -z "$(git ls-files e2e/__screenshots__)"
-      - run: npx playwright test e2e/visual-regression.spec.ts --update-snapshots --retries=0
+      - name: Require the 36 reviewed images and missing transaction drafts
+        run: |
+          test "$(git ls-files e2e/__screenshots__ | wc -l)" -eq 36
+          test -z "$(git ls-files 'e2e/__screenshots__/transactions-*')"
+      - run: npx playwright test e2e/visual-regression.spec.ts --grep transactions --update-snapshots --retries=0
+      - run: npx playwright test e2e/visual-regression.spec.ts --retries=0
       - name: Publish initial images only to the AI 4 task branch
         run: |
           test "${{ github.ref }}" = "refs/heads/ai4/d-10-visual-regression"
