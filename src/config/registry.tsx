@@ -469,6 +469,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
 export const SETTINGS_TABS_REGISTRY = withScreenHelp([
   { id: 'rules', label: { en: 'Rules & Automation', he: 'חוקים ואוטומציה' }, componentName: 'RulesSettingsView', icon: SlidersHorizontal },
   { id: 'dimensions', label: { en: 'Dimensions & Labels', he: 'ממדים ותגיות' }, componentName: 'DimensionsView', icon: Tag },
+  { id: 'tax-profiles', label: { en: 'Tax profiles', he: 'פרופילי מס' }, componentName: 'TaxProfilesSettingsView', icon: Receipt },
   { id: 'appearance', label: { en: 'Appearance & Display', he: 'מראה ותצוגה' }, componentName: 'AppearanceSettingsView', icon: Sliders },
   { id: 'team', label: { en: 'Team & Invites', he: 'צוות והרשאות' }, componentName: 'TeamView', icon: Users },
   { id: 'billing', label: { en: 'Billing & Plan', he: 'תוכניות וחיוב' }, componentName: 'BillingView', icon: CreditCard },
@@ -504,6 +505,7 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'TeamView': lazy(() => import('../components/platform/settings/TeamSettings')),
   'BillingView': lazy(() => import('../components/platform/settings/BillingSettings')),
   'TemplatesView': lazy(() => import('../components/platform/settings/BlueprintSettings')),
+  'TaxProfilesSettingsView': lazy(() => import('../components/platform/settings/TaxProfilesSettings')),
   'SecurityView': lazy(() => import('../components/platform/settings/SecuritySettings')),
   'AISettingsView': lazy(() => import('../components/platform/settings/AISettings')),
   'DeveloperView': lazy(() => import('../components/platform/settings/DeveloperSettings')),
