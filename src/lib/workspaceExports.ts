@@ -1,4 +1,10 @@
 /**
+ * E-15: EU/UK VAT number pattern previews and masked nonblocking warnings.
+ * They do not check VIES/HMRC registration or change live tax calculation.
+ */
+export { checkVatNumber, vatFormatWarning, maskVatNumber, VAT_COUNTRIES, VAT_COUNTRY_FORMATS } from './tax/vatNumberFormat';
+
+/**
  * E-14: US tax-ID formatting, masked display and warning helpers.
  * Read-only staging. Explicit EIN/SSN choice; never infers registration,
  * persists sensitive identifiers or enables 1099/W-9 filing.
