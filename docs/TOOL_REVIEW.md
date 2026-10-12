@@ -239,3 +239,9 @@ Confirmed on main `135fb91` in the pure selector/totals path: two active bi-week
 The shared person picker in `HourlyPayCell` has no duplicate-link guard. `payRunService` computes this selector and writes `paidRunId` for each selected entry: that protects later runs, but does not deduplicate employee lines inside one run. AI #1 owns payroll/time posting. Define whether a person must have one hourly employee record or how their time is allocated; enforce that on the server, not only in the picker, and add a duplicate-entry endpoint regression plus approval/release checks. Existing `hourly-pay.test.ts` covers one employee, repeat runs and undo, not this duplicate-link case. Server duplication itself still needs that targeted regression; the confirmed evidence here is selector/totals behavior.
 
 The implemented approved-time/pay-run link removes manual re-entry of hours and locks paid time against subsequent editing. It should not be described as a universal double-payment guarantee until this same-run boundary is resolved.
+
+## Page bookmarks (C-37)
+
+The sidebar can remember the pages a user returns to, including an exact report or settings subview. This reduces repeated menu searches while leaving the current report’s date context available. Existing header pins continue to provide their global shortcuts.
+
+`BookmarksGroup.tsx` consumes the registered navigation helper and `bookmarks.ts` validates saved targets, drops duplicate/obsolete entries and preserves exact user/workspace IDs. Native buttons support keyboard reorder with focus retained, and phone navigation closes the sidebar. Preferences are local to the browser and scoped to user and workspace; blocked storage produces a visible warning and keeps changes for this visit. Bookmarks do not capture filters, financial data or a historical report snapshot. Five pure/DOM checks pass; browser geometry and final integrated checks remain pending.

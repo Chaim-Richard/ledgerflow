@@ -8,6 +8,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 import { Download } from 'lucide-react';
 import { NAV_GROUPS, APP_TABS } from '../../config/registry';
+import BookmarksGroup from './BookmarksGroup';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 
 interface SidebarProps {
@@ -121,6 +122,7 @@ const Sidebar = React.memo(({
 
       {/* Navigation Groups */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4 mt-1">
+         <BookmarksGroup expanded={uiStore.isSidebarOpen} />
          <div>
             {uiStore.isSidebarOpen && (
               <p className="font-mono text-[10px] uppercase tracking-widest text-[var(--faint)] px-2 mb-2 font-semibold">Navigate</p>
