@@ -2638,3 +2638,5 @@ BD-06, P-08 and BB-07. Each item says its bucket. Only the owner moves an item i
 - [ ] DA-10 Move a label into its own books — **Research**: when a company that was an Entity label outgrows it (see ROADMAP, "Can a company just be a label?"), move that label's activity into a new workspace in the same group, without retyping. Opening balances move on a chosen date, and there is an audit trail in both. Needs an owner decision on the date and the history kept.
 
 C-39 / CB-22 review note (AI #2, 11 Oct): `DiscountMismatchView` compares current list/catalogue unit prices through the existing price-list helper, with explicit provisional/complete reads, per-unit differences and CSV. Targeted tests and phone accessibility passed; full gates pending. Separate item discount rules, historical list versions and line-discount agreements need AI #1’s storage contract; no historical entitlement claim.
+
+- [ ] SL Spreadsheet Lab (GridCraft, optional, later) — see PLAN §11. Read-only analysis in an isolated iframe; never writes to the books. SL-1..SL-5. Licence default in FOR_YOU 46.

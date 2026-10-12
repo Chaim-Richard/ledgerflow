@@ -258,3 +258,18 @@ conflict).
 **Order (AI #1):** line tax on the rule graph → Israel and US as rule packs (data, with sources) →
 entity-period rules (returns and filings per entity per year) → the Facts screen (AI #2) → learning
 suggests facts and rules, never sets them.
+
+## 11. Spreadsheet Lab with GridCraft (owner's report, 12 Oct) — adopted as an optional epic, later
+
+Checked against the repos (storytold/gridcraft 0.6.1, storytold/craft-libs 0.1.0): pure Rust, ~121k lines, MIT OR
+Apache-2.0, alpha, browser build is a WebAssembly canvas app (`apps/gridcraft-web`), not a React component. The
+ArtCraft brand is excluded from the licence (NOTICE, docs/brand/LICENSE-brand.txt). craft-libs (atomic files,
+printing, macOS quit, egui UI) is desktop plumbing that LedgerFlow does not need.
+
+- **Rule that never changes:** the spreadsheet never writes to the books. Data goes in one way: a report snapshot
+  made on the server. Any change goes back through our own screens (InlineEdit, Explain-number).
+- **Shape:** a separate build artifact served from its own origin, in a sandboxed iframe, with a typed postMessage
+  bridge that carries no login tokens. "Explain in LedgerFlow" on a cell opens our drill-down.
+- **Order:** SL-1 licence notice and no-brand check; SL-2 server report snapshot (read only, with provenance ids);
+  SL-3 the iframe and bridge behind a feature flag; SL-4 Explain-in-LedgerFlow; SL-5 export to .xlsx.
+- **Not before:** the tax and payroll work in §6 and §10. Native Pivot Sheet and pins stay the main way to analyse.
