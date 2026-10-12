@@ -108,3 +108,22 @@ test('viewers and guests can read profiles but cannot open an editor',()=>{
   view.unmount();setComponentWorkspace('owner');useAuthStore.setState({isGuest:true});render(<TaxProfilesSettings/>);
   assert.equal(screen.queryByRole('button',{name:'Edit this profile'}),null);
 });
+
+test('malformed profile data is an explicit refusal, never an empty-looking editable record',()=>{
+  profiles({books:{name:{unexpected:'object'}}} as unknown as TaxProfiles);
+  render(<TaxProfilesSettings/>);
+  assert.match(screen.getByRole('alert').textContent||'',/cannot be displayed safely/);
+  assert.equal(screen.queryByRole('button',{name:'Edit this profile'}),null);
+});
+
+test('a role loss during token retrieval prevents the write and preserves the draft',async()=>{
+  profiles({books:{name:'Before'}});render(<TaxProfilesSettings/>);edit();
+  fireEvent.change(screen.getByLabelText('Profile name'),{target:{value:'Retained draft'}});
+  let tokenRequested=false;let finish:(token:string)=>void=()=>{};let writes=0;
+  mock.method(useAuthStore.getState().user!,'getIdToken',()=>{tokenRequested=true;return new Promise<string>(resolve=>{finish=resolve;});});
+  globalThis.fetch=async()=>{writes++;return api({});};save();await waitFor(()=>assert.equal(tokenRequested,true));
+  act(()=>useAuthStore.getState().setWorkspaces([{...workspace,uid:'another-owner',roles:{'test-user':'viewer'}}]));
+  await act(async()=>finish('delayed-token'));
+  assert.match(screen.getByRole('alert').textContent||'',/permissions changed/);assert.equal(writes,0);
+  assert.equal((screen.getByLabelText('Profile name') as HTMLInputElement).value,'Retained draft');
+});

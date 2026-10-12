@@ -28,7 +28,7 @@ test('phone tax profiles preserve Hebrew drafts on refusal, save by keyboard and
     };
     createRoot(document.getElementById('fixture')).render(React.createElement(Screen));
   });
-  const profile=page.getByLabel('Profile',{exact:true});await profile.selectOption('world:entity/branch');
+  const profile=page.getByRole('combobox',{name:'Profile',exact:true});await profile.selectOption('world:entity/branch');
   await expect(page.getByText('Inherited from').filter({has:page.locator('bdi', {hasText:'world:entity'})})).toHaveCount(3);
   await expect(page.locator('dd').filter({hasText:'ירושלים'})).toContainText('the books');
   await profile.selectOption('books');

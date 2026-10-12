@@ -65,6 +65,9 @@ function ScopedTaxProfiles() {
       const next:TaxProfiles=submitted.target==='books'?{...latest,books:submitted.draft}:{...latest,labels:{...latest.labels,[submitted.target]:submitted.draft}};
       const token=await getIdToken();if(!current())return;
       if(!token)throw new Error('Sign in again before saving this profile.');
+      const active=useAuthStore.getState(), activeWorkspace=active.getCurrentWorkspace();
+      const activeRole=activeWorkspace?.uid===uid?'owner':activeWorkspace?.roles?.[uid];
+      if(active.isGuest||(activeRole!=='owner'&&activeRole!=='accountant'))throw new Error('Your permissions changed. The draft is retained; reopen this workspace before saving.');
       const res=await fetch(`/api/v1/workspaces/${encodeURIComponent(workspace.id)}/tax-profiles`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({profiles:next})});
       const result=await res.json().catch(()=>({}));if(!current())return;
       if(!res.ok)throw new Error(result.message||result.error||'The tax profile was not saved.');
@@ -75,6 +78,8 @@ function ScopedTaxProfiles() {
     finally{pending.current=false;if(current())setBusy(false);}
   }
   if(!workspace)return <p>No workspace is selected.</p>;
+  const unreadable=taxProfilesProblem(profiles);
+  if(unreadable)return <section aria-label="Tax profiles" className="p-4"><h2>Tax profiles</h2><p role="alert">The saved tax profiles cannot be displayed safely: {unreadable}. Reload the workspace or ask an accountant to review them.</p></section>;
   const selected=resolved(target);
   const addLabel=()=>{const key=newLabel.trim(),problem=taxProfilesProblem({labels:{[key]:{}}});if(problem){setError(problem);return;}edit(key);};
   return <section aria-label="Tax profiles" className="space-y-4 p-4 min-w-0"><h2>Tax profiles</h2><p>Country, place and registrations for these books and their label values. Grey inherited values come from the nearest parent, then the books. These are declarations used for calculation; saving a profile does not verify a registration or make a filing ready.</p>
