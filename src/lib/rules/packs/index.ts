@@ -16,7 +16,6 @@ import { usNexusPack } from './usNexusPack';
 import { productTaxabilityPack } from './productTaxabilityPack';
 import { filingPack } from './filingPack';
 import { registrationThresholdPack } from './registrationThresholdPack';
-import { usLocalRatePack } from './usLocalRatePack';
 import { marketplaceChannelPack } from './marketplacePack';
 import type { TaxEffect, TaxRulePack, UnmappedRow } from './shared';
 

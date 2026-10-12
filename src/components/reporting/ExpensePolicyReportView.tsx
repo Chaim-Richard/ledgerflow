@@ -13,7 +13,6 @@ import type { Bill } from '../../types';
 
 const field = 'min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]';
 const CSV_HEADERS = ['Claim date', 'Person', 'State', 'Account', 'Line', 'Amount', 'Finding', 'Rule', 'What it asks'];
-const T = '\t';
 
 /** The lines of a claim: the bill's own splits (every claim line is one split). */
 const claimLines = (bill: Bill) => (bill.splits || []).map(split => ({ description: split.description || '', accountId: split.accountId, amountCents: split.amountCents }));
@@ -47,6 +46,8 @@ export default function ExpensePolicyReportView({ endDate = '' }: { endDate?: st
   interface PolicyRow {
     bill: Bill;
     claim: ReturnType<typeof claimOf>;
+    /** the claim line the finding is about, 1-based; 0 when the whole claim is the subject */
+    line: number;
     account: string;
     amountCents: number;
     finding: 'Within policy' | 'Over the maximum' | 'Receipt missing' | 'Receipt not checked here';
@@ -58,13 +59,13 @@ export default function ExpensePolicyReportView({ endDate = '' }: { endDate?: st
     const lines = claimLines(bill).map(line => ({ line }));
     const check = checkExpenseClaim(policy, { date: bill.date || to, lines });
     const findings: Array<ExpenseBreach | ExpenseNotice> = [...check.breaches, ...check.notices];
-    if (!findings.length) return [{ bill, claim, account: '', amountCents: bill.amountCents || 0, finding: 'Within policy' as const, rule: '', ask: '' }];
+    if (!findings.length) return [{ bill, claim, line: 0, account: '', amountCents: bill.amountCents || 0, finding: 'Within policy' as const, rule: '', ask: '' }];
     return findings.map(finding => {
       const line = claimLines(bill)[finding.line - 1];
       const findingLabel: PolicyRow['finding'] = finding.kind === 'over-max' ? 'Over the maximum'
         : finding.kind === 'receipt-missing' ? 'Receipt missing' : 'Receipt not checked here';
       return {
-        bill, claim, account: line?.accountId || '',
+        bill, claim, line: finding.line, account: line?.accountId || '',
         amountCents: 'amountCents' in finding ? finding.amountCents : line?.amountCents || 0,
         finding: findingLabel,
         rule: finding.ruleId, ask: finding.message,
@@ -105,7 +106,7 @@ export default function ExpensePolicyReportView({ endDate = '' }: { endDate?: st
         <th scope="col">Claim</th><th scope="col">State</th><th scope="col">Account</th>
         <th scope="col">Amount</th><th scope="col">Finding</th><th scope="col">What the policy asks</th>
       </tr></thead>
-      <tbody>{rows.map((row, index) => <tr key={`${row.bill.id}-${row.account}-${index}`} className="border-t border-[var(--line)] align-top">
+      <tbody>{rows.map(row => <tr key={`${row.bill.id}-${row.line}-${row.finding}-${row.rule}`} className="border-t border-[var(--line)] align-top">
         <th scope="row" className="text-left"><bdi>{row.bill.date} · {row.bill.number || row.bill.id}</bdi><div className="text-xs text-[var(--muted)]"><bdi>{row.claim?.submittedByName || row.bill.vendorName}</bdi></div></th>
         <td>{row.claim?.state || ''}</td>
         <td><code>{row.account || '—'}</code></td>

@@ -44,8 +44,10 @@ const TABLES: Record<string, [string, string[]]> = {
   // credit notes and vendor credits are saved through POST /api/v1/transactions/bulk
   creditNotes: ['CreditNote', ['exchangeRate', 'tags', 'metadata', 'taxAmountCents', 'taxInclusive', 'taxVersion', 'taxTreatment', 'refundedCents', 'returnedGoods']],
   vendorCredits: ['VendorCredit', ['exchangeRate', 'tags', 'metadata', 'taxAmountCents', 'taxInclusive', 'taxVersion', 'taxTreatment', 'refundedCents', 'returnedGoods']],
-  // numberingSeries lives in its own collection; the field on the model is a legacy read path
-  workspaces: ['Workspace', ['numberingSeries', 'retention', 'setupCompletedAt', 'openingBalanceDate', 'branding', 'scheduledReportsSent', 'closeSteps', 'ledgerHealth', 'alerts', 'alertsSent', 'payrollApproval', 'requireTwoStep', 'refuseNegativeStock', 'modules', 'goodsLeaveWith', 'allocationRules', 'priceLists', 'salesReps', 'twoPersonRule', 'roleDashboards', 'approvalDelegates', 'taxProfiles']],
+  // numberingSeries lives in its own collection; the field on the model is a legacy read path.
+  // expensePolicy (A-74) is read by the Expense Policy Check report; the client never saves it, so the
+  // workspace's allowed-field list (and the migration that carries it) stays AI #1's to add.
+  workspaces: ['Workspace', ['numberingSeries', 'retention', 'setupCompletedAt', 'openingBalanceDate', 'branding', 'scheduledReportsSent', 'closeSteps', 'ledgerHealth', 'alerts', 'alertsSent', 'payrollApproval', 'requireTwoStep', 'refuseNegativeStock', 'modules', 'goodsLeaveWith', 'allocationRules', 'priceLists', 'salesReps', 'twoPersonRule', 'roleDashboards', 'approvalDelegates', 'taxProfiles', 'expensePolicy']],
   notifications: ['AppNotification', []],
   purchaseOrders: ['PurchaseOrder', []],
 };
