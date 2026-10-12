@@ -2507,7 +2507,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CF-03 Rate hierarchy
 - [ ] CF-04 Working time / capacity
 - [ ] CF-05 Per-user bookmarks
-- [ ] CF-06 Export templates
+- [~] CF-06 Export templates — **11 Oct (AI #2, C-38):** named C-29 column/order choices for indexed report tables and statement period groups, scoped per user/workspace/report on this browser. Apply then use the existing CSV action; changed schemas are refused, and blocked storage is explicit. Fifteen targeted tests and actual phone CSV download pass; full final gates pending on `codex/c38-export-templates`.
 - [ ] CF-07 Comments on customer / project
 - [ ] CF-08 Meta fields on any entity
 - [ ] CG-01 Custom field entities
