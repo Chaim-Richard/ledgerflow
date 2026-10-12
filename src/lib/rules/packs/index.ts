@@ -17,6 +17,7 @@ import { productTaxabilityPack } from './productTaxabilityPack';
 import { filingPack } from './filingPack';
 import { registrationThresholdPack } from './registrationThresholdPack';
 import { usLocalRatePack } from './usLocalRatePack';
+import { marketplaceChannelPack } from './marketplacePack';
 import type { TaxEffect, TaxRulePack, UnmappedRow } from './shared';
 
 export { usSalesTaxPack } from './usSalesTaxPack';
@@ -27,6 +28,7 @@ export { ilVatPack } from './ilVatPack';
 export { usNexusPack } from './usNexusPack';
 export { productTaxabilityPack, stateSalesRuleIds } from './productTaxabilityPack';
 export { registrationThresholdPack } from './registrationThresholdPack';
+export { marketplaceChannelPack, marketplaceRuleId } from './marketplacePack';
 export {
   usLocalRatePack, localRateKey,
   type LocalKeyAttribute, type LocalRateEffect, type LocalRateKeyResult,
@@ -36,7 +38,7 @@ export { rateRule, where, slug, type TaxEffect, type TaxRulePack, type RateEffec
 
 /** Every pack, in the order a screen should list them. */
 export function taxRulePacks(): TaxRulePack[] {
-  return [ilVatPack(), usSalesTaxPack(), usNexusPack(), productTaxabilityPack(), canadaVatPack(), ukVatPack(), euVatPack(), registrationThresholdPack(), filingPack()];
+  return [ilVatPack(), usSalesTaxPack(), usNexusPack(), productTaxabilityPack(), canadaVatPack(), ukVatPack(), euVatPack(), registrationThresholdPack(), filingPack(), marketplaceChannelPack()];
 }
 
 /** Every rule in every pack. */

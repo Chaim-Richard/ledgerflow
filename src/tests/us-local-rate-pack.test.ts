@@ -156,7 +156,7 @@ test('the rules carry the evidence trail: dates, source, row number and edition'
   assert.equal(rule.validTo, '2026-12-31');
   assert.match(rule.source.url, /^https:\/\/cdtfa\.ca\.gov\//);
   assert.equal(rule.status, 'calculation');
-  const effect = rule.effect as { sourceRow: number; edition?: string; basis: string };
+  const effect = rule.effect as unknown as { sourceRow: number; edition?: string; basis: string };
   assert.equal(effect.sourceRow, 2);
   assert.equal(effect.edition, 'CDTFA 2026 Q4 (verified manually)');
   assert.equal(effect.basis, 'combined');
