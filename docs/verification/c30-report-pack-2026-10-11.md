@@ -22,8 +22,8 @@ not claimed complete.
   cleaned up between tests. All three startup cases then completed.
 - Latest full lint **fails** in main's `src/lib/assetTagAdapter.ts:36`:
   `preserve-caught-error` requires the duplicate-tag error to retain its cause.
-  This belongs to the asset-tag owner; it was not silently suppressed or edited
-  in this report branch. Do not describe this integrated branch as all green.
+  This was handed to the asset-tag owner without suppressing the check. The owner
+  subsequently fixed it on main; the final integration below includes that fix.
 - The new unique asset-tag migration was applied to the local test database;
   `assets_workspace_tag_uq` exists. This does not assert deployed migration state.
 
@@ -35,3 +35,15 @@ authorized PRs, manual workflow starts and checking results. However, this
 environment's request to list Actions runs returned `Forbidden`; CLI auth also
 reports an invalid configured token. Git transport is separate. No PR creation,
 workflow run identifier or GitHub success is claimed without a returned result.
+
+## Final follow-up on main `f53ef945`
+
+Normal merge `a1a5eda5` preserves the expanded C-57..C-71 queue, incoming product
+features and Claude's startup cleanup. The fixture retains collection-shaped
+stubs plus Claude's auth/realtime disposal. Types, ESLint (212 warnings / zero
+errors), production build, fresh RLS and 15 focused unit/structural cases passed.
+Fresh Chromium: 11/11 passed across the actual report-pack PDF, both dashboard
+widths, all chart-kind cases and asset/purchase cases. The earlier full-suite
+coverage/browser figures remain pinned to their original integration; no new
+all-suite run on `f53ef945` is claimed. GitHub's automatic checks are separate
+evidence and still cannot be read through this environment's forbidden API.
