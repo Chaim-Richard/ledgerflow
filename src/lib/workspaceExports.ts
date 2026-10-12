@@ -1,4 +1,8 @@
 /**
+ * PLAN §10: the filings each entity owes for a year. Reachable here until AI #2's C-58 filings calendar uses it.
+ */
+export { entityFilings } from './tax/entityFilings';
+/**
  * PLAN US-3: a US state sales tax return per permit. Reachable here until AI #2's C-59 return screen uses it.
  */
 export { usSalesTaxReturn } from './tax/usSalesTaxReturn';

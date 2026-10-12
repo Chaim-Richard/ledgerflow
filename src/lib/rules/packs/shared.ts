@@ -43,7 +43,17 @@ export interface RegistrationThresholdEffect {
   guidanceUrl?: string;
 }
 
-export type TaxEffect = RateEffect | NexusEffect | RegistrationThresholdEffect;
+/** The effect of a filing rule (PLAN §10, entity-period scope): a return or form the entity files. */
+export interface FilingEffect {
+  kind: 'filing';
+  /** the form's own name, e.g. "Form 1120-S", "דוח שנתי 1214" */
+  form: string;
+  frequency: 'monthly' | 'bimonthly' | 'quarterly' | 'yearly';
+  /** when it is due, in words from the source ("15th day of the 3rd month after year end") */
+  due: string;
+}
+
+export type TaxEffect = RateEffect | NexusEffect | RegistrationThresholdEffect | FilingEffect;
 
 /** A table row a pack could not turn into a rule (a category it cannot name, a place it does not know). */
 export interface UnmappedRow {
