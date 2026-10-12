@@ -42,14 +42,18 @@ for (const width of [1280, 390]) for (const theme of ['light', 'dark'] as const)
       await expect(main).not.toContainText('Something went wrong');
       // The app scrolls inside main, so fullPage alone would clip the report body.
       // Keep the real responsive width and expand only the capture height to fit it.
-      for (let attempt = 0; attempt < 3; attempt++) {
+      if (screen === 'transactions') {
+        // A virtual grid grows with its viewport; use a fixed height and require a real row.
+        await page.setViewportSize({ width, height: 1250 });
+        await expect(main.locator('[role="presentation"] > [data-column="description"]').first()).toBeVisible();
+      } else for (let attempt = 0; attempt < 3; attempt++) {
         const overflow = await main.evaluate(element => element.scrollHeight - element.clientHeight);
         if (overflow <= 1) break;
         const height = page.viewportSize()!.height + overflow;
         expect(height).toBeLessThan(16_000);
         await page.setViewportSize({ width, height });
       }
-      await expect.poll(() => main.evaluate(element => element.scrollHeight - element.clientHeight)).toBeLessThanOrEqual(1);
+      if (screen !== 'transactions') await expect.poll(() => main.evaluate(element => element.scrollHeight - element.clientHeight)).toBeLessThanOrEqual(1);
       await page.mouse.move(0, 0);
       // A tight absolute pixel allowance catches small regressions even on tall screens.
       await expect(page).toHaveScreenshot(`${screen}-${width}-${theme}.png`, {
