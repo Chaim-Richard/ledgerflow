@@ -8,8 +8,10 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { useDataNeedsStore } from '../stores/useDataNeedsStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { setComponentWorkspace } from './helpers/componentFixtures';
+import { getSupabase } from '../lib/db/client';
 
-afterEach(() => { cleanup(); });
+// close the database client the screen opened, or the test process never ends (the suite then ran past CI's limit)
+afterEach(async () => { cleanup(); getSupabase().realtime.disconnect(); await getSupabase().auth.dispose(); });
 
 test('first-run decision waits for both collections from the current workspace', async () => {
   const ws = setComponentWorkspace();

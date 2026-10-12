@@ -88,6 +88,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Inspect the developer-only administration demonstration. Explore its example panels when developer mode is enabled. Demonstration telemetry is distinct from production monitoring.",
   },
   reports: {
+    "form-856":
+      "Review tax withheld at source from vendor payments, per vendor and tax year, with the certificate numbers the payments relied on. Choose the year and download the CSV for the form. Payments without a certificate number are listed as missing, never filled in; nothing is filed here.",
     "customer-cohorts": "Group customers by their earliest observed issued-invoice month and inspect each later month's total invoicing, distinct active customers or percentage. The first invoice can predate the selected display window. Incomplete invoice history makes these cohorts provisional.",
     "asset-register": "Review fixed assets held at a chosen date, with acquisition cost, recorded depreciation and book value. See category totals or export a numeric CSV. Historical cost adjustments after the selected date are flagged because saved asset metadata is current.",
     "one-sided-transfers": "Review internal bank transfers with a missing or unequal ledger cash side, or a confirmed statement match on only one side. Warnings are evidence to review, not proof that funds are missing. Results are provisional when bank statement or ledger history is incomplete.",
