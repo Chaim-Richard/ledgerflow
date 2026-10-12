@@ -121,7 +121,7 @@ test('E-15: invalid national lengths or required letter positions fail', () => {
     ['SE', 'SE123456789002'],
     ['DK', 'DK1234567'],
     ['LT', 'LT1234567890'],
-    ['FR', 'FR123456789'],
+    ['FR', 'FR12345678'],
     ['ES', 'ESA12345678Z'],
     ['GB', 'GB12345678'],
   ] as const) {
