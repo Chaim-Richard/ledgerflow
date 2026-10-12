@@ -1,4 +1,10 @@
 /**
+ * E-16: read-only USPS region and ZIP+4 recognition; never proof of tax
+ * jurisdiction or deliverable address. Needs authoritative geocoding/lookup.
+ */
+export { parseUsStateAndZip, US_POSTAL_REGIONS } from './usAddressStateZip';
+
+/**
  * E-14: US tax-ID formatting, masked display and warning helpers.
  * Read-only staging. Explicit EIN/SSN choice; never infers registration,
  * persists sensitive identifiers or enables 1099/W-9 filing.
