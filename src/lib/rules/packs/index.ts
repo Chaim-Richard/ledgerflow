@@ -14,6 +14,7 @@ import { ukVatPack } from './ukVatPack';
 import { ilVatPack } from './ilVatPack';
 import { usNexusPack } from './usNexusPack';
 import { productTaxabilityPack } from './productTaxabilityPack';
+import { registrationThresholdPack } from './registrationThresholdPack';
 import type { TaxEffect, TaxRulePack, UnmappedRow } from './shared';
 
 export { usSalesTaxPack } from './usSalesTaxPack';
@@ -23,11 +24,12 @@ export { ukVatPack } from './ukVatPack';
 export { ilVatPack } from './ilVatPack';
 export { usNexusPack } from './usNexusPack';
 export { productTaxabilityPack, stateSalesRuleIds } from './productTaxabilityPack';
-export { rateRule, where, slug, type TaxEffect, type TaxRulePack, type RateEffect, type NexusEffect, type UnmappedRow } from './shared';
+export { registrationThresholdPack } from './registrationThresholdPack';
+export { rateRule, where, slug, type TaxEffect, type TaxRulePack, type RateEffect, type NexusEffect, type RegistrationThresholdEffect, type RegistrationThresholdWindow, type UnmappedRow } from './shared';
 
 /** Every pack, in the order a screen should list them. */
 export function taxRulePacks(): TaxRulePack[] {
-  return [ilVatPack(), usSalesTaxPack(), usNexusPack(), productTaxabilityPack(), canadaVatPack(), ukVatPack(), euVatPack()];
+  return [ilVatPack(), usSalesTaxPack(), usNexusPack(), productTaxabilityPack(), canadaVatPack(), ukVatPack(), euVatPack(), registrationThresholdPack()];
 }
 
 /** Every rule in every pack. */

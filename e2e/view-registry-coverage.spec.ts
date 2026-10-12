@@ -78,6 +78,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Customer Cohorts', componentName: 'CustomerCohortsReportView' },
     { label: 'Asset Register', componentName: 'AssetRegisterReportView' },
     { label: 'Transfer Check', componentName: 'OneSidedTransfersReportView' },
+    { label: 'Registration Threshold Watch', componentName: 'RegistrationThresholdWatchReportView' },
     { label: 'Budget vs Actual', componentName: 'BudgetActualReportView' },
     { label: 'Sales by Item', componentName: 'SalesByItemReportView' },
     { label: 'Purchase Trends by Vendor', componentName: 'PurchaseTrendsView' },
