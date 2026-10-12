@@ -589,6 +589,39 @@ before:
 - [ ] **A-49 Customer quote acceptance list** on the customer portal, the customer sees their open estimates and proposals with Accept (uses Y-20 signing); tests.
 - [ ] **A-50 Reorder suggestions** items below their reorder point grouped by preferred vendor, with a suggested quantity; 'Create purchase orders' makes drafts. Tests.
 
+### Even bigger queue for AI #3 (Claude, 12 Oct — the last five days of work lasted five hours). Same rules as the queue above.
+
+- [ ] **A-51 Canada provincial filing calendar** GST/HST/QST filing frequencies and due dates by annual revenue band, dated rules with CRA/Revenu Québec sources.
+- [ ] **A-52 EU reverse-charge rules** B2B services and goods between EU countries: reverse charge when the buyer has a valid VAT number (fact) — exclude/override rules over the VAT pack; tests with three country pairs.
+- [ ] **A-53 UK VAT special schemes** flat rate scheme percentages by business type and the cash accounting threshold, as dated rules with GOV.UK sources (calculation status).
+- [ ] **A-54 US use tax rules** when a buyer owes use tax (seller collected none, item taxable in the buyer's state) — rules + a read-only 'use tax you may owe' report from bills.
+- [ ] **A-55 US exemption certificate types** resale, manufacturing, nonprofit, government: which states accept which (incl. the multistate SST/MTC forms), dated rows with sources; the customer certificate (T-05) gets a type.
+- [ ] **A-56 Israeli VAT on imports and services from abroad** reverse-charge self-assessment for services bought from abroad (Section 20 / 'מע"מ עסקאות'), as rules; report of bills it applies to.
+- [ ] **A-57 Israeli VAT reporting frequency** monthly vs bimonthly by turnover, dated with ITA source; a fact on the registration and a check that the chosen frequency matches.
+- [ ] **A-58 Sales tax holidays** US state sales tax holidays (dates, categories, price caps) as dated rules; tests on two states.
+- [ ] **A-59 Rule pack source checker** a script that lists every rule's source URL and checks each answers (HTTP 200) — run by hand, report in docs/eval/; no network in unit tests.
+- [ ] **A-60 Rule pack diff report** when a pack changes, a readable table of what rules were added/ended/changed (dates, rates) for the accountant review; tests.
+- [ ] **A-61 Quote versions** an estimate keeps its earlier versions (who, when, what changed); the customer sees the latest; compare two versions.
+- [ ] **A-62 Blanket purchase orders** a PO with a total and a validity period that several receipts/bills draw down; shows what is left. No posting.
+- [ ] **A-63 Landed cost preview** on a receipt, enter freight/duty to spread by value or quantity; shows the per-unit cost after spreading (preview only; AI #1 posts BF-04).
+- [ ] **A-64 Bin locations** stock items get a bin within a location; pick lists sort by bin. No quantity change.
+- [ ] **A-65 Pick, pack and ship lists** from sales orders: a pick list (by bin), a packing slip, a shipped mark with carrier and tracking number.
+- [ ] **A-66 Return authorisations (RMA)** a customer return request with reason, approval and an RMA number before goods come back; links to the existing sales return.
+- [ ] **A-67 Warranty tracking** serial numbers (A-33) get a warranty end date; a report of items under warranty by customer.
+- [ ] **A-68 Subscription plans list** customers' recurring invoices grouped as plans with MRR/ARR and churn by month (read-only analytics).
+- [ ] **A-69 Customer credit limits** a credit limit per customer; the invoice form warns when the new balance passes it; a report of customers over limit.
+- [ ] **A-70 Dunning letters** overdue reminders in three steps with their own wording (Hebrew/English), sent through the existing email path; a log per invoice.
+- [ ] **A-71 Vendor price history** each item's purchase price per vendor over time from bill lines; chart and CSV.
+- [ ] **A-72 Customer statements by entity** statement of account per customer filtered by the entity label (World/Entity), using the existing statement PDF.
+- [ ] **A-73 Project milestones billing view** per project: milestones, what is invoiced and what is left (from V-09 data); read-only.
+- [ ] **A-74 Expense policy checks** per expense category: a maximum and needed receipt; expense claims show breaches before approval. No posting.
+- [ ] **A-75 Mileage claims** distance × a dated rate per country (rows with sources) into an expense claim line.
+- [ ] **A-76 Per diem tables** daily allowance by country as dated rows with sources; used on expense claims.
+- [ ] **A-77 Document templates per entity** each entity label can have its own logo, address and footer on PDFs (inherits the books' branding).
+- [ ] **A-78 Item images** an image per item shown on the item list and optionally on the invoice PDF; uses the existing attachments store.
+- [ ] **A-79 Barcode scanning for items** scan an item barcode (camera or scanner input) to add a line on invoices, receipts and counts.
+- [ ] **A-80 Import price lists from CSV** prices per item and list from a spreadsheet, with preview and undo like the other imports.
+
 ## AI #4 (Codex): tasks (written by Claude, 6 Oct)
 
 Each task is a whole feature with tests, in its own area. **Don't edit** AI #1's files (the table
@@ -1521,3 +1554,4 @@ Same rules as every helper AI: one branch and PR per task from the latest main, 
 - 2026-10-11 AI #3 (Arena): **A-28 done** (`src/lib/tax/usFilingCalendar.ts` + `us-filing-calendar.test.ts`, CAPABILITIES row 153): one sourced row per state and DC with the common frequencies, the due day and a weekend-moving `filingDueDate`. With A-23 above and the tax batch, the A-queue is now complete except the `[~]` wirings that live in AI #1-reserved files (A-18/A-19/A-21/A-23/A-32/A-33/A-35/A-36/A-37): they are built, tested and listed in CAPABILITIES 143–153, waiting for the screens/jobs. Pushed: `arena/3659d972-ledgerflow` and [PR #72](https://github.com/shmuelbiller1/ledgerflow/pull/72).
 - 2026-10-11 AI #3 (Arena): **A-23 done end to end** — the Form 856 library plus its screen on the Reports tab (`src/components/reporting/Form856ReportView.tsx` with registry help, the e2e coverage line and `form-856-view.test.tsx`), CAPABILITIES row 148 now Available with limits. Year picker over the recorded payments, per-vendor paid/base/withheld/rate, certificates and months, what is missing, CSV; nothing is filed. A-28 above it was the last open tax task, so the remaining A-queue is the `[~]` wirings that live in AI #1-reserved files (A-18/A-19/A-21/A-32/A-33/A-35/A-36/A-37): built, tested and listed in CAPABILITIES 143–153, waiting for their screens/jobs.
 - 2026-10-12, Claude (AI #1): merged #71 and #72. AI #3's queue was down to A-15 and A-16: added A-39..A-50 (registration thresholds, US local rate packs, marketplace and digital-goods rules, Israeli default withholding rates as rules; requisitions, cycle counts, delivery notes, vendor scorecard, price lists per currency, portal quote acceptance, reorder suggestions).
+- 2026-10-12, Claude (AI #1), at the owner's request: AI #3 gets A-51..A-80 (30 more): tax rule packs (Canada filing, EU reverse charge, UK schemes, US use tax, certificate types, Israeli imports/services and reporting frequency, sales tax holidays, source checker, pack diff) and product features (quote versions, blanket POs, landed cost preview, bins, pick/pack/ship, RMA, warranties, subscriptions MRR, credit limits, dunning, vendor price history, statements by entity, milestones view, expense policies, mileage, per diem, templates per entity, item images, barcode scanning, price list import).
