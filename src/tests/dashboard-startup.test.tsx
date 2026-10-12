@@ -14,6 +14,7 @@ const realFetch = globalThis.fetch;
 beforeEach(() => {
   globalThis.fetch = (async input => new Response(JSON.stringify(String(input).includes('/rest/v1/') ? [] : { banks: [] }), { status: 200, headers: { 'content-type': 'application/json' } })) as typeof fetch;
 });
+// Close the database client opened by the screen so the test process can finish.
 afterEach(async () => { cleanup(); globalThis.fetch = realFetch; getSupabase().realtime.disconnect(); await getSupabase().auth.dispose(); });
 
 test('first-run decision waits for both collections from the current workspace', async () => {
