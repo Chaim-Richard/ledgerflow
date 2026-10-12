@@ -174,11 +174,14 @@ test('a one-month financial line and area keep visible value markers', async ({ 
   });
   await page.goto('/#charts');
   const mix = page.getByRole('region', { name: 'Monthly Profitability & Mix', exact: true });
+  await expect(mix.locator('.recharts-surface')).toBeVisible();
   const start = mix.getByLabel('Monthly Profitability & Mix brush start');
-  await expect(start).toBeVisible();
-  const last = await start.getAttribute('max');
-  await start.press('End');
-  await expect(start).toHaveValue(last!);
+  // The basic guest ledger already has one month; larger guest fixtures need zooming.
+  if (await start.count()) {
+    const last = await start.getAttribute('max');
+    await start.press('End');
+    await expect(start).toHaveValue(last!);
+  }
   await mix.getByRole('button', { name: 'Line', exact: true }).click();
   await expect(mix.locator('.recharts-line-dot')).toHaveCount(2);
   await mix.getByRole('button', { name: 'Area', exact: true }).click();
