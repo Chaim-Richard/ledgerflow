@@ -47,3 +47,26 @@ widths, all chart-kind cases and asset/purchase cases. The earlier full-suite
 coverage/browser figures remain pinned to their original integration; no new
 all-suite run on `f53ef945` is claimed. GitHub's automatic checks are separate
 evidence and still cannot be read through this environment's forbidden API.
+
+## 12 Oct: repair the red GitHub PDF extraction check
+
+PR #73's prior run #702 passed validate and both timezone suites but failed its
+PDF browser assertion. The old test helper read only hex text operators with
+two-byte glyphs; literal strings and one-byte font codes were missing. The helper
+now handles both PDF string forms, escaped literal bytes and the font's codespace.
+Three regression cases retain ASCII dates, cents, page labels and mixed Hebrew
+glyphs. The browser's existing expected date, amount, page count and print-chrome
+assertions are unchanged; explicit checks for books/sales/bank Hebrew words were
+added, with extracted text attached for diagnosis. This is a test-reader repair,
+not a change to report calculations or a reversal of numeric text.
+
+Merged main `c769abee` normally as `65f6c336`, preserving the four merged Codex
+features and Claude's memo/row-key/collection-screen fixes. On repair `b52a9ea1`:
+clean npm install using the current lockfile; types; lint **212 warnings / zero
+errors**; production build; **2598 tests / 672 suites, all passed with zero
+skipped/cancelled** under coverage (**80.86% lines / 78.83% branches / 81.50%
+functions**, unchanged gates); and fresh RLS all passed. Fresh Chromium **13/13**
+passed across the actual PDF, bookmarks, export templates, price mismatch, tax
+profiles, both dashboard widths, chart kinds and the nested record-details flow.
+The earlier 196- and 201-case browser results remain separately pinned; no new
+full-browser or green GitHub result is inferred from these focused checks.
