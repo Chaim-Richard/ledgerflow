@@ -11,6 +11,7 @@ import crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
 import { BayesianClassifier } from "../../lib/algorithms";
 import { callCostCents } from "../../lib/ai/modelPricing";
+import { tracedClient, type AiCallTrace } from "../services/aiGateway";
 import { getDb } from "../db/firestore";
 
 /** Routes moved out of server.ts (F-01), registered in the same place and order. */
@@ -117,8 +118,9 @@ You MUST output a valid JSON object matching this schema exactly:
          throw new Error("GEMINI_API_KEY environment variable is missing, and no User API Key was provided in settings.");
       }
 
-      const genAI = new GoogleGenAI({ apiKey, httpOptions: { headers: { "User-Agent": "aistudio-build" } } });
-      const startedAt = performance.now();
+      // through the AI gateway, which measures the call and prices it from the dated table
+      const traces: AiCallTrace[] = [];
+      const genAI = tracedClient(new GoogleGenAI({ apiKey, httpOptions: { headers: { "User-Agent": "aistudio-build" } } }), traces)!;
       const result = await genAI.models.generateContent({
         model: "gemini-2.5-flash",
         contents,
@@ -139,14 +141,16 @@ You MUST output a valid JSON object matching this schema exactly:
       });
 
       // EXACT TOKEN INTEGRITY & BILLING
-      const usage = result.usageMetadata;
-      const promptTokens = usage?.promptTokenCount || Math.floor(JSON.stringify(contents).length / 4);
-      const outputTokens = usage?.candidatesTokenCount || Math.floor((result.text || "").length / 4);
-      const totalTokens = usage?.totalTokenCount || (promptTokens + outputTokens);
+      const trace = traces[traces.length - 1];
+      const promptTokens = trace.inputTokens || Math.floor(JSON.stringify(contents).length / 4);
+      const outputTokens = trace.outputTokens || Math.floor((result.text || "").length / 4);
+      const totalTokens = promptTokens + outputTokens;
 
-      const executionTimeMs = Math.round(performance.now() - startedAt);
-      // the model's dated price (src/lib/ai/modelPricing.ts); a model without one is recorded at no cost, never guessed
-      const priced = callCostCents("gemini-2.5-flash", new Date().toISOString().slice(0, 10), promptTokens, outputTokens);
+      const executionTimeMs = trace.ms;
+      // the gateway's price; when the provider sent no token counts, the estimate is priced the same way
+      const priced = trace.inputTokens || trace.outputTokens
+        ? trace.costCents
+        : callCostCents(trace.model, new Date().toISOString().slice(0, 10), promptTokens, outputTokens);
       const baseCents = priced ?? 0;
       
       // Compute Credits = exact token proxy
@@ -181,7 +185,7 @@ You MUST output a valid JSON object matching this schema exactly:
           weightScore,
           isSelfFunded: isCustomKeyUsed,
           executionTimeMs,
-          model: "gemini-2.5-flash",
+          model: trace.model,
           inputTokens: promptTokens,
           outputTokens,
           ...(priced === undefined ? { costUnknown: true } : { costCents: priced }),

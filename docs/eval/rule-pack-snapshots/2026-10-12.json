@@ -1,0 +1,6251 @@
+{
+  "date": "2026-10-12",
+  "rules": [
+    {
+      "pack": "il-vat",
+      "id": "il-vat-2015-10-01",
+      "name": "Israel standard VAT 17%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2015-10-01",
+      "validTo": "2024-12-31",
+      "isRate": true,
+      "rate": 0.17,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.il/he/departments/israel_tax_authority",
+      "when": [
+        "country=IL"
+      ]
+    },
+    {
+      "pack": "il-vat",
+      "id": "il-vat-2025-01-01",
+      "name": "Israel standard VAT 18%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2025-01-01",
+      "isRate": true,
+      "rate": 0.18,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.il/he/departments/israel_tax_authority",
+      "when": [
+        "country=IL"
+      ]
+    },
+    {
+      "pack": "il-vat",
+      "id": "il-vat-area-eilat",
+      "name": "eilat is outside the ordinary VAT",
+      "scope": "line",
+      "combine": "override",
+      "validFrom": "1986-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.il/he/departments/general/eilat_vat",
+      "when": [
+        "country=IL",
+        "district=eilat"
+      ]
+    },
+    {
+      "pack": "il-vat",
+      "id": "il-vat-area-judea-samaria",
+      "name": "judea-samaria is outside the ordinary VAT",
+      "scope": "line",
+      "combine": "override",
+      "validFrom": "1968-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.il/he/departments/israel_tax_authority",
+      "when": [
+        "country=IL",
+        "district=judea-samaria"
+      ]
+    },
+    {
+      "pack": "il-vat",
+      "id": "il-vat-area-gaza",
+      "name": "gaza is outside the ordinary VAT",
+      "scope": "line",
+      "combine": "override",
+      "validFrom": "1968-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.il/he/departments/israel_tax_authority",
+      "when": [
+        "country=IL",
+        "district=gaza"
+      ]
+    },
+    {
+      "pack": "il-vat",
+      "id": "il-vat-area-duty-free",
+      "name": "duty-free is outside the ordinary VAT",
+      "scope": "line",
+      "combine": "override",
+      "validFrom": "1975-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.il/he/departments/israel_tax_authority",
+      "when": [
+        "country=IL",
+        "district=duty-free"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-al-2000-01-01",
+      "name": "Alabama state sales tax 4%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.04,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.alabama.gov/",
+      "when": [
+        "country=US",
+        "state=AL"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ak-2000-01-01",
+      "name": "Alaska state sales tax 0%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.alaska.gov/",
+      "when": [
+        "country=US",
+        "state=AK"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-az-2013-06-01",
+      "name": "Arizona state sales tax 5.6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-06-01",
+      "isRate": true,
+      "rate": 0.056,
+      "effectKind": "rate",
+      "sourceUrl": "https://azdor.gov/",
+      "when": [
+        "country=US",
+        "state=AZ"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ar-2013-07-01",
+      "name": "Arkansas state sales tax 6.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-07-01",
+      "isRate": true,
+      "rate": 0.065,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.dfa.arkansas.gov/",
+      "when": [
+        "country=US",
+        "state=AR"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ca-2004-07-01",
+      "name": "California state sales tax 7.25%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2004-07-01",
+      "isRate": true,
+      "rate": 0.0725,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.cdtfa.ca.gov/",
+      "when": [
+        "country=US",
+        "state=CA"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-co-2001-01-01",
+      "name": "Colorado state sales tax 2.9%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2001-01-01",
+      "isRate": true,
+      "rate": 0.029,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.colorado.gov/",
+      "when": [
+        "country=US",
+        "state=CO"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ct-2011-07-01",
+      "name": "Connecticut state sales tax 6.35%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2011-07-01",
+      "isRate": true,
+      "rate": 0.0635,
+      "effectKind": "rate",
+      "sourceUrl": "https://portal.ct.gov/DRS/",
+      "when": [
+        "country=US",
+        "state=CT"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-dc-2013-10-01",
+      "name": "District of Columbia state sales tax 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-10-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://otr.cfo.dc.gov/",
+      "when": [
+        "country=US",
+        "state=DC"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-de-2000-01-01",
+      "name": "Delaware state sales tax 0%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.delaware.gov/",
+      "when": [
+        "country=US",
+        "state=DE"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-fl-2000-01-01",
+      "name": "Florida state sales tax 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://floridarevenue.com/",
+      "when": [
+        "country=US",
+        "state=FL"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ga-2000-01-01",
+      "name": "Georgia state sales tax 4%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.04,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.georgia.gov/",
+      "when": [
+        "country=US",
+        "state=GA"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-hi-2000-01-01",
+      "name": "Hawaii state sales tax 4%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.04,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.hawaii.gov/",
+      "when": [
+        "country=US",
+        "state=HI"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-id-2006-10-01",
+      "name": "Idaho state sales tax 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2006-10-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.idaho.gov/",
+      "when": [
+        "country=US",
+        "state=ID"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-il-1990-07-01",
+      "name": "Illinois state sales tax 6.25%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1990-07-01",
+      "isRate": true,
+      "rate": 0.0625,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.illinois.gov/",
+      "when": [
+        "country=US",
+        "state=IL"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-in-2008-04-01",
+      "name": "Indiana state sales tax 7%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-04-01",
+      "isRate": true,
+      "rate": 0.07,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.in.gov/dor/",
+      "when": [
+        "country=US",
+        "state=IN"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ia-2008-01-01",
+      "name": "Iowa state sales tax 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.iowa.gov/",
+      "when": [
+        "country=US",
+        "state=IA"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ks-2003-07-01",
+      "name": "Kansas state sales tax 6.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2003-07-01",
+      "isRate": true,
+      "rate": 0.065,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.ksrevenue.gov/",
+      "when": [
+        "country=US",
+        "state=KS"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ky-2007-06-01",
+      "name": "Kentucky state sales tax 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2007-06-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.ky.gov/",
+      "when": [
+        "country=US",
+        "state=KY"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-la-2025-01-01",
+      "name": "Louisiana state sales tax 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2025-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.louisiana.gov/",
+      "when": [
+        "country=US",
+        "state=LA"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-me-2013-01-01",
+      "name": "Maine state sales tax 5.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-01-01",
+      "isRate": true,
+      "rate": 0.055,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.maine.gov/revenue/",
+      "when": [
+        "country=US",
+        "state=ME"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-md-2008-01-01",
+      "name": "Maryland state sales tax 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.marylandtaxes.gov/",
+      "when": [
+        "country=US",
+        "state=MD"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ma-2009-08-01",
+      "name": "Massachusetts state sales tax 6.25%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2009-08-01",
+      "isRate": true,
+      "rate": 0.0625,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.mass.gov/orgs/massachusetts-department-of-revenue/",
+      "when": [
+        "country=US",
+        "state=MA"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-mi-2007-10-01",
+      "name": "Michigan state sales tax 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2007-10-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.michigan.gov/treasury/",
+      "when": [
+        "country=US",
+        "state=MI"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-mn-2009-07-01",
+      "name": "Minnesota state sales tax 6.88%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2009-07-01",
+      "isRate": true,
+      "rate": 0.06875,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.state.mn.us/",
+      "when": [
+        "country=US",
+        "state=MN"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ms-2000-01-01",
+      "name": "Mississippi state sales tax 7%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.07,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.dor.ms.gov/",
+      "when": [
+        "country=US",
+        "state=MS"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-mo-2000-01-01",
+      "name": "Missouri state sales tax 4.23%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.04225,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.mo.gov/",
+      "when": [
+        "country=US",
+        "state=MO"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-mt-2000-01-01",
+      "name": "Montana state sales tax 0%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://mtrevenue.gov/",
+      "when": [
+        "country=US",
+        "state=MT"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ne-2016-01-01",
+      "name": "Nebraska state sales tax 5.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2016-01-01",
+      "isRate": true,
+      "rate": 0.055,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.nebraska.gov/",
+      "when": [
+        "country=US",
+        "state=NE"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-nv-2015-01-01",
+      "name": "Nevada state sales tax 6.85%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2015-01-01",
+      "isRate": true,
+      "rate": 0.0685,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.nv.gov/",
+      "when": [
+        "country=US",
+        "state=NV"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-nh-2000-01-01",
+      "name": "New Hampshire state sales tax 0%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.nh.gov/",
+      "when": [
+        "country=US",
+        "state=NH"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-nj-2018-01-01",
+      "name": "New Jersey state sales tax 6.63%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2018-01-01",
+      "isRate": true,
+      "rate": 0.06625,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.nj.gov/treasury/taxation/",
+      "when": [
+        "country=US",
+        "state=NJ"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-nm-2020-01-01",
+      "name": "New Mexico state sales tax 4.88%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2020-01-01",
+      "isRate": true,
+      "rate": 0.04875,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tax.newmexico.gov/",
+      "when": [
+        "country=US",
+        "state=NM"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ny-2000-01-01",
+      "name": "New York state sales tax 4%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.04,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tax.ny.gov/",
+      "when": [
+        "country=US",
+        "state=NY"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-nc-2015-01-01",
+      "name": "North Carolina state sales tax 4.75%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2015-01-01",
+      "isRate": true,
+      "rate": 0.0475,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.ncdor.gov/",
+      "when": [
+        "country=US",
+        "state=NC"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-nd-2000-01-01",
+      "name": "North Dakota state sales tax 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tax.nd.gov/",
+      "when": [
+        "country=US",
+        "state=ND"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-oh-2013-09-01",
+      "name": "Ohio state sales tax 5.75%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-09-01",
+      "isRate": true,
+      "rate": 0.0575,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.ohio.gov/",
+      "when": [
+        "country=US",
+        "state=OH"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ok-2000-01-01",
+      "name": "Oklahoma state sales tax 4.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.045,
+      "effectKind": "rate",
+      "sourceUrl": "https://oklahoma.gov/tax.html/",
+      "when": [
+        "country=US",
+        "state=OK"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-or-2000-01-01",
+      "name": "Oregon state sales tax 0%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.oregon.gov/dor/",
+      "when": [
+        "country=US",
+        "state=OR"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-pa-2000-01-01",
+      "name": "Pennsylvania state sales tax 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.pa.gov/",
+      "when": [
+        "country=US",
+        "state=PA"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ri-2013-01-01",
+      "name": "Rhode Island state sales tax 7%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-01-01",
+      "isRate": true,
+      "rate": 0.07,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.ri.gov/",
+      "when": [
+        "country=US",
+        "state=RI"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-sc-2007-06-01",
+      "name": "South Carolina state sales tax 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2007-06-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.sc.gov/",
+      "when": [
+        "country=US",
+        "state=SC"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-sd-2000-01-01",
+      "name": "South Dakota state sales tax 4.2%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.042,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.sd.gov/",
+      "when": [
+        "country=US",
+        "state=SD"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-tn-2000-01-01",
+      "name": "Tennessee state sales tax 7%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.07,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tn.gov/revenue.html/",
+      "when": [
+        "country=US",
+        "state=TN"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-tx-2000-01-01",
+      "name": "Texas state sales tax 6.25%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.0625,
+      "effectKind": "rate",
+      "sourceUrl": "https://comptroller.texas.gov/",
+      "when": [
+        "country=US",
+        "state=TX"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-ut-2000-01-01",
+      "name": "Utah state sales tax 6.1%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.061,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.utah.gov/",
+      "when": [
+        "country=US",
+        "state=UT"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-vt-2007-07-01",
+      "name": "Vermont state sales tax 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2007-07-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.vermont.gov/",
+      "when": [
+        "country=US",
+        "state=VT"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-va-2013-07-01",
+      "name": "Virginia state sales tax 5.3%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-07-01",
+      "isRate": true,
+      "rate": 0.053,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tax.virginia.gov/",
+      "when": [
+        "country=US",
+        "state=VA"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-wa-2000-01-01",
+      "name": "Washington state sales tax 6.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.065,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.wa.gov/",
+      "when": [
+        "country=US",
+        "state=WA"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-wv-2000-01-01",
+      "name": "West Virginia state sales tax 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.wv.gov/",
+      "when": [
+        "country=US",
+        "state=WV"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-wi-2000-01-01",
+      "name": "Wisconsin state sales tax 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.wi.gov/",
+      "when": [
+        "country=US",
+        "state=WI"
+      ]
+    },
+    {
+      "pack": "us-sales-tax",
+      "id": "us-sales-wy-2000-01-01",
+      "name": "Wyoming state sales tax 4%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": true,
+      "rate": 0.04,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.wyo.gov/",
+      "when": [
+        "country=US",
+        "state=WY"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-al-2018-10-01",
+      "name": "Alabama economic nexus ($250,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2018-10-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.revenue.alabama.gov/",
+      "when": [
+        "country=US",
+        "state=AL"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ak-2019-01-01",
+      "name": "Alaska economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://tax.alaska.gov/",
+      "when": [
+        "country=US",
+        "state=AK"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-az-2019-10-01",
+      "name": "Arizona economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-10-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://azdor.gov/",
+      "when": [
+        "country=US",
+        "state=AZ"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ar-2019-01-01",
+      "name": "Arkansas economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.dfa.arkansas.gov/",
+      "when": [
+        "country=US",
+        "state=AR"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ca-2019-04-01",
+      "name": "California economic nexus ($500,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-04-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.cdtfa.ca.gov/",
+      "when": [
+        "country=US",
+        "state=CA"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-co-2019-06-01",
+      "name": "Colorado economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-06-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://tax.colorado.gov/",
+      "when": [
+        "country=US",
+        "state=CO"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ct-2019-07-01",
+      "name": "Connecticut economic nexus ($100,000 or 200 transactions, both required)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-07-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://portal.ct.gov/DRS/",
+      "when": [
+        "country=US",
+        "state=CT"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-dc-2019-01-01",
+      "name": "District of Columbia economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://otr.cfo.dc.gov/",
+      "when": [
+        "country=US",
+        "state=DC"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-de-2019-01-01",
+      "name": "Delaware economic nexus (no sales-tax test)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://revenue.delaware.gov/",
+      "when": [
+        "country=US",
+        "state=DE"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-fl-2019-07-01",
+      "name": "Florida economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-07-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://floridarevenue.com/",
+      "when": [
+        "country=US",
+        "state=FL"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ga-2019-01-01",
+      "name": "Georgia economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://dor.georgia.gov/",
+      "when": [
+        "country=US",
+        "state=GA"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-hi-2019-07-01",
+      "name": "Hawaii economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-07-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://tax.hawaii.gov/",
+      "when": [
+        "country=US",
+        "state=HI"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-id-2019-06-01",
+      "name": "Idaho economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-06-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://tax.idaho.gov/",
+      "when": [
+        "country=US",
+        "state=ID"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-il-2026-01-01",
+      "name": "Illinois economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://tax.illinois.gov/",
+      "when": [
+        "country=US",
+        "state=IL"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-il-2019-01-01",
+      "name": "Illinois economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "validTo": "2025-12-31",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://tax.illinois.gov/",
+      "when": [
+        "country=US",
+        "state=IL"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-in-2019-01-01",
+      "name": "Indiana economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.in.gov/dor/",
+      "when": [
+        "country=US",
+        "state=IN"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ia-2019-01-01",
+      "name": "Iowa economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://revenue.iowa.gov/",
+      "when": [
+        "country=US",
+        "state=IA"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ks-2019-07-01",
+      "name": "Kansas economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-07-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.ksrevenue.gov/",
+      "when": [
+        "country=US",
+        "state=KS"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ky-2026-08-01",
+      "name": "Kentucky economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2026-08-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://revenue.ky.gov/",
+      "when": [
+        "country=US",
+        "state=KY"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ky-2019-01-01",
+      "name": "Kentucky economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "validTo": "2026-07-31",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://revenue.ky.gov/",
+      "when": [
+        "country=US",
+        "state=KY"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-la-2019-01-01",
+      "name": "Louisiana economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://revenue.louisiana.gov/",
+      "when": [
+        "country=US",
+        "state=LA"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-me-2019-01-01",
+      "name": "Maine economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.maine.gov/revenue/",
+      "when": [
+        "country=US",
+        "state=ME"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-md-2019-10-01",
+      "name": "Maryland economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-10-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.marylandtaxes.gov/",
+      "when": [
+        "country=US",
+        "state=MD"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ma-2019-10-01",
+      "name": "Massachusetts economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-10-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.mass.gov/orgs/massachusetts-department-of-revenue/",
+      "when": [
+        "country=US",
+        "state=MA"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-mi-2019-01-01",
+      "name": "Michigan economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.michigan.gov/treasury/",
+      "when": [
+        "country=US",
+        "state=MI"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-mn-2019-01-01",
+      "name": "Minnesota economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.revenue.state.mn.us/",
+      "when": [
+        "country=US",
+        "state=MN"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ms-2019-01-01",
+      "name": "Mississippi economic nexus ($250,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.dor.ms.gov/",
+      "when": [
+        "country=US",
+        "state=MS"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-mo-2023-01-01",
+      "name": "Missouri economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2023-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://dor.mo.gov/",
+      "when": [
+        "country=US",
+        "state=MO"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-mt-2019-01-01",
+      "name": "Montana economic nexus (no sales-tax test)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://mtrevenue.gov/",
+      "when": [
+        "country=US",
+        "state=MT"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ne-2019-01-01",
+      "name": "Nebraska economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://revenue.nebraska.gov/",
+      "when": [
+        "country=US",
+        "state=NE"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-nv-2019-01-01",
+      "name": "Nevada economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://tax.nv.gov/",
+      "when": [
+        "country=US",
+        "state=NV"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-nh-2019-01-01",
+      "name": "New Hampshire economic nexus (no sales-tax test)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.revenue.nh.gov/",
+      "when": [
+        "country=US",
+        "state=NH"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-nj-2019-10-01",
+      "name": "New Jersey economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-10-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.nj.gov/treasury/taxation/",
+      "when": [
+        "country=US",
+        "state=NJ"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-nm-2019-07-01",
+      "name": "New Mexico economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-07-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.tax.newmexico.gov/",
+      "when": [
+        "country=US",
+        "state=NM"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ny-2019-01-01",
+      "name": "New York economic nexus ($500,000 or 100 transactions, both required)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.tax.ny.gov/",
+      "when": [
+        "country=US",
+        "state=NY"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-nc-2024-07-01",
+      "name": "North Carolina economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2024-07-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.ncdor.gov/",
+      "when": [
+        "country=US",
+        "state=NC"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-nc-2019-01-01",
+      "name": "North Carolina economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "validTo": "2024-06-30",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.ncdor.gov/",
+      "when": [
+        "country=US",
+        "state=NC"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-nd-2019-01-01",
+      "name": "North Dakota economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.tax.nd.gov/",
+      "when": [
+        "country=US",
+        "state=ND"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-oh-2019-08-01",
+      "name": "Ohio economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-08-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://tax.ohio.gov/",
+      "when": [
+        "country=US",
+        "state=OH"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ok-2019-01-01",
+      "name": "Oklahoma economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://oklahoma.gov/tax.html/",
+      "when": [
+        "country=US",
+        "state=OK"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-or-2019-01-01",
+      "name": "Oregon economic nexus (no sales-tax test)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.oregon.gov/dor/",
+      "when": [
+        "country=US",
+        "state=OR"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-pa-2019-07-01",
+      "name": "Pennsylvania economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-07-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.revenue.pa.gov/",
+      "when": [
+        "country=US",
+        "state=PA"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ri-2019-07-01",
+      "name": "Rhode Island economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-07-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://tax.ri.gov/",
+      "when": [
+        "country=US",
+        "state=RI"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-sc-2019-11-01",
+      "name": "South Carolina economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-11-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://dor.sc.gov/",
+      "when": [
+        "country=US",
+        "state=SC"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-sd-2023-07-01",
+      "name": "South Dakota economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2023-07-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://dor.sd.gov/",
+      "when": [
+        "country=US",
+        "state=SD"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-sd-2019-01-01",
+      "name": "South Dakota economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "validTo": "2023-06-30",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://dor.sd.gov/",
+      "when": [
+        "country=US",
+        "state=SD"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-tn-2020-10-01",
+      "name": "Tennessee economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2020-10-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.tn.gov/revenue.html/",
+      "when": [
+        "country=US",
+        "state=TN"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-tx-2019-10-01",
+      "name": "Texas economic nexus ($500,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-10-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://comptroller.texas.gov/",
+      "when": [
+        "country=US",
+        "state=TX"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ut-2025-07-01",
+      "name": "Utah economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2025-07-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://tax.utah.gov/",
+      "when": [
+        "country=US",
+        "state=UT"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-ut-2019-01-01",
+      "name": "Utah economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "validTo": "2025-06-30",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://tax.utah.gov/",
+      "when": [
+        "country=US",
+        "state=UT"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-vt-2019-07-01",
+      "name": "Vermont economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-07-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://tax.vermont.gov/",
+      "when": [
+        "country=US",
+        "state=VT"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-va-2019-07-01",
+      "name": "Virginia economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-07-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.tax.virginia.gov/",
+      "when": [
+        "country=US",
+        "state=VA"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-wa-2019-03-01",
+      "name": "Washington economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-03-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://dor.wa.gov/",
+      "when": [
+        "country=US",
+        "state=WA"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-wv-2019-01-01",
+      "name": "West Virginia economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://tax.wv.gov/",
+      "when": [
+        "country=US",
+        "state=WV"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-wi-2019-01-01",
+      "name": "Wisconsin economic nexus ($100,000)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://www.revenue.wi.gov/",
+      "when": [
+        "country=US",
+        "state=WI"
+      ]
+    },
+    {
+      "pack": "us-nexus",
+      "id": "us-nexus-wy-2019-02-01",
+      "name": "Wyoming economic nexus ($100,000 or 200 transactions)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2019-02-01",
+      "isRate": false,
+      "effectKind": "nexus",
+      "sourceUrl": "https://revenue.wyo.gov/",
+      "when": [
+        "country=US",
+        "state=WY"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-al-groceries-2026-01-01",
+      "name": "AL groceries: reduced 3%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0.03,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.alabama.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=AL"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-al-prescription-medicine-2026-01-01",
+      "name": "AL prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.alabama.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=AL"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-al-digital-goods-2026-01-01",
+      "name": "AL digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.alabama.gov/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=AL"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ak-general-2026-01-01",
+      "name": "AK general: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.alaska.gov/",
+      "when": [
+        "country=US",
+        "productCategory=general",
+        "state=AK"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-az-groceries-2026-01-01",
+      "name": "AZ groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://azdor.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=AZ"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-az-prescription-medicine-2026-01-01",
+      "name": "AZ prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://azdor.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=AZ"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ar-groceries-2026-01-01",
+      "name": "AR groceries: reduced 1.25%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0.0125,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.dfa.arkansas.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=AR"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ar-prescription-medicine-2026-01-01",
+      "name": "AR prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.dfa.arkansas.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=AR"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ar-digital-goods-2026-01-01",
+      "name": "AR digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.dfa.arkansas.gov/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=AR"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ca-groceries-2026-01-01",
+      "name": "CA groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.cdtfa.ca.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=CA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ca-prescription-medicine-2026-01-01",
+      "name": "CA prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.cdtfa.ca.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=CA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ca-digital-goods-2026-01-01",
+      "name": "CA digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.cdtfa.ca.gov/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=CA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-co-groceries-2026-01-01",
+      "name": "CO groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.colorado.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=CO"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-co-prescription-medicine-2026-01-01",
+      "name": "CO prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.colorado.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=CO"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ct-prescription-medicine-2026-01-01",
+      "name": "CT prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://portal.ct.gov/DRS/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=CT"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-dc-prescription-medicine-2026-01-01",
+      "name": "DC prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://otr.cfo.dc.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=DC"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-de-general-2026-01-01",
+      "name": "DE general: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.delaware.gov/",
+      "when": [
+        "country=US",
+        "productCategory=general",
+        "state=DE"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-fl-groceries-2026-01-01",
+      "name": "FL groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://floridarevenue.com/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=FL"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-fl-prescription-medicine-2026-01-01",
+      "name": "FL prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://floridarevenue.com/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=FL"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-fl-digital-goods-2026-01-01",
+      "name": "FL digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://floridarevenue.com/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=FL"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ga-groceries-2026-01-01",
+      "name": "GA groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.georgia.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=GA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ga-prescription-medicine-2026-01-01",
+      "name": "GA prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.georgia.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=GA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-hi-prescription-medicine-2026-01-01",
+      "name": "HI prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.hawaii.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=HI"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-id-prescription-medicine-2026-01-01",
+      "name": "ID prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.idaho.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=ID"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-il-groceries-2026-01-01",
+      "name": "IL groceries: reduced 1%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0.01,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.illinois.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=IL"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-il-prescription-medicine-2026-01-01",
+      "name": "IL prescription-medicine: reduced 1%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0.01,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.illinois.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=IL"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-in-groceries-2026-01-01",
+      "name": "IN groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.in.gov/dor/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=IN"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-in-prescription-medicine-2026-01-01",
+      "name": "IN prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.in.gov/dor/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=IN"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ia-groceries-2026-01-01",
+      "name": "IA groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.iowa.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=IA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ia-prescription-medicine-2026-01-01",
+      "name": "IA prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.iowa.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=IA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ks-groceries-2026-01-01",
+      "name": "KS groceries: reduced 0%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.ksrevenue.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=KS"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ks-prescription-medicine-2026-01-01",
+      "name": "KS prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.ksrevenue.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=KS"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ks-digital-goods-2026-01-01",
+      "name": "KS digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.ksrevenue.gov/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=KS"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ky-groceries-2026-01-01",
+      "name": "KY groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.ky.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=KY"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ky-prescription-medicine-2026-01-01",
+      "name": "KY prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.ky.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=KY"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-la-groceries-2026-01-01",
+      "name": "LA groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.louisiana.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=LA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-la-prescription-medicine-2026-01-01",
+      "name": "LA prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.louisiana.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=LA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-me-groceries-2026-01-01",
+      "name": "ME groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.maine.gov/revenue/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=ME"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-me-prescription-medicine-2026-01-01",
+      "name": "ME prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.maine.gov/revenue/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=ME"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-md-groceries-2026-01-01",
+      "name": "MD groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.marylandtaxes.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=MD"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-md-prescription-medicine-2026-01-01",
+      "name": "MD prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.marylandtaxes.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=MD"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ma-groceries-2026-01-01",
+      "name": "MA groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.mass.gov/orgs/massachusetts-department-of-revenue/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=MA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ma-prescription-medicine-2026-01-01",
+      "name": "MA prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.mass.gov/orgs/massachusetts-department-of-revenue/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=MA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-mi-groceries-2026-01-01",
+      "name": "MI groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.michigan.gov/treasury/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=MI"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-mi-prescription-medicine-2026-01-01",
+      "name": "MI prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.michigan.gov/treasury/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=MI"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-mn-clothing-2026-01-01",
+      "name": "MN clothing: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.state.mn.us/",
+      "when": [
+        "country=US",
+        "productCategory=clothing",
+        "state=MN"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-mn-groceries-2026-01-01",
+      "name": "MN groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.state.mn.us/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=MN"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-mn-prescription-medicine-2026-01-01",
+      "name": "MN prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.state.mn.us/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=MN"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ms-groceries-2026-01-01",
+      "name": "MS groceries: reduced 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.dor.ms.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=MS"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ms-prescription-medicine-2026-01-01",
+      "name": "MS prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.dor.ms.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=MS"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-mo-groceries-2026-01-01",
+      "name": "MO groceries: reduced 1.225%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0.01225,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.mo.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=MO"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-mo-prescription-medicine-2026-01-01",
+      "name": "MO prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.mo.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=MO"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-mo-digital-goods-2026-01-01",
+      "name": "MO digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.mo.gov/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=MO"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-mt-general-2026-01-01",
+      "name": "MT general: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://mtrevenue.gov/",
+      "when": [
+        "country=US",
+        "productCategory=general",
+        "state=MT"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ne-groceries-2026-01-01",
+      "name": "NE groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.nebraska.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=NE"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ne-prescription-medicine-2026-01-01",
+      "name": "NE prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.nebraska.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=NE"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nv-groceries-2026-01-01",
+      "name": "NV groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.nv.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=NV"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nv-prescription-medicine-2026-01-01",
+      "name": "NV prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.nv.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=NV"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nv-digital-goods-2026-01-01",
+      "name": "NV digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.nv.gov/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=NV"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nh-general-2026-01-01",
+      "name": "NH general: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.nh.gov/",
+      "when": [
+        "country=US",
+        "productCategory=general",
+        "state=NH"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nj-clothing-2026-01-01",
+      "name": "NJ clothing: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.nj.gov/treasury/taxation/",
+      "when": [
+        "country=US",
+        "productCategory=clothing",
+        "state=NJ"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nj-groceries-2026-01-01",
+      "name": "NJ groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.nj.gov/treasury/taxation/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=NJ"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nj-prescription-medicine-2026-01-01",
+      "name": "NJ prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.nj.gov/treasury/taxation/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=NJ"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nm-groceries-2026-01-01",
+      "name": "NM groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tax.newmexico.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=NM"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nm-prescription-medicine-2026-01-01",
+      "name": "NM prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tax.newmexico.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=NM"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ny-prescription-medicine-2026-01-01",
+      "name": "NY prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tax.ny.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=NY"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nc-groceries-2026-01-01",
+      "name": "NC groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.ncdor.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=NC"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nc-prescription-medicine-2026-01-01",
+      "name": "NC prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.ncdor.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=NC"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nc-digital-goods-2026-01-01",
+      "name": "NC digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.ncdor.gov/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=NC"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nd-groceries-2026-01-01",
+      "name": "ND groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tax.nd.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=ND"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nd-prescription-medicine-2026-01-01",
+      "name": "ND prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tax.nd.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=ND"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-nd-digital-goods-2026-01-01",
+      "name": "ND digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tax.nd.gov/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=ND"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-oh-groceries-2026-01-01",
+      "name": "OH groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.ohio.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=OH"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-oh-prescription-medicine-2026-01-01",
+      "name": "OH prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.ohio.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=OH"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ok-prescription-medicine-2026-01-01",
+      "name": "OK prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://oklahoma.gov/tax.html/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=OK"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ok-digital-goods-2026-01-01",
+      "name": "OK digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://oklahoma.gov/tax.html/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=OK"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-or-general-2026-01-01",
+      "name": "OR general: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.oregon.gov/dor/",
+      "when": [
+        "country=US",
+        "productCategory=general",
+        "state=OR"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-pa-clothing-2026-01-01",
+      "name": "PA clothing: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.pa.gov/",
+      "when": [
+        "country=US",
+        "productCategory=clothing",
+        "state=PA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-pa-groceries-2026-01-01",
+      "name": "PA groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.pa.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=PA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-pa-prescription-medicine-2026-01-01",
+      "name": "PA prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.pa.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=PA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ri-clothing-2026-01-01",
+      "name": "RI clothing: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.ri.gov/",
+      "when": [
+        "country=US",
+        "productCategory=clothing",
+        "state=RI"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ri-groceries-2026-01-01",
+      "name": "RI groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.ri.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=RI"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ri-prescription-medicine-2026-01-01",
+      "name": "RI prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.ri.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=RI"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-sc-groceries-2026-01-01",
+      "name": "SC groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.sc.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=SC"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-sc-prescription-medicine-2026-01-01",
+      "name": "SC prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.sc.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=SC"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-sd-groceries-2026-01-01",
+      "name": "SD groceries: reduced 4.2%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0.042,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.sd.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=SD"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-sd-prescription-medicine-2026-01-01",
+      "name": "SD prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.sd.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=SD"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-tn-groceries-2026-01-01",
+      "name": "TN groceries: reduced 4%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0.04,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tn.gov/revenue.html/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=TN"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-tn-prescription-medicine-2026-01-01",
+      "name": "TN prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tn.gov/revenue.html/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=TN"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-tx-groceries-2026-01-01",
+      "name": "TX groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://comptroller.texas.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=TX"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-tx-prescription-medicine-2026-01-01",
+      "name": "TX prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://comptroller.texas.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=TX"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ut-groceries-2026-01-01",
+      "name": "UT groceries: reduced 3%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0.03,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.utah.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=UT"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-ut-prescription-medicine-2026-01-01",
+      "name": "UT prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.utah.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=UT"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-vt-groceries-2026-01-01",
+      "name": "VT groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.vermont.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=VT"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-vt-prescription-medicine-2026-01-01",
+      "name": "VT prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.vermont.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=VT"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-vt-digital-goods-2026-01-01",
+      "name": "VT digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.vermont.gov/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=VT"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-va-groceries-2026-01-01",
+      "name": "VA groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tax.virginia.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=VA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-va-prescription-medicine-2026-01-01",
+      "name": "VA prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tax.virginia.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=VA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-va-digital-goods-2026-01-01",
+      "name": "VA digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.tax.virginia.gov/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=VA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-wa-groceries-2026-01-01",
+      "name": "WA groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.wa.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=WA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-wa-prescription-medicine-2026-01-01",
+      "name": "WA prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://dor.wa.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=WA"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-wv-prescription-medicine-2026-01-01",
+      "name": "WV prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.wv.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=WV"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-wv-digital-goods-2026-01-01",
+      "name": "WV digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://tax.wv.gov/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=WV"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-wi-groceries-2026-01-01",
+      "name": "WI groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.wi.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=WI"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-wi-prescription-medicine-2026-01-01",
+      "name": "WI prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.wi.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=WI"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-wy-groceries-2026-01-01",
+      "name": "WY groceries: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.wyo.gov/",
+      "when": [
+        "country=US",
+        "productCategory=groceries",
+        "state=WY"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-wy-prescription-medicine-2026-01-01",
+      "name": "WY prescription-medicine: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.wyo.gov/",
+      "when": [
+        "country=US",
+        "productCategory=prescription-medicine",
+        "state=WY"
+      ]
+    },
+    {
+      "pack": "us-product-taxability",
+      "id": "us-cat-wy-digital-goods-2026-01-01",
+      "name": "WY digital-goods: exempt",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://revenue.wyo.gov/",
+      "when": [
+        "country=US",
+        "productCategory=digital-goods",
+        "state=WY"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-ab-gst-2008-01-01",
+      "name": "Alberta GST 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=AB"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-bc-gst-2008-01-01",
+      "name": "British Columbia GST 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=BC"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-mb-gst-2008-01-01",
+      "name": "Manitoba GST 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=MB"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-nb-gst-2008-01-01",
+      "name": "New Brunswick GST 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=NB"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-nl-gst-2008-01-01",
+      "name": "Newfoundland and Labrador GST 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=NL"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-ns-gst-2008-01-01",
+      "name": "Nova Scotia GST 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=NS"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-nt-gst-2008-01-01",
+      "name": "Northwest Territories GST 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=NT"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-nu-gst-2008-01-01",
+      "name": "Nunavut GST 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=NU"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-on-gst-2008-01-01",
+      "name": "Ontario GST 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=ON"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-pe-gst-2008-01-01",
+      "name": "Prince Edward Island GST 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=PE"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-qc-gst-2008-01-01",
+      "name": "Quebec GST 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=QC"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-sk-gst-2008-01-01",
+      "name": "Saskatchewan GST 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=SK"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-yt-gst-2008-01-01",
+      "name": "Yukon GST 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=YT"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-on-hst-2010-07-01",
+      "name": "Ontario HST 13%",
+      "scope": "line",
+      "combine": "override",
+      "validFrom": "2010-07-01",
+      "isRate": true,
+      "rate": 0.13,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=ON"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-nb-hst-2016-07-01",
+      "name": "New Brunswick HST 15%",
+      "scope": "line",
+      "combine": "override",
+      "validFrom": "2016-07-01",
+      "isRate": true,
+      "rate": 0.15,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=NB"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-nl-hst-2016-07-01",
+      "name": "Newfoundland and Labrador HST 15%",
+      "scope": "line",
+      "combine": "override",
+      "validFrom": "2016-07-01",
+      "isRate": true,
+      "rate": 0.15,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=NL"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-pe-hst-2013-04-01",
+      "name": "Prince Edward Island HST 14%",
+      "scope": "line",
+      "combine": "override",
+      "validFrom": "2013-04-01",
+      "validTo": "2016-09-30",
+      "isRate": true,
+      "rate": 0.14,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=PE"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-pe-hst-2016-10-01",
+      "name": "Prince Edward Island HST 15%",
+      "scope": "line",
+      "combine": "override",
+      "validFrom": "2016-10-01",
+      "isRate": true,
+      "rate": 0.15,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=PE"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-ns-hst-2010-07-01",
+      "name": "Nova Scotia HST 15%",
+      "scope": "line",
+      "combine": "override",
+      "validFrom": "2010-07-01",
+      "validTo": "2025-03-31",
+      "isRate": true,
+      "rate": 0.15,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "when": [
+        "country=CA",
+        "state=NS"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-ns-hst-2025-04-01",
+      "name": "Nova Scotia HST 14%",
+      "scope": "line",
+      "combine": "override",
+      "validFrom": "2025-04-01",
+      "isRate": true,
+      "rate": 0.14,
+      "effectKind": "rate",
+      "sourceUrl": "https://novascotia.ca/finance/en/home/taxation/tax101/hst.html",
+      "when": [
+        "country=CA",
+        "state=NS"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-bc-pst-2013-04-01",
+      "name": "British Columbia PST 7%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-04-01",
+      "isRate": true,
+      "rate": 0.07,
+      "effectKind": "rate",
+      "sourceUrl": "https://www2.gov.bc.ca/gov/content/taxes/sales-taxes/pst",
+      "when": [
+        "country=CA",
+        "state=BC"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-mb-rst-2022-01-01",
+      "name": "Manitoba RST 7%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2022-01-01",
+      "isRate": true,
+      "rate": 0.07,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.mb.ca/finance/taxation/taxes/retail.html",
+      "when": [
+        "country=CA",
+        "state=MB"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-sk-pst-2017-04-01",
+      "name": "Saskatchewan PST 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2017-04-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.saskatchewan.ca/business/taxes-licensing-and-reporting/provincial-taxes-policies-and-programs/provincial-sales-tax",
+      "when": [
+        "country=CA",
+        "state=SK"
+      ]
+    },
+    {
+      "pack": "ca-sales-tax",
+      "id": "ca-qc-qst-2013-01-01",
+      "name": "Quebec QST 9.975%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-01-01",
+      "isRate": true,
+      "rate": 0.09975,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenuquebec.ca/en/businesses/consumption-taxes/gsthst-and-qst/",
+      "when": [
+        "country=CA",
+        "state=QC"
+      ]
+    },
+    {
+      "pack": "uk-vat",
+      "id": "uk-vat-standard-1991-04-01-0-175",
+      "name": "UK standard VAT 17.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1991-04-01",
+      "validTo": "2008-11-30",
+      "isRate": true,
+      "rate": 0.175,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.uk/vat-rates",
+      "when": [
+        "country=GB"
+      ]
+    },
+    {
+      "pack": "uk-vat",
+      "id": "uk-vat-standard-2008-12-01-0-15",
+      "name": "UK standard VAT 15%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2008-12-01",
+      "validTo": "2009-12-31",
+      "isRate": true,
+      "rate": 0.15,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.uk/vat-rates",
+      "when": [
+        "country=GB"
+      ]
+    },
+    {
+      "pack": "uk-vat",
+      "id": "uk-vat-standard-2010-01-01-0-175",
+      "name": "UK standard VAT 17.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2010-01-01",
+      "validTo": "2011-01-03",
+      "isRate": true,
+      "rate": 0.175,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.uk/vat-rates",
+      "when": [
+        "country=GB"
+      ]
+    },
+    {
+      "pack": "uk-vat",
+      "id": "uk-vat-standard-2011-01-04-0-2",
+      "name": "UK standard VAT 20%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2011-01-04",
+      "isRate": true,
+      "rate": 0.2,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.uk/vat-rates",
+      "when": [
+        "country=GB"
+      ]
+    },
+    {
+      "pack": "uk-vat",
+      "id": "uk-vat-reduced-2020-07-15-0-05",
+      "name": "UK reduced VAT 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2020-07-15",
+      "validTo": "2021-09-30",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.uk/vat-rates",
+      "when": [
+        "country=GB",
+        "productCategory=prepared-food"
+      ]
+    },
+    {
+      "pack": "uk-vat",
+      "id": "uk-vat-reduced-2021-10-01-0-125",
+      "name": "UK reduced VAT 12.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2021-10-01",
+      "validTo": "2022-03-31",
+      "isRate": true,
+      "rate": 0.125,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.uk/vat-rates",
+      "when": [
+        "country=GB",
+        "productCategory=prepared-food"
+      ]
+    },
+    {
+      "pack": "uk-vat",
+      "id": "uk-vat-zero-1973-04-01-0",
+      "name": "UK zero VAT 0%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1973-04-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.gov.uk/vat-rates",
+      "when": [
+        "country=GB",
+        "productCategory=groceries|prescription-medicine|books|clothing"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-at-standard-2016-01-01-0-2",
+      "name": "Austria standard VAT 20%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2016-01-01",
+      "isRate": true,
+      "rate": 0.2,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.bmf.gv.at/",
+      "when": [
+        "country=AT"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-at-reduced-2016-01-01-0-1-food-books-transport",
+      "name": "Austria reduced VAT 10%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2016-01-01",
+      "validTo": "2026-06-30",
+      "isRate": true,
+      "rate": 0.1,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.bmf.gv.at/",
+      "when": [
+        "country=AT",
+        "productCategory=groceries|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-at-reduced-2026-07-01-0-1-books-transport-other-reduced-goods",
+      "name": "Austria reduced VAT 10%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-07-01",
+      "isRate": true,
+      "rate": 0.1,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.bmf.gv.at/",
+      "when": [
+        "country=AT",
+        "productCategory=books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-at-reduced-2026-07-01-0-05-food",
+      "name": "Austria reduced VAT 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-07-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.bmf.gv.at/",
+      "when": [
+        "country=AT",
+        "productCategory=groceries"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-be-standard-1996-01-01-0-21",
+      "name": "Belgium standard VAT 21%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1996-01-01",
+      "isRate": true,
+      "rate": 0.21,
+      "effectKind": "rate",
+      "sourceUrl": "https://finance.belgium.be/en/experts/vat",
+      "when": [
+        "country=BE"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-be-reduced-2026-03-01-0-12-hotels-catering-leisure",
+      "name": "Belgium reduced VAT 12%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-03-01",
+      "isRate": true,
+      "rate": 0.12,
+      "effectKind": "rate",
+      "sourceUrl": "https://finance.belgium.be/en/experts/vat",
+      "when": [
+        "country=BE",
+        "productCategory=prepared-food"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-be-reduced-1996-01-01-0-06-hotels-catering-leisure",
+      "name": "Belgium reduced VAT 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1996-01-01",
+      "validTo": "2026-02-28",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://finance.belgium.be/en/experts/vat",
+      "when": [
+        "country=BE",
+        "productCategory=prepared-food"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-be-reduced-1996-01-01-0-06-food-water-medicines-books",
+      "name": "Belgium reduced VAT 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1996-01-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://finance.belgium.be/en/experts/vat",
+      "when": [
+        "country=BE",
+        "productCategory=groceries|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-bg-standard-1999-01-01-0-2",
+      "name": "Bulgaria standard VAT 20%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1999-01-01",
+      "isRate": true,
+      "rate": 0.2,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.nra.bg/en/",
+      "when": [
+        "country=BG"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-bg-reduced-1999-01-01-0-09-accommodation-some-food",
+      "name": "Bulgaria reduced VAT 9%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1999-01-01",
+      "isRate": true,
+      "rate": 0.09,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.nra.bg/en/",
+      "when": [
+        "country=BG",
+        "productCategory=groceries"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-hr-standard-2013-07-01-0-25",
+      "name": "Croatia standard VAT 25%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-07-01",
+      "isRate": true,
+      "rate": 0.25,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.porezna-uprava.hr/en",
+      "when": [
+        "country=HR"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-hr-reduced-2021-01-01-0-13-food-newspapers-accommodation",
+      "name": "Croatia reduced VAT 13%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2021-01-01",
+      "isRate": true,
+      "rate": 0.13,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.porezna-uprava.hr/en",
+      "when": [
+        "country=HR",
+        "productCategory=groceries|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-hr-reduced-2013-07-01-0-05-medicines-books-some-food",
+      "name": "Croatia reduced VAT 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-07-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.porezna-uprava.hr/en",
+      "when": [
+        "country=HR",
+        "productCategory=groceries|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-cy-standard-2014-01-13-0-19",
+      "name": "Cyprus standard VAT 19%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2014-01-13",
+      "isRate": true,
+      "rate": 0.19,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.mof.gov.cy/en",
+      "when": [
+        "country=CY"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-cy-reduced-2014-01-13-0-09-restaurants-accommodation",
+      "name": "Cyprus reduced VAT 9%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2014-01-13",
+      "isRate": true,
+      "rate": 0.09,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.mof.gov.cy/en",
+      "when": [
+        "country=CY",
+        "productCategory=prepared-food"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-cy-reduced-2014-01-13-0-05-food-medicines-books",
+      "name": "Cyprus reduced VAT 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2014-01-13",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.mof.gov.cy/en",
+      "when": [
+        "country=CY",
+        "productCategory=groceries|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-cz-standard-2024-01-01-0-21",
+      "name": "Czechia standard VAT 21%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2024-01-01",
+      "isRate": true,
+      "rate": 0.21,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.financnisprava.cz/en",
+      "when": [
+        "country=CZ"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-cz-reduced-2024-01-01-0-12-food-books-medicines-accommodation",
+      "name": "Czechia reduced VAT 12%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2024-01-01",
+      "isRate": true,
+      "rate": 0.12,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.financnisprava.cz/en",
+      "when": [
+        "country=CZ",
+        "productCategory=groceries|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-cz-zero-2024-01-01-0-prescription-medicines-a-0-list",
+      "name": "Czechia reduced VAT 0%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2024-01-01",
+      "isRate": true,
+      "rate": 0,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.financnisprava.cz/en",
+      "when": [
+        "country=CZ",
+        "productCategory=prescription-medicine"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-dk-standard-1992-01-01-0-25",
+      "name": "Denmark standard VAT 25%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1992-01-01",
+      "isRate": true,
+      "rate": 0.25,
+      "effectKind": "rate",
+      "sourceUrl": "https://skat.dk/en-us",
+      "when": [
+        "country=DK"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-ee-standard-2025-07-01-0-24",
+      "name": "Estonia standard VAT 24%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2025-07-01",
+      "isRate": true,
+      "rate": 0.24,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.emta.ee/en",
+      "when": [
+        "country=EE"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-ee-standard-2024-01-01-0-22",
+      "name": "Estonia standard VAT 22%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2024-01-01",
+      "validTo": "2025-06-30",
+      "isRate": true,
+      "rate": 0.22,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.emta.ee/en",
+      "when": [
+        "country=EE"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-ee-reduced-2025-07-01-0-13-accommodation-books-medicines",
+      "name": "Estonia reduced VAT 13%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2025-07-01",
+      "isRate": true,
+      "rate": 0.13,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.emta.ee/en",
+      "when": [
+        "country=EE",
+        "productCategory=prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-fi-standard-2024-09-01-0-255",
+      "name": "Finland standard VAT 25.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2024-09-01",
+      "isRate": true,
+      "rate": 0.255,
+      "effectKind": "rate",
+      "sourceUrl": "https://vero.fi/en",
+      "when": [
+        "country=FI"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-fi-reduced-2026-01-01-0-135-food-restaurants-books-medicines",
+      "name": "Finland reduced VAT 13.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0.135,
+      "effectKind": "rate",
+      "sourceUrl": "https://vero.fi/en",
+      "when": [
+        "country=FI",
+        "productCategory=groceries|prepared-food|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-fr-standard-2014-01-01-0-2",
+      "name": "France standard VAT 20%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2014-01-01",
+      "isRate": true,
+      "rate": 0.2,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.impots.gouv.fr/",
+      "when": [
+        "country=FR"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-fr-reduced-2014-01-01-0-1-restaurants-transport-some-renovations",
+      "name": "France reduced VAT 10%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2014-01-01",
+      "isRate": true,
+      "rate": 0.1,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.impots.gouv.fr/",
+      "when": [
+        "country=FR",
+        "productCategory=prepared-food"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-fr-reduced-2014-01-01-0-055-food-books-energy",
+      "name": "France reduced VAT 5.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2014-01-01",
+      "isRate": true,
+      "rate": 0.055,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.impots.gouv.fr/",
+      "when": [
+        "country=FR",
+        "productCategory=groceries|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-fr-reduced-1986-01-01-0-021-prescription-medicines-newspapers",
+      "name": "France reduced VAT 2.1%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1986-01-01",
+      "isRate": true,
+      "rate": 0.021,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.impots.gouv.fr/",
+      "when": [
+        "country=FR",
+        "productCategory=prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-de-standard-2007-01-01-0-19",
+      "name": "Germany standard VAT 19%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2007-01-01",
+      "isRate": true,
+      "rate": 0.19,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.bundesfinanzministerium.de/EN",
+      "when": [
+        "country=DE"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-de-reduced-2007-01-01-0-07-food-books-restaurants-7-from-2026",
+      "name": "Germany reduced VAT 7%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2007-01-01",
+      "isRate": true,
+      "rate": 0.07,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.bundesfinanzministerium.de/EN",
+      "when": [
+        "country=DE",
+        "productCategory=groceries|prepared-food|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-el-standard-2016-06-01-0-24",
+      "name": "Greece standard VAT 24%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2016-06-01",
+      "isRate": true,
+      "rate": 0.24,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.aade.gr/en",
+      "when": [
+        "country=EL"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-el-reduced-2016-06-01-0-13-food-energy-hotels",
+      "name": "Greece reduced VAT 13%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2016-06-01",
+      "isRate": true,
+      "rate": 0.13,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.aade.gr/en",
+      "when": [
+        "country=EL",
+        "productCategory=groceries"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-el-reduced-2016-06-01-0-06-medicines-books-theatre",
+      "name": "Greece reduced VAT 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2016-06-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.aade.gr/en",
+      "when": [
+        "country=EL",
+        "productCategory=prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-hu-standard-2012-01-01-0-27",
+      "name": "Hungary standard VAT 27%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2012-01-01",
+      "isRate": true,
+      "rate": 0.27,
+      "effectKind": "rate",
+      "sourceUrl": "https://nav.gov.hu/en",
+      "when": [
+        "country=HU"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-hu-reduced-2012-01-01-0-18-food-accommodation-outdoor-events",
+      "name": "Hungary reduced VAT 18%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2012-01-01",
+      "isRate": true,
+      "rate": 0.18,
+      "effectKind": "rate",
+      "sourceUrl": "https://nav.gov.hu/en",
+      "when": [
+        "country=HU",
+        "productCategory=groceries"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-hu-reduced-2004-01-01-0-05-medicines-books-some-food",
+      "name": "Hungary reduced VAT 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2004-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://nav.gov.hu/en",
+      "when": [
+        "country=HU",
+        "productCategory=groceries|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-ie-standard-2012-01-01-0-23",
+      "name": "Ireland standard VAT 23%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2012-01-01",
+      "isRate": true,
+      "rate": 0.23,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.ie/en/vat/",
+      "when": [
+        "country=IE"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-ie-reduced-2012-01-01-0-135-construction-energy-some-food",
+      "name": "Ireland reduced VAT 13.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2012-01-01",
+      "isRate": true,
+      "rate": 0.135,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.ie/en/vat/",
+      "when": [
+        "country=IE",
+        "productCategory=groceries"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-ie-reduced-2026-07-01-0-09-hospitality-and-restaurants",
+      "name": "Ireland reduced VAT 9%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-07-01",
+      "isRate": true,
+      "rate": 0.09,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.revenue.ie/en/vat/",
+      "when": [
+        "country=IE",
+        "productCategory=prepared-food"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-it-standard-2013-10-01-0-22",
+      "name": "Italy standard VAT 22%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-10-01",
+      "isRate": true,
+      "rate": 0.22,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.agenziaentrate.gov.it/portale/en",
+      "when": [
+        "country=IT"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-it-reduced-1997-01-01-0-1-restaurants-hotels-some-food",
+      "name": "Italy reduced VAT 10%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1997-01-01",
+      "isRate": true,
+      "rate": 0.1,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.agenziaentrate.gov.it/portale/en",
+      "when": [
+        "country=IT",
+        "productCategory=groceries|prepared-food"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-it-reduced-1997-01-01-0-05-some-food-transport-social-services",
+      "name": "Italy reduced VAT 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1997-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.agenziaentrate.gov.it/portale/en",
+      "when": [
+        "country=IT",
+        "productCategory=groceries"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-it-reduced-1997-01-01-0-04-books-newspapers-medicines",
+      "name": "Italy reduced VAT 4%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1997-01-01",
+      "isRate": true,
+      "rate": 0.04,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.agenziaentrate.gov.it/portale/en",
+      "when": [
+        "country=IT",
+        "productCategory=prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-lv-standard-2013-07-01-0-21",
+      "name": "Latvia standard VAT 21%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-07-01",
+      "isRate": true,
+      "rate": 0.21,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.vid.gov.lv/en",
+      "when": [
+        "country=LV"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-lv-reduced-2013-07-01-0-12-medicines-accommodation-some-food",
+      "name": "Latvia reduced VAT 12%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-07-01",
+      "isRate": true,
+      "rate": 0.12,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.vid.gov.lv/en",
+      "when": [
+        "country=LV",
+        "productCategory=groceries|prescription-medicine"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-lv-reduced-2013-07-01-0-05-books-some-food-heating",
+      "name": "Latvia reduced VAT 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-07-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.vid.gov.lv/en",
+      "when": [
+        "country=LV",
+        "productCategory=groceries|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-lt-standard-2009-09-01-0-21",
+      "name": "Lithuania standard VAT 21%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2009-09-01",
+      "isRate": true,
+      "rate": 0.21,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.vmi.lt/en",
+      "when": [
+        "country=LT"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-lt-reduced-2026-01-01-0-12-accommodation-culture-publications",
+      "name": "Lithuania reduced VAT 12%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": true,
+      "rate": 0.12,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.vmi.lt/en",
+      "when": [
+        "country=LT",
+        "productCategory=books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-lt-reduced-2010-01-01-0-05-medicines-some-food",
+      "name": "Lithuania reduced VAT 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2010-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.vmi.lt/en",
+      "when": [
+        "country=LT",
+        "productCategory=groceries|prescription-medicine"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-lu-standard-2015-01-01-0-17",
+      "name": "Luxembourg standard VAT 17%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2015-01-01",
+      "isRate": true,
+      "rate": 0.17,
+      "effectKind": "rate",
+      "sourceUrl": "https://pfi.public.lu/en.html",
+      "when": [
+        "country=LU"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-lu-reduced-2015-01-01-0-14-food-books-medicines-a-14-list",
+      "name": "Luxembourg reduced VAT 14%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2015-01-01",
+      "isRate": true,
+      "rate": 0.14,
+      "effectKind": "rate",
+      "sourceUrl": "https://pfi.public.lu/en.html",
+      "when": [
+        "country=LU",
+        "productCategory=groceries|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-lu-reduced-2015-01-01-0-08-books-some-transport-agriculture",
+      "name": "Luxembourg reduced VAT 8%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2015-01-01",
+      "isRate": true,
+      "rate": 0.08,
+      "effectKind": "rate",
+      "sourceUrl": "https://pfi.public.lu/en.html",
+      "when": [
+        "country=LU",
+        "productCategory=books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-mt-standard-2011-01-01-0-18",
+      "name": "Malta standard VAT 18%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2011-01-01",
+      "isRate": true,
+      "rate": 0.18,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.cfr.gov.mt/",
+      "when": [
+        "country=MT"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-mt-reduced-2011-01-01-0-05-food-books-medicines",
+      "name": "Malta reduced VAT 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2011-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.cfr.gov.mt/",
+      "when": [
+        "country=MT",
+        "productCategory=groceries|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-nl-standard-2012-10-01-0-21",
+      "name": "Netherlands standard VAT 21%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2012-10-01",
+      "isRate": true,
+      "rate": 0.21,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.belastingdienst.nl/wps/wcm/connect/en/",
+      "when": [
+        "country=NL"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-nl-reduced-2019-01-01-0-09-food-medicines-books-transport",
+      "name": "Netherlands reduced VAT 9%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2019-01-01",
+      "isRate": true,
+      "rate": 0.09,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.belastingdienst.nl/wps/wcm/connect/en/",
+      "when": [
+        "country=NL",
+        "productCategory=groceries|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-pl-standard-2011-01-01-0-23",
+      "name": "Poland standard VAT 23%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2011-01-01",
+      "isRate": true,
+      "rate": 0.23,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.podatki.gov.pl/en",
+      "when": [
+        "country=PL"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-pl-reduced-2011-01-01-0-08-construction-accommodation-some-food",
+      "name": "Poland reduced VAT 8%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2011-01-01",
+      "isRate": true,
+      "rate": 0.08,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.podatki.gov.pl/en",
+      "when": [
+        "country=PL",
+        "productCategory=groceries"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-pl-reduced-2011-01-01-0-05-basic-food-books-medicines",
+      "name": "Poland reduced VAT 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2011-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.podatki.gov.pl/en",
+      "when": [
+        "country=PL",
+        "productCategory=groceries|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-pt-standard-2011-01-01-0-23",
+      "name": "Portugal standard VAT 23%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2011-01-01",
+      "isRate": true,
+      "rate": 0.23,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.portaldasfinancas.gov.pt/",
+      "when": [
+        "country=PT"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-pt-reduced-2011-01-01-0-13-food-restaurants-wine",
+      "name": "Portugal reduced VAT 13%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2011-01-01",
+      "isRate": true,
+      "rate": 0.13,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.portaldasfinancas.gov.pt/",
+      "when": [
+        "country=PT",
+        "productCategory=groceries|prepared-food"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-pt-reduced-2011-01-01-0-06-basic-food-books-medicines",
+      "name": "Portugal reduced VAT 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2011-01-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.portaldasfinancas.gov.pt/",
+      "when": [
+        "country=PT",
+        "productCategory=groceries|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-ro-standard-2025-08-01-0-21",
+      "name": "Romania standard VAT 21%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2025-08-01",
+      "isRate": true,
+      "rate": 0.21,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.mfinante.gov.ro/",
+      "when": [
+        "country=RO"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-ro-reduced-2025-08-01-0-11-food-medicines-accommodation-books",
+      "name": "Romania reduced VAT 11%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2025-08-01",
+      "isRate": true,
+      "rate": 0.11,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.mfinante.gov.ro/",
+      "when": [
+        "country=RO",
+        "productCategory=groceries|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-sk-standard-2025-01-01-0-23",
+      "name": "Slovakia standard VAT 23%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2025-01-01",
+      "isRate": true,
+      "rate": 0.23,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.financnasprava.sk/en",
+      "when": [
+        "country=SK"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-sk-reduced-2025-01-01-0-19-food-medicines-books-accommodation",
+      "name": "Slovakia reduced VAT 19%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2025-01-01",
+      "isRate": true,
+      "rate": 0.19,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.financnasprava.sk/en",
+      "when": [
+        "country=SK",
+        "productCategory=groceries|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-sk-reduced-2011-01-01-0-05-basic-food-some-construction",
+      "name": "Slovakia reduced VAT 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2011-01-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.financnasprava.sk/en",
+      "when": [
+        "country=SK",
+        "productCategory=groceries"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-si-standard-2013-07-01-0-22",
+      "name": "Slovenia standard VAT 22%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-07-01",
+      "isRate": true,
+      "rate": 0.22,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.fu.gov.si/en",
+      "when": [
+        "country=SI"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-si-reduced-2013-07-01-0-095-food-construction-accommodation",
+      "name": "Slovenia reduced VAT 9.5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-07-01",
+      "isRate": true,
+      "rate": 0.095,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.fu.gov.si/en",
+      "when": [
+        "country=SI",
+        "productCategory=groceries"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-si-reduced-2013-07-01-0-05-books-medicines-culture",
+      "name": "Slovenia reduced VAT 5%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2013-07-01",
+      "isRate": true,
+      "rate": 0.05,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.fu.gov.si/en",
+      "when": [
+        "country=SI",
+        "productCategory=prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-es-standard-2012-09-01-0-21",
+      "name": "Spain standard VAT 21%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2012-09-01",
+      "isRate": true,
+      "rate": 0.21,
+      "effectKind": "rate",
+      "sourceUrl": "https://sede.agenciatributaria.gob.es/Sede/en_gb.html",
+      "when": [
+        "country=ES"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-es-reduced-2012-09-01-0-1-food-restaurants-transport",
+      "name": "Spain reduced VAT 10%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "2012-09-01",
+      "isRate": true,
+      "rate": 0.1,
+      "effectKind": "rate",
+      "sourceUrl": "https://sede.agenciatributaria.gob.es/Sede/en_gb.html",
+      "when": [
+        "country=ES",
+        "productCategory=groceries|prepared-food"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-es-reduced-1995-01-01-0-04-basic-food-books-medicines",
+      "name": "Spain reduced VAT 4%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1995-01-01",
+      "isRate": true,
+      "rate": 0.04,
+      "effectKind": "rate",
+      "sourceUrl": "https://sede.agenciatributaria.gob.es/Sede/en_gb.html",
+      "when": [
+        "country=ES",
+        "productCategory=groceries|prescription-medicine|books"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-se-standard-1990-07-01-0-25",
+      "name": "Sweden standard VAT 25%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1990-07-01",
+      "isRate": true,
+      "rate": 0.25,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.skatteverket.se/servicelankar/otherlanguages/englishengelska.4.html",
+      "when": [
+        "country=SE"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-se-reduced-1990-07-01-0-12-food-restaurants-accommodation",
+      "name": "Sweden reduced VAT 12%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1990-07-01",
+      "isRate": true,
+      "rate": 0.12,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.skatteverket.se/servicelankar/otherlanguages/englishengelska.4.html",
+      "when": [
+        "country=SE",
+        "productCategory=groceries|prepared-food"
+      ]
+    },
+    {
+      "pack": "eu-vat",
+      "id": "eu-se-reduced-1996-01-01-0-06-books-culture-transport",
+      "name": "Sweden reduced VAT 6%",
+      "scope": "line",
+      "combine": "accumulate",
+      "validFrom": "1996-01-01",
+      "isRate": true,
+      "rate": 0.06,
+      "effectKind": "rate",
+      "sourceUrl": "https://www.skatteverket.se/servicelankar/otherlanguages/englishengelska.4.html",
+      "when": [
+        "country=SE",
+        "productCategory=books"
+      ]
+    },
+    {
+      "pack": "registration-thresholds",
+      "id": "il-osek-patur-2024",
+      "name": "Israel osek patur annual turnover ceiling (2024)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2024-01-01",
+      "validTo": "2024-12-31",
+      "isRate": false,
+      "effectKind": "registration-threshold",
+      "sourceUrl": "https://www.gov.il/BlobFolder/generalpage/income-tax-guide-knowyourright/he/Guides_IncomeTax_da-2024.pdf",
+      "when": [
+        "activity=il_osek_patur_turnover",
+        "country=IL"
+      ]
+    },
+    {
+      "pack": "registration-thresholds",
+      "id": "il-osek-patur-2025",
+      "name": "Israel osek patur annual turnover ceiling (2025)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "isRate": false,
+      "effectKind": "registration-threshold",
+      "sourceUrl": "https://www.gov.il/BlobFolder/generalpage/income-tax-guide-knowyourright/he/Guides_IncomeTax_da-2025.pdf",
+      "when": [
+        "activity=il_osek_patur_turnover",
+        "country=IL"
+      ]
+    },
+    {
+      "pack": "registration-thresholds",
+      "id": "il-osek-patur-2026",
+      "name": "Israel osek patur annual turnover ceiling (2026)",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "registration-threshold",
+      "sourceUrl": "https://www.gov.il/he/service/request-open-exempt-dealer-via-internet",
+      "when": [
+        "activity=il_osek_patur_turnover",
+        "country=IL"
+      ]
+    },
+    {
+      "pack": "registration-thresholds",
+      "id": "uk-vat-registration-2024-04",
+      "name": "UK VAT taxable-turnover registration threshold",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2024-04-01",
+      "isRate": false,
+      "effectKind": "registration-threshold",
+      "sourceUrl": "https://www.gov.uk/government/publications/vat-increasing-the-registration-and-deregistration-thresholds",
+      "when": [
+        "activity=uk_vat_taxable_turnover",
+        "country=GB"
+      ]
+    },
+    {
+      "pack": "registration-thresholds",
+      "id": "ca-gst-small-supplier-single-quarter",
+      "name": "Canada GST/HST small-supplier threshold — any single calendar quarter",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "1991-01-01",
+      "isRate": false,
+      "effectKind": "registration-threshold",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses/when-register-charge.html",
+      "when": [
+        "activity=ca_gst_taxable_supplies",
+        "country=CA"
+      ]
+    },
+    {
+      "pack": "registration-thresholds",
+      "id": "ca-gst-small-supplier-four-quarters",
+      "name": "Canada GST/HST small-supplier threshold — four consecutive calendar quarters",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "1991-01-01",
+      "isRate": false,
+      "effectKind": "registration-threshold",
+      "sourceUrl": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses/when-register-charge.html",
+      "when": [
+        "activity=ca_gst_taxable_supplies",
+        "country=CA"
+      ]
+    },
+    {
+      "pack": "registration-thresholds",
+      "id": "eu-oss-place-of-supply-2021-07",
+      "name": "EU-wide OSS-related place-of-supply threshold",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2021-07-01",
+      "isRate": false,
+      "effectKind": "registration-threshold",
+      "sourceUrl": "https://taxation-customs.ec.europa.eu/vat-e-commerce_en",
+      "when": [
+        "activity=eu_oss_qualifying_b2c_supplies",
+        "country=AT|BE|BG|HR|CY|CZ|DK|EE|FI|FR|DE|EL|HU|IE|IT|LV|LT|LU|MT|NL|PL|PT|RO|SK|SI|ES|SE"
+      ]
+    },
+    {
+      "pack": "filings",
+      "id": "us-1120",
+      "name": "US corporation income tax return",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": false,
+      "effectKind": "filing",
+      "sourceUrl": "https://www.irs.gov/forms-pubs/about-form-1120",
+      "when": [
+        "country=US",
+        "taxTreatment=c_corporation"
+      ]
+    },
+    {
+      "pack": "filings",
+      "id": "us-1120s",
+      "name": "S corporation income tax return",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": false,
+      "effectKind": "filing",
+      "sourceUrl": "https://www.irs.gov/forms-pubs/about-form-1120-s",
+      "when": [
+        "country=US",
+        "taxTreatment=s_corporation"
+      ]
+    },
+    {
+      "pack": "filings",
+      "id": "us-1065",
+      "name": "Partnership return",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": false,
+      "effectKind": "filing",
+      "sourceUrl": "https://www.irs.gov/forms-pubs/about-form-1065",
+      "when": [
+        "country=US",
+        "taxTreatment=partnership"
+      ]
+    },
+    {
+      "pack": "filings",
+      "id": "us-990",
+      "name": "Exempt organization return",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": false,
+      "effectKind": "filing",
+      "sourceUrl": "https://www.irs.gov/forms-pubs/about-form-990",
+      "when": [
+        "country=US",
+        "exemptStatus=recognized_exempt"
+      ]
+    },
+    {
+      "pack": "filings",
+      "id": "il-1214",
+      "name": "Israeli company annual return",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": false,
+      "effectKind": "filing",
+      "sourceUrl": "https://www.gov.il/he/departments/israel_tax_authority",
+      "when": [
+        "country=IL",
+        "taxTreatment=il_company"
+      ]
+    },
+    {
+      "pack": "filings",
+      "id": "il-vat-report",
+      "name": "Israeli periodic VAT report",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": false,
+      "effectKind": "filing",
+      "sourceUrl": "https://www.gov.il/he/departments/israel_tax_authority",
+      "when": [
+        "country=IL",
+        "taxTreatment=il_company|il_osek_murshe"
+      ]
+    },
+    {
+      "pack": "filings",
+      "id": "il-patur-declaration",
+      "name": "Osek patur yearly turnover declaration",
+      "scope": "entity-period",
+      "combine": "accumulate",
+      "validFrom": "2000-01-01",
+      "isRate": false,
+      "effectKind": "filing",
+      "sourceUrl": "https://www.gov.il/he/departments/israel_tax_authority",
+      "when": [
+        "country=IL",
+        "taxTreatment=il_osek_patur"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-al-2026-01-01",
+      "name": "Alabama: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.revenue.alabama.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=AL"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-az-2026-01-01",
+      "name": "Arizona: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://azdor.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=AZ"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ar-2026-01-01",
+      "name": "Arkansas: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.dfa.arkansas.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=AR"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ca-2026-01-01",
+      "name": "California: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.cdtfa.ca.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=CA"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-co-2026-01-01",
+      "name": "Colorado: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://tax.colorado.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=CO"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ct-2026-01-01",
+      "name": "Connecticut: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://portal.ct.gov/DRS/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=CT"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-dc-2026-01-01",
+      "name": "District of Columbia: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://otr.cfo.dc.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=DC"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-fl-2026-01-01",
+      "name": "Florida: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://floridarevenue.com/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=FL"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ga-2026-01-01",
+      "name": "Georgia: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://dor.georgia.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=GA"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-hi-2026-01-01",
+      "name": "Hawaii: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://tax.hawaii.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=HI"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-id-2026-01-01",
+      "name": "Idaho: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://tax.idaho.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=ID"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-il-2026-01-01",
+      "name": "Illinois: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://tax.illinois.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=IL"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-in-2026-01-01",
+      "name": "Indiana: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.in.gov/dor/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=IN"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ia-2026-01-01",
+      "name": "Iowa: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://revenue.iowa.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=IA"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ks-2026-01-01",
+      "name": "Kansas: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.ksrevenue.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=KS"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ky-2026-01-01",
+      "name": "Kentucky: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://revenue.ky.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=KY"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-la-2026-01-01",
+      "name": "Louisiana: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://revenue.louisiana.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=LA"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-me-2026-01-01",
+      "name": "Maine: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.maine.gov/revenue/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=ME"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-md-2026-01-01",
+      "name": "Maryland: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.marylandtaxes.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=MD"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ma-2026-01-01",
+      "name": "Massachusetts: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.mass.gov/orgs/massachusetts-department-of-revenue/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=MA"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-mi-2026-01-01",
+      "name": "Michigan: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.michigan.gov/treasury/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=MI"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-mn-2026-01-01",
+      "name": "Minnesota: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.revenue.state.mn.us/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=MN"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ms-2026-01-01",
+      "name": "Mississippi: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.dor.ms.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=MS"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-mo-2026-01-01",
+      "name": "Missouri: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://dor.mo.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=MO"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ne-2026-01-01",
+      "name": "Nebraska: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://revenue.nebraska.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=NE"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-nv-2026-01-01",
+      "name": "Nevada: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://tax.nv.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=NV"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-nj-2026-01-01",
+      "name": "New Jersey: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.nj.gov/treasury/taxation/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=NJ"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-nm-2026-01-01",
+      "name": "New Mexico: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.tax.newmexico.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=NM"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ny-2026-01-01",
+      "name": "New York: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.tax.ny.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=NY"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-nc-2026-01-01",
+      "name": "North Carolina: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.ncdor.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=NC"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-nd-2026-01-01",
+      "name": "North Dakota: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.tax.nd.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=ND"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-oh-2026-01-01",
+      "name": "Ohio: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://tax.ohio.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=OH"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ok-2026-01-01",
+      "name": "Oklahoma: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://oklahoma.gov/tax.html/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=OK"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-pa-2026-01-01",
+      "name": "Pennsylvania: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.revenue.pa.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=PA"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ri-2026-01-01",
+      "name": "Rhode Island: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://tax.ri.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=RI"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-sc-2026-01-01",
+      "name": "South Carolina: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://dor.sc.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=SC"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-sd-2026-01-01",
+      "name": "South Dakota: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://dor.sd.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=SD"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-tn-2026-01-01",
+      "name": "Tennessee: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.tn.gov/revenue.html/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=TN"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-tx-2026-01-01",
+      "name": "Texas: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://comptroller.texas.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=TX"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-ut-2026-01-01",
+      "name": "Utah: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://tax.utah.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=UT"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-vt-2026-01-01",
+      "name": "Vermont: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://tax.vermont.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=VT"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-va-2026-01-01",
+      "name": "Virginia: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.tax.virginia.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=VA"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-wa-2026-01-01",
+      "name": "Washington: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://dor.wa.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=WA"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-wv-2026-01-01",
+      "name": "West Virginia: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://tax.wv.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=WV"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-wi-2026-01-01",
+      "name": "Wisconsin: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://www.revenue.wi.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=WI"
+      ]
+    },
+    {
+      "pack": "us-marketplace-facilitator",
+      "id": "us-marketplace-wy-2026-01-01",
+      "name": "Wyoming: the marketplace collects, not the seller",
+      "scope": "line",
+      "combine": "exclude",
+      "validFrom": "2026-01-01",
+      "isRate": false,
+      "effectKind": "marketplace",
+      "sourceUrl": "https://revenue.wyo.gov/",
+      "when": [
+        "channel=marketplace",
+        "country=US",
+        "state=WY"
+      ]
+    }
+  ]
+}
