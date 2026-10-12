@@ -43,10 +43,14 @@ test('report pack: phone focus, period/current aging, Hebrew PDF, page numbers a
   await page.evaluate(() => document.fonts.ready);
   const pdf = await page.pdf({ format: 'A4', preferCSSPageSize: true, printBackground: true });
   const pdfPath = testInfo.outputPath('report-pack.pdf'); await writeFile(pdfPath, pdf);
-  const text = pdfText(pdf).replace(/\s/g, '');
+  const extracted = pdfText(pdf);
+  await testInfo.attach('report-pack-extracted-text', { body: extracted, contentType: 'text/plain' });
+  const text = extracted.replace(/\s/g, '');
   expect(pdfPageCount(pdf)).toBe(4);
   expect(text).not.toContain('APPCHROMEMUSTNOTPRINT'); expect(text).not.toContain('Preparepack');
   expect(text).toContain('2024-01-31'); expect(text).toContain('123.45'); expect(text).toMatch(/[\u0590-\u05ff]/);
+  // Hebrew drawing order may be visual or logical; dates and amounts must stay LTR.
+  expect(text).toMatch(/ספרים|םירפס/); expect(text).toMatch(/מכירות|תוריכמ/); expect(text).toMatch(/בנק|קנב/);
   expect(text).toContain('Page1of4'); expect(text).toContain('Page4of4');
   await page.emulateMedia({ media: 'screen' }); await dialog.press('Escape'); await expect(dialog).toHaveCount(0); await expect(opener).toBeFocused();
 });
