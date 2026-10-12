@@ -20,7 +20,7 @@ function ScopedBalanceChart({ endDate, currency }: { endDate: string; currency?:
   const [refresh, setRefresh] = useState(0);
   const [result, setResult] = useState<{ date: string; sourceAccounts: ChartAccount[]; sourceTransactions: Transaction[]; report?: ServerTrialBalanceData; accounts?: ChartAccount[]; error?: string }>();
   const cached = useMemo(() => {
-    const cacheWorkspace = workspace || (guest ? 'guest' : undefined);
+    const cacheWorkspace = guest ? 'guest' : workspace || undefined;
     const scoped = accounts.filter(account => !!cacheWorkspace && account.workspaceId === cacheWorkspace);
     return { accounts: scoped, report: computeTrialBalance(scoped, transactions.filter(tx => !!cacheWorkspace && tx.workspaceId === cacheWorkspace), endDate) };
   }, [accounts, transactions, workspace, guest, endDate]);

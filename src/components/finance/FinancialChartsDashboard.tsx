@@ -126,7 +126,7 @@ function ScopedChartsDashboard() {
         {period && <a className="inline-flex min-h-11 items-center underline" href={`?${reportParams}#reports`}>Open P&amp;L for selected period</a>}
         {selectedPeriod && <button type="button" className="min-h-11 px-3 border rounded ml-2" onClick={() => choosePeriod(undefined)}>Reset report period</button>}
       </div>
-      <FinancialChartPanels key={timeRange} data={data} currency={currency} selectionRange={selectionRange} onRangeChange={onRangeChange} emptyPeriod={!!selectedPeriod && !chosen.length} />
+      <FinancialChartPanels key={timeRange} data={data} currency={currency} selectionRange={selectionRange} onRangeChange={onRangeChange} onRangeReset={() => choosePeriod(undefined)} emptyPeriod={!!selectedPeriod && !chosen.length} />
       {period && <React.Suspense fallback={<p role="status">Loading account balance chart…</p>}><AccountBalanceChart endDate={period.endDate} currency={currency} /></React.Suspense>}
       <ChartExploration months={chosen.map(row => row.month)} currency={currency} />
     </div>

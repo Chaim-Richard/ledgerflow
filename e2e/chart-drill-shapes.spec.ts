@@ -49,6 +49,13 @@ for (const width of [1280,390]) test(`account icicle zoom and report-period drag
   await expect(mix.getByRole('row')).toHaveCount(4);
   await expect(burn.getByRole('row')).toHaveCount(4);
   expect(new URL(page.url()).searchParams.get('start')).toBe(null);
+  await mix.getByLabel('Monthly Profitability & Mix brush start').press('ArrowRight');
+  await expect(mix.getByRole('row')).toHaveCount(3);
+  await mix.getByRole('button',{name:'Reset zoom',exact:true}).click();
+  await expect(mix.getByRole('row')).toHaveCount(4);
+  await expect(burn.getByRole('row')).toHaveCount(4);
+  expect(new URL(page.url()).searchParams.get('start')).toBe(null);
+  await expect(page.getByRole('button',{name:'Reset report period',exact:true})).toHaveCount(0);
   await brush.scrollIntoViewIfNeeded();
   const resetBox=(await brush.boundingBox())!;
   await page.mouse.move(resetBox.x+resetBox.width/2,resetBox.y+resetBox.height/2);

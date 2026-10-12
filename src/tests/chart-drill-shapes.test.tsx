@@ -141,6 +141,38 @@ test('live account balances withhold cached amounts on refusal and retry with fu
   assert.equal(screen.queryByText(/Account balances unavailable:/),null);
 });
 
+test('controlled zoom reset clears the period and includes later streamed months', () => {
+  setComponentWorkspace();
+  function PeriodChart() {
+    const [range, setRange] = React.useState<[number, number] | null>([1, 1]);
+    const [added, setAdded] = React.useState(false);
+    const rows = [{id:'a',label:'2024-01',cents:100},{id:'b',label:'2024-02',cents:200}, ...(added ? [{id:'c',label:'2024-03',cents:300}] : [])];
+    return <><button onClick={() => setAdded(true)}>Stream next month</button><ChartFrame title="Controlled stream" time rows={rows} series={[{key:'cents',name:'Value'}]} selectionRange={range} onRangeChange={setRange} onRangeReset={() => setRange(null)}>{() => null}</ChartFrame></>;
+  }
+  render(<PeriodChart />);
+  fireEvent.click(screen.getByRole('button', {name:'Table'}));
+  assert.doesNotMatch(screen.getByRole('table').textContent || '', /2024-01/);
+  fireEvent.click(screen.getByRole('button', {name:'Reset zoom'}));
+  fireEvent.click(screen.getByRole('button', {name:'Stream next month'}));
+  assert.match(screen.getByRole('table').textContent || '', /2024-01/);
+  assert.match(screen.getByRole('table').textContent || '', /2024-03/);
+});
+
+test('guest account balances use demo scope even after logout leaves a real workspace selected', () => {
+  setComponentWorkspace();
+  useAuthStore.setState({user:null,isGuest:true,currentWorkspaceId:'previous-real-workspace'});
+  useLedgerStore.setState({accounts:[
+    makeChartAccount({id:'demo',name:'DEMO_BALANCE',workspaceId:'guest',openingBalanceCents:12345}),
+    makeChartAccount({id:'private',name:'PRIVATE_REAL_BALANCE',workspaceId:'previous-real-workspace',openingBalanceCents:999999}),
+  ],transactions:[]});
+  render(<AccountBalanceChart endDate="2024-02-29" />);
+  assert.match(screen.getByRole('status').textContent || '', /Guest demonstration/);
+  fireEvent.click(screen.getByText('Account balances table'));
+  assert.match(screen.getByRole('table').textContent || '', /DEMO_BALANCE/);
+  assert.match(screen.getByRole('table').textContent || '', /123\.45/);
+  assert.doesNotMatch(document.body.textContent || '', /PRIVATE_REAL_BALANCE/);
+});
+
 test('an obsolete workspace report cannot populate the new account chart', async () => {
   const workspace=setComponentWorkspace();
   useLedgerStore.setState({accounts:[],transactions:[]});

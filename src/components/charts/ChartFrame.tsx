@@ -22,19 +22,19 @@ function formatChartValue(value: unknown, unit: ChartSeries['unit'], currency?: 
   if (unit === 'days') return `${value} days`;
   return Number.isFinite(Number(value)) ? formatCurrency(Number(value), currency) : '—';
 }
-interface ChartFrameProps { title: string; rows: ChartRow[]; series: ChartSeries[]; currency?: string; time?: boolean; categories?: boolean; chartId?: string; defaultKind?: ChartKind; selectionRange?: [number, number] | null; onRangeChange?: (range: [number, number]) => void; children: (controls: ChartControls) => React.ReactNode }
+interface ChartFrameProps { title: string; rows: ChartRow[]; series: ChartSeries[]; currency?: string; time?: boolean; categories?: boolean; chartId?: string; defaultKind?: ChartKind; selectionRange?: [number, number] | null; onRangeChange?: (range: [number, number]) => void; onRangeReset?: () => void; children: (controls: ChartControls) => React.ReactNode }
 export default function ChartFrame(props: ChartFrameProps) {
   const scope = useChartScope(props.chartId || props.title);
   return <ScopedChartFrame key={scope} {...props} preferenceKey={scope} />;
 }
-function ScopedChartFrame({ title, rows, series, currency, time = false, categories = false, chartId, defaultKind = 'bar', selectionRange, onRangeChange, children, preferenceKey }: ChartFrameProps & { preferenceKey: string }) {
+function ScopedChartFrame({ title, rows, series, currency, time = false, categories = false, chartId, defaultKind = 'bar', selectionRange, onRangeChange, onRangeReset, children, preferenceKey }: ChartFrameProps & { preferenceKey: string }) {
   const { kind, changeKind, storageError } = useChartKind(preferenceKey, defaultKind);
   const [focusedCategory, setFocusedCategory] = useState<string>();
   const [table, setTable] = useState(false), [hidden, setHidden] = useState<Set<string>>(() => new Set());
   const [window, setWindow] = useState<[number, number]>([0, Number.MAX_SAFE_INTEGER]);
   const selection = selectionRange === null ? [0, Number.MAX_SAFE_INTEGER] : selectionRange || window;
   const changeRange = (range: [number, number]) => { setWindow(range); onRangeChange?.(range); };
-  const resetRange = () => { setWindow([0, Number.MAX_SAFE_INTEGER]); onRangeChange?.([0, rows.length - 1]); };
+  const resetRange = () => { setWindow([0, Number.MAX_SAFE_INTEGER]); if (onRangeReset) onRangeReset(); else onRangeChange?.([0, rows.length - 1]); };
   const end = Math.min(selection[1], Math.max(0, rows.length - 1)), start = Math.min(selection[0], end);
   const shown = useMemo(() => rows.slice(start, end + 1).filter(row => !categories || !hidden.has(row.id)), [rows, start, end, categories, hidden]);
   const columns = series.filter(item => !hidden.has(item.key));
