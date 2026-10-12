@@ -1,4 +1,8 @@
 /**
+ * PLAN US-3: a US state sales tax return per permit. Reachable here until AI #2's C-59 return screen uses it.
+ */
+export { usSalesTaxReturn } from './tax/usSalesTaxReturn';
+/**
  * E-15: EU/UK VAT number pattern previews and masked nonblocking warnings.
  * They do not check VIES/HMRC registration or change live tax calculation.
  */

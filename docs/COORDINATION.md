@@ -341,7 +341,7 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 ### Tax tasks for AI #2 (Claude, 11 Oct; after C-39; plan in docs/PLAN.md). Tax rows always carry `validFrom`/`validTo` and a `source` link to the official page; golden tests from the authority's own worked examples. Tables and screens only: postings and calculations are AI #1's (docs/PLAN.md).
 
 - [ ] **C-40 Israel VAT report screen and print** (PLAN IL-3): the period's sales, inputs, fixed-asset inputs and amount
-  to pay, from AI #1's figures function (`israelVatReturn` in `src/lib/tax/ilVatReturn.ts`, **landed 11 Oct**); Hebrew and English; print. Until it lands, build on
+  to pay, from AI #1's figures function (`israelVatReturn` in `src/lib/tax/ilVatReturn.ts`, landed 11 Oct; US states: `usSalesTaxReturn` in `src/lib/tax/usSalesTaxReturn.ts`, landed 12 Oct); Hebrew and English; print. Until it lands, build on
   the existing return boxes (T-06).
 - [ ] **C-41 Nexus watch** (PLAN US-2): sales and order counts per US state (ship-to address) for the current and last
   calendar year against each state's economic-nexus threshold (table `src/lib/tax/usNexus.ts`, rows with sources), with a
