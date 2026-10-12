@@ -1,0 +1,54 @@
+import { useMemo, useRef, useState, useEffect } from 'react';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { collection, getDocs, query, where } from '../../lib/db/firestore';
+import { db } from '../../firebase';
+import { discountMismatches } from '../../lib/discountMismatch';
+import { formatCurrency } from '../../lib/utils';
+import { downloadCsv, csvMoney } from '../../lib/csvExport';
+import { useUIStore } from '../../stores/useUIStore';
+import type { InventoryItem, Invoice } from '../../types';
+import type { PriceList } from '../../lib/priceLists';
+import ReportTableScroll from './ReportTableScroll';
+interface Props { startDate?: string; endDate?: string }
+interface Snapshot { invoices: Invoice[]; items: InventoryItem[]; lists: PriceList[]; loadedAt: string }
+export default function DiscountMismatchView(props: Props) {
+  const uid = useAuthStore(state=>state.user?.uid), workspace = useAuthStore(state=>state.currentWorkspaceId);
+  return <ScopedDiscountMismatch key={JSON.stringify([uid,workspace])} {...props} />;
+}
+function ScopedDiscountMismatch({startDate='',endDate=''}: Props) {
+  const workspaceId = useAuthStore(state=>state.currentWorkspaceId), uid = useAuthStore(state=>state.user?.uid), guest = useAuthStore(state=>state.isGuest);
+  const workspace = useAuthStore(state=>state.getCurrentWorkspace()), currency = workspace?.currency || 'USD', priceLists = workspace?.priceLists;
+  const invoices = useLedgerStore(state=>state.invoices), items = useLedgerStore(state=>state.inventory);
+  const {loading} = useLedgerCollections('invoices','inventory');
+  const [snapshot,setSnapshot] = useState<Snapshot|null>(null), [busy,setBusy] = useState(false), [error,setError] = useState('');
+  const pending = useRef(false), mounted = useRef(true);
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
+  const current = ()=>mounted.current && useAuthStore.getState().currentWorkspaceId===workspaceId && useAuthStore.getState().user?.uid===uid;
+  const report = useMemo(()=>{
+    try { return { ...discountMismatches({invoices:snapshot?.invoices||invoices,items:snapshot?.items||items,lists:snapshot?.lists||priceLists||[],workspaceId:workspaceId||'',currency,startDate,endDate}),problem:'' }; }
+    catch (reason) { return {rows:[],uncomparableLines:0,problem:reason instanceof Error?reason.message:'Could not compare current prices.'}; }
+  },[snapshot,invoices,items,priceLists,workspaceId,currency,startDate,endDate]);
+  async function refresh() {
+    if (!workspaceId || !uid || guest || pending.current) return;
+    pending.current=true;setBusy(true);setError('');
+    const lists=structuredClone(workspace?.priceLists||[]);
+    try {
+      const [invoiceDocs,itemDocs]=await Promise.all(['invoices','inventory'].map(name=>getDocs(query(collection(db,name),where('workspaceId','==',workspaceId)))));
+      if (current()) setSnapshot({invoices:invoiceDocs.docs.map(doc=>({...doc.data(),id:doc.id} as Invoice)),items:itemDocs.docs.map(doc=>({...doc.data(),id:doc.id} as InventoryItem)),lists,loadedAt:new Date().toISOString()});
+    } catch { if(current())setError('Could not refresh complete invoice and item history. Retry; no complete export is available.'); }
+    finally {pending.current=false;if(current())setBusy(false);}
+  }
+  const exportCsv=()=>downloadCsv('Current_price_mismatches.csv',['Date','Invoice','Customer','Item','Currency','Invoice unit price','Expected unit price','Difference per unit','Comparison source'],report.rows.map(row=>[row.date,row.number,row.customer,row.item,row.currency,csvMoney(row.actualCents),csvMoney(row.expectedCents),csvMoney(row.differenceCents),row.source]));
+  return <section aria-label="Discount mismatch review" className="p-4 space-y-4 min-w-0"><h2>Discount mismatch review</h2>
+    <p>Issued invoice unit prices for {startDate} through {endDate}, compared with the customer’s current price list or the item’s current catalogue price. The existing list-price helper supplies the expected rate. Difference = invoice unit price − expected unit price; negative means the invoice price is lower.</p>
+    <p>This is a current-price review, not proof of the discount agreed on the invoice date. Historical lists, separate item discount rules and document-wide discounts are not stored here. Credits, opening balances, drafts, voids and foreign-currency lines are outside this comparison. No prices, amounts or postings are changed.</p>
+    {!snapshot&&<p role="status">Loaded records are a provisional preview. Refresh complete history before exporting.</p>}{snapshot&&<p>Complete invoice/item reads retrieved {snapshot.loadedAt}; current price lists copied when refresh started. These separate reads are not an atomic historical snapshot.</p>}
+    {loading&&!snapshot&&<p role="status">Loading preview…</p>}{report.problem&&<p role="alert">{report.problem}</p>}{error&&<p role="alert">{error}</p>}
+    <div className="flex flex-wrap gap-2"><button type="button" disabled={busy||!uid||guest||!workspaceId} onClick={()=>void refresh()} className="min-h-11 border rounded px-3">{busy?'Refreshing…':'Refresh complete history'}</button><button type="button" disabled={!snapshot||busy||Boolean(error||report.problem)} onClick={exportCsv} className="min-h-11 border rounded px-3">Export CSV</button></div>
+    <p>{report.uncomparableLines} issued lines cannot be compared because their currency, item reference or price is unavailable or invalid.</p>
+    <ReportTableScroll><table className="w-full text-sm"><caption>Current price mismatch review</caption><thead><tr>{['Date','Invoice','Customer','Item','Invoice unit price','Expected unit price','Difference per unit','Comparison source'].map(name=><th scope="col" key={name}>{name}</th>)}</tr></thead><tbody>{report.rows.map(row=><tr key={JSON.stringify([row.invoiceId,row.line])}><td>{row.date}</td><th scope="row"><button type="button" onClick={()=>useUIStore.getState().openRecord({type:'invoice',id:row.invoiceId})} className="min-h-11 underline"><bdi>{row.number}</bdi></button></th><td><bdi>{row.customer}</bdi></td><td><bdi>{row.item}</bdi></td>{[{id:'actual',amount:row.actualCents},{id:'expected',amount:row.expectedCents},{id:'difference',amount:row.differenceCents}].map(({id,amount})=><td key={id}><bdi dir="auto">{formatCurrency(amount,row.currency)}</bdi></td>)}<td><bdi>{row.source}</bdi></td></tr>)}</tbody></table></ReportTableScroll>
+    {!report.problem&&!loading&&report.rows.length===0&&<p>No comparable unit-price mismatches in the selected period.</p>}
+  </section>;
+}

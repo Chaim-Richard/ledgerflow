@@ -1,4 +1,23 @@
 /**
+ * PLAN §10: the filings each entity owes for a year. Reachable here until AI #2's C-58 filings calendar uses it.
+ */
+export { entityFilings } from './tax/entityFilings';
+/**
+ * PLAN US-3: a US state sales tax return per permit. Reachable here until AI #2's C-59 return screen uses it.
+ */
+export { usSalesTaxReturn } from './tax/usSalesTaxReturn';
+/**
+ * E-15: EU/UK VAT number pattern previews and masked nonblocking warnings.
+ * They do not check VIES/HMRC registration or change live tax calculation.
+ */
+export { checkVatNumber, vatFormatWarning, maskVatNumber, VAT_COUNTRIES, VAT_COUNTRY_FORMATS } from './tax/vatNumberFormat';
+/**
+ * E-16: read-only USPS region and ZIP+4 recognition; never proof of tax
+ * jurisdiction or deliverable address. Needs authoritative geocoding/lookup.
+ */
+export { parseUsStateAndZip, US_POSTAL_REGIONS } from './usAddressStateZip';
+
+/**
  * E-14: US tax-ID formatting, masked display and warning helpers.
  * Read-only staging. Explicit EIN/SSN choice; never infers registration,
  * persists sensitive identifiers or enables 1099/W-9 filing.

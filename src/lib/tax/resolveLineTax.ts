@@ -55,8 +55,11 @@ export function resolveLineTax(input: {
   category?: string;
   exempt?: boolean;
   tables?: RateTables;
+  /** for a place without its own table: usually the rule packs (`ruleRateTable`, PLAN §10) */
+  fallback?: RateTable;
 }): LineTax {
   const tables = { ...builtInRateTables, ...input.tables };
+  const table = (key: string): RateTable | undefined => tables[key] || input.fallback;
   const sellerCountry = input.seller.place?.country;
   const buyer = input.buyer?.country ? input.buyer : input.seller.place;
   const none = (reason: LineTaxReason, registration?: string): LineTax => ({ reason, components: [], rate: 0, ...(registration ? { registration } : {}) });
@@ -69,7 +72,7 @@ export function resolveLineTax(input: {
     if (!permit) return none('not-registered');
     const key = registrationKey(permit);
     if (input.exempt) return none('exempt-certificate', key);
-    const components = tables[`US-${buyer.state}`]?.(buyer, input.date, input.category);
+    const components = table(`US-${buyer.state}`)?.(buyer, input.date, input.category);
     if (!components) return none('no-rate-table', key);
     return { reason: 'taxed', components, rate: total(components), registration: key };
   }
@@ -80,7 +83,7 @@ export function resolveLineTax(input: {
   const key = registrationKey(vat);
   if (buyer.country !== sellerCountry) return none('export', key);
   if (input.exempt) return none('exempt-certificate', key);
-  const components = tables[sellerCountry]?.(buyer, input.date, input.category);
+  const components = table(sellerCountry)?.(buyer, input.date, input.category);
   if (!components) return none('no-rate-table', key);
   const rate = total(components);
   return { reason: rate === 0 && buyer.district ? 'zero-area' : 'taxed', components, rate, registration: key };

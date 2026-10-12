@@ -2,6 +2,10 @@ import React from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { resolveSellerProfile, type TaxPlace } from '../../lib/tax/profile';
 import { resolveLineTax, type LineTaxReason } from '../../lib/tax/resolveLineTax';
+import { ruleRateTable } from '../../lib/tax/ruleRateTable';
+
+// every rule pack, built once, so each place with a pack gets its rate (PLAN §10)
+const packRates = ruleRateTable();
 import { DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 
 const SAYS: Record<Exclude<LineTaxReason, 'taxed'>, string> = {
@@ -35,7 +39,7 @@ export default function TaxPlaceSuggestion({ customer, date, lineLabels, current
     .sort((a, b) => Number(Boolean(b.isWorld)) - Number(Boolean(a.isWorld)) || (a.sortOrder ?? 99) - (b.sortOrder ?? 99)).map(d => d.id);
   const seller = resolveSellerProfile(profiles, lineLabels, order);
   const buyer = (customer?.metadata as { taxPlace?: TaxPlace } | undefined)?.taxPlace;
-  const tax = resolveLineTax({ seller, buyer, date, exempt });
+  const tax = resolveLineTax({ seller, buyer, date, exempt, fallback: packRates });
   const who = seller.name ? `${seller.name}: ` : '';
   if (tax.reason !== 'taxed') {
     const differs = tax.reason !== 'no-rate-table' && currentRate > 0;

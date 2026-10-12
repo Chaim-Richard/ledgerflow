@@ -181,6 +181,13 @@ test("corrupt or blocked storage uses the default and a refused save retains thi
       screen.getByRole("status").textContent || "",
       /could not save/,
     );
+    cleanup();
+    render(<Frame fallback="area" />);
+    assert.equal(screen.getByRole("button", { name: "Line" }).getAttribute("aria-pressed"), "true");
+    assert.match(screen.getByRole("status").textContent || "", /could not save/);
+    cleanup();
+    render(<Frame id="separate-blocked-chart" fallback="bar" />);
+    assert.equal(screen.getByRole("button", { name: "Bar" }).getAttribute("aria-pressed"), "true");
   } finally {
     cleanup();
     storageGet.mock.restore();
