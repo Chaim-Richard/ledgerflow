@@ -52,7 +52,7 @@ export default function FinancialSeriesPlot({
               {...common}
               type="linear"
               stroke={item.color}
-              dot={false}
+              dot={rows.length === 1}
             />
           ) : (
             <Area
@@ -62,6 +62,7 @@ export default function FinancialSeriesPlot({
               stroke={item.color}
               fill={item.color}
               fillOpacity={0.15}
+              dot={rows.length === 1}
             />
           );
         })}

@@ -4,6 +4,9 @@ import { useAuthStore } from "../stores/useAuthStore";
 export const CHART_KINDS = ["bar", "line", "area"] as const;
 export type ChartKind = (typeof CHART_KINDS)[number];
 
+// Failed writes still retain the scoped choice across remounts in this visit.
+const visitChoices = new Map<string, ChartKind>();
+
 /** Only a display choice is stored; no labels, financial rows or account IDs. */
 export function chartKindKey(
   userId: string | undefined,
@@ -19,6 +22,8 @@ export function useChartScope(chartId: string) {
 }
 export function useChartKind(key: string, fallback: ChartKind) {
   const [kind, setKind] = useState<ChartKind>(() => {
+    const visit = visitChoices.get(key);
+    if (visit) return visit;
     try {
       const saved = localStorage.getItem(key);
       return CHART_KINDS.find((value) => value === saved) || fallback;
@@ -26,13 +31,15 @@ export function useChartKind(key: string, fallback: ChartKind) {
       return fallback;
     }
   });
-  const [storageError, setStorageError] = useState(false);
+  const [storageError, setStorageError] = useState(() => visitChoices.has(key));
   const changeKind = (next: ChartKind) => {
     setKind(next);
     try {
       localStorage.setItem(key, next);
+      visitChoices.delete(key);
       setStorageError(false);
     } catch {
+      visitChoices.set(key, next);
       setStorageError(true);
     }
   };

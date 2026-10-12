@@ -141,6 +141,10 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review scheduled revenue earned by month and still deferred at the period end. Inspect each schedule and its recorded earned amounts. Future scheduled amounts remain distinct from posted earned revenue.",
     "financial-ratios":
       "Review financial ratios together with their formulas. Adjust report-only current-account groups and compare periods. Zero denominators are undefined and turnover days use labelled revenue or COGS proxies.",
+    "discount-mismatch":
+      "Compare issued invoice unit prices in the selected period with current customer price lists or item catalogue prices. Refresh complete invoice/item reads before CSV. Current prices do not prove historical discount entitlement; foreign currencies, document-wide discounts and unknown item references are excluded.",
+    "registration-threshold-watch":
+      "Compare posted revenue lines tagged with supported activity values against dated Israel, UK, Canada and EU-wide thresholds, grouped by a chosen entity dimension and country from Tax profiles. Sales are compared only when the workspace base currency matches the threshold currency; missing labels, incomplete history and statutory scope outside ledger data prevent a registration decision. This read-only report keeps its period windows and official sources visible and never posts or converts sales.",
     "gross-profit-by-customer":
       "Review sales, estimated cost and gross profit by customer. Compare periods and inspect cost provenance. The existing invoice-item margin rules remain unchanged.",
     "inactive-items":
@@ -193,6 +197,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review the existing sales-tax liability report. Select dates and inspect taxable amounts and tax totals. Review the report scope before using it for a tax filing.",
   },
   settings: {
+    "tax-profiles": "Review declared country, place, accounting basis and registrations for the books and each label value. Grey values inherit from the nearest parent or the books. Owners and accountants edit supported profile fields here; save confirms the server response and keeps the draft on refusal. A saved declaration is not a verified registration or a completed tax filing.",
     "scheduled-reports":
       "Choose a report to be emailed by itself after each finished week or month: the profit and loss, the balance sheet or receivables aging. The figures are in the email with a spreadsheet attached, and each period is sent once. Send now emails the last finished period straight away.",
     alerts:

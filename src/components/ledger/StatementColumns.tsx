@@ -1,3 +1,4 @@
+import ExportTemplateControls from '../reporting/ExportTemplateControls';
 import React, { useId, useMemo, useState } from "react";
 import type { ChartAccount, Transaction } from "../../types";
 import { useAuthStore } from "../../stores/useAuthStore";
@@ -228,6 +229,7 @@ export function StatementColumns(props: StatementColumnsProps) {
           Export columns CSV
         </button>
       </div>
+      {active && columns.length > 0 && <ExportTemplateControls report={`statement:${kind}:${mode}`} columns={columns.map(column=>`${column.period.id}|${column.period.label}|percent:${showPercent}|compare:${compare}`)} layout={{order:layout.order.map(id=>String(ids.indexOf(id))),hidden:layout.hidden.map(id=>String(ids.indexOf(id)))}} onUse={next=>updateLayout({order:next.order.map(index=>ids[Number(index)]),hidden:next.hidden.map(index=>ids[Number(index)])})} />}
       {active && columns.length > 1 && <details data-print-hide className="rounded-xl border p-3">
         <summary className="min-h-11 cursor-pointer">Choose and order periods</summary>
         <p className="text-sm">Amounts, percentages, comparisons, totals and CSV follow this order. At least one period stays visible.</p>

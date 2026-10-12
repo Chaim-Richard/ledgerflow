@@ -24,7 +24,36 @@ export interface NexusEffect {
   test: 'either' | 'both';
 }
 
-export type TaxEffect = RateEffect | NexusEffect;
+/** A dated turnover comparison, not a conclusion that an entity must register. */
+export type RegistrationThresholdWindow =
+  | 'calendar-year-to-date'
+  | 'rolling-12-months'
+  | 'canada-single-quarter-series'
+  | 'canada-previous-four-quarters'
+  | 'eu-current-and-previous-calendar-year';
+
+export interface RegistrationThresholdEffect {
+  kind: 'registration-threshold';
+  scheme: 'il-osek-patur' | 'uk-vat' | 'ca-gst-small-supplier' | 'eu-oss-place-of-supply';
+  currency: string;
+  thresholdCents: number;
+  activityValue: string;
+  window: RegistrationThresholdWindow;
+  note: string;
+  guidanceUrl?: string;
+}
+
+/** The effect of a filing rule (PLAN §10, entity-period scope): a return or form the entity files. */
+export interface FilingEffect {
+  kind: 'filing';
+  /** the form's own name, e.g. "Form 1120-S", "דוח שנתי 1214" */
+  form: string;
+  frequency: 'monthly' | 'bimonthly' | 'quarterly' | 'yearly';
+  /** when it is due, in words from the source ("15th day of the 3rd month after year end") */
+  due: string;
+}
+
+export type TaxEffect = RateEffect | NexusEffect | RegistrationThresholdEffect | FilingEffect;
 
 /** A table row a pack could not turn into a rule (a category it cannot name, a place it does not know). */
 export interface UnmappedRow {
