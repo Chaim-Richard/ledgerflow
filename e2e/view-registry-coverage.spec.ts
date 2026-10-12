@@ -78,6 +78,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Customer Cohorts', componentName: 'CustomerCohortsReportView' },
     { label: 'Asset Register', componentName: 'AssetRegisterReportView' },
     { label: 'Transfer Check', componentName: 'OneSidedTransfersReportView' },
+    { label: 'Discount Mismatch Review', componentName: 'DiscountMismatchView' },
     { label: 'Budget vs Actual', componentName: 'BudgetActualReportView' },
     { label: 'Sales by Item', componentName: 'SalesByItemReportView' },
     { label: 'Purchase Trends by Vendor', componentName: 'PurchaseTrendsView' },
@@ -134,6 +135,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Stages', componentName: 'StagesSettingsView' },
     { label: 'Currencies', componentName: 'CurrenciesSettingsView' },
     { label: 'Groups of books', componentName: 'GroupsSettingsView' },
+    { label: 'Tax profiles', componentName: 'TaxProfilesSettingsView' },
   ];
 
   for (const tab of settingsTabs) {
