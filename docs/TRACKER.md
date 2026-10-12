@@ -2506,7 +2506,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CF-02 Activity under project
 - [ ] CF-03 Rate hierarchy
 - [ ] CF-04 Working time / capacity
-- [~] CF-05 Per-user bookmarks — **11 Oct (AI #2, C-37):** sidebar stars registered pages and report/settings subviews, remembers each user/workspace’s order on this device, with keyboard reorder and explicit storage-refusal status. Exact registered navigation preserves mixed-language IDs; dates/filters are not captured. Five pure/DOM cases pass; Chromium and integrated gates pending on `codex/c37-bookmarks`.
+- [x] CF-05 Per-user bookmarks — **11 Oct (AI #2, C-37):** sidebar stars registered pages and report/settings subviews, remembers each user/workspace’s order on this device, with keyboard reorder and explicit storage-refusal status. Exact registered navigation preserves mixed-language IDs; dates/filters are not captured. Local checks passed, including 2386 unit cases with coverage/RLS and 201 full Chromium cases; later E-14/bookmark delta 15/15 passed. Review/checks pending on `codex/c37-bookmarks`; exact integration boundaries in `docs/verification/c37-bookmarks-2026-10-11.md`.
 - [ ] CF-06 Export templates
 - [ ] CF-07 Comments on customer / project
 - [ ] CF-08 Meta fields on any entity
