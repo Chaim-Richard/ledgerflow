@@ -138,7 +138,9 @@ function shiftMonth(day: string, delta: number): string {
   const targetIndex = year * 12 + month - 1 + delta;
   const targetYear = Math.floor(targetIndex / 12);
   const targetMonth = ((targetIndex % 12) + 12) % 12 + 1;
-  const lastDay = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
+  // days in the month by the calendar rule, no Date object (time zones cannot shift it)
+  const leap = (targetYear % 4 === 0 && targetYear % 100 !== 0) || targetYear % 400 === 0;
+  const lastDay = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][targetMonth - 1];
   return `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(Math.min(date, lastDay)).padStart(2, '0')}`;
 }
 
