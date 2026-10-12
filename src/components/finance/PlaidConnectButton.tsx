@@ -5,12 +5,14 @@ import { Link2 } from 'lucide-react';
 import { getIdToken } from '../../firebase';
 import { useAuthStore } from '../../stores/useAuthStore';
 
-async function plaidPost(path: string, body: Record<string, unknown>) {
+async function plaidPost(path: string, body: Record<string, unknown>, signal?: AbortSignal) {
   const idToken = await getIdToken();
+  signal?.throwIfAborted();
   const response = await fetch(`/api/v1/plaid/${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
     body: JSON.stringify(body),
+    signal,
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.message || 'Bank connection failed');
@@ -23,15 +25,16 @@ async function plaidPost(path: string, body: Record<string, unknown>) {
  */
 export default function PlaidConnectButton({ onSuccessSync, bankId, label }: { onSuccessSync?: () => void; bankId?: string; label?: string }) {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
-  const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [token, setToken] = useState<{ workspaceId: string; bankId?: string; value: string } | null>(null);
+  const linkToken = token?.workspaceId === workspaceId && token?.bankId === bankId ? token.value : null;
 
   useEffect(() => {
     if (!workspaceId) return;
-    let cancelled = false;
-    plaidPost('create_link_token', { workspaceId, ...(bankId ? { bankId } : {}) })
-      .then(data => { if (!cancelled) setLinkToken(data.link_token); })
-      .catch(err => console.error('Error generating link token:', err));
-    return () => { cancelled = true; };
+    const controller = new AbortController();
+    plaidPost('create_link_token', { workspaceId, ...(bankId ? { bankId } : {}) }, controller.signal)
+      .then(data => { if (!controller.signal.aborted) setToken({ workspaceId, bankId, value: data.link_token }); })
+      .catch(err => { if (!controller.signal.aborted) console.error('Error generating link token:', err); });
+    return () => { controller.abort(); };
   }, [workspaceId, bankId]);
 
   const onSuccess = useCallback(
