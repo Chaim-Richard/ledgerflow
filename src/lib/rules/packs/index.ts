@@ -29,6 +29,15 @@ export { usNexusPack } from './usNexusPack';
 export { productTaxabilityPack, stateSalesRuleIds } from './productTaxabilityPack';
 export { registrationThresholdPack } from './registrationThresholdPack';
 export { marketplaceChannelPack, marketplaceRuleId } from './marketplacePack';
+// the packs' own tooling (A-59, A-60): what the source pages answered, and what changed since a snapshot
+export {
+  ruleSourceIndex, checkRuleSources, sourceReportLines, sourceReportSummary, sourceReportMarkdown,
+  type RuleSourceEntry, type SourceCheckResult, type SourceCheckStatus, type SourceReport, type CheckRuleSourcesOptions,
+} from '../sourceCheck';
+export {
+  snapshotRule, diffRuleSnapshots, diffIsEmpty, packDiffMarkdown, RULE_DIFF_FIELDS,
+  type RuleSnapshot, type RulePackDiff, type ChangedField,
+} from '../packDiff';
 export {
   usLocalRatePack, localRateKey,
   type LocalKeyAttribute, type LocalRateEffect, type LocalRateKeyResult,
