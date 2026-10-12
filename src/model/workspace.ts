@@ -108,6 +108,8 @@ export interface Workspace {
   timezone?: string;
   /** Saved CSV column layouts for statement imports, keyed by header signature (src/lib/importColumnMaps.ts). */
   importColumnMaps?: Record<string, import('../lib/importColumnMaps').SavedColumnMap>;
+  /** A-74: the organisation's expense policy rows (src/lib/expensePolicy.ts); owners set them through the server. */
+  expensePolicy?: import('../lib/expensePolicy').ExpensePolicy;
   notifications?: {
     largeTransactionAlert: boolean;
     largeTransactionThreshold: number;

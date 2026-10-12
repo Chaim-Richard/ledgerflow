@@ -53,7 +53,21 @@ export interface FilingEffect {
   due: string;
 }
 
-export type TaxEffect = RateEffect | NexusEffect | RegistrationThresholdEffect | FilingEffect;
+/**
+ * A-41: the effect of a channel rule. It answers who taxes the sale, not how much: 'marketplace'
+ * means the facilitator is required to collect, so the seller's own rate rules are switched off.
+ * It is never a rate of zero written on the line, so a screen can say why the line has no tax.
+ */
+export interface MarketplaceEffect {
+  kind: 'marketplace';
+  state: string;
+  stateName: string;
+  /** the date this row is asserted from (never the law's own effective date) */
+  assertedFrom: string;
+  note: string;
+}
+
+export type TaxEffect = RateEffect | NexusEffect | RegistrationThresholdEffect | FilingEffect | MarketplaceEffect;
 
 /** A table row a pack could not turn into a rule (a category it cannot name, a place it does not know). */
 export interface UnmappedRow {

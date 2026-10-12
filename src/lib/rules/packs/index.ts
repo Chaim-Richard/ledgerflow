@@ -16,6 +16,7 @@ import { usNexusPack } from './usNexusPack';
 import { productTaxabilityPack } from './productTaxabilityPack';
 import { filingPack } from './filingPack';
 import { registrationThresholdPack } from './registrationThresholdPack';
+import { marketplaceChannelPack } from './marketplacePack';
 import type { TaxEffect, TaxRulePack, UnmappedRow } from './shared';
 
 export { usSalesTaxPack } from './usSalesTaxPack';
@@ -26,12 +27,26 @@ export { ilVatPack } from './ilVatPack';
 export { usNexusPack } from './usNexusPack';
 export { productTaxabilityPack, stateSalesRuleIds } from './productTaxabilityPack';
 export { registrationThresholdPack } from './registrationThresholdPack';
+export { marketplaceChannelPack, marketplaceRuleId } from './marketplacePack';
+// the packs' own tooling (A-59, A-60): what the source pages answered, and what changed since a snapshot
+export {
+  ruleSourceIndex, checkRuleSources, sourceReportLines, sourceReportSummary, sourceReportMarkdown,
+  type RuleSourceEntry, type SourceCheckResult, type SourceCheckStatus, type SourceReport, type CheckRuleSourcesOptions,
+} from '../sourceCheck';
+export {
+  snapshotRule, diffRuleSnapshots, diffIsEmpty, packDiffMarkdown, RULE_DIFF_FIELDS,
+  type RuleSnapshot, type RulePackDiff, type ChangedField,
+} from '../packDiff';
+export {
+  usLocalRatePack, localRateKey,
+  type LocalKeyAttribute, type LocalRateEffect, type LocalRateKeyResult,
+} from './usLocalRatePack';
 export { filingPack } from './filingPack';
 export { rateRule, where, slug, type TaxEffect, type TaxRulePack, type RateEffect, type NexusEffect, type RegistrationThresholdEffect, type RegistrationThresholdWindow, type UnmappedRow, type FilingEffect } from './shared';
 
 /** Every pack, in the order a screen should list them. */
 export function taxRulePacks(): TaxRulePack[] {
-  return [ilVatPack(), usSalesTaxPack(), usNexusPack(), productTaxabilityPack(), canadaVatPack(), ukVatPack(), euVatPack(), registrationThresholdPack(), filingPack()];
+  return [ilVatPack(), usSalesTaxPack(), usNexusPack(), productTaxabilityPack(), canadaVatPack(), ukVatPack(), euVatPack(), registrationThresholdPack(), filingPack(), marketplaceChannelPack()];
 }
 
 /** Every rule in every pack. */

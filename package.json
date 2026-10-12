@@ -26,7 +26,9 @@
     "start": "node build/server.cjs",
     "prepare": "if [ \"$HUSKY\" != \"0\" ]; then husky; fi || true",
     "ratchet:update": "tsx scripts/update-ratchet.ts",
-    "test:cov": "NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic tsx --test --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-exclude='src/tests/**' --test-coverage-exclude='src/**/*.test.ts' --test-coverage-lines=75 --test-coverage-branches=72 --test-coverage-functions=73 src/tests/*.test.ts src/tests/*.test.tsx src/lib/*.test.ts"
+    "test:cov": "NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic tsx --test --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-exclude='src/tests/**' --test-coverage-exclude='src/**/*.test.ts' --test-coverage-lines=75 --test-coverage-branches=72 --test-coverage-functions=73 src/tests/*.test.ts src/tests/*.test.tsx src/lib/*.test.ts",
+    "check:rule-sources": "tsx scripts/check-rule-sources.ts",
+    "diff:rule-packs": "tsx scripts/rule-pack-diff.ts"
   },
   "dependencies": {
     "@google/genai": "^1.51.0",

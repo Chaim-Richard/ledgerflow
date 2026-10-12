@@ -1,0 +1,2004 @@
+{
+  "checkedAt": "2026-10-12",
+  "entries": [
+    {
+      "url": "https://www.gov.il/he/departments/israel_tax_authority",
+      "authorities": [
+        "Israel Tax Authority"
+      ],
+      "ruleIds": [
+        "il-vat-2015-10-01",
+        "il-vat-2025-01-01",
+        "il-vat-area-judea-samaria",
+        "il-vat-area-gaza",
+        "il-vat-area-duty-free",
+        "il-1214",
+        "il-vat-report",
+        "il-patur-declaration"
+      ],
+      "ruleCount": 8,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.gov.il/he/departments/israel_tax_authority",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.gov.il/he/departments/general/eilat_vat",
+      "authorities": [
+        "Israel Tax Authority"
+      ],
+      "ruleIds": [
+        "il-vat-area-eilat"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.gov.il/he/departments/general/eilat_vat",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.revenue.alabama.gov/",
+      "authorities": [
+        "Alabama Department of Revenue",
+        "AL Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-al-2000-01-01",
+        "us-nexus-al-2018-10-01",
+        "us-cat-al-groceries-2026-01-01",
+        "us-cat-al-prescription-medicine-2026-01-01",
+        "us-cat-al-digital-goods-2026-01-01",
+        "us-marketplace-al-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.revenue.alabama.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://tax.alaska.gov/",
+      "authorities": [
+        "Alaska Department of Revenue",
+        "AK Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ak-2000-01-01",
+        "us-nexus-ak-2019-01-01",
+        "us-cat-ak-general-2026-01-01"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://tax.alaska.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://azdor.gov/",
+      "authorities": [
+        "Arizona Department of Revenue",
+        "AZ Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-az-2013-06-01",
+        "us-nexus-az-2019-10-01",
+        "us-cat-az-groceries-2026-01-01",
+        "us-cat-az-prescription-medicine-2026-01-01",
+        "us-marketplace-az-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://azdor.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.dfa.arkansas.gov/",
+      "authorities": [
+        "Arkansas Department of Revenue",
+        "AR Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ar-2013-07-01",
+        "us-nexus-ar-2019-01-01",
+        "us-cat-ar-groceries-2026-01-01",
+        "us-cat-ar-prescription-medicine-2026-01-01",
+        "us-cat-ar-digital-goods-2026-01-01",
+        "us-marketplace-ar-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.dfa.arkansas.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.cdtfa.ca.gov/",
+      "authorities": [
+        "California Department of Revenue",
+        "CA Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ca-2004-07-01",
+        "us-nexus-ca-2019-04-01",
+        "us-cat-ca-groceries-2026-01-01",
+        "us-cat-ca-prescription-medicine-2026-01-01",
+        "us-cat-ca-digital-goods-2026-01-01",
+        "us-marketplace-ca-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.cdtfa.ca.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://tax.colorado.gov/",
+      "authorities": [
+        "Colorado Department of Revenue",
+        "CO Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-co-2001-01-01",
+        "us-nexus-co-2019-06-01",
+        "us-cat-co-groceries-2026-01-01",
+        "us-cat-co-prescription-medicine-2026-01-01",
+        "us-marketplace-co-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://tax.colorado.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://portal.ct.gov/DRS/",
+      "authorities": [
+        "Connecticut Department of Revenue",
+        "CT Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ct-2011-07-01",
+        "us-nexus-ct-2019-07-01",
+        "us-cat-ct-prescription-medicine-2026-01-01",
+        "us-marketplace-ct-2026-01-01"
+      ],
+      "ruleCount": 4,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://portal.ct.gov/DRS/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://otr.cfo.dc.gov/",
+      "authorities": [
+        "District of Columbia Department of Revenue",
+        "DC Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-dc-2013-10-01",
+        "us-nexus-dc-2019-01-01",
+        "us-cat-dc-prescription-medicine-2026-01-01",
+        "us-marketplace-dc-2026-01-01"
+      ],
+      "ruleCount": 4,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://otr.cfo.dc.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://revenue.delaware.gov/",
+      "authorities": [
+        "Delaware Department of Revenue",
+        "DE Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-de-2000-01-01",
+        "us-nexus-de-2019-01-01",
+        "us-cat-de-general-2026-01-01"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://revenue.delaware.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://floridarevenue.com/",
+      "authorities": [
+        "Florida Department of Revenue",
+        "FL Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-fl-2000-01-01",
+        "us-nexus-fl-2019-07-01",
+        "us-cat-fl-groceries-2026-01-01",
+        "us-cat-fl-prescription-medicine-2026-01-01",
+        "us-cat-fl-digital-goods-2026-01-01",
+        "us-marketplace-fl-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://floridarevenue.com/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://dor.georgia.gov/",
+      "authorities": [
+        "Georgia Department of Revenue",
+        "GA Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ga-2000-01-01",
+        "us-nexus-ga-2019-01-01",
+        "us-cat-ga-groceries-2026-01-01",
+        "us-cat-ga-prescription-medicine-2026-01-01",
+        "us-marketplace-ga-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://dor.georgia.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://tax.hawaii.gov/",
+      "authorities": [
+        "Hawaii Department of Revenue",
+        "HI Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-hi-2000-01-01",
+        "us-nexus-hi-2019-07-01",
+        "us-cat-hi-prescription-medicine-2026-01-01",
+        "us-marketplace-hi-2026-01-01"
+      ],
+      "ruleCount": 4,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://tax.hawaii.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://tax.idaho.gov/",
+      "authorities": [
+        "Idaho Department of Revenue",
+        "ID Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-id-2006-10-01",
+        "us-nexus-id-2019-06-01",
+        "us-cat-id-prescription-medicine-2026-01-01",
+        "us-marketplace-id-2026-01-01"
+      ],
+      "ruleCount": 4,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://tax.idaho.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://tax.illinois.gov/",
+      "authorities": [
+        "Illinois Department of Revenue",
+        "IL Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-il-1990-07-01",
+        "us-nexus-il-2026-01-01",
+        "us-nexus-il-2019-01-01",
+        "us-cat-il-groceries-2026-01-01",
+        "us-cat-il-prescription-medicine-2026-01-01",
+        "us-marketplace-il-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://tax.illinois.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.in.gov/dor/",
+      "authorities": [
+        "Indiana Department of Revenue",
+        "IN Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-in-2008-04-01",
+        "us-nexus-in-2019-01-01",
+        "us-cat-in-groceries-2026-01-01",
+        "us-cat-in-prescription-medicine-2026-01-01",
+        "us-marketplace-in-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.in.gov/dor/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://revenue.iowa.gov/",
+      "authorities": [
+        "Iowa Department of Revenue",
+        "IA Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ia-2008-01-01",
+        "us-nexus-ia-2019-01-01",
+        "us-cat-ia-groceries-2026-01-01",
+        "us-cat-ia-prescription-medicine-2026-01-01",
+        "us-marketplace-ia-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://revenue.iowa.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.ksrevenue.gov/",
+      "authorities": [
+        "Kansas Department of Revenue",
+        "KS Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ks-2003-07-01",
+        "us-nexus-ks-2019-07-01",
+        "us-cat-ks-groceries-2026-01-01",
+        "us-cat-ks-prescription-medicine-2026-01-01",
+        "us-cat-ks-digital-goods-2026-01-01",
+        "us-marketplace-ks-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.ksrevenue.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://revenue.ky.gov/",
+      "authorities": [
+        "Kentucky Department of Revenue",
+        "KY Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ky-2007-06-01",
+        "us-nexus-ky-2026-08-01",
+        "us-nexus-ky-2019-01-01",
+        "us-cat-ky-groceries-2026-01-01",
+        "us-cat-ky-prescription-medicine-2026-01-01",
+        "us-marketplace-ky-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://revenue.ky.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://revenue.louisiana.gov/",
+      "authorities": [
+        "Louisiana Department of Revenue",
+        "LA Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-la-2025-01-01",
+        "us-nexus-la-2019-01-01",
+        "us-cat-la-groceries-2026-01-01",
+        "us-cat-la-prescription-medicine-2026-01-01",
+        "us-marketplace-la-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://revenue.louisiana.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.maine.gov/revenue/",
+      "authorities": [
+        "Maine Department of Revenue",
+        "ME Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-me-2013-01-01",
+        "us-nexus-me-2019-01-01",
+        "us-cat-me-groceries-2026-01-01",
+        "us-cat-me-prescription-medicine-2026-01-01",
+        "us-marketplace-me-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.maine.gov/revenue/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.marylandtaxes.gov/",
+      "authorities": [
+        "Maryland Department of Revenue",
+        "MD Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-md-2008-01-01",
+        "us-nexus-md-2019-10-01",
+        "us-cat-md-groceries-2026-01-01",
+        "us-cat-md-prescription-medicine-2026-01-01",
+        "us-marketplace-md-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.marylandtaxes.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.mass.gov/orgs/massachusetts-department-of-revenue/",
+      "authorities": [
+        "Massachusetts Department of Revenue",
+        "MA Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ma-2009-08-01",
+        "us-nexus-ma-2019-10-01",
+        "us-cat-ma-groceries-2026-01-01",
+        "us-cat-ma-prescription-medicine-2026-01-01",
+        "us-marketplace-ma-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.mass.gov/orgs/massachusetts-department-of-revenue/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.michigan.gov/treasury/",
+      "authorities": [
+        "Michigan Department of Revenue",
+        "MI Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-mi-2007-10-01",
+        "us-nexus-mi-2019-01-01",
+        "us-cat-mi-groceries-2026-01-01",
+        "us-cat-mi-prescription-medicine-2026-01-01",
+        "us-marketplace-mi-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.michigan.gov/treasury/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.revenue.state.mn.us/",
+      "authorities": [
+        "Minnesota Department of Revenue",
+        "MN Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-mn-2009-07-01",
+        "us-nexus-mn-2019-01-01",
+        "us-cat-mn-clothing-2026-01-01",
+        "us-cat-mn-groceries-2026-01-01",
+        "us-cat-mn-prescription-medicine-2026-01-01",
+        "us-marketplace-mn-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.revenue.state.mn.us/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.dor.ms.gov/",
+      "authorities": [
+        "Mississippi Department of Revenue",
+        "MS Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ms-2000-01-01",
+        "us-nexus-ms-2019-01-01",
+        "us-cat-ms-groceries-2026-01-01",
+        "us-cat-ms-prescription-medicine-2026-01-01",
+        "us-marketplace-ms-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.dor.ms.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://dor.mo.gov/",
+      "authorities": [
+        "Missouri Department of Revenue",
+        "MO Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-mo-2000-01-01",
+        "us-nexus-mo-2023-01-01",
+        "us-cat-mo-groceries-2026-01-01",
+        "us-cat-mo-prescription-medicine-2026-01-01",
+        "us-cat-mo-digital-goods-2026-01-01",
+        "us-marketplace-mo-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://dor.mo.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://mtrevenue.gov/",
+      "authorities": [
+        "Montana Department of Revenue",
+        "MT Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-mt-2000-01-01",
+        "us-nexus-mt-2019-01-01",
+        "us-cat-mt-general-2026-01-01"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://mtrevenue.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://revenue.nebraska.gov/",
+      "authorities": [
+        "Nebraska Department of Revenue",
+        "NE Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ne-2016-01-01",
+        "us-nexus-ne-2019-01-01",
+        "us-cat-ne-groceries-2026-01-01",
+        "us-cat-ne-prescription-medicine-2026-01-01",
+        "us-marketplace-ne-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://revenue.nebraska.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://tax.nv.gov/",
+      "authorities": [
+        "Nevada Department of Revenue",
+        "NV Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-nv-2015-01-01",
+        "us-nexus-nv-2019-01-01",
+        "us-cat-nv-groceries-2026-01-01",
+        "us-cat-nv-prescription-medicine-2026-01-01",
+        "us-cat-nv-digital-goods-2026-01-01",
+        "us-marketplace-nv-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://tax.nv.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.revenue.nh.gov/",
+      "authorities": [
+        "New Hampshire Department of Revenue",
+        "NH Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-nh-2000-01-01",
+        "us-nexus-nh-2019-01-01",
+        "us-cat-nh-general-2026-01-01"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.revenue.nh.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.nj.gov/treasury/taxation/",
+      "authorities": [
+        "New Jersey Department of Revenue",
+        "NJ Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-nj-2018-01-01",
+        "us-nexus-nj-2019-10-01",
+        "us-cat-nj-clothing-2026-01-01",
+        "us-cat-nj-groceries-2026-01-01",
+        "us-cat-nj-prescription-medicine-2026-01-01",
+        "us-marketplace-nj-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.nj.gov/treasury/taxation/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.tax.newmexico.gov/",
+      "authorities": [
+        "New Mexico Department of Revenue",
+        "NM Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-nm-2020-01-01",
+        "us-nexus-nm-2019-07-01",
+        "us-cat-nm-groceries-2026-01-01",
+        "us-cat-nm-prescription-medicine-2026-01-01",
+        "us-marketplace-nm-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.tax.newmexico.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.tax.ny.gov/",
+      "authorities": [
+        "New York Department of Revenue",
+        "NY Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ny-2000-01-01",
+        "us-nexus-ny-2019-01-01",
+        "us-cat-ny-prescription-medicine-2026-01-01",
+        "us-marketplace-ny-2026-01-01"
+      ],
+      "ruleCount": 4,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.tax.ny.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.ncdor.gov/",
+      "authorities": [
+        "North Carolina Department of Revenue",
+        "NC Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-nc-2015-01-01",
+        "us-nexus-nc-2024-07-01",
+        "us-nexus-nc-2019-01-01",
+        "us-cat-nc-groceries-2026-01-01",
+        "us-cat-nc-prescription-medicine-2026-01-01",
+        "us-cat-nc-digital-goods-2026-01-01",
+        "us-marketplace-nc-2026-01-01"
+      ],
+      "ruleCount": 7,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.ncdor.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.tax.nd.gov/",
+      "authorities": [
+        "North Dakota Department of Revenue",
+        "ND Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-nd-2000-01-01",
+        "us-nexus-nd-2019-01-01",
+        "us-cat-nd-groceries-2026-01-01",
+        "us-cat-nd-prescription-medicine-2026-01-01",
+        "us-cat-nd-digital-goods-2026-01-01",
+        "us-marketplace-nd-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.tax.nd.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://tax.ohio.gov/",
+      "authorities": [
+        "Ohio Department of Revenue",
+        "OH Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-oh-2013-09-01",
+        "us-nexus-oh-2019-08-01",
+        "us-cat-oh-groceries-2026-01-01",
+        "us-cat-oh-prescription-medicine-2026-01-01",
+        "us-marketplace-oh-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://tax.ohio.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://oklahoma.gov/tax.html/",
+      "authorities": [
+        "Oklahoma Department of Revenue",
+        "OK Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ok-2000-01-01",
+        "us-nexus-ok-2019-01-01",
+        "us-cat-ok-prescription-medicine-2026-01-01",
+        "us-cat-ok-digital-goods-2026-01-01",
+        "us-marketplace-ok-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://oklahoma.gov/tax.html/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.oregon.gov/dor/",
+      "authorities": [
+        "Oregon Department of Revenue",
+        "OR Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-or-2000-01-01",
+        "us-nexus-or-2019-01-01",
+        "us-cat-or-general-2026-01-01"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.oregon.gov/dor/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.revenue.pa.gov/",
+      "authorities": [
+        "Pennsylvania Department of Revenue",
+        "PA Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-pa-2000-01-01",
+        "us-nexus-pa-2019-07-01",
+        "us-cat-pa-clothing-2026-01-01",
+        "us-cat-pa-groceries-2026-01-01",
+        "us-cat-pa-prescription-medicine-2026-01-01",
+        "us-marketplace-pa-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.revenue.pa.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://tax.ri.gov/",
+      "authorities": [
+        "Rhode Island Department of Revenue",
+        "RI Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ri-2013-01-01",
+        "us-nexus-ri-2019-07-01",
+        "us-cat-ri-clothing-2026-01-01",
+        "us-cat-ri-groceries-2026-01-01",
+        "us-cat-ri-prescription-medicine-2026-01-01",
+        "us-marketplace-ri-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://tax.ri.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://dor.sc.gov/",
+      "authorities": [
+        "South Carolina Department of Revenue",
+        "SC Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-sc-2007-06-01",
+        "us-nexus-sc-2019-11-01",
+        "us-cat-sc-groceries-2026-01-01",
+        "us-cat-sc-prescription-medicine-2026-01-01",
+        "us-marketplace-sc-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://dor.sc.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://dor.sd.gov/",
+      "authorities": [
+        "South Dakota Department of Revenue",
+        "SD Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-sd-2000-01-01",
+        "us-nexus-sd-2023-07-01",
+        "us-nexus-sd-2019-01-01",
+        "us-cat-sd-groceries-2026-01-01",
+        "us-cat-sd-prescription-medicine-2026-01-01",
+        "us-marketplace-sd-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://dor.sd.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.tn.gov/revenue.html/",
+      "authorities": [
+        "Tennessee Department of Revenue",
+        "TN Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-tn-2000-01-01",
+        "us-nexus-tn-2020-10-01",
+        "us-cat-tn-groceries-2026-01-01",
+        "us-cat-tn-prescription-medicine-2026-01-01",
+        "us-marketplace-tn-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.tn.gov/revenue.html/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://comptroller.texas.gov/",
+      "authorities": [
+        "Texas Department of Revenue",
+        "TX Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-tx-2000-01-01",
+        "us-nexus-tx-2019-10-01",
+        "us-cat-tx-groceries-2026-01-01",
+        "us-cat-tx-prescription-medicine-2026-01-01",
+        "us-marketplace-tx-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://comptroller.texas.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://tax.utah.gov/",
+      "authorities": [
+        "Utah Department of Revenue",
+        "UT Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-ut-2000-01-01",
+        "us-nexus-ut-2025-07-01",
+        "us-nexus-ut-2019-01-01",
+        "us-cat-ut-groceries-2026-01-01",
+        "us-cat-ut-prescription-medicine-2026-01-01",
+        "us-marketplace-ut-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://tax.utah.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://tax.vermont.gov/",
+      "authorities": [
+        "Vermont Department of Revenue",
+        "VT Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-vt-2007-07-01",
+        "us-nexus-vt-2019-07-01",
+        "us-cat-vt-groceries-2026-01-01",
+        "us-cat-vt-prescription-medicine-2026-01-01",
+        "us-cat-vt-digital-goods-2026-01-01",
+        "us-marketplace-vt-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://tax.vermont.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.tax.virginia.gov/",
+      "authorities": [
+        "Virginia Department of Revenue",
+        "VA Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-va-2013-07-01",
+        "us-nexus-va-2019-07-01",
+        "us-cat-va-groceries-2026-01-01",
+        "us-cat-va-prescription-medicine-2026-01-01",
+        "us-cat-va-digital-goods-2026-01-01",
+        "us-marketplace-va-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.tax.virginia.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://dor.wa.gov/",
+      "authorities": [
+        "Washington Department of Revenue",
+        "WA Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-wa-2000-01-01",
+        "us-nexus-wa-2019-03-01",
+        "us-cat-wa-groceries-2026-01-01",
+        "us-cat-wa-prescription-medicine-2026-01-01",
+        "us-marketplace-wa-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://dor.wa.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://tax.wv.gov/",
+      "authorities": [
+        "West Virginia Department of Revenue",
+        "WV Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-wv-2000-01-01",
+        "us-nexus-wv-2019-01-01",
+        "us-cat-wv-prescription-medicine-2026-01-01",
+        "us-cat-wv-digital-goods-2026-01-01",
+        "us-marketplace-wv-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://tax.wv.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.revenue.wi.gov/",
+      "authorities": [
+        "Wisconsin Department of Revenue",
+        "WI Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-wi-2000-01-01",
+        "us-nexus-wi-2019-01-01",
+        "us-cat-wi-groceries-2026-01-01",
+        "us-cat-wi-prescription-medicine-2026-01-01",
+        "us-marketplace-wi-2026-01-01"
+      ],
+      "ruleCount": 5,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.revenue.wi.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://revenue.wyo.gov/",
+      "authorities": [
+        "Wyoming Department of Revenue",
+        "WY Department of Revenue"
+      ],
+      "ruleIds": [
+        "us-sales-wy-2000-01-01",
+        "us-nexus-wy-2019-02-01",
+        "us-cat-wy-groceries-2026-01-01",
+        "us-cat-wy-prescription-medicine-2026-01-01",
+        "us-cat-wy-digital-goods-2026-01-01",
+        "us-marketplace-wy-2026-01-01"
+      ],
+      "ruleCount": 6,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://revenue.wyo.gov/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+      "authorities": [
+        "Canada Revenue Agency / province"
+      ],
+      "ruleIds": [
+        "ca-ab-gst-2008-01-01",
+        "ca-bc-gst-2008-01-01",
+        "ca-mb-gst-2008-01-01",
+        "ca-nb-gst-2008-01-01",
+        "ca-nl-gst-2008-01-01",
+        "ca-ns-gst-2008-01-01",
+        "ca-nt-gst-2008-01-01",
+        "ca-nu-gst-2008-01-01",
+        "ca-on-gst-2008-01-01",
+        "ca-pe-gst-2008-01-01",
+        "ca-qc-gst-2008-01-01",
+        "ca-sk-gst-2008-01-01",
+        "ca-yt-gst-2008-01-01",
+        "ca-on-hst-2010-07-01",
+        "ca-nb-hst-2016-07-01",
+        "ca-nl-hst-2016-07-01",
+        "ca-pe-hst-2013-04-01",
+        "ca-pe-hst-2016-10-01",
+        "ca-ns-hst-2010-07-01"
+      ],
+      "ruleCount": 19,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://novascotia.ca/finance/en/home/taxation/tax101/hst.html",
+      "authorities": [
+        "Canada Revenue Agency / province"
+      ],
+      "ruleIds": [
+        "ca-ns-hst-2025-04-01"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://novascotia.ca/finance/en/home/taxation/tax101/hst.html",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www2.gov.bc.ca/gov/content/taxes/sales-taxes/pst",
+      "authorities": [
+        "Canada Revenue Agency / province"
+      ],
+      "ruleIds": [
+        "ca-bc-pst-2013-04-01"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www2.gov.bc.ca/gov/content/taxes/sales-taxes/pst",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.gov.mb.ca/finance/taxation/taxes/retail.html",
+      "authorities": [
+        "Canada Revenue Agency / province"
+      ],
+      "ruleIds": [
+        "ca-mb-rst-2022-01-01"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.gov.mb.ca/finance/taxation/taxes/retail.html",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.saskatchewan.ca/business/taxes-licensing-and-reporting/provincial-taxes-policies-and-programs/provincial-sales-tax",
+      "authorities": [
+        "Canada Revenue Agency / province"
+      ],
+      "ruleIds": [
+        "ca-sk-pst-2017-04-01"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.saskatchewan.ca/business/taxes-licensing-and-reporting/provincial-taxes-policies-and-programs/provincial-sales-tax",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.revenuquebec.ca/en/businesses/consumption-taxes/gsthst-and-qst/",
+      "authorities": [
+        "Canada Revenue Agency / province"
+      ],
+      "ruleIds": [
+        "ca-qc-qst-2013-01-01"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.revenuquebec.ca/en/businesses/consumption-taxes/gsthst-and-qst/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.gov.uk/vat-rates",
+      "authorities": [
+        "HM Revenue & Customs"
+      ],
+      "ruleIds": [
+        "uk-vat-standard-1991-04-01-0-175",
+        "uk-vat-standard-2008-12-01-0-15",
+        "uk-vat-standard-2010-01-01-0-175",
+        "uk-vat-standard-2011-01-04-0-2",
+        "uk-vat-reduced-2020-07-15-0-05",
+        "uk-vat-reduced-2021-10-01-0-125",
+        "uk-vat-zero-1973-04-01-0"
+      ],
+      "ruleCount": 7,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.gov.uk/vat-rates",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.bmf.gv.at/",
+      "authorities": [
+        "Austria tax authority"
+      ],
+      "ruleIds": [
+        "eu-at-standard-2016-01-01-0-2",
+        "eu-at-reduced-2016-01-01-0-1-food-books-transport",
+        "eu-at-reduced-2026-07-01-0-1-books-transport-other-reduced-goods",
+        "eu-at-reduced-2026-07-01-0-05-food"
+      ],
+      "ruleCount": 4,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.bmf.gv.at/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://finance.belgium.be/en/experts/vat",
+      "authorities": [
+        "Belgium tax authority"
+      ],
+      "ruleIds": [
+        "eu-be-standard-1996-01-01-0-21",
+        "eu-be-reduced-2026-03-01-0-12-hotels-catering-leisure",
+        "eu-be-reduced-1996-01-01-0-06-hotels-catering-leisure",
+        "eu-be-reduced-1996-01-01-0-06-food-water-medicines-books"
+      ],
+      "ruleCount": 4,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://finance.belgium.be/en/experts/vat",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.nra.bg/en/",
+      "authorities": [
+        "Bulgaria tax authority"
+      ],
+      "ruleIds": [
+        "eu-bg-standard-1999-01-01-0-2",
+        "eu-bg-reduced-1999-01-01-0-09-accommodation-some-food"
+      ],
+      "ruleCount": 2,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.nra.bg/en/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.porezna-uprava.hr/en",
+      "authorities": [
+        "Croatia tax authority"
+      ],
+      "ruleIds": [
+        "eu-hr-standard-2013-07-01-0-25",
+        "eu-hr-reduced-2021-01-01-0-13-food-newspapers-accommodation",
+        "eu-hr-reduced-2013-07-01-0-05-medicines-books-some-food"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.porezna-uprava.hr/en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.mof.gov.cy/en",
+      "authorities": [
+        "Cyprus tax authority"
+      ],
+      "ruleIds": [
+        "eu-cy-standard-2014-01-13-0-19",
+        "eu-cy-reduced-2014-01-13-0-09-restaurants-accommodation",
+        "eu-cy-reduced-2014-01-13-0-05-food-medicines-books"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.mof.gov.cy/en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.financnisprava.cz/en",
+      "authorities": [
+        "Czechia tax authority"
+      ],
+      "ruleIds": [
+        "eu-cz-standard-2024-01-01-0-21",
+        "eu-cz-reduced-2024-01-01-0-12-food-books-medicines-accommodation",
+        "eu-cz-zero-2024-01-01-0-prescription-medicines-a-0-list"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.financnisprava.cz/en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://skat.dk/en-us",
+      "authorities": [
+        "Denmark tax authority"
+      ],
+      "ruleIds": [
+        "eu-dk-standard-1992-01-01-0-25"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://skat.dk/en-us",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.emta.ee/en",
+      "authorities": [
+        "Estonia tax authority"
+      ],
+      "ruleIds": [
+        "eu-ee-standard-2025-07-01-0-24",
+        "eu-ee-standard-2024-01-01-0-22",
+        "eu-ee-reduced-2025-07-01-0-13-accommodation-books-medicines"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.emta.ee/en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://vero.fi/en",
+      "authorities": [
+        "Finland tax authority"
+      ],
+      "ruleIds": [
+        "eu-fi-standard-2024-09-01-0-255",
+        "eu-fi-reduced-2026-01-01-0-135-food-restaurants-books-medicines"
+      ],
+      "ruleCount": 2,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://vero.fi/en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.impots.gouv.fr/",
+      "authorities": [
+        "France tax authority"
+      ],
+      "ruleIds": [
+        "eu-fr-standard-2014-01-01-0-2",
+        "eu-fr-reduced-2014-01-01-0-1-restaurants-transport-some-renovations",
+        "eu-fr-reduced-2014-01-01-0-055-food-books-energy",
+        "eu-fr-reduced-1986-01-01-0-021-prescription-medicines-newspapers"
+      ],
+      "ruleCount": 4,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.impots.gouv.fr/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.bundesfinanzministerium.de/EN",
+      "authorities": [
+        "Germany tax authority"
+      ],
+      "ruleIds": [
+        "eu-de-standard-2007-01-01-0-19",
+        "eu-de-reduced-2007-01-01-0-07-food-books-restaurants-7-from-2026"
+      ],
+      "ruleCount": 2,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.bundesfinanzministerium.de/EN",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.aade.gr/en",
+      "authorities": [
+        "Greece tax authority"
+      ],
+      "ruleIds": [
+        "eu-el-standard-2016-06-01-0-24",
+        "eu-el-reduced-2016-06-01-0-13-food-energy-hotels",
+        "eu-el-reduced-2016-06-01-0-06-medicines-books-theatre"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.aade.gr/en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://nav.gov.hu/en",
+      "authorities": [
+        "Hungary tax authority"
+      ],
+      "ruleIds": [
+        "eu-hu-standard-2012-01-01-0-27",
+        "eu-hu-reduced-2012-01-01-0-18-food-accommodation-outdoor-events",
+        "eu-hu-reduced-2004-01-01-0-05-medicines-books-some-food"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://nav.gov.hu/en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.revenue.ie/en/vat/",
+      "authorities": [
+        "Ireland tax authority"
+      ],
+      "ruleIds": [
+        "eu-ie-standard-2012-01-01-0-23",
+        "eu-ie-reduced-2012-01-01-0-135-construction-energy-some-food",
+        "eu-ie-reduced-2026-07-01-0-09-hospitality-and-restaurants"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.revenue.ie/en/vat/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.agenziaentrate.gov.it/portale/en",
+      "authorities": [
+        "Italy tax authority"
+      ],
+      "ruleIds": [
+        "eu-it-standard-2013-10-01-0-22",
+        "eu-it-reduced-1997-01-01-0-1-restaurants-hotels-some-food",
+        "eu-it-reduced-1997-01-01-0-05-some-food-transport-social-services",
+        "eu-it-reduced-1997-01-01-0-04-books-newspapers-medicines"
+      ],
+      "ruleCount": 4,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.agenziaentrate.gov.it/portale/en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.vid.gov.lv/en",
+      "authorities": [
+        "Latvia tax authority"
+      ],
+      "ruleIds": [
+        "eu-lv-standard-2013-07-01-0-21",
+        "eu-lv-reduced-2013-07-01-0-12-medicines-accommodation-some-food",
+        "eu-lv-reduced-2013-07-01-0-05-books-some-food-heating"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.vid.gov.lv/en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.vmi.lt/en",
+      "authorities": [
+        "Lithuania tax authority"
+      ],
+      "ruleIds": [
+        "eu-lt-standard-2009-09-01-0-21",
+        "eu-lt-reduced-2026-01-01-0-12-accommodation-culture-publications",
+        "eu-lt-reduced-2010-01-01-0-05-medicines-some-food"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.vmi.lt/en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://pfi.public.lu/en.html",
+      "authorities": [
+        "Luxembourg tax authority"
+      ],
+      "ruleIds": [
+        "eu-lu-standard-2015-01-01-0-17",
+        "eu-lu-reduced-2015-01-01-0-14-food-books-medicines-a-14-list",
+        "eu-lu-reduced-2015-01-01-0-08-books-some-transport-agriculture"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://pfi.public.lu/en.html",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.cfr.gov.mt/",
+      "authorities": [
+        "Malta tax authority"
+      ],
+      "ruleIds": [
+        "eu-mt-standard-2011-01-01-0-18",
+        "eu-mt-reduced-2011-01-01-0-05-food-books-medicines"
+      ],
+      "ruleCount": 2,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.cfr.gov.mt/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.belastingdienst.nl/wps/wcm/connect/en/",
+      "authorities": [
+        "Netherlands tax authority"
+      ],
+      "ruleIds": [
+        "eu-nl-standard-2012-10-01-0-21",
+        "eu-nl-reduced-2019-01-01-0-09-food-medicines-books-transport"
+      ],
+      "ruleCount": 2,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.belastingdienst.nl/wps/wcm/connect/en/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.podatki.gov.pl/en",
+      "authorities": [
+        "Poland tax authority"
+      ],
+      "ruleIds": [
+        "eu-pl-standard-2011-01-01-0-23",
+        "eu-pl-reduced-2011-01-01-0-08-construction-accommodation-some-food",
+        "eu-pl-reduced-2011-01-01-0-05-basic-food-books-medicines"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.podatki.gov.pl/en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.portaldasfinancas.gov.pt/",
+      "authorities": [
+        "Portugal tax authority"
+      ],
+      "ruleIds": [
+        "eu-pt-standard-2011-01-01-0-23",
+        "eu-pt-reduced-2011-01-01-0-13-food-restaurants-wine",
+        "eu-pt-reduced-2011-01-01-0-06-basic-food-books-medicines"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.portaldasfinancas.gov.pt/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.mfinante.gov.ro/",
+      "authorities": [
+        "Romania tax authority"
+      ],
+      "ruleIds": [
+        "eu-ro-standard-2025-08-01-0-21",
+        "eu-ro-reduced-2025-08-01-0-11-food-medicines-accommodation-books"
+      ],
+      "ruleCount": 2,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.mfinante.gov.ro/",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.financnasprava.sk/en",
+      "authorities": [
+        "Slovakia tax authority"
+      ],
+      "ruleIds": [
+        "eu-sk-standard-2025-01-01-0-23",
+        "eu-sk-reduced-2025-01-01-0-19-food-medicines-books-accommodation",
+        "eu-sk-reduced-2011-01-01-0-05-basic-food-some-construction"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.financnasprava.sk/en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.fu.gov.si/en",
+      "authorities": [
+        "Slovenia tax authority"
+      ],
+      "ruleIds": [
+        "eu-si-standard-2013-07-01-0-22",
+        "eu-si-reduced-2013-07-01-0-095-food-construction-accommodation",
+        "eu-si-reduced-2013-07-01-0-05-books-medicines-culture"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.fu.gov.si/en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb.html",
+      "authorities": [
+        "Spain tax authority"
+      ],
+      "ruleIds": [
+        "eu-es-standard-2012-09-01-0-21",
+        "eu-es-reduced-2012-09-01-0-1-food-restaurants-transport",
+        "eu-es-reduced-1995-01-01-0-04-basic-food-books-medicines"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb.html",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.skatteverket.se/servicelankar/otherlanguages/englishengelska.4.html",
+      "authorities": [
+        "Sweden tax authority"
+      ],
+      "ruleIds": [
+        "eu-se-standard-1990-07-01-0-25",
+        "eu-se-reduced-1990-07-01-0-12-food-restaurants-accommodation",
+        "eu-se-reduced-1996-01-01-0-06-books-culture-transport"
+      ],
+      "ruleCount": 3,
+      "retrievedFrom": "2026-10-11",
+      "retrievedTo": "2026-10-11",
+      "result": {
+        "url": "https://www.skatteverket.se/servicelankar/otherlanguages/englishengelska.4.html",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.gov.il/BlobFolder/generalpage/income-tax-guide-knowyourright/he/Guides_IncomeTax_da-2024.pdf",
+      "authorities": [
+        "Israel Tax Authority"
+      ],
+      "ruleIds": [
+        "il-osek-patur-2024"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-12",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.gov.il/BlobFolder/generalpage/income-tax-guide-knowyourright/he/Guides_IncomeTax_da-2024.pdf",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.gov.il/BlobFolder/generalpage/income-tax-guide-knowyourright/he/Guides_IncomeTax_da-2025.pdf",
+      "authorities": [
+        "Israel Tax Authority"
+      ],
+      "ruleIds": [
+        "il-osek-patur-2025"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-12",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.gov.il/BlobFolder/generalpage/income-tax-guide-knowyourright/he/Guides_IncomeTax_da-2025.pdf",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.gov.il/he/service/request-open-exempt-dealer-via-internet",
+      "authorities": [
+        "Israel Tax Authority"
+      ],
+      "ruleIds": [
+        "il-osek-patur-2026"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-12",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.gov.il/he/service/request-open-exempt-dealer-via-internet",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.gov.uk/government/publications/vat-increasing-the-registration-and-deregistration-thresholds",
+      "authorities": [
+        "HM Revenue & Customs"
+      ],
+      "ruleIds": [
+        "uk-vat-registration-2024-04"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-12",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.gov.uk/government/publications/vat-increasing-the-registration-and-deregistration-thresholds",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses/when-register-charge.html",
+      "authorities": [
+        "Canada Revenue Agency"
+      ],
+      "ruleIds": [
+        "ca-gst-small-supplier-single-quarter",
+        "ca-gst-small-supplier-four-quarters"
+      ],
+      "ruleCount": 2,
+      "retrievedFrom": "2026-10-12",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses/when-register-charge.html",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://taxation-customs.ec.europa.eu/vat-e-commerce_en",
+      "authorities": [
+        "European Commission, Taxation and Customs Union"
+      ],
+      "ruleIds": [
+        "eu-oss-place-of-supply-2021-07"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-12",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://taxation-customs.ec.europa.eu/vat-e-commerce_en",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.irs.gov/forms-pubs/about-form-1120",
+      "authorities": [
+        "Internal Revenue Service"
+      ],
+      "ruleIds": [
+        "us-1120"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-12",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.irs.gov/forms-pubs/about-form-1120",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.irs.gov/forms-pubs/about-form-1120-s",
+      "authorities": [
+        "Internal Revenue Service"
+      ],
+      "ruleIds": [
+        "us-1120s"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-12",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.irs.gov/forms-pubs/about-form-1120-s",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.irs.gov/forms-pubs/about-form-1065",
+      "authorities": [
+        "Internal Revenue Service"
+      ],
+      "ruleIds": [
+        "us-1065"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-12",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.irs.gov/forms-pubs/about-form-1065",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    },
+    {
+      "url": "https://www.irs.gov/forms-pubs/about-form-990",
+      "authorities": [
+        "Internal Revenue Service"
+      ],
+      "ruleIds": [
+        "us-990"
+      ],
+      "ruleCount": 1,
+      "retrievedFrom": "2026-10-12",
+      "retrievedTo": "2026-10-12",
+      "result": {
+        "url": "https://www.irs.gov/forms-pubs/about-form-990",
+        "status": "skipped",
+        "detail": "dry run: no request made"
+      }
+    }
+  ],
+  "totals": {
+    "answered": 0,
+    "http-error": 0,
+    "unreachable": 0,
+    "skipped": 97
+  },
+  "urlCount": 97
+}
