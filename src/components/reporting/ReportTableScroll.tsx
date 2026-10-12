@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import ExportTemplateControls from './ExportTemplateControls';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { readPeriodLayout, savePeriodLayout, movePeriod, validPeriodLayout } from '../../lib/reportPeriodLayout';
 import { orderReportCells } from './orderReportCells';
@@ -79,6 +80,12 @@ export default function ReportTableScroll({children}:{children:ReactNode}) {
    {headers.length>2&&<button type="button" aria-expanded={open} onClick={()=>setOpen(o=>!o)} className="min-h-11 px-3 border rounded">Columns{effectiveHidden.length?` (${effectiveHidden.length} hidden)`:''}</button>}
    {open&&reorderable&&<button type="button" onClick={exportDisplayed} className="min-h-11 px-3 border rounded">Export displayed rows CSV</button>}
   </div>
+  {open&&reorderable&&report&&<ExportTemplateControls report={report} columns={headers} layout={{order,hidden:effectiveHidden.map(String)}} onUse={next=>{
+   const nextOrder=['0',...next.order.filter(id=>id!=='0')];
+   const nextHidden=next.hidden.map(Number).filter(index=>index>0&&index<headers.length).slice(0,Math.max(0,headers.length-2));
+   setChoice({key:orderKey,order:nextOrder});savePeriodLayout(orderKey,{order:nextOrder,hidden:[]});
+   setHidden(nextHidden);saveHidden(reportKey,nextHidden);
+  }}/>}
   {open&&headers.length>2&&(
    <fieldset data-print-hide className="sticky left-0 mb-2 flex flex-wrap gap-3 text-sm">
     <legend className="sr-only">Columns to show</legend>

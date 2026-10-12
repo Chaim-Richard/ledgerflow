@@ -312,3 +312,22 @@ test("period choices move headings and totals together, persist, and refuse hidi
   }
   localStorage.clear();
 });
+
+test('export template restores the chosen monthly statement periods without changing their figures', () => {
+  localStorage.clear();
+  const view = render(<Harness compare={false} />);
+  fireEvent.change(view.getByLabelText('Columns:'), { target: { value: 'months' } });
+  fireEvent.click(view.getByText('Choose and order periods', { exact: true }));
+  fireEvent.click(view.getByRole('checkbox', { name: 'Feb 2024' }));
+  fireEvent.click(view.getByText('Export templates', { exact: true }));
+  fireEvent.change(view.getByLabelText('Template name'), { target: { value: 'March only' } });
+  fireEvent.click(view.getByRole('button', { name: 'Save these columns as…' }));
+  fireEvent.click(view.getByRole('checkbox', { name: 'Feb 2024' }));
+  assert.ok(view.getByRole('columnheader', { name: /Feb 2024/ }));
+  fireEvent.click(view.getByRole('button', { name: 'Use template March only' }));
+  assert.equal(view.queryByRole('columnheader', { name: /Feb 2024/ }), null);
+  assert.ok(view.getByRole('columnheader', { name: /Mar 2024/ }));
+  const row = view.getAllByRole('row').find(item => item.textContent?.includes('Net income'))!;
+  assert.deepEqual(within(row).getAllByRole('cell').map(cell => cell.textContent), ['', '0.00']);
+  localStorage.clear();
+});
