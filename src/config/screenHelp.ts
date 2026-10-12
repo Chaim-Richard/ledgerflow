@@ -143,6 +143,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review financial ratios together with their formulas. Adjust report-only current-account groups and compare periods. Zero denominators are undefined and turnover days use labelled revenue or COGS proxies.",
     "discount-mismatch":
       "Compare issued invoice unit prices in the selected period with current customer price lists or item catalogue prices. Refresh complete invoice/item reads before CSV. Current prices do not prove historical discount entitlement; foreign currencies, document-wide discounts and unknown item references are excluded.",
+    "registration-threshold-watch":
+      "Compare posted revenue lines tagged with supported activity values against dated Israel, UK, Canada and EU-wide thresholds, grouped by a chosen entity dimension and country from Tax profiles. Sales are compared only when the workspace base currency matches the threshold currency; missing labels, incomplete history and statutory scope outside ledger data prevent a registration decision. This read-only report keeps its period windows and official sources visible and never posts or converts sales.",
     "gross-profit-by-customer":
       "Review sales, estimated cost and gross profit by customer. Compare periods and inspect cost provenance. The existing invoice-item margin rules remain unchanged.",
     "inactive-items":
