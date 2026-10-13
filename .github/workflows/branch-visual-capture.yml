@@ -7,7 +7,8 @@ name: Branch visual capture (temporary, AI #3)
 permissions:
   contents: write
 on:
-  workflow_dispatch:
+  push:
+    branches: [arena/65507daa-ledgerflow]
 jobs:
   capture:
     runs-on: ubuntu-latest
