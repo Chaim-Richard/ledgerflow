@@ -22,6 +22,8 @@ import { caFilingPack } from './caFilingPack';
 import { euReverseChargePack } from './euReverseChargePack';
 import { ukSchemesPack } from './ukSchemesPack';
 import { usUseTaxPack } from '../../tax/usUseTax';
+import { ilImportServicesPack } from '../../tax/ilImportServices';
+import { ilVatFrequencyPack } from '../../tax/ilVatFilingFrequency';
 import type { TaxEffect, TaxRulePack, UnmappedRow } from './shared';
 
 export { usSalesTaxPack } from './usSalesTaxPack';
@@ -38,6 +40,8 @@ export { caFilingPack } from './caFilingPack';
 export { euReverseChargePack, EU_MEMBER_STATES, EU_MEMBER_STATE_CODES } from './euReverseChargePack';
 export { ukSchemesPack, ukStandardRuleIds } from './ukSchemesPack';
 export { usUseTaxPack } from '../../tax/usUseTax';
+export { ilImportServicesPack } from '../../tax/ilImportServices';
+export { ilVatFrequencyPack } from '../../tax/ilVatFilingFrequency';
 // the packs' own tooling (A-59, A-60): what the source pages answered, and what changed since a snapshot
 export {
   ruleSourceIndex, checkRuleSources, sourceReportLines, sourceReportSummary, sourceReportMarkdown,
@@ -59,7 +63,7 @@ export function taxRulePacks(): TaxRulePack[] {
   return [
     ilVatPack(), usSalesTaxPack(), usNexusPack(), productTaxabilityPack(), canadaVatPack(), ukVatPack(), euVatPack(),
     registrationThresholdPack(), filingPack(), marketplaceChannelPack(), ilWithholdingPack(),
-    caFilingPack(), euReverseChargePack(), ukSchemesPack(), usUseTaxPack(),
+    caFilingPack(), euReverseChargePack(), ukSchemesPack(), usUseTaxPack(), ilImportServicesPack(), ilVatFrequencyPack(),
   ];
 }
 

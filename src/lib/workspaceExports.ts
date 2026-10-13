@@ -232,3 +232,5 @@ export { CA_FILING_CALENDAR, CA_FILING_TAXES, CA_GST_HST_BANDS, caFilingRows, ca
 export { UK_FRS_CATEGORIES, UK_VAT_SCHEME_THRESHOLDS, UK_FRS_FIRST_YEAR_DISCOUNT_POINTS, ukFrsCategory, ukFrsPercent, ukSchemeProblems } from './tax/ukVatSchemes';
 export { USE_TAX_STATES, USE_TAX_CSV_HEADERS, reviewUseTax, reviewUseTaxCsvRows } from './tax/usUseTax';
 export { US_EXEMPTION_CERTIFICATE_TYPES, SST_MEMBER_STATES, SST_MEMBER_ROW, CERTIFICATE_TYPE_IDS, certificateAcceptance, exemptionCertificateType, certificateTypeName, exemptionCertificateProblems } from './tax/usExemptionCertificates';
+export { ilImportServicesPack, importBillsReview, importBillsCsvRows, vendorCountryOf, IMPORT_BILLS_CSV_HEADERS } from './tax/ilImportServices';
+export { IL_VAT_REPORT_FREQUENCY, IL_BIMONTHLY_TURNOVER_CEILING_CENTS, assignedFrequency, frequencyCheck, ilVatFrequencyPack, ilVatFrequencyProblems } from './tax/ilVatFilingFrequency';
