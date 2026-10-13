@@ -136,7 +136,7 @@
 - [ ] `stale-async` src/components/sales/CustomerPortalLink.tsx:23 — call
 - [ ] `stale-async` src/components/sales/CustomerPortalPage.tsx:21 — (anonymous)
 - [ ] `stale-async` src/components/sales/EmailStatementsButton.tsx:21 — run
-- [ ] `stale-async` src/components/sales/EstimateDepositDialog.tsx:37 — save
+- [ ] `stale-async` src/components/sales/EstimateDepositDialog.tsx:40 — save
 - [ ] `stale-async` src/components/sales/EstimateSignLink.tsx:15 — ask
 - [ ] `stale-async` src/components/sales/OrderDeliveryDialog.tsx:66 — openNote
 - [ ] `stale-async` src/components/sales/PublicEstimatePage.tsx:35 — sign
@@ -226,7 +226,7 @@
 - [ ] `swallowing-action` src/components/sales/EstimatesView.tsx:170 — handleConvertToInvoice
 - [ ] `swallowing-action` src/components/sales/OrderDeliveryDialog.tsx:79 — recordReturn
 - [ ] `swallowing-action` src/components/sales/PublicInvoicePage.tsx:44 — handlePay
-- [ ] `swallowing-action` src/components/sales/ReceivePaymentModal.tsx:168 — handleSubmit
+- [ ] `swallowing-action` src/components/sales/ReceivePaymentModal.tsx:171 — handleSubmit
 - [ ] `swallowing-action` src/components/sales/WriteOffModal.tsx:38 — handleWriteOff
 - [ ] `swallowing-action` src/components/support/SupportView.tsx:89 — handleCreateTicket
 - [ ] `swallowing-action` src/components/support/SupportView.tsx:166 — handleSendMessage

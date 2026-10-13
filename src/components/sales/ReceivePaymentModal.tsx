@@ -1,5 +1,6 @@
 import { useDialog } from '../../hooks/useDialog';
-import React, { useState, useMemo, useEffect } from 'react';
+import { operationIdFor } from '../../lib/serverAction';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { X, DollarSign, Sparkles } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isUndepositedFundsAccount } from '../../lib/accountUtils';
@@ -39,6 +40,8 @@ export default function ReceivePaymentModal({
   const accounts = useLedgerStore(s => s.accounts);
   useLedgerCollections('bills', 'customers', 'invoices', 'vendors');
 
+  // #114: the same payment retried after a lost reply is recorded once (server idempotency)
+  const paymentOps = useRef(new Map<string, string>());
   const [direction, setDirection] = useState<'received' | 'made'>(defaultDirection);
   const [contactId, setContactId] = useState<string>(defaultContactId);
   const [date, setDate] = useState<string>(getLocalDateISO());
@@ -210,13 +213,7 @@ export default function ReceivePaymentModal({
       const contactType = direction === 'received' ? 'customer' : 'vendor';
       const memo = '';
 
-      const res = await fetch('/api/v1/payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
+      const paymentBody = JSON.stringify({
           workspaceId: currentWorkspaceId,
           paymentDate: date,
           amountCents: paymentAmountCents,
@@ -234,7 +231,16 @@ export default function ReceivePaymentModal({
             documentType: a.documentType,
             amountCents: a.amountCents
           }))
-        })
+        });
+      const operationId = operationIdFor(paymentOps.current, paymentBody);
+      const res = await fetch('/api/v1/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-operation-id': operationId,
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: paymentBody
       });
 
       if (!res.ok) {

@@ -129,3 +129,11 @@ test('attempt and allSettledWrites report failures instead of hiding them', asyn
   assert.deepEqual(r.done.map(d => d.item), [1, 3]);
   assert.deepEqual(r.failures, [{ item: 2, error: 'no' }]);
 });
+
+test('#114 operationIdFor: the same payment keeps its id across retries; a changed payment gets a new one', async () => {
+  const { operationIdFor } = await import('../lib/serverAction');
+  const ids = new Map<string, string>();
+  const a = operationIdFor(ids, '{"amountCents":100}');
+  assert.equal(operationIdFor(ids, '{"amountCents":100}'), a);
+  assert.notEqual(operationIdFor(ids, '{"amountCents":200}'), a);
+});

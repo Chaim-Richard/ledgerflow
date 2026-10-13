@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useRef, useMemo, useState } from 'react';
+import { operationIdFor } from '../../lib/serverAction';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDialog } from '../../hooks/useDialog';
@@ -25,6 +26,8 @@ export default function EstimateDepositDialog({ estimate, onClose }: { estimate:
   const accounts = useLedgerStore(s => s.accounts);
   const bankAccounts = useMemo(() => (accounts || []).filter(a => !a.isArchived && resolveAccountRole(a) === 'cash'), [accounts]);
   const depositsAccount = useMemo(() => advanceAccount(accounts || [], 'received', workspace?.defaultAccountMappings), [accounts, workspace]);
+  // #114: the same payment retried after a lost reply is recorded once (server idempotency)
+  const paymentOps = useRef(new Map<string, string>());
   const [amount, setAmount] = useState(((Math.round(estimate.amountCents * 0.5)) / 100).toFixed(2));
   const [date, setDate] = useState(getLocalDateISO());
   const [cashAccountId, setCashAccountId] = useState(bankAccounts[0]?.id || '');
@@ -39,14 +42,16 @@ export default function EstimateDepositDialog({ estimate, onClose }: { estimate:
     setSaving(true);
     try {
       const token = await getIdToken().catch(() => null);
-      const res = await fetch('/api/v1/payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({
+      const paymentBody = JSON.stringify({
           workspaceId, amountCents: cents, paymentDate: date, cashAccountId, paymentMethod: method,
           customerId: estimate.customerId, entityName: estimate.customerName || '', estimateId: estimate.id,
           memo: `Deposit for estimate ${estimate.number || estimate.id}`, allocations: [],
-        }),
+        });
+      const operationId = operationIdFor(paymentOps.current, paymentBody);
+      const res = await fetch('/api/v1/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-operation-id': operationId, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: paymentBody,
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || 'The deposit could not be recorded');

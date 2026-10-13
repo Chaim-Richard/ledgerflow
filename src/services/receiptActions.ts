@@ -18,7 +18,8 @@ export async function recordReceiptPayment(
   const token = await getIdToken().catch(() => null);
   const res = await fetch('/api/v1/payments', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    // #114: one receipt per sale invoice, so its id is the operation key — a retry is recorded once
+    headers: { 'Content-Type': 'application/json', 'x-operation-id': `sale-receipt:${invoice.id}`.slice(0, 128), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({
       workspaceId, amountCents: due, paymentDate: invoice.date, cashAccountId: payment.cashAccountId, paymentMethod: payment.method,
       customerId: invoice.customerId, entityName: invoice.customerName || '', memo: `Sale receipt ${invoice.number || ''}`.trim(),

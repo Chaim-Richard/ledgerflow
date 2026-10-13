@@ -61,3 +61,16 @@ export async function allSettledWrites<I, T>(items: I[], write: (item: I) => Pro
   });
   return { done, failures, allOk: failures.length === 0 };
 }
+
+/**
+ * #114: one operation id per intended payment (or other non-repeatable write). The same request
+ * body gets the same id until it succeeds, so a retry after a lost reply is recognised by the
+ * server and recorded once; a changed request gets a new id.
+ */
+export function operationIdFor(ids: Map<string, string>, body: string): string {
+  const existing = ids.get(body);
+  if (existing) return existing;
+  const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  ids.set(body, id);
+  return id;
+}
