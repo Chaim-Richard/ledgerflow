@@ -13,6 +13,11 @@ import { buildWorkspaceArchive } from '../../../lib/workspaceArchive';
 import { recordBackupCompleted } from '../../../lib/ledgerBackupHealth';
 
 export default function WorkspaceArchiveExport() {
+  const scope = useAuthStore(s => String(s.user?.uid || 'guest') + ':' + String(s.currentWorkspaceId || 'none'));
+  return <WorkspaceArchiveExportBody key={scope} />;
+}
+
+function WorkspaceArchiveExportBody() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const uid = useAuthStore(s => s.user?.uid);
   const isGuest = useAuthStore(s => s.isGuest && !s.user);
@@ -22,13 +27,9 @@ export default function WorkspaceArchiveExport() {
   const abortRef = useRef<AbortController | null>(null);
   const pending = useRef(false);
 
-  useEffect(() => {
-    abortRef.current?.abort();
-    pending.current = false;
-    setBusy(false);
-    setError('');
-    return () => { abortRef.current?.abort(); };
-  }, [workspaceId, uid]);
+  // The outer keyed component remounts when the user or workspace changes.
+  // Cleanup cancels in-flight reads; no stale archive can download afterwards.
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
 
   const download = async () => {
     if (pending.current) return;
