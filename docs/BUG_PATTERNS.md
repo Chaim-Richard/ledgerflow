@@ -154,8 +154,8 @@
 - [ ] `success-after-call` src/components/purchases/Purchases.tsx:110 — updateEntity
 - [ ] `success-after-call` src/components/sales/Sales.tsx:108 — updateEntity
 - [ ] `success-after-call` src/hooks/transactionActions/entryActions.ts:43 — recordAudit
-- [ ] `success-after-call` src/hooks/transactionActions/entryActions.ts:478 — recordAudit
-- [ ] `success-after-call` src/hooks/transactionActions/entryActions.ts:571 — recordAudit
+- [ ] `success-after-call` src/hooks/transactionActions/entryActions.ts:479 — recordAudit
+- [ ] `success-after-call` src/hooks/transactionActions/entryActions.ts:572 — recordAudit
 - [ ] `success-after-call` src/hooks/transactionActions/integrityActions.ts:49 — handleBulkRepair
 - [ ] `swallowing-action` src/components/assets/ConstructionActions.tsx:33 — addCost
 - [ ] `swallowing-action` src/components/auth/AcceptInviteView.tsx:65 — handleAcceptInvite
@@ -255,9 +255,9 @@
 - [ ] `swallowing-action` src/hooks/useEntityOperations.ts:301 — deleteEntity
 - [ ] `swallowing-action` src/services/ledgerPost/postingKit.ts:191 — postTxsServerApi
 - [ ] `unchecked-write` src/components/platform/SystemCommandCenter.tsx:142 — fetchWithAuth
-- [ ] `unchecked-write` src/hooks/transactionActions/entryActions.ts:368 — fetch
+- [ ] `unchecked-write` src/hooks/transactionActions/entryActions.ts:369 — fetch
 - [ ] `write-in-loop` src/components/assets/FixedAssetsView.tsx:79 — updateEntity
-- [ ] `write-in-loop` src/components/banking/TransferModal.tsx:113 — handleUpdateTransaction
+- [ ] `write-in-loop` src/components/banking/TransferModal.tsx:129 — handleUpdateTransaction
 - [ ] `write-in-loop` src/components/common/OpeningDocumentsDialog.tsx:56 — addEntity
 - [ ] `write-in-loop` src/components/common/OpeningDocumentsDialog.tsx:63 — addEntity
 - [ ] `write-in-loop` src/components/common/OpeningDocumentsDialog.tsx:64 — addEntity
@@ -268,27 +268,21 @@
 - [ ] `write-in-loop` src/components/migration/QBOMigrationWizard.tsx:533 — addEntity
 - [ ] `write-in-loop` src/components/platform/SystemCommandCenter.tsx:142 — fetchWithAuth
 - [ ] `write-in-loop` src/services/attachmentActions.ts:33 — addDoc
-- [ ] `write-in-loop` src/services/bulkDocumentActions.ts:29 — post
-- [ ] `write-in-loop` src/services/bulkDocumentActions.ts:58 — post
+- [ ] `write-in-loop` src/services/bulkDocumentActions.ts:34 — post
+- [ ] `write-in-loop` src/services/bulkDocumentActions.ts:64 — post
 
+## Server and database integrity review (not confirmed incidents)
 
-## Server/database audit additions (2026-10-13)
-
-Run `npx tsx scripts/bug-patterns.ts` to regenerate this checklist. The scanner now also traverses
-`src/server` and `supabase/migrations` and identifies these independent high-risk paths:
-
-- **#112** `server-unrestricted-ledger-patch`: the transactions batch route spreads arbitrary
-  `updateData` into a write, unlike the validated singular transaction update.
-- **#113** `server-partial-batch-commit`: a transaction batch commits inside a loop and can
-  leave earlier chunks saved after a later validation or write failure.
-- **#114** `server-unkeyed-payment-path`: backwards-compatible payment clients without
-  `x-operation-id` still use the non-idempotent API path. New bulk/payment-run clients
-  now send operation IDs; legacy callers should be migrated before rejecting unkeyed writes.
-- `sql-trusted-server-exemption`: privileged writes bypass client-side `lf_guard` logic.
-  This is intentional architecture, **not proof of a database vulnerability**; equivalent
-  checks must be applied in all server commands.
-
-The new per-location baseline (`bug-patterns-sites.json`) prevents a fresh finding in one
-function from being hidden by removing a different finding elsewhere. The prior aggregate
-baseline is retained for compatibility. Neither baseline certifies an operation correct:
-money-sensitive flows must also pass real Postgres tests, replay tests and failure injection.
+- [ ] `server-partial-batch-commit` src/server/routes/transactions/bulkRoutes.ts:276 — batch.commit (#113)
+- [ ] `server-partial-batch-commit` src/server/routes/transactions/periodRoutes.ts:225 — batch.commit
+- [ ] `server-partial-batch-commit` src/server/services/maintenanceService.ts:24 — batch.commit
+- [ ] `server-partial-batch-commit` src/server/services/notificationService.ts:161 — batch.commit
+- [ ] `server-partial-batch-commit` src/server/services/retentionService.ts:57 — batch.commit
+- [ ] `server-partial-batch-commit` src/server/services/workspacePurgeService.ts:80 — batch.commit
+- [ ] `server-unkeyed-payment-path` src/server/routes/paymentRoutes.ts:79 — createPaymentAtomic (#114)
+- [ ] `server-unrestricted-ledger-patch` src/server/routes/transactions/bulkRoutes.ts:273 — batch.update (#112)
+- [ ] `sql-trusted-server-exemption` supabase/migrations/20260924190000_init.sql:198 — lf_guard
+- [ ] `sql-trusted-server-exemption` supabase/migrations/20260924190000_init.sql:279 — lf_guard
+- [ ] `sql-trusted-server-exemption` supabase/migrations/20260924210000_server_ids.sql:29 — lf_guard
+- [ ] `sql-trusted-server-exemption` supabase/migrations/20260925000000_workspace_fields.sql:32 — lf_guard
+- [ ] `sql-trusted-server-exemption` supabase/migrations/20261008000000_invoice_approval_guard.sql:11 — lf_guard
