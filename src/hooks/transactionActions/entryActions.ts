@@ -1,4 +1,5 @@
 import { recategorizeLines } from '../../lib/accountChoices';
+import { workspaceScope } from '../../lib/serverAction';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { Transaction, TransactionLine } from '../../types';
@@ -389,6 +390,8 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
 
   const handleUpdateTransaction = async (id: string, updates: Partial<Transaction>): Promise<boolean> => {
     if (!user || !currentWorkspaceId) return false;
+    // #107: a reply for this workspace never changes another workspace's list
+    const scope = workspaceScope(() => useAuthStore.getState().currentWorkspaceId);
     
     const originalTransactions = [...useLedgerStore.getState().transactions];
     const txIndex = originalTransactions.findIndex(t => t.id === id);
@@ -453,6 +456,7 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
          throw new Error(data.error || 'Failed to update transaction');
       }
     } catch(e) {
+      if (!scope.isCurrent()) return false;
       if (isConflictError(e)) {
         toast.error('Version conflict: Transaction modified by another user.', {
           description: 'Your changes were not saved to prevent overwriting someone else\'s updates. Loaded latest version.'
@@ -472,9 +476,11 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
           description: `Please try again. (${message})`
         });
       }
-      setTransactions(originalTransactions);
+      // roll back only this entry, in the list as it is now (other changes made meanwhile stay)
+      setTransactions(useLedgerStore.getState().transactions.map(t => (t.id === id ? tx : t)));
       return false;
     }
+    if (!scope.isCurrent()) return true;
 
     await recordAudit('UPDATE_TRANSACTION', 'transaction', id, updates);
       

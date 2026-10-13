@@ -153,9 +153,9 @@
 - [ ] `success-after-call` src/components/platform/settings/SecuritySettings.tsx:141 — handleCloseMonth
 - [ ] `success-after-call` src/components/purchases/Purchases.tsx:110 — updateEntity
 - [ ] `success-after-call` src/components/sales/Sales.tsx:108 — updateEntity
-- [ ] `success-after-call` src/hooks/transactionActions/entryActions.ts:43 — recordAudit
-- [ ] `success-after-call` src/hooks/transactionActions/entryActions.ts:479 — recordAudit
-- [ ] `success-after-call` src/hooks/transactionActions/entryActions.ts:572 — recordAudit
+- [ ] `success-after-call` src/hooks/transactionActions/entryActions.ts:44 — recordAudit
+- [ ] `success-after-call` src/hooks/transactionActions/entryActions.ts:485 — recordAudit
+- [ ] `success-after-call` src/hooks/transactionActions/entryActions.ts:578 — recordAudit
 - [ ] `success-after-call` src/hooks/transactionActions/integrityActions.ts:49 — handleBulkRepair
 - [ ] `swallowing-action` src/components/assets/ConstructionActions.tsx:33 — addCost
 - [ ] `swallowing-action` src/components/auth/AcceptInviteView.tsx:65 — handleAcceptInvite
@@ -254,7 +254,7 @@
 - [ ] `swallowing-action` src/hooks/useEntityOperations.ts:301 — deleteEntity
 - [ ] `swallowing-action` src/services/ledgerPost/postingKit.ts:191 — postTxsServerApi
 - [ ] `unchecked-write` src/components/platform/SystemCommandCenter.tsx:142 — fetchWithAuth
-- [ ] `unchecked-write` src/hooks/transactionActions/entryActions.ts:369 — fetch
+- [ ] `unchecked-write` src/hooks/transactionActions/entryActions.ts:370 — fetch
 - [ ] `write-in-loop` src/components/assets/FixedAssetsView.tsx:79 — updateEntity
 - [ ] `write-in-loop` src/components/common/OpeningDocumentsDialog.tsx:56 — addEntity
 - [ ] `write-in-loop` src/components/common/OpeningDocumentsDialog.tsx:63 — addEntity

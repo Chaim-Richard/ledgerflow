@@ -90,7 +90,7 @@ const ISSUE_MECHANISMS: Array<{ issue: number; file: string; markers: string[] }
   { issue: 102, file: 'src/components/ledger/StatementImporter.tsx', markers: ['handleFileUpload', 'setCsvData'] },
   { issue: 105, file: 'src/components/banking/TransferModal.tsx', markers: ['retryRef.current.operationId', 'txActions.handleQuickAdd'] },
   { issue: 106, file: 'src/components/banking/TransferModal.tsx', markers: ['candidate.outflowTx, candidate.inflowTx', "'/api/v1/transactions/batch'"] }, // repaired: one all-or-nothing request
-  { issue: 107, file: 'src/hooks/transactionActions/entryActions.ts', markers: ['setTransactions(originalTransactions)'] },
+  { issue: 107, file: 'src/hooks/transactionActions/entryActions.ts', markers: ['if (!scope.isCurrent()) return false;'] }, // repaired: no write after a book switch
   { issue: 108, file: 'src/components/ledger/TransactionGrid.tsx', markers: ['const handleBulkSweep', 'were not saved (see the messages above)'] }, // repaired: only confirmed saves counted
   { issue: 109, file: 'src/components/purchases/PaymentRunDialog.tsx', markers: ['if (withFile && done.length) downloadBankFile(done)'] },
   { issue: 110, file: 'src/components/ledger/StatementImporter.tsx', markers: ['if (stored === false) return;'] }, // repaired: review stays open
