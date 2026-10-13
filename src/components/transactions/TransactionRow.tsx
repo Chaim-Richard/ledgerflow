@@ -39,7 +39,8 @@ function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => strin
 
 const HighlightMatch = ({ text, match }: { text: string; match?: string }) => {
   if (!match) return <>{text}</>;
-  const parts = text.split(new RegExp(`(${match})`, 'gi'));
+  // #103: the search text is matched literally — characters like [ ( * are not pattern syntax
+  const parts = text.split(new RegExp(`(${match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
   return (
     <>
       {withOccurrenceKeys(parts, part => part).map(({ item: p, key }) =>
