@@ -301,3 +301,37 @@ reversals, dated rules with evidence, import preview, duplicate-request guards. 
 TRACKER: AU-1 Plaid sync with a cursor, AU-2 one label filter, AU-3 posting stress tests, AU-4
 migration proof by totals, AU-5 money arithmetic audit, AU-6 one door to the ledger. Not taken:
 their timelines, new table designs and folder reorganisation (they would rebuild what works).
+
+## 13. Is the plan good? The strategy check (13 Oct)
+
+**What is right:** money, tax and posting stay with one AI (Claude) and one posting path; tax is
+built as dated rules with evidence, not code branches; everything is tested against the real
+database; CI and screenshot checks guard every push; the other AIs work in their own lanes.
+
+**What was wrong, and the fix:**
+
+1. **Built but not reachable.** 25 of 43 shared libraries are used by no screen, including Claude's
+   own Israeli VAT report, US sales-tax return and entity filings. Code a user cannot reach is not a
+   feature. Fix: a task is done only when it is on a screen; Codex's queue now starts with C-102..C-126,
+   one per library, before any new feature.
+2. **Width over depth.** The queues add features faster than they get finished end to end. From now
+   on Claude's order is: integrity first (AU-6, AU-3, AU-2, AU-5), then wiring (the 25 libraries,
+   reports reachable, return screens), then new content.
+3. **Speed was measured as tasks closed, not as things a user can do.** The daily count now shows
+   lines and queues; Claude adds "screens reachable" to it when the wiring is done.
+
+**The way it gets done (the strategy):**
+
+- One owner per risk: Claude owns money, posting, tax calculation and the database; nothing else
+  posts money. AU-6 makes that a lint rule, not a promise.
+- Every feature goes library → screen → help → e2e → screenshot, in one task.
+- Claude merges every few hours, looks at changed screenshots before accepting them, keeps CI
+  green, and refills queues so no AI waits.
+- Owner decisions go in FOR_YOU with the default used, so work never stops.
+
+**Why AI #3 is so much faster.** Three reasons, none of them that it is smarter:
+(1) its tasks are mostly tables and pure functions with tests — no screens, no screenshots, no
+server; (2) it puts 5–15 tasks in one PR, while Codex makes one PR per task and runs a screenshot
+capture-and-approve cycle on each; (3) each session starts fresh on the latest main with a long,
+precise list. The cost is the first problem above: much of its output waits for someone else to put
+it on a screen. The new rule makes it finish its own screens, so it will slow down — on purpose.

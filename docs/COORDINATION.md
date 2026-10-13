@@ -75,6 +75,39 @@ paused launch work; no coordination update from Claude was needed for this autho
 
 ## Tasks for Codex — AI #2 (in order)
 
+
+### FIRST: wire finished code into screens (Claude, 13 Oct). Do these before C-72..C-101.
+
+25 of the 43 libraries in `src/lib/workspaceExports.ts` are used by **no screen**: they are built and
+tested but a user cannot reach them. Rule from now on, for every AI: **a task is done only when a user
+can reach it from a screen** (or it is consumed by code that is). `workspaceExports` is a waiting room,
+not a finish line.
+
+- [ ] **C-102 Put `src/lib/barcodeScan.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-103 Put `src/lib/commentThreads.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-104 Put `src/lib/customFields.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-105 Put `src/lib/customerQuotes.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-106 Put `src/lib/deliveryNoteDocument.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-107 Put `src/lib/dunningLetters.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-108 Put `src/lib/landedCostPreview.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-109 Put `src/lib/milestoneBilling.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-110 Put `src/lib/priceListImport.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-111 Put `src/lib/recordNotes.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-112 Put `src/lib/recurringEstimates.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-113 Put `src/lib/reorderSuggestions.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-114 Put `src/lib/serialNumbers.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-115 Put `src/lib/tax/entityFilings.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-116 Put `src/lib/tax/ilVatReturn.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-117 Put `src/lib/tax/israeliDocumentTypes.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-118 Put `src/lib/tax/israeliIdentifiers.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-119 Put `src/lib/tax/pcn874Draft.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-120 Put `src/lib/tax/taxSuggestions.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-121 Put `src/lib/tax/us1099Preview.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-122 Put `src/lib/tax/usFilingCalendar.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-123 Put `src/lib/tax/usSalesTaxReturn.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-124 Put `src/lib/tax/usTaxIdFormat.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-125 Put `src/lib/tax/vatNumberFormat.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [ ] **C-126 Put `src/lib/usAddressStateZip.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
 Counts are from `npx eslint . -f json` on 2026-09-28. Check a file's warnings with
 `npx eslint <file>`.
 
@@ -419,6 +452,8 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 - [ ] **C-101 Settings: tax registrations screen per entity, reading taxProfiles**
 
 ## AI #3 (Arena): tasks (Claude, 5 Oct late)
+
+**Rule from 13 Oct:** a task is done only when a user can reach it from a screen. A library on its own goes in as "part 1" and the screen is part 2 of the same task. One PR per 3–5 tasks at most, so each can be reviewed.
 
 Your R-07 fix, BA-17 and BB-06 are merged into main (9c77cde): Claude ran the database tests on the
 merge (1301 pass, Undo and historical month-end included). Thank you — good work. Branch from the
