@@ -14,6 +14,12 @@ import {
 import type { FieldMapping, ImportIssue, ImportKind } from '../../../lib/recordImport';
 import { downloadCsv } from '../../../lib/csvExport';
 import { normalizeFreshBooksCsv } from '../../../lib/freshBooksImport';
+import { normalizeQuickBooksCsv } from '../../../lib/quickBooksCsvImport';
+
+type CsvSource = 'generic' | 'freshbooks' | 'quickbooks';
+const normalizeSourceTable = (source: CsvSource, kind: ImportKind, cells: string[][]): string[][] =>
+  source === 'freshbooks' ? normalizeFreshBooksCsv(kind, cells) :
+  source === 'quickbooks' ? normalizeQuickBooksCsv(kind, cells) : cells;
 
 /**
  * Settings → Import data (K-01): customers, vendors, items or accounts from a CSV or Excel file.
@@ -83,10 +89,10 @@ export default function ImportSettings() {
   const canImportAccounts = role === 'owner' || role === 'accountant';
 
   const [kind, setKind] = useState<ImportKind>('customers');
-  const [source, setSource] = useState<'generic' | 'freshbooks'>('generic');
+  const [source, setSource] = useState<CsvSource>('generic');
   const [fileName, setFileName] = useState('');
   const [rawTable, setRawTable] = useState<string[][]>([]);
-  const table = useMemo(() => source === 'freshbooks' ? normalizeFreshBooksCsv(kind, rawTable) : rawTable, [kind, source, rawTable]);
+  const table = useMemo(() => normalizeSourceTable(source, kind, rawTable), [kind, source, rawTable]);
   const [mapping, setMapping] = useState<FieldMapping>({});
   const [openingDate, setOpeningDate] = useState(() => getLocalDateISO());
   const [busy, setBusy] = useState(false);
@@ -120,7 +126,7 @@ export default function ImportSettings() {
 
   const chooseKind = (next: ImportKind) => {
     setKind(next);
-    const preview = source === 'freshbooks' ? normalizeFreshBooksCsv(next, rawTable) : rawTable;
+    const preview = normalizeSourceTable(source, next, rawTable);
     setMapping(preview.length ? guessMapping(next, preview[0]) : {});
     resetResults();
   };
@@ -139,7 +145,7 @@ export default function ImportSettings() {
       }
       setFileName(file.name);
       setRawTable(cells);
-      const converted = source === 'freshbooks' ? normalizeFreshBooksCsv(kind, cells) : cells;
+      const converted = normalizeSourceTable(source, kind, cells);
       setMapping(guessMapping(kind, converted[0]));
     } catch (err) {
       toast.error(`The file could not be read: ${err instanceof Error ? err.message : String(err)}`);
@@ -209,16 +215,17 @@ export default function ImportSettings() {
         <div className="flex flex-wrap gap-3 items-end">
           <label className="text-xs font-bold flex flex-col gap-1">CSV source
             <select aria-label="CSV source" value={source} onChange={e => {
-              const next = e.target.value === 'freshbooks' ? 'freshbooks' : 'generic';
+              const next: CsvSource = e.target.value === 'freshbooks' ? 'freshbooks' : e.target.value === 'quickbooks' ? 'quickbooks' : 'generic';
               setSource(next);
-              const converted = next === 'freshbooks' ? normalizeFreshBooksCsv(kind, rawTable) : rawTable;
+              const converted = normalizeSourceTable(next, kind, rawTable);
               setMapping(converted.length ? guessMapping(kind, converted[0]) : {});
               resetResults();
             }} className="min-h-11 border rounded px-3 bg-[var(--panel)] text-sm">
-              <option value="generic">Standard spreadsheet / Wave</option><option value="freshbooks">FreshBooks CSV</option>
+              <option value="generic">Standard spreadsheet / Wave</option><option value="freshbooks">FreshBooks CSV</option><option value="quickbooks">QuickBooks Online CSV</option>
             </select>
           </label>
           {source === 'freshbooks' && <p className="text-xs text-[var(--muted)]">Choose a FreshBooks Clients, Vendors, or Items export. We combine name and address columns for preview, then use the normal validated import. No transactions are imported. <a className="underline" href="https://support.freshbooks.com/hc/en-us/articles/360032628152-How-do-I-export-my-data" target="_blank" rel="noopener noreferrer">Export instructions</a>.</p>}
+          {source === 'quickbooks' && <p className="text-xs text-[var(--muted)]">Choose a QuickBooks Online Account List, Customer Contact List, Vendor Contact List, or Products &amp; Services export. Put headers on the first row; review mappings and check before importing. Account balances, existing stock quantities and transactions are not carried over. <a className="underline" href="https://quickbooks.intuit.com/learn-support/en-us/help-article/list-management/export-reports-lists-data-quickbooks-online/L1xleDrLp_US_en_US" target="_blank" rel="noopener noreferrer">QBO export instructions</a>.</p>}
         </div>
         <fieldset className="space-y-3">
           <legend className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">1. What are you importing?</legend>
