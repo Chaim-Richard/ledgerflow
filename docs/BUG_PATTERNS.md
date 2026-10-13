@@ -5,7 +5,7 @@
 | swallowing-action | 96 |
 | success-after-call | 12 |
 | unchecked-write | 2 |
-| write-in-loop | 14 |
+| write-in-loop | 13 |
 | stale-async | 81 |
 | silent-catch | 54 |
 | effect-before-write | 0 |
@@ -256,7 +256,6 @@
 - [ ] `unchecked-write` src/components/platform/SystemCommandCenter.tsx:142 — fetchWithAuth
 - [ ] `unchecked-write` src/hooks/transactionActions/entryActions.ts:369 — fetch
 - [ ] `write-in-loop` src/components/assets/FixedAssetsView.tsx:79 — updateEntity
-- [ ] `write-in-loop` src/components/banking/TransferModal.tsx:129 — handleUpdateTransaction
 - [ ] `write-in-loop` src/components/common/OpeningDocumentsDialog.tsx:56 — addEntity
 - [ ] `write-in-loop` src/components/common/OpeningDocumentsDialog.tsx:63 — addEntity
 - [ ] `write-in-loop` src/components/common/OpeningDocumentsDialog.tsx:64 — addEntity

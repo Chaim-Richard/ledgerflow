@@ -74,4 +74,16 @@ describe('batch edits are safe (database)', { skip: !url && 'LF_TEST_DATABASE_UR
     assert.equal(stale.status, 409);
     assert.equal((await entry('b')).description, 'b');
   });
+
+  test('#106: pairing two entries as a transfer is saved for both or for neither', async () => {
+    const pair = (bTo: string) => [
+      { id: id('a'), data: { isTransfer: true, transferDetails: { fromAccountId: 'x', toAccountId: 'y' } } },
+      { id: id('b'), data: { isTransfer: true, lines: [{ accountId: id('bank'), amountCents: -500 }, { accountId: bTo, amountCents: 500 }] } },
+    ];
+    assert.equal((await batch(pair(`${other}_theirs`))).status, 400);
+    assert.equal((await entry('a')).isTransfer, undefined, 'a must not be marked when b is refused');
+    assert.equal((await batch(pair(id('rent')))).status, 200);
+    assert.equal((await entry('a')).isTransfer, true);
+    assert.equal((await entry('b')).isTransfer, true);
+  });
 });

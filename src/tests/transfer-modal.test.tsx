@@ -67,11 +67,15 @@ describe('Transfer between your own accounts', () => {
     render(<TransferModal isOpen onClose={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /Transfer Suggestions \(1\)/ }));
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Link as Transfer' })); });
-    await waitFor(() => assert.equal(calls.filter(c => c.method === 'PUT').length, 2));
+    await waitFor(() => assert.equal(calls.filter(c => c.url === '/api/v1/transactions/batch').length, 1));
     const account = calls.find(c => c.url.includes('/rpc/lf_set') && (c.body as { p_table: string }).p_table === 'chartAccounts')!.body as { p_table: string; p_data: { id: string; name: string; type: string; code: string } };
     assert.equal(account.p_table, 'chartAccounts');
     assert.deepEqual([account.p_data.name, account.p_data.type, account.p_data.code], ['Transfer Clearing', 'asset', '1095']);
-    const updates = calls.filter(c => c.method === 'PUT').map(c => ({ url: c.url, tx: (c.body as { transaction: { isTransfer: boolean; lines: TransactionLine[] } }).transaction }));
+    // #106: both halves go in ONE batch request, which the server saves together or not at all
+    const batches = calls.filter(c => c.url === '/api/v1/transactions/batch');
+    assert.equal(batches.length, 1, 'one request for the pair');
+    assert.equal(calls.filter(c => c.method === 'PUT').length, 0, 'no separate per-entry saves');
+    const updates = (batches[0].body as { updates: Array<{ id: string; data: { isTransfer: boolean; lines: TransactionLine[] } }> }).updates.map(u => ({ url: `/api/v1/transactions/${u.id}`, tx: u.data }));
     assert.deepEqual(updates.map(u => u.url), ['/api/v1/transactions/out', '/api/v1/transactions/in']);
     assert.deepEqual(updates[0].tx.lines.map(l => [l.accountId, l.amountCents]), [[account.p_data.id, 25000], ['checking', -25000]]);
     assert.deepEqual(updates[1].tx.lines.map(l => [l.accountId, l.amountCents]), [['savings', 25000], [account.p_data.id, -25000]]);
@@ -85,9 +89,9 @@ describe('Transfer between your own accounts', () => {
     render(<TransferModal isOpen onClose={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /Transfer Suggestions \(1\)/ }));
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Link as Transfer' })); });
-    await waitFor(() => assert.equal(calls.filter(c => c.method === 'PUT').length, 2));
+    await waitFor(() => assert.equal(calls.filter(c => c.url === '/api/v1/transactions/batch').length, 1));
     assert.equal(calls.filter(c => c.url.includes('/rpc/lf_set') && (c.body as { p_table: string }).p_table === 'chartAccounts').length, 0);
-    const first = (calls.find(c => c.method === 'PUT')!.body as { transaction: { lines: TransactionLine[] } }).transaction;
+    const first = (calls.find(c => c.url === '/api/v1/transactions/batch')!.body as { updates: Array<{ data: { lines: TransactionLine[] } }> }).updates[0].data;
     assert.equal(first.lines[0].accountId, 'tc');
   });
 });

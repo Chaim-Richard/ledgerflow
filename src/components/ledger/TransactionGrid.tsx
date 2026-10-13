@@ -1,4 +1,6 @@
 import { TransactionGridView } from './TransactionGridView';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { workspaceScope } from '../../lib/serverAction';
 
 import React, { useId, useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Transaction, FilterCriteria } from '../../types';
@@ -374,10 +376,10 @@ function useTransactionGridModel() {
     if (txActions?.handleBulkUpdate) {
       await txActions.handleBulkUpdate(ids, updates);
     } else {
-      ids.forEach(id => {
-        onUpdate?.(id, updates);
-      });
-      toast.success(`Successfully updated ${ids.length} transactions`);
+      const results = await Promise.all(ids.map(id => Promise.resolve(onUpdate?.(id, updates)).then(r => r !== false, () => false)));
+      const saved = results.filter(Boolean).length;
+      if (saved === ids.length) toast.success(`Updated ${saved} ${saved === 1 ? 'entry' : 'entries'}`);
+      else toast.error(`${saved} of ${ids.length} entries were updated; ${ids.length - saved} were not saved.`);
     }
     setSelectedIds(new Set());
   }, [selectedIds, txActions, onUpdate]);
@@ -393,9 +395,12 @@ function useTransactionGridModel() {
     const accounts = state.accounts;
     const engine = new MatchingEngine(rules, state.analyticalPatternCache, undefined, state.matchingThreshold, transactionsWithBalance, state.dimensionNodes, accounts);
 
+    // #108: the books may change while suggestions are computed; only confirmed saves are counted
+    const scope = workspaceScope(() => useAuthStore.getState().currentWorkspaceId);
     const suggestions = await engine.suggestCategoriesAsync(transactionsWithBalance, Math.round);
+    if (!scope.isCurrent()) { toast.dismiss(loaderId); return; }
 
-    let count = 0;
+    const planned: Array<{ id: string; lines: Transaction['lines'] }> = [];
 
     // O(1) Pre-computing Maps to avoid O(N * M) performance drop during Bulk Sweep
     const txMap = new Map(transactionsWithBalance.map(t => [t.id, t]));
@@ -414,13 +419,17 @@ function useTransactionGridModel() {
           { accountId: targetAcc.id, accountName: targetAcc.name, amountCents: Math.abs(tx.totalAmountCents), dimensions: suggestion.dimensions || undefined },
           { accountId: bankAcc?.id || accounts[0]?.id || '', accountName: bankAcc?.name || 'Main Checking', amountCents: -Math.abs(tx.totalAmountCents) }
         ];
-        onUpdate?.(id, { lines: updatedLines });
-        count++;
+        planned.push({ id, lines: updatedLines as Transaction['lines'] });
       }
     });
 
-    if (count > 0) {
-      toast.success(`Bayesian rule network categorized ${count} items.`, { id: loaderId });
+    const results = await Promise.all(planned.map(p => Promise.resolve(onUpdate?.(p.id, { lines: p.lines })).then(r => r !== false, () => false)));
+    const count = results.filter(Boolean).length;
+    const failed = planned.length - count;
+    if (failed > 0) {
+      toast.error(`${count} of ${planned.length} entries were categorized; ${failed} were not saved (see the messages above).`, { id: loaderId });
+    } else if (count > 0) {
+      toast.success(`Categorized ${count} ${count === 1 ? 'entry' : 'entries'}.`, { id: loaderId });
     } else {
       toast.info('No auto-resolvable patterns found. Try adjusting Rule Matching thresholds.', { id: loaderId });
     }
