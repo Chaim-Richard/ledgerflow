@@ -88,11 +88,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Inspect the developer-only administration demonstration. Explore its example panels when developer mode is enabled. Demonstration telemetry is distinct from production monitoring.",
   },
   reports: {
-<<<<<<< HEAD
     "customer-tax-certificates": "Review current customer certificate declarations, with expiries within 30 calendar days first and expired or unreadable entries marked. Refresh the complete workspace customer list before CSV export. This is a dated review of current metadata, not verified entitlement or certificate history. Open customer details in a side drawer to keep this list visible.",
-=======
     "vendor-tax-records": "Review masked recorded tax/VAT IDs, withholding-certificate expiry and missing-data reminders. Refresh the complete workspace vendor list before CSV export; edited records invalidate that export until refreshed. This does not verify ID kind, W-9 receipt, registration or legal withholding obligations. Open related vendor details without leaving the report.",
->>>>>>> origin/codex/c48-vendor-tax-records
     "form-856":
       "Review tax withheld at source from vendor payments, per vendor and tax year, with the certificate numbers the payments relied on. Choose the year and download the CSV for the form. Payments without a certificate number are listed as missing, never filled in; nothing is filed here.",
     "customer-cohorts": "Group customers by their earliest observed issued-invoice month and inspect each later month's total invoicing, distinct active customers or percentage. The first invoice can predate the selected display window. Incomplete invoice history makes these cohorts provisional.",
