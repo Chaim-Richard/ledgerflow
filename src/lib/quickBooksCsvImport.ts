@@ -83,8 +83,8 @@ export function normalizeQuickBooksCsv(kind: ImportKind, table: readonly (readon
       col(headers, row, 'Account', 'Account Name', 'Name', 'Full Name'),
       col(headers, row, 'Number', 'Account Number', 'Account No', 'Code'),
       col(headers, row, 'Type', 'Account Type'),
-      col(headers, row, 'Detail Type', 'Detail'),
-      col(headers, row, 'Sub Type', 'Subtype'),
+      '', // Preserve category inferred by the shared parser (Cash, Receivables, Payables, etc.).
+      col(headers, row, 'Detail Type', 'Detail', 'Sub Type', 'Subtype'),
       col(headers, row, 'Description'),
       col(headers, row, 'Currency', 'Currency Code'),
     ]),
