@@ -59,7 +59,8 @@ test('E-20 QBO Account List maps account type and number but not the exported ba
   assert.deepEqual(result.errors, []);
   assert.equal(result.records[0].data.code, '1000');
   assert.equal(result.records[0].data.type, 'asset');
-  assert.equal(result.records[0].data.category, 'Checking', 'QBO detail type is preserved for review');
+  assert.equal(result.records[0].data.category, 'Cash', 'bank account must retain LedgerFlow cash role');
+  assert.equal(result.records[0].data.subtype, 'Checking', 'QBO detail type remains available for review');
   assert.equal(result.records[1].data.type, 'revenue');
   assert.ok(result.records.every(row => !('balance' in row.data)));
 });
