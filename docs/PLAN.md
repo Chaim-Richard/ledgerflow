@@ -213,7 +213,7 @@ people approve, posting services commit) and found real defects. Status:
 | Canned AI answers and confidence (85, 90) when the model fails | **Fixed**: an explicit `degraded` answer with no confidence, server and browser |
 | "Auto-fill Accuracy 98.4%" hard-coded | **Fixed**: removed; no quality number without a measurement |
 | Fixed execution times in AI traces | **Fixed**: measured |
-| One AI gateway for every model call (policy, data allowed per task, trace, budget) | AI #1, next |
+| One AI gateway for every model call (policy, data allowed per task, trace, budget) | **Done 12 Oct** for `/api/v1/ai/process`: fields per task, a trace per call (model, tokens, time, cost from the table) in `billingLedgerTraces` (`src/server/services/aiGateway.ts`); the brain route keeps its own trace for now |
 | Route-policy coverage: every server route that touches a workspace proves a guard (the server role bypasses RLS) | AI #4 D-30 |
 | AI evaluation harness (time-split, Hebrew/English slices, calibration) before any accuracy claim | AI #4 D-31 |
 | Tax capability labels in the product: calculation / reviewed / filing-ready | AI #2 C-55 |
@@ -258,3 +258,18 @@ conflict).
 **Order (AI #1):** line tax on the rule graph → Israel and US as rule packs (data, with sources) →
 entity-period rules (returns and filings per entity per year) → the Facts screen (AI #2) → learning
 suggests facts and rules, never sets them.
+
+## 11. Spreadsheet Lab with GridCraft (owner's report, 12 Oct) — adopted as an optional epic, later
+
+Checked against the repos (storytold/gridcraft 0.6.1, storytold/craft-libs 0.1.0): pure Rust, ~121k lines, MIT OR
+Apache-2.0, alpha, browser build is a WebAssembly canvas app (`apps/gridcraft-web`), not a React component. The
+ArtCraft brand is excluded from the licence (NOTICE, docs/brand/LICENSE-brand.txt). craft-libs (atomic files,
+printing, macOS quit, egui UI) is desktop plumbing that LedgerFlow does not need.
+
+- **Rule that never changes:** the spreadsheet never writes to the books. Data goes in one way: a report snapshot
+  made on the server. Any change goes back through our own screens (InlineEdit, Explain-number).
+- **Shape:** a separate build artifact served from its own origin, in a sandboxed iframe, with a typed postMessage
+  bridge that carries no login tokens. "Explain in LedgerFlow" on a cell opens our drill-down.
+- **Order:** SL-1 licence notice and no-brand check; SL-2 server report snapshot (read only, with provenance ids);
+  SL-3 the iframe and bridge behind a feature flag; SL-4 Explain-in-LedgerFlow; SL-5 export to .xlsx.
+- **Not before:** the tax and payroll work in §6 and §10. Native Pivot Sheet and pins stay the main way to analyse.

@@ -21,6 +21,7 @@ export type FactAttribute =
   | 'activity'            // retail, services, manufacturing … (a set: a business can do several)
   | 'productCategory'     // A-30's item tax categories (clothing, groceries, SaaS …): what is being sold
   | 'accountingMethod'    // accrual, cash
+  | 'channel'             // A-41: where the sale happens — direct, marketplace, own-website …
   | 'registration';       // a set of keys from src/lib/tax/profile.ts registrationKey
 
 /** Single-valued attributes may conflict between dimensions; set-valued ones accumulate. */

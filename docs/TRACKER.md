@@ -1855,8 +1855,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [x] O-01 Sunburst
 - [x] O-02 Treemap
-- [ ] O-03 Icicle
-- [ ] O-04 Brush selector
+- [x] O-03 Icicle — AI #4, D-9: trial-balance account hierarchy, direct postings counted once, signed shares/table and keyboard zoom; full GitHub gates pending on `ai4/d-9-chart-drill-shapes`.
+- [x] O-04 Brush selector — AI #4, D-9: pointer/touch drag and native keyboard sliders share the two financial time-plot windows and exact report dates; full GitHub gates pending on `ai4/d-9-chart-drill-shapes`.
 - [x] O-05 Chart switcher — D-6, PR #69: remembered bar/line/area choices for two financial time plots and five dashboard trends; specialized shapes retained.
 - [x] O-06 Legend toggling — D-6, PR #69: shared financial series/category controls and dashboard trend legends preserve accessible values.
 - [x] O-07 Scatter plot
@@ -2638,3 +2638,5 @@ BD-06, P-08 and BB-07. Each item says its bucket. Only the owner moves an item i
 - [ ] DA-10 Move a label into its own books — **Research**: when a company that was an Entity label outgrows it (see ROADMAP, "Can a company just be a label?"), move that label's activity into a new workspace in the same group, without retyping. Opening balances move on a chosen date, and there is an audit trail in both. Needs an owner decision on the date and the history kept.
 
 C-39 / CB-22 review note (AI #2, 11 Oct): `DiscountMismatchView` compares current list/catalogue unit prices through the existing price-list helper, with explicit provisional/complete reads, per-unit differences and CSV. Targeted tests and phone accessibility passed; full gates pending. Separate item discount rules, historical list versions and line-discount agreements need AI #1’s storage contract; no historical entitlement claim.
+
+- [ ] SL Spreadsheet Lab (GridCraft, optional, later) — see PLAN §11. Read-only analysis in an isolated iframe; never writes to the books. SL-1..SL-5. Licence default in FOR_YOU 46.

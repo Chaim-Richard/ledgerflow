@@ -326,6 +326,11 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
    supplies in Judea and Samaria as zero-rated from 1968. Default kept: the row stays, marked "calculation only", so no
    filing relies on it. Please confirm or correct it; it is one row.
 
+46. **GridCraft "Spreadsheet Lab" (12 Oct, decided by default: not started yet, research only).** GridCraft and craft-libs
+   are MIT OR Apache-2.0; we would use MIT and ship their NOTICE in a THIRD_PARTY_NOTICES file. The ArtCraft name and
+   logos are trademarks and are not covered: we never show them. GridCraft says it is **alpha**. Default: it stays an
+   optional, separate add-on that only reads report data and never writes to the books. Say if you want it sooner, or not at all.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

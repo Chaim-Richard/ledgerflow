@@ -102,6 +102,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Asset Depreciation Ledger', componentName: 'DepreciationLedgerReportView' },
     { label: 'Bank Clearance Summary', componentName: 'BankClearanceReportView' },
     { label: 'Withholding Report (Form 856)', componentName: 'Form856ReportView' },
+    { label: 'Expense Policy Check', componentName: 'ExpensePolicyReportView' },
   ];
 
   for (const report of reportTabs) {
