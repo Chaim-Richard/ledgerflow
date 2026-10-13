@@ -271,6 +271,37 @@
 
 ## Server and database integrity review (not confirmed incidents)
 
+- [ ] `server-direct-ledger-write` src/server/routes/transactions/crudRoutes.ts:191 — create
+- [ ] `server-direct-ledger-write` src/server/routes/transactions/reverseRoutes.ts:208 — create
+- [ ] `server-direct-ledger-write` src/server/routes/transactions/reverseRoutes.ts:222 — create
+- [ ] `server-direct-ledger-write` src/server/routes/transactions/reverseRoutes.ts:427 — set
+- [ ] `server-direct-ledger-write` src/server/routes/transactions/reverseRoutes.ts:428 — set
+- [ ] `server-direct-ledger-write` src/server/services/assetDisposalService.ts:117 — create
+- [ ] `server-direct-ledger-write` src/server/services/assetTransferService.ts:79 — create
+- [ ] `server-direct-ledger-write` src/server/services/badDebtService.ts:101 — create
+- [ ] `server-direct-ledger-write` src/server/services/badDebtService.ts:139 — create
+- [ ] `server-direct-ledger-write` src/server/services/badDebtService.ts:140 — update
+- [ ] `server-direct-ledger-write` src/server/services/bankLineService.ts:131 — create
+- [ ] `server-direct-ledger-write` src/server/services/creditService.ts:233 — create
+- [ ] `server-direct-ledger-write` src/server/services/deliveryService.ts:128 — create
+- [ ] `server-direct-ledger-write` src/server/services/deliveryService.ts:173 — create
+- [ ] `server-direct-ledger-write` src/server/services/deliveryService.ts:174 — update
+- [ ] `server-direct-ledger-write` src/server/services/deliveryService.ts:240 — create
+- [ ] `server-direct-ledger-write` src/server/services/depositService.ts:84 — create
+- [ ] `server-direct-ledger-write` src/server/services/depreciationService.ts:111 — create
+- [ ] `server-direct-ledger-write` src/server/services/fxRevaluationService.ts:283 — create
+- [ ] `server-direct-ledger-write` src/server/services/fxRevaluationService.ts:284 — create
+- [ ] `server-direct-ledger-write` src/server/services/fxRevaluationService.ts:346 — create
+- [ ] `server-direct-ledger-write` src/server/services/fxRevaluationService.ts:347 — update
+- [ ] `server-direct-ledger-write` src/server/services/paymentService.ts:502 — create
+- [ ] `server-direct-ledger-write` src/server/services/payRunService.ts:105 — create
+- [ ] `server-direct-ledger-write` src/server/services/payRunService.ts:298 — update
+- [ ] `server-direct-ledger-write` src/server/services/placeInServiceService.ts:80 — create
+- [ ] `server-direct-ledger-write` src/server/services/prepaidService.ts:144 — create
+- [ ] `server-direct-ledger-write` src/server/services/recordImportService.ts:134 — create
+- [ ] `server-direct-ledger-write` src/server/services/recordImportService.ts:279 — create
+- [ ] `server-direct-ledger-write` src/server/services/stockAdjustmentService.ts:139 — set
+- [ ] `server-direct-ledger-write` src/server/services/taxRecomputeService.ts:69 — create
 - [ ] `server-partial-batch-commit` src/server/routes/transactions/periodRoutes.ts:225 — batch.commit
 - [ ] `server-partial-batch-commit` src/server/services/maintenanceService.ts:24 — batch.commit
 - [ ] `server-partial-batch-commit` src/server/services/notificationService.ts:161 — batch.commit

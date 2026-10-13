@@ -1,4 +1,5 @@
 import type { Firestore } from '../db/firestore';
+import { ledgerCreate } from './ledgerDoor';
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { isOpeningBalanceEquity, OPENING_BALANCE_TYPE, openingEntry, type OpeningEntry } from '../../lib/openingBalances';
@@ -66,7 +67,7 @@ export async function recordOpeningBalances(db: Firestore, input: OpeningBalance
         const message = err instanceof Error ? err.message : String(err);
         throw new SetupError(/Period Locked/i.test(message) ? 409 : 400, message);
       }
-      t.create(db.collection('transactions').doc(prepared.id), { ...prepared, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      ledgerCreate(t, db.collection('transactions').doc(prepared.id), { ...prepared, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       transactionId = prepared.id;
     }
     const now = new Date().toISOString();

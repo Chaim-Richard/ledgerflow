@@ -137,3 +137,19 @@ test('#114 operationIdFor: the same payment keeps its id across retries; a chang
   assert.equal(operationIdFor(ids, '{"amountCents":100}'), a);
   assert.notEqual(operationIdFor(ids, '{"amountCents":200}'), a);
 });
+
+test('AU-6: ledger entries written outside the door (src/server/services/ledgerDoor.ts) never increase', () => {
+  const max = (JSON.parse(fs.readFileSync('ledger-door-baseline.json', 'utf8')) as Record<string, number>)['server-direct-ledger-write'];
+  const direct = scanFinancialIntegrity().filter(f => f.kind === 'server-direct-ledger-write');
+  assert.ok(direct.length <= max, `${direct.length} direct ledger writes > ${max}. Use ledgerWrite() from src/server/services/ledgerDoor.ts:\n` + direct.map(f => `  ${f.file}:${f.line}`).join('\n'));
+});
+
+test('AU-6: the door refuses entries that could not be valid', async () => {
+  const { checkLedgerEntry } = await import('../server/services/ledgerDoor');
+  const ok = { workspaceId: 'w', totalAmountCents: 500, lines: [{ accountId: 'a', amountCents: 500 }, { accountId: 'b', amountCents: -500 }] };
+  assert.doesNotThrow(() => checkLedgerEntry(ok));
+  assert.throws(() => checkLedgerEntry({ ...ok, workspaceId: '' }), /workspace/);
+  assert.throws(() => checkLedgerEntry({ ...ok, lines: [{ accountId: 'a', amountCents: 500 }, { accountId: 'b', amountCents: -400 }] }));
+  assert.throws(() => checkLedgerEntry({ ...ok, lines: [{ accountId: 'a', amountCents: 5.5 }, { accountId: 'b', amountCents: -5.5 }] }), /whole cents/);
+  assert.throws(() => checkLedgerEntry({ ...ok, totalAmountCents: 900 }), /does not match/);
+});

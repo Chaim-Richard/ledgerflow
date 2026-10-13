@@ -199,6 +199,15 @@ export function scanFinancialIntegrity(root = process.cwd()): FinancialFinding[]
         if (name === 'commit' && inLoop(n, sf)) {
           findings.push({ kind: 'server-partial-batch-commit', file: relative, line: line(n), name: 'batch.commit', issue: /transactions\/bulkRoutes/.test(relative) ? 113 : undefined });
         }
+        // AU-6: a ledger entry written outside src/server/services/ledgerDoor.ts skips the shared
+        // entry checks. Counted (ratchet) so the number only goes down as writers move to the door.
+        if (['set', 'update', 'create', 'add'].includes(name) && !relative.endsWith('/services/ledgerDoor.ts')) {
+          const target = ts.isPropertyAccessExpression(n.expression) ? n.expression.expression.getText(sf) : '';
+          const first = n.arguments[0]?.getText(sf) ?? '';
+          if (/collection\(\s*['"]transactions['"]\s*\)/.test(target) || /collection\(\s*['"]transactions['"]\s*\)/.test(first)) {
+            findings.push({ kind: 'server-direct-ledger-write', file: relative, line: line(n), name });
+          }
+        }
         // Payment creation that bypasses the idempotent path remains a backwards-compatible risk.
         if (name === 'createPaymentAtomic' && relative.endsWith('/paymentRoutes.ts')) {
           findings.push({ kind: 'server-unkeyed-payment-path', file: relative, line: line(n), name: 'createPaymentAtomic', issue: 114 });
