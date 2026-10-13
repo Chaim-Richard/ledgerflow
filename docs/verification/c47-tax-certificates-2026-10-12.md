@@ -22,3 +22,8 @@ No money calculations, server routes, schema, primary forms, dependency declarat
 ## Preserved current main before publication
 
 Merged main `363dec0e` normally, retaining both coordination histories and every upstream feature. The integrated source passes **13/13 targeted** (seven certificate cases plus help/quality), types, ESLint **212 warnings / zero errors**, and build. Its complete GitHub suites remain pending. Adding the report changes the always-visible P&L/balance-sheet navigation; a temporary CI-browser capture saves candidate images on an isolated review branch. Only inspected images will be brought into the feature branch, and the temporary capture workflow will be removed. Existing screenshot thresholds and money assertions stay unchanged.
+
+
+## Reviewed visual references
+
+Matching GitHub Chromium capture run **38329107479** passed all **40 visual comparisons** after capturing the eight intentionally changed P&L/balance-sheet navigation references. Candidate commit `a05efd78` changed those eight PNGs only. Inspected desktop/phone, light/dark menus and compared report bodies with main: the added certificate tab wraps normally, original controls remain visible, and assets/equity **$3,000**, P&L revenue **$15,000**, expenses **$12,000**, surplus **$3,000** are retained. The reviewed images are committed; the temporary capture workflow is removed. Pixel limits, expected money values and test selection are unchanged. Complete CI on this final review head remains pending.
