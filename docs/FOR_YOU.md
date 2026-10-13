@@ -9,7 +9,7 @@ Last updated: 2026-10-07.
 
 ## A. Settings only you can change (a few minutes each)
 
-0. **Most important: let database changes go through without you (1 minute).** Open
+0. **Done (owner, 13 Oct).** **Most important: let database changes go through without you (1 minute).** Open
    https://claude.ai/customize/connectors → **Supabase** → tool permissions → set
    `apply_migration`, `execute_sql` and `list_migrations` to **Always allow**.
    *Why:* these tools ask you to approve every single time, and while an approval is waiting
@@ -17,7 +17,7 @@ Last updated: 2026-10-07.
    this, Claude calls them as rarely as possible, and the 5-hour check-in cancels any
    approval that is still waiting so work carries on.
    *Both waiting changes (`tax_returns`, `updated_at_indexes`) were applied on 2 Oct while you were here.*
-1. **Sign-in addresses (Supabase).** supabase.com → project *ledgerflow* → Authentication → URL
+1. **Done (owner, 13 Oct).** **Sign-in addresses (Supabase).** supabase.com → project *ledgerflow* → Authentication → URL
    Configuration. Site URL: `https://ledgerflow-one-pearl.vercel.app`. Redirect URLs: add
    `https://ledgerflow-one-pearl.vercel.app/**` and `http://localhost:3000/**`.
    Without it, sign-up confirmation and password-reset emails link to the wrong place.
@@ -53,7 +53,7 @@ Last updated: 2026-10-07.
    money, the same with the live keys. Other optional keys (currency rates, tax): tell Claude
    which ones you want. Plaid (bank feeds): Claude has no Plaid connection; the `PLAID_*` values
    in Vercel must come from your Plaid dashboard (use the sandbox first).
-9. **Old settings to delete** in Vercel (unused since the move to Supabase): `FIREBASE_PROJECT_ID`,
+9. **Done (owner, 13 Oct).** **Old settings to delete** in Vercel (unused since the move to Supabase): `FIREBASE_PROJECT_ID`,
    `SQL_*`, `JWT_SECRET`.
 
 17. **Privacy papers (before real customers, 15 minutes + a lawyer).** Put your company name,
@@ -77,7 +77,7 @@ Last updated: 2026-10-07.
     invoice field needs a migration (the approval itself is stored with the invoice). Same as item 19:
     paste it in Supabase → SQL editor, or say so and the next session runs it through the connector.
 
-26. **Password rules in Supabase too (2 minutes, 7 Oct).** The app now asks for at least 10
+26. **Done (owner, 13 Oct).** **Password rules in Supabase too (2 minutes, 7 Oct).** The app now asks for at least 10
     characters (not a common password, not your email name) when someone signs up or picks a new
     password after a reset link. Make Supabase say the same, so nobody can get around it: Supabase →
     Authentication → Providers → Email → *Minimum password length* **10**, and, if your plan has it,
@@ -299,7 +299,7 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
    pay run, for their approved time up to the pay date that no earlier run paid, at one hourly rate.
    There is no overtime rate (e.g. time and a half over 40 hours a week) yet. Say if you need overtime.
 
-41. **Repository made public (11 Oct): roll one old Stripe test key — needs you, 2 minutes.** An early
+41. **Done (owner, 13 Oct).** **Repository made public (11 Oct): roll one old Stripe test key — needs you, 2 minutes.** An early
    commit (5 Jul, removed on 22 Jul) had a Stripe *test-mode* secret key starting `sk_test_51Th0cy…`.
    It cannot move real money, but anyone can now read it. In Stripe → Developers → API keys (test mode)
    → "Roll key", then put the new one in Vercel's `STRIPE_SECRET_KEY` if you use test mode there. No
