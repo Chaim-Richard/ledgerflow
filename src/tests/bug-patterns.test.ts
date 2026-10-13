@@ -76,21 +76,32 @@ test('financial scanner reads the real server and migration tree (not just scree
   assert.ok(risks.some(f => f.issue === 114), '#114 backwards-compatible unkeyed payment path not detected');
 });
 
-// The scanner must keep finding the code behind the public issues it was built from, until they are fixed.
-const ISSUE_SITES: Array<[issue: number, file: string]> = [
-  [97, 'src/components/collaboration/TimeView.tsx'],
-  [99, 'src/components/collaboration/TimeTimer.tsx'],
-  [100, 'src/hooks/useLedgerData.ts'],
-  [102, 'src/components/ledger/StatementImporter.tsx'],
-  [107, 'src/hooks/transactionActions/shared.ts'],
-  [109, 'src/services/bulkDocumentActions.ts'],
-  [110, 'src/hooks/transactionActions/importActions.ts'],
-  [111, 'src/hooks/transactionActions/entryActions.ts'], // also #105, #108 (bulk update)
+// A file-level check was too weak: any unrelated finding in the file could masquerade as
+// coverage. Track each of the 13 financial/data-safety issue mechanisms independently,
+// including the two repaired call sites; these probes are recall checks, NOT functional proof.
+const ISSUE_MECHANISMS: Array<{ issue: number; file: string; markers: string[] }> = [
+  { issue: 97, file: 'src/components/collaboration/TimeView.tsx', markers: ['const makeInvoice', "await addEntity('invoices'", "'/invoiced'"] },
+  { issue: 98, file: 'src/server/services/timeService.ts', markers: ['export async function moveTime', 'await found.ref.set(next)'] },
+  { issue: 99, file: 'src/components/collaboration/TimeTimer.tsx', markers: ['read(workspaceId)', 'setRunning'] },
+  { issue: 100, file: 'src/hooks/useLedgerData.ts', markers: ['const loadReferenceData', 'setAnalyticalPatternCache'] },
+  { issue: 101, file: 'src/components/ledger/StatementImporter.tsx', markers: ['parseCsvText', 'inQuotes = !inQuotes'] },
+  { issue: 102, file: 'src/components/ledger/StatementImporter.tsx', markers: ['handleFileUpload', 'setCsvData'] },
+  { issue: 105, file: 'src/components/banking/TransferModal.tsx', markers: ['retryRef.current.operationId', 'txActions.handleQuickAdd'] },
+  { issue: 106, file: 'src/components/banking/TransferModal.tsx', markers: ['candidate.outflowTx, candidate.inflowTx', 'handleUpdateTransaction'] },
+  { issue: 107, file: 'src/hooks/transactionActions/entryActions.ts', markers: ['setTransactions(originalTransactions)'] },
+  { issue: 108, file: 'src/components/ledger/TransactionGrid.tsx', markers: ['const handleBulkSweep', 'onUpdate?.(id, { lines: updatedLines })'] },
+  { issue: 109, file: 'src/components/purchases/PaymentRunDialog.tsx', markers: ['if (withFile && done.length) downloadBankFile(done)'] },
+  { issue: 110, file: 'src/components/ledger/StatementImporter.tsx', markers: ['await onImport(toImport);', 'onClose();'] },
+  { issue: 111, file: 'src/hooks/transactionActions/importActions.ts', markers: ['const handleParseReceipt', 'updateParsingItem(parsingId'] },
 ];
-test('the scanner finds the code named in issues #97–#111', () => {
-  const files = new Set(found.map(f => f.file));
-  const missed = ISSUE_SITES.filter(([, file]) => fs.existsSync(file) && !files.has(file));
-  assert.deepEqual(missed, [], 'scanner no longer flags these issue sites (fixed? remove them from ISSUE_SITES)');
+test('all 13 issue mechanisms have explicit call-site recall (not just any finding in eight files)', () => {
+  assert.equal(ISSUE_MECHANISMS.length, 13);
+  assert.equal(new Set(ISSUE_MECHANISMS.map(x => x.issue)).size, 13);
+  const missing = ISSUE_MECHANISMS.flatMap(({ issue, file, markers }) => {
+    const source = fs.readFileSync(file, 'utf8');
+    return markers.filter(marker => !source.includes(marker)).map(marker => `#${issue} ${file}: missing ${marker}`);
+  });
+  assert.deepEqual(missing, [], 'Update issue-specific regression coverage whenever an implementation changes');
 });
 
 test('runOnce: a second click while saving reuses the first request', async () => {
