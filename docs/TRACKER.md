@@ -2640,3 +2640,9 @@ BD-06, P-08 and BB-07. Each item says its bucket. Only the owner moves an item i
 C-39 / CB-22 review note (AI #2, 11 Oct): `DiscountMismatchView` compares current list/catalogue unit prices through the existing price-list helper, with explicit provisional/complete reads, per-unit differences and CSV. Targeted tests and phone accessibility passed; full gates pending. Separate item discount rules, historical list versions and line-discount agreements need AI #1’s storage contract; no historical entitlement claim.
 
 - [ ] SL Spreadsheet Lab (GridCraft, optional, later) — see PLAN §11. Read-only analysis in an isolated iframe; never writes to the books. SL-1..SL-5. Licence default in FOR_YOU 46.
+
+### From the owner's second AI audit (13 Oct) — only the parts the code check showed are real gaps
+- [ ] AU-1 Plaid: move from `transactionsGet` (plaidRoutes.ts) to `/transactions/sync` with a saved cursor per item, handling added / modified / removed, webhook replay safe.
+- [ ] AU-2 One label/dimension filter: label filtering is written separately in ~7 files; make one shared slice function, prove old == new on generated scopes, then switch P&L and trial balance first.
+- [ ] AU-3 Property tests on posting (postingKit): thousands of generated entries always balance; the same command posted twice (and 100 times at once) makes exactly one entry.
+- [ ] AU-4 Migration acceptance by reconciliation: after a QuickBooks/CSV import, show trial balance, A/R, A/P, cash and tax payable against the source, not just a record count.
