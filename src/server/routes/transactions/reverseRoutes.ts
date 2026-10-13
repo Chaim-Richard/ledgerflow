@@ -1,4 +1,5 @@
 import express from 'express';
+import { ledgerCreate } from '../../services/ledgerDoor';
 import { FieldValue } from '../../db/firestore';
 import { TransactionValidator } from '../../../kernel/validation/TransactionValidator';
 import { TransactionTemplates } from '../../../kernel/templates/TransactionTemplates';
@@ -205,7 +206,7 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
         // 3. ATOMIC WRITES (All after reads)
         stock.apply();
         // A: Create reversal transaction
-        t.create(db.collection('transactions').doc(reversalId), {
+        ledgerCreate(t, db.collection('transactions').doc(reversalId), {
           ...validatedReversal,
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp()
@@ -219,7 +220,7 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
 
         // C: Create replacement transaction if supplied
         if (validatedReplacement) {
-          t.create(db.collection('transactions').doc(validatedReplacement.id), {
+          ledgerCreate(t, db.collection('transactions').doc(validatedReplacement.id), {
             ...validatedReplacement,
             createdAt: FieldValue.serverTimestamp(),
             updatedAt: FieldValue.serverTimestamp()

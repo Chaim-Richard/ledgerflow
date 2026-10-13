@@ -1,4 +1,5 @@
 import { FieldValue } from '../db/firestore';
+import { ledgerCreate } from './ledgerDoor';
 import type { DocumentData, Firestore } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { resolveAccountRole } from '../../lib/accountUtils';
@@ -128,7 +129,7 @@ export async function splitBankLine(db: Firestore, input: SplitBankLineInput) {
         ...input.splits.map(s => ({ accountId: s.accountId, amountCents: -sign * s.amountCents, description: s.description || description })),
       ],
     }, { workspaceId: input.workspaceId, user: { uid: input.uid }, wsData: workspace }, undefined, t);
-    t.create(db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    ledgerCreate(t, db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     t.update(ref, { status: 'matched', matchedTransactionId: ledgerTx.id, accountId: bank.id, updatedAt: new Date().toISOString() });
     return { transactionId: ledgerTx.id };
   });

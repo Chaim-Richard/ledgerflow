@@ -1,4 +1,5 @@
 import type { Firestore } from '../db/firestore';
+import { ledgerCreate } from './ledgerDoor';
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { lockMessage, postingLock, workspaceRole } from '../../lib/periodLock';
@@ -77,7 +78,7 @@ export async function placeInService(db: Firestore, input: PlaceInServiceInput) 
       if (/Period Locked/i.test(message)) throw new InServiceError(409, message);
       throw err;
     }
-    t.create(db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    ledgerCreate(t, db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     t.update(assetRef, {
       status: 'active', purchaseDate: input.date, assetAccountId: target.id, usefulLifeYears: life, salvageValueCents: salvage,
       accumulatedDepreciationCents: 0, depreciatedThrough: null,

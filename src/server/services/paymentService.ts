@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { ledgerCreate } from './ledgerDoor';
 import { deriveScopedOperationKey } from '../utils/idempotency';
 import { isWithholdingAccount } from '../../lib/tax/withholding';
 import { calculateAmountDue, settledStatus } from '../../lib/documentMath';
@@ -499,7 +500,7 @@ export async function applyUnappliedPayment(db: Firestore, input: {
       unappliedCents: unapplied - total,
       updatedAt: new Date().toISOString(),
     });
-    if (ledgerTx) tx.create(db.collection('transactions').doc(String(ledgerTx.id)), { ...ledgerTx, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    if (ledgerTx) ledgerCreate(tx, db.collection('transactions').doc(String(ledgerTx.id)), { ...ledgerTx, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
     await writeServerAuditLog({
       workspaceId, uid, action: 'PAYMENT_APPLIED', entityType: 'payment', entityId: paymentId,
       details: { description: `Payment ${payment.number || paymentId}: ${formatCurrency(total, paymentCurrency)} applied to ${allocations.length} ${wanted}${allocations.length === 1 ? '' : 's'}`, amountCents: total, transactionId: ledgerTx?.id || null },

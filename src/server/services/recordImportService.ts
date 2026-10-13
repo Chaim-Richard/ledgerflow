@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { ledgerCreate } from './ledgerDoor';
 import { FieldValue } from '../db/firestore';
 import type { DocumentData, Firestore, QueryDocumentSnapshot, Transaction } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
@@ -131,7 +132,7 @@ export async function importRecords(db: Firestore, input: ImportRecordsInput) {
       t.create(itemRefs[i], { ...record.data, ...extra, id: itemRefs[i].id, uid: input.uid, workspaceId: input.workspaceId, importBatchId: batchId, createdAt: now, updatedAt: now });
     });
     if (openingTx) {
-      t.create(db.collection('transactions').doc(String(openingTx.id)), { ...openingTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      ledgerCreate(t, db.collection('transactions').doc(String(openingTx.id)), { ...openingTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     }
     // W-02: each imported item's opening quantity starts its stock history
     if (input.kind === 'items') {
@@ -276,7 +277,7 @@ export async function undoImport(db: Firestore, input: { workspaceId: string; ui
 
     removable.forEach(d => t.delete(d.ref));
     removedHistory.forEach(d => t.delete(d.ref));
-    if (reversal) t.create(db.collection('transactions').doc(String(reversal.id)), { ...reversal, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    if (reversal) ledgerCreate(t, db.collection('transactions').doc(String(reversal.id)), { ...reversal, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     const label = IMPORT_DEFINITIONS[kind].label.toLowerCase();
     await writeServerAuditLog({
       workspaceId: input.workspaceId,

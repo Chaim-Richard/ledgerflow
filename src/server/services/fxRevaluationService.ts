@@ -1,4 +1,5 @@
 import { FieldValue } from '../db/firestore';
+import { ledgerCreate } from './ledgerDoor';
 import type { DocumentData, Firestore, Transaction as DbTransaction } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { isIncomeAccount, resolveAccountRole } from '../../lib/accountUtils';
@@ -280,8 +281,8 @@ export async function revaluateForeignBalances(db: Firestore, input: Revaluation
     });
 
     const now = new Date().toISOString();
-    t.create(db.collection('transactions').doc(String(entry.id)), { ...entry, createdAt: FieldValue.serverTimestamp(), updatedAt: now });
-    t.create(db.collection('transactions').doc(String(reversal.id)), { ...reversal, createdAt: FieldValue.serverTimestamp(), updatedAt: now });
+    ledgerCreate(t, db.collection('transactions').doc(String(entry.id)), { ...entry, createdAt: FieldValue.serverTimestamp(), updatedAt: now });
+    ledgerCreate(t, db.collection('transactions').doc(String(reversal.id)), { ...reversal, createdAt: FieldValue.serverTimestamp(), updatedAt: now });
     await writeServerAuditLog({
       workspaceId: input.workspaceId, uid: input.user.uid, email: input.user.email,
       action: 'FX_REVALUATION_POSTED', entityType: 'workspace', entityId: input.workspaceId,
@@ -343,7 +344,7 @@ export async function undoRevaluation(db: Firestore, input: { workspaceId: strin
       lines,
     });
     const now = new Date().toISOString();
-    t.create(db.collection('transactions').doc(String(reversal.id)), { ...reversal, createdAt: FieldValue.serverTimestamp(), updatedAt: now });
+    ledgerCreate(t, db.collection('transactions').doc(String(reversal.id)), { ...reversal, createdAt: FieldValue.serverTimestamp(), updatedAt: now });
     t.update(db.collection('transactions').doc(String(found.id)), { reversalEventId: reversal.id, updatedAt: now });
     // The active scheduled entry was checked above and is voided in the same transaction as this
     // mirror. It stays in the audit trail; isPostable drops it so it cannot reverse the entry twice.

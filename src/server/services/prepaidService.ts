@@ -1,4 +1,5 @@
 import type { DocumentData, Firestore, Transaction } from '../db/firestore';
+import { ledgerCreate } from './ledgerDoor';
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { resolveAccountRole } from '../../lib/accountUtils';
@@ -141,7 +142,7 @@ export async function spreadDocument(db: Firestore, kind: SpreadKind, input: Doc
       throw err;
     }
 
-    for (const e of entries) t.create(db.collection('transactions').doc(String(e.id)), { ...e, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    for (const e of entries) ledgerCreate(t, db.collection('transactions').doc(String(e.id)), { ...e, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     const schedule = {
       id: scheduleId, amountCents: input.amountCents, months: input.months, startMonth: spread.startMonth,
       ...(kind === 'bill' ? { expenseAccountId: account.id, prepaidAccountId: hold.id } : { revenueAccountId: account.id, deferredAccountId: hold.id }),

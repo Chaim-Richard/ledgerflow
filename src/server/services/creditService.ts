@@ -1,4 +1,5 @@
 import { FieldValue } from '../db/firestore';
+import { ledgerCreate } from './ledgerDoor';
 import type { DocumentData, Firestore } from '../db/firestore';
 import { calculateAmountDue, settledStatus } from '../../lib/documentMath';
 import { resolveAccountRole } from '../../lib/accountUtils';
@@ -230,7 +231,7 @@ export async function refundCredit(db: Firestore, input: RefundCreditInput) {
     }, { workspaceId: input.workspaceId, user: { uid: input.uid }, wsData: workspace }, undefined, t);
 
     const newRemaining = remaining - amountCents;
-    t.create(db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    ledgerCreate(t, db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     // refundedCents: statements and balance summaries count a credit less what was paid back (L-160)
     t.update(creditRef, { remainingCents: newRemaining, refundedCents: (credit.refundedCents || 0) + amountCents, status: creditStatus(newRemaining), updatedAt: new Date().toISOString() });
     return { transactionId: ledgerTx.id, creditRemainingCents: newRemaining };

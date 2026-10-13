@@ -1,4 +1,5 @@
 import type { DocumentData, DocumentReference, Firestore, Transaction as Tx } from '../db/firestore';
+import { ledgerCreate } from './ledgerDoor';
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { lockMessage, postingLock, workspaceRole } from '../../lib/periodLock';
@@ -102,7 +103,7 @@ async function postRun(t: Tx, db: Firestore, workspace: DocumentData, input: {
     if (/Period Locked/i.test(message)) throw new PayRunError(409, message);
     throw err;
   }
-  t.create(db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+  ledgerCreate(t, db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
   t.set(input.runRef, {
     workspaceId: input.workspaceId, uid: input.uid, date: input.date, createdAt: new Date().toISOString(), schedule,
     ...input.runFields,

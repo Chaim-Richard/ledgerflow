@@ -1,4 +1,5 @@
 import { FieldValue } from '../db/firestore';
+import { ledgerCreate } from './ledgerDoor';
 import type { DocumentData, Firestore } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { isUndepositedFundsAccount, resolveAccountRole } from '../../lib/accountUtils';
@@ -81,7 +82,7 @@ export async function createDeposit(db: Firestore, input: CreateDepositInput) {
       ],
     }, { workspaceId: input.workspaceId, user: { uid: input.uid }, wsData: workspace }, undefined, t);
 
-    t.create(db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    ledgerCreate(t, db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     for (const p of payments) {
       t.update(db.collection('payments').doc(p.id), { depositTransactionId: ledgerTx.id, depositedAt: input.date, updatedAt: new Date().toISOString() });
     }

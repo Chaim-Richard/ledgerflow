@@ -12,6 +12,7 @@
  * other way round), so no unit leaves twice or never.
  */
 import { FieldValue } from '../db/firestore';
+import { ledgerCreate } from './ledgerDoor';
 import type { Firestore, Transaction as DbTransaction } from '../db/firestore';
 import { assertPeriodOpen, validateWorkspaceAccounts } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
@@ -125,7 +126,7 @@ export async function deliverOrder(db: Firestore, input: DeliveryInput) {
     const stock = await prepareStockMoves(db, t, input.workspaceId, posted as unknown as Parameters<typeof prepareStockMoves>[3]);
 
     stock.apply();
-    for (const tx of posted) t.create(db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    for (const tx of posted) ledgerCreate(t, db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     await writeServerAuditLog({
       workspaceId: input.workspaceId, uid: input.uid, email: input.email, action: 'GOODS_DELIVERED', entityType: 'estimates', entityId: order.id,
       details: { description: `Delivered from order ${order.number || order.id}: ${sending.map(l => `${lines.find(x => x.position === l.position)!.description || 'item'} × ${l.quantity}`).join(', ')}` },
@@ -170,7 +171,7 @@ export async function undoDelivery(db: Firestore, input: { workspaceId: string; 
     }
     const stock = await prepareStockMoves(db, t, input.workspaceId, reversals as unknown as Parameters<typeof prepareStockMoves>[3]);
     stock.apply();
-    for (const tx of reversals) t.create(db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    for (const tx of reversals) ledgerCreate(t, db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     for (const original of originals) t.update(db.collection('transactions').doc(original.id), { reversalEventId: `${original.id}_undo`, updatedAt: FieldValue.serverTimestamp() });
     await writeServerAuditLog({
       workspaceId: input.workspaceId, uid: input.uid, email: input.email, action: 'DELIVERY_UNDONE', entityType: 'estimates', entityId: input.orderId,
@@ -237,7 +238,7 @@ export async function returnDelivered(db: Firestore, input: {
     }
     const stock = await prepareStockMoves(db, t, input.workspaceId, posted as unknown as Parameters<typeof prepareStockMoves>[3]);
     stock.apply();
-    for (const tx of posted) t.create(db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    for (const tx of posted) ledgerCreate(t, db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     await writeServerAuditLog({
       workspaceId: input.workspaceId, uid: input.uid, email: input.email, action: 'GOODS_RETURNED', entityType: 'estimates', entityId: order.id,
       details: { description: `Came back from order ${order.number || order.id}: ${sending.map(l => `${lines.find(x => x.position === l.position)!.description || 'item'} × ${l.quantity}`).join(', ')}` },

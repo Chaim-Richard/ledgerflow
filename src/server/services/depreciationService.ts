@@ -1,4 +1,5 @@
 import type { DocumentReference, Firestore } from '../db/firestore';
+import { ledgerCreate } from './ledgerDoor';
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { depreciationThrough } from '../../lib/depreciationEngine';
@@ -108,7 +109,7 @@ export async function runDepreciation(db: Firestore, input: { workspaceId: strin
       throw err;
     }
 
-    t.create(db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    ledgerCreate(t, db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     const now = new Date().toISOString();
     for (const d of due) {
       t.update(d.ref, { accumulatedDepreciationCents: d.target, depreciatedThrough: input.month, lastDepreciationTransactionId: ledgerTx.id, updatedAt: now });

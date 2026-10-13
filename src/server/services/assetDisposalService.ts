@@ -1,4 +1,5 @@
 import type { Firestore } from '../db/firestore';
+import { ledgerCreate } from './ledgerDoor';
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { depreciationThrough } from '../../lib/depreciationEngine';
@@ -114,7 +115,7 @@ export async function disposeAsset(db: Firestore, input: DisposeInput) {
       throw err;
     }
 
-    t.create(db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    ledgerCreate(t, db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     if (share) {
       const record: PartialDisposal = {
         date: input.date, percent: Number(input.portionPercent), costCents: share.costPartCents, salvageCents: share.salvagePartCents,

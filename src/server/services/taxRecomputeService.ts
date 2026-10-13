@@ -1,4 +1,5 @@
 import type { Firestore } from '../db/firestore';
+import { ledgerCreate } from './ledgerDoor';
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { fallbackTaxAccounts, findTaxDifferences, taxAdjustmentEntry, type TaxDifference } from '../../lib/taxRecompute';
@@ -66,7 +67,7 @@ export async function recomputeDocumentTax(db: Firestore, input: TaxRecomputeInp
           },
           { workspaceId: input.workspaceId, user: { uid: input.uid }, wsData: workspace }, undefined, t,
         );
-        t.create(db.collection('transactions').doc(prepared.id), { ...prepared, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+        ledgerCreate(t, db.collection('transactions').doc(prepared.id), { ...prepared, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
         await writeServerAuditLog({
           workspaceId: input.workspaceId, uid: input.uid, action: 'tax_recomputed',
           entityType: diff.kind, entityId: diff.id,

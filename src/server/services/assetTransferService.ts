@@ -1,4 +1,5 @@
 import type { Firestore } from '../db/firestore';
+import { ledgerCreate } from './ledgerDoor';
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { lockMessage, postingLock, workspaceRole } from '../../lib/periodLock';
@@ -76,7 +77,7 @@ export async function transferAsset(db: Firestore, input: TransferInput) {
           lines: lines.map(l => ({ ...l, description })),
         }, { workspaceId: input.workspaceId, user: { uid: input.uid }, wsData: workspace }, undefined, t);
         transactionId = ledgerTx.id;
-        t.create(db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+        ledgerCreate(t, db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         if (/Period Locked/i.test(message)) throw new TransferError(409, message);

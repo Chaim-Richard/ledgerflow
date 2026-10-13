@@ -1,4 +1,5 @@
 import express from 'express';
+import { ledgerCreate } from '../../services/ledgerDoor';
 import { FieldValue } from '../../db/firestore';
 import { TransactionValidator } from '../../../kernel/validation/TransactionValidator';
 import { TransactionSchema } from '../../../schemas';
@@ -188,7 +189,7 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
         if ((await t.get(db.collection('transactions').doc(id))).exists) throw new HttpError(`Entry ${index}: an entry with the id ${id} already exists`, 409);
       }
       for (const tx of prepared) {
-        t.create(db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+        ledgerCreate(t, db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       }
       return { created: prepared.length, ids: prepared.map(tx => tx.id) };
     });
