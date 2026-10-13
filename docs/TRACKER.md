@@ -2646,3 +2646,5 @@ C-39 / CB-22 review note (AI #2, 11 Oct): `DiscountMismatchView` compares curren
 - [ ] AU-2 One label/dimension filter: label filtering is written separately in ~7 files; make one shared slice function, prove old == new on generated scopes, then switch P&L and trial balance first.
 - [ ] AU-3 Property tests on posting (postingKit): thousands of generated entries always balance; the same command posted twice (and 100 times at once) makes exactly one entry.
 - [ ] AU-4 Migration acceptance by reconciliation: after a QuickBooks/CSV import, show trial balance, A/R, A/P, cash and tax payable against the source, not just a record count.
+- [ ] AU-5 Money arithmetic audit: 132 uses of parseFloat/toFixed(2) in server and library code; list each one that touches money and move it to whole cents (or the shared money helpers).
+- [ ] AU-6 One door to the ledger: about 30 server files write transaction documents directly. Map them, route each through the shared posting module, then add a lint rule that rejects ledger writes outside it.
