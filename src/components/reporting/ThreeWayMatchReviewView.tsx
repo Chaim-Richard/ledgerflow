@@ -1,0 +1,113 @@
+import React, { useMemo, useState } from 'react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { useCollection } from '../../hooks/useCollection';
+import { threeWayReview, threeWayReviewCsvRows, THREE_WAY_REVIEW_CSV_HEADERS, type ThreeWayStatus } from '../../lib/threeWayReview';
+import type { PurchaseOrder } from '../../types';
+import { formatCurrency } from '../../lib/utils';
+import { downloadCsv } from '../../lib/csvExport';
+import ReportTableScroll from './ReportTableScroll';
+
+const field = 'min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]';
+const STATUS_LABEL: Record<ThreeWayStatus, string> = {
+  matched: 'Matched',
+  quantity_variance: 'Quantity variance',
+  price_variance: 'Price variance',
+  unreceived: 'Not received',
+  missing_bill: 'Awaiting bill',
+};
+
+/**
+ * A-118: the three-way match review. Order against goods received against the supplier's bill for
+ * a period, as a review list: what matched, what is short, what is over-delivered, what has no
+ * receipt and what is still waiting for a bill. The check itself is the purchase-orders engine
+ * (`performThreeWayMatch`) — this screen never recomputes it, so the two cannot disagree.
+ * Read-only: nothing is posted, approved or changed here.
+ */
+export default function ThreeWayMatchReviewView({ startDate = '', endDate = '' }: { startDate?: string; endDate?: string }) {
+  const { data: orders, loading: loadingOrders } = useCollection<PurchaseOrder>('purchaseOrders', { orderByField: 'createdAt', orderDirection: 'desc', limit: 500 });
+  return <ThreeWayMatchReviewPanel from={startDate} to={endDate} orders={orders} ordersLoading={loadingOrders} />;
+}
+
+/** The review for the orders it is given (the wrapper above reads them). */
+export function ThreeWayMatchReviewPanel({ from = '', to = '', orders, ordersLoading = false }: { from?: string; to?: string; orders: PurchaseOrder[]; ordersLoading?: boolean }) {
+  const bills = useLedgerStore(state => state.bills);
+  const vendors = useLedgerStore(state => state.vendors);
+  const truncated = useLedgerStore(state => state.truncatedCollections);
+  const failed = useDataNeedsStore(state => state.failed);
+  const workspaceId = useAuthStore(state => state.currentWorkspaceId);
+  const workspace = useAuthStore(state => state.getCurrentWorkspace());
+  const { loading: loadingLedger } = useLedgerCollections('bills', 'vendors');
+  const [status, setStatus] = useState<ThreeWayStatus | 'all'>('all');
+
+  const report = useMemo(() => threeWayReview({
+    orders: orders.filter(order => !workspaceId || order.workspaceId === workspaceId),
+    bills: bills.filter(bill => !workspaceId || bill.workspaceId === workspaceId),
+    vendors: vendors.filter(vendor => !workspaceId || vendor.workspaceId === workspaceId),
+    from: from || undefined,
+    to: to || undefined,
+    status,
+  }), [orders, bills, vendors, workspaceId, from, to, status]);
+
+  const partial = truncated.bills || failed.bills || truncated.vendors || failed.vendors || orders.length >= 500;
+  const loading = loadingLedger || ordersLoading;
+  const home = workspace?.currency || 'USD';
+
+  return <section aria-label="Three-way match review" className="p-4 space-y-4 min-w-0">
+    <h2>Three-way match review</h2>
+    <p className="text-sm text-[var(--muted)]">
+      Every purchase order whose issue date is in the window, checked against its goods receipts and its supplier&apos;s bill{from || to ? ` (${from || 'start'} – ${to || 'today'})` : ''}.
+      The result and the sentences come from the same check the Purchase orders screen runs; the amounts are each order&apos;s own figures in the order&apos;s own currency and are never added across currencies.
+      Read-only: nothing is approved, posted or changed, and the tolerance stays what the check uses (whole minor units, 0 by default).
+    </p>
+
+    <div className="flex flex-wrap items-end gap-3" data-print-hide>
+      <label className="flex flex-col gap-1 text-sm">Result
+        <select aria-label="Match result" className={field} value={status} onChange={event => setStatus(event.target.value as ThreeWayStatus | 'all')}>
+          <option value="all">All results</option>
+          {(Object.keys(STATUS_LABEL) as ThreeWayStatus[]).map(key => <option key={key} value={key}>{STATUS_LABEL[key]}</option>)}
+        </select>
+      </label>
+      <button type="button" className="min-h-11 px-4 rounded border border-[var(--line)]" disabled={!report.rows.length}
+        onClick={() => downloadCsv('three-way-match-review', THREE_WAY_REVIEW_CSV_HEADERS, threeWayReviewCsvRows(report))}>Export CSV</button>
+    </div>
+
+    {loading && <p role="status" className="text-sm text-[var(--muted)]">Loading orders and bills…</p>}
+    {partial && <p role="alert" className="text-sm text-[var(--muted)]">The loaded orders, bills or vendors are capped or failed at the database (the newest 500 orders are read). This review may be incomplete.</p>}
+
+    <p className="text-sm text-[var(--text)]">
+      {report.summary.orders} order(s): {report.summary.matched} matched · {report.summary.quantityVariance} quantity variance · {report.summary.priceVariance} price variance · {report.summary.unreceived} not received · {report.summary.missingBill} awaiting a bill
+    </p>
+    {report.byCurrency.length > 0 && <p className="text-sm text-[var(--muted)]">
+      Bill against order, by currency: {report.byCurrency.map(total => `${total.currency} ${formatCurrency(total.varianceCents, total.currency)}`).join(' · ')} (no sign: both directions).
+    </p>}
+
+    <ReportTableScroll>
+      <table className="w-full text-sm">
+        <caption>Three-way match{from || to ? `: orders issued ${from || 'any date'} – ${to || 'today'}` : ': every loaded order'}</caption>
+        <thead>
+          <tr>{['Order', 'Vendor', 'Issued', 'Currency', 'Result', 'Ordered', 'Received', 'Billed', 'Variance', 'What the check found'].map(head => <th key={head} scope="col" className="text-left py-1 px-2">{head}</th>)}</tr>
+        </thead>
+        <tbody>
+          {report.rows.map(row => <tr key={row.poId} className="border-b border-[var(--line)]/50">
+            <th scope="row" className="text-left font-normal py-1 px-2"><bdi>{row.poNumber}</bdi></th>
+            <td className="py-1 px-2"><bdi>{row.vendorName}</bdi></td>
+            <td className="py-1 px-2">{row.issueDate || '—'}</td>
+            <td className="py-1 px-2">{row.currency || home}</td>
+            <td className="py-1 px-2">{STATUS_LABEL[row.status]}</td>
+            <td className="py-1 px-2">{formatCurrency(row.orderedCents, row.currency || home)}</td>
+            <td className="py-1 px-2">{formatCurrency(row.receivedCents, row.currency || home)}</td>
+            <td className="py-1 px-2">{row.billedCents ? formatCurrency(row.billedCents, row.currency || home) : '—'}</td>
+            <td className="py-1 px-2">{row.billId ? `${formatCurrency(row.varianceCents, row.currency || home)}${row.variancePercent === undefined ? '' : ` (${row.variancePercent > 0 ? '+' : ''}${row.variancePercent.toFixed(2)}%)`}` : '—'}</td>
+            <td className="py-1 px-2">{row.findings.length ? <ul className="list-disc pl-4">{row.findings.map(finding => <li key={finding}>{finding}</li>)}</ul> : 'Order, receipt and bill agree.'}</td>
+          </tr>)}
+        </tbody>
+      </table>
+      {!loading && !report.rows.length && <p className="text-sm text-[var(--muted)]">No purchase order in this window.</p>}
+    </ReportTableScroll>
+
+    <p className="text-xs text-[var(--muted)]">The sentences in the last column are the check&apos;s own wording, kept as it is: they put a dollar sign in front of the figures. The columns beside them show the same figures in the order&apos;s own currency.</p>
+  </section>;
+}
