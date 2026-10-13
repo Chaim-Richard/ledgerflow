@@ -140,7 +140,7 @@ export async function buildWorkspaceArchive(payload: unknown, workspaceId: strin
     if (!safeKey(key) || key === 'workspace' || key === 'metadata') throw new Error('Invalid collection name in backup.');
     const count = meta.counts[key];
     const records = payload[key] as unknown[];
-    if (!Array.isArray(records) || !Number.isSafeInteger(count) || count < 0 || records.length !== count) {
+    if (!Array.isArray(records) || typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0 || records.length !== count) {
       throw new Error('Backup row count mismatch for ' + key + '.');
     }
     if (!records.every(record => obj(record) && typeof record.id === 'string' && record.workspaceId === workspaceId)) {
