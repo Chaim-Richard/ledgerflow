@@ -19,6 +19,7 @@ import {
   computeTaxReturn,
   taxCodeFromRate,
   customRateCode,
+  documentTotals,
 } from "../lib/taxCodes";
 test("tax rates and independently numbered exclusive/inclusive documents", () => {
   assert.equal(normalizeTaxRate(20), 0.2);
@@ -686,4 +687,11 @@ test("fractional percentage parts keep their declared units in a computed tax co
     [50, 2000],
   );
   assert.equal(tax.taxCents, 2050);
+});
+
+test("taxCodeFromRate keeps a component under 1% as a percentage (D-11 bug: 0.5% became 50%)", () => {
+  const code = taxCodeFromRate({ id: "two", name: "Two parts", components: [{ name: "Small", rate: 0.5 }, { name: "Other", rate: 20 }] });
+  assert.deepEqual(code.components.map(c => c.rate), [0.5, 20]);
+  // net 100.00 → 0.50 + 20.00 = 20.50 tax, not 70.00
+  assert.equal(documentTotals(10000, 0, code, false).taxCents, 2050);
 });

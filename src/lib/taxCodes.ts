@@ -100,9 +100,11 @@ export function computeTax(amountCents: number, code: TaxCode | null | undefined
 
 /** The workspace's saved tax rates as tax codes (a rate without parts is one part at its rate). */
 export function taxCodeFromRate(rate: { id: string; name: string; rate?: number; treatment?: TaxTreatment; components?: TaxComponent[] }): TaxCode {
+  // Only the single legacy `rate` may be a fraction (0.2 = 20%). Components are always saved as
+  // percentages (TaxManager), so a 0.5% component must stay 0.5, not become 50 (AI #4, D-11).
   const percent = (r: number) => (r > 0 && r <= 1 ? r * 100 : r);
   const components = rate.components?.length
-    ? rate.components.map(c => ({ ...c, rate: percent(Number(c.rate) || 0) }))
+    ? rate.components.map(c => ({ ...c, rate: Number(c.rate) || 0 }))
     : [{ name: rate.name, rate: percent(Number(rate.rate) || 0) }];
   return { id: rate.id, name: rate.name, treatment: rate.treatment || 'standard', components };
 }
