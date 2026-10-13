@@ -335,3 +335,35 @@ server; (2) it puts 5–15 tasks in one PR, while Codex makes one PR per task an
 capture-and-approve cycle on each; (3) each session starts fresh on the latest main with a long,
 precise list. The cost is the first problem above: much of its output waits for someone else to put
 it on a screen. The new rule makes it finish its own screens, so it will slow down — on purpose.
+
+## 14. Testing strategy: enough, not extra (13 Oct)
+
+**Where tests run**
+
+| When | What runs | Why |
+|---|---|---|
+| While working (each AI, locally) | type check, lint, the tests for the files touched | fast feedback, minutes |
+| Before pushing to main (Claude) | type check, lint, the full unit suite against a real Postgres (~8 min) | main must stay green |
+| A pull request (GitHub) | everything below, on the PR **merged with the latest main** | proves what will actually land |
+| A push to main (GitHub) | everything below, once more | the real merged result, after Claude's merges |
+| By hand | anything | after a flaky-looking failure, once |
+
+A branch push with no PR no longer runs CI, and a PR no longer runs twice (it used to run once for
+the push and once for the PR). A newer push to the same PR cancels the older run; runs on main always
+finish.
+
+**What runs in CI (the four checks)**
+
+1. Lint, type check, database security-rule tests, the unit suite with coverage floors (~81%),
+   and a dependency audit.
+2. and 3. The unit suite again in Auckland and Los Angeles time, in parallel — dates are where money
+   software breaks quietly, and these have caught real bugs.
+4. Browser tests (~250, Chromium), including 40 screenshot checks of the main screens.
+
+**Not too little:** money paths have extra layers — mutation tests (D-11, which found the 0.5% tax
+bug), golden examples from tax authorities, end-to-end runs against the real database, and next AU-3
+(thousands of generated postings: always balanced, never twice).
+
+**Not too much:** no screenshot test for every screen (only the ten main ones, refreshed by hand when
+a change is intended and looked at before accepting); no Firefox/Safari runs until users ask; no
+re-running a red job hoping it turns green — a failure is fixed or explained.

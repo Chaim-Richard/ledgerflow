@@ -1,18 +1,21 @@
 name: CI
 
-# Owner, 11 Oct 2026: the repository is public, so GitHub Actions minutes are free. CI runs on every
-# push to main and to the helper AIs' branches, on every pull request, and by hand any time
-# (GitHub → Actions → CI → "Run workflow").
+# When CI runs (owner, 13 Oct: no double runs). The repository is public, so minutes are free, but
+# double runs slow everyone down:
+#  - a pull request runs it on the PR merged with the latest main (what will actually land);
+#  - a push to main runs it once more on the real merged result;
+#  - a push to a branch with no PR does NOT run it (helper AIs open a draft PR to get CI);
+#  - by hand any time (Actions → CI → "Run workflow").
+# Before this, every push to a helper branch with an open PR ran CI twice (push + pull_request).
 on:
   push:
-    branches: [main, 'codex/**', 'arena/**', 'ai*/**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
-# a second run of the same branch stops the one still going (no double billing)
+# A newer push to the same PR stops the older run; every run on main finishes.
 concurrency:
-  group: ci-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'branch' }}
-  # runs on main always finish (each push is checked); a branch's older run stops
+  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'latest' }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
