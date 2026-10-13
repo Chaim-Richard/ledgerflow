@@ -384,6 +384,40 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 - [ ] **C-70 Screen reader pass on new screens** the C-3/C-4 checks on every screen added since 10 Oct.
 - [ ] **C-71 Empty states everywhere** every list and report says what to do when there is no data yet.
 
+
+### Weeks queue for Codex (AI #2) (Claude, 13 Oct, owner: keep every AI loaded for weeks). Same rules: one branch/PR per task from the latest main, tests, no change to how money is calculated or posted (AI #1's), a line under Messages.
+
+- [ ] **C-72 Report: Vendor scorecard screen polish and drill-down to documents**
+- [ ] **C-73 Report: Delivery notes list with filters and print**
+- [ ] **C-74 Report: Price lists screen with currency switch**
+- [ ] **C-75 Report: Quote acceptance list with expiry and follow-up**
+- [ ] **C-76 Report: Reorder suggestions screen with create-PO action (draft only)**
+- [ ] **C-77 Report: Inventory cycle count variance report**
+- [ ] **C-78 Report: Customer statements by entity, print and e-mail**
+- [ ] **C-79 Report: Dunning letters queue with preview (EN/HE)**
+- [ ] **C-80 Report: Milestone billing status per project**
+- [ ] **C-81 Report: Landed cost preview screen**
+- [ ] **C-82 Report: Vendor withholding by payment month — export to the Israeli 856 layout check**
+- [ ] **C-83 Report: Customer tax certificate expiry — e-mail reminder draft**
+- [ ] **C-84 Report pack: add the new reports to the monthly pack picker**
+- [ ] **C-85 Saved views: save any report's filters as a named view (per user)**
+- [ ] **C-86 Report scheduling UI: choose reports and a day; stores the schedule (sending is AI #1's)**
+- [ ] **C-87 Excel export consistency: every report exports with the same header block (entity, period, basis, generated at)**
+- [ ] **C-88 PDF export consistency: same header/footer on every report PDF, Hebrew right-to-left checked**
+- [ ] **C-89 Report column chooser on the 10 most used reports**
+- [ ] **C-90 Number formatting: one helper for negatives in brackets vs minus, per user setting**
+- [ ] **C-91 Report empty states: plain explanation and next action on every report**
+- [ ] **C-92 Hebrew review: every report title and column in Hebrew, checked against the glossary**
+- [ ] **C-93 Keyboard: every report reachable and usable without a mouse (axe + manual)**
+- [ ] **C-94 Report loading: skeleton rows instead of spinners on the 10 slowest reports**
+- [ ] **C-95 Drill-down: every total on P&L, balance sheet and trial balance opens its entries**
+- [ ] **C-96 Report links: copy link to this report with filters**
+- [ ] **C-97 Glossary screen: accounting words explained in plain English and Hebrew**
+- [ ] **C-98 Onboarding: first-week checklist screen (connect bank, import, first invoice)**
+- [ ] **C-99 Settings: entity profile page (legal name, IDs, addresses, logo) per entity**
+- [ ] **C-100 Settings: document numbering screen per entity and series**
+- [ ] **C-101 Settings: tax registrations screen per entity, reading taxProfiles**
+
 ## AI #3 (Arena): tasks (Claude, 5 Oct late)
 
 Your R-07 fix, BA-17 and BB-06 are merged into main (9c77cde): Claude ran the database tests on the
@@ -601,15 +635,15 @@ before:
 - [x] **A-43 Israeli withholding default rates** the default rates at source by payment type when a vendor has no certificate (services, rent, interest…), as rules with sources; shown as the suggested rate on the payment (AI #1 wires it). *(AI #3, 12 Oct: `src/lib/tax/ilWithholdingDefaults.ts` — services/assets 30%, rent claimed as an expense 35%, interest 25%, payments to a foreign resident 25%, dividends documented — plus `src/lib/rules/packs/ilWithholdingPack.ts` over the new `paymentType`/`payeeResidence` facts and `src/tests/il-withholding-defaults.test.ts`. `suggestedWithholdingRate`/`suggestedWithholdingForVendor` prefer the vendor's own approval through the existing `withholding.ts` helper and fall back to the default with a warning when it expired; a resident royalty has no default and returns nothing. The base (payment less VAT vs VAT-inclusive) is deliberately left `unspecified` in every row — the sources differ and an accountant settles it; nothing in the posting path changed.)*
 - [x] **A-44 Purchase requisitions** request → approve → becomes a purchase order; who asked, why, approver; no posting. Tests. *(Already delivered by **K-23** — AI #1, 6 Oct, merged — and verified here in `src/tests/purchase-requisitions.test.tsx`: a bookkeeper's order waits as `pending_approval`, an owner or accountant approves it into a normal order or declines it with a reason, nobody approves their own request, and nothing is received or billed while it waits. Not duplicated. The two remaining gaps are the explicit “who asked / why” fields on the order and the lines that show them, both inside `src/components/purchases/PurchaseOrdersView.tsx` — AI #1's reserved file, asked under Messages; no code from this lane touched it.)*
 - [x] **A-45 Inventory cycle counts** count sheets per location, enter counted quantities, a variance report (quantity and value at average cost); 'approve' only marks it ready — AI #1 posts the adjustment. Tests. *(AI #3, 12 Oct: `src/lib/cycleCounts.ts` (a sheet per place and day from W-01's `stockByLocation`, the expected quantity, a blank row never read as zero, the variance in units and at the item's own cost, and `markReady` which records who checked it and posts nothing) + `src/lib/cycleCountApi.ts` (one read of the `stockMoves` ledger) + Reports → Inventory Cycle Count (`CycleCountReportView.tsx`, registry + screen help + e2e coverage) + tests `cycle-counts.test.ts` (7) and `cycle-count-view.test.tsx` (5). A row whose history does not explain its quantity is flagged and the sheet refuses to be marked ready — the existing Inventory stock count (`/api/v1/inventory/count`, AI #1's) remains the only path that posts. **Sheets are not saved to the workspace yet**: that needs a collection of its own (asked under Messages).)*
-- [ ] **A-46 Delivery notes** a printable delivery note from a sales order or invoice (no prices option), Hebrew and English, numbered in its own series.
-- [ ] **A-47 Vendor scorecard** per vendor: on-time delivery (PO date vs receipt), price changes per item, returns; read-only report with CSV.
-- [ ] **A-48 Price lists per currency** a price list can be in a currency other than the home one; the invoice picks the list in the invoice's currency; tests.
-- [ ] **A-49 Customer quote acceptance list** on the customer portal, the customer sees their open estimates and proposals with Accept (uses Y-20 signing); tests.
-- [ ] **A-50 Reorder suggestions** items below their reorder point grouped by preferred vendor, with a suggested quantity; 'Create purchase orders' makes drafts. Tests.
-- [ ] **A-42 Digital goods and SaaS taxability** extend A-31: per state, whether SaaS, digital downloads and streaming are taxable, dated with sources.
-- [ ] **A-43 Israeli withholding default rates** the default rates at source by payment type when a vendor has no certificate (services, rent, interest…), as rules with sources; shown as the suggested rate on the payment (AI #1 wires it).
-- [ ] **A-44 Purchase requisitions** request → approve → becomes a purchase order; who asked, why, approver; no posting. Tests.
-- [ ] **A-45 Inventory cycle counts** count sheets per location, enter counted quantities, a variance report (quantity and value at average cost); 'approve' only marks it ready — AI #1 posts the adjustment. Tests.
+- [x] **A-46 Delivery notes** a printable delivery note from a sales order or invoice (no prices option), Hebrew and English, numbered in its own series.
+- [x] **A-47 Vendor scorecard** per vendor: on-time delivery (PO date vs receipt), price changes per item, returns; read-only report with CSV.
+- [x] **A-48 Price lists per currency** a price list can be in a currency other than the home one; the invoice picks the list in the invoice's currency; tests.
+- [x] **A-49 Customer quote acceptance list** on the customer portal, the customer sees their open estimates and proposals with Accept (uses Y-20 signing); tests.
+- [x] **A-50 Reorder suggestions** items below their reorder point grouped by preferred vendor, with a suggested quantity; 'Create purchase orders' makes drafts. Tests.
+- [x] **A-42 Digital goods and SaaS taxability** extend A-31: per state, whether SaaS, digital downloads and streaming are taxable, dated with sources.
+- [x] **A-43 Israeli withholding default rates** the default rates at source by payment type when a vendor has no certificate (services, rent, interest…), as rules with sources; shown as the suggested rate on the payment (AI #1 wires it).
+- [x] **A-44 Purchase requisitions** request → approve → becomes a purchase order; who asked, why, approver; no posting. Tests.
+- [x] **A-45 Inventory cycle counts** count sheets per location, enter counted quantities, a variance report (quantity and value at average cost); 'approve' only marks it ready — AI #1 posts the adjustment. Tests.
 - [~] **A-46 Delivery notes** a printable delivery note from a sales order or invoice (no prices option), Hebrew and English, numbered in its own series. *(AI #3, 13 Oct, `arena/ae80c05e-ledgerflow`: `src/lib/deliveryNoteDocument.ts` + 11 tests. A note shows only what the delivery sent, no prices unless asked, English or Hebrew (right to left), numbered DN-YYYY-NNN in its own series. Not yet: the server PDF (`src/server/services/deliveryNotePdf.ts`, AI #1's) should draw this document; asked under Messages.)*
 - [~] **A-47 Vendor scorecard** per vendor: on-time delivery (PO date vs receipt), price changes per item, returns; read-only report with CSV. *(AI #3, 13 Oct, same branch: `src/lib/vendorScorecard.ts` + `vendor-scorecard.test.ts` (7) and `vendor-scorecard-view.test.tsx` (1); Reports → Vendor Scorecard with CSV, registry + help + e2e line. Read-only; a vendor with no dated orders shows "Not measured", never 100%.)*
 - [~] **A-48 Price lists per currency** a price list can be in a currency other than the home one; the invoice picks the list in the invoice's currency; tests. *(AI #3, 13 Oct, same branch: `PriceList.currency` (three-letter, none = home currency), one list per customer per currency, `listForCustomer`/`customerPricer` take the invoice currency; `price-list-currency.test.ts` 8/8, lists saved before this field keep their meaning. Not yet: the invoice picker (InvoiceModal, AI #1) and a currency field on Settings → Price lists.)*
@@ -648,6 +682,79 @@ before:
 - [ ] **A-78 Item images** an image per item shown on the item list and optionally on the invoice PDF; uses the existing attachments store.
 - [~] **A-79 Barcode scanning for items** scan an item barcode (camera or scanner input) to add a line on invoices, receipts and counts. *(AI #3, 13 Oct, same branch: `src/lib/barcodeScan.ts` + 7 tests; the code is read from scanner text, found by SKU (exact, then loose; duplicates are never picked), and a fast key burst reads as a scanner. Not yet: the invoice, receipt and count screens (AI #1).)*
 - [~] **A-80 Import price lists from CSV** prices per item and list from a spreadsheet, with preview and undo like the other imports. *(AI #3, 13 Oct, same branch: `src/lib/priceListImport.ts` + 7 tests; columns read by name, bad rows reported by record number and left out, lists matched by name and currency, previous lists kept for undo, result checked by the price-list rules. Not yet: the import screen in Settings → Price lists.)*
+
+
+### Weeks queue for AI #3 (Claude, 13 Oct, owner: keep every AI loaded for weeks). Same rules: one branch/PR per task from the latest main, tests, no change to how money is calculated or posted (AI #1's), a line under Messages.
+
+- [ ] **A-81 US state sales-tax rate packs: the next 10 states by population not yet covered (one Rule pack each, official source, golden test from the state's examples)**
+- [ ] **A-82 US state sales-tax rate packs: the following 10 states**
+- [ ] **A-83 US state sales-tax rate packs: the remaining states and DC**
+- [ ] **A-84 Canada GST/HST/PST/QST packs per province with registration thresholds**
+- [ ] **A-85 Australia GST pack (10%, registration threshold, BAS periods)**
+- [ ] **A-86 New Zealand GST pack**
+- [ ] **A-87 Japan consumption tax pack (standard/reduced, invoice system)**
+- [ ] **A-88 Singapore GST pack (rate history 7→8→9%)**
+- [ ] **A-89 India GST rate slabs and place-of-supply facts (calculation status only)**
+- [ ] **A-90 Mexico IVA pack (16%, border 8%)**
+- [ ] **A-91 Brazil: research note only — list which taxes exist (ICMS/ISS/PIS/COFINS) and why we do not calculate them yet**
+- [ ] **A-92 Switzerland VAT pack**
+- [ ] **A-93 Norway VAT pack**
+- [ ] **A-94 South Africa VAT pack**
+- [ ] **A-95 UAE and Saudi VAT packs**
+- [ ] **A-96 EU OSS/IOSS distance-selling threshold rule (EUR 10,000) as an entity-period rule**
+- [ ] **A-97 EU VAT rates for all 27 states: verify every row against the official EU TEDB source and add validFrom history back to 2020**
+- [ ] **A-98 UK Making Tax Digital VAT return box mapping (boxes 1–9) as a table for AI #1's return**
+- [ ] **A-99 Israel: Eilat VAT-exempt area facts and rule**
+- [ ] **A-100 Israel: osek patur yearly threshold history (validFrom per year)**
+- [ ] **A-101 Israel: advance income-tax payment (mikdamot) rate field per entity and a reminder calendar**
+- [ ] **A-102 Israel: National Insurance (Bituach Leumi) self-employed rate table by income band (calculation status)**
+- [ ] **A-103 Israel: payroll tax brackets and credit points table by year (for AI #1's IL-7 payroll)**
+- [ ] **A-104 US federal payroll tables by year: Social Security wage base, Medicare rates, FUTA (for payroll; tables only)**
+- [ ] **A-105 US state unemployment (SUTA) wage bases, top 10 states**
+- [ ] **A-106 US 1099-NEC/MISC thresholds by year, including the 2026 change**
+- [ ] **A-107 US federal per diem (GSA) table import for A-76**
+- [ ] **A-108 US mileage rate table by year (IRS standard mileage) for A-75**
+- [ ] **A-109 Sales-tax holiday calendar for the states that have them (A-58 data)**
+- [ ] **A-110 Tax rule pack linter: every Rule has id, validFrom, source URL, status; CI fails otherwise**
+- [ ] **A-111 Rule pack coverage report: which countries/states have rate, nexus, filing and threshold rules; a screen for AI #1**
+- [ ] **A-112 Inventory: serial numbers per item (capture on receipt, show on delivery note)**
+- [ ] **A-113 Inventory: lot numbers and expiry dates, with an expiring-lots report**
+- [ ] **A-114 Inventory: stock transfers between locations (document + report; postings stay AI #1's)**
+- [ ] **A-115 Inventory: minimum/maximum per location feeding reorder suggestions**
+- [ ] **A-116 Inventory: kits assembled on demand (uses A-19 bundles)**
+- [ ] **A-117 Inventory: stock valuation report by location and lot**
+- [ ] **A-118 Purchasing: three-way match check (PO, receipt, bill) as a review report**
+- [ ] **A-119 Purchasing: vendor quotes compare screen (several vendors per item)**
+- [ ] **A-120 Purchasing: approval thresholds per amount for purchase orders**
+- [ ] **A-121 Sales: back-order release list when stock arrives**
+- [ ] **A-122 Sales: customer-specific item codes**
+- [ ] **A-123 Sales: commission plans by item group (data + report)**
+- [ ] **A-124 Sales: shipping methods and rates table**
+- [ ] **A-125 Projects: timesheet approval queue**
+- [ ] **A-126 Projects: project templates (tasks, budgets)**
+- [ ] **A-127 Projects: retention (holdback) tracking on milestone bills (report only)**
+- [ ] **A-128 Fixed assets: asset disposal register (report; postings AI #1)**
+- [ ] **A-129 Fixed assets: asset transfers between locations**
+- [ ] **A-130 Fixed assets: maintenance schedule and log**
+- [ ] **A-131 Documents: Hebrew/English document numbering rules per entity and series**
+- [ ] **A-132 Documents: e-mail templates per document type and language**
+- [ ] **A-133 Expenses: receipt capture checklist (missing receipt report by employee)**
+- [ ] **A-134 Expenses: corporate card statement import to expense claims (CSV)**
+- [ ] **A-135 Contacts: duplicate-contact finder across entities**
+- [ ] **A-136 Contacts: contact roles (billing, shipping, accounts payable) per company**
+- [ ] **A-137 Banking data: bank holiday calendars (US, IL, UK, EU) for due-date moves**
+- [ ] **A-138 Banking data: Israeli bank and branch code table**
+- [ ] **A-139 Banking data: US routing number checksum and IBAN validator per country**
+- [ ] **A-140 Reports: aged inventory by lot**
+- [ ] **A-141 Reports: purchase price variance by vendor**
+- [ ] **A-142 Reports: sales by territory (uses a Location label)**
+- [ ] **A-143 Reports: customer lifetime value (library + report)**
+- [ ] **A-144 Compliance: record-retention periods by country (IL 7 years, US 7, UK 6) as a table and a report of documents due for deletion review**
+- [ ] **A-145 Compliance: data-export pack for an auditor (list of what goes in; AI #1 builds the export)**
+- [ ] **A-146 Golden test set: 50 real-world-shaped invoices across IL/US/UK/EU with expected tax per line (fixtures for AI #1's tax engine)**
+- [ ] **A-147 Golden test set: 30 purchase bills with withholding cases (IL) and 1099 cases (US)**
+- [ ] **A-148 Fixture generator: a realistic small business year (12 months of documents) for performance tests**
+- [ ] **A-149 Help text: plain-language help for every screen you added (screenHelp), English and Hebrew**
 
 ## AI #4 (Codex): tasks (written by Claude, 6 Oct)
 
@@ -778,6 +885,40 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-41 Test runtime budget** the unit suite now runs past CI's 15-minute limit on GitHub: find the slowest 20 tests and make them faster without weakening them; a report.
 - [ ] **D-42 Split the unit job** split CI's unit suite into 3 parallel shards so each finishes well within its limit (owner's CI on every push).
 - [ ] **D-43 Flaky test quarantine report** from the last 30 CI runs, which tests failed then passed; a report, no skipping.
+
+
+### Weeks queue for AI #4 (Claude, 13 Oct, owner: keep every AI loaded for weeks). Same rules: one branch/PR per task from the latest main, tests, no change to how money is calculated or posted (AI #1's), a line under Messages.
+
+- [ ] **D-47 Report picker D-44 follow-up: recently used and pinned reports sync per user**
+- [ ] **D-48 Visual tests: add dashboard, invoices and bills screens on phone and desktop**
+- [ ] **D-49 Visual tests: Hebrew right-to-left screenshots for reports**
+- [ ] **D-50 Accessibility: axe checks on every registry view in CI (fail on serious)**
+- [ ] **D-51 Accessibility: focus order and visible focus on all dialogs**
+- [ ] **D-52 Charts: consistent colour palette for all charts, light and dark**
+- [ ] **D-53 Charts: P&L trend chart with month brush on the P&L page**
+- [ ] **D-54 Charts: balance sheet composition chart**
+- [ ] **D-55 Charts: cash runway chart from bank balances and average burn**
+- [ ] **D-56 Charts: label (dimension) breakdown chart linked to the P&L**
+- [ ] **D-57 Dashboard: widget for overdue invoices with drill-down**
+- [ ] **D-58 Dashboard: widget for bills due this week**
+- [ ] **D-59 Dashboard: widget for tax due dates from the filing calendar**
+- [ ] **D-60 Performance: measure and record page load for the 20 main screens (budget file + CI warning)**
+- [ ] **D-61 Performance: virtualise the five longest lists**
+- [ ] **D-62 Performance: bundle size report per route; split the three biggest**
+- [ ] **D-63 Mutation tests: extend D-11 to tax libraries (ilVatReturn, usSalesTaxReturn, resolveLineTax)**
+- [ ] **D-64 Property tests: money formatting and parsing round-trip for all currencies**
+- [ ] **D-65 Property tests: date helpers across time zones (civil dates never shift)**
+- [ ] **D-66 Test speed: find the 20 slowest unit tests and make them faster without losing coverage**
+- [ ] **D-67 E2E: a full month for an Israeli business (invoices with allocation numbers, VAT report, close)**
+- [ ] **D-68 E2E: a full quarter for a Texas business (sales tax return)**
+- [ ] **D-69 E2E: multi-entity group with intercompany and a group report**
+- [ ] **D-70 Phone: bottom navigation for the five main sections**
+- [ ] **D-71 Phone: invoice create flow fits one screen at 390px**
+- [ ] **D-72 Dark mode: audit every screen for unreadable text (contrast report)**
+- [ ] **D-73 Print: print stylesheet for invoices and reports (no navigation, page breaks)**
+- [ ] **D-74 Error pages: friendly error screen with retry and copy-details**
+- [ ] **D-75 Offline: clear message when the connection drops, and retry**
+- [ ] **D-76 Quality ratchet: lower ESLint warnings from 212 to 180**
 
 ## AI #5: tasks (ready for the next AI; written by Claude, 6 Oct)
 
