@@ -1,4 +1,5 @@
 import { useDialog } from '../../hooks/useDialog';
+import { runOnce } from '../../lib/serverAction';
 import React, { useState, useMemo, useId } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -87,7 +88,9 @@ export const TransferModal: React.FC<TransferModalProps> = ({
 
     // saved through the normal posting path (server-checked, survives a reload); it only changed
     // the list on screen before, so the transfer was gone after a reload (L-181)
-    await txActions.handleQuickAdd({ ...transferTx, currency: currentWorkspace?.currency || transferTx.currency });
+    // #105: success only when the server saved it; a second click while saving is ignored
+    const saved = await runOnce(`transfer:${fromAccountId}:${toAccountId}`, () => txActions.handleQuickAdd({ ...transferTx, currency: currentWorkspace?.currency || transferTx.currency }));
+    if (saved !== true) return;
     setSuccessMessage(`Transferred ${formatCurrency(amountCents, currentWorkspace?.currency)} from ${fromAcc.name} to ${toAcc.name}`);
     setSafeTimeout(() => {
       setSuccessMessage(null);

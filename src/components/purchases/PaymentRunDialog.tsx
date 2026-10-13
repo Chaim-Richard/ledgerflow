@@ -55,8 +55,8 @@ export default function PaymentRunDialog({ bills, vendors, onClose }: { bills: B
     return next;
   });
 
-  const downloadBankFile = () => {
-    const { headers, rows } = bankFileRows(payments, bank, { date: payDate, currency });
+  const downloadBankFile = (only: typeof payments = payments) => {
+    const { headers, rows } = bankFileRows(only, bank, { date: payDate, currency });
     downloadCsv(`payment-run-${payDate}.csv`, headers, rows);
   };
 
@@ -64,8 +64,11 @@ export default function PaymentRunDialog({ bills, vendors, onClose }: { bills: B
     if (!cashAccountId || payments.length === 0 || saving) return;
     setSaving(true);
     try {
-      if (withFile) downloadBankFile();
+      // #109: the server records first; the bank file then holds only the payments it accepted, and
+      // those bills leave the run, so pressing Pay again after a partial failure cannot pay twice
       const { done, failed } = await recordPayments(payments, { workspaceId, side: 'bill', cashAccountId, date: payDate, method: 'bank_transfer' });
+      if (withFile && done.length) downloadBankFile(done);
+      if (done.length) setLeft(prev => new Set([...prev, ...done.flatMap(p => p.allocations.map(a => a.documentId))]));
       if (done.length) toast.success(`${done.length} payment${done.length === 1 ? '' : 's'} recorded (${formatCurrency(done.reduce((s, p) => s + p.amountCents, 0), currency)})`);
       for (const f of failed) toast.error(`${f.payment.partyName}: ${f.message}`);
       if (!failed.length) onClose();
@@ -132,7 +135,7 @@ export default function PaymentRunDialog({ bills, vendors, onClose }: { bills: B
             {payments.length} payment{payments.length === 1 ? '' : 's'} to {payments.length} vendor{payments.length === 1 ? '' : 's'} for {paidCount} bill{paidCount === 1 ? '' : 's'}: {formatCurrency(total, currency)}
           </p>
           <div className="flex flex-wrap justify-end gap-2">
-            <button type="button" onClick={downloadBankFile} disabled={payments.length === 0}
+            <button type="button" onClick={() => downloadBankFile()} disabled={payments.length === 0}
               className="px-3 py-2 rounded-lg border border-[var(--line)] text-[var(--text)] disabled:opacity-50">
               Bank file only
             </button>
