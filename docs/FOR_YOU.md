@@ -138,7 +138,7 @@ not really live (everything else works). In Supabase → SQL editor, one at a ti
 8. `supabase/migrations/20261013070000_workspace_groups.sql` (item 30)
 Each is safe to run twice. Tell Claude when done, or Claude sees it at the next session and crosses these out.
 
-22. **One database change to paste (5 Oct, L-191).** `supabase/migrations/20261008000000_invoice_approval_guard.sql`
+22. ~~**One database change to paste (5 Oct, L-191).**~~ **Done: checked 13 Oct, all applied on the live database.** `supabase/migrations/20261008000000_invoice_approval_guard.sql`
     timed out twice through the connector (creating a trigger on the invoices table waits for it to be
     free). Paste the whole file into Supabase → SQL editor → Run; running it twice is safe. Until then,
     the server already refuses approvals from bookkeepers on every normal save; only a direct database
@@ -159,7 +159,7 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
     needed. Until it is applied, saving a loan says nothing was saved, and deleting a whole workspace
     would stop at the missing table.
 
-25. **Four database changes to paste (7 Oct) — please look soon.** The code is on main; the
+25. ~~**Four database changes to paste (7 Oct) — please look soon.**~~ **Done: checked 13 Oct, all applied on the live database.** The code is on main; the
     Supabase connector timed out on all of them (the first one rebuilds the list indexes, and a
     rebuild waits until each table is free, the same as item 22). First, in Supabase → SQL editor,
     check nothing is stuck (a waiting index build can hold up saving on that table):
@@ -215,7 +215,7 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
     - *Default:* that stays refused, so closed books are never replaced by an older state. If you
       want an owner-only "reopen everything" that allows it, say so and Claude adds it, audited.
 
-30. **Two more database changes to paste (7 Oct) — after the four in item 25.**
+30. ~~**Two more database changes to paste (7 Oct) — after the four in item 25.**~~ **Done: checked 13 Oct, all applied on the live database.**
     `supabase/migrations/20261013060000_stock_moves.sql` adds the stock history: every change to an
     item's stock with its reason (sold, returned, bought, counted, moved between locations). The
     Supabase connector timed out on it. Paste it in Supabase → SQL editor and Run (safe to run
