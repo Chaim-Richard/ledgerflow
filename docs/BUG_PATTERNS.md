@@ -174,8 +174,8 @@
 - [ ] `swallowing-action` src/components/forensics/Vault.tsx:183 — handleInjectTransaction
 - [ ] `swallowing-action` src/components/forensics/Vault.tsx:277 — handleDelete
 - [ ] `swallowing-action` src/components/hr/DirectDepositDialog.tsx:47 — saveBank
-- [ ] `swallowing-action` src/components/hr/PayrollView.tsx:151 — handleSaveEmployee
-- [ ] `swallowing-action` src/components/hr/PayrollView.tsx:191 — handlePostPayRunToLedger
+- [ ] `swallowing-action` src/components/hr/PayrollView.tsx:153 — handleSaveEmployee
+- [ ] `swallowing-action` src/components/hr/PayrollView.tsx:193 — handlePostPayRunToLedger
 - [ ] `swallowing-action` src/components/intelligence/AICustomBlueprint.tsx:44 — handleGenerate
 - [ ] `swallowing-action` src/components/intelligence/DiagnosticConsole.tsx:51 — handleCommand
 - [ ] `swallowing-action` src/components/inventory/Inventory.tsx:138 — handleUpdate
