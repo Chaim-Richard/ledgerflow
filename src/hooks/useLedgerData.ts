@@ -182,17 +182,23 @@ export function useLedgerData() {
 
     // Reference lists read once per workspace
     const filter = [where('workspaceId', '==', currentWorkspaceId)];
+    // #100: a read started for one workspace never fills the store after the user switched books
+    let cancelled = false;
+    const stillHere = () => !cancelled && useAuthStore.getState().currentWorkspaceId === currentWorkspaceId && useAuthStore.getState().user?.uid === userUid;
     const loadReferenceData = async () => {
       try {
         const snapTemplates = await getDocs(query(collection(db, 'customTemplates'), where('uid', '==', userUid), limit(500)));
+        if (!stillHere()) return;
         useLedgerStore.getState().setCollectionTruncated('customTemplates', snapTemplates.docs.length >= 500);
         useLedgerStore.getState().setCustomTemplates(snapTemplates.docs.map(d => ({ id: d.id, ...d.data() } as CustomTemplate)));
 
         const snapPartners = await getDocs(query(collection(db, 'partners'), ...filter, limit(500)));
+        if (!stillHere()) return;
         useLedgerStore.getState().setCollectionTruncated('partners', snapPartners.docs.length >= 500);
         useLedgerStore.getState().setPartners(snapPartners.docs.map(d => ({ id: d.id, ...d.data() })));
 
         const snapRulePatterns = await getDocs(query(collection(db, 'rulePatterns'), ...filter, limit(2000)));
+        if (!stillHere()) return;
         useLedgerStore.getState().setCollectionTruncated('rulePatterns', snapRulePatterns.docs.length >= 2000);
         const cache: Record<string, any> = {};
         snapRulePatterns.docs.forEach(d => {
@@ -202,6 +208,7 @@ export function useLedgerData() {
         useLedgerStore.getState().setAnalyticalPatternCache(cache);
 
         const snapDimensionNodes = await getDocs(query(collection(db, 'dimensionNodes'), ...filter, limit(10000)));
+        if (!stillHere()) return;
         useLedgerStore.getState().setCollectionTruncated('dimensionNodes', snapDimensionNodes.docs.length >= 10000);
         let nodes = snapDimensionNodes.docs.map(d => ({ ...d.data() } as DimensionNode));
         if (snapDimensionNodes.empty) {
@@ -223,6 +230,7 @@ export function useLedgerData() {
       }
     };
     loadReferenceData();
+    return () => { cancelled = true; };
   }, [userUid, currentWorkspaceId]);
 
   // Live collections (src/lib/ledgerCollections.ts): the core ones as soon as a workspace opens,

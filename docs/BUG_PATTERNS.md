@@ -49,8 +49,8 @@
 - [ ] `silent-catch` src/hooks/useCollaborators.ts:43 — updatePresence
 - [ ] `silent-catch` src/hooks/useEntityOperations.ts:88 — syncEntityBalance
 - [ ] `silent-catch` src/hooks/useEntityOperations.ts:126 — recordLearnedPattern
-- [ ] `silent-catch` src/hooks/useLedgerData.ts:221 — loadReferenceData
-- [ ] `silent-catch` src/hooks/useLedgerData.ts:310 — (anonymous)
+- [ ] `silent-catch` src/hooks/useLedgerData.ts:228 — loadReferenceData
+- [ ] `silent-catch` src/hooks/useLedgerData.ts:318 — (anonymous)
 - [ ] `silent-catch` src/hooks/useTransactionColumnLayout.ts:18 — persistLayout
 - [ ] `silent-catch` src/hooks/useTransactionColumnLayout.ts:35 — toggleColumnVisibility
 - [ ] `silent-catch` src/services/ledgerPost/postingKit.ts:229 — postTxsServerApi

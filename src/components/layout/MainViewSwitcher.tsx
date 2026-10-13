@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { VIEW_COMPONENTS } from '../../config/registry';
 import { useCommandDispatcher } from '../../hooks/useSystemContext';
 import { ViewErrorBoundary } from '../common/ViewErrorBoundary';
+import { useAuthStore } from '../../stores/useAuthStore';
 
 interface MainViewSwitcherProps {
   activeTab: string;
@@ -12,12 +13,15 @@ interface MainViewSwitcherProps {
 
 const MainViewSwitcher = React.memo(({ activeTab }: MainViewSwitcherProps) => {
   const Component = VIEW_COMPONENTS[activeTab];
+  // #99: each screen starts fresh when the user switches books, so no list, draft or timer from the
+  // previous workspace survives into the next (the key change remounts the screen)
+  const workspaceKey = useAuthStore(s => `${s.user?.uid ?? ''}:${s.currentWorkspaceId ?? ''}`);
   useCommandDispatcher();
   
   return (
     <div className="relative flex-1 flex flex-col w-full min-h-full">
       <ScreenHelpHeader activeTab={activeTab} />
-      <ViewErrorBoundary key={activeTab} viewName={activeTab}>
+      <ViewErrorBoundary key={`${activeTab}:${workspaceKey}`} viewName={activeTab}>
         <Suspense fallback={
           <div className="min-h-full flex flex-col items-center justify-center space-y-6 flex-1">
             <Loader2 className="animate-spin text-slate-300" size={32} />
@@ -27,7 +31,7 @@ const MainViewSwitcher = React.memo(({ activeTab }: MainViewSwitcherProps) => {
           </div>
         }>
           <motion.div
-            key={activeTab}
+            key={`${activeTab}:${workspaceKey}`}
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
