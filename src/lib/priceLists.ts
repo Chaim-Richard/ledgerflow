@@ -45,7 +45,7 @@ export function priceListsProblem(lists: unknown, homeCurrency = 'USD'): string 
     if (names.has(norm(name))) return `"${name}" is in the list twice`;
     names.add(norm(name));
     if (list.id !== undefined && (typeof list.id !== 'string' || !PRICE_LIST_ID.test(list.id))) return `"${name}": its id is not one of this workspace's price lists`;
-    if (list.currency !== undefined && (typeof list.currency !== 'string' || !PRICE_LIST_CURRENCY.test(list.currency))) return `\"${name}\": its currency is a three-letter code such as USD or EUR`;
+    if (list.currency !== undefined && (typeof list.currency !== 'string' || !PRICE_LIST_CURRENCY.test(list.currency))) return `"${name}": its currency is a three-letter code such as USD or EUR`;
     if (list.discountPercent !== undefined) {
       const d = list.discountPercent;
       if (typeof d !== 'number' || !Number.isFinite(d) || d <= 0 || d >= 100 || Math.round(d * 100) / 100 !== d) return `"${name}": the discount is a percentage above 0 and below 100, two decimals at most`;
