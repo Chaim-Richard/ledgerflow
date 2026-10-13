@@ -2400,7 +2400,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [x] BP-05 Visual regression *(AI #4 / PR #85; final integration checks pending)*
 - [ ] BP-06 Load tests
 - [ ] BP-07 Canary rollout
-- [ ] BP-08 Mutation testing on money files
+- [x] BP-08 Mutation testing on money files (AI #4, manual command and contract tests; integration/lead merge pending)
 
 # SECTION CA–CG — FROM 12 OPEN-SOURCE PRODUCTS
 
