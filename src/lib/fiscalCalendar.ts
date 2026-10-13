@@ -179,7 +179,8 @@ function fromDayNumber(n: number): string {
   return `${y}-${pad2(m)}-${pad2(d)}`;
 }
 
-function addMonthsYMD(ymd: string, months: number): string {
+/** Calendar-month arithmetic on a YYYY-MM-DD day; month-end and leap-day dates clamp to the target month. */
+export function addMonthsYMD(ymd: string, months: number): string {
   const [y, m, d] = ymd.split('-').map(Number);
   const total = y * 12 + (m - 1) + months;
   const ny = Math.floor(total / 12);

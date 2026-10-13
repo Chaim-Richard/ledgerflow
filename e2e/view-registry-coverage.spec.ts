@@ -113,6 +113,11 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Subscription Plans', componentName: 'SubscriptionPlansReportView' },
     { label: 'Use Tax Review', componentName: 'UseTaxReportView' },
     { label: 'Purchases from Abroad', componentName: 'ImportServicesReportView' },
+    { label: 'Expense Receipt Checklist', componentName: 'ExpenseReceiptChecklistReportView' },
+    { label: 'Duplicate Contact Review', componentName: 'DuplicateContactReviewReportView' },
+    { label: 'Purchase Price Variance', componentName: 'PurchasePriceVarianceReportView' },
+    { label: 'Sales by Territory', componentName: 'SalesByTerritoryReportView' },
+    { label: 'Record Retention Review', componentName: 'RetentionReviewReportView' },
   ];
 
   for (const report of reportTabs) {
