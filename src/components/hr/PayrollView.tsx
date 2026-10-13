@@ -38,6 +38,7 @@ const PayrollViewContent: React.FC = () => {
   const payRuns = useLedgerStore(s => (s.payRuns || []) as PayRun[]);
   const setPayRuns = useLedgerStore(s => s.setPayRuns);
   const accounts = useLedgerStore(s => s.accounts) as ChartAccount[];
+  const baseCurrency = useLedgerStore(s => s.baseCurrency) || 'USD';
   useLedgerCollections('employees', 'payRuns');
   const getCurrentWorkspace = useAuthStore(s => s.getCurrentWorkspace);
   const user = useAuthStore(s => s.user);
@@ -426,7 +427,7 @@ const PayrollViewContent: React.FC = () => {
         )
       )}
 
-      {activeTab === 'runs' && <IsraelForm102Review payRuns={payRuns} homeCurrency={useLedgerStore.getState().baseCurrency || 'USD'} />}
+      {activeTab === 'runs' && <IsraelForm102Review payRuns={payRuns} homeCurrency={baseCurrency} />}
 
       {/* Add Employee Modal */}
       {isAddingEmployee && (
