@@ -17,3 +17,8 @@ Complete uncapped workspace payment reads gate CSV. Refused, pending, obsolete w
 - Full coverage/RLS/time-zone/broader browser gates are delegated to GitHub under the owner's request and remain pending. The new registered report changes P&L/balance-sheet menu screenshots; matching CI-browser reference capture and image review are required, with existing pixel thresholds retained.
 
 This is a publication checkpoint, not an all-green/merged claim. Other AIs' changes and financial expectations are preserved.
+
+
+## Reviewed visual references
+
+Matching GitHub Chromium capture **38329108738** passed all **40 visual comparisons** after recapturing the eight intentionally changed P&L/balance-sheet menus. Candidate `dd69f6dc` changes those PNGs only. Inspected desktop/phone light/dark menus and compared report bodies to main: **$3,000** balanced assets/equity and P&L **$15,000** revenue, **$12,000** expenses, **$3,000** surplus remain unchanged. Imported only the reviewed images and removed the temporary capture workflow. Strict pixel allowances, financial expectations and full test selection remain intact. Existing PR #87 will run complete CI on this final reviewed head; no merge/all-green claim yet.
