@@ -73,7 +73,7 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
   };
 
   /** Resolves `true` only when the server saved the entry (callers show success on that, #105). */
-  const handleQuickAdd = async (data: Partial<Transaction>): Promise<boolean> => {
+  const handleQuickAdd = async (data: Partial<Transaction>, operationId?: string): Promise<boolean> => {
     if (!user || !currentWorkspaceId) return false;
     
     // Core App Feature: Integrity Enforcement
@@ -111,9 +111,8 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
     };
 
     // Create optimistic ID
-    const tempId = `temp-${crypto.randomUUID().split('-')[0]}`;
+    const tempId = operationId || `temp-${crypto.randomUUID().split('-')[0]}`;
     const optimisticTx: Transaction = {
-      id: tempId,
       uid: user.uid,
       workspaceId: currentWorkspaceId,
       status: 'completed',
@@ -124,6 +123,8 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
       currency: 'USD',
       date: getLocalDateISO(),
       ...balancedData,
+      // Reuse the exact transaction ID and server idempotency key when a failed/unknown response is retried.
+      id: operationId || balancedData.id || tempId,
       lines: balancedData.lines || []
     };
 

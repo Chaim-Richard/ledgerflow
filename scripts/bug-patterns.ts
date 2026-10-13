@@ -174,6 +174,58 @@ export function counts(found: Finding[]): Record<Kind, number> {
   return c;
 }
 
+/** Financial/server scanner. These are *risk paths*, not proof that any running DB was corrupted.
+ * The browser is not the only trust boundary: privileged server writes can bypass client RLS.
+ * Findings carry stable identities so CI can block new categories without letting counts cancel.
+ */
+export interface FinancialFinding { kind: string; file: string; line: number; name: string; issue?: number; }
+
+export function scanFinancialIntegrity(root = process.cwd()): FinancialFinding[] {
+  const findings: FinancialFinding[] = [];
+  const serverFiles = files(path.join(root, 'src/server'));
+  for (const file of serverFiles) {
+    const sf = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
+    const relative = path.relative(root, file).split(path.sep).join('/');
+    const line = (n: ts.Node) => sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1;
+    const visit = (n: ts.Node) => {
+      if (ts.isCallExpression(n)) {
+        const name = calleeName(n);
+        // Whole-record financial patches require the same validators as the singular edit.
+        if (name === 'update' && n.arguments.some(a => /\.\.\.updateData\b/.test(a.getText(sf)))
+          && /transactions\/(bulkRoutes|crudRoutes)\.ts$/.test(relative)) {
+          findings.push({ kind: 'server-unrestricted-ledger-patch', file: relative, line: line(n), name: 'batch.update', issue: 112 });
+        }
+        // A commit in a loop makes the request partially durable when a later chunk fails.
+        if (name === 'commit' && inLoop(n, sf)) {
+          findings.push({ kind: 'server-partial-batch-commit', file: relative, line: line(n), name: 'batch.commit', issue: /transactions\/bulkRoutes/.test(relative) ? 113 : undefined });
+        }
+        // Payment creation that bypasses the idempotent path remains a backwards-compatible risk.
+        if (name === 'createPaymentAtomic' && relative.endsWith('/paymentRoutes.ts')) {
+          findings.push({ kind: 'server-unkeyed-payment-path', file: relative, line: line(n), name: 'createPaymentAtomic', issue: 114 });
+        }
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(sf);
+  }
+  // The database's trusted-server exemption is intentional; flag it for review so every caller
+  // must provide equivalent server validation. This is NOT itself a database security flaw.
+  const migrationRoot = path.join(root, 'supabase/migrations');
+  if (fs.existsSync(migrationRoot)) {
+    for (const name of fs.readdirSync(migrationRoot).filter(n => n.endsWith('.sql'))) {
+      const full = path.join(migrationRoot, name);
+      const sql = fs.readFileSync(full, 'utf8');
+      const match = /if\s+not\s+public\.lf_is_client\(\)\s+then\s+return/gi;
+      let m: RegExpExecArray | null;
+      while ((m = match.exec(sql))) {
+        findings.push({ kind: 'sql-trusted-server-exemption', file: path.relative(root, full).split(path.sep).join('/'),
+          line: sql.slice(0, m.index).split('\n').length, name: 'lf_guard' });
+      }
+    }
+  }
+  return findings.sort((a,b) => a.kind.localeCompare(b.kind) || a.file.localeCompare(b.file) || a.line - b.line);
+}
+
 if (process.argv[1] && /bug-patterns\.ts$/.test(process.argv[1])) {
   const found = scan();
   const write = process.argv.includes('--write-baseline');
@@ -182,5 +234,11 @@ if (process.argv[1] && /bug-patterns\.ts$/.test(process.argv[1])) {
     ...Object.entries(counts(found)).map(([k, v]) => `| ${k} | ${v} |`), '',
     ...found.map(x => `- [ ] \`${x.kind}\` ${x.file}:${x.line} — ${x.name}`)].join('\n');
   fs.writeFileSync('docs/BUG_PATTERNS.md', md + '\n');
-  console.log(counts(found));
+  const financial = scanFinancialIntegrity();
+  fs.appendFileSync('docs/BUG_PATTERNS.md', [
+    '', '## Server and database integrity review (not confirmed incidents)', '',
+    ...financial.map(f => `- [ ] \`${f.kind}\` ${f.file}:${f.line} — ${f.name}${f.issue ? ` (#${f.issue})` : ''}`),
+    '',
+  ].join('\n'));
+  console.log({ client: counts(found), serverAndSql: financial.length });
 }

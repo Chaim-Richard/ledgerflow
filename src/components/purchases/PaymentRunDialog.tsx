@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDialog } from '../../hooks/useDialog';
@@ -38,6 +38,7 @@ export default function PaymentRunDialog({ bills, vendors, onClose }: { bills: B
   const [cashAccountId, setCashAccountId] = useState(bankAccounts[0]?.id || '');
   const [left, setLeft] = useState<Set<string>>(() => new Set());
   const [saving, setSaving] = useState(false);
+  const operationIds = useRef(new Map<string, string>());
   const { dialogProps, titleId } = useDialog(onClose, true);
 
   const due = useMemo(() => billsDueBy(bills, dueBy), [bills, dueBy]);
@@ -66,7 +67,7 @@ export default function PaymentRunDialog({ bills, vendors, onClose }: { bills: B
     try {
       // #109: the server records first; the bank file then holds only the payments it accepted, and
       // those bills leave the run, so pressing Pay again after a partial failure cannot pay twice
-      const { done, failed } = await recordPayments(payments, { workspaceId, side: 'bill', cashAccountId, date: payDate, method: 'bank_transfer' });
+      const { done, failed } = await recordPayments(payments, { workspaceId, side: 'bill', cashAccountId, date: payDate, method: 'bank_transfer', operationIds: operationIds.current });
       if (withFile && done.length) downloadBankFile(done);
       if (done.length) setLeft(prev => new Set([...prev, ...done.flatMap(p => p.allocations.map(a => a.documentId))]));
       if (done.length) toast.success(`${done.length} payment${done.length === 1 ? '' : 's'} recorded (${formatCurrency(done.reduce((s, p) => s + p.amountCents, 0), currency)})`);

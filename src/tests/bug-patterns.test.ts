@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { scan, counts, type Kind } from '../../scripts/bug-patterns';
+import os from 'node:os';
+import path from 'node:path';
+import { scan, scanFinancialIntegrity, counts, type Kind } from '../../scripts/bug-patterns';
 import { runOnce, workspaceScope, attempt, allSettledWrites } from '../lib/serverAction';
 
 const found = scan();
@@ -14,6 +16,64 @@ test('bug-pattern counts never rise (fix one → lower bug-patterns-baseline.jso
       `${kind}: ${now[kind]} > baseline ${baseline[kind] ?? 0}. New places:\n` +
       found.filter(f => f.kind === kind).map(f => `  ${f.file}:${f.line} ${f.name}`).join('\n'));
   }
+});
+
+// An aggregate ratchet alone is insufficient: a newly introduced risk can replace an old
+// finding with no rise in the total. Track the number of findings at EACH function and file.
+test('no new client risk at an existing or previously clean function', () => {
+  const siteBaseline = JSON.parse(fs.readFileSync('bug-patterns-sites.json', 'utf8')) as Record<string, number>;
+  const current: Record<string, number> = {};
+  for (const f of found) {
+    const key = [f.kind, f.file, f.name].join('|');
+    current[key] = (current[key] || 0) + 1;
+  }
+  const additions = Object.entries(current)
+    .filter(([key, n]) => n > (siteBaseline[key] ?? 0))
+    .map(([key, n]) => `${key}: ${n} > ${siteBaseline[key] ?? 0}`);
+  assert.deepEqual(additions, [], 'New locations need a fix, not an increased baseline');
+});
+
+test('financial scanner detects each #112–#114 failure mechanism and SQL trust boundary', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lf-scanner-'));
+  try {
+    const put = (file: string, text: string) => {
+      const dest = path.join(root, file);
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.writeFileSync(dest, text);
+    };
+    put('src/server/routes/transactions/bulkRoutes.ts', `
+      async function bulk(batch: any, ref: any, updates: any[]) {
+        for (const updateData of updates) {
+          batch.update(ref, { ...updateData, updatedAt: new Date() });
+          await batch.commit();
+        }
+      }`);
+    put('src/server/routes/paymentRoutes.ts', `
+      async function payment(db: any, payload: any) { return createPaymentAtomic(db, payload); }`);
+    put('supabase/migrations/2026_guard.sql', `
+      create function public.lf_guard() returns trigger as $
+      begin
+        if not public.lf_is_client() then return coalesce(new,old); end if;
+      end; $ language plpgsql;`);
+    const risks = scanFinancialIntegrity(root);
+    for (const kind of ['server-unrestricted-ledger-patch', 'server-partial-batch-commit',
+      'server-unkeyed-payment-path', 'sql-trusted-server-exemption']) {
+      assert.ok(risks.some(f => f.kind === kind), `Scanner missed ${kind}`);
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('financial scanner reads the real server and migration tree (not just screen code)', () => {
+  const risks = scanFinancialIntegrity();
+  assert.ok(risks.some(f => f.file.startsWith('src/server/')), 'Server was not scanned');
+  assert.ok(risks.some(f => f.file.startsWith('supabase/migrations/')), 'SQL migrations were not scanned');
+  // The three known high-risk endpoints must remain explicitly in view until their code is
+  // made safe; after fixing each, move its scenario into a database integration test.
+  assert.ok(risks.some(f => f.issue === 112), '#112 batch field validation not detected');
+  assert.ok(risks.some(f => f.issue === 113), '#113 multi-chunk commits not detected');
+  assert.ok(risks.some(f => f.issue === 114), '#114 backwards-compatible unkeyed payment path not detected');
 });
 
 // The scanner must keep finding the code behind the public issues it was built from, until they are fixed.
