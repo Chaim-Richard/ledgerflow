@@ -88,6 +88,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Inspect the developer-only administration demonstration. Explore its example panels when developer mode is enabled. Demonstration telemetry is distinct from production monitoring.",
   },
   reports: {
+    "customer-tax-certificates": "Review current customer certificate declarations, with expiries within 30 calendar days first and expired or unreadable entries marked. Refresh the complete workspace customer list before CSV export. This is a dated review of current metadata, not verified entitlement or certificate history. Open customer details in a side drawer to keep this list visible.",
     "form-856":
       "Review tax withheld at source from vendor payments, per vendor and tax year, with the certificate numbers the payments relied on. Choose the year and download the CSV for the form. Payments without a certificate number are listed as missing, never filled in; nothing is filed here.",
     "customer-cohorts": "Group customers by their earliest observed issued-invoice month and inspect each later month's total invoicing, distinct active customers or percentage. The first invoice can predate the selected display window. Incomplete invoice history makes these cohorts provisional.",

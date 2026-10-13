@@ -75,6 +75,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
   }
 
   const reportTabs = [
+    { label: 'Customer tax certificates', componentName: 'CustomerTaxCertificatesView' },
     { label: 'Customer Cohorts', componentName: 'CustomerCohortsReportView' },
     { label: 'Asset Register', componentName: 'AssetRegisterReportView' },
     { label: 'Transfer Check', componentName: 'OneSidedTransfersReportView' },

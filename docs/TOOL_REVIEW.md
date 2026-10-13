@@ -251,3 +251,7 @@ Reports can remember several named column selections and orders rather than maki
 ## Current invoice price review (C-39, partial)
 
 A bookkeeper can find invoice lines whose stored unit rate differs from the customer’s current list or item price, and open the exact invoice without searching again. Existing list-price logic supplies the expectation; missing references and foreign currency are excluded explicitly. Complete CSV requires successful full invoice/item reads; cache-only rows remain visibly provisional. The feature helps investigate current price differences, but cannot establish what discount was agreed historically: line agreements, dated list versions and separate item discount rules are not stored. Nine targeted tests/guards and a registered phone/axe case pass; integrated gates are pending.
+
+## Customer certificate expiry review (C-47)
+
+Bookkeepers can scan recorded exemption certificates, prioritize expiry within 30 days, and edit the customer's shared address without leaving the review. Unlike a spreadsheet copied from a partially loaded contact list, its CSV requires a complete workspace read and becomes unavailable after an edit until refreshed. Exact mixed Hebrew names and references are preserved. Sources are `customerTaxCertificates.ts`, `CustomerTaxCertificatesView.tsx` and the customer detail button. Declarations remain unverified; absence from the loaded preview does not establish absence from the workspace, and past invoice exemption eligibility requires authoritative historical evidence.
