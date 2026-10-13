@@ -270,3 +270,25 @@
 - [ ] `write-in-loop` src/services/attachmentActions.ts:33 — addDoc
 - [ ] `write-in-loop` src/services/bulkDocumentActions.ts:29 — post
 - [ ] `write-in-loop` src/services/bulkDocumentActions.ts:58 — post
+
+
+## Server/database audit additions (2026-10-13)
+
+Run `npx tsx scripts/bug-patterns.ts` to regenerate this checklist. The scanner now also traverses
+`src/server` and `supabase/migrations` and identifies these independent high-risk paths:
+
+- **#112** `server-unrestricted-ledger-patch`: the transactions batch route spreads arbitrary
+  `updateData` into a write, unlike the validated singular transaction update.
+- **#113** `server-partial-batch-commit`: a transaction batch commits inside a loop and can
+  leave earlier chunks saved after a later validation or write failure.
+- **#114** `server-unkeyed-payment-path`: backwards-compatible payment clients without
+  `x-operation-id` still use the non-idempotent API path. New bulk/payment-run clients
+  now send operation IDs; legacy callers should be migrated before rejecting unkeyed writes.
+- `sql-trusted-server-exemption`: privileged writes bypass client-side `lf_guard` logic.
+  This is intentional architecture, **not proof of a database vulnerability**; equivalent
+  checks must be applied in all server commands.
+
+The new per-location baseline (`bug-patterns-sites.json`) prevents a fresh finding in one
+function from being hidden by removing a different finding elsewhere. The prior aggregate
+baseline is retained for compatibility. Neither baseline certifies an operation correct:
+money-sensitive flows must also pass real Postgres tests, replay tests and failure injection.
