@@ -45,7 +45,8 @@ function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => strin
 interface StatementImporterProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (transactions: ParsedTx[]) => void;
+  /** Resolves `false` when nothing was stored: the review then stays open with the selection kept. */
+  onImport: (transactions: ParsedTx[]) => void | boolean | Promise<void | boolean>;
   existingTransactions: Transaction[];
   businessContext: string;
   accounts: ChartAccount[];
@@ -411,9 +412,19 @@ export default function StatementImporter({
     setStep('review');
   };
 
+  const [importing, setImporting] = useState(false);
   const handleImport = async () => {
+    if (importing) return;
     const toImport = parsedTxs.filter(t => t.selected);
-    await onImport(toImport);
+    setImporting(true);
+    let stored: void | boolean;
+    try {
+      stored = await onImport(toImport);
+    } finally {
+      setImporting(false);
+    }
+    // #110: close and clear only when the import was stored
+    if (stored === false) return;
     onClose();
     setStep('input');
     setRawText('');

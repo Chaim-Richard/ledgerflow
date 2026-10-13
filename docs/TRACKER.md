@@ -2661,7 +2661,7 @@ C-39 / CB-22 review note (AI #2, 11 Oct): `DiscountMismatchView` compares curren
 - [ ] PREV-6 Parsers: fuzz + real-file corpus (F-37, E-56) so import bugs like #101 are found before users.
 
 ### Public issues (13 Oct) — money/data safety, AI #1 first (GitHub labels `money`, `priority`)
-- [ ] ISS-A Save-then-say-success: #105 transfer dialog, #108 bulk categorise, #109 bank-file export before server accepts, #110 statement import swallows errors, #111 receipt marked verified when save rejected, #97 duplicate draft invoices from time — one rule: success only after the server confirms; buttons disabled while saving; idempotency key per action.
-- [ ] ISS-B All-or-nothing writes: #106 transfer pairing as one server transaction, #98 bulk time approval/invoicing validated before any write.
+- [~] ISS-A Save-then-say-success (#105, #109, #110, #111, #97 fixed 13 Oct; #108 open): #105 transfer dialog, #108 bulk categorise, #109 bank-file export before server accepts, #110 statement import swallows errors, #111 receipt marked verified when save rejected, #97 duplicate draft invoices from time — one rule: success only after the server confirms; buttons disabled while saving; idempotency key per action.
+- [~] ISS-B All-or-nothing writes (#98 fixed 13 Oct: time moves and invoicing in one transaction; #106 open): #106 transfer pairing as one server transaction, #98 bulk time approval/invoicing validated before any write.
 - [ ] ISS-C Workspace switch safety: #99, #100, #102, #107 — every async load/import carries the workspace id and is dropped if the user switched books.
 - [ ] ISS-D #101 CSV parser: apostrophes are not quotes; amounts never silently become 0 (fixture from the issue).

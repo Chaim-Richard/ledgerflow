@@ -80,8 +80,8 @@ test('financial scanner reads the real server and migration tree (not just scree
 // coverage. Track each of the 13 financial/data-safety issue mechanisms independently,
 // including the two repaired call sites; these probes are recall checks, NOT functional proof.
 const ISSUE_MECHANISMS: Array<{ issue: number; file: string; markers: string[] }> = [
-  { issue: 97, file: 'src/components/collaboration/TimeView.tsx', markers: ['const makeInvoice', "await addEntity('invoices'", "'/invoiced'"] },
-  { issue: 98, file: 'src/server/services/timeService.ts', markers: ['export async function moveTime', 'await found.ref.set(next)'] },
+  { issue: 97, file: 'src/components/collaboration/TimeView.tsx', markers: ['const makeInvoice', 'unlinked.current.get(hours)'] }, // repaired: retry links the saved invoice
+  { issue: 98, file: 'src/server/services/timeService.ts', markers: ['export async function moveTime', 'await db.runTransaction(async tx'] }, // repaired: all-or-nothing
   { issue: 99, file: 'src/components/collaboration/TimeTimer.tsx', markers: ['read(workspaceId)', 'setRunning'] },
   { issue: 100, file: 'src/hooks/useLedgerData.ts', markers: ['const loadReferenceData', 'setAnalyticalPatternCache'] },
   { issue: 101, file: 'src/components/ledger/StatementImporter.tsx', markers: ['parseCsvText', 'inQuotes = !inQuotes'] },
@@ -91,8 +91,8 @@ const ISSUE_MECHANISMS: Array<{ issue: number; file: string; markers: string[] }
   { issue: 107, file: 'src/hooks/transactionActions/entryActions.ts', markers: ['setTransactions(originalTransactions)'] },
   { issue: 108, file: 'src/components/ledger/TransactionGrid.tsx', markers: ['const handleBulkSweep', 'onUpdate?.(id, { lines: updatedLines })'] },
   { issue: 109, file: 'src/components/purchases/PaymentRunDialog.tsx', markers: ['if (withFile && done.length) downloadBankFile(done)'] },
-  { issue: 110, file: 'src/components/ledger/StatementImporter.tsx', markers: ['await onImport(toImport);', 'onClose();'] },
-  { issue: 111, file: 'src/hooks/transactionActions/importActions.ts', markers: ['const handleParseReceipt', 'updateParsingItem(parsingId'] },
+  { issue: 110, file: 'src/components/ledger/StatementImporter.tsx', markers: ['if (stored === false) return;'] }, // repaired: review stays open
+  { issue: 111, file: 'src/hooks/transactionActions/importActions.ts', markers: ['const handleParseReceipt', "was read but the entry was not saved"] }, // repaired: not done unless saved
 ];
 test('all 13 issue mechanisms have explicit call-site recall (not just any finding in eight files)', () => {
   assert.equal(ISSUE_MECHANISMS.length, 13);

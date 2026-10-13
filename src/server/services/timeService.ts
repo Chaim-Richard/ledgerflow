@@ -94,20 +94,35 @@ export async function moveTime(db: Firestore, input: Actor & { entryIds: string[
   const note = typeof input.note === 'string' ? input.note.trim().slice(0, 300) : '';
   const done: TimeEntry[] = [];
   const people = new Set<string>();
-  for (const entryId of input.entryIds) {
-    const found = await entryFor(db, { ...input, entryId: String(entryId) });
-    const from = found.entry.status;
-    const ok = (to === 'submitted' && found.own && from === 'open')
-      || (to === 'open' && found.own && from === 'submitted')
-      || (to === 'approved' && found.approver && from === 'submitted')
-      || (to === 'open' && found.approver && (from === 'submitted' || from === 'approved'));
-    if (!ok) throw new TimeError(found.approver || found.own ? 409 : 403, `A ${found.entry.date} entry is ${from}: it cannot be made ${to === 'open' ? 'open again' : to}`);
-    if (found.entry.paidRunId) throw new TimeError(409, `The ${found.entry.date} entry was paid in a pay run: undo that run first`);
-    const next = { ...found.entry, status: to, ...(to === 'approved' ? { approvedBy: input.uid, approvedAt: new Date().toISOString() } : {}), ...(to === 'open' && !found.own && note ? { note } : {}) };
-    await found.ref.set(next);
-    done.push({ ...next, id: String(entryId) });
-    if (!found.own) people.add(found.entry.person);
-  }
+  // #98: every entry is read and checked first, then all are saved in one transaction — a refused
+  // entry leaves every other one unchanged
+  const { role } = await roleOf(db, input);
+  const approver = APPROVERS.includes(role);
+  const ids = [...new Set(input.entryIds.map(String))];
+  await db.runTransaction(async tx => {
+    const found = [];
+    for (const entryId of ids) {
+      const ref = db.collection('documents').doc(entryId);
+      const entry = (await tx.get(ref)).data() as Omit<TimeEntry, 'id'> | undefined;
+      if (!entry || entry.kind !== TIME_KIND || entry.workspaceId !== input.workspaceId) throw new TimeError(404, 'That time entry is not in this workspace');
+      found.push({ ref, entry, entryId, own: entry.person === input.uid });
+    }
+    for (const f of found) {
+      const from = f.entry.status;
+      const ok = (to === 'submitted' && f.own && from === 'open')
+        || (to === 'open' && f.own && from === 'submitted')
+        || (to === 'approved' && approver && from === 'submitted')
+        || (to === 'open' && approver && (from === 'submitted' || from === 'approved'));
+      if (!ok) throw new TimeError(approver || f.own ? 409 : 403, `A ${f.entry.date} entry is ${from}: it cannot be made ${to === 'open' ? 'open again' : to}`);
+      if (f.entry.paidRunId) throw new TimeError(409, `The ${f.entry.date} entry was paid in a pay run: undo that run first`);
+    }
+    for (const f of found) {
+      const next = { ...f.entry, status: to, ...(to === 'approved' ? { approvedBy: input.uid, approvedAt: new Date().toISOString() } : {}), ...(to === 'open' && !f.own && note ? { note } : {}) };
+      tx.set(f.ref, next);
+      done.push({ ...next, id: f.entryId });
+      if (!f.own) people.add(f.entry.person);
+    }
+  });
   await writeServerAuditLog({
     workspaceId: input.workspaceId, uid: input.uid, email: input.email, action: to === 'approved' ? 'TIME_APPROVED' : to === 'submitted' ? 'TIME_SUBMITTED' : 'TIME_SENT_BACK', entityType: 'documents', entityId: String(input.entryIds[0]),
     details: { description: `${done.length} time ${done.length === 1 ? 'entry' : 'entries'} ${to === 'approved' ? 'approved' : to === 'submitted' ? 'submitted' : 'opened again'}`, entries: input.entryIds.length },
@@ -129,11 +144,27 @@ export async function markInvoiced(db: Firestore, input: Actor & { entryIds: unk
   if (!Array.isArray(input.entryIds) || input.entryIds.length === 0 || input.entryIds.length > 500 || typeof input.invoiceId !== 'string') throw new TimeError(400, 'Choose the time and the invoice');
   const invoice = (await db.collection('invoices').doc(input.invoiceId).get()).data();
   if (!invoice || invoice.workspaceId !== input.workspaceId) throw new TimeError(404, 'That invoice is not in this workspace');
-  for (const entryId of input.entryIds) {
-    const found = await entryFor(db, { ...input, entryId: String(entryId) });
-    if (found.entry.status !== 'approved' || !found.entry.billable || found.entry.invoiceId) throw new TimeError(409, `The ${found.entry.date} entry is not approved billable time waiting for an invoice`);
-    await found.ref.set({ ...found.entry, status: 'invoiced', invoiceId: input.invoiceId });
-  }
+  // #97/#98: all checked first, all saved together; entries already on this same invoice are a
+  // safe retry, not an error
+  const ids = [...new Set((input.entryIds as unknown[]).map(String))];
+  const invoiceId = input.invoiceId;
+  await db.runTransaction(async tx => {
+    const found = [];
+    for (const entryId of ids) {
+      const ref = db.collection('documents').doc(entryId);
+      const entry = (await tx.get(ref)).data() as Omit<TimeEntry, 'id'> | undefined;
+      if (!entry || entry.kind !== TIME_KIND || entry.workspaceId !== input.workspaceId) throw new TimeError(404, 'That time entry is not in this workspace');
+      found.push({ ref, entry });
+    }
+    for (const f of found) {
+      if (f.entry.status === 'invoiced' && f.entry.invoiceId === invoiceId) continue;
+      if (f.entry.status !== 'approved' || !f.entry.billable || f.entry.invoiceId) throw new TimeError(409, `The ${f.entry.date} entry is not approved billable time waiting for an invoice`);
+    }
+    for (const f of found) {
+      if (f.entry.status === 'invoiced' && f.entry.invoiceId === invoiceId) continue;
+      tx.set(f.ref, { ...f.entry, status: 'invoiced', invoiceId });
+    }
+  });
   return { invoiced: input.entryIds.length };
 }
 

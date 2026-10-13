@@ -48,7 +48,7 @@ interface CommandPortalProps {
     handleAIQuery: (q: string) => Promise<unknown>;
     handleFilter: (f: import("../../types").FilterCriteria) => void;
     handleQuickAdd: (d: Partial<import("../../types").Transaction>) => void;
-    handleImportTransactions: (t: Parameters<React.ComponentProps<typeof StatementImporter>['onImport']>[0]) => void;
+    handleImportTransactions: (t: Parameters<React.ComponentProps<typeof StatementImporter>['onImport']>[0]) => void | boolean | Promise<void | boolean>;
     handleIntegrityAction: (a: string) => void;
     handleSelectTemplate: (id: string) => void;
     handleOpenAIBlueprint: () => void;

@@ -127,3 +127,22 @@ test('QIF refuses zero- and three-decimal workspace currencies before scaling or
   assert.equal(calls, 0);
   assert.equal(aiCalls, 0);
 });
+
+test('#110: a refused import keeps the review open with the selection; a stored one closes it', async () => {
+  let closed = 0;
+  let answer = false;
+  const calls: unknown[][] = [];
+  render(<StatementImporter isOpen onClose={() => { closed++; }} onImport={async rows => { calls.push(rows); return answer; }} existingTransactions={[]} businessContext="" accounts={[]} patternCache={{}} />);
+  fireEvent.change(screen.getByLabelText('QIF date order'), { target: { value: 'dmy' } });
+  await upload('checking.QIF', fixture('checking-dmy.qif'));
+  await screen.findByText('שכירות Office - October rent');
+  fireEvent.click(screen.getAllByRole('button', { name: /^Select .+ on / })[0]);
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Import 1 Entries' })); });
+  assert.equal(calls.length, 1);
+  assert.equal(closed, 0, 'the server refused: the dialog must stay open');
+  assert.ok(screen.getByRole('button', { name: 'Import 1 Entries' }), 'the selection is kept for a retry');
+  answer = true;
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Import 1 Entries' })); });
+  assert.equal(calls.length, 2);
+  assert.equal(closed, 1);
+});

@@ -20,8 +20,9 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
   const { recordRulePattern, balanceTransactionLines } = posting;
   const { handleQuickAdd, handleUpdateTransaction } = entries;
 
-  const handleImportTransactions = async (newTransactions: ImportedTransaction[]) => {
-    if (!user || !currentWorkspaceId) return;
+  /** Resolves `true` only when the server stored the import (#110: the review stays open otherwise). */
+  const handleImportTransactions = async (newTransactions: ImportedTransaction[]): Promise<boolean> => {
+    if (!user || !currentWorkspaceId) return false;
 
     const existingTransactions = useLedgerStore.getState().transactions;
     // Fast deduplication via hash and date
@@ -239,9 +240,11 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
       const current = useLedgerStore.getState().transactions;
       setTransactions([...processedTxs, ...current]);
       toast.success(`Imported ${newTransactions.length} transactions with heuristic mapping.`, { id: loader });
+      return true;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'transactions-batch-import');
-      toast.error('Import failed. Transaction sequence aborted.', { id: loader });
+      toast.error('Import failed. Nothing was imported; your selection is kept so you can try again.', { id: loader });
+      return false;
     } finally {
       setIsSyncing(false);
     }
@@ -325,17 +328,26 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
           lines: balancedLines
         });
 
-        if (success) {
-          toast.success(`${file.name} matched and verified with ${data.lines?.length || 0} items`, { id: loader });
+        // #111: the receipt is "done" only when the entry was really saved
+        if (!success) {
+          updateParsingItem(parsingId, { status: 'error' });
+          toast.error(`${file.name} was read but the entry was not updated`, { id: loader });
+          return;
         }
+        toast.success(`${file.name} matched and verified with ${data.lines?.length || 0} items`, { id: loader });
       } else {
-        await handleQuickAdd({ 
+        const saved = await handleQuickAdd({ 
           description: data.vendorName || 'Receipt Entry',
           totalAmountCents: data.totalAmountCents,
           taxAmountCents: data.taxAmountCents || 0,
           date: data.date || getLocalDateISO(),
           lines: debitLines
         });
+        if (!saved) {
+          updateParsingItem(parsingId, { status: 'error' });
+          toast.error(`${file.name} was read but the entry was not saved`, { id: loader });
+          return;
+        }
         toast.success(`${file.name} processed with ${debitLines.length} line items`, { id: loader });
       }
       

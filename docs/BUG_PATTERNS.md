@@ -2,7 +2,7 @@
 
 | Pattern | Count |
 |---|---:|
-| swallowing-action | 97 |
+| swallowing-action | 96 |
 | success-after-call | 12 |
 | unchecked-write | 2 |
 | write-in-loop | 14 |
@@ -25,8 +25,8 @@
 - [ ] `silent-catch` src/components/hr/DirectDepositDialog.tsx:62 — download
 - [ ] `silent-catch` src/components/intelligence/AICustomBlueprint.tsx:60 — handleGenerate
 - [ ] `silent-catch` src/components/ledger/ReconciliationWizard.tsx:165 — handleFinalize
-- [ ] `silent-catch` src/components/ledger/StatementImporter.tsx:314 — saveColumnLayout
-- [ ] `silent-catch` src/components/ledger/StatementImporter.tsx:331 — handleParse
+- [ ] `silent-catch` src/components/ledger/StatementImporter.tsx:315 — saveColumnLayout
+- [ ] `silent-catch` src/components/ledger/StatementImporter.tsx:332 — handleParse
 - [ ] `silent-catch` src/components/ledger/TransactionGridShared.tsx:56 — handleEvaluateAndSave
 - [ ] `silent-catch` src/components/migration/QBOMigrationWizard.tsx:526 — handleNext
 - [ ] `silent-catch` src/components/platform/settings/BackupExportSettings.tsx:53 — exportJSON
@@ -78,7 +78,7 @@
 - [ ] `stale-async` src/components/banking/MakeDepositDialog.tsx:39 — submit
 - [ ] `stale-async` src/components/collaboration/HandOver.tsx:18 — give
 - [ ] `stale-async` src/components/collaboration/TimeRatesPanel.tsx:30 — save
-- [ ] `stale-async` src/components/collaboration/TimeView.tsx:99 — makeInvoice
+- [ ] `stale-async` src/components/collaboration/TimeView.tsx:102 — makeInvoice
 - [ ] `stale-async` src/components/common/AttachmentsPanel.tsx:29 — (anonymous)
 - [ ] `stale-async` src/components/common/MergePartyDialog.tsx:51 — submit
 - [ ] `stale-async` src/components/common/PartyRowActions.tsx:29 — remove
@@ -102,7 +102,7 @@
 - [ ] `stale-async` src/components/ledger/ClosingBalanceCheck.tsx:26 — (anonymous)
 - [ ] `stale-async` src/components/ledger/JournalEntryModal.tsx:250 — handleSubmit
 - [ ] `stale-async` src/components/ledger/MagicEntry.tsx:36 — (anonymous)
-- [ ] `stale-async` src/components/ledger/StatementImporter.tsx:319 — handleParse
+- [ ] `stale-async` src/components/ledger/StatementImporter.tsx:320 — handleParse
 - [ ] `stale-async` src/components/migration/QBOMigrationWizard.tsx:59 — parseSpreadsheetData
 - [ ] `stale-async` src/components/platform/settings/AlertsSettings.tsx:33 — save
 - [ ] `stale-async` src/components/platform/settings/AllocationRulesSettings.tsx:47 — save
@@ -189,9 +189,9 @@
 - [ ] `swallowing-action` src/components/ledger/JournalEntryModal.tsx:250 — handleSubmit
 - [ ] `swallowing-action` src/components/ledger/Ledger.tsx:175 — handleAddAccount
 - [ ] `swallowing-action` src/components/ledger/ReconciliationWizard.tsx:148 — handleFinalize
-- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:138 — handleFileUpload
-- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:297 — saveColumnLayout
-- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:319 — handleParse
+- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:139 — handleFileUpload
+- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:298 — saveColumnLayout
+- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:320 — handleParse
 - [ ] `swallowing-action` src/components/ledger/useReconciliationModel.ts:195 — handleAutoReconcile
 - [ ] `swallowing-action` src/components/ledger/useReconciliationModel.ts:210 — handleUndoAlignment
 - [ ] `swallowing-action` src/components/migration/QBOMigrationWizard.tsx:357 — handleNext
@@ -231,8 +231,7 @@
 - [ ] `swallowing-action` src/components/support/SupportView.tsx:89 — handleCreateTicket
 - [ ] `swallowing-action` src/components/support/SupportView.tsx:166 — handleSendMessage
 - [ ] `swallowing-action` src/components/support/SupportView.tsx:226 — updateStatus
-- [ ] `swallowing-action` src/hooks/transactionActions/importActions.ts:23 — handleImportTransactions
-- [ ] `swallowing-action` src/hooks/transactionActions/importActions.ts:250 — handleParseReceipt
+- [ ] `swallowing-action` src/hooks/transactionActions/importActions.ts:253 — handleParseReceipt
 - [ ] `swallowing-action` src/hooks/transactionActions/integrityActions.ts:17 — handleBulkRepair
 - [ ] `swallowing-action` src/hooks/transactionActions/postingHelpers.ts:15 — recordRulePattern
 - [ ] `swallowing-action` src/hooks/transactionActions/reconcileActions.ts:20 — handleReconcileMatch

@@ -117,7 +117,11 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.equal((await call('book-1', 'POST', '/invoiced', { entryIds: [id], invoiceId: 'nope' })).status, 404);
     assert.equal((await call('book-1', 'POST', '/invoiced', { entryIds: [id], invoiceId: `${ws}_inv` })).status, 200);
     assert.equal((await call('owner-1', 'DELETE', `/${id}`)).status, 403, 'invoiced time is locked');
-    assert.equal((await call('book-1', 'POST', '/invoiced', { entryIds: [id], invoiceId: `${ws}_inv` })).status, 409, 'once');
+    // #97: the same hours on the same invoice again is a retry after a lost reply: accepted, nothing changes;
+    // on any other invoice it is refused (time is invoiced once)
+    assert.equal((await call('book-1', 'POST', '/invoiced', { entryIds: [id], invoiceId: `${ws}_inv` })).status, 200, 'safe retry');
+    await db.collection('invoices').doc(`${ws}_inv2`).set({ workspaceId: ws, number: 'INV-2', status: 'draft' });
+    assert.equal((await call('book-1', 'POST', '/invoiced', { entryIds: [id], invoiceId: `${ws}_inv2` })).status, 409, 'once');
   });
 });
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { getIdToken } from '../../firebase';
@@ -40,6 +40,7 @@ export default function TimeView() {
   const projects = useLedgerStore(s => s.projects);
   const { addEntity } = useEntityOperations();
   const { people } = useHandOvers();
+  const unlinked = useRef(new Map<string, { id: string; number: string }>());
   const [entries, setEntries] = useState<TimeEntry[] | null>(null);
   const [rates, setRates] = useState<TimeRates | undefined>(undefined);
   const [canApprove, setCanApprove] = useState(false);
@@ -96,10 +97,21 @@ export default function TimeView() {
   const lines = invoiceLinesFromTime(billable, rates);
   const billTotal = lines.reduce((s, l) => s + l.amountCents, 0);
 
+  // #97: an invoice made for these hours whose "mark invoiced" step failed; a retry links that one
+  // instead of making a second invoice for the same time
   const makeInvoice = async () => {
     if (!billFor || lines.length === 0) return;
     setBusy(true);
+    const hours = billable.map(e => e.id).sort().join(',');
+    const pending = unlinked.current.get(hours);
     try {
+      if (pending) {
+        await call(workspaceId, '/invoiced', 'POST', { entryIds: billable.map(e => e.id), invoiceId: pending.id });
+        unlinked.current.delete(hours);
+        setEntries(list => (list || []).map(e => (billable.some(b => b.id === e.id) ? { ...e, status: 'invoiced', invoiceId: pending.id } : e)));
+        toast.success(`Time linked to draft invoice ${pending.number}.`);
+        return;
+      }
       const numberRes = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}/next-number`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` }, body: JSON.stringify({ type: 'invoice' }) });
       const number = numberRes.ok ? (await numberRes.json()).number : undefined;
       if (!number) throw new Error('Could not get the next invoice number. Please try again.');
@@ -109,7 +121,13 @@ export default function TimeView() {
         amountCents: billTotal, amountPaidCents: 0, status: 'draft', currency, items: lines, metadata: { fromTime: true },
       });
       if (!ref) return;
-      await call(workspaceId, '/invoiced', 'POST', { entryIds: billable.map(e => e.id), invoiceId: ref.id });
+      unlinked.current.set(hours, { id: ref.id, number });
+      try {
+        await call(workspaceId, '/invoiced', 'POST', { entryIds: billable.map(e => e.id), invoiceId: ref.id });
+      } catch (err) {
+        throw new Error(`Draft invoice ${number} was saved, but the time was not marked as invoiced (${err instanceof Error ? err.message : String(err)}). Press "Make a draft invoice" again to link it; no second invoice is made.`, { cause: err });
+      }
+      unlinked.current.delete(hours);
       setEntries(list => (list || []).map(e => (billable.some(b => b.id === e.id) ? { ...e, status: 'invoiced', invoiceId: ref.id } : e)));
       toast.success(`Draft invoice ${number} for ${formatCurrency(billTotal, currency)} made from ${lines.length} time ${lines.length === 1 ? 'entry' : 'entries'}. Review it in Sales, then send it.`);
     } catch (err) { toast.error(err instanceof Error ? err.message : String(err)); } finally { setBusy(false); }
