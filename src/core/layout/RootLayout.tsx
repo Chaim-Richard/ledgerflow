@@ -42,6 +42,9 @@ export function RootLayout() {
   
   const user = useAuthStore(state => state.user);
   const isGuest = useAuthStore(state => state.isGuest);
+  // #102: every dialog (statement importer, migration, entry tools) starts fresh on a book switch, so
+  // rows parsed or read for one workspace can never be imported into another
+  const dialogScope = useAuthStore(state => `${state.user?.uid ?? ''}:${state.currentWorkspaceId ?? ''}`);
   const workspaces = useAuthStore(state => state.workspaces);
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
   const projects = useLedgerStore(state => state.projects);
@@ -178,7 +181,7 @@ export function RootLayout() {
       {/* Overlays & Global Components */}
       <BottomNav activeTab={activeTab as unknown as string} onTabChange={setActiveTab as unknown as (tabId: string) => void} />
          <Suspense fallback={null}><CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} onAction={handleAction} /></Suspense>
-         <Suspense fallback={null}><CommandPortal modals={modals} handlers={handlers as unknown as React.ComponentProps<typeof CommandPortal>['handlers']} /></Suspense>
+         <Suspense fallback={null}><CommandPortal key={dialogScope} modals={modals} handlers={handlers as unknown as React.ComponentProps<typeof CommandPortal>['handlers']} /></Suspense>
          <Suspense fallback={null}><ShortcutOverlay isOpen={isShortcutOverlayOpen} onClose={() => setShortcutOverlayOpen(false)} /></Suspense>
          
          <Suspense fallback={null}><DiagnosticConsole isOpen={isDiagnosticConsoleOpen} onClose={() => setDiagnosticConsoleOpen(false)} /></Suspense>
