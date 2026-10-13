@@ -102,6 +102,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Bank Clearance Summary', componentName: 'BankClearanceReportView' },
     { label: 'Withholding Report (Form 856)', componentName: 'Form856ReportView' },
     { label: 'Expense Policy Check', componentName: 'ExpensePolicyReportView' },
+    { label: 'Vendor Scorecard', componentName: 'VendorScorecardReportView' },
   ];
 
   for (const report of reportTabs) {
