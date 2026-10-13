@@ -18,6 +18,10 @@ import { filingPack } from './filingPack';
 import { registrationThresholdPack } from './registrationThresholdPack';
 import { marketplaceChannelPack } from './marketplacePack';
 import { ilWithholdingPack } from './ilWithholdingPack';
+import { caFilingPack } from './caFilingPack';
+import { euReverseChargePack } from './euReverseChargePack';
+import { ukSchemesPack } from './ukSchemesPack';
+import { usUseTaxPack } from '../../tax/usUseTax';
 import type { TaxEffect, TaxRulePack, UnmappedRow } from './shared';
 
 export { usSalesTaxPack } from './usSalesTaxPack';
@@ -30,6 +34,10 @@ export { productTaxabilityPack, stateSalesRuleIds } from './productTaxabilityPac
 export { registrationThresholdPack } from './registrationThresholdPack';
 export { marketplaceChannelPack, marketplaceRuleId } from './marketplacePack';
 export { ilWithholdingPack } from './ilWithholdingPack';
+export { caFilingPack } from './caFilingPack';
+export { euReverseChargePack, EU_MEMBER_STATES, EU_MEMBER_STATE_CODES } from './euReverseChargePack';
+export { ukSchemesPack, ukStandardRuleIds } from './ukSchemesPack';
+export { usUseTaxPack } from '../../tax/usUseTax';
 // the packs' own tooling (A-59, A-60): what the source pages answered, and what changed since a snapshot
 export {
   ruleSourceIndex, checkRuleSources, sourceReportLines, sourceReportSummary, sourceReportMarkdown,
@@ -44,11 +52,15 @@ export {
   type LocalKeyAttribute, type LocalRateEffect, type LocalRateKeyResult,
 } from './usLocalRatePack';
 export { filingPack } from './filingPack';
-export { rateRule, where, slug, type TaxEffect, type TaxRulePack, type RateEffect, type NexusEffect, type RegistrationThresholdEffect, type RegistrationThresholdWindow, type UnmappedRow, type FilingEffect } from './shared';
+export { rateRule, where, slug, type TaxEffect, type TaxRulePack, type RateEffect, type NexusEffect, type RegistrationThresholdEffect, type RegistrationThresholdWindow, type UnmappedRow, type FilingEffect, type MarketplaceEffect, type WithholdingDefaultEffect, type ReverseChargeEffect, type FlatRateSchemeEffect, type UseTaxEffect, type SchemeThresholdEffect } from './shared';
 
 /** Every pack, in the order a screen should list them. */
 export function taxRulePacks(): TaxRulePack[] {
-  return [ilVatPack(), usSalesTaxPack(), usNexusPack(), productTaxabilityPack(), canadaVatPack(), ukVatPack(), euVatPack(), registrationThresholdPack(), filingPack(), marketplaceChannelPack(), ilWithholdingPack()];
+  return [
+    ilVatPack(), usSalesTaxPack(), usNexusPack(), productTaxabilityPack(), canadaVatPack(), ukVatPack(), euVatPack(),
+    registrationThresholdPack(), filingPack(), marketplaceChannelPack(), ilWithholdingPack(),
+    caFilingPack(), euReverseChargePack(), ukSchemesPack(), usUseTaxPack(),
+  ];
 }
 
 /** Every rule in every pack. */

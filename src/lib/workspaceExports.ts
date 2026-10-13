@@ -217,3 +217,15 @@ export { DEFAULT_DUNNING_SCHEDULE, dunningLetter, dunningStepDue, nextDunningSte
 export { MILESTONE_BILLING_CSV_HEADERS, milestoneBilling, milestoneBillingCsvRows } from './milestoneBilling';
 export { readScan, findItemByBarcode, isScannerBurst } from './barcodeScan';
 export { readPriceListCsv, planPriceListImport, parseMoneyCents } from './priceListImport';
+
+/**
+ * AI #3 (Arena) A-51 to A-55 (13 Oct): the Canada filing calendar, the UK VAT schemes, the US use
+ * tax review and the US exemption certificate types. Tables carry dated rows with official sources;
+ * the review is a pure function over the documents it is given. Nothing files, accrues or posts.
+ * The matching rule packs (caFilingPack, euReverseChargePack, ukSchemesPack, usUseTaxPack) are
+ * registered in `taxRulePacks()` and exported from `./rules/packs/index` above.
+ */
+export { CA_FILING_CALENDAR, CA_FILING_TAXES, CA_GST_HST_BANDS, caFilingRows, caFilingBandFor, caFilingCalendarProblems } from './tax/caFilingCalendar';
+export { UK_FRS_CATEGORIES, UK_VAT_SCHEME_THRESHOLDS, UK_FRS_FIRST_YEAR_DISCOUNT_POINTS, ukFrsCategory, ukFrsPercent, ukSchemeProblems } from './tax/ukVatSchemes';
+export { USE_TAX_STATES, USE_TAX_CSV_HEADERS, reviewUseTax, reviewUseTaxCsvRows } from './tax/usUseTax';
+export { US_EXEMPTION_CERTIFICATE_TYPES, SST_MEMBER_STATES, SST_MEMBER_ROW, CERTIFICATE_TYPE_IDS, certificateAcceptance, exemptionCertificateType, certificateTypeName, exemptionCertificateProblems } from './tax/usExemptionCertificates';

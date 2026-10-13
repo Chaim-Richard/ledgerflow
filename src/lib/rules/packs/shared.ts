@@ -51,6 +51,10 @@ export interface FilingEffect {
   frequency: 'monthly' | 'bimonthly' | 'quarterly' | 'yearly';
   /** when it is due, in words from the source ("15th day of the 3rd month after year end") */
   due: string;
+  /** A-51: which tax the return is for ("GST/HST", "QST", "BC PST"), where the row says so */
+  tax?: string;
+  /** A-51: the annual-revenue band the authority commonly assigns this frequency to */
+  revenueBand?: { minCents: number | null; maxCents: number | null; currency: string };
 }
 
 /**
@@ -83,7 +87,72 @@ export interface WithholdingDefaultEffect {
   note: string;
 }
 
-export type TaxEffect = RateEffect | NexusEffect | RegistrationThresholdEffect | FilingEffect | MarketplaceEffect | WithholdingDefaultEffect;
+/**
+ * A-52: the effect of an EU reverse-charge rule — the buyer accounts for the tax in their own
+ * member state, so the supplier's domestic rate rule is switched off. It is never a rate of zero
+ * written on the line by the supplier's own choice: the rule says who taxes the supply, and a
+ * screen can say why the line carries no supplier VAT. The buyer's valid VAT number must be
+ * verified (VIES or the certificate itself) before the rule can apply — a label never proves it.
+ */
+export interface ReverseChargeEffect {
+  kind: 'reverse-charge';
+  /** the supplier's member state (ISO alpha-2; EL for Greece) */
+  supplierCountry: string;
+  supply: 'goods' | 'services';
+  /** the directive articles the rule was read from, in words */
+  basis: string;
+  taxedBy: 'buyer';
+  note: string;
+}
+
+/**
+ * A-53: the effect of a UK Flat Rate Scheme rule — the percentage of VAT-inclusive turnover the
+ * scheme user pays HMRC in place of output VAT at the standard rate. The category is the business's
+ * own declared one (GOV.UK's table); the first-year discount is a percentage point off, per GOV.UK.
+ */
+export interface FlatRateSchemeEffect {
+  kind: 'flat-rate-scheme';
+  /** the slug in ukVatSchemes.ts (`accountancy`, `limited-cost-trader`, …) */
+  category: string;
+  categoryName: string;
+  /** percent of VAT-inclusive turnover (14.5 means 14.5%) */
+  percent: number;
+  /** percentage points off in the first year of FRS registration */
+  firstYearDiscountPoints: number;
+  note: string;
+}
+
+/**
+ * A-54: the effect of a US use-tax rule — where the seller charged none of its state's tax and the
+ * purchase is taxable in the buyer's (this workspace's) state, the state's own use tax applies at
+ * its sales-tax rate. The effect names the state-level rate only; county, city and district
+ * additions follow the state's own use-tax rules and are not concluded here.
+ */
+export interface UseTaxEffect {
+  kind: 'use-tax';
+  state: string;
+  stateName: string;
+  /** the state-level rate in force from validFrom, as a fraction of the purchase */
+  rate: number;
+  note: string;
+}
+
+/**
+ * A-53: the effect of a UK VAT scheme threshold — the turnover figure GOV.UK gives for joining or
+ * leaving a scheme. Like the registration thresholds it is a dated comparison, never a conclusion
+ * that an entity may or must join.
+ */
+export interface SchemeThresholdEffect {
+  kind: 'scheme-threshold';
+  scheme: 'uk-flat-rate-entry' | 'uk-flat-rate-exit' | 'uk-cash-accounting' | 'uk-annual-accounting';
+  currency: string;
+  thresholdCents: number;
+  /** what is measured, in words from the source */
+  measure: string;
+  note: string;
+}
+
+export type TaxEffect = RateEffect | NexusEffect | RegistrationThresholdEffect | FilingEffect | MarketplaceEffect | WithholdingDefaultEffect | ReverseChargeEffect | FlatRateSchemeEffect | UseTaxEffect | SchemeThresholdEffect;
 
 /** A table row a pack could not turn into a rule (a category it cannot name, a place it does not know). */
 export interface UnmappedRow {

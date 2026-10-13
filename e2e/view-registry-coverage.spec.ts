@@ -107,6 +107,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Expense Policy Check', componentName: 'ExpensePolicyReportView' },
     { label: 'Inventory Cycle Count', componentName: 'CycleCountReportView' },
     { label: 'Vendor Scorecard', componentName: 'VendorScorecardReportView' },
+    { label: 'Use Tax Review', componentName: 'UseTaxReportView' },
   ];
 
   for (const report of reportTabs) {
