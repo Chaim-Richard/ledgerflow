@@ -113,7 +113,6 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
     // Create optimistic ID
     const tempId = operationId || `temp-${crypto.randomUUID().split('-')[0]}`;
     const optimisticTx: Transaction = {
-      id: tempId,
       uid: user.uid,
       workspaceId: currentWorkspaceId,
       status: 'completed',
