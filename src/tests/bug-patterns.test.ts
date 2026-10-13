@@ -71,8 +71,10 @@ test('financial scanner reads the real server and migration tree (not just scree
   assert.ok(risks.some(f => f.file.startsWith('supabase/migrations/')), 'SQL migrations were not scanned');
   // The three known high-risk endpoints must remain explicitly in view until their code is
   // made safe; after fixing each, move its scenario into a database integration test.
-  assert.ok(risks.some(f => f.issue === 112), '#112 batch field validation not detected');
-  assert.ok(risks.some(f => f.issue === 113), '#113 multi-chunk commits not detected');
+  // #112 and #113 were repaired on 13 Oct (allowed fields only; one transaction): the scanner must
+  // no longer find them. Their behaviour is tested against the database in transaction-batch-safety.
+  assert.ok(!risks.some(f => f.issue === 112), '#112 came back: batch edits must use the allowed-field list');
+  assert.ok(!risks.some(f => f.issue === 113), '#113 came back: batch edits must commit in one transaction');
   assert.ok(risks.some(f => f.issue === 114), '#114 backwards-compatible unkeyed payment path not detected');
 });
 

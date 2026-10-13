@@ -272,14 +272,12 @@
 
 ## Server and database integrity review (not confirmed incidents)
 
-- [ ] `server-partial-batch-commit` src/server/routes/transactions/bulkRoutes.ts:276 — batch.commit (#113)
 - [ ] `server-partial-batch-commit` src/server/routes/transactions/periodRoutes.ts:225 — batch.commit
 - [ ] `server-partial-batch-commit` src/server/services/maintenanceService.ts:24 — batch.commit
 - [ ] `server-partial-batch-commit` src/server/services/notificationService.ts:161 — batch.commit
 - [ ] `server-partial-batch-commit` src/server/services/retentionService.ts:57 — batch.commit
 - [ ] `server-partial-batch-commit` src/server/services/workspacePurgeService.ts:80 — batch.commit
 - [ ] `server-unkeyed-payment-path` src/server/routes/paymentRoutes.ts:79 — createPaymentAtomic (#114)
-- [ ] `server-unrestricted-ledger-patch` src/server/routes/transactions/bulkRoutes.ts:273 — batch.update (#112)
 - [ ] `sql-trusted-server-exemption` supabase/migrations/20260924190000_init.sql:198 — lf_guard
 - [ ] `sql-trusted-server-exemption` supabase/migrations/20260924190000_init.sql:279 — lf_guard
 - [ ] `sql-trusted-server-exemption` supabase/migrations/20260924210000_server_ids.sql:29 — lf_guard

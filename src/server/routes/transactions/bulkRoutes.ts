@@ -225,55 +225,66 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
        // writers only: a viewer is a member too
        if (!user.admin && !['owner', 'accountant', 'bookkeeper'].includes(workspaceRole(wsData as never, user.uid))) return res.status(403).json({ error: 'Only owners, accountants and bookkeepers change entries' });
        const allowedStatuses = ['draft', 'pending', 'certified', 'void', 'reconciled', 'completed', 'failed', 'flagged', 'reviewed', 'overdue', 'approved'];
+       // #112: only these fields can change in a batch; totals, dates, currency and identity go
+       // through the full entry editor (PUT) or /recategorize, which check everything
+       const BATCH_FIELDS = new Set(['lines', 'description', 'status', 'tags', 'metadata', 'classId', 'locationId', 'projectId', 'dimensions', 'category', 'dimensions.category', 'dimensions.project', 'isLocked', 'isFlagged', 'verification', 'notes', 'memo', 'updatedAt']);
+       if (updates.length > 2000) return res.status(400).json({ error: 'At most 2000 entries per batch' });
+       const ids = updates.map((u: { id: unknown }) => String(u?.id ?? ''));
+       if (ids.some(id => !id) || new Set(ids).size !== ids.length) return res.status(400).json({ error: 'Each entry once, with its id' });
+       for (const u of updates as Array<{ id: string; data?: Record<string, unknown> }>) {
+         const bad = Object.keys(u.data || {}).filter(k => k !== 'expectedUpdatedAt' && !BATCH_FIELDS.has(k));
+         if (bad.length) return res.status(400).json({ error: `These fields cannot be changed in a batch: ${bad.join(', ')} (entry ${u.id})` });
+       }
 
-       // Chunk updates in batches of 400 to respect Firestore write limits
-       const BATCH_CHUNK_SIZE = 400;
-       for (let offset = 0; offset < updates.length; offset += BATCH_CHUNK_SIZE) {
-         const chunkUpdates = updates.slice(offset, offset + BATCH_CHUNK_SIZE);
-         const txRefs = chunkUpdates.map((u: { id: string }) => db.collection('transactions').doc(u.id));
-         const txDocs = await db.getAll(...txRefs);
-         const batch = db.batch();
-
+       // #113: everything is read and checked first, then written in ONE transaction — a refused
+       // entry or a version conflict leaves every entry unchanged
+       const conflict = await db.runTransaction(async (t) => {
+         const txRefs = ids.map(id => db.collection('transactions').doc(id));
+         const txDocs = await Promise.all(txRefs.map(r => t.get(r)));
+         const accountIds = new Set<string>();
+         for (const u of updates as Array<{ data?: { lines?: Array<{ accountId?: string }> } }>) for (const l of u.data?.lines || []) if (l?.accountId) accountIds.add(String(l.accountId));
+         const accountDocs = await Promise.all([...accountIds].map(id => t.get(db.collection('chartAccounts').doc(id))));
+         const ownAccounts = new Set(accountDocs.filter(d => d.exists && d.data()?.workspaceId === workspaceId).map(d => d.id));
+         const writes: Array<{ ref: (typeof txRefs)[number]; data: Record<string, unknown> }> = [];
          for (let i = 0; i < txDocs.length; i++) {
            const txDoc = txDocs[i];
-           if (!txDoc.exists) throw new Error(`Transaction ${chunkUpdates[i].id} not found`);
-         
+           const id = ids[i];
+           if (!txDoc.exists) throw new Error(`Transaction ${id} not found`);
            const txData = txDoc.data();
-           if (txData?.workspaceId !== workspaceId) throw new Error(`Transaction ${chunkUpdates[i].id} does not belong to this workspace`);
-         
+           if (txData?.workspaceId !== workspaceId) throw new Error(`Transaction ${id} does not belong to this workspace`);
            if (txData?.date) assertPostingOpen(txData.date, wsData, user.uid);
-           if ((txData?.status === 'certified' || txData?.status === 'void') && !user.admin) throw new Error(`Forbidden: Transaction ${chunkUpdates[i].id} status is locked.`);
-         
-           const updateData = { ...chunkUpdates[i].data };
-           const expectedUpdatedAt = chunkUpdates[i].expectedUpdatedAt || updateData.expectedUpdatedAt;
+           if ((txData?.status === 'certified' || txData?.status === 'void') && !user.admin) throw new Error(`Forbidden: Transaction ${id} status is locked.`);
+           const updateData = { ...updates[i].data } as Record<string, unknown>;
+           const expectedUpdatedAt = updates[i].expectedUpdatedAt || updateData.expectedUpdatedAt;
            delete updateData.expectedUpdatedAt;
-
-           if (isUpdatedAtMismatch(expectedUpdatedAt, txData?.updatedAt)) {
-             return res.status(409).json({
-               error: 'version_conflict',
-               message: `Transaction ${chunkUpdates[i].id} was modified by another user.`,
-               conflictTransactionId: chunkUpdates[i].id,
-               currentTransaction: { ...txData, id: txDoc.id }
-             });
+           if (isUpdatedAtMismatch(expectedUpdatedAt as never, txData?.updatedAt)) {
+             return { id, current: { ...txData, id: txDoc.id } };
            }
-
-           if (updateData.workspaceId !== undefined || updateData.uid !== undefined) {
-             throw new Error(`Restricted fields (workspaceId, uid) cannot be modified via batch update on transaction ${chunkUpdates[i].id}.`);
-           }
-
            if (updateData.lines !== undefined) {
-             const simulatedTx = { ...txData, ...updateData };
-             DoubleEntryValidator.validateJournalEntry(simulatedTx as Transaction);
+             const lines = updateData.lines as Array<{ accountId?: string; amountCents?: number }>;
+             if (!Array.isArray(lines) || lines.length < 2) throw new Error(`Entry ${id} needs at least two lines`);
+             DoubleEntryValidator.validateJournalEntry({ ...txData, ...updateData } as Transaction);
+             const unknown = lines.filter(l => !l.accountId || !ownAccounts.has(String(l.accountId)));
+             if (unknown.length) throw new Error(`Entry ${id} uses an account that is not in this workspace`);
+             const total = lines.reduce((sum, l) => sum + Math.max(0, Math.round(Number(l.amountCents) || 0)), 0);
+             const before = Math.abs(Math.round(Number(txData?.totalAmountCents) || 0));
+             if (before && total !== before) throw new Error(`Entry ${id}: a batch may move amounts between accounts but not change the total (${before} → ${total} cents); edit the entry instead`);
            }
-
-           if (updateData.status && !allowedStatuses.includes(updateData.status)) {
-             throw new Error(`Invalid status '${updateData.status}' provided for transaction ${chunkUpdates[i].id}.`);
+           if (updateData.status && !allowedStatuses.includes(String(updateData.status))) {
+             throw new Error(`Invalid status '${updateData.status}' provided for transaction ${id}.`);
            }
-
-           batch.update(txDoc.ref, { ...updateData, updatedAt: FieldValue.serverTimestamp() });
+           writes.push({ ref: txDoc.ref, data: { ...updateData, updatedAt: FieldValue.serverTimestamp() } });
          }
-       
-         await batch.commit();
+         for (const w of writes) t.update(w.ref, w.data);
+         return null;
+       });
+       if (conflict) {
+         return res.status(409).json({
+           error: 'version_conflict',
+           message: `Transaction ${conflict.id} was modified by another user. Nothing in this batch was saved.`,
+           conflictTransactionId: conflict.id,
+           currentTransaction: conflict.current
+         });
        }
 
        res.json({ status: 'ok' });
