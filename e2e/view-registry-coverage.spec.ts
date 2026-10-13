@@ -111,6 +111,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Three-Way Match Review', componentName: 'ThreeWayMatchReviewView' },
     { label: 'Customer Lifetime Value', componentName: 'CustomerLifetimeValueReportView' },
     { label: 'Subscription Plans', componentName: 'SubscriptionPlansReportView' },
+    { label: 'Use Tax Review', componentName: 'UseTaxReportView' },
   ];
 
   for (const report of reportTabs) {

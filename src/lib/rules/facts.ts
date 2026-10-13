@@ -24,6 +24,11 @@ export type FactAttribute =
   | 'channel'             // A-41: where the sale happens — direct, marketplace, own-website …
   | 'paymentType'         // A-43: what a payment to a vendor is for — services-or-assets, rent-expense, interest, royalty
   | 'payeeResidence'      // A-43: where the payee is a resident — IL (Israeli resident) or foreign
+  | 'buyerCountry'        // A-52: the buyer's country (ISO alpha-2) on a cross-border sale — EL for Greece, as the EU uses it
+  | 'buyerVatStatus'      // A-52: the buyer's VAT number state — 'valid' only with checked evidence (VIES or the certificate itself)
+  | 'supplyKind'          // A-52: what the line supplies — goods or services
+  | 'taxCollectedBySeller'// A-54: whether the seller charged its state's tax on a purchase — yes or no
+  | 'schemeCategory'      // A-53: the declared business category of a UK Flat Rate Scheme user (the slug in ukVatSchemes.ts)
   | 'registration';       // a set of keys from src/lib/tax/profile.ts registrationKey
 
 /** Single-valued attributes may conflict between dimensions; set-valued ones accumulate. */
