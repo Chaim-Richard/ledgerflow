@@ -17,3 +17,8 @@ A complete workspace read, dated snapshot and unchanged cache reference are requ
 - Final frozen-source run: **2597/2597 tests, 672 suites, zero failures/skips/cancellations**. Coverage **80.84% lines / 78.80% branches / 81.50% functions**, thresholds unchanged. Final types, ESLint **212 warnings / zero errors**, production build and **ALL RLS TESTS PASSED**. Chromium after the in-flight guard: **2/2 pass**. These results are pinned to the C-47 source based on main `c769abee`; newer main will be preserved before publication and GitHub will verify that integration.
 
 No money calculations, server routes, schema, primary forms, dependency declarations or quality baselines were changed. A complete CSV describes current recorded declarations only.
+
+
+## Preserved current main before publication
+
+Merged main `363dec0e` normally, retaining both coordination histories and every upstream feature. The integrated source passes **13/13 targeted** (seven certificate cases plus help/quality), types, ESLint **212 warnings / zero errors**, and build. Its complete GitHub suites remain pending. Adding the report changes the always-visible P&L/balance-sheet navigation; a temporary CI-browser capture saves candidate images on an isolated review branch. Only inspected images will be brought into the feature branch, and the temporary capture workflow will be removed. Existing screenshot thresholds and money assertions stay unchanged.

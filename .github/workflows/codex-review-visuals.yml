@@ -1,0 +1,47 @@
+name: AI 2 capture visual references for review
+on:
+  push:
+    branches:
+      - codex/c47-tax-certificates
+      - codex/c48-vendor-tax-records
+      - codex/c61-withholding-report
+    paths:
+      - .github/workflows/codex-review-visuals.yml
+permissions:
+  contents: write
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+        env:
+          HUSKY: 0
+      - run: npx playwright install --with-deps chromium
+      - name: Capture the intentionally changed report menus
+        run: npx playwright test e2e/visual-regression.spec.ts --grep 'pnl|balance-sheet' --update-snapshots --retries=0
+      - name: Check all forty visual comparisons
+        run: npx playwright test e2e/visual-regression.spec.ts --retries=0
+      - name: Save images on an isolated review branch
+        env:
+          REVIEW_BRANCH: codex/visual-review-${{ github.run_id }}
+        run: |
+          case "$GITHUB_REF_NAME" in codex/c47-tax-certificates|codex/c48-vendor-tax-records|codex/c61-withholding-report) ;; *) exit 1;; esac
+          git config user.name 'AI 2 visual capture (GitHub Actions)'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add e2e/__screenshots__
+          git diff --cached --quiet || git commit -m 'test: AI 2 capture report references for image review'
+          git push origin "HEAD:refs/heads/$REVIEW_BRANCH"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: review-visual-images
+          path: |
+            e2e/__screenshots__/
+            test-results/
+          retention-days: 7
