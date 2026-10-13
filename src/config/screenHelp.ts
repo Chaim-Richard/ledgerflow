@@ -141,6 +141,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review scheduled revenue earned by month and still deferred at the period end. Inspect each schedule and its recorded earned amounts. Future scheduled amounts remain distinct from posted earned revenue.",
     "financial-ratios":
       "Review financial ratios together with their formulas. Adjust report-only current-account groups and compare periods. Zero denominators are undefined and turnover days use labelled revenue or COGS proxies.",
+    "vendor-withholding": "Review posted vendor payments for a calendar month, grouped by vendor and payment currency. Saved withheld amounts and certificate references are used without recomputing tax rates. Refresh complete workspace payment history before exporting; changed or unreadable payment data keeps CSV unavailable. Vendor paid is shown in the payment currency, and the related-record drawer edits shared vendor metadata without leaving the report.",
     "discount-mismatch":
       "Compare issued invoice unit prices in the selected period with current customer price lists or item catalogue prices. Refresh complete invoice/item reads before CSV. Current prices do not prove historical discount entitlement; foreign currencies, document-wide discounts and unknown item references are excluded.",
     "expense-policy-check":
