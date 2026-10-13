@@ -2650,3 +2650,9 @@ C-39 / CB-22 review note (AI #2, 11 Oct): `DiscountMismatchView` compares curren
 - [ ] AU-6 One door to the ledger: about 30 server files write transaction documents directly. Map them, route each through the shared posting module, then add a lint rule that rejects ledger writes outside it.
 - [ ] ACC-1 Owner "Give access" screen (owner request, 13 Oct): as platform admin, type a person's email, pick Full / Pro / Growth / tester, and it sets bypassBilling or the plan on their workspaces (and can make them admin), with an audit line. Today this needs SQL or the System Command Center per workspace.
 - [ ] ACC-2 Settings → Billing & Plan: remove jargon ("Precision Core v2.0", "institutional rule bridges", "Documentation Protocol … topological registries"); show "Free access (given by LedgerFlow)" when bypassBilling is on; plan names match everywhere (sandbox/growth vs Free/Growth/Pro).
+
+### Public issues (13 Oct) — money/data safety, AI #1 first (GitHub labels `money`, `priority`)
+- [ ] ISS-A Save-then-say-success: #105 transfer dialog, #108 bulk categorise, #109 bank-file export before server accepts, #110 statement import swallows errors, #111 receipt marked verified when save rejected, #97 duplicate draft invoices from time — one rule: success only after the server confirms; buttons disabled while saving; idempotency key per action.
+- [ ] ISS-B All-or-nothing writes: #106 transfer pairing as one server transaction, #98 bulk time approval/invoicing validated before any write.
+- [ ] ISS-C Workspace switch safety: #99, #100, #102, #107 — every async load/import carries the workspace id and is dropped if the user switched books.
+- [ ] ISS-D #101 CSV parser: apostrophes are not quotes; amounts never silently become 0 (fixture from the issue).
