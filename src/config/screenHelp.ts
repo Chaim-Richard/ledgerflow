@@ -148,6 +148,14 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Compare issued invoice unit prices in the selected period with current customer price lists or item catalogue prices. Refresh complete invoice/item reads before CSV. Current prices do not prove historical discount entitlement; foreign currencies, document-wide discounts and unknown item references are excluded.",
     "vendor-scorecard":
       "Review each vendor's on-time delivery (first goods receipt against the expected date), unit-cost changes per item in the bill's own currency, and returns sent back in the period. Read-only: nothing is posted, and a vendor with no dated orders shows no on-time rate rather than 100%.",
+    "vendor-price-history":
+      "What each item actually cost from each vendor, purchase by purchase, from the bill lines the books hold: the line amount divided by its units, in that bill's own currency. Prices are compared only inside one currency, a single purchase shows no change, and draft, void or cancelled bills are not purchases and are left out. Read-only: nothing here prices, posts or changes a bill.",
+    "three-way-match":
+      "Every purchase order issued in the period, checked against its goods receipts and its supplier's bill: matched, short or over-delivered, not received, or still waiting for a bill. The check and its sentences are the Purchase orders screen's own 3-way match, and each amount is the order's own figure in its own currency, never added across currencies. Read-only: nothing is approved, posted or changed.",
+    "customer-lifetime-value":
+      "Each customer's recorded sales, credit notes, cost and gross profit up to an as-of date, with the orders, the first and last order, the average order and the orders per year. The projected lifetime value repeats the recorded average annual profit for a lifespan you choose: it is an assumption shown on the screen, not a forecast, and a customer with one order carries a very thin history. Read-only: nothing is posted or changed.",
+    "subscription-plans":
+      "The customers' recurring invoices seen as plans: the money each brings a month (MRR) and a year (ARR), and what started and what stopped in each month of the window. A stopped plan's month is when it last ran, because the rules record the last occurrence and not a cancellation date, and currencies are never added together. Read-only analytics: nothing here sends a draft or changes a plan.",
     "expense-policy-check":
       "Check expense claims dated in the period against the workspace's own expense policy rows: a maximum per line and the amount from which a receipt is needed. The maximum is inclusive; the receipt count is not read on this screen, so a needed receipt is listed as not checked here, never as missing. Read-only: nothing is approved, changed or posted, and claims in another currency keep their own currency.",
     "cycle-count":
