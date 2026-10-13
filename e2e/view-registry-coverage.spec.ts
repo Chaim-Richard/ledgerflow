@@ -75,11 +75,8 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
   }
 
   const reportTabs = [
-<<<<<<< HEAD
     { label: 'Customer tax certificates', componentName: 'CustomerTaxCertificatesView' },
-=======
     { label: 'Vendor tax records', componentName: 'VendorTaxRecordsView' },
->>>>>>> origin/codex/c48-vendor-tax-records
     { label: 'Customer Cohorts', componentName: 'CustomerCohortsReportView' },
     { label: 'Asset Register', componentName: 'AssetRegisterReportView' },
     { label: 'Transfer Check', componentName: 'OneSidedTransfersReportView' },
@@ -109,6 +106,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Withholding Report (Form 856)', componentName: 'Form856ReportView' },
     { label: 'Expense Policy Check', componentName: 'ExpensePolicyReportView' },
     { label: 'Inventory Cycle Count', componentName: 'CycleCountReportView' },
+    { label: 'Vendor Scorecard', componentName: 'VendorScorecardReportView' },
   ];
 
   for (const report of reportTabs) {

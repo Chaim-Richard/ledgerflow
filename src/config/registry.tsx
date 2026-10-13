@@ -387,11 +387,8 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'OpenAdvancesView': lazy(() => import('../components/reporting/OpenAdvancesView')),
   'FinancialRatiosReportView': lazy(() => import('../components/reporting/FinancialRatiosReportView')),
 <<<<<<< HEAD
-<<<<<<< HEAD
   'VendorWithholdingView': lazy(() => import('../components/reporting/VendorWithholdingView')),
-=======
   'CustomerTaxCertificatesView': lazy(() => import('../components/reporting/CustomerTaxCertificatesView')),
->>>>>>> origin/codex/c47-tax-certificates
 =======
   'VendorTaxRecordsView': lazy(() => import('../components/reporting/VendorTaxRecordsView')),
 >>>>>>> origin/codex/c48-vendor-tax-records
@@ -399,6 +396,7 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'RegistrationThresholdWatchReportView': lazy(() => import('../components/reporting/RegistrationThresholdWatchReportView')),
   'ExpensePolicyReportView': lazy(() => import('../components/reporting/ExpensePolicyReportView')),
   'CycleCountReportView': lazy(() => import('../components/reporting/CycleCountReportView')),
+  'VendorScorecardReportView': lazy(() => import('../components/reporting/VendorScorecardReportView')),
   'CustomerGrossProfitView': lazy(() => import('../components/reporting/CustomerGrossProfitView')),
   'InactiveItemsReportView': lazy(() => import('../components/reporting/InactiveItemsReportView')),
   'AccountBalancesAsOfView': lazy(() => import('../components/reporting/EverydayReportViews').then(module => ({default:module.AccountBalancesAsOfView}))),
@@ -443,11 +441,8 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'open-advances', label: { en: 'Open Advances', he: 'מקדמות פתוחות' }, componentName: 'OpenAdvancesView', icon: Calendar },
   { id: 'financial-ratios', label: { en: 'Financial Ratios', he: 'יחסים פיננסיים' }, componentName: 'FinancialRatiosReportView', icon: Activity },
 <<<<<<< HEAD
-<<<<<<< HEAD
   { id: 'vendor-withholding', label: { en: 'Vendor withholding', he: 'ניכוי במקור לספקים' }, componentName: 'VendorWithholdingView', icon: TrendingUp },
-=======
   { id: 'customer-tax-certificates', label: { en: 'Customer tax certificates', he: 'אישורי פטור לקוחות' }, componentName: 'CustomerTaxCertificatesView', icon: Receipt },
->>>>>>> origin/codex/c47-tax-certificates
 =======
   { id: 'vendor-tax-records', label: { en: 'Vendor tax records', he: 'אישורי מס ספקים' }, componentName: 'VendorTaxRecordsView', icon: Receipt },
 >>>>>>> origin/codex/c48-vendor-tax-records
@@ -455,6 +450,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'registration-threshold-watch', label: { en: 'Registration Threshold Watch', he: 'מעקב ספי רישום' }, componentName: 'RegistrationThresholdWatchReportView', icon: Scale },
   { id: 'expense-policy-check', label: { en: 'Expense Policy Check', he: 'בדיקת מדיניות הוצאות' }, componentName: 'ExpensePolicyReportView', icon: Receipt },
   { id: 'cycle-count', label: { en: 'Inventory Cycle Count', he: 'ספירת מלאי מחזורית' }, componentName: 'CycleCountReportView', icon: ClipboardCheck },
+  { id: 'vendor-scorecard', label: { en: 'Vendor Scorecard', he: 'כרטיס ציון ספקים' }, componentName: 'VendorScorecardReportView', icon: TrendingUp },
   { id: 'gross-profit-by-customer', label: { en: 'Gross Profit by Customer', he: 'רווח גולמי לפי לקוח' }, componentName: 'CustomerGrossProfitView', icon: TrendingUp },
   { id: 'inactive-items', label: { en: 'Inactive Items', he: 'פריטים ללא מכירה' }, componentName: 'InactiveItemsReportView', icon: Package },
   { id: 'account-balances-as-of', label: { en: 'Account Balances as of Date', he: 'יתרות חשבון לתאריך' }, componentName: 'AccountBalancesAsOfView', icon: BookOpen },

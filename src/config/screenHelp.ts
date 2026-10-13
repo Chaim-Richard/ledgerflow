@@ -149,6 +149,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     "vendor-withholding": "Review posted vendor payments for a calendar month, grouped by vendor and payment currency. Saved withheld amounts and certificate references are used without recomputing tax rates. Refresh complete workspace payment history before exporting; changed or unreadable payment data keeps CSV unavailable. Vendor paid is shown in the payment currency, and the related-record drawer edits shared vendor metadata without leaving the report.",
     "discount-mismatch":
       "Compare issued invoice unit prices in the selected period with current customer price lists or item catalogue prices. Refresh complete invoice/item reads before CSV. Current prices do not prove historical discount entitlement; foreign currencies, document-wide discounts and unknown item references are excluded.",
+    "vendor-scorecard":
+      "Review each vendor's on-time delivery (first goods receipt against the expected date), unit-cost changes per item in the bill's own currency, and returns sent back in the period. Read-only: nothing is posted, and a vendor with no dated orders shows no on-time rate rather than 100%.",
     "expense-policy-check":
       "Check expense claims dated in the period against the workspace's own expense policy rows: a maximum per line and the amount from which a receipt is needed. The maximum is inclusive; the receipt count is not read on this screen, so a needed receipt is listed as not checked here, never as missing. Read-only: nothing is approved, changed or posted, and claims in another currency keep their own currency.",
     "cycle-count":

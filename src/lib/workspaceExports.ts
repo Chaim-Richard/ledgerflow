@@ -200,3 +200,20 @@ export { CUSTOM_FIELD_CSV_HEADERS, customFieldProblem, fieldValueProblem, coerce
  * state's department as source) and the following-month due date, weekends moved to Monday.
  */
 export { US_FILING_CALENDAR, US_FILING_CALENDAR_STATES, NO_STATE_FILING, filingCalendarRow, hasNoStateFiling, filingDueDate, filingCalendarProblems } from './tax/usFilingCalendar';
+
+/**
+ * AI #3 (Arena) A-46 to A-80 libraries, kept reachable from the app. Each is a pure function over
+ * the documents it is given; none posts, moves stock or changes a calculation.
+ * A-46 delivery note document (EN/HE, DN series); A-47 vendor scorecard; A-49 customer quote list;
+ * A-50 reorder suggestions and draft purchase orders; A-63 landed cost preview; A-70 dunning letters;
+ * A-73 milestone billing view; A-79 barcode reading; A-80 price-list CSV import.
+ */
+export { DELIVERY_NOTE_LABELS, buildDeliveryNote, nextDeliveryNoteNumber, deliveryNoteColumns } from './deliveryNoteDocument';
+export { VENDOR_SCORECARD_CSV_HEADERS, vendorScorecard, vendorScorecardCsvRows } from './vendorScorecard';
+export { customerOpenQuotes, acceptQuoteProblem } from './customerQuotes';
+export { reorderSuggestions, reorderDraftOrders } from './reorderSuggestions';
+export { landedCostPreview, landedCostProblem, spreadCents } from './landedCostPreview';
+export { DEFAULT_DUNNING_SCHEDULE, dunningLetter, dunningStepDue, nextDunningStep, dunningLogFor, dunningAmountText } from './dunningLetters';
+export { MILESTONE_BILLING_CSV_HEADERS, milestoneBilling, milestoneBillingCsvRows } from './milestoneBilling';
+export { readScan, findItemByBarcode, isScannerBurst } from './barcodeScan';
+export { readPriceListCsv, planPriceListImport, parseMoneyCents } from './priceListImport';
