@@ -152,7 +152,24 @@ export interface SchemeThresholdEffect {
   note: string;
 }
 
-export type TaxEffect = RateEffect | NexusEffect | RegistrationThresholdEffect | FilingEffect | MarketplaceEffect | WithholdingDefaultEffect | ReverseChargeEffect | FlatRateSchemeEffect | UseTaxEffect | SchemeThresholdEffect;
+/**
+ * A-56: the effect of an imported-purchase rule — Israel taxes a purchase from a foreign supplier
+ * outside the invoice: services are self-assessed by the Israeli business (Section 20, "מע״מ
+ * עסקאות"), and goods' VAT is paid to customs at the import. The effect says which mechanism and
+ * the rate in force from validFrom; posting the self-assessment is the accountant's lane (AI #1).
+ */
+export interface ImportVatEffect {
+  kind: 'import-vat';
+  supply: 'goods' | 'services';
+  /** who collects the tax: the business self-assesses, or customs collects at the border */
+  collectedBy: 'self-assessment' | 'customs';
+  /** the Israeli VAT rate in force from validFrom, as a fraction */
+  rate: number;
+  basis: string;
+  note: string;
+}
+
+export type TaxEffect = RateEffect | NexusEffect | RegistrationThresholdEffect | FilingEffect | MarketplaceEffect | WithholdingDefaultEffect | ReverseChargeEffect | FlatRateSchemeEffect | UseTaxEffect | SchemeThresholdEffect | ImportVatEffect;
 
 /** A table row a pack could not turn into a rule (a category it cannot name, a place it does not know). */
 export interface UnmappedRow {

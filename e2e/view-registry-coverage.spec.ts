@@ -112,6 +112,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Customer Lifetime Value', componentName: 'CustomerLifetimeValueReportView' },
     { label: 'Subscription Plans', componentName: 'SubscriptionPlansReportView' },
     { label: 'Use Tax Review', componentName: 'UseTaxReportView' },
+    { label: 'Purchases from Abroad', componentName: 'ImportServicesReportView' },
   ];
 
   for (const report of reportTabs) {
