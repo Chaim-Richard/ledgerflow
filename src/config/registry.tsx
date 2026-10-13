@@ -387,10 +387,14 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'OpenAdvancesView': lazy(() => import('../components/reporting/OpenAdvancesView')),
   'FinancialRatiosReportView': lazy(() => import('../components/reporting/FinancialRatiosReportView')),
 <<<<<<< HEAD
+<<<<<<< HEAD
   'VendorWithholdingView': lazy(() => import('../components/reporting/VendorWithholdingView')),
 =======
   'CustomerTaxCertificatesView': lazy(() => import('../components/reporting/CustomerTaxCertificatesView')),
 >>>>>>> origin/codex/c47-tax-certificates
+=======
+  'VendorTaxRecordsView': lazy(() => import('../components/reporting/VendorTaxRecordsView')),
+>>>>>>> origin/codex/c48-vendor-tax-records
   'DiscountMismatchView': lazy(() => import('../components/reporting/DiscountMismatchView')),
   'RegistrationThresholdWatchReportView': lazy(() => import('../components/reporting/RegistrationThresholdWatchReportView')),
   'ExpensePolicyReportView': lazy(() => import('../components/reporting/ExpensePolicyReportView')),
@@ -439,10 +443,14 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'open-advances', label: { en: 'Open Advances', he: 'מקדמות פתוחות' }, componentName: 'OpenAdvancesView', icon: Calendar },
   { id: 'financial-ratios', label: { en: 'Financial Ratios', he: 'יחסים פיננסיים' }, componentName: 'FinancialRatiosReportView', icon: Activity },
 <<<<<<< HEAD
+<<<<<<< HEAD
   { id: 'vendor-withholding', label: { en: 'Vendor withholding', he: 'ניכוי במקור לספקים' }, componentName: 'VendorWithholdingView', icon: TrendingUp },
 =======
   { id: 'customer-tax-certificates', label: { en: 'Customer tax certificates', he: 'אישורי פטור לקוחות' }, componentName: 'CustomerTaxCertificatesView', icon: Receipt },
 >>>>>>> origin/codex/c47-tax-certificates
+=======
+  { id: 'vendor-tax-records', label: { en: 'Vendor tax records', he: 'אישורי מס ספקים' }, componentName: 'VendorTaxRecordsView', icon: Receipt },
+>>>>>>> origin/codex/c48-vendor-tax-records
   { id: 'discount-mismatch', label: { en: 'Discount Mismatch Review', he: 'בדיקת פערי הנחות' }, componentName: 'DiscountMismatchView', icon: TrendingUp },
   { id: 'registration-threshold-watch', label: { en: 'Registration Threshold Watch', he: 'מעקב ספי רישום' }, componentName: 'RegistrationThresholdWatchReportView', icon: Scale },
   { id: 'expense-policy-check', label: { en: 'Expense Policy Check', he: 'בדיקת מדיניות הוצאות' }, componentName: 'ExpensePolicyReportView', icon: Receipt },
