@@ -25,8 +25,8 @@
 - [ ] `silent-catch` src/components/hr/DirectDepositDialog.tsx:62 — download
 - [ ] `silent-catch` src/components/intelligence/AICustomBlueprint.tsx:60 — handleGenerate
 - [ ] `silent-catch` src/components/ledger/ReconciliationWizard.tsx:165 — handleFinalize
-- [ ] `silent-catch` src/components/ledger/StatementImporter.tsx:315 — saveColumnLayout
-- [ ] `silent-catch` src/components/ledger/StatementImporter.tsx:332 — handleParse
+- [ ] `silent-catch` src/components/ledger/StatementImporter.tsx:302 — saveColumnLayout
+- [ ] `silent-catch` src/components/ledger/StatementImporter.tsx:319 — handleParse
 - [ ] `silent-catch` src/components/ledger/TransactionGridShared.tsx:56 — handleEvaluateAndSave
 - [ ] `silent-catch` src/components/migration/QBOMigrationWizard.tsx:526 — handleNext
 - [ ] `silent-catch` src/components/platform/settings/BackupExportSettings.tsx:53 — exportJSON
@@ -102,7 +102,7 @@
 - [ ] `stale-async` src/components/ledger/ClosingBalanceCheck.tsx:26 — (anonymous)
 - [ ] `stale-async` src/components/ledger/JournalEntryModal.tsx:250 — handleSubmit
 - [ ] `stale-async` src/components/ledger/MagicEntry.tsx:36 — (anonymous)
-- [ ] `stale-async` src/components/ledger/StatementImporter.tsx:320 — handleParse
+- [ ] `stale-async` src/components/ledger/StatementImporter.tsx:307 — handleParse
 - [ ] `stale-async` src/components/migration/QBOMigrationWizard.tsx:59 — parseSpreadsheetData
 - [ ] `stale-async` src/components/platform/settings/AlertsSettings.tsx:33 — save
 - [ ] `stale-async` src/components/platform/settings/AllocationRulesSettings.tsx:47 — save
@@ -189,9 +189,9 @@
 - [ ] `swallowing-action` src/components/ledger/JournalEntryModal.tsx:250 — handleSubmit
 - [ ] `swallowing-action` src/components/ledger/Ledger.tsx:175 — handleAddAccount
 - [ ] `swallowing-action` src/components/ledger/ReconciliationWizard.tsx:148 — handleFinalize
-- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:139 — handleFileUpload
-- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:298 — saveColumnLayout
-- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:320 — handleParse
+- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:122 — handleFileUpload
+- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:285 — saveColumnLayout
+- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:307 — handleParse
 - [ ] `swallowing-action` src/components/ledger/useReconciliationModel.ts:195 — handleAutoReconcile
 - [ ] `swallowing-action` src/components/ledger/useReconciliationModel.ts:210 — handleUndoAlignment
 - [ ] `swallowing-action` src/components/migration/QBOMigrationWizard.tsx:357 — handleNext

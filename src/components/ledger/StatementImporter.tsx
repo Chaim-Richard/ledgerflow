@@ -1,6 +1,7 @@
 import { useDialog } from '../../hooks/useDialog';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useEffect, useId, useRef, useState } from 'react';
+import { parseCsv } from '../../lib/csv';
 import { headerSignature, mappingToSaved, savedToMapping } from '../../lib/importColumnMaps';
 import type { LedgerState } from '../../stores/useLedgerStore';
 import type { ColumnMapping } from '../../lib/importColumnMaps';
@@ -105,27 +106,9 @@ export default function StatementImporter({
   const csvPreview = withOccurrenceKeys(csvData.slice(1, 6), row => JSON.stringify(row));
   const [mapping, setMapping] = useState({ date: -1, description: -1, amount: -1, debit: -1, credit: -1, payee: -1, memo: -1, skipRows: 1 });
 
-  const parseCsvText = (text: string): string[][] => {
-    const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
-    return lines.map(line => {
-      const result: string[] = [];
-      let current = '';
-      let inQuotes = false;
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        if (char === '"' || char === "'") {
-          inQuotes = !inQuotes;
-        } else if ((char === ',' || char === '\t') && !inQuotes) {
-          result.push(current.trim().replace(/^["']|["']$/g, ''));
-          current = '';
-        } else {
-          current += char;
-        }
-      }
-      result.push(current.trim().replace(/^["']|["']$/g, ''));
-      return result;
-    });
-  };
+  // #101: the shared RFC 4180 reader — only double quotes quote, so "O'Brien" stays one cell, and
+  // quoted commas, line breaks and doubled quotes are kept
+  const parseCsvText = (text: string): string[][] => parseCsv(text).map(row => row.map(cell => cell.trim()));
 
   const cleanAmountStr = (str: string): string => {
     if (!str) return '0';
@@ -254,16 +237,20 @@ export default function StatementImporter({
     let skipped = 0;
     
     const results = dataRows.map(row => {
+      // #101: an empty or unreadable amount makes the row invalid (counted as skipped), never $0
+      const money = (cell: string | undefined) => {
+        const cleaned = cleanAmountStr(cell ?? '');
+        return cell !== undefined && cell.trim() !== '' && /^[+-]?\d+(\.\d+)?$/.test(cleaned) ? TruthEngine.parseAmountToCentsOrZero(cleaned) : NaN;
+      };
       let amountCents: number;
       if (hasAmount) {
-        const amountStr = cleanAmountStr(row[mapping.amount]);
-        amountCents = TruthEngine.parseAmountToCentsOrZero(amountStr);
+        amountCents = money(row[mapping.amount]);
       } else {
-        const debitStr = cleanAmountStr(row[mapping.debit]);
-        const creditStr = cleanAmountStr(row[mapping.credit]);
-        const debit = TruthEngine.parseAmountToCentsOrZero(debitStr);
-        const credit = TruthEngine.parseAmountToCentsOrZero(creditStr);
-        amountCents = credit - debit;
+        const debitCell = row[mapping.debit];
+        const creditCell = row[mapping.credit];
+        const debit = debitCell?.trim() ? money(debitCell) : 0;
+        const credit = creditCell?.trim() ? money(creditCell) : 0;
+        amountCents = !debitCell?.trim() && !creditCell?.trim() ? NaN : credit - debit;
       }
       
       const rawDate = row[mapping.date];

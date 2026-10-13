@@ -84,7 +84,7 @@ const ISSUE_MECHANISMS: Array<{ issue: number; file: string; markers: string[] }
   { issue: 98, file: 'src/server/services/timeService.ts', markers: ['export async function moveTime', 'await db.runTransaction(async tx'] }, // repaired: all-or-nothing
   { issue: 99, file: 'src/components/collaboration/TimeTimer.tsx', markers: ['read(workspaceId)', 'setRunning'] },
   { issue: 100, file: 'src/hooks/useLedgerData.ts', markers: ['const loadReferenceData', 'setAnalyticalPatternCache'] },
-  { issue: 101, file: 'src/components/ledger/StatementImporter.tsx', markers: ['parseCsvText', 'inQuotes = !inQuotes'] },
+  { issue: 101, file: 'src/components/ledger/StatementImporter.tsx', markers: ['parseCsv(text)', 'never $0'] }, // repaired: shared RFC 4180 reader
   { issue: 102, file: 'src/components/ledger/StatementImporter.tsx', markers: ['handleFileUpload', 'setCsvData'] },
   { issue: 105, file: 'src/components/banking/TransferModal.tsx', markers: ['retryRef.current.operationId', 'txActions.handleQuickAdd'] },
   { issue: 106, file: 'src/components/banking/TransferModal.tsx', markers: ['candidate.outflowTx, candidate.inflowTx', 'handleUpdateTransaction'] },
