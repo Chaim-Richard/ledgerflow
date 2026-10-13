@@ -21,6 +21,12 @@ const percent = (value: number | null | undefined) => (value === null || value =
  * flagged as partial rather than shown as complete.
  */
 export default function VendorScorecardReportView({ endDate = '' }: { endDate?: string }) {
+  const { data: orders, loading: loadingOrders } = useCollection<PurchaseOrder>('purchaseOrders', { orderByField: 'createdAt', orderDirection: 'desc', limit: 500 });
+  return <VendorScorecardPanel endDate={endDate} orders={orders} ordersLoading={loadingOrders} />;
+}
+
+/** The scorecard for the purchase orders it is given (the wrapper above reads them). */
+export function VendorScorecardPanel({ endDate = '', orders, ordersLoading = false }: { endDate?: string; orders: PurchaseOrder[]; ordersLoading?: boolean }) {
   const bills = useLedgerStore(state => state.bills);
   const vendors = useLedgerStore(state => state.vendors);
   const credits = useLedgerStore(state => state.vendorCredits);
@@ -29,7 +35,6 @@ export default function VendorScorecardReportView({ endDate = '' }: { endDate?: 
   const workspaceId = useAuthStore(state => state.currentWorkspaceId);
   const workspace = useAuthStore(state => state.getCurrentWorkspace());
   const { loading: loadingLedger } = useLedgerCollections('bills', 'vendors', 'vendorCredits');
-  const { data: orders, loading: loadingOrders } = useCollection<PurchaseOrder>('purchaseOrders', { orderByField: 'createdAt', orderDirection: 'desc', limit: 500 });
   const [chosenFrom, setChosenFrom] = useState<string | null>(null);
 
   const to = endDate || getLocalDateISO();
@@ -46,7 +51,7 @@ export default function VendorScorecardReportView({ endDate = '' }: { endDate?: 
   }, [vendors, orders, bills, credits, workspaceId, from, to, valid, homeCurrency]);
 
   const partial = truncated.bills || failed.bills || truncated.vendorCredits || failed.vendorCredits || orders.length >= 500;
-  const loading = loadingLedger || loadingOrders;
+  const loading = loadingLedger || ordersLoading;
   const money = (cents: number, currency?: string) => formatCurrency(cents, currency || homeCurrency);
 
   return <section aria-label="Vendor scorecard" className="p-4 space-y-4 min-w-0">

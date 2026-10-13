@@ -46,7 +46,18 @@ export interface VendorScorecardInput {
   homeCurrency?: string;
 }
 
-const dayNumber = (iso: string) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / 86400000;
+/** Days since 1970-01-01 for a YYYY-MM-DD date, by integer arithmetic (no clock, no time zone). */
+function dayNumber(iso: string): number {
+  const y = +iso.slice(0, 4);
+  const m = +iso.slice(5, 7);
+  const d = +iso.slice(8, 10);
+  const year = m <= 2 ? y - 1 : y;
+  const era = Math.floor(year / 400);
+  const yearOfEra = year - era * 400;
+  const dayOfYear = Math.floor((153 * ((m + 9) % 12) + 2) / 5) + d - 1;
+  const dayOfEra = yearOfEra * 365 + Math.floor(yearOfEra / 4) - Math.floor(yearOfEra / 100) + dayOfYear;
+  return era * 146097 + dayOfEra - 719468;
+}
 const daysBetween = (from: string, to: string) => dayNumber(to) - dayNumber(from);
 const dayOf = (value: unknown) => (typeof value === 'string' ? value.slice(0, 10) : '');
 const inWindow = (date: string, from?: string, to?: string) => !!date && (!from || date >= from) && (!to || date <= to);
