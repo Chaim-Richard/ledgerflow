@@ -1,5 +1,7 @@
 # Project Architecture and Modification Guide
 
+> **Any AI can run this project:** the lead's loop, public issue triage and batch fixing are in [`docs/LEAD_RUNBOOK.md`](docs/LEAD_RUNBOOK.md); the second to-do list (finishing and polish, biggest first) is [`docs/TODO_2.md`](docs/TODO_2.md).
+>
 > **Codex and other AI assistants:** first read [`docs/COORDINATION.md`](docs/COORDINATION.md).
 > It says which task to do next, which files not to touch, and the checks every change must pass.
 > What to build first, and what stays out of the core: [`docs/ROADMAP.md`](docs/ROADMAP.md) (owner, 7 Oct).

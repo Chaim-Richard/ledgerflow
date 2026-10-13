@@ -331,6 +331,16 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
    logos are trademarks and are not covered: we never show them. GridCraft says it is **alpha**. Default: it stays an
    optional, separate add-on that only reads report data and never writes to the books. Say if you want it sooner, or not at all.
 
+47. **Prices (13 Oct, decided by default).** There were four price lists: the pricing page ($0/49/149/499), Settings
+   ($0/29/99/299), the admin screen ($49/$299) and the Stripe checkout, which actually charged **$5, $10 and $50**.
+   Now there is one table, `src/lib/plans.ts`, read by all of them. Default used: **Free $0, Growth $29, Pro $99,
+   Enterprise $299 a month** (yearly 20% off), with the limits the server already enforced (100 / 1,000 / 10,000 /
+   1,000,000 entries; 1 / 5 / 25 / 1,000 people). Feature lists now say only what the app does (no "dedicated Firestore",
+   no "SSO", no "24/7"). Tell Claude your real prices and they change in one place.
+
+48. **Reminder letters for unpaid invoices (13 Oct, decided by default).** AI #3's dunning letters go out 7, 21 and 45 days
+   after the due date, each firmer than the last. Say if you want other days.
+
 ## C. Good to know (no action needed)
 
 - **GitHub Actions minutes (5 Oct, your message):** each automatic GitHub test run cost about 28 of

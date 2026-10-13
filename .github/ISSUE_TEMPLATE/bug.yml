@@ -1,0 +1,38 @@
+name: Something is wrong
+description: A number, screen or action in LedgerFlow does not do what it should.
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Please do not paste real customer names, bank details or passwords.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      placeholder: "I posted a bill for 1,000 and the P&L shows 100."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to see it again
+      placeholder: "1. Purchases → New bill  2. ...  3. ..."
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Money or tax numbers, Reports, Invoices and bills, Bank and reconciliation, Payroll, Import or export, Screens and layout, Sign-in and access, Other]
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Browser and device
+      placeholder: "Chrome on Windows, iPhone Safari…"
