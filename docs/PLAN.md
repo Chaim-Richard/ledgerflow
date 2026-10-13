@@ -367,3 +367,10 @@ bug), golden examples from tax authorities, end-to-end runs against the real dat
 **Not too much:** no screenshot test for every screen (only the ten main ones, refreshed by hand when
 a change is intended and looked at before accepting); no Firefox/Safari runs until users ask; no
 re-running a red job hoping it turns green — a failure is fixed or explained.
+
+**Compared with storytold/photocraft (13 Oct).** PhotoCraft (Rust, ~516k lines) has ~7,600 tests, 35 fuzz
+targets, property tests, a corpus of real files, nightly speed budgets, a dependency-layer check and a
+quality scorecard, on several operating systems. LedgerFlow (~236k lines) has ~3,000 tests (a similar
+number per line), coverage floors, time-zone runs, screenshots and mutation tests, but no fuzzing, no
+real-file corpus, no speed budgets and no layer check. Added: AU-3 property tests (Claude), F-37 fuzzing,
+F-38 speed budgets, F-39 scorecard, F-40 layer check (AI #7), E-56 real-file corpus (AI #5).

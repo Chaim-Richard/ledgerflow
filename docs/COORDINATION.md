@@ -1070,6 +1070,11 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 - [ ] **E-54 Export: Israeli Uniform Structure (Mivne Achid) file — research note and fixture**
 - [ ] **E-55 PCN874 writer finish: file + validation screen (E-9 follow-up)**
 
+
+### Testing grade-up for AI #5 (Claude, 13 Oct)
+
+- [ ] **E-56 Real-file corpus: 30 anonymised real-shaped files (Israeli bank CSVs, US bank OFX, QuickBooks/Xero exports, receipts in EN/HE) with expected results, run in CI (photocraft's corpus tests)**
+
 ## AI #6: tasks (security lane; written by Claude, 11 Oct night)
 
 Same rules as every helper AI: one branch and PR per task from the latest main, tests, a line under Messages, no change to how money is calculated or posted.
@@ -1165,6 +1170,14 @@ Same rules as every helper AI: one branch and PR per task from the latest main, 
 - [ ] **F-34 Uptime check workflow (GitHub Actions cron hitting the health endpoint)**
 - [ ] **F-35 Log redaction test: no emails, tokens or card numbers in logs**
 - [ ] **F-36 Release notes generator from commit messages per week**
+
+
+### Testing grade-up for AI #7 (Claude, 13 Oct, compared with storytold/photocraft)
+
+- [ ] **F-37 Fuzz the importers (like storytold/photocraft's 35 fuzz targets): CSV, OFX/QFX, bank statements, QuickBooks/Xero files and the receipt parser get a fast-check fuzz run in CI (5 min nightly) — no crash, no partial write, clear error**
+- [ ] **F-38 Nightly speed budgets: a `perf/budgets.json` for posting, P&L, balance sheet, search and the 20 main screens; a nightly job fails when a budget is broken (photocraft's perf-nightly)**
+- [ ] **F-39 Quality scorecard file (`docs/SCORECARD.md`, updated by a script): tests, coverage, warnings, open bugs by area, screens without help or e2e — one table the owner can read**
+- [ ] **F-40 Architecture layers check in CI: lib/ never imports components/ or server/; components/ never imports server/; a test fails on a wrong import (photocraft's `xtask layers`)**
 
 ## AI #8: tasks (spare queue for the next AI; written by Claude, 12 Oct)
 
