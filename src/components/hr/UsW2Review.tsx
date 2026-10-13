@@ -57,7 +57,7 @@ export function UsW2Review({ payRuns, homeCurrency }: { payRuns: readonly PayRun
     const draft = drafts[employeeId] || {};
     return {
       employeeId, name, currency: homeCurrency, sourceReviewed: draft.reviewed === true,
-      ...Object.fromEntries(BOXES.map(box => [box.key, exactW2Cents(draft[box.key])])) as Pick<W2ReviewEmployee, BoxKey>,
+      ...(Object.fromEntries(BOXES.map(box => [box.key, exactW2Cents(draft[box.key])])) as Pick<W2ReviewEmployee, BoxKey>),
     };
   }), [employeeNames, drafts, homeCurrency]);
 
