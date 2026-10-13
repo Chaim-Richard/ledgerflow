@@ -29,6 +29,7 @@ import PayRunApprovals from './PayRunApprovals';
 import { TimeOffCell } from './TimeOffCell';
 import { DeductionsCell } from './DeductionsCell';
 import { PayRunHistory } from './PayRunHistory';
+import { IsraelForm102Review } from './IsraelForm102Review';
 import { HourlyPayCell } from './HourlyPayCell';
 import { asPaidFor, hoursToPay, isHourly, type PayableTime } from '../../lib/hourlyPay';
 
@@ -424,6 +425,8 @@ const PayrollViewContent: React.FC = () => {
           </div>
         )
       )}
+
+      {activeTab === 'runs' && <IsraelForm102Review payRuns={payRuns} homeCurrency={useLedgerStore.getState().baseCurrency || 'USD'} />}
 
       {/* Add Employee Modal */}
       {isAddingEmployee && (
