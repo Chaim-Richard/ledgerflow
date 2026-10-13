@@ -1,0 +1,20 @@
+name: Idea or missing feature
+description: Something LedgerFlow should do.
+labels: [idea, needs-triage]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What do you need to do, and why?
+      placeholder: "I send monthly statements to 40 customers and want to do it in one click."
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: How do you do it today?
+  - type: dropdown
+    id: size
+    attributes:
+      label: How much does it matter to you?
+      options: [I cannot use LedgerFlow without it, It would save me real time, Nice to have]
