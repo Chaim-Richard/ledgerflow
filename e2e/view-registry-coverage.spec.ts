@@ -113,6 +113,8 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Subscription Plans', componentName: 'SubscriptionPlansReportView' },
     { label: 'Use Tax Review', componentName: 'UseTaxReportView' },
     { label: 'Purchases from Abroad', componentName: 'ImportServicesReportView' },
+    { label: 'Tax Rule Coverage', componentName: 'RulePackCoverageReportView' },
+    { label: 'Customer Credit Limits', componentName: 'CustomerCreditLimitReportView' },
   ];
 
   for (const report of reportTabs) {
