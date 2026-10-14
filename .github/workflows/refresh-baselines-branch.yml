@@ -1,12 +1,15 @@
 name: Refresh baselines (branch, temporary)
 # TEMPORARY, THIS BRANCH ONLY (AI #3, A-111/A-69): the two new report tabs wrap a row in the report
 # strip at 390px, so the committed pnl/balance-sheet references no longer match. The images can only
-# be captured on the CI Chromium, so this workflow re-captures the matching references and uploads
-# them as an artifact to be committed here; it is deleted before the PR is final.
+# be captured on the CI Chromium, so this workflow re-captures the matching references and commits
+# them to this branch; it is deleted before the PR is final. When the committed images already match,
+# the run stops without a commit (so the workflow cannot loop).
 on:
   push:
     branches: [arena/e64267f5-ledgerflow]
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   capture:
     runs-on: ubuntu-latest
@@ -22,6 +25,18 @@ jobs:
           HUSKY: 0
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test e2e/visual-regression.spec.ts --grep "pnl|balance-sheet" --update-snapshots --retries=0
+      - name: Commit the refreshed images to this branch
+        run: |
+          git config user.name 'Visual baselines (GitHub Actions)'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add e2e/__screenshots__
+          if git diff --cached --quiet; then
+            echo "no baseline change"
+          else
+            git commit -m "test: refresh pnl and balance-sheet visual baselines (two report tabs)"
+            git pull --rebase origin arena/e64267f5-ledgerflow
+            git push origin HEAD:arena/e64267f5-ledgerflow
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
