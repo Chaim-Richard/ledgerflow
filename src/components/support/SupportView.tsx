@@ -29,6 +29,7 @@ import { db } from '../../firebase';
 import { doc, setDoc, updateDoc } from '../../lib/db/firestore';
 import { Labelled } from '../ui/Labelled';
 import AttachmentsPanel from '../common/AttachmentsPanel';
+import { maskCardNumbers } from '../../lib/cardNumberMask';
 
 export default function SupportView() {
   const formId = useId();
@@ -95,11 +96,13 @@ export default function SupportView() {
       const ticketId = `ticket-${Math.random().toString(36).substring(2, 9)}`;
       const createdAt = new Date().toISOString();
       
+      const safeSubject = maskCardNumbers(newTicketSubject);
+      const safeInitialMessage = maskCardNumbers(initialMessage);
       const newTicket: SupportTicket = {
         id: ticketId,
         workspaceId: currentWorkspace.id,
         uid: user?.uid || '',
-        subject: newTicketSubject,
+        subject: safeSubject,
         status: 'open',
         priority: newTicketPriority,
         createdAt,
@@ -126,7 +129,7 @@ export default function SupportView() {
             'Authorization': `Bearer ${idToken}`
           },
           body: JSON.stringify({
-            body: initialMessage,
+            body: safeInitialMessage,
             authorRole: 'user'
           })
         });
@@ -145,7 +148,7 @@ export default function SupportView() {
           workspaceId: currentWorkspace.id,
           authorUid: user?.uid || '',
           authorRole: 'user',
-          body: initialMessage,
+          body: safeInitialMessage,
           createdAt
         };
         await setDoc(doc(db, 'supportMessages', messageId), newMessage);
@@ -168,7 +171,7 @@ export default function SupportView() {
     if (!messageInput.trim() || !selectedTicketId || !currentWorkspace) return;
 
     setIsSending(true);
-    const textToSend = messageInput.trim();
+    const textToSend = maskCardNumbers(messageInput.trim());
     try {
       const idToken = await user?.getIdToken();
       let sentViaApi = false;
