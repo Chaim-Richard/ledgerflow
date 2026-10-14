@@ -211,7 +211,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     "journal-sheet":
       "Review posted journal lines for the dates. Inspect account, debit and credit detail or print the report. Drafts do not belong in the posted journal.",
     "expense-by-category":
-      "Review posted expenses by account category. Compare periods and inspect contributing accounts. Categories come from the workspace chart of accounts.",
+      "Review posted expenses by account category. The read-only expense account list below maps categories to chart accounts and filters loaded bills by split lines, including archived accounts. A bill can match multiple categories, and its displayed amount remains the document total, not the selected line amount. Browser bill lists can be incomplete; the posted ledger report and bill filter are separate views.",
     "income-by-source":
       "Review posted income grouped by its reported source. Compare periods and inspect source totals. Existing account-role and posting rules determine inclusion.",
     "top-expenses-income":
