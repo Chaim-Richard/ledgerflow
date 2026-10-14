@@ -77,6 +77,6 @@ export function paymentMethodFlows(
     undatedCount,
     unverifiedCount,
     impliedCurrencyCount,
-    readyForExport: unverifiedCount === 0 && undatedCount === 0 && Boolean(workspaceId),
+    readyForExport: unverifiedCount === 0 && undatedCount === 0 && Boolean(workspaceId) && map.size > 0,
   };
 }
