@@ -3,6 +3,11 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency } from '../../lib/utils';
 import { computeExpenseByCategory } from '../../lib/reportGenerators';
 import { PieChart } from 'lucide-react';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { LEDGER_COLLECTIONS } from '../../lib/ledgerCollections';
+import ExpenseBillCategories from './ExpenseBillCategories';
 
 interface Props {
   selectedYear?: number;
@@ -18,6 +23,14 @@ export const ExpenseByCategoryReportView: React.FC<Props> = ({
 }) => {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
+  const bills = useLedgerStore(s => s.bills);
+  const { loading: billsLoading } = useLedgerCollections('bills');
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
+  const currency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
+  const cacheWorkspace = useDataNeedsStore(s => s.loadedWorkspaceId);
+  const billsFailed = useDataNeedsStore(s => Boolean(s.failed.bills));
+  const listIncomplete = billsFailed || cacheWorkspace !== workspaceId ||
+    bills.length >= LEDGER_COLLECTIONS.bills.cap || accounts.length >= LEDGER_COLLECTIONS.accounts.cap;
 
   const start = startDate || (selectedYear ? `${selectedYear}-01-01` : undefined);
   const end = endDate || (selectedYear ? `${selectedYear}-12-31` : undefined);
@@ -49,6 +62,10 @@ export const ExpenseByCategoryReportView: React.FC<Props> = ({
           </div>
         </div>
       </div>
+
+      <ExpenseBillCategories key={workspaceId} workspaceId={workspaceId}
+        accounts={accounts} bills={bills} startDate={start} endDate={end}
+        loading={billsLoading} incomplete={listIncomplete} currency={currency} />
 
       {breakdowns.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-neutral-200 text-neutral-500 text-xs">
