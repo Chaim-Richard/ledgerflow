@@ -399,3 +399,6 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
 - Vercel deploys by itself about a minute after each push to `main`.
 - Database changes are applied to Supabase by Claude and tested on a local copy first.
 - Progress and the full list: [TRACKER.md](TRACKER.md).
+
+## 49. While Claude is away (14–17 Oct)
+To keep the other AIs going, give each one this message: **"Read AGENTS.md and docs/COORDINATION.md, then keep working on your queue."** Give Codex this one: **"You are acting lead: follow docs/LEAD_RUNBOOK.md."** You don't need to merge anything yourself. When Claude is back, say "continue" and it picks up from docs/TRACKER.md.
