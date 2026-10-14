@@ -7,6 +7,7 @@ import { getLocalDateISO } from '../../../lib/utils';
 import { recordBackupCompleted } from '../../../lib/ledgerBackupHealth';
 import { isPostable } from '../../../lib/txFilters';
 import WorkspaceExportDialog from './WorkspaceExportDialog';
+import WorkspaceArchiveExport from './WorkspaceArchiveExport';
 
 export default function BackupExportSettings() {
   const [exportOpen, setExportOpen] = useState(false);
@@ -233,6 +234,8 @@ export default function BackupExportSettings() {
             Choose export
           </button>
         </div>
+
+        <WorkspaceArchiveExport />
 
         <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
