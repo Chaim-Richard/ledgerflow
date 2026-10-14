@@ -1,5 +1,5 @@
 import express from 'express';
-import { ledgerCreate } from '../../services/ledgerDoor';
+import { ledgerCreate, ledgerWrite } from '../../services/ledgerDoor';
 import { FieldValue } from '../../db/firestore';
 import { TransactionValidator } from '../../../kernel/validation/TransactionValidator';
 import { TransactionTemplates } from '../../../kernel/templates/TransactionTemplates';
@@ -425,8 +425,8 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
       ]);
 
       // 5. Commit Atomically
-      batch.set(db.collection('transactions').doc(sourceTxId), { ...validSource, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-      batch.set(db.collection('transactions').doc(targetTxId), { ...validTarget, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      await ledgerWrite(batch, db.collection('transactions').doc(sourceTxId), { ...validSource, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      await ledgerWrite(batch, db.collection('transactions').doc(targetTxId), { ...validTarget, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     
       await batch.commit();
 

@@ -1,3 +1,4 @@
+import { ledgerWrite } from './ledgerDoor';
 import Decimal from 'decimal.js';
 import { FieldValue } from '../db/firestore';
 import type { Firestore } from '../db/firestore';
@@ -136,7 +137,7 @@ export async function adjustStock(db: Firestore, input: StockAdjustmentInput): P
         lines,
       }, { workspaceId, user: input.user, wsData: input.wsData }, undefined, t);
       transactionId = tx.id;
-      t.set(db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      await ledgerWrite(t, db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     }
     for (const u of updates) t.update(u.ref, u.data);
     // W-02: the history of each item changed, with the entry it belongs to

@@ -46,3 +46,16 @@ export function ledgerCreate(t: Creatable, ref: unknown, entry: Record<string, u
   checkLedgerEntry(entry);
   t.create(ref, entry);
 }
+
+/** The header fields a posted entry may change after posting; amounts and lines never change in place. */
+export const LEDGER_MARK_FIELDS = new Set(['status', 'voidedReason', 'voidedAt', 'reversalEventId', 'updatedAt']);
+
+interface Updatable { update(ref: unknown, data: Record<string, unknown>): unknown }
+
+/** Marks an existing entry (void, reversed by…) inside `t`; refuses any change to its amounts or lines. */
+export function ledgerMark(t: Updatable, ref: unknown, patch: Record<string, unknown>): void {
+  for (const key of Object.keys(patch)) {
+    if (!LEDGER_MARK_FIELDS.has(key)) throw new LedgerDoorError(`A posted entry cannot change "${key}" in place; post a correcting entry instead`);
+  }
+  t.update(ref, patch);
+}

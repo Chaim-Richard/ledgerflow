@@ -29,7 +29,7 @@
 - [ ] `silent-catch` src/components/ledger/StatementImporter.tsx:319 — handleParse
 - [ ] `silent-catch` src/components/ledger/TransactionGridShared.tsx:56 — handleEvaluateAndSave
 - [ ] `silent-catch` src/components/migration/QBOMigrationWizard.tsx:526 — handleNext
-- [ ] `silent-catch` src/components/platform/settings/BackupExportSettings.tsx:53 — exportJSON
+- [ ] `silent-catch` src/components/platform/settings/BackupExportSettings.tsx:54 — exportJSON
 - [ ] `silent-catch` src/components/platform/settings/BillingSettings.tsx:28 — fetchStatus
 - [ ] `silent-catch` src/components/platform/settings/BlueprintSettings.tsx:150 — handleSaveCurrency
 - [ ] `silent-catch` src/components/platform/SystemCommandCenter.tsx:320 — fetchUsersData
@@ -42,9 +42,9 @@
 - [ ] `silent-catch` src/components/purchases/ExpenseClaims.tsx:26 — saveRates
 - [ ] `silent-catch` src/components/sales/EstimatesView.tsx:163 — nextInvoiceNumber
 - [ ] `silent-catch` src/components/sales/InvoiceModal.tsx:108 — fetchNextNumber
-- [ ] `silent-catch` src/components/support/SupportView.tsx:136 — handleCreateTicket
-- [ ] `silent-catch` src/components/support/SupportView.tsx:190 — handleSendMessage
-- [ ] `silent-catch` src/components/support/SupportView.tsx:243 — updateStatus
+- [ ] `silent-catch` src/components/support/SupportView.tsx:139 — handleCreateTicket
+- [ ] `silent-catch` src/components/support/SupportView.tsx:193 — handleSendMessage
+- [ ] `silent-catch` src/components/support/SupportView.tsx:246 — updateStatus
 - [ ] `silent-catch` src/hooks/transactionActions/postingHelpers.ts:97 — recordRulePattern
 - [ ] `silent-catch` src/hooks/useCollaborators.ts:43 — updatePresence
 - [ ] `silent-catch` src/hooks/useEntityOperations.ts:88 — syncEntityBalance
@@ -200,7 +200,7 @@
 - [ ] `swallowing-action` src/components/platform/settings/AISettings.tsx:110 — handleWipeRuleCache
 - [ ] `swallowing-action` src/components/platform/settings/AppearanceSettings.tsx:55 — handleTimezoneChange
 - [ ] `swallowing-action` src/components/platform/settings/AppearanceSettings.tsx:79 — handleFiscalStartChange
-- [ ] `swallowing-action` src/components/platform/settings/BackupExportSettings.tsx:121 — handleFileSelect
+- [ ] `swallowing-action` src/components/platform/settings/BackupExportSettings.tsx:122 — handleFileSelect
 - [ ] `swallowing-action` src/components/platform/settings/BillingSettings.tsx:80 — handleCheckout
 - [ ] `swallowing-action` src/components/platform/settings/BillingSettings.tsx:110 — handleOpenPortal
 - [ ] `swallowing-action` src/components/platform/settings/BlueprintSettings.tsx:88 — handleSaveMappings
@@ -228,9 +228,9 @@
 - [ ] `swallowing-action` src/components/sales/PublicInvoicePage.tsx:44 — handlePay
 - [ ] `swallowing-action` src/components/sales/ReceivePaymentModal.tsx:171 — handleSubmit
 - [ ] `swallowing-action` src/components/sales/WriteOffModal.tsx:38 — handleWriteOff
-- [ ] `swallowing-action` src/components/support/SupportView.tsx:89 — handleCreateTicket
-- [ ] `swallowing-action` src/components/support/SupportView.tsx:166 — handleSendMessage
-- [ ] `swallowing-action` src/components/support/SupportView.tsx:226 — updateStatus
+- [ ] `swallowing-action` src/components/support/SupportView.tsx:90 — handleCreateTicket
+- [ ] `swallowing-action` src/components/support/SupportView.tsx:169 — handleSendMessage
+- [ ] `swallowing-action` src/components/support/SupportView.tsx:229 — updateStatus
 - [ ] `swallowing-action` src/hooks/transactionActions/importActions.ts:253 — handleParseReceipt
 - [ ] `swallowing-action` src/hooks/transactionActions/integrityActions.ts:17 — handleBulkRepair
 - [ ] `swallowing-action` src/hooks/transactionActions/postingHelpers.ts:15 — recordRulePattern
@@ -271,13 +271,6 @@
 
 ## Server and database integrity review (not confirmed incidents)
 
-- [ ] `server-direct-ledger-write` src/server/routes/transactions/reverseRoutes.ts:428 — set
-- [ ] `server-direct-ledger-write` src/server/routes/transactions/reverseRoutes.ts:429 — set
-- [ ] `server-direct-ledger-write` src/server/services/badDebtService.ts:141 — update
-- [ ] `server-direct-ledger-write` src/server/services/deliveryService.ts:175 — update
-- [ ] `server-direct-ledger-write` src/server/services/fxRevaluationService.ts:348 — update
-- [ ] `server-direct-ledger-write` src/server/services/payRunService.ts:299 — update
-- [ ] `server-direct-ledger-write` src/server/services/stockAdjustmentService.ts:139 — set
 - [ ] `server-partial-batch-commit` src/server/routes/transactions/periodRoutes.ts:225 — batch.commit
 - [ ] `server-partial-batch-commit` src/server/services/maintenanceService.ts:24 — batch.commit
 - [ ] `server-partial-batch-commit` src/server/services/notificationService.ts:161 — batch.commit

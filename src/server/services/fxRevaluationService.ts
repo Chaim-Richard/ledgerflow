@@ -1,5 +1,5 @@
 import { FieldValue } from '../db/firestore';
-import { ledgerCreate } from './ledgerDoor';
+import { ledgerCreate, ledgerMark } from './ledgerDoor';
 import type { DocumentData, Firestore, Transaction as DbTransaction } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { isIncomeAccount, resolveAccountRole } from '../../lib/accountUtils';
@@ -345,7 +345,7 @@ export async function undoRevaluation(db: Firestore, input: { workspaceId: strin
     });
     const now = new Date().toISOString();
     ledgerCreate(t, db.collection('transactions').doc(String(reversal.id)), { ...reversal, createdAt: FieldValue.serverTimestamp(), updatedAt: now });
-    t.update(db.collection('transactions').doc(String(found.id)), { reversalEventId: reversal.id, updatedAt: now });
+    ledgerMark(t, db.collection('transactions').doc(String(found.id)), { reversalEventId: reversal.id, updatedAt: now });
     // The active scheduled entry was checked above and is voided in the same transaction as this
     // mirror. It stays in the audit trail; isPostable drops it so it cannot reverse the entry twice.
     t.update(scheduled, { status: 'void', voidedReason: `Undone early, with an entry dated ${today}`, updatedAt: now });

@@ -1,5 +1,5 @@
 import type { DocumentData, Firestore, Transaction } from '../db/firestore';
-import { ledgerCreate } from './ledgerDoor';
+import { ledgerCreate, ledgerMark } from './ledgerDoor';
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { resolveAccountRole } from '../../lib/accountUtils';
@@ -138,7 +138,7 @@ export async function reverseWriteOff(db: Firestore, input: Input) {
     });
 
     ledgerCreate(t, db.collection('transactions').doc(ledgerTx.id), { ...ledgerTx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-    t.update(db.collection('transactions').doc(String(invoice.writeOffTransactionId)), { reversalEventId: ledgerTx.id, updatedAt: new Date().toISOString() });
+    ledgerMark(t, db.collection('transactions').doc(String(invoice.writeOffTransactionId)), { reversalEventId: ledgerTx.id, updatedAt: new Date().toISOString() });
     const paid = Math.max(0, (Number(invoice.amountPaidCents) || 0) - writtenOff);
     const today = formatTzDate(new Date(), typeof workspace.timezone === 'string' ? workspace.timezone : 'UTC');
     t.update(ref, {

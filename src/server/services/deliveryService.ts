@@ -12,7 +12,7 @@
  * other way round), so no unit leaves twice or never.
  */
 import { FieldValue } from '../db/firestore';
-import { ledgerCreate } from './ledgerDoor';
+import { ledgerCreate, ledgerMark } from './ledgerDoor';
 import type { Firestore, Transaction as DbTransaction } from '../db/firestore';
 import { assertPeriodOpen, validateWorkspaceAccounts } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
@@ -172,7 +172,7 @@ export async function undoDelivery(db: Firestore, input: { workspaceId: string; 
     const stock = await prepareStockMoves(db, t, input.workspaceId, reversals as unknown as Parameters<typeof prepareStockMoves>[3]);
     stock.apply();
     for (const tx of reversals) ledgerCreate(t, db.collection('transactions').doc(tx.id), { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-    for (const original of originals) t.update(db.collection('transactions').doc(original.id), { reversalEventId: `${original.id}_undo`, updatedAt: FieldValue.serverTimestamp() });
+    for (const original of originals) ledgerMark(t, db.collection('transactions').doc(original.id), { reversalEventId: `${original.id}_undo`, updatedAt: FieldValue.serverTimestamp() });
     await writeServerAuditLog({
       workspaceId: input.workspaceId, uid: input.uid, email: input.email, action: 'DELIVERY_UNDONE', entityType: 'estimates', entityId: input.orderId,
       details: { description: `Delivery of ${delivery.date} undone: ${delivery.lines.map(l => `× ${l.quantity}`).join(', ')}` },

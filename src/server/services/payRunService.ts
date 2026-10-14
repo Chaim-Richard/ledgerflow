@@ -1,5 +1,5 @@
 import type { DocumentData, DocumentReference, Firestore, Transaction as Tx } from '../db/firestore';
-import { ledgerCreate } from './ledgerDoor';
+import { ledgerCreate, ledgerMark } from './ledgerDoor';
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { lockMessage, postingLock, workspaceRole } from '../../lib/periodLock';
@@ -296,7 +296,7 @@ export async function undoPayRun(db: Firestore, input: Actor & { payRunId: strin
     const lock = postingLock(String(run.date), workspace as never, input.uid);
     if (lock) throw new PayRunError(409, lockMessage(String(run.date), lock));
     const now = new Date().toISOString();
-    t.update(db.collection('transactions').doc(String(run.transactionId)), { status: 'void', voidedReason: 'Pay run undone', voidedAt: now, updatedAt: now });
+    ledgerMark(t, db.collection('transactions').doc(String(run.transactionId)), { status: 'void', voidedReason: 'Pay run undone', voidedAt: now, updatedAt: now });
     t.update(runRef, { status: 'undone', undoneAt: now });
     markTime(t, db, (run.employees || []) as PayRunEmployeeLine[], null);
     await writeServerAuditLog({
