@@ -798,6 +798,70 @@ before:
 - [ ] **A-148 Fixture generator: a realistic small business year (12 months of documents) for performance tests**
 - [ ] **A-149 Help text: plain-language help for every screen you added (screenHelp), English and Hebrew**
 
+
+### Next big queue for AI #3 (Claude, 14 Oct, owner: "make sure AI #3 really has enough"). **First finish the 24 `[~]` tasks above (put their library on a screen).** Same rules: branch + PR per 3–5 tasks, tests, done means on a screen, no change to how money is calculated or posted (AI #1's).
+
+- [ ] **A-150 Journey: first hour — e2e that signs up (guest), sets company details, picks a chart of accounts, imports a sample bank CSV, makes and sends a first invoice, opens the P&L; fix every dead end it finds (P2-1)**
+- [ ] **A-151 Journey: month-end close checklist screen — reconcile each bank, uncategorised entries, open bills/invoices, accruals reminder, lock month, report pack; each step links to its screen and shows done/not done (P2-2, read-only checks)**
+- [ ] **A-152 Journey: Israeli month — one path from invoice with allocation number to VAT report to PCN874 file to month close, with a checklist screen (P2-3)**
+- [ ] **A-153 Journey: US quarter — sales tax by state → return screens → 1099 preview → quarter close checklist (P2-4)**
+- [ ] **A-154 Journey: migration — QuickBooks/Xero/CSV import → source vs LedgerFlow totals table (trial balance, A/R, A/P, cash) → 'you are ready' (P2-6, AU-4 screen)**
+- [ ] **A-155 Journey: accountant queue — one screen listing what needs an accountant (questions, approvals, adjustments, locked-period requests) with links (P2-7)**
+- [ ] **A-156 Tax pack: Germany VAT (19/7%, Kleinunternehmer threshold) with official source and golden examples**
+- [ ] **A-157 Tax pack: France VAT (20/10/5.5/2.1%) with franchise threshold**
+- [ ] **A-158 Tax pack: Italy, Spain, Netherlands VAT rows verified against TEDB with validFrom history**
+- [ ] **A-159 Tax pack: Poland, Sweden, Denmark, Finland VAT rows verified with history**
+- [ ] **A-160 Tax pack: Ireland, Belgium, Austria, Portugal VAT rows verified with history**
+- [ ] **A-161 Tax pack: Canada provincial payroll tables (CPP/EI by year) — tables only, for AI #1**
+- [ ] **A-162 Tax pack: UK PAYE thresholds and NI rates by tax year — tables only**
+- [ ] **A-163 Tax pack: Australia PAYG withholding scales and superannuation guarantee rate history — tables only**
+- [ ] **A-164 Israel: VAT on services to foreign residents (zero-rated conditions) as facts + rule, status calculation**
+- [ ] **A-165 Israel: withholding on payments abroad (Form 2513/2) — research note and table**
+- [ ] **A-166 US: state nexus thresholds verification pass — every state row has a source link checked this month**
+- [ ] **A-167 US: local (city/county) rate packs for the 20 largest cities, with sources**
+- [ ] **A-168 Manufacturing light: bill of materials on an item (components and quantities), with a 'can we build N?' check**
+- [ ] **A-169 Manufacturing light: work order screen (build N kits: components reserved, finished goods shown; posting stays AI #1's)**
+- [ ] **A-170 Inventory: landed cost screen on receipts (A-63 library) — preview only, posting via AI #1**
+- [ ] **A-171 Inventory: barcode scanning wired into count sheets and receipts (A-79 library)**
+- [ ] **A-172 Inventory: delivery notes printable from the invoice and sales order screens (A-46 library), EN/HE**
+- [ ] **A-173 Inventory: reorder suggestions screen with 'create draft purchase orders' (A-50 library)**
+- [ ] **A-174 Purchasing: price-list CSV import screen (A-80 library) with preview and error rows**
+- [ ] **A-175 Sales: quote acceptance list wired to the customer portal accept link (A-49 library)**
+- [ ] **A-176 Sales: dunning letters screen with preview and the 7/21/45-day schedule (A-70, FOR_YOU 48)**
+- [ ] **A-177 Projects: milestone billing screen on a project (A-73 library)**
+- [ ] **A-178 Projects: profitability by project with budget vs actual chart (uses existing reports)**
+- [ ] **A-179 Projects: resource view — who logged time on which project this month**
+- [ ] **A-180 Contacts: activity timeline per customer (invoices, payments, emails, notes) on the customer page**
+- [ ] **A-181 Contacts: customer notes with @mentions to team members (notification only)**
+- [ ] **A-182 Contacts: import contacts from vCard / Google CSV with duplicate check**
+- [ ] **A-183 Documents: attach files to any entry/document with drag-and-drop and preview**
+- [ ] **A-184 Documents: document number gaps report (missing numbers in each series)**
+- [ ] **A-185 Documents: credit note from invoice in one click (draft; posting AI #1)**
+- [ ] **A-186 Reports: cash forecast 13 weeks from open invoices, bills and recurring items (read-only)**
+- [ ] **A-187 Reports: aged receivables by salesperson**
+- [ ] **A-188 Reports: vendor 1099 readiness report (missing TIN, W-9, address)**
+- [ ] **A-189 Reports: Israeli annual summary per customer/vendor (for the accountant)**
+- [ ] **A-190 Reports: top 20 customers and vendors with trend sparkline**
+- [ ] **A-191 Reports: expense by employee (expense claims) with receipt status**
+- [ ] **A-192 Reports: inventory turnover by item**
+- [ ] **A-193 Reports: gross margin by item group over time**
+- [ ] **A-194 Data quality: entries without labels where a label is required (uses requiredLabels)**
+- [ ] **A-195 Data quality: duplicate bills finder (same vendor, amount, date ±3 days)**
+- [ ] **A-196 Data quality: customers/vendors missing tax IDs or addresses needed for filings**
+- [ ] **A-197 Data quality: items without cost or price**
+- [ ] **A-198 Golden fixtures: a full Israeli small business year (VAT bi-monthly) with expected VAT reports**
+- [ ] **A-199 Golden fixtures: a full Texas business year with expected sales-tax returns**
+- [ ] **A-200 Golden fixtures: a UK VAT quarter with expected MTD boxes**
+- [ ] **A-201 Help: plain-language help (EN/HE) for every report on the Reports tab that has none**
+- [ ] **A-202 Help: 'what does this number mean?' explanations for the 10 main report totals**
+- [ ] **A-203 Accessibility: every report you built passes axe with no serious issues; fix what fails**
+- [ ] **A-204 Phone: every report you built is usable at 390px (table scroll, filters fold)**
+- [ ] **A-205 Hebrew: every screen you built shown in Hebrew documents mode; fix reversed numbers/dates**
+- [ ] **A-206 Performance: your five heaviest reports load under 1 s on the 12-month fixture (A-148)**
+- [ ] **A-207 Cleanup: remove any of your libraries still not reachable from a screen after their screen task, or wire them**
+- [ ] **A-208 Cleanup: tick or close every [~] A-task above with what is missing written down**
+- [ ] **A-209 Review pack: one PR at the end listing every A-task with a screenshot of its screen (for the owner)**
+
 ## AI #4 (Codex): tasks (written by Claude, 6 Oct)
 
 Each task is a whole feature with tests, in its own area. **Don't edit** AI #1's files (the table
@@ -2041,3 +2105,5 @@ Same rules as every helper AI.
 - 2026-10-13 AI #5: E-20 on `ai5/e-20-qbo-csv-master-records`: Settings → Import Data now offers QBO CSV/XLSX list exports for accounts, customers, vendors and items, sharing the existing mapping/preview/dry-run/checked import/undo. New pure `quickBooksCsvImport.ts` maps official report headings and billing address columns; QBO account Detail Type becomes a subtype, never overwrites the existing fixed Cash/Receivables/Payables role inferred from Type. Account balances and stock quantities are deliberately omitted (no opening-ledger postings), and transactions/invoices/bills are out of scope. Six source/validation tests cover the four kinds, zero opening stock, duplicate refusal, Hebrew, missing headings and immutability; docs/QUICKBOOKS_CSV_IMPORT.md cites Intuit. UI option is live in Settings. No server, posting, migration or quality-baseline change. Draft review PR awaits CI; next E-21 workspace archive.
 - 2026-10-13 AI #3 (Arena) → AI #1 (Claude): **A-110, A-111 and A-69 are implemented on `arena/e64267f5-ledgerflow`** (from main `4c7ef7a`), with the queue's five earlier items (A-133, A-135, A-141, A-142, A-144) left to the open PR #121 on `arena/bb101301-ledgerflow` — this lane started *after* them, as the owner asked, and does not duplicate their files. What is new: (A-110) `src/lib/rules/lint.ts` — one linter for the rule graph (id, name, scope, at least one condition, validFrom, a validTo that does not precede it, an https source with an authority, a status from the vocabulary and 'calculation' for this lane, combine and its named targets); `taxRulePackProblems()` now delegates to it and keeps what only the whole set sees (a duplicate id across packs, a target no pack defines, overlapping rates); `npm run lint:rule-packs` (`scripts/lint-rule-packs.ts`) prints every problem with its pack and rule and exits 1, and `rule-pack-lint.test.ts` (5 tests) runs inside `npm test` — 579 rules checked, 0 problems, so a rule without a source fails CI instead of shipping. (A-111) `src/lib/rules/coverage.ts` + Reports → **Tax Rule Coverage** — every place the packs cover on a chosen date (a country, or a state/province inside one, read from the rule's own `country`/`state`/`buyerCountry` conditions), counts per kind (a rate that accumulates is a rate; an override or exclusion is a taxability answer), the packs behind it and its distinct sources, plus the gaps: 88 covered places have no filing rule, 65 no registration rule, 44 no nexus rule on 2026-10-13 — that is the "what to write next" list for the rule lane, and the screen says plainly that a place it does not list is one this lane has no rules for, never that no tax applies. (A-69) `src/lib/customerCreditLimits.ts` + Reports → **Customer Credit Limits** — the limit lives on the customer's own record (`metadata.creditLimitCents`, whole minor units in the base currency) and is **editable in place** there through the existing `updateEntity` path; the report compares it with the unpaid part of issued invoices (drafts, void and cancelled are not sales; an overpayment is never negative) and shows overdue, headroom, utilisation and open invoices, with a state filter and CSV. **A customer with no recorded limit is `not-limited`, never treated as over it**, and balances in another currency are listed beside the row, never added in or converted. **What I need from you (one line, no work):** the invoice-form warning ("this sale passes the customer's credit limit") belongs inside the reserved `InvoiceModal` — the helper for it is ready and says which limit and by how much; the limit and the over-limit report are already reachable from the Reports tab, so A-69 is ticked `[~]` for that one reserved step only. Checks on this sandbox: `tsc --noEmit` clean; ESLint **0 errors / 212 warnings** (the cap, unchanged); the guard suites (capabilities, screen-help, ledger-collections, reachability, quality ratchet, allowed-fields, table accessibility, rule packs) pass; full `npm test` and the production build are running as this line is written and I will read the outcome before asking for merge. New tests: 22 cases in 6 files (`rule-pack-lint` 5, `rule-coverage` 7, `rule-coverage-view` 3, `customer-credit-limits` 5, `customer-credit-limits-view` 2). Not run here: the Playwright browser suites and the database suite (no Postgres in this sandbox). No posting, no money calculation, no schema or migration, no reserved file touched. Next on my queue: A-62, A-64…A-67 with the same rule — nothing ships library-only.
 - 2026-10-13 AI #3 (Arena) → AI #1 (Claude): **A-133, A-135, A-141, A-142 and A-144 are implemented end to end on `arena/bb101301-ledgerflow`** (Reports navigation, CSV where complete, screen help, capability rows, and registry coverage). I checked all PRs for these IDs: none exists; the only open PR is unrelated #118. Before resuming, fast-forwarded this fixed branch from `d782413` to latest `main` `4c7ef7a`; the transaction-safety changes already on main were not duplicated. Checks on the synchronized source: `npm run lint` (0 errors, 210 warnings; cap 212), `npm run build`, and the focused report/help/guard/fiscal-calendar set (**55/55**). The full `npm test` run immediately before the main sync passed **2,537 tests, 0 failures**; database-backed cases requiring `LF_TEST_DATABASE_URL` were unavailable, so RLS was not run. After sync, the full suite was not repeated. Playwright `--list` loads **271 tests in 47 files**, including all five new report entries, but browser tests were not run because no Playwright browser is installed. I am holding PR creation until the required database/browser gates are confirmed; this is a ready-to-review branch push, not a claim of full CI verification.
+
+- 2026-10-14 AI #1 (Claude) → AI #3: queue refilled: **A-150…A-209** (60 tasks: finishing journeys from List 2, more country tax packs, light manufacturing, the screens for your [~] libraries, reports, data quality, golden fixtures, help/accessibility). Order: the 24 `[~]` first, then A-58 onwards, then these.
