@@ -57,4 +57,50 @@ describe('Form 856 withholding report screen', () => {
     assert.equal(screen.queryByRole('table'), null);
     assert.match(screen.getByText(/No vendor payment in 2024 has tax withheld/).textContent || '', /2024/);
   });
+  test('E-17: review export stays blocked for guest, incomplete workspace and capped payment cache', () => {
+    render(<Form856ReportView />);
+    const button = screen.getByRole('button', { name: 'Download review worksheet CSV' }) as HTMLButtonElement;
+    assert.equal(button.disabled, true, 'guest records never count as verified history');
+    assert.match(screen.getByText(/Demo data cannot be exported/).textContent || '', /Demo data/);
+    cleanup();
+
+    useAuthStore.setState({ isGuest: false, currentWorkspaceId: 'book-a' });
+    useDataNeedsStore.setState({
+      loaded: { payments: true } as never, loadedWorkspaceId: 'book-b', failed: {},
+    });
+    useLedgerStore.setState({
+      payments: payments.map(payment => ({ ...payment, workspaceId: 'book-a', status: 'posted' })) as never,
+      baseCurrency: 'ILS',
+    });
+    render(<Form856ReportView />);
+    assert.equal((screen.getByRole('button', { name: 'Download review worksheet CSV' }) as HTMLButtonElement).disabled, true);
+    assert.ok(screen.getByText(/has not finished loading for this workspace/));
+    cleanup();
+
+    useDataNeedsStore.setState({ loadedWorkspaceId: 'book-a' });
+    render(<Form856ReportView />);
+    const enabledAfterReview = screen.getByRole('button', { name: 'Download review worksheet CSV' }) as HTMLButtonElement;
+    assert.equal(enabledAfterReview.disabled, true, 'explicit review acknowledgement required');
+    fireEvent.click(screen.getByRole('checkbox', { name: /I understand this is a review/ }));
+    assert.equal(enabledAfterReview.disabled, false, 'eligible scoped worksheet may be reviewed');
+    fireEvent.change(screen.getByLabelText('Year'), { target: { value: '2025' } });
+    assert.equal(enabledAfterReview.disabled, true, 'acknowledgement does not carry across tax years');
+  });
+
+  test('E-17: an invalid payment or a foreign workspace record refuses the review export', () => {
+    useAuthStore.setState({ isGuest: false, currentWorkspaceId: 'book-a' });
+    useDataNeedsStore.setState({ loaded: { payments: true } as never, loadedWorkspaceId: 'book-a', failed: {} });
+    useLedgerStore.setState({
+      payments: [
+        { ...payments[0], workspaceId: 'book-a', status: 'posted', currency: 'USD' },
+        { ...payments[1], workspaceId: 'book-b', status: 'posted' },
+      ] as never,
+      baseCurrency: 'ILS',
+    });
+    render(<Form856ReportView />);
+    assert.equal((screen.getByRole('button', { name: 'Download review worksheet CSV' }) as HTMLButtonElement).disabled, true);
+    assert.ok(screen.getByText(/different workspace/));
+    assert.ok(screen.getByText(/Foreign\/unknown-currency/));
+  });
+
 });

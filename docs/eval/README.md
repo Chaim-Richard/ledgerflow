@@ -35,3 +35,22 @@ its source before a filing position. The diff's pure core is covered by
 
 The 2026-10-12 snapshot (389 rules, every pack including the new A-40/A-41 content) is the first one;
 the same-day diff is empty by construction, which is what it should report.
+
+## `npm run lint:rule-packs` (A-110)
+
+Not a report: the gate. `src/lib/rules/lint.ts` checks every rule the packs write — an id, a name, a
+scope, at least one condition, a `validFrom` date, a `validTo` that does not precede it, an `https`
+source with an authority, a status from the vocabulary (and `calculation` for this lane), a valid
+combine and the targets it names — and `scripts/lint-rule-packs.ts` prints each problem with its pack
+and its rule, exiting 1 when there is any.
+
+```bash
+npm run lint:rule-packs           # the table of problems, then the count
+npm run lint:rule-packs -- --quiet  # just the count
+```
+
+`src/tests/rule-pack-lint.test.ts` runs the same check over every pack inside `npm test`, so a rule
+that lands without a source fails CI rather than the reader. `taxRulePackProblems()` delegates to the
+linter and adds what only the whole set can see: a duplicate id across packs and a target no pack
+defines. The script was not run against the packs by hand here beyond `npm test`; the counts it prints
+on 2026-10-13 are 579 rules checked, 0 problems.

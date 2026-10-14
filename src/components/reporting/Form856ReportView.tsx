@@ -6,10 +6,14 @@
  */
 import { useMemo, useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
+import { LEDGER_COLLECTIONS } from '../../lib/ledgerCollections';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { downloadCsv } from '../../lib/csvExport';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
-import { FORM_856_CSV_HEADERS, form856CsvRows, form856Notes, form856Rows, form856Summary, form856Year, type Form856Payment } from '../../lib/tax/form856';
+import { form856Notes, form856Rows, form856Summary, form856Year } from '../../lib/tax/form856';
+import { form856ReviewExport, type Form856ReviewPayment } from '../../lib/tax/form856ReviewExport';
 
 const th = 'font-semibold py-1 px-2';
 
@@ -17,19 +21,43 @@ export default function Form856ReportView() {
   const { loading } = useLedgerCollections('payments');
   const payments = useLedgerStore(s => s.payments);
   const baseCurrency = useLedgerStore(s => s.baseCurrency) || 'ILS';
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const isGuest = useAuthStore(s => s.isGuest && !s.user);
+  const paymentsLoaded = useDataNeedsStore(s => s.loaded.payments);
+  const loadedWorkspaceId = useDataNeedsStore(s => s.loadedWorkspaceId);
+  const paymentLoadError = useDataNeedsStore(s => s.failed.payments);
+  const [acknowledgedScope, setAcknowledgedScope] = useState('');
   const thisYear = (getLocalDateISO() || new Date().toISOString()).slice(0, 4);
   const [year, setYear] = useState(thisYear);
 
+  // The live browser cache may be capped or still belong to the previous workspace.
+  // This report remains a review of recorded data, never a complete annual filing.
+  const scopedPayments = useMemo(() => {
+    const all = (payments || []) as Array<Form856ReviewPayment & { workspaceId?: string }>;
+    return isGuest ? all : all.filter(payment => payment.workspaceId === currentWorkspaceId);
+  }, [payments, isGuest, currentWorkspaceId]);
   const years = useMemo(() => {
     const found = new Set<string>([thisYear]);
-    for (const payment of (payments || []) as Form856Payment[]) {
+    for (const payment of scopedPayments) {
       const y = form856Year(payment.date);
       if (y) found.add(y);
     }
     return [...found].sort().reverse();
-  }, [payments, thisYear]);
+  }, [scopedPayments, thisYear]);
 
-  const rows = useMemo(() => form856Rows((payments || []) as Form856Payment[], year), [payments, year]);
+  const rows = useMemo(() => form856Rows(scopedPayments, year), [scopedPayments, year]);
+  const worksheet = useMemo(() => form856ReviewExport(scopedPayments, year, baseCurrency), [scopedPayments, year, baseCurrency]);
+  const scopeKey = `${currentWorkspaceId ?? 'none'}:${year}`;
+  const sourceBlockers = [
+    ...(isGuest ? ['Demo data cannot be exported as a verified yearly record.'] : []),
+    ...(!currentWorkspaceId ? ['Choose a workspace before downloading.'] : []),
+    ...(loading || !paymentsLoaded || loadedWorkspaceId !== currentWorkspaceId ? ['The payment list has not finished loading for this workspace.'] : []),
+    ...(paymentLoadError ? ['The payments read failed; retry the collection load first.'] : []),
+    ...((payments || []).length >= LEDGER_COLLECTIONS.payments.cap ? ['The payments list hit its limit; older payments may be missing.'] : []),
+    ...(!isGuest && (payments || []).some(payment => payment.workspaceId !== currentWorkspaceId) ? ['The payment cache contains records from a different workspace.'] : []),
+    ...worksheet.blockers,
+  ];
+  const canDownloadWorksheet = worksheet.canDownloadForReview && sourceBlockers.length === 0 && acknowledgedScope === scopeKey;
   const summary = useMemo(() => form856Summary(rows), [rows]);
   const notes = useMemo(() => form856Notes(rows), [rows]);
   const money = (cents: number) => formatCurrency(cents, baseCurrency);
@@ -49,12 +77,37 @@ export default function Form856ReportView() {
             className="px-3 py-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-sm">
             {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-          <button type="button" disabled={rows.length === 0}
-            onClick={() => downloadCsv(`form-856-${year}.csv`, FORM_856_CSV_HEADERS, form856CsvRows(rows))}
-            className="px-4 py-2 rounded-xl border border-[var(--line)] text-xs font-bold uppercase tracking-widest disabled:opacity-40">
-            Download CSV
-          </button>
+
         </div>
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 text-sm" aria-label="Form 856 review worksheet">
+        <p className="font-semibold">Review worksheet only — not an official Form 856 filing file</p>
+        <p className="text-[var(--muted)]">The CSV contains sensitive vendor details. The browser payment list may omit older records; even an available download is not proof of complete annual history or accepted filing format. Check source payments and totals independently with an accountant.</p>
+        {sourceBlockers.length > 0 && (
+          <ul className="list-disc ps-5 text-[var(--muted)]" aria-label="Worksheet download blockers">
+            {[...new Set(sourceBlockers)].map(message => <li key={message}>{message}</li>)}
+          </ul>
+        )}
+        {sourceBlockers.length === 0 && worksheet.notices.length > 0 && (
+          <ul className="list-disc ps-5 text-[var(--muted)]" aria-label="Worksheet review notes">
+            {worksheet.notices.map(message => <li key={message}>{message}</li>)}
+          </ul>
+        )}
+        <label className="flex min-h-11 items-center gap-2">
+          <input type="checkbox" checked={acknowledgedScope === scopeKey}
+            onChange={event => setAcknowledgedScope(event.target.checked ? scopeKey : '')}
+            disabled={sourceBlockers.length > 0 || !worksheet.canDownloadForReview} />
+          I understand this is a review of recorded payments, not a complete or filing-ready return.
+        </label>
+        <button type="button" disabled={!canDownloadWorksheet}
+          onClick={() => {
+            if (!canDownloadWorksheet) return;
+            downloadCsv(`form-856-review-${year}.csv`, [...worksheet.headers], worksheet.rows);
+          }}
+          className="min-h-11 rounded-xl border border-[var(--line)] px-4 py-2 text-sm font-semibold disabled:opacity-40">
+          Download review worksheet CSV
+        </button>
       </div>
 
       {loading && <p className="text-sm text-[var(--muted)]">Loading…</p>}

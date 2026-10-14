@@ -1,6 +1,7 @@
 import { addDoc, collection, getDocs, query, where } from '../lib/db/firestore';
 import { db, getIdToken } from '../firebase';
-import { type Attachment, type AttachmentTarget, MAX_FILES_AT_ONCE, attachmentProblem, attachmentRecord, attachmentsOf } from '../lib/attachments';
+import { getSupabase } from '../lib/db/client';
+import { type Attachment, type AttachmentCollection, type AttachmentTarget, MAX_FILES_AT_ONCE, attachmentProblem, attachmentRecord, attachmentsOf } from '../lib/attachments';
 
 /** The file as a data address ("data:application/pdf;base64,…"), the way the Vault keeps files. */
 export function readAsDataUrl(file: File): Promise<string> {
@@ -43,6 +44,110 @@ export async function attachFiles(workspaceId: string, uid: string, target: Atta
 export async function loadAttachments(workspaceId: string, target: Pick<AttachmentTarget, 'collection' | 'id' | 'scope'>): Promise<Attachment[]> {
   const snap = await getDocs(query(collection(db, 'documents'), where('workspaceId', '==', workspaceId), where('linkedId', '==', target.id)));
   return attachmentsOf(snap.docs.map(d => ({ ...(d.data() as Omit<Attachment, 'id'>), id: d.id })), target);
+}
+
+/** Metadata-only index used by reports: never selects the file's potentially 700 KB data URL. */
+export interface AttachmentLinkIndexRow {
+  id: string;
+  linkedId: string;
+  linkedCollection: AttachmentCollection;
+  name?: string;
+  createdAt?: string;
+}
+
+export interface AttachmentLinkIndex {
+  rows: AttachmentLinkIndexRow[];
+  /** True when the safety cap was reached; callers must not treat absent links as a confirmed absence. */
+  truncated: boolean;
+}
+
+/** Minimal query port so the projection and workspace boundary can be tested without a live database. */
+export interface AttachmentIndexQueryBuilder extends PromiseLike<{ data: unknown; error: { message?: string } | null }> {
+  select(columns: string): AttachmentIndexQueryBuilder;
+  eq(column: string, value: string): AttachmentIndexQueryBuilder;
+  in(column: string, values: string[]): AttachmentIndexQueryBuilder;
+  order(column: string, options: { ascending: boolean }): AttachmentIndexQueryBuilder;
+  range(from: number, to: number): AttachmentIndexQueryBuilder;
+}
+
+export interface AttachmentIndexClient {
+  from(table: string): AttachmentIndexQueryBuilder;
+}
+
+const ATTACHMENT_INDEX_PAGE_SIZE = 1000;
+export const MAX_ATTACHMENT_INDEX_ROWS = 50_000;
+const ATTACHMENT_INDEX_PAGES_AT_ONCE = 4;
+
+/** One page of linked-file metadata, scoped in SQL to this workspace and target collections. */
+export async function queryAttachmentLinkIndexPage(
+  client: AttachmentIndexClient,
+  workspaceId: string,
+  collections: readonly AttachmentCollection[],
+  from: number,
+  to: number,
+): Promise<AttachmentLinkIndexRow[]> {
+  const result = await client.from('documents')
+    .select('id, linkedId:data->>linkedId, linkedCollection:data->>linkedCollection, name:data->>name, createdAt:data->>createdAt')
+    .eq('workspace_id', workspaceId)
+    .in('data->>linkedCollection', [...collections])
+    .order('id', { ascending: true })
+    .range(from, to);
+  if (result.error) throw new Error(result.error.message || 'Attachment metadata could not be loaded');
+  if (!Array.isArray(result.data)) return [];
+
+  const wanted = new Set<string>(collections);
+  return result.data.flatMap((value): AttachmentLinkIndexRow[] => {
+    if (!value || typeof value !== 'object') return [];
+    const row = value as Record<string, unknown>;
+    if (typeof row.id !== 'string' || typeof row.linkedId !== 'string' ||
+        typeof row.linkedCollection !== 'string' || !wanted.has(row.linkedCollection)) return [];
+    return [{
+      id: row.id,
+      linkedId: row.linkedId,
+      linkedCollection: row.linkedCollection as AttachmentCollection,
+      ...(typeof row.name === 'string' ? { name: row.name } : {}),
+      ...(typeof row.createdAt === 'string' ? { createdAt: row.createdAt } : {}),
+    }];
+  });
+}
+
+/**
+ * Read only the association/name/date columns for linked attachments. The original documents query
+ * selects `fileUrl` too, which is unnecessary and expensive for report counts. SQL scopes every
+ * page by workspace and collection; hitting the cap is surfaced to the report, never called complete.
+ */
+export async function loadAttachmentLinkIndex(
+  workspaceId: string,
+  collections: readonly AttachmentCollection[],
+  client: AttachmentIndexClient = getSupabase() as unknown as AttachmentIndexClient,
+  maxRows = MAX_ATTACHMENT_INDEX_ROWS,
+): Promise<AttachmentLinkIndex> {
+  if (!workspaceId || !collections.length) return { rows: [], truncated: false };
+  const cap = Number.isSafeInteger(maxRows) && maxRows > 0 ? Math.min(maxRows, MAX_ATTACHMENT_INDEX_ROWS) : MAX_ATTACHMENT_INDEX_ROWS;
+  const rows: AttachmentLinkIndexRow[] = [];
+
+  for (let offset = 0; offset < cap;) {
+    const starts: number[] = [];
+    for (let page = 0; page < ATTACHMENT_INDEX_PAGES_AT_ONCE && offset + page * ATTACHMENT_INDEX_PAGE_SIZE < cap; page++) {
+      starts.push(offset + page * ATTACHMENT_INDEX_PAGE_SIZE);
+    }
+    const pages = await Promise.all(starts.map(start => queryAttachmentLinkIndexPage(
+      client,
+      workspaceId,
+      collections,
+      start,
+      Math.min(start + ATTACHMENT_INDEX_PAGE_SIZE, cap) - 1,
+    )));
+    let exhausted = false;
+    for (let index = 0; index < pages.length; index++) {
+      rows.push(...pages[index]);
+      const requested = Math.min(ATTACHMENT_INDEX_PAGE_SIZE, cap - starts[index]);
+      if (pages[index].length < requested) { exhausted = true; break; }
+    }
+    if (exhausted) return { rows, truncated: false };
+    offset += starts.length * ATTACHMENT_INDEX_PAGE_SIZE;
+  }
+  return { rows: rows.slice(0, cap), truncated: true };
 }
 
 /** Remove a file (through the server: it checks who may, and keeps an audit line). */
