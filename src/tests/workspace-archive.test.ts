@@ -19,6 +19,19 @@ function signedBackup() {
   };
 }
 
+function signedChangedBackup(value: Record<string, unknown>) {
+  const metadata = { ...(value.metadata as Record<string, unknown>) };
+  delete metadata.checksum;
+  const unsigned = { ...value, metadata };
+  return {
+    ...unsigned,
+    metadata: {
+      ...metadata,
+      checksum: createHash('sha256').update(JSON.stringify(unsigned)).digest('hex'),
+    },
+  };
+}
+
 async function inspectZip(blob: Blob) {
   const bytes = new Uint8Array(await blob.arrayBuffer());
   const view = new DataView(bytes.buffer);
@@ -61,8 +74,13 @@ test('E-21 altered checksum, wrong workspace and incomplete lists are refused', 
   altered.transactions[0].description = 'Changed';
   await assert.rejects(buildWorkspaceArchive(altered, 'ws1'), /checksum/);
   await assert.rejects(buildWorkspaceArchive(valid, 'another-workspace'), /different workspace/);
-  const missing = { ...valid, accounts: undefined };
+  // The checksum is re-signed so each test reaches the inventory/count validation,
+  // rather than stopping earlier at the separate integrity check.
+  const missing = signedChangedBackup({ ...valid, accounts: undefined });
   await assert.rejects(buildWorkspaceArchive(missing, 'ws1'), /inventory/);
-  const wrongCount = { ...valid, metadata: { ...valid.metadata, counts: { transactions: 2, accounts: 1, vendors: 0 } } };
-  await assert.rejects(buildWorkspaceArchive(wrongCount, 'ws1'), /checksum/);
+  const wrongCount = signedChangedBackup({
+    ...valid,
+    metadata: { ...valid.metadata, counts: { transactions: 2, accounts: 1, vendors: 0 } },
+  });
+  await assert.rejects(buildWorkspaceArchive(wrongCount, 'ws1'), /count mismatch/);
 });
