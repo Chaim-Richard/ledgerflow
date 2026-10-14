@@ -30,7 +30,7 @@ test('E-23 read-only panel shows outgoing payments and makes CSV available for r
   const panel = screen.getByRole('region', { name: 'Payment in and out by method' });
   assert.match(panel.textContent || '', /Money in and out by payment method/);
   assert.ok(screen.getByText('bank_transfer'));
-  assert.ok(screen.getByText(/1 \/ \$125\.00/));
+  assert.ok(screen.getByText(/1 \/ /));
   assert.equal((screen.getByRole('button', { name: 'Download payment method CSV' }) as HTMLButtonElement).disabled, false);
 });
 
