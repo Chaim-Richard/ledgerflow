@@ -107,9 +107,9 @@
 - [ ] `stale-async` src/components/platform/settings/AlertsSettings.tsx:33 — save
 - [ ] `stale-async` src/components/platform/settings/AllocationRulesSettings.tsx:47 — save
 - [ ] `stale-async` src/components/platform/settings/ApprovalDelegatePanel.tsx:35 — save
-- [ ] `stale-async` src/components/platform/settings/ImportSettings.tsx:128 — onFile
-- [ ] `stale-async` src/components/platform/settings/ImportSettings.tsx:149 — send
-- [ ] `stale-async` src/components/platform/settings/ImportSettings.tsx:174 — undo
+- [ ] `stale-async` src/components/platform/settings/ImportSettings.tsx:134 — onFile
+- [ ] `stale-async` src/components/platform/settings/ImportSettings.tsx:155 — send
+- [ ] `stale-async` src/components/platform/settings/ImportSettings.tsx:180 — undo
 - [ ] `stale-async` src/components/platform/settings/IncomingEventsSettings.tsx:34 — (anonymous)
 - [ ] `stale-async` src/components/platform/settings/ModulesSettings.tsx:35 — change
 - [ ] `stale-async` src/components/platform/settings/PriceListsSettings.tsx:53 — save
@@ -174,8 +174,8 @@
 - [ ] `swallowing-action` src/components/forensics/Vault.tsx:183 — handleInjectTransaction
 - [ ] `swallowing-action` src/components/forensics/Vault.tsx:277 — handleDelete
 - [ ] `swallowing-action` src/components/hr/DirectDepositDialog.tsx:47 — saveBank
-- [ ] `swallowing-action` src/components/hr/PayrollView.tsx:153 — handleSaveEmployee
-- [ ] `swallowing-action` src/components/hr/PayrollView.tsx:193 — handlePostPayRunToLedger
+- [ ] `swallowing-action` src/components/hr/PayrollView.tsx:154 — handleSaveEmployee
+- [ ] `swallowing-action` src/components/hr/PayrollView.tsx:194 — handlePostPayRunToLedger
 - [ ] `swallowing-action` src/components/intelligence/AICustomBlueprint.tsx:44 — handleGenerate
 - [ ] `swallowing-action` src/components/intelligence/DiagnosticConsole.tsx:51 — handleCommand
 - [ ] `swallowing-action` src/components/inventory/Inventory.tsx:138 — handleUpdate
@@ -265,7 +265,7 @@
 - [ ] `write-in-loop` src/components/migration/QBOMigrationWizard.tsx:512 — fetch
 - [ ] `write-in-loop` src/components/migration/QBOMigrationWizard.tsx:533 — addEntity
 - [ ] `write-in-loop` src/components/platform/SystemCommandCenter.tsx:142 — fetchWithAuth
-- [ ] `write-in-loop` src/services/attachmentActions.ts:33 — addDoc
+- [ ] `write-in-loop` src/services/attachmentActions.ts:34 — addDoc
 - [ ] `write-in-loop` src/services/bulkDocumentActions.ts:34 — post
 - [ ] `write-in-loop` src/services/bulkDocumentActions.ts:64 — post
 
