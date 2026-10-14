@@ -54,7 +54,7 @@ test('E-22 category panel states when browser history is incomplete', () => {
   render(<ExpenseBillCategories accounts={accounts} bills={[]} workspaceId="component-workspace" currency="USD"
     loading incomplete />);
   assert.match(screen.getByRole('status').textContent || '', /may be incomplete/);
-  assert.match(screen.getByText(/No loaded bills match/).textContent || '', /Loading bill records/);
+  assert.ok(screen.getByText('Loading bill records…'));
 });
 
 test('E-22 filter is reachable on the existing Expenses by Category report screen', () => {
