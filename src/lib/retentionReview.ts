@@ -5,7 +5,7 @@
  */
 import type { DimensionNode } from '../types';
 import { addMonthsYMD } from './fiscalCalendar';
-import { resolveDimensionLabel } from './dimensionUtils';
+import { resolveDimensionLabel, stableLabelValue } from './dimensionUtils';
 import { resolveSellerProfile, type TaxProfiles } from './tax/profile';
 import { validCustomReportPeriod } from './reportCustomPeriod';
 
@@ -111,24 +111,7 @@ function periodForCountry(value: unknown): RetentionPeriodInput | undefined {
   return COUNTRY_PERIOD.get(code as 'IL' | 'US' | 'GB');
 }
 
-/** Resolve legacy descriptions and aliases to the stable node key used by Tax profiles. */
-function stableDimensionValue(raw: string, dimensionId: string, nodes: readonly DimensionNode[]): string {
-  const normalize = (value: string) => value.normalize('NFC').toLowerCase().trim();
-  const dimension = normalize(dimensionId);
-  const matches = (value: string) => {
-    const key = normalize(value);
-    return nodes.find(node => normalize(node.dimensionId) === dimension &&
-      [node.id, node.description, ...(node.aliases || [])].some(label => normalize(label) === key));
-  };
-  const target = raw.trim();
-  const exactNode = matches(target);
-  if (exactNode) return exactNode.id;
-
-  const [root, ...suffix] = target.split('/');
-  if (!suffix.length) return target;
-  const rootNode = matches(root);
-  return rootNode ? [rootNode.id, ...suffix].join('/') : target;
-}
+const stableDimensionValue = stableLabelValue;
 
 function valuesForRecord(record: RetentionSourceRecord, dimensionId: string, nodes: readonly DimensionNode[]): Array<string | undefined> {
   const canonical = (value: string) => stableDimensionValue(value, dimensionId, nodes);

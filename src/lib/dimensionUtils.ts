@@ -570,3 +570,35 @@ export function normalizeLabel(label: string | null | undefined): string {
   return label.trim().normalize('NFC').toLowerCase();
 }
 
+
+/**
+ * AU-2: the one label filter. A stored label value (node id, description or alias, with an optional
+ * `/child` path) resolves to its stable node id; a value no node knows stays as written (trimmed).
+ */
+export function stableLabelValue(raw: string, dimensionId: string, nodes: readonly DimensionNode[] = []): string {
+  const normalize = (value: string) => value.normalize('NFC').toLowerCase().trim();
+  const dimension = normalize(dimensionId);
+  const matches = (value: string) => {
+    const key = normalize(value);
+    return nodes.find(node => normalize(node.dimensionId) === dimension &&
+      [node.id, node.description, ...(node.aliases || [])].some(label => normalize(label) === key));
+  };
+  const target = raw.trim();
+  const exactNode = matches(target);
+  if (exactNode) return exactNode.id;
+  const [root, ...suffix] = target.split('/');
+  if (!suffix.length) return target;
+  const rootNode = matches(root);
+  return rootNode ? [rootNode.id, ...suffix].join('/') : target;
+}
+
+/** AU-2: does this line carry `filter.value` for `filter.dimensionId` (by id, name or alias)? */
+export function lineHasLabel(
+  line: TransactionLine,
+  tx: Transaction | undefined,
+  filter: { dimensionId: string; value: string },
+  nodes: readonly DimensionNode[] = [],
+): boolean {
+  const own = getLineDimension(line, tx, filter.dimensionId);
+  return stableLabelValue(own, filter.dimensionId, nodes) === stableLabelValue(filter.value, filter.dimensionId, nodes);
+}

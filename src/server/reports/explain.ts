@@ -7,7 +7,7 @@
  * entry, the document it came from (invoice, bill or the entry itself), whether the bank matched it,
  * and how many files are attached.
  */
-import { getLineDimension } from '../../lib/dimensionUtils';
+import { lineHasLabel } from '../../lib/dimensionUtils';
 import { isPostable, isTransactionInDateRange, lineAmount } from '../../lib/txFilters';
 import { openingDebitCents } from '../../lib/accountUtils';
 import type { ChartAccount, Transaction } from '../../types';
@@ -67,7 +67,7 @@ export function explainFigure(accounts: ChartAccount[], transactions: Transactio
     if (!isPostable(tx) || !isTransactionInDateRange(tx, filter.startDate, filter.endDate)) continue;
     for (const [position, line] of (tx.lines || []).entries()) {
       if (!wanted.has(line.accountId)) continue;
-      if (filter.label && getLineDimension(line, tx, filter.label.dimensionId) !== filter.label.value) continue;
+      if (filter.label && !lineHasLabel(line, tx, filter.label)) continue;
       const meta = (tx.metadata || {}) as Record<string, unknown>;
       const document = typeof meta.invoiceId === 'string' ? { type: 'invoice' as const, id: meta.invoiceId }
         : typeof meta.billId === 'string' ? { type: 'bill' as const, id: meta.billId }
