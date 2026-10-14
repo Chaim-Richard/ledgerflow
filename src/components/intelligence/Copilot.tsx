@@ -6,6 +6,7 @@ import { useLedgerStore } from "../../stores/useLedgerStore";
 import { isPostable, isCashAccount } from "../../lib/txFilters";
 import { cn } from "../../lib/utils";
 import Markdown from "react-markdown";
+import { maskCardNumbers } from '../../lib/cardNumberMask';
 import { motion, AnimatePresence } from 'motion/react';
 
 const SUGGESTIONS = [
@@ -56,7 +57,8 @@ export default function Copilot() {
 
   const ask = async (question: string) => {
     if (!question.trim() || loading) return;
-    appendMessage('user', question);
+    const safeQuestion = maskCardNumbers(question);
+    appendMessage('user', safeQuestion);
     setInput("");
     setLoading(true);
     try {
@@ -92,7 +94,7 @@ export default function Copilot() {
         }
 
         return {
-          name: a.name,
+          name: maskCardNumbers(a.name),
           category: a.category,
           type: a.type,
           balanceFormatted: formatCurrency(bal)
@@ -104,7 +106,7 @@ export default function Copilot() {
         .slice(0, 40)
         .map((t) => ({
           date: t.date,
-          description: t.description || '',
+          description: maskCardNumbers(t.description || ''),
           category: t.lines?.[0]?.category || (t as typeof t & { category?: string }).category || '',
           amountFormatted: formatCurrency(t.totalAmountCents || 0, t.currency)
         }));
@@ -137,7 +139,7 @@ export default function Copilot() {
             body: JSON.stringify({ 
               task: "chat", 
               payload: { 
-                query: question,
+                query: safeQuestion,
                 workspaceId: currentWorkspaceId,
                 selectedModel,
                 ledgerSummary
