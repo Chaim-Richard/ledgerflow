@@ -1,0 +1,30 @@
+name: Refresh baselines (branch, temporary)
+# TEMPORARY, THIS BRANCH ONLY (AI #3, A-111/A-69): the two new report tabs wrap a row in the report
+# strip at 390px, so the committed pnl/balance-sheet references no longer match. The images can only
+# be captured on the CI Chromium, so this workflow re-captures the matching references and uploads
+# them as an artifact to be committed here; it is deleted before the PR is final.
+on:
+  push:
+    branches: [arena/e64267f5-ledgerflow]
+  workflow_dispatch:
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+        env:
+          HUSKY: 0
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test e2e/visual-regression.spec.ts --grep "pnl|balance-sheet" --update-snapshots --retries=0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: refreshed-baselines
+          path: e2e/__screenshots__/
+          retention-days: 3
