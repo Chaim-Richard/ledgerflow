@@ -134,7 +134,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     "purchase-trends":
       "Review twelve months of purchases by vendor or item and compare ending dates. Vendor totals use issued bills in base currency; item mode uses the item-wise bill register with units, separate document currencies and CSV. Load full history before relying on item figures; returns and tax/discount reallocation are outside item mode.",
     "sales-payment-summary":
-      "Review customer receipts grouped by stored payment method. Compare periods and inspect undated receipt counts. Unapplied receipts are not automatically sales revenue.",
+      "Review customer receipts grouped by method under the existing customer report rules. A separate posted-payment section shows money received and paid per method and document currency, with a review CSV. Unlike currencies are never added, and draft or void payments are excluded. Partial or undated records block that CSV; payments are not automatically invoice revenue or proof of a reconciled bank balance.",
     "exchange-rates-used":
       "Review exchange rates stored on workspace documents and entries. Choose dates and inspect the rates actually used. Historical rates on records are distinct from current market quotes.",
     "open-advances":
