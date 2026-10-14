@@ -123,6 +123,8 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Milestone Billing', componentName: 'MilestoneBillingReportView' },
     { label: 'Reorder Suggestions', componentName: 'ReorderSuggestionsReportView' },
     { label: 'Dunning Letters', componentName: 'DunningLettersReportView' },
+    { label: 'Record Notes', componentName: 'RecordNotesReportView' },
+    { label: 'Serial & Lot Lookup', componentName: 'SerialLotLookupReportView' },
   ];
 
   for (const report of reportTabs) {
@@ -160,6 +162,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Currencies', componentName: 'CurrenciesSettingsView' },
     { label: 'Groups of books', componentName: 'GroupsSettingsView' },
     { label: 'Tax profiles', componentName: 'TaxProfilesSettingsView' },
+    { label: 'Custom fields', componentName: 'CustomFieldsSettingsView' },
   ];
 
   for (const tab of settingsTabs) {

@@ -37,7 +37,9 @@ describe('Schema drift & index consistency guard (database rules)', () => {
       // how money is shown (C-25, migration 20261010000000_workspace_money_display)
       'moneyDisplay',
       // scheduled reports (K-28, migration 20261011000000_scheduled_reports; what was sent is server-only)
-      'scheduledReports'
+      'scheduledReports',
+      // custom field definitions (A-37, migration 20261014020000_workspace_custom_fields)
+      'customFields'
     ];
     for (const key of expectedWorkspaceKeys) {
       assert.ok(allowed.includes(key), `workspaces allowed fields missing '${key}'`);
