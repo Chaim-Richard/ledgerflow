@@ -1883,7 +1883,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 
 - [x] Q-01 Units-of-production depreciation — integer-cent cumulative preview; C-21
 - [x] Q-02 Depreciation conventions — straight-line calendar-year planning previews; statutory MACRS excluded; C-21
-- [ ] Q-03 Serial / lot tracking
+- [~] Q-03 Serial / lot tracking — **14 Oct (AI #3, A-33)**: lookup screen done — Reports → Serial & Lot Lookup (where a serial has been, one item's lots with dates and units, the same serial twice for one item, CSV). Recording serial/lot numbers on receipt and invoice lines stays open: one input in the reserved document forms (the line fields already survive the document schemas). *Browser-suite note (14 Oct, AI #3): the Playwright E2E Smoke Suite fails at its "Run Playwright E2E Tests" step on `main` and on PR #129 alike — pre-existing, needs its own look.*
 - [x] Q-04 Tiered pricing — three-band graduated and volume previews; C-21
 - [x] Q-05 Cost allocation rules — **done 9 Oct (Claude)**: Settings → Split rules: a saved rule (name, the text the vendor or description contains, 2–20 shares adding up to exactly 100% with two decimals, each with its own account or the line's, and its labels). On a bill whose vendor or description contains the text, it is suggested with why ("rule 'Rent split' matched: vendor contains 'Landlord'"); applying it splits each line by the shares in whole cents with the remainder on the last share, and only changes the lines on screen: saving goes through the normal checked route. Owners and accountants keep the rules (saved by the server on the workspace, new ids, an audit line); others see them (`src/lib/allocationRules.ts`, `allocationRuleService.ts`, `PUT /api/v1/workspaces/:id/allocation-rules`, `AllocationRulesSettings.tsx`, `BillModal.tsx`; tests `allocation-rules.test.tsx`). **Open:** the same suggestion on entries and bank lines (with K-39). C-21 percentage/driver calculation preview complete. **expanded 7 Oct (roadmap, `docs/ROADMAP.md`), Later P1; one rule family with K-39 and CA-13)**: a saved rule says which account, labels and splits apply (e.g. rent 60/40 between two properties).
   - **It explains itself:** "rule 'Rent split' matched: payee contains 'Landlord'".
@@ -2490,7 +2490,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CD-03 Query language
 - [ ] CD-04 Formula engine
 - [ ] CD-05 E2E encryption
-- [ ] CD-06 Notes on any entity
+- [x] CD-06 Notes on any entity — **done 14 Oct (AI #3, A-36)**: notes with who and when on a customer, vendor, item, invoice, bill, estimate, entry or project, searchable from Reports → Record Notes; the panel adds a note or changes your own, and is also on the Inventory item form. Notes live in the record's own metadata (`recordNotes`), card numbers masked; nothing is posted.
 - [x] CD-07 Account groups — covered by K-14 (7 Oct): accounts inside a parent account, with subtotals on the reports
 - [ ] CE-01 Account subtypes
 - [ ] CE-02 Holdings
@@ -2511,8 +2511,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CF-05 Per-user bookmarks
 - [~] CF-06 Export templates — **11 Oct (AI #2, C-38):** named C-29 column/order choices for indexed report tables and statement period groups, scoped per user/workspace/report on this browser. Apply then use the existing CSV action; changed schemas are refused, and blocked storage is explicit. Fifteen targeted tests and actual phone CSV download pass; full final gates pending on `codex/c38-export-templates`.
 - [ ] CF-07 Comments on customer / project
-- [ ] CF-08 Meta fields on any entity
-- [ ] CG-01 Custom field entities
+- [~] CF-08 Meta fields on any entity — **14 Oct (AI #3)**: A-36 keeps notes as meta fields on eight record kinds and A-37 defines custom fields (text/number/date/choice) on customers, vendors and items with their values in each record's metadata; “any entity” beyond those kinds waits on the reserved document forms.
+- [x] CG-01 Custom field entities — **done 14 Oct (AI #3, A-37)**: Settings → Custom fields: owner-defined fields (text, number, date, choice) on customers, vendors and items, definitions on the workspace (`customFields` migration checked in, needs applying), values on each record's metadata, shown in a values list and the CSV export. The forms' own screens do not show the values yet.
 - [ ] CG-02 Unit of measure
 - [ ] CG-03 Payment method entity
 - [ ] CG-04 Exchange rate provider + log

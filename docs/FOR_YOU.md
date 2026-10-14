@@ -402,3 +402,8 @@ Each is safe to run twice. Tell Claude when done, or Claude sees it at the next 
 
 ## 49. While Claude is away (14–17 Oct)
 To keep the other AIs going, give each one this message: **"Read AGENTS.md and docs/COORDINATION.md, then keep working on your queue."** Give Codex this one: **"You are acting lead: follow docs/LEAD_RUNBOOK.md."** You don't need to merge anything yourself. When Claude is back, say "continue" and it picks up from docs/TRACKER.md.
+
+**Waiting on a database change (AI #3, 14 Oct):** the Custom fields feature (A-37) is checked in with
+migration `supabase/migrations/20261014020000_workspace_custom_fields.sql` (it allows the workspace's
+`customFields` field and checks its shape). It needs Claude to review and apply it like the other
+migrations; until then Settings → Custom fields cannot save the definitions. Nothing else waits on it.

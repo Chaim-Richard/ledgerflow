@@ -8,6 +8,7 @@ import { useState, useMemo } from 'react';
 import { bundlePartChoices, bundleProblem, type BundlePart } from '../../lib/itemBundles';
 import { UNITS } from '../../lib/units';
 import { CONSIGNMENT_OPTIONS } from '../../lib/consignmentStock';
+import RecordNotesPanel from '../common/RecordNotesPanel';
 import type { InventoryItem } from '../../types';
 
 interface InventoryItemDialogProps {
@@ -267,6 +268,13 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                   </AsyncButton>
                 </div>
               </form>
+              {editingItem?.id && (
+                <div className="p-4 md:p-8 border-t border-[var(--line)]">
+                  <RecordNotesPanel entityType="item" entityId={editingItem.id} entityName={editingItem.name || 'this item'}
+                    metadata={(editingItem as { metadata?: Record<string, unknown> }).metadata}
+                    canEdit={canChangeStock} />
+                </div>
+              )}
             </motion.div>
           </div>
         )}

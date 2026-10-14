@@ -14,6 +14,7 @@ import type { ApprovalDelegate } from '../lib/approvalDelegation';
 import type { LedgerHealth } from '../lib/ledgerHealth';
 import type { AlertSettings, AlertsSent } from '../lib/bookAlerts';
 import type { NotificationType } from '../lib/notifications';
+import type { CustomFieldDef } from '../lib/customFields';
 import type { EntityMetadata, DimensionDefinition, Transaction } from './ledger';
 
 // Workspaces, people and the app: members, invites, notifications, audit log, dashboards, partners.
@@ -61,6 +62,8 @@ export interface Workspace {
   moneyDisplay?: MoneyDisplaySettings;
   /** Scheduled reports (K-28, src/lib/scheduledReports.ts): emailed after each finished week or month. */
   scheduledReports?: ScheduledReport[];
+  /** A-37 (CG-01, src/lib/customFields.ts): owner-defined extra fields on customers, vendors and items; values live in each record's metadata. */
+  customFields?: CustomFieldDef[];
   /** Which period each schedule last sent (written by the server only). */
   scheduledReportsSent?: Record<string, string>;
   /** The client's own month-end steps (BD-10, src/lib/closeSteps.ts); saved by the server for owners and accountants. */

@@ -26,6 +26,19 @@ export interface RecordNote {
 
 export const NOTE_MAX_LENGTH = 4000;
 
+/** Where the panel keeps a record's notes: inside the record's own `metadata` (no new collection). */
+export const RECORD_NOTES_METADATA_KEY = 'recordNotes';
+
+/** The notes a record's metadata carries, ignoring anything malformed. */
+export function recordNotesFromMetadata(metadata: Record<string, unknown> | null | undefined): RecordNote[] {
+  const raw = metadata?.[RECORD_NOTES_METADATA_KEY];
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((n): n is RecordNote => Boolean(n)
+    && typeof (n as RecordNote).id === 'string'
+    && typeof (n as RecordNote).body === 'string'
+    && typeof (n as RecordNote).createdAt === 'string');
+}
+
 /** Why this text cannot be a note, in plain words, or null when it can. */
 export function noteProblem(body: string): string | null {
   const text = String(body ?? '').trim();

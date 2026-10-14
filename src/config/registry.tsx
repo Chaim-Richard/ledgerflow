@@ -411,6 +411,8 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'PurchasePriceVarianceReportView': lazy(() => import('../components/reporting/PurchasePriceVarianceReportView')),
   'SalesByTerritoryReportView': lazy(() => import('../components/reporting/SalesByTerritoryReportView')),
   'RetentionReviewReportView': lazy(() => import('../components/reporting/RetentionReviewReportView')),
+  'RecordNotesReportView': lazy(() => import('../components/reporting/RecordNotesReportView')),
+  'SerialLotLookupReportView': lazy(() => import('../components/reporting/SerialLotLookupReportView')),
   'CustomerGrossProfitView': lazy(() => import('../components/reporting/CustomerGrossProfitView')),
   'InactiveItemsReportView': lazy(() => import('../components/reporting/InactiveItemsReportView')),
   'AccountBalancesAsOfView': lazy(() => import('../components/reporting/EverydayReportViews').then(module => ({default:module.AccountBalancesAsOfView}))),
@@ -515,6 +517,8 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'purchase-price-variance', label: { en: 'Purchase Price Variance', he: 'שונות מחירי רכש' }, componentName: 'PurchasePriceVarianceReportView', icon: TrendingUp },
   { id: 'sales-by-territory', label: { en: 'Sales by Territory', he: 'מכירות לפי אזור' }, componentName: 'SalesByTerritoryReportView', icon: Globe },
   { id: 'record-retention-review', label: { en: 'Record Retention Review', he: 'בדיקת שמירת רשומות' }, componentName: 'RetentionReviewReportView', icon: Scale },
+  { id: 'record-notes', label: { en: 'Record Notes', he: 'הערות על רשומות' }, componentName: 'RecordNotesReportView', icon: FileText },
+  { id: 'serial-lot-lookup', label: { en: 'Serial & Lot Lookup', he: 'חיפוש מספרי סידוריים וסידות' }, componentName: 'SerialLotLookupReportView', icon: Barcode },
 ], 'reports');
 
 export const SETTINGS_TABS_REGISTRY = withScreenHelp([
@@ -543,6 +547,7 @@ export const SETTINGS_TABS_REGISTRY = withScreenHelp([
   { id: 'split-rules', label: { en: 'Split rules', he: 'כללי פיצול' }, componentName: 'AllocationRulesSettingsView', icon: Split },
   { id: 'price-lists', label: { en: 'Price lists', he: 'מחירונים' }, componentName: 'PriceListsSettingsView', icon: BadgePercent },
   { id: 'price-list-import', label: { en: 'Import price lists', he: 'ייבוא מחירונים' }, componentName: 'PriceListImportView', icon: Upload },
+  { id: 'custom-fields', label: { en: 'Custom fields', he: 'שדות מותאמים אישית' }, componentName: 'CustomFieldsSettingsView', icon: ListChecks },
   { id: 'sales-reps', label: { en: 'Sales reps', he: 'אנשי מכירות' }, componentName: 'SalesRepsSettingsView', icon: UserCheck },
   { id: 'stages', label: { en: 'Stages', he: 'שלבים' }, componentName: 'StagesSettingsView', icon: ListChecks },
   { id: 'currencies', label: { en: 'Currencies', he: 'מטבעות' }, componentName: 'CurrenciesSettingsView', icon: Coins },
@@ -579,7 +584,10 @@ export const SETTINGS_COMPONENTS: Record<string, ElementType> = {
   'SalesRepsSettingsView': lazy(() => import('../components/platform/settings/SalesRepsSettings')),
   'StagesSettingsView': lazy(() => import('../components/platform/settings/StagesSettings')),
   'CurrenciesSettingsView': lazy(() => import('../components/platform/settings/CurrenciesSettings')),
-  'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings'))
+  'ShortcutsView': lazy(() => import('../components/platform/settings/ShortcutSettings')),
+  // both registered in REPORT_COMPONENTS too; Settings resolves through this map
+  'PriceListImportView': lazy(() => import('../components/platform/settings/PriceListImportView')),
+  'CustomFieldsSettingsView': lazy(() => import('../components/platform/settings/CustomFieldsSettings'))
 };
 
 export const INTELLIGENCE_TABS_REGISTRY = withScreenHelp([
