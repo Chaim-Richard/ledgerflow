@@ -1,5 +1,7 @@
 # Project Architecture and Modification Guide
 
+> **14–17 Oct: Claude is away; AI #2 (Codex) is acting lead** — read "While Claude (AI #1) is away" in `docs/COORDINATION.md`.
+>
 > **Any AI can run this project:** the lead's loop, public issue triage and batch fixing are in [`docs/LEAD_RUNBOOK.md`](docs/LEAD_RUNBOOK.md); the second to-do list (finishing and polish, biggest first) is [`docs/TODO_2.md`](docs/TODO_2.md).
 >
 > **Codex and other AI assistants:** first read [`docs/COORDINATION.md`](docs/COORDINATION.md).
