@@ -7,6 +7,7 @@
  * The packs are content for `evaluateRules`; the engine (AI #1's lane) decides when to read them.
  */
 import type { Rule } from '../rules';
+import { lintRule } from '../lint';
 import { usSalesTaxPack } from './usSalesTaxPack';
 import { canadaVatPack } from './canadaVatPack';
 import { euVatPack } from './euVatPack';
@@ -85,7 +86,10 @@ export interface PackProblem {
 
 /**
  * What a pack must be able to say about itself. A problem here is a bug in the pack, not a tax
- * opinion: it never decides a rate.
+ * opinion: it never decides a rate. A-110: the per-rule shape (id, name, scope, conditions, dates,
+ * source, status, targets) is `lintRule`'s own check, so the screen, the script and the tests read
+ * one linter instead of three; this function adds what only the whole set can see — a duplicate id
+ * across packs, a target no pack defines, and two rules of one pack overlapping with different rates.
  */
 export function taxRulePackProblems(): PackProblem[] {
   const problems: PackProblem[] = [];
@@ -96,12 +100,11 @@ export function taxRulePackProblems(): PackProblem[] {
   for (const pack of packs) {
     if (!pack.id || !pack.name) problems.push({ pack: pack.id, problem: 'the pack needs an id and a name' });
     for (const rule of pack.rules) {
+      for (const problem of lintRule(rule, { pack: pack.id })) {
+        problems.push({ pack: pack.id, ...(problem.rule ? { rule: problem.rule } : {}), problem: problem.problem });
+      }
       if (seen.has(rule.id)) problems.push({ pack: pack.id, rule: rule.id, problem: 'duplicate rule id' });
       seen.add(rule.id);
-      if (!rule.source?.url?.startsWith('https://')) problems.push({ pack: pack.id, rule: rule.id, problem: 'the rule needs an https source' });
-      if (rule.status !== 'calculation') problems.push({ pack: pack.id, rule: rule.id, problem: `status is ${rule.status}, this lane writes 'calculation'` });
-      if (rule.validTo && rule.validTo < rule.validFrom) problems.push({ pack: pack.id, rule: rule.id, problem: 'validTo is before validFrom' });
-      if (!rule.when.length) problems.push({ pack: pack.id, rule: rule.id, problem: 'a rule without conditions would apply to everything' });
       for (const target of rule.targets || []) {
         if (!allIds.has(target)) problems.push({ pack: pack.id, rule: rule.id, problem: `targets ${target}, which no pack defines` });
       }

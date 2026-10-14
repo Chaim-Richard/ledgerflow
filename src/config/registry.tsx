@@ -399,6 +399,8 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'VendorPriceHistoryReportView': lazy(() => import('../components/reporting/VendorPriceHistoryReportView')),
   'SubscriptionPlansReportView': lazy(() => import('../components/reporting/SubscriptionPlansReportView')),
   'CustomerLifetimeValueReportView': lazy(() => import('../components/reporting/CustomerLifetimeValueReportView')),
+  'RulePackCoverageReportView': lazy(() => import('../components/reporting/RulePackCoverageReportView')),
+  'CustomerCreditLimitReportView': lazy(() => import('../components/reporting/CustomerCreditLimitReportView')),
   'ThreeWayMatchReviewView': lazy(() => import('../components/reporting/ThreeWayMatchReviewView')),
   'CustomerGrossProfitView': lazy(() => import('../components/reporting/CustomerGrossProfitView')),
   'InactiveItemsReportView': lazy(() => import('../components/reporting/InactiveItemsReportView')),
@@ -494,6 +496,8 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'general-ledger', label: { en: 'General Ledger', he: 'ספר ראשי' }, componentName: 'GeneralLedgerView', icon: BookOpen },
   { id: 'statement', label: { en: 'Account Statement', he: 'דף חשבון' }, componentName: 'StatementView', icon: FileText },
   { id: 'tax-liability', label: { en: 'Sales Tax Liability', he: 'חבות מס קניה' }, componentName: 'TaxLiabilityView', icon: Receipt },
+  { id: 'rule-pack-coverage', label: { en: 'Tax Rule Coverage', he: 'כיסוי חוקי מס' }, componentName: 'RulePackCoverageReportView', icon: ShieldCheck },
+  { id: 'customer-credit-limits', label: { en: 'Customer Credit Limits', he: 'מסגרות אשראי ללקוחות' }, componentName: 'CustomerCreditLimitReportView', icon: Wallet },
 ], 'reports');
 
 export const SETTINGS_TABS_REGISTRY = withScreenHelp([
