@@ -1,0 +1,117 @@
+import React, { useMemo, useState } from 'react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { DUPLICATE_CONTACT_CSV_HEADERS, duplicateContactCsvRows, findDuplicateContactCandidates, type DuplicateContactReview, type DuplicateMatchSignal, type ReviewContact } from '../../lib/contactDuplicateReview';
+import { normalizeSearchText } from '../../lib/textNormalization';
+import { downloadCsv } from '../../lib/csvExport';
+import ReportTableScroll from './ReportTableScroll';
+import type { Customer, Vendor } from '../../types';
+
+const field = 'min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]';
+const SIGNAL_LABEL: Record<DuplicateMatchSignal, string> = {
+  'tax-id': 'Same tax ID',
+  email: 'Same email',
+  phone: 'Same phone',
+  name: 'Same normalized name (weak)',
+};
+
+function taxIdOf(contact: Customer | Vendor): string | undefined {
+  const metadata = contact.metadata as Record<string, unknown> | undefined;
+  for (const key of ['taxId', 'taxNumber', 'vatNumber', 'ein', 'businessNumber']) {
+    const value = metadata?.[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
+/** A-135: candidates across customers and vendors; the existing merge workflow stays a separate user decision. */
+export default function DuplicateContactReviewReportView() {
+  const customers = useLedgerStore(state => state.customers);
+  const vendors = useLedgerStore(state => state.vendors);
+  const truncated = useLedgerStore(state => state.truncatedCollections);
+  const failed = useDataNeedsStore(state => state.failed);
+  const workspaceId = useAuthStore(state => state.currentWorkspaceId);
+  const { loading } = useLedgerCollections('customers', 'vendors');
+
+  const report = useMemo(() => {
+    const contacts: ReviewContact[] = [
+      ...customers.filter(contact => !workspaceId || contact.workspaceId === workspaceId).map(contact => ({
+        id: contact.id, kind: 'customer' as const, name: contact.name, email: contact.email, phone: contact.phone, taxId: taxIdOf(contact),
+      })),
+      ...vendors.filter(contact => !workspaceId || contact.workspaceId === workspaceId).map(contact => ({
+        id: contact.id, kind: 'vendor' as const, name: contact.name, email: contact.email, phone: contact.phone, taxId: taxIdOf(contact),
+      })),
+    ];
+    return findDuplicateContactCandidates(contacts);
+  }, [customers, vendors, workspaceId]);
+
+  const partial = Boolean(truncated.customers || failed.customers || truncated.vendors || failed.vendors);
+  return <DuplicateContactReviewPanel report={report} loading={loading} partial={partial} />;
+}
+
+export function DuplicateContactReviewPanel({ report, loading = false, partial = false }: {
+  report: DuplicateContactReview;
+  loading?: boolean;
+  partial?: boolean;
+}) {
+  const [filter, setFilter] = useState<'all' | 'identifier-match' | 'name-only'>('all');
+  const [search, setSearch] = useState('');
+  const query = normalizeSearchText(search.trim());
+  const visible = report.pairs.filter(pair => {
+    if (filter !== 'all' && pair.strength !== filter) return false;
+    if (!query) return true;
+    const haystack = normalizeSearchText([
+      pair.left.name, pair.right.name, pair.left.id, pair.right.id,
+      pair.left.kind, pair.right.kind, ...pair.signals.map(signal => SIGNAL_LABEL[signal]),
+    ].join(' '));
+    return haystack.includes(query);
+  });
+
+  return <section aria-label="Duplicate contact review" className="p-4 space-y-4 min-w-0">
+    <h2>Duplicate contact review</h2>
+    <p className="text-sm text-[var(--muted)]">
+      Compare customer and vendor records in this workspace for exact tax-ID, email or phone matches, plus normalized-name suggestions. Name-only rows are weak candidates, not proof of identity; review both records and use the existing merge flow only if appropriate. This report never merges or edits a contact, and it does not display the matched identifier values.
+    </p>
+
+    {loading && <p role="status">Loading customers and vendors…</p>}
+    {partial && <p role="alert">The loaded customer or vendor list is capped or failed. Duplicate candidates and CSV are provisional until complete contact lists are available.</p>}
+    {report.ambiguousBuckets > 0 && <p role="alert">{report.ambiguousBuckets} very large shared-value group(s) were not expanded into pairwise suggestions; inspect those contact groups directly.</p>}
+    {report.truncated && <p role="alert">Candidate output reached its safety cap. Narrow the workspace data and review the displayed pairs before exporting.</p>}
+
+    <div className="flex flex-wrap items-end gap-3" data-print-hide>
+      <label className="flex flex-col gap-1 text-sm">Match evidence
+        <select aria-label="Match evidence" className={field} value={filter} onChange={event => setFilter(event.target.value as typeof filter)}>
+          <option value="all">All suggestions</option>
+          <option value="identifier-match">Identifier match</option>
+          <option value="name-only">Name only (weak)</option>
+        </select>
+      </label>
+      <label className="flex flex-col gap-1 text-sm">Find a contact
+        <input aria-label="Find a contact" className={field} value={search} onChange={event => setSearch(event.target.value)} placeholder="Name or record ID" />
+      </label>
+      <button type="button" className="min-h-11 px-4 rounded border border-[var(--line)]" disabled={!visible.length || loading || partial || report.truncated}
+        onClick={() => downloadCsv('duplicate-contact-review', DUPLICATE_CONTACT_CSV_HEADERS, duplicateContactCsvRows(visible))}>Export CSV</button>
+    </div>
+
+    <p className="text-sm"><b>Suggestions shown:</b> {visible.length} of {report.pairs.length}</p>
+    <ReportTableScroll>
+      <table className="w-full text-sm">
+        <caption>Customer and vendor pairs to review; no record is changed</caption>
+        <thead><tr>
+          {['First record', 'Second record', 'Match reasons', 'Review strength'].map(head => <th key={head} scope="col" className="text-left py-1 px-2">{head}</th>)}
+        </tr></thead>
+        <tbody>
+          {visible.map(pair => <tr key={pair.key} className="border-b border-[var(--line)]/50 align-top">
+            <th scope="row" className="text-left font-normal py-1 px-2"><bdi>{pair.left.name || 'No name recorded'}</bdi><div className="text-xs text-[var(--muted)]">{pair.left.kind} · <code>{pair.left.id}</code></div></th>
+            <td className="py-1 px-2"><bdi>{pair.right.name || 'No name recorded'}</bdi><div className="text-xs text-[var(--muted)]">{pair.right.kind} · <code>{pair.right.id}</code></div></td>
+            <td className="py-1 px-2">{pair.signals.map(signal => SIGNAL_LABEL[signal]).join(' · ')}</td>
+            <td className="py-1 px-2">{pair.strength === 'name-only' ? 'Weak name suggestion' : 'Identifier match — still review'}</td>
+          </tr>)}
+        </tbody>
+      </table>
+      {!loading && !visible.length && <p className="text-sm text-[var(--muted)]">No candidate pair matches this filter. A match is not proof that two records are the same person or business.</p>}
+    </ReportTableScroll>
+  </section>;
+}
