@@ -30,6 +30,7 @@ import { TimeOffCell } from './TimeOffCell';
 import { DeductionsCell } from './DeductionsCell';
 import { PayRunHistory } from './PayRunHistory';
 import { IsraelForm102Review } from './IsraelForm102Review';
+import { UsW2Review } from './UsW2Review';
 import { HourlyPayCell } from './HourlyPayCell';
 import { asPaidFor, hoursToPay, isHourly, type PayableTime } from '../../lib/hourlyPay';
 
@@ -428,6 +429,7 @@ const PayrollViewContent: React.FC = () => {
       )}
 
       {activeTab === 'runs' && <IsraelForm102Review payRuns={payRuns} homeCurrency={baseCurrency} />}
+      {activeTab === 'runs' && <UsW2Review key={currentWorkspace?.id || 'none'} payRuns={payRuns} homeCurrency={baseCurrency} />}
 
       {/* Add Employee Modal */}
       {isAddingEmployee && (
