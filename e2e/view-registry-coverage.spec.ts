@@ -120,6 +120,9 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Purchase Price Variance', componentName: 'PurchasePriceVarianceReportView' },
     { label: 'Sales by Territory', componentName: 'SalesByTerritoryReportView' },
     { label: 'Record Retention Review', componentName: 'RetentionReviewReportView' },
+    { label: 'Milestone Billing', componentName: 'MilestoneBillingReportView' },
+    { label: 'Reorder Suggestions', componentName: 'ReorderSuggestionsReportView' },
+    { label: 'Dunning Letters', componentName: 'DunningLettersReportView' },
   ];
 
   for (const report of reportTabs) {
@@ -150,6 +153,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Alerts', componentName: 'AlertsSettingsView' },
     { label: 'Modules', componentName: 'ModulesSettingsView' },
     { label: 'Split rules', componentName: 'AllocationRulesSettingsView' },
+    { label: 'Import price lists', componentName: 'PriceListImportView' },
     { label: 'Price lists', componentName: 'PriceListsSettingsView' },
     { label: 'Sales reps', componentName: 'SalesRepsSettingsView' },
     { label: 'Stages', componentName: 'StagesSettingsView' },
