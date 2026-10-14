@@ -43,7 +43,7 @@ export function makeStoredZip(files: readonly ZipEntry[]): Blob {
 
   for (const { path, content } of files) {
     if (!path || path.startsWith('/') || path.includes('\\') || path.split('/').some(part => !part || part === '.' || part === '..')
-      || /[\u0000-\u001f]/.test(path) || seen.has(path)) {
+      || Array.from(path).some(character => character.charCodeAt(0) < 32) || seen.has(path)) {
       throw new Error('Unsafe or duplicate ZIP entry name.');
     }
     seen.add(path);
