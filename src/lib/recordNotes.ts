@@ -8,6 +8,8 @@
  * `commentThreads.ts`; this is the lighter note. Pure.
  */
 
+import { maskCardNumbers } from './cardNumberMask';
+
 export type NoteableType = 'customer' | 'vendor' | 'item' | 'invoice' | 'bill' | 'estimate' | 'transaction' | 'project';
 
 export interface RecordNote {
@@ -39,7 +41,7 @@ export function addRecordNote(
 ): RecordNote {
   return {
     id: input.id, workspaceId: input.workspaceId, entityType: input.entityType, entityId: input.entityId,
-    body: String(input.body).trim(), authorUid: input.authorUid,
+    body: maskCardNumbers(String(input.body).trim()), authorUid: input.authorUid,
     ...(input.authorName ? { authorName: input.authorName } : {}),
     createdAt: now,
   };
@@ -47,7 +49,7 @@ export function addRecordNote(
 
 /** The note with its text changed; the first change time stands. */
 export function editRecordNote(note: RecordNote, body: string, now: string = new Date().toISOString()): RecordNote {
-  return { ...note, body: String(body).trim(), editedAt: note.editedAt || now };
+  return { ...note, body: maskCardNumbers(String(body).trim()), editedAt: note.editedAt || now };
 }
 
 /** One record's notes, newest first (what a panel shows). */

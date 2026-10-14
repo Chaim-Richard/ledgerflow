@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import type { SupportTicket, SupportMessage } from '../types';
 import appPackage from '../../package.json';
 import { attachmentProblem, MAX_ATTACHMENT_BYTES, formatBytes } from './attachments';
+import { maskCardNumbers } from './cardNumberMask';
 
 /** Validate before creating a ticket; the attachment service retains its own size check. */
 export function feedbackScreenshotProblem(file: Pick<File, 'name' | 'size' | 'type'>): string | null {
@@ -14,9 +15,9 @@ export function feedbackScreenshotProblem(file: Pick<File, 'name' | 'size' | 'ty
 
 export const FEEDBACK_APP_VERSION = appPackage.version;
 export function feedbackRecords(input: { id: string; workspaceId: string; uid: string; screen: string; body: string; date: string }) {
-  const body = input.body.trim();
+  const body = maskCardNumbers(input.body.trim());
   if (!body || body.length > 5000) throw new Error('Describe what happened in 1–5000 characters.');
-  const screen = input.screen.slice(0, 160);
+  const screen = maskCardNumbers(input.screen.slice(0, 160));
   const ticket: SupportTicket = { id: input.id, workspaceId: input.workspaceId, uid: input.uid, subject: `Feedback: ${screen}`, status: 'open', priority: 'normal', createdAt: input.date, updatedAt: input.date, lastMessageAt: input.date, lastMessageBy: input.uid, unreadForUser: false, unreadForAdmin: true, errorDiagnostics: { message: `Screen: ${screen}`, release: FEEDBACK_APP_VERSION } };
   const message: SupportMessage = { id: `${input.id}-message`, ticketId: input.id, workspaceId: input.workspaceId, authorUid: input.uid, authorRole: 'user', body: `Screen: ${screen}\nApp version: ${FEEDBACK_APP_VERSION}\n\n${body}`, createdAt: input.date };
   return { ticket, message };
