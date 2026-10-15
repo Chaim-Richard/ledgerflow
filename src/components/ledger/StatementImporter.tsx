@@ -32,6 +32,7 @@ import { normalizeDateString } from '../../lib/dateParsing';
 import { Labelled } from '../ui/Labelled';
 import { parseQIFStatement, type QIFDateOrder } from '../../lib/qifParser';
 import { parseBAI2Statement } from '../../lib/bai2Parser';
+import { parseUsBankCsv, type UsBankCsvFormat } from '../../lib/usBankCsv';
 
 function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => string) {
   const occurrences = new Map<string, number>();
@@ -101,6 +102,7 @@ export default function StatementImporter({
   useEffect(() => { if (isOpen && step !== 'input') backButtonRef.current?.focus(); }, [isOpen, step]);
   const [csvData, setCsvData] = useState<string[][]>([]);
   const [qifDateOrder, setQifDateOrder] = useState<QIFDateOrder | ''>('');
+  const [usBankCsvFormat, setUsBankCsvFormat] = useState<UsBankCsvFormat | ''>('');
   const [fileError, setFileError] = useState('');
   const csvHeaders = withOccurrenceKeys(csvData[0] || [], column => column);
   const csvPreview = withOccurrenceKeys(csvData.slice(1, 6), row => JSON.stringify(row));
@@ -146,6 +148,19 @@ export default function StatementImporter({
           : parseBAI2Statement(content, currency);
         processResults(bankLines);
         toast.success(`Loaded ${bankLines.length} statement entries from ${file.name}. Review before importing.`, { id: loader });
+      } else if (usBankCsvFormat && (fileName.endsWith('.csv') || fileName.endsWith('.txt'))) {
+        // E-27: deliberate bank selection; particularly important for Wells Fargo's headerless export.
+        const workspaceId = useAuthStore.getState().currentWorkspaceId;
+        const userId = useAuthStore.getState().user?.uid;
+        const content = await file.text();
+        if (workspaceId !== useAuthStore.getState().currentWorkspaceId || userId !== useAuthStore.getState().user?.uid)
+          throw new Error('Workspace or user changed. Upload the statement again in the current workspace.');
+        const currency = useAuthStore.getState().getCurrentWorkspace()?.currency || 'USD';
+        if (getCurrencyDivisor(currency) !== 100)
+          throw new Error('Selected US bank CSV import requires a two-decimal workspace currency. No amount was imported.');
+        const bankLines = parseUsBankCsv(content, usBankCsvFormat);
+        processResults(bankLines);
+        toast.success(`Loaded ${bankLines.length} bank entries from ${file.name}. Review before importing.`, { id: loader });
       } else if (fileType.startsWith('image/')) {
         const result = await aiService.parseReceipt(file, undefined, patternCache, labels);
         if (result) {
@@ -498,7 +513,17 @@ export default function StatementImporter({
                       <option value="dmy">Day / month / year</option>
                     </select>
                   </Labelled>
-                  <p className="text-xs text-[var(--muted)]">QIF: Bank, Cash or CCard, one account per file. BAI2: one account in the workspace currency, with complete trailers. Both formats require a two-decimal workspace currency. Entries are reviewed before import.</p>
+                  <Labelled label="US bank CSV layout">
+                    <select value={usBankCsvFormat} onChange={e => setUsBankCsvFormat(e.target.value as UsBankCsvFormat | '')} disabled={isParsing} className="min-h-11 px-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-sm text-[var(--text)]">
+                      <option value="">Other CSV: review column mapping</option>
+                      <option value="chase-checking">Chase checking / savings</option>
+                      <option value="chase-card">Chase credit card</option>
+                      <option value="boa-checking">Bank of America checking / savings</option>
+                      <option value="boa-card">Bank of America credit card</option>
+                      <option value="wells-fargo-checking">Wells Fargo checking / savings (no header)</option>
+                    </select>
+                  </Labelled>
+                  <p className="text-xs text-[var(--muted)]">Choose a US bank layout only for its matching CSV export; Wells Fargo CSV has no header, so the first row is a transaction. Unknown layouts should use manual mapping, not guesswork. QIF and BAI2 keep their separate parsers. Bank-specific imports need a two-decimal workspace currency. All entries go to review before import.</p>
                   {fileError && <p role="alert" className="text-sm text-rose-600">{fileError}</p>}
                   <textarea
                     id={`${formId}-statement-text`}
