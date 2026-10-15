@@ -246,6 +246,12 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Print or export a delivery note from a sales order, recorded delivery or invoice in English (LTR) or Hebrew (RTL), numbered in its own DN-YYYY-NNN series. Prices are hidden by default so the note lists goods only, with an option to show unit and line prices.",
     "customer-quotes":
       "Review open, signed and expired customer estimates and proposals with their portal signing link (/e/<token>). Build and preview one-page proposals with cover letters, sections and optional add-on items. Inspect recurring estimate schedules and draft quotes due on or before the selected date.",
+    "sales-tax-holidays":
+      "The dated windows in which US states stop taxing qualifying items, each with its categories, its per-item sales-price cap and the state's own source. The checker answers whether an item at a price is inside a band's cap on a date, counting delivery and handling in the price; the source's qualifying-item list decides item by item what a band covers. Read-only: nothing here posts or files, and a holiday this table does not list is never assumed absent.",
+    "quote-versions":
+      "Every recorded version of an estimate — who recorded it, when and what changed — with any two versions compared line by line. Record the current version before an edit to keep the old content or after one to keep the new; recording the same content twice writes nothing, and content that was never recorded cannot be recovered. The customer portal always shows the estimate as it is now and says which version that is.",
+    "blanket-orders":
+      "A blanket order is an agreement — a total and a validity period — that several goods receipts and vendor bills draw down. Only documents explicitly linked to the order count, and a delivery recorded both ways is one delivery, so used takes the higher of the received and billed totals; both totals sit beside it and a bill in another currency is never added in. Mark an order here (an owner, accountant or bookkeeper) and edit its validity or agreed total in place; nothing here posts.",
   },
   settings: {
     "tax-profiles": "Review declared country, place, accounting basis and registrations for the books and each label value. Grey values inherit from the nearest parent or the books. Owners and accountants edit supported profile fields here; save confirms the server response and keeps the draft on refusal. A saved declaration is not a verified registration or a completed tax filing.",

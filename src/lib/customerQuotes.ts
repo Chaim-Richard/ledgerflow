@@ -12,6 +12,7 @@
 import { signatureProblem, signState, type SignState } from './estimateSignature';
 import type { Estimate } from '../types';
 import type { Proposal } from './proposals';
+import { customerVersionLabel, quoteVersionsFromMetadata } from './quoteVersions';
 
 export interface CustomerQuoteItem {
   estimateId: string;
@@ -28,6 +29,12 @@ export interface CustomerQuoteItem {
   canAccept: boolean;
   /** plain words for the customer when they cannot accept it */
   reason?: string;
+  /**
+   * A-61: which version of the quote the customer is looking at. The portal always shows the
+   * estimate as it is now — the latest content — and this line says which recorded version that
+   * is (undefined when no version was recorded yet).
+   */
+  versionLabel?: string;
 }
 
 const STATE_REASON: Record<Exclude<SignState, 'open'>, string> = {
@@ -38,7 +45,7 @@ const STATE_REASON: Record<Exclude<SignState, 'open'>, string> = {
 
 /** The live quotes of one customer, open ones first, then by date (newest first). */
 export function customerOpenQuotes(
-  estimates: Array<Pick<Estimate, 'id' | 'customerId' | 'number' | 'date' | 'expiryDate' | 'amountCents' | 'status' | 'orderedAt' | 'signature' | 'lines'> & { currency?: string }>,
+  estimates: Array<Pick<Estimate, 'id' | 'customerId' | 'number' | 'date' | 'expiryDate' | 'amountCents' | 'status' | 'orderedAt' | 'signature' | 'lines'> & { currency?: string; metadata?: Record<string, unknown> | null }>,
   customerId: string,
   today: string,
   proposals: Record<string, Pick<Proposal, 'title'>> = {},
@@ -49,6 +56,7 @@ export function customerOpenQuotes(
     .map((e): CustomerQuoteItem => {
       const state = signState(e, today);
       const proposal = proposals[e.id];
+      const versionLabel = customerVersionLabel(quoteVersionsFromMetadata(e.metadata));
       return {
         estimateId: e.id,
         number: e.number || e.id,
@@ -61,6 +69,7 @@ export function customerOpenQuotes(
         state,
         canAccept: state === 'open',
         ...(state === 'open' ? {} : { reason: STATE_REASON[state] }),
+        ...(versionLabel ? { versionLabel } : {}),
       };
     })
     .filter(item => item.state !== 'closed' || !['draft', 'declined', 'converted'].includes(String(estimates.find(e => e.id === item.estimateId)?.status)));

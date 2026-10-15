@@ -128,6 +128,9 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Landed Cost Preview', componentName: 'LandedCostPreviewReportView' },
     { label: 'Delivery Notes', componentName: 'DeliveryNotesReportView' },
     { label: 'Customer Quotes & Proposals', componentName: 'CustomerQuotesReportView' },
+    { label: 'Sales Tax Holidays', componentName: 'SalesTaxHolidaysReportView' },
+    { label: 'Quote Versions', componentName: 'QuoteVersionsReportView' },
+    { label: 'Blanket Purchase Orders', componentName: 'BlanketOrdersReportView' },
   ];
 
   for (const report of reportTabs) {

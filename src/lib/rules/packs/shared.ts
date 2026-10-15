@@ -169,7 +169,31 @@ export interface ImportVatEffect {
   note: string;
 }
 
-export type TaxEffect = RateEffect | NexusEffect | RegistrationThresholdEffect | FilingEffect | MarketplaceEffect | WithholdingDefaultEffect | ReverseChargeEffect | FlatRateSchemeEffect | UseTaxEffect | SchemeThresholdEffect | ImportVatEffect;
+/**
+ * A-58: the effect of a sales-tax-holiday rule — the dated window in which qualifying items stop
+ * being taxed. The rule's `when` cannot see an item's price (prices are not facts), so the
+ * per-item test lives in the effect: a line is exempt only inside one band and under (or at) that
+ * band's `capCents` (`capInclusive` is the state's own "under $100" vs "$100 or less" wording).
+ * `holidayItemAnswer()` in `src/lib/tax/usSalesTaxHolidays.ts` is the reference application of
+ * this effect; an engine reading the override must apply it only to a line that passes one band's
+ * cap — outside the caps the named rate rules stand, exactly as before the holiday.
+ */
+export interface SalesTaxHolidayEffect {
+  kind: 'sales-tax-holiday';
+  /** the row id in `src/lib/tax/usSalesTaxHolidays.ts` (state + holiday + year) */
+  holiday: string;
+  /** the bands a line may qualify under; one line uses at most one band */
+  bands: Array<{
+    id: string;
+    label: string;
+    /** the most an item's sales price may be and still be exempt, in cents */
+    capCents: number;
+    capInclusive: boolean;
+  }>;
+  note: string;
+}
+
+export type TaxEffect = RateEffect | NexusEffect | RegistrationThresholdEffect | FilingEffect | MarketplaceEffect | WithholdingDefaultEffect | ReverseChargeEffect | FlatRateSchemeEffect | UseTaxEffect | SchemeThresholdEffect | ImportVatEffect | SalesTaxHolidayEffect;
 
 /** A table row a pack could not turn into a rule (a category it cannot name, a place it does not know). */
 export interface UnmappedRow {
