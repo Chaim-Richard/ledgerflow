@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
@@ -52,7 +52,7 @@ export default function ReturnAuthorizationsPanel() {
 
   const [invoiceId, setInvoiceId] = useState('');
   const [reason, setReason] = useState('');
-  const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>({});
+  const [quantityDrafts, setQuantityDrafts] = useState<{ invoiceId: string; values: Record<string, string> }>({ invoiceId: '', values: {} });
   const [formProblem, setFormProblem] = useState('');
   const [actionProblems, setActionProblems] = useState<Record<string, string>>({});
   const [decisionNotes, setDecisionNotes] = useState<Record<string, string>>({});
@@ -78,33 +78,28 @@ export default function ReturnAuthorizationsPanel() {
     returnAuthorizationsFromMetadata(customer.metadata, customer.id, workspaceId || undefined),
   ).sort((a, b) => b.requestedAt.localeCompare(a.requestedAt)), [scopedCustomers, workspaceId]);
   const selectedInvoice = scopedInvoices.find(invoice => invoice.id === invoiceId) || scopedInvoices[0];
+  const activeQuantityDrafts = quantityDrafts.invoiceId === selectedInvoice?.id ? quantityDrafts.values : {};
   const selectedCustomer = scopedCustomers.find(customer => customer.id === selectedInvoice?.customerId);
   const requestLines = useMemo(() => (selectedInvoice?.items || []).filter(line => {
     if (!line.itemId || !line.id || !Number.isFinite(Number(line.quantity)) || Number(line.quantity) <= 0) return false;
     return itemById.get(line.itemId)?.itemType !== 'service';
   }), [selectedInvoice, itemById]);
 
-  useEffect(() => {
-    if (scopedInvoices.length && !scopedInvoices.some(invoice => invoice.id === invoiceId)) {
-      setInvoiceId(scopedInvoices[0].id);
-      setQuantityDrafts({});
-    } else if (!scopedInvoices.length && invoiceId) {
-      setInvoiceId('');
-      setQuantityDrafts({});
-    }
-  }, [invoiceId, scopedInvoices]);
-
-  const updateAction = async (rma: ReturnAuthorizationRecord, action: ReturnAuthorizationAction) => {
-    if (pendingRmaActions.current.has(rma.id)) return;
+  const updateAction = async (
+    rma: ReturnAuthorizationRecord,
+    action: ReturnAuthorizationAction,
+  ): Promise<{ ok: true } | { ok: false; reason: string }> => {
+    if (pendingRmaActions.current.has(rma.id)) return { ok: false, reason: 'This RMA action is already being saved.' };
     const customer = scopedCustomers.find(candidate => candidate.id === rma.customerId);
     if (!customer || !canEdit || loading || partial) {
-      setActionProblems(current => ({ ...current, [rma.id]: 'The customer record is not loaded, complete, or editable right now.' }));
-      return;
+      const reason = 'The customer record is not loaded, complete, or editable right now.';
+      setActionProblems(current => ({ ...current, [rma.id]: reason }));
+      return { ok: false, reason };
     }
     const result = transitionReturnAuthorization(rma, action, actorFor(user, role), new Date().toISOString());
     if (!result.ok) {
       setActionProblems(current => ({ ...current, [rma.id]: result.reason }));
-      return;
+      return { ok: false, reason: result.reason };
     }
     pendingRmaActions.current.add(rma.id);
     setSavingRmas(current => new Set(current).add(rma.id));
@@ -113,8 +108,11 @@ export default function ReturnAuthorizationsPanel() {
         [rmaFieldPath(rma.id)]: result.record,
       } as Record<string, unknown>, `${rma.number} updated: ${STATUS_LABEL[result.record.status]}.`);
       setActionProblems(current => ({ ...current, [rma.id]: '' }));
+      return { ok: true };
     } catch (error) {
-      setActionProblems(current => ({ ...current, [rma.id]: error instanceof Error ? error.message : 'The RMA update could not be saved.' }));
+      const reason = error instanceof Error ? error.message : 'The RMA update could not be saved.';
+      setActionProblems(current => ({ ...current, [rma.id]: reason }));
+      return { ok: false, reason };
     } finally {
       pendingRmaActions.current.delete(rma.id);
       setSavingRmas(current => {
@@ -133,7 +131,7 @@ export default function ReturnAuthorizationsPanel() {
       return;
     }
     const lines: ReturnAuthorizationRequestLine[] = requestLines.flatMap(line => {
-      const raw = quantityDrafts[line.id] || '';
+      const raw = activeQuantityDrafts[line.id] || '';
       if (!raw.trim()) return [];
       const quantity = Number(raw);
       if (!(quantity > 0)) return [{
@@ -182,7 +180,7 @@ export default function ReturnAuthorizationsPanel() {
         [rmaFieldPath(record.id)]: record,
       } as Record<string, unknown>, `${record.number} requested. An owner or accountant must approve it.`);
       setReason('');
-      setQuantityDrafts({});
+      setQuantityDrafts({ invoiceId: selectedInvoice.id, values: {} });
       setFormProblem('');
     } catch (error) {
       setFormProblem(error instanceof Error ? error.message : 'The return authorization could not be saved.');
@@ -209,7 +207,12 @@ export default function ReturnAuthorizationsPanel() {
       <div className="flex flex-wrap items-end gap-3" data-print-hide>
         <label className="flex flex-col gap-1 text-sm">Issued invoice
           <select aria-label="RMA invoice" className={`${field} max-w-lg`} value={selectedInvoice?.id || ''}
-            onChange={event => { setInvoiceId(event.target.value); setQuantityDrafts({}); setFormProblem(''); }}>
+            onChange={event => {
+              const nextInvoiceId = event.target.value;
+              setInvoiceId(nextInvoiceId);
+              setQuantityDrafts({ invoiceId: nextInvoiceId, values: {} });
+              setFormProblem('');
+            }}>
             {invoicesByCustomer.map(invoice => <option key={invoice.id} value={invoice.id}>{invoice.number || invoice.id} — {customerById.get(invoice.customerId)?.name || invoice.customerName || 'Customer'}</option>)}
           </select>
         </label>
@@ -234,7 +237,10 @@ export default function ReturnAuthorizationsPanel() {
               <td className="text-right py-2 px-2">{Number(line.quantity).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
               <td className="text-right py-2 px-2">
                 <input aria-label={`Return quantity for ${line.description || item?.name || line.id}`} type="number" min="0" max={line.quantity} step="0.01" inputMode="decimal" className={`${field} w-36 text-right`}
-                  value={quantityDrafts[line.id] || ''} onChange={event => setQuantityDrafts(current => ({ ...current, [line.id]: event.target.value }))} />
+                  value={activeQuantityDrafts[line.id] || ''} onChange={event => setQuantityDrafts(current => ({
+                    invoiceId: selectedInvoice.id,
+                    values: { ...(current.invoiceId === selectedInvoice.id ? current.values : {}), [line.id]: event.target.value },
+                  }))} />
               </td>
             </tr>;
           })}</tbody>
