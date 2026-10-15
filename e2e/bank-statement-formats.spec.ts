@@ -87,3 +87,45 @@ test('phone upload and review stay within the viewport with reachable new contro
   await expect(launch).toBeFocused();
   expect((await launch.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });
+
+
+test('E-27 Wells Fargo headerless export retains first transaction and requires explicit layout', async ({ page }) => {
+  const dialog = page.getByRole('dialog', { name: 'Statement Intelligence' });
+  await dialog.getByLabel('US bank CSV layout').selectOption('wells-fargo-checking');
+  await dialog.locator('input[type=file]').setInputFiles({
+    name: 'wells-fargo.csv', mimeType: 'text/csv', buffer: fixture('us-wells-fargo.csv'),
+  });
+  await expect(dialog.getByText('SAFEWAY MARKET', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Payroll שכירות', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('-$64.22', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('+$2,150.00', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Import 2 Entries' })).toBeVisible();
+});
+
+test('E-27 BofA checking discards summary and informational opening balance', async ({ page }) => {
+  const dialog = page.getByRole('dialog', { name: 'Statement Intelligence' });
+  await dialog.getByLabel('US bank CSV layout').selectOption('boa-checking');
+  await dialog.locator('input[type=file]').setInputFiles({
+    name: 'bofa.csv', mimeType: 'text/csv', buffer: fixture('us-boa-checking.csv'),
+  });
+  await expect(dialog.getByText('ירושלים חנות', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Payroll deposit', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Import 2 Entries' })).toBeVisible();
+  await expect(dialog.getByText('Beginning balance as of', { exact: false })).toHaveCount(0);
+});
+
+test('E-27 wrong selected bank header refuses rather than creating review entries', async ({ page }) => {
+  const dialog = page.getByRole('dialog', { name: 'Statement Intelligence' });
+  await dialog.getByLabel('US bank CSV layout').selectOption('chase-checking');
+  await dialog.locator('input[type=file]').setInputFiles({
+    name: 'wrong.csv', mimeType: 'text/csv', buffer: fixture('us-boa-card.csv'),
+  });
+  await expect(dialog.getByRole('alert')).toContainText('Required bank export header not found');
+  await expect(dialog.getByRole('button', { name: /Import \d+ Entries/ })).toHaveCount(0);
+  await dialog.getByLabel('US bank CSV layout').selectOption('boa-card');
+  await dialog.locator('input[type=file]').setInputFiles({
+    name: 'correct.csv', mimeType: 'text/csv', buffer: fixture('us-boa-card.csv'),
+  });
+  await expect(dialog.getByText('Internet provider', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Import 2 Entries' })).toBeVisible();
+});
