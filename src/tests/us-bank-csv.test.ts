@@ -49,10 +49,11 @@ test('E-27 refuses invalid calendar dates, unsafe/precision amounts, and suspici
   for (const badDate of ['02/30/2024', '31/12/2024', '02/29/2026', '2024-02-29', '02/29/24']) {
     assert.throws(() => parseUsBankCsv(template.replace('02/28/2024', badDate), 'chase-checking'), /row 2: (Invalid calendar date|Expected an unambiguous)/);
   }
-  for (const badAmount of ['-12.345', '1e5', 'NaN', '0.00', '-0.00', '9,9.00', '900719925474099.99']) {
+  for (const badAmount of ['-12.345', '1e5', 'NaN', '0.00', '-0.00', '9,9.00', '900719925474099.99', '9'.repeat(500)]) {
     assert.throws(() => parseUsBankCsv(template.replace('"-1,250.50"', badAmount), 'chase-checking'), /row 2: (Amount|Column count)/);
   }
   assert.throws(() => parseUsBankCsv(template.replace('DEBIT,02/28/2024', 'CREDIT,02/28/2024'), 'chase-checking'), /marker disagrees/);
+  assert.throws(() => parseUsBankCsv(template.replace('DEBIT,02/28/2024', 'UNKNOWN,02/28/2024'), 'chase-checking'), /Unknown Chase/);
   assert.throws(() => parseUsBankCsv(template.replace('שכירות Office', ''), 'chase-checking'), /Missing transaction description/);
 });
 test('E-27 refuses unknown summaries, truncated rows and returns no partial candidates on error', () => {
