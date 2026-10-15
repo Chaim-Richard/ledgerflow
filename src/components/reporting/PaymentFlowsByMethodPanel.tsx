@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import type { Payment } from '../../types';
 import { paymentMethodFlows } from '../../lib/paymentMethodFlows';
 import { validCustomReportPeriod } from '../../lib/reportCustomPeriod';
-import { csvMoney, downloadCsv } from '../../lib/csvExport';
+import { downloadCsv } from '../../lib/csvExport';
+import { paymentMethodCsvAmount } from '../../lib/paymentMethodCsvAmount';
 import { formatCurrency } from '../../lib/utils';
 
 interface Props {
@@ -29,8 +30,8 @@ export default function PaymentFlowsByMethodPanel({
     downloadCsv(`payment-methods-in-out-${startDate}-to-${endDate}.csv`,
       ['Method', 'Currency', 'Received count', 'Received amount', 'Paid count', 'Paid amount'],
       summary.rows.map(row => [
-        row.method, row.currency, String(row.receivedCount), csvMoney(row.receivedCents),
-        String(row.madeCount), csvMoney(row.madeCents),
+        row.method, row.currency, String(row.receivedCount), paymentMethodCsvAmount(row.receivedCents, row.currency),
+        String(row.madeCount), paymentMethodCsvAmount(row.madeCents, row.currency),
       ]));
   };
 
