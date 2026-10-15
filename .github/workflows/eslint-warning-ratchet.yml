@@ -1,0 +1,64 @@
+name: ESLint warning ratchet
+
+# Propose lower ceilings only after successful main CI; do not push to protected main.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: eslint-warning-ratchet
+  cancel-in-progress: false
+
+jobs:
+  propose:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+        env:
+          HUSKY: 0
+          NODE_ENV: development
+          npm_config_production: false
+      - name: Test the ratchet
+        run: node --test scripts/eslint-warning-ratchet.test.mjs
+      - name: Lower ceiling only if fewer warnings are present
+        run: node scripts/eslint-warning-ratchet.mjs --update
+      - name: Propose change in a reviewable PR
+        uses: peter-evans/create-pull-request@v7
+        id: pr
+        with:
+          branch: automation/eslint-warning-ceiling
+          delete-branch: true
+          add-paths: package.json
+          commit-message: 'chore: lower ESLint warning ceiling'
+          title: 'chore: lower ESLint warning ceiling automatically'
+          body: |
+            Real ESLint warnings decreased. Only package.json's warning ceiling changed.
+            This never raises the ceiling or merges automatically. Review and run required CI.
+      # GITHUB_TOKEN bot PRs do not trigger pull_request events, so dispatch CI explicitly.
+      - name: Start required CI on bot PR
+        if: steps.pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --ref automation/eslint-warning-ceiling

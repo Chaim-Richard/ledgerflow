@@ -70,6 +70,9 @@ jobs:
       - name: Type check
         run: npm run lint:types
 
+      - name: Test ESLint warning ratchet
+        run: node --test scripts/eslint-warning-ratchet.test.mjs
+
       - name: ESLint (errors fail; warnings may not exceed --max-warnings in package.json)
         run: npm run lint:eslint
 
@@ -84,6 +87,32 @@ jobs:
 
       - name: Security audit
         run: npm audit --audit-level=high
+
+  # Build the exact deployable artifacts rather than relying on a separate hosting status.
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_ENV: development
+          npm_config_production: false
+          HUSKY: 0
+      - name: Build production client and server
+        run: npm run build
+      - name: Confirm deployable artifacts exist
+        run: |
+          test -s dist/index.html
+          test -s build/server.cjs
 
   # The whole unit suite again in a time zone ahead of and one behind UTC, in parallel with the
   # job above (run one after the other they took the job past its time limit).
@@ -187,3 +216,14 @@ jobs:
 
       - name: Run Playwright E2E Tests
         run: npm run test:e2e
+
+      - name: Upload Playwright diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-diagnostics
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7

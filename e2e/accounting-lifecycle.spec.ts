@@ -1,5 +1,19 @@
 import { test, expect } from '@playwright/test';
 
+type TestLedgerTransaction = {
+  id?: string;
+  deletedAt?: string;
+  status?: string;
+  lines?: Array<{ amountCents: unknown }>;
+};
+
+type TestLedgerStore = {
+  getState: () => {
+    accounts?: unknown[];
+    transactions?: TestLedgerTransaction[];
+  };
+};
+
 test.describe('End-to-End Accounting Lifecycle & Workflows', () => {
 
   test.beforeEach(async ({ page }) => {
@@ -23,92 +37,57 @@ test.describe('End-to-End Accounting Lifecycle & Workflows', () => {
     await page.waitForSelector('text="Overview"', { timeout: 15000 });
   });
 
-  test('Full Lifecycle: Invoicing -> Payment -> Double-Entry Posting -> Aging -> Reports', async ({ page }) => {
-    // 1. Navigate to Sales / Invoices
-    const moneyInNav = page.locator('button:has-text("Money In"), button:has-text("Sales"), button:has-text("Invoices")').first();
-    if (await moneyInNav.isVisible()) {
-      await moneyInNav.click();
-    }
+  test('Invoice entry point opens and seeded ledger entries balance individually', async ({ page }) => {
+    // An E2E check must fail if the screen, dialog, or state under test is unavailable.
+    await page.locator('button:has-text("Money In")').first().click();
+    await page.locator('button:has-text("Invoices & AP")').first().click();
+    const addInvoice = page.locator('button:has-text("Add Invoice")').first();
+    await expect(addInvoice).toBeVisible();
+    await addInvoice.click();
+    await expect(page.getByRole('heading', { name: 'New invoice' })).toBeVisible();
 
-    // 2. Open Add/Create Invoice modal
-    const addInvoiceBtn = page.locator('button:has-text("Add Invoice"), button:has-text("New Invoice"), button:has-text("Create Invoice")').first();
-    if (await addInvoiceBtn.isVisible()) {
-      await addInvoiceBtn.click();
-      await expect(page.locator('body')).toBeVisible();
-    }
+    await expect.poll(() => page.evaluate(() => {
+      const store = (window as unknown as { __ledgerStore?: TestLedgerStore }).__ledgerStore;
+      return store?.getState()?.transactions?.length ?? 0;
+    })).toBeGreaterThan(0);
 
-    // 3. Verify ledger state integrity via evaluate
-    const ledgerIntegrity = await page.evaluate(() => {
-      const store = (window as any).__ledgerStore;
-      if (!store || !store.getState) return null;
-
+    const integrity = await page.evaluate(() => {
+      const store = (window as unknown as { __ledgerStore?: TestLedgerStore }).__ledgerStore;
+      if (!store) return null;
       const state = store.getState();
-      const accounts = state.accounts || [];
-      const transactions = state.transactions || [];
-
-      // Check double entry balance across postable transactions
-      let totalDebits = 0;
-      let totalCredits = 0;
-
-      transactions.forEach((tx: any) => {
-        if (tx.deletedAt || tx.status === 'void' || tx.status === 'draft') return;
-        (tx.lines || []).forEach((l: any) => {
-          const amt = Number(l.amountCents) || 0;
-          if (amt > 0) totalDebits += amt;
-          else totalCredits += Math.abs(amt);
-        });
+      const accounts = state.accounts ?? [];
+      const transactions = state.transactions ?? [];
+      const posted = transactions.filter(tx =>
+        !tx.deletedAt && tx.status !== 'void' && tx.status !== 'draft'
+      );
+      const invalidEntries = posted.filter(tx => {
+        const lines = tx.lines;
+        if (!Array.isArray(lines) || lines.length < 2) return true;
+        const amounts = lines.map(line => line.amountCents);
+        return amounts.some(n => typeof n !== 'number' || !Number.isSafeInteger(n))
+          || amounts.reduce<number>((sum, n) => sum + (typeof n === 'number' ? n : 0), 0) !== 0;
       });
-
-      return {
-        accountCount: accounts.length,
-        txCount: transactions.length,
-        isBalanced: totalDebits === totalCredits,
-        totalDebits,
-        totalCredits
-      };
+      return { accountCount: accounts.length, transactionCount: transactions.length, invalidIds: invalidEntries.map(tx => tx.id) };
     });
 
-    if (ledgerIntegrity) {
-      expect(ledgerIntegrity.accountCount).toBeGreaterThan(0);
-      expect(ledgerIntegrity.isBalanced).toBe(true);
-    }
+    expect(integrity, 'The real application ledger store must be mounted').not.toBeNull();
+    expect(integrity!.accountCount).toBeGreaterThan(0);
+    expect(integrity!.transactionCount).toBeGreaterThan(0);
+    expect(integrity!.invalidIds, 'Each posted entry must have valid balanced lines').toEqual([]);
   });
 
-  test('Financial Statements Integrity: Trial Balance, Balance Sheet, P&L', async ({ page }) => {
-    // Navigate to Reports
-    const reportsNav = page.locator('button:has-text("Reports")').first();
-    if (await reportsNav.isVisible()) {
-      await reportsNav.click();
-    }
-
-    // Check Trial Balance subview
-    const tbTab = page.locator('button:has-text("Trial Balance")').first();
-    if (await tbTab.isVisible()) {
-      await tbTab.click();
-      await page.waitForTimeout(500);
-
-      // Verify no NaN or undefined amounts
-      const text = await page.locator('body').innerText();
+  test('Financial reports render their real pages without invalid amounts', async ({ page }) => {
+    for (const report of [
+      { kind: 'pnl', heading: 'Financial Reports & Statements' },
+      { kind: 'balance-sheet', heading: 'Financial Reports & Statements' }
+    ]) {
+      await page.goto('/?report=' + report.kind + '&start=2026-09-01&end=2026-09-30&cmp=none#reports');
+      const main = page.locator('#main-content');
+      await expect(main.getByRole('heading', { name: report.heading, exact: true })).toBeVisible();
+      const text = await main.innerText();
       expect(text).not.toContain('NaN');
       expect(text).not.toContain('undefined');
-    }
-
-    // Check Balance Sheet
-    const bsTab = page.locator('button:has-text("Balance Sheet")').first();
-    if (await bsTab.isVisible()) {
-      await bsTab.click();
-      await page.waitForTimeout(500);
-      const text = await page.locator('body').innerText();
-      expect(text).not.toContain('NaN');
-    }
-
-    // Check Profit and Loss
-    const plTab = page.locator('button:has-text("Profit & Loss"), button:has-text("Income Statement")').first();
-    if (await plTab.isVisible()) {
-      await plTab.click();
-      await page.waitForTimeout(500);
-      const text = await page.locator('body').innerText();
-      expect(text).not.toContain('NaN');
+      expect(text).not.toContain('Something went wrong');
     }
   });
 
