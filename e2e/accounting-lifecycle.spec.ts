@@ -1,5 +1,19 @@
 import { test, expect } from '@playwright/test';
 
+type TestLedgerTransaction = {
+  id?: string;
+  deletedAt?: string;
+  status?: string;
+  lines?: Array<{ amountCents: unknown }>;
+};
+
+type TestLedgerStore = {
+  getState: () => {
+    accounts?: unknown[];
+    transactions?: TestLedgerTransaction[];
+  };
+};
+
 test.describe('End-to-End Accounting Lifecycle & Workflows', () => {
 
   test.beforeEach(async ({ page }) => {
@@ -33,24 +47,27 @@ test.describe('End-to-End Accounting Lifecycle & Workflows', () => {
     await expect(page.getByRole('heading', { name: 'New invoice' })).toBeVisible();
 
     await expect.poll(() => page.evaluate(() => {
-      const store = (window as any).__ledgerStore;
-      return store?.getState?.()?.transactions?.length ?? 0;
+      const store = (window as unknown as { __ledgerStore?: TestLedgerStore }).__ledgerStore;
+      return store?.getState()?.transactions?.length ?? 0;
     })).toBeGreaterThan(0);
 
     const integrity = await page.evaluate(() => {
-      const store = (window as any).__ledgerStore;
-      if (!store?.getState) return null;
-      const { accounts = [], transactions = [] } = store.getState();
-      const posted = transactions.filter((tx: any) =>
+      const store = (window as unknown as { __ledgerStore?: TestLedgerStore }).__ledgerStore;
+      if (!store) return null;
+      const state = store.getState();
+      const accounts = state.accounts ?? [];
+      const transactions = state.transactions ?? [];
+      const posted = transactions.filter(tx =>
         !tx.deletedAt && tx.status !== 'void' && tx.status !== 'draft'
       );
-      const invalidEntries = posted.filter((tx: any) => {
-        if (!Array.isArray(tx.lines) || tx.lines.length < 2) return true;
-        const amounts = tx.lines.map((line: any) => line.amountCents);
-        return amounts.some((n: unknown) => typeof n !== 'number' || !Number.isSafeInteger(n))
-          || amounts.reduce((sum: number, n: number) => sum + n, 0) !== 0;
+      const invalidEntries = posted.filter(tx => {
+        const lines = tx.lines;
+        if (!Array.isArray(lines) || lines.length < 2) return true;
+        const amounts = lines.map(line => line.amountCents);
+        return amounts.some(n => typeof n !== 'number' || !Number.isSafeInteger(n))
+          || amounts.reduce<number>((sum, n) => sum + (typeof n === 'number' ? n : 0), 0) !== 0;
       });
-      return { accountCount: accounts.length, transactionCount: transactions.length, invalidIds: invalidEntries.map((tx: any) => tx.id) };
+      return { accountCount: accounts.length, transactionCount: transactions.length, invalidIds: invalidEntries.map(tx => tx.id) };
     });
 
     expect(integrity, 'The real application ledger store must be mounted').not.toBeNull();
