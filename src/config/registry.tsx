@@ -416,6 +416,9 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'LandedCostPreviewReportView': lazy(() => import('../components/reporting/LandedCostPreviewReportView')),
   'DeliveryNotesReportView': lazy(() => import('../components/reporting/DeliveryNotesReportView')),
   'CustomerQuotesReportView': lazy(() => import('../components/reporting/CustomerQuotesReportView')),
+  'SalesTaxHolidaysReportView': lazy(() => import('../components/reporting/SalesTaxHolidaysReportView')),
+  'QuoteVersionsReportView': lazy(() => import('../components/reporting/QuoteVersionsReportView')),
+  'BlanketOrdersReportView': lazy(() => import('../components/reporting/BlanketOrdersReportView')),
   'CustomerGrossProfitView': lazy(() => import('../components/reporting/CustomerGrossProfitView')),
   'InactiveItemsReportView': lazy(() => import('../components/reporting/InactiveItemsReportView')),
   'AccountBalancesAsOfView': lazy(() => import('../components/reporting/EverydayReportViews').then(module => ({default:module.AccountBalancesAsOfView}))),
@@ -525,6 +528,9 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'landed-cost-preview', label: { en: 'Landed Cost Preview', he: 'תצוגת עלות משלוח ומכס' }, componentName: 'LandedCostPreviewReportView', icon: Package },
   { id: 'delivery-notes', label: { en: 'Delivery Notes', he: 'תעודות משלוח' }, componentName: 'DeliveryNotesReportView', icon: FileText },
   { id: 'customer-quotes', label: { en: 'Customer Quotes & Proposals', he: 'הצעות מחיר ללקוחות' }, componentName: 'CustomerQuotesReportView', icon: FileText },
+  { id: 'sales-tax-holidays', label: { en: 'Sales Tax Holidays', he: 'חגי מס מכירה' }, componentName: 'SalesTaxHolidaysReportView', icon: CalendarDays },
+  { id: 'quote-versions', label: { en: 'Quote Versions', he: 'גרסאות הצעת מחיר' }, componentName: 'QuoteVersionsReportView', icon: FileSignature },
+  { id: 'blanket-orders', label: { en: 'Blanket Purchase Orders', he: 'הזמנות רכש פתוחות' }, componentName: 'BlanketOrdersReportView', icon: Handshake },
 ], 'reports');
 
 export const SETTINGS_TABS_REGISTRY = withScreenHelp([

@@ -48,6 +48,7 @@ export const COVERAGE_KIND_LABELS: Record<CoverageKind, string> = {
 export function coverageKindOf(rule: Rule<TaxEffect>): CoverageKind {
   switch (rule.effect.kind) {
     case 'rate': return rule.combine === 'accumulate' ? 'rate' : 'taxability';
+    case 'sales-tax-holiday': return 'taxability';
     case 'nexus': return 'nexus';
     case 'registration-threshold': return 'registration';
     case 'filing': return 'filing';

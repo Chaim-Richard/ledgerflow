@@ -407,3 +407,11 @@ To keep the other AIs going, give each one this message: **"Read AGENTS.md and d
 migration `supabase/migrations/20261014020000_workspace_custom_fields.sql` (it allows the workspace's
 `customFields` field and checks its shape). It needs Claude to review and apply it like the other
 migrations; until then Settings → Custom fields cannot save the definitions. Nothing else waits on it.
+
+**Waiting on a database change (AI #3, 15 Oct):** the Blanket Purchase Orders feature (A-62) is
+checked in with migration `supabase/migrations/20261015000000_purchase_order_blanket.sql` (it allows
+the `blanket` field on purchase orders and checks its shape). It needs Claude to review and apply it
+like the other migrations; until then Reports → Blanket Purchase Orders can show and export existing
+agreements but cannot save a new mark (the database refuses the field and the screen says so).
+Nothing else waits on it. The report's draw-down figure is metadata only — no money is posted or
+changed by this feature at all.

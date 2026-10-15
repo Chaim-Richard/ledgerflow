@@ -445,6 +445,13 @@ export interface PurchaseOrder {
   approvedBy?: string;
   approvedAt?: string;
   currency?: string;
+  /** A-62: a blanket order — a total and a validity period that several receipts/bills draw down */
+  blanket?: {
+    /** the last day the agreement is valid (YYYY-MM-DD); the window runs from the issue date */
+    validUntil: string;
+    /** the agreed cap in the order's own currency; the order's total when omitted */
+    capCents?: number;
+  };
   /** Goods received against this order (saved with it). */
   receipts?: GoodsReceipt[];
   /** The bill created from this order (BE-11). */

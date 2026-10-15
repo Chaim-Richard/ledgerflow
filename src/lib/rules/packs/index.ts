@@ -25,6 +25,7 @@ import { ukSchemesPack } from './ukSchemesPack';
 import { usUseTaxPack } from '../../tax/usUseTax';
 import { ilImportServicesPack } from '../../tax/ilImportServices';
 import { ilVatFrequencyPack } from '../../tax/ilVatFilingFrequency';
+import { usSalesTaxHolidayPack } from './usSalesTaxHolidayPack';
 import type { TaxEffect, TaxRulePack, UnmappedRow } from './shared';
 
 export { usSalesTaxPack } from './usSalesTaxPack';
@@ -43,6 +44,7 @@ export { ukSchemesPack, ukStandardRuleIds } from './ukSchemesPack';
 export { usUseTaxPack } from '../../tax/usUseTax';
 export { ilImportServicesPack } from '../../tax/ilImportServices';
 export { ilVatFrequencyPack } from '../../tax/ilVatFilingFrequency';
+export { usSalesTaxHolidayPack } from './usSalesTaxHolidayPack';
 // the packs' own tooling (A-59, A-60): what the source pages answered, and what changed since a snapshot
 export {
   ruleSourceIndex, checkRuleSources, sourceReportLines, sourceReportSummary, sourceReportMarkdown,
@@ -57,7 +59,7 @@ export {
   type LocalKeyAttribute, type LocalRateEffect, type LocalRateKeyResult,
 } from './usLocalRatePack';
 export { filingPack } from './filingPack';
-export { rateRule, where, slug, type TaxEffect, type TaxRulePack, type RateEffect, type NexusEffect, type RegistrationThresholdEffect, type RegistrationThresholdWindow, type UnmappedRow, type FilingEffect, type MarketplaceEffect, type WithholdingDefaultEffect, type ReverseChargeEffect, type FlatRateSchemeEffect, type UseTaxEffect, type SchemeThresholdEffect } from './shared';
+export { rateRule, where, slug, type TaxEffect, type TaxRulePack, type RateEffect, type NexusEffect, type RegistrationThresholdEffect, type RegistrationThresholdWindow, type UnmappedRow, type FilingEffect, type MarketplaceEffect, type WithholdingDefaultEffect, type ReverseChargeEffect, type FlatRateSchemeEffect, type UseTaxEffect, type SchemeThresholdEffect, type SalesTaxHolidayEffect } from './shared';
 
 /** Every pack, in the order a screen should list them. */
 export function taxRulePacks(): TaxRulePack[] {
@@ -65,6 +67,7 @@ export function taxRulePacks(): TaxRulePack[] {
     ilVatPack(), usSalesTaxPack(), usNexusPack(), productTaxabilityPack(), canadaVatPack(), ukVatPack(), euVatPack(),
     registrationThresholdPack(), filingPack(), marketplaceChannelPack(), ilWithholdingPack(),
     caFilingPack(), euReverseChargePack(), ukSchemesPack(), usUseTaxPack(), ilImportServicesPack(), ilVatFrequencyPack(),
+    usSalesTaxHolidayPack(),
   ];
 }
 

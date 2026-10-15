@@ -136,7 +136,7 @@ export default function CustomerPortalPage() {
                       <tbody>
                         {quoteRows.map(q => (
                           <tr key={q.estimateId} className="border-t border-[var(--line)]">
-                            <td className="p-3 font-semibold"><bdi>{q.number}</bdi></td>
+                            <td className="p-3 font-semibold"><bdi>{q.number}</bdi>{q.versionLabel ? <div className="text-xs font-normal text-[var(--muted)]"><bdi>{q.versionLabel} — the latest is shown</bdi></div> : null}</td>
                             <td className="p-3"><bdi>{q.title}</bdi></td>
                             <td className="p-3 tabular-nums">{q.expiryDate || '—'}</td>
                             <td className="p-3 text-right tabular-nums">{formatCurrency(q.amountCents, q.currency || data.currency)}</td>
