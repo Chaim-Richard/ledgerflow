@@ -58,7 +58,7 @@ test('E-27 refuses invalid calendar dates, unsafe/precision amounts, and suspici
 test('E-27 refuses unknown summaries, truncated rows and returns no partial candidates on error', () => {
   const boa = fixture('us-boa-checking.csv');
   assert.throws(() => parseUsBankCsv(boa.replace('Total credits', 'Unknown line'), 'boa-checking'), /Unexpected line/);
-  assert.throws(() => parseUsBankCsv(boa.replace('Payroll deposit,"2,000.50"', 'Payroll deposit,'), 'boa-checking'), /row 11: Amount/);
+  assert.throws(() => parseUsBankCsv(boa.replace('Payroll deposit,"2,000.50"', 'Payroll deposit,'), 'boa-checking'), /row 9: Amount/);
   assert.throws(() => parseUsBankCsv('', 'boa-card'), /Required bank export header/);
   assert.throws(() => parseUsBankCsv('02/28/2024,0.00,*,,Foo', 'wells-fargo-checking'), /zero/);
 });
