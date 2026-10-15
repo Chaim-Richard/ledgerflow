@@ -34,3 +34,13 @@ When CI reports screenshot mismatches, download `playwright-failure-diagnostics`
 3. Add dedicated payment replay, multi-workspace isolation, document posting and period-close invariants against PostgreSQL.
 4. Remove conditional `if (visible)` browser assertions in feature-critical flows and introduce stable screen selectors. The current lifecycle suite still has legacy navigation coverage requiring follow-up.
 5. Ratchet **actual** ESLint warning counts and coverage thresholds based on observed CI results. `quality-baseline.json`'s `eslintWarnings` metric currently counts suppressions, not ESLint diagnostics.
+
+## Automatic, downward-only ESLint warning ceiling
+
+The existing package.json `lint:eslint` command remains `eslint . --max-warnings 212`. This is a historical quality ratchet, not an arbitrary tolerance. Never increase the budget to pass CI.
+
+- Run `node scripts/eslint-warning-ratchet.mjs` to measure **actual ESLint diagnostics** and report possible improvement; it fails on regressions.
+- Run `node scripts/eslint-warning-ratchet.mjs --update` to lower `package.json`'s maximum to the current actual warning count. It never raises the maximum.
+- The `ESLint warning ratchet` workflow runs after **successful CI on main** (or manually from main) and proposes an improvement as a PR; protected main is never changed automatically. The workflow dispatches normal CI for the bot-created PR.
+- GitHub **Settings → Actions → General → Allow GitHub Actions to create and approve pull requests** must be enabled to let the workflow open PRs using `GITHUB_TOKEN`. If unavailable, use the update script locally and open an ordinary PR.
+- `quality-baseline.json`'s legacy `eslintWarnings` field counts lint/TS suppression directives; it is separate from the **actual ESLint warnings** measured here. Do not conflate those values.

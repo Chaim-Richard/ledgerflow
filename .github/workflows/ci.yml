@@ -70,6 +70,9 @@ jobs:
       - name: Type check
         run: npm run lint:types
 
+      - name: Test ESLint warning ratchet
+        run: node --test scripts/eslint-warning-ratchet.test.mjs
+
       - name: ESLint (errors fail; warnings may not exceed --max-warnings in package.json)
         run: npm run lint:eslint
 
