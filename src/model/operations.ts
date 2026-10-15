@@ -30,12 +30,23 @@ export interface Project {
   createdAt: string;
 }
 
+export interface ItemBinLocation {
+  /** Dimension node id for the existing Location label; bin assignments never move stock. */
+  locationId: string;
+  bin: string;
+  updatedAt?: string;
+  updatedByUid?: string;
+  updatedByName?: string;
+}
+
 export interface InventoryItem {
   id: string;
   uid: string;
   workspaceId: string;
   name: string;
   sku: string;
+  /** A-64: bin by Location dimension key, stored under a safe encoded key. */
+  binLocations?: Record<string, ItemBinLocation>;
   description?: string;
   unitPriceCents: number;
   unitCostCents: number;

@@ -1,0 +1,325 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
+import { useLedgerStore } from '../../stores/useLedgerStore';
+import { getLocalDateISO } from '../../lib/utils';
+import {
+  createReturnAuthorization,
+  returnAuthorizationId,
+  returnAuthorizationNumber,
+  returnAuthorizationRequestProblem,
+  returnAuthorizationsFromMetadata,
+  rmaFieldPath,
+  transitionReturnAuthorization,
+  type ReturnAuthorizationAction,
+  type ReturnAuthorizationRecord,
+  type ReturnAuthorizationRequestLine,
+} from '../../lib/warehouseRecords';
+import { randomWarehouseToken, type WorkflowActor } from '../../lib/warehouseRecordUtils';
+import type { CreditNote, Customer, Invoice, InventoryItem } from '../../types';
+import ReportTableScroll from './ReportTableScroll';
+
+const field = 'min-h-11 border rounded px-3 py-2 bg-[var(--panel)] text-[var(--text)]';
+const UNISSUED = new Set(['draft', 'rejected', 'void', 'cancelled']);
+const STATUS_LABEL: Record<ReturnAuthorizationRecord['status'], string> = {
+  requested: 'Requested — waiting for an owner or accountant',
+  approved: 'Approved — waiting for goods',
+  declined: 'Declined',
+  received: 'Received — link the existing sales credit note',
+  closed: 'Closed — credit note linked',
+};
+
+function actorFor(user: { uid: string; displayName?: string | null; email?: string | null } | null, role: string): WorkflowActor {
+  return { uid: user?.uid || '', name: user?.displayName || user?.email || 'Workspace user', role };
+}
+
+export default function ReturnAuthorizationsPanel() {
+  const customers = useLedgerStore(state => state.customers) as Customer[];
+  const invoices = useLedgerStore(state => state.invoices) as Invoice[];
+  const inventory = useLedgerStore(state => state.inventory) as InventoryItem[];
+  const creditNotes = useLedgerStore(state => state.creditNotes) as CreditNote[];
+  const truncated = useLedgerStore(state => state.truncatedCollections);
+  const failed = useDataNeedsStore(state => state.failed);
+  const workspaceId = useAuthStore(state => state.currentWorkspaceId);
+  const user = useAuthStore(state => state.user);
+  const isGuest = useAuthStore(state => state.isGuest);
+  const role = useCurrentRole();
+  const { loading } = useLedgerCollections('customers', 'invoices', 'inventory', 'creditNotes');
+  const { updateEntity } = useEntityOperations();
+
+  const [invoiceId, setInvoiceId] = useState('');
+  const [reason, setReason] = useState('');
+  const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>({});
+  const [formProblem, setFormProblem] = useState('');
+  const [actionProblems, setActionProblems] = useState<Record<string, string>>({});
+  const [decisionNotes, setDecisionNotes] = useState<Record<string, string>>({});
+  const [selectedCreditNotes, setSelectedCreditNotes] = useState<Record<string, string>>({});
+  const [savingRequest, setSavingRequest] = useState(false);
+  const [savingRmas, setSavingRmas] = useState<Set<string>>(() => new Set());
+  const requestPending = useRef(false);
+  const pendingRmaActions = useRef(new Set<string>());
+
+  const canEdit = Boolean(user && !isGuest && ['owner', 'accountant', 'bookkeeper'].includes(role) && workspaceId);
+  const partial = Boolean(
+    truncated.customers || failed.customers || truncated.invoices || failed.invoices ||
+    truncated.inventory || failed.inventory,
+  );
+  const creditNotesPartial = Boolean(truncated.creditNotes || failed.creditNotes);
+  const scopedCustomers = useMemo(() => customers.filter(customer => Boolean(workspaceId) && customer.workspaceId === workspaceId), [customers, workspaceId]);
+  const scopedInvoices = useMemo(() => invoices.filter(invoice =>
+    Boolean(workspaceId) && invoice.workspaceId === workspaceId && !UNISSUED.has(String(invoice.status).toLowerCase()) &&
+    (invoice.items || []).some(line => Boolean(line.itemId) && Number(line.quantity) > 0),
+  ), [invoices, workspaceId]);
+  const itemById = useMemo(() => new Map(inventory.map(item => [item.id, item])), [inventory]);
+  const allRmas = useMemo(() => scopedCustomers.flatMap(customer =>
+    returnAuthorizationsFromMetadata(customer.metadata, customer.id, workspaceId || undefined),
+  ).sort((a, b) => b.requestedAt.localeCompare(a.requestedAt)), [scopedCustomers, workspaceId]);
+  const selectedInvoice = scopedInvoices.find(invoice => invoice.id === invoiceId) || scopedInvoices[0];
+  const selectedCustomer = scopedCustomers.find(customer => customer.id === selectedInvoice?.customerId);
+  const requestLines = useMemo(() => (selectedInvoice?.items || []).filter(line => {
+    if (!line.itemId || !line.id || !Number.isFinite(Number(line.quantity)) || Number(line.quantity) <= 0) return false;
+    return itemById.get(line.itemId)?.itemType !== 'service';
+  }), [selectedInvoice, itemById]);
+
+  useEffect(() => {
+    if (scopedInvoices.length && !scopedInvoices.some(invoice => invoice.id === invoiceId)) {
+      setInvoiceId(scopedInvoices[0].id);
+      setQuantityDrafts({});
+    } else if (!scopedInvoices.length && invoiceId) {
+      setInvoiceId('');
+      setQuantityDrafts({});
+    }
+  }, [invoiceId, scopedInvoices]);
+
+  const updateAction = async (rma: ReturnAuthorizationRecord, action: ReturnAuthorizationAction) => {
+    if (pendingRmaActions.current.has(rma.id)) return;
+    const customer = scopedCustomers.find(candidate => candidate.id === rma.customerId);
+    if (!customer || !canEdit || loading || partial) {
+      setActionProblems(current => ({ ...current, [rma.id]: 'The customer record is not loaded, complete, or editable right now.' }));
+      return;
+    }
+    const result = transitionReturnAuthorization(rma, action, actorFor(user, role), new Date().toISOString());
+    if (!result.ok) {
+      setActionProblems(current => ({ ...current, [rma.id]: result.reason }));
+      return;
+    }
+    pendingRmaActions.current.add(rma.id);
+    setSavingRmas(current => new Set(current).add(rma.id));
+    try {
+      await updateEntity('customers', customer.id, {
+        [rmaFieldPath(rma.id)]: result.record,
+      } as Record<string, unknown>, `${rma.number} updated: ${STATUS_LABEL[result.record.status]}.`);
+      setActionProblems(current => ({ ...current, [rma.id]: '' }));
+    } catch (error) {
+      setActionProblems(current => ({ ...current, [rma.id]: error instanceof Error ? error.message : 'The RMA update could not be saved.' }));
+    } finally {
+      pendingRmaActions.current.delete(rma.id);
+      setSavingRmas(current => {
+        const next = new Set(current);
+        next.delete(rma.id);
+        return next;
+      });
+    }
+  };
+
+  const submitRequest = async () => {
+    if (requestPending.current) return;
+    setFormProblem('');
+    if (!selectedInvoice || !selectedCustomer || !workspaceId || !user || !canEdit || loading || partial) {
+      setFormProblem('Choose an issued invoice with a loaded customer record.');
+      return;
+    }
+    const lines: ReturnAuthorizationRequestLine[] = requestLines.flatMap(line => {
+      const raw = quantityDrafts[line.id] || '';
+      if (!raw.trim()) return [];
+      const quantity = Number(raw);
+      if (!(quantity > 0)) return [{
+        invoiceLineId: line.id, itemId: line.itemId || '', description: line.description || 'Inventory item',
+        quantity, soldQuantity: Number(line.quantity),
+      }];
+      return [{
+        invoiceLineId: line.id,
+        itemId: line.itemId || '',
+        description: line.description || itemById.get(line.itemId || '')?.name || 'Inventory item',
+        quantity,
+        soldQuantity: Number(line.quantity),
+      }];
+    });
+    const at = new Date().toISOString();
+    const actor = actorFor(user, role);
+    const preflight = returnAuthorizationRequestProblem({
+      id: 'rma_validation', number: 'RMA-VALIDATION', workspaceId, customerId: selectedCustomer.id,
+      invoiceId: selectedInvoice.id, reason, lines, actor, at,
+    });
+    if (preflight) {
+      setFormProblem(lines.length ? preflight : 'Enter a quantity for at least one invoiced stock item.');
+      return;
+    }
+
+    requestPending.current = true;
+    setSavingRequest(true);
+    try {
+      let token = '';
+      let id = '';
+      let number = '';
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        token = randomWarehouseToken();
+        id = returnAuthorizationId(token);
+        number = returnAuthorizationNumber(getLocalDateISO(), token);
+        if (!allRmas.some(record => record.id === id || record.number === number)) break;
+        id = '';
+      }
+      if (!id) throw new Error('Could not create a unique RMA number. Try again.');
+      const record = createReturnAuthorization({
+        id, number, workspaceId, customerId: selectedCustomer.id, customerName: selectedCustomer.name,
+        invoiceId: selectedInvoice.id, invoiceNumber: selectedInvoice.number || selectedInvoice.id,
+        reason, lines, actor, at,
+      });
+      await updateEntity('customers', selectedCustomer.id, {
+        [rmaFieldPath(record.id)]: record,
+      } as Record<string, unknown>, `${record.number} requested. An owner or accountant must approve it.`);
+      setReason('');
+      setQuantityDrafts({});
+      setFormProblem('');
+    } catch (error) {
+      setFormProblem(error instanceof Error ? error.message : 'The return authorization could not be saved.');
+    } finally {
+      requestPending.current = false;
+      setSavingRequest(false);
+    }
+  };
+
+  const invoicesByCustomer = scopedInvoices.filter(invoice => scopedCustomers.some(customer => customer.id === invoice.customerId));
+  const customerById = new Map(scopedCustomers.map(customer => [customer.id, customer]));
+
+  return <section aria-label="Return authorizations" className="space-y-4 min-w-0">
+    <div>
+      <h3 className="text-lg font-semibold">Return authorizations</h3>
+      <p className="text-sm text-[var(--muted)]">Request a return against an issued invoice, require an owner or accountant other than the requester to decide it, record receipt, then link an existing customer credit note for that same invoice. Receiving here is an operational confirmation only: use the normal Sales return/credit-note workflow to move stock or issue a credit. This screen never changes inventory quantities or customer balances.</p>
+    </div>
+    {loading && <p role="status" className="text-sm text-[var(--muted)]">Loading invoices, customers, stock items and credit notes…</p>}
+    {partial && <p role="alert" className="text-sm text-[var(--warning,#b45309)]">At least one required list is capped or failed. The requestable invoice and RMA lists may be incomplete; new requests are disabled until they are complete.</p>}
+    {creditNotesPartial && <p role="alert" className="text-sm text-[var(--muted)]">The credit-note list is capped or failed. Linking a credit note is disabled until the list is complete.</p>}
+
+    <div className="rounded border border-[var(--line)] p-3 space-y-3">
+      <h4 className="font-semibold">Request a return</h4>
+      <div className="flex flex-wrap items-end gap-3" data-print-hide>
+        <label className="flex flex-col gap-1 text-sm">Issued invoice
+          <select aria-label="RMA invoice" className={`${field} max-w-lg`} value={selectedInvoice?.id || ''}
+            onChange={event => { setInvoiceId(event.target.value); setQuantityDrafts({}); setFormProblem(''); }}>
+            {invoicesByCustomer.map(invoice => <option key={invoice.id} value={invoice.id}>{invoice.number || invoice.id} — {customerById.get(invoice.customerId)?.name || invoice.customerName || 'Customer'}</option>)}
+          </select>
+        </label>
+        <span className="text-sm text-[var(--muted)]">Customer: {selectedCustomer?.name || selectedInvoice?.customerName || '—'}</span>
+      </div>
+      {!invoicesByCustomer.length && !loading && <p className="text-sm text-[var(--muted)]">No issued invoice with stock lines and a loaded customer is available.</p>}
+
+      {selectedInvoice && <ReportTableScroll>
+        <table className="w-full text-sm">
+          <caption>Requested quantities must not exceed the quantities on invoice {selectedInvoice.number || selectedInvoice.id}</caption>
+          <thead><tr>
+            <th scope="col" className="text-left py-2 px-2">Invoice line</th>
+            <th scope="col" className="text-left py-2 px-2">SKU</th>
+            <th scope="col" className="text-right py-2 px-2">Sold</th>
+            <th scope="col" className="text-right py-2 px-2">Return quantity</th>
+          </tr></thead>
+          <tbody>{requestLines.map(line => {
+            const item = itemById.get(line.itemId || '');
+            return <tr key={line.id} className="border-b border-[var(--line)]/50">
+              <th scope="row" className="text-left font-normal py-2 px-2">{line.description || item?.name || 'Inventory item'}</th>
+              <td className="py-2 px-2"><bdi>{item?.sku || '—'}</bdi></td>
+              <td className="text-right py-2 px-2">{Number(line.quantity).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+              <td className="text-right py-2 px-2">
+                <input aria-label={`Return quantity for ${line.description || item?.name || line.id}`} type="number" min="0" max={line.quantity} step="0.01" inputMode="decimal" className={`${field} w-36 text-right`}
+                  value={quantityDrafts[line.id] || ''} onChange={event => setQuantityDrafts(current => ({ ...current, [line.id]: event.target.value }))} />
+              </td>
+            </tr>;
+          })}</tbody>
+        </table>
+        {!requestLines.length && <p className="p-3 text-sm text-[var(--muted)]">This invoice has no stock item lines available for an RMA.</p>}
+      </ReportTableScroll>}
+
+      <label className="flex flex-col gap-1 text-sm max-w-2xl">Reason for return
+        <textarea aria-label="RMA reason" className={`${field} min-h-20`} maxLength={1000} value={reason} onChange={event => setReason(event.target.value)} placeholder="Describe why the customer is requesting a return" />
+      </label>
+      <button type="button" onClick={() => { void submitRequest(); }} disabled={!canEdit || loading || partial || savingRequest || !selectedInvoice || !selectedCustomer || !requestLines.length}
+        className="min-h-11 px-4 rounded bg-[var(--text)] text-[var(--surface)] disabled:opacity-50">{savingRequest ? 'Saving RMA request…' : 'Submit RMA request'}</button>
+      {formProblem && <p role="alert" className="text-sm text-[var(--neg)]">{formProblem}</p>}
+    </div>
+
+    <div className="space-y-3">
+      <h4 className="font-semibold">Return authorization register ({allRmas.length})</h4>
+      {!allRmas.length && !loading && <p className="text-sm text-[var(--muted)]">No return authorizations are recorded on the loaded customer records.</p>}
+      {allRmas.map(rma => {
+        const customer = customerById.get(rma.customerId);
+        const linkedCredits = creditNotes.filter(note =>
+          note.workspaceId === workspaceId && note.customerId === rma.customerId && note.invoiceId === rma.invoiceId &&
+          note.status !== 'draft' && note.status !== 'void',
+        );
+        const chosenCreditId = selectedCreditNotes[rma.id] || linkedCredits[0]?.id || '';
+        const actionNote = decisionNotes[rma.id] || '';
+        const mayDecide = canEdit && (role === 'owner' || role === 'accountant') && rma.status === 'requested' && rma.requestedByUid !== user?.uid;
+        return <article key={rma.id} aria-label={`Return authorization ${rma.number}`} className="rounded border border-[var(--line)] p-3 space-y-3">
+          <div className="flex flex-wrap justify-between gap-3 items-start">
+            <div>
+              <h5 className="font-semibold">{rma.number} · {customer?.name || rma.customerName}</h5>
+              <p className="text-sm">Invoice {rma.invoiceNumber} · {rma.status}</p>
+              <p className="text-sm">Reason: <bdi>{rma.reason}</bdi></p>
+              <ul className="text-sm list-disc pl-5">{rma.lines.map(line => <li key={line.invoiceLineId}>{line.description} · {line.quantity} requested</li>)}</ul>
+              {rma.linkedCreditNoteId && <p className="text-sm">Linked sales credit note: {rma.linkedCreditNoteNumber || rma.linkedCreditNoteId}</p>}
+              <p className="text-xs text-[var(--muted)]">{STATUS_LABEL[rma.status]}</p>
+            </div>
+            <span className="text-xs px-2 py-1 rounded bg-[var(--panel)]">{rma.status}</span>
+          </div>
+
+          {rma.status === 'requested' && <div className="flex flex-wrap items-end gap-2" data-print-hide>
+            <label className="flex flex-col gap-1 text-sm">Decision note{rma.status === 'requested' ? ' (required to decline)' : ''}
+              <input aria-label={`Decision note for ${rma.number}`} className={`${field} min-w-64`} maxLength={1000} value={actionNote}
+                onChange={event => setDecisionNotes(current => ({ ...current, [rma.id]: event.target.value }))} />
+            </label>
+            {mayDecide && <>
+              <button type="button" className="min-h-11 px-4 rounded border border-[var(--line)] disabled:opacity-50" disabled={loading || partial || savingRmas.has(rma.id)} onClick={() => { void updateAction(rma, { type: 'approve', note: actionNote }); }}>{savingRmas.has(rma.id) ? 'Saving…' : 'Approve RMA'}</button>
+              <button type="button" className="min-h-11 px-4 rounded border border-[var(--line)] disabled:opacity-50" disabled={loading || partial || savingRmas.has(rma.id)} onClick={() => { void updateAction(rma, { type: 'decline', note: actionNote }); }}>{savingRmas.has(rma.id) ? 'Saving…' : 'Decline RMA'}</button>
+            </>}
+            {canEdit && rma.requestedByUid === user?.uid && <p className="text-sm text-[var(--muted)]">You requested this RMA and cannot decide it.</p>}
+            {canEdit && !mayDecide && rma.requestedByUid !== user?.uid && <p className="text-sm text-[var(--muted)]">Only a different owner or accountant can approve or decline.</p>}
+          </div>}
+
+          {rma.status === 'approved' && canEdit && <button type="button" className="min-h-11 px-4 rounded border border-[var(--line)] disabled:opacity-50" disabled={loading || partial || savingRmas.has(rma.id)} onClick={() => { void updateAction(rma, { type: 'receive' }); }} data-print-hide>{savingRmas.has(rma.id) ? 'Saving…' : 'Mark goods received (metadata only)'}</button>}
+
+          {rma.status === 'received' && <div className="flex flex-wrap items-end gap-3" data-print-hide>
+            <label className="flex flex-col gap-1 text-sm">Existing sales credit note
+              <select aria-label={`Credit note for ${rma.number}`} className={`${field} max-w-lg`} value={chosenCreditId}
+                onChange={event => setSelectedCreditNotes(current => ({ ...current, [rma.id]: event.target.value }))} disabled={creditNotesPartial || !linkedCredits.length}>
+                {!linkedCredits.length && <option value="">No matching customer/invoice credit note loaded</option>}
+                {linkedCredits.map(note => <option key={note.id} value={note.id}>{note.number || note.id} · {note.status}</option>)}
+              </select>
+            </label>
+            <button type="button" className="min-h-11 px-4 rounded border border-[var(--line)] disabled:opacity-50" disabled={!canEdit || loading || partial || creditNotesPartial || savingRmas.has(rma.id) || !chosenCreditId}
+              onClick={() => {
+                const credit = linkedCredits.find(note => note.id === chosenCreditId);
+                if (!credit) {
+                  setActionProblems(current => ({ ...current, [rma.id]: 'Choose a loaded credit note for the same customer and invoice.' }));
+                  return;
+                }
+                void updateAction(rma, { type: 'link-credit-note', creditNote: credit });
+              }}>Link sales credit note</button>
+            {!linkedCredits.length && !creditNotesPartial && <p className="text-sm text-[var(--muted)]">Create the sales return/credit note in the normal Sales workflow, then link it here. Linking only records the reference.</p>}
+          </div>}
+
+          {actionProblems[rma.id] && <p role="alert" className="text-sm text-[var(--neg)]">{actionProblems[rma.id]}</p>}
+
+          <details>
+            <summary className="cursor-pointer text-sm">Status history ({rma.events.length})</summary>
+            <ol className="mt-2 space-y-1 text-xs text-[var(--muted)]">
+              {rma.events.map(event => <li key={`${event.status}:${event.at}:${event.byUid}`}>{event.status} · {event.byName || event.byUid} · {new Date(event.at).toLocaleString()}{event.note ? ` · ${event.note}` : ''}</li>)}
+            </ol>
+          </details>
+        </article>;
+      })}
+    </div>
+  </section>;
+}
