@@ -182,6 +182,10 @@ export interface Invoice {
     unitCostCents?: number;
     /** BF-09: the line's labels (Project, Location…), posted with its revenue */
     dimensions?: Record<string, string>;
+    /** A-33/A-67: serials recorded at sale for traceability and warranty reporting. */
+    serialNumbers?: string[];
+    /** A-33: optional lot/batch recorded at sale. */
+    lotNumber?: string;
     metadata?: EntityMetadata;
   }>;
   progressPercentage?: number;
@@ -289,6 +293,8 @@ export interface Estimate {
     unitPriceCents: number;
     amountCents: number;
   }>;
+  /** A-65: tracking annotations only; shipment metadata never changes stock or posting state. */
+  metadata?: EntityMetadata;
   notes?: string;
   createdAt: string;
   updatedAt?: string;

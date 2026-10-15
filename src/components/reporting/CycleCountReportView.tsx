@@ -13,6 +13,7 @@ import { loadWorkspaceStockMoves } from '../../lib/cycleCountApi';
 import { NO_LOCATION, type StockMove } from '../../lib/stockMoves';
 import { downloadCsv } from '../../lib/csvExport';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import WarehouseOperationsReportView from './WarehouseOperationsReportView';
 
 const field = 'min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]';
 const CSV_HEADERS = ['Item', 'SKU', 'Expected', 'Counted', 'Difference', 'Unit cost', 'Value', 'Expected figure explained'];
@@ -42,6 +43,7 @@ export default function CycleCountReportView({ endDate = '', loadMoves = loadWor
   const [note, setNote] = useState('');
   const [scanInput, setScanInput] = useState('');
   const [scanMessage, setScanMessage] = useState('');
+  const [activeWorkflow, setActiveWorkflow] = useState<'cycle-count' | 'warehouse'>('cycle-count');
   const keystrokeTimes = useRef<number[]>([]);
 
   const currency = workspace?.currency || 'USD';
@@ -111,7 +113,17 @@ export default function CycleCountReportView({ endDate = '', loadMoves = loadWor
     setScanMessage(`Scanned ${match.item.name} (${scan.code})${burst ? ' via scanner' : ''}: counted quantity is now ${nextQty}.`);
   };
 
-  return <section aria-label="Inventory cycle count" className="p-4 space-y-4 min-w-0">
+  return <>
+    <div role="tablist" aria-label="Inventory workflows" className="flex flex-wrap gap-2 border-b border-[var(--line)] px-4" data-print-hide>
+      <button type="button" role="tab" id="inventory-tab-cycle-count" aria-controls="inventory-workflow-panel" aria-selected={activeWorkflow === 'cycle-count'} tabIndex={activeWorkflow === 'cycle-count' ? 0 : -1}
+        className={`min-h-11 px-3 border-b-2 ${activeWorkflow === 'cycle-count' ? 'border-[var(--brass)] font-semibold' : 'border-transparent text-[var(--muted)]'}`}
+        onClick={() => setActiveWorkflow('cycle-count')}>Cycle count</button>
+      <button type="button" role="tab" id="inventory-tab-warehouse" aria-controls="inventory-workflow-panel" aria-selected={activeWorkflow === 'warehouse'} tabIndex={activeWorkflow === 'warehouse' ? 0 : -1}
+        className={`min-h-11 px-3 border-b-2 ${activeWorkflow === 'warehouse' ? 'border-[var(--brass)] font-semibold' : 'border-transparent text-[var(--muted)]'}`}
+        onClick={() => setActiveWorkflow('warehouse')}>Warehouse operations</button>
+    </div>
+    <div role="tabpanel" id="inventory-workflow-panel" aria-labelledby={activeWorkflow === 'cycle-count' ? 'inventory-tab-cycle-count' : 'inventory-tab-warehouse'}>
+    {activeWorkflow === 'warehouse' ? <WarehouseOperationsReportView /> : <section aria-label="Inventory cycle count" className="p-4 space-y-4 min-w-0">
     <h2>Inventory cycle count</h2>
     <p className="text-sm text-[var(--muted)]">A count sheet for one place: the ledger's expected quantity, what was counted, and the variance in units and at each item's own cost. {COUNT_POSTING_NOTE}</p>
     <p className="text-sm text-[var(--muted)]">A row left blank is never read as zero — it is listed as not counted. A row whose stock history does not explain its quantity is marked, so a difference is not blamed on the count before the history is checked. Expected quantities come from the stock-moves ledger (per Location); an item with no history uses its own quantity on hand and says so.</p>
@@ -231,5 +243,7 @@ export default function CycleCountReportView({ endDate = '', loadMoves = loadWor
       {variance.notCounted.length > 0 && <p className="text-sm text-[var(--muted)]">Not counted yet ({variance.notCounted.length}): {variance.notCounted.map(r => r.itemName).join(', ')} — a blank row is not zero.</p>}
       {variance.unexplained.length > 0 && <p className="text-sm text-[var(--warning,#b45309)]">The history does not explain the expected figure for {variance.unexplained.map(r => r.itemName).join(', ')}; the sheet cannot be marked ready until someone checks it or records the missing movement.</p>}
     </div>}
-  </section>;
+    </section>}
+    </div>
+  </>;
 }
