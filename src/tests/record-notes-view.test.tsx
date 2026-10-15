@@ -163,4 +163,22 @@ describe('Notes panel on a record', () => {
       metadata={{ [RECORD_NOTES_METADATA_KEY]: [note('n1', 'Called about the late invoice', '2026-10-01T09:00:00Z')] }} />);
     assert.ok(!screen.queryByRole('button', { name: /Change note on Acme Ltd/ }));
   });
+
+  test('the comment thread posts an @mention reply and allows editing within 10 minutes (A-21 / A-181)', async () => {
+    stubDbWrites();
+    useAuthStore.setState({
+      isGuest: false, user: { uid: 'u1', displayName: 'Alex', email: 'alex@shop.test' } as never,
+      currentWorkspaceId: 'w1', workspaces: [{ id: 'w1', uid: 'u1', name: 'W', currency: 'USD', roles: { u2: 'accountant' } }] as never,
+    });
+    render(<RecordNotesPanel entityType="customer" entityId="c1" entityName="Acme Ltd" metadata={{}} />);
+    fireEvent.change(screen.getByLabelText('New comment on Acme Ltd'), { target: { value: 'Ping @u2 about the renewal quote' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Post comment' })); });
+    await waitFor(() => assert.ok(screen.getByText('Ping @u2 about the renewal quote')));
+    assert.match(document.body.textContent || '', /mentioned: u2/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit comment on Acme Ltd' }));
+    fireEvent.change(screen.getByLabelText('Edit comment on Acme Ltd'), { target: { value: 'Ping @u2 — renewal confirmed' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save comment' })); });
+    await waitFor(() => assert.ok(screen.getByText('Ping @u2 — renewal confirmed')));
+  });
 });

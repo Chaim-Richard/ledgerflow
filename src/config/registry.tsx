@@ -413,6 +413,9 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'RetentionReviewReportView': lazy(() => import('../components/reporting/RetentionReviewReportView')),
   'RecordNotesReportView': lazy(() => import('../components/reporting/RecordNotesReportView')),
   'SerialLotLookupReportView': lazy(() => import('../components/reporting/SerialLotLookupReportView')),
+  'LandedCostPreviewReportView': lazy(() => import('../components/reporting/LandedCostPreviewReportView')),
+  'DeliveryNotesReportView': lazy(() => import('../components/reporting/DeliveryNotesReportView')),
+  'CustomerQuotesReportView': lazy(() => import('../components/reporting/CustomerQuotesReportView')),
   'CustomerGrossProfitView': lazy(() => import('../components/reporting/CustomerGrossProfitView')),
   'InactiveItemsReportView': lazy(() => import('../components/reporting/InactiveItemsReportView')),
   'AccountBalancesAsOfView': lazy(() => import('../components/reporting/EverydayReportViews').then(module => ({default:module.AccountBalancesAsOfView}))),
@@ -519,6 +522,9 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'record-retention-review', label: { en: 'Record Retention Review', he: 'בדיקת שמירת רשומות' }, componentName: 'RetentionReviewReportView', icon: Scale },
   { id: 'record-notes', label: { en: 'Record Notes', he: 'הערות על רשומות' }, componentName: 'RecordNotesReportView', icon: FileText },
   { id: 'serial-lot-lookup', label: { en: 'Serial & Lot Lookup', he: 'חיפוש מספרי סידוריים וסידות' }, componentName: 'SerialLotLookupReportView', icon: Barcode },
+  { id: 'landed-cost-preview', label: { en: 'Landed Cost Preview', he: 'תצוגת עלות משלוח ומכס' }, componentName: 'LandedCostPreviewReportView', icon: Package },
+  { id: 'delivery-notes', label: { en: 'Delivery Notes', he: 'תעודות משלוח' }, componentName: 'DeliveryNotesReportView', icon: FileText },
+  { id: 'customer-quotes', label: { en: 'Customer Quotes & Proposals', he: 'הצעות מחיר ללקוחות' }, componentName: 'CustomerQuotesReportView', icon: FileText },
 ], 'reports');
 
 export const SETTINGS_TABS_REGISTRY = withScreenHelp([

@@ -240,6 +240,12 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review a party statement and included documents. Choose a customer or supplier and inspect movements and balance. Sending a statement retains the existing delivery workflow.",
     "tax-liability":
       "Review the existing sales-tax liability report. Select dates and inspect taxable amounts and tax totals. Review the report scope before using it for a tax filing.",
+    "landed-cost-preview":
+      "Preview how freight, duty and handling spread across a purchase order receipt's lines (or a scanned receipt draft) by line value or by quantity. The allocated extra cents sum to the exact extra cost. Preview only: nothing here posts to inventory or bills (posting stays on the receipt/bill path).",
+    "delivery-notes":
+      "Print or export a delivery note from a sales order, recorded delivery or invoice in English (LTR) or Hebrew (RTL), numbered in its own DN-YYYY-NNN series. Prices are hidden by default so the note lists goods only, with an option to show unit and line prices.",
+    "customer-quotes":
+      "Review open, signed and expired customer estimates and proposals with their portal signing link (/e/<token>). Build and preview one-page proposals with cover letters, sections and optional add-on items. Inspect recurring estimate schedules and draft quotes due on or before the selected date.",
   },
   settings: {
     "tax-profiles": "Review declared country, place, accounting basis and registrations for the books and each label value. Grey values inherit from the nearest parent or the books. Owners and accountants edit supported profile fields here; save confirms the server response and keeps the draft on refusal. A saved declaration is not a verified registration or a completed tax filing.",

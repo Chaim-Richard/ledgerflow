@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -8,6 +8,7 @@ import {
   COUNT_POSTING_NOTE, countInputProblem, countSheetVariance, enterCount, markReady, openCountSheet,
   readyProblem, type CountSheet,
 } from '../../lib/cycleCounts';
+import { findItemByBarcode, isScannerBurst, readScan } from '../../lib/barcodeScan';
 import { loadWorkspaceStockMoves } from '../../lib/cycleCountApi';
 import { NO_LOCATION, type StockMove } from '../../lib/stockMoves';
 import { downloadCsv } from '../../lib/csvExport';
@@ -39,6 +40,9 @@ export default function CycleCountReportView({ endDate = '', loadMoves = loadWor
   const [readProblem, setReadProblem] = useState('');
   const [sheet, setSheet] = useState<CountSheet | null>(null);
   const [note, setNote] = useState('');
+  const [scanInput, setScanInput] = useState('');
+  const [scanMessage, setScanMessage] = useState('');
+  const keystrokeTimes = useRef<number[]>([]);
 
   const currency = workspace?.currency || 'USD';
   const locations = useMemo(() => (nodes || []).filter(n => n.dimensionId === 'location' && n.status !== 'archived'), [nodes]);
@@ -76,6 +80,35 @@ export default function CycleCountReportView({ endDate = '', loadMoves = loadWor
     if (result.problem) { toast.error(result.problem); return; }
     setSheet(result.sheet);
     toast.success('Sheet marked ready. The adjustment is posted from the Inventory stock count, not here.');
+  };
+
+  const onScanBarcode = () => {
+    if (!sheet) return;
+    const scan = readScan(scanInput);
+    const burst = isScannerBurst(keystrokeTimes.current);
+    keystrokeTimes.current = [];
+    if (!scan.ok) {
+      setScanMessage(scan.reason);
+      return;
+    }
+    const match = findItemByBarcode(items, scan.code);
+    if (match.status === 'none') {
+      setScanMessage(`No item has barcode “${scan.code}”.`);
+      return;
+    }
+    if (match.status === 'ambiguous') {
+      setScanMessage(`More than one item uses barcode “${scan.code}” (${match.items.map(i => i.name).join(', ')}) — enter the count on its row.`);
+      return;
+    }
+    const row = sheet.rows.find(r => r.itemId === match.item.id);
+    if (!row) {
+      setScanMessage(`${match.item.name} (${scan.code}) is not on this sheet — tick “List every item” and reopen the sheet to count it here.`);
+      return;
+    }
+    const nextQty = (row.counted ?? 0) + 1;
+    setSheet(current => (current ? enterCount(current, match.item.id, String(nextQty)) : current));
+    setScanInput('');
+    setScanMessage(`Scanned ${match.item.name} (${scan.code})${burst ? ' via scanner' : ''}: counted quantity is now ${nextQty}.`);
   };
 
   return <section aria-label="Inventory cycle count" className="p-4 space-y-4 min-w-0">
@@ -122,6 +155,39 @@ export default function CycleCountReportView({ endDate = '', loadMoves = loadWor
       <p className="text-sm text-[var(--text)]">
         {variance.countedRows.length} of {sheet.rows.length} counted · {variance.differences.length} differ from the ledger · units short {variance.unitsShort} · units found {variance.unitsFound} · variance <strong>{formatCurrency(variance.valueCents, currency)}</strong>
       </p>
+
+      <div className="flex flex-wrap items-end gap-2" data-print-hide>
+        <label className="flex flex-col gap-1 text-sm">
+          Scan item barcode
+          <input
+            aria-label="Scan item barcode"
+            type="text"
+            className={field}
+            placeholder="Scan or type SKU"
+            value={scanInput}
+            disabled={marked}
+            onChange={event => {
+              keystrokeTimes.current.push(Date.now());
+              setScanInput(event.target.value);
+            }}
+            onKeyDown={event => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                onScanBarcode();
+              }
+            }}
+          />
+        </label>
+        <button
+          type="button"
+          onClick={onScanBarcode}
+          disabled={marked}
+          className="min-h-11 px-4 rounded border border-[var(--line)] disabled:opacity-50"
+        >
+          Count scanned item (+1)
+        </button>
+        {scanMessage && <span className="text-sm text-[var(--muted)]">{scanMessage}</span>}
+      </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-[46rem]">

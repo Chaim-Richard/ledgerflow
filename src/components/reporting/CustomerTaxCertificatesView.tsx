@@ -6,6 +6,12 @@ import { collection,getDocs,query,where } from '../../lib/db/firestore';
 import { db } from '../../firebase';
 import { getLocalDateISO } from '../../lib/utils';
 import { customerTaxCertificates } from '../../lib/customerTaxCertificates';
+import { taxExemptionOf } from '../../lib/taxExemption';
+import {
+  certificateTypeName,
+  SST_MEMBER_STATES,
+  US_EXEMPTION_CERTIFICATE_TYPES,
+} from '../../lib/tax/usExemptionCertificates';
 import { downloadCsv } from '../../lib/csvExport';
 import { RelatedRecordEditButton } from '../common/RecordDetailsLauncher';
 import type { Customer } from '../../types';
@@ -25,7 +31,9 @@ function ScopedCertificates(){
   const today=snapshot?.assessed||getLocalDateISO();
   // Keep uncached rows and their focused detail buttons mounted after an edit.
   // A changed cache makes this dated read stale, so its CSV stays unavailable.
-  const report=useMemo(()=>customerTaxCertificates(snapshot?.customers||customers,workspaceId||'',today),[snapshot,customers,workspaceId,today]);
+  const sourceCustomers=snapshot?.customers||customers;
+  const customerById=useMemo(()=>new Map(sourceCustomers.map(c=>[c.id,c])),[sourceCustomers]);
+  const report=useMemo(()=>customerTaxCertificates(sourceCustomers,workspaceId||'',today),[sourceCustomers,workspaceId,today]);
   async function refresh(){
     if(pending.current||!workspaceId||!uid||guest||!current())return;
     const cacheAtStart=useLedgerStore.getState().customers;
@@ -48,7 +56,19 @@ function ScopedCertificates(){
     {snapshot&&<p>Complete customer read retrieved {snapshot.retrieved}; assessed on {snapshot.assessed} using the current date settings.</p>}{error&&<p role="alert">{error}</p>}
     <div className="flex flex-wrap gap-2"><button type="button" onClick={()=>void refresh()} disabled={busy||!uid||guest||!workspaceId} className="min-h-11 border rounded px-3">{busy?'Refreshing…':'Refresh complete customers'}</button><button type="button" onClick={exportCsv} disabled={!confirmed||busy||Boolean(error)} className="min-h-11 border rounded px-3">Export CSV</button></div>
     <p>{report.missing} customers have no recorded certificate and are outside this list.</p>
-    <div role="region" aria-label="Scrollable certificate table" tabIndex={0} className="overflow-x-auto"><table className="w-full min-w-[640px] text-sm"><caption>Current customer certificates — recorded expiry assessed on {today}</caption><thead><tr>{['Customer','Certificate number','Recorded expiry','Recorded status','Details'].map(label=><th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{report.rows.map(row=><tr key={row.id} className={row.state==='Expired'?'bg-red-500/10':''}><th scope="row"><bdi>{row.customer}</bdi></th><td><bdi>{row.number||'Not readable'}</bdi></td><td><bdi>{row.expires||'Not recorded'}</bdi></td><td>{row.state}{row.problem&&<p>{row.problem}</p>}</td><td><RelatedRecordEditButton target={{kind:'customers',id:row.id}}/></td></tr>)}</tbody></table></div>
+    <div role="region" aria-label="Scrollable certificate table" tabIndex={0} className="overflow-x-auto"><table className="w-full min-w-[640px] text-sm"><caption>Current customer certificates — recorded expiry assessed on {today}</caption><thead><tr>{['Customer','Certificate number','Recorded expiry','Recorded status','Details'].map(label=><th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{report.rows.map(row=>{const recordedType=certificateTypeName(taxExemptionOf(customerById.get(row.id))?.type);return <tr key={row.id} className={row.state==='Expired'?'bg-red-500/10':''}><th scope="row"><bdi>{row.customer}</bdi></th><td><bdi>{row.number||'Not readable'}</bdi>{recordedType?<span className="ml-2 text-xs text-[var(--muted)]">({recordedType})</span>:null}</td><td><bdi>{row.expires||'Not recorded'}</bdi></td><td>{row.state}{row.problem&&<p>{row.problem}</p>}</td><td><RelatedRecordEditButton target={{kind:'customers',id:row.id}}/></td></tr>;})}</tbody></table></div>
     {!loading&&report.rows.length===0&&<p>{confirmed?'No customer certificates are recorded. Add the certificate number and expiry in the customer editor, then refresh this list.':snapshot?'No certificates appeared in the last complete read; customer details have changed since then. Refresh to review current records.':'No certificates appear in the loaded preview. Refresh the complete customer list before concluding that none are recorded.'}</p>}
+    <details className="text-xs text-[var(--muted)] space-y-2 pt-2 border-t border-[var(--line)]">
+      <summary className="cursor-pointer font-medium text-[var(--text)]">US sales-tax exemption certificate types &amp; multistate forms (reference)</summary>
+      <p>Streamlined Sales Tax (SST) full member states ({SST_MEMBER_STATES.length}): {SST_MEMBER_STATES.join(', ')}. Each state’s own instructions govern which certificates it accepts.</p>
+      <dl className="space-y-1">
+        {US_EXEMPTION_CERTIFICATE_TYPES.map(t=>(
+          <div key={t.id}>
+            <dt className="font-medium text-[var(--text)] inline">{t.name} ({t.id}): </dt>
+            <dd className="inline">{t.whatItClaims} — Source: <a href={t.source.url} target="_blank" rel="noopener noreferrer" className="underline">{t.source.authority}</a></dd>
+          </div>
+        ))}
+      </dl>
+    </details>
   </section>;
 }

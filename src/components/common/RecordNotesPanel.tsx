@@ -9,10 +9,38 @@ import React, { useMemo, useState } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import {
-  addRecordNote, editRecordNote, noteProblem, notePreview, notesForEntity, recordNotesFromMetadata,
+  addRecordNote, editRecordNote, noteProblem, notePreview, recordNotesFromMetadata,
   RECORD_NOTES_METADATA_KEY, searchRecordNotes,
   type NoteableType, type RecordNote,
 } from '../../lib/recordNotes';
+import {
+  commentEditProblem,
+  commentProblem,
+  commentWhen,
+  editedThreadComment,
+  newThreadComment,
+  threadComments,
+  threadParticipants,
+  type CommentEntityType,
+  type ThreadComment,
+} from '../../lib/commentThreads';
+import type { Mentionable } from '../../lib/mentions';
+
+const COMMENT_THREAD_METADATA_KEY = 'commentThread';
+
+function commentThreadFromMetadata(metadata?: Record<string, unknown> | null): ThreadComment[] {
+  const raw = metadata?.[COMMENT_THREAD_METADATA_KEY];
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((item): item is ThreadComment => (
+    Boolean(item) &&
+    typeof item === 'object' &&
+    typeof (item as ThreadComment).id === 'string' &&
+    typeof (item as ThreadComment).body === 'string' &&
+    typeof (item as ThreadComment).createdAt === 'string' &&
+    typeof (item as ThreadComment).entityType === 'string' &&
+    typeof (item as ThreadComment).entityId === 'string'
+  ));
+}
 
 /** The store collection each kind of noteable record lives in (src/lib/ledgerCollections.ts). */
 export const NOTE_COLLECTIONS = {
@@ -49,17 +77,23 @@ const when = (iso: string) => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
 };
 
-/** Notes on one record: newest first, with add and edit-own. */
+/** Notes on one record: newest first, with add and edit-own, plus @mention comment thread (A-21). */
 export default function RecordNotesPanel({ entityType, entityId, entityName, metadata, canEdit = true }: RecordNotesPanelProps) {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
+  const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const user = useAuthStore(s => s.user);
   const { updateEntity } = useEntityOperations();
   const collection = NOTE_COLLECTIONS[entityType];
   const [saved, setSaved] = useState<RecordNote[] | null>(null);
+  const [savedThread, setSavedThread] = useState<ThreadComment[] | null>(null);
   const [draft, setDraft] = useState('');
   const [editingId, setEditingId] = useState('');
   const [editDraft, setEditDraft] = useState('');
   const [problem, setProblem] = useState('');
+  const [threadDraft, setThreadDraft] = useState('');
+  const [threadEditId, setThreadEditId] = useState('');
+  const [threadEditDraft, setThreadEditDraft] = useState('');
+  const [threadProblem, setThreadProblem] = useState('');
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState('');
 
@@ -71,11 +105,37 @@ export default function RecordNotesPanel({ entityType, entityId, entityName, met
   const authorUid = user?.uid || '';
   const authorName = user?.displayName || user?.email || undefined;
 
+  const people = useMemo<Mentionable[]>(() => {
+    const uids = new Set<string>();
+    if (workspace?.uid) uids.add(workspace.uid);
+    for (const uid of Object.keys(workspace?.roles || {})) uids.add(uid);
+    if (user?.uid) uids.add(user.uid);
+    const list: Mentionable[] = [];
+    for (const uid of uids) {
+      const email = uid === user?.uid ? user.email || `${uid}@workspace.local` : `${uid}@workspace.local`;
+      list.push({ uid, email });
+    }
+    return list;
+  }, [workspace, user]);
+
+  const commentEntityType: CommentEntityType | null =
+    entityType === 'transaction' ? null : entityType;
+
+  const thread = useMemo(
+    () => (commentEntityType ? threadComments(savedThread ?? commentThreadFromMetadata(metadata), commentEntityType, entityId, workspaceId || undefined) : []),
+    [savedThread, metadata, commentEntityType, entityId, workspaceId],
+  );
+  const participants = useMemo(() => threadParticipants(thread), [thread]);
+
   const save = async (next: RecordNote[], message: string): Promise<boolean> => {
     setBusy(true);
     try {
       await updateEntity(collection, entityId, {
-        metadata: { ...(metadata || {}), [RECORD_NOTES_METADATA_KEY]: next },
+        metadata: {
+          ...(metadata || {}),
+          ...(savedThread ? { [COMMENT_THREAD_METADATA_KEY]: savedThread } : {}),
+          [RECORD_NOTES_METADATA_KEY]: next,
+        },
       }, message);
       setSaved(next);
       return true;
@@ -84,6 +144,59 @@ export default function RecordNotesPanel({ entityType, entityId, entityName, met
       return false;
     } finally {
       setBusy(false);
+    }
+  };
+
+  const saveThread = async (nextThread: ThreadComment[], message: string): Promise<boolean> => {
+    setBusy(true);
+    try {
+      await updateEntity(collection, entityId, {
+        metadata: {
+          ...(metadata || {}),
+          ...(saved ? { [RECORD_NOTES_METADATA_KEY]: saved } : {}),
+          [COMMENT_THREAD_METADATA_KEY]: nextThread,
+        },
+      }, message);
+      setSavedThread(nextThread);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addThreadReply = async () => {
+    if (!commentEntityType) return;
+    const refusal = commentProblem(threadDraft);
+    if (refusal) { setThreadProblem(refusal); return; }
+    setThreadProblem('');
+    const created = newThreadComment(
+      {
+        id: newNoteId(),
+        workspaceId,
+        entityType: commentEntityType,
+        entityId,
+        author: { uid: authorUid, ...(user?.displayName ? { name: user.displayName } : {}), ...(user?.email ? { email: user.email } : {}) },
+        body: threadDraft,
+      },
+      people,
+    );
+    if (await saveThread([...thread, created], `Comment posted on ${entityName}`)) {
+      setThreadDraft('');
+    }
+  };
+
+  const editThreadReply = async (comment: ThreadComment) => {
+    const canChangeProblem = commentEditProblem(comment, authorUid);
+    if (canChangeProblem) { setThreadProblem(canChangeProblem); return; }
+    const refusal = commentProblem(threadEditDraft);
+    if (refusal) { setThreadProblem(refusal); return; }
+    setThreadProblem('');
+    const updated = editedThreadComment(comment, threadEditDraft, people);
+    if (await saveThread(thread.map(c => (c.id === comment.id ? updated : c)), `Comment updated on ${entityName}`)) {
+      setThreadEditId('');
+      setThreadEditDraft('');
     }
   };
 
@@ -188,6 +301,101 @@ export default function RecordNotesPanel({ entityType, entityId, entityName, met
           </li>
         ))}
       </ul>
+
+      {commentEntityType && (
+        <div className="pt-3 border-t border-[var(--line)] space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-xs font-semibold text-[var(--text)]">Comment thread (@mentions, 10-minute own-edit)</h4>
+            {participants.length > 0 && (
+              <span className="text-xs text-[var(--muted)]">
+                Participants: {participants.map(p => p.name || p.email || p.uid).join(', ')}
+              </span>
+            )}
+          </div>
+          {thread.length === 0 ? (
+            <p className="text-xs text-[var(--muted)]">No thread comments on this record yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {thread.map(comment => {
+                const editRefusal = commentEditProblem(comment, authorUid);
+                return (
+                  <li key={comment.id} className="border border-[var(--line)] rounded p-2 text-xs space-y-1">
+                    <div className="text-[var(--muted)]">
+                      <bdi>{comment.authorName || comment.authorEmail || comment.authorUid || 'Someone'}</bdi>
+                      {' · '}
+                      <span>{commentWhen(comment) || when(comment.createdAt)}</span>
+                      {comment.editedAt ? ' · edited' : ''}
+                      {comment.mentions.length > 0 ? ` · mentioned: ${comment.mentions.join(', ')}` : ''}
+                    </div>
+                    {threadEditId === comment.id ? (
+                      <div className="space-y-1">
+                        <textarea
+                          aria-label={`Edit comment on ${entityName}`}
+                          rows={2}
+                          value={threadEditDraft}
+                          onChange={e => setThreadEditDraft(e.target.value)}
+                          className="w-full border rounded px-2 py-1 bg-[var(--panel)] text-[var(--text)] text-sm"
+                          dir="auto"
+                        />
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => void editThreadReply(comment)} disabled={busy}
+                            className="px-2 py-1 rounded border border-[var(--line)]">Save comment</button>
+                          <button type="button" onClick={() => { setThreadEditId(''); setThreadProblem(''); }}
+                            className="px-2 py-1 rounded border border-[var(--line)]">Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm whitespace-pre-wrap text-[var(--text)]" dir="auto">{comment.body}</p>
+                        {canEdit && !editRefusal && (
+                          <button
+                            type="button"
+                            data-print-hide
+                            aria-label={`Edit comment on ${entityName}`}
+                            onClick={() => {
+                              setThreadEditId(comment.id);
+                              setThreadEditDraft(comment.body);
+                              setThreadProblem('');
+                            }}
+                            className="text-xs text-[var(--muted)] hover:underline"
+                          >
+                            Edit comment
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {canEdit && (
+            <div className="space-y-1" data-print-hide>
+              <label className="flex flex-col gap-1 text-xs">
+                Reply in thread (use @name or @email to mention teammates)
+                <input
+                  type="text"
+                  aria-label={`New comment on ${entityName}`}
+                  value={threadDraft}
+                  onChange={e => { setThreadDraft(e.target.value); if (threadProblem) setThreadProblem(''); }}
+                  placeholder="Write a comment or @mention a teammate"
+                  className="min-h-9 border rounded px-2 bg-[var(--panel)] text-[var(--text)] text-sm"
+                  dir="auto"
+                />
+              </label>
+              {threadProblem && <p role="alert" className="text-xs text-red-600">{threadProblem}</p>}
+              <button
+                type="button"
+                onClick={() => void addThreadReply()}
+                disabled={busy}
+                className="px-3 py-1 rounded border border-[var(--line)] text-xs disabled:opacity-50"
+              >
+                Post comment
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
