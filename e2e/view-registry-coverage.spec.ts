@@ -125,6 +125,9 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Dunning Letters', componentName: 'DunningLettersReportView' },
     { label: 'Record Notes', componentName: 'RecordNotesReportView' },
     { label: 'Serial & Lot Lookup', componentName: 'SerialLotLookupReportView' },
+    { label: 'Landed Cost Preview', componentName: 'LandedCostPreviewReportView' },
+    { label: 'Delivery Notes', componentName: 'DeliveryNotesReportView' },
+    { label: 'Customer Quotes & Proposals', componentName: 'CustomerQuotesReportView' },
   ];
 
   for (const report of reportTabs) {

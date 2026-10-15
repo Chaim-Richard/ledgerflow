@@ -148,4 +148,22 @@ describe('On screen', () => {
     assert.deepEqual(sent.body, { lists: [{ name: 'Wholesale', discountPercent: 10, prices: { chair: 4500 }, customerIds: ['c1'] }] });
     await waitFor(() => assert.ok(screen.getByText(/10% off every item · Chair \$45\.00 · for Acme Ltd/)));
   });
+
+  test('Settings → Price lists: an owner sets a foreign currency on a price list (A-48)', async () => {
+    const ws = setComponentWorkspace('owner');
+    useAuthStore.setState({ workspaces: [{ ...ws, currency: 'USD', priceLists: [wholesale] }] });
+    useLedgerStore.setState({ inventory: [chair, desk], customers: [makeCustomer({ id: 'c1', name: 'Acme Ltd' })] });
+    const eurList: PriceList = { id: 'pl_bbbbbbbb', name: 'EU Trade', currency: 'EUR', discountPercent: 15, customerIds: ['c1'] };
+    const calls = stubFetchWithBodies(200, { status: 'success', lists: [wholesale, eurList] });
+    render(<PriceListsSettings />);
+    fireEvent.click(screen.getByRole('button', { name: 'New price list' }));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'EU Trade' } });
+    fireEvent.change(screen.getByLabelText('Currency'), { target: { value: 'eur' } });
+    fireEvent.change(screen.getByLabelText('Discount on every item, %'), { target: { value: '15' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Acme Ltd' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save price list' })); });
+    const sent = calls.find(c => c.url === `/api/v1/workspaces/${ws.id}/price-lists`)!;
+    assert.deepEqual(sent.body, { lists: [wholesale, { name: 'EU Trade', currency: 'EUR', discountPercent: 15, customerIds: ['c1'] }] });
+    await waitFor(() => assert.ok(screen.getByText('(EUR)')));
+  });
 });

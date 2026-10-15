@@ -7,21 +7,22 @@ import { useLedgerCollections } from '../../../hooks/useLedgerCollections';
 import { useCurrentRole } from '../../../hooks/useCurrentRole';
 import { getIdToken } from '../../../firebase';
 import { formatCurrency } from '../../../lib/utils';
-import { priceListsProblem, type PriceList } from '../../../lib/priceLists';
+import { listCurrency, priceListsProblem, type PriceList } from '../../../lib/priceLists';
 
 const field = 'px-2 py-1.5 text-sm border border-[var(--line)] rounded bg-[var(--panel)] text-[var(--text)]';
 
 /** A list being edited: amounts as typed. */
-interface Draft { id?: string; name: string; discount: string; prices: Array<{ key: string; itemId: string; price: string }>; customerIds: string[] }
+interface Draft { id?: string; name: string; currency: string; discount: string; prices: Array<{ key: string; itemId: string; price: string }>; customerIds: string[] }
 
 const newKey = () => globalThis.crypto.randomUUID();
 const toCents = (text: string) => Math.round(Number(text.replace(',', '.')) * 100);
 const toDraft = (l: PriceList): Draft => ({
-  id: l.id, name: l.name, discount: l.discountPercent ? String(l.discountPercent) : '', customerIds: [...(l.customerIds || [])],
+  id: l.id, name: l.name, currency: l.currency || '', discount: l.discountPercent ? String(l.discountPercent) : '', customerIds: [...(l.customerIds || [])],
   prices: Object.entries(l.prices || {}).map(([itemId, cents]) => ({ key: newKey(), itemId, price: (cents / 100).toFixed(2) })),
 });
 const fromDraft = (d: Draft) => ({
   ...(d.id ? { id: d.id } : {}), name: d.name,
+  ...(d.currency.trim() ? { currency: d.currency.trim().toUpperCase() } : {}),
   ...(d.discount.trim() ? { discountPercent: Number(d.discount.replace(',', '.')) } : {}),
   ...(d.prices.some(p => p.itemId) ? { prices: Object.fromEntries(d.prices.filter(p => p.itemId).map(p => [p.itemId, p.price.trim() === '' ? NaN : toCents(p.price)])) } : {}),
   ...(d.customerIds.length ? { customerIds: d.customerIds } : {}),
@@ -74,7 +75,7 @@ export default function PriceListsSettings() {
     if (editing?.index === null || editing?.index === undefined) list.push(fromDraft(d)); else list[editing.index] = fromDraft(d);
     return list;
   };
-  const problem = draft ? priceListsProblem(nextLists(draft)) : null;
+  const problem = draft ? priceListsProblem(nextLists(draft), currency) : null;
   const set = (change: Partial<Draft>) => setEditing(e => e && ({ ...e, draft: { ...e.draft, ...change } }));
   const setPrice = (i: number, change: Partial<Draft['prices'][number]>) => setEditing(e => e && ({ ...e, draft: { ...e.draft, prices: e.draft.prices.map((p, j) => (j === i ? { ...p, ...change } : p)) } }));
   const liveItems = (items || []).filter(i => !(i as { isArchived?: boolean }).isArchived).sort((a, b) => a.name.localeCompare(b.name));
@@ -89,30 +90,37 @@ export default function PriceListsSettings() {
       </div>
       <ul className="rounded-xl border border-[var(--line)] bg-[var(--surface)] divide-y divide-[var(--line)]">
         {lists.length === 0 && <li className="p-4 text-sm text-[var(--muted)]">No price lists yet.</li>}
-        {lists.map((l, index) => (
-          <li key={l.id} className="p-4 flex flex-wrap items-start justify-between gap-2 text-sm">
-            <div>
-              <p className="font-semibold text-[var(--text)]"><bdi>{l.name}</bdi></p>
-              <p className="text-xs text-[var(--muted)]">
-                {[l.discountPercent ? `${l.discountPercent}% off every item` : '', ...Object.entries(l.prices || {}).slice(0, 5).map(([id, cents]) => `${itemName(id)} ${formatCurrency(cents, currency)}`)].filter(Boolean).join(' · ')}
-                {Object.keys(l.prices || {}).length > 5 ? ` and ${Object.keys(l.prices || {}).length - 5} more` : ''}
-                {' · '}{(l.customerIds || []).length === 0 ? 'no customers yet' : `for ${(l.customerIds || []).slice(0, 3).map(customerName).join(', ')}${(l.customerIds || []).length > 3 ? ` and ${(l.customerIds || []).length - 3} more` : ''}`}
-              </p>
-            </div>
-            {canChange && (
-              <div className="flex gap-2 text-xs">
-                <button type="button" disabled={busy} onClick={() => setEditing({ index, draft: toDraft(l) })} className="text-indigo-600 dark:text-indigo-400 hover:underline">Change<span className="sr-only"> {l.name}</span></button>
-                <button type="button" disabled={busy} onClick={() => void save(lists.filter((_, i) => i !== index), `Price list ${l.name} removed`)} className="text-rose-600 hover:underline">Remove<span className="sr-only"> {l.name}</span></button>
+        {lists.map((l, index) => {
+          const listCur = listCurrency(l, currency);
+          return (
+            <li key={l.id} className="p-4 flex flex-wrap items-start justify-between gap-2 text-sm">
+              <div>
+                <p className="font-semibold text-[var(--text)]">
+                  <bdi>{l.name}</bdi>
+                  {l.currency ? <span className="ml-2 text-xs font-mono text-[var(--muted)]">({listCur})</span> : null}
+                </p>
+                <p className="text-xs text-[var(--muted)]">
+                  {[l.discountPercent ? `${l.discountPercent}% off every item` : '', ...Object.entries(l.prices || {}).slice(0, 5).map(([id, cents]) => `${itemName(id)} ${formatCurrency(cents, listCur)}`)].filter(Boolean).join(' · ')}
+                  {Object.keys(l.prices || {}).length > 5 ? ` and ${Object.keys(l.prices || {}).length - 5} more` : ''}
+                  {' · '}{(l.customerIds || []).length === 0 ? 'no customers yet' : `for ${(l.customerIds || []).slice(0, 3).map(customerName).join(', ')}${(l.customerIds || []).length > 3 ? ` and ${(l.customerIds || []).length - 3} more` : ''}`}
+                </p>
               </div>
-            )}
-          </li>
-        ))}
+              {canChange && (
+                <div className="flex gap-2 text-xs">
+                  <button type="button" disabled={busy} onClick={() => setEditing({ index, draft: toDraft(l) })} className="text-indigo-600 dark:text-indigo-400 hover:underline">Change<span className="sr-only"> {l.name}</span></button>
+                  <button type="button" disabled={busy} onClick={() => void save(lists.filter((_, i) => i !== index), `Price list ${l.name} removed`)} className="text-rose-600 hover:underline">Remove<span className="sr-only"> {l.name}</span></button>
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
       {canChange && draft && (
         <fieldset disabled={busy} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-3 text-sm">
           <legend className="px-1 font-semibold text-[var(--text)]">{editing?.index === null ? 'New price list' : 'Change the price list'}</legend>
           <div className="flex flex-wrap gap-3">
             <label className="flex flex-col gap-1 text-[var(--muted)]">Name<input value={draft.name} onChange={e => set({ name: e.target.value })} className={field} /></label>
+            <label className="flex flex-col gap-1 text-[var(--muted)]">Currency<input aria-label="Currency" value={draft.currency} onChange={e => set({ currency: e.target.value })} placeholder={currency} maxLength={3} className={`${field} w-24 uppercase`} /></label>
             <label className="flex flex-col gap-1 text-[var(--muted)]">Discount on every item, %<input inputMode="decimal" value={draft.discount} onChange={e => set({ discount: e.target.value })} placeholder="none" className={`${field} w-28`} /></label>
           </div>
           <div role="group" aria-label="Prices of their own" className="space-y-2">
@@ -149,7 +157,7 @@ export default function PriceListsSettings() {
         </fieldset>
       )}
       {canChange && !draft && (
-        <button type="button" onClick={() => setEditing({ index: null, draft: { name: '', discount: '', prices: [], customerIds: [] } })}
+        <button type="button" onClick={() => setEditing({ index: null, draft: { name: '', currency: '', discount: '', prices: [], customerIds: [] } })}
           className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm font-semibold text-[var(--text)] hover:bg-[var(--elevated)]">New price list</button>
       )}
     </section>

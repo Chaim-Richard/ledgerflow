@@ -86,3 +86,15 @@ test('an edit during a complete read leaves its dated response stale until a new
   globalThis.fetch=async()=>response([{id:after.id,data:after}]);fireEvent.click(screen.getByRole('button',{name:'Refresh complete customers'}));
   await waitFor(()=>assert.equal(csv.disabled,false));assert.equal(screen.queryByText(/changed since the last complete read/),null);
 });
+
+test('shows the recorded US exemption certificate type and toggles the 8-type reference list (A-55)',()=>{
+  const resaleCustomer:Customer={...customer('resale-cust','2026-12-31','RES-900'),metadata:{taxExemption:{number:'RES-900',expires:'2026-12-31',type:'resale'}}};
+  useLedgerStore.setState({customers:[resaleCustomer]});
+  render(<CustomerTaxCertificatesView/>);
+  assert.ok(screen.getByText('(Resale)'));
+  assert.ok(screen.getByText('US sales-tax exemption certificate types & multistate forms (reference)'));
+  assert.ok(screen.getByText(/SST multistate exemption certificate/));
+  assert.ok(screen.getByText(/MTC Uniform Sales & Use Tax Resale Certificate/));
+  assert.ok(screen.getByText(/Streamlined Sales Tax \(SST\) full member states/));
+});
+

@@ -36,7 +36,7 @@ describe('The cycle-count screen', () => {
     globalThis.fetch = (async (input: RequestInfo | URL) => { fetches.push(String(input)); return new Response('{}', { status: 200 }); }) as typeof fetch;
     markComponentCollectionsLoaded('inventory');
     setComponentWorkspace('owner');
-    useLedgerStore.setState({ inventory: [item({}), item({ id: 'b', name: 'Gadget', unitCostCents: 1000 })], dimensionNodes: [warehouse] });
+    useLedgerStore.setState({ inventory: [item({}), item({ id: 'b', name: 'Gadget', sku: 'G-1', unitCostCents: 1000 })], dimensionNodes: [warehouse] });
   });
   afterEach(() => cleanup());
 
@@ -105,5 +105,18 @@ describe('The cycle-count screen', () => {
     await clickText('Open the count sheet');
     assert.ok(screen.getByLabelText('Counted quantity for Gadget'), 'the full count lists every item');
     assert.match(document.body.textContent || '', /nothing says these units are at this place|no units of this item at this place/i);
+  });
+
+  test('scanning an item barcode increments the counted quantity on the open sheet and refuses unknown barcodes (A-79 / A-171)', async () => {
+    await renderSheet([move({ itemId: 'a', quantityBefore: 0, quantityAfter: 10, quantity: 10 })]);
+    const scanInput = screen.getByLabelText('Scan item barcode');
+    await act(async () => { fireEvent.change(scanInput, { target: { value: 'NOPE-99' } }); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Count scanned item (+1)' })); });
+    assert.match(document.body.textContent || '', /No item has barcode “NOPE-99”/);
+
+    await act(async () => { fireEvent.change(scanInput, { target: { value: 'W-1' } }); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Count scanned item (+1)' })); });
+    assert.equal((screen.getByLabelText('Counted quantity for Widget') as HTMLInputElement).value, '1');
+    assert.match(document.body.textContent || '', /Scanned Widget \(W-1\): counted quantity is now 1/);
   });
 });

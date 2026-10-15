@@ -1,15 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, Building2 } from 'lucide-react';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { customerOpenQuotes, type CustomerQuoteItem } from '../../lib/customerQuotes';
+import type { Estimate } from '../../types';
 
 /**
- * Customer portal (K-27): what a customer sees at `/c/<token>`: their invoices from this business,
- * what is still due on each, and "View and pay" for each one's own page. No sign-in; nothing else.
+ * Customer portal (K-27, A-49 / A-175): what a customer sees at `/c/<token>`: their invoices from
+ * this business, what is still due on each, "View and pay" for each one's own page, and their open
+ * estimates and proposals with the Y-20 signing link (`/e/<signToken>`). No sign-in; nothing else.
  */
 interface PortalInvoice { number: string; date: string; dueDate: string; totalCents: number; dueCents: number; currency: string; status: 'open' | 'overdue' | 'paid'; payPath: string }
-interface PortalData { business: string; customer: string; currency: string; owedCents: number; invoices: PortalInvoice[] }
+interface PortalData {
+  business: string;
+  customer: string;
+  customerId?: string;
+  currency: string;
+  owedCents: number;
+  invoices: PortalInvoice[];
+  estimates?: Estimate[];
+  quotes?: Array<CustomerQuoteItem & { signToken?: string }>;
+}
 
 const STATUS = { open: 'Open', overdue: 'Overdue', paid: 'Paid' } as const;
+const QUOTE_STATE = { open: 'Open', expired: 'Expired', signed: 'Signed', closed: 'Closed' } as const;
 
 export default function CustomerPortalPage() {
   const token = window.location.pathname.split('/')[2] || '';
@@ -94,6 +107,55 @@ export default function CustomerPortalPage() {
               </div>
             )}
             <p className="text-xs text-[var(--muted)]">Paid invoices from the last 12 months are shown. Questions about an invoice? Reply to the email it came with.</p>
+            {(() => {
+              const quoteRows: Array<CustomerQuoteItem & { signToken?: string }> = data.quotes
+                ? data.quotes
+                : data.estimates && data.customerId
+                ? customerOpenQuotes(data.estimates, data.customerId, getLocalDateISO()).map(q => {
+                    const est = data.estimates?.find(e => e.id === q.estimateId);
+                    return { ...q, ...(est?.signToken ? { signToken: est.signToken } : {}) };
+                  })
+                : [];
+              if (quoteRows.length === 0) return null;
+              return (
+                <section aria-label="Quotes and proposals" className="space-y-2 pt-2">
+                  <h2 className="text-lg font-bold">Estimates &amp; proposals</h2>
+                  <div className="overflow-x-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+                    <table className="w-full text-sm">
+                      <caption className="sr-only">Quotes and proposals for {data.customer}</caption>
+                      <thead>
+                        <tr className="text-left text-xs text-[var(--muted)]">
+                          <th scope="col" className="p-3">Quote</th>
+                          <th scope="col" className="p-3">Title</th>
+                          <th scope="col" className="p-3">Valid until</th>
+                          <th scope="col" className="p-3 text-right">Amount</th>
+                          <th scope="col" className="p-3">Status</th>
+                          <th scope="col" className="p-3"><span className="sr-only">Accept</span></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {quoteRows.map(q => (
+                          <tr key={q.estimateId} className="border-t border-[var(--line)]">
+                            <td className="p-3 font-semibold"><bdi>{q.number}</bdi></td>
+                            <td className="p-3"><bdi>{q.title}</bdi></td>
+                            <td className="p-3 tabular-nums">{q.expiryDate || '—'}</td>
+                            <td className="p-3 text-right tabular-nums">{formatCurrency(q.amountCents, q.currency || data.currency)}</td>
+                            <td className="p-3">{QUOTE_STATE[q.state]}</td>
+                            <td className="p-3">
+                              {q.canAccept && q.signToken && (
+                                <a href={`/e/${encodeURIComponent(q.signToken)}`} className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline whitespace-nowrap">
+                                  Review and accept<span className="sr-only"> quote {q.number}</span>
+                                </a>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              );
+            })()}
           </>
         )}
       </div>
