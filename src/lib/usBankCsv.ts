@@ -42,6 +42,7 @@ function amount(value: string, name: string, row: number): number {
     return fail(name, row, 'Amount must be signed decimal with at most two places.');
   const negative = input.startsWith('-');
   const [whole, fraction = ''] = input.replace(/^[+-]/, '').replace(/,/g, '').split('.');
+  if (whole.length > 14) return fail(name, row, 'Amount exceeds the safe cent range.');
   const cents = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, '0'));
   if (cents === 0n || cents > BigInt(Number.MAX_SAFE_INTEGER))
     return fail(name, row, 'Amount is zero or exceeds the safe cent range.');
@@ -107,6 +108,8 @@ export function parseUsBankCsv(content: string, format: UsBankCsvFormat): Parsed
       if (format === 'chase-checking') {
         const value = amount(r[3], format, n);
         const direction = r[0].trim().toUpperCase();
+        if (direction !== 'DEBIT' && direction !== 'CREDIT')
+          return fail(format, n, 'Unknown Chase DEBIT/CREDIT marker.');
         if ((direction === 'DEBIT' && value > 0) || (direction === 'CREDIT' && value < 0))
           return fail(format, n, 'DEBIT/CREDIT marker disagrees with signed amount.');
         result.push(line(day(r[1], format, n), value, r[2], format, n, r[6]));
