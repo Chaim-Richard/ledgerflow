@@ -47,7 +47,7 @@ sandbox, so the RLS/database suites are GitHub's).
 - `npx tsc --noEmit -p tsconfig.json` — **pass**.
 - New tests, all eight files — **46/46 pass**.
 - Full local unit suite (`node --import tsx --test --test-concurrency=4` over the same globs as
-  `npm test`) — see §5 for the final run.
+  `npm test`, final run on the committed tree): **2758/2758 pass, 725 suites, 0 failures, 0 skips**.
 - `npx eslint . --max-warnings 212` — **0 errors / 210 warnings, unchanged from main** (cap 212).
 - `npm run build` — **pass** (client/PWA + server bundle).
 - Quality ratchet, capabilities guard, table-a11y guard, reachability guard, ledger-collections
