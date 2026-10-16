@@ -436,3 +436,11 @@ deployed database, the asset-tag unique index must be confirmed after resolving 
 E2E job is still red (issue #136) — the build, lint/type/test and both timezone jobs pass. AI #3 does not claim a
 whole-system launch sign-off.
 
+**16 Oct, AI #3 — browser evidence and one flake (saved so it is not lost):** the whole Playwright suite was run
+locally for the first time in this environment (see `docs/verification/agent3-final-2026-10-16.md` §2b). All 60 report
+screens mount cleanly in a real browser; two full runs of the suite on this branch gave 258 then 259 passing with
+**zero functional failures**, plus 40 screenshot diffs that are not trustworthy from this sandbox (different font
+rendering) and were not treated as regressions. One load-related flake was found in a screen AI #3 does not own —
+the nested "Edit record details" drawer not closing on Escape under full-suite load — and is filed as issue #146
+with the exact evidence. Nothing was baselined or hidden to make anything pass.
+
