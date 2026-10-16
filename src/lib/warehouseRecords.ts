@@ -204,6 +204,50 @@ export function returnAuthorizationRequestProblem(input: {
   return null;
 }
 
+/**
+ * Read-only guard for the request screen: existing non-declined RMAs reserve
+ * invoice-line quantities, including already received/closed returns.
+ *
+ * This does NOT replace an authoritative atomic database check. Two clients
+ * can create RMAs simultaneously; the server needs its own compare-and-swap.
+ * Work in hundredths, not floating point, to avoid cumulative 0.1+0.2 drift.
+ */
+export function returnAuthorizationCapacityProblem(
+  input: {
+    workspaceId: string;
+    customerId: string;
+    invoiceId: string;
+    lines: readonly ReturnAuthorizationRequestLine[];
+  },
+  existing: readonly ReturnAuthorizationRecord[],
+): string | null {
+  const reserved = new Map<string, number>();
+  for (const rma of existing) {
+    if (rma.workspaceId !== input.workspaceId || rma.customerId !== input.customerId ||
+        rma.invoiceId !== input.invoiceId || rma.status === 'declined') continue;
+    for (const line of rma.lines) {
+      const units = Math.round(line.quantity * 100);
+      if (!Number.isSafeInteger(units) || units <= 0 || units / 100 !== line.quantity)
+        return 'Earlier RMA quantities cannot be verified. Review the return history before requesting more.';
+      const total = (reserved.get(line.invoiceLineId) || 0) + units;
+      if (!Number.isSafeInteger(total))
+        return 'Earlier RMA quantities exceed the supported range. Review the return history.';
+      reserved.set(line.invoiceLineId, total);
+    }
+  }
+  for (const line of input.lines) {
+    const sold = Math.round(line.soldQuantity * 100);
+    const requested = Math.round(line.quantity * 100);
+    if (!Number.isSafeInteger(sold) || sold <= 0 || sold / 100 !== line.soldQuantity ||
+        !Number.isSafeInteger(requested) || requested <= 0 || requested / 100 !== line.quantity)
+      return `${line.description}: invoice or return quantity cannot be verified to two decimal places.`;
+    const used = reserved.get(line.invoiceLineId) || 0;
+    if (used > sold || requested > sold - used)
+      return `${line.description}: ${(used / 100).toFixed(2)} already requested or returned; only ${(Math.max(0, sold - used) / 100).toFixed(2)} of ${line.soldQuantity} sold remain available for a new RMA.`;
+  }
+  return null;
+}
+
 export function createReturnAuthorization(input: {
   id: string;
   number: string;
