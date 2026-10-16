@@ -54,8 +54,39 @@ sandbox, so the RLS/database suites are GitHub's).
   guard, screen-help, money-format guard, store-selector guard, effect-cleanup guard, orphan-module
   guard — **pass**. (The ratchet caught one real regression during development — a `key={week.index}`
   — and it was fixed, not baselined.)
-- Not run here: Playwright (no browser in the sandbox) and the database/RLS suites. Both run on
-  GitHub for this branch; the job-level result is reported in the PR and in the coordination message.
+- **Playwright in a real browser, run locally** (this sandbox has no Playwright browser download, so a
+  `chrome-headless-shell` 153 binary was taken from the npm package `@sparticuz/chromium` — installed with
+  `--no-save`, never added to `package.json` — together with the NSS/NSPR libraries from its own
+  `al2023.tar.br`, and pointed at with a temporary untracked `playwright.local.config.ts`):
+  **all 60 registered report screens mount with no error boundary, no `NaN` and no new serious axe
+  violation — 60/60 pass**, including the four added by this batch. The full local E2E run is discussed in §2b.
+- Not run locally: the database/RLS suites (`LF_TEST_DATABASE_URL` unset) — GitHub runs them for this branch.
+
+## 2b. Full local E2E run — what it found (and what it cannot prove)
+
+Full local suite on this branch, run twice:
+
+| Run | Passed | Functional failures | Screenshot-comparison failures |
+|---|---|---|---|
+| 1 | 258 | 1 (the load flake below) | 40 |
+| 2 | **259** | **0** | 40 |
+
+Two different things were in the failures:
+
+1. **One functional failure, reproduced only under full-suite load:**
+   `e2e/customer-tax-certificates.spec.ts` — after "Save details", Escape did not close the nested
+   "Edit record details" drawer within 5 s. Re-run **standalone, the same spec passes on this branch
+   (9.2 s) and on a clean `main` worktree (9.6 s)**. So it is a load/timing flake in the nested-drawer
+   Escape path, not a regression from this batch — but it is a real robustness signal worth a fix in the
+   drawer/`useDialog` lane (Codex owns that spec; AI #3 did not change that screen or the drawer).
+2. **40 screenshot-comparison failures** in both runs (`visual-regression.spec.ts`). These are **not valid evidence**
+   from this sandbox: the comparison runs against a `chrome-headless-shell` build with different font
+   rendering than GitHub's Chromium, so pixel diffs here say nothing about the repository's baselines or
+   about GitHub's red E2E job. They are not reported as regressions and no baseline was touched.
+
+**Honest conclusion:** the browser evidence that matters for this batch is the 60/60 functional
+report-mount run and the second full run with **zero functional failures** — both environment-independent. GitHub's E2E job is still red and its detailed log
+host is unreachable from this sandbox, so the exact CI failure set is still not compared.
 
 ## 3. The queue at a glance (218 A-tasks)
 
