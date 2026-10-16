@@ -87,6 +87,7 @@ describe('Warehouse operations views (A-64–A-67)', () => {
     await waitFor(() => assert.ok(screen.getByRole('heading', { name: 'Warehouse operations' })));
     await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Return authorizations' })); });
     assert.ok(screen.getByRole('heading', { name: 'Return authorizations' }));
+    assert.ok(screen.getByText(/not a server-enforced two-person approval/));
   });
 
   test('bin assignment persists only an item Location/bin annotation', async () => {
@@ -224,6 +225,25 @@ describe('Warehouse operations views (A-64–A-67)', () => {
     await act(async () => { fireEvent.keyDown(warehouse, { key: 'Home' }); });
     assert.equal(document.activeElement, cycle);
     assert.ok(screen.getByRole('heading', { name: 'Inventory cycle count' }));
+  });
+
+  test('RTL warehouse arrows follow visual direction and leave modified shortcuts alone', async () => {
+    render(<WarehouseOperationsReportView />);
+    for (const tab of screen.getAllByRole('tab')) tab.style.direction = 'rtl';
+    const bins = screen.getByRole('tab', { name: 'Bin locations' });
+    const pick = screen.getByRole('tab', { name: 'Pick, pack and ship' });
+    bins.focus();
+    await act(async () => { fireEvent.keyDown(bins, { key: 'ArrowLeft' }); });
+    assert.equal(document.activeElement, pick);
+    assert.equal(pick.getAttribute('aria-selected'), 'true');
+    await act(async () => { fireEvent.keyDown(pick, { key: 'ArrowRight' }); });
+    assert.equal(document.activeElement, bins);
+    for (const modifier of ['altKey', 'metaKey']) {
+      await act(async () => { fireEvent.keyDown(bins, { key: 'ArrowLeft', [modifier]: true }); });
+      assert.equal(document.activeElement, bins);
+    }
+    await act(async () => { fireEvent.keyDown(bins, { key: 'ArrowRight' }); });
+    assert.equal(document.activeElement, screen.getByRole('tab', { name: 'Warranty register' }));
   });
 
   test('a second packing-slip request prints again without closing or changing the order', async () => {

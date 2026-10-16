@@ -97,6 +97,21 @@ test('all four warehouse panels contain long mixed-language data on a phone and 
     await page.getByRole('tab', { name, exact: true }).click();
     if (name === 'Warranty register') await page.getByLabel('Warranty status filter').selectOption('all');
     await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+    if (name === 'Return authorizations') {
+      const quantity = page.getByRole('spinbutton', { name: /Return quantity for/ });
+      await quantity.scrollIntoViewIfNeeded();
+      await quantity.fill('1');
+      const box = (await quantity.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(390);
+      await expect(quantity).toHaveValue('1');
+    }
+    if (name === 'Warranty register') {
+      const serial = page.locator('bdi').filter({ hasText: 'SN-אב-01' });
+      await serial.scrollIntoViewIfNeeded();
+      await expect(serial).toHaveText('SN-אב-01');
+      expect(await serial.evaluate(element => getComputedStyle(element).unicodeBidi)).toBe('isolate');
+    }
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 844 });
       await expectBounded(page);
