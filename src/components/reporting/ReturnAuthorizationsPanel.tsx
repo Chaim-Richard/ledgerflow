@@ -11,6 +11,7 @@ import {
   returnAuthorizationId,
   returnAuthorizationNumber,
   returnAuthorizationRequestProblem,
+  returnAuthorizationCapacityProblem,
   returnAuthorizationsFromMetadata,
   rmaFieldPath,
   transitionReturnAuthorization,
@@ -61,6 +62,9 @@ export default function ReturnAuthorizationsPanel() {
   const [savingRmas, setSavingRmas] = useState<Set<string>>(() => new Set());
   const requestPending = useRef(false);
   const pendingRmaActions = useRef(new Set<string>());
+  // Track successful writes until the asynchronous customer cache includes them.
+  // Prevents back-to-back requests from reusing a stale snapshot of RMA history.
+  const locallySavedRequests = useRef<ReturnAuthorizationRecord[]>([]);
 
   const canEdit = Boolean(user && !isGuest && ['owner', 'accountant', 'bookkeeper'].includes(role) && workspaceId);
   const partial = Boolean(
@@ -156,6 +160,16 @@ export default function ReturnAuthorizationsPanel() {
       setFormProblem(lines.length ? preflight : 'Enter a quantity for at least one invoiced stock item.');
       return;
     }
+    const latestById = new Map(locallySavedRequests.current.map(rma => [rma.id, rma]));
+    // Store-loaded versions supersede our recent local writes (e.g. a later decline).
+    for (const rma of allRmas) latestById.set(rma.id, rma);
+    const capacityProblem = returnAuthorizationCapacityProblem({
+      workspaceId, customerId: selectedCustomer.id, invoiceId: selectedInvoice.id, lines,
+    }, [...latestById.values()]);
+    if (capacityProblem) {
+      setFormProblem(capacityProblem);
+      return;
+    }
 
     requestPending.current = true;
     setSavingRequest(true);
@@ -179,6 +193,7 @@ export default function ReturnAuthorizationsPanel() {
       await updateEntity('customers', selectedCustomer.id, {
         [rmaFieldPath(record.id)]: record,
       } as Record<string, unknown>, `${record.number} requested. An owner or accountant must approve it.`);
+      locallySavedRequests.current.push(record);
       setReason('');
       setQuantityDrafts({ invoiceId: selectedInvoice.id, values: {} });
       setFormProblem('');
@@ -196,7 +211,7 @@ export default function ReturnAuthorizationsPanel() {
   return <section aria-label="Return authorizations" className="space-y-4 min-w-0">
     <div>
       <h3 className="text-lg font-semibold">Return authorizations</h3>
-      <p className="text-sm text-[var(--muted)]">Request a return against an issued invoice, require an owner or accountant other than the requester to decide it, record receipt, then link an existing customer credit note for that same invoice. Receiving here is an operational confirmation only: use the normal Sales return/credit-note workflow to move stock or issue a credit. This screen never changes inventory quantities or customer balances.</p>
+      <p className="text-sm text-[var(--muted)]">Request a return against an issued invoice, require an owner or accountant other than the requester to decide it, record receipt, then link an existing customer credit note for that same invoice. Previous non-declined requests reduce the remaining quantity available on each invoice line. Receiving here is an operational confirmation only: use the normal Sales return/credit-note workflow to move stock or issue a credit. This screen never changes inventory quantities or customer balances.</p>
     </div>
     <p className="text-sm text-[var(--muted)]">RMA decisions and history are editable workflow notes, not a server-enforced two-person approval or an immutable audit trail. Financial returns still require the normal Sales return/credit-note workflow.</p>
     {loading && <p role="status" className="text-sm text-[var(--muted)]">Loading invoices, customers, stock items and credit notes…</p>}
