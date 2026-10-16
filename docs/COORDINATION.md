@@ -835,18 +835,18 @@ before:
 - [x] **A-181 Contacts: customer notes with @mentions to team members (notification only)** *(AI #3, 15 Oct, `arena/18e400db-ledgerflow`: wired into `RecordNotesPanel.tsx` on Reports → Record Notes, with A-21 — see its line)*
 - [ ] **A-182 Contacts: import contacts from vCard / Google CSV with duplicate check**
 - [ ] **A-183 Documents: attach files to any entry/document with drag-and-drop and preview**
-- [ ] **A-184 Documents: document number gaps report (missing numbers in each series)**
+- [x] **A-184 Documents: document number gaps report (missing numbers in each series)** *(AI #3, 16 Oct on `arena/8f84f1e9-ledgerflow`, merged into the batch below: library + Reports screen + tests, see `docs/verification/agent3-final-2026-10-16.md`)*
 - [ ] **A-185 Documents: credit note from invoice in one click (draft; posting AI #1)**
-- [ ] **A-186 Reports: cash forecast 13 weeks from open invoices, bills and recurring items (read-only)**
+- [x] **A-186 Reports: cash forecast 13 weeks from open invoices, bills and recurring items (read-only)** *(AI #3, 16 Oct on `arena/8f84f1e9-ledgerflow`, merged into the batch below: library + Reports screen + tests, see `docs/verification/agent3-final-2026-10-16.md`)*
 - [ ] **A-187 Reports: aged receivables by salesperson**
-- [ ] **A-188 Reports: vendor 1099 readiness report (missing TIN, W-9, address)**
+- [x] **A-188 Reports: vendor 1099 readiness report (missing TIN, W-9, address)** *(AI #3, 16 Oct on `arena/8f84f1e9-ledgerflow`, merged into the batch below: library + Reports screen + tests, see `docs/verification/agent3-final-2026-10-16.md`)*
 - [ ] **A-189 Reports: Israeli annual summary per customer/vendor (for the accountant)**
 - [ ] **A-190 Reports: top 20 customers and vendors with trend sparkline**
 - [ ] **A-191 Reports: expense by employee (expense claims) with receipt status**
 - [ ] **A-192 Reports: inventory turnover by item**
 - [ ] **A-193 Reports: gross margin by item group over time**
 - [ ] **A-194 Data quality: entries without labels where a label is required (uses requiredLabels)**
-- [ ] **A-195 Data quality: duplicate bills finder (same vendor, amount, date ±3 days)**
+- [x] **A-195 Data quality: duplicate bills finder (same vendor, amount, date ±3 days)** *(AI #3, 16 Oct on `arena/8f84f1e9-ledgerflow`, merged into the batch below: library + Reports screen + tests, see `docs/verification/agent3-final-2026-10-16.md`)*
 - [ ] **A-196 Data quality: customers/vendors missing tax IDs or addresses needed for filings**
 - [ ] **A-197 Data quality: items without cost or price**
 - [ ] **A-198 Golden fixtures: a full Israeli small business year (VAT bi-monthly) with expected VAT reports**
