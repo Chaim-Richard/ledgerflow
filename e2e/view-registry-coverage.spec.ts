@@ -133,6 +133,21 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Blanket Purchase Orders', componentName: 'BlanketOrdersReportView' },
   ];
 
+  test('Warehouse operations workflows are reachable from Inventory Cycle Count', async ({ page }) => {
+    await page.locator('button:has-text("Reports")').first().click();
+    const cycleCount = page.locator('button:has-text("Inventory Cycle Count")').first();
+    await expect(cycleCount).toBeVisible({ timeout: 10000 });
+    await cycleCount.click();
+    await page.getByRole('tab', { name: 'Warehouse operations' }).click();
+    await expect(page.getByRole('heading', { name: 'Warehouse operations' })).toBeVisible();
+    await expect(page.getByRole('tablist', { name: 'Warehouse operations views' })).toBeVisible();
+
+    for (const tab of ['Bin locations', 'Pick, pack and ship', 'Return authorizations', 'Warranty register']) {
+      await page.getByRole('tab', { name: tab }).click();
+      await expect(page.getByRole('heading', { name: tab })).toBeVisible();
+    }
+  });
+
   for (const report of reportTabs) {
     test(`Report tab mounts: ${report.label} (${report.componentName})`, async ({ page }) => {
       await page.locator('button:has-text("Reports")').first().click();
