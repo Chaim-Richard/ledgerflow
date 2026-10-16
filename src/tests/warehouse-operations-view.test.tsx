@@ -195,4 +195,122 @@ describe('Warehouse operations views (A-64–A-67)', () => {
     assert.equal(saved.changeLog[0].previousEndDate, null);
     assert.equal('amountCents' in saved, false);
   });
+
+  test('both inventory tablists are keyboard reachable, wrap, and keep valid panel references', async () => {
+    render(<CycleCountReportView loadMoves={async () => []} />);
+    const cycle = screen.getByRole('tab', { name: 'Cycle count' });
+    cycle.focus();
+    await act(async () => { fireEvent.keyDown(cycle, { key: 'ArrowRight' }); });
+    const warehouse = screen.getByRole('tab', { name: 'Warehouse operations' });
+    assert.equal(document.activeElement, warehouse);
+    assert.equal(warehouse.getAttribute('aria-selected'), 'true');
+    const bins = screen.getByRole('tab', { name: 'Bin locations' });
+    bins.focus();
+    await act(async () => { fireEvent.keyDown(bins, { key: 'End' }); });
+    const warranty = screen.getByRole('tab', { name: 'Warranty register' });
+    assert.equal(document.activeElement, warranty);
+    assert.ok(screen.getByRole('heading', { name: 'Warranty register' }));
+    await act(async () => { fireEvent.keyDown(warranty, { key: 'ArrowRight' }); });
+    assert.equal(document.activeElement, bins);
+    await act(async () => { fireEvent.keyDown(bins, { key: 'ArrowLeft' }); });
+    assert.equal(document.activeElement, warranty);
+    await act(async () => { fireEvent.keyDown(warranty, { key: 'Home' }); });
+    assert.equal(document.activeElement, bins);
+    await act(async () => { fireEvent.keyDown(bins, { key: 'ArrowRight', ctrlKey: true }); });
+    assert.equal(document.activeElement, bins);
+    for (const tab of screen.getAllByRole('tab')) {
+      assert.ok(document.getElementById(tab.getAttribute('aria-controls') || ''), 'every tab has an existing panel');
+    }
+    await act(async () => { fireEvent.keyDown(warehouse, { key: 'Home' }); });
+    assert.equal(document.activeElement, cycle);
+    assert.ok(screen.getByRole('heading', { name: 'Inventory cycle count' }));
+  });
+
+  test('a second packing-slip request prints again without closing or changing the order', async () => {
+    render(<WarehouseOperationsReportView />);
+    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Pick, pack and ship' })); });
+    const originalPrint = window.print;
+    let prints = 0;
+    window.print = () => { prints += 1; window.dispatchEvent(new window.Event('afterprint')); };
+    try {
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Print packing slip' })); });
+      assert.equal(prints, 1);
+      assert.ok(screen.getByRole('article', { name: 'Warehouse packing slip' }));
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Print packing slip' })); });
+      assert.equal(prints, 2);
+      assert.equal(document.body.classList.contains('warehouse-packing-print'), false);
+      assert.equal(rpcWrites().length, 0);
+    } finally { window.print = originalPrint; }
+  });
+
+  test('two immediate shipment activations send only one pending write', async () => {
+    render(<WarehouseOperationsReportView />);
+    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Pick, pack and ship' })); });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Shipment carrier'), { target: { value: 'ParcelCo' } });
+      fireEvent.change(screen.getByLabelText('Shipment tracking number'), { target: { value: 'TRACK-002' } });
+    });
+    let release: () => void = () => {};
+    const pending = new Promise<void>(resolve => { release = resolve; });
+    const fetchMock = globalThis.fetch;
+    let started = 0;
+    globalThis.fetch = async (input, init) => {
+      if (String(input).includes('/rpc/lf_update')) { started += 1; await pending; }
+      return fetchMock(input, init);
+    };
+    try {
+      const save = screen.getByRole('button', { name: 'Mark shipped' });
+      await act(async () => { fireEvent.click(save); fireEvent.click(save); });
+      await waitFor(() => assert.equal(started, 1));
+      assert.ok(screen.getByRole('button', { name: 'Saving shipment…' }).hasAttribute('disabled'));
+    } finally { await act(async () => { release(); }); }
+    await waitFor(() => assert.equal(rpcWrites().length, 1));
+  });
+
+  test('refused shipment and RMA writes retain their drafts for an explicit retry', async () => {
+    calls = stubFetchWithBodies(403, { message: 'Warehouse metadata refused', code: '42501' });
+    render(<WarehouseOperationsReportView />);
+    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Pick, pack and ship' })); });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Shipment carrier'), { target: { value: 'ParcelCo' } });
+      fireEvent.change(screen.getByLabelText('Shipment tracking number'), { target: { value: 'RETRY-001' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Mark shipped' }));
+    });
+    await waitFor(() => assert.match(screen.getByRole('alert').textContent || '', /Warehouse metadata refused/));
+    assert.equal((screen.getByLabelText('Shipment tracking number') as HTMLInputElement).value, 'RETRY-001');
+    calls = stubFetchWithBodies(200, null);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Mark shipped' })); });
+    await waitFor(() => assert.equal((screen.getByLabelText('Shipment tracking number') as HTMLInputElement).value, ''));
+    assert.equal(rpcWrites().length, 1);
+
+    calls = stubFetchWithBodies(403, { message: 'RMA metadata refused', code: '42501' });
+    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Return authorizations' })); });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Return quantity for Blue Widget'), { target: { value: '1' } });
+      fireEvent.change(screen.getByLabelText('RMA reason'), { target: { value: 'Keep this reason' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Submit RMA request' }));
+    });
+    await waitFor(() => assert.match(screen.getByRole('alert').textContent || '', /RMA metadata refused/));
+    assert.equal((screen.getByLabelText('RMA reason') as HTMLTextAreaElement).value, 'Keep this reason');
+    assert.equal((screen.getByLabelText('Return quantity for Blue Widget') as HTMLInputElement).value, '1');
+    calls = stubFetchWithBodies(200, null);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Submit RMA request' })); });
+    await waitFor(() => assert.equal((screen.getByLabelText('RMA reason') as HTMLTextAreaElement).value, ''));
+    assert.equal(rpcWrites().length, 1);
+  });
+
+  test('viewers cannot edit warehouse metadata in any of the four panels', async () => {
+    prepare('viewer');
+    render(<WarehouseOperationsReportView />);
+    assert.equal(screen.queryByRole('button', { name: /Edit Bin/ }), null);
+    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Pick, pack and ship' })); });
+    assert.ok(screen.getByRole('button', { name: 'Mark shipped' }).hasAttribute('disabled'));
+    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Return authorizations' })); });
+    assert.ok(screen.getByRole('button', { name: 'Submit RMA request' }).hasAttribute('disabled'));
+    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Warranty register' })); });
+    await act(async () => { fireEvent.change(screen.getByLabelText('Warranty status filter'), { target: { value: 'all' } }); });
+    assert.equal(screen.queryByRole('button', { name: /Edit Warranty/ }), null);
+    assert.equal(rpcWrites().length, 0);
+  });
+
 });

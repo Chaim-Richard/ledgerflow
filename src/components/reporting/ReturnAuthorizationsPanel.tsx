@@ -22,7 +22,7 @@ import { randomWarehouseToken, type WorkflowActor } from '../../lib/warehouseRec
 import type { CreditNote, Customer, Invoice, InventoryItem } from '../../types';
 import ReportTableScroll from './ReportTableScroll';
 
-const field = 'min-h-11 border rounded px-3 py-2 bg-[var(--panel)] text-[var(--text)]';
+const field = 'min-h-11 min-w-0 max-w-full border rounded px-3 py-2 bg-[var(--panel)] text-[var(--text)]';
 const UNISSUED = new Set(['draft', 'rejected', 'void', 'cancelled']);
 const STATUS_LABEL: Record<ReturnAuthorizationRecord['status'], string> = {
   requested: 'Requested — waiting for an owner or accountant',
@@ -198,6 +198,7 @@ export default function ReturnAuthorizationsPanel() {
       <h3 className="text-lg font-semibold">Return authorizations</h3>
       <p className="text-sm text-[var(--muted)]">Request a return against an issued invoice, require an owner or accountant other than the requester to decide it, record receipt, then link an existing customer credit note for that same invoice. Receiving here is an operational confirmation only: use the normal Sales return/credit-note workflow to move stock or issue a credit. This screen never changes inventory quantities or customer balances.</p>
     </div>
+    <p className="text-sm text-[var(--muted)]">RMA decisions and history are editable workflow notes, not a server-enforced two-person approval or an immutable audit trail. Financial returns still require the normal Sales return/credit-note workflow.</p>
     {loading && <p role="status" className="text-sm text-[var(--muted)]">Loading invoices, customers, stock items and credit notes…</p>}
     {partial && <p role="alert" className="text-sm text-[var(--warning,#b45309)]">At least one required list is capped or failed. The requestable invoice and RMA lists may be incomplete; new requests are disabled until they are complete.</p>}
     {creditNotesPartial && <p role="alert" className="text-sm text-[var(--muted)]">The credit-note list is capped or failed. Linking a credit note is disabled until the list is complete.</p>}
@@ -205,7 +206,7 @@ export default function ReturnAuthorizationsPanel() {
     <div className="rounded border border-[var(--line)] p-3 space-y-3">
       <h4 className="font-semibold">Request a return</h4>
       <div className="flex flex-wrap items-end gap-3" data-print-hide>
-        <label className="flex flex-col gap-1 text-sm">Issued invoice
+        <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm">Issued invoice
           <select aria-label="RMA invoice" className={`${field} max-w-lg`} value={selectedInvoice?.id || ''}
             onChange={event => {
               const nextInvoiceId = event.target.value;
@@ -216,7 +217,7 @@ export default function ReturnAuthorizationsPanel() {
             {invoicesByCustomer.map(invoice => <option key={invoice.id} value={invoice.id}>{invoice.number || invoice.id} — {customerById.get(invoice.customerId)?.name || invoice.customerName || 'Customer'}</option>)}
           </select>
         </label>
-        <span className="text-sm text-[var(--muted)]">Customer: {selectedCustomer?.name || selectedInvoice?.customerName || '—'}</span>
+        <span className="min-w-0 max-w-full break-words text-sm text-[var(--muted)]">Customer: <bdi>{selectedCustomer?.name || selectedInvoice?.customerName || '—'}</bdi></span>
       </div>
       {!invoicesByCustomer.length && !loading && <p className="text-sm text-[var(--muted)]">No issued invoice with stock lines and a loaded customer is available.</p>}
 
@@ -248,7 +249,7 @@ export default function ReturnAuthorizationsPanel() {
         {!requestLines.length && <p className="p-3 text-sm text-[var(--muted)]">This invoice has no stock item lines available for an RMA.</p>}
       </ReportTableScroll>}
 
-      <label className="flex flex-col gap-1 text-sm max-w-2xl">Reason for return
+      <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm max-w-2xl">Reason for return
         <textarea aria-label="RMA reason" className={`${field} min-h-20`} maxLength={1000} value={reason} onChange={event => setReason(event.target.value)} placeholder="Describe why the customer is requesting a return" />
       </label>
       <button type="button" onClick={() => { void submitRequest(); }} disabled={!canEdit || loading || partial || savingRequest || !selectedInvoice || !selectedCustomer || !requestLines.length}
@@ -270,9 +271,9 @@ export default function ReturnAuthorizationsPanel() {
         const mayDecide = canEdit && (role === 'owner' || role === 'accountant') && rma.status === 'requested' && rma.requestedByUid !== user?.uid;
         return <article key={rma.id} aria-label={`Return authorization ${rma.number}`} className="rounded border border-[var(--line)] p-3 space-y-3">
           <div className="flex flex-wrap justify-between gap-3 items-start">
-            <div>
-              <h5 className="font-semibold">{rma.number} · {customer?.name || rma.customerName}</h5>
-              <p className="text-sm">Invoice {rma.invoiceNumber} · {rma.status}</p>
+            <div className="min-w-0 max-w-full break-words">
+              <h5 className="font-semibold"><bdi>{rma.number}</bdi> · <bdi>{customer?.name || rma.customerName}</bdi></h5>
+              <p className="text-sm">Invoice <bdi>{rma.invoiceNumber}</bdi> · {rma.status}</p>
               <p className="text-sm">Reason: <bdi>{rma.reason}</bdi></p>
               <ul className="text-sm list-disc pl-5">{rma.lines.map(line => <li key={line.invoiceLineId}>{line.description} · {line.quantity} requested</li>)}</ul>
               {rma.linkedCreditNoteId && <p className="text-sm">Linked sales credit note: {rma.linkedCreditNoteNumber || rma.linkedCreditNoteId}</p>}
@@ -282,8 +283,8 @@ export default function ReturnAuthorizationsPanel() {
           </div>
 
           {rma.status === 'requested' && <div className="flex flex-wrap items-end gap-2" data-print-hide>
-            <label className="flex flex-col gap-1 text-sm">Decision note{rma.status === 'requested' ? ' (required to decline)' : ''}
-              <input aria-label={`Decision note for ${rma.number}`} className={`${field} min-w-64`} maxLength={1000} value={actionNote}
+            <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm">Decision note{rma.status === 'requested' ? ' (required to decline)' : ''}
+              <input aria-label={`Decision note for ${rma.number}`} className={`${field} w-64`} maxLength={1000} value={actionNote}
                 onChange={event => setDecisionNotes(current => ({ ...current, [rma.id]: event.target.value }))} />
             </label>
             {mayDecide && <>
@@ -297,7 +298,7 @@ export default function ReturnAuthorizationsPanel() {
           {rma.status === 'approved' && canEdit && <button type="button" className="min-h-11 px-4 rounded border border-[var(--line)] disabled:opacity-50" disabled={loading || partial || savingRmas.has(rma.id)} onClick={() => { void updateAction(rma, { type: 'receive' }); }} data-print-hide>{savingRmas.has(rma.id) ? 'Saving…' : 'Mark goods received (metadata only)'}</button>}
 
           {rma.status === 'received' && <div className="flex flex-wrap items-end gap-3" data-print-hide>
-            <label className="flex flex-col gap-1 text-sm">Existing sales credit note
+            <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm">Existing sales credit note
               <select aria-label={`Credit note for ${rma.number}`} className={`${field} max-w-lg`} value={chosenCreditId}
                 onChange={event => setSelectedCreditNotes(current => ({ ...current, [rma.id]: event.target.value }))} disabled={creditNotesPartial || !linkedCredits.length}>
                 {!linkedCredits.length && <option value="">No matching customer/invoice credit note loaded</option>}
@@ -319,7 +320,7 @@ export default function ReturnAuthorizationsPanel() {
           {actionProblems[rma.id] && <p role="alert" className="text-sm text-[var(--neg)]">{actionProblems[rma.id]}</p>}
 
           <details>
-            <summary className="cursor-pointer text-sm">Status history ({rma.events.length})</summary>
+            <summary className="min-h-11 py-3 cursor-pointer text-sm">Status history ({rma.events.length})</summary>
             <ol className="mt-2 space-y-1 text-xs text-[var(--muted)]">
               {rma.events.map(event => <li key={`${event.status}:${event.at}:${event.byUid}`}>{event.status} · {event.byName || event.byUid} · {new Date(event.at).toLocaleString()}{event.note ? ` · ${event.note}` : ''}</li>)}
             </ol>

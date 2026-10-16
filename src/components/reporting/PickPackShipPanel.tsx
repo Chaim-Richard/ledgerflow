@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
@@ -26,7 +26,7 @@ import { goodsLeaveWith } from '../../lib/deliveries';
 import type { Estimate, InventoryItem, Invoice, Transaction } from '../../types';
 import ReportTableScroll from './ReportTableScroll';
 
-const field = 'min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]';
+const field = 'min-h-11 min-w-0 max-w-full border rounded px-3 bg-[var(--panel)] text-[var(--text)]';
 const PICK_CSV_HEADERS = ['Sales order', 'Customer', 'Location', 'Bin', 'SKU', 'Item', 'Quantity to pick'];
 const displayQty = (value: number) => Number(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
@@ -55,6 +55,8 @@ export default function PickPackShipPanel() {
   const [problem, setProblem] = useState('');
   const [saving, setSaving] = useState(false);
   const [showPackingSlip, setShowPackingSlip] = useState(false);
+  const [printRequest, setPrintRequest] = useState(0);
+  const shipmentPending = useRef(false);
 
   const mode = goodsLeaveWith(workspace);
   const scopedItems = useMemo(() => inventory.filter(item => Boolean(workspaceId) && item.workspaceId === workspaceId), [inventory, workspaceId]);
@@ -100,10 +102,10 @@ export default function PickPackShipPanel() {
       window.removeEventListener('afterprint', clear);
       clear();
     };
-  }, [showPackingSlip]);
+  }, [showPackingSlip, printRequest]);
 
   const markShipped = async () => {
-    if (saving) return;
+    if (shipmentPending.current) return;
     setProblem('');
     if (!order || !currentSource) {
       setProblem('Choose an existing delivery or issued invoice first.');
@@ -146,6 +148,7 @@ export default function PickPackShipPanel() {
       setProblem('The selected fulfilment record has an invalid identifier.');
       return;
     }
+    shipmentPending.current = true;
     setSaving(true);
     try {
       await updateEntity('estimates', order.id, { [path]: record } as Record<string, unknown>, `Shipment tracking recorded for ${order.number || order.id}.`);
@@ -155,6 +158,7 @@ export default function PickPackShipPanel() {
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'Shipment tracking could not be saved.');
     } finally {
+      shipmentPending.current = false;
       setSaving(false);
     }
   };
@@ -188,13 +192,13 @@ export default function PickPackShipPanel() {
       : <p className="text-sm text-[var(--muted)]">This workspace moves stock when an invoice is issued. Only issued invoices can be marked shipped here.</p>}
 
     <div className="flex flex-wrap items-end gap-3" data-print-hide>
-      <label className="flex flex-col gap-1 text-sm">Pick location
+      <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm">Pick location
         <select aria-label="Warehouse pick location" className={field} value={locationId} onChange={event => setSelectedLocationId(event.target.value)}>
           {!locations.length && <option value={NO_LOCATION_VALUE}>No Location values configured</option>}
           {locations.map(location => <option key={location.id} value={location.id}>{location.description || location.id}{location.status === 'archived' ? ' (archived)' : ''}</option>)}
         </select>
       </label>
-      <label className="flex flex-col gap-1 text-sm">Sales order
+      <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm">Sales order
         <select aria-label="Pick and ship sales order" className={field} value={order?.id || ''} onChange={event => {
           setSelectedOrderId(event.target.value);
           setSelectedSourceKey('');
@@ -208,7 +212,7 @@ export default function PickPackShipPanel() {
       </label>
       <button type="button" className="min-h-11 px-4 rounded border border-[var(--line)] disabled:opacity-50"
         disabled={!pickRows.length || !mayUseCurrentRows || locationId === NO_LOCATION_VALUE}
-        onClick={() => setShowPackingSlip(true)}>Print packing slip</button>
+        onClick={() => { setShowPackingSlip(true); setPrintRequest(current => current + 1); }}>Print packing slip</button>
       <button type="button" className="min-h-11 px-4 rounded border border-[var(--line)] disabled:opacity-50"
         disabled={!allPickRows.length || !mayUseCurrentRows}
         onClick={() => downloadCsv(`warehouse-pick-list-${today}`, PICK_CSV_HEADERS, rowsForCsv)}>Export pick list CSV</button>
@@ -238,7 +242,7 @@ export default function PickPackShipPanel() {
       {!shipmentSources.length
         ? <p className="text-sm text-[var(--muted)]">No existing {mode === 'delivery' ? 'delivery' : 'issued invoice'} with stock lines is available for this order. Record the normal fulfilment first; this form never creates it.</p>
         : <>
-          <label className="flex flex-col gap-1 text-sm max-w-2xl">Existing {mode === 'delivery' ? 'delivery' : 'issued invoice'}
+          <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm max-w-2xl">Existing {mode === 'delivery' ? 'delivery' : 'issued invoice'}
             <select aria-label="Existing shipment source" className={field} value={currentSource ? shipmentSourceKey(currentSource.sourceType, currentSource.sourceId) : ''}
               onChange={event => {
                 setSelectedSourceKey(event.target.value);
@@ -251,13 +255,13 @@ export default function PickPackShipPanel() {
             </select>
           </label>
           {unshippedSources.length > 0 && <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-sm">Carrier
+            <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm">Carrier
               <input aria-label="Shipment carrier" className={field} maxLength={80} value={carrier} onChange={event => setCarrier(event.target.value)} placeholder="Carrier name" />
             </label>
-            <label className="flex flex-col gap-1 text-sm">Tracking number
+            <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm">Tracking number
               <input aria-label="Shipment tracking number" className={field} maxLength={120} value={trackingNumber} onChange={event => setTrackingNumber(event.target.value)} placeholder="Tracking reference" />
             </label>
-            <label className="flex flex-col gap-1 text-sm">Shipment date
+            <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm">Shipment date
               <input aria-label="Shipment date" type="date" className={field} max={today} value={shippedDate} onChange={event => setShippedDate(event.target.value)} />
             </label>
             <button type="button" onClick={() => { void markShipped(); }} disabled={!canEdit || !mayUseCurrentRows || !currentSource || saving}

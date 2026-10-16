@@ -11,7 +11,7 @@ import type { InventoryItem, ItemBinLocation } from '../../types';
 import InlineEdit from '../ui/InlineEdit';
 import ReportTableScroll from './ReportTableScroll';
 
-const field = 'min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]';
+const field = 'min-h-11 min-w-0 max-w-full border rounded px-3 bg-[var(--panel)] text-[var(--text)]';
 
 export default function WarehouseBinLocationsPanel() {
   const inventory = useLedgerStore(state => state.inventory) as InventoryItem[];
@@ -73,13 +73,13 @@ export default function WarehouseBinLocationsPanel() {
     {partial && <p role="alert" className="text-sm text-[var(--muted)]">The inventory list is capped or failed. Only the loaded items are shown; an edit here changes only the selected item.</p>}
 
     <div className="flex flex-wrap items-end gap-3" data-print-hide>
-      <label className="flex flex-col gap-1 text-sm">Location
+      <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm">Location
         <select aria-label="Bin location" className={field} value={locationId} onChange={event => setSelectedLocationId(event.target.value)}>
           {!locations.length && <option value={NO_LOCATION_VALUE}>No Location values are configured</option>}
           {locations.map(option => <option key={option.id} value={option.id}>{option.description || option.id}{option.status === 'archived' ? ' (archived)' : ''}</option>)}
         </select>
       </label>
-      <label className="flex flex-col gap-1 text-sm">Find item
+      <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm">Find item
         <input aria-label="Find item for bin" type="search" className={field} value={query} onChange={event => setQuery(event.target.value)} placeholder="Name or SKU" />
       </label>
       <span className="text-sm text-[var(--muted)]">{visibleItems.length} of {items.length} loaded stock item(s)</span>

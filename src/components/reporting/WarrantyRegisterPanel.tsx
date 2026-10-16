@@ -22,7 +22,7 @@ import type { Customer, InventoryItem, Invoice } from '../../types';
 import InlineEdit from '../ui/InlineEdit';
 import ReportTableScroll from './ReportTableScroll';
 
-const field = 'min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]';
+const field = 'min-h-11 min-w-0 max-w-full border rounded px-3 bg-[var(--panel)] text-[var(--text)]';
 const CSV_HEADERS = ['Customer', 'Invoice', 'Invoice date', 'Item', 'SKU', 'Serial number', 'Warranty end date', 'Status', 'Last updated', 'Updated by'];
 type WarrantyFilter = 'under warranty' | 'all' | 'expired' | 'not set';
 
@@ -109,7 +109,7 @@ export default function WarrantyRegisterPanel() {
     {allWarrantyRecords.length > 0 && <p className="text-xs text-[var(--muted)]">{allWarrantyRecords.length} warranty record(s) saved on customer records; only records for loaded, issued invoice serials appear below.</p>}
 
     <div className="flex flex-wrap items-end gap-3" data-print-hide>
-      <label className="flex flex-col gap-1 text-sm">Show
+      <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm">Show
         <select aria-label="Warranty status filter" className={field} value={filter} onChange={event => setFilter(event.target.value as WarrantyFilter)}>
           <option value="under warranty">Under warranty</option>
           <option value="all">All issued invoice serials</option>
@@ -117,7 +117,7 @@ export default function WarrantyRegisterPanel() {
           <option value="not set">End date not set</option>
         </select>
       </label>
-      <label className="flex flex-col gap-1 text-sm">Find customer, item, serial or invoice
+      <label className="flex min-w-0 max-w-full flex-col gap-1 text-sm">Find customer, item, serial or invoice
         <input aria-label="Find warranty record" type="search" className={field} value={query} onChange={event => setQuery(event.target.value)} placeholder="Search warranty register" />
       </label>
       <span className="text-sm text-[var(--muted)]">{rows.length} of {candidates.length} serial(s)</span>

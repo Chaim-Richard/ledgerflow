@@ -14,6 +14,7 @@ import { NO_LOCATION, type StockMove } from '../../lib/stockMoves';
 import { downloadCsv } from '../../lib/csvExport';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import WarehouseOperationsReportView from './WarehouseOperationsReportView';
+import InventoryWorkflowTabs from './InventoryWorkflowTabs';
 
 const field = 'min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]';
 const CSV_HEADERS = ['Item', 'SKU', 'Expected', 'Counted', 'Difference', 'Unit cost', 'Value', 'Expected figure explained'];
@@ -114,14 +115,11 @@ export default function CycleCountReportView({ endDate = '', loadMoves = loadWor
   };
 
   return <>
-    <div role="tablist" aria-label="Inventory workflows" className="flex flex-wrap gap-2 border-b border-[var(--line)] px-4" data-print-hide>
-      <button type="button" role="tab" id="inventory-tab-cycle-count" aria-controls="inventory-workflow-panel" aria-selected={activeWorkflow === 'cycle-count'} tabIndex={activeWorkflow === 'cycle-count' ? 0 : -1}
-        className={`min-h-11 px-3 border-b-2 ${activeWorkflow === 'cycle-count' ? 'border-[var(--brass)] font-semibold' : 'border-transparent text-[var(--muted)]'}`}
-        onClick={() => setActiveWorkflow('cycle-count')}>Cycle count</button>
-      <button type="button" role="tab" id="inventory-tab-warehouse" aria-controls="inventory-workflow-panel" aria-selected={activeWorkflow === 'warehouse'} tabIndex={activeWorkflow === 'warehouse' ? 0 : -1}
-        className={`min-h-11 px-3 border-b-2 ${activeWorkflow === 'warehouse' ? 'border-[var(--brass)] font-semibold' : 'border-transparent text-[var(--muted)]'}`}
-        onClick={() => setActiveWorkflow('warehouse')}>Warehouse operations</button>
-    </div>
+    <InventoryWorkflowTabs label="Inventory workflows" idPrefix="inventory" className="px-4"
+      value={activeWorkflow} onChange={setActiveWorkflow} tabs={[
+        { id: 'cycle-count', label: 'Cycle count', panelId: 'inventory-workflow-panel' },
+        { id: 'warehouse', label: 'Warehouse operations', panelId: 'inventory-workflow-panel' },
+      ]} />
     <div role="tabpanel" id="inventory-workflow-panel" aria-labelledby={activeWorkflow === 'cycle-count' ? 'inventory-tab-cycle-count' : 'inventory-tab-warehouse'}>
     {activeWorkflow === 'warehouse' ? <WarehouseOperationsReportView /> : <section aria-label="Inventory cycle count" className="p-4 space-y-4 min-w-0">
     <h2>Inventory cycle count</h2>

@@ -15,7 +15,7 @@
 > 4. **A-142** Reports: sales by territory (uses a Location label).
 > 5. **A-144** Compliance: record-retention periods by country (table + a report).
 >
-> A-15 and A-16 (older open items) need a new field and wait on AI #1's migration; A-46, A-48…A-50, A-63, A-70, A-73, A-79 and A-80 are libraries waiting on AI #1's screens (both listed under Messages). Then continue down the open `A-` items in queue order.
+> **Status reconciled 16 Oct (AI #3): all five priorities above are complete on main**, as are A-15/A-16 and the screen portions of A-46, A-48…A-50, A-63, A-70, A-73, A-79 and A-80. Do not rebuild them. A-70 still needs its reserved server send/log/schedule path. The six remaining `[~]` handoffs, the blocked A-72 statement/PDF contract, and the warehouse-only A-203…A-205 audit are recorded in [`docs/verification/agent3-warehouse-audit-2026-10-16.md`](docs/verification/agent3-warehouse-audit-2026-10-16.md). Continue in the current coordination queue; do not cross into reserved financial files to clear a checkbox.
 
 ## 1. System Overview
 This project is an advanced Enterprise Resource Planning (ERP) and Financial Ledger system built with React, Vite, and Tailwind CSS. It uses client-side state management (Zustand) and features a dynamic registry architecture for views, algorithms, and analytical lenses.
