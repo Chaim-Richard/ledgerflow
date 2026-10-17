@@ -1,8 +1,9 @@
 name: Refresh visual baselines
 # Manual review workflow: captures updated images on the Linux Chromium used by CI.
-# It NEVER pushes to main; reviewers download the artifact and submit approved images via a PR.
+# It NEVER pushes to main. Candidate images go to a review branch `visual-baselines/<run id>`
+# (and the artifact); a reviewer opens the images there and merges the branch only after looking.
 permissions:
-  contents: read
+  contents: write
 on:
   workflow_dispatch:
     inputs:
@@ -39,3 +40,15 @@ jobs:
             playwright-report/
           retention-days: 7
           if-no-files-found: ignore
+      - name: Push candidates to a review branch (never main)
+        if: success()
+        env:
+          BRANCH: visual-baselines/${{ github.run_id }}
+        run: |
+          git add e2e/__screenshots__
+          if git diff --cached --quiet; then echo "No image changed"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "test: candidate visual baselines (${{ inputs.screens }}) for review"
+          git push origin "HEAD:refs/heads/$BRANCH"
+          echo "Review branch: $BRANCH" >> "$GITHUB_STEP_SUMMARY"
