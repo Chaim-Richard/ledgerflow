@@ -40,6 +40,8 @@ for (const width of [1280, 390]) for (const theme of ['light', 'dark'] as const)
       await expect(page.locator('html')).toHaveClass(theme === 'dark' ? /dark/ : /^(?!.*\bdark\b)/);
       await page.evaluate(() => document.fonts.ready);
       await expect(main).not.toContainText('Something went wrong');
+      // The list of report tabs grows each time a report is added; it is not what these shots check.
+      await page.addStyleTag({ content: '[data-testid="report-tabs"]{display:none !important}' });
       // The app scrolls inside main, so fullPage alone would clip the report body.
       // Keep the real responsive width and expand only the capture height to fit it.
       if (screen === 'transactions') {

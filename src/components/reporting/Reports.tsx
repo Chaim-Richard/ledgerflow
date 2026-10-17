@@ -320,7 +320,7 @@ const Reports = React.memo(() => {
       {packPeriod && <React.Suspense fallback={<p role="status">Loading report pack…</p>}><ReportPackDialog {...packPeriod} onClose={() => setPackPeriod(undefined)} /></React.Suspense>}
 
       {/* Navigation */}
-      <div data-print-hide className="flex flex-wrap gap-2 pb-2 border-b border-[var(--line)]">
+      <div data-print-hide data-testid="report-tabs" className="flex flex-wrap gap-2 pb-2 border-b border-[var(--line)]">
         {REPORT_TABS_REGISTRY.map((tab) => (
           <button
             key={tab.id}
