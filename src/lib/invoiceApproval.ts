@@ -1,3 +1,4 @@
+import { parseAmountToCents } from './utils';
 /**
  * Invoice approval (BE-04): a workspace can say "an invoice over X must be signed off by an owner
  * or an accountant before it goes to the customer". It is a gate on **sending**, not on the books:
@@ -86,7 +87,8 @@ export const approvalLimitUnits = (cents: number): string => (cents > 0 ? String
 export function parseApprovalLimit(text: unknown): number {
   const cleaned = String(text ?? '').replace(/[^0-9.,-]/g, '').replace(/,/g, '');
   const units = Number.parseFloat(cleaned);
-  return Number.isFinite(units) && units > 0 ? Math.round(units * 100) : 0;
+  // the decimal text is turned into cents exactly (AU-5): 1.005 is 101 cents, never 100
+  return Number.isFinite(units) && units > 0 ? parseAmountToCents(String(units)) : 0;
 }
 
 /** The stored setting, cleaned. Enabled only with a real limit, so a half-saved rule can't block anyone. */

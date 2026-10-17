@@ -1,3 +1,4 @@
+import { parseAmountToCents } from './utils';
 export interface ParsedBankLine {
   date: string;
   amountCents: number;
@@ -34,7 +35,7 @@ export function parseMT940Statement(rawContent: string): ParsedBankLine[] {
       // Extract amount
       const amountMatch = data.match(/([0-9]+[,.][0-9]{2})/);
       const amountCents = amountMatch
-        ? Math.round(parseFloat(amountMatch[1].replace(',', '.')) * 100)
+        ? parseAmountToCents(amountMatch[1].replace(',', '.'))
         : 0;
 
       const signedAmountCents = indicator === 'debit' ? -amountCents : amountCents;

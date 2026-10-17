@@ -1,3 +1,4 @@
+import { parseAmountToCents } from '../utils';
 import { unquoteSearchValue } from '../textNormalization';
 import { AlgorithmDefinition } from './types';
 import { addToDateISO, getLocalDateISO } from '../utils';
@@ -64,7 +65,7 @@ export function parseNaturalLanguageEntry(text: string): ParsedCommandIntent {
     // Amount extraction
     const amtMatch = lower.match(/\$?\s*(\d+(?:\.\d{1,2})?)/);
     if (amtMatch) {
-      amountCents = Math.round(parseFloat(amtMatch[1]) * 100);
+      amountCents = parseAmountToCents(amtMatch[1]);
     }
 
     // Payment method

@@ -1,3 +1,4 @@
+import { parseAmountToCents } from './utils';
 import { ParsedBankLine } from './mt940Parser';
 
 /**
@@ -14,7 +15,7 @@ export function parseCamt053Statement(xmlContent: string): ParsedBankLine[] {
     const block = match[1];
 
     const amtMatch = block.match(/<Amt[^>]*>([0-9.]+)</);
-    const amtCents = amtMatch ? Math.round(parseFloat(amtMatch[1]) * 100) : 0;
+    const amtCents = amtMatch ? parseAmountToCents(amtMatch[1]) : 0;
 
     const cdtDbtMatch = block.match(/<CdtDbtInd>(CRDT|DBIT)<\/CdtDbtInd>/);
     const isCredit = cdtDbtMatch ? cdtDbtMatch[1] === 'CRDT' : amtCents > 0;
