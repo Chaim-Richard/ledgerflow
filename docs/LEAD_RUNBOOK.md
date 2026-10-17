@@ -14,7 +14,9 @@ other AI (Codex, Arena, a new one) can take the lead role by following this file
 3. **Check before pushing:** type check, ESLint (warnings must not rise above the ratchet), the full
    unit suite against a real Postgres (`docs/TRACKER.md` top says how to start it). Push to main.
 4. **Screenshots.** If a screen changed on purpose, run Actions → "Refresh visual baselines" with the
-   screens' names, then **open the new images and look at them** before calling it done.
+   screens' names. It puts the new images on a branch `visual-baselines/<run id>` (never on main):
+   `git fetch origin <that branch>`, **open the images and look at them**, then merge the branch.
+   Images made on another machine differ by ~1% and fail CI, so only use the workflow's images.
 5. **Tick what is done.** For every open task: `git log origin/main --grep=<ID>`; done → `[x]` with
    the commit; built but not on a screen → `[~]`.
 6. **Refill queues.** Each helper AI keeps at least two weeks of tasks (the daily
