@@ -131,6 +131,10 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Sales Tax Holidays', componentName: 'SalesTaxHolidaysReportView' },
     { label: 'Quote Versions', componentName: 'QuoteVersionsReportView' },
     { label: 'Blanket Purchase Orders', componentName: 'BlanketOrdersReportView' },
+    { label: 'Duplicate Bill Review', componentName: 'DuplicateBillsReviewView' },
+    { label: 'Document Number Gaps', componentName: 'DocumentNumberGapsReportView' },
+    { label: '13-Week Cash Forecast', componentName: 'CashForecast13WeekView' },
+    { label: 'Vendor 1099 Readiness', componentName: 'Vendor1099ReadinessReportView' },
   ];
 
   test('Warehouse operations workflows are reachable from Inventory Cycle Count', async ({ page }) => {

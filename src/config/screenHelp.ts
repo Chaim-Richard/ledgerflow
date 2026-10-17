@@ -162,6 +162,14 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "List expense claims by the employee named on the bill, with any linked files and the recorded receipt URL. Claims with no file are grouped for review by employee, but linked files are not inspected and may not be receipts. Incomplete claim or attachment history is marked not checked; this report never approves or deletes a claim.",
     "duplicate-contact-review":
       "Compare customer and vendor records for exact tax-ID, email or phone matches and normalized-name suggestions. Name-only matches are weak; review both records before using the existing merge flow because this report never merges or edits contacts. Matched identifier values are not shown in the table or export.",
+    "duplicate-bill-review":
+      "Purchase bills from one vendor, in one currency, for exactly the same amount, dated within three days of each other, with a shared document number or order reference shown as stronger evidence. Two real deliveries can look like this, so every row is a question to check, not a finding. Read-only: no bill is edited, merged or deleted, and another currency is never converted.",
+    "document-number-gaps":
+      "Issued invoices, bills, credit notes and estimates read by their number: everything before the trailing digits is the series and the digits are the counter. A missing number can come from a skipped import, a numbering restart or a lost document, so the report shows the numbers rather than judging them, and a repeated number is shown separately. Draft, void, cancelled and rejected documents are excluded and counted, and nothing is changed.",
+    "cash-forecast-13-week":
+      "Open invoices on their due dates, open bills on theirs and the recorded recurring rules, added week by week for thirteen weeks. It is arithmetic on what is recorded, not a prediction: no payment history, seasonality or new business is modelled, money in another currency is counted rather than converted, and a rule whose accounts do not say which way the money moves is listed instead of guessed. Read-only; nothing is posted.",
+    "vendor-1099-readiness":
+      "Posted outgoing payments in the workspace currency for the chosen year, compared per vendor with the existing 1099 threshold table, and what the vendor record is missing. The tax ID appears as a mask only, no country is assumed when none is recorded, and this workspace has no W-9 field, so no form is claimed to be on file. Read-only: nothing files, edits a vendor or posts.",
     "purchase-price-variance":
       "Compare each vendor's quantity-weighted average unit cost with the median of other vendors for the same item and currency. Costs reuse the bill-line unit-cost rule, and currencies are never converted or combined; no baseline is shown when there is no comparable vendor. Read-only: bills and catalogue prices are not changed.",
     "sales-by-territory":

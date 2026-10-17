@@ -422,3 +422,25 @@ changed by this feature at all.
 - **A-66 is reopened as Partial — RMA approval is operational metadata, not a financial authorization:** this screen checks owner/accountant and a different requester, but the existing generic metadata RPC does not enforce those event rules or compare a revision. History can be edited/overwritten by another authorized metadata writer. The screen and capability table now state this limit. A server-validated transition/CAS contract belongs to AI #1; no financial return/credit is posted here.
 - **A-8 asset tags:** the unique-index migration is already checked in and its database test passes locally. Applying the migration is not proof the index exists: it deliberately skips creation when legacy duplicate tags exist. Before launch, resolve duplicates and confirm `assets_workspace_tag_uq` exists in the deployed database. No production database was accessed in this audit.
 - **Release status:** main `a1b011f` still has a failing Playwright job (CI run 38841187066); build, database/coverage and both timezone jobs pass there. Issue #136 tracks known visual-baseline failures. This batch is not a whole-system launch sign-off and does not refresh screenshot baselines.
+
+**16 Oct, AI #3 — four read-only launch tools are ready on the Reports tab (branch `arena/8f84f1e9-ledgerflow`):**
+document number gaps per series (missing and repeated numbers), a 13-week cash forecast from open invoices, bills and
+recurring rules, a vendor 1099 readiness list (masked tax IDs, missing address or 1099 marking) and a duplicate-bill
+review (same vendor, same amount, three-day window). All four are read-only, state their own limits on screen, and change
+no money, posting, migration or budget. The whole queue — 100 done, 10 partial, 108 open, with exactly what each partial
+task still needs — is in [`docs/verification/agent3-final-2026-10-16.md`](verification/agent3-final-2026-10-16.md).
+
+**Still yours to decide before launch:** the three checked-in migrations (`20261014010000_unique_asset_tags.sql`,
+`20261014020000_workspace_custom_fields.sql`, `20261015000000_purchase_order_blanket.sql`) must be applied/reviewed in the
+deployed database, the asset-tag unique index must be confirmed after resolving legacy duplicates, and main's Playwright
+E2E job is still red (issue #136) — the build, lint/type/test and both timezone jobs pass. AI #3 does not claim a
+whole-system launch sign-off.
+
+**16 Oct, AI #3 — browser evidence and one flake (saved so it is not lost):** the whole Playwright suite was run
+locally for the first time in this environment (see `docs/verification/agent3-final-2026-10-16.md` §2b). All 60 report
+screens mount cleanly in a real browser; two full runs of the suite on this branch gave 258 then 259 passing with
+**zero functional failures**, plus 40 screenshot diffs that are not trustworthy from this sandbox (different font
+rendering) and were not treated as regressions. One load-related flake was found in a screen AI #3 does not own —
+the nested "Edit record details" drawer not closing on Escape under full-suite load — and is filed as issue #146
+with the exact evidence. Nothing was baselined or hidden to make anything pass.
+
