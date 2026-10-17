@@ -24,13 +24,13 @@ function genLine(): { line: TransactionLine; tx: Transaction } {
   return { line, tx };
 }
 
-test('without nodes, the shared filter matches the old exact comparison for every trimmed value', () => {
+test('without nodes, the shared filter matches the old comparison (ignoring case) for every trimmed value', () => {
   for (let i = 0; i < 2000; i++) {
     const { line, tx } = genLine();
     const filter = { dimensionId: dims[rnd(dims.length)], value: values[rnd(values.length)].trim() };
     const own = getLineDimension(line, tx, filter.dimensionId);
     if (own !== own.trim()) continue; // the old filter missed padded values; the new one is meant to catch them
-    const old = own === filter.value;
+    const old = own.toLowerCase() === filter.value.toLowerCase(); // the new filter also ignores case
     assert.equal(lineHasLabel(line, tx, filter), old, JSON.stringify({ line, tx, filter }));
   }
 });

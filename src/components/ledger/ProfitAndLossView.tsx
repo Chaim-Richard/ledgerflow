@@ -18,6 +18,7 @@ import type { ReportColumnMode } from '../../lib/reportColumns';
 import DrillDownModal, { type ExplainRequest } from '../layout/DrillDownModal';
 import { accountGroupLayout, groupSubtotals, hasAccountGroups, toggleAccountGroup, visibleGroupRows } from '../../lib/accountGroups';
 import { AccountGroupRow, AccountGroupSubtotal } from './AccountGroupControls';
+import { lineHasLabel } from '../../lib/dimensionUtils';
 
 /** A P&L line as the report holds it; `parentId` is only for account groups (K-14). */
 interface PLAccount { name: string; code?: string; balance: number; parentId?: string }
@@ -51,7 +52,20 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   const formId = useId();
   const [columnMode, setColumnMode] = useState<ReportColumnMode>('total');
   const [showPercent, setShowPercent] = useState(false);
-  const transactions = useLedgerStore(s => s.transactions);
+  const allTransactions = useLedgerStore(s => s.transactions);
+  // AU-2: an optional label (e.g. location = Tel Aviv); only the lines carrying it count
+  const [labelDimension, setLabelDimension] = useState('');
+  const [labelValue, setLabelValue] = useState('');
+  const labelFilter = useMemo(() => (labelDimension && labelValue.trim() ? { dimensionId: labelDimension, value: labelValue.trim() } : null), [labelDimension, labelValue]);
+  const transactions = useMemo(() => {
+    if (!labelFilter || !Array.isArray(allTransactions)) return allTransactions;
+    const scoped: Transaction[] = [];
+    for (const t of allTransactions) {
+      const lines = (t.lines || []).filter(l => lineHasLabel(l, t, labelFilter));
+      if (lines.length) scoped.push({ ...t, lines });
+    }
+    return scoped;
+  }, [allTransactions, labelFilter]);
   const accounts = useLedgerStore(s => s.accounts);
   const [dateRange, setDateRange] = usePageSyncedState(
     JSON.stringify([startDate, endDate]),
@@ -254,8 +268,9 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   // on cash basis only the server's figures are shown (never the accrual figures computed here)
   const cashReady = basis === 'cash' && isServerAuthoritative && serverData?.basis === 'cash';
   const emptyPl: PLData = { income: { total: 0, accounts: {} }, cogs: { total: 0, accounts: {} }, expense: { total: 0, accounts: {} }, grossProfit: 0, netIncome: 0 };
-  const data = basis === 'cash' ? (cashReady ? serverData! : emptyPl) : isServerAuthoritative && serverData ? serverData : localCalculation.data;
-  const prevData = basis === 'cash' ? (cashReady && serverPrevData?.basis === 'cash' ? serverPrevData : emptyPl) : isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;
+  const useServer = isServerAuthoritative && !labelFilter;
+  const data = basis === 'cash' ? (cashReady ? serverData! : emptyPl) : useServer && serverData ? serverData : localCalculation.data;
+  const prevData = basis === 'cash' ? (cashReady && serverPrevData?.basis === 'cash' ? serverPrevData : emptyPl) : useServer && serverPrevData ? serverPrevData : localCalculation.prevData;
   const chooseBasis = (next: 'accrual' | 'cash') => {
     setBasis(next);
     setServerData(null);
@@ -300,7 +315,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   return (
     <div className="space-y-6">
       {/* Authoritative / Truncation Status Banner */}
-      {!isServerAuthoritative && isDataTruncated ? (
+      {!useServer && isDataTruncated ? (
         <div id="pl-statement-truncation-banner" className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-medium">
           <div className="flex items-center gap-2">
             <AlertCircle aria-hidden="true" className="w-4 h-4 text-amber-400 shrink-0" />
@@ -315,7 +330,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             <span>{loadingStates.pl ? "Loading Server..." : "Load Full Server Report"}</span>
           </button>
         </div>
-      ) : isServerAuthoritative ? (
+      ) : useServer ? (
         <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-between text-xs font-semibold">
           <div className="flex items-center gap-2">
             <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5 text-emerald-400" />
@@ -366,6 +381,16 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             </div>
           </div>
           <div className="hidden sm:block w-px h-8 bg-slate-200" />
+          {basis === 'accrual' && <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-700">Label
+            <select aria-label="Label kind" value={labelDimension} onChange={e => setLabelDimension(e.target.value)} className="bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal">
+              <option value="">All</option>
+              <option value="location">Location</option>
+              <option value="class">Class</option>
+              <option value="project">Project</option>
+              <option value="department">Department</option>
+            </select>
+            {labelDimension && <input aria-label="Label value" value={labelValue} onChange={e => setLabelValue(e.target.value)} placeholder="e.g. Tel Aviv" className="bg-slate-100 border-none text-xs px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal w-28" />}
+          </div>}
           <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-700">Basis
             <select value={basis} onChange={e => chooseBasis(e.target.value === 'cash' ? 'cash' : 'accrual')} className="bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal">
               <option value="accrual">Accrual (as posted)</option>
@@ -511,7 +536,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
         startDate={dateRange.start} endDate={dateRange.end} compare={isComparative}
         compareStartDate={prevRange.start} compareEndDate={prevRange.end}
         mode={columnMode} onModeChange={setColumnMode} showPercent={showPercent} onPercentChange={setShowPercent}
-        totalData={data} previousTotalData={prevData} totalAuthoritative={isServerAuthoritative}
+        totalData={data} previousTotalData={prevData} totalAuthoritative={useServer}
         formatMoney={formatCurrency} sortBy={sortBy} sortDir={sortDir} onSort={toggleSort}
         onDrillDown={(accountName, selectedTransactions) => drill({ accountName, transactions: selectedTransactions })} />}
       {/* Detail Core */}
@@ -596,7 +621,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                         accountName: acc.name,
                         transactions: matchedTxs,
                         // N-12: explained from the server, adding up to this figure
-                        explain: { accountIds: [id], startDate: dateRange.start || undefined, endDate: dateRange.end || undefined, expectedCents: balance, sign: -1 }
+                        explain: { accountIds: [id], startDate: dateRange.start || undefined, endDate: dateRange.end || undefined, expectedCents: balance, sign: -1, ...(labelFilter ? { labelFilter } : {}) }
                       });
                     }}
                     title={`Click to drill down into ${acc.name}`}
@@ -678,7 +703,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                         accountName: acc.name,
                         transactions: matchedTxs,
                         // N-12: explained from the server, adding up to this figure
-                        explain: { accountIds: [id], startDate: dateRange.start || undefined, endDate: dateRange.end || undefined, expectedCents: balance, sign: 1 }
+                        explain: { accountIds: [id], startDate: dateRange.start || undefined, endDate: dateRange.end || undefined, expectedCents: balance, sign: 1, ...(labelFilter ? { labelFilter } : {}) }
                       });
                     }}
                     title={`Click to drill down into ${acc.name}`}

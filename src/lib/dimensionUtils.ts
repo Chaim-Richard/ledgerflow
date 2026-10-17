@@ -600,5 +600,6 @@ export function lineHasLabel(
   nodes: readonly DimensionNode[] = [],
 ): boolean {
   const own = getLineDimension(line, tx, filter.dimensionId);
-  return stableLabelValue(own, filter.dimensionId, nodes) === stableLabelValue(filter.value, filter.dimensionId, nodes);
+  const key = (v: string) => stableLabelValue(v, filter.dimensionId, nodes).normalize('NFC').toLowerCase();
+  return key(own) === key(filter.value); // case does not matter: "tel aviv" finds "Tel Aviv"
 }
