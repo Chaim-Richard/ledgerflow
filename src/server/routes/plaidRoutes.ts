@@ -19,7 +19,7 @@ import { writeServerAuditLog } from "../services/auditLogService.ts";
 export const plaidRouter = express.Router();
 
 /** The Plaid calls this router makes (tests swap in a fake). */
-export type PlaidClientLike = Pick<PlaidApi, 'linkTokenCreate' | 'itemPublicTokenExchange' | 'transactionsGet'> & Partial<Pick<PlaidApi, 'itemRemove'>>;
+export type PlaidClientLike = Pick<PlaidApi, 'linkTokenCreate' | 'itemPublicTokenExchange' | 'transactionsGet'> & Partial<Pick<PlaidApi, 'itemRemove' | 'transactionsSync'>>;
 
 let plaidClient: PlaidClientLike = new PlaidApi(new Configuration({
   basePath: PlaidEnvironments[process.env.PLAID_ENV || "sandbox"],
@@ -174,6 +174,35 @@ plaidRouter.get("/banks", async (req, res) => {
   }
 });
 
+type SyncCall = NonNullable<PlaidClientLike['transactionsSync']>;
+
+/**
+ * AU-1: every page of /transactions/sync after `cursor`. If the bank's data changes while paging
+ * (TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION), the pages are thrown away and read again from the
+ * same starting cursor, as Plaid asks; nothing is kept from a half-read run.
+ */
+export async function syncAllPages(call: SyncCall, accessToken: string, cursor: string | undefined) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const added: unknown[] = [], modified: unknown[] = [], removed: string[] = [];
+    let next = cursor;
+    try {
+      for (let pages = 0; pages < 200; pages++) {
+        const { data } = await call({ access_token: accessToken, ...(next ? { cursor: next } : {}), count: 500 });
+        added.push(...data.added);
+        modified.push(...data.modified);
+        removed.push(...data.removed.map(r => r.transaction_id).filter((id): id is string => typeof id === 'string'));
+        next = data.next_cursor;
+        if (!data.has_more) return { added, modified, removed, cursor: next };
+      }
+      throw new Error('Too many pages from the bank feed');
+    } catch (err) {
+      if (plaidErrorCode(err) === 'TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION') continue;
+      throw err;
+    }
+  }
+  throw new Error('The bank kept changing while it was read; try again');
+}
+
 const syncSchema = z.object({ workspaceId: z.string().min(1), accountId: z.string().min(1).optional() });
 
 /** Last 30 days of transactions from this workspace's connections (optionally one bank account). */
@@ -195,6 +224,8 @@ plaidRouter.post("/sync", async (req, res) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(today.getDate() - 30);
     const transactions: unknown[] = [];
+    const modified: unknown[] = [];
+    const removed: string[] = [];
     const needsReconnect: { bankId: string; institutionName: string }[] = [];
     // Z-28: a bank that fails another way is said and kept in its log; the others still sync
     const failed: { bankId: string; institutionName: string; error: string }[] = [];
@@ -202,17 +233,32 @@ plaidRouter.post("/sync", async (req, res) => {
     for (const doc of banksSnap.docs) {
       const bank = doc.data();
       try {
-        const response = await plaidClient.transactionsGet({
-          access_token: SecurityService.decryptSensitiveField(bank.access_token),
-          start_date: getLocalDateISO(thirtyDaysAgo),
-          end_date: getLocalDateISO(today),
-        });
-        transactions.push(...response.data.transactions);
+        const accessToken = SecurityService.decryptSensitiveField(bank.access_token);
+        let lineCount: number;
+        let nextCursor: string | undefined;
+        if (plaidClient.transactionsSync) {
+          // AU-1: /transactions/sync from the connection's saved cursor — only what changed since the
+          // last sync; the cursor is saved only after every page arrived, so a failure repeats safely
+          const page = await syncAllPages(plaidClient.transactionsSync.bind(plaidClient), accessToken, typeof bank.syncCursor === 'string' ? bank.syncCursor : undefined);
+          transactions.push(...page.added);
+          modified.push(...page.modified);
+          removed.push(...page.removed);
+          lineCount = page.added.length + page.modified.length;
+          nextCursor = page.cursor;
+        } else {
+          const response = await plaidClient.transactionsGet({
+            access_token: accessToken,
+            start_date: getLocalDateISO(thirtyDaysAgo),
+            end_date: getLocalDateISO(today),
+          });
+          transactions.push(...response.data.transactions);
+          lineCount = response.data.transactions.length;
+        }
         answered += 1;
         // the last time this connection answered (BC-11: the dashboard's bank feed health); a failed or
         // expired sync leaves it where it was. Z-29: each attempt goes in the connection's sync log
         const syncedAt = new Date().toISOString();
-        await doc.ref.update({ status: 'active', lastSyncedAt: syncedAt, updatedAt: syncedAt, syncLog: appendSyncLog(bank.syncLog, { at: syncedAt, result: 'ok', lines: response.data.transactions.length }) });
+        await doc.ref.update({ status: 'active', lastSyncedAt: syncedAt, updatedAt: syncedAt, ...(nextCursor !== undefined ? { syncCursor: nextCursor } : {}), syncLog: appendSyncLog(bank.syncLog, { at: syncedAt, result: 'ok', lines: lineCount }) });
       } catch (err) {
         const code = plaidErrorCode(err);
         const now = new Date().toISOString();
@@ -238,7 +284,7 @@ plaidRouter.post("/sync", async (req, res) => {
     }
     // every connection failed: the sync failed (as before), with each one's reason kept in its log
     if (failed.length > 0 && answered === 0 && needsReconnect.length === 0) return sendError(res, "Could not sync the bank feed", 502);
-    res.json({ success: transactions.length > 0, transactions, needsReconnect, failed, banks: banksSnap.size });
+    res.json({ success: transactions.length > 0, transactions, modified, removed, needsReconnect, failed, banks: banksSnap.size });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (/not a member|Unauthorized|not found/i.test(message)) return sendError(res, message, 403);
