@@ -1,4 +1,5 @@
 import type { DocumentData, Firestore } from '../db/firestore';
+import { checkLedgerEntry } from './ledgerDoor';
 
 /**
  * Restores a workspace from a backup file (the export's JSON), all or nothing.
@@ -119,6 +120,18 @@ export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string,
         throw new RestoreError(400, `Backup field "${key}" contains an invalid record id`);
       }
       records.set(`${coll}/${id}`, { coll, id, data: { ...data, workspaceId } });
+    }
+  }
+
+  // AUD-02: every ledger entry in the backup must be one the ledger door would accept (its workspace,
+  // whole cents, debits = credits, total = lines) — checked before anything is read or written, so a
+  // tampered or broken backup restores nothing.
+  for (const r of records.values()) {
+    if (r.coll !== 'transactions') continue;
+    try {
+      checkLedgerEntry(r.data);
+    } catch (err) {
+      throw new RestoreError(400, `Backup entry transactions/${r.id} is not a valid ledger entry (${err instanceof Error ? err.message : 'invalid'}); nothing was restored`);
     }
   }
 

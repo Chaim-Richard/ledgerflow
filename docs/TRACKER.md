@@ -2671,7 +2671,7 @@ C-39 / CB-22 review note (AI #2, 11 Oct): `DiscountMismatchView` compares curren
 Each is fixed with the acceptance test its section names. Server, posting, restore, jobs and security items are AI #1's; AUD-13/14/15 may go to a helper queue.
 
 - [ ] AUD-01 — Statement screen, server JSON and PDF do not have one scope contract
-- [ ] AUD-02 — Restore commits atomically, but validation and ownership reads precede the commit transaction
+- [~] AUD-02 (18 Oct: every ledger entry in a backup is checked by the ledger door before anything is read or written — an unbalanced one restores nothing; test in `workspace-restore.test.ts`. Left: ownership/deletion reads inside the commit transaction, document-shape checks, coherent export snapshot) — Restore commits atomically, but validation and ownership reads precede the commit transaction
 - [ ] AUD-03 — RMA decisions/history remain editable metadata, not server approval authority
 - [ ] AUD-04 — Scheduled-report pre-marking trades duplicate avoidance for lost delivery and is not a concurrent claim
 - [ ] AUD-05 — Standalone background-job coverage differs from Vercel

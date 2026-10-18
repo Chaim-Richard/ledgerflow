@@ -46,6 +46,18 @@ describe('Workspace restore', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, 
     assert.equal((await db.collection('workspaces').doc(ws).get()).data()?.name, 'Restored name');
   });
 
+  test('AUD-02: refuses an unbalanced ledger entry in the backup, and changes nothing', async () => {
+    await assert.rejects(restoreWorkspaceBackup(db, ws, {
+      workspace: { id: ws, name: 'Broken' },
+      customers: [{ id: `${ws}_c9`, name: 'Would be added' }],
+      transactions: [{ id: `${ws}_bad`, date: '2026-03-01', status: 'completed', lines: [{ accountId: 'a', amountCents: 10000 }, { accountId: 'b', amountCents: -9000 }] }],
+    }), (err: unknown) => err instanceof RestoreError && err.status === 400 && /not a valid ledger entry/.test(err.message));
+    assert.equal((await db.collection('transactions').doc(`${ws}_bad`).get()).exists, false);
+    assert.equal((await db.collection('customers').doc(`${ws}_c9`).get()).exists, false);
+    assert.equal((await db.collection('customers').doc(`${ws}_c1`).get()).exists, true, 'the previous restore is untouched');
+    assert.equal((await db.collection('workspaces').doc(ws).get()).data()?.name, 'Restored name');
+  });
+
   test('refuses a record id that belongs to another workspace, and changes nothing', async () => {
     await assert.rejects(restoreWorkspaceBackup(db, ws, {
       workspace: { id: ws, name: 'Hijack' },
