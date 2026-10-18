@@ -78,12 +78,12 @@ an unreadable quarter is reported, and a capped list is called provisional.
 
 ## 3. What was NOT done (and is not claimed)
 
-- **No browser run here.** Playwright's browsers are not downloadable in this sandbox and GitHub CI
-  does not run on pushes. The screen is registered in
-  `e2e/view-registry-coverage.spec.ts` (mount, no error boundary, no `NaN`, no new serious axe
-  violation), so GitHub's Playwright job is the check that has not been run locally.
-- **No database run here.** `LF_TEST_DATABASE_URL` is unset, so the DB/RLS suites skip. This change
-  adds no migration and no server route, so nothing in the database lane is affected.
+- **No browser run in this sandbox.** Playwright's browsers are not downloadable here. The screen is
+  registered in `e2e/view-registry-coverage.spec.ts` (mount, no error boundary, no `NaN`, no new
+  serious axe violation); **PR #169's GitHub run is the browser evidence** — see §4.
+- **No database run in this sandbox.** `LF_TEST_DATABASE_URL` is unset, so the DB/RLS suites skip
+  locally. This change adds no migration and no server route; **PR #169's CI ran `test:rules`
+  against a real Postgres with every migration applied and passed.**
 - The journey does **not** know a filing holiday, a marketplace facilitator, a local (city/county/
   district) return, or a transaction-count nexus test, and it never says "you must file".
 - CON-1 and CON-2 (the state return screens' own wiring) remain the lead's work; this screen reads
@@ -96,10 +96,28 @@ an unreadable quarter is reported, and a capped list is called provisional.
 | `npm ci` | 1,307 packages, clean |
 | `npx tsc --noEmit` | clean |
 | `npm run lint:eslint` | **0 errors / 210 warnings** (cap 210, unchanged) |
-| `npm test` | **2,856 passed / 0 failed** (731 suites; DB suites skip without `LF_TEST_DATABASE_URL`) |
+| `npm test` | **2,859 passed / 0 failed** (731 suites; DB suites skip without `LF_TEST_DATABASE_URL`) |
 | `npm run build` | passes (`dist/` + `build/server.cjs`) |
 | New tests | 20 (15 pure + 5 view) |
 | Guards touched | capabilities-guard, screen-help, view-registry-coverage, ledger-collections, no-orphan-modules, money-format — all green |
+
+### 4b. GitHub CI on PR #169 (18 Oct 2026, run `39170913179`) — all green
+
+| Job | Result |
+|---|---|
+| Lint, Typecheck, and Test (includes `test:rules` on a real Postgres, all migrations applied) | **pass** (11m41s) |
+| Unit tests in America/Los_Angeles | **pass** (9m35s) |
+| Unit tests in Pacific/Auckland | **pass** (10m57s) |
+| Browser shard 1/2 (includes the new screen's mount case: no error boundary, no `NaN`, no new serious axe violation) | **pass** (9m1s) |
+| Browser shard 2/2 | **pass** (7m1s) |
+| Playwright E2E Smoke Suite | **pass** (28s) |
+| Production build | **pass** (51s) |
+| CodeQL JavaScript and TypeScript | **pass** (1m47s) |
+
+The only red status is the **Vercel preview deployment**, which is the pre-existing blocker already
+recorded for other branches (issue #159: previews blocked, cause not readable without dashboard
+access). It is not part of the CI workflow and is not caused by this change; the `Production build`
+job passes.
 
 Files changed: `src/lib/usQuarterJourney.ts` (new), `src/components/reporting/UsQuarterJourneyReportView.tsx`
 (new), `src/tests/us-quarter-journey.test.ts` (new), `src/tests/us-quarter-journey-view.test.tsx`
