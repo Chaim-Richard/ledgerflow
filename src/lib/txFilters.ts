@@ -89,9 +89,32 @@ export function isPeriodLocked(date: string, periods: Array<Pick<AccountingPerio
  */
 export function lineAmount(l: TransactionLine, t?: Transaction): number {
   if (!l) return 0;
+  if (Number.isInteger(l.baseAmountCents)) return l.baseAmountCents as number;
   const raw = l.amountCents || 0;
   const rate = l.exchangeRate ?? t?.exchangeRate ?? 1;
   return Math.round(raw * rate);
+}
+
+/**
+ * BUG-07: an entry in a foreign currency must balance in the home currency too. Converting each line
+ * on its own can leave a cent or two over (rounding): those are put on the largest line and every
+ * line's home amount is written down (`baseAmountCents`), so reports read exactly what balanced.
+ * A bigger difference means the lines use different rates: refused — post an exchange difference.
+ */
+export function settleHomeCurrency(t: Pick<Transaction, 'lines' | 'exchangeRate'>): void {
+  const lines = t.lines || [];
+  const rateOf = (l: TransactionLine) => l.exchangeRate ?? t.exchangeRate ?? 1;
+  if (lines.length === 0 || lines.every(l => rateOf(l) === 1)) return;
+  const base = lines.map(l => Math.round((l.amountCents || 0) * rateOf(l)));
+  const residual = base.reduce((a, b) => a + b, 0);
+  if (residual === 0) return;
+  if (Math.abs(residual) > lines.length) {
+    throw new Error(`Validation Failed: the lines balance in the foreign currency but differ by ${residual} cents in the home currency (different rates) — add an exchange-difference line`);
+  }
+  let largest = 0;
+  base.forEach((b, i) => { if (Math.abs(b) > Math.abs(base[largest])) largest = i; });
+  base[largest] -= residual;
+  lines.forEach((l, i) => { l.baseAmountCents = base[i]; });
 }
 
 /**

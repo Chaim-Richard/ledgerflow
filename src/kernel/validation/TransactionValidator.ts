@@ -5,6 +5,7 @@ import { TransactionSchema } from '../../schemas';
 import { getAbsoluteTotal } from '../../lib/txFilters';
 import { SecurityService } from '../../services/securityService';
 import { assertPostingOpen, lockMessage, postingLock } from '../../lib/periodLock';
+import { settleHomeCurrency } from '../../lib/txFilters';
 
 export interface ValidationContext {
   workspaceId: string;
@@ -122,8 +123,9 @@ export class TransactionValidator {
       }
     }
 
-    // 5. Double Entry
+    // 5. Double Entry (in the entry's currency, then in the home currency — BUG-07)
     DoubleEntryValidator.validateJournalEntry(validatedTx);
+    settleHomeCurrency(validatedTx);
     
     // 6. Server-Authoritative Forensic Hash Stamping
     if (!process.env.SYSTEM_SALT && process.env.NODE_ENV !== 'test') {

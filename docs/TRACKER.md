@@ -2711,7 +2711,7 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 - [ ] BUG-04 Statement PDF/email ignores the chosen period (same as ISS-141/AUD-01).
 - [ ] BUG-05 After a successful post the local list adds the rows again instead of replacing them by id.
 - [ ] BUG-06 Ten enabled buttons do nothing; one "Close Period" button only selects (helper AI, screens).
-- [ ] BUG-07 Foreign-currency entries: lines balance in the foreign currency but not after conversion to the home currency — validate the base amounts too.
+- [x] BUG-07 (18 Oct: the server now also balances every foreign-currency entry in the home currency — rounding cents go to the largest line and each line's home amount is stored (`baseAmountCents`, read by `lineAmount`); a bigger gap from different rates is refused; test `home-currency-balance.test.ts`, 616 FX/validation tests pass) Foreign-currency entries: lines balance in the foreign currency but not after conversion to the home currency — validate the base amounts too.
 - [ ] AUD-07b The three direct idempotent calls in adminRoutes.ts also pass the request fingerprint.
 - [ ] DIM-3 Each label kind gets an accounting role: informational (no balancing), fully attributed (every line has a value), or self-balancing (each value balances) — so balancing is applied only where it is required (strategy §16).
 

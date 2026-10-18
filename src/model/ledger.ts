@@ -49,6 +49,8 @@ export interface TransactionLine {
   debitCents?: number;
   creditCents?: number;
   exchangeRate?: number;
+  /** BUG-07: the line in the home currency, fixed at posting so the entry balances there too */
+  baseAmountCents?: number;
   description?: string;
   category?: string;    // Category for price intel / account category
   total_impact?: number; // Risk/Impact factor
