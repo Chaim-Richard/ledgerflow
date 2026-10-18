@@ -1,7 +1,7 @@
 import { usePageSyncedState } from '../../hooks/usePageSyncedState';
 import type { ExplainRequest } from '../layout/DrillDownModal';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { useId, useState, useMemo, useCallback, useEffect } from 'react';
+import { useId, useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ChartAccount, Transaction } from '../../types';
 import { getLocalDateISO, addToDateISO } from '../../lib/utils';
 import { exportToExcel } from '../../lib/excelExport';
@@ -44,21 +44,22 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
   const [serverData, setServerData] = useState<ServerBalanceSheetData | null>(null);
   const [serverPrevData, setServerPrevData] = useState<ServerBalanceSheetData | null>(null);
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
+  const reportGen = useRef(0);
 
   // N-08: accrual (as posted) or cash (without trade receivables and payables; from the server only)
   const [basis, setBasis] = useState<'accrual' | 'cash'>('accrual');
   const loadServerReport = useCallback(async () => {
     try {
+      const gen = ++reportGen.current;
       const res = await fetchBalanceSheet(asOfDate, basis === 'cash' ? 'cash' : undefined);
-      if (res) {
-        setServerData(res);
-        setIsServerAuthoritative(true);
-      }
+      // BUG-02: a failed or late answer never leaves another period's figures on screen
+      if (gen !== reportGen.current) return;
+      setServerData(res || null);
+      setIsServerAuthoritative(Boolean(res));
       if (isComparative) {
         const prevRes = await fetchBalanceSheet(priorDate, basis === 'cash' ? 'cash' : undefined);
-        if (prevRes) {
-          setServerPrevData(prevRes);
-        }
+        if (gen !== reportGen.current) return;
+        setServerPrevData(prevRes || null);
       }
     } catch {
       setIsServerAuthoritative(false);

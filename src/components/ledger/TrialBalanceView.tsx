@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { isDebitNatureType } from '../../lib/accountUtils';
 import { ChartAccount } from '../../types';
 import { format, subMonths, endOfMonth, endOfQuarter, subQuarters, subYears, endOfYear } from 'date-fns';
@@ -40,14 +40,16 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
   const { fetchTrialBalance, loadingStates } = useFinancialReporting();
   const [serverData, setServerData] = useState<ServerTrialBalanceData | null>(null);
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
+  const reportGen = useRef(0);
 
   const loadServerReport = useCallback(async () => {
     try {
+      const gen = ++reportGen.current;
       const res = await fetchTrialBalance(asOfDate);
-      if (res) {
-        setServerData(res);
-        setIsServerAuthoritative(true);
-      }
+      // BUG-02: a failed or late answer never leaves another period's figures on screen
+      if (gen !== reportGen.current) return;
+      setServerData(res || null);
+      setIsServerAuthoritative(Boolean(res));
     } catch {
       setIsServerAuthoritative(false);
     }

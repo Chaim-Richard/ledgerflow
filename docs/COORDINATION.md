@@ -1043,6 +1043,7 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-90 Settings: group the tabs into five sections with a search box (P2-30)**
 - [ ] **D-91 Icon-only buttons: aria-label + tooltip everywhere (P2-51); a test that fails on a new unlabeled icon button**
 - [ ] **D-92 Sidebar: clearer names and grouping; the "Worlds" balances box renamed and explained or removed**
+- [ ] **D-93 Test harness: rendering ProfitAndLossView/TrialBalanceView with `currentWorkspaceId` set hangs the node test runner (even with `--test-force-exit`); find what keeps running (live query / interval / render loop), fix it, then add the BUG-02 screen test: success for one period, failure for the next → no old figures, no server badge**
 
 
 ## AI #5: tasks (ready for the next AI; written by Claude, 6 Oct)

@@ -1,6 +1,6 @@
 import { usePageSyncedState } from '../../hooks/usePageSyncedState';
 import type { Transaction } from '../../types';
-import React, { useId, useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useId, useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn, getLocalDateISO, monthBoundsISO, formatCurrency } from '../../lib/utils';
@@ -88,6 +88,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   const [serverData, setServerData] = useState<PLData | null>(null);
   const [serverPrevData, setServerPrevData] = useState<PLData | null>(null);
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
+  const reportGen = useRef(0);
 
   // Follow the Reports page period and comparison
 
@@ -101,17 +102,17 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
 
   const loadServerReport = useCallback(async () => {
     try {
+      const gen = ++reportGen.current;
       const cashBasis = basis === 'cash' ? 'cash' as const : undefined;
       const res = await fetchPL(dateRange.start, dateRange.end, cashBasis);
-      if (res) {
-        setServerData(res);
-        setIsServerAuthoritative(true);
-      }
+      // BUG-02: a failed or late answer never leaves another period's figures on screen
+      if (gen !== reportGen.current) return;
+      setServerData(res || null);
+      setIsServerAuthoritative(Boolean(res));
       if (isComparative) {
         const prevRes = await fetchPL(prevRange.start, prevRange.end, cashBasis);
-        if (prevRes) {
-          setServerPrevData(prevRes);
-        }
+        if (gen !== reportGen.current) return;
+        setServerPrevData(prevRes || null);
       }
     } catch {
       setIsServerAuthoritative(false);

@@ -1,5 +1,5 @@
 import { usePageSyncedState } from '../../hooks/usePageSyncedState';
-import React, { useId, useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useId, useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { getComparePeriod } from '../../lib/fiscalCalendar';
 import { formatCurrency, cn, getLocalDateISO, monthBoundsISO } from '../../lib/utils';
@@ -42,6 +42,7 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
   const [serverData, setServerData] = useState<ServerCashFlowData | null>(null);
   const [serverPrevData, setServerPrevData] = useState<ServerCashFlowData | null>(null);
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
+  const reportGen = useRef(0);
 
   // The page's comparison period, else the calendar period just before
   const getPrevPeriod = useCallback((start: string, end: string) => {
@@ -52,17 +53,17 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
 
   const loadServerReport = useCallback(async () => {
     try {
+      const gen = ++reportGen.current;
       const res = await fetchCashFlow(dateRange.start, dateRange.end);
-      if (res) {
-        setServerData(res);
-        setIsServerAuthoritative(true);
-      }
+      // BUG-02: a failed or late answer never leaves another period's figures on screen
+      if (gen !== reportGen.current) return;
+      setServerData(res || null);
+      setIsServerAuthoritative(Boolean(res));
       if (isComparative) {
         const prev = getPrevPeriod(dateRange.start, dateRange.end);
         const prevRes = await fetchCashFlow(prev.start, prev.end);
-        if (prevRes) {
-          setServerPrevData(prevRes);
-        }
+        if (gen !== reportGen.current) return;
+        setServerPrevData(prevRes || null);
       }
     } catch {
       setIsServerAuthoritative(false);
