@@ -37,7 +37,7 @@ independently worked figures passes · **Browser** = an end-to-end browser test 
 | W5 | Labels (property, project, location) → reports by label | 2 | Yes | Partly | No | DIM-1 payments, DIM-3 balancing roles |
 | W6 | Order with deposit → part invoices → delivery (no double charge) | 2 | Yes | Yes (DEP-1) | No | browser test |
 | W7 | Israel VAT month: invoices with allocation numbers → VAT report → PCN874 → close | 2 | Partly | Partly ([D-32 report goldens](verification/ai4-d32-israeli-vat-golden.md), A-146) | No | CON-3, CON-4, journey A-151, #160 persisted equipment/report adapter |
-| W8 | US quarter: sales tax by state → summary → 1099 preview → close | 2 | Partly | Partly (A-146/147) | No | CON-1, CON-2, journey A-153 |
+| W8 | US quarter: sales tax by state → summary → 1099 preview → close | 2 | Partly | Partly (A-146/147, [A-153 US quarter journey](verification/ai3-a153-us-quarter-journey.md)) | No | CON-1, CON-2 |
 | W9 | Month-end close and reopen | 2 | Yes | Yes (AUD-08 race) | Partly | — |
 | W10 | Backup → restore → same reports | 3 | Yes | Partly (AUD-02) | No | AUD-02 rest (ownership inside the transaction) |
 | W11 | Import from QuickBooks/CSV → totals match the source (AU-4) | 3 | Partly | No | No | AU-4 |
