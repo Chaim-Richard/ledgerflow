@@ -6,6 +6,26 @@
 > (14 workflows, each connected / verified with worked figures / browser-tested). Screens follow
 > [`docs/UI_GUIDE.md`](docs/UI_GUIDE.md). The lead's loop: [`docs/LEAD_RUNBOOK.md`](docs/LEAD_RUNBOOK.md).
 > Money, posting, tax maths and `src/server/` belong to AI #1 — report problems there, don't patch them.
+> **New independent audit assignment (owner, 18 Oct):** [Function-by-function audit mission](docs/INDEPENDENT_AUDIT_AGENT.md) and [first-tester release gates](docs/FIRST_TESTERS_GATE.md). A dedicated audit agent should review each micro-helper, caller, workflow and strategy, track inspected coverage at a pinned revision, and publish independent evidence. This is review scope only: no financial or server changes without the established lead, and no claim that automated indexing is a correctness audit.
+
+> **14–17 Oct: Claude is away; AI #2 (Codex) is acting lead** — read "While Claude (AI #1) is away" in `docs/COORDINATION.md`.
+>
+> **Any AI can run this project:** the lead's loop, public issue triage and batch fixing are in [`docs/LEAD_RUNBOOK.md`](docs/LEAD_RUNBOOK.md); the second to-do list (finishing and polish, biggest first) is [`docs/TODO_2.md`](docs/TODO_2.md).
+>
+> **Codex and other AI assistants:** first read [`docs/COORDINATION.md`](docs/COORDINATION.md).
+> It says which task to do next, which files not to touch, and the checks every change must pass.
+> What to build first, and what stays out of the core: [`docs/ROADMAP.md`](docs/ROADMAP.md) (owner, 7 Oct).
+>
+> **AI #3 (Arena): the finalized to-do list (owner, 13 Oct).** The queue, the IDs (`A-…`) and the lane rules live in [`docs/COORDINATION.md`](docs/COORDINATION.md) → "AI #3 (Arena): tasks". Work in this order; one branch and PR per batch of 3–5 tasks, from the latest main; **a task is done only when a user can reach it on a screen** (a library alone is `[~]`, not done); never change how money is calculated or posted (AI #1's lane); tests for each; a line under Messages.
+> 1. **A-133** Expenses: missing-receipt checklist by employee (report).
+> 2. **A-135** Contacts: duplicate-contact finder across entities (report).
+> 3. **A-141** Reports: purchase price variance by vendor.
+> 4. **A-142** Reports: sales by territory (uses a Location label).
+> 5. **A-144** Compliance: record-retention periods by country (table + a report).
+>
+> **Status reconciled 16 Oct (AI #3): all five priorities above are complete on main**, as are A-15/A-16 and the screen portions of A-46, A-48…A-50, A-63, A-70, A-73, A-79 and A-80.
+>
+> **16 Oct, AI #3 batch 12 (final for this session): A-184 document number gaps, A-186 13-week cash forecast, A-188 vendor 1099 readiness and A-195 duplicate bill review are complete** — each a pure library plus a Reports screen, a screen-help entry, a capabilities row and tests, on `arena/8f84f1e9-ledgerflow`. The queue is 100 done / 10 partial / 108 open; the full list with the remaining steps is [`docs/verification/agent3-final-2026-10-16.md`](docs/verification/agent3-final-2026-10-16.md). Do not rebuild them. A-70 still needs its reserved server send/log/schedule path. The six remaining `[~]` handoffs, the blocked A-72 statement/PDF contract, and the warehouse-only A-203…A-205 audit are recorded in [`docs/verification/agent3-warehouse-audit-2026-10-16.md`](docs/verification/agent3-warehouse-audit-2026-10-16.md). Continue in the current coordination queue; do not cross into reserved financial files to clear a checkbox.
 
 ## 1. System Overview
 This project is an advanced Enterprise Resource Planning (ERP) and Financial Ledger system built with React, Vite, and Tailwind CSS. It uses client-side state management (Zustand) and features a dynamic registry architecture for views, algorithms, and analytical lenses.
