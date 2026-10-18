@@ -81,7 +81,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
                 Preview PDF
               </button>
               <button
-                onClick={() => downloadDocumentPdf('statement', selectedContact.id, currentWorkspaceId || 'default', `statement_${selectedContact.name || selectedContact.id}.pdf`)}
+                onClick={() => downloadDocumentPdf('statement', selectedContact.id, currentWorkspaceId || 'default', `statement_${selectedContact.name || selectedContact.id}.pdf`, { startDate, endDate })}
                 className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
               >
                 <Download className="w-4 h-4" />
@@ -260,6 +260,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
           documentId={selectedContact.id}
           workspaceId={currentWorkspaceId || 'default'}
           filename={`statement_${selectedContact.name || selectedContact.id}.pdf`}
+          period={{ startDate, endDate }}
         />
       )}
     </div>

@@ -39,6 +39,9 @@ describe('Document PDF downloads', { skip: !url && 'LF_TEST_DATABASE_URL not set
       workspaceId: ws, customerId: id('c1'), customerName: 'Acme Ltd', number: 'INV-0007', date: '2026-06-01', status: 'sent',
       amountCents: 12500, items: [{ description: 'Consulting', quantity: 1, amountCents: 12500 }],
     });
+    await db.collection('invoices').doc(id('inv2')).set({
+      workspaceId: ws, customerId: id('c1'), customerName: 'Acme Ltd', number: 'INV-0009', date: '2026-08-10', status: 'sent', amountCents: 3000, items: [],
+    });
     await db.collection('estimates').doc(id('est')).set({
       workspaceId: ws, customerId: id('c1'), number: 'EST-0003', date: '2026-06-02', status: 'sent', amountCents: 4000,
       lines: [{ description: 'Site survey', quantity: 2, unitPriceCents: 2000, amountCents: 4000 }],
@@ -90,6 +93,16 @@ describe('Document PDF downloads', { skip: !url && 'LF_TEST_DATABASE_URL not set
     assert.equal(res.status, 200);
     const pdf = pdfText(Buffer.from(await res.arrayBuffer()));
     assert.match(pdf, /2026-06-01 Invoice INV-0007/);
+  });
+
+  test('a statement PDF follows the period on screen: opening balance, then only that period (ISS-141)', async () => {
+    const res = await fetch(`${base}/api/v1/documents/statement/${id('c1')}/pdf?workspaceId=${ws}&startDate=2026-08-01&endDate=2026-08-31`, { headers: { 'x-test-uid': 'owner-1' } });
+    assert.equal(res.status, 200);
+    const pdf = pdfText(Buffer.from(await res.arrayBuffer()));
+    assert.match(pdf, /2026-08-01 Opening balance/);
+    assert.match(pdf, /125\.00/);
+    assert.match(pdf, /2026-08-10 Invoice INV-0009/);
+    assert.doesNotMatch(pdf, /INV-0007/);
   });
 
   test('a purchase order prints for the vendor: number, delivery date, lines (BA-08)', async () => {

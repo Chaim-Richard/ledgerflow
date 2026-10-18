@@ -15,12 +15,15 @@ export interface PdfPreviewModalProps {
   documentId: string;
   workspaceId: string;
   filename?: string;
+  /** statement only: the period shown on screen (ISS-141) */
+  period?: { startDate?: string; endDate?: string };
 }
 
 export async function fetchDocumentPdfBlob(
   type: PdfDocumentKind,
   id: string,
-  workspaceId: string
+  workspaceId: string,
+  period?: { startDate?: string; endDate?: string }
 ): Promise<Blob> {
   if (!workspaceId) throw new Error('Workspace ID is required to generate PDF');
   if (!id) throw new Error('Document ID is required');
@@ -31,7 +34,10 @@ export async function fetchDocumentPdfBlob(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`/api/v1/documents/${type}/${encodeURIComponent(id)}/pdf?workspaceId=${encodeURIComponent(workspaceId)}`, {
+  const query = new URLSearchParams({ workspaceId });
+  if (period?.startDate) query.set('startDate', period.startDate);
+  if (period?.endDate) query.set('endDate', period.endDate);
+  const res = await fetch(`/api/v1/documents/${type}/${encodeURIComponent(id)}/pdf?${query}`, {
     headers
   });
 
@@ -47,11 +53,12 @@ export async function downloadDocumentPdf(
   type: PdfDocumentKind,
   id: string,
   workspaceId: string,
-  filename?: string
+  filename?: string,
+  period?: { startDate?: string; endDate?: string }
 ): Promise<void> {
   const toastId = toast.loading('Generating document PDF...');
   try {
-    const blob = await fetchDocumentPdfBlob(type, id, workspaceId);
+    const blob = await fetchDocumentPdfBlob(type, id, workspaceId, period);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -73,7 +80,8 @@ export default function PdfPreviewModal({
   documentType,
   documentId,
   workspaceId,
-  filename
+  filename,
+  period
 }: PdfPreviewModalProps) {
   const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(onClose, isOpen);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -93,7 +101,7 @@ export default function PdfPreviewModal({
     setIsLoading(true);
     setError(null);
 
-    fetchDocumentPdfBlob(documentType, documentId, workspaceId)
+    fetchDocumentPdfBlob(documentType, documentId, workspaceId, period)
       .then((blob) => {
         if (!isMounted) return;
         const url = URL.createObjectURL(blob);
@@ -112,7 +120,7 @@ export default function PdfPreviewModal({
         URL.revokeObjectURL(blobUrl);
       }
     };
-  }, [isOpen, documentType, documentId, workspaceId]);
+  }, [isOpen, documentType, documentId, workspaceId, period?.startDate, period?.endDate]);
 
   if (!isOpen) return null;
 
@@ -128,7 +136,7 @@ export default function PdfPreviewModal({
       document.body.removeChild(a);
       toast.success('PDF downloaded');
     } else {
-      downloadDocumentPdf(documentType, documentId, workspaceId, downloadName);
+      downloadDocumentPdf(documentType, documentId, workspaceId, downloadName, period);
     }
   };
 
@@ -201,7 +209,7 @@ export default function PdfPreviewModal({
                 onClick={() => {
                   setError(null);
                   setIsLoading(true);
-                  fetchDocumentPdfBlob(documentType, documentId, workspaceId)
+                  fetchDocumentPdfBlob(documentType, documentId, workspaceId, period)
                     .then((blob) => {
                       const url = URL.createObjectURL(blob);
                       setBlobUrl(url);

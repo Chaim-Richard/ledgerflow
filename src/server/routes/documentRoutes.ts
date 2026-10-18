@@ -6,7 +6,7 @@ import { getDb, validateWorkspaceMember } from '../db/firestore';
 import type { Firestore } from '../db/firestore';
 import { generateDocumentPdf } from '../services/pdfService';
 import type { PdfDocument, PdfDocumentType, PdfWorkspace } from '../services/pdfService';
-import { loadStatement } from '../services/statementService';
+import { loadStatement, statementDate } from '../services/statementService';
 import { contactTerms, documentLanguage, type DocumentLanguage } from '../../lib/documentLanguage';
 import { ChequeError, generateChequePdf, layoutCheque } from '../services/chequePdf';
 import { getTrustedAppUrl } from '../utils/urlHelper';
@@ -148,7 +148,7 @@ export async function handlePdfRequest(req: express.Request, res: express.Respon
       ({ docData, paymentUrl } = loaded);
     } else {
       // id is a customer or vendor
-      const statement = await loadStatement(db, workspaceId, id);
+      const statement = await loadStatement(db, workspaceId, id, { startDate: statementDate(req.query.startDate), endDate: statementDate(req.query.endDate) });
       if (!statement) return res.status(404).json({ status: 'error', message: 'Contact not found' });
       docData = statement.pdf;
       style = { language: documentLanguage(workspace.branding, statement.contact), terms: contactTerms(statement.contact) };

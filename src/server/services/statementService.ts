@@ -16,7 +16,14 @@ export interface LoadedStatement {
  * PDF data: used by the statement PDF and by emailing statements (BE-07). Null when the contact
  * isn't in this workspace (another workspace's contact answers like a missing one).
  */
-export async function loadStatement(db: Firestore, workspaceId: string, contactId: string): Promise<LoadedStatement | null> {
+export interface StatementPeriod { startDate?: string; endDate?: string }
+
+/** A YYYY-MM-DD date from a query string, or undefined (ISS-141: the PDF follows the screen's period) */
+export function statementDate(value: unknown): string | undefined {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
+}
+
+export async function loadStatement(db: Firestore, workspaceId: string, contactId: string, period: StatementPeriod = {}): Promise<LoadedStatement | null> {
   const [customerSnap, vendorSnap] = await Promise.all([db.collection('customers').doc(contactId).get(), db.collection('vendors').doc(contactId).get()]);
   const customer = customerSnap.data();
   const vendor = vendorSnap.data();
@@ -31,7 +38,10 @@ export async function loadStatement(db: Firestore, workspaceId: string, contactI
   // the statement only reads this contact's payments: no need to load the whole workspace's
   const payments = await rows<Payment>('payments', 'contactId');
   const credits = contactType === 'customer' ? await rows<CreditNote>('creditNotes', 'customerId') : await rows<VendorCredit>('vendorCredits', 'vendorId');
-  const stmt = computeStatement(contact, invoices, bills, payments, '1970-01-01', '2099-12-31', contactType, credits);
+  const startDate = period.startDate || '1970-01-01';
+  const stmt = computeStatement(contact, invoices, bills, payments, startDate, period.endDate || '2099-12-31', contactType, credits);
+  // a statement for a period starts from what was owed before it
+  const opening = period.startDate ? [{ description: `${startDate} Opening balance`, amountCents: stmt.openingBalanceCents }] : [];
   return {
     contactType,
     contact,
@@ -41,7 +51,7 @@ export async function loadStatement(db: Firestore, workspaceId: string, contactI
       date: getLocalDateISO(),
       customerName: stmt.contactName,
       amountCents: stmt.endingBalanceCents,
-      transactions: stmt.entries.map(item => ({ description: `${item.date} ${item.type} ${item.reference || ''}`, amountCents: item.amountCents || 0 })),
+      transactions: [...opening, ...stmt.entries.map(item => ({ description: `${item.date} ${item.type} ${item.reference || ''}`, amountCents: item.amountCents || 0 }))],
     },
   };
 }
