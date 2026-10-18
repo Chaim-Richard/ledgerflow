@@ -85,9 +85,10 @@ export default function DeveloperSettings() {
                   Register endpoints to receive real-time rule updates and fiscal anomaly detected events.
                 </p>
               </div>
-              <button className="mt-4 px-8 py-3 bg-[var(--brass)] text-[var(--ink)] rounded-xl text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-all cursor-pointer" aria-label="Provision New Endpoint">
+              <div className="min-w-0 space-y-1"><button className="disabled:cursor-not-allowed disabled:opacity-50 mt-4 px-8 py-3 bg-[var(--brass)] text-[var(--ink)] rounded-xl text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-all cursor-pointer" type="button" disabled aria-describedby="endpoint-help" title="Endpoint provisioning is not available. No external endpoint will be registered." aria-label="Provision New Endpoint">
                 Provision New Endpoint
               </button>
+            <p id="endpoint-help" className="text-xs text-[var(--muted)] max-w-sm">Endpoint provisioning is not available. No external endpoint will be registered.</p></div>
             </div>
           </div>
 

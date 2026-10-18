@@ -1,3 +1,4 @@
+import { useUIStore } from '../../stores/useUIStore';
 import ChartFrame, { ChartTooltip } from '../charts/ChartFrame';
 import React, { useMemo, useState, useEffect } from 'react';
 import { 
@@ -260,8 +261,8 @@ const ForensicAudit = React.memo(() => {
               <p className="text-[11px] text-zinc-400 leading-relaxed">
                  All transactions are passed through a series of deterministic and heuristic filters. The integrity suite continuously monitors for data drift and classification mismatches to ensure audit-ready ledger states.
               </p>
-              <button className="w-full mt-6 py-3 bg-[var(--surface)]/10 hover:bg-[var(--surface)]/20 text-white rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all" aria-label="Generate Full Audit Log">
-                 Generate Full Audit Log
+              <button className="min-h-11 w-full mt-6 py-3 bg-[var(--surface)]/10 hover:bg-[var(--surface)]/20 text-white rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all" type="button" onClick={() => useUIStore.getState().setActiveTab('audit-trail')} aria-label="Open audit trail">
+                 Open audit trail
               </button>
            </div>
         </div>

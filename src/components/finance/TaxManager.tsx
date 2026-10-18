@@ -251,10 +251,11 @@ export default function TaxManager({
                ))}
              </select>
           </div>
-          <button className="flex items-center gap-2 px-6 py-3.5 bg-[var(--brass)] text-[var(--ink)] rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-md cursor-pointer" aria-label="Fiscal Export">
+          <div className="min-w-0 space-y-1"><button className="disabled:cursor-not-allowed disabled:opacity-50 flex items-center gap-2 px-6 py-3.5 bg-[var(--brass)] text-[var(--ink)] rounded-[32px] text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-md cursor-pointer" type="button" disabled aria-describedby="fiscal-export-help" title="Fiscal export is not available. Review the tax reports before preparing a filing." aria-label="Fiscal Export">
             <Download size={16} />
             Fiscal Export
           </button>
+            <p id="fiscal-export-help" className="text-xs text-[var(--muted)] max-w-sm">Fiscal export is not available. Review the tax reports before preparing a filing.</p></div>
         </div>
       </div>
 

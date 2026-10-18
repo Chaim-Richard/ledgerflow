@@ -39,9 +39,10 @@ export default function Consolidation() {
             <Globe className="w-3.5 h-3.5 text-emerald-400" />
             <span>Worlds: {summary.worldStatements.length}</span>
           </div>
-          <button className="h-10 px-4 bg-purple-500 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-purple-400 transition-colors" aria-label="Export Report">
+          <div className="min-w-0 space-y-1"><button className="disabled:cursor-not-allowed disabled:opacity-50 h-10 px-4 bg-purple-500 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-purple-400 transition-colors" type="button" disabled aria-describedby="consolidation-export-help" title="Export is unavailable until complete consolidated history is supported." aria-label="Export Report">
             <Download className="w-4 h-4" /> Export Report
           </button>
+            <p id="consolidation-export-help" className="text-xs text-[var(--muted)] max-w-sm">Export is unavailable until complete consolidated history is supported.</p></div>
         </div>
       </div>
 

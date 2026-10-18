@@ -131,9 +131,10 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
                    {showAllChart ? 'Show Top 10' : `Show All (${projectProfitability.length})`}
                  </button>
                )}
-               <button className="w-10 h-10 flex items-center justify-center rounded-full bg-[var(--ink)] text-[var(--muted)] hover:bg-slate-100 transition-all" aria-label="Maximize2 action">
+               <div className="min-w-0 space-y-1"><button className="disabled:cursor-not-allowed disabled:opacity-50 w-10 h-10 flex items-center justify-center rounded-full bg-[var(--ink)] text-[var(--muted)] hover:bg-slate-100 transition-all" type="button" disabled aria-describedby="chart-expand-help" title="Chart expansion is not available. Use the table below to review all projects." aria-label="Maximize2 action">
                   <Maximize2 size={16} />
                </button>
+            <p id="chart-expand-help" className="text-xs text-[var(--muted)] max-w-sm">Chart expansion is not available. Use the table below to review all projects.</p></div>
              </div>
            </div>
            
@@ -181,9 +182,10 @@ export default function ProjectProfitabilityView({ transactions, formatCurrency 
             <h3 className="text-sm font-black text-[var(--text)] uppercase tracking-widest">Project Ledger Engine</h3>
             <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1">Real-time vector synchronization</p>
           </div>
-          <button className="px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-[var(--ink)] flex items-center gap-2 transition-all" aria-label="Export Node">
+          <div className="min-w-0 space-y-1"><button className="disabled:cursor-not-allowed disabled:opacity-50 px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-[var(--ink)] flex items-center gap-2 transition-all" type="button" disabled aria-describedby="project-export-help" title="Project export is not available. The displayed analysis uses the loaded transactions only." aria-label="Export Node">
             <Download size={14} /> Export Node
           </button>
+            <p id="project-export-help" className="text-xs text-[var(--muted)] max-w-sm">Project export is not available. The displayed analysis uses the loaded transactions only.</p></div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
