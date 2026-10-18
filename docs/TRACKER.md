@@ -2665,3 +2665,25 @@ C-39 / CB-22 review note (AI #2, 11 Oct): `DiscountMismatchView` compares curren
 - [x] ISS-B All-or-nothing writes (#98, #106, #112, #113 fixed 13 Oct): #106 transfer pairing as one server transaction, #98 bulk time approval/invoicing validated before any write.
 - [x] ISS-C (fixed 13 Oct) Workspace switch safety: #99, #100, #102, #107 — every async load/import carries the workspace id and is dropped if the user switched books.
 - [x] ISS-D (fixed 13 Oct) #101 CSV parser: apostrophes are not quotes; amounts never silently become 0 (fixture from the issue).
+
+## Deep code audit findings (PR #144, 16 Oct; details and acceptance tests in docs/DEEP_CODE_AUDIT.md)
+
+Each is fixed with the acceptance test its section names. Server, posting, restore, jobs and security items are AI #1's; AUD-13/14/15 may go to a helper queue.
+
+- [ ] AUD-01 — Statement screen, server JSON and PDF do not have one scope contract
+- [ ] AUD-02 — Restore commits atomically, but validation and ownership reads precede the commit transaction
+- [ ] AUD-03 — RMA decisions/history remain editable metadata, not server approval authority
+- [ ] AUD-04 — Scheduled-report pre-marking trades duplicate avoidance for lost delivery and is not a concurrent claim
+- [ ] AUD-05 — Standalone background-job coverage differs from Vercel
+- [ ] AUD-06 — Security suites are outside ordinary unit-test discovery
+- [ ] AUD-07 — Generic and bulk idempotency have weaker replay identity than payment posting
+- [ ] AUD-08 — Bulk validation reads workspace locks outside its posting transaction
+- [ ] AUD-09 — Privileged server access means SQL client guards are not a universal safety net
+- [ ] AUD-10 — Report fallback and cache completeness need one visible provenance contract
+- [ ] AUD-11 — Safe-fetch DNS validation is not a pinned connection
+- [ ] AUD-12 — Static Vercel CSP can disagree with the configurable Supabase project
+- [ ] AUD-13 — Async auth-derived UI state has no identity generation check
+- [ ] AUD-14 — A registered receipt algorithm is a hard-coded demonstration
+- [ ] AUD-15 — Client post-success cache inserts request entries rather than a canonical server result
+- [ ] AUD-19 — Altman analytical EBIT loses reversal signs
+- [ ] AUD-20 — Remote database TLS does not authenticate the server unless a CA is supplied
