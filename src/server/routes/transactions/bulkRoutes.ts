@@ -144,6 +144,27 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
             throw new LedgerPostingError(403, `Forbidden: Entity ${entityMutation.docId} does not belong to authorized workspace.`);
           }
         }
+        // DEP-1: an invoice made from an estimate/order never takes the order past its total — the
+        // invoices already made from it are read here, inside the save, so two people invoicing the
+        // same order at once cannot both get through (a deposit is a payment, not an invoice)
+        if (entityRef && entityMutation.collection === 'invoices' && (entityMutation.action === 'create' || entityMutation.action === 'update')) {
+          const data = (entityMutation.data || {}) as { amountCents?: unknown; status?: unknown; metadata?: { convertedFromEstimateId?: unknown } };
+          const estimateId = data.metadata?.convertedFromEstimateId ?? (existingEntity?.metadata as { convertedFromEstimateId?: unknown } | undefined)?.convertedFromEstimateId;
+          const status = String(data.status ?? existingEntity?.status ?? '');
+          if (typeof estimateId === 'string' && estimateId && status !== 'void' && status !== 'cancelled') {
+            const est = await t.get(db.collection('estimates').doc(estimateId));
+            if (est.exists && est.data()?.workspaceId === wsId) {
+              const totalCents = Math.round(Number(est.data()?.amountCents) || 0);
+              const made = await t.get(db.collection('invoices').where('workspaceId', '==', wsId).where('metadata.convertedFromEstimateId', '==', estimateId));
+              const others = made.docs.filter(d => d.id !== entityMutation.docId && !['void', 'cancelled'].includes(String(d.data()?.status)))
+                .reduce((sum, d) => sum + Math.round(Number(d.data()?.amountCents) || 0), 0);
+              const thisCents = Math.round(Number(data.amountCents ?? existingEntity?.amountCents) || 0);
+              if (totalCents > 0 && others + thisCents > totalCents) {
+                throw new LedgerPostingError(409, `That is more than is left to invoice on this order (${(Math.max(0, totalCents - others) / 100).toFixed(2)} left)`);
+              }
+            }
+          }
+        }
         const refs = validatedTransactions.map(tx => db.collection('transactions').doc(tx.id));
         if (refs.length > 0) {
           const snaps = await t.getAll(...refs);
