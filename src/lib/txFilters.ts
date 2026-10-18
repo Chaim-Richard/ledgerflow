@@ -413,6 +413,20 @@ export function calculateFilteredTotals(
     postableCount++;
     totalExposure += baseAbsoluteTotal(t);
 
+    // BUG-01: when the lines' accounts are known, count by the side each income/expense line is on —
+    // income credited or expense credited back is money in; expense debited or income debited back
+    // (a reversal, a refund) is money out. A sale and its exact reversal: 1,000 in and 1,000 out.
+    const incomeOrExpense = accountMap && t.lines?.length
+      ? t.lines.filter(l => { const acc = accountMap.get(l.accountId); return !l.isTransfer && acc && (isRevenueAccount(acc) || isExpenseAccount(acc)); })
+      : [];
+    if (incomeOrExpense.length > 0) {
+      for (const l of incomeOrExpense) {
+        const amt = lineAmount(l, t);
+        if (amt < 0) inflowCents += -amt; else outflowCents += amt;
+      }
+      continue;
+    }
+
     if (t.type === 'income' || isInflow(t, accountMap)) {
       const amt = t.lines && t.lines.length > 0
         ? t.lines.filter(l => (l.amountCents || 0) > 0).reduce((s, l) => s + lineAmount(l, t), 0)

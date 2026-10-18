@@ -2705,7 +2705,7 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 
 ## Audit of 18 Oct (audit/VERIFIED_BUG_REPORT.md) — AI #1 fixes these, each with the test the report names
 
-- [ ] BUG-01 Transaction-list inflow/outflow totals lose reversal signs (sale + its reversal shows 2,000 in, 0 out).
+- [x] BUG-01 (18 Oct: list totals count each income/expense line by its side; a sale and its reversal → 1,000 in and 1,000 out; test `list-totals-reversal.test.ts`) Transaction-list inflow/outflow totals lose reversal signs (sale + its reversal shows 2,000 in, 0 out).
 - [ ] BUG-02 A failed report refetch leaves the previous period's server figures under the new date heading (P&L, balance sheet, trial balance, cash flow).
 - [ ] BUG-03 A stale or retried invoice save gets a new posting identity and can post the invoice twice without reversing the first (one active posting per invoice revision, checked on the server).
 - [ ] BUG-04 Statement PDF/email ignores the chosen period (same as ISS-141/AUD-01).
