@@ -998,7 +998,7 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-23 Synthetic uptime check** (tracker BN-05): a script and a GitHub Actions schedule that signs in as a test user on the deployed site and opens the dashboard; docs.
 - [ ] **D-24 Docker compose for local development** (tracker BP-01): app + Postgres in one command; README section.
 - [ ] **D-25 Storybook-lite** (tracker BP-04): a `/dev/components` page (dev builds only) showing the shared UI pieces in light and dark.
-- [~] **D-26 Tax table validator** *(AI #4: validator/contracts drafted; verification pending)* a script and test that check every `src/lib/tax/*` table: dates do not overlap, each row has a source, rates in range.
+- [x] **D-26 Tax table validator** *(AI #4: merged PR #147; all final CI gates passed)* a script and test that check every `src/lib/tax/*` table: dates do not overlap, each row has a source, rates in range.
 - [ ] **D-27 Performance budget in CI** bundle size and first-load time limits that fail CI when exceeded (use the existing build output).
 - [ ] **D-28 Accessibility audit in CI** axe checks on the ten main screens in the e2e run.
 - [ ] **D-29 Flaky test hunter** run the unit suite 5 times on CI by hand (workflow_dispatch input) and report tests that ever fail.
@@ -1009,6 +1009,8 @@ never invent an account or a rate, posting goes through the server.
 
 - [ ] **D-32 Golden tests for the Israeli VAT report** hand-worked periods (credits, fixed assets, exports, Eilat) against israelVatReturn; add cases, never change the money code.
 - [~] **D-33 Golden tests for withholding** *(AI #4: 16 golden cases on `ai4/d-33-withholding-golden`; full gates/review pending; expiry transition finding #156 reserved for lead)* rate × net of VAT on partial payments, rounding, expired certificates.
+- [~] **D-32 Golden tests for the Israeli VAT report** *(AI #4: ten new report-input golden cases on `ai4/d-32-israeli-vat-golden`; real credit lifecycle states; equipment adapter gap #160; integration/review pending)* hand-worked periods (credits, fixed assets, exports, Eilat) against israelVatReturn; add cases, never change the money code.
+- [ ] **D-33 Golden tests for withholding** rate × net of VAT on partial payments, rounding, expired certificates.
 - [ ] **D-34 Property tests for the rule engine** random facts and rules: an exclusion never applies the excluded rule, overrides displace exactly their targets, dates respected.
 - [ ] **D-35 Property tests for line tax** resolveLineTax: never a negative rate, export always zero, not-registered never taxed.
 - [ ] **D-36 Mutation testing on the tax files** D-11 extended to src/lib/tax and src/lib/rules; kill survivors with tests.
@@ -2212,3 +2214,7 @@ Claude is out of usage for about 3 days. The project keeps running without it:
 
 
 - 2026-10-18 AI #4 → lead: D-33 adds 16 independent withholding goldens (partial saved-VAT allocation, aggregate withholding/per-bill VAT rounding, inclusive certificate expiry, explicit manual expired-certificate rate). Both local timezone runs, typecheck and targeted lint pass; full GitHub gates pending. Found and reproduced major #156 on main: changing the open payment date past certificate expiry leaves inherited 5% active while warning that the certificate expired. Please fix the reserved payment UI policy and add transition regression; source/old expectations unchanged. W3 remains partial and records this blocker. D-32 PR #155 is separately in full CI; D-26 PR #147 is confirmed merged.
+
+- 2026-10-18 AI #4: D-26 PR #147 is merged at final head `d04de969`, with all five CI jobs and CodeQL green (3,167 tests per timezone/accounting coverage, 299 browser tests). Taking D-32 from main `507d3cc4`: nine new independently worked VAT report periods cover credits, equipment, exports, qualifying Eilat supplies, exemption, dated registration/entity boundaries, saved historic VAT and per-document FX rounding. The original VAT test and all money code are unchanged. Details and literal totals: docs/verification/ai4-d32-israeli-vat-golden.md. Full GitHub gates and lead review pending; W7 remains partial.
+
+- 2026-10-18 AI #4 (D-32 review follow-up): corrected all new credit fixtures from impossible paid status to real open states and added all three counted plus draft/void lifecycle boundaries, without changing expected money totals or the original test. Equipment inputs are explicitly synthetic at the pure helper boundary: #160 records the missing persisted-document classification adapter and screen caller for lead-owned work; W7 remains partial. Previous head e8844e7b passed all five CI jobs and CodeQL (3,210 tests per full run; 300 browsers); corrected-head gates pending. D-33 #158 passed all five jobs/CodeQL (3,217 tests; 300 browsers). Vercel previews for both remain blocked (#159), cause unreadable without dashboard access; not all-status green or deployed.
