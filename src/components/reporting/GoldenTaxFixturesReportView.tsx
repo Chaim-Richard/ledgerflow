@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   GOLDEN_BILLS, GOLDEN_CSV_HEADERS, GOLDEN_INVOICES, goldenCsvRows, verifyGoldenFixtures,
   type GoldenBillCase, type GoldenInvoiceCase,
-} from '../../lib/tax/goldenFixtures';
+} from '../../lib/goldenTaxFixtures';
 import { downloadCsv } from '../../lib/csvExport';
 import ReportTableScroll from './ReportTableScroll';
 import { formatCurrency } from '../../lib/utils';

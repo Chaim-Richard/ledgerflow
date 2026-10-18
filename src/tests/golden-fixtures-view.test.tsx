@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 afterEach(() => cleanup());
-import { GOLDEN_BILLS, GOLDEN_INVOICES, verifyGoldenFixtures } from '../lib/tax/goldenFixtures';
+import { GOLDEN_BILLS, GOLDEN_INVOICES, verifyGoldenFixtures } from '../lib/goldenTaxFixtures';
 import { GoldenTaxFixturesPanel } from '../components/reporting/GoldenTaxFixturesReportView';
 
 test('A-146/A-147 screen: all fixtures shown as matching when tables agree', () => {

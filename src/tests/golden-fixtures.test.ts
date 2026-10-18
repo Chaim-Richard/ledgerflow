@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GOLDEN_BILLS, GOLDEN_INVOICES, goldenCsvRows, recomputeInvoice, verifyGoldenFixtures } from '../lib/tax/goldenFixtures';
+import { GOLDEN_BILLS, GOLDEN_INVOICES, goldenCsvRows, recomputeInvoice, verifyGoldenFixtures } from '../lib/goldenTaxFixtures';
 
 test('A-146: exactly 50 golden invoices, IL and US only (PLAN §15)', () => {
   assert.equal(GOLDEN_INVOICES.length, 50);

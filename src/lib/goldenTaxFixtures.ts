@@ -17,11 +17,11 @@
  * departments / IRS pages named in the underlying tables (ilVatRates, usStateSalesTax,
  * ilWithholdingDefaults, us1099Preview).
  */
-import { rateOn, IL_VAT_STANDARD } from './ilVatRates';
-import { stateSalesTaxRate } from './usStateSalesTax';
-import { ilWithholdingDefault, type IlWithholdingPaymentType, type IlWithholdingPayeeResidence } from './ilWithholdingDefaults';
-import { withheldCents } from './withholding';
-import { threshold1099Cents, type Form1099Box, type Form1099Kind } from './us1099Preview';
+import { rateOn, IL_VAT_STANDARD } from './tax/ilVatRates';
+import { stateSalesTaxRate } from './tax/usStateSalesTax';
+import { ilWithholdingDefault, type IlWithholdingPaymentType, type IlWithholdingPayeeResidence } from './tax/ilWithholdingDefaults';
+import { withheldCents } from './tax/withholding';
+import { threshold1099Cents, type Form1099Box, type Form1099Kind } from './tax/us1099Preview';
 
 export type GoldenTreatment = 'standard' | 'eilat' | 'export' | 'exempt-certificate';
 export interface GoldenInvoiceLine { netCents: number; expectedRate: number; expectedTaxCents: number }
