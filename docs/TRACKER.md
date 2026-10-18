@@ -2709,7 +2709,7 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 - [ ] BUG-02 A failed report refetch leaves the previous period's server figures under the new date heading (P&L, balance sheet, trial balance, cash flow).
 - [ ] BUG-03 A stale or retried invoice save gets a new posting identity and can post the invoice twice without reversing the first (one active posting per invoice revision, checked on the server).
 - [ ] BUG-04 Statement PDF/email ignores the chosen period (same as ISS-141/AUD-01).
-- [ ] BUG-05 After a successful post the local list adds the rows again instead of replacing them by id.
+- [x] BUG-05 (18 Oct: posted entries replace same-id rows in the local list; test `post-cache-upsert.test.ts`) After a successful post the local list adds the rows again instead of replacing them by id.
 - [ ] BUG-06 Ten enabled buttons do nothing; one "Close Period" button only selects (helper AI, screens).
 - [x] BUG-07 (18 Oct: the server now also balances every foreign-currency entry in the home currency — rounding cents go to the largest line and each line's home amount is stored (`baseAmountCents`, read by `lineAmount`); a bigger gap from different rates is refused; test `home-currency-balance.test.ts`, 616 FX/validation tests pass) Foreign-currency entries: lines balance in the foreign currency but not after conversion to the home currency — validate the base amounts too.
 - [ ] AUD-07b The three direct idempotent calls in adminRoutes.ts also pass the request fingerprint.

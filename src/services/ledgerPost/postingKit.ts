@@ -224,7 +224,9 @@ export async function postTxsServerApi(
     const store = useLedgerStore.getState();
     if (store && store.setTransactions) {
       const currentTxs = store.transactions || [];
-      store.setTransactions([...(txs as unknown as Transaction[]), ...currentTxs]);
+      // BUG-05: replace by id instead of adding again — a retried or replayed save must not show twice
+      const posted = new Set((txs as unknown as Transaction[]).map(tx => tx.id));
+      store.setTransactions([...(txs as unknown as Transaction[]), ...currentTxs.filter(tx => !posted.has(tx.id))]);
     }
   } catch (e) {
     // Fallback if useLedgerStore or DOM APIs are unavailable (e.g. Server-Side Execution)
