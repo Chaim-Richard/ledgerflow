@@ -349,15 +349,16 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
       ) : null}
 
       {/* Date Range & Controls */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs relative overflow-hidden group gap-4">
+      <div data-testid="report-controls" role="region" aria-label="Report filters" className="flex flex-wrap items-start justify-between p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs relative group gap-4">
         <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 relative z-10 w-full lg:w-auto">
+        <div className="flex flex-wrap items-end gap-4 relative z-10 flex-1 min-w-0">
           <MonthNavigator 
+            className="[&_button]:min-h-11 [&_button]:min-w-11 [&_button]:text-[var(--text)]"
             currentDate={dateRange.start} 
             onMonthChange={({ start, end }) => setDateRange({ start, end })} 
           />
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg flex items-center justify-center text-[var(--muted)] shrink-0">
+          <div className="flex flex-wrap items-center gap-3 min-w-0">
+            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg hidden sm:flex items-center justify-center text-[var(--muted)] shrink-0">
                <Calendar aria-hidden="true" size={13} />
             </div>
             <div className="flex flex-col min-w-0">
@@ -368,32 +369,32 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                   type="date" 
                   value={dateRange.start}
                   onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                  className="bg-slate-55 bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md focus:ring-1 focus:ring-slate-300 outline-none text-[var(--text)]"
+                  className="bg-[var(--ink)] min-h-11 max-w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)]"
                 />
-                <span className="text-slate-300 font-mono text-sm leading-none">/</span>
+                <span className="text-[var(--muted)] font-mono text-sm leading-none">/</span>
                 <input 
                   aria-label="Reporting period end date"
                   type="date" 
                   value={dateRange.end}
                   onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                  className="bg-slate-55 bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md focus:ring-1 focus:ring-slate-300 outline-none text-[var(--text)]"
+                  className="bg-[var(--ink)] min-h-11 max-w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)]"
                 />
               </div>
             </div>
           </div>
           <div className="hidden sm:block w-px h-8 bg-slate-200" />
-          {basis === 'accrual' && <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-700">Label
-            <select aria-label="Label kind" value={labelDimension} onChange={e => setLabelDimension(e.target.value)} className="bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal">
+          {basis === 'accrual' && <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text)]">Label
+            <select aria-label="Label kind" value={labelDimension} onChange={e => setLabelDimension(e.target.value)} className="bg-[var(--ink)] min-h-11 max-w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal">
               <option value="">All</option>
               <option value="location">Location</option>
               <option value="class">Class</option>
               <option value="project">Project</option>
               <option value="department">Department</option>
             </select>
-            {labelDimension && <input aria-label="Label value" value={labelValue} onChange={e => setLabelValue(e.target.value)} placeholder="e.g. Tel Aviv" className="bg-slate-100 border-none text-xs px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal w-28" />}
+            {labelDimension && <input aria-label="Label value" value={labelValue} onChange={e => setLabelValue(e.target.value)} placeholder="e.g. Tel Aviv" className="bg-[var(--ink)] min-h-11 max-w-full border border-[var(--line)] text-xs px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal w-28" />}
           </div>}
-          <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-700">Basis
-            <select value={basis} onChange={e => chooseBasis(e.target.value === 'cash' ? 'cash' : 'accrual')} className="bg-slate-100 border-none text-xs font-semibold px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal">
+          <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text)]">Basis
+            <select aria-label="Basis" value={basis} onChange={e => chooseBasis(e.target.value === 'cash' ? 'cash' : 'accrual')} className="bg-[var(--ink)] min-h-11 max-w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal">
               <option value="accrual">Accrual (as posted)</option>
               <option value="cash">Cash (when paid)</option>
             </select>
@@ -417,7 +418,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
               )} />
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider group-hover/toggle:text-[var(--text)] transition-colors flex items-center gap-1">
+              <span className="text-[10px] font-bold text-[var(--text)] uppercase tracking-wider group-hover/toggle:text-[var(--text)] transition-colors flex items-center gap-1">
                 Comparative Mode <SplitSquareHorizontal aria-hidden="true" size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--muted)]")} />
               </span>
               <span className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest">Compare to Prior Prev</span>
@@ -426,7 +427,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
         </div>
         {(basis === 'cash' || !columnsActive) && <button
           onClick={exportToExcel}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider hover:bg-slate-800 transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
+          className="flex min-h-11 items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider hover:bg-slate-800 transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
          aria-label="Export to Excel">
           <FileSpreadsheet aria-hidden="true" size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
           <span>Export to Excel</span>
