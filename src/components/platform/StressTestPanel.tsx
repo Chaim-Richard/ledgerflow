@@ -61,12 +61,12 @@ export function StressTestPanel({ model }: { model: SystemCommandCenterModel }) 
 
               {/* Log filter toggles */}
               <div className="flex gap-1 mb-4 bg-slate-100 p-1 rounded-xl">
-                <button
-                  type="button"
+                <span role="status"
+
                   className="flex-1 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg bg-[var(--surface)] text-[var(--text)] shadow-3xs"
                  aria-label={`Latest events (${liveErrors.length})`}>
                   Latest Events ({liveErrors.length})
-                </button>
+                </span>
                 {simulatedLogs.length > 0 && (
                   <button
                     type="button"
