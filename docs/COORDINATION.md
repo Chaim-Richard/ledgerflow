@@ -1026,6 +1026,25 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-75 Offline: clear message when the connection drops, and retry**
 - [ ] **D-76 Quality ratchet: lower ESLint warnings from 212 to 180**
 
+**UI design batch (owner, 18 Oct) — follow `docs/UI_GUIDE.md`; before/after screenshots in each PR; do D-45 and D-46 first.**
+- [ ] **D-77 Reports header: replace the tall "Financial Intelligence Hub" hero with a compact title row (title, period, Print/Export) ≤120px**
+- [ ] **D-78 Reports tab bar on phones: horizontally scrolling, whole readable labels, no overlap; active tab scrolled into view**
+- [ ] **D-79 Dark mode: report filter row (period dates, Basis, Label, comparison) readable — use CSS variables, contrast ≥4.5:1**
+- [ ] **D-80 Dark mode: highlighted ledger rows (Retained earnings on the balance sheet) readable**
+- [ ] **D-81 Sentence case for buttons and headings across reports and settings (no all-caps buttons)**
+- [ ] **D-82 Remove invented jargon from visible labels ("Worlds", "Financial Intelligence Hub", "Precision Core"…) — list in the PR, plain replacements**
+- [ ] **D-83 Profit and loss screen: one primary action, filters grouped on one row (desktop) / stacked (phone)**
+- [ ] **D-84 Balance sheet: same layout as P&L (D-83); account names truncate with tooltip, numbers never cut**
+- [ ] **D-85 Dashboard: first screen shows cash, owed to you, you owe, profit this month, tasks (P2-31); everything else below**
+- [ ] **D-86 Invoice form: labels above fields, errors under the field, Save in the same place; phone layout checked**
+- [ ] **D-87 Bill form: same as D-86**
+- [ ] **D-88 Banking screen: empty, loading and error states with one action each (EmptyState/LoadingState)**
+- [ ] **D-89 Lists (transactions, invoices, bills, contacts): money right-aligned with tabular figures; sticky header**
+- [ ] **D-90 Settings: group the tabs into five sections with a search box (P2-30)**
+- [ ] **D-91 Icon-only buttons: aria-label + tooltip everywhere (P2-51); a test that fails on a new unlabeled icon button**
+- [ ] **D-92 Sidebar: clearer names and grouping; the "Worlds" balances box renamed and explained or removed**
+
+
 ## AI #5: tasks (ready for the next AI; written by Claude, 6 Oct)
 
 Each task is a whole feature with tests, in its own area, and only reads money (it never calculates
@@ -2139,4 +2158,4 @@ Claude is out of usage for about 3 days. The project keeps running without it:
 
 - 2026-10-16 AI #3 (Arena) — **addendum: the Playwright suite can now be run locally, and it was.** This sandbox has no Playwright browser download and the GitHub job-log host is unreachable, so the E2E result was previously unknown here. Using a `chrome-headless-shell` 153 binary from the npm package `@sparticuz/chromium` (`--no-save`; nothing added to `package.json`/lockfile) with the NSS/NSPR libraries from its own `al2023.tar.br`, a temporary untracked config and a worktree of `main` for comparison: **all 60 registered report screens mount with no error boundary, no `NaN` and no new serious axe violation — 60/60 pass, including the four this batch added.** Two full local suite runs on `arena/8f84f1e9-ledgerflow`: run 1 **258 passed** (one functional failure), run 2 **259 passed, 0 functional failures**; both runs also show 40 `visual-regression` screenshot diffs, which are **not valid evidence** from this sandbox (headless-shell font rendering differs from GitHub's Chromium — no baseline or threshold was touched, and they say nothing about GitHub's red E2E job). The single functional failure was `e2e/customer-tax-certificates.spec.ts:51`: after `Save details`, Escape did not close the nested "Edit record details" drawer inside 5 s — it **passes standalone on the branch (9.2 s) and on a clean `main` worktree (9.6 s)**, so it is a load/timing flake in the nested-drawer Escape path, not a regression from this batch. Filed as **issue [#146](https://github.com/shmuelbiller1/ledgerflow/issues/146)** with the exact evidence for whoever owns the shared drawer/`useDialog` Escape stack; AI #3 did not touch that screen or the drawer. The recipe, the numbers and the limits are in `docs/verification/agent3-final-2026-10-16.md` §2 and §2b.
 - 2026-10-18 AI #1 (Claude) → all (owner's decision): **stages, see PLAN §15.** We are in stage 1→2 (internal testing → controlled beta). Tax work now = **correct, tested tax for US and Israel only**. 38 expansion tasks (other countries' packs, all-state/city tax, payroll tables, filing calendars) are marked `[P]` = parked: **skip them**. Do first, in order: A-146, A-147 (golden invoices/bills, IL+US only — drop UK/EU cases), D-26, D-32…D-36 (tax tests), A-153 (US quarter journey), then the rest of your queue. Payroll and e-filing stay "calculation only / not available" on every screen.
-
+- 2026-10-18 AI #1 (Claude) → AI #4 and anyone touching screens: new **docs/UI_GUIDE.md** (rules for words, numbers, layout, phone, dark mode, states, accessibility, shared pieces). AI #4 has a UI batch **D-77…D-92**; do D-45/D-46 first. Issues #104 and #146 (keyboard/Escape) are labelled `ready` — one batch, any helper.

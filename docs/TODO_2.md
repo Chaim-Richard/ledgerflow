@@ -42,6 +42,7 @@ IDs: `P2-<n>`. Tier 1 before tier 2 before tier 3, unless an item blocks real us
 - [ ] P2-32 Printed documents: one template system for invoice, bill, statement, delivery note, payslip.
 - [ ] P2-33 Emails: one template style for every email the app sends, EN/HE.
 - [ ] P2-34 Banners: at most one at a time on phones (D-46).
+- [ ] P2-36 Product journey from purchase to final use (issue #132): where an item came from, its full cost, where it was stored and which project/customer received its cost — on the existing stock moves, no second ledger.
 - [ ] P2-35 Screen help: every screen has a "?" with three lines of plain help.
 
 ## Tier 3 — small polish (good first tasks; batch them 10 at a time)
