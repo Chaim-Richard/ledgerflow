@@ -14,6 +14,7 @@ import { assertPostingOpen } from '../../../lib/periodLock';
 import { errorMessage, requestUser } from '../../auth/requestUser';
 import { isUpdatedAtMismatch } from './helpers';
 import { assertSameRequest, requestPayloadHash } from '../../utils/idempotency';
+import { LEDGER_WRITER_ROLES, roleInWorkspace } from '../../middleware/requireLedgerWriter';
 import { writeServerAuditLog } from '../../services/auditLogService';
 import { deletionSentence, deletionSnapshot } from '../../services/deletionRecord';
 import { MAX_RECATEGORIZE, RecategorizeError, recategorize } from '../../services/recategorizeService';
@@ -129,6 +130,14 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
         // AUD-08: the closing date as it is at commit — a month closed after the checks above but
         // before this save refuses the save instead of posting into the closed month
         const wsNow = (await t.get(db.collection('workspaces').doc(wsId))).data();
+        // authority at commit: the role and membership as they are now, read in this transaction, so a
+        // role taken away after the first check (middleware) cannot still let this save through
+        if (!user.admin) {
+          const isMember = wsNow?.uid === user.uid || (Array.isArray(wsNow?.members) && wsNow.members.includes(user.uid));
+          if (!wsNow || !isMember || !LEDGER_WRITER_ROLES.includes(roleInWorkspace(wsNow, user.uid))) {
+            throw new LedgerPostingError(403, 'You no longer have permission to change these books');
+          }
+        }
         for (const tx of validatedTransactions) {
           const date = (tx as { date?: string }).date;
           if (date) {
@@ -279,7 +288,7 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
        const conflict = await db.runTransaction(async (t) => {
          // AUD-08: the workspace (closing date, role) as it is at commit, not as it was read before
          const wsNow = (await t.get(db.collection('workspaces').doc(workspaceId))).data();
-         if (!user.admin && !['owner', 'accountant', 'bookkeeper'].includes(workspaceRole(wsNow as never, user.uid))) throw new Error('Only owners, accountants and bookkeepers change entries');
+         if (!user.admin && (!wsNow || !(wsNow.uid === user.uid || (Array.isArray(wsNow.members) && wsNow.members.includes(user.uid))) || !LEDGER_WRITER_ROLES.includes(roleInWorkspace(wsNow, user.uid)))) throw new Error('Only owners, accountants and bookkeepers change entries');
          const txRefs = ids.map(id => db.collection('transactions').doc(id));
          const txDocs = await Promise.all(txRefs.map(r => t.get(r)));
          const accountIds = new Set<string>();

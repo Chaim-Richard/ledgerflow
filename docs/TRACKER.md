@@ -2715,3 +2715,11 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 - [ ] AUD-07b The three direct idempotent calls in adminRoutes.ts also pass the request fingerprint.
 - [ ] DIM-3 Each label kind gets an accounting role: informational (no balancing), fully attributed (every line has a value), or self-balancing (each value balances) — so balancing is applied only where it is required (strategy §16).
 
+## Integrity follow-up of 18 Oct (owner's request; independent AI examination at 507d3cc)
+
+- [x] INT-1 P0 authority at commit: bulk create and batch edit re-read the workspace inside the posting transaction and refuse if the user is no longer a member or no longer owner/accountant/bookkeeper (403), next to the closing-date check. API-key workspace scope is fixed per request (checked at the route). Test `authority-at-commit.test.ts` (real Postgres): role downgrade and removal between the first check and the commit are refused with nothing written (both fail without the fix), month closed meanwhile refused, two writers at once both succeed. Left: other write routes (payments, documents services) — same pattern to apply (AUD-09).
+- [ ] INT-2 P0 invoice business-level idempotency (BUG-03): one server-authoritative posting per invoice revision.
+- [ ] INT-3 P1 admin executeIdempotent calls pass payloadHash (AUD-07b).
+- [ ] INT-4 P1 SDK: caller-supplied idempotency key reusable across invocations; lost-response test.
+- [ ] INT-5 P1 home-currency rounding: only same-rate rounding is settled automatically; different rates need an exchange-difference line.
+
