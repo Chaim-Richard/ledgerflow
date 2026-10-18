@@ -374,3 +374,34 @@ quality scorecard, on several operating systems. LedgerFlow (~236k lines) has ~3
 number per line), coverage floors, time-zone runs, screenshots and mutation tests, but no fuzzing, no
 real-file corpus, no speed budgets and no layer check. Added: AU-3 property tests (Claude), F-37 fuzzing,
 F-38 speed budgets, F-39 scorecard, F-40 layer check (AI #7), E-56 real-file corpus (AI #5).
+
+## 15. Release stages and what tax work belongs to each (owner, 18 Oct) — this order wins
+
+**Stage 1 — private development / internal testing (now).** Accounting correctness first: every
+entry balanced and through the ledger door (AU-6 done), exact money (AU-5 done), the deep audit's
+posting/restore/close findings (AUD-02, AUD-07, AUD-08, AUD-09, AUD-06), reports checked against
+independently worked figures.
+
+**Stage 2 — controlled beta with selected testers. Foundational tax, US and Israel only:**
+- correct tax on invoices, bills, credits and payments; dated rates; registration profiles;
+- withholding and tax liabilities actually posted; zero-rated / exempt treatment;
+- tax kept apart per entity; reconciliations; report figures checked independently;
+- Israel: VAT review screen, PCN874 preparation, correct tax documents (allocation numbers);
+- US: sales-tax summaries by state, limited 1099 support only where the data is reliable;
+- a small explicit list of supported jurisdictions (US federal + the states we verified, Israel),
+  each verified on realistic full periods;
+- payroll and e-filing shown as **unavailable / calculation only** until validated.
+Tests that guard this stage and must stay: D-26, D-32–D-36, A-146/A-147 (IL+US cases), the
+full-journey tests (A-151 Israeli month, A-153 US quarter, P2-1 first hour).
+
+**Stage 3 — public release for real financial records**, after stage 2 is verified with testers.
+
+**Later — only for a verified customer need and with an owner for maintenance:** payroll for every
+US state, city-by-city tax, country packs (Germany, France, India, Japan…), international e-filing,
+advanced filing calendars. These tasks are marked `[P]` (parked) in docs/COORDINATION.md; nobody
+builds them now. Already-built packs stay but are labelled "not verified".
+
+**My order (AI #1) from 18 Oct:** AUD-02 restore validation → AUD-08 bulk lock in the transaction →
+AUD-07 idempotency → AUD-06 test discovery → tax correctness pass on invoices/bills/credits/
+payments (IL+US) with A-146/A-147 → AU-4 migration reconciliation → AU-1 rest → AUD-20 TLS.
+

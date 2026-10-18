@@ -379,7 +379,7 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 - [ ] **C-41 Nexus watch** (PLAN US-2): sales and order counts per US state (ship-to address) for the current and last
   calendar year against each state's economic-nexus threshold (table `src/lib/tax/usNexus.ts`, rows with sources), with a
   warning at 80%. Read-only.
-- [ ] **C-42 Payroll forms layouts** (PLAN US-5, IL-7): 941, 940, W-2/W-3 data and Israel 102/106 as printable screens and
+- [P] **C-42 Payroll forms layouts** (PLAN US-5, IL-7): 941, 940, W-2/W-3 data and Israel 102/106 as printable screens and *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
   CSV, from the pay runs' posted figures. Read-only; "not for filing" banner stays.
 
 ### Big queue for AI #2 (Claude, 11 Oct evening; plan in docs/PLAN.md §6–7). Rules: one branch and PR per task, from the latest main; tables carry `validFrom`/`validTo` and an official `source`; no change to how money is calculated or posted (that is AI #1's); tests for each; a line under Messages.
@@ -390,7 +390,7 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 - [ ] **C-46 Tax code suggestions panel** a side panel on invoice/bill lines showing AI #1's suggestion (code, why, how often) with Accept, from `suggestTaxCode` / `unusualTaxCode` in `src/lib/tax/taxSuggestions.ts` (**landed 11 Oct**; history rows from saved invoices and bills).
 - [x] **C-47 Exemption certificates list** Customers → Tax certificates: every customer's certificate (T-05), expiring in 30 days first, expired highlighted; CSV.
 - [x] **C-48 Vendor W-9 / Israeli withholding certificate list** vendors with their tax ID status (masked) and Israeli withholding certificate expiry; reminders for missing ones. Read-only.
-- [ ] **C-49 Payroll tax calendar** the deposit and filing dates per registration (941 quarterly, 940 yearly, Israel 102 monthly by the 15th), from a dated table with sources; a card on the dashboard.
+- [P] **C-49 Payroll tax calendar** the deposit and filing dates per registration (941 quarterly, 940 yearly, Israel 102 monthly by the 15th), from a dated table with sources; a card on the dashboard. *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
 - [ ] **C-50 Report pack: tax section** add the period's tax summary per registration to the C-30 report pack.
 - [ ] **C-51 Hebrew labels for tax screens** every new tax screen in Hebrew too, right-to-left checked (C-32 pattern).
 - [ ] **C-52 Keyboard and screen-reader pass on tax screens** the C-4/C-3 checks on C-43..C-49.
@@ -728,31 +728,31 @@ before:
 
 ### Weeks queue for AI #3 (Claude, 13 Oct, owner: keep every AI loaded for weeks). Same rules: one branch/PR per task from the latest main, tests, no change to how money is calculated or posted (AI #1's), a line under Messages.
 
-- [ ] **A-81 US state sales-tax rate packs: the next 10 states by population not yet covered (one Rule pack each, official source, golden test from the state's examples)**
-- [ ] **A-82 US state sales-tax rate packs: the following 10 states**
-- [ ] **A-83 US state sales-tax rate packs: the remaining states and DC**
-- [ ] **A-84 Canada GST/HST/PST/QST packs per province with registration thresholds**
-- [ ] **A-85 Australia GST pack (10%, registration threshold, BAS periods)**
-- [ ] **A-86 New Zealand GST pack**
-- [ ] **A-87 Japan consumption tax pack (standard/reduced, invoice system)**
-- [ ] **A-88 Singapore GST pack (rate history 7→8→9%)**
-- [ ] **A-89 India GST rate slabs and place-of-supply facts (calculation status only)**
-- [ ] **A-90 Mexico IVA pack (16%, border 8%)**
-- [ ] **A-91 Brazil: research note only — list which taxes exist (ICMS/ISS/PIS/COFINS) and why we do not calculate them yet**
-- [ ] **A-92 Switzerland VAT pack**
-- [ ] **A-93 Norway VAT pack**
-- [ ] **A-94 South Africa VAT pack**
-- [ ] **A-95 UAE and Saudi VAT packs**
-- [ ] **A-96 EU OSS/IOSS distance-selling threshold rule (EUR 10,000) as an entity-period rule**
-- [ ] **A-97 EU VAT rates for all 27 states: verify every row against the official EU TEDB source and add validFrom history back to 2020**
-- [ ] **A-98 UK Making Tax Digital VAT return box mapping (boxes 1–9) as a table for AI #1's return**
+- [P] **A-81 US state sales-tax rate packs: the next 10 states by population not yet covered (one Rule pack each, official source, golden test from the state's examples)** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-82 US state sales-tax rate packs: the following 10 states** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-83 US state sales-tax rate packs: the remaining states and DC** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-84 Canada GST/HST/PST/QST packs per province with registration thresholds** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-85 Australia GST pack (10%, registration threshold, BAS periods)** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-86 New Zealand GST pack** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-87 Japan consumption tax pack (standard/reduced, invoice system)** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-88 Singapore GST pack (rate history 7→8→9%)** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-89 India GST rate slabs and place-of-supply facts (calculation status only)** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-90 Mexico IVA pack (16%, border 8%)** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-91 Brazil: research note only — list which taxes exist (ICMS/ISS/PIS/COFINS) and why we do not calculate them yet** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-92 Switzerland VAT pack** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-93 Norway VAT pack** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-94 South Africa VAT pack** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-95 UAE and Saudi VAT packs** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-96 EU OSS/IOSS distance-selling threshold rule (EUR 10,000) as an entity-period rule** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-97 EU VAT rates for all 27 states: verify every row against the official EU TEDB source and add validFrom history back to 2020** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-98 UK Making Tax Digital VAT return box mapping (boxes 1–9) as a table for AI #1's return** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
 - [ ] **A-99 Israel: Eilat VAT-exempt area facts and rule**
 - [ ] **A-100 Israel: osek patur yearly threshold history (validFrom per year)**
 - [ ] **A-101 Israel: advance income-tax payment (mikdamot) rate field per entity and a reminder calendar**
 - [ ] **A-102 Israel: National Insurance (Bituach Leumi) self-employed rate table by income band (calculation status)**
-- [ ] **A-103 Israel: payroll tax brackets and credit points table by year (for AI #1's IL-7 payroll)**
-- [ ] **A-104 US federal payroll tables by year: Social Security wage base, Medicare rates, FUTA (for payroll; tables only)**
-- [ ] **A-105 US state unemployment (SUTA) wage bases, top 10 states**
+- [P] **A-103 Israel: payroll tax brackets and credit points table by year (for AI #1's IL-7 payroll)** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-104 US federal payroll tables by year: Social Security wage base, Medicare rates, FUTA (for payroll; tables only)** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-105 US state unemployment (SUTA) wage bases, top 10 states** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
 - [ ] **A-106 US 1099-NEC/MISC thresholds by year, including the 2026 change**
 - [ ] **A-107 US federal per diem (GSA) table import for A-76**
 - [ ] **A-108 US mileage rate table by year (IRS standard mileage) for A-75**
@@ -807,18 +807,18 @@ before:
 - [ ] **A-153 Journey: US quarter — sales tax by state → return screens → 1099 preview → quarter close checklist (P2-4)**
 - [ ] **A-154 Journey: migration — QuickBooks/Xero/CSV import → source vs LedgerFlow totals table (trial balance, A/R, A/P, cash) → 'you are ready' (P2-6, AU-4 screen)**
 - [ ] **A-155 Journey: accountant queue — one screen listing what needs an accountant (questions, approvals, adjustments, locked-period requests) with links (P2-7)**
-- [ ] **A-156 Tax pack: Germany VAT (19/7%, Kleinunternehmer threshold) with official source and golden examples**
-- [ ] **A-157 Tax pack: France VAT (20/10/5.5/2.1%) with franchise threshold**
-- [ ] **A-158 Tax pack: Italy, Spain, Netherlands VAT rows verified against TEDB with validFrom history**
-- [ ] **A-159 Tax pack: Poland, Sweden, Denmark, Finland VAT rows verified with history**
-- [ ] **A-160 Tax pack: Ireland, Belgium, Austria, Portugal VAT rows verified with history**
-- [ ] **A-161 Tax pack: Canada provincial payroll tables (CPP/EI by year) — tables only, for AI #1**
-- [ ] **A-162 Tax pack: UK PAYE thresholds and NI rates by tax year — tables only**
-- [ ] **A-163 Tax pack: Australia PAYG withholding scales and superannuation guarantee rate history — tables only**
+- [P] **A-156 Tax pack: Germany VAT (19/7%, Kleinunternehmer threshold) with official source and golden examples** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-157 Tax pack: France VAT (20/10/5.5/2.1%) with franchise threshold** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-158 Tax pack: Italy, Spain, Netherlands VAT rows verified against TEDB with validFrom history** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-159 Tax pack: Poland, Sweden, Denmark, Finland VAT rows verified with history** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-160 Tax pack: Ireland, Belgium, Austria, Portugal VAT rows verified with history** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-161 Tax pack: Canada provincial payroll tables (CPP/EI by year) — tables only, for AI #1** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-162 Tax pack: UK PAYE thresholds and NI rates by tax year — tables only** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **A-163 Tax pack: Australia PAYG withholding scales and superannuation guarantee rate history — tables only** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
 - [ ] **A-164 Israel: VAT on services to foreign residents (zero-rated conditions) as facts + rule, status calculation**
 - [ ] **A-165 Israel: withholding on payments abroad (Form 2513/2) — research note and table**
 - [ ] **A-166 US: state nexus thresholds verification pass — every state row has a source link checked this month**
-- [ ] **A-167 US: local (city/county) rate packs for the 20 largest cities, with sources**
+- [P] **A-167 US: local (city/county) rate packs for the 20 largest cities, with sources** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
 - [ ] **A-168 Manufacturing light: bill of materials on an item (components and quantities), with a 'can we build N?' check**
 - [ ] **A-169 Manufacturing light: work order screen (build N kits: components reserved, finished goods shown; posting stays AI #1's)**
 - [x] **A-170 Inventory: landed cost screen on receipts (A-63 library) — preview only, posting via AI #1** *(AI #3, 15 Oct, `arena/18e400db-ledgerflow`: Reports → Landed Cost Preview (`LandedCostPreviewReportView.tsx`), with A-63 — see its line)*
@@ -851,7 +851,7 @@ before:
 - [ ] **A-197 Data quality: items without cost or price**
 - [ ] **A-198 Golden fixtures: a full Israeli small business year (VAT bi-monthly) with expected VAT reports**
 - [ ] **A-199 Golden fixtures: a full Texas business year with expected sales-tax returns**
-- [ ] **A-200 Golden fixtures: a UK VAT quarter with expected MTD boxes**
+- [P] **A-200 Golden fixtures: a UK VAT quarter with expected MTD boxes** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
 - [ ] **A-201 Help: plain-language help (EN/HE) for every report on the Reports tab that has none**
 - [ ] **A-202 Help: 'what does this number mean?' explanations for the 10 main report totals**
 - [~] **A-203 Accessibility: every report you built passes axe with no serious issues; fix what fails** *(16 Oct, AI #3 on `arena/2c2ad9f1-ledgerflow`: all four warehouse panels pass zero-serious/critical axe checks, with real LTR/RTL keyboard navigation and valid panel references; `e2e/warehouse-operations.spec.ts`. This is the warehouse subset only, not completion of the all-report task.)*
@@ -954,17 +954,17 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-15 US federal withholding 2026 table** (PLAN US-5): Pub 15-T 2026 percentage-method tables, Social Security
   wage base, Medicare and additional Medicare, FUTA, as dated rows in `src/lib/tax/usFederalPayroll.ts`, with the
   Pub 15-T worked examples as golden tests (they test the table's numbers; AI #1 wires the engine).
-- [ ] **D-16 US state payroll tables** (PLAN US-6): all states with income tax (brackets, standard deductions,
+- [P] **D-16 US state payroll tables** (PLAN US-6): all states with income tax (brackets, standard deductions, *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
   allowances), unemployment rate ranges and wage bases, 2026; one file per state under `src/lib/tax/usStates/`.
-- [ ] **D-17 Israel payroll tables** (PLAN IL-7): 2026 income tax brackets, credit point value, Bituach Leumi and health
+- [P] **D-17 Israel payroll tables** (PLAN IL-7): 2026 income tax brackets, credit point value, Bituach Leumi and health *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
   tax (reduced and full rates and the threshold), mandatory pension and severance rates, in `src/lib/tax/ilPayroll.ts`,
   with the Tax Authority's / Bituach Leumi's published examples as golden tests.
 
 ### Big queue for AI #4 (Claude, 11 Oct evening). Rules: one branch and PR per task, from the latest main; tables carry `validFrom`/`validTo` and an official `source`; no change to how money is calculated or posted (that is AI #1's); tests for each; a line under Messages.
 
 - [ ] **D-18 Golden tests for Pub 15-T** every worked example in IRS Pub 15-T 2026 as a test against D-15's table.
-- [ ] **D-19 Israel payroll golden tests** the Tax Authority's and Bituach Leumi's published examples against D-17.
-- [ ] **D-20 State payroll golden tests** each state's published withholding example (where one exists) against D-16.
+- [P] **D-19 Israel payroll golden tests** the Tax Authority's and Bituach Leumi's published examples against D-17. *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
+- [P] **D-20 State payroll golden tests** each state's published withholding example (where one exists) against D-16. *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
 - [ ] **D-21 Structured JSON logging** (tracker BN-01): one logger on the server with request id, workspace and route; no personal data in logs; tests.
 - [ ] **D-22 Slow-query log** (tracker BN-02): queries over 500 ms logged with their shape (no values).
 - [ ] **D-23 Synthetic uptime check** (tracker BN-05): a script and a GitHub Actions schedule that signs in as a test user on the deployed site and opens the dashboard; docs.
@@ -1007,7 +1007,7 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-56 Charts: label (dimension) breakdown chart linked to the P&L**
 - [ ] **D-57 Dashboard: widget for overdue invoices with drill-down**
 - [ ] **D-58 Dashboard: widget for bills due this week**
-- [ ] **D-59 Dashboard: widget for tax due dates from the filing calendar**
+- [P] **D-59 Dashboard: widget for tax due dates from the filing calendar** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
 - [ ] **D-60 Performance: measure and record page load for the 20 main screens (budget file + CI warning)**
 - [ ] **D-61 Performance: virtualise the five longest lists**
 - [ ] **D-62 Performance: bundle size report per route; split the three biggest**
@@ -1265,7 +1265,7 @@ Same rules as every helper AI.
 
 ### More for AI #8 (spare): product polish (Claude, 13 Oct). Same rules: one branch/PR per task from the latest main, tests, done means a user can reach it on a screen, no change to how money is calculated or posted (AI #1's).
 
-- [ ] **G-9 Onboarding: sample company per country (IL, US, UK) with realistic data**
+- [ ] **G-9 Onboarding: sample company per country (IL, US, UK) with realistic data** *(18 Oct: IL and US only for now)*
 - [ ] **G-10 Help centre: 20 short how-to articles (EN/HE) linked from screens**
 - [ ] **G-11 In-app search of help articles**
 - [ ] **G-12 Keyboard shortcut sheet screen**
@@ -2138,4 +2138,5 @@ Claude is out of usage for about 3 days. The project keeps running without it:
 - 2026-10-16 AI #3 (Arena): **FINAL for batch 12 on `arena/8f84f1e9-ledgerflow` — PR [#145](https://github.com/shmuelbiller1/ledgerflow/pull/145): A-184, A-186, A-188 and A-195 are done.** Four read-only Reports screens, each with a pure library, screen help, a capabilities row (186–189) and an E2E mount case: **Document Number Gaps** (missing and repeated numbers per series; drafts/voids excluded and counted; a gap is a question, not proof of deletion), **13-Week Cash Forecast** (open invoices and bills on their due dates plus recurring occurrences, week by week with a projected balance from the starting cash the reader types; no history or seasonality, another currency counted never converted, unresolvable recurring rules listed not guessed), **Vendor 1099 Readiness** (posted outgoing payments against the existing 1099 threshold table, tax ID shown as a mask only, no assumed country, no W-9 field claimed) and **Duplicate Bill Review** (one vendor, one currency, exact amount, three-day window; shared number/reference shown as stronger evidence; nothing merged, edited or deleted). No money calculation, posting, server, migration, quality budget or screenshot baseline was touched. **Local checks: typecheck pass; 46/46 new tests; full unit suite 2758/2758 pass, 725 suites, 0 failures, 0 skips; ESLint 0 errors / 210 warnings (cap 212, unchanged); production build pass; quality-ratchet (it caught and fixed a real `key={index}` regression), capabilities, table-a11y, reachability, collections, screen-help, money-format and orphan guards pass.** Playwright and the database/RLS suites run on GitHub for this branch; main's E2E job is red as before (issue #136), so this is a batch result, not a whole-system launch sign-off. The complete queue list — 100 done, 10 partial with exactly what each needs, 108 open grouped by lane, and the blocked A-72 — is in `docs/verification/agent3-final-2026-10-16.md`; owner items are in `docs/FOR_YOU.md`.
 
 - 2026-10-16 AI #3 (Arena) — **addendum: the Playwright suite can now be run locally, and it was.** This sandbox has no Playwright browser download and the GitHub job-log host is unreachable, so the E2E result was previously unknown here. Using a `chrome-headless-shell` 153 binary from the npm package `@sparticuz/chromium` (`--no-save`; nothing added to `package.json`/lockfile) with the NSS/NSPR libraries from its own `al2023.tar.br`, a temporary untracked config and a worktree of `main` for comparison: **all 60 registered report screens mount with no error boundary, no `NaN` and no new serious axe violation — 60/60 pass, including the four this batch added.** Two full local suite runs on `arena/8f84f1e9-ledgerflow`: run 1 **258 passed** (one functional failure), run 2 **259 passed, 0 functional failures**; both runs also show 40 `visual-regression` screenshot diffs, which are **not valid evidence** from this sandbox (headless-shell font rendering differs from GitHub's Chromium — no baseline or threshold was touched, and they say nothing about GitHub's red E2E job). The single functional failure was `e2e/customer-tax-certificates.spec.ts:51`: after `Save details`, Escape did not close the nested "Edit record details" drawer inside 5 s — it **passes standalone on the branch (9.2 s) and on a clean `main` worktree (9.6 s)**, so it is a load/timing flake in the nested-drawer Escape path, not a regression from this batch. Filed as **issue [#146](https://github.com/shmuelbiller1/ledgerflow/issues/146)** with the exact evidence for whoever owns the shared drawer/`useDialog` Escape stack; AI #3 did not touch that screen or the drawer. The recipe, the numbers and the limits are in `docs/verification/agent3-final-2026-10-16.md` §2 and §2b.
+- 2026-10-18 AI #1 (Claude) → all (owner's decision): **stages, see PLAN §15.** We are in stage 1→2 (internal testing → controlled beta). Tax work now = **correct, tested tax for US and Israel only**. 38 expansion tasks (other countries' packs, all-state/city tax, payroll tables, filing calendars) are marked `[P]` = parked: **skip them**. Do first, in order: A-146, A-147 (golden invoices/bills, IL+US only — drop UK/EU cases), D-26, D-32…D-36 (tax tests), A-153 (US quarter journey), then the rest of your queue. Payroll and e-filing stay "calculation only / not available" on every screen.
 
