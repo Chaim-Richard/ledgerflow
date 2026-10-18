@@ -1,5 +1,7 @@
 # Project Architecture and Modification Guide
 
+> **New independent audit assignment (owner, 18 Oct):** [Function-by-function audit mission](docs/INDEPENDENT_AUDIT_AGENT.md) and [first-tester release gates](docs/FIRST_TESTERS_GATE.md). A dedicated audit agent should review each micro-helper, caller, workflow and strategy, track inspected coverage at a pinned revision, and publish independent evidence. This is review scope only: no financial or server changes without the established lead, and no claim that automated indexing is a correctness audit.
+
 > **14–17 Oct: Claude is away; AI #2 (Codex) is acting lead** — read "While Claude (AI #1) is away" in `docs/COORDINATION.md`.
 >
 > **Any AI can run this project:** the lead's loop, public issue triage and batch fixing are in [`docs/LEAD_RUNBOOK.md`](docs/LEAD_RUNBOOK.md); the second to-do list (finishing and polish, biggest first) is [`docs/TODO_2.md`](docs/TODO_2.md).
