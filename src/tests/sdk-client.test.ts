@@ -83,4 +83,34 @@ describe('The client against the server (database)', { skip: !url && 'LF_TEST_DA
     await client.deleteTransaction(String(draft.id));
     assert.equal((await db.collection('transactions').doc(String(draft.id)).get()).exists, false);
   });
+
+  test('INT-4: the server commits, the answer is lost; a new call with the same key gets the first result and creates nothing more', async () => {
+    const realFetch = (client as unknown as { fetchImpl: typeof fetch }).fetchImpl;
+    let dropNext = true;
+    const lossy = new LedgerFlowClient({ apiKey: (client as unknown as { options: { apiKey: string } }).options.apiKey, baseUrl: (client as unknown as { base: string }).base, maxRetries: 0,
+      fetch: (async (u: string, init: RequestInit) => { const res = await realFetch(u, init); if (dropNext) { dropNext = false; throw new TypeError('network connection lost'); } return res; }) as unknown as typeof fetch });
+    const key = LedgerFlowClient.newOperationKey();
+    const e = entry('2026-09-15', 4242);
+    await assert.rejects(lossy.createTransaction(ws, e, { idempotencyKey: key }), /network connection lost/);
+    const count = async () => (await db.pool.query(`select count(*)::int as n from public."transactions" where workspace_id = $1 and (data->>'description') = 'Sale 4242'`, [ws])).rows[0].n as number;
+    assert.equal(await count(), 1, 'the server did create it');
+    const again = await lossy.createTransaction(ws, e, { idempotencyKey: key });
+    assert.ok(again.id);
+    assert.equal(await count(), 1, 'the repeat created nothing more');
+    await assert.rejects(lossy.createTransaction(ws, entry('2026-09-15', 999), { idempotencyKey: key }), (err: unknown) => err instanceof LedgerFlowError && err.status === 409);
+    // two real, identical payments: two keys, two entries
+    await client.createTransaction(ws, entry('2026-09-16', 5151));
+    await client.createTransaction(ws, entry('2026-09-16', 5151));
+    assert.equal((await db.pool.query(`select count(*)::int as n from public."transactions" where workspace_id = $1 and (data->>'description') = 'Sale 5151'`, [ws])).rows[0].n, 2);
+  });
+
+  test('INT-4: inside one call, a dropped connection is retried with the same key: one entry', async () => {
+    const realFetch = (client as unknown as { fetchImpl: typeof fetch }).fetchImpl;
+    let dropNext = true;
+    const lossy = new LedgerFlowClient({ apiKey: (client as unknown as { options: { apiKey: string } }).options.apiKey, baseUrl: (client as unknown as { base: string }).base, sleep: async () => {},
+      fetch: (async (u: string, init: RequestInit) => { const res = await realFetch(u, init); if (dropNext) { dropNext = false; throw new TypeError('network connection lost'); } return res; }) as unknown as typeof fetch });
+    const created = await lossy.createTransactions(ws, [entry('2026-09-17', 6161), entry('2026-09-17', 6262)]);
+    assert.equal(created.created, 2);
+    assert.equal((await db.pool.query(`select count(*)::int as n from public."transactions" where workspace_id = $1 and (data->>'description') in ('Sale 6161','Sale 6262')`, [ws])).rows[0].n, 2);
+  });
 });

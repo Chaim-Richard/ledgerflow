@@ -5,6 +5,14 @@
  * so a retried request never creates twice, waits and retries when the key's limit a minute is
  * reached (429), and turns refusals into a LedgerFlowError with the status and the server's message.
  *
+ * Retries and the operation key (INT-4): every create has one operation key (Idempotency-Key). If the
+ * connection drops, the client sends the same request again with the same key, and the server answers
+ * with the first result instead of creating again. If your program stops or the outcome is uncertain,
+ * call again with the SAME key (`{ idempotencyKey }`; make one with `LedgerFlowClient.newOperationKey()`
+ * and store it with your record): you get the original result. Two real, identical payments need two
+ * different keys — the key, not the content, says "this is the same operation". Reusing a key for a
+ * different request is refused (409).
+ *
  *   const lf = new LedgerFlowClient({ apiKey: process.env.LEDGERFLOW_KEY!, baseUrl: 'https://your-app' });
  *   for await (const entry of lf.listTransactions(workspaceId, { startDate: '2026-01-01' })) { … }
  *   const { ids } = await lf.createTransactions(workspaceId, [entryA, entryB]);
@@ -53,13 +61,24 @@ export class LedgerFlowClient {
     this.sleep = options.sleep || (ms => new Promise(resolve => setTimeout(resolve, ms)));
   }
 
+  /** A new operation key: keep it with your record and reuse it to repeat the same create safely. */
+  static newOperationKey(): string { return randomKey(); }
+
   private async request<T>(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
     for (let attempt = 0; ; attempt++) {
-      const res = await this.fetchImpl(`${this.base}${path}`, {
-        method,
-        headers: { 'X-API-Key': this.options.apiKey, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...headers },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      });
+      let res: Response;
+      try {
+        res = await this.fetchImpl(`${this.base}${path}`, {
+          method,
+          headers: { 'X-API-Key': this.options.apiKey, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...headers },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        });
+      } catch (err) {
+        // the connection dropped: the server may or may not have done it. Only a request carrying an
+        // operation key (or a read) is sent again — the key makes the repeat return the first result.
+        if ((method === 'GET' || headers['Idempotency-Key']) && attempt < this.maxRetries) { await this.sleep(500 * (attempt + 1)); continue; }
+        throw err;
+      }
       if (res.status === 429 && attempt < this.maxRetries) {
         const seconds = Number(res.headers.get('retry-after') || res.headers.get('ratelimit-reset') || 1);
         await this.sleep(Math.max(1, Number.isFinite(seconds) ? seconds : 1) * 1000);
@@ -87,15 +106,15 @@ export class LedgerFlowClient {
     } while (cursor);
   }
 
-  /** One entry; its lines must add up to zero. Safe to retry: the same Idempotency-Key is reused. */
-  async createTransaction(workspaceId: string, entry: LedgerEntry): Promise<LedgerEntry> {
-    const res = await this.request<{ data: LedgerEntry }>('POST', '/api/v1/transactions', { transaction: { ...entry, workspaceId } }, { 'Idempotency-Key': randomKey() });
+  /** One entry; its lines must add up to zero. Pass `idempotencyKey` to repeat the same create safely later. */
+  async createTransaction(workspaceId: string, entry: LedgerEntry, options: { idempotencyKey?: string } = {}): Promise<LedgerEntry> {
+    const res = await this.request<{ data: LedgerEntry }>('POST', '/api/v1/transactions', { transaction: { ...entry, workspaceId } }, { 'Idempotency-Key': options.idempotencyKey || randomKey() });
     return res.data;
   }
 
   /** Up to 500 entries, all or none; their ids in the order given. */
-  async createTransactions(workspaceId: string, entries: LedgerEntry[]): Promise<{ created: number; ids: string[] }> {
-    const res = await this.request<{ data: { created: number; ids: string[] } }>('POST', '/api/v1/transactions/batch-create', { workspaceId, transactions: entries }, { 'Idempotency-Key': randomKey() });
+  async createTransactions(workspaceId: string, entries: LedgerEntry[], options: { idempotencyKey?: string } = {}): Promise<{ created: number; ids: string[] }> {
+    const res = await this.request<{ data: { created: number; ids: string[] } }>('POST', '/api/v1/transactions/batch-create', { workspaceId, transactions: entries }, { 'Idempotency-Key': options.idempotencyKey || randomKey() });
     return res.data;
   }
 
