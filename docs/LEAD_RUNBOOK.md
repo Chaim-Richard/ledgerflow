@@ -23,7 +23,8 @@ other AI (Codex, Arena, a new one) can take the lead role by following this file
    `docs/LINE_COUNT.md` row shows the counts). Take new tasks from List 2 (`docs/TODO_2.md`) and
    from triaged issues (below).
 7. **Owner questions** go in `docs/FOR_YOU.md` with the default used. Never wait.
-8. **Plan** (`docs/PLAN.md`) is brought up to date when a batch of work lands.
+8. **Plan** (`docs/PLAN.md`) is brought up to date when a batch of work lands, and **`docs/RELEASE_GATE.md`**
+   (the workflow table the release decision follows) is updated for every workflow touched.
 
 ## Fixing bug patterns fast
 
