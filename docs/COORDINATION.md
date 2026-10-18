@@ -73,6 +73,32 @@ paused launch work; no coordination update from Claude was needed for this autho
    - Say only what is true (DA-05).
    - Each tracker item has a bucket (V1 / Later / Add-on / Research). Never move one into V1 yourself; ask under **Messages**.
 
+## NOW — every AI works by the plan (owner, 18 Oct). Read this before your queue.
+
+**The plan:** `docs/PLAN.md` §15 (stages: we are in stage 1, "AI completion"; tax = correct US + Israel only,
+other countries parked `[P]`) and §16 (success = complete, verified customer workflows). **The finish line:**
+`docs/RELEASE_GATE.md` — 14 workflows, each Connected / Verified (independently worked figures) / Browser-tested.
+
+**Rules from 18 Oct:**
+1. Take tasks in this order: **(a)** your tasks listed below, which move a RELEASE_GATE row to Yes; **(b)** your
+   half-done `[~]` items; **(c)** the rest of your queue. Skip `[P]` (parked) tasks.
+2. When you finish work that touches a workflow, update its row in `docs/RELEASE_GATE.md` in the same PR.
+3. Bugs: critical (money/records/access) → report under Messages for AI #1 immediately; never patch money,
+   posting, tax maths or `src/server/` yourself. Ordinary bugs → fix in batches.
+4. Every screen change follows `docs/UI_GUIDE.md`; every PR says which RELEASE_GATE row it moves.
+5. A task is done only when it is on a screen, tested, and (for money) checked against worked figures.
+
+| AI | Do first (in order) | Rows it moves |
+|---|---|---|
+| #1 Claude (lead, money/server) | INT-2 for bills/payments, AUD-02 rest, ISS-141 statement period, DIM-1 payments, CON-1…CON-4, AU-4, ISS-130/131, INT-6/7 | W2 W3 W5 W7 W8 W10 W11 W13 |
+| #2 Codex (screens/wiring) | C-127 dead buttons (BUG-06), C-128 bundles + units-of-measure screens (CON-5), then C-102…C-126 | W1 W13 |
+| #3 Arena (journeys, tax data) | A-152 Israeli month, A-153 US quarter, A-151 month-end close — each with a test of worked figures | W7 W8 W9 |
+| #4 (UI, quality) | D-45, D-46, D-93 (report test harness), then D-77…D-92 | W2 W5 (screens) |
+| #5 (imports) | E-57 import totals proof screen (AU-4 screen side, with AI #1's server check), then your queue | W4 W11 |
+| #6 (security) | S-37…S-40 access tests per write family (AUD-09) — tests only, report failures to AI #1 | W14 |
+| #7 (stability) | F-41…F-45 browser journey tests for W2, W3, W4, W6, W9 | W2 W3 W4 W6 W9 |
+| #8 (onboarding) | G-24 first-hour journey test (sign-up → company → accounts → invoice → report), G-9 (IL + US only) | W1 |
+
 ## Tasks for Codex — AI #2 (in order)
 
 
@@ -450,6 +476,8 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 - [ ] **C-99 Settings: entity profile page (legal name, IDs, addresses, logo) per entity**
 - [ ] **C-100 Settings: document numbering screen per entity and series**
 - [ ] **C-101 Settings: tax registrations screen per entity, reading taxProfiles**
+- [ ] **C-127 Dead and miswired buttons (audit BUG-06, `audit/VERIFIED_BUG_REPORT.md`): wire each of the ten enabled buttons with no handler to its existing action, or disable it with a reason; fix the "Close Period" button that only selects. A test per button.**
+- [ ] **C-128 Screens for item bundles and units of measure (capabilities 143/144, CON-5) on the item form, with tests; relabel capabilities 151/152 after checking their new screens.**
 
 ## AI #3 (Arena): tasks (Claude, 5 Oct late)
 
@@ -1165,6 +1193,7 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 ### Testing grade-up for AI #5 (Claude, 13 Oct)
 
 - [ ] **E-56 Real-file corpus: 30 anonymised real-shaped files (Israeli bank CSVs, US bank OFX, QuickBooks/Xero exports, receipts in EN/HE) with expected results, run in CI (photocraft's corpus tests)**
+- [ ] **E-57 Migration proof screen (AU-4, screen side): after an import, show trial balance, A/R, A/P, cash and tax payable next to the source file's totals with the differences; the server check is AI #1's. Test with a sample QuickBooks export.**
 
 ## AI #6: tasks (security lane; written by Claude, 11 Oct night)
 
@@ -1213,6 +1242,10 @@ Same rules as every helper AI: one branch and PR per task from the latest main, 
 - [ ] **S-34 Security headers test in e2e (HSTS, X-Frame-Options, Referrer-Policy)**
 - [ ] **S-35 Privacy: cookie banner choices respected by analytics; test**
 - [ ] **S-36 Pen-test checklist doc mapped to OWASP ASVS level 1 with status per item**
+- [ ] **S-37 Access tests (AUD-09), invoices/bills/credits: as viewer, non-member, wrong-workspace API key, with another workspace's account ids and in a closed month — every write refused, nothing written. Real Postgres. Report any failure to AI #1; do not change server code.**
+- [ ] **S-38 Same as S-37 for payments and payment runs.**
+- [ ] **S-39 Same as S-37 for bank lines, reconciliation and imports.**
+- [ ] **S-40 Same as S-37 for settings, roles, period close/reopen and restore.**
 
 ## AI #7: tasks (stability lane; written by Claude, 11 Oct night)
 
@@ -1269,6 +1302,11 @@ Same rules as every helper AI: one branch and PR per task from the latest main, 
 - [ ] **F-38 Nightly speed budgets: a `perf/budgets.json` for posting, P&L, balance sheet, search and the 20 main screens; a nightly job fails when a budget is broken (photocraft's perf-nightly)**
 - [ ] **F-39 Quality scorecard file (`docs/SCORECARD.md`, updated by a script): tests, coverage, warnings, open bugs by area, screens without help or e2e — one table the owner can read**
 - [ ] **F-40 Architecture layers check in CI: lib/ never imports components/ or server/; components/ never imports server/; a test fails on a wrong import (photocraft's `xtask layers`)**
+- [ ] **F-41 Browser journey test W2: invoice → send → payment → customer statement, figures checked against worked numbers.**
+- [ ] **F-42 Browser journey test W3: bill → payment run → vendor statement.**
+- [ ] **F-43 Browser journey test W4: bank CSV import → match → reconciled balance.**
+- [ ] **F-44 Browser journey test W6: order with 25% deposit → part invoices → delivery charged once (DEP-1 figures).**
+- [ ] **F-45 Browser journey test W9: close a month → posting refused → reopen with reason.**
 
 ## AI #8: tasks (spare queue for the next AI; written by Claude, 12 Oct)
 
@@ -1300,6 +1338,7 @@ Same rules as every helper AI.
 - [ ] **G-21 Dark mode for printed PDFs disabled (always light) with a test**
 - [ ] **G-22 Translation tool: list of untranslated strings per screen (EN/HE)**
 - [ ] **G-23 Demo data reset button for testers (guest and sandbox only)**
+- [ ] **G-24 First-hour journey test (W1, P2-1): sign up → company details → chart of accounts → first invoice → first report, no dead ends; browser test plus a list of every place a new user got stuck.**
 
 
 ## Claude is working on (Codex: don't edit these files)
@@ -2166,3 +2205,5 @@ Claude is out of usage for about 3 days. The project keeps running without it:
 - 2026-10-18 AI #3 (Arena): **A-146 and A-147 done on `arena/e036c582-ledgerflow`** (PLAN §15 order, IL+US only, UK/EU cases dropped, parked `[P]` tasks skipped). `src/lib/goldenTaxFixtures.ts`: 50 golden invoices + 30 golden bills with literal hand-checked expected tax, rechecked live against the dated tables (`ilVatRates`, `usStateSalesTax`, `ilWithholdingDefaults`, `us1099Preview`) — Reports → **Golden Tax Fixtures** shows any mismatch by case number and states plainly that US figures are state base rate only and IL withholding uses the existing helper basis. No money calculation, posting, server, migration, screenshot baseline or quality budget was touched (how money is calculated is unchanged; the fixtures only read the existing tables). Local checks: typecheck pass; new tests 8/8; full unit suite 2771/2772 on the pre-guard-fix tree with the single failure being the money-format guard on the new screen, fixed by using `formatCurrency` and re-verified (guard + golden + screen-help + capabilities/reachability/orphan guards 23/23); ESLint 0 errors / 210 warnings (cap unchanged); production build pass. DB/RLS suites need `LF_TEST_DATABASE_URL` (unset here) and Playwright runs on GitHub. Next in the 18 Oct order for my lane: A-153 (US quarter journey); D-26/D-32…D-36 are AI #4's lane, not touched.
 - 2026-10-18 AI #1 (Claude) → all (owner): **`docs/RELEASE_GATE.md`** — the release follows a table of 14 workflows (connected / verified with worked figures / browser-tested), not the number of issues. When you finish work on a workflow, update its row. Bugs are critical / major / ordinary / incomplete feature; only critical ones block a stage. Prefer tasks that turn a row to Yes.
 - 2026-10-18 AI #1 (Claude): integrity follow-up done on main — INT-1 (role/membership re-checked inside the posting transaction), INT-2 (an invoice is posted once: stale retries answered as done, stale changed saves 409), INT-3 (admin idempotent calls bound to the request), INT-4 (SDK operation keys reusable across calls), INT-5 (only same-rate rounding settled). Tests on real Postgres, none skipped. Still open in TRACKER: INT-2 for bills/payments, AUD-02 rest, AUD-09 other write routes.
+- 2026-10-18 AI #1 (Claude) → all: **new section "NOW — every AI works by the plan" at the top of this file.** Each AI has a short do-first list tied to `docs/RELEASE_GATE.md` rows (new tasks C-127/128, E-57, S-37…40, F-41…45, G-24). Order: do-first → your `[~]` items → the rest. Update the release-gate row you move.
+
