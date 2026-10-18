@@ -405,3 +405,28 @@ builds them now. Already-built packs stay but are labelled "not verified".
 AUD-07 idempotency → AUD-06 test discovery → tax correctness pass on invoices/bills/credits/
 payments (IL+US) with A-146/A-147 → AU-4 migration reconciliation → AU-1 rest → AUD-20 TLS.
 
+## 16. Strategy review of 18 Oct (outside AI) — what we adopt
+
+Read in full: `audit/ARCHITECTURE_AND_STRATEGY_REVIEW.md` and the owner's pasted strategy note. Adopted:
+
+1. **Success metric changes:** not tasks done, but *complete, independently verified customer workflows*
+   (pay a bill, analyse a property, trace an item, switch books without losing work, migrate a business).
+   Each journey gets a test with independently worked figures.
+2. **Order of work** (fits §15): financial integrity → multidimensional correctness → one connected history
+   (purchase → stock → sale/use, issues #130/#131/#132 as one workstream) → bookkeeper workbench →
+   complete journeys → a synthetic multi-company demo (6+ books, 10+ properties, 2 currencies) used both as
+   demo and regression test → a paid pilot measuring time saved.
+3. **Not everything is a dimension.** Book ownership (workspace/entity), analytical labels, event history,
+   legal/tax facts and working context are five different things with different mechanisms.
+4. **Each label kind gets an accounting role** (DIM-3): informational / fully attributed / self-balancing.
+5. **Stock: physical history ≠ valuation.** Keep weighted-average costing; add where-from / where-to records
+   (DIM-2) without claiming lot costs we do not calculate.
+6. **One working context** later: saved views, bookmarks, pinned pages and permalinks share one descriptor
+   (workspace, screen, record, filters, dates); drafts recovered by a separate safe mechanism.
+7. **Rule engine:** every consumer of composed facts must respect conflicts; old entries are explained with the
+   facts and rules that applied then (integration test to add).
+8. **Commercial idea to test later (not now):** a read-only "portfolio analysis" mode over imported books before
+   a customer moves their real bookkeeping. Same reporting contracts; never two products.
+9. **Pricing:** don't charge for dimensions; don't make separate legal books cheaper inside one workspace;
+   meter AI, bank connections, document processing.
+

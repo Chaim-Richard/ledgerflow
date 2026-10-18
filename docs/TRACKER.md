@@ -2703,3 +2703,15 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 - [ ] DIM-2 Stock moves keep where an item came from (vendor/bill/receipt line) and where it went (customer, project, label) — with issue #132 / P2-36.
 - [x] DEP-1 (18 Oct: the server refuses, inside the save, an invoice that takes an order past its total — test `order-invoice-limit.test.ts`: 25% + rest accepted, a second delivery charge refused, two people at once → only one; fails without the fix) Deposits and part-invoicing (owner's QuickBooks example, 18 Oct): golden test — order 1,000 goods + 100 delivery, 25% deposit, then invoices by parts and the rest → delivery charged exactly once, the deposit applied once, the customer owes exactly 1,100 in total. And: "never more than is left to invoice" checked on the server inside the save, so two people invoicing the same order at once cannot double it (today the check is on screen only).
 
+## Audit of 18 Oct (audit/VERIFIED_BUG_REPORT.md) — AI #1 fixes these, each with the test the report names
+
+- [ ] BUG-01 Transaction-list inflow/outflow totals lose reversal signs (sale + its reversal shows 2,000 in, 0 out).
+- [ ] BUG-02 A failed report refetch leaves the previous period's server figures under the new date heading (P&L, balance sheet, trial balance, cash flow).
+- [ ] BUG-03 A stale or retried invoice save gets a new posting identity and can post the invoice twice without reversing the first (one active posting per invoice revision, checked on the server).
+- [ ] BUG-04 Statement PDF/email ignores the chosen period (same as ISS-141/AUD-01).
+- [ ] BUG-05 After a successful post the local list adds the rows again instead of replacing them by id.
+- [ ] BUG-06 Ten enabled buttons do nothing; one "Close Period" button only selects (helper AI, screens).
+- [ ] BUG-07 Foreign-currency entries: lines balance in the foreign currency but not after conversion to the home currency — validate the base amounts too.
+- [ ] AUD-07b The three direct idempotent calls in adminRoutes.ts also pass the request fingerprint.
+- [ ] DIM-3 Each label kind gets an accounting role: informational (no balancing), fully attributed (every line has a value), or self-balancing (each value balances) — so balancing is applied only where it is required (strategy §16).
+
