@@ -99,7 +99,7 @@ export function lineAmount(l: TransactionLine, t?: Transaction): number {
  * BUG-07: an entry in a foreign currency must balance in the home currency too. Converting each line
  * on its own can leave a cent or two over (rounding): those are put on the largest line and every
  * line's home amount is written down (`baseAmountCents`), so reports read exactly what balanced.
- * A bigger difference means the lines use different rates: refused — post an exchange difference.
+ * Lines at different rates must balance by themselves (an exchange gain/loss line), else refused (INT-5).
  */
 export function settleHomeCurrency(t: Pick<Transaction, 'lines' | 'exchangeRate'>): void {
   const lines = t.lines || [];
@@ -108,7 +108,11 @@ export function settleHomeCurrency(t: Pick<Transaction, 'lines' | 'exchangeRate'
   const base = lines.map(l => Math.round((l.amountCents || 0) * rateOf(l)));
   const residual = base.reduce((a, b) => a + b, 0);
   if (residual === 0) return;
-  if (Math.abs(residual) > lines.length) {
+  // INT-5, the rule: only rounding at ONE rate is settled here (at most a cent per line). Foreign lines
+  // at different rates must balance in the home currency by themselves — normally through an explicit
+  // exchange gain/loss line (rate 1) — otherwise the entry is refused, however small the gap.
+  const foreignRates = new Set(lines.filter(l => rateOf(l) !== 1).map(rateOf));
+  if (foreignRates.size > 1 || Math.abs(residual) > lines.length) {
     throw new Error(`Validation Failed: the lines balance in the foreign currency but differ by ${residual} cents in the home currency (different rates) — add an exchange-difference line`);
   }
   let largest = 0;

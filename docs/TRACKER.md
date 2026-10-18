@@ -2721,5 +2721,5 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 - [ ] INT-2 P0 invoice business-level idempotency (BUG-03): one server-authoritative posting per invoice revision.
 - [ ] INT-3 P1 admin executeIdempotent calls pass payloadHash (AUD-07b).
 - [ ] INT-4 P1 SDK: caller-supplied idempotency key reusable across invocations; lost-response test.
-- [ ] INT-5 P1 home-currency rounding: only same-rate rounding is settled automatically; different rates need an exchange-difference line.
+- [x] INT-5 P1 home-currency rounding — rule: foreign lines at ONE rate: the rounding residual (≤ a cent per line) goes on the largest line and each line's home amount is stored; lines at DIFFERENT rates must balance in the home currency by themselves (an explicit exchange gain/loss line), else refused however small. `home-currency-balance.test.ts` 7 tests (one rate, divergent rates refused, gain line accepted, opposite signs + several lines, reversal mirror); 1,113 related FX/payment/validation tests pass, 0 skipped.
 
