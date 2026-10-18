@@ -31,7 +31,7 @@ independently worked figures passes · **Browser** = an end-to-end browser test 
 | # | Workflow | Stage | Connected | Verified | Browser | Remaining blockers |
 |---|---|---|---|---|---|---|
 | W1 | Sign up → company → chart of accounts → first invoice → first report (P2-1) | 2 | Partly | No | Partly | first-hour journey test (A-151/P2-1) |
-| W2 | Invoice → posting → payment → customer statement | 2 | Yes | Partly | Partly | BUG-03 (stale save may post twice), ISS-141/BUG-04 statement period, DIM-1 payments |
+| W2 | Invoice → posting → payment → customer statement | 2 | Yes | Partly | Partly | ISS-141/BUG-04 statement period, DIM-1 payments, INT-2 for bills |
 | W3 | Bill → posting → payment run → vendor statement | 2 | Yes | Partly | Partly | golden bills A-147 wired to the posting, DIM-1 payments |
 | W4 | Bank import / feed → reconciliation | 2 | Yes | Partly | Partly | AU-1 changed/removed lines on the Banking screen, #96 |
 | W5 | Labels (property, project, location) → reports by label | 2 | Yes | Partly | No | DIM-1 payments, DIM-3 balancing roles |
@@ -45,4 +45,4 @@ independently worked figures passes · **Browser** = an end-to-end browser test 
 | W13 | Stock: purchase → stock → sale → valuation | 3 | Yes | Partly | Partly | ISS-130, ISS-131, DIM-2 |
 | W14 | Roles and access (owner, accountant, bookkeeper, viewer) | 2 | Yes | Yes (RLS suite) | Partly | AUD-09 per write family |
 
-**Today (18 Oct):** stage 1. Nearest to stage 2: W6, W9, W14. The critical items still open: BUG-03, AUD-02 (rest).
+**Today (18 Oct):** stage 1. Nearest to stage 2: W6, W9, W14. The critical items still open: AUD-02 (rest), INT-2 for bills. Fixed 18 Oct: BUG-03/INT-2 invoices, INT-1 authority at commit, INT-3, INT-4, INT-5.

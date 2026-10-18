@@ -219,6 +219,10 @@ export async function postTxsServerApi(
   }
   if (Array.isArray(data.warnings)) data.warnings.forEach((w: unknown) => toast.warning(String(w)));
 
+  // INT-2: the server says this save had already happened (an earlier save of the same posting); the
+  // entries built here were not written, so they are not added to the local list either
+  if (data.replayed) return;
+
   // Immediately update client Zustand store state if available
   try {
     const store = useLedgerStore.getState();
