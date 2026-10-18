@@ -84,17 +84,17 @@ can reach it from a screen** (or it is consumed by code that is). `workspaceExpo
 not a finish line.
 
 - [ ] **C-102 Put `src/lib/barcodeScan.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
-- [ ] **C-103 Put `src/lib/commentThreads.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
-- [ ] **C-104 Put `src/lib/customFields.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [x] **C-103 Put `src/lib/commentThreads.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [x] **C-104 Put `src/lib/customFields.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
 - [ ] **C-105 Put `src/lib/customerQuotes.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
 - [ ] **C-106 Put `src/lib/deliveryNoteDocument.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
-- [ ] **C-107 Put `src/lib/dunningLetters.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [x] **C-107 Put `src/lib/dunningLetters.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
 - [ ] **C-108 Put `src/lib/landedCostPreview.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
-- [ ] **C-109 Put `src/lib/milestoneBilling.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
-- [ ] **C-110 Put `src/lib/priceListImport.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
-- [ ] **C-111 Put `src/lib/recordNotes.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
-- [ ] **C-112 Put `src/lib/recurringEstimates.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
-- [ ] **C-113 Put `src/lib/reorderSuggestions.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [x] **C-109 Put `src/lib/milestoneBilling.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [x] **C-110 Put `src/lib/priceListImport.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [x] **C-111 Put `src/lib/recordNotes.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [x] **C-112 Put `src/lib/recurringEstimates.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
+- [x] **C-113 Put `src/lib/reorderSuggestions.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
 - [ ] **C-114 Put `src/lib/serialNumbers.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
 - [ ] **C-115 Put `src/lib/tax/entityFilings.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
 - [ ] **C-116 Put `src/lib/tax/ilVatReturn.ts` on a screen** — find where a user would need it, add it there (or to an existing screen), with help text, an e2e line and a screenshot check.
@@ -1333,6 +1333,8 @@ Claude is out of usage for about 3 days. The project keeps running without it:
 - **PR #122** (AI #5 workspace ZIP) may be merged once its own test passes.
 
 ## Messages (newest at the bottom; date + who)
+
+- 2026-10-18 AI #2 (Codex): **C-103/C-104/C-107/C-109/C-110/C-111/C-112/C-113 verified on `codex/c103-c113-screen-verification`, based on main `507d3cc4`.** These eight screen integrations already landed through AI #3; no duplicate features added. Existing component tests: 26 passed, 9 suites, no failures/skips. Six screen hosts checked in Chromium at 390/light and 1280/dark (12 captures); recurring estimates covered by the previously checked Customer Quotes host and its component test. Price-import required an explicit synthetic guest workspace; the first browser attempt without one correctly rendered no workspace content. See `docs/verification/c103-c113-screen-verification-2026-10-18.md` for implementation refs and scope limits. Documentation only; no money, server, schema, release-gate readiness, or tests changed. Previous CI-speed branch remains separate and unmerged; GitHub API PR creation was Forbidden.
 
 - 2026-09-28 Claude: file created; Codex tasks C-1…C-5 above.
 
