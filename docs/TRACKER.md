@@ -2712,14 +2712,14 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 - [x] BUG-05 (18 Oct: posted entries replace same-id rows in the local list; test `post-cache-upsert.test.ts`) After a successful post the local list adds the rows again instead of replacing them by id.
 - [ ] BUG-06 Ten enabled buttons do nothing; one "Close Period" button only selects (helper AI, screens).
 - [x] BUG-07 (18 Oct: the server now also balances every foreign-currency entry in the home currency — rounding cents go to the largest line and each line's home amount is stored (`baseAmountCents`, read by `lineAmount`); a bigger gap from different rates is refused; test `home-currency-balance.test.ts`, 616 FX/validation tests pass) Foreign-currency entries: lines balance in the foreign currency but not after conversion to the home currency — validate the base amounts too.
-- [ ] AUD-07b The three direct idempotent calls in adminRoutes.ts also pass the request fingerprint.
+- [x] AUD-07b see INT-3 (18 Oct).
 - [ ] DIM-3 Each label kind gets an accounting role: informational (no balancing), fully attributed (every line has a value), or self-balancing (each value balances) — so balancing is applied only where it is required (strategy §16).
 
 ## Integrity follow-up of 18 Oct (owner's request; independent AI examination at 507d3cc)
 
 - [x] INT-1 P0 authority at commit: bulk create and batch edit re-read the workspace inside the posting transaction and refuse if the user is no longer a member or no longer owner/accountant/bookkeeper (403), next to the closing-date check. API-key workspace scope is fixed per request (checked at the route). Test `authority-at-commit.test.ts` (real Postgres): role downgrade and removal between the first check and the commit are refused with nothing written (both fail without the fix), month closed meanwhile refused, two writers at once both succeed. Left: other write routes (payments, documents services) — same pattern to apply (AUD-09).
 - [ ] INT-2 P0 invoice business-level idempotency (BUG-03): one server-authoritative posting per invoice revision.
-- [ ] INT-3 P1 admin executeIdempotent calls pass payloadHash (AUD-07b).
+- [x] INT-3 P1 the three admin `executeIdempotent` calls (workspace update, user update, global config) pass the fingerprint of the validated request with its target id; replay needs the same actor, operation and request. Test `idempotency-identity.test.ts` (real Postgres): same request once, changed request 409, other actor 409, field order irrelevant, two at once → one effect; 5 pass, 0 skipped. Payment path unchanged.
 - [ ] INT-4 P1 SDK: caller-supplied idempotency key reusable across invocations; lost-response test.
 - [x] INT-5 P1 home-currency rounding — rule: foreign lines at ONE rate: the rounding residual (≤ a cent per line) goes on the largest line and each line's home amount is stored; lines at DIFFERENT rates must balance in the home currency by themselves (an explicit exchange gain/loss line), else refused however small. `home-currency-balance.test.ts` 7 tests (one rate, divergent rates refused, gain line accepted, opposite signs + several lines, reversal mirror); 1,113 related FX/payment/validation tests pass, 0 skipped.
 

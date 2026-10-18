@@ -21,7 +21,7 @@ describe('authority is checked at commit (database)', { skip: !url && 'LF_TEST_D
     .then(async r => ({ status: r.status, body: await r.json() as Record<string, unknown> }));
   const exists = async (id: string) => (await db.collection('transactions').doc(`${ws}_${id}`).get()).exists;
   /** run `change` after the route's first checks, just before its transaction (a "paused" request) */
-  const between = (change: () => Promise<void>) => {
+  const between = (change: () => Promise<unknown>) => {
     const original = db.runTransaction.bind(db);
     (db as unknown as { runTransaction: unknown }).runTransaction = (async (fn: never) => {
       (db as unknown as { runTransaction: unknown }).runTransaction = original;

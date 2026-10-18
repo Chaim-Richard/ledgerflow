@@ -15,7 +15,8 @@ import { processErrorDigest } from "../services/errorDigestService";
 import { 
   executeIdempotent, 
   extractCanonicalOperationId, 
-  deriveScopedOperationKey 
+  deriveScopedOperationKey,
+  requestPayloadHash,
 } from "../utils/idempotency";
 import { isSystemJobAuthorized } from "../auth/systemJobAuth";
 
@@ -175,7 +176,8 @@ export function registerAdminRoutes(app: express.Express, ctx: ServerContext): v
         result = await executeIdempotent(scopedKey, {
           actor: authReq.user.uid,
           workspaceId,
-          operationType: 'ADMIN_WORKSPACE_UPDATED'
+          operationType: 'ADMIN_WORKSPACE_UPDATED',
+          payloadHash: requestPayloadHash({ workspaceId, validated })
         }, performMutation);
       } else {
         result = await db.runTransaction(performMutation);
@@ -267,7 +269,8 @@ export function registerAdminRoutes(app: express.Express, ctx: ServerContext): v
         mutationOutput = await executeIdempotent(scopedKey, {
           actor: authReq.user.uid,
           workspaceId: 'system',
-          operationType: 'ADMIN_USER_UPDATED'
+          operationType: 'ADMIN_USER_UPDATED',
+          payloadHash: requestPayloadHash({ userId, validated })
         }, performMutation);
       } else {
         mutationOutput = await db.runTransaction(performMutation);
@@ -449,7 +452,8 @@ export function registerAdminRoutes(app: express.Express, ctx: ServerContext): v
         result = await executeIdempotent(scopedKey, {
           actor: authReq.user.uid,
           workspaceId: 'system',
-          operationType: 'ADMIN_GLOBAL_CONFIG_UPDATED'
+          operationType: 'ADMIN_GLOBAL_CONFIG_UPDATED',
+          payloadHash: requestPayloadHash({ validated })
         }, performMutation);
       } else {
         result = await db.runTransaction(performMutation);
