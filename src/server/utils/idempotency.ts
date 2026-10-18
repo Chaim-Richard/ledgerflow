@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { getDb } from '../db/firestore';
 import type { Transaction as FirestoreTransaction } from '../db/firestore';
 
@@ -9,9 +10,39 @@ export interface IdempotencyRecord {
   createdAt: string;
   updatedAt?: string;
   status: 'pending' | 'success' | 'failed';
+  payloadHash?: string;
   result?: any;
   error?: string;
   expiresAt: string;
+}
+
+/** JSON with keys sorted at every level, so the same request always gives the same text. */
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value as Record<string, unknown>).sort().filter(k => (value as Record<string, unknown>)[k] !== undefined)
+      .map(k => `${JSON.stringify(k)}:${stableJson((value as Record<string, unknown>)[k])}`).join(',')}}`;
+  }
+  return JSON.stringify(value ?? null);
+}
+
+/** AUD-07: a fingerprint of what was asked (the operation id itself left out). */
+export function requestPayloadHash(body: unknown): string {
+  const rest = body && typeof body === 'object' && !Array.isArray(body)
+    ? Object.fromEntries(Object.entries(body as Record<string, unknown>).filter(([k]) => k !== 'operationId'))
+    : body;
+  return createHash('sha256').update(stableJson(rest)).digest('hex');
+}
+
+/** AUD-07: the same key reused by someone else or for a different request is refused (409), never replayed. */
+export function assertSameRequest(stored: { actor?: unknown; payloadHash?: unknown } | undefined, actor: string, payloadHash?: string): void {
+  if (!stored) return;
+  if (typeof stored.actor === 'string' && stored.actor && stored.actor !== actor) {
+    throw Object.assign(new Error('This operation id was already used by another user'), { status: 409 });
+  }
+  if (payloadHash && typeof stored.payloadHash === 'string' && stored.payloadHash !== payloadHash) {
+    throw Object.assign(new Error('This operation id was already used for a different request'), { status: 409 });
+  }
 }
 
 /**
@@ -59,6 +90,7 @@ export async function executeIdempotent<T>(
     actor: string;
     workspaceId: string;
     operationType: string;
+    payloadHash?: string;
   },
   transactionHandler: (t: FirestoreTransaction) => Promise<T>
 ): Promise<T> {
@@ -72,6 +104,7 @@ export async function executeIdempotent<T>(
     if (doc.exists) {
       const data = doc.data() as IdempotencyRecord;
       if (data.status === 'success') {
+        assertSameRequest(data, metadata.actor, metadata.payloadHash);
         return data.result as T;
       }
       if (data.status === 'pending') {
@@ -95,6 +128,7 @@ export async function executeIdempotent<T>(
       actor: metadata.actor,
       workspaceId: metadata.workspaceId,
       operationType: metadata.operationType,
+      ...(metadata.payloadHash ? { payloadHash: metadata.payloadHash } : {}),
       createdAt: doc.exists ? (doc.data()?.createdAt || new Date().toISOString()) : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: 'success',

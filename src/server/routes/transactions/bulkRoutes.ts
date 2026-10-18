@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { assertPostingOpen } from '../../../lib/periodLock';
 import { errorMessage, requestUser } from '../../auth/requestUser';
 import { isUpdatedAtMismatch } from './helpers';
+import { assertSameRequest, requestPayloadHash } from '../../utils/idempotency';
 import { writeServerAuditLog } from '../../services/auditLogService';
 import { deletionSentence, deletionSnapshot } from '../../services/deletionRecord';
 import { MAX_RECATEGORIZE, RecategorizeError, recategorize } from '../../services/recategorizeService';
@@ -47,6 +48,7 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
 
       const idempotencyKey = req.headers['idempotency-key'] as string;
       const scopedIdempotencyKey = idempotencyKey ? `${wsId}_${idempotencyKey}` : null;
+      const payloadHash = scopedIdempotencyKey ? requestPayloadHash(req.body) : undefined;
 
       if ((!Array.isArray(transactions) || transactions.length === 0) && !entityMutation && bankLines.length === 0) {
         return res.json({ status: 'ok', count: 0 });
@@ -55,6 +57,7 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
       if (scopedIdempotencyKey) {
         const idempotencyDoc = await db.collection('idempotencyKeys').doc(scopedIdempotencyKey).get();
         if (idempotencyDoc.exists) {
+          try { assertSameRequest(idempotencyDoc.data(), user.uid, payloadHash); } catch (err) { return res.status(409).json({ error: errorMessage(err) }); }
           const cachedResult = idempotencyDoc.data()?.body || { status: 'ok', count: Array.isArray(transactions) ? transactions.length : 0 };
           return res.json(cachedResult);
         }
@@ -113,6 +116,16 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
       await db.runTransaction(async (t) => {
         approvalNotice = null;
         // Reads first
+        // AUD-07: a replay is recognised first, before any other read or check, and only for the same
+        // user and the same request
+        const idempotencyRef = scopedIdempotencyKey ? db.collection('idempotencyKeys').doc(scopedIdempotencyKey) : null;
+        if (idempotencyRef) {
+          const replay = await t.get(idempotencyRef);
+          if (replay.exists) {
+            try { assertSameRequest(replay.data(), user.uid, payloadHash); } catch (err) { throw new LedgerPostingError(409, errorMessage(err)); }
+            body = replay.data()?.body || body; return;
+          }
+        }
         // AUD-08: the closing date as it is at commit — a month closed after the checks above but
         // before this save refuses the save instead of posting into the closed month
         const wsNow = (await t.get(db.collection('workspaces').doc(wsId))).data();
@@ -145,11 +158,6 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
           const postedIds = new Set(validatedTransactions.map(tx => tx.id));
           const unknown = bankLines.find(b => b.matchedTransactionId && !postedIds.has(b.matchedTransactionId));
           if (unknown) throw new LedgerPostingError(400, `Bank line ${unknown.id} points to a transaction outside this request`);
-        }
-        const idempotencyRef = scopedIdempotencyKey ? db.collection('idempotencyKeys').doc(scopedIdempotencyKey) : null;
-        if (idempotencyRef) {
-          const replay = await t.get(idempotencyRef);
-          if (replay.exists) { body = replay.data()?.body || body; return; }
         }
 
         // Writes
@@ -188,7 +196,7 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
         stock.apply();
         bankLines.forEach((b, j) => t.create(bankLineRefs[j], { ...b, matchedTransactionId: b.matchedTransactionId ?? null, workspaceId: wsId, uid: user.uid, createdAt: new Date().toISOString() }));
         if (stock.warnings.length > 0) body = { ...body, warnings: stock.warnings };
-        if (idempotencyRef) t.set(idempotencyRef, { createdAt: FieldValue.serverTimestamp(), code: 200, body, workspaceId: wsId });
+        if (idempotencyRef) t.set(idempotencyRef, { createdAt: FieldValue.serverTimestamp(), code: 200, body, workspaceId: wsId, actor: user.uid, payloadHash });
       });
 
       const notice = approvalNotice as { invoiceId: string; invoice: Record<string, unknown>; event: ApprovalEvent } | null;

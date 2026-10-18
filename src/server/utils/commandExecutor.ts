@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import type { Transaction as FirestoreTransaction } from '../db/firestore';
 import { getDb } from '../db/firestore';
 import { 
+  requestPayloadHash,
   executeIdempotent, 
   extractCanonicalOperationId, 
   deriveScopedOperationKey 
@@ -77,7 +78,7 @@ export async function executeCommand<T>(
   const scopedKey = deriveScopedOperationKey(ctx.workspaceId, operationType, rawOperationId);
 
   try {
-    const result = await executeIdempotent(scopedKey, ctx, async (t) => {
+    const result = await executeIdempotent(scopedKey, { ...ctx, payloadHash: requestPayloadHash(req.body) }, async (t) => {
       return await action(ctx, t);
     });
     return res.json({ status: 'success', data: result });

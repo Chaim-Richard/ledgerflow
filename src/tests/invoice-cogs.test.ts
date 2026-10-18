@@ -144,6 +144,14 @@ describe('Posting endpoint: cost of goods sold moves stock', { skip: !url && 'LF
     assert.equal(await stock(), 7);
   });
 
+  test('AUD-07: the same key from another user, or for a different request, is refused and changes nothing', async () => {
+    const other = await post('owner-1', { workspaceId: ws, transactions: [sale] }, `k-${suffix}`);
+    assert.equal(other.status, 409, JSON.stringify(other.body));
+    const changed = await post('book-1', { workspaceId: ws, transactions: [{ ...sale, description: 'something else' }] }, `k-${suffix}`);
+    assert.equal(changed.status, 409, JSON.stringify(changed.body));
+    assert.equal(await stock(), 7);
+  });
+
   test('reversing it puts the stock back, and it cannot be reversed twice', async () => {
     const rev = await post('book-1', { workspaceId: ws, transactions: [reversalOf(`${ws}_r1`, sale)] });
     assert.equal(rev.status, 200, JSON.stringify(rev.body));

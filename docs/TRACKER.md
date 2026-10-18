@@ -2676,7 +2676,7 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 - [ ] AUD-04 — Scheduled-report pre-marking trades duplicate avoidance for lost delivery and is not a concurrent claim
 - [ ] AUD-05 — Standalone background-job coverage differs from Vercel
 - [ ] AUD-06 — Security suites are outside ordinary unit-test discovery
-- [ ] AUD-07 — Generic and bulk idempotency have weaker replay identity than payment posting
+- [x] AUD-07 (18 Oct: generic commands and bulk posting store who sent the key and a fingerprint of the request; the same key from another user or with a different request is refused (409), a true retry gets the first answer; bulk recognises a replay first in its transaction; test in `invoice-cogs.test.ts`) — Generic and bulk idempotency have weaker replay identity than payment posting
 - [x] AUD-08 (18 Oct: both bulk paths re-read the workspace inside the commit transaction and check the closing date (and role, for /batch) there; test closes the month between the checks and the save — refused, nothing changed; the test fails without the fix) — Bulk validation reads workspace locks outside its posting transaction
 - [ ] AUD-09 — Privileged server access means SQL client guards are not a universal safety net
 - [ ] AUD-10 — Report fallback and cache completeness need one visible provenance contract
