@@ -2,7 +2,7 @@
 
 Run `npm ci`, then `npm run check:tax-tables`. The command exits nonzero on invalid rows and prints the file, export, row and rule. Its focused contracts also run in the normal unit suite (`npx tsx --test src/tests/tax-table-validator.test.ts`).
 
-The catalog declares 24 table contracts across the existing tax directory. It imports actual exports, including generated product/digital/marketplace rows, rather than copying expected values. Every module is classified; new modules and unclassified structured tax exports fail discovery. Application vocabularies, derived state lists, import functions and calculation/document/profile helpers are not dated legal tables.
+The catalog declares 24 table contracts across the existing tax directory. It imports actual exports, including generated product/digital/marketplace rows, rather than copying expected values. Every module is classified; new modules (including nested modules) and unclassified structured tax exports fail discovery. Unreviewed modules are reported without executing their top-level code. Application vocabularies, derived state lists, import functions and calculation/document/profile helpers are not dated legal tables.
 
 Checks cover real ISO calendar dates (including leap days), reversed ranges, source URLs, authority/retrieval metadata where supplied, explicit units and inclusive date overlap within each declared tax scope. Bounds are 0–1 for fractions, 0–100 for percentages, and nonnegative safe integers for monetary amounts. Allocation thresholds use money units even though their legacy field is named `rate`. An absent optional rate is allowed for an unclear/exempt treatment; a reduced treatment needs its rate.
 
@@ -12,4 +12,4 @@ The validator does not fetch authority sites, verify their contents, prove compl
 
 To add or change a table, edit its original data in the owning lane, declare its export, business identity, units and date shape in `scripts/tax-table-catalog.ts`, and run the command. If a module has no embedded source table, record its reason in `NON_TABLE_MODULES`. Never group history by a version-specific ID just to hide an overlap. Never alter a financial value merely to make this checker pass: hand the source finding to AI #1.
 
-Verification status: implementation prepared; local execution environment is still starting. GitHub's existing full gates will verify the branch; no local test pass is claimed yet.
+Verification status: the first GitHub checkpoint passed type checking, full lint and production build. Final regression and integration gates are pending on the consolidated follow-up. Local execution environment is still starting; no local test pass is claimed.

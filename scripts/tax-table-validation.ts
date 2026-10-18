@@ -38,6 +38,10 @@ export function validateTable(spec: TableSpec, value: unknown): Problem[] {
   const problems: Problem[] = [];
   const label = spec.file + ':' + spec.name;
   const add = (row: number, rule: string, message: string) => problems.push({ table: label, row, rule, message });
+  if (spec.mode !== 'metadata' && spec.mode !== 'reference' && !Array.isArray(value)) {
+    add(0, 'shape', 'Expected an array table.');
+    return problems;
+  }
   const rows = normalizeRows(spec, value);
   if (!rows.length) add(0, 'empty', 'The declared table must not be empty.');
   const intervals = new Map<string, Array<{ start: string; end: string; row: number }>>();
@@ -80,7 +84,12 @@ export function validateTable(spec: TableSpec, value: unknown): Problem[] {
         }
       }
     }
-    if (spec.mode === 'reference') return; // A format review date is not a legal effective date.
+    if (spec.mode === 'reference') {
+      if (!realDate(row.reviewedOn)) add(rowNumber, 'date', 'A format needs its real reviewedOn date.');
+      return; // A format review date is not a legal effective date.
+    }
+    if (spec.mode === 'year' && (!Number.isInteger(row.year) || Number(row.year) < 1 || Number(row.year) > 9999)) add(rowNumber, 'date', 'year must be an integer from 1 to 9999.');
+    if (spec.mode === 'holiday' && !realDate(row.validTo)) add(rowNumber, 'date', 'A holiday publication needs its closing date.');
     if (!realDate(row.validFrom)) { add(rowNumber, 'date', 'validFrom is not a real ISO date.'); return; }
     if (row.validTo !== undefined && row.validTo !== null && !realDate(row.validTo)) {
       add(rowNumber, 'date', 'validTo must be a real ISO date or an open end.'); return;

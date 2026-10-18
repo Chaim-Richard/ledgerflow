@@ -1,5 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { validateTable, realDate, type TableSpec } from '../../scripts/tax-table-validation';
 import { checkTaxTables, looksLikeTaxTable } from '../../scripts/validate-tax-tables';
 
@@ -78,6 +82,7 @@ test('optional taxability rates can be absent, but a reduced treatment requires 
   }
   assert.ok(validateTable(spec, []).some(p => p.rule === 'empty'));
   assert.ok(validateTable(spec, undefined).some(p => p.rule === 'shape'));
+  assert.ok(validateTable(spec, row()).some(p => p.rule === 'shape'));
 });
 
 test('annual tables keep independent calendar-year ranges and detect duplicate years', () => {
@@ -86,6 +91,7 @@ test('annual tables keep independent calendar-year ranges and detect duplicate y
   assert.deepEqual(validateTable(year, [annual, { ...annual, year: 2026 }]), []);
   assert.ok(validateTable(year, [annual, annual]).some(p => p.rule === 'overlap'));
   assert.ok(validateTable(year, [{ ...annual, year: '2025' }]).some(p => p.rule === 'date'));
+  assert.ok(validateTable(year, [{ ...annual, year: '2025', validFrom: '2025-01-01' }]).some(p => p.rule === 'date'));
 });
 
 test('holiday bands retain their own scope, dates and integer caps', () => {
@@ -95,12 +101,14 @@ test('holiday bands retain their own scope, dates and integer caps', () => {
   assert.deepEqual(validateTable(holiday, [published]), []);
   assert.ok(validateTable(holiday, [published, published]).some(p => p.rule === 'overlap'));
   assert.ok(validateTable(holiday, [{ ...published, bands: [] }]).some(p => p.rule === 'range'));
+  assert.ok(validateTable(holiday, [{ ...published, to: undefined }]).some(p => p.rule === 'date'));
 });
 
 test('reference-format review dates are not invented effective dates', () => {
   const reference: TableSpec = { file: 'format.ts', name: 'FORMAT', keys: ['country'], mode: 'reference' };
   assert.deepEqual(validateTable(reference, { GB: { source: 'https://www.gov.uk/', reviewedOn: '2026-10-11' } }), []);
   assert.ok(validateTable(reference, { GB: { source: 'https://www.gov.uk/', reviewedOn: '2026-02-30' } }).some(p => p.rule === 'date'));
+  assert.ok(validateTable(reference, { GB: { source: 'https://www.gov.uk/' } }).some(p => p.rule === 'date'));
 });
 
 test('discovery sees new row exports even when dates or sources were accidentally removed', () => {
@@ -112,4 +120,17 @@ test('all current tax modules and structured tables have contracts and valid row
   const result = await checkTaxTables();
   assert.ok(result.tables >= 24);
   assert.deepEqual(result.problems, [], result.problems.map(p => p.table + ':' + p.row + ' ' + p.message).join('\n'));
+});
+
+test('repository discovery detects nested modules and new tables without executing unreviewed modules', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'ledgerflow-tax-table-'));
+  try {
+    await mkdir(join(directory, 'nested'));
+    await writeFile(join(directory, 'package.json'), '{"type":"module"}');
+    await writeFile(join(directory, 'nested', 'newTax.ts'), 'throw new Error("Unreviewed module must not execute");');
+    await writeFile(join(directory, 'ilVatRates.ts'), "export const IL_VAT_STANDARD = [{rate:0.18,validFrom:'2025-01-01',source:'https://example.gov'}]; export const UNREVIEWED_TABLE = [{rate:0.5}];");
+    const result = await checkTaxTables(pathToFileURL(directory + sep));
+    assert.ok(result.problems.some(p => p.table === 'nested/newTax.ts' && p.rule === 'discovery'));
+    assert.ok(result.problems.some(p => p.table === 'ilVatRates.ts:UNREVIEWED_TABLE' && p.rule === 'discovery'));
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });

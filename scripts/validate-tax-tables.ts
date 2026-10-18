@@ -12,13 +12,16 @@ export function looksLikeTaxTable(value: unknown): boolean {
   return rows.some(row => record(row) && ['validFrom', 'validTo', 'source', 'rate', 'ratePercent', 'percent', 'thresholdCents', 'from', 'socialSecurityWageBaseCents'].some(key => key in row));
 }
 export async function checkTaxTables(directory: URL = TAX_DIRECTORY) {
-  const files = (await readdir(directory)).filter(file => file.endsWith('.ts') && !file.endsWith('.d.ts')).sort();
+  const files = (await readdir(directory, { recursive: true })).map(file => file.replaceAll('\\', '/')).filter(file => file.endsWith('.ts') && !file.endsWith('.d.ts')).sort();
   const problems: Problem[] = [];
   const declarations = new Set([...TAX_TABLES.map(table => table.file), ...Object.keys(NON_TABLE_MODULES)]);
   for (const file of declarations) if (!files.includes(file)) problems.push({ table: file, row: 0, rule: 'discovery', message: 'Declared module no longer exists; reconcile the catalog.' });
   let rowCount = 0;
   for (const file of files) {
-    if (!declarations.has(file)) problems.push({ table: file, row: 0, rule: 'discovery', message: 'New tax module needs table contracts or an explicit non-table reason.' });
+    if (!declarations.has(file)) {
+      problems.push({ table: file, row: 0, rule: 'discovery', message: 'New tax module needs table contracts or an explicit non-table reason.' });
+      continue; // Unknown modules must be reviewed before executing their top-level code.
+    }
     const exported = await import(new URL(file, directory).href) as Record<string, unknown>;
     const specs = TAX_TABLES.filter(table => table.file === file);
     for (const spec of specs) {
