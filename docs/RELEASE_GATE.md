@@ -36,7 +36,7 @@ independently worked figures passes · **Browser** = an end-to-end browser test 
 | W4 | Bank import / feed → reconciliation | 2 | Yes | Partly | Partly | AU-1 changed/removed lines on the Banking screen, #96 |
 | W5 | Labels (property, project, location) → reports by label | 2 | Yes | Partly | No | DIM-1 payments, DIM-3 balancing roles |
 | W6 | Order with deposit → part invoices → delivery (no double charge) | 2 | Yes | Yes (DEP-1) | No | browser test |
-| W7 | Israel VAT month: invoices with allocation numbers → VAT report → PCN874 → close | 2 | Partly | Partly (D-32, A-146) | No | CON-3, CON-4, journey A-151 |
+| W7 | Israel VAT month: invoices with allocation numbers → VAT report → PCN874 → close | 2 | Partly | Partly ([D-32 report goldens](verification/ai4-d32-israeli-vat-golden.md), A-146) | No | CON-3, CON-4, journey A-151 |
 | W8 | US quarter: sales tax by state → summary → 1099 preview → close | 2 | Partly | Partly (A-146/147) | No | CON-1, CON-2, journey A-153 |
 | W9 | Month-end close and reopen | 2 | Yes | Yes (AUD-08 race) | Partly | — |
 | W10 | Backup → restore → same reports | 3 | Yes | Partly (AUD-02) | No | AUD-02 rest (ownership inside the transaction) |
