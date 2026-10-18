@@ -180,14 +180,18 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
         // a retry after a lost answer) the invoice's live posting is still there and not reversed by this
         // request. Then: the very same posting again → this save already happened, answer as before and
         // write nothing; a different posting → refused, so the invoice is never counted twice.
-        const accruals = validatedTransactions.filter(tx => tx.metadata?.type === 'invoice-accrual' && typeof tx.metadata?.invoiceId === 'string');
-        for (const incoming of accruals) {
-          const invoiceId = String(incoming.metadata!.invoiceId);
-          const posted = await t.get(db.collection('transactions').where('workspaceId', '==', wsId).where('metadata.invoiceId', '==', invoiceId));
+        // the same for bills (INT-2 for bills): one live 'bill-accrual' per bill
+        const ACCRUAL_KINDS = [{ type: 'invoice-accrual', key: 'invoiceId' }, { type: 'bill-accrual', key: 'billId' }] as const;
+        const accruals = validatedTransactions.flatMap(tx => ACCRUAL_KINDS
+          .filter(k => tx.metadata?.type === k.type && typeof (tx.metadata as Record<string, unknown> | undefined)?.[k.key] === 'string')
+          .map(k => ({ tx, kind: k })));
+        for (const { tx: incoming, kind } of accruals) {
+          const invoiceId = String((incoming.metadata as Record<string, unknown>)[kind.key]);
+          const posted = await t.get(db.collection('transactions').where('workspaceId', '==', wsId).where(`metadata.${kind.key}`, '==', invoiceId));
           const docs = posted.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as Array<Transaction & { id: string }>;
           const reversed = new Set([...docs, ...validatedTransactions]
             .filter(x => x.metadata?.isReversal).map(x => String(x.metadata?.reversesTxId || x.metadata?.reversedTransactionId || '')));
-          const live = docs.filter(x => x.metadata?.type === 'invoice-accrual' && !x.metadata?.isReversal && isPostable(x) && !reversed.has(x.id));
+          const live = docs.filter(x => x.metadata?.type === kind.type && !x.metadata?.isReversal && isPostable(x) && !reversed.has(x.id));
           if (live.length === 0) continue;
           const same = (a: Transaction, b: Transaction) => a.date === b.date && Number(a.totalAmountCents) === Number(b.totalAmountCents)
             && JSON.stringify((a.lines || []).map(l => [l.accountId, l.amountCents])) === JSON.stringify((b.lines || []).map(l => [l.accountId, l.amountCents]));
@@ -195,7 +199,7 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
             body = { status: 'ok', count: 0, replayed: true, transactionIds: [live[0].id] };
             return;
           }
-          throw new LedgerPostingError(409, 'This invoice was changed or posted elsewhere (another tab or an earlier save). Reload it and save again.');
+          throw new LedgerPostingError(409, `This ${kind.key === 'billId' ? 'bill' : 'invoice'} was changed or posted elsewhere (another tab or an earlier save). Reload it and save again.`);
         }
         const refs = validatedTransactions.map(tx => db.collection('transactions').doc(tx.id));
         if (refs.length > 0) {

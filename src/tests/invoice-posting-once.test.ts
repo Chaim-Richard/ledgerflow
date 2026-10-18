@@ -44,7 +44,7 @@ describe('an invoice is posted once (database)', { skip: !url && 'LF_TEST_DATABA
     const { getDb } = await import('../server/db/firestore');
     db = getDb();
     await db.collection('workspaces').doc(ws).set({ uid: 'owner-1', name: 'Inv', currency: 'USD', members: ['owner-1'] });
-    for (const [id, type] of [['ar', 'asset'], ['sales', 'income']]) await db.collection('chartAccounts').doc(`${ws}_${id}`).set({ workspaceId: ws, name: id, code: id, type });
+    for (const [id, type] of [['ar', 'asset'], ['sales', 'income'], ['ap', 'liability'], ['rent', 'expense']]) await db.collection('chartAccounts').doc(`${ws}_${id}`).set({ workspaceId: ws, name: id, code: id, type });
     const app = express();
     app.use(express.json());
     app.use((req, _res, next) => { (req as unknown as { user: { uid: string } }).user = { uid: String(req.header('x-test-uid')) }; next(); });
@@ -86,5 +86,18 @@ describe('an invoice is posted once (database)', { skip: !url && 'LF_TEST_DATABA
     const results = await Promise.all([save([accrual('B', 5000)], 'B', 5000), save([accrual('B', 6000)], 'B', 6000)]);
     assert.equal(results.filter(r => r.status === 200).length, 1, JSON.stringify(results.map(r => [r.status, r.body])));
     assert.equal((await live('B')).length, 1);
+  });
+
+  test('bills too: a stale retry posts nothing more, a stale changed save is refused', async () => {
+    const bill = (cents: number) => ({ id: crypto.randomUUID(), workspaceId: ws, date: '2026-06-02', description: 'Bill B-1', status: 'completed', type: 'actual', totalAmountCents: cents, currency: 'USD',
+      metadata: { billId: 'B-1', type: 'bill-accrual' }, lines: [{ accountId: `${ws}_rent`, amountCents: cents }, { accountId: `${ws}_ap`, amountCents: -cents }] });
+    const post = (tx: unknown) => fetch(`${base}/api/v1/transactions/bulk`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': 'owner-1' }, body: JSON.stringify({ workspaceId: ws, transactions: [tx] }) })
+      .then(async r => ({ status: r.status, body: await r.json() as Record<string, unknown> }));
+    assert.equal((await post(bill(3000))).status, 200);
+    const retry = await post(bill(3000));
+    assert.equal(retry.status, 200); assert.equal(retry.body.replayed, true);
+    assert.equal((await post(bill(3500))).status, 409);
+    const { rows } = await db.pool.query(`select count(*)::int as n from public."transactions" where workspace_id = $1 and data->'metadata'->>'billId' = 'B-1'`, [ws]);
+    assert.equal(rows[0].n, 1);
   });
 });
