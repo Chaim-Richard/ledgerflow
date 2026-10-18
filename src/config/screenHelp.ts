@@ -170,6 +170,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Open invoices on their due dates, open bills on theirs and the recorded recurring rules, added week by week for thirteen weeks. It is arithmetic on what is recorded, not a prediction: no payment history, seasonality or new business is modelled, money in another currency is counted rather than converted, and a rule whose accounts do not say which way the money moves is listed instead of guessed. Read-only; nothing is posted.",
     "vendor-1099-readiness":
       "Posted outgoing payments in the workspace currency for the chosen year, compared per vendor with the existing 1099 threshold table, and what the vendor record is missing. The tax ID appears as a mask only, no country is assumed when none is recorded, and this workspace has no W-9 field, so no form is claimed to be on file. Read-only: nothing files, edits a vendor or posts.",
+    "golden-tax-fixtures":
+      "Fifty golden invoices and thirty golden bills for Israel and the United States with the tax expected on each, checked on screen against the dated tables they name. A failure is shown by case number instead of passing silently. Read-only test fixtures: US amounts are the state base rate only, nothing posts or files.",
     "purchase-price-variance":
       "Compare each vendor's quantity-weighted average unit cost with the median of other vendors for the same item and currency. Costs reuse the bill-line unit-cost rule, and currencies are never converted or combined; no baseline is shown when there is no comparable vendor. Read-only: bills and catalogue prices are not changed.",
     "sales-by-territory":

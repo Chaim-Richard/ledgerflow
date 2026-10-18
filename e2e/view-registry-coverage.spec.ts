@@ -135,6 +135,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Document Number Gaps', componentName: 'DocumentNumberGapsReportView' },
     { label: '13-Week Cash Forecast', componentName: 'CashForecast13WeekView' },
     { label: 'Vendor 1099 Readiness', componentName: 'Vendor1099ReadinessReportView' },
+    { label: 'Golden Tax Fixtures', componentName: 'GoldenTaxFixturesReportView' },
   ];
 
   test('Warehouse operations workflows are reachable from Inventory Cycle Count', async ({ page }) => {
