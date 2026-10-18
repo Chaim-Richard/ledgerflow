@@ -127,3 +127,34 @@ test('a role loss during token retrieval prevents the write and preserves the dr
   assert.match(screen.getByRole('alert').textContent||'',/permissions changed/);assert.equal(writes,0);
   assert.equal((screen.getByLabelText('Profile name') as HTMLInputElement).value,'Retained draft');
 });
+
+test('registration format checks are explicit, masked, and preserve the mixed-language profile draft',()=>{
+  profiles({books:{name:'ספרים Books',registrations:[{kind:'income_tax',number:'123456782',place:{country:'IL'}}]}});
+  render(<TaxProfilesSettings/>);edit();
+  const number=screen.getByLabelText('Registration number') as HTMLInputElement;
+  const format=screen.getByLabelText('Check number as') as HTMLSelectElement;
+  assert.equal(format.value,'','never infer identifier type from digits or country');
+  fireEvent.change(format,{target:{value:'identity'}});
+  assert.match(document.body.textContent||'',/Format matches: •••••6782/);
+  fireEvent.change(number,{target:{value:'123456783'}});
+  assert.match(document.body.textContent||'',/check digit does not match/);
+  fireEvent.change(format,{target:{value:'ein'}});
+  fireEvent.change(number,{target:{value:'12-3456789'}});
+  assert.match(document.body.textContent||'',/Format matches: \*\*-\*\*\*6789/);
+  fireEvent.change(format,{target:{value:'ssn'}});
+  assert.match(document.body.textContent||'',/selected EIN or SSN layout/);
+  assert.equal(number.value,'12-3456789','format selection must not rewrite the draft');
+  assert.equal((screen.getByLabelText('Profile name') as HTMLInputElement).value,'ספרים Books');
+  fireEvent.click(screen.getByRole('button',{name:'Cancel'}));edit();
+  assert.equal((screen.getByLabelText('Check number as') as HTMLSelectElement).value,'');
+  assert.equal((screen.getByLabelText('Registration number') as HTMLInputElement).value,'123456782');
+});
+
+test('registration format selection clears on workspace change',()=>{
+  profiles({books:{registrations:[{kind:'vat',number:'123456782',place:{country:'IL'}}]}});
+  render(<TaxProfilesSettings/>);edit();
+  fireEvent.change(screen.getByLabelText('Check number as'),{target:{value:'identity'}});
+  act(()=>useAuthStore.setState({currentWorkspaceId:'another-workspace'}));
+  assert.equal(screen.queryByLabelText('Check number as'),null);
+  assert.doesNotMatch(document.body.textContent||'',/6782/);
+});
