@@ -66,6 +66,24 @@ describe('batch edits are safe (database)', { skip: !url && 'LF_TEST_DATABASE_UR
     assert.equal((await entry('a')).lines[1].accountId, id('rent'));
   });
 
+  test('AUD-08: a month closed after the checks but before the save refuses the save', async () => {
+    const original = db.runTransaction.bind(db);
+    // close the month between the route's first read of the workspace and its transaction
+    (db as unknown as { runTransaction: typeof db.runTransaction }).runTransaction = (async (fn: never) => {
+      (db as unknown as { runTransaction: typeof db.runTransaction }).runTransaction = original;
+      await db.collection('workspaces').doc(ws).set({ lockDate: '2026-12-31' }, { merge: true });
+      return original(fn);
+    }) as never;
+    try {
+      const r = await batch([{ id: id('b'), data: { description: 'after close' } }]);
+      assert.notEqual(r.status, 200, JSON.stringify(r.body));
+      assert.notEqual((await entry('b')).description, 'after close');
+    } finally {
+      (db as unknown as { runTransaction: typeof db.runTransaction }).runTransaction = original;
+      await db.collection('workspaces').doc(ws).set({ lockDate: '' }, { merge: true });
+    }
+  });
+
   test('#113: one refused entry or a stale copy leaves every entry unchanged', async () => {
     const r = await batch([{ id: id('b'), data: { description: 'changed' } }, { id: id('missing'), data: { description: 'x' } }]);
     assert.equal(r.status, 400);

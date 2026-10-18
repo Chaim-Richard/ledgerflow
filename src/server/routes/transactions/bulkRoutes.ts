@@ -113,6 +113,15 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
       await db.runTransaction(async (t) => {
         approvalNotice = null;
         // Reads first
+        // AUD-08: the closing date as it is at commit — a month closed after the checks above but
+        // before this save refuses the save instead of posting into the closed month
+        const wsNow = (await t.get(db.collection('workspaces').doc(wsId))).data();
+        for (const tx of validatedTransactions) {
+          const date = (tx as { date?: string }).date;
+          if (date) {
+            try { assertPostingOpen(date, wsNow as never, user.uid); } catch (err) { throw new LedgerPostingError(409, errorMessage(err)); }
+          }
+        }
         const entityRef = entityMutation ? db.collection(entityMutation.collection).doc(entityMutation.docId) : null;
         let existingEntity: Record<string, unknown> | undefined;
         if (entityRef) {
@@ -239,6 +248,9 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
        // #113: everything is read and checked first, then written in ONE transaction — a refused
        // entry or a version conflict leaves every entry unchanged
        const conflict = await db.runTransaction(async (t) => {
+         // AUD-08: the workspace (closing date, role) as it is at commit, not as it was read before
+         const wsNow = (await t.get(db.collection('workspaces').doc(workspaceId))).data();
+         if (!user.admin && !['owner', 'accountant', 'bookkeeper'].includes(workspaceRole(wsNow as never, user.uid))) throw new Error('Only owners, accountants and bookkeepers change entries');
          const txRefs = ids.map(id => db.collection('transactions').doc(id));
          const txDocs = await Promise.all(txRefs.map(r => t.get(r)));
          const accountIds = new Set<string>();
@@ -252,7 +264,9 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
            if (!txDoc.exists) throw new Error(`Transaction ${id} not found`);
            const txData = txDoc.data();
            if (txData?.workspaceId !== workspaceId) throw new Error(`Transaction ${id} does not belong to this workspace`);
-           if (txData?.date) assertPostingOpen(txData.date, wsData, user.uid);
+           if (txData?.date) assertPostingOpen(txData.date, wsNow as never, user.uid);
+           const newDate = (updates[i].data as { date?: unknown } | undefined)?.date;
+           if (typeof newDate === 'string' && newDate) assertPostingOpen(newDate, wsNow as never, user.uid);
            if ((txData?.status === 'certified' || txData?.status === 'void') && !user.admin) throw new Error(`Forbidden: Transaction ${id} status is locked.`);
            const updateData = { ...updates[i].data } as Record<string, unknown>;
            const expectedUpdatedAt = updates[i].expectedUpdatedAt || updateData.expectedUpdatedAt;

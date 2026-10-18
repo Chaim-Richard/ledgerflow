@@ -2677,7 +2677,7 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 - [ ] AUD-05 — Standalone background-job coverage differs from Vercel
 - [ ] AUD-06 — Security suites are outside ordinary unit-test discovery
 - [ ] AUD-07 — Generic and bulk idempotency have weaker replay identity than payment posting
-- [ ] AUD-08 — Bulk validation reads workspace locks outside its posting transaction
+- [x] AUD-08 (18 Oct: both bulk paths re-read the workspace inside the commit transaction and check the closing date (and role, for /batch) there; test closes the month between the checks and the save — refused, nothing changed; the test fails without the fix) — Bulk validation reads workspace locks outside its posting transaction
 - [ ] AUD-09 — Privileged server access means SQL client guards are not a universal safety net
 - [ ] AUD-10 — Report fallback and cache completeness need one visible provenance contract
 - [ ] AUD-11 — Safe-fetch DNS validation is not a pinned connection
