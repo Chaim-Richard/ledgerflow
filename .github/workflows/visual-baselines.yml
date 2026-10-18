@@ -5,8 +5,6 @@ name: Refresh visual baselines
 permissions:
   contents: write
 on:
-  push:
-    branches: [ai4/d-45-report-filters]
   workflow_dispatch:
     inputs:
       screens:
@@ -28,7 +26,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Generate candidate reference images
         env:
-          SCREENS: ${{ inputs.screens || 'pnl|balance-sheet' }}
+          SCREENS: ${{ inputs.screens }}
         run: npx playwright test e2e/visual-regression.spec.ts --grep "$SCREENS" --update-snapshots --retries=0
       - name: Check the entire reference set
         run: npx playwright test e2e/visual-regression.spec.ts --retries=0

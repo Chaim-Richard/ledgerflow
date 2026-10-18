@@ -49,3 +49,5 @@ Full fresh-install, accounting/RLS/coverage, both timezone suites, production bu
 browser and security gates run on GitHub. Their exact-head results and candidate
 image review are recorded in the PR. Vercel previews remain intentionally blocked
 by the owner to save limits; no deployment retry or success is claimed.
+
+CI reference capture: run 39163910254 passed, generated exactly the eight affected P&L/balance-sheet images, and all 40 visual reference cases passed. All eight candidate images were opened and inspected before acceptance: dates/Basis are readable, balance-sheet sorting is fully visible, and report figures remain visible. The temporary push trigger was removed; the final workflow matches main. Full final-PR gates remain pending at publication.
