@@ -444,3 +444,10 @@ rendering) and were not treated as regressions. One load-related flake was found
 the nested "Edit record details" drawer not closing on Escape under full-suite load — and is filed as issue #146
 with the exact evidence. Nothing was baselined or hidden to make anything pass.
 
+
+
+## AI #2 — CI speed batch ready for GitHub review (17 Oct)
+
+The branch `codex/ci-faster-browser-feedback` is pushed (implementation `74a8ae51`). It splits all 299 browser tests into two isolated shards, keeps every existing accounting/security/time-zone gate and the original required browser check, and provides combined reports and readable failure locations. Local types/lint, four diagnostic contracts, two actual browser smoke shards and report merging pass; five already-landed screen tasks were reconciled after 17 component cases and ten guest screenshot checks. Evidence: `docs/verification/ci-speed-and-queue-review-2026-10-17.md`.
+
+**Outside action:** [open the pull request](https://github.com/shmuelbiller1/ledgerflow/pull/new/codex/ci-faster-browser-feedback). The GitHub API returns `Forbidden` to this environment for PR creation. Native Git push succeeded and its exact remote SHA was verified, but no Actions run is visible for the branch yet. Full GitHub verification and merge remain outstanding; do not treat the local smoke subset as a full-suite pass.
