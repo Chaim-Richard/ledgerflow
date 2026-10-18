@@ -49,6 +49,39 @@ function splitByAccount(totalCents: number, fallback: AccountRef, lineAccounts: 
   return [...byAccount.values()].filter(e => e.amountCents !== 0);
 }
 
+
+/**
+ * DIM-1: the other side of an entry (receivable/payable, tax, discount, retainage) carries the
+ * document lines' labels too, in the same proportions as the lines, so every label's part of the
+ * entry balances on its own. Lines that already have labels are left as they are; each split adds
+ * up exactly to the line it replaces, so the entry still balances.
+ */
+export function spreadLabels(lines: TransactionLine[], lineAccounts: LineAccountWeight[] | undefined): TransactionLine[] {
+  if (!lineAccounts || !lineAccounts.some(l => labelKey(l.dimensions))) return lines;
+  const groups = new Map<string, { dimensions?: Record<string, string>; weight: number }>();
+  for (const l of lineAccounts) {
+    const key = labelKey(l.dimensions);
+    const g = groups.get(key) || { ...(key ? { dimensions: { ...l.dimensions } } : {}), weight: 0 };
+    g.weight += Math.max(0, l.weightCents);
+    groups.set(key, g);
+  }
+  const list = [...groups.values()].filter(g => g.weight > 0);
+  if (list.length === 0) return lines;
+  // the document lines' own revenue/expense lines keep exactly the labels they were given
+  const ownAccounts = new Set(lineAccounts.map(l => l.account.id));
+  const out: TransactionLine[] = [];
+  for (const line of lines) {
+    if (ownAccounts.has(line.accountId)) { out.push(line); continue; }
+    if ((line as { dimensions?: Record<string, string> }).dimensions && Object.keys((line as { dimensions?: Record<string, string> }).dimensions!).length > 0) { out.push(line); continue; }
+    const parts = allocateCents(line.amountCents, list.map(g => g.weight));
+    list.forEach((g, i) => {
+      if (parts[i] === 0) return;
+      out.push({ ...line, amountCents: parts[i], ...(g.dimensions ? { dimensions: { ...g.dimensions } } : {}) } as TransactionLine);
+    });
+  }
+  return out;
+}
+
 export interface InvoiceTemplateParams {
   invoiceNumber: string;
   customerName: string;
@@ -158,7 +191,7 @@ export class TransactionTemplates {
       });
     }
 
-    return lines;
+    return spreadLabels(lines, params.lineAccounts);
   }
 
   /**
@@ -221,7 +254,7 @@ export class TransactionTemplates {
       });
     }
 
-    return lines;
+    return spreadLabels(lines, params.lineAccounts);
   }
 
   /**
