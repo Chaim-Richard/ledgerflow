@@ -69,16 +69,39 @@ export function spreadLabels(lines: TransactionLine[], lineAccounts: LineAccount
   if (list.length === 0) return lines;
   // the document lines' own revenue/expense lines keep exactly the labels they were given
   const ownAccounts = new Set(lineAccounts.map(l => l.account.id));
+  const isLabelled = (l: TransactionLine) => Object.keys((l as { dimensions?: Record<string, string> }).dimensions || {}).length > 0;
+  const toSpread = lines.filter(l => !ownAccounts.has(l.accountId) && !isLabelled(l));
+  if (toSpread.length === 0) return lines;
+  // #152: the largest of those lines takes, per label, whatever makes that label's slice balance;
+  // the others are split by weight. Each label then balances exactly, and every account's total is
+  // unchanged (the entry balanced before, so the balancing parts add up to that line's amount).
+  const balancer = toSpread.reduce((a, b) => (Math.abs(b.amountCents) > Math.abs(a.amountCents) ? b : a));
+  const sliceSum = new Map<string, number>(list.map(g => [labelKey(g.dimensions), 0]));
   const out: TransactionLine[] = [];
   for (const line of lines) {
-    if (ownAccounts.has(line.accountId)) { out.push(line); continue; }
-    if ((line as { dimensions?: Record<string, string> }).dimensions && Object.keys((line as { dimensions?: Record<string, string> }).dimensions!).length > 0) { out.push(line); continue; }
+    if (line === balancer) continue;
+    if (!toSpread.includes(line)) {
+      out.push(line);
+      const key = labelKey((line as { dimensions?: Record<string, string> }).dimensions);
+      if (sliceSum.has(key)) sliceSum.set(key, sliceSum.get(key)! + line.amountCents);
+      continue;
+    }
     const parts = allocateCents(line.amountCents, list.map(g => g.weight));
     list.forEach((g, i) => {
       if (parts[i] === 0) return;
+      sliceSum.set(labelKey(g.dimensions), sliceSum.get(labelKey(g.dimensions))! + parts[i]);
       out.push({ ...line, amountCents: parts[i], ...(g.dimensions ? { dimensions: { ...g.dimensions } } : {}) } as TransactionLine);
     });
   }
+  const balancingParts = list.map(g => -(sliceSum.get(labelKey(g.dimensions)) || 0));
+  if (balancingParts.reduce((a, b) => a + b, 0) !== balancer.amountCents) {
+    // a line outside the label groups (e.g. labelled differently) — keep the plain proportional split
+    allocateCents(balancer.amountCents, list.map(g => g.weight)).forEach((c, i) => { if (c) out.push({ ...balancer, amountCents: c, ...(list[i].dimensions ? { dimensions: { ...list[i].dimensions } } : {}) } as TransactionLine); });
+    return out;
+  }
+  list.forEach((g, i) => {
+    if (balancingParts[i] !== 0) out.push({ ...balancer, amountCents: balancingParts[i], ...(g.dimensions ? { dimensions: { ...g.dimensions } } : {}) } as TransactionLine);
+  });
   return out;
 }
 
