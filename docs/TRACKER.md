@@ -2687,3 +2687,16 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 - [ ] AUD-15 — Client post-success cache inserts request entries rather than a canonical server result
 - [ ] AUD-19 — Altman analytical EBIT loses reversal signs
 - [ ] AUD-20 — Remote database TLS does not authenticate the server unless a CA is supplied
+
+## Issues and connections (18 Oct)
+
+- [ ] ISS-130 Inventory unit-cost edits change stock value without a ledger posting (issue #130): cost changes on stock in hand go through a balanced revaluation entry, or are refused.
+- [ ] ISS-131 Inventory valuation as-of date mixes today's stock with past books (issue #131): historical quantities/costs from stock moves, or the comparison hidden for past dates.
+- [ ] ISS-141 Account statement PDF ignores the chosen period (issue #141): one statement scope for screen, JSON, PDF and email (with AUD-01).
+- [ ] ISS-143 RMA approvals and quantities enforced on the server in one transaction (issue #143, with AUD-03).
+- [ ] CON-1 US sales-tax table (capability 137) and item taxability (139) used by invoice lines for the supported states; label stays "not verified" for others.
+- [ ] CON-2 US nexus watch (138) on a screen from posted invoices, for the supported states.
+- [ ] CON-3 Israel special VAT areas (141, Eilat) applied to invoices with a test.
+- [ ] CON-4 Israel VAT reporting frequency (161) drives the VAT report period and PCN874.
+- [ ] CON-5 Capabilities 151/152 (notes, custom fields) now have screens (PR #129): relabel after checking; 143/144 (bundles, units of measure) get their screens.
+
