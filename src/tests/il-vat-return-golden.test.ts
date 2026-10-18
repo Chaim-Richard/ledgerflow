@@ -1,4 +1,4 @@
-/** D-32: independent report periods, integer agorot, already-classified saved documents.
+/** D-32: independent report-input periods, integer agorot, explicit synthetic equipment classification.
  * Eilat/export fixtures are qualifying zero-rated supplies, not an automatic place-based exemption.
  * No expected amount below is calculated by another production helper.
  */
@@ -10,6 +10,7 @@ import {
   type IlVatReturn,
 } from "../lib/tax/ilVatReturn";
 import type { TaxProfiles, TaxRegistration } from "../lib/tax/profile";
+import type { CreditNote } from "../types";
 
 const registration = "vat:IL:514000001";
 const permit: TaxRegistration = {
@@ -46,6 +47,15 @@ const doc = (
   taxTreatment: "standard",
   ...extra,
 });
+const credit = (
+  id: string,
+  amountCents: number,
+  taxAmountCents: number,
+  extra: Omit<Partial<IlVatDocument>, "status"> & {
+    status?: CreditNote["status"];
+  } = {},
+): IlVatDocument =>
+  doc(id, amountCents, taxAmountCents, { status: "open", ...extra });
 type Input = Parameters<typeof israelVatReturn>[0];
 const period = (changes: Partial<Input> = {}): Input => ({
   registration,
@@ -86,14 +96,14 @@ test("D-32: a complete month separates exports, Eilat, exemption, both credit ki
       }),
       doc("exempt-sale", 5000, 0, { taxTreatment: "exempt" }),
     ],
-    creditNotes: [doc("sales-credit", 11800, 1800)],
+    creditNotes: [credit("sales-credit", 11800, 1800)],
     bills: [
       doc("supplies", 59000, 9000),
       doc("machine", 236000, 36000, { fixedAsset: true }),
     ],
     vendorCredits: [
-      doc("machine-return", 23600, 3600, { fixedAsset: true }),
-      doc("supplies-return", 11800, 1800),
+      credit("machine-return", 23600, 3600, { fixedAsset: true }),
+      credit("supplies-return", 11800, 1800),
     ],
   });
   const before = structuredClone(input);
@@ -113,7 +123,7 @@ test("D-32: a complete month separates exports, Eilat, exemption, both credit ki
   assert.deepEqual(
     input,
     before,
-    "reporting must not mutate saved documents or registration profiles",
+    "reporting must not mutate its document inputs or registration profiles",
   );
 });
 
@@ -122,7 +132,7 @@ test("D-32: an equipment credit in a later period reverses input VAT and creates
     israelVatReturn(
       period({
         vendorCredits: [
-          doc("returned-machine", 23600, 3600, { fixedAsset: true }),
+          credit("returned-machine", 23600, 3600, { fixedAsset: true }),
         ],
       }),
     ),
@@ -148,12 +158,12 @@ test("D-32: export and qualifying Eilat credits reduce zero-rated sales separate
           doc("exempt-only", 30000, 0, { taxTreatment: "exempt" }),
         ],
         creditNotes: [
-          doc("export-return", 10000, 0, { taxTreatment: "zero_rated" }),
-          doc("eilat-return", 15000, 0, {
+          credit("export-return", 10000, 0, { taxTreatment: "zero_rated" }),
+          credit("eilat-return", 15000, 0, {
             taxTreatment: "zero_rated",
             dimensions: { entity: "eilat" },
           }),
-          doc("exempt-return", 5000, 0, { taxTreatment: "exempt" }),
+          credit("exempt-return", 5000, 0, { taxTreatment: "exempt" }),
         ],
       }),
     ),
@@ -232,7 +242,7 @@ test("D-32: saved foreign-currency sales, credits and equipment inputs convert i
     israelVatReturn(
       period({
         invoices: [doc("fx-sale", 11800, 1800, { exchangeRate: 3.7 })],
-        creditNotes: [doc("fx-credit", 1180, 180, { exchangeRate: 3.7 })],
+        creditNotes: [credit("fx-credit", 1180, 180, { exchangeRate: 3.7 })],
         bills: [
           doc("fx-equipment", 5900, 900, {
             exchangeRate: 3.7,
@@ -289,7 +299,7 @@ test("D-32: FX rounds each saved document’s VAT to agorot before aggregation a
           doc("small-supply", 7, 1, { exchangeRate: 1.5 }),
         ],
         vendorCredits: [
-          doc("small-equipment-return", 7, 1, {
+          credit("small-equipment-return", 7, 1, {
             exchangeRate: 1.5,
             fixedAsset: true,
           }),
@@ -322,5 +332,41 @@ test("D-32: unregistered books and empty periods never acquire another registrat
       }),
     ),
     golden({ registration: "vat:IL:missing" }),
+  );
+});
+
+test("D-32: actual credit lifecycle statuses count, while draft and void credits do not", () => {
+  for (const status of ["open", "applied", "partially_applied"] as const) {
+    assert.deepEqual(
+      israelVatReturn(
+        period({
+          creditNotes: [credit("customer-return", 11800, 1800, { status })],
+          vendorCredits: [credit("vendor-return", 5900, 900, { status })],
+        }),
+      ),
+      golden({
+        taxableSalesCents: -10000,
+        outputVatCents: -1800,
+        otherInputVatCents: -900,
+        toPayCents: -900,
+        documentCount: 2,
+      }),
+      status,
+    );
+  }
+  assert.deepEqual(
+    israelVatReturn(
+      period({
+        creditNotes: [
+          credit("draft-customer", 11800, 1800, { status: "draft" }),
+          credit("void-customer", 11800, 1800, { status: "void" }),
+        ],
+        vendorCredits: [
+          credit("draft-vendor", 5900, 900, { status: "draft" }),
+          credit("void-vendor", 5900, 900, { status: "void" }),
+        ],
+      }),
+    ),
+    golden(),
   );
 });
