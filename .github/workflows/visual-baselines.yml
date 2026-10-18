@@ -5,6 +5,8 @@ name: Refresh visual baselines
 permissions:
   contents: write
 on:
+  push:
+    branches: [ai4/d-46-mobile-notices]
   workflow_dispatch:
     inputs:
       screens:
@@ -26,7 +28,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Generate candidate reference images
         env:
-          SCREENS: ${{ inputs.screens }}
+          SCREENS: ${{ inputs.screens || 'visual' }}
         run: npx playwright test e2e/visual-regression.spec.ts --grep "$SCREENS" --update-snapshots --retries=0
       - name: Check the entire reference set
         run: npx playwright test e2e/visual-regression.spec.ts --retries=0

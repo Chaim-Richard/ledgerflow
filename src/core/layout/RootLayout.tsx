@@ -40,8 +40,6 @@ export function RootLayout() {
   const activeTab = useUIStore(state => state.activeTab);
   const setActiveTab = useUIStore(state => state.setActiveTab);
   
-  const user = useAuthStore(state => state.user);
-  const isGuest = useAuthStore(state => state.isGuest);
   // #102: every dialog (statement importer, migration, entry tools) starts fresh on a book switch, so
   // rows parsed or read for one workspace can never be imported into another
   const dialogScope = useAuthStore(state => `${state.user?.uid ?? ''}:${state.currentWorkspaceId ?? ''}`);
@@ -154,11 +152,6 @@ export function RootLayout() {
       )}>
         <ConnectionBanner />
         <LedgerBackupReminder />
-        {!user && isGuest && (
-          <div className="bg-purple-600/10 text-purple-800 dark:text-purple-300 border-b border-purple-500/20 px-4 py-1.5 text-xs text-center font-semibold">
-            Demo data — sign up to save your own
-          </div>
-        )}
         <PendingDeletionBanner />
         <DataStatusBar />
         {!isFocusMode && <Header onLogout={handleLogout} onLoginPrompt={handleLoginPrompt} />}
