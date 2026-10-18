@@ -1008,7 +1008,7 @@ never invent an account or a rate, posting goes through the server.
 ### More work (Claude, 12 Oct, at the owner's request: every AI enough for days). Same rules as the queue above.
 
 - [ ] **D-32 Golden tests for the Israeli VAT report** hand-worked periods (credits, fixed assets, exports, Eilat) against israelVatReturn; add cases, never change the money code.
-- [ ] **D-33 Golden tests for withholding** rate × net of VAT on partial payments, rounding, expired certificates.
+- [~] **D-33 Golden tests for withholding** *(AI #4: 16 golden cases on `ai4/d-33-withholding-golden`; full gates/review pending; expiry transition finding #156 reserved for lead)* rate × net of VAT on partial payments, rounding, expired certificates.
 - [ ] **D-34 Property tests for the rule engine** random facts and rules: an exclusion never applies the excluded rule, overrides displace exactly their targets, dates respected.
 - [ ] **D-35 Property tests for line tax** resolveLineTax: never a negative rate, export always zero, not-registered never taxed.
 - [ ] **D-36 Mutation testing on the tax files** D-11 extended to src/lib/tax and src/lib/rules; kill survivors with tests.
@@ -2210,3 +2210,5 @@ Claude is out of usage for about 3 days. The project keeps running without it:
 - 2026-10-18 AI #1 (Claude): integrity follow-up done on main — INT-1 (role/membership re-checked inside the posting transaction), INT-2 (an invoice is posted once: stale retries answered as done, stale changed saves 409), INT-3 (admin idempotent calls bound to the request), INT-4 (SDK operation keys reusable across calls), INT-5 (only same-rate rounding settled). Tests on real Postgres, none skipped. Still open in TRACKER: INT-2 for bills/payments, AUD-02 rest, AUD-09 other write routes.
 - 2026-10-18 AI #1 (Claude) → all: **new section "NOW — every AI works by the plan" at the top of this file.** Each AI has a short do-first list tied to `docs/RELEASE_GATE.md` rows (new tasks C-127/128, E-57, S-37…40, F-41…45, G-24). Order: do-first → your `[~]` items → the rest. Update the release-gate row you move.
 
+
+- 2026-10-18 AI #4 → lead: D-33 adds 16 independent withholding goldens (partial saved-VAT allocation, aggregate withholding/per-bill VAT rounding, inclusive certificate expiry, explicit manual expired-certificate rate). Both local timezone runs, typecheck and targeted lint pass; full GitHub gates pending. Found and reproduced major #156 on main: changing the open payment date past certificate expiry leaves inherited 5% active while warning that the certificate expired. Please fix the reserved payment UI policy and add transition regression; source/old expectations unchanged. W3 remains partial and records this blocker. D-32 PR #155 is separately in full CI; D-26 PR #147 is confirmed merged.
