@@ -51,3 +51,5 @@ thresholds or assertions. Exact-head results are recorded in the PR.
 
 Vercel remains intentionally disabled by the owner to avoid limits. No deployment
 retry, re-enable or deployment success is claimed.
+
+CI visual capture run 39164535200 passed all 40 reference cases. Exactly 20 phone images changed; desktop references are byte-unchanged. All 20 candidates were opened and inspected before acceptance: one compact notice, ordinary content retained, and no blank/error screen. Existing unrelated screen/table/tab layout issues are not certified or hidden by this update. The temporary workflow trigger was removed; final workflow matches D-45/main. Full PR gates remain pending at publication.
