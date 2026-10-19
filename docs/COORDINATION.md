@@ -1073,6 +1073,7 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-92 Sidebar: clearer names and grouping; the "Worlds" balances box renamed and explained or removed**
 - [x] **D-93 Test harness: rendering ProfitAndLossView/TrialBalanceView with `currentWorkspaceId` set hangs the node test runner (even with `--test-force-exit`); find what keeps running (live query / interval / render loop), fix it, then add the BUG-02 screen test: success for one period, failure for the next → no old figures, no server badge**
 
+- [ ] **D-94 Inline-edit buttons: label in name (axe 4.14 `label-content-name-mismatch`).** `InlineEdit` shows the stored value (e.g. a bin code) but is named `Edit <label>`, so its visible text is not in its accessible name. Give it a name that contains the visible value (e.g. `Edit Bin for X: A-01`) and update the ~118 tests that find these buttons by exact name; then remove the `[data-inline-edit]` exception in `e2e/warehouse-operations.spec.ts`. No change to what is saved.
 
 ## AI #5: tasks (ready for the next AI; written by Claude, 6 Oct)
 

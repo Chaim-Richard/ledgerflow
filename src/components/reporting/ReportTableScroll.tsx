@@ -75,8 +75,8 @@ export default function ReportTableScroll({children}:{children:ReactNode}) {
  return <div ref={ref} data-columns={scope} className="overflow-x-auto" role="region" aria-label="Scrollable report table" tabIndex={0}>
   <style>{hiddenColumnsCss(scope,effectiveHidden.map(index=>reorderable?order.indexOf(String(index)):index))}</style>
   <div data-print-hide className="sticky left-0 flex flex-wrap gap-2 mb-2">
-   <button type="button" aria-label="Scroll table left" onClick={()=>scroll(-240)} className="min-h-11 px-3 border rounded">← Scroll left</button>
-   <button type="button" aria-label="Scroll table right" onClick={()=>scroll(240)} className="min-h-11 px-3 border rounded">Scroll right →</button>
+   <button type="button" onClick={()=>scroll(-240)} className="min-h-11 px-3 border rounded"><span aria-hidden="true">← </span>Scroll table left</button>
+   <button type="button" onClick={()=>scroll(240)} className="min-h-11 px-3 border rounded">Scroll table right<span aria-hidden="true"> →</span></button>
    {headers.length>2&&<button type="button" aria-expanded={open} onClick={()=>setOpen(o=>!o)} className="min-h-11 px-3 border rounded">Columns{effectiveHidden.length?` (${effectiveHidden.length} hidden)`:''}</button>}
    {open&&reorderable&&<button type="button" onClick={exportDisplayed} className="min-h-11 px-3 border rounded">Export displayed rows CSV</button>}
   </div>

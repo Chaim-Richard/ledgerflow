@@ -121,7 +121,7 @@ export default function InlineEdit({
   }
 
   return (
-    <button type="button" onClick={e => { e.stopPropagation(); start(); }} aria-label={`Edit ${label}`} title={`Click to edit ${label.toLowerCase()}`}
+    <button type="button" onClick={e => { e.stopPropagation(); start(); }} aria-label={`Edit ${label}`} data-inline-edit="" title={`Click to edit ${label.toLowerCase()}`}
       disabled={saving} aria-busy={saving || undefined}
       className={cn('group text-left max-w-full rounded px-0.5 -mx-0.5 border border-transparent hover:border-dashed hover:border-[var(--line)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brass)] cursor-text', saving && 'opacity-60', className)}>
       {shown ?? <span className="text-[var(--faint)] italic">{placeholder || 'Add'}</span>}

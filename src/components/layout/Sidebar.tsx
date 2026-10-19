@@ -250,7 +250,7 @@ const Sidebar = React.memo(({
              !uiStore.isSidebarOpen && "justify-center"
            )}
            title={uiStore.isSidebarOpen ? undefined : (user ? "Log Out" : "Exit Guest / Sign In")}
-          aria-label="Log Out">
+          aria-label={user ? "Log Out" : "Exit Guest / Sign In"}>
            <LogOut aria-hidden="true" size={16} className="shrink-0 text-[var(--faint)] group-hover:text-red-400 transition-colors" />
            {uiStore.isSidebarOpen && <span>{user ? "Log Out" : "Exit Guest / Sign In"}</span>}
          </button>

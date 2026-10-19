@@ -21,10 +21,10 @@ test('phone bookmarks use native keyboard controls, remember order and restore a
   }
   await page.goto('/bookmarks-fixture?report=ar-aging'); await mount();
   const group = page.getByRole('region', { name: 'Bookmarks' });
-  const star = group.getByRole('button', { name: /^Bookmark Reports/ }); await star.focus(); await star.press('Space');
-  await expect(group.getByRole('button', { name: /^Remove bookmark for Reports/ })).toHaveAttribute('aria-pressed', 'true');
+  const star = group.getByRole('button', { name: /^Bookmark this page: Reports/ }); await star.focus(); await star.press('Space');
+  await expect(group.getByRole('button', { name: /^Bookmarked: Reports/ })).toHaveAttribute('aria-pressed', 'true');
   await page.evaluate(() => window.bookmarkUi.setState({ activeTab: 'settings', activeSettingsTab: 'security' }));
-  await group.getByRole('button', { name: /^Bookmark Preferences/ }).click();
+  await group.getByRole('button', { name: /^Bookmark this page: Preferences/ }).click();
   const up = group.getByRole('button', { name: /^Move Preferences.* up$/ }); await up.focus(); await up.press('Enter');
   const openSecurity = group.getByRole('button', { name: /^Open bookmark Preferences/ }); await expect(openSecurity).toBeFocused();
   await expect(group.getByRole('listitem').first()).toContainText('Security');

@@ -12,9 +12,9 @@ afterEach(cleanup);
 function setup() { const workspace = setComponentWorkspace(); localStorage.clear(); useUIStore.setState({ activeTab: 'reports', activeReportTab: 'pnl', isProMode: true }); return workspace; }
 test('star, reorder, remount and open preserve the exact report and settings subview', () => {
   setup(); const view = render(<BookmarksGroup expanded />);
-  fireEvent.click(view.getByRole('button', { name: /^Bookmark Reports/ }));
+  fireEvent.click(view.getByRole('button', { name: /^Bookmark this page: Reports/ }));
   act(() => useUIStore.setState({ activeTab: 'settings', activeSettingsTab: 'security' }));
-  fireEvent.click(view.getByRole('button', { name: /^Bookmark Preferences/ }));
+  fireEvent.click(view.getByRole('button', { name: /^Bookmark this page: Preferences/ }));
   fireEvent.click(view.getByRole('button', { name: /^Move Preferences.* up$/ }));
   const buttons = view.getAllByRole('button', { name: /^Open bookmark/ });
   assert.match(buttons[0].textContent!, /Security/);
@@ -28,7 +28,7 @@ test('star, reorder, remount and open preserve the exact report and settings sub
 });
 test('changing workspace or user shows only that context’s bookmarks; old storage is retained', () => {
   const workspace = setup(); const view = render(<BookmarksGroup expanded />);
-  fireEvent.click(view.getByRole('button', { name: /^Bookmark Reports/ }));
+  fireEvent.click(view.getByRole('button', { name: /^Bookmark this page: Reports/ }));
   const key = bookmarkStorageKey(useAuthStore.getState().user!.uid, workspace.id), saved = localStorage.getItem(key);
   act(() => useAuthStore.setState({ currentWorkspaceId: 'other' })); assert.equal(view.queryAllByRole('button', { name: /^Open bookmark/ }).length, 0);
   act(() => useAuthStore.setState({ currentWorkspaceId: workspace.id })); assert.equal(view.queryAllByRole('button', { name: /^Open bookmark/ }).length, 1);
@@ -41,7 +41,7 @@ test('storage refusal retains the bookmark for this session and reports that it 
   const view = render(<BookmarksGroup expanded />);
   try {
     prototype.setItem = () => { throw new Error('blocked'); };
-    fireEvent.click(view.getByRole('button', { name: /^Bookmark Reports/ }));
+    fireEvent.click(view.getByRole('button', { name: /^Bookmark this page: Reports/ }));
     assert.match(view.getByRole('alert').textContent!, /until this page reloads/);
     assert.equal(view.queryAllByRole('button', { name: /^Open bookmark/ }).length, 1);
   } finally { prototype.setItem = original; }
