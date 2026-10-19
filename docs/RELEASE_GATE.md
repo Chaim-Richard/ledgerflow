@@ -30,7 +30,7 @@ independently worked figures passes · **Browser** = an end-to-end browser test 
 
 | # | Workflow | Stage | Connected | Verified | Browser | Remaining blockers |
 |---|---|---|---|---|---|---|
-| W1 | Sign up → company → chart of accounts → first invoice → first report (P2-1) | 2 | Partly | No | Partly ([D-46 notices only](verification/ai4-d46-mobile-notices.md)) | first-hour journey test (A-151/P2-1); C-127 navigation/disabled-control batch verified locally, complete journey/CI still pending |
+| W1 | Sign up → company → chart of accounts → first invoice → first report (P2-1) | 2 | Partly | No | Partly ([D-46 notices](verification/ai4-d46-mobile-notices.md); [G-24 first-hour journey, PR #2 pending](verification/ai8-g24-first-hour-journey.md); [G-9 guest IL/US samples](verification/ai8-g9-country-samples.md)) | first-hour journey and sample selector are under review; complete journey/CI still pending. G-9 is in-memory demo data only, not a durable demo workspace or tax validation |
 | W2 | Invoice → posting → payment → customer statement | 2 | Yes | Partly | Partly | DIM-1 payments |
 | W3 | Bill → posting → payment run → vendor statement | 2 | Yes | Partly ([D-33 withholding goldens](verification/ai4-d33-withholding-golden.md)) | Partly | golden bills A-147 wired to the posting, DIM-1 payments, #156 inherited withholding rate after expiry |
 | W4 | Bank import / feed → reconciliation | 2 | Yes | Partly | Partly | AU-1 changed/removed lines on the Banking screen, #96 |

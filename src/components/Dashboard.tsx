@@ -15,6 +15,7 @@ import DashboardWidgets from './dashboard/DashboardWidgets';
 
 import { useShallow } from 'zustand/react/shallow';
 import SinceLastVisitCard from './SinceLastVisitCard';
+import GuestCountrySamplePicker from './onboarding/GuestCountrySamplePicker';
 
 export default function Dashboard() {
   const { 
@@ -36,6 +37,7 @@ export default function Dashboard() {
   // First-run setup (L-19): a signed-in workspace not set up yet and without entries (once its
   // entries have loaded). The wizard stays until finished, even after it posts the first entry.
   const isGuest = useAuthStore(s => s.isGuest);
+  const signedInUser = useAuthStore(s => s.user);
   const transactionsLoaded = useDataNeedsStore(s => Boolean(s.loaded.transactions));
   const accountsLoaded = useDataNeedsStore(s => Boolean(s.loaded.accounts));
   const loadedWorkspaceId = useDataNeedsStore(s => s.loadedWorkspaceId);
@@ -102,6 +104,7 @@ export default function Dashboard() {
   return (
     <div className="w-full p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1360px] mx-auto text-[var(--text)]">
       <SinceLastVisitCard />
+      {isGuest && !signedInUser && <GuestCountrySamplePicker />}
       {/* DA-02: one queue of what needs doing */}
       <NeedsAttentionCard />
 
