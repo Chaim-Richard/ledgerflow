@@ -330,7 +330,7 @@ declare
 begin
   foreach t in array array[
     'invoices', 'bills', 'payments', 'creditNotes', 'vendorCredits',
-    'bankLines', 'reconciliations', 'customers', 'vendors'
+    'reconciliations', 'customers', 'vendors'
   ] loop
     if pg_temp.try_as('u-book', format(
       'select lf_update(%L, %L, %L::jsonb)',
