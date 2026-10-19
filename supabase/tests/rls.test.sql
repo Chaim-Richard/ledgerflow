@@ -333,6 +333,12 @@ begin
     if pg_temp.try_as('u-book', format('select lf_update(%L, %L, %L::jsonb)', t, 'iso-' || t, '{"workspaceId":"ws2"}')) then
       raise exception 'FAIL %: writer moved an existing record into another workspace', t;
     end if;
+    -- A refused call is not enough: prove the durable record still belongs to ws1.
+    if pg_temp.count_rows('u-view', format(
+      'select count(*) from public.%I where id = %L and data->>''workspaceId'' = %L',
+      t, 'iso-' || t, 'ws1')) <> 1 then
+      raise exception 'FAIL %: cross-workspace move changed the durable workspaceId', t;
+    end if;
   end loop;
 end $audit$;
 
