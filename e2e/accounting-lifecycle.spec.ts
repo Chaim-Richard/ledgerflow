@@ -78,8 +78,8 @@ test.describe('End-to-End Accounting Lifecycle & Workflows', () => {
 
   test('Financial reports render their real pages without invalid amounts', async ({ page }) => {
     for (const report of [
-      { kind: 'pnl', heading: 'Financial Reports & Statements' },
-      { kind: 'balance-sheet', heading: 'Financial Reports & Statements' }
+      { kind: 'pnl', heading: 'Reports' },
+      { kind: 'balance-sheet', heading: 'Reports' }
     ]) {
       await page.goto('/?report=' + report.kind + '&start=2026-09-01&end=2026-09-30&cmp=none#reports');
       const main = page.locator('#main-content');

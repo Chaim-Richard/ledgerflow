@@ -5,7 +5,7 @@ const screens = [
   { tab: 'transactions', heading: 'Journal Entries', action: 'Create new entry' },
   { tab: 'sales', heading: 'Invoicing & Customer Accounts', action: 'Add Invoice' },
   { tab: 'purchases', heading: 'Purchases & AP', action: 'Record Bill' },
-  { tab: 'reports', heading: 'Financial Reports & Statements', action: 'Generate' },
+  { tab: 'reports', heading: 'Reports', action: 'Generate' },
   { tab: 'settings', heading: 'Settings', action: 'Backup & Export' },
 ];
 
