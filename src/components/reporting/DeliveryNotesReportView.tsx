@@ -31,6 +31,12 @@ interface SourceEntry {
 
 export default function DeliveryNotesReportView() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const userId = useAuthStore(s => s.user?.uid);
+  return <DeliveryNotesContent key={JSON.stringify([userId, workspaceId])} />;
+}
+
+function DeliveryNotesContent() {
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const homeCurrency = (workspace?.currency || 'USD').toUpperCase();
   const truncated = useLedgerStore(s => s.truncatedCollections);
@@ -173,7 +179,12 @@ export default function DeliveryNotesReportView() {
   const [customNumber, setCustomNumber] = useState<string>('');
   const [customDate, setCustomDate] = useState<string>('');
 
-  const selected = sources.find(s => s.key === selectedKey) || sources[0];
+  const [search, setSearch] = useState('');
+  const [sourceType, setSourceType] = useState('all');
+  const filteredSources = useMemo(() => sources.filter(source =>
+    (sourceType === 'all' || (sourceType === 'invoice' ? source.key.startsWith('invoice:') : source.key.startsWith('order'))) &&
+    source.label.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())), [sources, sourceType, search]);
+  const selected = filteredSources.find(s => s.key === selectedKey) || filteredSources[0];
   const effectiveNumber = customNumber.trim() || defaultNextNumber;
   const effectiveDate = customDate || selected?.delivery.date || today;
 
@@ -229,7 +240,7 @@ export default function DeliveryNotesReportView() {
             type="button"
             onClick={() => window.print()}
             disabled={!doc}
-            className="px-3 py-1.5 rounded border text-sm disabled:opacity-50"
+            className="min-h-11 px-3 py-1.5 rounded border text-sm disabled:opacity-50"
           >
             Print delivery note
           </button>
@@ -237,7 +248,7 @@ export default function DeliveryNotesReportView() {
             type="button"
             onClick={exportCsv}
             disabled={!doc}
-            className="px-3 py-1.5 rounded border text-sm disabled:opacity-50"
+            className="min-h-11 px-3 py-1.5 rounded border text-sm disabled:opacity-50"
           >
             Download CSV
           </button>
@@ -252,15 +263,27 @@ export default function DeliveryNotesReportView() {
       )}
 
       <div className="flex flex-wrap items-end gap-3" data-print-hide>
+        <label className="flex flex-col gap-1 text-sm">Find source document
+          <input aria-label="Find source document" dir="auto" value={search} onChange={event => setSearch(event.target.value)}
+            className="min-h-11 max-w-full border rounded px-3 bg-[var(--panel)] text-[var(--text)]" />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">Source type
+          <select aria-label="Source type" value={sourceType} onChange={event => setSourceType(event.target.value)}
+            className="min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]">
+            <option value="all">All sources</option><option value="order">Sales orders and deliveries</option><option value="invoice">Invoices</option>
+          </select>
+        </label>
         <label className="flex flex-col gap-1 text-sm">
           Source document
           <select
             aria-label="Source document"
+            disabled={!filteredSources.length}
             value={selected?.key || ''}
             onChange={e => setSelectedKey(e.target.value)}
-            className="min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]"
+            className="min-h-11 max-w-full border rounded px-3 bg-[var(--panel)] text-[var(--text)]"
           >
-            {sources.map(s => (
+            {!filteredSources.length && <option value="">No matching sources</option>}
+            {filteredSources.map(s => (
               <option key={s.key} value={s.key}>{s.label}</option>
             ))}
           </select>
@@ -315,7 +338,7 @@ export default function DeliveryNotesReportView() {
 
       {!doc && !loading && (
         <p className="text-sm text-[var(--muted)]">
-          No sales orders or invoices with item lines are loaded in this workspace yet.
+          {sources.length ? 'No matching source documents. Clear the search or choose All sources.' : 'No sales orders or invoices with item lines are loaded in this workspace yet.'}
         </p>
       )}
 

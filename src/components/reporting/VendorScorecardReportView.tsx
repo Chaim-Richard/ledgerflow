@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useUIStore } from '../../stores/useUIStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
@@ -26,7 +27,13 @@ export default function VendorScorecardReportView({ endDate = '' }: { endDate?: 
 }
 
 /** The scorecard for the purchase orders it is given (the wrapper above reads them). */
-export function VendorScorecardPanel({ endDate = '', orders, ordersLoading = false }: { endDate?: string; orders: PurchaseOrder[]; ordersLoading?: boolean }) {
+export function VendorScorecardPanel(props: { endDate?: string; orders: PurchaseOrder[]; ordersLoading?: boolean }) {
+  const workspaceId = useAuthStore(state => state.currentWorkspaceId);
+  const userId = useAuthStore(state => state.user?.uid);
+  return <VendorScorecardContent key={JSON.stringify([userId, workspaceId])} {...props} />;
+}
+
+function VendorScorecardContent({ endDate = '', orders, ordersLoading = false }: { endDate?: string; orders: PurchaseOrder[]; ordersLoading?: boolean }) {
   const bills = useLedgerStore(state => state.bills);
   const vendors = useLedgerStore(state => state.vendors);
   const credits = useLedgerStore(state => state.vendorCredits);
@@ -38,8 +45,9 @@ export function VendorScorecardPanel({ endDate = '', orders, ordersLoading = fal
   const [chosenFrom, setChosenFrom] = useState<string | null>(null);
 
   const to = endDate || getLocalDateISO();
-  const valid = validCustomReportPeriod({ startDate: to, endDate: to });
-  const from = chosenFrom && validCustomReportPeriod({ startDate: chosenFrom, endDate: chosenFrom }) ? chosenFrom : `${to.slice(0, 4)}-01-01`;
+  const from = chosenFrom ?? `${to.slice(0, 4)}-01-01`;
+  const valid = validCustomReportPeriod({ startDate: from, endDate: to });
+  const [vendorSearch, setVendorSearch] = useState('');
   const homeCurrency = workspace?.currency || 'USD';
 
   const rows = useMemo(() => {
@@ -52,6 +60,7 @@ export function VendorScorecardPanel({ endDate = '', orders, ordersLoading = fal
 
   const partial = truncated.bills || failed.bills || truncated.vendorCredits || failed.vendorCredits || orders.length >= 500;
   const loading = loadingLedger || ordersLoading;
+  const visibleRows = rows.filter(row => row.vendorName.toLocaleLowerCase().includes(vendorSearch.trim().toLocaleLowerCase()));
   const money = (cents: number, currency?: string) => formatCurrency(cents, currency || homeCurrency);
 
   return <section aria-label="Vendor scorecard" className="p-4 space-y-4 min-w-0">
@@ -65,23 +74,37 @@ export function VendorScorecardPanel({ endDate = '', orders, ordersLoading = fal
       <label className="flex flex-col gap-1">To
         <input aria-label="Scorecard to date" type="date" className={field} value={to} readOnly />
       </label>
-      <button type="button" className="btn-secondary min-h-11 px-3" disabled={!rows.length} onClick={() => downloadCsv(
-        `vendor-scorecard-${from}-${to}.csv`, VENDOR_SCORECARD_CSV_HEADERS, vendorScorecardCsvRows(rows)
+      <label className="flex flex-col gap-1">Find vendor
+        <input aria-label="Find vendor" dir="auto" className={field} value={vendorSearch} onChange={event => setVendorSearch(event.target.value)} />
+      </label>
+      <button type="button" className="btn-secondary min-h-11 px-3" disabled={!visibleRows.length} onClick={() => downloadCsv(
+        `vendor-scorecard-${from}-${to}.csv`, VENDOR_SCORECARD_CSV_HEADERS, vendorScorecardCsvRows(visibleRows)
       )}>Export CSV</button>
     </div>
 
     {loading && <p role="status">Loading vendor history…</p>}
-    {!valid && <p role="alert">Choose a valid end date on the report.</p>}
+    {!valid && <p role="alert">Choose a valid date range; From must be on or before To.</p>}
     {partial && <p role="alert">Some history is incomplete or failed to load. Figures here may leave out older orders, bills or credits.</p>}
 
-    {rows.length > 0 && <ReportTableScroll><table className="w-full text-sm">
+    {visibleRows.length > 0 && <ReportTableScroll><table className="w-full min-w-[900px] text-sm">
       <caption>Vendors from {from} to {to}</caption>
       <thead><tr>
         <th scope="col">Vendor</th><th scope="col" className="text-right">Orders with dates</th><th scope="col" className="text-right">On time</th>
         <th scope="col" className="text-right">Average days late</th><th scope="col">Price changes</th><th scope="col" className="text-right">Returns</th>
       </tr></thead>
-      <tbody>{rows.map(row => <tr key={row.vendorId} className="border-t border-[var(--line)] align-top">
-        <th scope="row" className="text-left"><bdi>{row.vendorName}</bdi></th>
+      <tbody>{visibleRows.map(row => <tr key={row.vendorId} className="border-t border-[var(--line)] align-top">
+        <th scope="row" className="text-left min-w-60"><bdi>{row.vendorName}</bdi>
+          <details key={`${workspaceId}:${row.vendorId}`} className="font-normal mt-2">
+            <summary className="min-h-11 cursor-pointer">Review source bills</summary>
+            <p className="text-sm text-[var(--muted)]">Loaded bills in this date range, including bills without item quantities. Open a bill to inspect its original lines. Orders and return credits keep their own screens.</p>
+            <ul>{bills.filter(bill => typeof bill.date === 'string' && bill.vendorId === row.vendorId && (!workspaceId || bill.workspaceId === workspaceId) &&
+              bill.date.slice(0, 10) >= from && bill.date.slice(0, 10) <= to).map(bill => <li key={bill.id}>
+                <button type="button" className="min-h-11 underline text-left" onClick={() => useUIStore.getState().openRecord({ type: 'bill', id: bill.id })}>
+                  <bdi>{bill.number || bill.id}</bdi> · <bdi>{bill.date?.slice(0, 10)}</bdi>
+                </button>
+              </li>)}</ul>
+          </details>
+        </th>
         <td className="text-right tabular-nums">{row.orders.withDates}{row.orders.withDates ? ` (${percent(row.orders.onTimeRate)} on time)` : ''}</td>
         <td className="text-right tabular-nums">{row.orders.onTime} on time, {row.orders.late} late</td>
         <td className="text-right tabular-nums">{row.orders.averageDaysLate ?? 'Not measured'}</td>
@@ -92,6 +115,6 @@ export function VendorScorecardPanel({ endDate = '', orders, ordersLoading = fal
       </tr>)}</tbody>
     </table></ReportTableScroll>}
 
-    {!loading && rows.length === 0 && valid && <p>No vendors to show for this period.</p>}
+    {!loading && visibleRows.length === 0 && valid && <p>{rows.length ? 'No matching vendors. Clear the vendor search.' : 'No vendors to show for this period.'}</p>}
   </section>;
 }
