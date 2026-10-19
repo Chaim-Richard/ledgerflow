@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { usePerformanceTrace } from '../../hooks/usePerformanceTrace';
 import { Transaction } from '../../types';
 import { 
-  Activity,
   Download,
   Loader2,
   Printer
@@ -216,21 +215,22 @@ const Reports = React.memo(() => {
         <h1 className="text-xl font-bold">{(REPORT_TABS_REGISTRY.find(t => t.id === activeTab)?.label as Record<string, string> | undefined)?.en || 'Report'}</h1>
         <p className="text-sm">{customPeriod ? "Custom range" : periodLabel} · {period.startDate} to {period.endDate}{comparePeriod ? ` · compared with ${comparePeriod.startDate} to ${comparePeriod.endDate}` : ''}</p>
       </div>
-      {/* Header banner with brand gold backdrop */}
-      <div data-print-hide className="relative overflow-hidden bg-gradient-to-r from-[var(--brass-soft)] via-[var(--surface)]/40 to-[var(--panel)] p-6 rounded-2xl border border-[var(--brass-line)]/50 shadow-sm">
-        <div className="absolute -top-16 -left-16 w-56 h-56 bg-[var(--brass)] opacity-10 rounded-full blur-3xl hidden md:block pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)]/60 text-[10px] font-mono text-[var(--brass)] font-semibold shadow-xs">
-              <Activity size={12} />
-              FINANCIAL INTELLIGENCE HUB
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text)] tracking-tight">Financial Reports & Statements</h1>
-            <p className="text-sm text-[var(--muted)]">{periodLabel}</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 bg-[var(--surface)]/80 p-2 rounded-xl border border-[var(--line)] shadow-inner backdrop-blur-sm">
-            <button onClick={() => onAction('generate')} className="px-3.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black hover:opacity-95 transition-all shadow-xs cursor-pointer">
+      <section data-print-hide data-testid="reports-heading" aria-label="Reports heading" className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-[var(--text)]">Reports</h1>
+          <p className="text-sm text-[var(--muted)]">{periodLabel}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => onAction('export')} className="min-h-11 px-3 flex items-center gap-2 text-sm text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brass)]">
+            <Download size={16} aria-hidden="true" /> Export
+          </button>
+          <button onClick={() => window.print()} className="min-h-11 px-3 flex items-center gap-2 text-sm text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brass)]">
+            <Printer size={16} aria-hidden="true" /> Print / PDF
+          </button>
+        </div>
+      </section>
+      <div data-print-hide role="region" aria-label="Report period" className="flex flex-wrap items-center gap-2 [&_button]:min-h-11 [&_select]:min-h-11 [&_button]:min-w-11">
+            <button onClick={() => onAction('generate')} className="px-3.5 py-1.5 rounded-lg text-sm font-medium bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black hover:opacity-95 transition-all shadow-xs cursor-pointer">
               Generate
             </button>
             
@@ -240,13 +240,13 @@ const Reports = React.memo(() => {
                   key={t}
                   onClick={() => { setCustomPeriod(undefined); setTimeframe(t); }}
                   className={cn(
-                    "px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer",
+                    "px-3 py-1 rounded-md text-sm font-medium transition-all cursor-pointer",
                     timeframe === t 
                       ? "bg-[var(--brass)] text-[var(--ink)] shadow-xs font-bold" 
                       : "text-[var(--muted)] hover:text-[var(--text)]"
                   )}
                 >
-                  {t}
+                  {t[0].toUpperCase() + t.slice(1)}
                 </button>
               ))}
             </div>
@@ -305,16 +305,7 @@ const Reports = React.memo(() => {
 
             <div className="h-4 w-px bg-[var(--line)]" />
             
-            <button onClick={() => onAction('export')} className="h-7 px-2.5 bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] rounded-md shadow-xs hover:border-[var(--brass-line)] flex items-center justify-center transition-colors cursor-pointer" aria-label="Export">
-              <Download size={14} />
-            </button>
-            
             <button className="min-h-11 px-3 border border-[var(--line)] rounded-md text-xs" onClick={() => setPackPeriod({ startDate: period.startDate, endDate: period.endDate })}>Report pack</button>
-            <button onClick={() => window.print()} className="h-7 px-2.5 flex items-center gap-1.5 text-[10px] font-bold text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-md shadow-xs hover:border-[var(--brass-line)] transition-colors cursor-pointer">
-              <Printer size={14} aria-hidden="true" /> Print / PDF
-            </button>
-          </div>
-        </div>
       </div>
 
       {packPeriod && <React.Suspense fallback={<p role="status">Loading report pack…</p>}><ReportPackDialog {...packPeriod} onClose={() => setPackPeriod(undefined)} /></React.Suspense>}
