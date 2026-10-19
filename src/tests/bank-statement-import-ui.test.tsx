@@ -157,3 +157,57 @@ test("#101: CSV keeps O'Brien's amount, reads a quoted line break as one row, an
   assert.equal(screen.queryByText('No amount'), null, 'a row without an amount is skipped, not imported as $0');
   assert.equal(screen.queryAllByText('$0.00').length, 0);
 });
+
+
+test('E-30 OFX bank and QFX card statements reach normal review, no AI parser or automatic posting', async () => {
+  const files = [
+    { name: 'one.ofx', text: [
+      'OFXHEADER:100', 'DATA:OFXSGML', 'VERSION:102',
+      '<OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS><CURDEF>USD',
+      '<BANKACCTFROM><ACCTID>00005555</BANKACCTFROM>',
+      '<BANKTRANLIST><STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20261003',
+      '<TRNAMT>-12.34<FITID>id-a<NAME>October office supplies</STMTTRN>',
+      '</BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>',
+    ].join('\n'), amount: -1234 },
+    { name: 'one.qfx', text: [
+      '<?xml version="1.0"?>',
+      '<OFX><CREDITCARDMSGSRSV1><CCSTMTTRNRS><CCSTMTRS>',
+      '<CURDEF>USD</CURDEF><CCACCTFROM><ACCTID>XXXX55</ACCTID></CCACCTFROM>',
+      '<BANKTRANLIST><STMTTRN><TRNTYPE>CREDIT</TRNTYPE>',
+      '<DTPOSTED>20261004</DTPOSTED><TRNAMT>12.34</TRNAMT>',
+      '<FITID>id-b</FITID><NAME>October credit</NAME>',
+      '</STMTTRN></BANKTRANLIST></CCSTMTRS></CCSTMTTRNRS></CREDITCARDMSGSRSV1></OFX>',
+    ].join(''), amount: 1234 },
+  ];
+  for (const file of files) {
+    const saved: Array<{ amountCents: number }> = [];
+    const { unmount } = render(<StatementImporter isOpen onClose={() => {}} onImport={rows => { saved.push(...rows); return false; }} existingTransactions={[]} businessContext="" accounts={[]} patternCache={{}} />);
+    assert.match((document.querySelector('input[type=file]') as HTMLInputElement).accept, /\.ofx,\.qfx/);
+    await upload(file.name, file.text);
+    assert.equal(screen.queryByRole('alert'), null);
+    await screen.findByRole('button', { name: 'Import 1 Entries' });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Import 1 Entries' })); });
+    assert.equal(saved.length, 1);
+    assert.equal(saved[0].amountCents, file.amount);
+    assert.equal(aiCalls, 0);
+    unmount();
+  }
+});
+
+test('E-30 OFX currency disagreement or malformed source refuses review and does not call import', async () => {
+  let imports = 0;
+  render(<StatementImporter isOpen onClose={() => {}} onImport={() => { imports++; }} existingTransactions={[]} businessContext="" accounts={[]} patternCache={{}} />);
+  const currencyMismatch = [
+    '<OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS><CURDEF>EUR',
+    '<BANKACCTFROM><ACCTID>123</BANKACCTFROM><BANKTRANLIST>',
+    '<STMTTRN><DTPOSTED>20261003<TRNAMT>-10.00<FITID>id-a<NAME>Example</STMTTRN>',
+    '</BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>',
+  ].join('');
+  await upload('foreign.ofx', currencyMismatch);
+  assert.match(screen.getByRole('alert').textContent || '', /differs from workspace currency/);
+  assert.equal(screen.queryByRole('button', { name: /Import \d+ Entries/ }), null);
+  await upload('bad.qfx', currencyMismatch.replace('<CURDEF>EUR', '<CURDEF>USD').replace('-10.00', '-10.001'));
+  assert.match(screen.getByRole('alert').textContent || '', /TRNAMT/);
+  assert.equal(imports, 0);
+  assert.equal(aiCalls, 0);
+});
