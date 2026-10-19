@@ -145,6 +145,8 @@ export async function postInvoiceLedger(
     'Retainage Receivable'
   ) : null;
   
+  // income accounts; Opening Balance Equity only for a customer's opening balance (BA-02)
+  const docLines = lineAccounts(invoiceData.items, accounts, revenueAccount, a => isIncomeAccount(a) || isOpeningBalanceEquity(a));
   const accrualLines = TransactionTemplates.buildInvoiceLines({
     invoiceNumber: String(invoiceNum),
     customerName: customer,
@@ -155,8 +157,7 @@ export async function postInvoiceLedger(
     exchangeRate: rate,
     arAccount,
     revenueAccount,
-    // income accounts; Opening Balance Equity only for a customer's opening balance (BA-02)
-    lineAccounts: lineAccounts(invoiceData.items, accounts, revenueAccount, a => isIncomeAccount(a) || isOpeningBalanceEquity(a)),
+    lineAccounts: docLines,
     taxAccount,
     discountAccount,
     retainageAccount
@@ -259,7 +260,8 @@ export async function postInvoiceLedger(
           exchangeRate: rate,
           cashAccount,
           offsetAccount: arAccount,
-          isReceipt: true
+          isReceipt: true,
+          lineAccounts: docLines // DIM-1: the payment carries the invoice lines' labels
         })
       };
       txsToPost.push(inBaseCurrency(paymentTx, workspaceId, context));

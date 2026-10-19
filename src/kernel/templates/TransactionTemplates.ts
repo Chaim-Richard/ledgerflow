@@ -147,6 +147,8 @@ export interface PaymentTemplateParams {
   cashAccount: AccountRef;
   offsetAccount: AccountRef;
   isReceipt: boolean; // true = customer payment (DR Cash, CR A/R), false = vendor payment (DR A/P, CR Cash)
+  /** DIM-1: the paid document's lines, so the payment carries their labels in the same proportions */
+  lineAccounts?: LineAccountWeight[];
 }
 
 export class TransactionTemplates {
@@ -300,7 +302,7 @@ export class TransactionTemplates {
 
     if (params.isReceipt) {
       // DR Cash, CR offset (e.g. A/R)
-      return [
+      return spreadLabels([
         {
           accountId: params.cashAccount.id,
           accountName: params.cashAccount.name,
@@ -315,10 +317,10 @@ export class TransactionTemplates {
           description: `A/R clearance for Invoice ${params.documentNumber}`,
           exchangeRate: rate
         }
-      ];
+      ], params.lineAccounts);
     } else {
       // DR offset (e.g. A/P), CR Cash
-      return [
+      return spreadLabels([
         {
           accountId: params.offsetAccount.id,
           accountName: params.offsetAccount.name,
@@ -333,7 +335,7 @@ export class TransactionTemplates {
           description: `Cash payment for Bill ${params.documentNumber}`,
           exchangeRate: rate
         }
-      ];
+      ], params.lineAccounts);
     }
   }
 }
