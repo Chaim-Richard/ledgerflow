@@ -10,6 +10,12 @@ for (const theme of ['light', 'dark']) {
       localStorage.setItem('lf_theme', selectedTheme);
     }, theme);
     await page.goto('/?report=trial-balance#reports');
+    const modules = page.getByRole('navigation', { name: 'Module pages', exact: true });
+    await expect(modules).toBeVisible();
+    expect(await modules.evaluate(el => {
+      const items = [...el.querySelectorAll('button')].map(button => button.getBoundingClientRect());
+      return items.every((rect, index) => rect.height >= 44 && (!index || rect.x >= items[index - 1].right));
+    })).toBe(true);
     const navigation = page.getByRole('navigation', { name: 'Report pages', exact: true });
     await expect(navigation).toBeVisible();
     const buttons = navigation.getByRole('button');
