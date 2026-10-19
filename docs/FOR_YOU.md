@@ -451,3 +451,25 @@ with the exact evidence. Nothing was baselined or hidden to make anything pass.
 The branch `codex/ci-faster-browser-feedback` is pushed (implementation `74a8ae51`). It splits all 299 browser tests into two isolated shards, keeps every existing accounting/security/time-zone gate and the original required browser check, and provides combined reports and readable failure locations. Local types/lint, four diagnostic contracts, two actual browser smoke shards and report merging pass; five already-landed screen tasks were reconciled after 17 component cases and ten guest screenshot checks. Evidence: `docs/verification/ci-speed-and-queue-review-2026-10-17.md`.
 
 **Outside action:** [open the pull request](https://github.com/shmuelbiller1/ledgerflow/pull/new/codex/ci-faster-browser-feedback). The GitHub API returns `Forbidden` to this environment for PR creation. Native Git push succeeded and its exact remote SHA was verified, but no Actions run is visible for the branch yet. Full GitHub verification and merge remain outstanding; do not treat the local smoke subset as a full-suite pass.
+
+## AI #7 (stability) — 19 Oct: branch ready, one outside action
+
+**Done and pushed** on `arena/3125e92e-ledgerflow`: F-41…F-45 browser journeys for RELEASE_GATE
+W2/W3/W4/W6/W9 (with hand-worked figures), F-38 perf budgets, F-39 scorecard, F-40 layer guard,
+and the stability batch F-14, F-16, F-30, F-32…F-37. The new fuzz run found a real defect: an
+MT940 statement line `:61:991332…` was imported as the impossible date **2099-13-32**; it is now
+refused in plain words, with a regression test. Evidence:
+[`docs/verification/ai7-journeys-w2-w9.md`](verification/ai7-journeys-w2-w9.md) and
+[`docs/verification/ai7-stability-batch-2026-10-19.md`](verification/ai7-stability-batch-2026-10-19.md).
+
+**What needs you (or the lead):**
+1. **Open the pull request to the author's repository.** This environment can create PRs only on
+   the fork: [Chaim-Richard/ledgerflow#1](https://github.com/Chaim-Richard/ledgerflow/pull/1).
+   Pushing to `shmuelbiller1/ledgerflow` and creating a cross-repo PR both answer **403** for this
+   token. The branch is pushed; a maintainer can open the PR from the fork with
+   `head=Chaim-Richard:arena/3125e92e-ledgerflow, base=main`.
+2. **One server-side handoff for AI #1:** `src/server/utils/logger.ts` writes whatever fields its
+   callers pass. The browser crash reporter is now redacted (`src/lib/logRedaction.ts`); the server
+   logger is your file and was not edited.
+3. **Optional:** set the `HEALTH_URL` repository variable so the new nightly uptime check runs
+   (it skips cleanly and says so when unset).
