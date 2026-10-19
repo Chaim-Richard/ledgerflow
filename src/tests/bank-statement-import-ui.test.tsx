@@ -211,3 +211,42 @@ test('E-30 OFX currency disagreement or malformed source refuses review and does
   assert.equal(imports, 0);
   assert.equal(aiCalls, 0);
 });
+
+
+test('E-31 CAMT.053 upload stages signed entries for review, without using AI or saving on upload', async () => {
+  let calls = 0;
+  const saved: Array<{ amountCents: number; date: string }> = [];
+  render(<StatementImporter isOpen onClose={() => {}} onImport={rows => { calls++; saved.push(...rows); return false; }} existingTransactions={[]} businessContext="" accounts={[]} patternCache={{}} />);
+  const xml = [
+    '<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">',
+    '<BkToCstmrStmt><Stmt><Acct><Id><IBAN>DE44500105175407324931</IBAN></Id><Ccy>USD</Ccy></Acct>',
+    '<Ntry><NtryRef>camt-one</NtryRef><Amt Ccy="USD">25.10</Amt><CdtDbtInd>DBIT</CdtDbtInd>',
+    '<BookgDt><Dt>2026-10-14</Dt></BookgDt><NtryDtls><TxDtls><RmtInf>',
+    '<Ustrd>Office supplies</Ustrd></RmtInf></TxDtls></NtryDtls></Ntry>',
+    '</Stmt></BkToCstmrStmt></Document>',
+  ].join('');
+  assert.match((document.querySelector('input[type=file]') as HTMLInputElement).accept, /camt053/);
+  await upload('bank-statement.xml', xml);
+  assert.equal(calls, 0);
+  assert.equal(aiCalls, 0);
+  assert.equal(screen.queryByRole('alert'), null);
+  await screen.findByRole('button', { name: 'Import 1 Entries' });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Import 1 Entries' })); });
+  assert.equal(calls, 1);
+  assert.deepEqual(saved.map(row => [row.date, row.amountCents]), [['2026-10-14', -2510]]);
+});
+
+test('E-31 incomplete CAMT.053 file stays on upload screen and never calls import', async () => {
+  let calls = 0;
+  render(<StatementImporter isOpen onClose={() => {}} onImport={() => { calls++; }} existingTransactions={[]} businessContext="" accounts={[]} patternCache={{}} />);
+  await upload('broken.camt053',
+    '<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">' +
+    '<BkToCstmrStmt><Stmt><Acct><Id><IBAN>DE44500105175407324931</IBAN></Id>' +
+    '<Ccy>USD</Ccy></Acct><Ntry><Amt Ccy="USD">20.00</Amt>' +
+    '<CdtDbtInd>CRDT</CdtDbtInd><BookgDt><Dt>2026-10-07</Dt></BookgDt>' +
+    '</Stmt></BkToCstmrStmt></Document>');
+  assert.match(screen.getByRole('alert').textContent || '', /Missing closing <Ntry>/);
+  assert.equal(screen.queryByRole('button', { name: /Import \d+ Entries/ }), null);
+  assert.equal(calls, 0);
+  assert.equal(aiCalls, 0);
+});
