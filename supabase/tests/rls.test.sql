@@ -476,18 +476,18 @@ select set_config('request.jwt.claims', '', true);
 insert into "payRuns" (id, data) values ('pr1', '{"workspaceId":"ws1","date":"2026-02-15","status":"awaiting_approval"}');
 select pg_temp.expect_count('viewer reads pay runs', 'u-view', $$select count(*) from "payRuns"$$, 1);
 select pg_temp.expect_count('outsider reads pay runs', 'u-out', $$select count(*) from "payRuns"$$, 0);
-select pg_temp.expect_denied('owner approves a pay run from the browser', 'u-owner', $select lf_update('payRuns','pr1','{"status":"processed"}'::jsonb)$);
+select pg_temp.expect_denied('owner approves a pay run from the browser', 'u-owner', $stmt$select lf_update('payRuns','pr1','{"status":"processed"}'::jsonb)$stmt$);
 select pg_temp.expect_denied('owner cannot move a pay run to another workspace', 'u-owner',
-  $select lf_update('payRuns','pr1','{"workspaceId":"ws2"}'::jsonb)$);
+  $stmt$select lf_update('payRuns','pr1','{"workspaceId":"ws2"}'::jsonb)$stmt$);
 select pg_temp.expect_denied('bookkeeper adds a pay run from the browser', 'u-book',
   $$insert into "payRuns"(id,data) values ('pr2', '{"workspaceId":"ws1","date":"2026-02-15","status":"processed"}')$$);
 select pg_temp.expect_denied('owner deletes a pay run from the browser', 'u-owner', $$delete from "payRuns" where id = 'pr1'$$);
 
 -- purchase orders: members read; owners, accountants and bookkeepers write
 select pg_temp.expect_ok('bookkeeper saves a purchase order', 'u-book',
-  $insert into "purchaseOrders"(id,data) values ('po1', '{"workspaceId":"ws1","poNumber":"PO-2026-001","vendorId":"v1","vendorName":"V","status":"approved","items":[],"totalAmountCents":1000,"receipts":[]}')$);
+  $stmt$insert into "purchaseOrders"(id,data) values ('po1', '{"workspaceId":"ws1","poNumber":"PO-2026-001","vendorId":"v1","vendorName":"V","status":"approved","items":[],"totalAmountCents":1000,"receipts":[]}')$stmt$);
 select pg_temp.expect_denied('bookkeeper cannot move a purchase order to another workspace',
-  'u-book', $select lf_update('purchaseOrders','po1','{"workspaceId":"ws2"}'::jsonb)$);
+  'u-book', $stmt$select lf_update('purchaseOrders','po1','{"workspaceId":"ws2"}'::jsonb)$stmt$);
 select pg_temp.expect_count('viewer reads purchase orders', 'u-view', $$select count(*) from "purchaseOrders"$$, 1);
 select pg_temp.expect_denied('viewer changes a purchase order', 'u-view', $$select lf_update('purchaseOrders','po1','{"status":"cancelled"}'::jsonb)$$);
 select pg_temp.expect_count('outsider reads purchase orders', 'u-out', $$select count(*) from "purchaseOrders"$$, 0);
