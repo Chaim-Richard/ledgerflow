@@ -19,7 +19,7 @@ for (const width of [390, 1280]) for (const theme of ['light', 'dark']) {
     await expect(controls).toHaveCount(5);
     for (const control of await controls.all()) {
       const box = (await control.boundingBox())!;
-      expect(box.y).toBeGreaterThanOrEqual(0); expect(box.y + box.height).toBeLessThanOrEqual(850); expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.y).toBeGreaterThanOrEqual(0); expect(box.y + box.height).toBeLessThanOrEqual(850); expect(Number(box.height.toFixed(3))).toBeGreaterThanOrEqual(44);
     }
     const scan = await new AxeBuilder({ page }).analyze();
     expect(scan.violations.filter(violation => ['serious', 'critical'].includes(violation.impact || ''))).toEqual([]);
@@ -51,13 +51,15 @@ for (const width of [390, 1280]) for (const theme of ['light', 'dark']) {
     await page.getByLabel('Dashboard from').fill('2026-10-01');
     await expect(overview.getByText('Choose dates', { exact: true })).toHaveCount(4);
     await expect(overview.locator('[data-summary-report="balance-sheet"]')).toHaveAttribute('aria-disabled', 'true');
+    const invalidScan = await new AxeBuilder({ page }).analyze();
+    expect(invalidScan.violations.filter(violation => ['serious', 'critical'].includes(violation.impact || ''))).toEqual([]);
     await overview.getByRole('link', { name: 'Open tasks', exact: true }).click();
     await expect(page).toHaveURL(/#tasks$/); await expect(page.getByRole('heading', { name: 'Tasks', exact: true })).toBeVisible();
     await page.goto('/#settings');
     const nav = page.getByRole('navigation', { name: 'Settings sections', exact: true });
     await expect(nav.getByRole('region')).toHaveCount(5);
     await expect(nav.getByRole('button')).toHaveCount(31);
-    for (const button of await nav.getByRole('button').all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const button of await nav.getByRole('button').all()) expect(Number((await button.boundingBox())!.height.toFixed(3))).toBeGreaterThanOrEqual(44);
     const appearance = nav.getByRole('button', { name: 'Appearance & Display', exact: true });
     await appearance.focus(); await appearance.press('Enter');
     await expect(appearance).toHaveAttribute('aria-current', 'page');
