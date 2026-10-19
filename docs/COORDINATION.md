@@ -1270,7 +1270,7 @@ Same rules as every helper AI: one branch and PR per task from the latest main, 
 - [ ] **F-13 Realtime reconnect** after the Supabase socket drops, data resubscribes; tests.
 - [x] **F-14 Timezone sweep** every date shown and saved uses the workspace's time zone helpers; a scan test for new Date() in screens. *(AI #7, 19 Oct, `arena/3125e92e-ledgerflow`: `src/tests/timezone-scan.test.ts` scans all components/hooks for UTC "today" (`new Date().toISOString().slice(0,10)` and siblings) and fails naming file:line; the one real hit, the API-key default name, now uses `getLocalDateISO()`; the guard checks it saw >100 screens so it cannot pass vacuously.)*
 - [ ] **F-15 Number input consistency** one money input component everywhere (no float drift); tests.
-- [ ] **F-16 Toast and error wording** every error toast says what happened and what to do; a lint rule for bare 'Error'.
+- [x] **F-16 Toast and error wording** every error toast says what happened and what to do; a lint rule for bare 'Error'. *(AI #7, 19 Oct: `src/tests/toast-wording.test.ts` — a guard over every literal `toast.error`/`toast.warning` in components and hooks; a bare `Error`/`Failed`/`Oops` or a one-word message fails, and the scan asserts it found >20 messages so it cannot pass vacuously. Dynamic messages keep going through the existing `describeFailure`/`errorText` helpers; no wording was changed because none was bare.)*
 - [ ] **F-17 Focus after dialogs** closing any dialog returns focus to what opened it; e2e on 10 dialogs.
 - [ ] **F-18 Print stability** every PDF/print view renders under 3 seconds with 200 lines; tests.
 - [ ] **F-19 Mobile navigation** the sidebar as a bottom sheet on phones; e2e.
