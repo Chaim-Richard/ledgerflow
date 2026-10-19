@@ -33,7 +33,7 @@ unit tests). Passing this audit is not a statement that a report is filing-ready
 | Production build | `npm run build` | passes |
 | Unit + component suite | `npm test` | see the CI block below |
 | Browser audit | `npx playwright test e2e/ai3-report-audit.spec.ts` | runs on GitHub CI (no browser binary in the sandbox) |
-| New browser audit, static check | `npx tsc --noEmit` covers the spec | clean |
+| New browser audit, static check | `npx tsc --noEmit --strict --skipLibCheck --module esnext --moduleResolution bundler --target esnext --lib DOM,DOM.Iterable,ESNext --types node --esModuleInterop e2e/ai3-report-audit.spec.ts` | clean (the repository's `tsconfig.json` includes only `src` and `server.ts`, so the browser specs need their own check) |
 | Full unit suite (local, this sandbox) | `npm test` | 2,930 tests: 2,929 pass, 0 fail, 1 skipped (needs `LF_TEST_DATABASE_URL`); 731 suites; 27m44s |
 
 ### The browser audit's own history (nothing hidden)
@@ -41,7 +41,8 @@ unit tests). Passing this audit is not a statement that a report is filing-ready
 | Attempt | What happened | What was done |
 |---|---|---|
 | PR #190 CI run 39288681099, shard 1/2 | One test failed: the check for the word `undefined` matched **prose** — Gross Profit by Customer explains "margin percent = margin ÷ sales, undefined when sales are zero" | The token check now looks for `undefined` only inside table cells; `NaN`, `Infinity` and `Invalid Date` stay whole-region checks. The same run's "Playwright E2E Smoke Suite" failure was only its roll-up step ("require every shard to succeed"), not a separate failure |
-| Re-run after the fix | recorded below once green | — |
+| PR #190 CI run 39291426442, shard 1/2 | Ten tests stopped on `ReferenceError: report is not defined` — a variable name left over from an edit, which the repository typecheck did not catch because `tsconfig.json` does not include `e2e/` | The name is now the destructured `selector`; the spec is typechecked with its own `tsc` command (row above). The other 17 tests already reached the axe, overflow and right-to-left checks and passed |
+| Final run after both fixes | recorded below once green | — |
 
 ## 2. Report screens this lane built (the tab a user opens)
 

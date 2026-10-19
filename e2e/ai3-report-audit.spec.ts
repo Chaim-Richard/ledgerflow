@@ -95,7 +95,7 @@ async function expectNoBrokenFigures(region: Locator) {
   }
 }
 
-for (const { id, title } of reports) {
+for (const { id, title, selector: reportSelector } of reports) {
   test(`${id}: empty state draws, fits a phone, stays right-to-left clean and passes serious axe`, async ({ page }, testInfo) => {
     test.setTimeout(120000);
     const errors: string[] = [];
@@ -110,7 +110,7 @@ for (const { id, title } of reports) {
     // A-203: the report's own region, empty state, no serious or critical axe finding.
     // Scoped to this report's own region, so a finding in the shared screen chrome or in another
     // report cannot fail this one. Contrast has its own test (`contrast.spec.ts`).
-    const selector = report.selector ?? `section[aria-label="${title}"]`;
+    const selector = reportSelector ?? `section[aria-label="${title}"]`;
     const axe = await new AxeBuilder({ page }).include(selector).disableRules(['color-contrast']).analyze();
     const serious = axe.violations.filter(violation => violation.impact === 'serious' || violation.impact === 'critical');
     expect(serious.map(violation => `${violation.id} (${violation.impact}): ${violation.nodes.map(node => node.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
