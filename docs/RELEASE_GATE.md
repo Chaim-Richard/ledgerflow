@@ -36,13 +36,13 @@ independently worked figures passes · **Browser** = an end-to-end browser test 
 | W4 | Bank import / feed → reconciliation | 2 | Yes | Partly | Partly | AU-1 changed/removed lines on the Banking screen, #96 |
 | W5 | Labels (property, project, location) → reports by label | 2 | Yes | Partly ([D-93 failure-state checks](verification/ai4-d93-report-harness.md)) | No ([D-45 header checks only](verification/ai4-d45-report-controls.md)) | DIM-1 payments, DIM-3 balancing roles |
 | W6 | Order with deposit → part invoices → delivery (no double charge) | 2 | Yes | Yes (DEP-1) | No | browser test |
-| W7 | Israel VAT month: invoices with allocation numbers → VAT report → PCN874 → close | 2 | Partly | Partly ([D-32 report goldens](verification/ai4-d32-israeli-vat-golden.md), A-146) | No | CON-3, CON-4, journey A-151, #160 persisted equipment/report adapter |
+| W7 | Israel VAT month: invoices with allocation numbers → VAT report → PCN874 → close | 2 | Partly | Partly ([D-32 report goldens](verification/ai4-d32-israeli-vat-golden.md), A-146, [A-152 Israel month journey](verification/ai3-a152-israeli-month.md)) | No | CON-3, CON-4, #160 persisted equipment/report adapter; the PCN874 screen builds the historical draft only and is not filing-ready |
 | W8 | US quarter: sales tax by state → summary → 1099 preview → close | 2 | Partly | Partly (A-146/147, [A-153 US quarter journey](verification/ai3-a153-us-quarter-journey.md)) | No | CON-1, CON-2 |
-| W9 | Month-end close and reopen | 2 | Yes | Yes (AUD-08 race) | Partly | — |
+| W9 | Month-end close and reopen | 2 | Yes | Yes (AUD-08 race, [A-151 close journey](verification/ai3-a151-close-journey.md)) | Partly | — |
 | W10 | Backup → restore → same reports | 3 | Yes | Partly (AUD-02) | No ([D-46 reminder only](verification/ai4-d46-mobile-notices.md)) | AUD-02 rest (ownership inside the transaction) |
 | W11 | Import from QuickBooks/CSV → totals match the source (AU-4) | 3 | Partly | No | No | AU-4 |
 | W12 | Several books → group report | 3 | Yes | Partly | No | consolidation export, cross-book test |
 | W13 | Stock: purchase → stock → sale → valuation | 3 | Yes | Partly | Partly | ISS-130, ISS-131, DIM-2 |
 | W14 | Roles and access (owner, accountant, bookkeeper, viewer) | 2 | Yes | Yes (RLS suite) | Partly | AUD-09 per write family |
 
-**Today (18 Oct):** stage 1. Nearest to stage 2: W6, W9, W14. The critical items still open: AUD-02 (rest). Fixed 18 Oct: BUG-03/INT-2 invoices, INT-1 authority at commit, INT-3, INT-4, INT-5.
+**Today (19 Oct):** stage 1. Nearest to stage 2: W6, W9, W14. The critical items still open: AUD-02 (rest). Fixed 18 Oct: BUG-03/INT-2 invoices, INT-1 authority at commit, INT-3, INT-4, INT-5. Added 19 Oct: the Israeli month journey (A-152, W7 evidence) and the close journey on Month-End Close (A-151, W9 evidence) — both read-only; W7's PCN874 step remains a historical draft and CON-3/CON-4 stay open.
