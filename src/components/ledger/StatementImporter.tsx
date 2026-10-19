@@ -33,6 +33,7 @@ import { Labelled } from '../ui/Labelled';
 import { parseQIFStatement, type QIFDateOrder } from '../../lib/qifParser';
 import { parseBAI2Statement } from '../../lib/bai2Parser';
 import { parseOFXStatement } from '../../lib/ofxParser';
+import { parseCamt053Import } from '../../lib/camt053Import';
 import { parseUsBankCsv, type UsBankCsvFormat } from '../../lib/usBankCsv';
 
 function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => string) {
@@ -136,19 +137,20 @@ export default function StatementImporter({
       const fileType = file.type;
       const fileName = file.name.toLowerCase();
       
-      if (fileName.endsWith('.qif') || fileName.endsWith('.bai') || fileName.endsWith('.bai2') || fileName.endsWith('.ofx') || fileName.endsWith('.qfx')) {
+      if (fileName.endsWith('.qif') || fileName.endsWith('.bai') || fileName.endsWith('.bai2') || fileName.endsWith('.ofx') || fileName.endsWith('.qfx') || fileName.endsWith('.xml') || fileName.endsWith('.camt053')) {
         const workspaceId = useAuthStore.getState().currentWorkspaceId;
         const userId = useAuthStore.getState().user?.uid;
         const content = await file.text();
         if (workspaceId !== useAuthStore.getState().currentWorkspaceId || userId !== useAuthStore.getState().user?.uid) throw new Error('Workspace or user changed. Upload the statement again in the current workspace.');
         const isOfx = fileName.endsWith('.ofx') || fileName.endsWith('.qfx');
+        const isCamt = fileName.endsWith('.xml') || fileName.endsWith('.camt053');
         if (fileName.endsWith('.qif') && !qifDateOrder) throw new Error('Choose the QIF date order before uploading the statement.');
         const currency = useAuthStore.getState().getCurrentWorkspace()?.currency || 'USD';
         if (fileName.endsWith('.qif') && getCurrencyDivisor(currency) !== 100) throw new Error('QIF import supports two-decimal workspace currencies only. No amount was imported.');
-        if (isOfx && getCurrencyDivisor(currency) !== 100) throw new Error('OFX/QFX import supports two-decimal workspace currencies only. No amount was imported.');
+        if ((isOfx || isCamt) && getCurrencyDivisor(currency) !== 100) throw new Error('OFX/QFX/CAMT.053 import supports two-decimal workspace currencies only. No amount was imported.');
         const bankLines = fileName.endsWith('.qif')
           ? parseQIFStatement(content, qifDateOrder as QIFDateOrder)
-          : isOfx ? parseOFXStatement(content, currency) : parseBAI2Statement(content, currency);
+          : isOfx ? parseOFXStatement(content, currency) : isCamt ? parseCamt053Import(content, currency) : parseBAI2Statement(content, currency);
         processResults(bankLines);
         toast.success(`Loaded ${bankLines.length} statement entries from ${file.name}. Review before importing.`, { id: loader });
       } else if (usBankCsvFormat && (fileName.endsWith('.csv') || fileName.endsWith('.txt'))) {
@@ -495,7 +497,7 @@ export default function StatementImporter({
                       <input 
                         type="file" 
                         id={`${formId}-csv-upload`}
-                        accept=".csv,.txt,.qif,.bai,.bai2,.ofx,.qfx"
+                        accept=".csv,.txt,.qif,.bai,.bai2,.ofx,.qfx,.xml,.camt053"
                         className="hidden" 
                         onChange={handleFileUpload}
                         disabled={isParsing}
@@ -505,7 +507,7 @@ export default function StatementImporter({
                         className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all cursor-pointer"
                       >
                         <Upload aria-hidden="true" size={14} />
-                        Upload CSV / QIF / BAI2 / OFX / QFX
+                        Upload CSV / QIF / BAI2 / OFX / QFX / CAMT.053
                       </label>
                     </div>
                   </div>
@@ -526,7 +528,7 @@ export default function StatementImporter({
                       <option value="wells-fargo-checking">Wells Fargo checking / savings (no header)</option>
                     </select>
                   </Labelled>
-                  <p className="text-xs text-[var(--muted)]">Choose a US bank layout only for its matching CSV export; Wells Fargo CSV has no header, so the first row is a transaction. Unknown layouts should use manual mapping, not guesswork. QIF and BAI2 keep their separate parsers. Bank-specific imports need a two-decimal workspace currency. All entries go to review before import.</p>
+                  <p className="text-xs text-[var(--muted)]">Choose a US bank layout only for its matching CSV export; Wells Fargo CSV has no header, so the first row is a transaction. Unknown layouts should use manual mapping, not guesswork. QIF, BAI2, OFX/QFX and CAMT.053 use separate parsers; XML uploads must be a single-account CAMT.053 statement. Bank-specific imports need a two-decimal workspace currency. All entries go to review before import.</p>
                   {fileError && <p role="alert" className="text-sm text-rose-600">{fileError}</p>}
                   <textarea
                     id={`${formId}-statement-text`}
