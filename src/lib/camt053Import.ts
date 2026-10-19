@@ -106,9 +106,12 @@ export function parseCamt053Import(xmlSource: string, expectedCurrency: string):
       fail('Entry ' + item + ' contains multiple transaction details; review a detailed export.');
     if (/<(?:CcyXchg|XchgRate|CntrValAmt|RvslInd)\b/i.test(entry))
       fail('Entry ' + item + ' has currency conversion or reversal information that needs separate review.');
-    const status = field(entry, 'Cd') || field(entry, 'Sts');
-    if (status && status !== 'BOOK' && status !== 'BOOKED')
-      fail('Entry ' + item + ' is not booked.');
+    const statuses = blocks(entry, 'Sts');
+    // CAMT may express status as <Sts>BOOK</Sts> or <Sts><Cd>BOOK</Cd></Sts>.
+    const status = statuses.length === 1 ? (field(statuses[0], 'Cd') ||
+      (statuses[0].trim().match(/^(BOOK|BOOKED|PDNG|INFO)$/)?.[1] ?? null)) : null;
+    if (statuses.length > 1 || !status || (status !== 'BOOK' && status !== 'BOOKED'))
+      fail('Entry ' + item + ' is not booked or has an unknown status.');
 
     // Read the entry-level amount only, never a nested TxDtls amount.
     const envelope = entry.split(/<NtryDtls(?:\s[^<>]*)?>/i)[0];
