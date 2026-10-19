@@ -1,0 +1,13 @@
+# E-30: OFX/QFX bank and card statement preview (19 Oct 2026)
+
+**User path:** Banking → Import statement → Upload CSV / QIF / BAI2 / OFX / QFX. Upload a downloaded `.ofx` or `.qfx` file. Parsed entries go through the **existing** review, duplicate suggestion, user selection, and import callback; a file upload itself never posts a ledger entry.
+
+**Supported:** downloadable OFX 1.x SGML leaf fields and OFX 2.x XML-style tags, with one bank or credit-card statement / one account / one `BANKTRANLIST` per file, 50,000 transactions maximum (5 MB file cap), two-decimal currency matching the current workspace, calendar-validated `DTPOSTED`, exact integer-cent `TRNAMT`, bank `FITID` as review reference, and `NAME`/`MEMO` including entity-decoded Hebrew and English. Signed `TRNAMT` determines debit/credit, not `TRNTYPE`. `LEDGERBAL` and `AVAILBAL` are deliberately not imported as entries. A text amount's decimal places are never silently rounded.
+
+**Refuses:** broken/unclosed transaction blocks; multiple accounts; missing/duplicate FITID; invalid/unsupported dates and amounts; unexpected currency; zero- or three-decimal money; transaction-level currency conversion or correction instructions; oversized files and XML DTD/entity declarations. Unsupported variants need explicit review, not fallback to AI or silent row omission.
+
+**Known limits:** No support for aggregated downloads across accounts, FX conversion, investment transactions, non-UTF-8 transcoding, QFX-specific provenance checks or live bank connections. References are returned for review; the existing `StatementImporter` fingerprint still primarily uses transaction date, amount and description, so cross-import FITID-based deduplication is not certified. No claim that a browser-side import is an authoritative reconciliation, nor that all providers' OFX/QFX dialects are accepted.
+
+**Format references:** [OFX 2.1.1 STMTTRN schema](https://schemas.liquid-technologies.com/ofx/2.1.1/stmttrn.html) and [SGML/XML bank statement examples](https://www.exactsoftware.com/docs/DocView.aspx?DocumentID=%7B6e02f9a5-ee40-4d2f-b8ea-4bee57825907%7D). Source-shaped synthetic fixtures are in `src/tests/ofx-parser.test.ts` and the live entry path is exercised by `src/tests/bank-statement-import-ui.test.tsx`. Real anonymised provider files remain E-56 corpus work.
+
+**Release gate:** W4 remains **Connected Yes / Verified Partly / Browser Yes**; E-30 improves the format entry path but does not fix Plaid cursor durability (AF-001), background-tab recovery (#96), or establish full authority-side source-to-ledger agreement. No server, schema, posting or pricing code modified.
