@@ -317,7 +317,38 @@ begin
       raise exception 'FAIL %: viewer updated a document', t;
     end if;
   end loop;
-end $$;
+end $;
+
+-- AUD-09 / AI #6 S-37…S-40: cross-workspace write attempts across each write family.
+-- The generic table-driven checks above prove viewer/outsider restrictions; these
+-- checks specifically prove that an authorized writer cannot re-home an existing
+-- record by changing its workspaceId, including payment, bank, reconciliation,
+-- settings-adjacent and import-related records.
+do $
+declare
+  t text;
+begin
+  foreach t in array array[
+    'invoices', 'bills', 'payments', 'creditNotes', 'vendorCredits',
+    'bankLines', 'reconciliations', 'customers', 'vendors'
+  ] loop
+    if pg_temp.try_as('u-book', format(
+      'select lf_update(%L, %L, %L::jsonb)',
+      t, 'iso-' || t, '{"workspaceId":"ws2"}'
+    )) then
+      raise exception 'FAIL %: writer moved an existing record into another workspace', t;
+    end if;
+  end loop;
+end $;
+
+-- Payment-family and reconciliation records are not exempt from the normal
+-- tenant boundary even when the caller is a valid member of the source workspace.
+select pg_temp.expect_denied('bookkeeper cannot move a payment to another workspace', 'u-book',
+  $select lf_update('payments','iso-payments','{"workspaceId":"ws2"}'::jsonb)$);
+select pg_temp.expect_denied('bookkeeper cannot move a bill to another workspace', 'u-book',
+  $select lf_update('bills','iso-bills','{"workspaceId":"ws2"}'::jsonb)$);
+select pg_temp.expect_denied('bookkeeper cannot move a reconciliation to another workspace', 'u-book',
+  $select lf_update('reconciliations','iso-reconciliations','{"workspaceId":"ws2"}'::jsonb)$);
 
 -- Every dated table: nothing is posted into, or moved into, a locked period (ws1 is locked to 2026-01-31).
 do $$
