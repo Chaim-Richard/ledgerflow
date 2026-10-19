@@ -23,3 +23,9 @@ Logs and pictures are current-instance artifacts under `/workspace/scratch/c128-
 Capabilities 143/144 remain **Partial**: the reserved invoice form still needs bundle expansion/unit controls, and posted quantity conversion is separate. C-128's item-configuration scope is complete. Capabilities 151/152 now describe the real notes/custom-field screens, with their limits; the earlier verified hosts are unchanged. Prior completed C-103/104/107/109/110/111/112/113 ticks are carried forward, without claiming new implementations.
 
 W13 records this configuration evidence but retains its existing statuses and stock-valuation/label blockers. No money, stock math, server, migrations, dependencies or quality budgets changed.
+
+## Integration check
+
+Merged main `0ace84f1` normally, preserving Claude's changes and both C-127/C-128 handoff messages. Inventory source is byte-identical to the version used for the full coverage and four browser checks. Removed duplicate C-102…C-114 queue entries only after confirming each generic line was a prefix of the retained detailed entry; completed states and evidence links are retained.
+
+After the merge, **9/9 focused component/persistence/capability cases passed**, with no skips, and RLS passed again. The 3,256-test full run belongs to the pre-merge base plus this feature; complete combined-main CI is still pending. Type checking was repeated on the merged branch. No duplicate full-suite run was needed for the documentation merge and unrelated main changes.
