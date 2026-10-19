@@ -248,7 +248,7 @@ const Reports = React.memo(() => {
         </div>
       </section>
       <div data-print-hide role="region" aria-label="Report period" className="flex flex-wrap items-center gap-2 [&_button]:min-h-11 [&_select]:min-h-11 [&_button]:min-w-11">
-            <button onClick={() => onAction('generate')} className="px-3.5 py-1.5 rounded-lg text-sm font-medium bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black hover:opacity-95 transition-all shadow-xs cursor-pointer">
+            <button onClick={() => onAction('generate')} className="px-3.5 py-1.5 rounded-lg text-sm font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] hover:border-[var(--brass)] transition-all shadow-xs cursor-pointer">
               Generate
             </button>
             
