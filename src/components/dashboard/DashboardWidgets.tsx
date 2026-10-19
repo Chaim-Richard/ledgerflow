@@ -13,7 +13,7 @@ import { dashboardReportHref, dashboardComparison, dashboardPeriod, dashboardAgi
 import type { DashboardRange, DashboardRole, DashboardWidget, DashboardLayout } from '../../lib/dashboardOverview';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { getIdToken } from '../../firebase';
-import { AGING_BUCKETS } from '../../lib/aging';
+import { AGING_BUCKETS, partyStats } from '../../lib/aging';
 import { reportVariance, reportPercent } from '../../lib/reportColumns';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { isPostable, isTransactionInDateRange } from '../../lib/txFilters';
@@ -40,11 +40,11 @@ interface WidgetRefreshState { workspaceId: string; at: number; values: WidgetSn
 
 /** The person's own arrangement in this browser, or null (BC-02: then their role's starting layout). */
 function readOwn(key: string): unknown { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; } }
-export default function DashboardWidgets() {
+export default function DashboardWidgets({ children }: { children?: React.ReactNode }) {
   const uid = useAuthStore(state => state.user?.uid), workspaceId = useAuthStore(state => state.currentWorkspaceId);
-  return <ScopedDashboardWidgets key={`${uid || 'guest'}:${workspaceId}`} />;
+  return <ScopedDashboardWidgets key={`${uid || 'guest'}:${workspaceId}`}>{children}</ScopedDashboardWidgets>;
 }
-function ScopedDashboardWidgets() {
+function ScopedDashboardWidgets({ children }: { children?: React.ReactNode }) {
   const uid = useAuthStore(state => state.user?.uid), workspaceId = useAuthStore(state => state.currentWorkspaceId);
   const workspace = useAuthStore(state => state.getCurrentWorkspace());
   const isGuest = useAuthStore(state => state.isGuest && !state.user);
@@ -122,6 +122,9 @@ function ScopedDashboardWidgets() {
   const ap = useMemo(() => valid ? dashboardAging(scoped.vendors, scoped.bills, 'vendor', period.endDate) : { rows: [], top: [] }, [scoped, valid, period.endDate]);
   const recent = useMemo(() => scoped.transactions.filter(tx => isPostable(tx) && isTransactionInDateRange(tx, period.startDate, period.endDate)).sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id)).slice(0, 5), [scoped, period.startDate, period.endDate]);
   const partial = (['transactions', 'accounts', 'invoices', 'bills', 'customers', 'vendors'] as const).filter(key => truncated[key] || failed[key]);
+  const owedToYou = useMemo(() => partyStats(scoped.invoices.filter(doc => !doc.date || doc.date.slice(0, 10) <= period.endDate), [], 'customer', period.endDate).outstandingCents, [scoped.invoices, period.endDate]);
+  const youOwe = useMemo(() => partyStats(scoped.bills.filter(doc => !doc.date || doc.date.slice(0, 10) <= period.endDate), [], 'vendor', period.endDate).outstandingCents, [scoped.bills, period.endDate]);
+  const summaryReady = valid && data && !loading && !partial.length && (isGuest || ['transactions', 'accounts', 'invoices', 'bills', 'customers', 'vendors'].every(key => loaded[key as LedgerKey]));
   const reportLink = (report: string) => dashboardReportHref(report, period.startDate, period.endDate, fiscalStart);
   const aging = (value: typeof ar, side: 'customer' | 'vendor') => <>
     <p className="text-sm text-[var(--muted)]">Current unpaid amounts aged at {period.endDate}; documents dated later are excluded. Past payments are not rewound.</p>
@@ -166,9 +169,31 @@ function ScopedDashboardWidgets() {
       {range === 'custom' && <><label>From<input aria-label="Dashboard from" type="date" value={custom.startDate} onChange={event => setCustom({ ...custom, startDate: event.target.value })} className="block min-h-11 bg-[var(--panel)] border rounded px-2" /></label><label>To<input aria-label="Dashboard to" type="date" value={custom.endDate} onChange={event => setCustom({ ...custom, endDate: event.target.value })} className="block min-h-11 bg-[var(--panel)] border rounded px-2" /></label></>}
     </div>
     {!valid && <p role="alert">Choose valid dates with From on or before To.</p>}
-    {valid && <p>{period.startDate} to {period.endDate}. Previous period: {data?.previousPeriod.startDate} to {data?.previousPeriod.endDate}. Sparklines show 12 calendar months ending at the selected date.</p>}
+    {valid && <p className="text-sm text-[var(--muted)]">{period.startDate} to {period.endDate}</p>}
     {loading && <p role="status">Loading dashboard collections…</p>}
     {partial && partial.length > 0 && <p role="alert">Incomplete data: {partial.join(', ')}. These loaded-data figures may omit history; use authoritative reports before relying on totals.</p>}
+    <section aria-label="Dashboard at a glance" className="space-y-2">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {[
+          { label: 'Cash', cents: data?.current.cash, report: 'balance-sheet' },
+          { label: 'Owed to you', cents: owedToYou, report: 'ar-aging' },
+          { label: 'You owe', cents: youOwe, report: 'ap-aging' },
+          { label: range === 'month' ? 'Profit this month' : 'Profit for period', cents: data?.current.profit, report: 'pnl' },
+         ].map(item => {
+          const amount = summaryReady ? formatCurrency(item.cents ?? 0, currency) : !valid ? 'Choose dates' : partial.length ? 'Unavailable' : 'Loading…';
+          return <a key={item.report} role={valid ? undefined : 'link'} tabIndex={valid ? undefined : -1} href={valid ? reportLink(item.report) : undefined} aria-disabled={!valid} aria-label={`${item.label} ${amount} report`} data-summary-report={item.report} className="min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 min-h-11">
+          <span className="block text-sm text-[var(--muted)]">{item.label}</span>
+          <span id={`dashboard-summary-${item.report}`} className="block text-right text-lg font-semibold tabular-nums break-all">{amount}</span>
+        </a>; })}
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-xs text-[var(--muted)]">{isGuest ? 'Demo data' : 'Loaded data'} · Cash at end date; profit for selected period.</span>
+        <a href="#tasks" className="min-h-11 inline-flex items-center px-3 border border-[var(--line)] rounded-lg font-semibold text-sm">Open tasks</a>
+      </div>
+      <p className="text-xs text-[var(--muted)]">Current unpaid amounts; later documents excluded. Past payments are not reconstructed.</p>
+    </section>
+    {children}
+    {valid && <p className="text-sm text-[var(--muted)]">Previous period: {data?.previousPeriod.startDate} to {data?.previousPeriod.endDate}. Sparklines show 12 calendar months ending at the selected date.</p>}
     <details><summary className="cursor-pointer min-h-11 flex items-center">Customize widgets</summary><div className="space-y-1">{layout.order.map((id, index) => <div key={id} className="flex flex-wrap items-center gap-2"><label className="min-h-11 flex items-center gap-2 flex-1"><input type="checkbox" checked={!layout.hidden.includes(id)} onChange={event => changeLayout({ ...layout, hidden: event.target.checked ? layout.hidden.filter(key => key !== id) : [...layout.hidden, id] })} />{LABELS[id]}</label><button type="button" aria-label={`Move ${LABELS[id]} up`} disabled={index === 0} onClick={() => move(id, -1)} className="min-h-11 min-w-11 underline disabled:opacity-40">Up</button><button type="button" aria-label={`Move ${LABELS[id]} down`} disabled={index === layout.order.length - 1} onClick={() => move(id, 1)} className="min-h-11 min-w-11 underline disabled:opacity-40">Down</button></div>)}</div><button type="button" onClick={resetLayout} className="min-h-11 underline">Reset layout</button>
       {role === 'owner' && <div className="flex flex-wrap items-center gap-2"><label className="min-h-11 flex items-center gap-2">Starting dashboard for<select value={forRole} onChange={event => setForRole(event.target.value as DashboardRole)} className="border border-[var(--line)] rounded bg-[var(--panel)] px-2 py-1">{DASHBOARD_ROLES.map(r => <option key={r} value={r}>{r === 'owner' ? 'owners' : `${r}s`}</option>)}</select></label><button type="button" onClick={() => void giveToRole()} className="min-h-11 underline">Give them this layout</button>{roleNote && <p role="status">{roleNote}</p>}</div>}</details>
     {storageError && <p role="status">Layout changed for this visit; this browser could not save it.</p>}
