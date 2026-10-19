@@ -50,7 +50,7 @@ test('E-31: no silent rounding, amount guessing, wrong currency or overflow', ()
   assert.throws(() => parseCamt053Import(sample.replace('1234.56', '9999999999999999.99'), 'EUR'), /zero or out-of-range/);
   assert.throws(() => parseCamt053Import(sample, 'USD'), /Account currency differs/);
   assert.throws(() => parseCamt053Import(sample.replace('Ccy="EUR">25.05', 'Ccy="USD">25.05'), 'EUR'), /currency USD differs/);
-  assert.throws(() => parseCamt053Import(sample.replace('<Ccy>EUR</Ccy>', '<Ccy>JPY</Ccy>'), 'JPY'), /currency EUR differs|currency differs/);
+  assert.throws(() => parseCamt053Import(sample.replace('<Ccy>EUR</Ccy>', '<Ccy>USD</Ccy>'), 'USD'), /currency EUR differs|currency differs/);
 });
 
 test('E-31: rejects unsupported aggregation, XML entities, corrections, unbooked entries and missing close', () => {
