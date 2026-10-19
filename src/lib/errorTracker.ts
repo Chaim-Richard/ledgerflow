@@ -1,5 +1,6 @@
 import { useAuthStore } from '../stores/useAuthStore';
 import { ErrorLogRecord } from '../types';
+import { redactForLogs } from './logRedaction';
 
 const RECENT_ERRORS_MAX = 5;
 const recentErrors: ErrorLogRecord[] = [];
@@ -9,12 +10,9 @@ const recentErrors: ErrorLogRecord[] = [];
  */
 function sanitizeText(input: string): string {
   if (!input) return '';
-  return input
-    .replace(/(bearer\s+)[a-zA-Z0-9_.-]+/gi, '$1[REDACTED]')
-    .replace(/(api[_-]?key["']?\s*[:=]\s*["']?)[a-zA-Z0-9_.-]+/gi, '$1[REDACTED]')
-    .replace(/(password["']?\s*[:=]\s*["']?)[^\s"']+/gi, '$1[REDACTED]')
-    .replace(/(secret["']?\s*[:=]\s*["']?)[^\s"']+/gi, '$1[REDACTED]')
-    .slice(0, 5000);
+  // F-35: one redaction rule (credentials, e-mail addresses, card numbers) lives in
+  // src/lib/logRedaction.ts, so nothing personal leaves the browser in a crash report.
+  return redactForLogs(input).slice(0, 5000);
 }
 
 /**

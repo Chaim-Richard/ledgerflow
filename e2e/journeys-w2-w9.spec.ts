@@ -257,7 +257,6 @@ test('F-43 W4 browser: imported bank lines match ledger entries, one reconciled 
   await expect(page.getByText(/Matched History/).first()).toBeVisible();
 
   // Axe on the reconciliation panel (serious/critical only)
-  const axeTarget = page.locator('main, #root, body').first();
   const axe = await new AxeBuilder({ page }).include('body').analyze();
   const serious = axe.violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
   expect(serious, JSON.stringify(serious.map(v => ({ id: v.id, desc: v.description })))).toEqual([]);
