@@ -43,7 +43,8 @@ unit tests). Passing this audit is not a statement that a report is filing-ready
 | PR #190 CI run 39288681099, shard 1/2 | One test failed: the check for the word `undefined` matched **prose** — Gross Profit by Customer explains "margin percent = margin ÷ sales, undefined when sales are zero" | The token check now looks for `undefined` only inside table cells; `NaN`, `Infinity` and `Invalid Date` stay whole-region checks. The same run's "Playwright E2E Smoke Suite" failure was only its roll-up step ("require every shard to succeed"), not a separate failure |
 | PR #190 CI run 39291426442, shard 1/2 | Ten tests stopped on `ReferenceError: report is not defined` — a variable name left over from an edit, which the repository typecheck did not catch because `tsconfig.json` does not include `e2e/` | The name is now the destructured `selector`; the spec is typechecked with its own `tsc` command (row above). The other 17 tests already reached the axe, overflow and right-to-left checks and passed |
 | **Run 39294040889** at `3935984` (report tabs only) | **All green:** Lint/Typecheck/Test (with `test:rules` on a real Postgres, every migration applied), unit tests in America/Los_Angeles and Pacific/Auckland, Browser shard 1/2 and 2/2, Playwright E2E Smoke Suite, production build. 27 report tests × 4 checks + 81 screenshots attached to the run | — |
-| **Final run 39296559701** at `8befe52` (report tabs + Loans and Petty cash screens) | **All seven jobs green**, both browser shards | final head for review |
+| **Run 39296559701** at `8befe52` (report tabs + Loans and Petty cash screens) | **All seven jobs green**, both browser shards | — |
+| **Final run 39299198528** at `b91b20b` (this pack's own text) | **All seven jobs green**, both browser shards | final head for review |
 
 ## 2. Report screens this lane built (the tab a user opens)
 
@@ -116,7 +117,7 @@ screen and tested. Nothing here is silently claimed as done.
 | **A-70** Dunning letters | Three-step letters, preview, CSV, nothing sent | Actually sending through the email path and writing the once-per-step log (server) | AI #1 |
 | **A-203** Accessibility | Warehouse panels (16 Oct) | **Closed:** all 27 report tabs scanned with axe over their own region, green on CI `39294040889`; every screen is also covered by `layout.spec.ts` at 1280 px | AI #3 (done) |
 | **A-204** Phone at 390 px | Warehouse panels at 390 and 320 (16 Oct), Close journey at 390 | **Closed:** all 27 report tabs at 390 px, green on CI `39294040889` | AI #3 (done) |
-| **A-205** Hebrew / right-to-left | Warehouse panels with Hebrew branding (16 Oct) | **Closed:** the 27 report tabs are green in a right-to-left page, and the **Loans** and **Petty cash** screens get the same 390 px pass with axe over the screen (`#main-content`); green on CI `39296559701` | AI #3 (done) |
+| **A-205** Hebrew / right-to-left | Warehouse panels with Hebrew branding (16 Oct) | **Closed:** the 27 report tabs are green in a right-to-left page, and the **Loans** and **Petty cash** screens get the same 390 px pass with axe over the screen (`#main-content`); green on CI `39299198528` | AI #3 (done) |
 | **A-208** Reconcile partial tasks | This table | Closed by this pack: every `[~]` item now names its remaining step and owner (the only two left in this lane are A-205's two panels and the five items blocked on AI #1) | AI #3 (done here) |
 
 ## 5. A-207: the waiting room, checked library by library
