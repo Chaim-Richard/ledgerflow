@@ -44,7 +44,7 @@ describe('an invoice is posted once (database)', { skip: !url && 'LF_TEST_DATABA
     const { getDb } = await import('../server/db/firestore');
     db = getDb();
     await db.collection('workspaces').doc(ws).set({ uid: 'owner-1', name: 'Inv', currency: 'USD', members: ['owner-1'] });
-    for (const [id, type] of [['ar', 'asset'], ['sales', 'income'], ['ap', 'liability'], ['rent', 'expense']]) await db.collection('chartAccounts').doc(`${ws}_${id}`).set({ workspaceId: ws, name: id, code: id, type });
+    for (const [id, type] of [['ar', 'asset'], ['sales', 'income'], ['ap', 'liability'], ['rent', 'expense'], ['cash', 'asset']]) await db.collection('chartAccounts').doc(`${ws}_${id}`).set({ workspaceId: ws, name: id, code: id, type });
     const app = express();
     app.use(express.json());
     app.use((req, _res, next) => { (req as unknown as { user: { uid: string } }).user = { uid: String(req.header('x-test-uid')) }; next(); });
@@ -99,5 +99,27 @@ describe('an invoice is posted once (database)', { skip: !url && 'LF_TEST_DATABA
     assert.equal((await post(bill(3500))).status, 409);
     const { rows } = await db.pool.query(`select count(*)::int as n from public."transactions" where workspace_id = $1 and data->'metadata'->>'billId' = 'B-1'`, [ws]);
     assert.equal(rows[0].n, 1);
+  });
+
+  test('the payment posted with a paid invoice (INT-2 payments): retry posts nothing; an old tab marking it paid is refused', async () => {
+    const payment = (invoiceId: string, cents: number) => ({ id: crypto.randomUUID(), workspaceId: ws, date: '2026-06-05', description: `Payment ${invoiceId}`, status: 'completed', type: 'actual', totalAmountCents: cents, currency: 'USD',
+      metadata: { invoiceId, type: 'invoice-payment' }, lines: [{ accountId: `${ws}_cash`, amountCents: cents }, { accountId: `${ws}_ar`, amountCents: -cents }] });
+    const payments = async (invoiceId: string) => (await db.pool.query(`select count(*)::int as n from public."transactions" where workspace_id = $1 and data->'metadata'->>'invoiceId' = $2 and data->'metadata'->>'type' = 'invoice-payment'`, [ws, invoiceId])).rows[0].n as number;
+
+    // paid on the first save: invoice + payment; the same save retried posts nothing more
+    assert.equal((await save([accrual('P', 8000), payment('P', 8000)], 'P', 8000)).status, 200);
+    const retry = await save([accrual('P', 8000), payment('P', 8000)], 'P', 8000);
+    assert.equal(retry.status, 200, JSON.stringify(retry.body));
+    assert.equal(retry.body.replayed, true);
+    assert.equal(await payments('P'), 1);
+    // a different payment from an out-of-date screen is refused
+    assert.equal((await save([accrual('P', 8000), payment('P', 5000)], 'P', 8000)).status, 409);
+    assert.equal(await payments('P'), 1);
+
+    // sent first, then an old tab (that never saw the posting) marks it paid: refused, not half-applied
+    assert.equal((await save([accrual('Q', 4000)], 'Q', 4000)).status, 200);
+    const stale = await save([accrual('Q', 4000), payment('Q', 4000)], 'Q', 4000);
+    assert.equal(stale.status, 409, JSON.stringify(stale.body));
+    assert.equal(await payments('Q'), 0);
   });
 });

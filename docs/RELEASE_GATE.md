@@ -43,6 +43,6 @@ independently worked figures passes · **Browser** = an end-to-end browser test 
 | W11 | Import from QuickBooks/CSV → totals match the source (AU-4) | 3 | Partly | No | No | AU-4 |
 | W12 | Several books → group report | 3 | Yes | Partly | No | consolidation export, cross-book test |
 | W13 | Stock: purchase → stock → sale → valuation | 3 | Yes | Partly | Partly | ISS-130, ISS-131, DIM-2; C-128 item configuration verified locally, full stock journey/CI still pending |
-| W14 | Roles and access (owner, accountant, bookkeeper, viewer) | 2 | Yes | Yes (RLS suite) | Partly | AUD-09 per write family |
+| W14 | Roles and access (owner, accountant, bookkeeper, viewer) | 2 | Yes | Yes (RLS suite; AI #6 adds cross-workspace write assertions for invoice, bill, payment, credit, reconciliation, customer and vendor records; pass on test Postgres 19 Oct) | Partly | AUD-09 for the remaining write families |
 
 **Today (19 Oct, AI #7):** stage 1 moving to stage 2 on five workflows. W2, W3, W4, W6, W9 now have browser journeys (F-41…F-45) with worked figures verified locally; CI will confirm on the PR. Nearest to stage 2: W2, W3, W4, W6, W9, W14 — W7/W8 stay Partly on Connected until CON-1…CON-4. Critical still open: AUD-02 (rest). Fixed 18 Oct: BUG-03/INT-2 invoices, INT-1/3/4/5. Added 19 Oct morning: Israeli month journey (A-152) + close journey (A-151); evening: F-41…F-45 journeys ([evidence](verification/ai7-journeys-w2-w9.md)); also F-38…F-40 grade-up foundations (perf budgets, scorecard, layer guard).
