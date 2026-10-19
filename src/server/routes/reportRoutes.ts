@@ -313,7 +313,16 @@ reportRouter.get("/trial-balance", async (req, res) => {
   const result = WorkspaceIdSchema.safeParse(req.query);
   if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
   const { workspaceId } = result.data;
-  const asOfDate = (req.query.asOfDate || req.query.endDate) as string | undefined;
+
+  const rawAsOfDate = req.query.asOfDate ?? req.query.endDate;
+  if (rawAsOfDate !== undefined && typeof rawAsOfDate !== 'string') {
+    return sendError(res, "Invalid parameters", 400, [{ path: ['asOfDate'], message: "Must be a single date string" }]);
+  }
+  const asOfDate = rawAsOfDate;
+  if (asOfDate && !/^\d{4}-\d{2}-\d{2}$/.test(asOfDate)) {
+    return sendError(res, "Invalid parameters", 400, [{ path: ['asOfDate'], message: "Use YYYY-MM-DD" }]);
+  }
+
   try {
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, asOfDate);
     const tb = computeTrialBalance(accounts, transactions, asOfDate);
