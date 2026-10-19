@@ -32,6 +32,7 @@ import { normalizeDateString } from '../../lib/dateParsing';
 import { Labelled } from '../ui/Labelled';
 import { parseQIFStatement, type QIFDateOrder } from '../../lib/qifParser';
 import { parseBAI2Statement } from '../../lib/bai2Parser';
+import { parseOFXStatement } from '../../lib/ofxParser';
 import { parseUsBankCsv, type UsBankCsvFormat } from '../../lib/usBankCsv';
 
 function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => string) {
@@ -135,17 +136,19 @@ export default function StatementImporter({
       const fileType = file.type;
       const fileName = file.name.toLowerCase();
       
-      if (fileName.endsWith('.qif') || fileName.endsWith('.bai') || fileName.endsWith('.bai2')) {
+      if (fileName.endsWith('.qif') || fileName.endsWith('.bai') || fileName.endsWith('.bai2') || fileName.endsWith('.ofx') || fileName.endsWith('.qfx')) {
         const workspaceId = useAuthStore.getState().currentWorkspaceId;
         const userId = useAuthStore.getState().user?.uid;
         const content = await file.text();
         if (workspaceId !== useAuthStore.getState().currentWorkspaceId || userId !== useAuthStore.getState().user?.uid) throw new Error('Workspace or user changed. Upload the statement again in the current workspace.');
+        const isOfx = fileName.endsWith('.ofx') || fileName.endsWith('.qfx');
         if (fileName.endsWith('.qif') && !qifDateOrder) throw new Error('Choose the QIF date order before uploading the statement.');
         const currency = useAuthStore.getState().getCurrentWorkspace()?.currency || 'USD';
         if (fileName.endsWith('.qif') && getCurrencyDivisor(currency) !== 100) throw new Error('QIF import supports two-decimal workspace currencies only. No amount was imported.');
+        if (isOfx && getCurrencyDivisor(currency) !== 100) throw new Error('OFX/QFX import supports two-decimal workspace currencies only. No amount was imported.');
         const bankLines = fileName.endsWith('.qif')
           ? parseQIFStatement(content, qifDateOrder as QIFDateOrder)
-          : parseBAI2Statement(content, currency);
+          : isOfx ? parseOFXStatement(content, currency) : parseBAI2Statement(content, currency);
         processResults(bankLines);
         toast.success(`Loaded ${bankLines.length} statement entries from ${file.name}. Review before importing.`, { id: loader });
       } else if (usBankCsvFormat && (fileName.endsWith('.csv') || fileName.endsWith('.txt'))) {
@@ -492,7 +495,7 @@ export default function StatementImporter({
                       <input 
                         type="file" 
                         id={`${formId}-csv-upload`}
-                        accept=".csv,.txt,.qif,.bai,.bai2"
+                        accept=".csv,.txt,.qif,.bai,.bai2,.ofx,.qfx"
                         className="hidden" 
                         onChange={handleFileUpload}
                         disabled={isParsing}
@@ -502,7 +505,7 @@ export default function StatementImporter({
                         className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all cursor-pointer"
                       >
                         <Upload aria-hidden="true" size={14} />
-                        Upload CSV / QIF / BAI2
+                        Upload CSV / QIF / BAI2 / OFX / QFX
                       </label>
                     </div>
                   </div>
