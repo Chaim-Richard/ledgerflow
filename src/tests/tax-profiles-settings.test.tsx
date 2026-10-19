@@ -158,3 +158,36 @@ test('registration format selection clears on workspace change',()=>{
   assert.equal(screen.queryByLabelText('Check number as'),null);
   assert.doesNotMatch(document.body.textContent||'',/6782/);
 });
+
+test('US address recognition copies only state/ZIP on request and preserves the mixed profile draft',()=>{
+  profiles({books:{name:'ספרים Books',place:{country:'US',state:'NY',postalCode:'10001',city:'עיר City',county:'Review county',district:'Review district'}}});
+  let requests=0;globalThis.fetch=async()=>{requests++;return api({});};
+  render(<TaxProfilesSettings/>);edit();fireEvent.click(screen.getByText('Read state and ZIP from a US address'));
+  fireEvent.change(screen.getByLabelText('US address to read'),{target:{value:'חנות Store\n15 Summer St\nBoston, MA 02110-1234\nUSA'}});
+  assert.match(document.body.textContent||'',/Massachusetts \(MA\).*02110-1234/);
+  assert.equal((screen.getByLabelText('State') as HTMLInputElement).value,'NY','no silent change');
+  fireEvent.click(screen.getByRole('button',{name:'Use state and ZIP in draft'}));
+  for(const [label,value] of [['State','MA'],['Postal code','02110-1234'],['Country','US'],['City','עיר City'],['County','Review county'],['District','Review district'],['Profile name','ספרים Books']])
+    assert.equal((screen.getByLabelText(label) as HTMLInputElement).value,value,label);
+  assert.equal(requests,0,'recognition/copy has no network or save side effect');
+  fireEvent.click(screen.getByRole('button',{name:'Cancel'}));edit();
+  assert.equal((screen.getByLabelText('US address to read') as HTMLTextAreaElement).value,'');
+  assert.equal((screen.getByLabelText('State') as HTMLInputElement).value,'NY');
+});
+
+test('partial, ambiguous, foreign, territory and military addresses require review instead of copying',()=>{
+  profiles({books:{place:{country:'US'}}});render(<TaxProfilesSettings/>);edit();fireEvent.click(screen.getByText('Read state and ZIP from a US address'));
+  for(const address of ['Boston, MA','Boston, MA 02110\nNew York, NY 10001','Toronto, ON M5V2T6\nCanada','San Juan, PR 00901','APO AE 09012']){
+    fireEvent.change(screen.getByLabelText('US address to read'),{target:{value:address}});
+    assert.equal((screen.getByRole('button',{name:'Use state and ZIP in draft'}) as HTMLButtonElement).disabled,true,address);
+  }
+  assert.match(document.body.textContent||'',/does not verify delivery/);
+});
+
+test('address scratch text clears on country/workspace changes and appears only for declared US profiles',()=>{
+  profiles({books:{place:{country:'US'}}});render(<TaxProfilesSettings/>);edit();
+  fireEvent.change(screen.getByLabelText('US address to read'),{target:{value:'Boston, MA 02110'}});
+  fireEvent.change(screen.getByLabelText('Country'),{target:{value:'IL'}});assert.equal(screen.queryByLabelText('US address to read'),null);
+  fireEvent.change(screen.getByLabelText('Country'),{target:{value:'US'}});assert.equal((screen.getByLabelText('US address to read') as HTMLTextAreaElement).value,'');
+  act(()=>useAuthStore.setState({currentWorkspaceId:'another-workspace'}));assert.equal(screen.queryByLabelText('US address to read'),null);
+});
