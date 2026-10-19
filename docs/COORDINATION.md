@@ -976,7 +976,7 @@ never invent an account or a rate, posting goes through the server.
 
 - [ ] **D-44 Report picker that fits (do this first; from the e2e screenshots, 13 Oct)**. The Reports tab shows ~60 report buttons; on a phone they fill more than the first screen. Replace with one "Choose report" control: recent/pinned reports first, groups (Statements, Sales, Purchases, Stock, Tax, Banking, Analysis), and a search box. Keep each report's URL (`?report=`) and keyboard access. Refresh the visual baselines with the "Refresh visual baselines" workflow and look at the images before you commit.
 - [x] **D-45 Dark-mode contrast on report date fields (from the screenshots)** *(AI #4: theme-variable controls, wrapping and dark-mode axe/native contrast/geometry checks on `ai4/d-45-report-filters`; integration pending).* On the phone balance sheet in dark mode the date inputs are dark grey on dark blue. Same on the desktop P&L in dark mode: the date and Basis fields are white boxes with near-invisible text. Also, on the desktop balance sheet the Sort buttons are cut off at the right edge ("NA…"). Fix the input colours in the report header for both themes; add an axe contrast check for that header in dark mode.
-- [x] **D-46 Banner space on phones** *(AI #4: combined compact notice row, state/keyboard/axe tests on `ai4/d-46-mobile-notices`, based on D-45; integration pending).* The backup and demo-data banners take ~10% of a phone screen. Collapse them to one slim line on phones (still dismissable, still keyboard reachable).
+- [x] **D-46 Banner space on phones** *(AI #4: combined compact notice row, state/keyboard/axe tests on `ai4/d-46-mobile-notices`, merged PR #164; combined references merged 0fdbdbe2).* The backup and demo-data banners take ~10% of a phone screen. Collapse them to one slim line on phones (still dismissable, still keyboard reachable).
 - [x] **D-11 Mutation testing on money files** (tracker BP-08): Stryker (dev dependency only) on `src/lib/taxCodes.ts`,
 - [x] **D-11 Mutation testing on money files** *(AI #4: implemented; GitHub integration and lead merge pending)* (tracker BP-08): Stryker (dev dependency only) on `src/lib/taxCodes.ts`,
   `documentMath.ts`, `moneyFormat.ts` and `hourlyPay.ts`, run by hand (`npm run test:mutation`), not in CI. Report the
@@ -1068,10 +1068,8 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-76 Quality ratchet: lower ESLint warnings from 212 to 180**
 
 **UI design batch (owner, 18 Oct) — follow `docs/UI_GUIDE.md`; before/after screenshots in each PR; do D-45 and D-46 first.**
-- [ ] **D-77 Reports header: replace the tall "Financial Intelligence Hub" hero with a compact title row (title, period, Print/Export) ≤120px**
 - [~] **D-78 Reports tab bar on phones: horizontally scrolling, whole readable labels, no overlap; active tab scrolled into view**
 - [~] **D-77 Reports header: replace the tall "Financial Intelligence Hub" hero with a compact title row (title, period, Print/Export) ≤120px**
-- [ ] **D-78 Reports tab bar on phones: horizontally scrolling, whole readable labels, no overlap; active tab scrolled into view**
 - [x] **D-79 Dark mode: report filter row (period dates, Basis, Label, comparison) readable — use CSS variables, contrast ≥4.5:1**
 - [~] **D-80 Dark mode: highlighted ledger rows (Retained earnings on the balance sheet) readable**
 - [ ] **D-81 Sentence case for buttons and headings across reports and settings (no all-caps buttons)**
