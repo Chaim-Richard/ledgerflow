@@ -38,7 +38,7 @@ test('phone tax profiles preserve Hebrew drafts on refusal, save by keyboard and
   const save=page.getByRole('button',{name:'Save profile'});await save.focus();await save.press('Enter');
   await expect(page.getByRole('alert')).toHaveText('Review required');
   await expect(page.getByLabel('Profile name')).toHaveValue('ספרים Edited');await expect(page.getByLabel('Registration city')).toHaveValue('תל אביב');
-  await save.press('Enter');await expect(page.getByRole('status')).toHaveText('Tax profile saved.');
+  await save.press('Enter');await expect(page.getByRole('status').filter({hasText:'Tax profile saved.'})).toHaveText('Tax profile saved.');
   await expect(page.getByRole('form',{name:'Edit tax profile'})).toHaveCount(0);await expect(edit).toBeFocused();await expect(page.locator('dd').filter({hasText:'ספרים Edited'})).toBeVisible();
   await edit.click();const add=page.getByRole('button',{name:'Add registration'});await add.focus();await add.press('Enter');
   const remove=page.getByRole('button',{name:'Remove registration 2'});await remove.focus();await remove.press('Enter');

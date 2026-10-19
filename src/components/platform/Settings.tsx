@@ -15,16 +15,16 @@ export default function Settings() {
   const ActiveComponent = activeTabDef ? SETTINGS_COMPONENTS[activeTabDef.componentName] : null;
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-12 py-6 px-4 md:py-12 md:px-8">
+    <div className="sentence-case-controls w-full max-w-6xl mx-auto space-y-12 py-6 px-4 md:py-12 md:px-8">
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-8 pb-12 border-b border-[var(--line)]">
         <div className="space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-[0.3em]">
             <Terminal size={12} />
-            Precision Core v2.0
+            Workspace settings
           </div>
           <h1 className="text-4xl md:text-6xl font-black text-[var(--text)] tracking-tighter">Settings</h1>
           <p className="text-[var(--muted)] font-medium text-lg max-w-xl">
-            Configure institutional rule bridges, developer integrations, and enterprise-grade security protocols.
+            Manage your workspace, appearance, backups and integrations.
           </p>
         </div>
 
@@ -71,10 +71,10 @@ export default function Settings() {
         {/* Global Sidebar Documentation Context (Could also be modularized later) */}
         <div className="space-y-10">
           <div className="p-4 md:p-10 bg-[var(--surface)] rounded-[40px] border border-[var(--line)] shadow-sm group hover:border-indigo-600 transition-all duration-500">
-            <h2 className="text-[11px] font-black text-[var(--text)] uppercase tracking-[0.3em] mb-6 opacity-40">Documentation Protocol</h2>
+            <h2 className="text-[11px] font-black text-[var(--text)] uppercase tracking-[0.3em] mb-6 opacity-40">About settings</h2>
             <div className="space-y-4">
-              <p className="text-[11px] text-[var(--muted)] leading-relaxed font-bold uppercase tracking-widest mb-8">
-                The architecture runs entirely on dynamic topological registries. Settings components are lazy-loaded on demand via the SETTINGS_COMPONENTS registry mapping.
+              <p className="text-[11px] text-[var(--muted)] leading-relaxed font-bold mb-8">
+                Choose a tab to review or update the settings for your workspace.
               </p>
             </div>
           </div>
