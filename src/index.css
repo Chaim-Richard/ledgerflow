@@ -283,3 +283,10 @@
   [data-testid="tx-header"] > [data-column] { padding: 4px; gap: 0; }
   [data-column="select"] { padding-inline: 0; overflow: visible; }
 }
+
+/* Reports/settings retain authored labels and acronyms instead of forcing all caps.
+   Include descendants because nested icons/labels can carry their own utilities. */
+.sentence-case-controls :is(button, h1, h2, h3, h4, h5, h6),
+.sentence-case-controls :is(button, h1, h2, h3, h4, h5, h6) * {
+  text-transform: none;
+}

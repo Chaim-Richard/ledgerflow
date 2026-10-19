@@ -162,10 +162,11 @@ const Sidebar = React.memo(({
             </div>
          </div>
 
-         {/* Worlds Rail Section */}
+         {/* Project amounts, or absolute account totals when there are no projects. */}
          {uiStore.isSidebarOpen && (
            <div className="pt-2 border-t border-[var(--line)]">
-              <h2 className="font-mono text-[10px] uppercase tracking-widest text-[var(--faint)] px-2 mb-2 font-semibold">Worlds</h2>
+              <h2 className="font-mono text-[10px] uppercase tracking-widest text-[var(--faint)] px-2 mb-2 font-semibold">{realProjects.length ? 'Projects' : accounts.length ? 'Account totals' : 'Book summary'}</h2>
+              <p className="text-[10px] text-[var(--muted)] px-2 mb-2">{realProjects.length ? 'Budgets or spending, as available' : accounts.length ? 'Sum of absolute account balances' : 'No accounts loaded'}</p>
               <div className="space-y-1">
                  {worldItems.map((w) => (
                    <div 

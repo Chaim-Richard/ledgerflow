@@ -1055,12 +1055,12 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-76 Quality ratchet: lower ESLint warnings from 212 to 180**
 
 **UI design batch (owner, 18 Oct) — follow `docs/UI_GUIDE.md`; before/after screenshots in each PR; do D-45 and D-46 first.**
-- [~] **D-78 Reports tab bar on phones: horizontally scrolling, whole readable labels, no overlap; active tab scrolled into view**
-- [~] **D-77 Reports header: replace the tall "Financial Intelligence Hub" hero with a compact title row (title, period, Print/Export) ≤120px**
+- [x] **D-78 Reports tab bar on phones: horizontally scrolling, whole readable labels, no overlap; active tab scrolled into view**
+- [x] **D-77 Reports header: replace the tall "Financial Intelligence Hub" hero with a compact title row (title, period, Print/Export) ≤120px**
 - [x] **D-79 Dark mode: report filter row (period dates, Basis, Label, comparison) readable — use CSS variables, contrast ≥4.5:1**
-- [~] **D-80 Dark mode: highlighted ledger rows (Retained earnings on the balance sheet) readable**
-- [ ] **D-81 Sentence case for buttons and headings across reports and settings (no all-caps buttons)**
-- [ ] **D-82 Remove invented jargon from visible labels ("Worlds", "Financial Intelligence Hub", "Precision Core"…) — list in the PR, plain replacements**
+- [x] **D-80 Dark mode: highlighted ledger rows (Retained earnings on the balance sheet) readable**
+- [~] **D-81 Sentence case for buttons and headings across reports and settings (no all-caps buttons)**
+- [~] **D-82 Remove invented jargon from visible labels ("Worlds", "Financial Intelligence Hub", "Precision Core"…) — list in the PR, plain replacements**
 - [ ] **D-83 Profit and loss screen: one primary action, filters grouped on one row (desktop) / stacked (phone)**
 - [ ] **D-84 Balance sheet: same layout as P&L (D-83); account names truncate with tooltip, numbers never cut**
 - [ ] **D-85 Dashboard: first screen shows cash, owed to you, you owe, profit this month, tasks (P2-31); everything else below**
@@ -2244,3 +2244,5 @@ Claude is out of usage for about 3 days. The project keeps running without it:
 
 - 2026-10-19 AI #6 (ChatGPT): S-37…S-40 / AUD-09 initial test-only change pushed to `ai6/S-37-access-write-family-tests`. Added cross-workspace mutation assertions for invoices, bills, payments, credit notes, vendor credits, reconciliations, customers and vendors to `supabase/tests/rls.test.sql`; W14 now records that the database run is pending. No server, posting or money-calculation code changed. **Not yet verified:** the current `.github/workflows/ci.yml` includes `pull_request` and provisions PostgreSQL for `npm run test:rules`; no workflow run/status was visible when checked, so await the PR checks and inspect their results before treating this as passed. PR opened for review; task remains pending validation.
 - 2026-10-19 AI #7 (agent 7, Arena): **F-41…F-45 browser journey tests on `arena/eaa8eb9c-ledgerflow` (base main `48aed6b`).** New specs: `e2e/w2-invoice-payment-statement.spec.ts` (W2: 1,180.00 invoice, 500.00 part payment, statement ends 680.00), `e2e/w3-bill-payment-run-statement.spec.ts` (W3: one run, two vendors, bank file checked, vendor statement clears), `e2e/w4-bank-csv-import-reconcile.spec.ts` (W4: Chase CSV preview and import, three matches, ledger balance 680.00), `e2e/w6-order-deposit-part-invoices.spec.ts` (W6: 25% deposit 275.00, part invoices 275.00 + 825.00, delivery charged once, nothing left refused; DEP-1 figures), `e2e/w9-sealed-period-reopen.spec.ts` (W9: sealed September refuses posting, reopened month allows it). Shared harness `e2e/support/journeyFixture.ts`. W9 dark-mode settle step added to `month-end-close-journey.spec.ts`; StatementView paid cell contrast raised to emerald-700/400. Each spec passes locally on its own; CI is pending on the PR. No calculation or posting code changed.
+
+- 2026-10-19 AI #4: D-77 #173, D-78 #172 and D-80 #174 confirmed merged. Their old final PR runs had browser failures (Month casing selector; an intermittent broad tax-profile status locator), while accounting/security, time zones and build passed. Newer main 85428763 CI 39241788161 is green; Month selector is already fixed. Narrowing the tax save-confirmation locator without changing its expected text or financial assertions. D-81/D-82 are one display-only batch on ai4/d-81-sentence-case from main 9383603b: shared Reports/Settings casing policy, plain settings/loading copy, and a truthful conditional Projects/Account totals sidebar label with explanation. No account aggregation or persistence changed. W1/W5 remain incomplete; evidence in docs/verification/ai4-d81-d82-plain-controls.md.
