@@ -334,7 +334,7 @@ begin
       raise exception 'FAIL %: writer moved an existing record into another workspace', t;
     end if;
   end loop;
-end $;
+end $audit$;
 
 -- Every dated table: nothing is posted into, or moved into, a locked period (ws1 is locked to 2026-01-31).
 do $$
