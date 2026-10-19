@@ -319,6 +319,23 @@ begin
   end loop;
 end $$;
 
+-- AUD-09 / AI #6: every standard write family must reject cross-workspace moves by an authorized writer.
+do $
+declare
+  t text;
+begin
+  foreach t in array array[
+    'transactions', 'journalEntries', 'invoices', 'payments', 'bills', 'creditNotes', 'vendorCredits',
+    'projects', 'estimates', 'inventory', 'recurring', 'budgets', 'autoRules', 'fixedAssets', 'assets',
+    'taxRates', 'dimensionNodes', 'vendors', 'customers', 'rulePatterns', 'scenarios', 'loans',
+    'employees', 'partners', 'reconciliations', 'workspaceShards'
+  ] loop
+    if pg_temp.try_as('u-book', format('select lf_update(%L, %L, %L::jsonb)', t, 'iso-' || t, '{"workspaceId":"ws2"}')) then
+      raise exception 'FAIL %: writer moved an existing record into another workspace', t;
+    end if;
+  end loop;
+end $;
+
 -- Every dated table: nothing is posted into, or moved into, a locked period (ws1 is locked to 2026-01-31).
 do $$
 declare t text;
