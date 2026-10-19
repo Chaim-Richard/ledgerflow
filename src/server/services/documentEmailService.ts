@@ -237,7 +237,7 @@ export interface StatementBatchResult {
  * PDF with the "statement" email. Customers with nothing open, without an email address, archived
  * or bounced are skipped with the reason; one failure doesn't stop the rest. Writers only.
  */
-export async function emailStatements(db: Firestore, input: { workspaceId: string; uid: string; customerIds?: string[]; system?: boolean }): Promise<StatementBatchResult> {
+export async function emailStatements(db: Firestore, input: { workspaceId: string; uid: string; customerIds?: string[]; system?: boolean; startDate?: string; endDate?: string }): Promise<StatementBatchResult> {
   const workspace = (await db.collection('workspaces').doc(input.workspaceId).get()).data();
   if (!workspace) throw new EmailSendError(404, 'Workspace not found');
   if (!input.system && !WRITER_ROLES.includes(workspaceRole(workspace, input.uid))) throw new EmailSendError(403, 'Viewers cannot send emails');
@@ -252,7 +252,7 @@ export async function emailStatements(db: Firestore, input: { workspaceId: strin
   const result: StatementBatchResult = { sent: [], skipped: [], failed: [] };
   const template = resolveTemplate('statement', workspace.emailTemplates as EmailTemplates | undefined);
   for (const id of ids) {
-    const statement = await loadStatement(db, input.workspaceId, id);
+    const statement = await loadStatement(db, input.workspaceId, id, { startDate: input.startDate, endDate: input.endDate });
     if (!statement || statement.contactType !== 'customer') { result.skipped.push({ id, name: id, reason: 'not a customer here' }); continue; }
     const name = String(statement.contact.name || id);
     const to = String(statement.contact.email || '').trim().toLowerCase();
