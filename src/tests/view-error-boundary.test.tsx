@@ -49,6 +49,8 @@ describe('ViewErrorBoundary', () => {
     assert.ok(screen.getByRole('heading', { name: 'View Render Error (Broken screen)' }));
     assert.match(document.body.textContent || '', /kaboom in the widget/);
     assert.match(document.body.textContent || '', /Your ledger data remains safe and intact/);
+    // F-03: the crash report's own id is shown, so a user can quote it.
+    await waitFor(() => assert.match(document.body.textContent || '', /Error reference: err_\d+_[a-z0-9]+/));
 
     explode = false;
     fireEvent.click(screen.getByRole('button', { name: /Retry Rendering/ }));
