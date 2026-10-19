@@ -18,7 +18,7 @@ export interface JourneyMount {
   module: string;
   /** named export; the default export when omitted */
   exportName?: string;
-  /** JSON-serialisable props; `onClose` and `onBack` are supplied by the fixture */
+  /** JSON-serialisable props; `onClose` and `onBack` are supplied by the fixture. "__capture:name" makes a callback that records its arguments (see captured()). */
   props?: Record<string, unknown>;
 }
 
@@ -127,7 +127,19 @@ export async function mountJourney(page: Page, options: JourneyOptions): Promise
       for (const mount of list) {
         const mod = await import(mount.module);
         const Component = (mount.exportName ? mod[mount.exportName] : mod.default) as React.ComponentType<Record<string, unknown>>;
-        children.push(React.createElement(Component, { key: mount.module + (mount.exportName ?? ''), onClose: noop, onBack: noop, ...(mount.props ?? {}) }));
+        // A prop written as "__capture:name" becomes a function that records its arguments for the test (read with captured()).
+        const props: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(mount.props ?? {})) {
+          if (typeof value === 'string' && value.startsWith('__capture:')) {
+            const name = value.slice('__capture:'.length);
+            props[key] = (...args: unknown[]) => {
+              const captures = ((window as unknown as { __captures?: Record<string, unknown[]> }).__captures ??= {});
+              (captures[name] ??= []).push(JSON.parse(JSON.stringify(args)));
+              return true;
+            };
+          } else props[key] = value;
+        }
+        children.push(React.createElement(Component, { key: mount.module + (mount.exportName ?? ''), onClose: noop, onBack: noop, ...props }));
       }
       root.render(React.createElement(React.Fragment, null, ...children));
     };
@@ -136,6 +148,11 @@ export async function mountJourney(page: Page, options: JourneyOptions): Promise
   }, { workspaceId: options.workspaceId, user, role: options.role ?? 'owner', ledger, mounts: options.mounts, loadedKeys: LOADED_KEYS, ledgerFields: [...LEDGER_FIELDS] });
 
   return { errors, requests };
+}
+
+/** The arguments a "__capture:name" callback received, in call order. */
+export async function captured(page: Page, name: string): Promise<unknown[][]> {
+  return page.evaluate(name => (window as unknown as { __captures?: Record<string, unknown[][]> }).__captures?.[name] ?? [], name);
 }
 
 /** Re-renders the same fixture with a different set of screens (for example, a dialog closed after posting). */
