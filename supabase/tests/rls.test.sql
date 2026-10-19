@@ -320,7 +320,7 @@ begin
 end $$;
 
 -- AUD-09 / AI #6: every standard write family must reject cross-workspace moves by an authorized writer.
-do $
+do $audit$
 declare
   t text;
 begin
