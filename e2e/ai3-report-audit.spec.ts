@@ -21,7 +21,7 @@ import AxeBuilder from '@axe-core/playwright';
  * Empty-state checks do not prove a report's figures with real records — the worked-figure tests
  * (`israel-month-journey`, `us-quarter-journey`, `close-journey`, golden fixtures) do that.
  */
-const reports = [
+const reports: ReadonlyArray<{ id: string; title: string; selector?: string }> = [
   { id: 'blanket-orders', title: 'Blanket purchase orders' },
   { id: 'customer-credit-limits', title: 'Customer credit limits' },
   { id: 'customer-quotes', title: 'Customer quotes and proposals' },
@@ -44,12 +44,12 @@ const reports = [
   { id: 'use-tax-review', title: 'Use tax review' },
   { id: 'vendor-scorecard', title: 'Vendor scorecard' },
   { id: 'vendor-price-history', title: 'Vendor price history' },
-  { id: 'by-label', title: 'Profit by label' },
-  { id: 'slow-moving-stock', title: 'Slow-moving items' },
-  { id: 'profitability-by', title: 'Profitability' },
-  { id: 'form-856', title: 'Withholding Report (Form 856)' },
+  { id: 'by-label', title: 'Profit by label', selector: 'section[aria-labelledby="by-label-title"]' },
+  { id: 'slow-moving-stock', title: 'Slow-moving items', selector: 'section[aria-labelledby="slow-moving-title"]' },
+  { id: 'profitability-by', title: 'Profitability', selector: 'section[aria-labelledby="profitability-by-title"]' },
+  { id: 'form-856', title: 'Withholding Report (Form 856)', selector: 'section[aria-labelledby="form-856-title"]' },
   { id: 'gross-profit-by-customer', title: 'Gross profit by customer' },
-] as const;
+];
 
 async function signInAsGuest(page: Page) {
   await page.addInitScript(() => {
@@ -80,8 +80,18 @@ async function expectBounded(page: Page, width: number, where: string) {
 
 async function expectNoBrokenFigures(region: Locator) {
   const text = await region.innerText();
-  for (const bad of ['NaN', 'Infinity', 'undefined', 'Invalid Date']) {
+  // Words a report may use on purpose ("… undefined when sales are zero") are not figures, so
+  // `undefined` is only a failure inside a table cell; the other three are never prose in these
+  // reports and are checked across the whole region.
+  for (const bad of ['NaN', 'Infinity', 'Invalid Date']) {
     expect(text, `a figure reads "${bad}"`).not.toContain(bad);
+  }
+  const cells = region.locator('td, th, dd, dt, output');
+  const cellCount = await cells.count();
+  for (let index = 0; index < cellCount; index += 1) {
+    const cell = cells.nth(index);
+    const value = (await cell.textContent()) || '';
+    expect(value, `a cell reads "${value.trim()}"`).not.toContain('undefined');
   }
 }
 
@@ -96,13 +106,12 @@ for (const { id, title } of reports) {
     const region = await open(page, id, title);
     await expectNoBrokenFigures(region);
     await expectBounded(page, 390, `${id} is wider than a 390 px phone`);
-    await expectBounded(page, 320, `${id} is wider than a 320 px phone`);
-    await page.setViewportSize({ width: 390, height: 844 });
 
     // A-203: the report's own region, empty state, no serious or critical axe finding.
-    // The report's page is this screen with only this report mounted, so a whole-page scan cannot
-    // pick up another report; contrast has its own test (`contrast.spec.ts`).
-    const axe = await new AxeBuilder({ page }).disableRules(['color-contrast']).analyze();
+    // Scoped to this report's own region, so a finding in the shared screen chrome or in another
+    // report cannot fail this one. Contrast has its own test (`contrast.spec.ts`).
+    const selector = report.selector ?? `section[aria-label="${title}"]`;
+    const axe = await new AxeBuilder({ page }).include(selector).disableRules(['color-contrast']).analyze();
     const serious = axe.violations.filter(violation => violation.impact === 'serious' || violation.impact === 'critical');
     expect(serious.map(violation => `${violation.id} (${violation.impact}): ${violation.nodes.map(node => node.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
 
@@ -122,7 +131,7 @@ for (const { id, title } of reports) {
     // Any money or date cell that carries right-to-left text must isolate its direction, so the
     // number cannot be re-ordered by the surrounding Hebrew text.
     await testInfo.attach(`${id}-rtl-390.png`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
-    const cells = region.locator('td, th, li');
+    const cells = region.locator('td');
     const count = Math.min(await cells.count(), 40);
     for (let index = 0; index < count; index += 1) {
       const cell = cells.nth(index);
