@@ -19,6 +19,7 @@ import CloseComparisonPanel from './CloseComparisonPanel';
 import WorkpapersPanel from './WorkpapersPanel';
 import ClosingBalanceCheck from './ClosingBalanceCheck';
 import CloseStepsEditor from './CloseStepsEditor';
+import CloseJourneyPanel from './CloseJourneyPanel';
 import { closeStepItems } from '../../lib/closeSteps';
 import { closePackageSheets } from '../../lib/closePackage';
 import type { ClientQuery } from '../../lib/clientQueries';
@@ -395,6 +396,10 @@ export default function MonthEndCloseView() {
             )}
           </div>
         </section>
+
+        {/* A-151: the month's path in order, read-only; signing off and closing stay above. */}
+        <CloseJourneyPanel month={month} state={state} items={items} accounts={accounts} bankLines={bankLines}
+          invoices={invoices} bills={bills} journalEntries={journalEntries} currency={workspace?.currency || 'USD'} />
 
         {/* CA-06: a closed month's balances now, against the snapshot taken when it was closed */}
         {state !== 'open' && (

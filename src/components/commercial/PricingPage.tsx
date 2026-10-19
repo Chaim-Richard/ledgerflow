@@ -1,3 +1,4 @@
+import { useUIStore } from '../../stores/useUIStore';
 // Keep trial helpers reachable for the structural module guard.
 import { getTrialStatus as _getTrialStatus } from '../../lib/trialManager';
 import React, { useState } from 'react';
@@ -98,14 +99,15 @@ export const PricingPage: React.FC = () => {
               </div>
 
               <button
+                type="button" onClick={() => { useUIStore.getState().setActiveSettingsTab('billing'); useUIStore.getState().setActiveTab('settings'); }}
                 id={`btn-select-tier-${tier.id}`}
-                className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                className={`min-h-11 w-full py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   tier.recommended
                     ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md'
                     : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white'
                 }`}
               >
-                {tier.id === 'free' ? 'Get Started' : 'Start 14-Day Free Trial'}
+                Review plans in billing
               </button>
             </div>
           );

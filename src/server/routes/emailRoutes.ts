@@ -35,7 +35,9 @@ emailRouter.post('/invoices/:invoiceId', async (req, res) => {
 });
 
 // BE-07: statements to many customers at once (all active ones when no ids are given)
-const statementsSchema = z.object({ customerIds: z.array(z.string().min(1).max(200)).max(1000).optional() }).strict();
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+// ISS-141: an optional period, like the statement screen's (opening balance, then that period)
+const statementsSchema = z.object({ customerIds: z.array(z.string().min(1).max(200)).max(1000).optional(), startDate: isoDate.optional(), endDate: isoDate.optional() }).strict();
 
 emailRouter.post('/statements', async (req, res) => {
   const { workspaceId } = req.params as Record<string, string>;

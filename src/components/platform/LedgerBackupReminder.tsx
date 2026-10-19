@@ -6,13 +6,17 @@ import { getBackupHealth, BackupHealth } from '../../lib/ledgerBackupHealth';
 
 export const LedgerBackupReminder: React.FC = () => {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const isGuest = useAuthStore(s => s.isGuest);
+  const userId = useAuthStore(s => s.user?.uid);
   const setActiveTab = useUIStore(s => s.setActiveTab);
   const [health, setHealth] = useState<BackupHealth>(() => getBackupHealth(currentWorkspaceId));
   const [isDismissed, setIsDismissed] = useState(false);
+  const [demoDismissed, setDemoDismissed] = useState(false);
 
   useEffect(() => {
     setHealth(getBackupHealth(currentWorkspaceId));
     setIsDismissed(false);
+    setDemoDismissed(false);
 
     const handleBackupDone = () => {
       setHealth(getBackupHealth(currentWorkspaceId));
@@ -20,9 +24,11 @@ export const LedgerBackupReminder: React.FC = () => {
 
     window.addEventListener('ledgerflow:backup_completed', handleBackupDone);
     return () => window.removeEventListener('ledgerflow:backup_completed', handleBackupDone);
-  }, [currentWorkspaceId]);
+  }, [currentWorkspaceId, isGuest, userId]);
 
-  if (!health.isDue || isDismissed) {
+  const showBackup = health.isDue && !isDismissed;
+  const showDemo = !userId && isGuest && !demoDismissed;
+  if (!showBackup && !showDemo) {
     return null;
   }
 
@@ -30,11 +36,26 @@ export const LedgerBackupReminder: React.FC = () => {
     setActiveTab('settings' as unknown as string);
   };
 
-  return (
+  return (<>
+    <div role="status" aria-label="Ledger notices" data-testid="compact-ledger-notices"
+      className="sm:hidden flex min-h-11 shrink-0 items-center gap-2 border-b border-[var(--line)] bg-[var(--surface)] text-[var(--text)] px-3 text-xs font-medium">
+      <span className="min-w-0 flex-1 truncate">
+        {showDemo ? 'Demo data' : ''}{showDemo && showBackup ? ' · ' : ''}{showBackup ? 'Backup due' : ''}
+      </span>
+      {showBackup && <button onClick={handleGoToBackup} aria-label="Export backup" title="Export backup"
+        className="min-h-11 min-w-11 inline-flex items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brass)]">
+        <Download aria-hidden="true" className="w-4 h-4" />
+      </button>}
+      <button onClick={() => { setIsDismissed(true); setDemoDismissed(true); }} aria-label="Dismiss notices" title="Dismiss notices"
+        className="min-h-11 min-w-11 inline-flex items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brass)]">
+        <X aria-hidden="true" className="w-4 h-4" />
+      </button>
+    </div>
+    {showBackup &&
     <div 
       role="status"
       id="ledger-backup-reminder-banner"
-      className="bg-amber-500/10 border-b border-amber-500/20 text-amber-900 dark:text-amber-300 px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm font-medium transition-colors"
+      className="hidden sm:flex bg-amber-500/10 border-b border-amber-500/20 text-amber-900 dark:text-amber-300 px-4 py-2.5 items-center justify-between text-xs sm:text-sm font-medium transition-colors"
     >
       <div className="flex items-center gap-2.5 overflow-hidden">
         <ShieldAlert className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0" aria-hidden="true" />
@@ -63,7 +84,11 @@ export const LedgerBackupReminder: React.FC = () => {
           <X className="w-4 h-4" />
         </button>
       </div>
-    </div>
+    </div>}
+    {showDemo && <div data-testid="desktop-demo-notice" className="hidden sm:block bg-purple-600/10 text-purple-800 dark:text-purple-300 border-b border-purple-500/20 px-4 py-1.5 text-xs text-center font-semibold">
+      Demo data — sign up to save your own
+    </div>}
+  </>
   );
 };
 

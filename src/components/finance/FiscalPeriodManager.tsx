@@ -197,8 +197,8 @@ export default function FiscalPeriodManager() {
                   </span>
                   
                   {!p.isLocked && (
-                    <button className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      Close Period <ArrowRight className="w-3 h-3" />
+                    <button type="button" onClick={() => setSelectedPeriod(p.id)} className="min-h-11 text-[10px] font-bold text-indigo-600 flex items-center gap-1">
+                      Review period <ArrowRight className="w-3 h-3" />
                     </button>
                   )}
                 </div>
@@ -279,10 +279,10 @@ export default function FiscalPeriodManager() {
             </div>
             <h3 className="text-sm font-bold mb-2 relative z-10">Year-End Close</h3>
             <p className="text-xs text-indigo-100 mb-4 relative z-10 leading-relaxed">
-              Performing a year-end close resets temporary accounts (Revenue/Expense) and shifts net income to Retained Earnings.
+              Review closing checks in the closing workspace. This button does not close a year or post an entry.
             </p>
-            <button className="w-full py-2 bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold rounded-lg border border-white/20 transition-all cursor-pointer relative z-10">
-              Run Year-End Wizard
+            <button type="button" onClick={() => setActiveTab('month-end-close')} className="w-full min-h-11 py-2 bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold rounded-lg border border-white/20 transition-all cursor-pointer relative z-10">
+              Open closing workspace
             </button>
           </div>
         </div>

@@ -10,6 +10,7 @@ import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { DEFAULT_TEMPLATES, renderEmail, resolveTemplate, unknownPlaceholders } from '../lib/emailTemplates';
+import { pdfText } from './helpers/pdfText';
 import { htmlToText, setMailTransportForTests } from '../server/services/mailer';
 import type { MailMessage } from '../server/services/mailer';
 import { parseProviderReports } from '../server/routes/emailRoutes';
@@ -190,6 +191,14 @@ describe('Emailing an invoice', { skip: !url && 'LF_TEST_DATABASE_URL not set' }
 
     const one = await statements('owner-1', { customerIds: [id('c5')] }).then(r => r.json()) as { sent: Array<{ id: string }> };
     assert.deepEqual(one.sent.map(s => s.id), [id('c5')], 'an archived customer can still be chosen by hand');
+
+    // ISS-141: a chosen period prints the opening balance and only that period's activity
+    assert.equal((await statements('owner-1', { customerIds: [id('c4')], startDate: '2026-3-1' })).status, 400);
+    const april = await statements('owner-1', { customerIds: [id('c4')], startDate: '2026-04-01', endDate: '2026-04-30' }).then(r => r.json()) as { sent: Array<{ id: string }> };
+    assert.deepEqual(april.sent.map(s => s.id), [id('c4')]);
+    const aprilPdf = pdfText(outbox[outbox.length - 1].attachments?.[0]?.content as Buffer);
+    assert.match(aprilPdf, /2026-04-01 Opening balance/);
+    assert.doesNotMatch(aprilPdf, /INV-40/);
   });
 
   test('remittance advice (K-25): the vendor gets what was paid and for which bills, only when asked', async () => {

@@ -285,10 +285,11 @@ export function ProjectsView({ withOccurrenceKeys, isProjectTx, formId, projects
                   </div>
 
                   <div className="mt-6 pt-4 border-t border-[var(--line)]">
-                    <button className="w-full h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold uppercase tracking-wider text-[9px] transition-all flex items-center justify-center gap-2 shadow-3xs cursor-pointer" aria-label="Generate Brief">
+                    <div className="min-w-0 space-y-1"><button className="disabled:cursor-not-allowed disabled:opacity-50 w-full h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold uppercase tracking-wider text-[9px] transition-all flex items-center justify-center gap-2 shadow-3xs cursor-pointer" type="button" disabled aria-describedby="brief-help" title="Project brief generation is not available. Review the project details here." aria-label="Generate Brief">
                       <BarChart3 aria-hidden="true" size={12} className="text-slate-300" />
                       Generate Brief
                     </button>
+            <p id="brief-help" className="text-xs text-[var(--muted)] max-w-sm">Project brief generation is not available. Review the project details here.</p></div>
                   </div>
                 </div>
               </motion.div>
