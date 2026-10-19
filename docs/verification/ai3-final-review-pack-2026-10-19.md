@@ -32,7 +32,7 @@ unit tests). Passing this audit is not a statement that a report is filing-ready
 | ESLint | `npm run lint:eslint` | 0 errors, 210 warnings (cap 210, unchanged) |
 | Production build | `npm run build` | passes |
 | Unit + component suite | `npm test` | see the CI block below |
-| Browser audit | `npx playwright test e2e/ai3-report-audit.spec.ts` | runs on GitHub CI (no browser binary in the sandbox) |
+| Browser audit | `npx playwright test e2e/ai3-report-audit.spec.ts` | green on GitHub CI, shards 1/2 and 2/2 (no browser binary in this sandbox; see the history table) |
 | New browser audit, static check | `npx tsc --noEmit --strict --skipLibCheck --module esnext --moduleResolution bundler --target esnext --lib DOM,DOM.Iterable,ESNext --types node --esModuleInterop e2e/ai3-report-audit.spec.ts` | clean (the repository's `tsconfig.json` includes only `src` and `server.ts`, so the browser specs need their own check) |
 | Full unit suite (local, this sandbox) | `npm test` | 2,930 tests: 2,929 pass, 0 fail, 1 skipped (needs `LF_TEST_DATABASE_URL`); 731 suites; 27m44s |
 
@@ -42,7 +42,7 @@ unit tests). Passing this audit is not a statement that a report is filing-ready
 |---|---|---|
 | PR #190 CI run 39288681099, shard 1/2 | One test failed: the check for the word `undefined` matched **prose** — Gross Profit by Customer explains "margin percent = margin ÷ sales, undefined when sales are zero" | The token check now looks for `undefined` only inside table cells; `NaN`, `Infinity` and `Invalid Date` stay whole-region checks. The same run's "Playwright E2E Smoke Suite" failure was only its roll-up step ("require every shard to succeed"), not a separate failure |
 | PR #190 CI run 39291426442, shard 1/2 | Ten tests stopped on `ReferenceError: report is not defined` — a variable name left over from an edit, which the repository typecheck did not catch because `tsconfig.json` does not include `e2e/` | The name is now the destructured `selector`; the spec is typechecked with its own `tsc` command (row above). The other 17 tests already reached the axe, overflow and right-to-left checks and passed |
-| Final run after both fixes | recorded below once green | — |
+| **Final run:** PR #190 CI run 39294040889 at `3935984` | **All green:** Lint/Typecheck/Test (with `test:rules` on a real Postgres, every migration applied), unit tests in America/Los_Angeles and Pacific/Auckland, Browser shard 1/2 and 2/2, Playwright E2E Smoke Suite, production build. 27 report tests × 4 checks + 81 screenshots attached to the run | nothing further needed |
 
 ## 2. Report screens this lane built (the tab a user opens)
 
@@ -113,8 +113,10 @@ screen and tested. Nothing here is silently claimed as done.
 | **A-66** Return authorisations | RMA document, approval screen, receive/link, closure rules | Server-enforced transitions and a revision (CAS) for two-person approval; today only the screen and metadata notes enforce it | AI #1 (server transition contract) |
 | **A-69** Customer credit limits | Limit per customer, over-limit report, in-place edit | The warning inside the invoice form (`InvoiceModal.tsx`, reserved) | AI #1 |
 | **A-70** Dunning letters | Three-step letters, preview, CSV, nothing sent | Actually sending through the email path and writing the once-per-step log (server) | AI #1 |
-| **A-203/A-204/A-205** Accessibility / phone / Hebrew audits | Warehouse subset verified 16 Oct | This pack adds all 27 report tabs; the result is the CI run of `ai3-report-audit.spec.ts` (below) | AI #3 (this work) |
-| **A-208** Reconcile partial tasks | This table | Closed by this pack: every `[~]` item now names its remaining step and owner | AI #3 (done here) |
+| **A-203** Accessibility | Warehouse panels (16 Oct) | **Closed:** all 27 report tabs scanned with axe over their own region, green on CI `39294040889`; every screen is also covered by `layout.spec.ts` at 1280 px | AI #3 (done) |
+| **A-204** Phone at 390 px | Warehouse panels at 390 and 320 (16 Oct), Close journey at 390 | **Closed:** all 27 report tabs at 390 px, green on CI `39294040889` | AI #3 (done) |
+| **A-205** Hebrew / right-to-left | Warehouse panels with Hebrew branding (16 Oct) | **Partial:** the 27 report tabs are green in a right-to-left page; the **Loans** and **Petty cash** panels still need a 390 px right-to-left pass of their own (they have desktop axe coverage in `layout.spec.ts`) | AI #3 (next) |
+| **A-208** Reconcile partial tasks | This table | Closed by this pack: every `[~]` item now names its remaining step and owner (the only two left in this lane are A-205's two panels and the five items blocked on AI #1) | AI #3 (done here) |
 
 ## 5. A-207: the waiting room, checked library by library
 
