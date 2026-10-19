@@ -441,6 +441,8 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'SalesByItemReportView': lazy(() => import('../components/reporting/SalesByItemReportView')),
   'InventoryValuationReportView': lazy(() => import('../components/reporting/InventoryValuationReportView')),
   'JournalSheetReportView': lazy(() => import('../components/reporting/JournalSheetReportView')),
+  'MileageRatesReportView': lazy(() => import('../components/reporting/MileageRatesReportView')),
+  'BankingValidationReportView': lazy(() => import('../components/reporting/BankingValidationReportView')),
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = withScreenHelp([
@@ -545,6 +547,8 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'sales-tax-holidays', label: { en: 'Sales Tax Holidays', he: 'חגי מס מכירה' }, componentName: 'SalesTaxHolidaysReportView', icon: CalendarDays },
   { id: 'quote-versions', label: { en: 'Quote Versions', he: 'גרסאות הצעת מחיר' }, componentName: 'QuoteVersionsReportView', icon: FileSignature },
   { id: 'blanket-orders', label: { en: 'Blanket Purchase Orders', he: 'הזמנות רכש פתוחות' }, componentName: 'BlanketOrdersReportView', icon: Handshake },
+  { id: 'mileage-rates', label: { en: 'US Mileage Rates', he: 'תעריפי נסיעה ארה\"ב' }, componentName: 'MileageRatesReportView', icon: Truck },
+  { id: 'banking-validation', label: { en: 'Banking Data Validation', he: 'אימות נתוני בנק' }, componentName: 'BankingValidationReportView', icon: ShieldCheck },
 ], 'reports');
 
 export const SETTINGS_TABS_REGISTRY = withScreenHelp([
