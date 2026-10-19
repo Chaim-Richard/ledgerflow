@@ -62,6 +62,24 @@ const Reports = React.memo(() => {
   const [drillDownExplain, setDrillDownExplain] = useState<ExplainRequest | undefined>(undefined);
   const language = useUIStore(state => state.language);
 
+  const reportTabsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const tabs = reportTabsRef.current;
+    if (!tabs) return;
+    const revealActive = () => {
+      const active = tabs.querySelector<HTMLElement>('[aria-current="page"]');
+      if (!active) return;
+      const frame = tabs.getBoundingClientRect();
+      const item = active.getBoundingClientRect();
+      if (item.left < frame.left) tabs.scrollLeft += item.left - frame.left;
+      else if (item.right > frame.right) tabs.scrollLeft += item.right - frame.right;
+    };
+    revealActive();
+    const observer = new ResizeObserver(revealActive);
+    observer.observe(tabs);
+    return () => observer.disconnect();
+  }, [activeTab, language]);
+
   const availableYears = useMemo(() => {
     if (!transactions || transactions.length === 0) return [...new Set([workspaceYearMonth().year, ...(linked.year ? [linked.year] : [])])].sort((a, b) => b - a);
     const yearsSet = new Set<number>(linked.year ? [linked.year] : []);
@@ -320,13 +338,14 @@ const Reports = React.memo(() => {
       {packPeriod && <React.Suspense fallback={<p role="status">Loading report pack…</p>}><ReportPackDialog {...packPeriod} onClose={() => setPackPeriod(undefined)} /></React.Suspense>}
 
       {/* Navigation */}
-      <div data-print-hide data-testid="report-tabs" className="flex flex-wrap gap-2 pb-2 border-b border-[var(--line)]">
+      <div ref={reportTabsRef} data-print-hide data-testid="report-tabs" role="navigation" aria-label="Report pages" className="flex flex-nowrap overflow-x-auto gap-2 pb-2 border-b border-[var(--line)]">
         {REPORT_TABS_REGISTRY.map((tab) => (
           <button
             key={tab.id}
+            aria-current={activeTab === tab.id ? 'page' : undefined}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer",
+              "flex shrink-0 whitespace-nowrap min-h-11 items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brass)]",
               activeTab === tab.id
                 ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold border-[var(--brass-line)] shadow-sm"
                 : "bg-[var(--surface)] border-[var(--line)]/80 text-[var(--muted)] hover:border-[var(--brass-line)]/60 hover:text-[var(--text)] shadow-3xs"
