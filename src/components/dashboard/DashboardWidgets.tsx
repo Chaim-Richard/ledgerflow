@@ -179,9 +179,9 @@ function ScopedDashboardWidgets({ children }: { children?: React.ReactNode }) {
           { label: 'Owed to you', cents: owedToYou, report: 'ar-aging' },
           { label: 'You owe', cents: youOwe, report: 'ap-aging' },
           { label: range === 'month' ? 'Profit this month' : 'Profit for period', cents: data?.current.profit, report: 'pnl' },
-        ].map(item => <a key={item.report} href={valid ? reportLink(item.report) : undefined} aria-disabled={!valid} aria-label={`${item.label} report`} className="min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 min-h-11">
+        ].map(item => <a key={item.report} href={valid ? reportLink(item.report) : undefined} aria-disabled={!valid} aria-label={`${item.label} report`} aria-describedby={`dashboard-summary-${item.report}`} className="min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 min-h-11">
           <span className="block text-sm text-[var(--muted)]">{item.label}</span>
-          <span className="block text-right text-lg font-semibold tabular-nums break-all">{summaryReady ? formatCurrency(item.cents ?? 0, currency) : !valid ? 'Choose dates' : partial.length ? 'Unavailable' : 'Loading…'}</span>
+          <span id={`dashboard-summary-${item.report}`} className="block text-right text-lg font-semibold tabular-nums break-all">{summaryReady ? formatCurrency(item.cents ?? 0, currency) : !valid ? 'Choose dates' : partial.length ? 'Unavailable' : 'Loading…'}</span>
         </a>)}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">

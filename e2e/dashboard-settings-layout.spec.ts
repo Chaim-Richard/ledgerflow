@@ -34,6 +34,7 @@ for (const width of [390, 1280]) for (const theme of ['light', 'dark']) {
       ], bills: [makeBill({ workspaceId, date: '2026-09-01', amountCents: 24000, amountPaidCents: 4000 })] });
     });
     await expect(overview.getByRole('link', { name: 'Owed to you report', exact: true })).toContainText('$350.00');
+    await expect(overview.getByRole('link', { name: 'Owed to you report', exact: true })).toHaveAccessibleDescription('$350.00');
     await expect(overview.getByRole('link', { name: 'You owe report', exact: true })).toContainText('$200.00');
     await page.evaluate(async () => {
       const modulePath = '/src/stores/useLedgerStore.ts';
