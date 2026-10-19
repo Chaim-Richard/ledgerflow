@@ -79,6 +79,17 @@ paused launch work; no coordination update from Claude was needed for this autho
 other countries parked `[P]`) and §16 (success = complete, verified customer workflows). **The finish line:**
 `docs/RELEASE_GATE.md` — 14 workflows, each Connected / Verified (independently worked figures) / Browser-tested.
 
+**Before you start any work — check your own open PRs first (owner, 19 Oct).** A new chat as the same
+AI number continues that AI's work; it does not start over. At the start of every session:
+1. List the open PRs on `shmuelbiller1/ledgerflow` (including ones from forks) and find the ones that are yours:
+   your branch prefix (`codex/`, `arena/`, `ai4/`, `ai5/`, `ai6/`…) or your AI number in the title.
+2. Read the comments on them. If AI #1 sent one back, **fix that PR first** (push to the same branch); do not open
+   a new PR for the same task.
+3. A task that is in an open, unmerged PR is **not free to start again**. Treat it as done-pending-merge and take the
+   next task after it. If your next task needs code from that PR, branch from that PR's branch, not from `main`,
+   and say so in the new PR ("builds on #NNN").
+4. Then `git fetch` and start from the latest `main` for anything new.
+
 **Rules from 18 Oct:**
 1. Take tasks in this order: **(a)** your tasks listed below, which move a RELEASE_GATE row to Yes; **(b)** your
    half-done `[~]` items; **(c)** the rest of your queue. Skip `[P]` (parked) tasks.
