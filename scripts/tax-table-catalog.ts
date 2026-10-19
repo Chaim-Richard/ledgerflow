@@ -121,6 +121,17 @@ export const TAX_TABLES: readonly TableSpec[] = [
     ]
   },
   {
+    "file": "us1099Thresholds.ts",
+    "name": "US_1099_THRESHOLDS",
+    "keys": [
+      "kind",
+      "form"
+    ],
+    "amounts": [
+      "thresholdCents"
+    ]
+  },
+  {
     "file": "us1099Preview.ts",
     "name": "US1099_THRESHOLDS",
     "keys": [],
