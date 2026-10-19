@@ -30,7 +30,7 @@ independently worked figures passes · **Browser** = an end-to-end browser test 
 
 | # | Workflow | Stage | Connected | Verified | Browser | Remaining blockers |
 |---|---|---|---|---|---|---|
-| W1 | Sign up → company → chart of accounts → first invoice → first report (P2-1) | 2 | Partly | No | Partly ([D-46 notices only](verification/ai4-d46-mobile-notices.md)) | first-hour journey test (A-151/P2-1); C-127 navigation/disabled-control batch verified locally, complete journey/CI still pending |
+| W1 | Sign up → company → chart of accounts → first invoice → first report (P2-1) | 2 | Partly | No | Partly ([D-46 notices only](verification/ai4-d46-mobile-notices.md); [D-85/D-90 overview/navigation](verification/ai4-d85-d90-dashboard-settings.md)) | first-hour journey test (A-151/P2-1); C-127 navigation/disabled-control batch verified locally, complete journey/CI still pending |
 | W2 | Invoice → posting → payment → customer statement | 2 | Yes | Partly | Partly | DIM-1 payments |
 | W3 | Bill → posting → payment run → vendor statement | 2 | Yes | Partly ([D-33 withholding goldens](verification/ai4-d33-withholding-golden.md)) | Partly | golden bills A-147 wired to the posting, DIM-1 payments, #156 inherited withholding rate after expiry |
 | W4 | Bank import / feed → reconciliation | 2 | Yes | Partly | Partly | AU-1 changed/removed lines on the Banking screen, #96 |
