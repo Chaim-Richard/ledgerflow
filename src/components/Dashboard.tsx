@@ -109,7 +109,7 @@ export default function Dashboard() {
           <div className="flex border border-[var(--line)] rounded-xl bg-[var(--panel)] text-xs">
             {(['owner', 'accountant'] as const).map(value => <button key={value} type="button" aria-pressed={lens === value} onClick={() => setLens(value)} className={cn('min-h-11 px-3 rounded-xl', lens === value ? 'bg-[var(--brass-soft)] font-semibold' : 'text-[var(--muted)]')}>{value === 'owner' ? 'Owner Lens' : 'Accountant Lens'}</button>)}
           </div>
-          <button type="button" onClick={() => setQuickEntryOpen(true)} className="min-h-11 inline-flex items-center gap-1.5 bg-[var(--brass)] text-black px-3 rounded-xl text-xs font-bold"><Plus size={15} aria-hidden="true" />Add Entry</button>
+          <button type="button" onClick={() => setQuickEntryOpen(true)} className="min-h-11 inline-flex items-center gap-1.5 bg-[var(--brass)] text-[var(--ink)] px-3 rounded-xl text-xs font-bold"><Plus size={15} aria-hidden="true" />Add Entry</button>
         </div>
       </header>
 

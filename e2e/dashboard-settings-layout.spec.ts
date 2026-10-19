@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 for (const width of [390, 1280]) for (const theme of ['light', 'dark']) {
   test(`dashboard first screen and searchable settings ${width} ${theme}`, async ({ page }) => {
@@ -10,8 +11,8 @@ for (const width of [390, 1280]) for (const theme of ['light', 'dark']) {
     }, theme);
     await page.goto('/#dashboard');
     const overview = page.getByRole('region', { name: 'Dashboard at a glance', exact: true });
-    await expect(overview.getByRole('link', { name: 'Cash report', exact: true })).toContainText('$3,000.00');
-    await expect(overview.getByRole('link', { name: 'Profit this month report', exact: true })).toContainText('$3,000.00');
+    await expect(overview.getByRole('link', { name: /^Cash .* report$/ })).toContainText('$3,000.00');
+    await expect(overview.getByRole('link', { name: /^Profit this month .* report$/ })).toContainText('$3,000.00');
     // The real, unfinished setup checklist must not push the first-screen actions away.
     await expect(page.getByRole('heading', { name: 'Workspace Setup Checklist' })).toBeVisible();
     const controls = overview.getByRole('link');
@@ -20,6 +21,8 @@ for (const width of [390, 1280]) for (const theme of ['light', 'dark']) {
       const box = (await control.boundingBox())!;
       expect(box.y).toBeGreaterThanOrEqual(0); expect(box.y + box.height).toBeLessThanOrEqual(850); expect(box.height).toBeGreaterThanOrEqual(44);
     }
+    const scan = await new AxeBuilder({ page }).analyze();
+    expect(scan.violations.filter(violation => ['serious', 'critical'].includes(violation.impact || ''))).toEqual([]);
     await page.evaluate(async () => {
       const authPath = '/src/stores/useAuthStore.ts';
       const { useAuthStore } = await import(/* @vite-ignore */ authPath) as typeof import('../src/stores/useAuthStore');
@@ -33,9 +36,9 @@ for (const width of [390, 1280]) for (const theme of ['light', 'dark']) {
         makeInvoice({ workspaceId, id: 'draft', date: '2026-09-01', status: 'draft', amountCents: 90000 }),
       ], bills: [makeBill({ workspaceId, date: '2026-09-01', amountCents: 24000, amountPaidCents: 4000 })] });
     });
-    await expect(overview.getByRole('link', { name: 'Owed to you report', exact: true })).toContainText('$350.00');
-    await expect(overview.getByRole('link', { name: 'Owed to you report', exact: true })).toHaveAccessibleDescription('$350.00');
-    await expect(overview.getByRole('link', { name: 'You owe report', exact: true })).toContainText('$200.00');
+    await expect(overview.getByRole('link', { name: /^Owed to you .* report$/ })).toContainText('$350.00');
+    await expect(overview.getByRole('link', { name: /^Owed to you .* report$/ })).toHaveAccessibleName('Owed to you $350.00 report');
+    await expect(overview.getByRole('link', { name: /^You owe .* report$/ })).toContainText('$200.00');
     await page.evaluate(async () => {
       const modulePath = '/src/stores/useLedgerStore.ts';
       const { useLedgerStore } = await import(/* @vite-ignore */ modulePath) as typeof import('../src/stores/useLedgerStore');
@@ -47,7 +50,7 @@ for (const width of [390, 1280]) for (const theme of ['light', 'dark']) {
     await range.selectOption('custom');
     await page.getByLabel('Dashboard from').fill('2026-10-01');
     await expect(overview.getByText('Choose dates', { exact: true })).toHaveCount(4);
-    await expect(overview.locator('[aria-label="Cash report"]')).toHaveAttribute('aria-disabled', 'true');
+    await expect(overview.locator('[data-summary-report="balance-sheet"]')).toHaveAttribute('aria-disabled', 'true');
     await overview.getByRole('link', { name: 'Open tasks', exact: true }).click();
     await expect(page).toHaveURL(/#tasks$/); await expect(page.getByRole('heading', { name: 'Tasks', exact: true })).toBeVisible();
     await page.goto('/#settings');
