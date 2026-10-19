@@ -23,8 +23,8 @@ test('IL and US sample books are synthetic, one-year, currency-specific and ever
     assert.equal(sample.transactions[0].date, '2025-01-01');
     assert.equal(sample.transactions.at(-1)?.date, '2025-12-01');
     assert.ok(sample.companyName.includes('(demo)'));
-    assert.ok(sample.customers.every(party => party.name.includes('(demo)'));
-    assert.ok(sample.vendors.every(party => party.name.includes('(demo)'));
+    assert.ok(sample.customers.every(party => party.name.includes('(demo)')));
+    assert.ok(sample.vendors.every(party => party.name.includes('(demo)')));
     assert.ok(sample.transactions.every(tx => tx.currency === currency && tx.totalAmountCents > 0));
     assert.ok(sample.transactions.every(tx => tx.lines.reduce((sum, line) => sum + line.amountCents, 0) === 0));
     assert.ok(sample.accounts.every(account => account.workspaceId === 'guest' && account.uid === 'usr_demo'));

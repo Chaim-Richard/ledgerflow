@@ -134,13 +134,20 @@ export function seedCountryDemoWorkspace(workspaceId: string, country: DemoCount
     });
   });
 
-  const parties = (names: string[], kind: 'customer' | 'vendor') => names.map((name, index) => ({
-    id: `sample-${country.toLowerCase()}-${kind}-${index + 1}-${workspaceId}`,
+  const customers: Customer[] = profile.customers.map((name, index) => ({
+    id: `sample-${country.toLowerCase()}-customer-${index + 1}-${workspaceId}`,
     uid,
     workspaceId,
     name,
-    status: 'active' as const,
-    ...(kind === 'vendor' ? { category: 'Services' } : {}),
+    status: 'active',
+  }));
+  const vendors: Vendor[] = profile.vendors.map((name, index) => ({
+    id: `sample-${country.toLowerCase()}-vendor-${index + 1}-${workspaceId}`,
+    uid,
+    workspaceId,
+    name,
+    category: 'Services',
+    status: 'active',
   }));
 
   return {
@@ -148,8 +155,8 @@ export function seedCountryDemoWorkspace(workspaceId: string, country: DemoCount
     companyName: profile.companyName,
     currency: profile.currency,
     accounts,
-    customers: parties(profile.customers, 'customer'),
-    vendors: parties(profile.vendors, 'vendor'),
+    customers,
+    vendors,
     transactions,
   };
 }
