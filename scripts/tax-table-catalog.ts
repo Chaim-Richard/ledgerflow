@@ -235,6 +235,14 @@ export const TAX_TABLES: readonly TableSpec[] = [
       "country"
     ],
     "mode": "reference"
+  },
+  {
+    "file": "usMileageRates.ts",
+    "name": "US_MILEAGE_RATES",
+    "keys": [],
+    "amounts": [
+      "rateCentsPerMile"
+    ]
   }
 ];
 /** Non-table modules are classified so a newly added module cannot silently escape review. */
