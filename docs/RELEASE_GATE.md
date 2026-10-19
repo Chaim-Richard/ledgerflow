@@ -45,4 +45,6 @@ independently worked figures passes · **Browser** = an end-to-end browser test 
 | W13 | Stock: purchase → stock → sale → valuation | 3 | Yes | Partly | Partly | ISS-130, ISS-131, DIM-2 |
 | W14 | Roles and access (owner, accountant, bookkeeper, viewer) | 2 | Yes | Yes (RLS suite) | Partly | AUD-09 per write family |
 
+C-126 local input evidence: the US tax-profile editor can explicitly copy recognized state/ZIP into its draft, preserving other place fields. Four phone/desktop light/dark browser cases pass; this does not establish tax jurisdiction or upgrade W8 readiness. See [verification](verification/c126-us-address-help-2026-10-19.md).
+
 **Today (19 Oct):** stage 1. Nearest to stage 2: W6, W9, W14. The critical items still open: AUD-02 (rest). Fixed 18 Oct: BUG-03/INT-2 invoices, INT-1 authority at commit, INT-3, INT-4, INT-5. Added 19 Oct: the Israeli month journey (A-152, W7 evidence) and the close journey on Month-End Close (A-151, W9 evidence) — both read-only; W7's PCN874 step remains a historical draft and CON-3/CON-4 stay open.
