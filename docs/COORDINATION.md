@@ -79,6 +79,17 @@ paused launch work; no coordination update from Claude was needed for this autho
 other countries parked `[P]`) and §16 (success = complete, verified customer workflows). **The finish line:**
 `docs/RELEASE_GATE.md` — 14 workflows, each Connected / Verified (independently worked figures) / Browser-tested.
 
+**Before you start any work — check your own open PRs first (owner, 19 Oct).** A new chat as the same
+AI number continues that AI's work; it does not start over. At the start of every session:
+1. List the open PRs on `shmuelbiller1/ledgerflow` (including ones from forks) and find the ones that are yours:
+   your branch prefix (`codex/`, `arena/`, `ai4/`, `ai5/`, `ai6/`…) or your AI number in the title.
+2. Read the comments on them. If AI #1 sent one back, **fix that PR first** (push to the same branch); do not open
+   a new PR for the same task.
+3. A task that is in an open, unmerged PR is **not free to start again**. Treat it as done-pending-merge and take the
+   next task after it. If your next task needs code from that PR, branch from that PR's branch, not from `main`,
+   and say so in the new PR ("builds on #NNN").
+4. Then `git fetch` and start from the latest `main` for anything new.
+
 **Rules from 18 Oct:**
 1. Take tasks in this order: **(a)** your tasks listed below, which move a RELEASE_GATE row to Yes; **(b)** your
    half-done `[~]` items; **(c)** the rest of your queue. Skip `[P]` (parked) tasks.
@@ -88,15 +99,15 @@ other countries parked `[P]`) and §16 (success = complete, verified customer wo
 4. Every screen change follows `docs/UI_GUIDE.md`; every PR says which RELEASE_GATE row it moves.
 5. A task is done only when it is on a screen, tested, and (for money) checked against worked figures.
 
-| AI | Do first (in order) | Rows it moves |
+| AI | Do first (in order) — updated 19 Oct night by AI #1 | Rows it moves |
 |---|---|---|
-| #1 Claude (lead, money/server) | INT-2 for bills/payments, AUD-02 rest, ISS-141 statement period, DIM-1 payments, CON-1…CON-4, AU-4, ISS-130/131, INT-6/7 | W2 W3 W5 W7 W8 W10 W11 W13 |
-| #2 Codex (screens/wiring) | C-127 dead buttons (BUG-06), C-128 bundles + units-of-measure screens (CON-5), then C-102…C-126 | W1 W13 |
-| #3 Arena (journeys, tax data) | A-152 Israeli month, A-153 US quarter, A-151 month-end close — each with a test of worked figures | W7 W8 W9 |
-| #4 (UI, quality) | D-45, D-46, D-93 (report test harness), then D-77…D-92 | W2 W5 (screens) |
+| #1 Claude (lead, money/server) | AUD-02 rest (W10), DIM-1 for separate payment records, CON-1…CON-4 (W7 W8), AU-4 server check (W11), ISS-130/131 (W13), INT-6/7, INT-2 server revision number. Done 18–19 Oct: INT-1…5, INT-2 invoices/bills/payments, ISS-141/BUG-04, DIM-1 document payments | W7 W8 W10 W11 W13 |
+| #2 Codex (screens/wiring) | C-120, C-125 and the rest of C-102…C-126 still open, then C-115/C-117. Done: C-127, C-128, C-116/119/123/126 | W1 W13 |
+| #3 Arena (journeys, tax data) | Done: A-151/152/153, W7–W9 browser tests, A-198/199/106, A-203…209. Next: your half-done `[~]` A-items, then A-72 onward (skip `[P]`) | W7 W8 W9 |
+| #4 (UI, quality) | D-94 inline-edit names (removes the warehouse axe exception), D-85 dashboard first screen, D-86 invoice form, D-90 settings groups, D-92 sidebar names, then the rest of D-85…D-92. Done: D-45/46/77–84/93 | W1 W2 W5 (screens) |
 | #5 (imports) | E-57 import totals proof screen (AU-4 screen side, with AI #1's server check), then your queue | W4 W11 |
-| #6 (security) | S-37…S-40 access tests per write family (AUD-09) — tests only, report failures to AI #1 | W14 |
-| #7 (stability) | F-41…F-45 browser journey tests for W2, W3, W4, W6, W9 | W2 W3 W4 W6 W9 |
+| #6 (security) | Fix and re-open #181 and #183 (run `npm run test:rules` and the test file locally first), then S-37 per remaining write family, S-41+ in your queue. Done: S-37…S-40 first batch (#180) | W14 |
+| #7 (stability) | Done: F-41…F-45 (W2 W3 W4 W6 W9 browser journeys, #182). Next: a W10 backup → restore → same reports browser test, a W12 group-report browser test, then F-1… in your queue | W10 W12 |
 | #8 (onboarding) | G-24 first-hour journey test (sign-up → company → accounts → invoice → report), G-9 (IL + US only) | W1 |
 
 ## Tasks for Codex — AI #2 (in order)
@@ -1303,16 +1314,18 @@ Same rules as every helper AI: one branch and PR per task from the latest main, 
 - [ ] **F-38 Nightly speed budgets: a `perf/budgets.json` for posting, P&L, balance sheet, search and the 20 main screens; a nightly job fails when a budget is broken (photocraft's perf-nightly)**
 - [ ] **F-39 Quality scorecard file (`docs/SCORECARD.md`, updated by a script): tests, coverage, warnings, open bugs by area, screens without help or e2e — one table the owner can read**
 - [ ] **F-40 Architecture layers check in CI: lib/ never imports components/ or server/; components/ never imports server/; a test fails on a wrong import (photocraft's `xtask layers`)**
-- [ ] **F-41 Browser journey test W2: invoice → send → payment → customer statement, figures checked against worked numbers.**
-- [ ] **F-42 Browser journey test W3: bill → payment run → vendor statement.**
-- [ ] **F-43 Browser journey test W4: bank CSV import → match → reconciled balance.**
-- [ ] **F-44 Browser journey test W6: order with 25% deposit → part invoices → delivery charged once (DEP-1 figures).**
-- [ ] **F-45 Browser journey test W9: close a month → posting refused → reopen with reason.**
+- [x] **F-41 Browser journey test W2: invoice → send → payment → customer statement, figures checked against worked numbers.**
+- [x] **F-42 Browser journey test W3: bill → payment run → vendor statement.**
+- [x] **F-43 Browser journey test W4: bank CSV import → match → reconciled balance.**
+- [x] **F-44 Browser journey test W6: order with 25% deposit → part invoices → delivery charged once (DEP-1 figures).**
+- [x] **F-45 Browser journey test W9: close a month → posting refused → reopen with reason.**
 
 ## AI #8: tasks (spare queue for the next AI; written by Claude, 12 Oct)
 
 Same rules as every helper AI.
 
+- [ ] **F-46 Browser journey test W10: make a backup, change records, restore it → P&L, balance sheet and trial balance equal the figures from before the change (exact amounts).** Use the e2e journey fixture from F-41; owner role; no change to restore code (report failures to AI #1).
+- [ ] **F-47 Browser journey test W12: two books with known figures → group report shows the combined totals and the eliminations; export matches the screen.**
 - [ ] **G-1 Help center content** — one help page per main screen in docs/help/ (English and Hebrew), linked from the screen's help button.
 - [ ] **G-2 Guided first month** — a checklist for a new workspace's first month (bank, opening balances, first invoice, first reconciliation, first VAT report); progress saved per user.
 - [ ] **G-3 Demo workspace** — a generated sample company (Israel or US) with a year of data for trying LedgerFlow; never mixed with real books.
@@ -2256,4 +2269,8 @@ Claude is out of usage for about 3 days. The project keeps running without it:
 - 2026-10-19 AI #3 (Arena): **A-207, A-208 and A-209 answered, and A-203/A-204/A-205 extended to every report this lane built, on `arena/aa2ebf13-ledgerflow`** (from main `568f478`). New `e2e/ai3-report-audit.spec.ts`: each of the 27 report tabs this lane added is opened by its own address (`/?report=<id>#reports`) in a guest workspace — the empty state a new tester sees first — and checked at 390 px and 320 px for page overflow, in right-to-left layout for the same, for `NaN`/`Infinity`/`undefined`/`Invalid Date` printed as a figure, for runtime errors, and with axe for serious/critical findings; it attaches three screenshots per report (390, 1280, RTL 390) to the CI run for the owner. **What this does not prove:** any figure. The worked-figure tests (`israel-month-journey` 15, `us-quarter-journey` 14, `close-journey` 7, golden fixtures and each report's own unit tests) remain the correctness evidence; an empty report that fits a phone is not a correct report. **A-207:** all 50 modules in `src/lib/workspaceExports.ts` traced; 45 reach a screen, 5 wait on AI #2's C-115/C-117/C-120/C-125/C-126 and were neither duplicated nor deleted. **A-208:** every `[~]` item now names its one remaining step and owner — A-19/A-32/A-33/A-69/A-70 and A-66 are all blocked on AI #1's reserved document forms or server transition, none on AI #3. **A-209:** `docs/verification/ai3-final-review-pack-2026-10-19.md` lists all 187 A-tasks with their state, the 27 report tabs with component/library/tests/browser spec, the 12 panels outside Reports, and the release-gate rows this touches without moving (W7/W8 stay Partly until CON-1…CON-4). Local checks: `tsc --noEmit` clean; ESLint 0 errors / 210 warnings (cap unchanged); production build passes; full unit suite 2,930 tests: 2,929 pass / 0 fail / 1 skipped (needs `LF_TEST_DATABASE_URL`); **CI run 39296559701 on PR #190 is green on all seven jobs**, including both browser shards with the 27-report audit and the two screen passes. The audit's two failed runs and their fixes are recorded in the pack rather than hidden. No money calculation, posting, server, migration, screenshot baseline or quality budget touched.
 - 2026-10-19 AI #4: D-81/D-82 #185 confirmed merged at 6c351f7f; all required CI 39278047677 jobs green (both time zones, coverage/RLS/lint/types, build, browser shards and combined gate). Taking D-83/D-84 together on ai4/d-83-d84-report-layout from main 568f4788. Month navigation/export occupy a top row; labelled filters share a desktop grid and stack on phones. Generate is secondary; original export visibility and all financial/date/filter handlers remain. Balance-sheet names have dedicated truncating spans/full-name tooltips, amounts stay unbroken. Existing eight accessibility/Tab checks pass; phone stress test preserves long mixed Hebrew names and fully visible $3bn values, actual Excel downloads and comparison keyboard edits. Full six-case responsive run and visual capture pending. W5 stays incomplete.
 
+- 2026-10-19 night, Claude (AI #1): merged today #179–#190 (except #181/#183, sent back to AI #6 with the exact failing command). CI on main green on every push. F-41…F-45 and D-83/D-84 ticked. "Do first" table above rewritten from what is actually done; every queue still has 24+ open tasks. RELEASE_GATE: W2, W3, W4, W6 and W9 now Browser = Yes (F-41…F-45, CI green).
+
 - 2026-10-19 AI #4: #189 (D-83/D-84) confirmed merged as dae712e5; all seven required jobs of CI 39286477333 passed. D-85/D-90 display-only batch on ai4/d-85-dashboard-first-screen: first-screen cash/owed/payable/profit plus real Tasks navigation, existing calculation helpers and incomplete-cache guards, details/setup below; five searchable Settings groups preserving registry IDs and the mounted active page. D-86/D-87 remain reserved to AI #1. Evidence: docs/verification/ai4-d85-d90-dashboard-settings.md. W1/W5 remain incomplete. Focused checks and Linux visual/full PR CI in progress.
+
+- 2026-10-19 AI #4: current open PRs checked after the new session rule landed: none from ai4 before this batch; #189 is merged. Eight Linux candidates inspected, all 40 reference checks green. Final new browser spec 4/4, existing dashboard 2/2, tax profiles 1/1, focused unit/component guards 17/17, types and changed-file ESLint clean. Merged latest main e5a19464 (documentation only), preserving the lead's new priorities and release decisions. D-94 is next after D-85/D-90 review; no duplicate task started.

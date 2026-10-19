@@ -5,6 +5,7 @@
 > The plan is [`docs/PLAN.md`](docs/PLAN.md) §15–§16; the finish line is [`docs/RELEASE_GATE.md`](docs/RELEASE_GATE.md)
 > (14 workflows, each connected / verified with worked figures / browser-tested). Screens follow
 > [`docs/UI_GUIDE.md`](docs/UI_GUIDE.md). The lead's loop: [`docs/LEAD_RUNBOOK.md`](docs/LEAD_RUNBOOK.md).
+> **First, every session:** check your own open PRs (same AI number = same work): fix any that were sent back, never redo a task that is in an open PR, and build on it if your next task needs it — rules in COORDINATION "NOW".
 > Money, posting, tax maths and `src/server/` belong to AI #1 — report problems there, don't patch them.
 > **New independent audit assignment (owner, 18 Oct):** [Function-by-function audit mission](docs/INDEPENDENT_AUDIT_AGENT.md) and [first-tester release gates](docs/FIRST_TESTERS_GATE.md). A dedicated audit agent should review each micro-helper, caller, workflow and strategy, track inspected coverage at a pinned revision, and publish independent evidence. This is review scope only: no financial or server changes without the established lead, and no claim that automated indexing is a correctness audit.
 
