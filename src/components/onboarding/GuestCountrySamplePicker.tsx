@@ -5,7 +5,7 @@ import { seedCountryDemoWorkspace, type DemoCountry } from '../../lib/countryDem
 
 /** Country samples are intentionally client-only and available only before sign-in. */
 export default function GuestCountrySamplePicker() {
-  const [loadedCountry, setLoadedCountry] = useState<DemoCountry | null>(null);
+  const [loadedSample, setLoadedSample] = useState<{ country: DemoCountry; companyName: string } | null>(null);
 
   const loadSample = (country: DemoCountry) => {
     const auth = useAuthStore.getState();
@@ -28,10 +28,12 @@ export default function GuestCountrySamplePicker() {
     ledger.setEstimates([]);
     ledger.setBankLines([]);
     ledger.setJournalEntries([]);
-    setLoadedCountry(country);
+    setLoadedSample({ country, companyName: sample.companyName });
   };
 
-  const active = loadedCountry ? (loadedCountry === 'IL' ? 'Israel · ILS' : 'United States · USD') : 'Starter demo';
+  const active = loadedSample
+    ? `${loadedSample.country === 'IL' ? 'Israel · ILS' : 'United States · USD'} — ${loadedSample.companyName}`
+    : 'Starter demo';
   return (
     <section aria-labelledby="guest-sample-title" className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-3">
       <div>
