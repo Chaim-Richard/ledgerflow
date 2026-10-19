@@ -22,7 +22,7 @@ describe('ConnectionBanner', () => {
   test('offline is an alert, in words that say edits wait', () => {
     render(<ConnectionBanner />);
     act(() => useUIStore.setState({ isOnline: false }));
-    assert.match(screen.getByRole('alert').textContent || '', /Working offline — changes will sync when you reconnect/);
+    assert.match(screen.getByRole('alert').textContent || '', /Working offline — changes can't be saved until you reconnect/);
   });
 
   test('a save in flight says so, and a reconnection confirms everything is saved', () => {
