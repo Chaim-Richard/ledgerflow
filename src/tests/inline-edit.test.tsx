@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * Edit in place (I-22) and help while typing (I-23): the shared InlineEdit and its helpers.
  */
@@ -40,7 +41,7 @@ describe('Edit in place: values', () => {
 
 describe('Edit in place: on screen', () => {
   afterEach(() => cleanup());
-  const edit = (label: string) => fireEvent.click(screen.getByRole('button', { name: `Edit ${label}` }));
+  const edit = (label: string) => fireEvent.click(screen.getByRole('button', { name: inlineEditName(`Edit ${label}`) }));
 
   test('Enter saves the typed value; nothing is saved when unchanged; Esc cancels', async () => {
     const saved: unknown[] = [];
@@ -57,7 +58,7 @@ describe('Edit in place: on screen', () => {
     fireEvent.change(screen.getByLabelText('Address of Acme'), { target: { value: 'typo' } });
     await act(async () => { fireEvent.keyDown(screen.getByLabelText('Address of Acme'), { key: 'Escape' }); });
     assert.equal(saved.length, 1, 'Esc: not saved');
-    assert.ok(screen.getByRole('button', { name: 'Edit Address of Acme' }));
+    assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Address of Acme') }));
   });
 
   test('leaving the field saves; money is saved in cents; a click does not reach the row', async () => {
@@ -126,7 +127,7 @@ describe('Edit in place: on screen', () => {
     await act(async () => { fireEvent.keyDown(screen.getByLabelText('Name'), { key: 'Enter' }); });
     assert.equal(tries, 2, 'Enter tries again');
     fireEvent.keyDown(screen.getByLabelText('Name'), { key: 'Escape' });
-    assert.ok(screen.getByRole('button', { name: 'Edit Name' }));
+    assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Name') }));
     assert.ok(screen.getByText('Acme'));
   });
 
@@ -136,12 +137,12 @@ describe('Edit in place: on screen', () => {
     edit('Name');
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Acme 2' } });
     await act(async () => { fireEvent.keyDown(screen.getByLabelText('Name'), { key: 'Enter' }); });
-    const button = screen.getByRole('button', { name: 'Edit Name' }) as HTMLButtonElement;
+    const button = screen.getByRole('button', { name: inlineEditName('Edit Name') }) as HTMLButtonElement;
     assert.equal(button.disabled, true);
     fireEvent.click(button);
     assert.equal(screen.queryByRole('textbox'), null);
     await act(async () => { release(); });
-    assert.equal((screen.getByRole('button', { name: 'Edit Name' }) as HTMLButtonElement).disabled, false);
+    assert.equal((screen.getByRole('button', { name: inlineEditName('Edit Name') }) as HTMLButtonElement).disabled, false);
   });
 });
 
@@ -165,5 +166,34 @@ describe('Add in place', () => {
     fireEvent.change(box, { target: { value: 'oops' } });
     fireEvent.keyDown(box, { key: 'Escape' });
     assert.equal(box.value, '');
+  });
+});
+
+
+describe('Inline editor accessible names', () => {
+  afterEach(() => cleanup());
+  test('names contain the displayed mixed-language value, formatted amount and empty placeholder', () => {
+    render(<>
+      <InlineEdit label="Project" value="raw-id" display={<span>בית <strong>Mixed Case</strong></span>} onSave={() => {}} />
+      <InlineEdit label="Price" kind="money" value={12000} display="$120.00" onSave={() => {}} />
+      <InlineEdit label="Email" value="" placeholder="Add email" onSave={() => {}} />
+      <InlineEdit label="Note" value={null} onSave={() => {}} />
+    </>);
+    assert.ok(screen.getByRole('button', { name: 'Edit Project: בית Mixed Case' }));
+    assert.ok(screen.getByRole('button', { name: 'Edit Price: $120.00' }));
+    assert.ok(screen.getByRole('button', { name: 'Edit Email: Add email' }));
+    assert.ok(screen.getByRole('button', { name: 'Edit Note: Add' }));
+    const references = screen.getAllByRole('button').flatMap(button => button.getAttribute('aria-labelledby')!.split(' '));
+    assert.equal(new Set(references).size, 8, 'each editor has its own name/value references');
+  });
+  test('names follow the rendered value after an update; viewers retain plain text', () => {
+    const view = render(<InlineEdit label="Bin" value="A-01" onSave={() => {}} />);
+    assert.ok(screen.getByRole('button', { name: 'Edit Bin: A-01' }));
+    view.rerender(<InlineEdit label="Bin" value="B-08" onSave={() => {}} />);
+    assert.equal(screen.queryByRole('button', { name: 'Edit Bin: A-01' }), null);
+    assert.ok(screen.getByRole('button', { name: 'Edit Bin: B-08' }));
+    view.rerender(<InlineEdit label="Bin" value="B-08" canEdit={false} onSave={() => {}} />);
+    assert.equal(screen.queryByRole('button'), null);
+    assert.ok(screen.getByText('B-08', { exact: true }));
   });
 });

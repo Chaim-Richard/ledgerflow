@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * Account groups (K-14) on the screens: choosing a parent in the chart of accounts, and what the
  * trial balance, the balance sheet and the P&L do with a group — children indented, a subtotal for
@@ -58,7 +59,7 @@ const chart = () => render(
 );
 /** How far a chart row is indented: the wrapper of the code cell. */
 const chartIndent = (name: string) =>
-  (screen.getByRole('button', { name: `Edit Code of ${name}` }).closest('td')!.firstElementChild as HTMLElement).style.paddingLeft;
+  (screen.getByRole('button', { name: inlineEditName(`Edit Code of ${name}`) }).closest('td')!.firstElementChild as HTMLElement).style.paddingLeft;
 
 beforeEach(() => {
   stubFetch(404);
@@ -92,7 +93,7 @@ describe('the chart of accounts', () => {
       makeChartAccount({ id: 'rent', code: '6100', name: 'Rent', type: 'expense', category: 'Operating' }),
     ];
     render(<ChartOfAccountsView accounts={flat} searchTerm="" formatCurrency={money} onDrillDown={() => {}} onDeleteAccount={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Parent account of Rent' }));
+    fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Parent account of Rent') }));
     const picker = screen.getByLabelText('Parent account of Rent') as HTMLSelectElement;
     assert.deepEqual(
       [...picker.options].map(option => option.textContent),
@@ -111,7 +112,7 @@ describe('the chart of accounts', () => {
     const calls = stubFetchWithBodies(200, null);
     chart();
     fireEvent.click(screen.getByRole('button', { name: 'Show the accounts inside Overheads' }));
-    const shown = screen.getByRole('button', { name: 'Edit Parent account of Rent' });
+    const shown = screen.getByRole('button', { name: inlineEditName('Edit Parent account of Rent') });
     assert.equal(shown.textContent, 'Overheads', 'the row reads the parent\'s name, not its id');
     fireEvent.click(shown);
     const picker = screen.getByLabelText('Parent account of Rent') as HTMLSelectElement;

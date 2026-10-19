@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 import './helpers/dom';
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -117,7 +118,7 @@ test('inline tag editing refuses a real request-boundary duplicate and retains a
     return response([]);
   }) as typeof fetch;
   render(<AssetInlineDetails asset={asset} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Edit Tag of ציוד' }));
+  fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Tag of ציוד') }));
   fireEvent.change(screen.getByLabelText('Tag of ציוד'), { target: { value: 'AT-0002' } });
   fireEvent.keyDown(screen.getByLabelText('Tag of ציוד'), { key: 'Enter' });
   await waitFor(() => assert.match(screen.getByRole('alert').textContent || '', /already used/));

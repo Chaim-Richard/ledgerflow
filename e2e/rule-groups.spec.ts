@@ -1,3 +1,4 @@
+import { inlineEditName } from '../src/tests/helpers/inlineEditName';
 import { test, expect } from '@playwright/test';
 
 type Rule = { id: string; uid: string; workspaceId: string; name: string; groupName: string; groupIsActive?: boolean; priority: number; isActive: boolean; condition: { descriptionContains: string }; action: { addTags: string[] }; confidence: number; isHardened: boolean; createdAt: string };
@@ -42,18 +43,18 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('keyboard rename retries a refused save, priority saves, and group toggle preserves individual state', async ({ page }) => {
-  const rename = page.getByRole('button', { name: 'Edit Name of group תוכנה / SaaS' });
+  const rename = page.getByRole('button', { name: inlineEditName('Edit Name of group תוכנה / SaaS') });
   await rename.focus(); await page.keyboard.press('Enter');
   const draft = page.getByRole('combobox', { name: 'Name of group תוכנה / SaaS' });
   await expect(draft).toBeFocused(); await draft.fill('ענן / Cloud');
   refuse = true; await draft.press('Enter');
   await expect(page.getByRole('alert')).toBeVisible(); await expect(draft).toHaveValue('ענן / Cloud');
   refuse = false; await draft.press('Enter');
-  await expect(page.getByRole('button', { name: 'Edit Name of group ענן / Cloud' })).toBeVisible();
-  await page.getByRole('button', { name: 'Edit Priority of AWS' }).click();
+  await expect(page.getByRole('button', { name: inlineEditName('Edit Name of group ענן / Cloud') })).toBeVisible();
+  await page.getByRole('button', { name: inlineEditName('Edit Priority of AWS') }).click();
   const priority = page.getByRole('textbox', { name: 'Priority of AWS' });
   await priority.fill('0'); await priority.press('Enter');
-  await expect(page.getByRole('button', { name: 'Edit Priority of AWS' })).toContainText('Priority #0');
+  await expect(page.getByRole('button', { name: inlineEditName('Edit Priority of AWS') })).toContainText('Priority #0');
   const toggle = page.getByRole('button', { name: 'Enable group ענן / Cloud' });
   await toggle.focus(); await page.keyboard.press('Enter');
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');

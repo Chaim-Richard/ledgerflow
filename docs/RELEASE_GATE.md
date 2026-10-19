@@ -42,7 +42,7 @@ independently worked figures passes · **Browser** = an end-to-end browser test 
 | W10 | Backup → restore → same reports | 3 | Yes | Partly (AUD-02) | No ([D-46 reminder only](verification/ai4-d46-mobile-notices.md)) | AUD-02 rest (ownership inside the transaction); F-46 browser test |
 | W11 | Import from QuickBooks/CSV → totals match the source (AU-4) | 3 | Partly | No | No | AU-4 |
 | W12 | Several books → group report | 3 | Yes | Partly | No | consolidation export, cross-book test; F-47 browser test |
-| W13 | Stock: purchase → stock → sale → valuation | 3 | Yes | Partly | Partly | ISS-130, ISS-131, DIM-2; C-128 item configuration verified locally, full stock journey/CI still pending |
+| W13 | Stock: purchase → stock → sale → valuation | 3 | Yes | Partly | Partly ([D-94 inline-editor accessibility](verification/ai4-d94-inline-edit-names.md)) | ISS-130, ISS-131, DIM-2; C-128 item configuration verified locally, full stock journey/CI still pending |
 | W14 | Roles and access (owner, accountant, bookkeeper, viewer) | 2 | Yes | Yes (RLS suite; AI #6 adds cross-workspace write assertions for invoice, bill, payment, credit, reconciliation, customer and vendor records; pass on test Postgres 19 Oct) | Partly | AUD-09 for the remaining write families |
 
 **Today (19 Oct, night):** stage 1. **Fully Yes (connected, worked figures, browser): W6, W9.** One column short: W2 (worked figures: DIM-1 for separate payment records), W14 (browser), W3, W4 (worked figures). Critical items still open: AUD-02 rest (W10). Fixed 18–19 Oct: INT-1…5, INT-2 invoices/bills/payments, ISS-141/BUG-04, DIM-1 document payments, the axe 4.14 label-in-name failures.

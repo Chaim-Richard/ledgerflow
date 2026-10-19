@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 import './helpers/dom';
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,8 +15,8 @@ test('budget cards edit the name and planning amount through a confirmed partial
  const writes: Record<string, unknown>[] = [];
  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => { if (String(input).includes('/rpc/lf_update')) writes.push(JSON.parse(String(init?.body))); return new Response(JSON.stringify(String(input).includes('/rpc/') ? null : { id: 'b', data: budget }), { status: 200, headers: { 'Content-Type': 'application/json' } }); }) as typeof fetch;
  render(<BudgetManager />);
- assert.ok(screen.getByRole('button', { name: 'Edit Name of budget cash' }));
- fireEvent.click(screen.getByRole('button', { name: 'Edit Amount of budget cash' })); fireEvent.change(screen.getByLabelText('Amount of budget cash'), { target: { value: '250.25' } });
+ assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Name of budget cash') }));
+ fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Amount of budget cash') })); fireEvent.change(screen.getByLabelText('Amount of budget cash'), { target: { value: '250.25' } });
  await act(async () => { fireEvent.keyDown(screen.getByLabelText('Amount of budget cash'), { key: 'Enter' }); });
  const fields = writes[0].p_set as Record<string, unknown>; assert.equal(fields.amountCents, 25025); assert.equal('targetId' in fields, false); assert.equal('period' in fields, false);
  cleanup(); setComponentWorkspace('viewer'); render(<BudgetManager />); assert.equal(screen.queryByRole('button', { name: /^Edit (Name|Amount) of budget/ }), null);

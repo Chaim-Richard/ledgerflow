@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * Payment runs (K-24): every open bill due by a date, one payment per vendor, and a bank file with
  * each vendor's bank details; vendors keep their bank details on their page (an IBAN must pass its
@@ -124,7 +125,7 @@ describe('Bank details on the vendor page', () => {
     setComponentWorkspace('owner');
     render(<VendorDetailView vendorId="ink" onBack={() => {}} />);
     const label = 'Account number or IBAN of Ink Ltd';
-    fireEvent.click(screen.getByRole('button', { name: `Edit ${label}` }));
+    fireEvent.click(screen.getByRole('button', { name: inlineEditName(`Edit ${label}`) }));
     fireEvent.change(screen.getByLabelText(label), { target: { value: 'GB82 WEST 1234 5698 7654 33' } });
     await act(async () => { fireEvent.keyDown(screen.getByLabelText(label), { key: 'Enter' }); });
     assert.match(document.body.textContent || '', /This IBAN has a typo/);
