@@ -152,3 +152,32 @@ for (const { id, title, selector: reportSelector } of reports) {
     expect(errors).toEqual([]);
   });
 }
+
+/**
+ * A-205 for the two screens this lane built that are not report tabs: Loans and Petty cash. They
+ * have desktop axe coverage in `layout.spec.ts`; this is the 390 px right-to-left pass.
+ */
+for (const { tab, name } of [
+  { tab: 'loans', name: 'Loans' },
+  { tab: 'petty-cash', name: 'Petty cash' },
+]) {
+  test(`${tab}: draws, fits a 390 px right-to-left page and passes serious axe`, async ({ page }) => {
+    test.setTimeout(90000);
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await signInAsGuest(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/#${tab}`);
+    const main = page.locator('#main-content');
+    await expect.poll(() => main.innerText().then(text => text.trim().length), { timeout: 30000 }).toBeGreaterThan(20);
+    await page.evaluate(() => { document.documentElement.dir = 'rtl'; document.documentElement.lang = 'he'; });
+    const text = await main.innerText();
+    expect(text, name).not.toContain('NaN');
+    expect(text, name).not.toContain('Invalid Date');
+    await expectBounded(page, 390, `${tab} is wider than a 390 px phone in right-to-left layout`);
+    const axe = await new AxeBuilder({ page }).include('#main-content').disableRules(['color-contrast']).analyze();
+    const serious = axe.violations.filter(violation => violation.impact === 'serious' || violation.impact === 'critical');
+    expect(serious.map(violation => `${violation.id} (${violation.impact}): ${violation.nodes.map(node => node.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+}
