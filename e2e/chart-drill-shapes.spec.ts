@@ -79,6 +79,6 @@ for (const width of [1280,390]) test(`account icicle zoom and report-period drag
   const report=page.getByRole('link',{name:'Open P&L for selected period',exact:true});
   expect(await report.getAttribute('href')).toContain('start=2024-02-01');
   await report.click();
-  await page.getByRole('heading',{name:'Financial Reports & Statements',exact:true}).waitFor({state:'visible',timeout:20000});
+  await page.getByRole('heading',{name:'Reports',exact:true}).waitFor({state:'visible',timeout:20000});
   await expect(page.getByText('Custom range: 2024-02-01 to 2024-03-31',{exact:true})).toBeVisible();
 });
