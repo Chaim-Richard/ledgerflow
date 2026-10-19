@@ -36,10 +36,15 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
   const [partQuantity, setPartQuantity] = useState('1');
   const choices = useMemo(() => bundlePartChoices(editingItem?.id || '', allItems), [allItems, editingItem?.id]);
   const partsProblem = parts.length ? bundleProblem({ id: editingItem?.id || '', name: '' }, parts, allItems) : undefined;
+  const candidateParts = partToAdd
+    ? parts.some(part => part.itemId === partToAdd)
+      ? parts.map(part => part.itemId === partToAdd ? { ...part, quantity: Number(partQuantity) } : part)
+      : [...parts, { itemId: partToAdd, quantity: Number(partQuantity) }]
+    : parts;
+  const candidateProblem = partToAdd ? bundleProblem({ id: editingItem?.id || '', name: '' }, candidateParts, allItems) : undefined;
   const addPart = () => {
-    const quantity = Number(partQuantity);
-    if (!partToAdd || !Number.isInteger(quantity) || quantity < 1) return;
-    setParts(prev => (prev.some(p => p.itemId === partToAdd) ? prev.map(p => (p.itemId === partToAdd ? { ...p, quantity } : p)) : [...prev, { itemId: partToAdd, quantity }]));
+    if (!partToAdd || candidateProblem) return;
+    setParts(candidateParts);
     setPartToAdd(''); setPartQuantity('1');
   };
   return (
@@ -57,7 +62,7 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden"
+              className="relative w-full max-w-2xl bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain"
             >
               <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between">
                 <h2 id={itemTitleId} className="text-xl font-black text-[var(--text)] tracking-tighter">
@@ -65,16 +70,16 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                 </h2>
                 <button aria-label="Close item dialog"
                   onClick={onClose} 
-                  className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
+                  className="min-h-11 min-w-11 p-2 hover:bg-zinc-100 rounded-full transition-colors"
                 >
                   <X aria-hidden="true" size={20} className="text-zinc-400" />
                 </button>
               </div>
-              <form onSubmit={onSubmit} className="p-4 md:p-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="col-span-2 space-y-2">
+              <form onSubmit={event => { if (partsProblem) { event.preventDefault(); return; } onSubmit(event); }} className="p-4 md:p-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="sm:col-span-2 space-y-2">
                   <label htmlFor="inv-item-name" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Item Name</label>
                   <input 
-                    id="inv-item-name"
+                    id="inv-item-name" dir="auto"
                     name="name" 
                     defaultValue={editingItem?.name}
                     required 
@@ -189,28 +194,29 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                   <div className="flex flex-wrap items-center gap-2" role="group" aria-labelledby="inv-bundle-label">
                     <label htmlFor="inv-bundle-part" className="sr-only">Item to add as a bundle part</label>
                     <select id="inv-bundle-part" value={partToAdd} onChange={e => setPartToAdd(e.target.value)}
-                      className="px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-2xl font-bold text-sm">
+                      className="max-w-full min-w-0 px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-2xl font-bold text-sm">
                       <option value="">Choose an item…</option>
                       {choices.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                     </select>
                     <label htmlFor="inv-bundle-qty" className="sr-only">How many of the part one bundle holds</label>
                     <input id="inv-bundle-qty" type="number" min={1} step={1} value={partQuantity} onChange={e => setPartQuantity(e.target.value)}
                       className="w-24 px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-2xl font-bold text-sm" />
-                    <button type="button" onClick={addPart} className="px-4 py-3 rounded-2xl bg-[var(--text)] text-[var(--surface)] text-xs font-black uppercase tracking-widest">Add part</button>
+                    <button type="button" disabled={!partToAdd || Boolean(candidateProblem)} onClick={addPart} className="px-4 py-3 rounded-2xl bg-[var(--text)] text-[var(--surface)] text-xs font-black uppercase tracking-widest">Add part</button>
                   </div>
+                  {candidateProblem && <p role="alert" className="text-xs text-[var(--muted)]">{candidateProblem}</p>}
                   {parts.length > 0 && (
                     <ul className="flex flex-wrap gap-2" aria-label="Bundle parts chosen">
                       {parts.map(part => (
                         <li key={part.itemId} className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--line)] text-xs font-semibold">
                           <span>{part.quantity} × {allItems.find(i => i.id === part.itemId)?.name || 'a removed item'}</span>
                           <button type="button" aria-label={`Remove ${allItems.find(i => i.id === part.itemId)?.name || 'the removed part'}`}
-                            onClick={() => setParts(prev => prev.filter(p => p.itemId !== part.itemId))} className="text-[var(--muted)] hover:text-[var(--text)]">×</button>
+                            onClick={() => setParts(prev => prev.filter(p => p.itemId !== part.itemId))} className="min-h-11 min-w-11 text-[var(--muted)] hover:text-[var(--text)]">×</button>
                         </li>
                       ))}
                     </ul>
                   )}
                   {partsProblem && <p role="alert" className="text-[10px] text-amber-600">{partsProblem}</p>}
-                  <p className="text-[10px] text-[var(--muted)]">With parts here this item is a bundle: choosing it on an invoice adds the parts as lines at each part&rsquo;s price. A bundle keeps no stock itself.</p>
+                  <p className="text-[10px] text-[var(--muted)]">Record the parts and quantities that define this bundle. Automatic expansion into invoice lines is not available here; saving this configuration does not move stock or post an entry.</p>
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <label htmlFor="inv-consignment" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Consignment</label>
@@ -234,7 +240,7 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                 <div className="space-y-2">
                   <label htmlFor="inv-uom" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">UOM (e.g. pack, kg)</label>
                   <input 
-                    id="inv-uom"
+                    id="inv-uom" dir="auto"
                     name="measurementUnit" 
                     type="text" 
                     list="inv-uom-options"
@@ -242,6 +248,7 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                     placeholder="Optional"
                     className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
+                  <p className="text-xs text-[var(--muted)]">Choose a suggested unit or keep your own label, including Hebrew. The unit and package size are item settings; this form does not convert posted stock or invoice quantities.</p>
                   <datalist id="inv-uom-options">
                     {UNITS.map(u => <option key={u.id} value={u.id}>{u.label}</option>)}
                   </datalist>
@@ -258,9 +265,9 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                     className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
-                <div className="col-span-2 pt-4">
+                <div className="sm:col-span-2 pt-4">
                   <AsyncButton 
-                    type="submit" 
+                    type="submit" disabled={Boolean(partsProblem)}
                     loadingText={editingItem ? 'Updating...' : 'Adding...'}
                     className="w-full py-5 bg-zinc-900 text-white rounded-[32px] font-black hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/20"
                   >

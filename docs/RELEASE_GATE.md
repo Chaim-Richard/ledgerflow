@@ -42,7 +42,7 @@ independently worked figures passes · **Browser** = an end-to-end browser test 
 | W10 | Backup → restore → same reports | 3 | Yes | Partly (AUD-02) | No | AUD-02 rest (ownership inside the transaction) |
 | W11 | Import from QuickBooks/CSV → totals match the source (AU-4) | 3 | Partly | No | No | AU-4 |
 | W12 | Several books → group report | 3 | Yes | Partly | No | consolidation export, cross-book test |
-| W13 | Stock: purchase → stock → sale → valuation | 3 | Yes | Partly | Partly | ISS-130, ISS-131, DIM-2 |
+| W13 | Stock: purchase → stock → sale → valuation | 3 | Yes | Partly | Partly | ISS-130, ISS-131, DIM-2; C-128 item configuration verified locally, full stock journey/CI still pending |
 | W14 | Roles and access (owner, accountant, bookkeeper, viewer) | 2 | Yes | Yes (RLS suite) | Partly | AUD-09 per write family |
 
 **Today (18 Oct):** stage 1. Nearest to stage 2: W6, W9, W14. The critical items still open: AUD-02 (rest). Fixed 18 Oct: BUG-03/INT-2 invoices, INT-1 authority at commit, INT-3, INT-4, INT-5.
