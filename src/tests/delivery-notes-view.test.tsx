@@ -116,4 +116,16 @@ describe('Delivery notes screen (A-46 / A-172)', () => {
     assert.ok(screen.getByRole('article', { name: 'Printable delivery note' }));
   });
 
+  test('changing books clears source filters and manual numbering', async () => {
+    const { useAuthStore } = await import('../stores/useAuthStore');
+    render(<DeliveryNotesReportView />);
+    fireEvent.change(screen.getByLabelText('Find source document'), { target: { value: 'קפה' } });
+    fireEvent.change(screen.getByLabelText('Delivery note number'), { target: { value: 'private-number' } });
+    act(() => useAuthStore.setState({ currentWorkspaceId: 'other-books' }));
+    assert.equal((screen.getByLabelText('Find source document') as HTMLInputElement).value, '');
+    assert.equal((screen.getByLabelText('Delivery note number') as HTMLInputElement).value, '');
+    assert.equal((screen.getByLabelText('Source type') as HTMLSelectElement).value, 'all');
+    assert.equal(screen.queryByRole('article', { name: 'Printable delivery note' }), null);
+  });
+
 });

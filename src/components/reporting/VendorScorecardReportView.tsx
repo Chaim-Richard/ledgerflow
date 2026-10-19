@@ -94,7 +94,7 @@ function VendorScorecardContent({ endDate = '', orders, ordersLoading = false }:
       </tr></thead>
       <tbody>{visibleRows.map(row => <tr key={row.vendorId} className="border-t border-[var(--line)] align-top">
         <th scope="row" className="text-left min-w-60"><bdi>{row.vendorName}</bdi>
-          <details key={`${workspaceId}:${row.vendorId}`} className="font-normal mt-2">
+          <details key={`${workspaceId}:${row.vendorId}`} className="font-normal mt-2 w-64 max-w-full">
             <summary className="min-h-11 cursor-pointer">Review source bills</summary>
             <p className="text-sm text-[var(--muted)]">Loaded bills in this date range, including bills without item quantities. Open a bill to inspect its original lines. Orders and return credits keep their own screens.</p>
             <ul>{bills.filter(bill => typeof bill.date === 'string' && bill.vendorId === row.vendorId && (!workspaceId || bill.workspaceId === workspaceId) &&

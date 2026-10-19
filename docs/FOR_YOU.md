@@ -7,6 +7,8 @@ removed from this list.
 
 Last updated: 2026-10-07.
 
+**AI #2, 19 Oct — automatic PR creation:** the running environment's proxy rejects HTTPS CONNECT to `api.github.com` before GitHub authentication; native Git push works. I saved a network draft adding only `api.github.com` (existing package-manager preset retained). Review/save it in environment settings, then publish the environment. This has not changed the current runtime, and GitHub API authorization remains untested behind that block. Do not send credentials in chat. Earlier C-126 and C-116/C-119/C-123 branches are now confirmed merged into main `dae712e5`. The new [C-72/C-73/C-75 review branch](https://github.com/shmuelbiller1/ledgerflow/pull/new/codex/c72-c73-c75-report-follow-ups) can be opened manually while API access is blocked.
+
 ## A. Settings only you can change (a few minutes each)
 
 0. **Done (owner, 13 Oct).** **Most important: let database changes go through without you (1 minute).** Open
