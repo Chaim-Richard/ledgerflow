@@ -147,7 +147,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     "discount-mismatch":
       "Compare issued invoice unit prices in the selected period with current customer price lists or item catalogue prices. Refresh complete invoice/item reads before CSV. Current prices do not prove historical discount entitlement; foreign currencies, document-wide discounts and unknown item references are excluded.",
     "vendor-scorecard":
-      "Review each vendor's on-time delivery (first goods receipt against the expected date), unit-cost changes per item in the bill's own currency, and returns sent back in the period. Read-only: nothing is posted, and a vendor with no dated orders shows no on-time rate rather than 100%.",
+      "Review each vendor's on-time delivery (first goods receipt against the expected date), unit-cost changes per item in the bill's own currency, and returns sent back in the period. Read-only: nothing is posted, and a vendor with no dated orders shows no on-time rate rather than 100%. Find a vendor by name and expand Review source bills to open its loaded bills in the date range.",
     "vendor-price-history":
       "What each item actually cost from each vendor, purchase by purchase, from the bill lines the books hold: the line amount divided by its units, in that bill's own currency. Prices are compared only inside one currency, a single purchase shows no change, and draft, void or cancelled bills are not purchases and are left out. Read-only: nothing here prices, posts or changes a bill.",
     "three-way-match":
@@ -257,9 +257,9 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     "landed-cost-preview":
       "Preview how freight, duty and handling spread across a purchase order receipt's lines (or a scanned receipt draft) by line value or by quantity. The allocated extra cents sum to the exact extra cost. Preview only: nothing here posts to inventory or bills (posting stays on the receipt/bill path).",
     "delivery-notes":
-      "Print or export a delivery note from a sales order, recorded delivery or invoice in English (LTR) or Hebrew (RTL), numbered in its own DN-YYYY-NNN series. Prices are hidden by default so the note lists goods only, with an option to show unit and line prices.",
+      "Print or export a delivery note from a sales order, recorded delivery or invoice in English (LTR) or Hebrew (RTL), numbered in its own DN-YYYY-NNN series. Prices are hidden by default so the note lists goods only, with an option to show unit and line prices. Find a source by its document number or customer name, or filter to invoices or sales orders and deliveries; no match disables print and CSV.",
     "customer-quotes":
-      "Review open, signed and expired customer estimates and proposals with their portal signing link (/e/<token>). Build and preview one-page proposals with cover letters, sections and optional add-on items. Inspect recurring estimate schedules and draft quotes due on or before the selected date.",
+      "Review open, signed and expired customer estimates and proposals with their portal signing link (/e/<token>). Build and preview one-page proposals with cover letters, sections and optional add-on items. Inspect recurring estimate schedules and draft quotes due on or before the selected date. Filter by quote state and copy a follow-up draft for open or expired quotes; expired drafts request an update, and nothing is sent or saved.",
     "sales-tax-holidays":
       "The dated windows in which US states stop taxing qualifying items, each with its categories, its per-item sales-price cap and the state's own source. The checker answers whether an item at a price is inside a band's cap on a date, counting delivery and handling in the price; the source's qualifying-item list decides item by item what a band covers. Read-only: nothing here posts or files, and a holiday this table does not list is never assumed absent.",
     "quote-versions":

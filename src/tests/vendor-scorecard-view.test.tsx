@@ -48,3 +48,33 @@ test('the scorecard lists each vendor with its price change and returns, and say
   assert.equal(screen.queryByText(/100\.00%/), null, 'a vendor without dated orders is never shown as on time');
   assert.ok(screen.getByRole('button', { name: 'Export CSV' }));
 });
+
+test('source bills open their exact record and exclude other vendors, workspaces and dates', async () => {
+  const { fireEvent } = await import('@testing-library/react');
+  const { useUIStore } = await import('../stores/useUIStore');
+  const previousUI = useUIStore.getState();
+  useAuthStore.setState({ user: null, isGuest: true, currentWorkspaceId: 'ws-1', workspaces: [] } as never);
+  useLedgerStore.setState({ vendors: [{ id: 'v1', name: 'ספק Supplies', workspaceId: 'ws-1' }], bills: [
+    { id: 'keep', number: 'חשבונית B-1', vendorId: 'v1', workspaceId: 'ws-1', date: '2026-09-01', splits: [] },
+    { id: 'wrong-vendor', vendorId: 'v2', workspaceId: 'ws-1', date: '2026-09-01', splits: [] },
+    { id: 'wrong-workspace', vendorId: 'v1', workspaceId: 'ws-2', date: '2026-09-01', splits: [] },
+    { id: 'undated', vendorId: 'v1', workspaceId: 'ws-1', splits: [] },
+    { id: 'old', vendorId: 'v1', workspaceId: 'ws-1', date: '2025-09-01', splits: [] },
+  ] } as never);
+  try {
+    render(<VendorScorecardPanel endDate="2026-10-19" orders={[]} />);
+    assert.ok(screen.getByText('ספק Supplies'));
+    fireEvent.click(screen.getByText('Review source bills'));
+    fireEvent.click(screen.getByRole('button', { name: /חשבונית B-1/ }));
+    assert.deepEqual(useUIStore.getState().focusRecord, { type: 'bill', id: 'keep' });
+    for (const id of ['wrong-vendor', 'wrong-workspace', 'old', 'undated']) assert.equal(screen.queryByRole('button', { name: new RegExp(id) }), null);
+    fireEvent.change(screen.getByLabelText('Find vendor'), { target: { value: 'no match' } });
+    assert.ok(screen.getByText(/No matching vendors/));
+    assert.equal((screen.getByRole('button', { name: 'Export CSV' }) as HTMLButtonElement).disabled, true);
+    fireEvent.change(screen.getByLabelText('Find vendor'), { target: { value: 'ספק' } });
+    assert.ok(screen.getByText('ספק Supplies'));
+    fireEvent.change(screen.getByLabelText('Scorecard from date'), { target: { value: '2027-01-01' } });
+    assert.match(screen.getByRole('alert').textContent || '', /From must be on or before To/);
+    assert.equal(screen.queryByRole('table'), null);
+  } finally { useUIStore.setState(previousUI, true); }
+});

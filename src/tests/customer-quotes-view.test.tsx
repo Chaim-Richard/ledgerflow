@@ -61,6 +61,23 @@ describe('Customer quotes, proposals and recurring estimates screen (A-49 / A-17
     window.history.pushState({}, '', '/');
   });
 
+  test('quote-state filters and follow-up drafts respect expiry without sending or changing records', () => {
+    useLedgerStore.setState({ customers: [{ ...customer, name: 'לקוח Studio' }] });
+    const original = useLedgerStore.getState().estimates;
+    render(<CustomerQuotesReportView />);
+    fireEvent.change(screen.getByLabelText('Assessment date'), { target: { value: '2026-10-15' } });
+    const draft = screen.getByLabelText('Follow-up draft for EST-101') as HTMLTextAreaElement;
+    assert.match(draft.value, /Hello לקוח Studio/);
+    assert.match(draft.value, /validity runs through 2026-11-01/);
+    assert.equal(draft.readOnly, true);
+    fireEvent.change(screen.getByLabelText('Quote state'), { target: { value: 'signed' } });
+    assert.equal(screen.queryByLabelText('Follow-up draft for EST-101'), null);
+    fireEvent.change(screen.getByLabelText('Quote state'), { target: { value: 'expired' } });
+    fireEvent.change(screen.getByLabelText('Assessment date'), { target: { value: '2026-11-02' } });
+    assert.match((screen.getByLabelText('Follow-up draft for EST-101') as HTMLTextAreaElement).value, /ended on 2026-11-01; please contact us for an updated quote/);
+    assert.equal(useLedgerStore.getState().estimates, original);
+  });
+
   test('lists open quotes with the /e/<signToken> link, separates optional proposal items, and computes recurring drafts due', async () => {
     render(<CustomerQuotesReportView />);
     await act(async () => {

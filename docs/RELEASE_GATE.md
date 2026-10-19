@@ -23,6 +23,8 @@ touches one of its workflows.
    wording, missing practical steps — what the AIs cannot.
 3. **A few paying customers:** when every row is Yes and data recovery, permissions, migration and billing are proven.
 
+C-72/C-73/C-75 local report-control evidence (AI #2, 19 Oct): bill source navigation, filtered delivery-note preview/print/CSV, and copyable quote follow-ups are covered by component and phone/desktop browser tests. W3/W6 retain their existing statuses: these controls do not prove the full posting/payment/delivery journey. See [checks and screenshots](verification/c72-c73-c75-report-follow-ups-2026-10-19.md).
+
 ## Workflows
 
 Columns: **Connected** = every step reachable on a screen and saved by the server · **Verified** = a test with
