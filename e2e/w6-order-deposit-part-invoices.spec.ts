@@ -85,7 +85,7 @@ test('W6 browser: a 25% deposit is taken, the order is invoiced in two parts, an
   await first.getByRole('radio', { name: 'A percentage of the order' }).check();
   await first.getByRole('textbox', { name: 'Percentage of the order' }).fill('25');
   await expect(first.getByRole('button', { name: 'Create $275.00 invoice', exact: true })).toBeEnabled();
-  expect(await draftLines(page)).toEqual<Array<[string, string]>>([
+  expect(await draftLines(page)).toEqual([
     ['Goods (25% of order EST-1)', '$250.00'],
     ['Delivery (25% of order EST-1)', '$25.00'],
     ['Total', '$275.00'],
@@ -103,7 +103,7 @@ test('W6 browser: a 25% deposit is taken, the order is invoiced in two parts, an
   await expect(second.getByText(/order of \$1,100\.00 · invoiced \$275\.00 \(INV-101\) · left \$825\.00/)).toBeVisible();
   await second.getByRole('radio', { name: 'All that is left ($825.00)' }).check();
   await expect(second.getByRole('button', { name: 'Create $825.00 invoice', exact: true })).toBeEnabled();
-  expect(await draftLines(page)).toEqual<Array<[string, string]>>([
+  expect(await draftLines(page)).toEqual([
     ['Goods (rest of order EST-1)', '$750.00'],
     ['Delivery (rest of order EST-1)', '$75.00'],
     ['Total', '$825.00'],

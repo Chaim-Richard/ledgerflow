@@ -104,7 +104,8 @@ test('W4 browser: a bank CSV is previewed and imported exactly, line by line', a
   const ledgerBalance = await page.evaluate(async () => {
     const { useLedgerStore } = await import('/src/stores/useLedgerStore.ts');
     const state = useLedgerStore.getState();
-    return state.transactions.flatMap(t => t.lines).filter(l => l.accountId === 'bank-1000').reduce((sum, l) => sum + l.amountCents, 0);
+    const lines = state.transactions.flatMap((t: { lines?: unknown[] }) => (t.lines ?? []) as Array<{ accountId: string; amountCents: number }>);
+    return lines.filter(l => l.accountId === 'bank-1000').reduce((sum, l) => sum + l.amountCents, 0);
   });
   expect(ledgerBalance, 'ledger balance of Bank 1000 equals the statement closing balance').toBe(68000);
   await expect(page.getByRole('button', { name: /Matched History \(3\)/ })).toBeVisible();

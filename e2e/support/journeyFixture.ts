@@ -167,8 +167,8 @@ export async function settleStyles(page: Page): Promise<void> {
   await expect.poll(() => page.evaluate(() => document.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
 }
 
-/** The store update the live database subscription would deliver after a server write. */
-export async function setLedgerField(page: Page, field: string, value: unknown[]): Promise<void> {
+/** The store update the live database subscription would deliver after a server write (a list or a setting such as lockDate). */
+export async function setLedgerField(page: Page, field: string, value: unknown): Promise<void> {
   await page.evaluate(async ({ field, value }) => {
     const { useLedgerStore } = await import('/src/stores/useLedgerStore.ts');
     useLedgerStore.setState({ [field]: value } as never);
