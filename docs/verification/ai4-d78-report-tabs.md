@@ -1,0 +1,9 @@
+# AI #4 — D-78 readable scrolling report navigation
+
+Based on main 0ace84f1. Report buttons occupy one horizontal strip, keep whole labels without shrinking/wrapping, and have 44px targets plus keyboard focus indicators. The current page has aria-current. A ResizeObserver and selection effect reveal the active button by adjusting the strip's horizontal scroll only; cleanup disconnects the observer. Report IDs, labels, registry, URL handlers, and financial logic are unchanged.
+
+Chromium: two phone light/dark cases verify horizontal overflow belongs to the strip, all buttons occupy one nonoverlapping row, all targets are at least 44px, keyboard focus/Enter activates the last item and reveals it, the report URL changes, the document has no horizontal overflow, and resizing to desktop preserves selection. Types and focused ESLint pass.
+
+Before/after at 390/1280 in both themes: [images/d78](images/d78). UI guide: phone navigation and accessibility rules. The top Reports/Visual Analytics module strip also had shrinking buttons whose labels overlapped. Report-group module buttons now keep their whole width with 44px targets; other module groups retain their presentation. Both strips are checked. Module before/after images accompany the report-picker images. The reviewed D-77 heading is merged into this branch; Linux capture refreshes the eight report references for the visible module-strip correction. W5 remains incomplete: navigation alone is not a verified label-report journey. Full GitHub PR checks pending.
+
+Linux capture [39191247913](https://github.com/shmuelbiller1/ledgerflow/actions/runs/39191247913) passed all 40 reference checks. All eight changed report references were opened and inspected before acceptance. The temporary capture trigger is removed. Six combined heading/navigation Chromium cases pass (25.7s); types and focused lint pass. Merge D-77 #173 before this PR #172.

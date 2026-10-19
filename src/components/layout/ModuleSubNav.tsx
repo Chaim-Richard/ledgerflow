@@ -42,6 +42,9 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
     <div className="bg-[var(--surface)] border-b border-[var(--line)] px-4 sm:px-6 z-20 shadow-2xs">
       <div 
         ref={scrollRef}
+        data-testid="module-navigation"
+        role="navigation"
+        aria-label="Module pages"
         className="flex overflow-x-auto no-scrollbar items-center gap-1.5 py-2.5"
       >
         {groupTabs.map(tab => {
@@ -54,6 +57,7 @@ export default function ModuleSubNav({ activeTab, onTabChange }: ModuleSubNavPro
               onClick={() => onTabChange(tab.id)}
               className={cn(
                 "flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border",
+                currentTabDef.groupId === 'reports' && "shrink-0 min-h-11 min-w-11 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brass)]",
                 isActive 
                   ? "bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black font-bold border-[var(--brass-line)] shadow-xs" 
                   : "bg-[var(--panel)]/80 text-[var(--muted)] border-[var(--line)] hover:text-[var(--text)] hover:border-[var(--brass-line)]/50 hover:bg-[var(--elevated)]"
