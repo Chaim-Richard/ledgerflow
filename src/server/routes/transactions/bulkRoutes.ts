@@ -180,26 +180,37 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
         // a retry after a lost answer) the invoice's live posting is still there and not reversed by this
         // request. Then: the very same posting again → this save already happened, answer as before and
         // write nothing; a different posting → refused, so the invoice is never counted twice.
-        // the same for bills (INT-2 for bills): one live 'bill-accrual' per bill
-        const ACCRUAL_KINDS = [{ type: 'invoice-accrual', key: 'invoiceId' }, { type: 'bill-accrual', key: 'billId' }] as const;
+        // the same for bills (INT-2 for bills): one live 'bill-accrual' per bill; and for the payment posted with
+        // the document (INT-2 for payments): one live 'invoice-payment' / 'bill-payment' per document. Only when
+        // every such entry of the request is already live and identical is it a replay; a stale save that adds or
+        // changes one of them (e.g. marks the invoice paid from an old tab) is refused, never half-applied.
+        const ACCRUAL_KINDS = [
+          { type: 'invoice-accrual', key: 'invoiceId' }, { type: 'bill-accrual', key: 'billId' },
+          { type: 'invoice-payment', key: 'invoiceId' }, { type: 'bill-payment', key: 'billId' },
+        ] as const;
         const accruals = validatedTransactions.flatMap(tx => ACCRUAL_KINDS
           .filter(k => tx.metadata?.type === k.type && typeof (tx.metadata as Record<string, unknown> | undefined)?.[k.key] === 'string')
           .map(k => ({ tx, kind: k })));
+        const same = (a: Transaction, b: Transaction) => a.date === b.date && Number(a.totalAmountCents) === Number(b.totalAmountCents)
+          && JSON.stringify((a.lines || []).map(l => [l.accountId, l.amountCents])) === JSON.stringify((b.lines || []).map(l => [l.accountId, l.amountCents]));
+        const replayedIds: string[] = [];
+        let stale = '';
         for (const { tx: incoming, kind } of accruals) {
-          const invoiceId = String((incoming.metadata as Record<string, unknown>)[kind.key]);
-          const posted = await t.get(db.collection('transactions').where('workspaceId', '==', wsId).where(`metadata.${kind.key}`, '==', invoiceId));
+          const documentId = String((incoming.metadata as Record<string, unknown>)[kind.key]);
+          const posted = await t.get(db.collection('transactions').where('workspaceId', '==', wsId).where(`metadata.${kind.key}`, '==', documentId));
           const docs = posted.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as Array<Transaction & { id: string }>;
           const reversed = new Set([...docs, ...validatedTransactions]
             .filter(x => x.metadata?.isReversal).map(x => String(x.metadata?.reversesTxId || x.metadata?.reversedTransactionId || '')));
           const live = docs.filter(x => x.metadata?.type === kind.type && !x.metadata?.isReversal && isPostable(x) && !reversed.has(x.id));
-          if (live.length === 0) continue;
-          const same = (a: Transaction, b: Transaction) => a.date === b.date && Number(a.totalAmountCents) === Number(b.totalAmountCents)
-            && JSON.stringify((a.lines || []).map(l => [l.accountId, l.amountCents])) === JSON.stringify((b.lines || []).map(l => [l.accountId, l.amountCents]));
-          if (live.length === 1 && same(live[0], incoming)) {
-            body = { status: 'ok', count: 0, replayed: true, transactionIds: [live[0].id] };
-            return;
-          }
-          throw new LedgerPostingError(409, `This ${kind.key === 'billId' ? 'bill' : 'invoice'} was changed or posted elsewhere (another tab or an earlier save). Reload it and save again.`);
+          if (live.length === 1 && same(live[0], incoming)) replayedIds.push(live[0].id);
+          else if (live.length > 0) stale = kind.key === 'billId' ? 'bill' : 'invoice';
+        }
+        // some entries already live and the rest new: an old tab adding to a posted document
+        if (!stale && replayedIds.length > 0 && replayedIds.length < accruals.length) stale = accruals[0].kind.key === 'billId' ? 'bill' : 'invoice';
+        if (stale) throw new LedgerPostingError(409, `This ${stale} was changed or posted elsewhere (another tab or an earlier save). Reload it and save again.`);
+        if (replayedIds.length > 0) {
+          body = { status: 'ok', count: 0, replayed: true, transactionIds: replayedIds };
+          return;
         }
         const refs = validatedTransactions.map(tx => db.collection('transactions').doc(tx.id));
         if (refs.length > 0) {

@@ -31,7 +31,7 @@ export const ConnectionBanner: React.FC = () => {
         className="bg-amber-500/15 border-b border-amber-500/30 text-amber-300 px-4 py-1.5 flex items-center justify-center gap-2 text-xs font-medium tracking-wide animate-in fade-in duration-200"
       >
         <WifiOff className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-        <span>Working offline — changes will sync when you reconnect</span>
+        <span>Working offline — changes can't be saved until you reconnect</span>
       </div>
     );
   }

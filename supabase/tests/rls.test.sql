@@ -319,6 +319,22 @@ begin
   end loop;
 end $$;
 
+-- AUD-09 / AI #6 S-37…S-40: a writer in ws1 cannot re-home an existing record into another workspace,
+-- for each write family (documents, payments, credits, reconciliations, contacts).
+do $$
+declare
+  t text;
+begin
+  foreach t in array array[
+    'invoices', 'bills', 'payments', 'creditNotes', 'vendorCredits',
+    'reconciliations', 'customers', 'vendors'
+  ] loop
+    if pg_temp.try_as('u-book', format('select lf_update(%L, %L, %L::jsonb)', t, 'iso-' || t, '{"workspaceId":"ws2"}')) then
+      raise exception 'FAIL %: writer moved an existing record into another workspace', t;
+    end if;
+  end loop;
+end $$;
+
 -- Every dated table: nothing is posted into, or moved into, a locked period (ws1 is locked to 2026-01-31).
 do $$
 declare t text;

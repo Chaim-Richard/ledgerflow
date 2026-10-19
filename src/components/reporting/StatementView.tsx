@@ -169,9 +169,9 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
           Please select a {type === 'customer' ? 'customer' : 'vendor'} to view statement.
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 space-y-8 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-8 space-y-6 sm:space-y-8 shadow-sm">
           {/* Statement Header Card */}
-          <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-800 pb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start border-b border-slate-200 dark:border-slate-800 pb-6">
             <div>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">STATEMENT OF ACCOUNT</h2>
               <p className="text-xs text-[var(--muted)] mt-1">Period: {startDate} to {endDate}</p>
@@ -183,7 +183,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
           </div>
 
           {/* Statement Overview Cards */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
               <span className="text-xs text-[var(--muted)] uppercase font-semibold">Opening Balance</span>
               <div className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">
@@ -207,7 +207,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
           </div>
 
           {/* Activity Table */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
+          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-x-auto">
             <table className="w-full text-left text-xs">
               <caption className="sr-only">Account statement</caption>
               <thead>
