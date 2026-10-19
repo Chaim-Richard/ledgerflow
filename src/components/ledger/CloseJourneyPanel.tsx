@@ -10,7 +10,7 @@ import ReportTableScroll from '../reporting/ReportTableScroll';
 
 const STATUS: Record<CloseJourneyStatus, { label: string; tone: string; icon: React.ReactNode }> = {
   done: { label: 'Done', tone: 'text-[var(--pos)]', icon: <CheckCircle2 className="w-5 h-5 text-[var(--pos)]" aria-hidden="true" /> },
-  attention: { label: 'Needs attention', tone: 'text-amber-600', icon: <AlertTriangle className="w-5 h-5 text-amber-500" aria-hidden="true" /> },
+  attention: { label: 'Needs attention', tone: 'text-amber-700 dark:text-amber-400', icon: <AlertTriangle className="w-5 h-5 text-amber-500" aria-hidden="true" /> },
   blocker: { label: 'Blocks the close', tone: 'text-[var(--neg)]', icon: <XCircle className="w-5 h-5 text-[var(--neg)]" aria-hidden="true" /> },
   review: { label: 'For review', tone: 'text-[var(--muted)]', icon: <Eye className="w-5 h-5 text-[var(--muted)]" aria-hidden="true" /> },
   'not-applicable': { label: 'Does not apply', tone: 'text-[var(--muted)]', icon: <Circle className="w-5 h-5 text-[var(--muted)]" aria-hidden="true" /> },

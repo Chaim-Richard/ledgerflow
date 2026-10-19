@@ -24,7 +24,7 @@ const STATUS_LABEL: Record<UsQuarterStepStatus, string> = {
 };
 const STATUS_TONE: Record<UsQuarterStepStatus, string> = {
   done: 'text-[var(--pos)]',
-  attention: 'text-amber-600',
+  attention: 'text-amber-700 dark:text-amber-400',
   'not-applicable': 'text-[var(--muted)]',
 };
 
