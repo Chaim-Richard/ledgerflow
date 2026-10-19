@@ -314,7 +314,7 @@ reportRouter.get("/trial-balance", async (req, res) => {
   if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
   const { workspaceId } = result.data;
 
-  const rawAsOfDate = req.query.asOfDate ?? req.query.endDate;
+  const rawAsOfDate = req.query.asOfDate || req.query.endDate;
   if (rawAsOfDate !== undefined && typeof rawAsOfDate !== 'string') {
     return sendError(res, "Invalid parameters", 400, [{ path: ['asOfDate'], message: "Must be a single date string" }]);
   }
