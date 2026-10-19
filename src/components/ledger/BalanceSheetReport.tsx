@@ -486,29 +486,29 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                     setDrillDownTarget({ accountName: 'Retained Earnings (Income & Expenses)', transactions: matchedTxs });
                   }}
                   title="Click to drill down into Retained Earnings transaction activity"
-                  className="w-full text-left flex justify-between items-center bg-emerald-50/20 hover:bg-emerald-50/50 p-2 rounded-lg transition-all border border-emerald-100/40 hover:border-emerald-300 min-w-0 cursor-pointer group/row"
+                  className="w-full text-left flex justify-between items-center bg-[var(--brass-soft)] hover:bg-[var(--surface)] text-[var(--text)] p-2 rounded-lg transition-all border border-[var(--brass-line)] hover:border-[var(--brass)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brass)] min-h-11 min-w-0 cursor-pointer group/row"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-emerald-100 shrink-0">
+                    <div className="w-8 h-8 bg-[var(--panel)] text-[var(--text)] rounded-md flex items-center justify-center text-[9px] font-bold font-mono border border-[var(--line)] shrink-0">
                       INC
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-emerald-800 group-hover/row:text-emerald-950 uppercase tracking-tight truncate flex items-center gap-1.5">
+                      <p className="text-xs font-bold text-[var(--text)] uppercase tracking-tight truncate flex items-center gap-1.5">
                         {labels.retainedEarningsLabel}
-                        <ExternalLink aria-hidden="true" size={10} className="opacity-0 group-hover/row:opacity-100 text-emerald-600 transition-opacity" />
+                        <ExternalLink aria-hidden="true" size={10} className="opacity-0 group-hover/row:opacity-100 text-[var(--text)] transition-opacity" />
                       </p>
-                      <p className="text-[8px] font-bold text-emerald-600/60 uppercase tracking-wider truncate">{labels.retainedEarningsSub}</p>
+                      <p className="text-[8px] font-bold text-[var(--text)] uppercase tracking-wider truncate">{labels.retainedEarningsSub}</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end shrink-0 ml-2">
-                    <span className={cn("font-mono font-bold text-xs", currentData.netIncome >= 0 ? "text-emerald-700" : "text-rose-700", "tabular-nums")}>
+                    <span className="font-mono font-bold text-xs text-[var(--text)] tabular-nums">
                       <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.netIncome)}</bdi>
                     </span>
                     {isComparative && (
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="font-mono text-[8.5px] text-[var(--muted)] tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.netIncome)}</bdi></span>
+                        <span className="font-mono text-[8.5px] text-[var(--text)] tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.netIncome)}</bdi></span>
                         {prevData.netIncome !== 0 && (
-                          <span className={cn("text-[8.5px] font-bold", (currentData.netIncome >= prevData.netIncome) ? "text-emerald-500" : "text-rose-500")}>
+                          <span className="text-[8.5px] font-bold text-[var(--text)]">
                             {(((currentData.netIncome - prevData.netIncome) / Math.abs(prevData.netIncome)) * 100).toFixed(1)}%
                           </span>
                         )}
