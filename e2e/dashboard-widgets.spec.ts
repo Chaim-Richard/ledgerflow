@@ -29,7 +29,7 @@ for (const width of [1280, 390]) {
     await expect(page.getByLabel('Select Year')).toHaveValue('2024');
     await expect(page.getByLabel('Reporting period start date')).toHaveValue('2024-02-10');
     await expect(page.getByLabel('Reporting period end date')).toHaveValue('2024-02-29');
-    await page.getByRole('button', { name: 'month', exact: true }).click();
+    await page.getByRole('button', { name: 'Month', exact: true }).click();
     await expect(page).not.toHaveURL(/start=/);
   });
 }
