@@ -364,7 +364,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           <span>Export to Excel</span>
         </button>}
         </div>
-        <div data-testid="report-filter-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(276px,2fr)_minmax(104px,1fr)_minmax(146px,1.2fr)_minmax(126px,1fr)] gap-2 items-start">
+        <div data-testid="report-filter-grid" className={cn("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(276px,2fr)_minmax(104px,1fr)_minmax(146px,1.2fr)_minmax(126px,1fr)] gap-2 items-start", basis === 'cash' && "lg:grid-cols-[minmax(276px,2fr)_minmax(146px,1fr)_minmax(126px,1fr)]")}>
           <div data-filter-group className="flex min-w-0 flex-col gap-1 text-[9px] font-bold text-[var(--text)]">
             <span>Period</span>
             <div className="grid grid-cols-2 gap-2">

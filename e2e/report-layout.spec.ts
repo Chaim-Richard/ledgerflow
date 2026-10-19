@@ -29,6 +29,12 @@ for (const width of [390, 1024, 1280]) for (const theme of ['light', 'dark']) {
         await header.getByLabel('Label value', { exact: true }).fill('בית Mixed Case');
         await header.getByLabel('Basis', { exact: true }).focus();
         await expect(header.getByLabel('Label value', { exact: true })).toHaveValue('בית Mixed Case');
+        await header.getByLabel('Basis', { exact: true }).selectOption('cash');
+        await expect(header.getByLabel('Label kind', { exact: true })).toHaveCount(0);
+        await expect(header.locator('input[type="checkbox"]')).toBeDisabled();
+        if (width >= 1024) expect((await header.getByLabel('Basis', { exact: true }).boundingBox())!.width).toBeGreaterThanOrEqual(146);
+        await header.getByLabel('Basis', { exact: true }).selectOption('accrual');
+        await expect(header.getByLabel('Label value', { exact: true })).toHaveValue('בית Mixed Case');
       } else {
         const compare = header.locator('input[type="checkbox"]');
         await compare.focus(); await compare.press('Space'); await expect(compare).toBeChecked();
