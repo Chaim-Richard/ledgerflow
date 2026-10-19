@@ -2,26 +2,41 @@ import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 /**
- * F-41 … F-45 — Browser journey tests for RELEASE_GATE W2, W3, W4, W6, W9
+ * F-41 … F-45 — Browser journey tests for RELEASE_GATE W2, W3, W4, W6, W9.
  *
- * Each journey uses the app's own stores with stubbed request boundaries, so the
- * test is a browser test of the screens the user reaches — not of a live DB or
- * payment provider.  Every figure below is hand-worked and stated in the header
- * comment of its test; the assertions check those exact cents, the wiring
- * (payment → statement, match → reconciled) and that the screen stays
- * accessible on a phone.
+ * Each journey mounts the screen a user reaches against the app's own stores and stubs only the
+ * request boundary (database and server), so the browser test exercises the real component, its
+ * calculations and its save request. Every figure below is hand-worked in the header comment of
+ * its test; the assertions check those exact cents, the wiring (payment → statement, match →
+ * reconciled, close → refused posting) and that the screen works on a phone.
  *
  * Worked numbers are referenced from:
- *   W2: main-path.test.ts §4-5 — invoice $1,000, payment $600, $400 left
+ *   W2: statement-view.test.tsx / main-path.test.ts — invoice $1,000, payment $600, $400 left
  *   W3: bill $250, fully paid, $0 left
- *   W4: banking.test.ts / reconciliation-screen.test.ts — 50,000 + -120,000
- *   W6: DEP-1 order-invoice-limit.test.ts — 1,000 goods + 100 delivery = 1,100,
- *       25 % + rest, delivery billed once, deposit applied once
- *   W9: month-end-close-journey.spec.ts — September 2026 close/reopen
+ *   W4: reconciliation-screen.test.tsx — 50,000 + −120,000, one match by hand
+ *   W6: DEP-1 / sales-orders.test.tsx — 1,000 goods + 100 delivery = 1,100,
+ *       25 % = 275 then rest 825, delivery billed once, a later part refused
+ *   W9: period-close.test.ts / month-end-close-journey.spec.ts — September 2026 close/reopen
+ *
+ * Vite transforms every `.tsx` module with the React refresh runtime, which expects the preamble
+ * that the app's index.html installs. A fixture page that mounts a screen itself must install the
+ * same runtime first; without it the first import of a screen throws `$RefreshSig$ is not defined`.
  */
 
 const WORKSPACE = 'journey-w2-w9';
 const USER = { uid: 'journey-owner', email: 'owner@journeys.test', displayName: 'Journey Owner' };
+
+async function installRefreshRuntime(page: Page) {
+  await page.evaluate(async () => {
+    const refresh = await import('/@react-refresh');
+    refresh.default.injectIntoGlobalHook(window);
+    Object.assign(window, {
+      $RefreshReg$: () => {},
+      $RefreshSig$: () => (type: unknown) => type,
+      __vite_plugin_react_preamble_installed__: true,
+    });
+  });
+}
 
 async function baseFixture(page: Page) {
   const errors: string[] = [];
@@ -32,6 +47,7 @@ async function baseFixture(page: Page) {
     body: '<!doctype html><html lang="en" class="light"><head><title>Journey</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/index.css"></head><body><div id="root"></div></body></html>',
   }));
   await page.goto('/journey-fixture');
+  await installRefreshRuntime(page);
   await page.evaluate(async ({ workspaceId, user }) => {
     const mod = await import('/src/stores/useAuthStore.ts');
     const { useAuthStore } = mod;
@@ -46,12 +62,16 @@ async function baseFixture(page: Page) {
   return { errors };
 }
 
-async function expectFitsAndAxe(page: Page, selector: string, label: string) {
-  const fits = await page.locator(selector).evaluate(el => ({ w: (el as HTMLElement).clientWidth, s: (el as HTMLElement).scrollWidth }));
-  expect(fits.s, `${label} overflows`).toBeLessThanOrEqual(fits.w);
+/** A phone must not scroll the whole page sideways; wide tables scroll inside their own card. */
+async function expectNoPageOverflow(page: Page, label: string) {
+  const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, view: window.innerWidth }));
+  expect(widths.scroll, `${label} scrolls the page sideways`).toBeLessThanOrEqual(widths.view + 1);
+}
+
+async function expectAxeClean(page: Page, selector: string, label: string) {
   const axe = await new AxeBuilder({ page }).include(selector).analyze();
   const serious = axe.violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
-  expect(serious, JSON.stringify(serious.map(v => ({ id: v.id, nodes: v.nodes.length })))).toEqual([]);
+  expect(serious, `${label}: ${JSON.stringify(serious.map(v => ({ id: v.id, nodes: v.nodes.length })))}`).toEqual([]);
 }
 
 // ---------------------------------------------------------------------------
@@ -95,22 +115,21 @@ test('F-41 W2 browser: invoice $1,000, payment $600, customer statement shows $4
   }, { workspaceId: WORKSPACE });
 
   await expect(page.getByRole('heading', { name: 'Account Statement' })).toBeVisible();
-  // Customer selector shows Acme Corp; statement header shows same name
-  await expect(page.getByText('Acme Corp').first()).toBeVisible();
-  // Opening 0.00, Ending Outstanding 400.00, billed 1,000, paid 600
+  await expect(page.getByRole('heading', { name: 'STATEMENT OF ACCOUNT' })).toBeVisible();
+  await expect(page.getByText('Period: 2026-05-01 to 2026-05-31')).toBeVisible();
+  // Opening 0.00, Total Period Billed 1,000.00, Ending Outstanding 400.00
   await expect(page.getByText('$400.00').first()).toBeVisible();
   await expect(page.getByText('$1,000.00').first()).toBeVisible();
   await expect(page.getByText('$600.00').first()).toBeVisible();
-  // The ledger table has Invoice and Payment rows
   const table = page.locator('table');
   await expect(table).toContainText('Invoice');
   await expect(table).toContainText('INV-1001');
   await expect(table).toContainText('Payment');
-  // Running balance after invoice 1000, after payment 400
   await expect(table).toContainText('$1,000.00');
   await expect(table).toContainText('$400.00');
 
-  await expectFitsAndAxe(page, 'table', 'W2 statement table');
+  await expectNoPageOverflow(page, 'W2 statement');
+  await expectAxeClean(page, 'table', 'W2 statement table');
   expect(errors).toEqual([]);
 });
 
@@ -154,28 +173,30 @@ test('F-42 W3 browser: bill $250, fully paid, vendor statement shows $0 outstand
   }, { workspaceId: WORKSPACE });
 
   await expect(page.getByRole('heading', { name: 'Account Statement' })).toBeVisible();
-  // Switch to vendor statement
+  // Switch to vendor statement, the screen a vendor balance is checked on.
   await page.getByRole('button', { name: 'Vendor Statement' }).click();
-  await expect(page.getByText('Office Depot').first()).toBeVisible();
-  // Billed and paid both 250, outstanding 0.00
-  const amountCells = page.locator('table').first();
-  await expect(amountCells).toContainText('B-77');
-  await expect(amountCells).toContainText('Bill');
-  await expect(amountCells).toContainText('Payment');
-  // The Outstanding card is $0.00
-  await expect(page.getByText('$0.00').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'STATEMENT OF ACCOUNT' })).toBeVisible();
+  await expect(page.getByText('Period: 2026-05-01 to 2026-05-31')).toBeVisible();
+  const table = page.locator('table');
+  await expect(table).toContainText('B-77');
+  await expect(table).toContainText('Bill');
+  await expect(table).toContainText('Payment');
+  // Billed 250, paid 250, outstanding 0.00
   await expect(page.getByText('$250.00').first()).toBeVisible();
+  await expect(page.getByText('$0.00').first()).toBeVisible();
 
-  await expectFitsAndAxe(page, 'table', 'W3 vendor statement');
+  await expectNoPageOverflow(page, 'W3 vendor statement');
+  await expectAxeClean(page, 'table', 'W3 vendor statement table');
   expect(errors).toEqual([]);
 });
 
 // ---------------------------------------------------------------------------
-// W4 — Bank CSV import → match → reconciled balance (via Reconciliation screen)
+// W4 — Bank CSV import → match → reconciled balance (via the Reconciliation screen)
 // ---------------------------------------------------------------------------
 test('F-43 W4 browser: imported bank lines match ledger entries, one reconciled balance', async ({ page }) => {
   test.setTimeout(90000);
-  await page.setViewportSize({ width: 390, height: 844 });
+  // Matching is a two-list click; the phone pass below checks the same screen at 390px.
+  await page.setViewportSize({ width: 1280, height: 900 });
   const { errors } = await baseFixture(page);
 
   const apiCalls: Array<{ url: string; method: string; body: unknown }> = [];
@@ -194,15 +215,15 @@ test('F-43 W4 browser: imported bank lines match ledger entries, one reconciled 
       import('/src/stores/useDataNeedsStore.ts'),
       import('/src/components/ledger/Reconciliation.tsx'),
     ]);
-    // Worked figures for W4 (mirrors reconciliation-screen.test.tsx + main-path):
-    //  Bank account Checking $0 opening
-    //  Transactions posted:
+    // Worked figures for W4 (mirrors reconciliation-screen.test.tsx):
+    //  Bank account Checking, opening $0
+    //  Ledger entries:
     //    t1 payment from Acme $500.00 (50000 cents)
-    //    t2 rent $1,200.00 (-120000 cents on bank)
-    //  Bank lines imported (CSV):
-    //    b1 ACME $500.00 — should pair with t1
+    //    t2 rent $1,200.00 (120000 cents out of the bank)
+    //  Imported bank lines (CSV):
+    //    b1 ACME $500.00 — pairs with t1
     //    b2 LANDLORD $1,200 — pairs with t2
-    //  After matching both, matched history = 2, pending = 0 on that account
+    //  One match by hand reconciles t1; the auto-align action is offered for the rest.
     const accounts = [
       { id: 'bank', workspaceId, code: '1000', name: 'Business Checking', type: 'asset', category: 'Cash', subtype: 'bank' },
       { id: 'sales', workspaceId, code: '4000', name: 'Sales', type: 'revenue', category: 'Revenue' },
@@ -218,28 +239,25 @@ test('F-43 W4 browser: imported bank lines match ledger entries, one reconciled 
       { id: 't2', workspaceId, date: '2026-10-02', description: 'October office rent', totalAmountCents: 120000, status: 'completed', lines: [{ id: 'l3', accountId: 'rent', amountCents: 120000 }, { id: 'l4', accountId: 'bank', amountCents: -120000 }] },
       { id: 't0', workspaceId, date: '2026-09-01', description: 'September deposit', totalAmountCents: 10000, status: 'reconciled', lines: [{ id: 'l5', accountId: 'bank', amountCents: 10000 }, { id: 'l6', accountId: 'sales', amountCents: -10000 }] },
     ];
-    useLedgerStore.setState({ accounts, transactions, bankLines } as never);
+    useLedgerStore.setState({ accounts, transactions, bankLines, autoRules: [] } as never);
     useDataNeedsStore.setState({ loaded: { accounts: true, transactions: true, bankLines: true }, loadedWorkspaceId: workspaceId, failed: {} } as never);
     (createRoot(document.getElementById('root')!)).render(React.createElement(Reconciliation));
   }, { workspaceId: WORKSPACE });
 
-  // Reconciliation screen loads
-  await expect(page.getByText('Streams', { exact: false }).first()).toBeVisible();
-  // Pending bank lines visible
-  await expect(page.getByText('ACME CORP DEP 4411')).toBeVisible();
-  await expect(page.getByText('LANDLORD LTD OCT')).toBeVisible();
-  await expect(page.getByText('Payment from Acme Corp')).toBeVisible();
-  await expect(page.getByText('October office rent')).toBeVisible();
-  // Suggested match chip visible (the engine pairs ACME deposit with Acme payment)
+  // Both lists are on screen; the engine suggests the Acme pair.
+  await expect(page.getByRole('button', { name: /Streams \(2\)/ })).toBeVisible();
+  await expect(page.getByText('ACME CORP DEP 4411').first()).toBeVisible();
+  await expect(page.getByText('LANDLORD LTD OCT').first()).toBeVisible();
+  await expect(page.getByText('Payment from Acme Corp').first()).toBeVisible();
+  await expect(page.getByText('October office rent').first()).toBeVisible();
   await expect(page.getByText('Match found').first()).toBeVisible();
 
-  // Match by hand: click bank line then ledger entry, then assert match
-  await page.getByText('ACME CORP DEP 4411').click();
-  await page.getByText('Payment from Acme Corp').click();
+  // Match by hand: bank line then ledger entry, then assert the pair.
+  await page.getByText('ACME CORP DEP 4411').first().click();
+  await page.getByText('Payment from Acme Corp').first().click();
   const matchBtn = page.getByRole('button', { name: 'Assert Match Verification' });
   await expect(matchBtn).toBeVisible();
   await matchBtn.click();
-  // Verify the reconcile API was called with the correct operations
   await expect.poll(() => apiCalls.length).toBeGreaterThan(0);
   expect(apiCalls[0].body).toMatchObject({
     workspaceId: WORKSPACE,
@@ -249,124 +267,139 @@ test('F-43 W4 browser: imported bank lines match ledger entries, one reconciled 
     ],
   });
 
-  // Auto-align should also work (verify wording)
-  // Reset fixture for auto-align check by checking button exists
   await expect(page.getByRole('button', { name: 'Auto Align All' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Matched History \(1\)/ })).toBeVisible();
+  await expectAxeClean(page, 'body', 'W4 reconciliation');
 
-  // Matched history tab exists
-  await expect(page.getByText(/Matched History/).first()).toBeVisible();
-
-  // Axe on the reconciliation panel (serious/critical only)
-  const axe = await new AxeBuilder({ page }).include('body').analyze();
-  const serious = axe.violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
-  expect(serious, JSON.stringify(serious.map(v => ({ id: v.id, desc: v.description })))).toEqual([]);
-
+  // Phone pass: the same screen keeps the page at the viewport width.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectNoPageOverflow(page, 'W4 reconciliation');
   expect(errors).toEqual([]);
 });
 
 // ---------------------------------------------------------------------------
 // W6 — Order with deposit → part invoices → delivery charged once (DEP-1)
 // ---------------------------------------------------------------------------
-test('F-44 W6 browser: order 1,100 totals, 25% deposit then rest, delivery charged once, $1,100 total', async ({ page }) => {
+test('F-44 W6 browser: order 1,100 totals, 25% then rest, delivery charged once, a later part refused', async ({ page }) => {
   test.setTimeout(90000);
   await page.setViewportSize({ width: 390, height: 844 });
   const { errors } = await baseFixture(page);
   await page.route('**/api/**', route => route.fulfill({ json: {} }));
 
   await page.evaluate(async ({ workspaceId }) => {
-    const [{ default: React }, { default: { createRoot } }] = await Promise.all([
+    const [{ default: React }, { default: { createRoot } }, { orderProgress }, { default: OrderInvoiceDialog }] = await Promise.all([
       import('/node_modules/.vite/deps/react.js'),
       import('/node_modules/.vite/deps/react-dom_client.js'),
+      import('/src/lib/salesOrders.ts'),
+      import('/src/components/sales/OrderInvoiceDialog.tsx'),
     ]);
-    const { orderProgress, orderStage, partProblem, orderPartInvoice } = await import('/src/lib/salesOrders.ts');
-
     // Worked figures (DEP-1):
-    //  Estimate/Order EST-1 ordered 2026-05-01, amount 1,100.00 = 110000 cents
-    //    Line 1 Goods 1 × 1,000.00 = 100000
-    //    Line 2 Delivery 1 × 100.00 = 10000
-    //  Invoices made from it:
-    //    p1 25% = 27500, p2 rest = 82500 → together 110000
-    //  Checks:
-    //    after p1 alone: invoiced 27500, left 82500, partly invoiced
-    //    after both: invoiced 110000, left 0, stage invoiced
-    //    an extra 10000 → refused "more than is left"
+    //  Order EST-1, 2026-05-01, total 1,100.00 = 110000 cents
+    //    Goods    1 × 1,000.00 = 100000
+    //    Delivery 1 ×   100.00 =  10000
+    //  First part 25%  = 27500 → goods 25000 + delivery 2500
+    //  Rest      = 110000 − 27500 = 82500 → goods 75000 + delivery 7500
+    //  Both parts together: 110000, delivery exactly 10000 once.
     const est = {
       id: `${workspaceId}_order`, workspaceId, number: 'EST-1', status: 'accepted', orderedAt: '2026-05-01',
-      amountCents: 110000,
+      customerName: 'Acme Corp', amountCents: 110000,
       lines: [
         { description: 'Goods', quantity: 1, unitPriceCents: 100000, amountCents: 100000 },
         { description: 'Delivery', quantity: 1, unitPriceCents: 10000, amountCents: 10000 },
       ],
-    } as unknown as import('/src/types').Estimate;
-    const invoices: unknown[] = [];
-    const progress0 = orderProgress(est, invoices as import('/src/types').Invoice[]);
-    const progress1 = { ...progress0, invoicedCents: 27500, leftCents: 82500, invoices: [{ id: 'p1', metadata: { convertedFromEstimateId: est.id }, amountCents: 27500 } as import('/src/types').Invoice] };
-    // Real second invoice uses helper to ensure line split is exactly 1,100 total across both parts
-    const p1 = orderPartInvoice(est, progress1, 82500, 'rest of order EST-1');
-    // The two invoices together must sum to order total and no line billed twice
-    // Expose results for assertions
-    (window as unknown as { __w6: unknown }).__w6 = {
-      est, progress0, progress1,
-      p1Amount: p1.amountCents,
-      p1Items: p1.items,
-      stage0: orderStage(est, progress0),
-      stage1: orderStage(est, progress1),
-      stage2: orderStage(est, { totalCents: 110000, invoicedCents: 110000, leftCents: 0, invoices: [{ id: 'p1' } as never, { id: 'p2' } as never] }),
-      extraProblem: partProblem({ mode: 'amount', cents: 10000 }, { totalCents: 110000, invoicedCents: 110000, leftCents: 0, invoices: [] } as never),
-      p1Cents: partProblem({ mode: 'percent', percent: 25 }, progress0 as never),
-      restCents: progress1.leftCents,
     };
-
-    function View() {
-      const w6 = (window as unknown as { __w6: Record<string, unknown> }).__w6;
-      return React.createElement('div', null,
-        React.createElement('h1', null, 'W6 Order journey'),
-        React.createElement('section', { 'aria-label': 'W6 order progress' },
-          React.createElement('h2', null, 'Order EST-1 — 1,100 total (1,000 goods + 100 delivery)'),
-          React.createElement('dl', null,
-            React.createElement('dt', null, 'Total'),
-            React.createElement('dd', { 'data-testid': 'total' }, `$${Number(w6.totalCents ?? 110000) / 100}`),
-            React.createElement('dt', null, 'After 25%'),
-            React.createElement('dd', { 'data-testid': 'after-25' }, `invoiced $275.00, left $${Number(w6.restCents) / 100}, stage ${String(w6.stage1)}`),
-            React.createElement('dt', null, 'After rest'),
-            React.createElement('dd', { 'data-testid': 'after-rest' }, `stage ${String(w6.stage2)}, p1 amount $${Number(w6.p1Amount) / 100}`),
-            React.createElement('dt', null, 'Delivery lines'),
-            React.createElement('dd', { 'data-testid': 'delivery' }, JSON.stringify((w6.p1Items as Array<{ description: string; amountCents: number }>).map(i => ({ d: i.description, c: i.amountCents })))),
-            React.createElement('dt', null, 'Extra invoice'),
-            React.createElement('dd', { 'data-testid': 'extra' }, String(w6.extraProblem)),
-          ),
-          React.createElement('p', null, 'Worked total 1,100 = 275 + 825, delivery charged exactly once; the extra charge is refused: more than is left to invoice.'),
-        ),
-      );
-    }
-    (createRoot(document.getElementById('root')!)).render(React.createElement(View));
+    const root = createRoot(document.getElementById('root')!);
+    const created: unknown[] = [];
+    const store = { est, created, root, key: 0, render: (_progress: unknown) => {} };
+    store.render = (progress: unknown) => {
+      store.key += 1;
+      root.render(React.createElement(OrderInvoiceDialog, {
+        key: store.key,
+        estimate: est as never,
+        progress: progress as never,
+        currency: 'USD',
+        canWrite: true,
+        onCreate: async (part: unknown) => { created.push(part); },
+        onClose: () => {},
+      }));
+    };
+    (window as unknown as { __w6: typeof store }).__w6 = store;
+    store.render(orderProgress(est as never, [] as never));
   }, { workspaceId: WORKSPACE });
 
-  await expect(page.getByRole('heading', { name: 'W6 Order journey' })).toBeVisible();
-  await expect(page.getByText('Order EST-1 — 1,100 total (1,000 goods + 100 delivery)')).toBeVisible();
-  // Worked figures visible
-  await expect(page.getByTestId('total')).toContainText('$1100');
-  await expect(page.getByTestId('after-25')).toContainText('invoiced $275.00');
-  await expect(page.getByTestId('after-25')).toContainText('left $825');
-  await expect(page.getByTestId('after-25')).toContainText('partly invoiced');
-  await expect(page.getByTestId('after-rest')).toContainText('stage invoiced');
-  // p1 amount should be the rest 825.00 (1100 - 275)
-  await expect(page.getByTestId('after-rest')).toContainText('$825');
-  // Delivery appears across the two invoices exactly once in total (100 delivery split proportionally)
-  // The second invoice carries the delivery share; we check the JSON contains Delivery with correct amount
-  await expect(page.getByTestId('delivery')).toContainText('Delivery');
-  // Extra invoice refused
-  await expect(page.getByTestId('extra')).toContainText('more than is left');
-  await expect(page.getByText('delivery charged exactly once')).toBeVisible();
+  // First part: 25% of 1,100 = 275.00, split over the two order lines.
+  await expect(page.getByRole('heading', { name: 'Invoice order EST-1' })).toBeVisible();
+  await expect(page.getByText(/order of \$1,100\.00 · invoiced \$0\.00/)).toBeVisible();
+  await page.getByLabel('A percentage of the order').check();
+  await page.getByLabel('Percentage of the order').fill('25');
+  await expect(page.getByText('Goods (25% of order EST-1)')).toBeVisible();
+  await expect(page.getByText('$250.00')).toBeVisible();
+  await expect(page.getByText('Delivery (25% of order EST-1)')).toBeVisible();
+  await expect(page.getByText('$25.00')).toBeVisible();
+  const firstCreate = page.getByRole('button', { name: 'Create $275.00 invoice' });
+  await expect(firstCreate).toBeEnabled();
+  await firstCreate.click();
+  expect(await page.evaluate(() => (window as unknown as { __w6: { created: unknown[] } }).__w6.created[0]))
+    .toEqual({ mode: 'percent', percent: 25 });
 
-  await expectFitsAndAxe(page, 'section[aria-label="W6 order progress"]', 'W6 order progress');
+  // The first invoice exists now: the same screen offers the rest, 825.00.
+  await page.evaluate(async () => {
+    const { orderProgress, orderPartInvoice } = await import('/src/lib/salesOrders.ts');
+    const w = (window as unknown as { __w6: { est: unknown; created: unknown[]; render: (p: unknown) => void } }).__w6;
+    const p1 = { ...orderPartInvoice(w.est as never, orderProgress(w.est as never, [] as never), 27500, '25% of order EST-1', { mode: 'percent', percent: 25 }), id: 'p1', number: 'INV-P1' };
+    const progress1 = orderProgress(w.est as never, [p1] as never);
+    (w as unknown as { p1: unknown; progress1: unknown }).p1 = p1;
+    (w as unknown as { progress1: unknown }).progress1 = progress1;
+    w.render(progress1);
+  });
+  await expect(page.getByText(/order of \$1,100\.00 · invoiced \$275\.00/)).toBeVisible();
+  await expect(page.getByText(/left \$825\.00/)).toBeVisible();
+  const secondCreate = page.getByRole('button', { name: 'Create $825.00 invoice' });
+  await expect(secondCreate).toBeEnabled();
+  await expect(page.getByText('Goods (rest of order EST-1)')).toBeVisible();
+  await expect(page.getByText('$750.00')).toBeVisible();
+  await expect(page.getByText('Delivery (rest of order EST-1)')).toBeVisible();
+  await expect(page.getByText('$75.00')).toBeVisible();
+  await secondCreate.click();
+  expect(await page.evaluate(() => (window as unknown as { __w6: { created: unknown[] } }).__w6.created[1]))
+    .toEqual({ mode: 'rest' });
+
+  // Both invoices: 27,500 + 82,500 = 110,000; delivery appears once in total, 10,000.
+  const totals = await page.evaluate(async () => {
+    const { orderPartInvoice } = await import('/src/lib/salesOrders.ts');
+    const w = (window as unknown as { __w6: { est: unknown; progress1: unknown; p1: { items?: Array<{ description: string; amountCents: number }>; amountCents: number } } }).__w6;
+    const p2 = orderPartInvoice(w.est as never, w.progress1 as never, 82500, 'rest of order EST-1', { mode: 'rest' });
+    const items = [...(w.p1.items || []), ...(p2.items || [])];
+    return {
+      p1: w.p1.amountCents,
+      p2: p2.amountCents,
+      delivery: items.filter(i => i.description.includes('Delivery')).reduce((sum, i) => sum + i.amountCents, 0),
+    };
+  });
+  expect(totals.p1).toBe(27500);
+  expect(totals.p2).toBe(82500);
+  expect(totals.p1 + totals.p2).toBe(110000);
+  expect(totals.delivery).toBe(10000);
+
+  // A further part over what is left is refused before anything is sent.
+  await page.evaluate(() => {
+    const w = (window as unknown as { __w6: { render: (p: unknown) => void; progress1: unknown } }).__w6;
+    w.render(w.progress1);
+  });
+  await page.getByLabel('An amount').check();
+  await page.getByLabel('Amount to invoice (USD)').fill('900');
+  await expect(page.locator('div[role="dialog"]').getByRole('alert')).toHaveText('That is more than is left to invoice');
+  await expect(page.getByRole('button', { name: 'Create $0.00 invoice' })).toBeDisabled();
+
+  await expectNoPageOverflow(page, 'W6 order invoice dialog');
+  await expectAxeClean(page, 'div[role="dialog"]', 'W6 order invoice dialog');
   expect(errors).toEqual([]);
 });
 
 // ---------------------------------------------------------------------------
 // W9 — Close a month → posting refused → reopen with reason (F-45)
 // ---------------------------------------------------------------------------
-test('F-45 W9 browser: close September 2026, posting into it refused, reopen with reason reopens it', async ({ page }) => {
+test('F-45 W9 browser: close September 2026, a late posting is refused, reopen with a reason reopens it', async ({ page }) => {
   test.setTimeout(90000);
   await page.setViewportSize({ width: 390, height: 844 });
 
@@ -383,20 +416,6 @@ test('F-45 W9 browser: close September 2026, posting into it refused, reopen wit
     if (req.method() === 'POST' && /\/periods\/\d{4}-\d{2}\/reopen$/.test(url)) return route.fulfill({ json: { lockDate: null, softLockDate: null } });
     if (url.includes('/balance-check')) return route.fulfill({ json: { snapshot: null, changes: [] } });
     if (url.includes('/close-steps')) return route.fulfill({ json: { closeSteps: [] } });
-    if (req.method() === 'POST' && url.includes('/transactions/bulk')) {
-      // Simulate locked-period refusal for a late posting
-      const ws = req.header('x-workspace-id');
-      if (body && typeof body === 'object' && 'transactions' in (body as Record<string, unknown>)) {
-        const txs = (body as { transactions: Array<{ date: string }> }).transactions || [];
-        if (txs.some((t: { date: string }) => t.date === '2026-09-25') && ws !== undefined) {
-          // In real app this would be 400/403 after close; we let the route return that
-          // For this fixture we simulate the locked response only when already closed
-          const alreadyClosed = requests.some(r => /\/close$/.test(r.url) && r.method === 'POST');
-          if (alreadyClosed) return route.fulfill({ status: 403, json: { error: 'Period 2026-09 is closed: nobody can post' } });
-        }
-      }
-      return route.fulfill({ json: {} });
-    }
     return route.fulfill({ json: {} });
   });
   await page.route('**/close-fixture', route => route.fulfill({
@@ -404,6 +423,7 @@ test('F-45 W9 browser: close September 2026, posting into it refused, reopen wit
     body: '<!doctype html><html lang="en" class="light"><head><title>Close</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/index.css"></head><body><div id="root"></div></body></html>',
   }));
   await page.goto('/close-fixture');
+  await installRefreshRuntime(page);
 
   await page.evaluate(async ({ workspaceId, user }) => {
     const [{ default: React }, { default: { createRoot } }, { useAuthStore }, { useLedgerStore }, { useDataNeedsStore }, { default: MonthEndClose }] = await Promise.all([
@@ -416,22 +436,16 @@ test('F-45 W9 browser: close September 2026, posting into it refused, reopen wit
     ]);
     const signedIn = { ...user, isAnonymous: false, getIdToken: async () => 'browser-fixture-token' };
     const workspace = { id: workspaceId, uid: user.uid, name: 'Books', currency: 'USD', fiscalYearStartMonth: 1, roles: { [user.uid]: 'owner' } };
-    useAuthStore.setState({ user: signedIn, isGuest: false, currentWorkspaceId: workspaceId, workspaces: [workspace] });
-    // Clean month: no drafts, no pending bills, one reconciled line so banks step passes
+    useAuthStore.setState({ user: signedIn, isGuest: false, currentWorkspaceId: workspaceId, workspaces: [workspace] } as never);
+    // A month with nothing left to do: no drafts, no open documents, no unmatched bank lines.
     useLedgerStore.setState({
-      accounts: [],
-      bankLines: [{ id: 'bl-1', workspaceId, accountId: 'bank-1000', date: '2026-09-10', status: 'matched', matchedTransactionId: 't1', amountCents: 1000 }],
-      transactions: [],
-      invoices: [{ id: 'inv-1', workspaceId, customerId: 'c1', number: 'INV-001', date: '2026-09-05', dueDate: '2026-09-30', status: 'paid', amountCents: 100000, amountPaidCents: 100000, currency: 'USD' }],
-      bills: [{ id: 'bill-1', workspaceId, vendorId: 'v1', number: 'B-001', date: '2026-09-08', dueDate: '2026-09-20', status: 'paid', amountCents: 60000, currency: 'USD' }],
-      journalEntries: [],
-      assets: [],
+      accounts: [], bankLines: [], transactions: [], invoices: [], bills: [], journalEntries: [], assets: [],
       truncatedCollections: {}, baseCurrency: 'USD',
     } as never);
     useDataNeedsStore.setState({
-      loaded: { accounts: true, bankLines: true, bills: true, invoices: true, transactions: true, journalEntries: true, customers: true, vendors: true },
+      loaded: { accounts: true, bankLines: true, bills: true, invoices: true, transactions: true, journalEntries: true, customers: true, vendors: true, assets: true },
       loadedWorkspaceId: workspaceId, failed: {},
-    });
+    } as never);
     (createRoot(document.getElementById('root')!)).render(React.createElement(MonthEndClose));
   }, { workspaceId: WORKSPACE, user: USER });
 
@@ -440,8 +454,9 @@ test('F-45 W9 browser: close September 2026, posting into it refused, reopen wit
   const journey = page.locator('section[aria-labelledby="close-journey"]');
   await expect(journey.getByRole('heading', { name: 'Close journey' })).toBeVisible();
 
-  // Clean month: 5 of 9 done, next is Lock the month; close button enabled
+  // Clean month: 5 of 9 steps done, only the lock is left; the owner closes it.
   await expect(journey.getByText(/5 of 9 steps done/)).toBeVisible();
+  await expect(journey.getByText('2026-09 is open.')).toBeVisible();
   const closeBtn = page.getByRole('button', { name: 'Close 2026-09', exact: true });
   await expect(closeBtn).toBeEnabled();
   await closeBtn.click();
@@ -449,16 +464,25 @@ test('F-45 W9 browser: close September 2026, posting into it refused, reopen wit
   const closeCall = requests.find(r => /\/periods\/2026-09\/close$/.test(r.url));
   expect(closeCall?.method).toBe('POST');
   expect(closeCall?.body).toEqual({ mode: 'hard' });
-
-  // After close: says closed, reopen needs a reason
   const statusCard = page.locator('section[aria-labelledby="close-status"]');
   await expect(statusCard.getByText('Closed: nobody can post', { exact: true })).toBeVisible();
   await expect(journey.getByText('2026-09 is closed.')).toBeVisible();
 
-  // Posting into closed month would be refused (contract: 403 with lock message) — verify wording exists
-  await expect(statusCard.getByText(/nobody can post/)).toBeVisible();
+  // The shared posting rule (src/lib/periodLock.ts, used by the app's validation and the server)
+  // refuses a late September date now that the screen has written the hard close into the workspace.
+  const closedGate = await page.evaluate(async ({ uid }) => {
+    const { postingLock, lockMessage } = await import('/src/lib/periodLock.ts');
+    const { useAuthStore } = await import('/src/stores/useAuthStore.ts');
+    const state = useAuthStore.getState();
+    const workspace = state.workspaces.find(w => w.id === state.currentWorkspaceId)!;
+    const lock = postingLock('2026-09-25', workspace, uid);
+    return { lockDate: workspace.lockDate, lock, message: lock ? lockMessage('2026-09-25', lock) : null };
+  }, { uid: USER.uid });
+  expect(closedGate.lockDate).toBe('2026-09-30');
+  expect(closedGate.lock).toEqual({ kind: 'hard', through: '2026-09-30' });
+  expect(closedGate.message).toContain('in a closed period');
 
-  // Reopen requires a reason, then succeeds
+  // Reopen needs a reason; it goes through the server and re-opens the month.
   const reopenBtn = page.getByRole('button', { name: 'Reopen 2026-09 and later months' });
   await expect(reopenBtn).toBeDisabled();
   await page.getByLabel('Reason for reopening').fill('Late supplier bill arrived');
@@ -471,7 +495,17 @@ test('F-45 W9 browser: close September 2026, posting into it refused, reopen wit
   await expect(journey.getByText('2026-09 is open.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Close 2026-09', exact: true })).toBeEnabled();
 
-  // Axe on status card
+  // Reopened: the same late date is allowed again.
+  const openGate = await page.evaluate(async ({ uid }) => {
+    const { postingLock } = await import('/src/lib/periodLock.ts');
+    const { useAuthStore } = await import('/src/stores/useAuthStore.ts');
+    const state = useAuthStore.getState();
+    const workspace = state.workspaces.find(w => w.id === state.currentWorkspaceId)!;
+    return postingLock('2026-09-25', workspace, uid);
+  }, { uid: USER.uid });
+  expect(openGate).toBeNull();
+
+  await expectNoPageOverflow(page, 'W9 month-end close');
   const axe = await new AxeBuilder({ page }).include('section[aria-labelledby="close-status"]').analyze();
   const serious = axe.violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
   expect(serious, JSON.stringify(serious.map(v => ({ id: v.id, nodes: v.nodes.length })))).toEqual([]);
