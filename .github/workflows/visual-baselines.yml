@@ -5,6 +5,8 @@ name: Refresh visual baselines
 permissions:
   contents: write
 on:
+  push:
+    branches: [ai4/d83-d84-capture]
   workflow_dispatch:
     inputs:
       screens:
@@ -26,7 +28,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Generate candidate reference images
         env:
-          SCREENS: ${{ inputs.screens }}
+          SCREENS: ${{ inputs.screens || 'pnl|balance-sheet' }}
         run: npx playwright test e2e/visual-regression.spec.ts --grep "$SCREENS" --update-snapshots --retries=0
       - name: Check the entire reference set
         run: npx playwright test e2e/visual-regression.spec.ts --retries=0
@@ -49,6 +51,6 @@ jobs:
           if git diff --cached --quiet; then echo "No image changed"; exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "test: candidate visual baselines (${{ inputs.screens }}) for review"
+          git commit -m "test: candidate visual baselines (${{ inputs.screens || 'pnl|balance-sheet' }}) for review"
           git push origin "HEAD:refs/heads/$BRANCH"
           echo "Review branch: $BRANCH" >> "$GITHUB_STEP_SUMMARY"

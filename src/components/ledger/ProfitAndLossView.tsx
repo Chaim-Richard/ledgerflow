@@ -1,7 +1,7 @@
 import { usePageSyncedState } from '../../hooks/usePageSyncedState';
 import type { Transaction } from '../../types';
 import React, { useId, useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Activity, Target, Zap, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, FileSpreadsheet, Activity, Target, Zap, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn, getLocalDateISO, monthBoundsISO, formatCurrency } from '../../lib/utils';
 import { toast } from 'sonner';
@@ -348,90 +348,53 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
         </div>
       ) : null}
 
-      {/* Date Range & Controls */}
-      <div data-testid="report-controls" role="region" aria-label="Report filters" className="flex flex-wrap items-end justify-between p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs relative group gap-4">
-        <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
-        <div className="contents">
+      {/* Period navigation/actions and aligned report filters. */}
+      <div data-testid="report-controls" role="region" aria-label="Report filters" className="p-4 sm:p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <MonthNavigator 
             className="[&_button]:min-h-11 [&_button]:min-w-11 [&_button]:text-[var(--text)]"
             currentDate={dateRange.start} 
             onMonthChange={({ start, end }) => setDateRange({ start, end })} 
           />
-          <div className="flex flex-wrap items-center gap-3 min-w-0">
-            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg hidden sm:flex items-center justify-center text-[var(--muted)] shrink-0">
-               <Calendar aria-hidden="true" size={13} />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mb-0.5">Period</span>
-              <div className="flex flex-wrap items-center gap-2">
-                <input 
-                  aria-label="Reporting period start date"
-                  type="date" 
-                  value={dateRange.start}
-                  onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                  className="bg-[var(--ink)] min-h-11 max-w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)]"
-                />
-                <span className="text-[var(--muted)] font-mono text-sm leading-none">/</span>
-                <input 
-                  aria-label="Reporting period end date"
-                  type="date" 
-                  value={dateRange.end}
-                  onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                  className="bg-[var(--ink)] min-h-11 max-w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)]"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="hidden sm:block w-px h-8 bg-slate-200" />
-          {basis === 'accrual' && <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text)]">Label
-            <select aria-label="Label kind" value={labelDimension} onChange={e => setLabelDimension(e.target.value)} className="bg-[var(--ink)] min-h-11 max-w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal">
-              <option value="">All</option>
-              <option value="location">Location</option>
-              <option value="class">Class</option>
-              <option value="project">Project</option>
-              <option value="department">Department</option>
-            </select>
-            {labelDimension && <input aria-label="Label value" value={labelValue} onChange={e => setLabelValue(e.target.value)} placeholder="e.g. Tel Aviv" className="bg-[var(--ink)] min-h-11 max-w-full border border-[var(--line)] text-xs px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal w-28" />}
-          </div>}
-          <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text)]">Basis
-            <select aria-label="Basis" value={basis} onChange={e => chooseBasis(e.target.value === 'cash' ? 'cash' : 'accrual')} className="bg-[var(--ink)] min-h-11 max-w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal">
-              <option value="accrual">Accrual (as posted)</option>
-              <option value="cash">Cash (when paid)</option>
-            </select>
-          </label>
-          <label htmlFor={`${formId}-comparative`} aria-label="Comparative Mode" className="flex min-h-11 items-center gap-2 cursor-pointer group/toggle rounded focus-within:outline focus-within:outline-2 focus-within:outline-indigo-500">
-            <input 
-               id={`${formId}-comparative`}
-               type="checkbox" 
-               className="sr-only"
-               checked={isComparative} 
-               disabled={basis === 'cash'}
-               onChange={(e) => setIsComparative(e.target.checked)} 
-            />
-            <div className={cn(
-              "w-8 h-4 rounded-full flex items-center p-0.5 transition-colors duration-300",
-              isComparative ? "bg-indigo-500" : "bg-slate-300"
-            )}>
-              <div className={cn(
-                "w-3 h-3 bg-[var(--surface)] rounded-full shadow-sm transition-transform duration-300",
-                isComparative ? "translate-x-4" : "translate-x-0"
-              )} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-[var(--text)] uppercase tracking-wider group-hover/toggle:text-[var(--text)] transition-colors flex items-center gap-1">
-                Comparative Mode <SplitSquareHorizontal aria-hidden="true" size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--muted)]")} />
-              </span>
-              <span className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest">Compare to Prior Prev</span>
-            </div>
-          </label>
-        </div>
-        {(basis === 'cash' || !columnsActive) && <button
+          {(basis === 'cash' || !columnsActive) && <button data-report-primary-action
           onClick={exportToExcel}
-          className="flex min-h-11 items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider hover:bg-slate-800 transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
+          className="flex min-h-11 items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider hover:bg-slate-800 transition-all shadow-sm active:scale-95 group/btn w-full sm:w-auto cursor-pointer"
          aria-label="Export to Excel">
           <FileSpreadsheet aria-hidden="true" size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
           <span>Export to Excel</span>
         </button>}
+        </div>
+        <div data-testid="report-filter-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(276px,2fr)_minmax(104px,1fr)_minmax(146px,1.2fr)_minmax(126px,1fr)] gap-2 items-start">
+          <div data-filter-group className="flex min-w-0 flex-col gap-1 text-[9px] font-bold text-[var(--text)]">
+            <span>Period</span>
+            <div className="grid grid-cols-2 gap-2">
+              <input aria-label="Reporting period start date" type="date" value={dateRange.start} onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} className="bg-[var(--ink)] min-h-11 min-w-0 w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)] normal-case tracking-normal" />
+              <input aria-label="Reporting period end date" type="date" value={dateRange.end} onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} className="bg-[var(--ink)] min-h-11 min-w-0 w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)] normal-case tracking-normal" />
+            </div>
+          </div>
+          {basis === 'accrual' && <div data-filter-group className="flex min-w-0 flex-col gap-1 text-[9px] font-bold text-[var(--text)]">
+            <label htmlFor={`${formId}-label-kind`}>Label</label>
+            <select id={`${formId}-label-kind`} aria-label="Label kind" value={labelDimension} onChange={e => setLabelDimension(e.target.value)} className="bg-[var(--ink)] min-h-11 min-w-0 w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)] normal-case tracking-normal">
+              <option value="">All</option><option value="location">Location</option><option value="class">Class</option><option value="project">Project</option><option value="department">Department</option>
+            </select>
+            {labelDimension && <><label htmlFor={`${formId}-label-value`}>Label value</label><input id={`${formId}-label-value`} aria-label="Label value" value={labelValue} onChange={e => setLabelValue(e.target.value)} placeholder="e.g. Tel Aviv" className="bg-[var(--ink)] min-h-11 min-w-0 w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)] normal-case tracking-normal" /></>}
+          </div>}
+          <label data-filter-group className="flex min-w-0 flex-col gap-1 text-[9px] font-bold text-[var(--text)]">Basis
+            <select aria-label="Basis" value={basis} onChange={e => chooseBasis(e.target.value === 'cash' ? 'cash' : 'accrual')} className="bg-[var(--ink)] min-h-11 min-w-0 w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)] normal-case tracking-normal">
+              <option value="accrual">Accrual (as posted)</option><option value="cash">Cash (when paid)</option>
+            </select>
+          </label>
+          <div data-filter-group className="flex min-w-0 flex-col gap-1 text-[9px] font-bold text-[var(--text)]">
+            <span>Comparison</span>
+            <label htmlFor={`${formId}-comparative`} aria-label="Comparative Mode" className="flex min-h-11 items-center gap-2 cursor-pointer rounded focus-within:outline focus-within:outline-2 focus-within:outline-[var(--brass)]">
+              <input id={`${formId}-comparative`} type="checkbox" className="sr-only" checked={isComparative} disabled={basis === 'cash'} onChange={(e) => setIsComparative(e.target.checked)} />
+              <span aria-hidden="true" className={cn("w-8 h-4 shrink-0 rounded-full flex items-center p-0.5", isComparative ? "bg-indigo-500" : "bg-slate-300")}>
+                <span className={cn("w-3 h-3 bg-[var(--surface)] rounded-full shadow-sm", isComparative ? "translate-x-4" : "translate-x-0")} />
+              </span>
+              <span className="text-[10px] text-[var(--text)]">Prior period</span>
+            </label>
+          </div>
+        </div>
       </div>
 
       {/* KPI Matrix */}
