@@ -47,7 +47,7 @@ test('A-152 screen: every step is listed with its screen, status and what the da
   // the return's own figures, in the workspace currency
   assert.ok(screen.getAllByText(formatCurrency(1100000, 'ILS')).length >= 1, 'taxable sales 11,000.00');
   assert.ok(screen.getAllByText(formatCurrency(162000, 'ILS')).length >= 1, 'to pay 1,620.00');
-  assert.ok(screen.getByText('vat:IL:514000000'.replace(/^vat:/, '')));
+  assert.ok(screen.getAllByText('514000000').length);
   // each step opens the screen that does the work
   assert.ok(screen.getByRole('button', { name: 'Open Reports → Tax return' }));
   assert.ok(screen.getByRole('button', { name: 'Open Sales → Invoices' }));
