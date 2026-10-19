@@ -2,19 +2,42 @@ import type { FormEvent } from 'react';
 import { test, expect } from '@playwright/test';
 
 test('item bundle and unit settings retain mixed text, validate quantities and work in a scrollable dialog',async({page})=>{
+ const documentWrites: Array<Record<string, unknown>> = [];
  await page.route('**/api/**',route=>route.fulfill({status:200,json:{}}));
+ await page.route('**/rest/v1/**',async route=>{
+  const url=route.request().url();
+  if(url.includes('/rpc/lf_set')){
+   documentWrites.push(JSON.parse(route.request().postData()||'{}'));
+   await route.fulfill({status:200,contentType:'application/json',body:'null'});
+  }else await route.fulfill({status:200,json:[]});
+ });
  await page.addInitScript(()=>{localStorage.setItem('isGuest','true');localStorage.setItem('has_seen_onboarding','true');localStorage.setItem('ledgerflow-cookie-consent','accepted');});
  await page.goto('/');
  await page.evaluate(async()=>{
-  const paths=['/node_modules/.vite/deps/react.js','/node_modules/.vite/deps/react-dom_client.js','/src/components/inventory/InventoryItemDialog.tsx'];
-  const [r,d,m]=await Promise.all(paths.map(path=>import(path)));
-  const item={id:'kit',name:'ערכה Kit',sku:'KIT',itemType:'stock',quantityAtHand:0,reorderPoint:0,unitPriceCents:1000,unitCostCents:500,measurementUnit:'ארגז pack',unitsPerPackage:12,bundleParts:[]};
+  const paths=['/node_modules/.vite/deps/react.js','/node_modules/.vite/deps/react-dom_client.js','/src/stores/useAuthStore.ts','/src/components/inventory/InventoryItemDialog.tsx'];
+  const [r,d,a,m]=await Promise.all(paths.map(path=>import(path)));
+  const workspaceId='inventory-image-browser';
+  const user={uid:'inventory-image-user',email:'image@example.test',displayName:'Image Tester',isAnonymous:false,getIdToken:async()=> 'fixture-token'};
+  const workspace={id:workspaceId,uid:user.uid,name:'Inventory image test',currency:'USD',roles:{[user.uid]:'owner'}};
+  a.useAuthStore.setState({user,isGuest:false,currentWorkspaceId:workspaceId,workspaces:[workspace]});
+  const item={id:'kit',uid:user.uid,workspaceId,name:'ערכה Kit',sku:'KIT',itemType:'stock',quantityAtHand:0,reorderPoint:0,unitPriceCents:1000,unitCostCents:500,measurementUnit:'ארגז pack',unitsPerPackage:12,bundleParts:[]};
   const part={...item,id:'part',name:'חלק Widget',sku:'PART',bundleParts:undefined};
   const trigger=document.createElement('button');trigger.textContent='Edit fixture';document.body.append(trigger);trigger.focus();
   const host=document.createElement('div');host.id='item-probe';document.body.append(host);const root=d.default.createRoot(host);
   root.render(r.default.createElement(m.default,{open:true,editingItem:item,allItems:[item,part],categories:[],canChangeStock:false,onClose:()=>root.unmount(),onAdjust:()=>{},onSubmit:(event:FormEvent<HTMLFormElement>)=>{event.preventDefault();host.dataset.saved=JSON.stringify(Object.fromEntries(new FormData(event.currentTarget).entries()));}}));
  });
  const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible();
+ await expect(dialog.getByRole('heading',{name:'Item image',exact:true})).toBeVisible();
+ await expect(dialog.getByText(/does not appear on invoices and never changes stock, price, or tax/)).toBeVisible();
+ const imageInput=dialog.getByLabel('Choose image for ערכה Kit');
+ await imageInput.setInputFiles({name:'כיסא.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1wAAAABJRU5ErkJggg==','base64')});
+ await expect(dialog.getByRole('img',{name:'ערכה Kit'})).toHaveAttribute('src',/^data:image\/png;base64,/);
+ await expect.poll(()=>documentWrites.length).toBe(1);
+ expect(documentWrites[0].p_table).toBe('documents');
+ expect((documentWrites[0].p_data as Record<string,unknown>).linkedCollection).toBe('inventory');
+ expect((documentWrites[0].p_data as Record<string,unknown>).linkedId).toBe('kit');
+ expect((documentWrites[0].p_data as Record<string,unknown>).workspaceId).toBe('inventory-image-browser');
+ expect((documentWrites[0].p_data as Record<string,unknown>).mimeType).toBe('image/png');
  await expect(dialog.getByLabel('Item Name',{exact:true})).toHaveValue('ערכה Kit');
  const choice=dialog.getByLabel('Item to add as a bundle part');await choice.selectOption('part');
  const quantity=dialog.getByLabel('How many of the part one bundle holds');await quantity.fill('1.5');

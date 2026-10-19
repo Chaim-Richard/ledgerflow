@@ -11,6 +11,8 @@ import { CONSIGNMENT_OPTIONS } from '../../lib/consignmentStock';
 import RecordNotesPanel from '../common/RecordNotesPanel';
 import type { InventoryItem } from '../../types';
 
+import ItemImagePanel from './ItemImagePanel';
+
 interface InventoryItemDialogProps {
   open: boolean;
   editingItem: InventoryItem | null;
@@ -22,12 +24,13 @@ interface InventoryItemDialogProps {
   canChangeStock: boolean;
   onClose: () => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  onItemImageChange?: (itemId: string) => void;
   /** Opens Adjust stock for the item being edited (its quantity changes only through the books). */
   onAdjust: (item: InventoryItem) => void;
 }
 
 /** The add / edit item form of the Inventory screen (F-16: moved out of Inventory.tsx). */
-export default function InventoryItemDialog({ open, editingItem, categories, taxCodes = [], allItems = [], canChangeStock, onClose, onSubmit, onAdjust }: InventoryItemDialogProps) {
+export default function InventoryItemDialog({ open, editingItem, categories, taxCodes = [], allItems = [], canChangeStock, onClose, onSubmit, onItemImageChange, onAdjust }: InventoryItemDialogProps) {
   const { dialogProps: itemDialogProps, titleId: itemTitleId } = useDialog(onClose, open);
   // A-19: the bundle's parts, held here and written into the form as JSON. The parent keys this
   // dialog by item id, so switching items gives fresh state without an effect.
@@ -276,7 +279,9 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                 </div>
               </form>
               {editingItem?.id && (
-                <div className="p-4 md:p-8 border-t border-[var(--line)]">
+                <div className="space-y-6 p-4 md:p-8 border-t border-[var(--line)]">
+                  <ItemImagePanel itemId={editingItem.id} itemName={editingItem.name || 'this item'} workspaceId={editingItem.workspaceId || ''}
+                    onChange={() => onItemImageChange?.(editingItem.id)} />
                   <RecordNotesPanel entityType="item" entityId={editingItem.id} entityName={editingItem.name || 'this item'}
                     metadata={(editingItem as { metadata?: Record<string, unknown> }).metadata}
                     canEdit={canChangeStock} />
