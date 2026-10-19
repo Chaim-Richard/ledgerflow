@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * Purchase orders edited in place (I-22): vendor, expected delivery and lines while nothing was
  * received or billed; the order total follows a line change; delete only with nothing against it;
@@ -38,7 +39,7 @@ beforeEach(() => {
 afterEach(async () => { cleanup(); getSupabase().realtime.disconnect(); await getSupabase().auth.dispose(); });
 
 const type = async (label: string, value: string) => {
-  fireEvent.click(screen.getByRole('button', { name: `Edit ${label}` }));
+  fireEvent.click(screen.getByRole('button', { name: inlineEditName(`Edit ${label}`) }));
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
   await act(async () => { fireEvent.keyDown(screen.getByLabelText(label), { key: 'Enter' }); });
 };
@@ -46,9 +47,9 @@ const type = async (label: string, value: string) => {
 test('an open order: vendor, delivery and lines change in place, and the total follows', async () => {
   render(<PurchaseOrdersView />);
   await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Lines of PO-2026-001' })));
-  assert.ok(screen.getByRole('button', { name: 'Edit Vendor of PO-2026-001' }));
-  assert.equal(screen.queryByRole('button', { name: 'Edit Vendor of PO-2026-002' }), null, 'goods already arrived on PO-2026-002');
-  assert.ok(screen.getByRole('button', { name: 'Edit Expected delivery of PO-2026-002' }), 'delivery can still move');
+  assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Vendor of PO-2026-001') }));
+  assert.equal(screen.queryByRole('button', { name: inlineEditName('Edit Vendor of PO-2026-002') }), null, 'goods already arrived on PO-2026-002');
+  assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Expected delivery of PO-2026-002') }), 'delivery can still move');
 
   await type('Expected delivery of PO-2026-001', '2026-08-01');
   assert.match(screen.getByRole('alert').textContent || '', /before the order date/);
@@ -72,7 +73,7 @@ test('an open order: vendor, delivery and lines change in place, and the total f
   assert.equal(added.totalAmountCents, 10000 + 350);
 
   fireEvent.click(screen.getByRole('button', { name: 'Lines of PO-2026-002' }));
-  assert.equal(screen.queryByRole('button', { name: 'Edit Quantity of Toner' }), null, 'lines are fixed once goods arrived');
+  assert.equal(screen.queryByRole('button', { name: inlineEditName('Edit Quantity of Toner') }), null, 'lines are fixed once goods arrived');
   assert.equal(screen.queryByLabelText('New line on PO-2026-002'), null);
 });
 

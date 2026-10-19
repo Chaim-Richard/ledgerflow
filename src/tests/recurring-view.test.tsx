@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * The Recurring screen: pause/resume and delete, and edit in place (I-22) — a schedule's name,
  * how often it runs, and its next date (not before its last run; the day of the month follows).
@@ -18,7 +19,7 @@ const rent = { id: 'r1', workspaceId: 'component-workspace', description: 'Offic
 const updates = (calls: Array<{ url: string; body?: unknown }>) =>
   calls.filter(c => c.url.includes('/rpc/lf_update')).map(c => (c.body as { p_set: Record<string, unknown> }).p_set);
 const edit = async (label: string, value: string) => {
-  fireEvent.click(screen.getByRole('button', { name: `Edit ${label}` }));
+  fireEvent.click(screen.getByRole('button', { name: inlineEditName(`Edit ${label}`) }));
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
   await act(async () => { fireEvent.keyDown(screen.getByLabelText(label), { key: 'Enter' }); });
 };

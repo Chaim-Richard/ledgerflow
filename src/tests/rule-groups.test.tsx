@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 import './helpers/dom';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -146,7 +147,7 @@ describe('Durable rule group writes', () => {
 describe('Rules settings group interactions', () => {
   it('retains a refused rename draft, retries on Enter, and saves priority in place', async () => {
     render(<RulesSettings />);
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Name of group תוכנה / SaaS' }));
+    fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Name of group תוכנה / SaaS') }));
     const name = screen.getByRole('combobox', { name: 'Name of group תוכנה / SaaS' });
     refuse = true;
     fireEvent.change(name, { target: { value: 'ענן / Cloud' } });
@@ -155,12 +156,12 @@ describe('Rules settings group interactions', () => {
     assert.equal((screen.getByRole('combobox', { name: 'Name of group תוכנה / SaaS' }) as HTMLInputElement).value, 'ענן / Cloud');
     refuse = false;
     fireEvent.keyDown(screen.getByRole('combobox', { name: 'Name of group תוכנה / SaaS' }), { key: 'Enter' });
-    await screen.findByRole('button', { name: 'Edit Name of group ענן / Cloud' });
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Priority of first' }));
+    await screen.findByRole('button', { name: inlineEditName('Edit Name of group ענן / Cloud') });
+    fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Priority of first') }));
     const priority = screen.getByRole('textbox', { name: 'Priority of first' });
     fireEvent.change(priority, { target: { value: '0' } });
     fireEvent.keyDown(priority, { key: 'Enter' });
-    await waitFor(() => assert.equal(screen.getByRole('button', { name: 'Edit Priority of first' }).textContent?.trim(), 'Priority #0'));
+    await waitFor(() => assert.equal(screen.getByRole('button', { name: inlineEditName('Edit Priority of first') }).textContent?.trim(), 'Priority #0'));
     assert.equal(durable.find(r => r.id === 'first')!.priority, 0);
     assert.deepEqual(writes.at(-1)!.body.p_set, { priority: 0 });
   });
@@ -236,7 +237,7 @@ describe('Rules settings group interactions', () => {
     view.unmount();
     setComponentWorkspace('viewer');
     render(<RulesSettings />);
-    assert.equal(screen.queryByRole('button', { name: 'Edit Priority of first' }), null);
+    assert.equal(screen.queryByRole('button', { name: inlineEditName('Edit Priority of first') }), null);
     assert.equal((screen.getByRole('button', { name: 'Enable group תוכנה / SaaS' }) as HTMLButtonElement).disabled, true);
     fireEvent.click(screen.getByRole('button', { name: 'Create Rule' }));
     assert.equal(Boolean(screen.queryByRole('dialog')), false);

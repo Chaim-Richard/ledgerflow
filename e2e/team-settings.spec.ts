@@ -1,3 +1,4 @@
+import { inlineEditName } from '../src/tests/helpers/inlineEditName';
 import { test, expect } from '@playwright/test';
 
 test('team inline edits and named removal work by keyboard on a phone', async ({ page }) => {
@@ -25,13 +26,13 @@ test('team inline edits and named removal work by keyboard on a phone', async ({
     createRoot(container).render(React.createElement(TeamSettings));
   });
   const team = page.locator('#team-fixture');
-  const role = team.getByRole('button', { name: 'Edit Role of member-א' });
+  const role = team.getByRole('button', { name: inlineEditName('Edit Role of member-א') });
   await role.focus(); await role.press('Enter');
   const choice = team.getByRole('combobox', { name: 'Role of member-א' });
   await choice.selectOption('bookkeeper'); await choice.press('Enter');
   await expect(role).toHaveText('Bookkeeper');
   expect(writes.filter(write => write.method === 'PATCH')).toHaveLength(1);
-  const invite = team.getByRole('button', { name: 'Edit Invite team member email' });
+  const invite = team.getByRole('button', { name: inlineEditName('Edit Invite team member email') });
   await invite.focus(); await invite.press('Enter');
   const email = team.getByRole('textbox', { name: 'Invite team member email' });
   await email.fill('person@example.test'); await email.press('Enter');

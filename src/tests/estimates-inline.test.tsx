@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 import './helpers/dom';
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,9 +16,9 @@ test('only draft estimate reference/dates/notes are editable; the latest status 
  let writes = 0;
  globalThis.fetch = (async (input: RequestInfo | URL) => { if (String(input).includes('/rpc/lf_update')) writes++; return new Response(JSON.stringify({ id: 'e', data: { ...draft, status: 'converted' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }); }) as typeof fetch;
  render(<EstimatesView />);
- for (const field of ['Reference', 'Date', 'Expiry', 'Notes']) assert.ok(screen.getByRole('button', { name: `Edit ${field} of estimate EST-1` }));
- assert.equal(screen.queryByRole('button', { name: 'Edit Reference of estimate EST-2' }), null);
- fireEvent.click(screen.getByRole('button', { name: 'Edit Reference of estimate EST-1' })); fireEvent.change(screen.getByLabelText('Reference of estimate EST-1'), { target: { value: 'EST-3' } });
+ for (const field of ['Reference', 'Date', 'Expiry', 'Notes']) assert.ok(screen.getByRole('button', { name: inlineEditName(`Edit ${field} of estimate EST-1`) }));
+ assert.equal(screen.queryByRole('button', { name: inlineEditName('Edit Reference of estimate EST-2') }), null);
+ fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Reference of estimate EST-1') })); fireEvent.change(screen.getByLabelText('Reference of estimate EST-1'), { target: { value: 'EST-3' } });
  await act(async () => { fireEvent.keyDown(screen.getByLabelText('Reference of estimate EST-1'), { key: 'Enter' }); });
  assert.match(screen.getByRole('alert').textContent || '', /Only draft/); assert.equal(writes, 0); assert.equal(useLedgerStore.getState().estimates[0].amountCents, 15000);
  cleanup(); setComponentWorkspace('viewer'); render(<EstimatesView />); assert.equal(screen.queryByRole('button', { name: /^Edit .* of estimate/ }), null);

@@ -7,7 +7,7 @@ import { inlineEditText, parseInlineValue, sameInlineValue, type InlineKind } fr
 export interface InlineEditProps {
   /** The stored value (money in cents). */
   value: unknown;
-  /** Accessible name, e.g. "Email of Acme Ltd". */
+  /** Field/context for the accessible name; the displayed value is added automatically. */
   label: string;
   /** Saves the new value (money: integer cents; number: number; else text). Throw to refuse. */
   onSave: (next: string | number) => Promise<unknown> | unknown;
@@ -121,11 +121,14 @@ export default function InlineEdit({
   }
 
   return (
-    <button type="button" onClick={e => { e.stopPropagation(); start(); }} aria-label={`Edit ${label}`} data-inline-edit="" title={`Click to edit ${label.toLowerCase()}`}
+    <>
+    <span id={`${listId}-edit-label`} hidden>Edit {label}:</span>
+    <button type="button" onClick={e => { e.stopPropagation(); start(); }} aria-labelledby={`${listId}-edit-label ${listId}-edit-value`} data-inline-edit="" title={`Click to edit ${label.toLowerCase()}`}
       disabled={saving} aria-busy={saving || undefined}
       className={cn('group text-left max-w-full rounded px-0.5 -mx-0.5 border border-transparent hover:border-dashed hover:border-[var(--line)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brass)] cursor-text', saving && 'opacity-60', className)}>
-      {shown ?? <span className="text-[var(--faint)] italic">{placeholder || 'Add'}</span>}
+      <span id={`${listId}-edit-value`} className="contents">{shown ?? <span className="text-[var(--faint)] italic">{placeholder || 'Add'}</span>}</span>
       {saving && <Loader2 aria-hidden="true" className="inline w-3 h-3 ml-1 animate-spin" />}
     </button>
+    </>
   );
 }

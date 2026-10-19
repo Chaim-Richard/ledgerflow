@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * Transaction list, edit in place (I-22 I-23): the category of a plain entry (accounts used most
  * first), and class / location on every line; locked or split entries are not changed here.
@@ -48,7 +49,7 @@ describe('Transaction list: edit in place', () => {
   test('change the category of a plain entry: the other line stays', async () => {
     const updates: Array<Partial<Transaction>> = [];
     row(plain, (_id, u) => updates.push(u));
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Category of GitHub' }));
+    fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Category of GitHub') }));
     fireEvent.change(screen.getByLabelText('Category of GitHub'), { target: { value: 'rent' } });
     await act(async () => { fireEvent.keyDown(screen.getByLabelText('Category of GitHub'), { key: 'Enter' }); });
     assert.deepEqual(updates[0].lines?.map(l => [l.accountId, l.accountName, l.amountCents]), [['rent', 'Rent', 2500], ['bank', 'Checking', -2500]]);
@@ -57,8 +58,8 @@ describe('Transaction list: edit in place', () => {
   test('class is set on every line; a split entry has no category box; a locked period edits nothing', async () => {
     const updates: Array<Partial<Transaction>> = [];
     row(split, (_id, u) => updates.push(u));
-    assert.equal(screen.queryByRole('button', { name: 'Edit Category of Mixed' }), null);
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Class of Mixed' }));
+    assert.equal(screen.queryByRole('button', { name: inlineEditName('Edit Category of Mixed') }), null);
+    fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Class of Mixed') }));
     fireEvent.change(screen.getByLabelText('Class of Mixed'), { target: { value: 'Retail' } });
     await act(async () => { fireEvent.keyDown(screen.getByLabelText('Class of Mixed'), { key: 'Enter' }); });
     assert.deepEqual(updates[0].lines?.map(l => l.class), ['Retail', 'Retail', 'Retail']);
@@ -110,7 +111,7 @@ describe('Transaction list: date, description and amount in place', () => {
     const updates: Array<Partial<Transaction>> = [];
     row(plain, (_id, u) => updates.push(u));
     const edit = async (name: string, value: string) => {
-      fireEvent.click(screen.getByRole('button', { name: `Edit ${name} of GitHub` }));
+      fireEvent.click(screen.getByRole('button', { name: inlineEditName(`Edit ${name} of GitHub`) }));
       fireEvent.change(screen.getByLabelText(`${name} of GitHub`), { target: { value } });
       await act(async () => { fireEvent.keyDown(screen.getByLabelText(`${name} of GitHub`), { key: 'Enter' }); });
     };
@@ -127,18 +128,18 @@ describe('Transaction list: date, description and amount in place', () => {
 
   test('an entry behind an invoice payment: description only; a bank-line entry: category but not amount; a split: date but no amount', () => {
     row(invoicePayment, () => {});
-    assert.equal(screen.queryByRole('button', { name: 'Edit Amount of Payment INV-7' }), null);
-    assert.equal(screen.queryByRole('button', { name: 'Edit Date of Payment INV-7' }), null);
-    assert.equal(screen.queryByRole('button', { name: 'Edit Category of Payment INV-7' }), null, 'its receivable side stays');
-    assert.ok(screen.getByRole('button', { name: 'Edit Description of Payment INV-7' }));
+    assert.equal(screen.queryByRole('button', { name: inlineEditName('Edit Amount of Payment INV-7') }), null);
+    assert.equal(screen.queryByRole('button', { name: inlineEditName('Edit Date of Payment INV-7') }), null);
+    assert.equal(screen.queryByRole('button', { name: inlineEditName('Edit Category of Payment INV-7') }), null, 'its receivable side stays');
+    assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Description of Payment INV-7') }));
     cleanup();
     row({ ...plain, metadata: { bankLineId: 'bl1' } }, () => {});
-    assert.ok(screen.getByRole('button', { name: 'Edit Category of GitHub' }));
-    assert.equal(screen.queryByRole('button', { name: 'Edit Amount of GitHub' }), null);
+    assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Category of GitHub') }));
+    assert.equal(screen.queryByRole('button', { name: inlineEditName('Edit Amount of GitHub') }), null);
     cleanup();
     row(split, () => {});
-    assert.equal(screen.queryByRole('button', { name: 'Edit Amount of Mixed' }), null);
-    assert.ok(screen.getByRole('button', { name: 'Edit Date of Mixed' }));
+    assert.equal(screen.queryByRole('button', { name: inlineEditName('Edit Amount of Mixed') }), null);
+    assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Date of Mixed') }));
   });
 });
 

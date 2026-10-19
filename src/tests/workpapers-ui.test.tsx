@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * BD-04 workpapers panel (AI #3, A-6): what the person closing the month sees — each account's
  * balance at month end with its note, files and review mark — and that the note and the mark are
@@ -91,7 +92,7 @@ describe('the workpapers panel on Month-End Close', () => {
     assert.ok(screen.getByText('1 of 6 reviewed'));
     const balances = within(table()).getAllByRole('row').slice(1).map(row => within(row).getAllByRole('cell')[0]?.textContent);
     assert.deepEqual(balances, ['$300.00', '$1,900.00', '$0.00', '$1,900.00', '$200.00', '$0.00']);
-    assert.ok(within(rowOf('Rent')).getByRole('button', { name: 'Edit Note on Rent for 2026-09' }));
+    assert.ok(within(rowOf('Rent')).getByRole('button', { name: inlineEditName('Edit Note on Rent for 2026-09') }));
     assert.ok(within(rowOf('Noted supplies')).getByText('kept under a zero balance'), 'a kept note is shown');
     assert.ok(within(rowOf('Reviewed loan')).getByText(/Reviewed by Ada on 2026-10-02/), 'a kept review mark is shown');
 
@@ -111,7 +112,7 @@ describe('the workpapers panel on Month-End Close', () => {
   test('a note is saved on the account document, and shown once it is', async () => {
     setup('owner');
     render(<WorkpapersPanel month="2026-09" currency="USD" />);
-    fireEvent.click(within(rowOf('Rent')).getByRole('button', { name: 'Edit Note on Rent for 2026-09' }));
+    fireEvent.click(within(rowOf('Rent')).getByRole('button', { name: inlineEditName('Edit Note on Rent for 2026-09') }));
     const box = screen.getByLabelText('Note on Rent for 2026-09');
     fireEvent.change(box, { target: { value: 'check the August invoice' } });
     await act(async () => { fireEvent.blur(box); });
@@ -157,7 +158,7 @@ describe('the workpapers panel on Month-End Close', () => {
       return new Response(JSON.stringify(body), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }) as typeof fetch;
     render(<WorkpapersPanel month="2026-09" currency="USD" />);
-    fireEvent.click(within(rowOf('Rent')).getByRole('button', { name: 'Edit Note on Rent for 2026-09' }));
+    fireEvent.click(within(rowOf('Rent')).getByRole('button', { name: inlineEditName('Edit Note on Rent for 2026-09') }));
     const box = screen.getByLabelText('Note on Rent for 2026-09');
     fireEvent.change(box, { target: { value: 'typed before the refusal' } });
     await act(async () => { fireEvent.blur(box); });

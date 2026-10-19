@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 import './helpers/dom';
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,7 +17,7 @@ test('dimension labels persist with their stable ID and old-name alias, while vi
  const writes: Record<string, unknown>[] = [];
  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => { if (String(input).includes('/rpc/lf_update')) writes.push(JSON.parse(String(init?.body))); return new Response(JSON.stringify(String(input).includes('/rpc/') ? null : { id: 'component-workspace_project_P1', data: { ...node, workspaceId: workspace.id } }), { status: 200, headers: { 'Content-Type': 'application/json' } }); }) as typeof fetch;
  render(<DimensionsSettings />);
- fireEvent.click(screen.getByRole('button', { name: 'Edit Label project P1' })); fireEvent.change(screen.getByLabelText('Label project P1'), { target: { value: 'שלום New' } });
+ fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Label project P1') })); fireEvent.change(screen.getByLabelText('Label project P1'), { target: { value: 'שלום New' } });
  await act(async () => { fireEvent.keyDown(screen.getByLabelText('Label project P1'), { key: 'Enter' }); });
  assert.equal(writes[0].p_id, 'component-workspace_project_P1'); const fields = writes[0].p_set as Record<string, unknown>; assert.equal(fields.description, 'שלום New'); assert.deepEqual(fields.aliases, ['Original', 'ישן']); assert.equal('id' in fields, false);
  assert.equal(useLedgerStore.getState().dimensionNodes[0].description, 'שלום New');
