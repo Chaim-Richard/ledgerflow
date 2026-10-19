@@ -23,7 +23,7 @@ const STATUS_LABEL: Record<IlMonthStepStatus, string> = {
 };
 const STATUS_TONE: Record<IlMonthStepStatus, string> = {
   done: 'text-[var(--pos)]',
-  attention: 'text-amber-600',
+  attention: 'text-amber-700 dark:text-amber-400',
   'not-applicable': 'text-[var(--muted)]',
 };
 
@@ -234,7 +234,7 @@ export function IsraelMonthJourneyPanel({ journey, preview, currency = 'ILS', mo
         classification, allocation-number rules and Tax Authority acceptance must be verified
         independently. Nothing is submitted from this screen.
       </p>
-      {preview.problem && <p role="status" className="text-sm text-amber-600">{preview.problem}</p>}
+      {preview.problem && <p role="status" className="text-sm text-amber-700 dark:text-amber-400">{preview.problem}</p>}
       {preview.unmapped.length > 0 && <ReportTableScroll>
         <table className="w-full text-sm">
           <caption className="text-left font-semibold text-[var(--text)] pb-1">Documents that cannot be written in this historical layout</caption>
