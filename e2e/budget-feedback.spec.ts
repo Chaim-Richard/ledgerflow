@@ -17,11 +17,11 @@ test('budget actual is a phone-sized report with keyboard account drill-down and
   useLedgerStore.setState({accounts:[...existing.filter((a: {id:string})=>a.id!==account.id),account,...(existing.some((a:{id:string})=>a.id===cash.id)?[]:[cash])],budgets:[budget],transactions:[tx]});
  });
  await expect(report.getByRole('cell',{name:'$900.00',exact:true})).toBeVisible();
- const actual=report.getByRole('button',{name:'Entries for Rent שכירות, Total'});await expect(actual).toHaveText('$150.00');
+ const actual=report.getByRole('button',{name:/: entries for Rent שכירות, Total$/});await expect(actual).toHaveText('$150.00');
  const bounds=await actual.boundingBox();expect(bounds!.height).toBeGreaterThanOrEqual(44);
  await actual.press('Enter');const dialog=page.getByRole('dialog',{name:'Rent שכירות'});await expect(dialog).toBeVisible();await expect(dialog.getByRole('cell',{name:'+$150.00',exact:true})).toBeVisible();
  await dialog.getByRole('button',{name:'Close',exact:true}).press('Escape');await expect(dialog).toBeHidden();await expect(actual).toBeFocused();
- await report.getByLabel('Columns',{exact:true}).selectOption('months');await expect(report.getByRole('button',{name:'Entries for Rent שכירות, Jan 2026'})).toHaveText('$150.00');
+ await report.getByLabel('Columns',{exact:true}).selectOption('months');await expect(report.getByRole('button',{name:/: entries for Rent שכירות, Jan 2026$/})).toHaveText('$150.00');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  const axe=await new AxeBuilder({page}).include('#main-content').disableRules(['color-contrast']).analyze();expect(axe.violations.map(v=>v.id)).toEqual([]);
 });

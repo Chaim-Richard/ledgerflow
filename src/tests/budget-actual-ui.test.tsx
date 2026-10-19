@@ -17,13 +17,13 @@ test('budget actual report opens the actual account impact, changes months, and 
  setup(); globalThis.fetch = async () => new Response('[]', {headers:{'Content-Type':'application/json'}});
  const view = render(<BudgetActualReportView startDate="2026-01-01" endDate="2026-01-31" />);
  assert.match(screen.getByRole('status').textContent || '', /Provisional/);
- await act(async () => fireEvent.click(screen.getByRole('button', {name:'Entries for Rent שכירות, Total'})));
+ await act(async () => fireEvent.click(screen.getByRole('button', {name:/: entries for Rent שכירות, Total$/})));
  assert.ok(screen.getByRole('dialog')); assert.ok(screen.getByText('Office rent')); assert.ok(screen.getByText('+$50.00'));
  await act(async () => fireEvent.click(screen.getByRole('button',{name:'Close Report'})));
  fireEvent.change(screen.getByLabelText('Columns'),{target:{value:'months'}});
- assert.ok(screen.getByRole('button',{name:'Entries for Rent שכירות, Jan 2026'}));
+ assert.ok(screen.getByRole('button',{name:/: entries for Rent שכירות, Jan 2026$/}));
  view.rerender(<BudgetActualReportView startDate="2026-02-01" endDate="2026-02-28" />);
- assert.equal(screen.queryByRole('dialog'),null); assert.equal(screen.getByRole('button',{name:'Entries for Rent שכירות, Feb 2026'}).textContent,'$0.00');
+ assert.equal(screen.queryByRole('dialog'),null); assert.equal(screen.getByRole('button',{name:/: entries for Rent שכירות, Feb 2026$/}).textContent,'$0.00');
 });
 test('full-history load replaces capped cache; failed refresh retains figures and explains refusal', async () => {
  setup(); let refused = false;
@@ -33,11 +33,11 @@ test('full-history load replaces capped cache; failed refresh retains figures an
  return new Response(JSON.stringify(rows.map(row=>({id:row.id,data:row}))),{headers:{'Content-Type':'application/json'}}); };
  render(<BudgetActualReportView startDate="2026-01-01" endDate="2026-01-31" />);
  await act(async () => fireEvent.click(screen.getByRole('button',{name:'Load / refresh full history'})));
- assert.equal(screen.queryByRole('status'),null); assert.equal(screen.getByRole('button',{name:'Entries for Rent שכירות, Total'}).textContent,'$75.00');
+ assert.equal(screen.queryByRole('status'),null); assert.equal(screen.getByRole('button',{name:/: entries for Rent שכירות, Total$/}).textContent,'$75.00');
  assert.ok(reads.some(url=>url.includes('workspace_id=eq.component-workspace')));
  refused=true; await act(async () => fireEvent.click(screen.getByRole('button',{name:'Load / refresh full history'})));
  assert.match(screen.getByRole('alert').textContent || '', /Retry/);
- assert.equal(screen.getByRole('button',{name:'Entries for Rent שכירות, Total'}).textContent,'$75.00');
+ assert.equal(screen.getByRole('button',{name:/: entries for Rent שכירות, Total$/}).textContent,'$75.00');
  act(()=>useAuthStore.setState({currentWorkspaceId:'other'}));
  assert.ok(screen.getByRole('status')); assert.equal(screen.queryByRole('alert'),null);
 });
