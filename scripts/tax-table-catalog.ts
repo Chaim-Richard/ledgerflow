@@ -52,6 +52,19 @@ export const TAX_TABLES: readonly TableSpec[] = [
     ]
   },
   {
+    "file": "ilSelfEmploymentNationalInsurance.ts",
+    "name": "IL_SELF_EMPLOYMENT_NI_ROWS",
+    "keys": [],
+    "amounts": [
+      "minMonthlyIncomeCents",
+      "reducedBandCeilingCents",
+      "maxMonthlyIncomeCents",
+      "publishedMinMonthlyAdvanceCents?",
+      "publishedMaxMonthlyAdvanceCents?",
+      "averageMonthlyWageCents?"
+    ]
+  },
+  {
     "file": "ilOsekPaturThresholds.ts",
     "name": "IL_OSEK_PATUR_CEILINGS",
     "keys": [],
