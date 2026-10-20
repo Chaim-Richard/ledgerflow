@@ -161,7 +161,7 @@ export function compareTrialBalances(source: SourceTrialBalance, server: ServerT
     }
   }
   for (const [key, account] of ledgerByName) {
-    if (!sourceNames.has(key) && account.net !== 0) {
+    if (!sourceNames.has(key)) {
       differences.push({ accountId: account.id, account: account.name, sourceCents: 0, ledgerCents: account.net, differenceCents: account.net, problem: 'extra-in-ledger' });
     }
   }
