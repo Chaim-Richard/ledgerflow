@@ -44,7 +44,7 @@ server validation, attachments, or any `src/server/` file.
 |---|---|
 | `npx tsc --noEmit -p tsconfig.json` | passed |
 | `npm run lint:eslint` | **0 errors / 209 warnings** (cap 209 unchanged; the 4 `any` warnings in `BillModal.tsx` are identical to `HEAD`) |
-| `npm test` (whole unit suite, no `LF_TEST_DATABASE_URL`) | **3,094 tests, 3,093 pass, 0 fail, 1 skipped** (Postgres suites skip without a test database), 744 suites, 26.9 min |
+| `npm test` (whole unit suite, no `LF_TEST_DATABASE_URL`) | **3,102 tests, 3,101 pass, 0 fail, 1 skipped** (Postgres suites skip without a test database), 744 suites, 26.1 min — the same run covers this commit and the D-88 commit on the branch |
 | Bill dialog unit checks | **11/11** (5 existing + 6 new: label order, refusals under vendor/number, stock units and cost, in-flight lock, footer outside the form) |
 | Bill-related suites together (`bill-modal`, `bill-stock-ui`, `attachments-ui`, `spread-bill`, `asset-from-bill`) | 23/23 before the new checks were added |
 | `npm run build` | passed (Vite + esbuild server + PWA) |
@@ -77,5 +77,6 @@ visual-regression baseline was changed — the bill dialog is not in that snapsh
 evidence only. W3's Connected / Verified / Browser columns are unchanged; DIM-1 and the full workflow
 proof remain the lead's. This is not a complete accounting-system audit or a release approval.
 
-Status: implementation complete and locally verified; final once the browser spec and the
-database-backed suites pass on a machine with Chromium/Postgres and AI #1 reviews the PR.
+Status: implementation complete and locally verified (whole unit suite, ESLint and build green).
+Two checks are still owed before it can be called final: the browser spec on a machine with Chromium,
+and the database-backed suites on a machine with Postgres. AI #1 reviews the PR.
