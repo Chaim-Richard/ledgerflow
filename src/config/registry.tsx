@@ -446,6 +446,11 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'IsraelAdvanceTaxReportView': lazy(() => import('../components/reporting/IsraelAdvanceTaxReportView')),
   'BankingValidationReportView': lazy(() => import('../components/reporting/BankingValidationReportView')),
   'UsNexusWatchReportView': lazy(() => import('../components/reporting/UsNexusWatchReportView')),
+  'TaxCodeSuggestionsReportView': lazy(() => import('../components/reporting/TaxCodeSuggestionsReportView')),
+  'EntityFilingsCalendarView': lazy(() => import('../components/reporting/EntityFilingsCalendarView')),
+  'IsraeliDocumentTypesView': lazy(() => import('../components/reporting/IsraeliDocumentTypesView')),
+  'Us1099PreviewReportView': lazy(() => import('../components/reporting/Us1099PreviewReportView')),
+  'UsFilingCalendarReportView': lazy(() => import('../components/reporting/UsFilingCalendarReportView')),
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = withScreenHelp([
@@ -555,6 +560,11 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'israel-advance-tax', label: { en: 'Israel: Advance Tax Calendar (Mikdamot)', he: 'ישראל: מקדמות מס הכנסה' }, componentName: 'IsraelAdvanceTaxReportView', icon: Calendar },
   { id: 'banking-validation', label: { en: 'Banking Data Validation', he: 'אימות נתוני בנק' }, componentName: 'BankingValidationReportView', icon: ShieldCheck },
   { id: 'us-nexus-watch', label: { en: 'US Nexus Watch', he: 'מעקב נקסוס בארה"ב' }, componentName: 'UsNexusWatchReportView', icon: MapPin },
+  { id: 'tax-code-suggestions', label: { en: 'Tax Code Suggestions', he: 'הצעות קוד מס' }, componentName: 'TaxCodeSuggestionsReportView', icon: Tag },
+  { id: 'entity-filings', label: { en: 'Entity Filings Calendar', he: 'יומן הגשות לישות' }, componentName: 'EntityFilingsCalendarView', icon: CalendarDays },
+  { id: 'israeli-document-types', label: { en: 'Israeli Document Types', he: 'סוגי מסמכים בישראל' }, componentName: 'IsraeliDocumentTypesView', icon: Receipt },
+  { id: 'us-1099-preview', label: { en: 'US 1099 Preview', he: 'תצוגת 1099 אמריקאי' }, componentName: 'Us1099PreviewReportView', icon: Users },
+  { id: 'us-filing-calendar', label: { en: 'US Filing Calendar', he: 'יומן הגשות ארה"ב' }, componentName: 'UsFilingCalendarReportView', icon: Calendar },
 ], 'reports');
 
 export const SETTINGS_TABS_REGISTRY = withScreenHelp([
