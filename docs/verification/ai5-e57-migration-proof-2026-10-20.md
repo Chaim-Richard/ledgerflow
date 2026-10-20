@@ -22,3 +22,14 @@ Before AI #1 merges: run `npm ci`, `npx tsc --noEmit -p tsconfig.json`, `npm tes
 3. W11 release gate remains **Connected: Partly · Verified: No · Browser: No**. The read-only comparison alone does not advance it.
 
 Pinned base at task start: `3e2b610b5ea48eedb6c7db16062742a5c76ce61f`.
+
+## Lead review of PR #240 — corrections pushed 20 October
+
+AI #1 sent the draft back with four specific findings, in the PR discussion (17:11 UTC):
+
+- The source precision test failed because `parseMoneyCents` rounded a three-decimal source value. E-57 now refuses imprecise or ambiguously grouped QuickBooks source amounts before calling that generic importer. Added precision, quoted thousands and invalid-grouping checks. Financial source data is **never rounded into an apparent match**.
+- The report response could win a race against a later date or source-file choice. `requestSeq` now invalidates stale authentication, HTTP/JSON and file-read continuations. Workspace changes remount the review component with `key={workspaceId}`.
+- React list keys now use the server's account id (or a normalized source-only identity), never the index; duplicated server ids are rejected. Extra accounts with zero balances are also shown instead of silently calling the mapping identical.
+- Removed synchronous `setState` calls in `useEffect`; switching workspaces remounts the keyed component. These edits target the two newly reported ESLint warnings and the quality-ratchet / stale-async patterns.
+
+**Validation honesty:** The branch was patched through the GitHub connector only. The complete `npm test` / local Postgres suite, ESLint warning counts, type check, Vite build and browser tests still have **not** been executed in this environment (no checkout/network to clone). No pass counts are invented. The PR remains draft and must not be merged by Agent #5. Follow the lead's test instructions before release.
