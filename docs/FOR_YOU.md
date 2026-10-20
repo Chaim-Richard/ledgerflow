@@ -479,3 +479,7 @@ dismiss as *false positive*: alert 24 (payslip GET), 25 (API-key SHA-256 — key
 ## 20 Oct night — migration to confirm on Supabase (ISS-130, PR #259)
 
 `supabase/migrations/20261020120000_inventory_cost_server_only.sql` (browser may not change the cost of stock on hand; only the server's revaluation can) — **the Supabase connector timed out twice, so it may or may not be applied.** It is safe to run again (it replaces the function and re-creates the trigger). To apply: Supabase dashboard → SQL editor → paste the file → Run. Until it is applied the app still works; the new Revalue screen posts correctly either way, the database just doesn't yet *refuse* a direct browser cost change.
+
+## 20 Oct — PAY-1 payroll import: provider column sets (AI #9)
+
+**Open question for you:** the payroll import accepts one column set per provider (Gusto payroll journal, ADP payroll register, Paychex payroll journal; listed in `src/lib/payrollProviderImport.ts`). I wrote them from the common column names; they are **not checked against a real export** from each provider. **Default I used:** any other column stops the import and names it, so a different export is refused rather than read wrongly. If you or a pilot customer can share a sample export (names changed), I'll match its columns exactly.

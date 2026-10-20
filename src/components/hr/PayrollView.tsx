@@ -31,6 +31,7 @@ import { DeductionsCell } from './DeductionsCell';
 import { PayRunHistory } from './PayRunHistory';
 import { IsraelForm102Review } from './IsraelForm102Review';
 import { UsW2Review } from './UsW2Review';
+import PayrollImportDialog from './PayrollImportDialog';
 import { HourlyPayCell } from './HourlyPayCell';
 import { asPaidFor, hoursToPay, isHourly, type PayableTime } from '../../lib/hourlyPay';
 
@@ -83,6 +84,7 @@ const PayrollViewContent: React.FC = () => {
   const [taxExpenseAccountId, setTaxExpenseAccountId] = useState('');
   const [liabilitiesAccountId, setLiabilitiesAccountId] = useState('');
   const [posting, setPosting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [postError, setPostError] = useState('');
   // U-03: what this year's posted pay runs paid each employee
   const thisYear = getLocalDateISO().slice(0, 4);
@@ -246,6 +248,11 @@ const PayrollViewContent: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {canRunPayroll && (
+            <button onClick={() => setImportOpen(true)} className="min-h-11 px-3.5 py-2 text-xs font-semibold bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg border border-neutral-300 cursor-pointer" id="import-payroll-btn">
+              Import from payroll provider
+            </button>
+          )}
           <button
             disabled={!canWrite}
             onClick={() => { setEmployeeError(''); setIsAddingEmployee(true); }}
@@ -266,6 +273,10 @@ const PayrollViewContent: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {importOpen && currentWorkspace && (
+        <PayrollImportDialog workspaceId={currentWorkspace.id} accounts={usable} dimensions={currentWorkspace.dimensions || []} currency={currentWorkspace.currency} onClose={() => setImportOpen(false)} />
+      )}
 
       {/* Statutory Disclaimer Banner */}
       <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-lg text-amber-900 text-xs flex items-start gap-2.5">
