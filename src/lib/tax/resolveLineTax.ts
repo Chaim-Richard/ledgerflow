@@ -109,7 +109,8 @@ export function resolveLineTax(input: {
   const vat = registrationsOn(input.seller, 'vat', input.date).find(r => r.place.country === sellerCountry);
   if (!vat) return none('not-registered');
   const key = registrationKey(vat);
-  if (buyer.country !== sellerCountry) return none('export', key);
+  // an Israeli export is zero-rated (VAT Law s.30): a taxable sale at 0%, so it takes the zero-rated code, never the exempt one
+  if (buyer.country !== sellerCountry) return sellerCountry === 'IL' ? { ...none('export', key), treatment: 'zero_rated' } : none('export', key);
   if (input.exempt) return none('exempt-certificate', key);
   const components = table(sellerCountry)?.(buyer, input.date, input.category);
   if (!components) return none('no-rate-table', key);
