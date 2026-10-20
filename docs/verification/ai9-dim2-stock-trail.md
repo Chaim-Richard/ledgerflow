@@ -57,3 +57,22 @@ On hand: 4 + 10 − 3 − 2 + 1 + 5 + 6 − 1 − 2 = 18.
 2. Save the source document line ids and the supplier when goods are received.
 3. Record destination labels and purpose on each move.
 4. The reconciliation report.
+
+## #260 review (7 findings)
+
+Each fix has a test in `dim2-stock-trail.test.ts` (10/10).
+
+1. **Delivery returns.** Goods returned against a delivery (kind `return`, document type `delivery`) now follow the
+   delivery's entry to its sales order and customer, the same way a delivery does.
+2. **Not loaded.** A document that is absent from a capped or still-loading list is now "not loaded" (its own origin and
+   total). It is no longer counted as a missing document.
+3. **Per list.** Each list decides for itself whether it is capped or loading. A capped entry list no longer hides a
+   bill that is really missing.
+4. **Stock received with Adjust stock.** These moves (kind `purchase`, document type `adjustment`) now show as "Stock
+   adjustment (no bill)". They are counted as adjusted, not as missing.
+5. **Purchase order from the bill.** A bill that names its order (`metadata.poId`) shows that order even when the order
+   does not name the bill.
+6. **Summary wording.** It now says "came in on a document with its vendor or customer", which is also true for undone
+   sales and undone vendor returns.
+7. **Speed.** The lists are indexed once and the dialog memoizes the trail. A test runs 5,000 moves against 10,000
+   invoices in well under a second.
