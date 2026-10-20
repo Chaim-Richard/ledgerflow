@@ -136,7 +136,7 @@ export function calculateWorkspaceCharges(wsData: WorkspaceBillingOverrides | nu
  * Standard API error response
  */
 export function sendError(res: express.Response, message: string, status: number = 500, details?: unknown) {
-  console.error(`[API Error] ${status}: ${message} (Path: ${res.req?.originalUrl || "unknown"})`, details || "");
+  console.error("[API Error] %s: %s (Path: %s)", status, message, res.req?.originalUrl || "unknown", details || "");
   res.status(status).json({
     status: "error",
     message,
