@@ -134,9 +134,23 @@ second `<table>` would break the existing screen contract. The added test assert
 - **No CI run exists for `88ce2d76` or `90156b72`.** Later pushes did not create runs, and this sandbox's
   GitHub token cannot start one: `gh workflow run ci.yml` answers `403 Resource not accessible by
   integration`. So the CI signal on the final head needs a re-run or any push from the lead.
-- The log itself is unreadable here: CI logs are served from `*.blob.core.windows.net`, which this sandbox
-  cannot reach (every download ends in EOF; `--log-failed` also says the run was still in progress at the
-  time). So the failing test names are not available to me, and I did not guess at them.
+- The CI log itself is unreadable from this sandbox: job logs are served from
+  `*.blob.core.windows.net`, which is outside the allowed hosts, so every download ends in EOF. **So the
+  failure was reproduced locally instead** — `npm test` is what those jobs run — and that found the real
+  cause, which is not a timezone problem at all:
+
+  ```
+  not ok - should not regress against quality-baseline.json
+    error: "Quality regression detected for 'untestedViews': current value 45 exceeds baseline 44"
+  ```
+
+  `scripts/quality-metrics.ts` counts a report view as covered when its registry `componentName` is quoted
+  in some `e2e/*.spec.ts`; **A-102's new `IlSelfEmploymentNiReportView` had no row in
+  `e2e/view-registry-coverage.spec.ts`**, so the branch sat one above the ratchet baseline in every
+  timezone. Fixed by adding that row (the spec's own convention: label + componentName) — `untestedViews`
+  is back to 44, `quality-ratchet.test.ts` passes, and the baseline file was **not** touched or raised.
+  Both mileage rows are worth noting for the lead: `MileageRatesReportView` (A-108) sits inside the
+  baseline's 44 and is still untested by the browser specs — one row would take the metric to 43.
 - **Attribution I could do locally, and did:** both timezone jobs are `npm test` with `TZ` set. Every file
   this branch touched passes under both failing timezones — 50/50 (`us-sales-tax-holiday-calendar`,
   `sales-tax-holidays-view`, `us-sales-tax-holidays`, the two A-102 files, `il-eilat-area-facts`,
@@ -147,8 +161,8 @@ second `<table>` would break the existing screen contract. The added test assert
   (39361963636) succeeded 30 minutes later. Nothing in A-99/A-100/A-102/A-109 reads `new Date()` or the
   machine timezone — all four modules compare `YYYY-MM-DD` **strings**, which is what makes them
   timezone-immune, and the data rows carry no `T00:00:00` timestamps that a timezone shift could move.
-  A full-suite run under both timezones was still in progress locally when this was written; it is the
-  check that names the failing test, and its result does not change the paragraph above.
+  (A full `npm test` under `TZ=Pacific/Auckland` is what named the failing test; `MileageRatesReportView`
+  and 43 other views are the pre-existing untested set the baseline already carried.)
 
 **Therefore: the two red timezone jobs are not evidence against this task, and they are not green either.**
 Whoever merges #229 should look at those two jobs on a run of the final head first; if they still fail, the

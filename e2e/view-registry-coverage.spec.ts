@@ -138,6 +138,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Golden Tax Fixtures', componentName: 'GoldenTaxFixturesReportView' },
     { label: 'US Quarter Journey', componentName: 'UsQuarterJourneyReportView' },
     { label: 'Israel Month Journey', componentName: 'IsraelMonthJourneyReportView' },
+    { label: 'Israel: Self-Employed National Insurance', componentName: 'IlSelfEmploymentNiReportView' },
   ];
 
   test('Warehouse operations workflows are reachable from Inventory Cycle Count', async ({ page }) => {
