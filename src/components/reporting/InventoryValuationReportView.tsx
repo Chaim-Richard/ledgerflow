@@ -56,10 +56,10 @@ export const InventoryValuationReportView: React.FC<{ asOfDate?: string }> = ({ 
     if (!historyKey || !workspaceId) return;
     let live = true;
     readHistory(workspaceId, today)
-      .then(toToday => { if (live) setHistory({ key: historyKey, asOf: inventoryAsOf({ asOf: asOfDate, items: inventory || [], toToday }) }); })
+      .then(toToday => { if (live) setHistory({ key: historyKey, asOf: inventoryAsOf({ asOf: asOfDate, items: inventory || [], toToday, itemsPartial }) }); })
       .catch((error: unknown) => { if (live) setHistory({ key: historyKey, error: error instanceof Error ? error.message : String(error) }); });
     return () => { live = false; };
-  }, [historyKey, workspaceId, asOfDate, today, inventory]);
+  }, [historyKey, workspaceId, asOfDate, today, inventory, itemsPartial]);
   const asOf = past && history?.key === historyKey ? history.asOf : undefined;
   const historyError = past && history?.key === historyKey ? history.error : undefined;
 

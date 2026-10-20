@@ -155,6 +155,38 @@ test('ISS-131 review: a never-moved item at zero today is zero on the date only 
   assert.equal(base({ itemType: 'service' }), undefined, 'a service holds no stock');
 });
 
+// ---- #256 review ----
+test('#256 review: a move backdated before the history began does not move the start earlier', () => {
+  // the history was first written on 1 Aug 2026 (nuts); a move written on 1 Oct is dated 1 Jun 2026
+  const backdated = { ...move('rivets', '2026-06-01', 3, 0, 300), createdAt: '2026-10-01T10:00:00Z' };
+  const history = itemDetails([...moves, backdated], START, TODAY);
+  const rivets = { id: 'rivets', name: 'Rivets', quantityAtHand: 3 };
+  // an item created on 15 Jul (after the backdated date, before the history really began) is not proven zero
+  const legacy = inventoryAsOf({ asOf: '2026-09-30', items: [rivets, { id: 'legacy', name: 'Legacy', quantityAtHand: 0, createdAt: '2026-07-15T00:00:00Z' }], toToday: history }).rows.find(r => r.itemId === 'legacy');
+  assert.match(legacy?.unknownReason || '', /may have held stock before the history was kept/);
+  // one created after the first write day (20 Aug) still is
+  const clips = inventoryAsOf({ asOf: '2026-09-30', items: [rivets, { id: 'clips', name: 'Clips', quantityAtHand: 0, createdAt: '2026-08-20T00:00:00Z' }], toToday: history }).rows.find(r => r.itemId === 'clips');
+  assert.equal(clips, undefined, 'zero, so not listed');
+});
+
+test('#256 review: with a capped item list, an item missing from it is not called deleted', () => {
+  const history = itemDetails(moves, START, TODAY);
+  const rows = inventoryAsOf({ asOf: '2026-09-30', items: items.filter(i => i.id !== 'nuts'), toToday: history, itemsPartial: true }).rows;
+  const nuts = rows.find(r => r.itemId === 'nuts')!;
+  assert.match(nuts.unknownReason || '', /not in the loaded item list \(the list is capped\)/);
+  assert.doesNotMatch(nuts.unknownReason || '', /deleted/);
+});
+
+test('#256 review: a deleted item is known to be zero before its first move', () => {
+  const history = itemDetails(moves, START, TODAY);
+  // nuts (first move 1 Aug, 15 still in the history) deleted: on 31 Jul the history, which starts at zero, proves 0
+  const before = inventoryAsOf({ asOf: '2026-07-31', items: items.filter(i => i.id !== 'nuts'), toToday: history }).rows.find(r => r.itemId === 'nuts');
+  assert.equal(before, undefined, 'zero, so not listed');
+  // on 30 Sep it held stock and the deletion does not say when it went: unknown
+  const after = inventoryAsOf({ asOf: '2026-09-30', items: items.filter(i => i.id !== 'nuts'), toToday: history }).rows.find(r => r.itemId === 'nuts');
+  assert.match(after?.unknownReason || '', /deleted with 15 still in its stock history/);
+});
+
 describe('ISS-131 review on the screen', () => {
   afterEach(() => cleanup());
   const mount = async (asOfDate: string, truncated: Record<string, boolean>, fetchImpl?: typeof fetch) => {

@@ -46,12 +46,16 @@ export function inventoryAsOf(input: {
   items: Array<{ id: string; name?: string; quantityAtHand?: number; itemType?: string; createdAt?: string }>;
   /** `itemDetails` from the start of the history to today */
   toToday: ItemDetails[];
+  /** #256 review: the item list is capped, so an item missing from it may exist: it is not called deleted */
+  itemsPartial?: boolean;
 }): InventoryAsOf {
   const now = new Map(input.toToday.map(d => [d.itemId, d]));
   const items = new Map(input.items.map(i => [i.id, i]));
   const ids = [...new Set([...input.items.map(i => i.id), ...input.toToday.map(d => d.itemId)])];
-  // the first day any move was kept: an item created after it would have a move for any stock it ever had
-  const historyStart = input.toToday.flatMap(d => d.moves.map(m => m.date)).sort()[0];
+  // the first day any move was written: an item created after it would have a move for any stock it ever had.
+  // #256 review: the day written, not the move's own date — a backdated move does not move the start earlier; with
+  // no write day kept, nothing is proven by it
+  const historyStart = input.toToday.flatMap(d => d.moves.map(m => m.writtenOn || '')).filter(Boolean).sort()[0];
 
   const rows = ids.map((itemId): InventoryAsOfRow => {
     const item = items.get(itemId);
@@ -68,10 +72,16 @@ export function inventoryAsOf(input: {
     }
     const startsAt = round6(today.closing.quantity - (today.received - today.issued));
     if (startsAt !== 0) return unknown(`its stock history starts at ${startsAt} units (stock from before the history was kept)`);
-    if (!item && round6(today.closing.quantity) !== 0) return unknown(`it was deleted with ${today.closing.quantity} still in its stock history, which does not say when that stock went`);
-    if (item && round6(today.closing.quantity) !== onHand) return unknown(`its stock history ends at ${today.closing.quantity}, but ${onHand} are on hand`);
     // placed by date, not by the order the moves were written (a backdated move counts on its own date)
     const dated = today.moves.filter(m => m.date <= input.asOf);
+    if (!item && round6(today.closing.quantity) !== 0) {
+      // #256 review: with a capped item list, an item not in it may simply not be loaded
+      if (input.itemsPartial) return unknown(`it is not in the loaded item list (the list is capped), so its stock on ${input.asOf} is not checked`);
+      // #256 review: before its first move the history (which starts at zero) proves it had none
+      if (dated.length > 0) return unknown(`it was deleted with ${today.closing.quantity} still in its stock history, which does not say when that stock went`);
+      return { itemId, name, quantity: 0, valueCents: 0, unitCostCents: 0 };
+    }
+    if (item && round6(today.closing.quantity) !== onHand) return unknown(`its stock history ends at ${today.closing.quantity}, but ${onHand} are on hand`);
     const quantity = round6(dated.reduce((sum, m) => sum + (Number(m.quantity) || 0), 0));
     const valueCents = Math.round(dated.reduce((sum, m) => sum + (Number(m.valueCents) || 0), 0));
     return {
