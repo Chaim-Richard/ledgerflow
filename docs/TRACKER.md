@@ -1777,6 +1777,7 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 - [x] CON-2 *(AI #9, merged 20 Oct)* US nexus watch (138) on a screen from posted invoices, for the supported states.
 - [x] CON-3 *(AI #9, merged 20 Oct)* Israel special VAT areas (141, Eilat) applied to invoices with a test.
 - [x] CON-4 *(AI #9, merged 20 Oct)* Israel VAT reporting frequency (161) drives the VAT report period and PCN874.
+- [ ] CON-4b (from AI #9, #244) The Israeli VAT return record on the server carries its registration (dealer number), so "filed" can be attributed to one of several registrations; then let the screen clear it per registration. Also check the Eilat Law s.5 subsection numbers against the statute, and the PCN874 bi-monthly header month against the Tax Authority spec.
 - [ ] CON-1 *(→ AI #9 from 20 Oct)* US sales-tax table (capability 137) and item taxability (139) used by invoice lines for the supported states; label stays "not verified" for others.
 - [~] CON-2 *(→ AI #9 from 20 Oct; PR open, ai9/CON-2)* US nexus watch (138) on a screen from posted invoices, for the supported states.
 - [ ] CON-3 *(→ AI #9 from 20 Oct)* Israel special VAT areas (141, Eilat) applied to invoices with a test.
