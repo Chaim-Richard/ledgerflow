@@ -27,6 +27,8 @@ export interface ServerTrialBalanceSnapshot {
 }
 
 export interface TrialBalanceDifference {
+  /** Stable row identity from the real server account id, or the source account name. */
+  accountId: string;
   account: string;
   sourceCents: number;
   ledgerCents: number;
@@ -44,6 +46,12 @@ const addSafe = (a: number, b: number): number => {
 
 function readAmount(raw: string, row: number, field: string): number {
   if (!raw.trim()) return 0;
+  // Unlike generic record imports, migration proof must NEVER round a source
+  // amount to cents: that can make genuinely different books appear equal.
+  // QuickBooks US Trial Balance exports use a dot as decimal separator.
+  if (!/^\\$?(?:\\d+|\\d{1,3}(?:,\\d{3})+)(?:\\.\\d{1,2})?$/.test(raw.trim())) {
+    throw new Error(`Row ${row}: ${field} must be a nonnegative amount with at most two decimals.`);
+  }
   const cents = parseMoneyCents(raw);
   if (cents === null || !safeCents(cents) || cents < 0) {
     throw new Error(`Row ${row}: ${field} must be a nonnegative amount with at most two decimals.`);
@@ -106,16 +114,20 @@ export function compareTrialBalances(source: SourceTrialBalance, server: ServerT
       typeof server.isBalanced !== 'boolean') {
     throw new Error('Server trial balance is unavailable or invalid.');
   }
-  const ledgerByName = new Map<string, { name: string; net: number; repeated: boolean }>();
+  const ledgerByName = new Map<string, { id: string; name: string; net: number; repeated: boolean }>();
+  const seenAccountIds = new Set<string>();
   let rawDebit = 0;
   let rawCredit = 0;
   let ledgerDebitCents = 0;
   let ledgerCreditCents = 0;
   for (const acc of server.accounts) {
-    if (!acc || typeof acc.name !== 'string' || !acc.name.trim() ||
+    if (!acc || typeof acc.id !== 'string' || !acc.id.trim() ||
+        typeof acc.name !== 'string' || !acc.name.trim() ||
         !safeCents(acc.debit) || !safeCents(acc.credit) || acc.debit < 0 || acc.credit < 0) {
       throw new Error('Server returned an invalid account balance.');
     }
+    if (seenAccountIds.has(acc.id)) throw new Error('Server returned a duplicate account id.');
+    seenAccountIds.add(acc.id);
     rawDebit = addSafe(rawDebit, acc.debit);
     rawCredit = addSafe(rawCredit, acc.credit);
     const net = addSafe(acc.debit, -acc.credit);
@@ -124,7 +136,7 @@ export function compareTrialBalances(source: SourceTrialBalance, server: ServerT
     const key = keyOf(acc.name);
     const old = ledgerByName.get(key);
     ledgerByName.set(key, {
-      name: acc.name, net: old ? addSafe(old.net, net) : net, repeated: Boolean(old),
+      id: old?.id ?? acc.id, name: acc.name, net: old ? addSafe(old.net, net) : net, repeated: Boolean(old),
     });
   }
   // Do not silently accept a partial, malformed or internally inconsistent response.
@@ -141,16 +153,16 @@ export function compareTrialBalances(source: SourceTrialBalance, server: ServerT
     const found = ledgerByName.get(key);
     const expected = acc.debitCents - acc.creditCents;
     if (!found) {
-      differences.push({ account: acc.name, sourceCents: expected, ledgerCents: 0, differenceCents: -expected, problem: 'missing-in-ledger' });
+      differences.push({ accountId: `source:${key}`, account: acc.name, sourceCents: expected, ledgerCents: 0, differenceCents: -expected, problem: 'missing-in-ledger' });
     } else if (found.repeated) {
-      differences.push({ account: acc.name, sourceCents: expected, ledgerCents: found.net, differenceCents: found.net - expected, problem: 'ambiguous-name' });
+      differences.push({ accountId: found.id, account: acc.name, sourceCents: expected, ledgerCents: found.net, differenceCents: found.net - expected, problem: 'ambiguous-name' });
     } else if (found.net !== expected) {
-      differences.push({ account: acc.name, sourceCents: expected, ledgerCents: found.net, differenceCents: found.net - expected, problem: 'difference' });
+      differences.push({ accountId: found.id, account: acc.name, sourceCents: expected, ledgerCents: found.net, differenceCents: found.net - expected, problem: 'difference' });
     }
   }
   for (const [key, account] of ledgerByName) {
     if (!sourceNames.has(key) && account.net !== 0) {
-      differences.push({ account: account.name, sourceCents: 0, ledgerCents: account.net, differenceCents: account.net, problem: 'extra-in-ledger' });
+      differences.push({ accountId: account.id, account: account.name, sourceCents: 0, ledgerCents: account.net, differenceCents: account.net, problem: 'extra-in-ledger' });
     }
   }
   // Even an entirely matching trial balance does NOT establish A/R, A/P, cash or tax
