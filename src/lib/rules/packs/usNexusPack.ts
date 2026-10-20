@@ -10,10 +10,11 @@ import type { Rule } from '../rules';
 
 export function usNexusPack(): TaxRulePack {
   const rules: Array<Rule<TaxEffect>> = US_NEXUS_THRESHOLDS.map(row => {
-    const effect: NexusEffect = { kind: 'nexus', thresholdCents: row.salesThresholdCents, transactions: row.transactions, test: row.test };
+    const effect: NexusEffect = { kind: 'nexus', thresholdCents: row.salesThresholdCents, transactions: row.transactions, test: row.test, ...(row.strict ? { strict: true } : {}) };
+    const more = row.strict ? 'more than ' : '';
     return rateRule({
       id: `us-nexus-${slug(row.state)}-${slug(row.validFrom)}`,
-      name: `${row.stateName} economic nexus (${row.salesThresholdCents === null ? 'no sales-tax test' : `$${Math.round(row.salesThresholdCents / 100).toLocaleString('en-US')}`}${row.transactions ? ` or ${row.transactions} transactions` : ''}${row.test === 'both' ? ', both required' : ''})`,
+      name: `${row.stateName} economic nexus (${row.salesThresholdCents === null ? 'no sales-tax test' : `${more}$${Math.round(row.salesThresholdCents / 100).toLocaleString('en-US')}`}${row.transactions ? ` or ${more}${row.transactions} transactions` : ''}${row.test === 'both' ? ', both required' : ''})`,
       scope: 'entity-period',
       when: [where('country', ['US']), where('state', [row.state])],
       effect,

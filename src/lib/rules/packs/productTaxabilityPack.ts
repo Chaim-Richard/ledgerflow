@@ -15,6 +15,16 @@ export function stateSalesRuleIds(state: string, date: string): string[] {
     .map(r => `us-sales-${slug(r.state)}-${slug(r.validFrom)}`);
 }
 
+/**
+ * #258 review: every state sales-tax rule whose validity overlaps a category row's (from its start to its end, or on
+ * with no end), so a later general-rate row is also switched off or replaced, never added to the category's rate.
+ */
+export function overlappingStateSalesRuleIds(state: string, validFrom: string, validTo?: string): string[] {
+  return US_STATE_SALES_TAX
+    .filter(r => r.state === state && (!r.validTo || r.validTo >= validFrom) && (!validTo || r.validFrom <= validTo))
+    .map(r => `us-sales-${slug(r.state)}-${slug(r.validFrom)}`);
+}
+
 export function productTaxabilityPack(): TaxRulePack {
   const unmapped: UnmappedRow[] = [];
   const rules = US_PRODUCT_TAXABILITY.flatMap(row => {
@@ -30,10 +40,10 @@ export function productTaxabilityPack(): TaxRulePack {
       when: [where('country', ['US']), where('state', [row.state]), where('productCategory', [row.category])],
       effect: { kind: 'rate', level: 'state', name: `${row.state} ${row.category}`, rate },
       // an exemption switches the state's own rate rule off for that category (the graph's `exclude`); a reduced rate is
-      // the state part itself (Illinois groceries 1%), so it replaces the state's own rule rather than adding to it
+      // the state part itself (Utah groceries 1.75%), so it replaces the state's own rule rather than adding to it
       // (it used to accumulate: 6.25% + 1% = 7.25%). Local rates still add on top, as for any category.
       combine: row.treatment === 'exempt' ? 'exclude' : 'override',
-      targets: stateSalesRuleIds(row.state, row.validFrom),
+      targets: overlappingStateSalesRuleIds(row.state, row.validFrom, row.validTo),
       validFrom: row.validFrom,
       ...(row.validTo ? { validTo: row.validTo } : {}),
       source: { authority: `${row.state} Department of Revenue`, url: row.source, retrieved: row.checked },

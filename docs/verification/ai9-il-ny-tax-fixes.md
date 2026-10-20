@@ -33,3 +33,27 @@ All three tests fail without the change.
 **Noted, not changed:** the taxability table lists Virginia in both the exempt and the reduced grocery lists. The
 exempt list wins, so Virginia groceries are exempt here. Which one the table should say is a source check for the
 table's owner.
+
+## #258 review: rates checked against the states' notices (20 Oct)
+
+The override change made each reduced row the state rate itself, so the rows had to be right. I checked them against
+each state's notice (via search; the .gov sites cannot be fetched from this environment).
+
+| State | Row before | Row now | Basis |
+|---|---|---|---|
+| IL | reduced 1% | **exempt** (state) | State 1% grocery tax ended 1 Jan 2026 (Public Act 103-0781). A municipality or county may levy its own 1% by ordinance, and RTA/Metro-East rates remain (in the note). |
+| AR | reduced 1.25% (should have been 0.125%) | **exempt** (state) | State 0.125% ended 1 Jan 2026 (Act 1008 of 2025). City and county grocery taxes remain (note). |
+| AL | 3% | **2%** | Act 2025-305, from 1 Sep 2025. |
+| UT | 3% | **1.75%** | 3% is the combined rate with the 1% local and 0.25% county options (note). |
+| VA | listed exempt *and* reduced 2.5% | **exempt** (state), out of the reduced list | The state part ended 1 Jan 2023; the 1% local tax applies everywhere (note). |
+| MO, MS, SD, TN | 1.225%, 5%, 4.2%, 4% | unchanged | |
+
+**Also from the review:**
+- A category row now targets every state-rate row its dates overlap (`overlappingStateSalesRuleIds`), not only the one in
+  force on its first day.
+- New York's "more than" is carried in the rule pack's `NexusEffect` (`strict`) and in the rule's name.
+- **Existing test changed** (the review requires it): `us-nexus-and-taxability.test.ts` expected Illinois groceries
+  reduced 1% and Alabama 3%. It now expects Illinois exempt and Alabama 2%.
+
+The local grocery taxes (Illinois ordinances, Arkansas, Virginia 1%, Utah local/county) are not modelled. These states
+are "not verified" on the invoice screen, and their rows' notes name the local tax.
