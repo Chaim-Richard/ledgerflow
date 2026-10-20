@@ -9,7 +9,7 @@ does not run payroll, and it claims no provider integration beyond reading a CSV
 |---|---|
 | Reading the CSV, one entry per pay date | `src/lib/payrollProviderImport.ts` |
 | Posting (server, one database transaction) | `src/server/services/payrollImportService.ts` |
-| Route | `src/server/routes/payrollImportRoutes.ts`: `POST /api/v1/workspaces/:id/payroll-imports` (owners, accountants) |
+| Route | `src/server/routes/payrollImportRoutes.ts`: `POST /api/v1/workspaces/:id/pay-runs/imports` (owners, accountants) |
 | Screen | `src/components/hr/PayrollImportDialog.tsx`; Payroll → **Import from payroll provider** |
 
 **The entry for a pay date:**

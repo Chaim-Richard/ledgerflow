@@ -17,7 +17,7 @@ const CSV = [
 test('a provider\'s payroll file is previewed as one balanced entry per pay date and sent with the chosen accounts', async ({ page }) => {
   const posts: Array<Record<string, unknown>> = [];
   let refuse = false;
-  await page.route('**/api/v1/workspaces/*/payroll-imports', async route => {
+  await page.route('**/api/v1/workspaces/*/pay-runs/imports', async route => {
     posts.push(JSON.parse(route.request().postData() || '{}'));
     if (refuse) await route.fulfill({ status: 409, json: { status: 'error', message: 'The payroll of 2026-05-15 from this file ($15,000.00 gross, 5 people) is already in the books. Nothing from this file was posted.', problems: [] } });
     else await route.fulfill({ status: 200, json: { status: 'success', entries: [{ transactionId: 'payroll-import-x', payDate: '2026-05-15' }] } });
@@ -86,7 +86,7 @@ test('a provider\'s payroll file is previewed as one balanced entry per pay date
 
 test('a file with a column outside the provider\'s set is stopped before anything is sent', async ({ page }) => {
   let sent = 0;
-  await page.route('**/api/v1/workspaces/*/payroll-imports', async route => { sent++; await route.fulfill({ status: 200, json: {} }); });
+  await page.route('**/api/v1/workspaces/*/pay-runs/imports', async route => { sent++; await route.fulfill({ status: 200, json: {} }); });
   await page.route('**/rest/v1/**', route => route.fulfill({ status: 200, json: [] }));
   await page.route('**/payroll-import-fixture', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><html lang="en"><head><title>Payroll import</title></head><body><div id="root"></div></body></html>' }));
   await page.addInitScript(() => { localStorage.setItem('isGuest', 'true'); localStorage.setItem('has_seen_onboarding', 'true'); localStorage.setItem('ledgerflow-cookie-consent', 'accepted'); });

@@ -119,9 +119,10 @@ export function payrollDate(value: string): string | null {
   const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   const us = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   const [y, m, d] = iso ? [Number(iso[1]), Number(iso[2]), Number(iso[3])] : us ? [Number(us[3]), Number(us[1]), Number(us[2])] : [0, 0, 0];
-  if (!y) return null;
-  const date = new Date(Date.UTC(y, m - 1, d));
-  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return null;
+  if (!y || m < 1 || m > 12 || d < 1) return null;
+  const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+  if (d > days) return null;
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 

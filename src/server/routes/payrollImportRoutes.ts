@@ -4,8 +4,8 @@ import { getDb } from '../db/firestore';
 import { importPayroll, PayrollImportError } from '../services/payrollImportService';
 
 /**
- * PAY-1: a payroll provider's CSV, mounted at /api/v1/workspaces/:workspaceId/payroll-imports (workspaceRoutes.ts,
- * owners and accountants). POST reads the file on the server and posts one entry per pay date
+ * PAY-1: a payroll provider's CSV, mounted at /api/v1/workspaces/:workspaceId/pay-runs/imports (payRunRoutes.ts, owners
+ * and accountants). POST reads the file on the server and posts one entry per pay date
  * (payrollImportService.ts); a refusal lists every problem found, and nothing is posted.
  */
 export const payrollImportRouter = express.Router({ mergeParams: true });

@@ -122,7 +122,7 @@ describe('PAY-1 on the database', { skip: !url && 'LF_TEST_DATABASE_URL not set'
     return { status: res.status, body: await res.json().catch(() => ({})) as Record<string, any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
   };
   const importFile = (csv: string, extra: Record<string, unknown> = {}, uid = OWNER) =>
-    send(uid, 'POST', `/api/v1/workspaces/${ws}/payroll-imports`, { provider: 'gusto', csv, fileName: 'gusto-may.csv', accounts, labelDimensionId: 'property', ...extra });
+    send(uid, 'POST', `/api/v1/workspaces/${ws}/pay-runs/imports`, { provider: 'gusto', csv, fileName: 'gusto-may.csv', accounts, labelDimensionId: 'property', ...extra });
   const entries = async () => (await db.collection('transactions').where('workspaceId', '==', ws).get()).docs.map(d => ({ ...d.data(), id: d.id }) as { id: string; date: string; status?: string; reversalEventId?: string; metadata?: Record<string, unknown>; lines: Array<{ accountId: string; amountCents: number; dimensions?: Record<string, string> }> });
   const balance = async (code: string, endDate: string) => {
     const gl = (await send(OWNER, 'GET', `/api/v1/reports/general-ledger?startDate=2026-01-01&endDate=${endDate}&accountId=${acct[code]}&workspaceId=${ws}`)).body;

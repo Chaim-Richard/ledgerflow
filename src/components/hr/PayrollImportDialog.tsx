@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDialog } from '../../hooks/useDialog';
@@ -38,6 +38,8 @@ export default function PayrollImportDialog({ workspaceId, accounts, dimensions,
   const [labelDimensionId, setLabelDimensionId] = useState('');
   const [saving, setSaving] = useState(false);
   const [serverProblems, setServerProblems] = useState<string[]>([]);
+  // a new file or a second click makes an earlier answer stale: only the latest request's answer is shown
+  const requestSeq = useRef(0);
 
   const usable = accounts.filter(a => !a.isArchived);
   const choicesFor = (side: 'expense' | 'liability', role: PayrollAccountRole) => usable.filter(a => {
@@ -54,6 +56,7 @@ export default function PayrollImportDialog({ workspaceId, accounts, dimensions,
   const problems = [...read.problems, ...(read.problems.length ? [] : preview.problems)];
 
   const loadFile = async (file: File | undefined) => {
+    requestSeq.current++;
     setServerProblems([]);
     if (!file) return;
     setFileName(file.name);
@@ -63,15 +66,17 @@ export default function PayrollImportDialog({ workspaceId, accounts, dimensions,
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (problems.length || !preview.payDates.length) return;
+    const mine = ++requestSeq.current;
     setSaving(true);
     setServerProblems([]);
     try {
-      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}/payroll-imports`, {
+      const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}/pay-runs/imports`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` },
         body: JSON.stringify({ provider, csv, fileName, accounts: chosen, ...(labelDimensionId ? { labelDimensionId } : {}) }),
       });
       const data = await res.json().catch(() => ({}));
+      if (mine !== requestSeq.current) return;
       if (!res.ok) {
         setServerProblems([String(data.message || 'The payroll could not be imported'), ...(Array.isArray(data.problems) ? data.problems.map(String) : [])]);
         return;
@@ -80,9 +85,9 @@ export default function PayrollImportDialog({ workspaceId, accounts, dimensions,
       toast.success(`Payroll recorded: ${posted.length} ${posted.length === 1 ? 'entry' : 'entries'} (${posted.map(p => p.payDate).join(', ')})`);
       onClose();
     } catch (err) {
-      setServerProblems([(err as Error).message]);
+      if (mine === requestSeq.current) setServerProblems([(err as Error).message]);
     } finally {
-      setSaving(false);
+      if (mine === requestSeq.current) setSaving(false);
     }
   };
 
@@ -149,6 +154,7 @@ export default function PayrollImportDialog({ workspaceId, accounts, dimensions,
                 <span className="tabular-nums">Cost {formatCurrency(p.totals.costCents, currency)}</span>
               </div>
               <table className="w-full text-xs">
+                <caption className="sr-only">The entry for the pay date {p.payDate}</caption>
                 <thead><tr className="text-neutral-600"><th scope="col" className="text-left px-3 py-1">Account</th><th scope="col" className="text-right px-3 py-1">Debit</th><th scope="col" className="text-right px-3 py-1">Credit</th></tr></thead>
                 <tbody>
                   {PAYROLL_ACCOUNT_ROLES.map(r => {
