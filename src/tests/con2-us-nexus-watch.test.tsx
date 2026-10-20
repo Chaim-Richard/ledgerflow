@@ -156,3 +156,31 @@ describe('CON-2 review on the screen', () => {
     assert.match(screen.getByRole('alert').textContent || '', /capped or failed, so the figures below are provisional/);
   });
 });
+
+// ---- #255 review ----
+const twoEntities: TaxProfiles = {
+  books: { name: 'Parent Inc', place: { country: 'US', state: 'TX' } },
+  labels: { 'world:sub': { name: 'Sub LLC', place: { country: 'US', state: 'TX' } } },
+};
+
+test('#255 review: an invoice\'s entity comes from its lines; lines naming two entities are left out, not pooled', () => {
+  const docs = [
+    // Sub LLC's $200,000 sale, labelled on its two lines (as saved invoices are)
+    inv('sub', 'tx', '2026-05-01', 20_000_000, { items: [{ dimensions: { world: 'sub' } }, { dimensions: { world: 'sub', project: 'p1' } }] }),
+    // the parent's $100,000 sale: its lines carry no entity label
+    inv('par', 'tx', '2026-05-02', 10_000_000, { items: [{ dimensions: { project: 'p2' } }] }),
+    // $50,000 with one line for each entity: no entity can be assumed
+    inv('mix', 'tx', '2026-05-03', 5_000_000, { items: [{ dimensions: { world: 'sub' } }, { dimensions: {} }] }),
+  ];
+  const w = usNexusWatch({ asOf: '2026-10-20', invoices: docs, customers, profiles: twoEntities, order: ['world'] });
+  assert.deepEqual(w.states.map(s => [s.entityName, s.thisYear!.salesCents]).sort(), [['Parent Inc', 10_000_000], ['Sub LLC', 20_000_000]]);
+  assert.equal(w.mixedEntityDocuments, 1);
+});
+
+test('#255 review: a credit note follows its invoice\'s entity and state, not the customer\'s place now', () => {
+  // Sub LLC sold $200,000 shipped to Oklahoma; a $30,000 credit on it lowers Sub LLC's Oklahoma sales to $170,000
+  const sale = inv('sub', 'tx', '2026-05-01', 20_000_000, { items: [{ dimensions: { world: 'sub' } }], shippingAddress: { country: 'US', state: 'OK' } });
+  const credit = { ...inv('cn', 'tx', '2026-06-01', 3_000_000), invoiceId: 'sub' };
+  const w = usNexusWatch({ asOf: '2026-10-20', invoices: [sale], creditNotes: [credit], customers, profiles: twoEntities, order: ['world'] });
+  assert.deepEqual(w.states.map(s => [s.entityName, s.state, s.thisYear!.salesCents, s.thisYear!.orders]), [['Sub LLC', 'OK', 17_000_000, 1]]);
+});
