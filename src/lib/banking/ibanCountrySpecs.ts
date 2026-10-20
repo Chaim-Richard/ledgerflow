@@ -23,7 +23,7 @@ export interface IbanCountrySpec {
 
 const CHECKED = '2026-10-19';
 const SWIFT = 'https://www.swift.com/about-us/legal/compliance-0/iban-registry';
-const ISO13616 = 'https://www.iso.org/standard/81090.html';
+// IBAN structure and check digits: ISO 13616 (https://www.iso.org/standard/81090.html)
 
 export const IBAN_COUNTRY_SPECS: IbanCountrySpec[] = [
   { country: 'AL', countryName: 'Albania', length: 28, source: { authority: 'SWIFT IBAN Registry', url: SWIFT, retrieved: CHECKED } },

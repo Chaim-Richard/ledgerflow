@@ -50,8 +50,9 @@ export interface AuthenticatedRequest extends express.Request {
 }
 
 // Temporary upload folder (the only writable place on Vercel); files are deleted after parsing.
+export const UPLOAD_DIR = path.join(os.tmpdir(), "ledgerflow-uploads");
 export const upload = multer({
-  dest: path.join(os.tmpdir(), "ledgerflow-uploads"),
+  dest: UPLOAD_DIR,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10 MB limit
     files: 1
@@ -409,4 +410,15 @@ export interface ServerContext {
   apiLimiter: express.RequestHandler;
   matchLimiter: express.RequestHandler;
   limiter: express.RequestHandler;
+}
+
+/**
+ * The stored path of a file multer just saved, checked to lie inside the upload folder (code-scanning
+ * alerts 11–19: the path comes from the request object, so prove it is multer's own temp file).
+ */
+export function uploadedFilePath(file: { path: string }): string {
+  const root = path.resolve(UPLOAD_DIR) + path.sep;
+  const resolved = path.resolve(file.path);
+  if (!resolved.startsWith(root)) throw new Error("Upload is outside the upload folder");
+  return resolved;
 }
