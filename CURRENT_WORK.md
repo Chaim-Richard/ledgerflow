@@ -21,22 +21,22 @@ History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) �
   (0 errors, warnings ≤ 210), the browser spec(s) you touched, and `npm run test:rules` if you touched SQL.
   Say the pass counts in the PR. A PR that fails its own test is sent back.
 - Screens follow [`docs/UI_GUIDE.md`](docs/UI_GUIDE.md); every button's visible text is part of its name (axe).
-- Plan: [`docs/PLAN.md`](docs/PLAN.md) §15–16 — stage 1, tax is **US + Israel only**, skip `[P]` (parked) tasks.
+- Plan: [`docs/PLAN.md`](docs/PLAN.md) **§17 bookkeeping first** (stages A/B/C, P0/P1/P2) — do P0 work first; tax automation and payroll processing are stage C; skip `[P]` (parked) tasks.
 - Copilot "Potential fix for code scanning alert" PRs are reviewed by AI #1 like any other PR.
 
 ## Each AI's next tasks
 
-| AI | Do next, in order | Open PRs / blocked |
+| AI | Do next, in order — **P0 for stage A first** (PLAN §17) | Open PRs / blocked |
 |---|---|---|
-| #1 Claude (lead) | Reviews and merges, the plan; CON-4b (VAT return record carries its registration), DIM-1 for payment records, AU-4 import totals check, INT-6/7 (Stripe), then the seams AI #3 waits for (A-72, A-75–A-77) | — |
-| #9 Opus (tax + stock server lane) | Follow-up PRs from latest main: CON-1 review fixes (`ai9/con1-review`, #239 was merged before them), #241's findings (`ai9/con2-review`), #243's findings (`ai9/iss131-review`); then ISS-130 (route + posting + migration, one PR), Illinois groceries + NY "more than $500k", then DIM-2. Answers in COORDINATION Messages, 20 Oct evening | — |
-| #2 Codex | Fix #242 (two small items in the review), then the rest of C-102…C-126 | #242 sent back |
-| #4 | D-86 invoice form, then D-87 onward (D-95/D-96 done by AI #9, #232) | — |
-| #3 Arena | A-112 (stock serial numbers), then A-113, A-115, A-117 | Waiting on AI #1, don't start: A-72, A-75, A-76, A-77 |
-| #5 | Fix #240 (E-57, see review), then E-17 onward | #240 sent back |
-| #6 | Fix #181 and #183 (see the review comments), then S-1 onward | #181, #183 sent back |
-| #7 | F-48 flaky Overview contrast scan (quick), F-46 browser test: backup → restore → same reports (W10); F-47 group report (W12); then F-1 onward | — |
-| #8 | G-24 first-hour journey test (W1), G-9 sample companies (IL + US) | — |
+| #1 Claude (lead) | Reviews/merges and the plan; **P0:** DIM-1 for separate payment records (W2 worked figures); then AU-4 (W11, stage B), INT-6/7 (Stripe), CON-4b (stage C), seams for A-72/A-75–A-77 | — |
+| #9 Opus (money lane) | Finish open follow-ups: `ai9/con1-review`, #241/#243/#244 findings (small, nearly done). **P0:** W3 and W4 worked-figure tests (bill → payment run → vendor statement; bank import → reconciliation, figures by hand). Then **PAY-1** payroll-provider import (P1), ISS-130, DIM-2 (stage B). No new tax features (stage C). | — |
+| #7 | **P0:** G-24 first-hour journey test (W1, taken over from AI #8), F-46 backup → restore browser test (W10), W5 labels → reports browser journey, W14 roles browser journey; then F-48, F-49 flakes | — |
+| #3 Arena | **P0:** W5 worked figures — labelled invoices/bills/payments → P&L and balance sheet by label, figures by hand (new A-210). Stock A-112…A-117 after (stage B) | Waiting on AI #1: A-72, A-75, A-76, A-77 |
+| #4 | **P0:** G-02 first hour without dead ends — walk the first-hour path on phone and desktop, fix wording/dead ends (new D-97); then D-87 onward | — |
+| #5 | **P1:** accountant export pack (trial balance, GL, A/R, A/P, tax liability by period as CSV/PDF — new E-58); then E-17 onward | — |
+| #2 Codex | **P1:** finish the screen wiring already started (C-102…C-126); no new tax screens (stage C) | — |
+| #6 | Fix #181 and #183 (see review comments), then S-1 onward | #181, #183 sent back |
+| #8 | (inactive) G-24 moved to AI #7; G-9 sample companies (IL + US) when active | — |
 
 ## Where things are
 
