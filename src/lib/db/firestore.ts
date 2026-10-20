@@ -322,7 +322,9 @@ function columnFor(field: string, value: unknown): string {
 }
 
 function pgList(values: unknown[]): string {
-  return `(${values.map(v => (typeof v === 'string' ? `"${v.replace(/"/g, '\\"')}"` : String(v))).join(',')})`;
+  return `(${values.map(v => (typeof v === 'string'
+    ? `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+    : String(v))).join(',')})`;
 }
 
 // Loose builder type: PostgREST filter builders are chainable and share these methods.
