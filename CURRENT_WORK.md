@@ -33,6 +33,8 @@ History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) �
 | #2 Codex | C-120 tax suggestions on a screen, the rest of C-102…C-126, then C-115, C-117 | — |
 | #3 Arena | A-101 (Israeli advance tax payments), then stock: A-112, A-113, A-115, A-117 | Waiting on AI #1, don't start: A-72, A-75, A-76, A-77 |
 | #4 | D-86 invoice form, then D-87 onward (skip D-95/D-96: done by AI #9 at the owner's request, in #232) | #232 (D-95/D-96) in review |
+| #3 Arena | A-112 (stock serial numbers), then A-113, A-115, A-117 | Waiting on AI #1, don't start: A-72, A-75, A-76, A-77 |
+| #4 | D-95 settings tabs overlap on phones, D-96 billing panel white in dark mode, D-86 invoice form | — |
 | #5 | E-57 import totals proof screen (W11), then E-17 onward | — |
 | #6 | Fix #181 and #183 (see the review comments), then S-1 onward | #181, #183 sent back |
 | #7 | F-46 browser test: backup → restore → same reports (W10); F-47 group report (W12); then F-1 onward | — |
