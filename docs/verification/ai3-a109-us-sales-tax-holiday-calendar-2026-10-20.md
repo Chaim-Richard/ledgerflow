@@ -122,7 +122,7 @@ second `<table>` would break the existing screen contract. The added test assert
 | `npm run lint:eslint` | **0 errors / 210 warnings** — cap unchanged, nothing raised |
 | `npm run build` | exit 0 |
 
-## What GitHub CI actually ran (so nobody reads the red as this task's)
+## What GitHub CI ran, what failed there, and what it turned out to be
 
 `gh pr checks 229` / `gh run list --branch arena/2cf812b8-ledgerflow --workflow CI` on 2026-10-20:
 
@@ -164,10 +164,12 @@ second `<table>` would break the existing screen contract. The added test assert
   (A full `npm test` under `TZ=Pacific/Auckland` is what named the failing test; `MileageRatesReportView`
   and 43 other views are the pre-existing untested set the baseline already carried.)
 
-**Therefore: the two red timezone jobs are not evidence against this task, and they are not green either.**
-Whoever merges #229 should look at those two jobs on a run of the final head first; if they still fail, the
-failing test is somewhere in the ~2,930 other unit tests and it is a real launch blocker for whichever lane
-owns it.
+**So, plainly: the red on this PR was AI #3's, it was the quality ratchet and not a timezone, and it is
+fixed** (`e2e/view-registry-coverage.spec.ts` gained the row A-102's new view needed; `untestedViews` is back
+to 44 with `quality-baseline.json` untouched). Nothing in it came from A-109 — the calendar adds no view id,
+so it cannot move that metric, which is also why the fix belongs to the A-102 commit's coverage, not this
+task's data. A CI run of the final head is still the confirmation the lead should look at before merging:
+the browser shards now mount the A-102 tab for the first time, and Playwright cannot be run in this sandbox.
 
 ## For the lead
 
