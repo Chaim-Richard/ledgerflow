@@ -22,7 +22,7 @@ import {
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag, ArrowLeftRight
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText, Split, BadgePercent, UserCheck, ListChecks } from 'lucide-react';
+, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText, Split, BadgePercent, UserCheck, ListChecks, MapPin } from 'lucide-react';
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
@@ -445,6 +445,7 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'IlSelfEmploymentNiReportView': lazy(() => import('../components/reporting/IlSelfEmploymentNiReportView')),
   'IsraelAdvanceTaxReportView': lazy(() => import('../components/reporting/IsraelAdvanceTaxReportView')),
   'BankingValidationReportView': lazy(() => import('../components/reporting/BankingValidationReportView')),
+  'UsNexusWatchReportView': lazy(() => import('../components/reporting/UsNexusWatchReportView')),
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = withScreenHelp([
@@ -553,6 +554,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'israel-self-employment-ni', label: { en: 'Israel: Self-Employed National Insurance', he: 'ישראל: ביטוח לאומי לעצמאים' }, componentName: 'IlSelfEmploymentNiReportView', icon: Receipt },
   { id: 'israel-advance-tax', label: { en: 'Israel: Advance Tax Calendar (Mikdamot)', he: 'ישראל: מקדמות מס הכנסה' }, componentName: 'IsraelAdvanceTaxReportView', icon: Calendar },
   { id: 'banking-validation', label: { en: 'Banking Data Validation', he: 'אימות נתוני בנק' }, componentName: 'BankingValidationReportView', icon: ShieldCheck },
+  { id: 'us-nexus-watch', label: { en: 'US Nexus Watch', he: 'מעקב נקסוס בארה"ב' }, componentName: 'UsNexusWatchReportView', icon: MapPin },
 ], 'reports');
 
 export const SETTINGS_TABS_REGISTRY = withScreenHelp([
