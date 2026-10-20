@@ -87,6 +87,19 @@ describe('Workspace restore', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, 
     assert.equal(data?.members, undefined);
   });
 
+  test('AUD-02: a document whose fields have the wrong type refuses the backup; a valid one keeps fields no schema knows', async () => {
+    await assert.rejects(restoreWorkspaceBackup(db, ws, {
+      invoices: [{ id: `${ws}_bad`, status: 'sent', amountCents: '100' }],
+    }), (err: unknown) => err instanceof RestoreError && err.status === 400 && /invoices\/.*_bad is not a valid invoice \(amountCents/.test(err.message));
+    assert.equal((await db.collection('invoices').doc(`${ws}_bad`).get()).exists, false);
+    await restoreWorkspaceBackup(db, ws, {
+      invoices: [{ id: `${ws}_good`, status: 'unpaid-legacy', amountCents: 100, someLaterField: 'kept' }],
+    });
+    const good = (await db.collection('invoices').doc(`${ws}_good`).get()).data();
+    assert.equal(good?.someLaterField, 'kept');
+    assert.equal(good?.status, 'unpaid-legacy');
+  });
+
   test('rejects malformed backups', async () => {
     for (const bad of [null, 'text', { workspace: { id: other } }, { schemaVersion: 2 },
       { customers: 'not-a-list' }, { customers: [42] }, { customers: [{ id: 'a/b' }] }]) {

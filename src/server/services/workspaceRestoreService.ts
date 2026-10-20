@@ -1,5 +1,6 @@
 import type { DocumentData, Firestore } from '../db/firestore';
 import { checkLedgerEntry } from './ledgerDoor';
+import { InvoiceSchema, BillSchema, ProjectSchema, CreditNoteSchema, VendorCreditSchema } from '../../schemas';
 
 /**
  * Restores a workspace from a backup file (the export's JSON), all or nothing.
@@ -140,7 +141,23 @@ export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string,
       }
     }
 
-    // 2. Refuse ids that belong to another workspace.
+    // AUD-02: the documents with a schema (the same ones a normal save checks): every field they carry must
+  // have the type a save would accept — an amount as text or a date as a number refuses the whole backup.
+  // Fields that are missing, and the status label (older versions wrote others), are not judged, and the
+  // record is restored as it was: the check never strips fields an older or newer version wrote.
+  const DOCUMENT_SCHEMAS = { invoices: InvoiceSchema, bills: BillSchema, projects: ProjectSchema, creditNotes: CreditNoteSchema, vendorCredits: VendorCreditSchema } as const;
+  for (const r of records.values()) {
+    const schema = DOCUMENT_SCHEMAS[r.coll as keyof typeof DOCUMENT_SCHEMAS];
+    if (!schema) continue;
+    const { status: _status, ...fields } = r.data;
+    const parsed = schema.partial().safeParse(fields);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new RestoreError(400, `Backup record ${r.coll}/${r.id} is not a valid ${r.coll === 'bills' ? 'bill' : r.coll.replace(/s$/, '')} (${issue?.path.join('.') || 'record'}: ${issue?.message || 'invalid'}); nothing was restored`);
+    }
+  }
+
+  // 2. Refuse ids that belong to another workspace.
     const byCollection = new Map<string, string[]>();
     for (const r of records.values()) byCollection.set(r.coll, [...(byCollection.get(r.coll) || []), r.id]);
     for (const [coll, ids] of byCollection) {
