@@ -62,3 +62,33 @@ test('E-57: refuses malformed and ambiguous QuickBooks exports', () => {
   assert.throws(() => parseQuickBooksTrialBalance('Account,Debit,Credit\nCash,5.001,'), /at most two decimals/);
   assert.throws(() => parseQuickBooksTrialBalance('Account,Debit,Credit\nCash,-5.00,'), /nonnegative/);
 });
+
+test('E-57: strict source amounts never round third-decimal values', () => {
+  assert.throws(() => parseQuickBooksTrialBalance('Account,Debit,Credit\nCash,5.001,'), /at most two decimals/);
+  assert.throws(() => parseQuickBooksTrialBalance('Account,Debit,Credit\nCash,1.234,'), /at most two decimals/);
+  assert.throws(() => parseQuickBooksTrialBalance('Account,Debit,Credit\nCash,"1,23",'), /at most two decimals/);
+  const exact = parseQuickBooksTrialBalance('Account,Debit,Credit\nCash,"$1,234.50",\nRevenue,,"$1,234.50"');
+  assert.equal(exact.totalDebitCents, 123450);
+  assert.equal(exact.totalCreditCents, 123450);
+});
+
+test('E-57: account differences carry stable server IDs; zero-balance extra accounts still need review', () => {
+  const result = compareTrialBalances(parseQuickBooksTrialBalance(fixture), {
+    accounts: [...server.accounts, { id: 'extra-id', name: 'Unused account', debit: 0, credit: 0 }],
+    totalDebit: 10000, totalCredit: 10000, isBalanced: true,
+  });
+  assert.equal(result.accountsMatch, false);
+  assert.equal(result.differences[0].accountId, 'extra-id');
+  assert.equal(result.differences[0].problem, 'extra-in-ledger');
+});
+
+test('E-57: duplicate server account IDs are refused, not rendered as unstable rows', () => {
+  const source = parseQuickBooksTrialBalance(fixture);
+  assert.throws(() => compareTrialBalances(source, {
+    accounts: [
+      { id: 'a', name: 'Cash', debit: 10000, credit: 0 },
+      { id: 'a', name: 'Revenue', debit: 0, credit: 10000 },
+    ],
+    totalDebit: 10000, totalCredit: 10000, isBalanced: true,
+  }), /duplicate account id/);
+});
