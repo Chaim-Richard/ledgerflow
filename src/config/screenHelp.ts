@@ -272,6 +272,16 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "The self-employed National Insurance and health-insurance rates by income band and date, from the Authority's own pages, with the monthly advance and the section-345 settlement side by side because they are different figures. Type an income to see both. This is a dated reference and calculation status only: it is not the Authority's assessment (which is made on the annual figure), it does not cover a person who is also an employee, a minor or of retirement age, and nothing here posts, files or pays.",
     "israel-advance-tax":
       "Statutory Israeli advance income-tax payment (מקדמות מס הכנסה) calendar by year and frequency (monthly or bi-monthly), under Section 175 of the Income Tax Ordinance. Shows statutory due dates (15th of the month following the period) and automatic postponements when deadlines fall on Friday or Shabbat. Pulls the entity's declared advance rate from Settings → Tax profiles and calculates estimated payments on turnover. Calculation and planning status only: rates are determined by the Tax Authority, and nothing here posts, files, assesses or pays.",
+    "tax-code-suggestions":
+      "Tax code suggestions learned from your saved invoices and bills, with the share of past documents behind each suggestion and a flag when a code looks unusual. Read-only and calculation status only: it never applies a code for you. Choosing a code stays in the invoice or bill form, and a capped or incomplete history makes the screen provisional.",
+    "entity-filings":
+      "The filings each entity in the workspace requires this year, worked out from its recorded facts, each with its form, frequency, due date and official source. Blocked and undecided rows say exactly which fact is unverified or in conflict. Planning status only: nothing here files, posts or pays.",
+    "israeli-document-types":
+      "The four Israeli document kinds — tax invoice, receipt, tax invoice/receipt and credit invoice — with their Hebrew and English titles and when each may be issued. A draft or refused lifecycle says plainly that nothing was issued. Titles and guidance only: numbering, allocation numbers and filing stay in the document workflow.",
+    "us-1099-preview":
+      "A conservative preview of US 1099-NEC and 1099-MISC totals from posted payments to vendors marked as 1099 vendors, grouped per vendor before the IRS threshold is applied. Taxpayer IDs show only their last four digits, and the preview is deliberately not filing-ready. Review only: it is not an IRS form or an IRIS upload.",
+    "us-filing-calendar":
+      "US state sales-tax filing frequencies and due days for all fifty states and DC, each with its revenue-department source and the date it was checked. Enter a period end to preview a due date, with weekend due dates moved to Monday. Planning status only: state holidays are not moved and nothing here files or pays.",
     "banking-validation":
       "Check a US routing number (9 digits, checksum) and an IBAN (country length and mod-97). This is a data-quality check only — calculation status — not a bank confirmation, and it never posts or moves money. IBAN lengths are from the SWIFT IBAN Registry (ISO 13616); the table and its CSV list 86 countries. A country not listed does not use IBAN or is not in this table.",
   },
