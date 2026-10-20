@@ -119,6 +119,7 @@ export default function IsraelMonthJourneyReportView() {
       month: period.startMonth,
       endMonth: period.endMonth,
       ...(own ? { registration: own.registration, profiles: workspace?.taxProfiles, order: [workspace?.dimensions?.find(d => d.isWorld)?.id || 'world'] } : {}),
+      ...(!own && returns.length ? { dealerUnknown: true } : {}),
       generatedOn: getLocalDateISO(),
       currency,
       dealerId,
