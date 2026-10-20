@@ -115,7 +115,7 @@ export interface ItemDetails {
   itemId: string;
   itemName: string;
   opening: { quantity: number; valueCents: number };
-  moves: Array<Pick<StockMove, 'date' | 'kind' | 'quantity' | 'quantityAfter' | 'valueCents' | 'unitCostCents' | 'transactionId' | 'documentType' | 'documentId' | 'locationId'> & { key: string }>;
+  moves: Array<Pick<StockMove, 'date' | 'kind' | 'quantity' | 'quantityAfter' | 'valueCents' | 'unitCostCents' | 'transactionId' | 'documentType' | 'documentId' | 'locationId'> & { key: string; /** the day the move was written (its createdAt), when kept: the history's real start */ writtenOn?: string }>;
   received: number;
   issued: number;
   closing: { quantity: number; valueCents: number };
@@ -147,6 +147,7 @@ export function itemDetails(moves: StockMove[], startDate: string, endDate: stri
         key: m.id || `${m.seq}-${i}`, date: String(m.date).slice(0, 10), kind: m.kind, quantity: m.quantity, quantityAfter: m.quantityAfter, valueCents: m.valueCents, unitCostCents: m.unitCostCents,
         ...(m.transactionId ? { transactionId: m.transactionId } : {}), ...(m.documentType ? { documentType: m.documentType } : {}), ...(m.documentId ? { documentId: m.documentId } : {}),
         ...(m.locationId ? { locationId: m.locationId } : {}),
+        ...(/^\d{4}-\d{2}-\d{2}/.test(String(m.createdAt || '')) ? { writtenOn: String(m.createdAt).slice(0, 10) } : {}),
       })),
       received: round6(within.filter(m => m.quantity > 0).reduce((s, m) => s + m.quantity, 0)),
       issued: round6(-within.filter(m => m.quantity < 0).reduce((s, m) => s + m.quantity, 0)) || 0,

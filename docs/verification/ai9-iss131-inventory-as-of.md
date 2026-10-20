@@ -54,3 +54,11 @@ Release gate: W13. The valuation on a past date is now truthful; W13 stays Partl
    the date, or it was created after the stock history began. Otherwise it is unknown.
 6. **A deleted item** whose history still holds stock is unknown: the deletion left no move saying when the stock
    went. The merged test that read it as known is updated to match.
+
+**#256 review (3 × P2).** Each has a test that fails without the fix.
+1. **History start.** The start is the first day a move was *written* (`writtenOn`, from the move's `createdAt`, now in
+   `itemDetails`), not the earliest move date. A move backdated to 1 Jun no longer makes an item created on 15 Jul
+   "proven zero".
+2. **Capped item list.** An item missing from a capped list is "not in the loaded item list", never "deleted".
+3. **Deleted item before its first move.** The history starts at zero, so on 31 Jul a deleted item whose first move
+   is 1 Aug is known to be 0. On 30 Sep it is still unknown.
