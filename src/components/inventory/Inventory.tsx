@@ -101,9 +101,10 @@ export default function Inventory() {
   const canChangeStock = role !== 'viewer';
   // ISS-130: revaluing changes book value, so owners and accountants (the server checks the same)
   const canRevalue = role === 'owner' || role === 'accountant';
-  const [revalueItem, setRevalueItem] = useState<InventoryItem | null>(null);
-  // #259 review: a revaluation draft belongs to the workspace it was opened in
-  useEffect(() => { setRevalueItem(null); }, [workspaceId]);
+  // #259 review: a revaluation draft belongs to the workspace it was opened in; after a switch it is not shown
+  const [revalueDraft, setRevalueDraft] = useState<{ item: InventoryItem; workspaceId: string | null } | null>(null);
+  const revalueItem = revalueDraft && revalueDraft.workspaceId === workspaceId ? revalueDraft.item : null;
+  const setRevalueItem = (item: InventoryItem | null) => setRevalueDraft(item ? { item, workspaceId } : null);
   const { setSafeTimeout } = useTimeout();
 
   useEffect(() => {
