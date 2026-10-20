@@ -9,10 +9,11 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import BillModal, { type BillDraft } from '../components/purchases/BillModal';
+import { markComponentCollectionsLoaded } from './helpers/componentFixtures';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { getSupabase } from '../lib/db/client';
-import type { Bill, Workspace } from '../types';
+import type { Bill, InventoryItem, Workspace } from '../types';
 import { makeChartAccount, makeVendor } from './fixtures';
 
 const vendors = [makeVendor({ id: 'v1', name: 'Paper Co' })];
@@ -120,3 +121,116 @@ describe('Bill dialog', () => {
     assert.equal(none.length, 0);
   });
 });
+
+/** D-87: the bill form follows the same field rules as the invoice form (D-86). */
+describe('Bill dialog — labels above fields and errors under the field (D-87)', () => {
+  const input = (label: string | RegExp) => screen.getByLabelText(label) as HTMLInputElement | HTMLSelectElement;
+
+  beforeEach(() => {
+    stubFetch(404);
+    useAuthStore.setState({ currentWorkspaceId: 'w1', workspaces: [{ id: 'w1', name: 'W', currency: 'USD' } as Workspace] });
+    markComponentCollectionsLoaded('inventory');
+    useLedgerStore.setState({ bills: [], transactions: [], taxRates: [], inventory: [] });
+  });
+  afterEach(async () => { cleanup(); getSupabase().realtime.disconnect(); await getSupabase().auth.dispose(); });
+
+  test('every labelled field has its label above the control, not beside it', () => {
+    setup();
+    for (const id of ['bill-vendor', 'bill-number', 'bill-status', 'bill-date', 'bill-due-date', 'bill-split-desc-0', 'bill-split-acc-0', 'bill-split-amount-0', 'bill-memo']) {
+      const control = document.getElementById(id);
+      assert.ok(control, `${id} exists`);
+      const label = document.querySelector(`label[for="${id}"]`);
+      assert.ok(label, `${id} has a label`);
+      const order = label.compareDocumentPosition(control);
+      assert.ok(order & Node.DOCUMENT_POSITION_FOLLOWING, `${id}: label comes before its field`);
+    }
+  });
+
+  test('all save actions report the missing vendor under its field and keep the draft', async () => {
+    const saved = setup();
+    fillTwoLinesWithoutVendor();
+    for (const action of ['Save Draft', 'Save & Close', 'Approve Bill']) {
+      await act(async () => { fireEvent.click(screen.getByText(action)); });
+      assert.equal(saved.length, 0, `${action}: nothing saved without a vendor`);
+      assert.equal(input('Vendor').getAttribute('aria-invalid'), 'true');
+      assert.ok(document.getElementById('bill-vendor-error')?.textContent, 'the refusal is written under the field');
+    }
+    fireEvent.change(input('Vendor'), { target: { value: 'v1' } });
+    assert.equal(document.getElementById('bill-vendor-error'), null, 'choosing the vendor clears it');
+    type(input('Bill Number'), '');
+    await act(async () => { fireEvent.click(screen.getByText('Save Draft')); });
+    assert.equal(saved.length, 0, 'a required field is still required');
+    assert.equal(input('Bill Number').getAttribute('aria-invalid'), 'true');
+    assert.equal(input('Vendor').value, 'v1', 'the draft is kept');
+  });
+
+  test('a stock line without units is refused under the units field and focuses the correction', async () => {
+    useLedgerStore.setState({ inventory: [{ id: 'chair', name: 'Chair', quantityAtHand: 2, unitCostCents: 1000 } as InventoryItem] });
+    const saved = setup();
+    fireEvent.change(input('Vendor'), { target: { value: 'v1' } });
+    fireEvent.change(input('Expense Account'), { target: { value: 'exp' } });
+    type(input(/^Amount \(/), '36');
+    fireEvent.change(screen.getByLabelText('Stock item on line 1'), { target: { value: 'chair' } });
+    await act(async () => { fireEvent.click(screen.getByText('Save & Close')); });
+    assert.equal(saved.length, 0, 'a stock line cannot post without its units');
+    const units = screen.getByLabelText('Units on line 1');
+    assert.equal(units.getAttribute('aria-invalid'), 'true');
+    assert.equal(document.getElementById('bill-split-units-0')?.getAttribute('aria-describedby'), 'bill-split-units-0-error');
+    assert.equal(document.getElementById('bill-split-units-0-error')?.textContent, 'Enter how many units came in');
+    assert.equal(document.activeElement, units, 'the correction is focused');
+    fireEvent.change(units, { target: { value: '3' } });
+    assert.equal(document.getElementById('bill-split-units-0-error'), null, 'typing the units clears it');
+    await act(async () => { fireEvent.click(screen.getByText('Save & Close')); });
+    await waitFor(() => assert.equal(saved.length, 1));
+    assert.deepEqual(saved[0].splits?.map(s => [s.itemId, s.quantity, s.amountCents]), [['chair', 3, 3600]]);
+  });
+
+  test('a stock line without its cost is refused under the amount field, not the units field', async () => {
+    useLedgerStore.setState({ inventory: [{ id: 'chair', name: 'Chair', quantityAtHand: 2, unitCostCents: 1000 } as InventoryItem] });
+    const saved = setup();
+    fireEvent.change(input('Vendor'), { target: { value: 'v1' } });
+    fireEvent.change(input('Expense Account'), { target: { value: 'exp' } });
+    fireEvent.change(screen.getByLabelText('Stock item on line 1'), { target: { value: 'chair' } });
+    fireEvent.change(screen.getByLabelText('Units on line 1'), { target: { value: '3' } });
+    await act(async () => { fireEvent.click(screen.getByText('Save & Close')); });
+    assert.equal(saved.length, 0);
+    assert.equal(document.getElementById('bill-split-amount-0-error')?.textContent, 'Enter what the units cost');
+    assert.equal(document.getElementById('bill-split-amount-0')?.getAttribute('aria-invalid'), 'true');
+    assert.equal(document.activeElement, document.getElementById('bill-split-amount-0'), 'the amount is focused');
+    assert.equal(document.getElementById('bill-split-units-0-error'), null, 'the units are already answered');
+    type(input(/^Amount \(/), '36');
+    assert.equal(document.getElementById('bill-split-amount-0-error'), null);
+    await act(async () => { fireEvent.click(screen.getByText('Save & Close')); });
+    await waitFor(() => assert.equal(saved.length, 1));
+  });
+
+  test('the save actions live outside the scrolling form, so they keep their place (D-87)', () => {
+    setup();
+    const footer = document.getElementById('bill-save-footer');
+    assert.ok(footer, 'the footer has its own place');
+    assert.equal(footer.closest('form'), null, 'it does not scroll away with the fields');
+    for (const action of ['Cancel', 'Save Draft', 'Save & Close', 'Approve Bill']) {
+      assert.ok(footer.contains(screen.getByText(action).closest('button')), `${action} sits in the footer`);
+    }
+  });
+
+  test('a save in flight locks every save button and a hurried second click saves once', async () => {
+    let finish: (() => void) | undefined;
+    const saved: BillDraft[] = [];
+    render(<BillModal isOpen onClose={() => {}} onSave={b => { saved.push(b); return new Promise<void>(resolve => { finish = resolve; }); }} vendors={vendors} accounts={accounts} />);
+    fireEvent.change(input('Vendor'), { target: { value: 'v1' } });
+    type(input(/^Amount \(/), '100');
+    await act(async () => { fireEvent.click(screen.getByText('Save & Close')); fireEvent.click(screen.getByText('Save & Close')); });
+    for (const action of ['Save Draft', 'Approve Bill']) {
+      assert.equal((screen.getByText(action).closest('button') as HTMLButtonElement).disabled, true, `${action} is locked`);
+    }
+    assert.equal(saved.length, 1, 'the second click did not save again');
+    await act(async () => { finish?.(); });
+  });
+});
+
+function fillTwoLinesWithoutVendor() {
+  type(screen.getByLabelText('Description'), 'Paper');
+  fireEvent.change(screen.getByLabelText('Expense Account'), { target: { value: 'exp' } });
+  type(screen.getByLabelText(/^Amount \(/), '100');
+}

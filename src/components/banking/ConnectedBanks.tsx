@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { bankHealth, readBankStatuses, type BankStatus, type SyncLogEntry } from '../../lib/bankFeedStatus';
 import PlaidConnectButton from '../finance/PlaidConnectButton';
+import { LoadingState } from '../ui/LoadingState';
 
 const RESULT: Record<SyncLogEntry['result'], string> = { ok: 'Synced', login_required: 'Login expired', error: 'Failed' };
 const tone = { ok: 'text-[var(--muted)]', behind: 'text-amber-700 dark:text-amber-400', action: 'text-rose-600' } as const;
@@ -17,21 +18,33 @@ const tone = { ok: 'text-[var(--muted)]', behind: 'text-amber-700 dark:text-ambe
  */
 export default function ConnectedBanks() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
+  // a demo has no database and no connections to ask the server about
+  const isGuest = useAuthStore(s => s.isGuest && !s.user);
   const role = useCurrentRole();
-  const [banks, setBanks] = useState<BankStatus[] | null>(null);
+  // no database (a demo) means no connections to ask about: the screen stays quiet
+  const noServer = isGuest || !workspaceId;
+  const [read, setRead] = useState<{ workspace: string; state: 'loading' | 'ready' | 'error'; banks: BankStatus[]; error: string }>({ workspace: '', state: 'loading', banks: [], error: '' });
   const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState('');
   const [now] = useState(() => Date.now());
   useEffect(() => {
-    if (!workspaceId) return;
+    if (noServer || !workspaceId) return;
+    const ws = workspaceId;
     let live = true;
     (async () => {
-      const res = await fetch(`/api/v1/plaid/banks?workspaceId=${encodeURIComponent(workspaceId)}`, { headers: { Authorization: `Bearer ${await getIdToken()}` } });
-      if (!res.ok) return [];
+      const res = await fetch(`/api/v1/plaid/banks?workspaceId=${encodeURIComponent(ws)}`, { headers: { Authorization: `Bearer ${await getIdToken()}` } });
+      if (!res.ok) throw new Error('The server could not list your bank connections');
       return readBankStatuses(await res.json());
-    })().then(list => { if (live) setBanks(list); }).catch(() => { if (live) setBanks([]); });
+    })().then(list => { if (live) setRead({ workspace: ws, state: 'ready', banks: list, error: '' }); }).catch(err => {
+      // a read that failed is not "no connections": say so, and offer the one action that retries it
+      if (live) setRead({ workspace: ws, state: 'error', banks: [], error: err instanceof Error ? err.message : 'The server could not list your bank connections' });
+    });
     return () => { live = false; };
-  }, [workspaceId, reload]);
+  }, [noServer, workspaceId, reload]);
+  // another workspace's connections are never shown while the new ones are read
+  const fresh = read.workspace === workspaceId;
+  const banks = fresh ? read.banks : [];
+  const retry = () => { setRead({ workspace: workspaceId ?? '', state: 'loading', banks: [], error: '' }); setReload(n => n + 1); };
 
   const disconnect = async (bank: BankStatus) => {
     if (!workspaceId || busy) return;
@@ -53,7 +66,25 @@ export default function ConnectedBanks() {
     }
   };
 
-  if (!banks || banks.length === 0) return null;
+  if (noServer) return null;
+  if (!fresh) return <LoadingState what="bank connections" />;
+  if (read.state === 'error') {
+    return (
+      <section role="alert" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+        <h2 className="text-sm font-bold text-[var(--text)]">We couldn't check your bank connections</h2>
+        <p className="mt-1 text-xs text-[var(--muted)]">{read.error}</p>
+        <button
+          type="button"
+          onClick={retry}
+          className="mt-3 min-h-11 px-4 py-2 rounded-xl border border-[var(--line)] bg-[var(--ink)] text-xs font-bold text-[var(--text)]"
+        >
+          Try again
+        </button>
+      </section>
+    );
+  }
+  if (read.state === 'loading') return <LoadingState what="bank connections" />;
+  if (banks.length === 0) return null;
   return (
     <section aria-labelledby="connected-banks-title" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
       <h2 id="connected-banks-title" className="text-sm font-bold text-[var(--text)]">Connected banks</h2>

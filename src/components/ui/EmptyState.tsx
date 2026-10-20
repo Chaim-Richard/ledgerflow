@@ -6,10 +6,12 @@ interface EmptyStateProps {
   description: string;
   actionLabel?: string;
   onAction?: () => void;
+  /** the one control that fills the screen, when it is not a plain button (for example "Connect a bank") */
+  action?: React.ReactNode;
 }
 
 /** "Nothing here yet" with the one action that fills the screen. Use LoadingState while loading. */
-export function EmptyState({ title, description, actionLabel, onAction }: EmptyStateProps) {
+export function EmptyState({ title, description, actionLabel, onAction, action }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-[var(--line)] rounded-[32px] bg-[var(--ink)]">
       <div className="w-16 h-16 bg-[var(--surface)] border border-[var(--line)] rounded-2xl flex items-center justify-center text-[var(--muted)] mb-6 shadow-sm">
@@ -17,7 +19,7 @@ export function EmptyState({ title, description, actionLabel, onAction }: EmptyS
       </div>
       <h2 className="text-xl font-black text-[var(--text)] tracking-tight mb-2">{title}</h2>
       <p className="text-sm font-semibold text-[var(--muted)] max-w-md mb-8">{description}</p>
-      {onAction && actionLabel && (
+      {action ?? (onAction && actionLabel && (
         <button
           type="button"
           onClick={onAction}
@@ -26,7 +28,7 @@ export function EmptyState({ title, description, actionLabel, onAction }: EmptyS
           <Plus size={16} aria-hidden="true" />
           {actionLabel}
         </button>
-      )}
+      ))}
     </div>
   );
 }
