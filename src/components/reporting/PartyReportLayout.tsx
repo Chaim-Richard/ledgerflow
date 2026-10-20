@@ -16,6 +16,8 @@ export interface PartyReportLayoutProps<T> {
   icon: LucideIcon;
   totalLabel: string;
   totalAmountCents: number;
+  /** shown instead of the amount when the total is not known (never a made-up 0) */
+  totalDisplay?: string;
   secondaryTotalLabel?: string;
   secondaryTotalCents?: number;
   exportFilename: string;
@@ -43,6 +45,7 @@ export function PartyReportLayout<T>({
   icon: Icon,
   totalLabel,
   totalAmountCents,
+  totalDisplay,
   secondaryTotalLabel,
   secondaryTotalCents,
   onExportCSV,
@@ -81,7 +84,7 @@ export function PartyReportLayout<T>({
               {totalLabel}
             </div>
             <div className="text-base font-mono font-bold text-neutral-900 dark:text-white">
-              {formatCurrency(totalAmountCents)}
+              {totalDisplay ?? formatCurrency(totalAmountCents)}
             </div>
           </div>
 
