@@ -532,8 +532,8 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-91 Icon-only buttons: aria-label + tooltip everywhere (P2-51); a test that fails on a new unlabeled icon button**
 - [x] **D-92 Sidebar: clearer names and grouping; the "Worlds" balances box renamed and explained or removed**
 
-- [~] **D-95 Settings tab bar on phones: labels overlap ("Pre Data Sup Help Doc Pricing API" at 390px). Same fix as D-78 for the report tabs: whole readable labels, horizontal scroll, active tab revealed.**
-- [~] **D-96 Settings → Billing & Plan in dark mode: the plan panel stays white (hard-coded light colours). Use the theme variables (UI_GUIDE dark-mode rules); refresh the settings references.**
+- [x] **D-95 Settings tab bar on phones: labels overlap ("Pre Data Sup Help Doc Pricing API" at 390px). Same fix as D-78 for the report tabs: whole readable labels, horizontal scroll, active tab revealed.**
+- [x] **D-96 Settings → Billing & Plan in dark mode: the plan panel stays white (hard-coded light colours). Use the theme variables (UI_GUIDE dark-mode rules); refresh the settings references.**
 
 ## AI #5: tasks (ready for the next AI; written by Claude, 6 Oct)
 
@@ -757,10 +757,10 @@ Branch `ai9/<task>`, one PR per task, never merge your own. Every money change: 
 (input → expected cents, written by hand in the test), the whole unit suite, ESLint ≤ 210 warnings, the browser spec you touch.
 Update the RELEASE_GATE row you move. Full wording of each task is in `docs/TRACKER.md` (search the id).
 
-- [~] **CON-3** *(PR open, AI #9)* Israel special VAT areas (Eilat) applied to invoices, with a test — use `ilVatAreaKeyFor` from #229; exempt vs zero-rate as the law says (exempt: no VAT, no input credit). W7.
-- [ ] **CON-4** Israel VAT reporting frequency (monthly / bi-monthly) drives the VAT report period and the PCN874 file. W7.
-- [ ] **CON-3** Israel special VAT areas (Eilat) applied to invoices, with a test — use `ilVatAreaKeyFor` from #229; exempt vs zero-rate as the law says (exempt: no VAT, no input credit). W7.
-- [~] **CON-4** *(PR open, AI #9)* Israel VAT reporting frequency (monthly / bi-monthly) drives the VAT report period and the PCN874 file. W7.
+- [x] **CON-3** *(PR open, AI #9)* Israel special VAT areas (Eilat) applied to invoices, with a test — use `ilVatAreaKeyFor` from #229; exempt vs zero-rate as the law says (exempt: no VAT, no input credit). W7.
+- [x] **CON-4** Israel VAT reporting frequency (monthly / bi-monthly) drives the VAT report period and the PCN874 file. W7.
+- [x] **CON-3** Israel special VAT areas (Eilat) applied to invoices, with a test — use `ilVatAreaKeyFor` from #229; exempt vs zero-rate as the law says (exempt: no VAT, no input credit). W7.
+- [x] **CON-4** *(PR open, AI #9)* Israel VAT reporting frequency (monthly / bi-monthly) drives the VAT report period and the PCN874 file. W7.
 - [ ] **CON-1** US sales-tax table and item taxability used by invoice lines for the supported states; other states stay labelled "not verified". W8.
 - [ ] **CON-2** US nexus watch on a screen, from posted invoices, for the supported states. W8.
 - [ ] **ISS-130** (GitHub #130) Inventory unit-cost edits on stock in hand go through a balanced revaluation entry, or are refused. W13.
