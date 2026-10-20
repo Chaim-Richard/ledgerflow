@@ -201,3 +201,31 @@ test('CON-4 second review: a dealer number that is not a registration gets no dr
   assert.equal(preview.draft, undefined);
   assert.match(preview.problem || '', /Dealer number 599999999 is not one of this workspace's Israeli VAT registrations, so no draft is built/);
 });
+
+// ---- third review (#244) ----
+
+test('CON-4 third review: an unknown dealer number gets no rows and no comparison, not every dealer\'s documents', () => {
+  const preview = ilPcn874Preview({ month: '2026-01', endMonth: '2026-02', generatedOn: '2026-03-10', currency: 'ILS', dealerId: '599999999', dealerUnknown: true, invoices, bills, customers, vendors, returns: vatReturnsFeb() });
+  assert.deepEqual([preview.rows.length, preview.comparison.length, preview.totals.taxableSalesNis, preview.draft], [0, 0, 0, undefined]);
+  assert.match(preview.problem || '', /Dealer number 599999999 is not one of this workspace's Israeli VAT registrations/);
+});
+
+test('CON-4 third review: January of a bimonthly pair shows no draft rows until February ends', () => {
+  const preview = ilPcn874Preview({ month: '2026-01', endMonth: '2026-02', pendingUntil: '2026-02', generatedOn: '2026-01-31', currency: 'ILS', dealerId: '514000000', invoices, bills, customers, vendors });
+  assert.deepEqual([preview.rows.length, preview.comparison.length, preview.draft], [0, 0, undefined]);
+  assert.equal(preview.problem, 'This dealer reports for 2026-01 to 2026-02; the draft is built after 2026-02 ends.');
+  // February ends the period: the same dealer's draft holds 2001, 2002 and 8001 (as in the worked figures above)
+  const february = ilPcn874Preview({ month: '2026-01', endMonth: '2026-02', generatedOn: '2026-03-10', currency: 'ILS', dealerId: '514000000', invoices, bills, customers, vendors });
+  assert.deepEqual(february.rows.map(r => r.referenceNumber), ['2001', '2002', '8001']);
+});
+
+test('CON-4 third review: a month with no Israeli VAT registration says no report is due, not that one is recorded', () => {
+  const j = israelMonthJourney({ month: '2026-02', today: '2026-03-20', currency: 'ILS', profiles: { books: { name: 'Tel Aviv Ltd' } }, order: ['world'], invoices, bills, customers, vendors });
+  const close = j.steps.find(s => s.id === 'close')!;
+  assert.match(close.detail, /No Israeli VAT registration is recorded for 2026-02, so no VAT report is due here\./);
+  assert.doesNotMatch(close.detail, /A return for the report period is recorded/);
+});
+
+function vatReturnsFeb() {
+  return journey('2026-02', 'bimonthly').steps.find(s => s.id === 'vat-report')!.returns;
+}

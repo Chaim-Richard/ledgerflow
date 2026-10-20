@@ -64,3 +64,15 @@ Full suite with the test database: 3,424 pass / 0 fail. Browser W7/W8 2/2.
 5. **Several registrations.** A dated return record is not counted as any one registration's, since the server's
    record carries no registration, and the step says why. With one registration it is still that registration's.
 6. **Two-month draft not due yet.** It is not-applicable in the pair's first month.
+
+**Third review (#244, follow-up on `ai9/con4-review` from latest main).** Each has a test that fails without the fix
+(`src/tests/con4-il-vat-frequency.test.ts`, 19/19 pass).
+1. **Unknown dealer number.** It now gets no rows, no comparison and no totals as well as no draft, so the screen
+   never lists another dealer's documents under the typed number.
+2. **Two-month period not ended.** In January of a bimonthly pair the preview shows no rows and says the draft is built
+   after February ends. In February the same dealer's draft holds 2001, 2002 and 8001.
+3. **No Israeli VAT registration.** The close step says "No Israeli VAT registration is recorded for 2026-02, so no
+   VAT report is due here", not that a return is recorded.
+
+Finding 4 (the server's return record carries no registration) is AI #1's CON-4b. Until then "filed" stays unclearable
+for multi-registration books, as answered on 20 Oct.

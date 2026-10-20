@@ -120,6 +120,7 @@ export default function IsraelMonthJourneyReportView() {
       endMonth: period.endMonth,
       ...(own ? { registration: own.registration, profiles: workspace?.taxProfiles, order: [workspace?.dimensions?.find(d => d.isWorld)?.id || 'world'] } : {}),
       ...(!own && returns.length ? { dealerUnknown: true } : {}),
+      ...(own?.pending ? { pendingUntil: own.endMonth } : {}),
       generatedOn: getLocalDateISO(),
       currency,
       dealerId,
