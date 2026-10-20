@@ -1773,7 +1773,7 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 - [ ] ISS-130 *(→ AI #9 from 20 Oct)* Inventory unit-cost edits change stock value without a ledger posting (issue #130): cost changes on stock in hand go through a balanced revaluation entry, or are refused.
 - [ ] ISS-131 *(→ AI #9 from 20 Oct)* Inventory valuation as-of date mixes today's stock with past books (issue #131): historical quantities/costs from stock moves, or the comparison hidden for past dates.
 - [ ] ISS-143 RMA approvals and quantities enforced on the server in one transaction (issue #143, with AUD-03).
-- [ ] CON-1 *(→ AI #9 from 20 Oct)* US sales-tax table (capability 137) and item taxability (139) used by invoice lines for the supported states; label stays "not verified" for others.
+- [~] CON-1 *(→ AI #9 from 20 Oct; PR open, ai9/CON-1)* US sales-tax table (capability 137) and item taxability (139) used by invoice lines for the supported states; label stays "not verified" for others.
 - [ ] CON-2 *(→ AI #9 from 20 Oct)* US nexus watch (138) on a screen from posted invoices, for the supported states.
 - [~] CON-3 *(→ AI #9 from 20 Oct; PR open, ai9/CON-3)* Israel special VAT areas (141, Eilat) applied to invoices with a test.
 - [ ] CON-4 *(→ AI #9 from 20 Oct)* Israel VAT reporting frequency (161) drives the VAT report period and PCN874.
