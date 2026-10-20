@@ -74,6 +74,8 @@ export interface IlMonthReturn extends ReturnType<typeof israelVatReturn> {
   filed: boolean;
   /** CON-4: the period runs past this month (the first month of a bimonthly pair): not yet due, not owed to close the month */
   pending: boolean;
+  /** a return for exactly these dates is recorded for the workspace (with several registrations, not attributable) */
+  recordedForDates: boolean;
 }
 
 /** An invoice that needs an allocation number, and what is wrong with the one recorded. */
@@ -416,6 +418,8 @@ export function ilPcn874Rows(input: IlPcn874Input): IlPcn874Mapping {
 export function ilPcn874Preview(input: IlPcn874Input & {
   dealerId?: string;
   generatedOn: string;
+  /** #235 review: the typed dealer number matches none of the workspace's registrations — no draft is built */
+  dealerUnknown?: boolean;
   /** the month's VAT returns, to compare the draft with the report the screen shows */
   returns?: Array<{ taxableSalesCents: number; outputVatCents: number; zeroRatedSalesCents: number; fixedAssetInputVatCents: number; otherInputVatCents: number }>;
 }): IlPcn874Preview {
@@ -423,6 +427,7 @@ export function ilPcn874Preview(input: IlPcn874Input & {
   const dealerId = String(input.dealerId || '').replace(/\D/g, '');
   const problems: string[] = [];
   if (dealerId.length !== 9) problems.push('A 9-digit dealer number is needed for the historical PCN874 draft.');
+  else if (input.dealerUnknown) problems.push(`Dealer number ${dealerId} is not one of this workspace's Israeli VAT registrations, so no draft is built: a draft holds one registration's documents.`);
   if (mapping.unmapped.length) problems.push(`${mapping.unmapped.length} document(s) cannot be written in this layout; they are listed with the reason.`);
   let draft: Pcn874DraftOutput | undefined;
   if (!problems.length) {
@@ -513,7 +518,9 @@ export function israelMonthJourney(input: IsraelMonthInput): IsraelMonth {
         ...(own ? { dueDate: own.dueDate } : {}),
         startMonth: own?.startMonth || month,
         endMonth: own?.endMonth || month,
-        filed: (input.filedPeriods || []).some(r => r.startDate === from && r.endDate === to),
+        // a recorded return carries dates, not a registration: with several registrations it cannot be told whose it is
+        filed: registrations.length === 1 && (input.filedPeriods || []).some(r => r.startDate === from && r.endDate === to),
+        recordedForDates: (input.filedPeriods || []).some(r => r.startDate === from && r.endDate === to),
         pending: (own?.endMonth || month) > month,
       };
     })
@@ -524,15 +531,26 @@ export function israelMonthJourney(input: IsraelMonthInput): IsraelMonth {
     ? ilAllocationCases({ invoices: input.invoices, customers: input.customers, month, currency })
     : [];
   const allocationMissing = allocation.filter(c => c.problem);
-  const mapping = period
-    ? ilPcn874Rows({
-      month: pcn874Period.startMonth,
-      endMonth: pcn874Period.endMonth,
-      ...(returns[0] ? { registration: returns[0].registration, profiles: input.profiles, order: input.order || [] } : {}),
-      invoices: input.invoices, creditNotes: input.creditNotes, bills: input.bills, vendorCredits: input.vendorCredits,
-      customers: input.customers, vendors: input.vendors, currency,
-    })
-    : ilPcn874Rows({ month });
+  // #235 review: every registration's own draft counts (a dealer whose documents cannot be written is not hidden behind
+  // the first one), and a two-month draft that is not due yet does not block closing its first month
+  const docs = { invoices: input.invoices, creditNotes: input.creditNotes, bills: input.bills, vendorCredits: input.vendorCredits, customers: input.customers, vendors: input.vendors, currency };
+  const perRegistration = period
+    ? (returns.length ? returns : [undefined]).map(r => ({
+      pending: Boolean(r?.pending),
+      mapping: ilPcn874Rows({
+        month: r?.startMonth || month, endMonth: r?.endMonth || month,
+        ...(r ? { registration: r.registration, profiles: input.profiles, order: input.order || [] } : {}),
+        ...docs,
+      }),
+    }))
+    : [{ pending: false, mapping: ilPcn874Rows({ month }) }];
+  const dueMappings = perRegistration.filter(m => !m.pending).map(m => m.mapping);
+  const mapping = {
+    rows: dueMappings.flatMap(m => m.rows),
+    unmapped: dueMappings.flatMap(m => m.unmapped),
+    notRepresented: dueMappings.reduce((n, m) => n + m.notRepresented, 0),
+  };
+  const pcn874Pending = perRegistration.length > 0 && perRegistration.every(m => m.pending);
   const closeState = new Map((input.periods || []).map(p => [p.month, p.state]));
   const state: MonthCloseState = month ? (closeState.get(month) || 'open') : 'open';
   const closed = state === 'soft' || state === 'hard';
@@ -585,7 +603,7 @@ export function israelMonthJourney(input: IsraelMonthInput): IsraelMonth {
         : !due.length ? 'not-applicable' : due.every(r => r.filed) ? 'done' : 'attention',
       detail: !registrations.length
         ? 'No registration is recorded, so there is no VAT report to prepare from this data.'
-        : returns.map(r => `${r.registration.replace(/^vat:/, '')}${r.startMonth !== r.endMonth ? ` (bimonthly report ${r.startMonth} to ${r.endMonth})` : ''}: taxable sales ${money(r.taxableSalesCents, currency)}, output VAT ${money(r.outputVatCents, currency)}, zero-rated ${money(r.zeroRatedSalesCents, currency)}, input VAT ${money(r.fixedAssetInputVatCents + r.otherInputVatCents, currency)} (equipment ${money(r.fixedAssetInputVatCents, currency)}), ${r.toPayCents >= 0 ? 'to pay' : 'to reclaim'} ${money(Math.abs(r.toPayCents), currency)}${r.filed ? ' — recorded as filed' : r.pending ? ` — the two-month report is prepared after ${r.endMonth} ends (planning due date ${r.dueDate}); nothing is owed to close ${month}` : r.dueDate ? ` — planning due date ${r.dueDate}${today && r.dueDate < today ? ', already past' : ''}` : ' — the registration records no monthly or bimonthly frequency, so the month is shown and no due date'}.`).join(' '),
+        : returns.map(r => `${r.registration.replace(/^vat:/, '')}${r.startMonth !== r.endMonth ? ` (bimonthly report ${r.startMonth} to ${r.endMonth})` : ''}: taxable sales ${money(r.taxableSalesCents, currency)}, output VAT ${money(r.outputVatCents, currency)}, zero-rated ${money(r.zeroRatedSalesCents, currency)}, input VAT ${money(r.fixedAssetInputVatCents + r.otherInputVatCents, currency)} (equipment ${money(r.fixedAssetInputVatCents, currency)}), ${r.toPayCents >= 0 ? 'to pay' : 'to reclaim'} ${money(Math.abs(r.toPayCents), currency)}${r.filed ? ' — recorded as filed' : r.recordedForDates ? ` — a return for ${r.startDate} to ${r.endDate} is recorded for the workspace, but with ${registrations.length} registrations it cannot be told whose it is, so it is not counted as this one's` : r.pending ? ` — the two-month report is prepared after ${r.endMonth} ends (planning due date ${r.dueDate}); nothing is owed to close ${month}` : r.dueDate ? ` — planning due date ${r.dueDate}${today && r.dueDate < today ? ', already past' : ''}` : ' — the registration records no monthly or bimonthly frequency, so the month is shown and no due date'}.${r.pending || r.filed ? '' : ` On the return screen choose ${r.startDate} to ${r.endDate}.`}`).join(' '),
       figures: returns.flatMap(r => [
         { label: `${r.registration.replace(/^vat:/, '')} taxable sales`, cents: r.taxableSalesCents, note: `${r.documentCount} document(s) counted` },
         { label: `${r.registration.replace(/^vat:/, '')} output VAT`, cents: r.outputVatCents },
@@ -603,11 +621,13 @@ export function israelMonthJourney(input: IsraelMonthInput): IsraelMonth {
       screen: 'il-month-journey',
       tab: 'reports',
       screenLabel: 'Reports → Israel Month Journey',
-      status: !registrations.length
+      status: !registrations.length || pcn874Pending
         ? 'not-applicable'
         : mapping.unmapped.length ? 'attention' : 'done',
       detail: !registrations.length
         ? 'No registration is recorded, so there is no dealer number and no draft to prepare.'
+        : pcn874Pending
+          ? `The two-month draft covers ${pcn874Period.startMonth} to ${pcn874Period.endMonth}; it is prepared after ${pcn874Period.endMonth} ends, so nothing is owed for ${month}.`
         : !mapping.rows.length && !mapping.unmapped.length
           ? `No document dated in ${pcn874Period.startMonth === pcn874Period.endMonth ? month : `${pcn874Period.startMonth} to ${pcn874Period.endMonth}`} can be written as a PCN874 row, so there is nothing to draft.`
           : `${mapping.rows.length} row(s) can be written; ${mapping.unmapped.length} document(s) cannot${mapping.unmapped.length ? ` (${mapping.unmapped.slice(0, 3).map(u => u.number || u.documentId).join(', ')}${mapping.unmapped.length > 3 ? ', …' : ''})` : ''}.${mapping.notRepresented ? ` ${mapping.notRepresented} exempt or reverse-charge document(s) have no row in this historical layout.` : ''} The draft is never filing-ready: the layout dates to 2010.`,
@@ -633,7 +653,9 @@ export function israelMonthJourney(input: IsraelMonthInput): IsraelMonth {
           closed ? `${month} is ${state === 'hard' ? 'closed' : 'soft-closed'}.` : `${month} is still open.`,
           unfiled
             ? 'Record the VAT report on the return screen before closing the month.'
-            : 'The VAT report for the month is recorded as filed.',
+            : !due.length
+              ? `No VAT report is due for ${month}: the two-month report is filed after ${returns.find(r => r.pending)?.endMonth || month} ends.`
+              : 'A return for the report period is recorded.',
         ].join(' '),
       figures: [
         { label: 'Months still open', count: closed ? 0 : 1 },

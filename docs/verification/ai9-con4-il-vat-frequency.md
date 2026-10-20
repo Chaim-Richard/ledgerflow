@@ -51,3 +51,16 @@ Release gate: W7. The VAT report period now follows the registration; W7 stays P
    come out from either month.
 
 Full suite with the test database: 3,424 pass / 0 fail. Browser W7/W8 2/2.
+
+**Second review (#235, 6 × P2).** Each has a test.
+1. **Unknown dealer number.** A number that matches no registration gets no draft and a reason. The draft never falls
+   back to every dealer's documents.
+2. **PCN874 readiness per registration.** Each registration gets its own draft. A dealer whose documents cannot be
+   written makes the step "attention", even when the first dealer's can be.
+3. **January wording.** January of a pair says "No VAT report is due for 2026-01…", never "recorded as filed".
+4. **Dates to choose.** The report step names the dates to choose on the return screen ("choose 2026-01-01 to
+   2026-02-28"). The Reports screen reads its period once when it opens, and the journey runs inside it, so the period
+   is named rather than passed through navigation.
+5. **Several registrations.** A dated return record is not counted as any one registration's, since the server's
+   record carries no registration, and the step says why. With one registration it is still that registration's.
+6. **Two-month draft not due yet.** It is not-applicable in the pair's first month.
