@@ -34,7 +34,7 @@ for (const width of [390, 1280]) {
 
       // labels sit above their controls, not beside them
       const labelAbove = async (label: string, id: string) => {
-        const box = await page.getByLabel(label, { exact: true }).boundingBox();
+        const box = await page.locator(`label[for="${id}"]`).filter({ hasText: label }).boundingBox();
         const field = await page.locator(`#${id}`).boundingBox();
         expect(box!.y + box!.height).toBeLessThanOrEqual(field!.y + 1);
       };
