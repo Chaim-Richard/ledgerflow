@@ -441,7 +441,7 @@ export default function ImportSettings() {
         )}
       </section>
 
-      <MigrationTrialBalanceProof workspaceId={workspaceId} />
+      <MigrationTrialBalanceProof key={workspaceId} workspaceId={workspaceId} />
 
       {recent.length > 0 && (
         <section className="ledger-card p-6 bg-[var(--surface)] border border-[var(--line)] rounded-2xl space-y-3" aria-labelledby="recent-imports">
