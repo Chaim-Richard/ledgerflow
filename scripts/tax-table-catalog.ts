@@ -219,6 +219,15 @@ export const TAX_TABLES: readonly TableSpec[] = [
     ]
   },
   {
+    "file": "usSalesTaxHolidayCalendar.ts",
+    "name": "US_SALES_TAX_HOLIDAY_CALENDAR",
+    "keys": [
+      "state",
+      "name"
+    ],
+    "mode": "holiday"
+  },
+  {
     "file": "usSalesTaxHolidays.ts",
     "name": "US_SALES_TAX_HOLIDAYS",
     "keys": [
