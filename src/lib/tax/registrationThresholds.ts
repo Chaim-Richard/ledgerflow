@@ -4,6 +4,7 @@
  * the report only counts posted sales carrying one of these labels.
  */
 import { EU_VAT_COUNTRIES } from './euVat';
+import { IL_OSEK_PATUR_CEILINGS } from './ilOsekPaturThresholds';
 import type { RegistrationThresholdWindow } from '../rules/packs/shared';
 
 export type RegistrationThresholdScheme = 'il-osek-patur' | 'uk-vat' | 'ca-gst-small-supplier' | 'eu-oss-place-of-supply';
@@ -63,9 +64,6 @@ const UK_ACTIVITY = REGISTRATION_THRESHOLD_ACTIVITIES.find(row => row.value === 
 const CA_ACTIVITY = REGISTRATION_THRESHOLD_ACTIVITIES.find(row => row.value === 'ca_gst_taxable_supplies')!;
 const EU_ACTIVITY = REGISTRATION_THRESHOLD_ACTIVITIES.find(row => row.value === 'eu_oss_qualifying_b2c_supplies')!;
 
-const ITA_2024 = 'https://www.gov.il/BlobFolder/generalpage/income-tax-guide-knowyourright/he/Guides_IncomeTax_da-2024.pdf';
-const ITA_2025 = 'https://www.gov.il/BlobFolder/generalpage/income-tax-guide-knowyourright/he/Guides_IncomeTax_da-2025.pdf';
-const ITA_2026 = 'https://www.gov.il/he/service/request-open-exempt-dealer-via-internet';
 const HMRC_THRESHOLD = 'https://www.gov.uk/government/publications/vat-increasing-the-registration-and-deregistration-thresholds';
 const HMRC_TESTS = 'https://www.gov.uk/vat-registration/when-to-register';
 const CRA_TESTS = 'https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses/when-register-charge.html';
@@ -73,29 +71,37 @@ const CRA_1991 = 'https://www.canada.ca/en/revenue-agency/services/forms-publica
 const EU_SUMMARY = 'https://taxation-customs.ec.europa.eu/vat-e-commerce_en';
 const EU_GUIDANCE = 'https://taxation-customs.ec.europa.eu/document/download/6d3b649e-e4b6-4db8-a902-ce21802de18b_en';
 
+/**
+ * The Israeli rows are not typed here: each one is the same year's row of A-100's ceiling history
+ * (`ilOsekPaturThresholds.ts`), so the report, the rule pack and the history cannot answer for the
+ * same year with two different figures. The rows kept are the recent years the watch compares;
+ * the full dated history answers for a past period through `osekPaturCeilingOn`.
+ */
+function israelCeilingRow(year: number): RegistrationThresholdRow {
+  const ceiling = IL_OSEK_PATUR_CEILINGS.find(row => row.year === year);
+  if (!ceiling) throw new Error(`A-100's ceiling history has no row for ${year}`);
+  return {
+    id: `il-osek-patur-${year}`,
+    name: `Israel osek patur annual turnover ceiling (${year})`,
+    scheme: 'il-osek-patur',
+    countryCodes: ['IL'],
+    activity: IL_ACTIVITY,
+    currency: 'ILS',
+    thresholdCents: ceiling.ceilingCents,
+    window: 'calendar-year-to-date',
+    validFrom: ceiling.validFrom,
+    ...(ceiling.validTo ? { validTo: ceiling.validTo } : {}),
+    source: ceiling.source,
+    guidanceUrl: ceiling.corroboratedBy,
+    note: `${ceiling.note} The report compares current-year posted turnover only; it does not check profession-based exclusions, the statutory prior-year / expected-turnover basis, all other businesses, or excluded equipment sales.`,
+  };
+}
+
 /** The ceiling/threshold rows in force, with the effective periods preserved. */
 export const REGISTRATION_THRESHOLDS: RegistrationThresholdRow[] = [
-  {
-    id: 'il-osek-patur-2024', name: 'Israel osek patur annual turnover ceiling (2024)', scheme: 'il-osek-patur',
-    countryCodes: ['IL'], activity: IL_ACTIVITY, currency: 'ILS', thresholdCents: 12_000_000,
-    window: 'calendar-year-to-date', validFrom: '2024-01-01', validTo: '2024-12-31',
-    source: { authority: 'Israel Tax Authority', url: ITA_2024, retrieved: CHECKED },
-    note: '₪120,000 for 2024. The report compares current-year posted turnover only; it does not check profession-based exclusions, the statutory prior-year / expected-turnover basis, all other businesses, or excluded equipment sales.',
-  },
-  {
-    id: 'il-osek-patur-2025', name: 'Israel osek patur annual turnover ceiling (2025)', scheme: 'il-osek-patur',
-    countryCodes: ['IL'], activity: IL_ACTIVITY, currency: 'ILS', thresholdCents: 12_000_000,
-    window: 'calendar-year-to-date', validFrom: '2025-01-01', validTo: '2025-12-31',
-    source: { authority: 'Israel Tax Authority', url: ITA_2025, retrieved: CHECKED },
-    note: '₪120,000 for 2025. The report compares current-year posted turnover only; it does not check profession-based exclusions, the statutory prior-year / expected-turnover basis, all other businesses, or excluded equipment sales.',
-  },
-  {
-    id: 'il-osek-patur-2026', name: 'Israel osek patur annual turnover ceiling (2026)', scheme: 'il-osek-patur',
-    countryCodes: ['IL'], activity: IL_ACTIVITY, currency: 'ILS', thresholdCents: 12_283_300,
-    window: 'calendar-year-to-date', validFrom: '2026-01-01',
-    source: { authority: 'Israel Tax Authority', url: ITA_2026, retrieved: CHECKED },
-    note: '₪122,833 for 2026. The report compares current-year posted turnover only; it does not check profession-based exclusions, the statutory prior-year / expected-turnover basis, all other businesses, or excluded equipment sales.',
-  },
+  israelCeilingRow(2024),
+  israelCeilingRow(2025),
+  israelCeilingRow(2026),
   {
     id: 'uk-vat-registration-2024-04', name: 'UK VAT taxable-turnover registration threshold', scheme: 'uk-vat',
     countryCodes: ['GB'], activity: UK_ACTIVITY, currency: 'GBP', thresholdCents: 9_000_000,

@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { registrationThresholdWatch } from '../../lib/registrationThresholdWatch';
+import { IL_OSEK_PATUR_CEILINGS } from '../../lib/tax/ilOsekPaturThresholds';
 import { validCustomReportPeriod } from '../../lib/reportCustomPeriod';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import ReportTableScroll from './ReportTableScroll';
@@ -127,6 +128,35 @@ export default function RegistrationThresholdWatchReportView({ endDate = '' }: {
       </tr>)}</tbody>
     </table></ReportTableScroll>}
     {report && report.rows.length === 0 && !loading && <p>No threshold comparison can be made from the recognized posted sales. Configure an entity country in Tax profiles and assign a supported activity label to revenue lines; unclassified or absent activity is not assumed to be zero.</p>}
+    <details className="text-sm" data-osek-patur-history>
+      <summary className="min-h-11 cursor-pointer">Israel: the osek patur ceiling, year by year (A-100)</summary>
+      <p className="text-[var(--muted)]">
+        Every year this table answers for, with the day its figure starts (1 January, the VAT Law&rsquo;s indexation date) and the page it was
+        read from. The ceiling is the comparison only: &ldquo;does not exceed&rdquo; means a year at the figure is inside it, and eligibility also
+        turns on the occupation list in Regulation 13, the prior-year / expected-turnover basis, equipment sales left out of
+        &ldquo;מחזור עסקאות&rdquo;, and every business the person runs — none of which this list can see. A year that is not listed is unknown,
+        never zero, and the three years the comparison above uses are built from these rows rather than typed twice.
+      </p>
+      <ReportTableScroll>
+      <table className="w-full text-sm">
+        <caption>Osek patur annual turnover ceiling by tax year (₪)</caption>
+        <thead><tr>
+          {['Tax year', 'Ceiling', 'From', 'Until', "How the year's figure came about", 'Read from'].map(head => <th key={head} scope="col" className="text-left">{head}</th>)}
+        </tr></thead>
+        <tbody>{IL_OSEK_PATUR_CEILINGS.map(row => <tr key={row.year} className="border-t border-[var(--line)] align-top">
+          <th scope="row" className="text-left font-normal">{row.year}</th>
+          <td className="text-right tabular-nums">{formatCurrency(row.ceilingCents, 'ILS')}</td>
+          <td>{row.validFrom}</td>
+          <td>{row.validTo || 'open — the Authority sets each year'}</td>
+          <td>{row.basis === 'indexed' ? 'indexed to the consumer price index on 1 January' : row.basis === 'statute' ? 'fixed in the definition of "עוסק פטור"' : 'the published figure did not move for that January'}</td>
+          <td><a className="underline" href={row.source.url} target="_blank" rel="noopener noreferrer">{row.source.authority}</a>
+            {row.corroboratedBy ? <> · <a className="underline" href={row.corroboratedBy} target="_blank" rel="noopener noreferrer">also cited</a></> : null}
+            <div className="text-xs text-[var(--muted)]"><bdi>{row.note}</bdi></div></td>
+        </tr>)}</tbody>
+      </table>
+      </ReportTableScroll>
+    </details>
+
     {report?.rows.length ? <details className="text-sm"><summary className="min-h-11 cursor-pointer">Scope and statutory limits</summary><ul className="list-disc pl-5 space-y-1">{report.rows.filter((row, index, rows) => rows.findIndex(candidate => candidate.rule.id === row.rule.id) === index).map(row => <li key={row.rule.id}><bdi>{row.rule.name}:</bdi> {row.rule.effect.kind === 'registration-threshold' ? row.rule.effect.note : ''}</li>)}</ul></details> : null}
   </section>;
 }

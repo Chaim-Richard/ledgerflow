@@ -52,6 +52,15 @@ export const TAX_TABLES: readonly TableSpec[] = [
     ]
   },
   {
+    "file": "ilOsekPaturThresholds.ts",
+    "name": "IL_OSEK_PATUR_CEILINGS",
+    "keys": [],
+    "amounts": [
+      "ceilingCents"
+    ],
+    "mode": "year"
+  },
+  {
     "file": "ilVatRates.ts",
     "name": "IL_VAT_STANDARD",
     "keys": [],
