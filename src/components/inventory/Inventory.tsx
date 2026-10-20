@@ -52,6 +52,7 @@ import CogsDialog from './CogsDialog';
 import StockPolicySwitch from './StockPolicySwitch';
 import StockHistoryDialog from './StockHistoryDialog';
 import InventoryItemDialog from './InventoryItemDialog';
+import { ItemImageThumb } from './ItemImagePanel';
 import StockAdjustDialog from './StockAdjustDialog';
 import StockCountDialog from './StockCountDialog';
 import CategoryManagerDialog from './CategoryManagerDialog';
@@ -131,6 +132,7 @@ export default function Inventory() {
   }, [items, activeTransactions, accounts]);
 
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [imageRefresh, setImageRefresh] = useState<Record<string, number>>({});
   // A-7: the sales tax codes an item can default to (the same list the invoice offers)
   const taxRatesForItems = useLedgerStore(s => s.taxRates || []);
   const salesTaxCodes = useMemo(() => taxRatesForItems.filter(r => r.type === 'Sales' && r.appliesTo !== 'purchases').map(r => ({ id: r.id, name: r.name })), [taxRatesForItems]);
@@ -472,7 +474,9 @@ export default function Inventory() {
             {displayItems.map((item) => (
               <tr key={item.id} className="hover:bg-[var(--ink)]/50 transition-colors group">
                 <td className="px-8 py-5">
-                  <div>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <ItemImageThumb itemId={item.id} itemName={item.name} workspaceId={item.workspaceId || workspaceId || ''} refreshKey={imageRefresh[item.id] || 0} />
+                    <div className="min-w-0">
                     <InlineEdit value={item.name} label={`Name of ${item.name}`} canEdit={canChangeStock}
                       validate={v => String(v) ? null : 'An item needs a name'} onSave={v => saveItemField(item, 'name', v)}
                       className="text-sm font-black text-[var(--text)] block" />
@@ -483,6 +487,7 @@ export default function Inventory() {
                     )}
                     <InlineEdit value={item.sku} label={`SKU of ${item.name}`} placeholder="Add SKU" canEdit={canChangeStock}
                       onSave={v => saveItemField(item, 'sku', v)} className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest block" />
+                    </div>
                   </div>
                 </td>
                 <td className="px-8 py-5">
@@ -679,6 +684,7 @@ export default function Inventory() {
 
       <InventoryItemDialog key={editingItem?.id || 'new-item'} open={isAdding || !!editingItem} editingItem={editingItem} categories={categories} canChangeStock={canChangeStock} taxCodes={salesTaxCodes} allItems={items}
         onClose={closeItemDialog} onSubmit={editingItem ? handleUpdate : handleAdd}
+        onItemImageChange={itemId => setImageRefresh(current => ({ ...current, [itemId]: (current[itemId] || 0) + 1 }))}
         onAdjust={it => { setEditingItem(null); setAdjustItem(it); }} />
 
       {cogsItem && workspaceId && (
