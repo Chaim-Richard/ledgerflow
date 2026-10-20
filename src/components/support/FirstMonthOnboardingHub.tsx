@@ -13,7 +13,7 @@ import {
 import { buildOnboardingEmails, type OnboardingEmailDay } from '../../lib/onboardingEmails';
 
 export default function FirstMonthOnboardingHub() {
-  useLedgerCollections('invoices', 'bills', 'bankLines', 'taxRates');
+  useLedgerCollections('invoices', 'bills', 'bankLines', 'taxRates', 'reconciliations');
   const user = useAuthStore(s => s.user);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const currentWorkspace = useAuthStore(s => s.getCurrentWorkspace());

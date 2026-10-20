@@ -37,7 +37,7 @@ describe('Customer portal', () => {
     render(<CustomerPortalPage />);
     assert.ok(await screen.findByRole('heading', { level: 1, name: 'Invoices for Acme' }));
     assert.equal(calls[0].url, '/api/v1/invoices/public/portal/cp_abc');
-    assert.match(screen.getByText(/Still to pay/).textContent || '', /\$600\.00/);
+    assert.match(screen.getByText(/Still to pay:/).textContent || '', /\$600\.00/);
     assert.equal(screen.getByRole('link', { name: 'View and pay invoice INV-1' }).getAttribute('href'), '/i/pay_1');
     assert.ok(screen.getByRole('link', { name: 'View invoice INV-0' }));
     assert.ok(screen.getByText('Overdue'));

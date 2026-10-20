@@ -26,8 +26,7 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
 
   const mac = isMacPlatform();
   const q = filterQuery.trim().toLowerCase();
-  const shortcuts = SHORTCUTS
-    .map(sc => ({ key: shortcutLabel(sc.keys[0], mac), desc: sc.label, icon: SHORTCUT_ICONS[sc.id] || Activity }))
+  const shortcuts = SHORTCUTS.map(sc => ({ key: shortcutLabel(sc.keys[0], mac), desc: sc.label, icon: SHORTCUT_ICONS[sc.id] || Activity }))
     .filter(sc => !q || sc.desc.toLowerCase().includes(q) || sc.key.toLowerCase().includes(q));
   const { dialogProps, titleId } = useDialog(onClose, isOpen);
 
