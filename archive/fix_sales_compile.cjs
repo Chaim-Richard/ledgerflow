@@ -34,7 +34,6 @@ if (timelineStart !== -1) {
 content = content.replace(/inv\.custorName/g, 'inv.customerName');
 
 // 5. Fix status overlap (unpaid -> pending)
-content = content.replace(/inv\.status !== 'paid' &&/g, "inv.status !== 'paid' &&");
 content = content.replace(/inv\.status === 'unpaid'/g, "inv.status === 'pending'");
 
 // 6. Fix onAddInvoice arguments
