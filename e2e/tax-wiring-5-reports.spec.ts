@@ -2,11 +2,11 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 const reports = [
-  { id: 'tax-code-suggestions', name: 'Tax Code Suggestions' },
-  { id: 'entity-filings', name: 'Entity Filings Calendar' },
-  { id: 'israeli-document-types', name: 'Israeli Document Types' },
-  { id: 'us-1099-preview', name: 'US 1099 Preview' },
-  { id: 'us-filing-calendar', name: 'US Filing Calendar' },
+  { id: 'tax-code-suggestions', name: 'Tax Code Suggestions', heading: /Tax code suggestions from history/i },
+  { id: 'entity-filings', name: 'Entity Filings Calendar', heading: /Entity filings calendar/i },
+  { id: 'israeli-document-types', name: 'Israeli Document Types', heading: /Israeli document types/i },
+  { id: 'us-1099-preview', name: 'US 1099 Preview', heading: /US 1099 Preview/i },
+  { id: 'us-filing-calendar', name: 'US Filing Calendar', heading: /US Sales Tax Filing Calendar/i },
 ];
 
 for (const width of [1280, 390]) {
@@ -33,7 +33,7 @@ for (const width of [1280, 390]) {
         await btn.click();
         await page.waitForTimeout(700);
         // Each report's h2 present
-        await expect(page.getByRole('heading', { name: new RegExp(r.name.replace('US ', '(US |ישראל|Tax Code|Entity)'), 'i') }).first()).toBeVisible({ timeout: 5000 });
+        await expect(page.getByRole('heading', { name: r.heading }).first()).toBeVisible({ timeout: 5000 });
         // Ensure no horizontal overflow
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
         const box = await btn.boundingBox();
@@ -48,7 +48,7 @@ for (const width of [1280, 390]) {
       // US Filing Calendar shows 51 states
       await page.getByRole('button', { name: 'US Filing Calendar', exact: true }).click();
       await expect(page.getByText(/51 rows \(50 \+ DC\)/i).first()).toBeVisible();
-      const stateInput = page.getByLabelText('State (code or name)');
+      const stateInput = page.getByLabel('State (code or name)');
       await stateInput.fill('TX');
       await expect(page.getByRole('table')).toContainText('TX');
       await stateInput.fill('');
@@ -56,12 +56,12 @@ for (const width of [1280, 390]) {
       // Israeli Document Types: change lifecycle to draft shows Not issued
       await page.getByRole('button', { name: 'Israeli Document Types', exact: true }).click();
       await expect(page.getByText(/חשבונית מס/i).first()).toBeVisible();
-      await page.getByLabelText('Lifecycle').selectOption('draft');
+      await page.getByLabel('Lifecycle').selectOption('draft');
       await expect(page.getByText(/Not issued:/i)).toBeVisible();
 
       // US 1099 Preview: threshold and NOT IRIS visible
       await page.getByRole('button', { name: 'US 1099 Preview', exact: true }).click();
-      await expect(page.getByText(/NOT IRIS/i)).toBeVisible();
+      await expect(page.getByText(/NOT IRIS/i).first()).toBeVisible();
 
       // Entity Filings: due table caption
       await page.getByRole('button', { name: 'Entity Filings Calendar', exact: true }).click();
