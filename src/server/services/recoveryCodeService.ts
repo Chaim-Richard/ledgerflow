@@ -30,8 +30,20 @@ function keyedHash(uid: string, code: string): string {
 }
 
 function newCode(): string {
-  const bytes = crypto.randomBytes(10);
-  const chars = [...bytes].map(b => ALPHABET[b % ALPHABET.length]).join('');
+  const targetLen = 10;
+  const n = ALPHABET.length;
+  const limit = Math.floor(256 / n) * n; // largest multiple of n below 256
+  let chars = '';
+
+  while (chars.length < targetLen) {
+    const bytes = crypto.randomBytes(targetLen - chars.length);
+    for (const b of bytes) {
+      if (b >= limit) continue; // reject to avoid modulo bias
+      chars += ALPHABET[b % n];
+      if (chars.length === targetLen) break;
+    }
+  }
+
   return `${chars.slice(0, 5)}-${chars.slice(5)}`;
 }
 
