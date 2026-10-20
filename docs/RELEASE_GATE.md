@@ -31,7 +31,7 @@ independently worked figures passes · **Browser** = an end-to-end browser test 
 | # | Workflow | Stage | Connected | Verified | Browser | Remaining blockers |
 |---|---|---|---|---|---|---|
 | W1 | Sign up → company → chart of accounts → first invoice → first report (P2-1) | 2 | Partly | No | Partly ([D-46 notices only](verification/ai4-d46-mobile-notices.md)) | first-hour journey test (A-151/P2-1); C-127 navigation/disabled-control batch verified locally, complete journey/CI still pending |
-| W2 | Invoice → posting → payment → customer statement | 2 | Yes | Partly | Partly | DIM-1 payments |
+| W2 | Invoice → posting → payment → customer statement | 2 | Yes | Yes | Yes | DIM-1 payments |
 | W3 | Bill → posting → payment run → vendor statement | 2 | Yes | Partly ([D-33 withholding goldens](verification/ai4-d33-withholding-golden.md)) | Partly | golden bills A-147 wired to the posting, DIM-1 payments, #156 inherited withholding rate after expiry |
 | W4 | Bank import / feed → reconciliation | 2 | Yes | Partly | Partly | AU-1 changed/removed lines on the Banking screen, #96 |
 | W5 | Labels (property, project, location) → reports by label | 2 | Yes | Partly ([D-93 failure-state checks](verification/ai4-d93-report-harness.md)) | No ([D-45 filter checks](verification/ai4-d45-report-controls.md); [D-77 heading](verification/ai4-d77-report-heading.md); [D-78 navigation](verification/ai4-d78-report-tabs.md); [D-80 contrast](verification/ai4-d80-highlighted-ledger-row.md)) | DIM-1 payments, DIM-3 balancing roles |
