@@ -1,5 +1,8 @@
 # Status: moved
 
+> **Not the current task list.** What to do now: [`CURRENT_WORK.md`](../CURRENT_WORK.md). Product status: [`RELEASE_GATE.md`](RELEASE_GATE.md). This file is kept for older status snapshots.
+
+
 This page was a generated snapshot from late September and is out of date. **What works today is in [`CAPABILITIES.md`](CAPABILITIES.md)** (one row per capability, its label, its evidence and its limit, checked by `src/tests/capabilities-guard.test.ts`). The old snapshot is kept below for history only.
 
 ---

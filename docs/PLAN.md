@@ -1,5 +1,8 @@
 # LedgerFlow: the plan (updated 13 Oct 2026)
 
+> **Not the current task list.** What to do now: [`CURRENT_WORK.md`](../CURRENT_WORK.md). Product status: [`RELEASE_GATE.md`](RELEASE_GATE.md). This file is kept for the strategy (§15–16 are current).
+
+
 Written for the owner. It says where the list stands, the fastest way to finish it, what Claude
 (AI #1) does next, what the other AIs do, and how tax becomes solid: the US and Israel first, then
 states, cities and other countries.

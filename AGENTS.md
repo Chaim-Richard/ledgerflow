@@ -1,7 +1,7 @@
 # Project Architecture and Modification Guide
 
-> **Every AI, start here (18 Oct):** read **"NOW — every AI works by the plan"** at the top of
-> [`docs/COORDINATION.md`](docs/COORDINATION.md): your do-first list, the order to work in, and the rules.
+> **Every AI, start here:** read [`CURRENT_WORK.md`](CURRENT_WORK.md) — your next tasks, your open PRs, the rules —
+> then the rules in "NOW" at the top of [`docs/COORDINATION.md`](docs/COORDINATION.md) and your queue there.
 > The plan is [`docs/PLAN.md`](docs/PLAN.md) §15–§16; the finish line is [`docs/RELEASE_GATE.md`](docs/RELEASE_GATE.md)
 > (14 workflows, each connected / verified with worked figures / browser-tested). Screens follow
 > [`docs/UI_GUIDE.md`](docs/UI_GUIDE.md). The lead's loop: [`docs/LEAD_RUNBOOK.md`](docs/LEAD_RUNBOOK.md).

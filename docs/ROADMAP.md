@@ -1,5 +1,8 @@
 # LedgerFlow roadmap filter (owner, 7 Oct)
 
+> **Not the current task list.** What to do now: [`CURRENT_WORK.md`](../CURRENT_WORK.md). Product status: [`RELEASE_GATE.md`](RELEASE_GATE.md). This file is kept for the product roadmap and its history.
+
+
 Every task in `docs/TRACKER.md` and every queue in `docs/COORDINATION.md` is judged by this page.
 It does not replace the tracker. It says what we build first, what waits, and what never goes into
 the core.
