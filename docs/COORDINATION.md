@@ -762,14 +762,14 @@ Update the RELEASE_GATE row you move. Full wording of each task is in `docs/TRAC
 - [x] **CON-4** Israel VAT reporting frequency (monthly / bi-monthly) drives the VAT report period and the PCN874 file. W7.
 - [x] **CON-3** Israel special VAT areas (Eilat) applied to invoices, with a test — use `ilVatAreaKeyFor` from #229; exempt vs zero-rate as the law says (exempt: no VAT, no input credit). W7.
 - [x] **CON-4** *(PR open, AI #9)* Israel VAT reporting frequency (monthly / bi-monthly) drives the VAT report period and the PCN874 file. W7.
-- [ ] **CON-1** US sales-tax table and item taxability used by invoice lines for the supported states; other states stay labelled "not verified". W8.
+- [x] **CON-1** US sales-tax table and item taxability used by invoice lines for the supported states; other states stay labelled "not verified". W8.
 - [~] **CON-3** *(PR open, AI #9)* Israel special VAT areas (Eilat) applied to invoices, with a test — use `ilVatAreaKeyFor` from #229; exempt vs zero-rate as the law says (exempt: no VAT, no input credit). W7.
 - [ ] **CON-4** Israel VAT reporting frequency (monthly / bi-monthly) drives the VAT report period and the PCN874 file. W7.
-- [~] **CON-1** *(PR open, AI #9)* US sales-tax table and item taxability used by invoice lines for the supported states; other states stay labelled "not verified". W8.
-- [ ] **CON-2** US nexus watch on a screen, from posted invoices, for the supported states. W8.
-- [~] **CON-2** *(PR open, AI #9)* US nexus watch on a screen, from posted invoices, for the supported states. W8.
+- [x] **CON-1** *(PR open, AI #9)* US sales-tax table and item taxability used by invoice lines for the supported states; other states stay labelled "not verified". W8.
+- [x] **CON-2** US nexus watch on a screen, from posted invoices, for the supported states. W8.
+- [x] **CON-2** *(PR open, AI #9)* US nexus watch on a screen, from posted invoices, for the supported states. W8.
 - [ ] **ISS-130** (GitHub #130) Inventory unit-cost edits on stock in hand go through a balanced revaluation entry, or are refused. W13.
-- [~] **ISS-131** *(PR open, AI #9)* (GitHub #131) Inventory valuation as of a past date uses historical quantities/costs from stock moves (or hides the comparison). W13.
+- [x] **ISS-131** *(PR open, AI #9)* (GitHub #131) Inventory valuation as of a past date uses historical quantities/costs from stock moves (or hides the comparison). W13.
 - [ ] **DIM-2** Stock moves keep where an item came from (vendor/bill/receipt line) and where it went (customer, project, label). W13.
 
 ## Messages (newest at the bottom; date + who)
