@@ -275,7 +275,8 @@ export function usQuarterJourney(input: UsQuarterInput): UsQuarter {
       filed: filed.has(permit.registration) || filed.has(quarterKey)
         || (input.filedPeriods || []).some(f => f.startDate === startDate && f.endDate === endDate),
       nexusThresholdCents: threshold,
-      nexusSalesReached: threshold !== null && r.grossSalesCents >= threshold,
+      // the state's own wording: New York's "more than" is not reached at exactly the threshold
+      nexusSalesReached: threshold !== null && (nexus?.strict ? r.grossSalesCents > threshold : r.grossSalesCents >= threshold),
     };
   });
   const unfiled = returns.filter(r => !r.filed && (r.taxCollectedCents !== 0 || r.documentCount > 0));
