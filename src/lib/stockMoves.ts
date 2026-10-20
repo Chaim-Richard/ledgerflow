@@ -7,7 +7,7 @@
  * Pure: the Stock history window and the nightly check read it.
  */
 
-export type StockMoveKind = 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'purchase-reversal' | 'purchase-return' | 'purchase-return-reversal' | 'opening' | 'adjustment' | 'count' | 'manual-cogs' | 'transfer-out' | 'transfer-in';
+export type StockMoveKind = 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'purchase-reversal' | 'purchase-return' | 'purchase-return-reversal' | 'opening' | 'adjustment' | 'count' | 'manual-cogs' | 'transfer-out' | 'transfer-in' | 'revaluation';
 
 export interface StockMove {
   id?: string;
@@ -50,6 +50,8 @@ export const STOCK_MOVE_LABEL: Record<StockMoveKind, string> = {
   'manual-cogs': 'Cost of goods sold recorded',
   'transfer-out': 'Moved out',
   'transfer-in': 'Moved in',
+  // ISS-130: the cost of stock on hand changed, with its entry; no units move (quantity 0, the value change)
+  revaluation: 'Revalued',
 };
 
 /** W-01: the stock with no location (made before locations were used, or never placed). */

@@ -472,3 +472,6 @@ dismiss as *false positive*: alert 24 (payslip GET), 25 (API-key SHA-256 — key
 2. **Tax in stages A and B = user- or accountant-chosen rates, clearly marked.** The US/IL engines stay as suggestions; filing-ready automation is stage C. Real Israeli tax invoices still need allocation numbers. *Change if a pilot customer needs automated filing.*
 3. **First-hour journey test (W1) moved from AI #8 (inactive) to AI #7.**
 4. **Open question for you:** who are the stage-A testers, and when do you want to invite them? Stage A needs W1, W2–W5, W10, W14 and gates G-01/G-02 (see RELEASE_GATE "Today").
+## 20 Oct — migration to apply after ISS-130 is merged (AI #9)
+
+- **`supabase/migrations/20261020120000_inventory_cost_server_only.sql`**: refuses a browser change to an item's unit cost while it has stock on hand (the cost of stock changes only through Inventory → Revalue, which posts the difference). Tested with `npm run test:rules` on the local test database. AI #1 applies it to Supabase after reviewing the ISS-130 PR; until it is applied, the screen already locks the cost, but a direct browser write is not yet refused by the database.
