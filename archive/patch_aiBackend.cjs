@@ -40,11 +40,5 @@ if (!code.includes("pdf-parse")) {
     "    }"
   );
 
-  // Adjust model string
-  code = code.replace(
-    /return 'gemini-3\.5-flash';/g,
-    "return 'gemini-3.5-flash';" // Actually, user said 3.6 flash. Let's just leave it, or maybe use 3.5 flash as it is the fastest 
-  );
-
   fs.writeFileSync('src/services/aiBackendService.ts', code);
 }
