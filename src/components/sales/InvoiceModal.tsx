@@ -50,8 +50,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const inventoryItems = useLedgerStore(s => s.inventory || []);
-  const { loading: inventoryLoading } = useLedgerCollections('inventory', 'invoices');
-  const inventoryCapped = useLedgerStore(s => Boolean(s.truncatedCollections?.inventory));
+  const { loading: inventoryLoading } = useLedgerCollections('inventory', 'invoices'); const inventoryCapped = useLedgerStore(s => Boolean(s.truncatedCollections?.inventory));
   const pastInvoices = useLedgerStore(s => s.invoices);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   // a sale receipt goes into a bank account or Undeposited Funds (then "Make deposit" takes it to the bank)
