@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { taxRulePacks } from '../../lib/rules/packs/index';
 import {
   ruleCoverage, ruleCoverageCsvRows, RULE_COVERAGE_CSV_HEADERS, COVERAGE_KINDS, COVERAGE_KIND_LABELS, CORE_COVERAGE_KINDS,
   type CoverageKind,
 } from '../../lib/rules/coverage';
+import { IL_VAT_SPECIAL_AREAS, ilVatAreaKeyFor, ilVatAreaNames } from '../../lib/tax/ilVat';
 import { getLocalDateISO } from '../../lib/utils';
 import { downloadCsv } from '../../lib/csvExport';
 import ReportTableScroll from './ReportTableScroll';
@@ -99,6 +99,31 @@ export default function RulePackCoverageReportView({ asOfDate = '' }: { asOfDate
       </table>
       {!rows.length && <p className="text-sm text-[var(--muted)]">No rule in the packs matches these filters.</p>}
     </ReportTableScroll>
+
+    <details className="text-sm" data-il-special-areas>
+      <summary className="min-h-11 cursor-pointer">Israel: the places outside the ordinary rate (A-99)</summary>
+      <p className="text-[var(--muted)]">
+        The rows the <code>il-vat</code> pack is built from, and every spelling each row recognises. The same recognition answers
+        the line&rsquo;s rate on the invoice, so a book written <bdi>אילת</bdi> and a book written <bdi>Eilat</bdi> are one place here,
+        and a place this table does not state stays at the ordinary rate rather than being guessed into a special one. An exemption is
+        not a zero rate: in Eilat the resident dealer charges no VAT and has no input credit. Nothing here files, posts or decides an
+        eligibility question the law leaves to the authority.
+      </p>
+      <ul className="list-disc ps-5 space-y-2">
+        {IL_VAT_SPECIAL_AREAS.map(row => <li key={row.area}>
+          <bdi className="font-semibold">{row.name}</bdi> <bdi className="font-semibold">{row.nameHebrew}</bdi>
+          {' — '}{row.treatment === 'zero' ? 'outside the ordinary VAT' : 'the ordinary rate'}
+          {`, ${(row.rate * 100).toFixed(row.rate % 1 === 0 ? 0 : 2)}%`}
+          {`, in force ${row.validFrom}${row.validTo ? ` – ${row.validTo}` : ' onward'}.`}
+          <div className="text-xs">Recognised as {ilVatAreaNames(row).map(name => <code key={name} className="me-2">{name}</code>)}</div>
+          <div className="text-xs text-[var(--muted)]"><bdi>{row.note || ''}</bdi></div>
+          <div className="text-xs"><a className="underline" href={row.source} target="_blank" rel="noopener noreferrer">{row.sourceAuthority || 'Source'}</a></div>
+        </li>)}
+      </ul>
+      <p className="text-xs text-[var(--muted)]">
+        Read the same way this screen reads them on {asOf}: {'אילת, Eilat, eilat, Tel Aviv'.split(', ').map(name => <span key={name} className="me-3"><bdi>{name}</bdi> → <code>{ilVatAreaKeyFor(name) || 'ordinary'}</code></span>)}
+      </p>
+    </details>
 
     <p className="text-xs text-[var(--muted)]">
       A rule of the four the queue asks about ({CORE_COVERAGE_KINDS.map(k => COVERAGE_KIND_LABELS[k]).join(', ')}) is counted once per place it names, so a

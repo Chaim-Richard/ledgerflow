@@ -442,6 +442,7 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'InventoryValuationReportView': lazy(() => import('../components/reporting/InventoryValuationReportView')),
   'JournalSheetReportView': lazy(() => import('../components/reporting/JournalSheetReportView')),
   'MileageRatesReportView': lazy(() => import('../components/reporting/MileageRatesReportView')),
+  'IlSelfEmploymentNiReportView': lazy(() => import('../components/reporting/IlSelfEmploymentNiReportView')),
   'BankingValidationReportView': lazy(() => import('../components/reporting/BankingValidationReportView')),
 };
 
@@ -548,6 +549,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'quote-versions', label: { en: 'Quote Versions', he: 'גרסאות הצעת מחיר' }, componentName: 'QuoteVersionsReportView', icon: FileSignature },
   { id: 'blanket-orders', label: { en: 'Blanket Purchase Orders', he: 'הזמנות רכש פתוחות' }, componentName: 'BlanketOrdersReportView', icon: Handshake },
   { id: 'mileage-rates', label: { en: 'US Mileage Rates', he: 'תעריפי נסיעה ארה"ב' }, componentName: 'MileageRatesReportView', icon: Truck },
+  { id: 'israel-self-employment-ni', label: { en: 'Israel: Self-Employed National Insurance', he: 'ישראל: ביטוח לאומי לעצמאים' }, componentName: 'IlSelfEmploymentNiReportView', icon: Receipt },
   { id: 'banking-validation', label: { en: 'Banking Data Validation', he: 'אימות נתוני בנק' }, componentName: 'BankingValidationReportView', icon: ShieldCheck },
 ], 'reports');
 

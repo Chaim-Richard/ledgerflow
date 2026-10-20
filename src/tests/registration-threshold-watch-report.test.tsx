@@ -72,3 +72,22 @@ test('report exposes missing country and incomplete loaded history instead of im
   assert.ok(screen.getByText(/No country fact is set in the Tax profile/));
   assert.ok(screen.getByText(/No threshold comparison can be made/));
 });
+
+test('A-100: the osek patur ceiling history is on the screen, year by year, with the page it was read from', () => {
+  render(<RegistrationThresholdWatchReportView endDate="2026-12-31" />);
+  const block = screen.getByText('Israel: the osek patur ceiling, year by year (A-100)').closest('details')!;
+  const cells = Array.from(block.querySelectorAll('tbody > tr')).map(row => Array.from(row.children).map(cell => cell.textContent || ''));
+  assert.equal(cells.length, 10, 'one row per year the table answers for');
+  const row2021 = cells.find(row => row[0] === '2021')!;
+  assert.equal(row2021[1], '₪998.93'.replace('998.93', '99,893.00'), 'the 2021 figure is the year that came down with the index');
+  assert.equal(row2021[2], '2021-01-01', 'and it starts on 1 January of that year');
+  assert.equal(row2021[3], '2021-12-31', 'and ends on 31 December');
+  assert.match(row2021[4], /consumer price index/, 'the screen says how the year’s figure came about');
+  const row2026 = cells.find(row => row[0] === '2026')!;
+  assert.equal(row2026[1], '₪122,833.00');
+  assert.equal(row2026[3], 'open — the Authority sets each year', 'the newest year is not closed off');
+  const links = Array.from(block.querySelectorAll('a')).map(link => link.getAttribute('href'));
+  assert.ok(links.every(href => href && href.startsWith('https://')), 'every year cites an https page');
+  assert.ok(links.includes('https://www.gov.il/he/service/request-open-exempt-dealer-via-internet'), 'the Tax Authority’s own page is one of them');
+  assert.match(block.textContent || '', /unknown,\\s*,?|never zero/, 'and the screen states that a year without a row is unknown');
+});

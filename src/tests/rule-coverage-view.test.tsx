@@ -58,4 +58,19 @@ describe('Tax rule coverage screen', () => {
     assert.ok(us, 'the federal US row is a country row of its own');
     assert.match(us!.textContent || '', /filings/, 'the US filing pack is counted there');
   });
+
+  test('A-99: the Israel special-areas block names each spelling the pack recognises and its source', () => {
+    render(<RulePackCoverageReportView asOfDate="2026-10-13" />);
+    const block = screen.getByText('Israel: the places outside the ordinary rate (A-99)').closest('details')!;
+    assert.match(block.textContent || '', /אילת/, 'the Hebrew name is on the screen, not only in the table');
+    assert.match(block.textContent || '', /Eilat Free Trade Zone Law/, 'the statute is named');
+    assert.match(block.textContent || '', /1985-11-01 onward/, 'the law’s commencement day is the date shown');
+    assert.match(block.textContent || '', /exemption is\s+\n?\s*not a zero rate|exemption is not a zero rate/, 'and the screen says an exemption is not a zero rate');
+    // the recognition line answers for the spellings a book actually carries, in the same words the
+    // table uses: a Hebrew address is Eilat, an unstated city is the ordinary area
+    const resolution = block.querySelector('p:last-of-type')!;
+    assert.match(resolution.textContent || '', /אילת\s*→\s*eilat/, 'the screen shows the resolution it applied');
+    assert.match(resolution.textContent || '', /Tel Aviv\s*→\s*ordinary/, 'and says plainly when a place is not special');
+  });
+
 });

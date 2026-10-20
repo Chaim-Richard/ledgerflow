@@ -47,6 +47,27 @@ describe('Sales tax holidays screen', () => {
     assert.ok(screen.getByText(/never assumed absent/));
   });
 
+  test('A-109 states the calendar of every state that runs a window, as WHEN and not WHAT', () => {
+    render(<SalesTaxHolidaysReportView today="2026-08-01" />);
+    const body = document.body;
+    assert.match(screen.getByRole('heading', { name: /A-109: the calendar/ }).textContent || '', /which states run a window/);
+    const va = body.querySelector('[data-calendar-row="va-sales-tax-holiday-2026"]');
+    assert.match(va?.textContent || '', /2026-08-07 → 2026-08-09/, 'the window the Department itself publishes');
+    assert.match(va?.textContent || '', /opened for this table/, 'and the row says its state page was read');
+    assert.match(body.textContent || '', /Next window dated after 2026-08-01/);
+    assert.match(body.textContent || '', /Arkansas — Back-to-School Sales Tax Holiday/);
+    // Illinois cuts the rate rather than removing the tax; the screen must not let it read as tax-free
+    const il = body.querySelector('[data-calendar-row="il-back-to-school-2026"]');
+    assert.match(il?.textContent || '', /the rate falls/u);
+    assert.match(il?.textContent || '', /1\.25%/u);
+    assert.equal(body.querySelectorAll('[data-calendar-month]').length, 8, 'eight months of 2026 carry a window');
+    assert.match(body.querySelector('[data-calendar-gaps]')?.textContent || '', /Alabama food sales tax holiday/);
+    // the calendar is a list on purpose: this screen's rules table stays the one table it exports
+    assert.equal(screen.getAllByRole('table').length, 1, 'a second table would break A-58 and the CSV');
+    fireEvent.change(screen.getByLabelText('Calendar year'), { target: { value: '2027' } });
+    assert.match(body.textContent || '', /2027-01-08 → 2027-01-09/u, "Puerto Rico's January window is already published");
+  });
+
   test('a guest can read and export the calendar', () => {
     render(<SalesTaxHolidaysReportView today="2026-08-07" />);
     const exportButton = screen.getByRole('button', { name: /Export CSV/ });

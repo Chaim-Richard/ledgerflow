@@ -52,6 +52,28 @@ export const TAX_TABLES: readonly TableSpec[] = [
     ]
   },
   {
+    "file": "ilSelfEmploymentNationalInsurance.ts",
+    "name": "IL_SELF_EMPLOYMENT_NI_ROWS",
+    "keys": [],
+    "amounts": [
+      "minMonthlyIncomeCents",
+      "reducedBandCeilingCents",
+      "maxMonthlyIncomeCents",
+      "publishedMinMonthlyAdvanceCents?",
+      "publishedMaxMonthlyAdvanceCents?",
+      "averageMonthlyWageCents?"
+    ]
+  },
+  {
+    "file": "ilOsekPaturThresholds.ts",
+    "name": "IL_OSEK_PATUR_CEILINGS",
+    "keys": [],
+    "amounts": [
+      "ceilingCents"
+    ],
+    "mode": "year"
+  },
+  {
     "file": "ilVatRates.ts",
     "name": "IL_VAT_STANDARD",
     "keys": [],
@@ -195,6 +217,15 @@ export const TAX_TABLES: readonly TableSpec[] = [
     "fractions": [
       "rate?"
     ]
+  },
+  {
+    "file": "usSalesTaxHolidayCalendar.ts",
+    "name": "US_SALES_TAX_HOLIDAY_CALENDAR",
+    "keys": [
+      "state",
+      "name"
+    ],
+    "mode": "holiday"
   },
   {
     "file": "usSalesTaxHolidays.ts",
