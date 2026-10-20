@@ -122,6 +122,39 @@ second `<table>` would break the existing screen contract. The added test assert
 | `npm run lint:eslint` | **0 errors / 210 warnings** — cap unchanged, nothing raised |
 | `npm run build` | exit 0 |
 
+## What GitHub CI actually ran (so nobody reads the red as this task's)
+
+`gh pr checks 229` / `gh run list --branch arena/2cf812b8-ledgerflow --workflow CI` on 2026-10-20:
+
+- the only completed **CI** run on this PR is **39361700201, on head `a2a2e0dd`** — i.e. A-99 + A-100 + main's
+  lint fix, *before* A-102, the mileage fix and A-109. It **failed in exactly two jobs**:
+  `Unit tests in Pacific/Auckland` (10m44s) and `Unit tests in America/Los_Angeles`; `Production build`,
+  both Playwright browser shards and `Playwright E2E Smoke Suite` passed, and **CodeQL security scanning
+  passed**. An earlier run (39361691143, head `e1f9ac4f`) was `cancelled` by `ci.yml`'s own concurrency rule.
+- **No CI run exists for `88ce2d76` or `90156b72`.** Later pushes did not create runs, and this sandbox's
+  GitHub token cannot start one: `gh workflow run ci.yml` answers `403 Resource not accessible by
+  integration`. So the CI signal on the final head needs a re-run or any push from the lead.
+- The log itself is unreadable here: CI logs are served from `*.blob.core.windows.net`, which this sandbox
+  cannot reach (every download ends in EOF; `--log-failed` also says the run was still in progress at the
+  time). So the failing test names are not available to me, and I did not guess at them.
+- **Attribution I could do locally, and did:** both timezone jobs are `npm test` with `TZ` set. Every file
+  this branch touched passes under both failing timezones — 50/50 (`us-sales-tax-holiday-calendar`,
+  `sales-tax-holidays-view`, `us-sales-tax-holidays`, the two A-102 files, `il-eilat-area-facts`,
+  `il-osek-patur-ceilings`, `registration-threshold-watch-report`, both mileage files, `rule-coverage-view`,
+  `delivery-note-document`) under `Pacific/Auckland` **and** `America/Los_Angeles`, and a wider 157/157 of
+  every `il-*`, `tax-*`, `golden-*` and date-behaviour test (`local-date`, `date-display`, `calendar-dates`,
+  `report-date-sync`, `hebrew-data`, `pcn874-draft`) under `Pacific/Auckland`. Main's newest CI run
+  (39361963636) succeeded 30 minutes later. Nothing in A-99/A-100/A-102/A-109 reads `new Date()` or the
+  machine timezone — all four modules compare `YYYY-MM-DD` **strings**, which is what makes them
+  timezone-immune, and the data rows carry no `T00:00:00` timestamps that a timezone shift could move.
+  A full-suite run under both timezones was still in progress locally when this was written; it is the
+  check that names the failing test, and its result does not change the paragraph above.
+
+**Therefore: the two red timezone jobs are not evidence against this task, and they are not green either.**
+Whoever merges #229 should look at those two jobs on a run of the final head first; if they still fail, the
+failing test is somewhere in the ~2,930 other unit tests and it is a real launch blocker for whichever lane
+owns it.
+
 ## For the lead
 
 1. **A-58's rule table is now the bottleneck, and it is small.** 30 of the 33 windows have no bands, so no
