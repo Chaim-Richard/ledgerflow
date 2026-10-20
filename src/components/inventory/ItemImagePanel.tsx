@@ -65,14 +65,8 @@ export default function ItemImagePanel({
       const next = result.saved[0];
       // The new image is durably saved before the previous one is removed. A failed replacement
       // never leaves the item without its prior image.
-      let failedCleanupCount = 0;
-      for (const oldImage of existingImages) {
-        try {
-          await removeAttachment(workspaceId, oldImage.id);
-        } catch {
-          failedCleanupCount += 1;
-        }
-      }
+      const cleanup = await Promise.allSettled(existingImages.map(oldImage => removeAttachment(workspaceId, oldImage.id)));
+      const failedCleanupCount = cleanup.filter(r => r.status === 'rejected').length;
       const replacementWarning = failedCleanupCount
         ? `The new image was saved, but ${failedCleanupCount} older image attachment${failedCleanupCount === 1 ? '' : 's'} could not be removed. The new image is shown; try replacing again or ask a workspace owner to remove them.`
         : '';
