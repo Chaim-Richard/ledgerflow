@@ -1,6 +1,6 @@
 /**
  * A-38: the US product-taxability table (A-31) written as rules. Only rows that change the outcome
- * become rules — an exemption (0%) or a reduced rate — because "taxable at the state rate" is the
+ * become rules — an exemption (0%) or a reduced rate (which replaces the state rate) — because "taxable at the state rate" is the
  * default the state rule already says. Rows marked `unclear` are never turned into rules: they are
  * listed under `unmapped` so a person confirms them, which is what the table's own note says.
  */
@@ -29,9 +29,11 @@ export function productTaxabilityPack(): TaxRulePack {
       name: `${row.state} ${row.category}: ${row.treatment === 'exempt' ? 'exempt' : `reduced ${(rate * 100).toFixed(3).replace(/\.?0+$/, '')}%`}`,
       when: [where('country', ['US']), where('state', [row.state]), where('productCategory', [row.category])],
       effect: { kind: 'rate', level: 'state', name: `${row.state} ${row.category}`, rate },
-      combine: row.treatment === 'exempt' ? 'exclude' : 'accumulate',
-      // an exemption switches the state's own rate rule off for that category (the graph's `exclude`)
-      ...(row.treatment === 'exempt' ? { targets: stateSalesRuleIds(row.state, row.validFrom) } : {}),
+      // an exemption switches the state's own rate rule off for that category (the graph's `exclude`); a reduced rate is
+      // the state part itself (Illinois groceries 1%), so it replaces the state's own rule rather than adding to it
+      // (it used to accumulate: 6.25% + 1% = 7.25%). Local rates still add on top, as for any category.
+      combine: row.treatment === 'exempt' ? 'exclude' : 'override',
+      targets: stateSalesRuleIds(row.state, row.validFrom),
       validFrom: row.validFrom,
       ...(row.validTo ? { validTo: row.validTo } : {}),
       source: { authority: `${row.state} Department of Revenue`, url: row.source, retrieved: row.checked },
