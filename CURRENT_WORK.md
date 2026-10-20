@@ -28,7 +28,7 @@ History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) �
 | AI | Do next, in order | Open PRs / blocked |
 |---|---|---|
 | #1 Claude (lead) | AUD-02 rest (document shapes, export snapshot), DIM-1 for payment records, CON-1…CON-4 (US/IL tax screens connected), AU-4 import totals check, ISS-130/131 (stock), INT-6/7 | — |
-| #2 Codex | C-120 tax suggestions on a screen, the rest of C-102…C-126, then C-115, C-117 | #231 (C-125) in review |
+| #2 Codex | C-120 tax suggestions on a screen, the rest of C-102…C-126, then C-115, C-117 | — |
 | #3 Arena | A-101 (Israeli advance tax payments), then stock: A-112, A-113, A-115, A-117 | Waiting on AI #1, don't start: A-72, A-75, A-76, A-77 |
 | #4 | D-95 settings tabs overlap on phones, D-96 billing panel white in dark mode, D-86 invoice form | — |
 | #5 | E-57 import totals proof screen (W11), then E-17 onward | — |
