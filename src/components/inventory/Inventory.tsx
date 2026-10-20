@@ -54,6 +54,7 @@ import StockHistoryDialog from './StockHistoryDialog';
 import InventoryItemDialog from './InventoryItemDialog';
 import { ItemImageThumb } from './ItemImagePanel';
 import StockAdjustDialog from './StockAdjustDialog';
+import StockRevalueDialog from './StockRevalueDialog';
 import StockCountDialog from './StockCountDialog';
 import CategoryManagerDialog from './CategoryManagerDialog';
 import { categoryCounts } from '../../lib/itemCategories';
@@ -96,7 +97,11 @@ export default function Inventory() {
   const [taxCategoryFilter, setTaxCategoryFilter] = useState('');
   const [isManagingCategories, setIsManagingCategories] = useState(false);
   const baseCurrency = useLedgerStore(s => s.baseCurrency) || 'USD';
-  const canChangeStock = useCurrentRole() !== 'viewer';
+  const role = useCurrentRole();
+  const canChangeStock = role !== 'viewer';
+  // ISS-130: revaluing changes book value, so owners and accountants (the server checks the same)
+  const canRevalue = role === 'owner' || role === 'accountant';
+  const [revalueItem, setRevalueItem] = useState<InventoryItem | null>(null);
   const { setSafeTimeout } = useTimeout();
 
   useEffect(() => {
@@ -147,7 +152,8 @@ export default function Inventory() {
       sku: formData.get('sku') as string,
       description: formData.get('description') as string,
       unitPriceCents: TruthEngine.parseAmountToCents(formData.get('unitPrice') as string),
-      unitCostCents: TruthEngine.parseAmountToCents(formData.get('unitCost') as string),
+      // ISS-130: the cost of stock on hand changes only by a revaluation, so the form leaves it alone
+      ...(editingItem.quantityAtHand ? {} : { unitCostCents: TruthEngine.parseAmountToCents(formData.get('unitCost') as string) }),
       // the quantity changes only through Adjust stock, a count or a sale, which post to the books
       reorderPoint: parseInt(formData.get('reorderPoint') as string, 10) || 0,
       measurementUnit: formData.get('measurementUnit') as string || undefined,
@@ -539,8 +545,9 @@ export default function Inventory() {
                     </div>
                   ) : (
                     <div className="flex flex-col">
-                      <InlineEdit kind="money" value={item.unitCostCents} display={formatCurrency(item.unitCostCents)} label={`Unit cost of ${item.name}`} canEdit={canChangeStock}
+                      <InlineEdit kind="money" value={item.unitCostCents} display={formatCurrency(item.unitCostCents)} label={`Unit cost of ${item.name}`} canEdit={canChangeStock && !item.quantityAtHand}
                         onSave={v => saveItemField(item, 'unitCostCents', v)} className="text-sm font-bold text-zinc-500 font-mono tabular-nums" />
+                      {Boolean(item.quantityAtHand) && canRevalue && <button type="button" onClick={() => setRevalueItem(item)} className="min-h-11 self-start text-[10px] font-semibold text-emerald-700 hover:underline">Revalue {item.name}</button>}
                       {item.unitsPerPackage && item.unitsPerPackage > 1 && (
                         <span className="text-[10px] font-black text-emerald-600 tracking-widest mt-0.5 uppercase tabular-nums">
                           {formatCurrency(Math.round(item.unitCostCents / item.unitsPerPackage))} / {item.measurementUnit || 'unit'}
@@ -685,13 +692,17 @@ export default function Inventory() {
       <InventoryItemDialog key={editingItem?.id || 'new-item'} open={isAdding || !!editingItem} editingItem={editingItem} categories={categories} canChangeStock={canChangeStock} taxCodes={salesTaxCodes} allItems={items}
         onClose={closeItemDialog} onSubmit={editingItem ? handleUpdate : handleAdd}
         onItemImageChange={itemId => setImageRefresh(current => ({ ...current, [itemId]: (current[itemId] || 0) + 1 }))}
-        onAdjust={it => { setEditingItem(null); setAdjustItem(it); }} />
+        onAdjust={it => { setEditingItem(null); setAdjustItem(it); }}
+        onRevalue={canRevalue ? it => { setEditingItem(null); setRevalueItem(it); } : undefined} />
 
       {cogsItem && workspaceId && (
         <CogsDialog item={cogsItem} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setCogsItem(null)} />
       )}
       {adjustItem && workspaceId && (
         <StockAdjustDialog item={adjustItem} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setAdjustItem(null)} />
+      )}
+      {revalueItem && workspaceId && (
+        <StockRevalueDialog item={revalueItem} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setRevalueItem(null)} />
       )}
       {historyItem && workspaceId && (
         <StockHistoryDialog item={historyItem} workspaceId={workspaceId} currency={baseCurrency} onClose={() => setHistoryItem(null)} />

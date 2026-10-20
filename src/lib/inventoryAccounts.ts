@@ -41,6 +41,15 @@ export function defaultOffsetAccount(accounts: ChartAccount[], kind: StockChange
   return named || byRole('cogs')[0];
 }
 
+/**
+ * ISS-130: what revaluing stock on hand changes in the books, integer cents: the stock's value at the new cost less
+ * its value at the old cost, each rounded the way Inventory Valuation rounds it (quantity × cost). Positive raises
+ * the Inventory account. Zero quantity has nothing to revalue.
+ */
+export function revaluationValueCents(quantity: number, oldUnitCostCents: number, newUnitCostCents: number): number {
+  return Math.round(quantity * (newUnitCostCents || 0)) - Math.round(quantity * (oldUnitCostCents || 0));
+}
+
 /** Value of a stock change at a unit cost, integer cents (positive = stock added). */
 export function stockChangeValueCents(quantityChange: number, unitCostCents: number): number {
   return Math.round(quantityChange * (unitCostCents || 0));

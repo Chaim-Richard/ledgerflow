@@ -27,10 +27,14 @@ interface InventoryItemDialogProps {
   onItemImageChange?: (itemId: string) => void;
   /** Opens Adjust stock for the item being edited (its quantity changes only through the books). */
   onAdjust: (item: InventoryItem) => void;
+  /** ISS-130: the cost of stock on hand changes only by a revaluation (owners and accountants) */
+  onRevalue?: (item: InventoryItem) => void;
 }
 
 /** The add / edit item form of the Inventory screen (F-16: moved out of Inventory.tsx). */
-export default function InventoryItemDialog({ open, editingItem, categories, taxCodes = [], allItems = [], canChangeStock, onClose, onSubmit, onItemImageChange, onAdjust }: InventoryItemDialogProps) {
+export default function InventoryItemDialog({ open, editingItem, categories, taxCodes = [], allItems = [], canChangeStock, onClose, onSubmit, onItemImageChange, onAdjust, onRevalue }: InventoryItemDialogProps) {
+  // ISS-130: with stock on hand the cost is on the books; it changes by a revaluation, never by this form
+  const costLocked = Boolean(editingItem?.quantityAtHand);
   const { dialogProps: itemDialogProps, titleId: itemTitleId } = useDialog(onClose, open);
   // A-19: the bundle's parts, held here and written into the form as JSON. The parent keys this
   // dialog by item id, so switching items gives fresh state without an effect.
@@ -130,8 +134,14 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                     step="0.01" 
                     defaultValue={editingItem ? editingItem.unitCostCents / 100 : undefined}
                     required 
-                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
+                    readOnly={costLocked}
+                    aria-describedby={costLocked ? 'inv-unit-cost-locked' : undefined}
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold read-only:opacity-70" 
                   />
+                  {costLocked && editingItem && <p id="inv-unit-cost-locked" className="text-[10px] text-[var(--muted)]">
+                    It has stock on hand, so its cost is on the books: change it with a revaluation, which posts the difference.
+                    {onRevalue && <> <button type="button" onClick={() => onRevalue(editingItem)} className="min-h-11 px-1 font-semibold text-emerald-700 hover:underline">Revalue cost</button></>}
+                  </p>}
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="inv-unit-price" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Unit Price ($)</label>

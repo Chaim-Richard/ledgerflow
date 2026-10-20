@@ -1770,7 +1770,7 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 
 ## Issues and connections (18 Oct)
 
-- [ ] ISS-130 *(→ AI #9 from 20 Oct)* Inventory unit-cost edits change stock value without a ledger posting (issue #130): cost changes on stock in hand go through a balanced revaluation entry, or are refused.
+- [~] ISS-130 *(→ AI #9 from 20 Oct; PR open, ai9/ISS-130)* Inventory unit-cost edits change stock value without a ledger posting (issue #130): cost changes on stock in hand go through a balanced revaluation entry, or are refused.
 - [x] ISS-131 *(AI #9, merged 20 Oct)* Inventory valuation as-of date mixes today's stock with past books (issue #131): historical quantities/costs from stock moves, or the comparison hidden for past dates.
 - [ ] ISS-143 RMA approvals and quantities enforced on the server in one transaction (issue #143, with AUD-03).
 - [x] CON-1 *(AI #9, merged 20 Oct)* US sales-tax table (capability 137) and item taxability (139) used by invoice lines for the supported states; label stays "not verified" for others.

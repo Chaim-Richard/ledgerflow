@@ -172,6 +172,21 @@ select pg_temp.expect_ok('edit an item''s price', 'u-book',
 select pg_temp.expect_denied('change an item''s quantity in the browser', 'u-book',
   $$select lf_update('inventory','i1','{"quantityAtHand":50}'::jsonb)$$);
 
+-- the cost of stock on hand changes only through the server's revaluation (ISS-130)
+select pg_temp.expect_ok('set the cost of an item with nothing on hand (a template)', 'u-book',
+  $$select lf_update('inventory','i1','{"unitCostCents":450}'::jsonb)$$);
+-- the server (not a browser role) puts stock on hand, as Adjust stock does
+do $$ begin
+  perform set_config('request.jwt.claims', '', true);
+  update inventory set data = data || '{"quantityAtHand":10}'::jsonb where id = 'i1';
+end $$;
+select pg_temp.expect_denied('change the cost of stock on hand in the browser', 'u-book',
+  $$select lf_update('inventory','i1','{"unitCostCents":1200}'::jsonb)$$);
+select pg_temp.expect_denied('owner cannot either: only the revaluation changes it', 'u-owner',
+  $$select lf_update('inventory','i1','{"unitCostCents":1200}'::jsonb)$$);
+select pg_temp.expect_ok('rename the stocked item in the browser (the cost is untouched)', 'u-book',
+  $$select lf_update('inventory','i1','{"name":"Widget L"}'::jsonb)$$);
+
 -- only owners and accountants approve or send back an invoice (BE-04, L-191)
 select pg_temp.expect_ok('bookkeeper saves an invoice waiting for approval', 'u-book',
   $$insert into invoices(id,data) values ('inv-appr', '{"workspaceId":"ws1","customerId":"c2","amountCents":150000,"status":"pending","date":"2026-10-05","approval":{"state":"awaiting","thresholdCents":100000}}')$$);

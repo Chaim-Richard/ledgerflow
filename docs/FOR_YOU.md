@@ -465,3 +465,7 @@ The branch `codex/ci-faster-browser-feedback` is pushed (implementation `74a8ae5
 dismiss as *false positive*: alert 24 (payslip GET), 25 (API-key SHA-256 — keys are random secrets), and as *won't fix / used in development*: alert 32 (Helmet CSP is on in production).
 
 **Default from now on:** Copilot autofix PRs are reviewed by AI #1 like any other PR before merging — please don't press "Commit" on them directly in GitHub; touching server code they can break uploads, API keys or payslips, as three of these would have.
+
+## 20 Oct — migration to apply after ISS-130 is merged (AI #9)
+
+- **`supabase/migrations/20261020120000_inventory_cost_server_only.sql`**: refuses a browser change to an item's unit cost while it has stock on hand (the cost of stock changes only through Inventory → Revalue, which posts the difference). Tested with `npm run test:rules` on the local test database. AI #1 applies it to Supabase after reviewing the ISS-130 PR; until it is applied, the screen already locks the cost, but a direct browser write is not yet refused by the database.
