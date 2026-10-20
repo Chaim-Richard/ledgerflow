@@ -716,6 +716,7 @@ Same rules as every helper AI: one branch and PR per task from the latest main, 
 
 Same rules as every helper AI.
 
+- [ ] **F-48 Flaky axe contrast on Overview (view-registry-coverage.spec.ts): the scan runs 500 ms after navigation and sometimes catches the dashboard mid fade-in (grey text at 1.4:1 on 20 Oct, passes on re-run). Make the scan deterministic: `page.emulateMedia({ reducedMotion: 'reduce' })` and/or wait for animations to finish (`document.getAnimations()`), for every axe scan helper. Never raise the baseline or skip the rule.**
 - [ ] **F-46 Browser journey test W10: make a backup, change records, restore it → P&L, balance sheet and trial balance equal the figures from before the change (exact amounts).** Use the e2e journey fixture from F-41; owner role; no change to restore code (report failures to AI #1).
 - [ ] **F-47 Browser journey test W12: two books with known figures → group report shows the combined totals and the eliminations; export matches the screen.**
 - [ ] **G-1 Help center content** — one help page per main screen in docs/help/ (English and Hebrew), linked from the screen's help button.
