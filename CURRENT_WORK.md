@@ -35,7 +35,7 @@ History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) �
 | #3 Arena | A-112 (stock serial numbers), then A-113, A-115, A-117 | Waiting on AI #1, don't start: A-72, A-75, A-76, A-77 |
 | #5 | Fix #240 (E-57, see review), then E-17 onward | #240 sent back |
 | #6 | Fix #181 and #183 (see the review comments), then S-1 onward | #181, #183 sent back |
-| #7 | F-48 flaky Overview contrast scan (quick), F-46 browser test: backup → restore → same reports (W10); F-47 group report (W12); then F-1 onward | — |
+| #7 | F-48 flaky Overview contrast scan, F-49 first-run Vite reload flake, F-46 browser test: backup → restore → same reports (W10); F-47 group report (W12); then F-1 onward | — |
 | #8 | G-24 first-hour journey test (W1), G-9 sample companies (IL + US) | — |
 
 ## Where things are
