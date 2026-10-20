@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import { getIdToken } from '../../../firebase';
 import { formatCurrency } from '../../../lib/utils';
 import { compareTrialBalances, parseQuickBooksTrialBalance } from '../../../lib/migrationTrialBalanceProof';
@@ -13,41 +13,59 @@ export function MigrationTrialBalanceProof({ workspaceId }: { workspaceId: strin
   const [proof, setProof] = useState<Proof | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  useEffect(() => { setSource(null); setSourceFile(''); setProof(null); setError(''); }, [workspaceId]);
+  // Each changed file/date or new comparison invalidates every prior async result.
+  // The parent keys this component by workspaceId so switching books also unmounts it.
+  const requestSeq = useRef(0);
   const readSource = async (file?: File) => {
+    const seq = ++requestSeq.current;
     setSource(null);
     setProof(null);
     setError('');
     setSourceFile('');
+    setBusy(false);
     if (!file) return;
     try {
       const data = parseQuickBooksTrialBalance(await file.text());
+      if (seq !== requestSeq.current) return;
       setSource(data);
       setSourceFile(file.name);
     } catch (cause) {
+      if (seq !== requestSeq.current) return;
       setError(cause instanceof Error ? cause.message : 'Cannot read the source trial balance.');
     }
   };
+  const changeDate = (next: string) => {
+    ++requestSeq.current;
+    setDate(next);
+    setProof(null);
+    setError('');
+    setBusy(false);
+  };
   const compare = async () => {
     if (!source || !workspaceId || !date) return;
+    const seq = ++requestSeq.current;
     setBusy(true);
     setProof(null);
     setError('');
     try {
       const token = await getIdToken();
+      if (seq !== requestSeq.current) return;
       if (!token) throw new Error('Sign in again before reading the server trial balance.');
       const query = new URLSearchParams({ workspaceId, asOfDate: date });
       const response = await fetch(`/api/v1/reports/trial-balance?${query}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store',
       });
+      if (seq !== requestSeq.current) return;
       if (!response.ok) throw new Error(`The server trial balance could not be read (HTTP ${response.status}).`);
       const data = await response.json() as ServerTrialBalanceSnapshot;
+      if (seq !== requestSeq.current) return;
       setProof(compareTrialBalances(source, data));
     } catch (cause) {
+      if (seq !== requestSeq.current) return;
       setError(cause instanceof Error ? cause.message : 'Comparison failed.');
     } finally {
-      setBusy(false);
+      if (seq === requestSeq.current) setBusy(false);
     }
   };
   const amount = (cents: number) => formatCurrency(cents);
@@ -63,7 +81,7 @@ export function MigrationTrialBalanceProof({ workspaceId }: { workspaceId: strin
           <input type="file" accept=".csv,text/csv" className="mt-1 block w-full text-sm" onChange={e => { void readSource(e.target.files?.[0]); e.target.value = ''; }} />
         </label>
         <label className="text-sm font-medium text-[var(--text)]">Both books as of
-          <input type="date" value={date} onChange={e => { setDate(e.target.value); setProof(null); }} className="mt-1 block w-full min-h-11 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2 text-[var(--text)]" />
+          <input type="date" value={date} onChange={e => changeDate(e.target.value)} className="mt-1 block w-full min-h-11 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2 text-[var(--text)]" />
         </label>
       </div>
       {source && <p className="text-xs text-[var(--muted)]">{sourceFile}: {source.accounts.length} accounts; source debits {amount(source.totalDebitCents)}, credits {amount(source.totalCreditCents)}.</p>}
@@ -87,7 +105,7 @@ export function MigrationTrialBalanceProof({ workspaceId }: { workspaceId: strin
           {proof.differences.length > 0 && <div className="max-h-60 overflow-auto"><table className="w-full text-xs tabular-nums">
             <caption className="sr-only">Accounts with discrepancies</caption>
             <thead><tr><th scope="col" className="text-left">Account</th><th scope="col" className="text-left">Reason</th><th scope="col" className="text-right">Difference</th></tr></thead>
-            <tbody>{proof.differences.map((row, i) => <tr key={i} className="border-t border-[var(--line)]"><td className="py-2">{row.account}</td><td>{row.problem.replaceAll('-', ' ')}</td><td className="text-right">{amount(row.differenceCents)}</td></tr>)}</tbody>
+            <tbody>{proof.differences.map(row => <tr key={row.accountId} className="border-t border-[var(--line)]"><td className="py-2">{row.account}</td><td>{row.problem.replaceAll('-', ' ')}</td><td className="text-right">{amount(row.differenceCents)}</td></tr>)}</tbody>
           </table></div>}
           <p className="text-xs font-semibold text-[var(--text)]">Financial migration NOT verified. A/R, A/P, cash and tax payable still need independently sourced totals and Agent #1's server-side AU-4 check. Even matching balances do not certify posting, documents, opening stock, currency, completeness or unchanged data between requests.</p>
         </div>
