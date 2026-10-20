@@ -50,7 +50,8 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const inventoryItems = useLedgerStore(s => s.inventory || []);
-  useLedgerCollections('inventory', 'invoices');
+  const { loading: inventoryLoading } = useLedgerCollections('inventory', 'invoices');
+  const inventoryCapped = useLedgerStore(s => Boolean(s.truncatedCollections?.inventory));
   const pastInvoices = useLedgerStore(s => s.invoices);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   // a sale receipt goes into a bank account or Undeposited Funds (then "Make deposit" takes it to the bank)
@@ -461,7 +462,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                    />
                  )}
                  {salesCodes.length === 0 && <p className="text-[11px] text-[var(--muted)]">Add tax codes in Taxes.</p>}
-                 <TaxExemptionNotice customer={safeCustomers.find(c => c.id === invoice.customerId)} date={invoice.date || ''} charging={totals.taxCents > 0} onNoTax={() => setInvoice({ ...invoice, taxCodeId: salesCodes.find(c => c.treatment === 'exempt')?.id, taxRate: 0 })} lineLabels={items[0]?.dimensions} lineCategories={items.filter(i => i.itemId || i.description.trim() || i.amountCents).map(i => lineTaxCategory(i, inventoryItems))} currentRate={taxCode ? effectiveRate(taxCode.components) : 0} currentTreatment={taxCode?.treatment} salesTreatments={salesCodes.map(c => c.treatment)} onUseRate={(rate, treatment) => { const choice = taxChoiceFor(rate, salesCodes, effectiveRate, treatment); setInvoice({ ...invoice, taxCodeId: choice.taxCodeId, taxRate: choice.taxRate }); }} allocation={{ netCents: totals.netCents, taxCents: totals.taxCents, currency, exchangeRate: invoice.exchangeRate, value: String(invoice.metadata?.ilAllocationNumber || ''), onChange: v => setInvoice({ ...invoice, metadata: { ...invoice.metadata, ilAllocationNumber: v || undefined } }) }} />
+                 <TaxExemptionNotice customer={safeCustomers.find(c => c.id === invoice.customerId)} date={invoice.date || ''} charging={totals.taxCents > 0} onNoTax={() => setInvoice({ ...invoice, taxCodeId: salesCodes.find(c => c.treatment === 'exempt')?.id, taxRate: 0 })} lineLabels={items[0]?.dimensions} lineCategories={items.filter(i => i.itemId || i.description.trim() || i.amountCents).map(i => lineTaxCategory(i, inventoryItems, !inventoryLoading && !inventoryCapped))} currentRate={taxCode ? effectiveRate(taxCode.components) : 0} currentTreatment={taxCode?.treatment} salesTreatments={salesCodes.map(c => c.treatment)} onUseRate={(rate, treatment) => { const choice = taxChoiceFor(rate, salesCodes, effectiveRate, treatment); setInvoice({ ...invoice, taxCodeId: choice.taxCodeId, taxRate: choice.taxRate }); }} allocation={{ netCents: totals.netCents, taxCents: totals.taxCents, currency, exchangeRate: invoice.exchangeRate, value: String(invoice.metadata?.ilAllocationNumber || ''), onChange: v => setInvoice({ ...invoice, metadata: { ...invoice.metadata, ilAllocationNumber: v || undefined } }) }} />
              </div>
              <div className="space-y-2 flex flex-col justify-end pb-3">
                <label htmlFor="inv-tax-inclusive" className="flex items-center gap-2 cursor-pointer">

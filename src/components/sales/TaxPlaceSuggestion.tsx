@@ -36,7 +36,7 @@ export default function TaxPlaceSuggestion({ customer, date, lineLabels, lineCat
   date: string;
   lineLabels?: Record<string, string>;
   /** CON-1: each line's item tax category ('' for an item with none, null for a line with no item) */
-  lineCategories?: Array<string | null>;
+  lineCategories?: Array<string | null | undefined>;
   /** what the invoice charges now, as a fraction */
   currentRate: number;
   /** CON-3: the treatment of the invoice's tax code now, and the treatments the workspace has sales codes for */
@@ -113,7 +113,9 @@ function UsSalesTaxSuggestion({ answer, who, currentRate, onUseRate }: {
       <p role="status" className="text-xs text-[var(--muted)]">
         {who}{answer.unclear.length ? `whether ${categoriesInWords(answer.unclear)} ${answer.unclear.length === 1 ? 'is' : 'are'} taxed in ${answer.state} is not settled in LedgerFlow's table` : ''}
         {answer.unclear.length && answer.unknown.length ? '; ' : ''}
-        {answer.unknown.length ? `an item has a tax category LedgerFlow does not know (${answer.unknown.join(', ')})` : ''}: confirm with the state and choose the tax yourself.{verified}{noItem}
+        {answer.unknown.length ? `an item has a tax category LedgerFlow does not know (${answer.unknown.join(', ')})` : ''}
+        {(answer.unclear.length || answer.unknown.length) && answer.unloaded ? '; ' : ''}
+        {answer.unloaded ? `${answer.unloaded} line(s) have an item that is not loaded yet, so its tax category is not known` : ''}: confirm with the state and choose the tax yourself.{verified}{noItem}
       </p>
     );
   }
@@ -128,9 +130,9 @@ function UsSalesTaxSuggestion({ answer, who, currentRate, onUseRate }: {
   return (
     <p role="status" className="text-xs text-[var(--muted)]">
       {who}{answer.rate === 0
-        ? `no sales tax: ${categoriesInWords(answer.categories)} ${answer.categories.length === 1 ? 'is' : 'are'} not taxed in ${answer.state}.`
+        ? `no state sales tax: ${categoriesInWords(answer.categories)} ${answer.categories.length === 1 ? 'is' : 'are'} not taxed by ${answer.state}.${answer.localIncluded ? '' : ' City, county and district taxes are not included, and some places tax what the state does not, so check them for the customer\'s address.'}`
         : `expected sales tax ${pct(answer.rate)} (${answer.components.map(c => `${c.name} ${pct(c.rate)}`).join(' + ')}).${local}`}{verified}{noItem}
-      {!same && <> <button type="button" onClick={() => onUseRate(answer.rate)} className="underline font-semibold text-[var(--text)]">{answer.rate === 0 ? 'Use no tax' : `Use ${pct(answer.rate)}`}</button></>}
+      {!same && <> <button type="button" onClick={() => onUseRate(answer.rate)} className={ACTION}>{answer.rate === 0 ? 'Use no tax' : `Use ${pct(answer.rate)}`}</button></>}
     </p>
   );
 }
