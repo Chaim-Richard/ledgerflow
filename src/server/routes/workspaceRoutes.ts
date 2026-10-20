@@ -28,6 +28,7 @@ import { assetDisposalRouter } from './assetDisposalRoutes';
 import { assetTransferRouter } from './assetTransferRoutes';
 import { placeInServiceRouter } from './placeInServiceRoutes';
 import { payRunRouter } from './payRunRoutes';
+import { payrollImportRouter } from './payrollImportRoutes';
 import { twoStepPolicyRouter } from './twoStepPolicyRoutes';
 import { AlertSettingsError, saveAlertSettings } from '../services/bookAlertService';
 import { emailRouter } from './emailRoutes';
@@ -202,6 +203,8 @@ workspaceRouter.use('/:workspaceId/assets/:assetId/transfer', requireWorkspaceRo
 workspaceRouter.use('/:workspaceId/assets/:assetId/in-service', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), placeInServiceRouter);
 // Pay runs posted by the server (U-02): owners and accountants
 workspaceRouter.use('/:workspaceId/pay-runs', requireWorkspaceRole(['owner', 'accountant']), payRunRouter);
+// PAY-1: an outside payroll provider's results, one entry per pay date
+workspaceRouter.use('/:workspaceId/payroll-imports', requireWorkspaceRole(['owner', 'accountant']), payrollImportRouter);
 workspaceRouter.use('/:workspaceId/security', requireWorkspaceRole(['owner']), twoStepPolicyRouter);
 // Settings → Alerts (S-08, S-10, S-11): owners and accountants
 const alertsSchema = z.object({

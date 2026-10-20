@@ -472,3 +472,7 @@ dismiss as *false positive*: alert 24 (payslip GET), 25 (API-key SHA-256 — key
 2. **Tax in stages A and B = user- or accountant-chosen rates, clearly marked.** The US/IL engines stay as suggestions; filing-ready automation is stage C. Real Israeli tax invoices still need allocation numbers. *Change if a pilot customer needs automated filing.*
 3. **First-hour journey test (W1) moved from AI #8 (inactive) to AI #7.**
 4. **Open question for you:** who are the stage-A testers, and when do you want to invite them? Stage A needs W1, W2–W5, W10, W14 and gates G-01/G-02 (see RELEASE_GATE "Today").
+
+## 20 Oct — PAY-1 payroll import: provider column sets (AI #9)
+
+**Open question for you:** the payroll import accepts one column set per provider (Gusto payroll journal, ADP payroll register, Paychex payroll journal; listed in `src/lib/payrollProviderImport.ts`). I wrote them from the common column names; they are **not checked against a real export** from each provider. **Default I used:** any other column stops the import and names it, so a different export is refused rather than read wrongly. If you or a pilot customer can share a sample export (names changed), I'll match its columns exactly.
