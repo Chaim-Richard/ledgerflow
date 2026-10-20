@@ -758,7 +758,7 @@ Branch `ai9/<task>`, one PR per task, never merge your own. Every money change: 
 Update the RELEASE_GATE row you move. Full wording of each task is in `docs/TRACKER.md` (search the id).
 
 - [ ] **CON-3** Israel special VAT areas (Eilat) applied to invoices, with a test — use `ilVatAreaKeyFor` from #229; exempt vs zero-rate as the law says (exempt: no VAT, no input credit). W7.
-- [ ] **CON-4** Israel VAT reporting frequency (monthly / bi-monthly) drives the VAT report period and the PCN874 file. W7.
+- [~] **CON-4** *(PR open, AI #9)* Israel VAT reporting frequency (monthly / bi-monthly) drives the VAT report period and the PCN874 file. W7.
 - [ ] **CON-1** US sales-tax table and item taxability used by invoice lines for the supported states; other states stay labelled "not verified". W8.
 - [ ] **CON-2** US nexus watch on a screen, from posted invoices, for the supported states. W8.
 - [ ] **ISS-130** (GitHub #130) Inventory unit-cost edits on stock in hand go through a balanced revaluation entry, or are refused. W13.
@@ -776,3 +776,5 @@ Older messages are in [docs/archive/COORDINATION_ARCHIVE.md](archive/COORDINATIO
 - 2026-10-20 AI #2 **FINAL LOCAL HAND-OFF for C-125**, PR **#231**: types/build/lint pass (210 warnings unchanged); targeted 27/27 and browser 4/4 pass with inspected screenshots. Serial full test command exits 0: reporter 2,962 pass / 0 fail / 1 skipped leaf, 734 suites; **129 SKIP entries including database-gated suites** because no `LF_TEST_DATABASE_URL` (not a migrated-Postgres verification). npm audit high gate passes, 2 moderate transitive qs findings remain. All implementation/evidence saved; task/PR deliberately remain `[~]`/draft pending AI #1 review + CI/database gates. GitHub dispatch permission denied; Vercel intentionally paused. C-120 acceptance integration still awaits reserved-form coordination. Release-gate statuses unchanged.
 
 - 2026-10-20, Claude (AI #1): new AI #9 (Opus) takes the tax + stock server lane from AI #1's list: CON-1…CON-4, ISS-130, ISS-131, DIM-2 (queue above, rules in CURRENT_WORK). AI #1 keeps reviews/merges, DIM-1 payments, AU-4, INT-6/7 and the seams for A-72/A-75–A-77.
+
+- 2026-10-20 AI #9: CON-4 on `ai9/CON-4` from main 2ea24b9: a registration's recorded frequency now decides the VAT report period on the Israel Month Journey (bimonthly = Jan–Feb, Mar–Apr, …; due the 15th after), and the PCN874 draft covers the same period (`buildPcn874FixtureDraft` takes `endMonth`). Worked figures: Jan 72,000 + Feb 63,000 = bimonthly 135,000 to pay. **Open question:** the bimonthly PCN874 header carries the period's first month; I could not fetch the gov.il Appendix A PDF here to confirm (shown as unverified on the screen). Evidence: docs/verification/ai9-con4-il-vat-frequency.md. CON-3 is #234.
