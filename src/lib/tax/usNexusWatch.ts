@@ -24,8 +24,12 @@ export const US_NEXUS_SUPPORTED_STATES = ['TX', 'CA', 'NY', 'WA', 'CO'] as const
 
 export interface NexusSaleDocument extends TaxableDocument {
   customerId?: string;
-  /** the labels of the document's first line: its selling entity (PLAN §6) */
+  /** document-level labels, when a document carries them (most keep them on their lines) */
   dimensions?: Record<string, string>;
+  /** the lines' labels: the selling entity is the one every line names (PLAN §6) */
+  items?: Array<{ dimensions?: Record<string, string> }>;
+  /** a credit note's invoice: the credit belongs to that sale's entity and state */
+  invoiceId?: string;
   /** where this sale went, when the document records it: it comes before the customer's own place */
   shippingAddress?: { country?: string; state?: string };
   metadata?: { taxPlace?: TaxPlace } & Record<string, unknown>;
@@ -64,6 +68,8 @@ export interface UsNexusWatch {
   states: UsNexusStateWatch[];
   /** posted sales whose customer has no US tax place recorded: in no state's figures */
   unplacedDocuments: number;
+  /** #255 review: posted sales whose lines name different selling entities: left out, not split by a guess */
+  mixedEntityDocuments?: number;
 }
 
 const toBase = (cents: number, rate?: number) => Math.round(cents * (rate && rate > 0 ? rate : 1));
@@ -93,6 +99,24 @@ export function usNexusWatch(input: {
   // per selling entity and state: two entities' sales are never added together (each has its own nexus)
   const totals = new Map<string, { entity: string; entityName?: string; state: string; permit: boolean; thisYear: { salesCents: number; orders: number }; lastYear: { salesCents: number; orders: number } }>();
   let unplacedDocuments = 0;
+  let mixedEntityDocuments = 0;
+  const invoicesById = new Map((input.invoices || []).map(d => [d.id, d]));
+  const entityKeys = input.order || [];
+  // #255 review: invoices keep their labels on their lines; the entity is the one all lines agree on, for each
+  // label in the entity order. Lines that disagree make the sale "mixed" (null): never pooled into one entity.
+  const sellerLabels = (doc: NexusSaleDocument): Record<string, string> | null | undefined => {
+    if (doc.dimensions) return doc.dimensions;
+    const lines = (doc.items || []).map(l => l.dimensions || {});
+    if (!lines.length) return undefined;
+    const shared: Record<string, string> = {};
+    for (const key of entityKeys) {
+      const values = new Set(lines.map(l => l[key] || ''));
+      if (values.size > 1) return null;
+      const [value] = [...values];
+      if (value) shared[key] = value;
+    }
+    return shared;
+  };
 
   const add = (docs: NexusSaleDocument[] | undefined, sign: 1 | -1) => {
     for (const doc of docs || []) {
@@ -100,14 +124,19 @@ export function usNexusWatch(input: {
       if (!COUNTED_SALES.has(String(doc.status))) continue;
       const window = windows.find(w => date >= w.startDate && date <= w.endDate);
       if (!window) continue;
+      // a credit note follows its invoice: the same destination and the same selling entity
+      const invoice = sign === -1 && doc.invoiceId ? invoicesById.get(doc.invoiceId) : undefined;
+      const placeOf = (d: NexusSaleDocument | undefined) => d && (d.metadata?.taxPlace || (d.shippingAddress?.state ? { country: d.shippingAddress.country || 'US', state: d.shippingAddress.state } : undefined));
       // the sale's own destination first (its tax place, then its ship-to), then the customer's place
-      const shipped = doc.shippingAddress?.state ? { country: doc.shippingAddress.country || 'US', state: doc.shippingAddress.state } : undefined;
       const customerPlace = ((doc.customerId ? customers.get(doc.customerId) : undefined)?.metadata as { taxPlace?: TaxPlace } | undefined)?.taxPlace;
-      const place = doc.metadata?.taxPlace || shipped || customerPlace;
+      const place = placeOf(doc) || placeOf(invoice) || customerPlace;
       if (place && String(place.country || '').toUpperCase() !== 'US') continue; // a sale abroad is in no state
       const state = String(place?.state || '').toUpperCase();
       if (!state) { if (sign === 1) unplacedDocuments++; continue; }
-      const seller = resolveSellerProfile(input.profiles, doc.dimensions, input.order || []);
+      const own = sellerLabels(doc);
+      const labels = own === undefined && invoice ? sellerLabels(invoice) : own;
+      if (labels === null) { if (sign === 1) mixedEntityDocuments++; continue; }
+      const seller = resolveSellerProfile(input.profiles, labels, input.order || []);
       const entity = seller.from?.[0] || 'books';
       const key = `${entity}|${state}`;
       const row = totals.get(key) || {
@@ -148,5 +177,5 @@ export function usNexusWatch(input: {
   const rank = (s: UsNexusStateWatch) => (s.crossed ? 2 : s.warning ? 1 : 0);
   const reach = (s: UsNexusStateWatch) => Math.max(s.thisYear?.ratio ?? 0, s.lastYear?.ratio ?? 0);
   states.sort((a, b) => rank(b) - rank(a) || reach(b) - reach(a) || a.state.localeCompare(b.state) || a.entity.localeCompare(b.entity));
-  return { asOf, states, unplacedDocuments };
+  return { asOf, states, unplacedDocuments, ...(mixedEntityDocuments ? { mixedEntityDocuments } : {}) };
 }

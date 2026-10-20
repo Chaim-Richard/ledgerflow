@@ -50,3 +50,14 @@ Release gate: W8. The nexus watch is now on a screen; W8 stays Partly.
 
 The merged test's New York sales now carry the NY entity's label, so its permit counts for its own sales, as fix 5
 requires. The figures are unchanged.
+
+**#255 review (2 × P1).**
+1. **The selling entity comes from the invoice's lines.** Saved invoices keep their labels on their lines. The entity
+   is the one all lines name. A sale whose lines name two entities is left out and counted on screen ("left out rather
+   than split by a guess"), never pooled. A credit note follows its invoice's entity and destination. Tests: Sub LLC
+   $200,000 and Parent $100,000 kept apart, with a mixed $50,000 sale left out; a $30,000 credit on Sub LLC's Oklahoma
+   sale gives $170,000 in Oklahoma.
+2. **Destination snapshot.** Saved invoices do not yet store their own tax place or ship-to, so a sale is still placed
+   by the customer's place as recorded now. The screen now says so. Storing a snapshot at save time touches the
+   invoice form and the server's allowed invoice fields, which are outside this lane. It is asked of AI #1 under
+   Messages (20 Oct).
