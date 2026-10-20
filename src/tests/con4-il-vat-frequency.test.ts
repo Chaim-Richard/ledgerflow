@@ -19,7 +19,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ilVatReportPeriod } from '../lib/tax/ilVatFilingFrequency';
 import { buildPcn874FixtureDraft } from '../lib/tax/pcn874Draft';
-import { ilPcn874Preview, israelMonthJourney } from '../lib/israelMonthJourney';
+import { ilMonthJourneyCsvRows, ilPcn874Preview, ilPcn874Rows, ilReturnForDealer, israelMonthJourney } from '../lib/israelMonthJourney';
 import type { TaxProfiles } from '../lib/tax/profile';
 
 const profilesWith = (filing: 'monthly' | 'bimonthly' | undefined): TaxProfiles => ({
@@ -101,4 +101,54 @@ test('CON-4: the draft refuses a period that is not one or two months of one yea
   assert.throws(() => buildPcn874FixtureDraft({ dealerId: '514000000', month: '2026-01', generatedOn: '2026-03-10', documents: [doc] }), /outside report month/);
   assert.throws(() => buildPcn874FixtureDraft({ dealerId: '514000000', month: '2026-01', endMonth: '2026-03', generatedOn: '2026-03-10', documents: [] }), /one month or two months/);
   assert.throws(() => buildPcn874FixtureDraft({ dealerId: '514000000', month: '2026-12', endMonth: '2027-01', generatedOn: '2027-02-10', documents: [] }), /one month or two months/);
+});
+
+// ---- review fixes (#235) ----
+
+test('CON-4 review: January of a bimonthly pair is not due — closing January does not wait for the Jan–Feb return', () => {
+  const january = journey('2026-01', 'bimonthly');
+  const r = vatReturn(january);
+  assert.deepEqual([r.pending, r.filed], [true, false]);
+  assert.equal(january.steps.find(s => s.id === 'vat-report')!.status, 'not-applicable');
+  assert.match(january.steps.find(s => s.id === 'vat-report')!.detail, /prepared after 2026-02 ends \(planning due date 2026-03-15\); nothing is owed to close 2026-01/);
+  assert.deepEqual(january.steps.find(s => s.id === 'close')!.figures.find(f => f.label === 'Returns not recorded as filed'), { label: 'Returns not recorded as filed', count: 0 });
+  // February ends the period: now the report is due and closing February waits for it
+  const february = journey('2026-02', 'bimonthly');
+  assert.deepEqual([vatReturn(february).pending, february.steps.find(s => s.id === 'vat-report')!.status], [false, 'attention']);
+});
+
+test('CON-4 review: a bimonthly registration that starts inside the pair shows the month alone and says why', () => {
+  const profiles: TaxProfiles = { books: { name: 'Tel Aviv Ltd', registrations: [{ kind: 'vat', number: '514000000', place: { country: 'IL' }, filing: 'bimonthly', validFrom: '2026-02-01' }] } };
+  const february = israelMonthJourney({ month: '2026-02', today: '2026-03-20', currency: 'ILS', profiles, order: ['world'], invoices, bills, customers, vendors });
+  // February only: taxable 600,000; output 108,000; input 45,000; to pay 63,000 — never labelled Jan–Feb
+  assert.deepEqual(figures(vatReturn(february)), ['2026-02-01', '2026-02-28', 600000, 108000, 45000, 63000, '2026-03-15']);
+  assert.deepEqual([vatReturn(february).startMonth, vatReturn(february).endMonth], ['2026-02', '2026-02']);
+  assert.ok(february.problems.some(p => /not recorded as bimonthly for the whole 2026-01 to 2026-02 period/.test(p)), february.problems.join(' | '));
+});
+
+test('CON-4 review: with two dealers, the draft holds only the typed dealer\'s documents, matched as digits', () => {
+  const profiles: TaxProfiles = {
+    books: { name: 'Tel Aviv Ltd', registrations: [{ kind: 'vat', number: '514-000-000', place: { country: 'IL' }, filing: 'monthly' }] },
+    labels: { 'world:south': { name: 'South Ltd', registrations: [{ kind: 'vat', number: '514000002', place: { country: 'IL' }, filing: 'bimonthly' }] } },
+  };
+  const south = [{ id: 's1', number: '3001', date: '2026-01-20', status: 'sent', taxVersion: 2, amountCents: 118000, taxAmountCents: 18000, customerId: 'c1', dimensions: { world: 'south' } }];
+  const all = [...(invoices as unknown as typeof south), ...south] as never;
+  const j = israelMonthJourney({ month: '2026-02', today: '2026-03-20', currency: 'ILS', profiles, order: ['world'], invoices: all, bills, customers, vendors });
+  const returns = j.steps.find(s => s.id === 'vat-report')!.returns;
+  const southReturn = ilReturnForDealer(returns, '514000002')!;
+  const telAviv = ilReturnForDealer(returns, '514000000')!;
+  assert.equal(telAviv.registration, 'vat:IL:514-000-000', 'found although it was saved with dashes');
+  assert.equal(ilReturnForDealer(returns, ''), undefined);
+  // South, Jan–Feb: only invoice 3001 — net 100,000, VAT 18,000
+  assert.deepEqual([southReturn.startMonth, southReturn.endMonth, southReturn.taxableSalesCents, southReturn.outputVatCents], ['2026-01', '2026-02', 100000, 18000]);
+  const rows = ilPcn874Rows({ month: '2026-01', endMonth: '2026-02', registration: southReturn.registration, profiles, order: ['world'], invoices: all, bills, customers, vendors, currency: 'ILS' });
+  assert.deepEqual(rows.rows.map(r => r.referenceNumber), ['3001'], 'the other dealer\'s 2001, 2002 and 8001 are not in South\'s draft');
+});
+
+test('CON-4 review: the CSV states each return\'s own period', () => {
+  const fromJanuary = ilMonthJourneyCsvRows(journey('2026-01', 'bimonthly')).find(row => row[5] === 'vat:IL:514000000')!;
+  const fromFebruary = ilMonthJourneyCsvRows(journey('2026-02', 'bimonthly')).find(row => row[5] === 'vat:IL:514000000')!;
+  assert.deepEqual(fromJanuary.slice(-2), ['2026-01', '2026-02']);
+  assert.deepEqual(fromJanuary.slice(5, 16), fromFebruary.slice(5, 16), 'the same two-month figures from either month');
+  assert.equal(fromJanuary[11], '1350.00');
 });
