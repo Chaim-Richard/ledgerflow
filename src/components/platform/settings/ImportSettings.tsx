@@ -16,6 +16,7 @@ import { downloadCsv } from '../../../lib/csvExport';
 import { normalizeFreshBooksCsv } from '../../../lib/freshBooksImport';
 import { normalizeQuickBooksCsv } from '../../../lib/quickBooksCsvImport';
 import { reconcileImportCounts } from '../../../lib/importCountReconciliation';
+import { MigrationTrialBalanceProof } from './MigrationTrialBalanceProof';
 
 type CsvSource = 'generic' | 'freshbooks' | 'quickbooks';
 const normalizeSourceTable = (source: CsvSource, kind: ImportKind, cells: string[][]): string[][] =>
@@ -439,6 +440,8 @@ export default function ImportSettings() {
           </div>
         )}
       </section>
+
+      <MigrationTrialBalanceProof workspaceId={workspaceId} />
 
       {recent.length > 0 && (
         <section className="ledger-card p-6 bg-[var(--surface)] border border-[var(--line)] rounded-2xl space-y-3" aria-labelledby="recent-imports">
