@@ -191,3 +191,52 @@ test('address scratch text clears on country/workspace changes and appears only 
   fireEvent.change(screen.getByLabelText('Country'),{target:{value:'US'}});assert.equal((screen.getByLabelText('US address to read') as HTMLTextAreaElement).value,'');
   act(()=>useAuthStore.setState({currentWorkspaceId:'another-workspace'}));assert.equal(screen.queryByLabelText('US address to read'),null);
 });
+
+test('VAT format help uses the registration country only, masks output and never edits or fetches',()=>{
+  profiles({books:{name:'ספרים Books',place:{country:'US'},registrations:[{kind:'vat',number:'DE 123 456 789',place:{country:'DE'}}]}});
+  let requests=0;globalThis.fetch=async()=>{requests++;return api({});};
+  render(<TaxProfilesSettings/>);edit();
+  const number=screen.getByLabelText('Registration number') as HTMLInputElement;
+  const country=screen.getByLabelText('Registration country');
+  const help=screen.getByText('EU / UK VAT number format').closest('details')!;
+  assert.match(help.textContent||'',/Format matches: DE••••6789/);
+  assert.doesNotMatch(help.textContent||'',/123 456 789/);
+  assert.match(help.textContent||'',/Registration is not verified/);
+  fireEvent.change(country,{target:{value:'FR'}});
+  assert.match(help.textContent||'',/prefix does not match/);
+  fireEvent.change(country,{target:{value:'IL'}});
+  assert.match(help.textContent||'',/supported EU country or the UK/);
+  fireEvent.change(country,{target:{value:'DE'}});
+  fireEvent.change(number,{target:{value:'DE000000000'}});
+  assert.match(help.textContent||'',/all-zero placeholder/);
+  fireEvent.change(number,{target:{value:''}});
+  assert.match(help.textContent||'',/Enter a registration number/);
+  assert.equal(requests,0);
+  assert.equal((screen.getByLabelText('Profile name') as HTMLInputElement).value,'ספרים Books');
+  fireEvent.click(screen.getByRole('button',{name:'Cancel'}));edit();
+  assert.equal((screen.getByLabelText('Registration number') as HTMLInputElement).value,'DE 123 456 789');
+  assert.equal(screen.getByText('EU / UK VAT number format').closest('details')!.open,false);
+});
+
+test('VAT help is limited to VAT rows and clears with the owning workspace',()=>{
+  profiles({books:{registrations:[{kind:'vat',number:'GB123456789',place:{country:'UK'}}]}});
+  render(<TaxProfilesSettings/>);edit();
+  assert.match(screen.getByText('EU / UK VAT number format').closest('details')!.textContent||'',/GB••••6789/);
+  fireEvent.change(screen.getByLabelText('Registration kind'),{target:{value:'employer'}});
+  assert.equal(screen.queryByText('EU / UK VAT number format'),null);
+  fireEvent.change(screen.getByLabelText('Registration kind'),{target:{value:'vat'}});
+  assert.ok(screen.getByText('EU / UK VAT number format'));
+  act(()=>useAuthStore.setState({currentWorkspaceId:'another-workspace'}));
+  assert.equal(screen.queryByText('EU / UK VAT number format'),null);
+  assert.doesNotMatch(document.body.textContent||'',/6789/);
+});
+
+test('VAT format warnings do not block the existing confirmed profile save',async()=>{
+  profiles({books:{registrations:[{kind:'vat',number:'review-needed',place:{country:'DE'}}]}});
+  render(<TaxProfilesSettings/>);edit();
+  let sent:TaxProfiles|undefined;
+  globalThis.fetch=async(_input,init)=>{sent=JSON.parse(String(init?.body)).profiles;return api({status:'success',profiles:sent});};
+  save();await screen.findByText('Tax profile saved.');
+  assert.equal(sent?.books?.registrations?.[0].number,'review-needed');
+  assert.equal(sent?.books?.registrations?.[0].place.country,'DE');
+});
