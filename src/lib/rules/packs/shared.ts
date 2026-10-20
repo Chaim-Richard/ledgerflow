@@ -22,6 +22,8 @@ export interface NexusEffect {
   thresholdCents: number | null;
   transactions: number | null;
   test: 'either' | 'both';
+  /** #258 review: "more than" the thresholds (New York): exactly the threshold has not crossed */
+  strict?: boolean;
 }
 
 /** A dated turnover comparison, not a conclusion that an entity must register. */
