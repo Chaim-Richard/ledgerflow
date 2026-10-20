@@ -3,10 +3,13 @@ import { US_MILEAGE_RATES, mileageRateOn } from '../../lib/tax/usMileageRates';
 import { downloadCsv } from '../../lib/csvExport';
 import ReportTableScroll from './ReportTableScroll';
 
-const CSV_HEADERS = ['Valid from', 'Valid to', 'Cents per mile', 'Rate per mile', 'Source', 'Note'];
+const CSV_HEADERS = ['Valid from', 'Valid to', 'Tenths of a cent per mile', 'Rate per mile', 'Source', 'Note'];
+
+/** The table stores the rate in tenths of a cent (6550 = 65.5¢), because a mileage rate needs three decimals of a dollar. */
+const centsPerMile = (tenthsOfCent: number) => `${(tenthsOfCent / 10).toFixed(1)}¢ per mile`;
 
 function rowsToCsv(rows: typeof US_MILEAGE_RATES) {
-  return rows.map(r => [r.validFrom, r.validTo || '', String(r.rateCentsPerMile), `$${(r.rateCentsPerMile/100).toFixed(2)}`, r.source.url, r.note || '']);
+  return rows.map(r => [r.validFrom, r.validTo || '', String(r.rateCentsPerMile), centsPerMile(r.rateCentsPerMile), r.source.url, r.note || '']);
 }
 
 /**
@@ -32,7 +35,7 @@ export default function MileageRatesReportView() {
           <input aria-label="Check date" type="date" value={date} onChange={e => setDate(e.target.value)} className="min-h-11 border rounded px-3 bg-[var(--panel)]" />
         </label>
         <p className="text-sm py-2">
-          In force on {date}: <b>{active ? `$${(active.rateCentsPerMile/100).toFixed(2)}/mi (${active.rateThousandths/1000}/mi)` : 'No row covers that date'}</b>
+          In force on {date}: <b>{active ? centsPerMile(active.rateCentsPerMile) : 'No row covers that date'}</b>
           {active?.note ? ` — ${active.note}` : ''}
         </p>
         <button type="button" className="min-h-11 px-4 rounded border border-[var(--line)]" onClick={() => downloadCsv('us-mileage-rates', CSV_HEADERS, rowsToCsv(US_MILEAGE_RATES))}>Export CSV</button>
@@ -42,14 +45,14 @@ export default function MileageRatesReportView() {
         <table className="w-full text-sm">
           <caption className="text-left font-semibold pb-1">IRS business standard mileage rates, dated</caption>
           <thead><tr className="border-b border-[var(--line)] text-xs text-[var(--muted)]">
-            {['Valid from', 'Valid to', 'Rate', 'Cents per mile', 'Source', 'Note'].map(h => <th key={h} scope="col" className="text-left py-1 px-2">{h}</th>)}
+            {['Valid from', 'Valid to', 'Rate', 'Tenths of a cent per mile', 'Source', 'Note'].map(h => <th key={h} scope="col" className="text-left py-1 px-2">{h}</th>)}
           </tr></thead>
           <tbody>
             {US_MILEAGE_RATES.map(r => (
               <tr key={r.validFrom} className="border-b border-[var(--line)]/50">
                 <td className="py-1 px-2 whitespace-nowrap">{r.validFrom}</td>
                 <td className="py-1 px-2 whitespace-nowrap">{r.validTo || '—'}</td>
-                <td className="py-1 px-2 tabular-nums">${(r.rateCentsPerMile/100).toFixed(2)}/mi</td>
+                <td className="py-1 px-2 tabular-nums">{centsPerMile(r.rateCentsPerMile)}</td>
                 <td className="py-1 px-2 tabular-nums">{r.rateCentsPerMile}</td>
                 <td className="py-1 px-2"><a className="underline break-all" href={r.source.url}>{r.source.authority}</a> · {r.source.retrieved}</td>
                 <td className="py-1 px-2 text-[var(--muted)]">{r.note}</td>
