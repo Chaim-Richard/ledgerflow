@@ -152,3 +152,52 @@ test('CON-4 review: the CSV states each return\'s own period', () => {
   assert.deepEqual(fromJanuary.slice(5, 16), fromFebruary.slice(5, 16), 'the same two-month figures from either month');
   assert.equal(fromJanuary[11], '1350.00');
 });
+
+// ---- second review (#235) ----
+const twoDealers: TaxProfiles = {
+  books: { name: 'Tel Aviv Ltd', registrations: [{ kind: 'vat', number: '514000000', place: { country: 'IL' }, filing: 'monthly' }] },
+  labels: { 'world:south': { name: 'South Ltd', registrations: [{ kind: 'vat', number: '514000002', place: { country: 'IL' }, filing: 'bimonthly' }] } },
+};
+// South's January invoice to a buyer with no VAT number cannot be written as a PCN874 row
+const southBad = [{ id: 's1', number: '3001', date: '2026-01-20', status: 'sent', taxVersion: 2, amountCents: 118000, taxAmountCents: 18000, customerId: 'nobody', dimensions: { world: 'south' } }];
+const twoDealerJourney = (month: string, filedPeriods: Array<{ startDate: string; endDate: string }> = []) => israelMonthJourney({
+  month, today: '2026-03-20', currency: 'ILS', profiles: twoDealers, order: ['world'],
+  invoices: [...(invoices as unknown as typeof southBad), ...southBad] as never, bills, customers, vendors, filedPeriods,
+});
+
+test('CON-4 second review: the PCN874 step counts every dealer, and waits for a two-month period to end', () => {
+  // February: South's Jan–Feb draft is due and its invoice 3001 cannot be written, though Tel Aviv's can: attention
+  const february = twoDealerJourney('2026-02').steps.find(s => s.id === 'pcn874')!;
+  assert.equal(february.status, 'attention');
+  assert.match(february.detail, /3001/);
+  // a bimonthly-only workspace in January: the Jan–Feb draft is not due, so it does not block January
+  const january = journey('2026-01', 'bimonthly');
+  const step = january.steps.find(s => s.id === 'pcn874')!;
+  assert.equal(step.status, 'not-applicable');
+  assert.match(step.detail, /prepared after 2026-02 ends, so nothing is owed for 2026-01/);
+});
+
+test('CON-4 second review: January says the two-month report is not due — never that it was filed', () => {
+  const close = journey('2026-01', 'bimonthly').steps.find(s => s.id === 'close')!;
+  assert.match(close.detail, /No VAT report is due for 2026-01: the two-month report is filed after 2026-02 ends\./);
+  assert.doesNotMatch(close.detail, /recorded as filed|is recorded\./);
+});
+
+test('CON-4 second review: the report step names the dates to choose on the return screen', () => {
+  assert.match(journey('2026-02', 'bimonthly').steps.find(s => s.id === 'vat-report')!.detail, /On the return screen choose 2026-01-01 to 2026-02-28\./);
+});
+
+test('CON-4 second review: with two registrations a dated return record is not counted as either one\'s', () => {
+  const j = twoDealerJourney('2026-02', [{ startDate: '2026-01-01', endDate: '2026-02-28' }]);
+  const south = ilReturnForDealer(j.steps.find(s => s.id === 'vat-report')!.returns, '514000002')!;
+  assert.deepEqual([south.filed, south.recordedForDates], [false, true]);
+  assert.match(j.steps.find(s => s.id === 'vat-report')!.detail, /is recorded for the workspace, but with 2 registrations it cannot be told whose it is/);
+  // one registration: the dated record is its own
+  assert.equal(vatReturn(journey('2026-02', 'bimonthly', [{ startDate: '2026-01-01', endDate: '2026-02-28' }])).filed, true);
+});
+
+test('CON-4 second review: a dealer number that is not a registration gets no draft, not every dealer\'s documents', () => {
+  const preview = ilPcn874Preview({ month: '2026-01', endMonth: '2026-02', generatedOn: '2026-03-10', currency: 'ILS', dealerId: '599999999', dealerUnknown: true, invoices, bills, customers, vendors });
+  assert.equal(preview.draft, undefined);
+  assert.match(preview.problem || '', /Dealer number 599999999 is not one of this workspace's Israeli VAT registrations, so no draft is built/);
+});

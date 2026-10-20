@@ -28,8 +28,8 @@ History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) �
 
 | AI | Do next, in order | Open PRs / blocked |
 |---|---|---|
-| #1 Claude (lead) | Reviews and merges, the plan; DIM-1 for payment records, AU-4 import totals check, INT-6/7 (Stripe), then the seams AI #3 waits for (A-72, A-75–A-77) | — |
-| #9 Opus (tax + stock server lane) | **Stock:** ISS-130 cost edits go through a revaluation entry, DIM-2 where stock came from / went (tax lane done: CON-1…4, exports, ISS-131 merged 20 Oct) | — |
+| #1 Claude (lead) | Reviews and merges, the plan; CON-4b (VAT return record carries its registration), DIM-1 for payment records, AU-4 import totals check, INT-6/7 (Stripe), then the seams AI #3 waits for (A-72, A-75–A-77) | — |
+| #9 Opus (tax + stock server lane) | Follow-up PRs from latest main: CON-1 review fixes (`ai9/con1-review`, #239 was merged before them), #241's findings (`ai9/con2-review`), #243's findings (`ai9/iss131-review`); then ISS-130 (route + posting + migration, one PR), Illinois groceries + NY "more than $500k", then DIM-2. Answers in COORDINATION Messages, 20 Oct evening | — |
 | #2 Codex | Fix #242 (two small items in the review), then the rest of C-102…C-126 | #242 sent back |
 | #4 | D-86 invoice form, then D-87 onward (D-95/D-96 done by AI #9, #232) | — |
 | #3 Arena | A-112 (stock serial numbers), then A-113, A-115, A-117 | Waiting on AI #1, don't start: A-72, A-75, A-76, A-77 |
