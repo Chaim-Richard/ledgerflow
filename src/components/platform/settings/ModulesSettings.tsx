@@ -52,12 +52,19 @@ export default function ModulesSettings() {
     }
   };
 
+  const enabledCount = MODULES.filter(m => isModuleOn(workspace.modules, m.id)).length;
+
   return (
     <section aria-labelledby="modules-title" className="space-y-4">
-      <div>
-        <h2 id="modules-title" className="text-lg font-bold text-[var(--text)] flex items-center gap-2"><Blocks className="w-5 h-5" aria-hidden="true" /> Modules</h2>
-        <p className="text-sm text-[var(--muted)]">Turn on the screens this business needs. A module turned off leaves the menu and the search; nothing in it is deleted, and turning it on shows everything again.</p>
-        {!canChange && <p className="text-sm text-[var(--muted)]">Owners and accountants choose the modules.</p>}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 id="modules-title" className="text-lg font-bold text-[var(--text)] flex items-center gap-2"><Blocks className="w-5 h-5" aria-hidden="true" /> Modules</h2>
+          <p className="text-sm text-[var(--muted)]">Core bookkeeping (Overview, Transactions, Sales, Purchases, Banking, Reconciliation, Reports, Settings) is always active. Optional modules turned off leave the menu and search; nothing in them is deleted, and turning them back on restores every record.</p>
+          {!canChange && <p className="text-sm text-[var(--muted)]">Owners and accountants choose the modules.</p>}
+        </div>
+        <span className="text-xs font-semibold px-3 py-1 rounded-full bg-[var(--panel)] border border-[var(--line)] text-[var(--text)] tabular-nums">
+          {enabledCount} of {MODULES.length} active
+        </span>
       </div>
       <ul className="rounded-xl border border-[var(--line)] bg-[var(--surface)] divide-y divide-[var(--line)]">
         {MODULES.map(m => {

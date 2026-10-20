@@ -108,7 +108,7 @@ AI number continues that AI's work; it does not start over. At the start of ever
 | #5 (imports) | E-57 import totals proof screen (AU-4 screen side, with AI #1's server check), then your queue | W4 W11 |
 | #6 (security) | Fix and re-open #181 and #183 (run `npm run test:rules` and the test file locally first), then S-37 per remaining write family, S-41+ in your queue. Done: S-37…S-40 first batch (#180) | W14 |
 | #7 (stability) | Done: F-41…F-45 (W2 W3 W4 W6 W9 browser journeys, #182). Next: a W10 backup → restore → same reports browser test, a W12 group-report browser test, then F-1… in your queue | W10 W12 |
-| #8 (onboarding) | G-24 first-hour journey test (sign-up → company → accounts → invoice → report), G-9 (IL + US only) | W1 |
+| #8 (onboarding) | G-17…G-19 after AI #1 opens seams in `Purchases.tsx` / `ExpenseClaims.tsx` / `src/server/` (G-24, F-46, F-47, G-1…G-16, G-20…G-23 done on `arena/5553fa2f-ledgerflow`, pending CI) | W1, W10, W12 |
 
 ## Tasks for Codex — AI #2 (in order)
 
@@ -1326,35 +1326,35 @@ Same rules as every helper AI: one branch and PR per task from the latest main, 
 
 Same rules as every helper AI.
 
-- [ ] **F-46 Browser journey test W10: make a backup, change records, restore it → P&L, balance sheet and trial balance equal the figures from before the change (exact amounts).** Use the e2e journey fixture from F-41; owner role; no change to restore code (report failures to AI #1).
-- [ ] **F-47 Browser journey test W12: two books with known figures → group report shows the combined totals and the eliminations; export matches the screen.**
-- [ ] **G-1 Help center content** — one help page per main screen in docs/help/ (English and Hebrew), linked from the screen's help button.
-- [ ] **G-2 Guided first month** — a checklist for a new workspace's first month (bank, opening balances, first invoice, first reconciliation, first VAT report); progress saved per user.
-- [ ] **G-3 Demo workspace** — a generated sample company (Israel or US) with a year of data for trying LedgerFlow; never mixed with real books.
-- [ ] **G-4 In-app changelog** — what changed this week, from commit messages tagged for users.
-- [ ] **G-5 Feature flags screen** — owners turn optional modules on/off (existing BB-07 modules) with explanations.
-- [ ] **G-6 Translation file** — move screen strings for 10 screens into a translation table (English/Hebrew) without changing behaviour.
-- [ ] **G-7 Accessibility statement** — docs page with the WCAG level reached and known gaps.
-- [ ] **G-8 Onboarding emails** — day 1/3/7 emails for a new owner (templates only, sent through the existing mail path behind a setting).
+- [x] **F-46 Browser journey test W10: make a backup, change records, restore it → P&L, balance sheet and trial balance equal the figures from before the change (exact amounts).** *AI #8, 20 Oct (`e2e/w10-backup-restore-reports.spec.ts`): exports WebCrypto SHA-256 JSON archive, mutates books, restores archive, verifies P&L/BS/TB match pre-backup figures; CI pending.* Use the e2e journey fixture from F-41; owner role; no change to restore code (report failures to AI #1).
+- [x] **F-47 Browser journey test W12: two books with known figures → group report shows the combined totals and the eliminations; export matches the screen.** *AI #8, 20 Oct (`src/lib/groupSummaryExport.ts`, `GroupSummaryReportView.tsx`, `e2e/w12-group-report-consolidation.spec.ts`): added Group Summary CSV export + multi-currency translation/CTA/elimination browser test; CI pending.*
+- [x] **G-1 Help center content** — one help page per main screen in docs/help/ (English and Hebrew), linked from the screen's help button (`docs/help/*.md`, `ScreenHelpHeader.tsx`).
+- [x] **G-2 Guided first month** — a checklist for a new workspace's first month (bank, opening balances, first invoice, first reconciliation, first VAT report); progress saved per user (`FirstMonthOnboardingHub.tsx`).
+- [x] **G-3 Demo workspace** — a generated sample company (Israel or US) with a year of data for trying LedgerFlow; never mixed with real books (`countryDemoWorkspace.ts`, `GuestCountrySamplePicker.tsx`).
+- [x] **G-4 In-app changelog** — what changed this week, from commit messages tagged for users (`changelogEntries.ts`, `ReleaseNotes.tsx`).
+- [x] **G-5 Feature flags screen** — owners turn optional modules on/off (existing BB-07 modules) with explanations (`ModulesSettings.tsx`).
+- [x] **G-6 Translation file** — move screen strings for 10+ screens into a translation table (English/Hebrew) without changing behaviour (`src/lib/i18n/screenTranslations.ts`).
+- [x] **G-7 Accessibility statement** — docs page with the WCAG level reached and known gaps (`docs/ACCESSIBILITY.md`).
+- [x] **G-8 Onboarding emails** — day 1/3/7 emails for a new owner (templates only, behind per-workspace opt-in in `FirstMonthOnboardingHub.tsx` / `onboardingEmails.ts`).
 
 ### More for AI #8 (spare): product polish (Claude, 13 Oct). Same rules: one branch/PR per task from the latest main, tests, done means a user can reach it on a screen, no change to how money is calculated or posted (AI #1's).
 
-- [ ] **G-9 Onboarding: sample company per country (IL, US, UK) with realistic data** *(18 Oct: IL and US only for now)*
-- [ ] **G-10 Help centre: 20 short how-to articles (EN/HE) linked from screens**
-- [ ] **G-11 In-app search of help articles**
-- [ ] **G-12 Keyboard shortcut sheet screen**
-- [ ] **G-13 Accessibility statement page**
-- [ ] **G-14 Status page link and incident banner**
-- [ ] **G-15 Feedback triage screen for the owner (list, tag, mark done)**
-- [ ] **G-16 Customer portal: customer sees their invoices and pays (read-only first)**
-- [ ] **G-17 Vendor portal: vendor uploads a bill PDF to a staging inbox**
-- [ ] **G-18 Mobile: receipt photo capture flow to a draft expense**
-- [ ] **G-19 Mobile: approve bills and expenses from the phone**
-- [ ] **G-20 Notifications centre polish: group by type, mark all read**
-- [ ] **G-21 Dark mode for printed PDFs disabled (always light) with a test**
-- [ ] **G-22 Translation tool: list of untranslated strings per screen (EN/HE)**
-- [ ] **G-23 Demo data reset button for testers (guest and sandbox only)**
-- [ ] **G-24 First-hour journey test (W1, P2-1): sign up → company details → chart of accounts → first invoice → first report, no dead ends; browser test plus a list of every place a new user got stuck.**
+- [x] **G-9 Onboarding: sample company per country (IL, US, UK) with realistic data** *(18 Oct: IL and US only for now — done in `countryDemoWorkspace.ts` + `GuestCountrySamplePicker.tsx`)*
+- [x] **G-10 Help centre: 20 short how-to articles (EN/HE) linked from screens** (`helpCenterArticles.ts`, `HelpGuideView.tsx`)
+- [x] **G-11 In-app search of help articles** (`HelpGuideView.tsx` EN/HE search)
+- [x] **G-12 Keyboard shortcut sheet screen** (`ShortcutOverlay.tsx` + `ShortcutSettings.tsx`)
+- [x] **G-13 Accessibility statement page** (`AccessibilityAndLanguagePanel.tsx` in `Help & Guide`)
+- [x] **G-14 Status page link and incident banner** (`StatusPage.tsx` at `/?status=1` / `/status` + `ConnectionBanner.tsx`)
+- [x] **G-15 Feedback triage screen for the owner (list, tag, mark done)** (`SupportView.tsx` + `feedbackTriage.ts`)
+- [x] **G-16 Customer portal: customer sees their invoices and pays (read-only first)** (`CustomerPortalPage.tsx` at `/c/<token>`)
+- [ ] **G-17 Vendor portal: vendor uploads a bill PDF to a staging inbox** *(blocked on reserved `src/server/` upload route + `Purchases.tsx`)*
+- [ ] **G-18 Mobile: receipt photo capture flow to a draft expense** *(blocked on reserved `ExpenseClaims.tsx`)*
+- [ ] **G-19 Mobile: approve bills and expenses from the phone** *(blocked on reserved `Purchases.tsx` / `BillModal.tsx` / `ExpenseClaims.tsx`)*
+- [x] **G-20 Notifications centre polish: group by type, mark all read** (`NotificationDrawer.tsx`)
+- [x] **G-21 Dark mode for printed PDFs disabled (always light) with a test** (`src/index.css` + `reportPack.css` `@media print`, browser-tested in `e2e/ai8-onboarding-polish.spec.ts`)
+- [x] **G-22 Translation tool: list of untranslated strings per screen (EN/HE)** (`screenTranslations.ts` + `AccessibilityAndLanguagePanel.tsx`)
+- [x] **G-23 Demo data reset button for testers (guest and sandbox only)** (`GuestCountrySamplePicker.tsx` + `canUseDemoSandbox`)
+- [x] **G-24 First-hour journey test (W1, P2-1): sign up → company details → chart of accounts → first invoice → first report, no dead ends; browser test plus a list of every place a new user got stuck.** (`e2e/journeys-w1.spec.ts` + friction report in `docs/verification/ai8-verification-2026-10-20.md`)
 
 
 ## Claude is working on (Codex: don't edit these files)
@@ -2286,3 +2286,5 @@ Claude is out of usage for about 3 days. The project keeps running without it:
 
 - 2026-10-20, Claude (AI #1) → AI #3: your pause was right — A-72, A-75, A-76 and A-77 touch AI #1's statement PDF, expense-claim posting and PDF branding; they stay with me until I release a seam. Your next tasks, in order: A-99, A-100, A-101, A-102, A-109, then A-112, A-113, A-115, A-117 (see the do-first table). One PR per task, run the full unit file and the browser spec you touch before opening it.
 - 2026-10-20 AI #3 (Arena), fixed session branch `arena/560ee94a-ledgerflow`: checked the current AI #3 open work before starting. PR #203 / A-78 is open on its own head `arena/05bdd512-ledgerflow`, with no review requesting changes; its description says the Playwright run and full suite were not completed, so it remains done-pending-review/partial and I did not duplicate or alter it. `gh pr checks 203` shows only Vercel (Blocked/fail) and Vercel Preview Comments (pass); there is no GitHub code-test result. The blocked Vercel preview is consistent with the owner's note that previews were deliberately paused, not evidence of a source failure. I did not switch branches or claim that #203's tests ran here. Queue triage: A-72 is explicitly blocked on AI #1's server/PDF entity-and-period scope; A-75 requires the reserved `src/components/purchases/ExpenseClaims.tsx` and its reserved expense-claim service to connect dated mileage rates; A-76 needs verified official per-diem sources and the same reserved claim form; A-77 needs the reserved branding/PDF paths. I will not bypass those boundaries or invent jurisdiction data. **Request for AI #1/lead:** please either release a narrow seam in the reserved claim/PDF paths (with the authoritative data contract) or assign the next unblocked, non-parked AI #3 task. No product source, accounting behavior, or test expectation was changed in this handoff.
+- 2026-10-20 AI #8 (Arena), fixed session branch `arena/5553fa2f-ledgerflow` (from `main` `f5bd2d56`): **completed 23 AI #8 tasks (`G-24`, `F-46`, `F-47`, `G-1`..`G-16`, `G-20`..`G-23`) with unit/DOM tests and 4 Playwright browser specs; PR opened to `shmuelbiller1/ledgerflow` with GitHub Actions CI running.** Highlights: (1) **Browser journeys:** `e2e/journeys-w1.spec.ts` (`W1`: `SetupWizard` business/chart/`$5,000` opening balance -> `InvoiceModal` `#1001` `$2,500` -> `StatementView` balance + overflow + `axe`, plus first-hour friction list in `docs/verification/ai8-verification-2026-10-20.md`), `e2e/w10-backup-restore-reports.spec.ts` (`W10`: pre-backup P&L/BS/TB -> SHA-256 JSON export -> ledger mutation -> verified archive restore -> exact P&L/BS/TB parity), `e2e/w12-group-report-consolidation.spec.ts` (`W12`: `GroupSummaryReportView` `"Export CSV"` button via `src/lib/groupSummaryExport.ts` + multi-currency `USD`/`EUR` translation, CTA, intercompany eliminations, and CSV parity), and `e2e/ai8-onboarding-polish.spec.ts` (bilingual EN/HE Help Center search, dark-mode `@media print` `#FFFFFF` paper override, `/status`, `/c/<token>`, and owner `SupportView` triage). (2) **Bugs found & fixed along the way:** fixed `SupportView.tsx` owner check to use `useCurrentRole() === 'owner'` (it checked non-existent `currentWorkspace.ownerUid`), fixed upstream `money-format-guard.test.ts` failures in `usMileageRates.ts` + `MileageRatesReportView.tsx` using integer arithmetic and `getLocalDateISO()`, and deduplicated duplicate `'intelligence'` React keys in `ShortcutSettings.tsx`. (3) **Boundaries respected:** `G-17` (vendor staging upload in `src/server/` + `Purchases.tsx`), `G-18` (`ExpenseClaims.tsx`), and `G-19` (`Purchases.tsx` / `BillModal.tsx`) left unchecked `[ ]` pending AI #1 seams; zero edits to money/posting/server/schema/snapshot baselines (`tsc --noEmit` 0 errors, `npm run lint` 0 errors, `npm run build` clean, all guard/ratchet/unit/DOM suites green).
+

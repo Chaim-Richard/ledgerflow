@@ -88,6 +88,17 @@ export function mileageRateForYear(year: number): UsMileageRateRow | undefined {
   return mileageRateOn(`${year}-07-01`);
 }
 
+/** Exact integer millidollar formatter (e.g. 575 -> "$0.575/mi", 700 -> "$0.70/mi") avoiding 100x hand-division bugs. */
+export function formatMileageRateUsd(row: Pick<UsMileageRateRow, 'rateThousandths'>): string {
+  const millidollars = row.rateThousandths;
+  const wholeDollars = Math.floor(millidollars / 1000);
+  const remainder = millidollars % 1000;
+  const fraction = remainder % 10 === 0
+    ? String(remainder / 10).padStart(2, '0')
+    : String(remainder).padStart(3, '0');
+  return `$${wholeDollars}.${fraction}/mi`;
+}
+
 /** Structural problems in this table (a bug in this file, not a tax opinion). */
 export function usMileageRateProblems(): string[] {
   const problems: string[] = [];
