@@ -7,7 +7,7 @@ import AllocationNumberField from './AllocationNumberField';
  * On an invoice (T-05): the customer is tax-exempt, with the certificate's number, and a button to
  * charge no tax while tax is charged; or their certificate ran out, so tax is charged again.
  */
-export default function TaxExemptionNotice({ customer, date, charging, onNoTax, lineLabels, currentRate = 0, currentTreatment, salesTreatments, onUseRate, allocation }: {
+export default function TaxExemptionNotice({ customer, date, charging, onNoTax, lineLabels, lineCategories, currentRate = 0, currentTreatment, salesTreatments, onUseRate, allocation }: {
   customer?: { name?: string; metadata?: unknown } | null;
   date: string;
   /** whether the invoice charges tax now */
@@ -16,6 +16,8 @@ export default function TaxExemptionNotice({ customer, date, charging, onNoTax, 
   /** PLAN §6: the first line's labels (its entity), what the invoice charges now and how to change it */
   lineLabels?: Record<string, string>;
   currentRate?: number;
+  /** CON-1: each line's item tax category ('' for an item with none, null for a line with no item) */
+  lineCategories?: Array<string | null>;
   /** CON-3: the current code's treatment and the treatments the workspace has sales codes for */
   currentTreatment?: string;
   salesTreatments?: string[];
@@ -25,7 +27,7 @@ export default function TaxExemptionNotice({ customer, date, charging, onNoTax, 
 }) {
   const found = exemptionOn(customer, date);
   const suggestion = <>
-    {onUseRate && <TaxPlaceSuggestion customer={customer} date={date} lineLabels={lineLabels} currentRate={currentRate} currentTreatment={currentTreatment} salesTreatments={salesTreatments} exempt={found?.state === 'exempt'} onUseRate={onUseRate} />}
+    {onUseRate && <TaxPlaceSuggestion customer={customer} date={date} lineLabels={lineLabels} lineCategories={lineCategories} currentRate={currentRate} currentTreatment={currentTreatment} salesTreatments={salesTreatments} exempt={found?.state === 'exempt'} onUseRate={onUseRate} />}
     {allocation && <AllocationNumberField customer={customer} date={date} {...allocation} />}
   </>;
   if (!found) return suggestion;

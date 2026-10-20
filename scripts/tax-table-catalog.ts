@@ -300,6 +300,7 @@ export const NON_TABLE_MODULES: Readonly<Record<string, string>> = {
   "stateLocalRateImporters.ts": "Import-time validation of supplied local-rate publications; no embedded legal rows.",
   "taxCategories.ts": "Application vocabulary, not a dated legal schedule.",
   "taxSuggestions.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
+  "usInvoiceTax.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
   "usSalesTaxReturn.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
   "usTaxIdFormat.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
   "usUseTax.ts": "Calculation, review, profile or document helper; no embedded dated source table.",

@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { resolveSellerProfile, type TaxPlace } from '../../lib/tax/profile';
 import { resolveLineTax, type LineTaxReason } from '../../lib/tax/resolveLineTax';
 import { ruleRateTable } from '../../lib/tax/ruleRateTable';
+import { categoriesInWords, usInvoiceTax, US_SUPPORTED_STATES, type UsInvoiceTax } from '../../lib/tax/usInvoiceTax';
 
 // every rule pack, built once, so each place with a pack gets its rate (PLAN §10)
 const packRates = ruleRateTable();
@@ -27,10 +28,12 @@ const pct = (rate: number) => `${Math.round(rate * 100000) / 1000}%`;
  * first line's entity label, else the books), the customer's tax place and the date, with a button
  * to use it when the invoice charges something else. Shown only once tax profiles are set up.
  */
-export default function TaxPlaceSuggestion({ customer, date, lineLabels, currentRate, currentTreatment, salesTreatments, exempt, onUseRate }: {
+export default function TaxPlaceSuggestion({ customer, date, lineLabels, lineCategories, currentRate, currentTreatment, salesTreatments, exempt, onUseRate }: {
   customer?: { metadata?: unknown } | null;
   date: string;
   lineLabels?: Record<string, string>;
+  /** CON-1: each line's item tax category ('' for an item with none, null for a line with no item) */
+  lineCategories?: Array<string | null>;
   /** what the invoice charges now, as a fraction */
   currentRate: number;
   /** CON-3: the treatment of the invoice's tax code now, and the treatments the workspace has sales codes for */
@@ -48,6 +51,8 @@ export default function TaxPlaceSuggestion({ customer, date, lineLabels, current
   const buyer = (customer?.metadata as { taxPlace?: TaxPlace } | undefined)?.taxPlace;
   const tax = resolveLineTax({ seller, buyer, date, exempt, fallback: packRates });
   const who = seller.name ? `${seller.name}: ` : '';
+  const us = lineCategories ? usInvoiceTax({ seller, buyer, date, lineCategories, exempt, fallback: packRates }) : undefined;
+  if (us && us.kind !== 'none') return <UsSalesTaxSuggestion answer={us} who={who} currentRate={currentRate} onUseRate={onUseRate} />;
   if (tax.conditions && tax.treatment) {
     // CON-3 review: a special-area relief depends on facts the books do not hold, so it is the user's choice, never the expected tax
     const kind = TREATMENT_NAME[tax.treatment];
@@ -87,3 +92,44 @@ export default function TaxPlaceSuggestion({ customer, date, lineLabels, current
   );
 }
 
+/**
+ * CON-1: the US answer for the whole invoice — one rate when every line is taxed alike, "mixed" or "confirm"
+ * otherwise — with what it leaves out: local rates when they are not loaded, and states LedgerFlow has not checked.
+ */
+function UsSalesTaxSuggestion({ answer, who, currentRate, onUseRate }: {
+  answer: Exclude<UsInvoiceTax, { kind: 'none' }>;
+  who: string;
+  currentRate: number;
+  onUseRate: (rate: number) => void;
+}) {
+  const local = answer.kind !== 'confirm' && answer.localIncluded
+    ? ' City, county and district rates are included.'
+    : ` This is the ${answer.state} state rate only: city, county and district rates are not included, so add them for the customer's address.`;
+  const verified = answer.verified ? '' : ` Not verified: LedgerFlow has checked the state tables of ${US_SUPPORTED_STATES.join(', ')} only.`;
+  const noItem = answer.linesWithoutItem ? ` ${answer.linesWithoutItem} line(s) without an item are counted as general goods.` : '';
+  if (answer.kind === 'confirm') {
+    return (
+      <p role="status" className="text-xs text-[var(--muted)]">
+        {who}{answer.unclear.length ? `whether ${categoriesInWords(answer.unclear)} ${answer.unclear.length === 1 ? 'is' : 'are'} taxed in ${answer.state} is not settled in LedgerFlow's table` : ''}
+        {answer.unclear.length && answer.unknown.length ? '; ' : ''}
+        {answer.unknown.length ? `an item has a tax category LedgerFlow does not know (${answer.unknown.join(', ')})` : ''}: confirm with the state and choose the tax yourself.{verified}{noItem}
+      </p>
+    );
+  }
+  if (answer.kind === 'mixed') {
+    return (
+      <p role="status" className="text-xs text-[var(--muted)]">
+        {who}the lines are taxed differently in {answer.state} (mixed): {answer.groups.map(g => `${categoriesInWords([g.category])} ${pct(g.rate)}`).join(', ')}. One invoice carries one tax rate, so put them on separate invoices or choose the rate yourself.{local}{verified}{noItem}
+      </p>
+    );
+  }
+  const same = Math.abs(answer.rate - currentRate) < 1e-6;
+  return (
+    <p role="status" className="text-xs text-[var(--muted)]">
+      {who}{answer.rate === 0
+        ? `no sales tax: ${categoriesInWords(answer.categories)} ${answer.categories.length === 1 ? 'is' : 'are'} not taxed in ${answer.state}.`
+        : `expected sales tax ${pct(answer.rate)} (${answer.components.map(c => `${c.name} ${pct(c.rate)}`).join(' + ')}).${local}`}{verified}{noItem}
+      {!same && <> <button type="button" onClick={() => onUseRate(answer.rate)} className="underline font-semibold text-[var(--text)]">{answer.rate === 0 ? 'Use no tax' : `Use ${pct(answer.rate)}`}</button></>}
+    </p>
+  );
+}
