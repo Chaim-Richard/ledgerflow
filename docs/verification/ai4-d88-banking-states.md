@@ -44,7 +44,7 @@ routes and `readBankStatuses` are unchanged.
 | New `src/tests/banking-states.test.tsx` | **7/7** — loading keeps header actions, failed read + Try again returns to loading, demo shows the empty state at once, empty state has exactly one action ("Connect Bank"), a bank card shows its code and Sync Feed, the connections list loads → fails → retries (2 server calls), and no-connections renders nothing |
 | With the existing banking suites (`bank-statement-import-ui` + these) | **19/19** |
 | With the bill suites (`bill-modal`, `bill-stock-ui`) | **33/33** |
-| Whole unit suite `npm test` (no `LF_TEST_DATABASE_URL`) | **3,102 tests, 3,101 pass, 0 fail, 1 skipped** (Postgres suites skip), 744 suites, 26.1 min |
+| Whole unit suite `npm test` (no `LF_TEST_DATABASE_URL`) | **3,106 tests, 3,105 pass, 0 fail, 1 skipped** (Postgres suites skip), 744 suites, 26.1 min, on the rebased tree |
 | `npm run lint:eslint` / `npm run build` | 0 errors / **209 warnings** (cap unchanged) / build passed |
 
 ## Limits

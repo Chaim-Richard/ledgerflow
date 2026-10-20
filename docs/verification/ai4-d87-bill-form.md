@@ -1,7 +1,7 @@
 # AI #4 — D-87 bill form (same rules as D-86)
 
-Base revision: `982958d07a64d3a7175e1e7f1d861fab85c71107` (`main`, 20 October 2026), branch
-`arena/3578f85b-ledgerflow`. Scope: `src/components/purchases/BillModal.tsx`, its unit tests, a new
+Base revision: `982958d07a64d3a7175e1e7f1d861fab85c71107` (`main`, 20 October 2026); rebased onto
+`main` `2cca8686` for review. Branch `arena/3578f85b-ledgerflow`. Scope: `src/components/purchases/BillModal.tsx`, its unit tests, a new
 browser spec and this evidence. D-86 (invoice form, #236) was checked first: merged, no lead request
 for changes; its pattern is reused here rather than rewritten. No financial, tax, posting or server
 file is touched.
@@ -44,7 +44,7 @@ server validation, attachments, or any `src/server/` file.
 |---|---|
 | `npx tsc --noEmit -p tsconfig.json` | passed |
 | `npm run lint:eslint` | **0 errors / 209 warnings** (cap 209 unchanged; the 4 `any` warnings in `BillModal.tsx` are identical to `HEAD`) |
-| `npm test` (whole unit suite, no `LF_TEST_DATABASE_URL`) | **3,102 tests, 3,101 pass, 0 fail, 1 skipped** (Postgres suites skip without a test database), 744 suites, 26.1 min — the same run covers this commit and the D-88 commit on the branch |
+| `npm test` (whole unit suite, no `LF_TEST_DATABASE_URL`) | **3,106 tests, 3,105 pass, 0 fail, 1 skipped** (Postgres suites skip without a test database), 744 suites, 26.1 min — measured on the rebased tree (branch on top of `main` `2cca8686`), so it covers both this commit and the D-88 commit |
 | Bill dialog unit checks | **11/11** (5 existing + 6 new: label order, refusals under vendor/number, stock units and cost, in-flight lock, footer outside the form) |
 | Bill-related suites together (`bill-modal`, `bill-stock-ui`, `attachments-ui`, `spread-bill`, `asset-from-bill`) | 23/23 before the new checks were added |
 | `npm run build` | passed (Vite + esbuild server + PWA) |
