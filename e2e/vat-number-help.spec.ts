@@ -11,6 +11,7 @@ for (const width of [1280, 390]) {
         localStorage.setItem('lf_theme', theme);
       }, theme);
       await page.goto('/#settings');
+      await expect(page.locator('html')).toHaveClass(new RegExp(`\\b${theme}\\b`));
       await expect(page.getByRole('button', { name: 'Tax profiles', exact: true })).toBeVisible();
       // Synthetic owner cache tests screen behavior only, not authenticated persistence.
       await page.evaluate(async () => {
