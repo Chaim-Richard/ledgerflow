@@ -200,13 +200,14 @@ const Sidebar = React.memo(({
              uiStore.isSidebarOpen ? "justify-between" : "justify-center"
            )}
            title="Search pages (Ctrl/⌘+K)"
-           aria-label="Search pages"
+           aria-label={uiStore.isSidebarOpen ? undefined : "Search pages"}
+           aria-keyshortcuts="Control+K Meta+K"
          >
            <span className="flex items-center gap-2.5">
              <Command aria-hidden="true" size={16} className="shrink-0 text-[var(--faint)] group-hover:text-[var(--text)] transition-colors" />
              {uiStore.isSidebarOpen && <span>Search pages</span>}
            </span>
-           {uiStore.isSidebarOpen && <span className="text-[10px] font-mono text-[var(--faint)] border border-[var(--line)] rounded px-1">⌘K</span>}
+           {uiStore.isSidebarOpen && <kbd aria-hidden="true" className="text-[10px] font-mono text-[var(--faint)] border border-[var(--line)] rounded px-1">⌘K</kbd>}
          </button>
          
          {isAdmin && uiStore.developerMode && (
