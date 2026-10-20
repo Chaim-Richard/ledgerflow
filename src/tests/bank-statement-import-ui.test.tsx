@@ -220,7 +220,7 @@ test('E-31 CAMT.053 upload stages signed entries for review, without using AI or
   const xml = [
     '<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">',
     '<BkToCstmrStmt><Stmt><Acct><Id><IBAN>DE44500105175407324931</IBAN></Id><Ccy>USD</Ccy></Acct>',
-    '<Ntry><NtryRef>camt-one</NtryRef><Amt Ccy="USD">25.10</Amt><CdtDbtInd>DBIT</CdtDbtInd>',
+    '<Ntry><NtryRef>camt-one</NtryRef><Amt Ccy="USD">25.10</Amt><CdtDbtInd>DBIT</CdtDbtInd><Sts><Cd>BOOK</Cd></Sts>',
     '<BookgDt><Dt>2026-10-14</Dt></BookgDt><NtryDtls><TxDtls><RmtInf>',
     '<Ustrd>Office supplies</Ustrd></RmtInf></TxDtls></NtryDtls></Ntry>',
     '</Stmt></BkToCstmrStmt></Document>',
