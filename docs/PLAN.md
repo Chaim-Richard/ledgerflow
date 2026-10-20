@@ -433,3 +433,25 @@ Read in full: `audit/ARCHITECTURE_AND_STRATEGY_REVIEW.md` and the owner's pasted
 9. **Pricing:** don't charge for dimensions; don't make separate legal books cheaper inside one workspace;
    meter AI, bank connections, document processing.
 
+## 17. Bookkeeping first (owner, 20 Oct) — this order wins over §15 where they differ
+
+LedgerFlow becomes an exceptionally reliable, low-friction, multidimensional bookkeeping system **before** it tries
+to be a payroll processor or a tax-filing platform. Nothing built is thrown away; the order changes.
+
+- **Stages:** A synthetic bookkeeping beta → B narrow real-records pilot → C tax and payroll automation. Exact
+  conditions per stage: `docs/RELEASE_GATE.md` "Stages". W7/W8 filing automation moves from stage 2 to C.
+- **Tax in A/B = tax accounting:** user- or accountant-chosen rates, marked as such; correct postings; dated rates
+  with source; accountant exports. US/IL engines stay as suggestions. Israeli allocation numbers stay required for
+  real Israeli tax invoices (law), whatever rate is chosen. Later (design note only, nothing built before launch):
+  one versioned, dated, sourced tax-rate table in Postgres, workspace overrides isolated, central changes reviewed,
+  posted documents never recalculated, a ZIP code alone never decides a US jurisdiction.
+- **Payroll in A/B = payroll accounting:** import an outside provider's results (CSV first) and post them, split by
+  property/department/project/entity (PAY-1). Running payroll (withholding engines, direct deposit, filings, W-2) is C.
+  Existing payroll code and tests stay, labelled honestly.
+- **Priorities for every queue:** **P0** must work for stage A/B (accounting integrity, first hour, payments, bank
+  reconciliation, supported reports, permissions, recovery). **P1** removes friction (imports, accountant exports,
+  payroll accounting import, search, inline editing, property/entity reports). **P2** later (payroll processing,
+  wider tax automation and filings, other countries, big ERP additions). Finish connected workflows before adding
+  libraries, screens or documents; never a second implementation of something that exists.
+- **Never postponed:** the list in `RELEASE_GATE.md` — integrity, retries, leaks, reports, rounding, partial saves,
+  backups, permissions, false success, statutory documents.
