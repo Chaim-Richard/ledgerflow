@@ -35,6 +35,13 @@ const GROUP_ICONS: Record<string, React.ElementType> = {
   settings: Settings
 };
 
+const NAV_SECTIONS = [
+  { label: 'Daily work', groups: ['dashboard', 'transactions', 'reconcile'] },
+  { label: 'Sales and purchases', groups: ['money_in', 'money_out'] },
+  { label: 'Reports and settings', groups: ['reports', 'settings'] },
+];
+const ASSIGNED_GROUPS = new Set(NAV_SECTIONS.flatMap(section => section.groups));
+
 const WORLD_COLORS = [
   'var(--w-personal)',
   'var(--w-charity)',
@@ -123,12 +130,10 @@ const Sidebar = React.memo(({
       {/* Navigation Groups */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4 mt-1">
          <BookmarksGroup expanded={uiStore.isSidebarOpen} />
-         <div>
-            {uiStore.isSidebarOpen && (
-              <p className="font-mono text-[10px] uppercase tracking-widest text-[var(--faint)] px-2 mb-2 font-semibold">Navigate</p>
-            )}
+         {NAV_SECTIONS.map((section, sectionIndex) => <section key={section.label} aria-label={section.label}>
+            {uiStore.isSidebarOpen && <h2 className="text-xs text-[var(--muted)] px-2 mb-2 font-semibold">{section.label}</h2>}
             <div className="space-y-1">
-              {Object.entries(NAV_GROUPS).map(([groupId, groupLabel]) => {
+              {Object.entries(NAV_GROUPS).filter(([id]) => section.groups.includes(id) || (sectionIndex === NAV_SECTIONS.length - 1 && !ASSIGNED_GROUPS.has(id))).map(([groupId, groupLabel]) => {
                  if (groupId === 'admin' && !isAdmin) return null;
 
                  const Icon = GROUP_ICONS[groupId] || LayoutGrid;
@@ -138,19 +143,20 @@ const Sidebar = React.memo(({
                  return (
                    <button aria-label={groupLabel[uiStore.language as "en" | "he"] || groupLabel.en}
                      key={groupId}
+                     aria-current={isActive ? 'page' : undefined}
                      data-testid={`nav-${firstTabInGroup?.id || groupId}`}
                      onClick={() => {
                        if (firstTabInGroup) setActiveTab(firstTabInGroup.id as unknown as string);
                      }}
                      className={cn(
-                       "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all relative group overflow-hidden",
+                       "w-full min-h-11 min-w-11 flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all relative group overflow-hidden",
                        isActive
                          ? "text-[var(--text)] bg-[var(--brass-soft)] border border-[var(--brass-line)]"
                          : "text-[var(--muted)] hover:bg-[var(--elevated)] hover:text-[var(--text)]"
                      )}
-                     title={uiStore.isSidebarOpen ? undefined : groupLabel[uiStore.language as 'en' | 'he'] || groupLabel.en}
+                     title={groupLabel[uiStore.language as 'en' | 'he'] || groupLabel.en}
                    >
-                     <Icon size={16} className={cn("shrink-0", isActive ? "text-[var(--brass)]" : "text-[var(--faint)] group-hover:text-[var(--text)]")} strokeWidth={isActive ? 2.5 : 2} />
+                     <Icon aria-hidden="true" size={16} className={cn("shrink-0", isActive ? "text-[var(--brass)]" : "text-[var(--faint)] group-hover:text-[var(--text)]")} strokeWidth={isActive ? 2.5 : 2} />
                      {uiStore.isSidebarOpen && (
                        <span className="truncate">
                          {groupLabel[uiStore.language as 'en' | 'he'] || groupLabel.en}
@@ -160,7 +166,7 @@ const Sidebar = React.memo(({
                  );
               })}
             </div>
-         </div>
+         </section>)}
 
          {/* Project amounts, or absolute account totals when there are no projects. */}
          {uiStore.isSidebarOpen && (
@@ -190,14 +196,15 @@ const Sidebar = React.memo(({
          <button
             onClick={() => onAction('open-command-palette')}
            className={cn(
-             "w-full flex items-center px-3 py-2 rounded-lg text-[12.5px] font-medium text-[var(--muted)] hover:bg-[var(--elevated)] hover:text-[var(--text)] transition-all group",
+             "w-full min-h-11 min-w-11 flex items-center px-3 py-2 rounded-lg text-[12.5px] font-medium text-[var(--muted)] hover:bg-[var(--elevated)] hover:text-[var(--text)] transition-all group",
              uiStore.isSidebarOpen ? "justify-between" : "justify-center"
            )}
-           title={uiStore.isSidebarOpen ? undefined : "Global Coordinate Search"}
+           title="Search pages (Ctrl/⌘+K)"
+           aria-label="Search pages"
          >
            <span className="flex items-center gap-2.5">
              <Command aria-hidden="true" size={16} className="shrink-0 text-[var(--faint)] group-hover:text-[var(--text)] transition-colors" />
-             {uiStore.isSidebarOpen && <span>Command Bar</span>}
+             {uiStore.isSidebarOpen && <span>Search pages</span>}
            </span>
            {uiStore.isSidebarOpen && <span className="text-[10px] font-mono text-[var(--faint)] border border-[var(--line)] rounded px-1">⌘K</span>}
          </button>
