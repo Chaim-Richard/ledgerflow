@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 // AUD-06: every unit test file under src/ is one that `npm test` and `npm run test:cov` run.
-const toRegex = (glob: string) => new RegExp('^' + glob.replace(/\./g, '\\.').replace(/\*/g, '[^/]*') + '$');
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const toRegex = (glob: string) => new RegExp('^' + escapeRegex(glob).replace(/\\\*/g, '[^/]*') + '$');
 
 test('every src/**/*.test.ts(x) file is matched by the npm test globs', () => {
   const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')) as { scripts: Record<string, string> };

@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * A-62 screen: blanket purchase orders. Hand-checked from the orders and bills given to the
  * panel: the marked agreement shows what is left and how it was drawn, the unlinked bill never
@@ -58,7 +59,7 @@ describe('Blanket purchase orders screen', () => {
 
   test('the mark form refuses a missing date, and the validity is editable in place', async () => {
     render(<BlanketOrdersPanel orders={orders as never} today="2026-10-15" />);
-    const editable = screen.getByLabelText('Edit Last valid day of PO-1');
+    const editable = screen.getByLabelText(inlineEditName('Edit Last valid day of PO-1'));
     assert.equal(editable.tagName, 'BUTTON', 'the validity is edited in place');
     const mark = screen.getByRole('button', { name: /Mark as blanket order PO-2/ });
     fireEvent.click(mark);

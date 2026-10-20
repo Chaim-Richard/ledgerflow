@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * Credit notes and vendor credits (I-22): numbers come from the workspace's series (they were
  * random and could repeat); number, reason and (while unused) date change in place; a viewer
@@ -79,9 +80,9 @@ test('a new credit note takes the next number of the series; without one nothing
 
 test('number, reason and date change in place; the date stays fixed once the credit was used', async () => {
   render(<CreditNotesView />);
-  assert.ok(screen.getByRole('button', { name: 'Edit Date of credit note CN-2026-0001' }));
-  assert.equal(screen.queryByRole('button', { name: 'Edit Date of credit note CN-2026-0002' }), null);
-  fireEvent.click(screen.getByRole('button', { name: 'Edit Number of credit note CN-2026-0001' }));
+  assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Date of credit note CN-2026-0001') }));
+  assert.equal(screen.queryByRole('button', { name: inlineEditName('Edit Date of credit note CN-2026-0002') }), null);
+  fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Number of credit note CN-2026-0001') }));
   const box = screen.getByLabelText('Number of credit note CN-2026-0001');
   fireEvent.change(box, { target: { value: 'CN-2026-0002' } });
   await act(async () => { fireEvent.keyDown(box, { key: 'Enter' }); });
@@ -89,7 +90,7 @@ test('number, reason and date change in place; the date stays fixed once the cre
   assert.equal(calls.length, 0);
   fireEvent.keyDown(box, { key: 'Escape' });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Edit Reason for credit note CN-2026-0001' }));
+  fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Reason for credit note CN-2026-0001') }));
   fireEvent.change(screen.getByLabelText('Reason for credit note CN-2026-0001'), { target: { value: 'Damaged on arrival' } });
   await act(async () => { fireEvent.keyDown(screen.getByLabelText('Reason for credit note CN-2026-0001'), { key: 'Enter' }); });
   await waitFor(() => assert.ok(calls.some(c => c.url.includes('/transactions/bulk'))));

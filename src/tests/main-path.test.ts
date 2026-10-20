@@ -175,6 +175,9 @@ describe('The main path, one simple business', { skip: !url && 'LF_TEST_DATABASE
     const tb = await report(`/trial-balance?asOfDate=${MAY_END}`);
     const totals = cents(tb);
     assert.equal(totals.d, totals.c, 'the trial balance balances');
+    // code-scanning alert 29: a repeated or malformed date is refused, not half-read
+    assert.equal((await send('GET', `/api/v1/reports/trial-balance?asOfDate=${MAY_END}&asOfDate=2026-06-30&workspaceId=${ws}`)).status, 400);
+    assert.equal((await send('GET', `/api/v1/reports/trial-balance?asOfDate=31-05-2026&workspaceId=${ws}`)).status, 400);
     const pl = await report('/profit-and-loss?startDate=2026-05-01&endDate=2026-05-31');
     assert.deepEqual([pl.income.total, pl.expense.total, pl.netIncome], [100000, 25000, 75000]);
     // N-08: on cash basis, the 600.00 the customer paid of the 1,000.00 invoice, and the bill paid in full

@@ -91,21 +91,6 @@ export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string,
     throw new RestoreError(400, 'Unsupported schema version');
   }
 
-  // Closed books are never replaced by an older state: a backup may be restored over closed periods
-  // only if it was made when the books were closed at least as far as they are now, so its closed
-  // months are those closed books. (Refusing every restore once a month was closed left no way to
-  // restore at all: reopening a month never clears the lock date. Found by the main-path test, DA-07.)
-  const current = (await db.collection('workspaces').doc(workspaceId).get()).data() || {};
-  const closedNow = latestDate(current.lockDate, current.softLockDate);
-  if (closedNow) {
-    const closedInBackup = isRecord(backupWorkspace) ? latestDate(backupWorkspace.lockDate, backupWorkspace.softLockDate) : '';
-    if (!closedInBackup || closedInBackup < closedNow) {
-      throw new RestoreError(409, closedInBackup
-        ? `Books are closed through ${closedNow}, but this backup was made when they were closed through ${closedInBackup}: it can't replace the months closed since. Use a backup made after the close, or reopen those months first (Month-End Close).`
-        : `Books are closed through ${closedNow}, and this backup was made before any month was closed: it can't replace closed periods. Use a backup made after the close.`);
-    }
-  }
-
   // 1. Collect the backup's records (the same record under two keys: the last one wins).
   const records = new Map<string, { coll: string; id: string; data: DocumentData }>();
   for (const { key, coll } of RESTORE_COLLECTIONS) {
@@ -135,39 +120,57 @@ export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string,
     }
   }
 
-  // 2. Refuse ids that belong to another workspace.
-  const byCollection = new Map<string, string[]>();
-  for (const r of records.values()) byCollection.set(r.coll, [...(byCollection.get(r.coll) || []), r.id]);
-  for (const [coll, ids] of byCollection) {
-    for (let i = 0; i < ids.length; i += 500) {
-      const snaps = await db.getAll(...ids.slice(i, i + 500).map(id => db.collection(coll).doc(id)));
-      const foreign = snaps.find(s => s.exists && s.data()?.workspaceId !== workspaceId);
-      if (foreign) {
-        throw new RestoreError(409, `Backup record ${coll}/${foreign.id} belongs to another workspace; nothing was restored`);
+  // AUD-02: the closed-books check, the ownership check and the reads of what is deleted all happen
+  // inside the one serializable transaction that writes the backup — a month closed, or a record moved
+  // or added, between checking and writing can no longer slip past the checks.
+  const counts: Record<string, number> = {};
+  await db.runTransaction(async t => {
+    // Closed books are never replaced by an older state: a backup may be restored over closed periods
+    // only if it was made when the books were closed at least as far as they are now, so its closed
+    // months are those closed books. (Refusing every restore once a month was closed left no way to
+    // restore at all: reopening a month never clears the lock date. Found by the main-path test, DA-07.)
+    const current = (await t.get(db.collection('workspaces').doc(workspaceId))).data() || {};
+    const closedNow = latestDate(current.lockDate, current.softLockDate);
+    if (closedNow) {
+      const closedInBackup = isRecord(backupWorkspace) ? latestDate(backupWorkspace.lockDate, backupWorkspace.softLockDate) : '';
+      if (!closedInBackup || closedInBackup < closedNow) {
+        throw new RestoreError(409, closedInBackup
+          ? `Books are closed through ${closedNow}, but this backup was made when they were closed through ${closedInBackup}: it can't replace the months closed since. Use a backup made after the close, or reopen those months first (Month-End Close).`
+          : `Books are closed through ${closedNow}, and this backup was made before any month was closed: it can't replace closed periods. Use a backup made after the close.`);
       }
     }
-  }
 
-  // 3. One transaction: delete this workspace's records, write the backup, update safe settings.
-  const batch = db.batch();
-  const colls = Array.from(new Set(RESTORE_COLLECTIONS.map(c => c.coll)));
-  for (const coll of colls) {
-    const existing = await db.collection(coll).where('workspaceId', '==', workspaceId).get();
-    existing.docs.forEach(doc => batch.delete(doc.ref));
-  }
-  const counts: Record<string, number> = {};
-  for (const r of records.values()) {
-    batch.set(db.collection(r.coll).doc(r.id), r.data);
-    counts[r.coll] = (counts[r.coll] || 0) + 1;
-  }
-  if (isRecord(backupWorkspace)) {
-    const safe: DocumentData = {};
-    for (const [k, v] of Object.entries(backupWorkspace)) {
-      if (!PROTECTED_WORKSPACE_FIELDS.has(k)) safe[k] = v;
+    // 2. Refuse ids that belong to another workspace.
+    const byCollection = new Map<string, string[]>();
+    for (const r of records.values()) byCollection.set(r.coll, [...(byCollection.get(r.coll) || []), r.id]);
+    for (const [coll, ids] of byCollection) {
+      for (let i = 0; i < ids.length; i += 500) {
+        const snaps = await t.getAll(...ids.slice(i, i + 500).map(id => db.collection(coll).doc(id)));
+        const foreign = snaps.find(s => s.exists && s.data()?.workspaceId !== workspaceId);
+        if (foreign) {
+          throw new RestoreError(409, `Backup record ${coll}/${foreign.id} belongs to another workspace; nothing was restored`);
+        }
+      }
     }
-    if (Object.keys(safe).length > 0) batch.set(db.collection('workspaces').doc(workspaceId), safe, { merge: true });
-  }
-  await batch.commit();
+
+    // 3. Delete this workspace's records, write the backup, update safe settings.
+    const colls = Array.from(new Set(RESTORE_COLLECTIONS.map(c => c.coll)));
+    // every read happens before the first write (a transaction rule)
+    const existing = [];
+    for (const coll of colls) existing.push(await t.get(db.collection(coll).where('workspaceId', '==', workspaceId)));
+    for (const snap of existing) snap.docs.forEach(doc => t.delete(doc.ref));
+    for (const r of records.values()) {
+      t.set(db.collection(r.coll).doc(r.id), r.data);
+      counts[r.coll] = (counts[r.coll] || 0) + 1;
+    }
+    if (isRecord(backupWorkspace)) {
+      const safe: DocumentData = {};
+      for (const [k, v] of Object.entries(backupWorkspace)) {
+        if (!PROTECTED_WORKSPACE_FIELDS.has(k)) safe[k] = v;
+      }
+      if (Object.keys(safe).length > 0) t.set(db.collection('workspaces').doc(workspaceId), safe, { merge: true });
+    }
+  });
 
   return {
     restoredCollections: Array.from(new Set(RESTORE_COLLECTIONS.filter(c => backup[c.key] != null).map(c => c.key))),

@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * A-37 screen: custom fields. Hand-checked from the workspace's definitions and the loaded
  * records: the definitions table shows every field with its kind and options, a writer adds and
@@ -76,10 +77,10 @@ describe('Settings → Custom fields', () => {
     assert.match(rows[0].textContent || '', /North/);
     assert.match(rows[0].textContent || '', /5,000|5000/);
     assert.match(rows[1].textContent || '', /Beta GmbH/);
-    assert.ok(screen.getByLabelText('Edit Region of Acme Ltd'));
-    assert.ok(screen.getByLabelText('Edit Credit limit of Beta GmbH'));
+    assert.ok(screen.getByLabelText(inlineEditName('Edit Region of Acme Ltd')));
+    assert.ok(screen.getByLabelText(inlineEditName('Edit Credit limit of Beta GmbH')));
     fireEvent.change(screen.getByLabelText('Which records'), { target: { value: 'item' } });
-    assert.ok(screen.getByLabelText('Edit Grade of Widget'));
+    assert.ok(screen.getByLabelText(inlineEditName('Edit Grade of Widget')));
   });
 
   test('a viewer reads the fields but cannot change them', () => {

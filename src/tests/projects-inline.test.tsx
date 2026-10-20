@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 import './helpers/dom';
 import test, { afterEach, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,7 +14,7 @@ beforeEach(() => { setComponentWorkspace(); markComponentCollectionsLoaded('tran
 afterEach(cleanup);
 test('project client, budget and status can be edited; viewers read only', () => {
   render(<ProjectInlineDetails project={project} />);
-  for (const name of ['Client', 'Budget', 'Status']) assert.ok(screen.getByRole('button', { name: `Edit ${name} of שלום` }));
+  for (const name of ['Client', 'Budget', 'Status']) assert.ok(screen.getByRole('button', { name: inlineEditName(`Edit ${name} of שלום`) }));
   assert.ok(screen.getByText('$12.50')); cleanup(); setComponentWorkspace('viewer'); render(<ProjectInlineDetails project={project} />);
   assert.equal(screen.queryByRole('button', { name: /^Edit/ }), null);
 });
@@ -21,7 +22,7 @@ test('Enter confirms a partial update and preserves a failed Hebrew draft for re
   let attempts = 0; const writes: unknown[] = [];
   const adapter = { session: () => ({ uid: 'test-user', workspaceId: 'component-workspace', writable: true }), read: async () => ({ ...project }), update: async (_target: unknown, fields: unknown) => { attempts++; if (attempts === 1) throw new Error('offline'); writes.push(fields); } };
   render(<RecordInlineField collection="projects" record={project} field="name" label="Project name" adapter={adapter} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Edit Project name' })); fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'חדש Supply' } });
+  fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Project name') })); fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'חדש Supply' } });
   await act(async () => { fireEvent.keyDown(screen.getByLabelText('Project name'), { key: 'Enter' }); });
   assert.match(screen.getByRole('alert').textContent || '', /offline/);
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Retry Project name' })); });
@@ -33,7 +34,7 @@ test('a project linked by legacy names refuses a rename rather than dropping its
   let writes = 0;
   const adapter = { session: () => ({ uid: 'test-user', workspaceId: 'component-workspace', writable: true }), read: async () => ({ ...project }), update: async () => { writes++; } };
   render(<RecordInlineField collection="projects" record={project} field="name" label="Legacy project name" adapter={adapter} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Edit Legacy project name' })); fireEvent.change(screen.getByLabelText('Legacy project name'), { target: { value: 'Changed' } });
+  fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Legacy project name') })); fireEvent.change(screen.getByLabelText('Legacy project name'), { target: { value: 'Changed' } });
   await act(async () => { fireEvent.keyDown(screen.getByLabelText('Legacy project name'), { key: 'Enter' }); });
   assert.match(screen.getByRole('alert').textContent || '', /Re-link/); assert.equal(writes, 0);
 });
@@ -42,7 +43,7 @@ test('project names cannot save before their reference history has loaded', asyn
   useDataNeedsStore.getState().resetLoaded(); let writes = 0;
   const adapter = { session: () => ({ uid: 'test-user', workspaceId: 'component-workspace', writable: true }), read: async () => ({ ...project }), update: async () => { writes++; } };
   render(<RecordInlineField collection="projects" record={project} field="name" label="Unloaded project name" adapter={adapter} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Edit Unloaded project name' })); fireEvent.change(screen.getByLabelText('Unloaded project name'), { target: { value: 'Changed' } });
+  fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Unloaded project name') })); fireEvent.change(screen.getByLabelText('Unloaded project name'), { target: { value: 'Changed' } });
   await act(async () => { fireEvent.keyDown(screen.getByLabelText('Unloaded project name'), { key: 'Enter' }); });
   assert.match(screen.getByRole('alert').textContent || '', /Load complete project history/); assert.equal(writes, 0);
 });

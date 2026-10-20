@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 import './helpers/dom';
 import test, { afterEach, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,7 +19,7 @@ test('employee email is confirmed through the database without changing payroll 
     return new Response(JSON.stringify(String(input).includes('/rpc/') ? null : { id: employee.id, data: employee }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }) as typeof fetch;
   render(<EmployeeInlineDetails employee={employee} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Edit Email of שרה' }));
+  fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Email of שרה') }));
   fireEvent.change(screen.getByLabelText('Email of שרה'), { target: { value: 'new@example.test' } });
   await act(async () => { fireEvent.keyDown(screen.getByLabelText('Email of שרה'), { key: 'Enter' }); });
   assert.equal(writes.length, 1); assert.equal(writes[0].p_table, 'employees');
@@ -27,7 +28,7 @@ test('employee email is confirmed through the database without changing payroll 
 });
 test('employees expose name/email/role suggestions but viewers see text', () => {
   render(<EmployeeInlineDetails employee={employee} />);
-  for (const field of ['Name', 'Email', 'Role']) assert.ok(screen.getByRole('button', { name: `Edit ${field} of שרה` }));
-  fireEvent.click(screen.getByRole('button', { name: 'Edit Role of שרה' })); assert.ok(screen.getByLabelText('Role of שרה').getAttribute('list'));
+  for (const field of ['Name', 'Email', 'Role']) assert.ok(screen.getByRole('button', { name: inlineEditName(`Edit ${field} of שרה`) }));
+  fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Role of שרה') })); assert.ok(screen.getByLabelText('Role of שרה').getAttribute('list'));
   cleanup(); setComponentWorkspace('viewer'); render(<EmployeeInlineDetails employee={employee} />); assert.equal(screen.queryByRole('button', { name: /^Edit/ }), null);
 });

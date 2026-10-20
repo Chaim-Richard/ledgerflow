@@ -38,6 +38,12 @@ import ReportTableScroll from './ReportTableScroll';
 
 export default function CustomerQuotesReportView() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const userId = useAuthStore(s => s.user?.uid);
+  return <CustomerQuotesContent key={JSON.stringify([userId, workspaceId])} />;
+}
+
+function CustomerQuotesContent() {
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const homeCurrency = (workspace?.currency || 'USD').toUpperCase();
   const truncated = useLedgerStore(s => s.truncatedCollections);
@@ -48,6 +54,7 @@ export default function CustomerQuotesReportView() {
   const customers = useLedgerStore(s => s.customers) as Customer[];
 
   const [today, setToday] = useState<string>(() => getLocalDateISO());
+  const [quoteState, setQuoteState] = useState('all');
   const [customerFilter, setCustomerFilter] = useState<string>('__all__');
   const [selectedEstId, setSelectedEstId] = useState<string>('');
   const [proposalTitle, setProposalTitle] = useState<string>('');
@@ -97,7 +104,7 @@ export default function CustomerQuotesReportView() {
     return out;
   }, [selectedEstimate, activeProposal, proposalTitle]);
 
-  const quoteRows = useMemo<Array<CustomerQuoteItem & { customerName: string; signToken?: string; problem: string | null }>>(() => {
+  const allQuoteRows = useMemo<Array<CustomerQuoteItem & { customerName: string; signToken?: string; problem: string | null }>>(() => {
     const customerIds = customerFilter === '__all__'
       ? Array.from(new Set(wsEstimates.map(e => e.customerId).filter(Boolean)))
       : [customerFilter];
@@ -116,6 +123,8 @@ export default function CustomerQuotesReportView() {
     }
     return rows;
   }, [wsEstimates, wsCustomers, customerFilter, today, proposalsMap, estimatesById]);
+
+  const quoteRows = allQuoteRows.filter(row => quoteState === 'all' || row.state === quoteState);
 
   const propTotals = useMemo(
     () => (activeProposal ? proposalTotals(activeProposal.sections) : null),
@@ -187,7 +196,7 @@ export default function CustomerQuotesReportView() {
           type="button"
           onClick={exportCsv}
           disabled={quoteRows.length === 0}
-          className="px-3 py-1.5 rounded border text-sm disabled:opacity-50"
+          className="min-h-11 px-3 py-1.5 rounded border text-sm disabled:opacity-50"
         >
           Download CSV
         </button>
@@ -201,6 +210,12 @@ export default function CustomerQuotesReportView() {
       )}
 
       <div className="flex flex-wrap items-end gap-3" data-print-hide>
+        <label className="flex flex-col gap-1 text-sm">Quote state
+          <select aria-label="Quote state" value={quoteState} onChange={event => setQuoteState(event.target.value)}
+            className="min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]">
+            <option value="all">All states</option><option value="open">Open</option><option value="expired">Expired</option><option value="signed">Signed</option>
+          </select>
+        </label>
         <label className="flex flex-col gap-1 text-sm">
           Customer
           <select
@@ -232,7 +247,7 @@ export default function CustomerQuotesReportView() {
         <p className="text-sm text-[var(--muted)]">No open or signed customer quotes match the selected filter.</p>
       ) : (
         <ReportTableScroll>
-          <table className="w-full text-sm border-collapse">
+          <table className="w-full min-w-[1100px] text-sm border-collapse">
             <caption className="sr-only">Customer quotes and proposals as of {today}</caption>
             <thead>
               <tr className="border-b text-left">
@@ -245,6 +260,7 @@ export default function CustomerQuotesReportView() {
                 <th scope="col" className="py-2 pr-3 text-right">Amount</th>
                 <th scope="col" className="py-2 pr-3">State</th>
                 <th scope="col" className="py-2">Portal Accept Link</th>
+                <th scope="col" className="py-2">Follow-up</th>
               </tr>
             </thead>
             <tbody>
@@ -272,6 +288,16 @@ export default function CustomerQuotesReportView() {
                         <span className="text-[var(--muted)]">{r.problem || 'Send estimate to generate signing link'}</span>
                       )}
                     </td>
+                    <td className="py-2 align-top min-w-72">{(r.state === 'open' || r.state === 'expired') ? <details>
+                      <summary className="min-h-11 cursor-pointer">Follow-up draft</summary>
+                      <p className="text-sm text-[var(--muted)]">Select and copy this draft, then review it before sending through your usual channel. Nothing is sent or saved here.</p>
+                      <label className="block">Draft for <bdi>{r.number}</bdi>
+                        <textarea aria-label={`Follow-up draft for ${r.number}`} dir="auto" readOnly rows={6}
+                          onFocus={event => event.currentTarget.select()}
+                          className="block min-h-11 w-64 max-w-full border rounded p-2 bg-[var(--panel)] text-[var(--text)]"
+                          value={`Hello ${r.customerName},\n\nFollowing up on quote ${r.number}.${r.state === 'expired' ? ` Its recorded validity ended${r.expiryDate ? ` on ${r.expiryDate}` : ''}; please contact us for an updated quote before accepting.` : r.expiryDate ? ` Its recorded validity runs through ${r.expiryDate}.` : ''}\n\nWould you like to discuss next steps?`} />
+                      </label>
+                    </details> : 'No follow-up draft for this state'}</td>
                   </tr>
                 );
               })}

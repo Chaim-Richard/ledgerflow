@@ -15,6 +15,7 @@ import type { FieldMapping, ImportIssue, ImportKind } from '../../../lib/recordI
 import { downloadCsv } from '../../../lib/csvExport';
 import { normalizeFreshBooksCsv } from '../../../lib/freshBooksImport';
 import { normalizeQuickBooksCsv } from '../../../lib/quickBooksCsvImport';
+import { reconcileImportCounts } from '../../../lib/importCountReconciliation';
 
 type CsvSource = 'generic' | 'freshbooks' | 'quickbooks';
 const normalizeSourceTable = (source: CsvSource, kind: ImportKind, cells: string[][]): string[][] =>
@@ -98,6 +99,7 @@ export default function ImportSettings() {
   const [busy, setBusy] = useState(false);
   const [check, setCheck] = useState<ImportResult | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [importCountSnapshot, setImportCountSnapshot] = useState<{ sourceRows: number; preparedRows: number } | null>(null);
   const [serverIssues, setServerIssues] = useState<ImportIssue[]>([]);
   const [recent, setRecent] = useState<RecentImport[]>([]);
   const [recentVersion, setRecentVersion] = useState(0);
@@ -109,6 +111,9 @@ export default function ImportSettings() {
   const stockCents = kind === 'items' ? openingStockCents(prepared.records) : 0;
   const issues = serverIssues.length > 0 ? serverIssues : prepared.errors;
   const tooMany = rows.length > MAX_IMPORT_ROWS;
+  const countProof = result && importCountSnapshot ? reconcileImportCounts({
+    ...importCountSnapshot, created: result.created, skipped: result.skipped.length,
+  }) : null;
   const ready = table.length > 1 && prepared.errors.length === 0 && prepared.records.length > 0 && !tooMany;
 
   useEffect(() => {
@@ -121,6 +126,7 @@ export default function ImportSettings() {
   const resetResults = () => {
     setCheck(null);
     setResult(null);
+    setImportCountSnapshot(null);
     setServerIssues([]);
   };
 
@@ -162,6 +168,7 @@ export default function ImportSettings() {
         setCheck(res);
       } else {
         setResult(res);
+        setImportCountSnapshot({ sourceRows: rows.length, preparedRows: prepared.records.length });
         setCheck(null);
         setRawTable([]);
         setFileName('');
@@ -381,6 +388,41 @@ export default function ImportSettings() {
               </button>
             </div>
           </div>
+        )}
+
+        {result && (
+          <section className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 space-y-3" aria-labelledby="import-count-proof-title" aria-live="polite">
+            <h3 id="import-count-proof-title" className="text-sm font-bold text-[var(--text)]">Import count comparison</h3>
+            <p className="text-xs text-[var(--muted)]">Compares submitted spreadsheet records with the server response for this import. It does not check the trial balance, cash, receivables, payables, taxes or saved ledger amounts.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <caption className="sr-only">Source record counts and server-reported import counts</caption>
+                <thead><tr className="border-b border-[var(--line)]">
+                  <th scope="col" className="py-2 text-left">Measurement</th>
+                  <th scope="col" className="py-2 text-right">Count</th>
+                </tr></thead>
+                <tbody className="text-[var(--text)]">
+                  {([
+                    ['Source data rows', countProof?.sourceRows],
+                    ['Validated rows submitted', countProof?.preparedRows],
+                    ['Reported as created', countProof?.created],
+                    ['Reported as existing (skipped)', countProof?.skipped],
+                    ['Submitted rows not accounted for', countProof?.unexplained],
+                  ] as Array<[string, number | undefined]>).map(([label, value]) => (
+                    <tr key={label} className="border-b border-[var(--line)]">
+                      <th scope="row" className="py-2 text-left font-normal">{label}</th>
+                      <td className="py-2 text-right tabular-nums font-mono">{value === undefined ? 'Not available' : value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs font-semibold text-[var(--text)]" role="status">
+              {countProof?.status === 'counts-explained' ? 'Counts explained by the server response — financial reconciliation not verified.' :
+                countProof?.status === 'review-required' ? 'Count differences need review. Do not treat this as a verified migration.' :
+                'Import comparison unavailable. Do not treat this as a verified migration.'}
+            </p>
+          </section>
         )}
 
         {result && result.batchId && (

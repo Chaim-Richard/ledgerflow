@@ -99,4 +99,33 @@ describe('Delivery notes screen (A-46 / A-172)', () => {
     assert.match(card.textContent || '', /סחורה בלבד; המחירים מופיעים בחשבונית\./);
     assert.match(card.textContent || '', /התקבל על ידי/);
   });
+  test('search and source-type filters cannot print an unrelated fallback document', () => {
+    render(<DeliveryNotesReportView />);
+    fireEvent.change(screen.getByLabelText('Find source document'), { target: { value: 'קפה' } });
+    assert.ok(screen.getByRole('article', { name: 'Printable delivery note' }));
+    fireEvent.change(screen.getByLabelText('Source type'), { target: { value: 'invoice' } });
+    assert.equal(screen.queryByRole('article', { name: 'Printable delivery note' }), null);
+    assert.equal((screen.getByRole('button', { name: 'Print delivery note' }) as HTMLButtonElement).disabled, true);
+    assert.equal((screen.getByRole('button', { name: 'Download CSV' }) as HTMLButtonElement).disabled, true);
+    assert.ok(screen.getByText(/No matching source documents/));
+    fireEvent.change(screen.getByLabelText('Source type'), { target: { value: 'all' } });
+    assert.match(screen.getByRole('article', { name: 'Printable delivery note' }).textContent || '', /קפה הכרמל/);
+    fireEvent.change(screen.getByLabelText('Find source document'), { target: { value: 'missing' } });
+    assert.equal(screen.queryByRole('article', { name: 'Printable delivery note' }), null);
+    fireEvent.change(screen.getByLabelText('Find source document'), { target: { value: 'SO-2026-014' } });
+    assert.ok(screen.getByRole('article', { name: 'Printable delivery note' }));
+  });
+
+  test('changing books clears source filters and manual numbering', async () => {
+    const { useAuthStore } = await import('../stores/useAuthStore');
+    render(<DeliveryNotesReportView />);
+    fireEvent.change(screen.getByLabelText('Find source document'), { target: { value: 'קפה' } });
+    fireEvent.change(screen.getByLabelText('Delivery note number'), { target: { value: 'private-number' } });
+    act(() => useAuthStore.setState({ currentWorkspaceId: 'other-books' }));
+    assert.equal((screen.getByLabelText('Find source document') as HTMLInputElement).value, '');
+    assert.equal((screen.getByLabelText('Delivery note number') as HTMLInputElement).value, '');
+    assert.equal((screen.getByLabelText('Source type') as HTMLSelectElement).value, 'all');
+    assert.equal(screen.queryByRole('article', { name: 'Printable delivery note' }), null);
+  });
+
 });
