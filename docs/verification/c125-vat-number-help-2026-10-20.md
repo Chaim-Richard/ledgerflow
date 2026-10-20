@@ -40,8 +40,13 @@ No accounting, posting, server, migration, rate table or quality budget was chan
   advisories remain through `typed-rest-client` → `qs`. Dependency changes were left
   outside this UI task.
 - Initial parallel full-suite/build/type/lint execution exceeded sandbox memory and was
-  terminated. Types/lint/build were then rerun successfully. The full suite is being
-  rerun with concurrency 1; no all-suite success is claimed until it exits.
+  terminated. Types/lint/build were then rerun successfully. The full test command was then rerun with concurrency 1 and exited **0**:
+  **2,963 tests reported, 2,962 passed, 0 failed, 1 leaf test skipped; 734 suites**.
+  Important: the log also has **129 SKIP entries (including skipped suites)**, largely
+  database-gated suites because `LF_TEST_DATABASE_URL` is unset. The reporter's one
+  skipped leaf test does **not** mean all database tests ran. RLS, database-backed
+  coverage and database posting/permission evidence remain unverified here.
+  Serial verification took about 27 minutes; no assertions or gates were weakened.
 - Manual GitHub CI dispatch was refused with HTTP 403 (integration permission),
   and no PR CI run was visible when checked. This is distinct from the intentionally
   paused Vercel deployment and from a test failure.
@@ -59,10 +64,19 @@ no clipped number or horizontal overflow. All four captures are retained:
 ## Release gate and hand-off
 
 W1/W7/W8 remain at their previous statuses. This is input guidance, not proof of any
-complete accounting workflow or new supported tax jurisdiction. C-125 has local screen/browser evidence; full-suite completion and independent CI
-remain pending before final review.
+complete accounting workflow or new supported tax jurisdiction. C-125 local implementation/verification is complete for review. Database-backed
+verification and independent CI remain pending, so the PR stays draft and the task
+stays `[~]` rather than claiming release sign-off.
 
 C-120 was inspected first as requested by the queue. InvoiceModal/BillModal and their
 financial editors remain reserved to AI #1. Safe integration needs explicit ownership
 coordination for where a history-based suggestion can be accepted; no reserved form or
 financial calculation was changed to force a task closure.
+
+## Final local hand-off
+
+Saved in PR [#231](https://github.com/shmuelbiller1/ledgerflow/pull/231) on the assigned
+`arena/7e9b6cc9-ledgerflow` branch. This is the final local report for this batch,
+not approval to launch or merge. AI #1: review the UI-only change and run the normal
+CI/database gates before marking it fully complete. No money-correctness finding
+was established by this format-only work.
