@@ -49,7 +49,7 @@ function readAmount(raw: string, row: number, field: string): number {
   // Unlike generic record imports, migration proof must NEVER round a source
   // amount to cents: that can make genuinely different books appear equal.
   // QuickBooks US Trial Balance exports use a dot as decimal separator.
-  if (!/^\\$?(?:\\d+|\\d{1,3}(?:,\\d{3})+)(?:\\.\\d{1,2})?$/.test(raw.trim())) {
+  if (!/^\$?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d{1,2})?$/.test(raw.trim())) {
     throw new Error(`Row ${row}: ${field} must be a nonnegative amount with at most two decimals.`);
   }
   const cents = parseMoneyCents(raw);
