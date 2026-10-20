@@ -204,8 +204,17 @@ const BACKUP_TABLES = RESTORE_COLLECTIONS.filter(c => c.key !== 'recurring');
  * it before restoring).
  */
 export async function exportWorkspaceBackup(db: Firestore, workspaceId: string, exportedBy: string): Promise<Record<string, unknown> & { metadata: Record<string, unknown> }> {
-  const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
-  const wsData = wsDoc.exists ? wsDoc.data() || {} : {};
+  // AUD-02: every table is read inside one transaction, so the backup is one consistent moment of the
+  // books — a save made while the export runs is either wholly in it or wholly out of it.
+  const tables: Record<string, Array<Record<string, unknown>>> = {};
+  const wsData = await db.runTransaction(async t => {
+    const wsDoc = await t.get(db.collection('workspaces').doc(workspaceId));
+    for (const { key, coll } of BACKUP_TABLES) {
+      const snap = await t.get(db.collection(coll).where('workspaceId', '==', workspaceId));
+      tables[key] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    return wsDoc.exists ? wsDoc.data() || {} : {};
+  }, { readOnly: true });
   const payload: Record<string, unknown> & { metadata: Record<string, unknown> } = {
     schemaVersion: 1,
     exportedAt: new Date().toISOString(),
@@ -213,10 +222,9 @@ export async function exportWorkspaceBackup(db: Firestore, workspaceId: string, 
     metadata: {},
   };
   const counts: Record<string, number> = {};
-  for (const { key, coll } of BACKUP_TABLES) {
-    const snap = await db.collection(coll).where('workspaceId', '==', workspaceId).get();
-    payload[key] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    counts[key] = snap.size;
+  for (const { key } of BACKUP_TABLES) {
+    payload[key] = tables[key];
+    counts[key] = tables[key].length;
   }
   payload.metadata = {
     counts,
