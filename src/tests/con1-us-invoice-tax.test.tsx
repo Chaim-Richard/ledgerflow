@@ -26,7 +26,7 @@ const profiles: TaxProfiles = {
 const seller = resolveSellerProfile(profiles, {}, ['world']);
 const packs = ruleRateTable();
 const austin = { country: 'US', state: 'TX', city: 'Austin' };
-const ask = (lineCategories: Array<string | null>, buyer = austin, extra: Partial<Parameters<typeof usInvoiceTax>[0]> = {}) =>
+const ask = (lineCategories: Array<string | null | undefined>, buyer = austin, extra: Partial<Parameters<typeof usInvoiceTax>[0]> = {}) =>
   usInvoiceTax({ seller, buyer, date: DATE, lineCategories, fallback: packs, ...extra });
 
 test('CON-1: the supported states are exactly TX, CA, NY, WA and CO', () => {
@@ -92,10 +92,26 @@ test('CON-1: a line\'s category comes from its linked item, else the item whose 
   assert.equal(lineTaxCategory({ description: 'Custom work' }, items), null, 'free text: no item');
 });
 
+test('CON-1 review: a taxability row must be in force on the invoice date — before the table starts, a person decides', () => {
+  // the 2026 table starts on 1 Jan 2026: a 31 Dec 2025 grocery invoice is not "taxable at 6.25%" by default
+  const before = usInvoiceTax({ seller, buyer: austin, date: '2025-12-31', lineCategories: ['groceries'], fallback: packs });
+  assert.deepEqual(before?.kind === 'confirm' && [before.unclear, before.unloaded], [['groceries'], 0]);
+  assert.equal(ask(['groceries'])?.kind, 'rate', 'on 10 Aug 2026 the row is in force');
+});
+
+test('CON-1 review: a line whose item is not loaded is unknown, never general goods', () => {
+  const answer = ask([undefined, 'groceries']);
+  assert.deepEqual(answer?.kind === 'confirm' && [answer.unloaded, answer.unclear, answer.unknown], [1, [], []]);
+  const items = [{ id: 'i1', name: 'Rice 5kg', productTaxCategory: 'groceries' }];
+  assert.equal(lineTaxCategory({ itemId: 'gone' }, items), undefined, 'linked to an item that is not in the list');
+  assert.equal(lineTaxCategory({ description: 'Installation' }, items, false), undefined, 'the list is still loading or capped');
+  assert.equal(lineTaxCategory({ description: 'Installation' }, items, true), null, 'the whole list is loaded: free text');
+});
+
 describe('CON-1 on the invoice screen', () => {
   afterEach(() => cleanup());
 
-  const mount = async (lineCategories: Array<string | null>, customerPlace = austin, currentRate = 0) => {
+  const mount = async (lineCategories: Array<string | null | undefined>, customerPlace = austin, currentRate = 0) => {
     const { useAuthStore } = await import('../stores/useAuthStore');
     const ws = setComponentWorkspace('owner');
     useAuthStore.setState({ workspaces: [{ ...ws, taxProfiles: profiles }] });
@@ -121,6 +137,18 @@ describe('CON-1 on the invoice screen', () => {
   test('unclear category: confirm with the state', async () => {
     const { text } = await mount(['services']);
     assert.match(text, /whether Services is taxed in TX is not settled in LedgerFlow's table: confirm with the state and choose the tax yourself/);
+    assert.equal(screen.queryByRole('button'), null);
+  });
+
+  test('review: a 0% state answer still says city, county and district taxes are not included', async () => {
+    const { text } = await mount(['groceries'], { country: 'US', state: 'CA', city: 'San Jose' }, 0.0725);
+    assert.match(text, /no state sales tax: Groceries \(food at home\) is not taxed by CA\. City, county and district taxes are not included, and some places tax what the state does not/);
+    assert.match(screen.getByRole('button', { name: 'Use no tax' }).className, /\bmin-h-11\b/);
+  });
+
+  test('review: an item not loaded yet: no rate is suggested', async () => {
+    const { text } = await mount([undefined, 'general']);
+    assert.match(text, /1 line\(s\) have an item that is not loaded yet, so its tax category is not known: confirm with the state and choose the tax yourself/);
     assert.equal(screen.queryByRole('button'), null);
   });
 
