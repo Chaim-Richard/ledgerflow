@@ -420,14 +420,25 @@ export function ilPcn874Preview(input: IlPcn874Input & {
   generatedOn: string;
   /** #235 review: the typed dealer number matches none of the workspace's registrations — no draft is built */
   dealerUnknown?: boolean;
+  /** the selected dealer's report period runs past the month (a bimonthly pair's first month): its last month */
+  pendingUntil?: string;
   /** the month's VAT returns, to compare the draft with the report the screen shows */
   returns?: Array<{ taxableSalesCents: number; outputVatCents: number; zeroRatedSalesCents: number; fixedAssetInputVatCents: number; otherInputVatCents: number }>;
 }): IlPcn874Preview {
-  const mapping = ilPcn874Rows(input);
   const dealerId = String(input.dealerId || '').replace(/\D/g, '');
+  // #244 review: an unknown dealer or a period not yet ended gets no rows, no comparison and no draft — never another
+  // dealer's documents or a two-month draft before the second month is over
+  const refusal = dealerId.length === 9 && input.dealerUnknown
+    ? `Dealer number ${dealerId} is not one of this workspace's Israeli VAT registrations, so no draft is built: a draft holds one registration's documents.`
+    : input.pendingUntil
+      ? `This dealer reports for ${input.month} to ${input.pendingUntil}; the draft is built after ${input.pendingUntil} ends.`
+      : undefined;
+  if (refusal) {
+    return { rows: [], unmapped: [], totals: { taxableSalesNis: 0, outputVatNis: 0, zeroRatedSalesNis: 0, inputOtherNis: 0, inputEquipmentNis: 0 }, notRepresented: 0, ...(dealerId.length === 9 ? { dealerId } : {}), problem: refusal, comparison: [], startMonth: input.month, endMonth: input.endMonth || input.month };
+  }
+  const mapping = ilPcn874Rows(input);
   const problems: string[] = [];
   if (dealerId.length !== 9) problems.push('A 9-digit dealer number is needed for the historical PCN874 draft.');
-  else if (input.dealerUnknown) problems.push(`Dealer number ${dealerId} is not one of this workspace's Israeli VAT registrations, so no draft is built: a draft holds one registration's documents.`);
   if (mapping.unmapped.length) problems.push(`${mapping.unmapped.length} document(s) cannot be written in this layout; they are listed with the reason.`);
   let draft: Pcn874DraftOutput | undefined;
   if (!problems.length) {
@@ -653,6 +664,8 @@ export function israelMonthJourney(input: IsraelMonthInput): IsraelMonth {
           closed ? `${month} is ${state === 'hard' ? 'closed' : 'soft-closed'}.` : `${month} is still open.`,
           unfiled
             ? 'Record the VAT report on the return screen before closing the month.'
+            : !returns.length
+              ? `No Israeli VAT registration is recorded for ${month}, so no VAT report is due here.`
             : !due.length
               ? `No VAT report is due for ${month}: the two-month report is filed after ${returns.find(r => r.pending)?.endMonth || month} ends.`
               : 'A return for the report period is recorded.',
