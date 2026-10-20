@@ -12,7 +12,7 @@
  * Pure.
  */
 import { effectiveTaxCategory, taxCategoryLabel, type TaxCategoryId } from './taxCategories';
-import { productTreatment } from './usProductTaxability';
+import { productTaxabilityRows } from './usProductTaxability';
 import { resolveLineTax, type LineTaxReason, type RateTable, type RateTables, type TaxComponent } from './resolveLineTax';
 import type { ResolvedProfile, TaxPlace } from './profile';
 
@@ -38,6 +38,10 @@ interface UsAnswerBase {
   linesWithoutItem: number;
 }
 
+/** The taxability row in force on the date; none means the table does not answer for that date (#239 review). */
+const treatmentOn = (state: string, category: TaxCategoryId, date: string) =>
+  productTaxabilityRows(state, category).find(r => r.validFrom <= date && (!r.validTo || date <= r.validTo))?.treatment;
+
 export type UsInvoiceTax =
   /** no sales tax applies, for a reason that does not depend on what is sold */
   | { kind: 'none'; reason: Exclude<LineTaxReason, 'taxed'>; state?: string }
@@ -46,19 +50,19 @@ export type UsInvoiceTax =
   /** the lines are taxed differently: one invoice rate cannot be right */
   | (UsAnswerBase & { kind: 'mixed'; groups: UsRateGroup[]; localIncluded: boolean })
   /** a line's category is one the state table leaves unclear, or is not a known category: a person decides */
-  | (UsAnswerBase & { kind: 'confirm'; unclear: TaxCategoryId[]; unknown: string[] });
+  | (UsAnswerBase & { kind: 'confirm'; unclear: TaxCategoryId[]; unknown: string[]; unloaded: number });
 
 const total = (components: TaxComponent[]) => Math.round(components.reduce((s, c) => s + c.rate, 0) * 1e6) / 1e6;
 
 /**
  * @param lineCategories one entry per invoice line: the line's item tax category (`''` for an item with none),
- *   or `null` for a line with no item.
+ *   `null` for a line with no item, or `undefined` while its item is not loaded (its category is not known yet).
  */
 export function usInvoiceTax(input: {
   seller: ResolvedProfile;
   buyer?: TaxPlace | null;
   date: string;
-  lineCategories: Array<string | null>;
+  lineCategories: Array<string | null | undefined>;
   exempt?: boolean;
   tables?: RateTables;
   fallback?: RateTable;
@@ -76,13 +80,16 @@ export function usInvoiceTax(input: {
 
   const counts = new Map<TaxCategoryId, number>();
   const unknown: string[] = [];
+  const unloaded = lines.filter(c => c === undefined).length;
   for (const raw of lines) {
+    if (raw === undefined) continue;
     const category = effectiveTaxCategory(raw);
     if (!category) { if (raw && !unknown.includes(raw)) unknown.push(raw); continue; }
     counts.set(category, (counts.get(category) || 0) + 1);
   }
-  const unclear = [...counts.keys()].filter(category => productTreatment(state, category)?.treatment === 'unclear');
-  if (unclear.length || unknown.length) return { kind: 'confirm', ...common, unclear, unknown };
+  // unclear in the table, or no row in force on the invoice date: a person decides, never a silent "taxable"
+  const unclear = [...counts.keys()].filter(category => { const t = treatmentOn(state, category, input.date); return !t || t === 'unclear'; });
+  if (unclear.length || unknown.length || unloaded) return { kind: 'confirm', ...common, unclear, unknown, unloaded };
 
   const groups: UsRateGroup[] = [...counts.entries()].map(([category, count]) => {
     const tax = resolveLineTax({ ...base, category });
@@ -101,15 +108,18 @@ export const categoriesInWords = (ids: string[]) => ids.map(id => taxCategoryLab
 /**
  * One invoice line's tax category for `usInvoiceTax`: its linked item's, else the item whose name it carries (a
  * service item fills the name only and stays unlinked), with a service item that has no category counted as
- * Services. `''` is an item with no category (general goods); null is a free-text line with no item.
+ * Services. `''` is an item with no category (general goods); null is a free-text line with no item; undefined is
+ * a line whose item is not in the loaded list (its category is not known yet).
  */
 export function lineTaxCategory(
   line: { itemId?: string; description?: string },
   items: Array<{ id: string; name: string; sku?: string; itemType?: string; productTaxCategory?: string }>,
-): string | null {
+  /** false while the item list is loading or capped: an item not found may just not be loaded (#239 review) */
+  complete = true,
+): string | null | undefined {
   // the same exact name-or-SKU match the invoice uses to link an item (findInventoryItem)
   const typed = (line.description || '').trim();
   const item = line.itemId ? items.find(i => i.id === line.itemId) : typed ? items.find(i => i.name === typed || (Boolean(i.sku) && i.sku === typed)) : undefined;
-  if (!item) return null;
+  if (!item) return line.itemId || !complete ? undefined : null;
   return item.productTaxCategory || (item.itemType === 'service' ? 'services' : '');
 }

@@ -16,12 +16,26 @@ Zero bugs is not the bar; the supported workflows working correctly is. The lead
 Label issues with `critical`, `major` or nothing (ordinary); a stage cannot start while a **critical** issue
 touches one of its workflows.
 
-## Stages
+## Stages (owner decision 20 Oct: bookkeeping first — a smarter order, not a smaller product)
 
-1. **AI completion (now):** finish known gaps in the workflows below; fix critical and major findings.
-2. **Selected bookkeepers on synthetic books:** when every "stage 2" row is Yes/Yes/Yes. They judge usability,
-   wording, missing practical steps — what the AIs cannot.
-3. **A few paying customers:** when every row is Yes and data recovery, permissions, migration and billing are proven.
+| Stage | Who | Must be Yes/Yes/Yes (connected · worked figures · browser) | Also required |
+|---|---|---|---|
+| **A — Synthetic bookkeeping beta** | invited bookkeepers, made-up books in a marked sandbox | **W1, W2, W3, W4, W5, W6, W9, W10, W14** | first-tester gates G-01 (setup saved, return after refresh) and G-02 (one first hour without dead ends) in [`FIRST_TESTERS_GATE.md`](FIRST_TESTERS_GATE.md); "test environment" banner; every item in *Never postponed* below |
+| **B — Narrow real-records pilot** | a few real businesses | everything in A **plus W11** (import totals match the source), **W12** (group report), **W13** (stock) | the P0 money/data/security gates of `FIRST_TESTERS_GATE.md` passed on a production-like database and deployment; backups proven on that deployment; Israeli tax invoices only with allocation numbers (a legal requirement, never bypassed by manual tax) |
+| **C — Tax and payroll automation** | customers who need them | **W7** (Israel VAT month → PCN874), **W8** (US quarter → returns, 1099) as filing-ready, and each payroll-provider integration separately | each automation verified against worked figures and official sources; until then its screens say "calculation — check before filing" |
+
+**Tax in stages A and B** is *tax accounting*: rates chosen by the user or the accountant (shown as "user-chosen", never as verified), correct tax liability/expense postings, dated rates with their source, exports for the accountant. The US/IL engines stay in the product as suggestions; they do not block A or B.
+**Payroll in stages A and B** is *payroll accounting*: the result of an outside provider (ADP, Gusto, Paychex…) imported from a CSV and posted — gross wages, employer costs, withholdings and net pay to clearing/liability accounts, the bank payment, reversals, duplicate-import refusal, cost split by property/department/project/entity (task PAY-1). Running payroll (withholding engines, direct deposit, filings, W-2) is stage C; the existing payroll code stays, labelled "Internal, test or demo only" or "with limits".
+
+**Never postponed, at any stage:** duplicate or lost postings; unsafe retries after an uncertain answer; period and transaction integrity; cross-workspace leaks; wrong or incomplete reports; currency precision and rounding; silent partial saves or imports; failed backups or restores; unauthorised writes; wrong invoice/payment/reversal accounting; false success messages; statutory documents issued without what the law requires.
+
+| Before 20 Oct | From 20 Oct |
+|---|---|
+| Stage 2 (synthetic testers) needed every "stage 2" row, including W7 and W8 tax workflows | Stage A needs the bookkeeping rows only; W7/W8 automation moves to stage C; tax is recorded with user/accountant-chosen rates in A and B |
+| Payroll processing was part of the product scope | Payroll *accounting* by provider import (PAY-1) in A/B; payroll processing in C |
+| Stage 3: "every row is Yes" | Stage B: A + W11/W12/W13 + production-like gates; C rows are not required for B |
+
+**Risk that remains:** testers in A cannot judge tax automation; B customers must keep their own tax filing process (the product says so); Israeli invoices for real records still need allocation numbers.
 
 C-72/C-73/C-75 local report-control evidence (AI #2, 19 Oct): bill source navigation, filtered delivery-note preview/print/CSV, and copyable quote follow-ups are covered by component and phone/desktop browser tests. W3/W6 retain their existing statuses: these controls do not prove the full posting/payment/delivery journey. See [checks and screenshots](verification/c72-c73-c75-report-follow-ups-2026-10-19.md).
 
@@ -47,7 +61,7 @@ independently worked figures passes · **Browser** = an end-to-end browser test 
 | W13 | Stock: purchase → stock → sale → valuation | 3 | Yes | Partly | Partly ([D-94 inline-editor accessibility](verification/ai4-d94-inline-edit-names.md)) | ISS-130 in review ([revaluation entry, cost locked in the browser](verification/ai9-iss130-stock-revaluation.md)), ISS-131 in review ([valuation on a past date from the stock history](verification/ai9-iss131-inventory-as-of.md)), DIM-2; C-128 item configuration verified locally, full stock journey/CI still pending |
 | W14 | Roles and access (owner, accountant, bookkeeper, viewer) | 2 | Yes | Yes (RLS suite; AI #6 adds cross-workspace write assertions for invoice, bill, payment, credit, reconciliation, customer and vendor records; pass on test Postgres 19 Oct) | Partly | AUD-09 for the remaining write families |
 
-**Today (19 Oct, night):** stage 1. **Fully Yes (connected, worked figures, browser): W6, W9.** One column short: W2 (worked figures: DIM-1 for separate payment records), W14 (browser), W3, W4 (worked figures). Critical items still open: AUD-02 rest (W10). Fixed 18–19 Oct: INT-1…5, INT-2 invoices/bills/payments, ISS-141/BUG-04, DIM-1 document payments, the axe 4.14 label-in-name failures.
+**Today (20 Oct):** stage 1 (before A). **Done for A: W6, W9.** Still missing for stage A: **W1** connected + worked figures + browser (first-hour journey, G-24); **W2** worked figures (DIM-1 for separate payment records); **W3, W4** worked figures; **W5** worked figures + browser; **W10** browser (F-46); **W14** browser; and gates G-01, G-02. Older note — **19 Oct, night:** **Fully Yes (connected, worked figures, browser): W6, W9.** One column short: W2 (worked figures: DIM-1 for separate payment records), W14 (browser), W3, W4 (worked figures). Critical items still open: AUD-02 rest (W10). Fixed 18–19 Oct: INT-1…5, INT-2 invoices/bills/payments, ISS-141/BUG-04, DIM-1 document payments, the axe 4.14 label-in-name failures.
 C-126 local input evidence: the US tax-profile editor can explicitly copy recognized state/ZIP into its draft, preserving other place fields. Four phone/desktop light/dark browser cases pass; this does not establish tax jurisdiction or upgrade W8 readiness. See [verification](verification/c126-us-address-help-2026-10-19.md).
 
 

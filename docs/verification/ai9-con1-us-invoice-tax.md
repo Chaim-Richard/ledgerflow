@@ -35,3 +35,13 @@ when Illinois taxes groceries at a reduced 1% that replaces the 6.25%. Raised un
 
 Release gate: W8. The invoice now uses the state table and item taxability for the supported states; W8 stays Partly
 (CON-2, local rows).
+
+**Review fixes (#239).**
+- **Items not loaded yet.** A line whose item is not in the loaded list counts as **unknown**, never as general goods:
+  the list may still be loading, capped, or missing the linked item. The answer becomes "confirm", with no rate
+  button.
+- **Missing local taxes on a 0% answer.** A 0% state answer ("no state sales tax") still says that city, county and
+  district taxes are not included.
+- **Dated taxability rows.** The taxability row must be in force on the invoice date. The 2026 table starts on
+  1 Jan 2026, so a 31 Dec 2025 grocery invoice asks a person instead of silently taking 6.25%.
+- **Touch targets.** The action is a 44px target. The non-taxing-code and Eilat fixes come from #234 (merged in).

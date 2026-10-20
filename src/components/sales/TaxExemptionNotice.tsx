@@ -17,7 +17,7 @@ export default function TaxExemptionNotice({ customer, date, charging, onNoTax, 
   lineLabels?: Record<string, string>;
   currentRate?: number;
   /** CON-1: each line's item tax category ('' for an item with none, null for a line with no item) */
-  lineCategories?: Array<string | null>;
+  lineCategories?: Array<string | null | undefined>;
   /** CON-3: the current code's treatment and the treatments the workspace has sales codes for */
   currentTreatment?: string;
   salesTreatments?: string[];
