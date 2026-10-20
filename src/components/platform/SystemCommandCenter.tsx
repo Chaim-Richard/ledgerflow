@@ -162,13 +162,18 @@ function useSystemCommandCenterModel() {
 
   // Trigger System Diagnostic event directly in system telemetry logs
   const handleTriggerStressEvent = (type: 'db_timeout' | 'quota_low' | 'normal_gemini') => {
+    const secureRandomInt = (maxExclusive: number) => {
+      const randomValue = globalThis.crypto.getRandomValues(new Uint32Array(1))[0];
+      return randomValue % maxExclusive;
+    };
+
     const freshLog: TelemetryLog = {
       timestamp: new Date().toISOString(),
       statusCode: type === 'db_timeout' ? 503 : type === 'quota_low' ? 429 : 200,
       method: type === 'normal_gemini' ? 'POST' : 'GET',
       path: type === 'normal_gemini' ? `/api/v1/workspace/gemini/summarize` : `/api/v1/transactions/ledger_audit`,
-      ip: `10.244.31.${Math.floor(Math.random() * 254)}`,
-      apiKeyUsed: `test_sim_ws_${Math.floor(Math.random() * 1000)}_key`,
+      ip: `10.244.31.${secureRandomInt(254)}`,
+      apiKeyUsed: `test_sim_ws_${secureRandomInt(1000)}_key`,
       simulated: true
     };
 

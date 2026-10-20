@@ -18,7 +18,7 @@ for (const file of files) {
   const m = c.match(r1);
   if (m) {
     if (!m[0].includes('parseLocalDate')) {
-      const newImport = m[0].replace('{', '{ parseLocalDate,');
+      const newImport = m[0].replace(/\{\s*/, '{ parseLocalDate, ');
       c = c.replace(m[0], newImport);
     }
   } else {

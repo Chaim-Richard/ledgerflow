@@ -453,3 +453,15 @@ with the exact evidence. Nothing was baselined or hidden to make anything pass.
 The branch `codex/ci-faster-browser-feedback` is pushed (implementation `74a8ae51`). It splits all 299 browser tests into two isolated shards, keeps every existing accounting/security/time-zone gate and the original required browser check, and provides combined reports and readable failure locations. Local types/lint, four diagnostic contracts, two actual browser smoke shards and report merging pass; five already-landed screen tasks were reconciled after 17 component cases and ten guest screenshot checks. Evidence: `docs/verification/ci-speed-and-queue-review-2026-10-17.md`.
 
 **Outside action:** [open the pull request](https://github.com/shmuelbiller1/ledgerflow/pull/new/codex/ci-faster-browser-feedback). The GitHub API returns `Forbidden` to this environment for PR creation. Native Git push succeeded and its exact remote SHA was verified, but no Actions run is visible for the branch yet. Full GitHub verification and merge remain outstanding; do not treat the local smoke subset as a full-suite pass.
+
+## 20 Oct — Copilot "Potential fix for code scanning alert" PRs (for the owner)
+
+24 automatic fixes were opened (#205–#228); three more had been merged straight into main earlier (alerts 9, 29, 33 — reviewed afterwards, all fine). Reviewed one by one:
+- **Merged (12):** #205, #206, #208, #210, #211, #212, #221, #223, #224, #225, #226, #228.
+- **Replaced by one correct fix (9):** #213–#220, #222 (upload path). #213 would have refused every bank CSV upload.
+- **Closed — would break the app:** #209 (every API key refused), #227 (payslips stop downloading). #207 was a duplicate.
+
+**Please do on the code-scanning page** (needs your admin rights; this session cannot read or dismiss alerts):
+dismiss as *false positive*: alert 24 (payslip GET), 25 (API-key SHA-256 — keys are random secrets), and as *won't fix / used in development*: alert 32 (Helmet CSP is on in production).
+
+**Default from now on:** Copilot autofix PRs are reviewed by AI #1 like any other PR before merging — please don't press "Commit" on them directly in GitHub; touching server code they can break uploads, API keys or payslips, as three of these would have.

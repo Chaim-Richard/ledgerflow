@@ -38,7 +38,7 @@ test('every file named as evidence exists', () => {
   const missing: string[] = [];
   for (const [n, , , evidence] of rows) {
     for (const m of evidence.matchAll(/`([^`]+)`/g)) {
-      const ref = m[1].replace(/^e2e\//, 'e2e/');
+      const ref = m[1];
       if (!/\.(tsx?|sql|md|mjs)$/.test(ref)) continue;
       if (!names.has(ref) && !names.has(path.basename(ref))) missing.push(`row ${n}: ${ref}`);
     }
