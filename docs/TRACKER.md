@@ -1770,15 +1770,15 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 
 ## Issues and connections (18 Oct)
 
-- [ ] ISS-130 Inventory unit-cost edits change stock value without a ledger posting (issue #130): cost changes on stock in hand go through a balanced revaluation entry, or are refused.
-- [ ] ISS-131 Inventory valuation as-of date mixes today's stock with past books (issue #131): historical quantities/costs from stock moves, or the comparison hidden for past dates.
+- [ ] ISS-130 *(→ AI #9 from 20 Oct)* Inventory unit-cost edits change stock value without a ledger posting (issue #130): cost changes on stock in hand go through a balanced revaluation entry, or are refused.
+- [ ] ISS-131 *(→ AI #9 from 20 Oct)* Inventory valuation as-of date mixes today's stock with past books (issue #131): historical quantities/costs from stock moves, or the comparison hidden for past dates.
 - [ ] ISS-143 RMA approvals and quantities enforced on the server in one transaction (issue #143, with AUD-03).
-- [ ] CON-1 US sales-tax table (capability 137) and item taxability (139) used by invoice lines for the supported states; label stays "not verified" for others.
-- [ ] CON-2 US nexus watch (138) on a screen from posted invoices, for the supported states.
-- [ ] CON-3 Israel special VAT areas (141, Eilat) applied to invoices with a test.
-- [ ] CON-4 Israel VAT reporting frequency (161) drives the VAT report period and PCN874.
+- [ ] CON-1 *(→ AI #9 from 20 Oct)* US sales-tax table (capability 137) and item taxability (139) used by invoice lines for the supported states; label stays "not verified" for others.
+- [ ] CON-2 *(→ AI #9 from 20 Oct)* US nexus watch (138) on a screen from posted invoices, for the supported states.
+- [ ] CON-3 *(→ AI #9 from 20 Oct)* Israel special VAT areas (141, Eilat) applied to invoices with a test.
+- [ ] CON-4 *(→ AI #9 from 20 Oct)* Israel VAT reporting frequency (161) drives the VAT report period and PCN874.
 - [~] DIM-1 (18 Oct: invoices and bills — receivable/payable, tax, discount and retainage now carry the lines' labels in proportion, so each label balances; the lines' own revenue/expense lines keep exactly their labels; test `labels-every-side.test.ts`. 19 Oct: the payment posted with a paid invoice/bill now carries the document lines' labels in the same proportions — each label balances and a full payment clears each label's receivable/payable to 0 (300 random cases in `labels-every-side.test.ts`; 404 posting tests pass). Left: payments recorded separately (payment records applied to invoices/bills: bank, fees, FX difference)) Labels on every side of an entry (owner, 18 Oct): today only revenue/expense lines and the cost of goods carry the document line's labels. Carry them (in proportion) to receivable/payable, tax, discount, retainage, the payment entry (bank, fees, FX difference), and stock moves; so a P&L or balance sheet by label is complete. Test: an invoice with two labelled lines, paid with a fee → every line of every entry has the right labels and each label's books balance.
-- [ ] DIM-2 Stock moves keep where an item came from (vendor/bill/receipt line) and where it went (customer, project, label) — with issue #132 / P2-36.
+- [ ] DIM-2 *(→ AI #9 from 20 Oct)* Stock moves keep where an item came from (vendor/bill/receipt line) and where it went (customer, project, label) — with issue #132 / P2-36.
 
 ## Audit of 18 Oct (audit/VERIFIED_BUG_REPORT.md) — AI #1 fixes these, each with the test the report names
 

@@ -13,6 +13,7 @@ History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) �
 
 ## Rules that never change
 
+- **AI #9 (Opus)** may change money/tax/stock code **in its lane only** (files listed in COORDINATION "AI #9"), always through a PR that AI #1 reviews; every money change comes with a test of worked figures.
 - **AI #1 (Claude)** is the lead: pushes straight to `main`, merges everyone's PRs, owns money, posting, tax maths,
   statements/PDFs and `src/server/`. **Every other AI** works on its own branch and opens a PR; never merge your own.
 - Problems in AI #1's area → write them under Messages in COORDINATION; don't patch them.
@@ -27,7 +28,8 @@ History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) �
 
 | AI | Do next, in order | Open PRs / blocked |
 |---|---|---|
-| #1 Claude (lead) | DIM-1 for payment records, CON-1…CON-4 (US/IL tax screens connected), AU-4 import totals check, ISS-130/131 (stock), INT-6/7 | — |
+| #1 Claude (lead) | Reviews and merges, the plan; DIM-1 for payment records, AU-4 import totals check, INT-6/7 (Stripe), then the seams AI #3 waits for (A-72, A-75–A-77) | — |
+| #9 Opus (tax + stock server lane) | **Tax:** CON-3 Eilat VAT on invoices, CON-4 Israeli VAT frequency → VAT report period + PCN874, CON-1 US sales-tax table + item taxability on invoice lines, CON-2 US nexus watch. **Stock:** ISS-130 cost edits go through a revaluation entry, ISS-131 valuation as of a past date, DIM-2 where stock came from / went | — |
 | #2 Codex | C-120 tax suggestions on a screen, the rest of C-102…C-126, then C-115, C-117 | — |
 | #3 Arena | A-101 (Israeli advance tax payments), then stock: A-112, A-113, A-115, A-117 | Waiting on AI #1, don't start: A-72, A-75, A-76, A-77 |
 | #4 | D-95 settings tabs overlap on phones, D-96 billing panel white in dark mode, D-86 invoice form | — |
