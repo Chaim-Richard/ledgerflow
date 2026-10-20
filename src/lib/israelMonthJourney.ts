@@ -24,7 +24,7 @@ import { calculateDocumentNet, calculateDocumentTax } from './documentMath';
 import { monthEnd, type MonthCloseState } from './periodLock';
 import { COUNTED_PURCHASES, COUNTED_SALES } from './taxCodes';
 import { allocationNumberProblem, allocationThresholdCents, needsAllocationNumber } from './tax/ilAllocation';
-import { israelVatReturn, type IlVatDocument } from './tax/ilVatReturn';
+import { belongsTo, israelVatReturn, type IlVatDocument } from './tax/ilVatReturn';
 import {
   buildPcn874FixtureDraft, type Pcn874DraftOutput, type Pcn874FixtureDocument,
 } from './tax/pcn874Draft';
@@ -72,6 +72,8 @@ export interface IlMonthReturn extends ReturnType<typeof israelVatReturn> {
   endMonth: string;
   /** the caller recorded a return for exactly this period */
   filed: boolean;
+  /** CON-4: the period runs past this month (the first month of a bimonthly pair): not yet due, not owed to close the month */
+  pending: boolean;
 }
 
 /** An invoice that needs an allocation number, and what is wrong with the one recorded. */
@@ -302,6 +304,10 @@ export interface IlPcn874Input {
   month: string;
   /** CON-4: the last month of a bimonthly report period that starts at `month` */
   endMonth?: string;
+  /** CON-4: only the documents of this VAT registration (the same ownership the VAT report uses) */
+  registration?: string;
+  profiles?: TaxProfiles | null;
+  order?: string[];
   invoices?: IlJourneyDocument[];
   creditNotes?: IlJourneyDocument[];
   bills?: IlJourneyDocument[];
@@ -373,16 +379,19 @@ export function ilPcn874Rows(input: IlPcn874Input): IlPcn874Mapping {
     });
   };
 
-  for (const doc of input.invoices || []) {
+  // CON-4: a dealer's draft holds only its own registration's documents
+  const mine = (docs: IlJourneyDocument[] | undefined) => (docs || []).filter(doc =>
+    !input.registration || belongsTo(doc, input.profiles, input.order || [], input.registration));
+  for (const doc of mine(input.invoices)) {
     if (COUNTED_SALES.has(String(doc.status)) && inPeriod(doc.date || doc.issueDate, input.month, input.endMonth)) add('invoice', doc, 'sale', '+');
   }
-  for (const doc of input.creditNotes || []) {
+  for (const doc of mine(input.creditNotes)) {
     if (COUNTED_SALES.has(String(doc.status)) && inPeriod(doc.date || doc.issueDate, input.month, input.endMonth)) add('credit-note', doc, 'sale', '-');
   }
-  for (const doc of input.bills || []) {
+  for (const doc of mine(input.bills)) {
     if (COUNTED_PURCHASES.has(String(doc.status)) && inPeriod(doc.date || doc.issueDate, input.month, input.endMonth)) add('bill', doc, 'purchase', '+');
   }
-  for (const doc of input.vendorCredits || []) {
+  for (const doc of mine(input.vendorCredits)) {
     if (COUNTED_PURCHASES.has(String(doc.status)) && inPeriod(doc.date || doc.issueDate, input.month, input.endMonth)) add('vendor-credit', doc, 'purchase', '-');
   }
 
@@ -477,7 +486,15 @@ export function israelMonthJourney(input: IsraelMonthInput): IsraelMonth {
     filing === 'bimonthly' || filing === 'monthly' ? ilVatReportPeriod(month, filing) : undefined;
   const returns: IlMonthReturn[] = period
     ? registrations.map(registration => {
-      const own = reportPeriodOf(registration.filing);
+      let own = reportPeriodOf(registration.filing);
+      // a two-month report needs the registration in force for both months; otherwise the month is shown alone
+      if (own && own.startMonth !== own.endMonth) {
+        const whole = [own.startDate, own.endDate].every(day => ilVatRegistrations(input.profiles, day).some(r => r.registration === registration.registration && r.filing === registration.filing));
+        if (!whole) {
+          problems.push(`Registration ${registration.number} is not recorded as ${registration.filing} for the whole ${own.startMonth} to ${own.endMonth} period (it starts, ends or changes frequency inside it), so ${month} is shown alone. Check the registration dates in Settings → Tax profiles.`);
+          own = ilVatReportPeriod(month, 'monthly');
+        }
+      }
       const from = own?.startDate || startDate;
       const to = own?.endDate || endDate;
       return {
@@ -497,6 +514,7 @@ export function israelMonthJourney(input: IsraelMonthInput): IsraelMonth {
         startMonth: own?.startMonth || month,
         endMonth: own?.endMonth || month,
         filed: (input.filedPeriods || []).some(r => r.startDate === from && r.endDate === to),
+        pending: (own?.endMonth || month) > month,
       };
     })
     : [];
@@ -510,6 +528,7 @@ export function israelMonthJourney(input: IsraelMonthInput): IsraelMonth {
     ? ilPcn874Rows({
       month: pcn874Period.startMonth,
       endMonth: pcn874Period.endMonth,
+      ...(returns[0] ? { registration: returns[0].registration, profiles: input.profiles, order: input.order || [] } : {}),
       invoices: input.invoices, creditNotes: input.creditNotes, bills: input.bills, vendorCredits: input.vendorCredits,
       customers: input.customers, vendors: input.vendors, currency,
     })
@@ -517,7 +536,8 @@ export function israelMonthJourney(input: IsraelMonthInput): IsraelMonth {
   const closeState = new Map((input.periods || []).map(p => [p.month, p.state]));
   const state: MonthCloseState = month ? (closeState.get(month) || 'open') : 'open';
   const closed = state === 'soft' || state === 'hard';
-  const unfiled = returns.filter(r => !r.filed).length;
+  const due = returns.filter(r => !r.pending);
+  const unfiled = due.filter(r => !r.filed).length;
 
   const steps: IlMonthStep[] = [
     {
@@ -562,10 +582,10 @@ export function israelMonthJourney(input: IsraelMonthInput): IsraelMonth {
       screenLabel: 'Reports → Tax return',
       status: !registrations.length
         ? 'not-applicable'
-        : returns.every(r => r.filed) ? 'done' : 'attention',
+        : !due.length ? 'not-applicable' : due.every(r => r.filed) ? 'done' : 'attention',
       detail: !registrations.length
         ? 'No registration is recorded, so there is no VAT report to prepare from this data.'
-        : returns.map(r => `${r.registration.replace(/^vat:/, '')}${r.startMonth !== r.endMonth ? ` (bimonthly report ${r.startMonth} to ${r.endMonth})` : ''}: taxable sales ${money(r.taxableSalesCents, currency)}, output VAT ${money(r.outputVatCents, currency)}, zero-rated ${money(r.zeroRatedSalesCents, currency)}, input VAT ${money(r.fixedAssetInputVatCents + r.otherInputVatCents, currency)} (equipment ${money(r.fixedAssetInputVatCents, currency)}), ${r.toPayCents >= 0 ? 'to pay' : 'to reclaim'} ${money(Math.abs(r.toPayCents), currency)}${r.filed ? ' — recorded as filed' : r.dueDate ? ` — planning due date ${r.dueDate}${today && r.dueDate < today ? ', already past' : ''}` : ' — the registration records no monthly or bimonthly frequency, so the month is shown and no due date'}.`).join(' '),
+        : returns.map(r => `${r.registration.replace(/^vat:/, '')}${r.startMonth !== r.endMonth ? ` (bimonthly report ${r.startMonth} to ${r.endMonth})` : ''}: taxable sales ${money(r.taxableSalesCents, currency)}, output VAT ${money(r.outputVatCents, currency)}, zero-rated ${money(r.zeroRatedSalesCents, currency)}, input VAT ${money(r.fixedAssetInputVatCents + r.otherInputVatCents, currency)} (equipment ${money(r.fixedAssetInputVatCents, currency)}), ${r.toPayCents >= 0 ? 'to pay' : 'to reclaim'} ${money(Math.abs(r.toPayCents), currency)}${r.filed ? ' — recorded as filed' : r.pending ? ` — the two-month report is prepared after ${r.endMonth} ends (planning due date ${r.dueDate}); nothing is owed to close ${month}` : r.dueDate ? ` — planning due date ${r.dueDate}${today && r.dueDate < today ? ', already past' : ''}` : ' — the registration records no monthly or bimonthly frequency, so the month is shown and no due date'}.`).join(' '),
       figures: returns.flatMap(r => [
         { label: `${r.registration.replace(/^vat:/, '')} taxable sales`, cents: r.taxableSalesCents, note: `${r.documentCount} document(s) counted` },
         { label: `${r.registration.replace(/^vat:/, '')} output VAT`, cents: r.outputVatCents },
@@ -641,9 +661,16 @@ export function israelMonthJourney(input: IsraelMonthInput): IsraelMonth {
   };
 }
 
+/** CON-4: the return of the dealer number typed on the screen, compared as digits (a registration may be saved as 514-000-000). */
+export function ilReturnForDealer<R extends { registration: string }>(returns: R[], dealerId: string): R | undefined {
+  const wanted = String(dealerId || '').replace(/\D/g, '');
+  return wanted ? returns.find(r => (r.registration.split(':').pop() || '').replace(/\D/g, '') === wanted) : undefined;
+}
+
 export const IL_MONTH_JOURNEY_CSV_HEADERS = [
   'Month', 'Step', 'Status', 'What to do', 'Screen', 'Registration', 'Taxable sales', 'Output VAT',
   'Zero-rated sales', 'Input VAT, other', 'Input VAT, equipment', 'To pay', 'Due date', 'Recorded as filed',
+  'Report period from', 'Report period to',
 ];
 
 /** One row per step, plus one row per registration's return, for the export on the journey screen. */
@@ -651,13 +678,13 @@ export function ilMonthJourneyCsvRows(journey: IsraelMonth): string[][] {
   const rows: string[][] = [];
   const cents = (n: number) => (n / 100).toFixed(2);
   for (const step of journey.steps) {
-    rows.push([journey.month, step.title, step.status, step.what, step.screenLabel, '', '', '', '', '', '', '', '', '']);
+    rows.push([journey.month, step.title, step.status, step.what, step.screenLabel, '', '', '', '', '', '', '', '', '', '', '']);
     for (const r of step.returns) {
       rows.push([
         journey.month, `${step.title} — ${r.registration}`, step.status, step.what, step.screenLabel,
         r.registration, cents(r.taxableSalesCents), cents(r.outputVatCents), cents(r.zeroRatedSalesCents),
         cents(r.otherInputVatCents), cents(r.fixedAssetInputVatCents), cents(r.toPayCents),
-        r.dueDate || 'not a monthly report', r.filed ? 'yes' : 'no',
+        r.dueDate || 'not stated', r.filed ? 'yes' : 'no', r.startMonth, r.endMonth,
       ]);
     }
   }

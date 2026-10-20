@@ -6,7 +6,7 @@ import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import {
   IL_MONTH_JOURNEY_CSV_HEADERS, israelMonthJourney, ilMonthJourneyCsvRows, israelMonthOf, israelMonthProblem,
-  ilPcn874Preview, type IlJourneyDocument, type IlJourneyParty, type IlMonthStepStatus, type IsraelMonth,
+  ilPcn874Preview, ilReturnForDealer, type IlJourneyDocument, type IlJourneyParty, type IlMonthStepStatus, type IsraelMonth,
 } from '../../lib/israelMonthJourney';
 import { downloadCsv } from '../../lib/csvExport';
 import { monthCloseState } from '../../lib/periodLock';
@@ -113,11 +113,12 @@ export default function IsraelMonthJourneyReportView() {
     const month = israelMonthOf(monthText)?.month || monthText;
     // CON-4: the draft covers the report period of the registration whose dealer number is typed
     const returns = journey?.steps.find(s => s.id === 'vat-report')?.returns || [];
-    const own = returns.find(r => r.registration.split(':').pop() === dealerId);
+    const own = ilReturnForDealer(returns, dealerId);
     const period = own ? { startMonth: own.startMonth, endMonth: own.endMonth } : journey?.pcn874Period || { startMonth: month, endMonth: month };
     return ilPcn874Preview({
       month: period.startMonth,
       endMonth: period.endMonth,
+      ...(own ? { registration: own.registration, profiles: workspace?.taxProfiles, order: [workspace?.dimensions?.find(d => d.isWorld)?.id || 'world'] } : {}),
       generatedOn: getLocalDateISO(),
       currency,
       dealerId,
@@ -129,7 +130,7 @@ export default function IsraelMonthJourneyReportView() {
       vendorCredits: inWorkspace(vendorCredits, workspaceId) as IlJourneyDocument[],
       returns: own ? [own] : returns,
     });
-  }, [monthText, currency, dealerId, journey, customers, vendors, workspaceId, invoices, creditNotes, bills, vendorCredits]);
+  }, [monthText, currency, dealerId, journey, workspace, customers, vendors, workspaceId, invoices, creditNotes, bills, vendorCredits]);
 
   return <IsraelMonthJourneyPanel
     journey={journey}

@@ -36,3 +36,18 @@ names. The screen says so, and the draft was already marked not filing-ready.
 
 Release gate: W7. The VAT report period now follows the registration; W7 stays Partly (PCN874 is a historical draft,
 #160 open).
+
+**Review fixes (#235, Codex P1 + 4 × P2).** Each has its own test in `con4-il-vat-frequency.test.ts`.
+1. **One dealer's documents only.** The PCN874 rows hold only the selected registration's documents, using the same
+   `belongsTo` ownership as the VAT report. With two dealers, South's Jan–Feb draft holds only its invoice 3001
+   (100,000 + 18,000).
+2. **Dealer numbers compared as digits** (`ilReturnForDealer`), so a registration saved as `514-000-000` is found.
+3. **January of a bimonthly pair is `pending`.** It is not due and not owed to close January, and the VAT-report step
+   is not-applicable. February ends the period, so the report is due there.
+4. **Registration in force for the whole period.** A bimonthly registration that starts, ends or changes frequency
+   inside the pair shows the month alone, with a problem line saying why. February only: to pay 63,000, never
+   labelled Jan–Feb.
+5. **The CSV carries each return's own period** ("Report period from/to"). The same Jan–Feb figures (to pay 1,350.00)
+   come out from either month.
+
+Full suite with the test database: 3,424 pass / 0 fail. Browser W7/W8 2/2.
