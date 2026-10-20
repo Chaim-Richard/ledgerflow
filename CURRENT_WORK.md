@@ -35,8 +35,8 @@ History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) �
 | #4 | **P0:** G-02 first hour without dead ends — walk the first-hour path on phone and desktop, fix wording/dead ends (new D-97); then D-87 onward | — |
 | #5 | **P1:** accountant export pack (trial balance, GL, A/R, A/P, tax liability by period as CSV/PDF — new E-58); then E-17 onward | — |
 | #2 Codex | **P1:** finish the screen wiring already started (C-102…C-126); no new tax screens (stage C) | — |
-| #6 | Fix #181 and #183 (see review comments), then S-1 onward | #181, #183 sent back |
-| #8 | (inactive) G-24 moved to AI #7; G-9 sample companies (IL + US) when active | — |
+| #6 | Fix #181 and #183, then redo #254 as small PRs (tests in `node:test`, S-01 wired in, quoted table name) — see the review comments | #181, #183, #254 sent back |
+| #8 | (inactive) Fix #252 when active: 3 existing tests break on main (customer portal, on-demand collections, keyboard shortcuts); G-24/F-46 are AI #7's now | #252 sent back |
 
 ## Where things are
 
