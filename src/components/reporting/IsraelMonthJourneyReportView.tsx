@@ -292,7 +292,7 @@ function VatReturnTable({ returns, currency }: { returns: IsraelMonth['steps'][n
       </tr></thead>
       <tbody>
         {returns.map(r => <tr key={r.registration} className="border-b border-[var(--line)]/50">
-          <th scope="row" className="text-left font-normal py-1 px-2">{r.registration.split(':').pop()}<span className="block text-xs text-[var(--muted)]">{r.startMonth === r.endMonth ? r.startMonth : `${r.startMonth} to ${r.endMonth}`}</span></th>
+          <th scope="row" className="text-left font-normal py-1 px-2"><span className="block">{r.registration.split(':').pop()}</span><span className="block text-xs text-[var(--muted)]">{r.startMonth === r.endMonth ? r.startMonth : `${r.startMonth} to ${r.endMonth}`}</span></th>
           <td className="py-1 px-2 tabular-nums">{r.documentCount}</td>
           <td className="py-1 px-2 tabular-nums whitespace-nowrap">{formatCurrency(r.taxableSalesCents, currency)}</td>
           <td className="py-1 px-2 tabular-nums whitespace-nowrap">{formatCurrency(r.outputVatCents, currency)}</td>
