@@ -63,6 +63,10 @@ answered its geo-block page), so those seven rows are recorded as read from a so
 re-open — `npm run check:rule-sources` does that and writes its dated report. Nobody should treat a past
 year's figure as settled until that report is green for these URLs.
 
+The report could not be produced from here: `npm run check:rule-sources` in this sandbox answered **0 of 110 URLs** and marked
+every one of them `unreachable`, including two pages opened minutes earlier, so its dated file was **deleted rather than committed** —
+a verdict that says nothing about the links. CI runs it with network access; its report is the record.
+
 **One near-miss worth recording:** ₪120,000 in 2024–2025 is *also* the §46 threshold at which a buyer
 must ask for a VAT invoice, and the Tax Authority page that states the §46 figure calls it
 "the exempt dealer turnover threshold". Only the Knesset note's own per-year series for 2017–2023, which
