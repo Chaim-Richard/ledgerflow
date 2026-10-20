@@ -29,8 +29,10 @@ const customers = [
 // net = amount − tax; the tax amounts are the state's own, so the net is the round figure in the comment
 const inv = (id: string, customerId: string, date: string, netCents: number, extra: Partial<NexusSaleDocument> = {}): NexusSaleDocument =>
   ({ id, customerId, date, status: 'sent', taxVersion: 2, amountCents: netCents + Math.round(netCents * 0.0625), taxAmountCents: Math.round(netCents * 0.0625), ...extra });
-const ny2025 = Array.from({ length: 120 }, (_, i) => inv(`ny25-${i}`, 'ny', '2025-06-01', 500_000));
-const ny2026 = Array.from({ length: 99 }, (_, i) => inv(`ny26-${i}`, 'ny', '2026-03-01', 600_000));
+// New York's sales are made by the New York entity (label world:ny), which holds the NY permit (#241 review: an
+// entity's permit covers its own sales only)
+const ny2025 = Array.from({ length: 120 }, (_, i) => inv(`ny25-${i}`, 'ny', '2025-06-01', 500_000, { dimensions: { world: 'ny' } }));
+const ny2026 = Array.from({ length: 99 }, (_, i) => inv(`ny26-${i}`, 'ny', '2026-03-01', 600_000, { dimensions: { world: 'ny' } }));
 const invoices = [
   inv('tx1', 'tx', '2026-02-10', 30_000_000), inv('tx2', 'tx', '2026-09-30', 12_000_000), inv('tx25', 'tx', '2025-11-01', 10_000_000),
   ...ny2025, ...ny2026,
@@ -46,7 +48,7 @@ const profiles: TaxProfiles = {
   books: { place: { country: 'US', state: 'TX' }, registrations: [{ kind: 'sales_tax', number: '320001', place: { country: 'US', state: 'TX' } }] },
   labels: { 'world:ny': { registrations: [{ kind: 'sales_tax', number: 'NY-1', place: { country: 'US', state: 'NY' }, validFrom: '2026-01-01' }] } },
 };
-const watch = usNexusWatch({ asOf: '2026-10-20', invoices, creditNotes, customers, profiles });
+const watch = usNexusWatch({ asOf: '2026-10-20', invoices, creditNotes, customers, profiles, order: ['world'] });
 const state = (code: string) => watch.states.find(s => s.state === code)!;
 
 test('CON-2 worked figures: Texas at exactly 80% is flagged, not crossed; a credit note lowers sales, not the count', () => {
@@ -81,9 +83,9 @@ describe('CON-2 on the screen', () => {
     assert.match(screen.getByRole('status').textContent || '', /3 state\(s\) with sales; 2 at 80% of a threshold or over: NY, TX\. 1 posted sale\(s\) have a customer with no tax place recorded/);
     const table = screen.getByRole('table', { name: 'Sales by state against the economic-nexus thresholds' });
     const rows = within(table).getAllByRole('row').slice(1).map(row => row.textContent || '');
-    assert.match(rows[0], /^New YorkThreshold crossed: ask about registering.*\$594,000\.00, 99 sale\(s\) \(119%\).*\$600,000\.00, 120 sale\(s\) \(120%\).*\$500,000\.00 and 100 sales.*Recorded.*Checked$/);
-    assert.match(rows[1], /^TexasAt 80% or over: watch.*\$400,000\.00, 2 sale\(s\) \(80%\).*\$500,000\.00.*Recorded.*Checked$/);
-    assert.match(rows[2], /^IllinoisBelow 80%.*\$27,000\.00, 1 sale\(s\) \(27%\).*None recorded.*Not verified$/);
+    assert.match(rows[0], /^nyNew YorkThreshold crossed: ask about registering.*\$594,000\.00, 99 sale\(s\) \(119%\).*\$600,000\.00, 120 sale\(s\) \(120%\).*\$500,000\.00 and 100 sales.*Recorded.*Checked$/);
+    assert.match(rows[1], /^The booksTexasAt 80% or over: watch.*\$400,000\.00, 2 sale\(s\) \(80%\).*\$500,000\.00.*Recorded.*Checked$/);
+    assert.match(rows[2], /^The booksIllinoisBelow 80%.*\$27,000\.00, 1 sale\(s\) \(27%\).*None recorded.*Not verified$/);
     assert.match(screen.getByRole('region', { name: 'US nexus watch' }).textContent || '', /a watch, not a conclusion that you must register/);
     fireEvent.change(screen.getByLabelText('As of'), { target: { value: '2025-12-31' } });
     assert.deepEqual(changed, ['2025-12-31']);
@@ -93,5 +95,64 @@ describe('CON-2 on the screen', () => {
     render(<UsNexusWatchPanel watch={usNexusWatch({ asOf: '2026-10-20', invoices: [], customers: [] })} asOf="2026-10-20" onAsOfChange={() => {}} />);
     assert.match(screen.getByRole('status').textContent || '', /No posted sale to a customer with a US tax place in these two years\./);
     assert.equal(screen.queryByRole('table'), null);
+  });
+});
+
+// ---- review fixes (#241) ----
+test('CON-2 review: books kept in another currency are refused, never compared with US-dollar thresholds', () => {
+  const eur = usNexusWatch({ asOf: '2026-10-20', invoices, creditNotes, customers, profiles, currency: 'EUR' });
+  assert.deepEqual(eur.states, []);
+  assert.match(eur.problem || '', /thresholds are in US dollars and these books are kept in EUR/);
+  render(<UsNexusWatchPanel watch={eur} asOf="2026-10-20" onAsOfChange={() => {}} />);
+  assert.match(screen.getByRole('alert').textContent || '', /Nothing is converted at a guessed rate/);
+  assert.equal(screen.queryByRole('table'), null);
+  cleanup();
+});
+
+test('CON-2 review: a sale counts where it went — its own tax place or ship-to — before the customer\'s place', () => {
+  const docs = [
+    inv('ship', 'tx', '2026-04-01', 1_000_000, { shippingAddress: { state: 'CA' } }),             // customer in Texas, shipped to California
+    inv('own', 'tx', '2026-04-02', 2_000_000, { metadata: { taxPlace: { country: 'US', state: 'WA' } } }), // the invoice's own place
+    inv('plain', 'tx', '2026-04-03', 3_000_000),                                                       // no place of its own: the customer's
+  ];
+  const w = usNexusWatch({ asOf: '2026-10-20', invoices: docs, customers });
+  assert.deepEqual(w.states.map(s => [s.state, s.thisYear!.salesCents]).sort(), [['CA', 1_000_000], ['TX', 3_000_000], ['WA', 2_000_000]]);
+});
+
+test('CON-2 review: each selling entity is watched on its own — two $300,000 Texas entities are 60% each, not $600,000', () => {
+  const two: TaxProfiles = {
+    books: { name: 'Parent Inc', place: { country: 'US', state: 'TX' }, registrations: [{ kind: 'sales_tax', number: '320001', place: { country: 'US', state: 'TX' } }] },
+    // Sub LLC lists its own registrations (Oklahoma only), so it does not file under the parent's Texas permit
+    labels: { 'world:sub': { name: 'Sub LLC', place: { country: 'US', state: 'TX' }, registrations: [{ kind: 'sales_tax', number: 'OK-1', place: { country: 'US', state: 'OK' } }] } },
+  };
+  const docs = [inv('p', 'tx', '2026-05-01', 30_000_000), inv('s', 'tx', '2026-05-02', 30_000_000, { dimensions: { world: 'sub' } })];
+  const w = usNexusWatch({ asOf: '2026-10-20', invoices: docs, customers, profiles: two, order: ['world'] });
+  assert.deepEqual(w.states.map(s => [s.entityName, s.state, s.thisYear!.salesCents, s.thisYear!.ratio, s.crossed, s.permit]).sort(),
+    [['Parent Inc', 'TX', 30_000_000, 0.6, false, true], ['Sub LLC', 'TX', 30_000_000, 0.6, false, false]]);
+});
+
+test('CON-2 review: a state with no economic-nexus test says so, never "Below 80%"', () => {
+  const w = usNexusWatch({ asOf: '2026-10-20', invoices: [inv('or', 'or', '2026-05-01', 5_000_000)], customers: [{ id: 'or', metadata: { taxPlace: { country: 'US', state: 'OR' } } }] });
+  assert.deepEqual([w.states[0].state, w.states[0].noTest, w.states[0].warning], ['OR', true, false]);
+  render(<UsNexusWatchPanel watch={w} asOf="2026-10-20" onAsOfChange={() => {}} />);
+  const row = within(screen.getByRole('table')).getAllByRole('row')[1].textContent || '';
+  assert.match(row, /No economic-nexus test in this state/);
+  assert.doesNotMatch(row, /Below 80%/);
+  cleanup();
+});
+
+describe('CON-2 review on the screen', () => {
+  afterEach(() => cleanup());
+  test('the Reports period\'s date starts the watch, and a capped customer list marks the figures provisional', async () => {
+    const { useLedgerStore } = await import('../stores/useLedgerStore');
+    const { useAuthStore } = await import('../stores/useAuthStore');
+    const { useDataNeedsStore } = await import('../stores/useDataNeedsStore');
+    useAuthStore.setState({ currentWorkspaceId: 'w' } as never);
+    useLedgerStore.setState({ invoices: [], creditNotes: [], customers: [], truncatedCollections: { customers: true } } as never);
+    useDataNeedsStore.setState({ loaded: { invoices: true, creditNotes: true, customers: true }, loadedWorkspaceId: 'w', failed: {} } as never);
+    const { default: UsNexusWatchReportView } = await import('../components/reporting/UsNexusWatchReportView');
+    render(<UsNexusWatchReportView asOfDate="2025-12-31" />);
+    assert.equal((screen.getByLabelText('As of') as HTMLInputElement).value, '2025-12-31');
+    assert.match(screen.getByRole('alert').textContent || '', /capped or failed, so the figures below are provisional/);
   });
 });

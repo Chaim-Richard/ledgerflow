@@ -9,19 +9,26 @@
  *    sales, marketplace sales); this shows the two calendar years for every state, so it is a watch, never a
  *    conclusion that a seller must register;
  *  - LedgerFlow has checked TX, CA, NY, WA and CO; other states' figures are shown "not verified";
- *  - a customer without a recorded US tax place is not counted in any state, and the count of them is shown.
+ *  - a sale is placed by its own tax place or ship-to state, else its customer's; one with neither is counted apart;
+ *  - each selling entity (PLAN §6) is watched on its own, with its own permits: entities' sales are never pooled;
+ *  - the thresholds are US dollars: books kept in another currency are refused, not converted at a guessed rate.
  * Pure: the same document figures (`taxReturnDocument`) and statuses (`COUNTED_SALES`) as the sales-tax return.
  */
 import { COUNTED_SALES } from '../taxCodes';
 import { taxReturnDocument, type TaxableDocument } from '../taxReturnDocs';
 import { nexusWatch, type NexusWatchResult } from './usNexus';
-import { registrationsOn, type TaxPlace, type TaxProfiles } from './profile';
+import { registrationsOn, resolveSellerProfile, type TaxPlace, type TaxProfiles } from './profile';
 
 /** The states whose tables LedgerFlow has checked (AI #1, 20 Oct); the same list as the invoice suggestion's. */
 export const US_NEXUS_SUPPORTED_STATES = ['TX', 'CA', 'NY', 'WA', 'CO'] as const;
 
 export interface NexusSaleDocument extends TaxableDocument {
   customerId?: string;
+  /** the labels of the document's first line: its selling entity (PLAN §6) */
+  dimensions?: Record<string, string>;
+  /** where this sale went, when the document records it: it comes before the customer's own place */
+  shippingAddress?: { country?: string; state?: string };
+  metadata?: { taxPlace?: TaxPlace } & Record<string, unknown>;
 }
 
 export interface NexusYear extends NexusWatchResult {
@@ -32,6 +39,9 @@ export interface NexusYear extends NexusWatchResult {
 }
 
 export interface UsNexusStateWatch {
+  /** the selling entity the totals belong to: its profile key (a label, or 'books') and its name */
+  entity: string;
+  entityName?: string;
   state: string;
   /** false outside TX, CA, NY, WA and CO */
   verified: boolean;
@@ -39,6 +49,8 @@ export interface UsNexusStateWatch {
   permit: boolean;
   thisYear?: NexusYear;
   lastYear?: NexusYear;
+  /** the state has no economic-nexus test (no sales and no transaction threshold) */
+  noTest: boolean;
   /** a threshold is crossed in either year */
   crossed: boolean;
   /** crossed, or 80% of the way, in either year */
@@ -47,6 +59,8 @@ export interface UsNexusStateWatch {
 
 export interface UsNexusWatch {
   asOf: string;
+  /** set when the figures cannot be compared with the thresholds (they are in US dollars); no states are given */
+  problem?: string;
   states: UsNexusStateWatch[];
   /** posted sales whose customer has no US tax place recorded: in no state's figures */
   unplacedDocuments: number;
@@ -60,15 +74,24 @@ export function usNexusWatch(input: {
   creditNotes?: NexusSaleDocument[];
   customers: Array<{ id: string; metadata?: unknown }>;
   profiles?: TaxProfiles | null;
+  /** the label order that finds a document's selling entity (World / Entity first) */
+  order?: string[];
+  /** the workspace (home) currency the figures are in; the thresholds are US dollars */
+  currency?: string;
 }): UsNexusWatch {
   const asOf = input.asOf.slice(0, 10);
+  const currency = (input.currency || 'USD').toUpperCase();
+  if (currency !== 'USD') {
+    return { asOf, states: [], unplacedDocuments: 0, problem: `The state thresholds are in US dollars and these books are kept in ${currency}, so the sales cannot be compared with them here. Nothing is converted at a guessed rate.` };
+  }
   const year = Number(asOf.slice(0, 4));
   const windows = [
     { key: 'thisYear' as const, year, startDate: `${year}-01-01`, endDate: asOf },
     { key: 'lastYear' as const, year: year - 1, startDate: `${year - 1}-01-01`, endDate: `${year - 1}-12-31` },
   ];
   const customers = new Map(input.customers.map(c => [c.id, c]));
-  const totals = new Map<string, Record<'thisYear' | 'lastYear', { salesCents: number; orders: number }>>();
+  // per selling entity and state: two entities' sales are never added together (each has its own nexus)
+  const totals = new Map<string, { entity: string; entityName?: string; state: string; permit: boolean; thisYear: { salesCents: number; orders: number }; lastYear: { salesCents: number; orders: number } }>();
   let unplacedDocuments = 0;
 
   const add = (docs: NexusSaleDocument[] | undefined, sign: 1 | -1) => {
@@ -77,33 +100,45 @@ export function usNexusWatch(input: {
       if (!COUNTED_SALES.has(String(doc.status))) continue;
       const window = windows.find(w => date >= w.startDate && date <= w.endDate);
       if (!window) continue;
-      const place = ((doc.customerId ? customers.get(doc.customerId) : undefined)?.metadata as { taxPlace?: TaxPlace } | undefined)?.taxPlace;
-      if (place && place.country !== 'US') continue; // a sale abroad is in no state
+      // the sale's own destination first (its tax place, then its ship-to), then the customer's place
+      const shipped = doc.shippingAddress?.state ? { country: doc.shippingAddress.country || 'US', state: doc.shippingAddress.state } : undefined;
+      const customerPlace = ((doc.customerId ? customers.get(doc.customerId) : undefined)?.metadata as { taxPlace?: TaxPlace } | undefined)?.taxPlace;
+      const place = doc.metadata?.taxPlace || shipped || customerPlace;
+      if (place && String(place.country || '').toUpperCase() !== 'US') continue; // a sale abroad is in no state
       const state = String(place?.state || '').toUpperCase();
       if (!state) { if (sign === 1) unplacedDocuments++; continue; }
-      const row = totals.get(state) || { thisYear: { salesCents: 0, orders: 0 }, lastYear: { salesCents: 0, orders: 0 } };
+      const seller = resolveSellerProfile(input.profiles, doc.dimensions, input.order || []);
+      const entity = seller.from?.[0] || 'books';
+      const key = `${entity}|${state}`;
+      const row = totals.get(key) || {
+        entity, ...(seller.name ? { entityName: seller.name } : {}), state,
+        permit: registrationsOn(seller, 'sales_tax', asOf).some(r => r.place.state === state),
+        thisYear: { salesCents: 0, orders: 0 }, lastYear: { salesCents: 0, orders: 0 },
+      };
       // credit notes lower the sales of the year they fall in; they are not sales, so the count is unchanged
       row[window.key].salesCents += sign * toBase(taxReturnDocument(doc).netCents, doc.exchangeRate);
       if (sign === 1) row[window.key].orders += 1;
-      totals.set(state, row);
+      totals.set(key, row);
     }
   };
   add(input.invoices, 1);
   add(input.creditNotes, -1);
 
-  // a permit can sit on the books or on any entity label (a Texas LLC under the group)
-  const profiles = [...(input.profiles?.books ? [input.profiles.books] : []), ...Object.values(input.profiles?.labels || {})];
-  const permitted = (state: string) => profiles.some(p => registrationsOn(p, 'sales_tax', asOf).some(r => r.place.state === state));
-  const states = [...totals.entries()].map(([state, row]): UsNexusStateWatch => {
+  const states = [...totals.values()].map((row): UsNexusStateWatch => {
+    const { state } = row;
     const years = windows.map(w => {
       const result = nexusWatch({ state, ...row[w.key] }, w.endDate);
       return result ? { ...result, year: w.year, startDate: w.startDate, endDate: w.endDate } : undefined;
     });
     const [thisYear, lastYear] = years;
+    const rule = thisYear || lastYear;
     return {
+      entity: row.entity, ...(row.entityName ? { entityName: row.entityName } : {}),
       state,
       verified: (US_NEXUS_SUPPORTED_STATES as readonly string[]).includes(state),
-      permit: permitted(state),
+      // the seller's own permit: one entity's permit does not cover another's sales
+      permit: row.permit,
+      noTest: Boolean(rule && rule.salesThresholdCents === null && rule.transactions === null),
       ...(thisYear ? { thisYear } : {}),
       ...(lastYear ? { lastYear } : {}),
       crossed: years.some(y => y?.crossed),
@@ -112,6 +147,6 @@ export function usNexusWatch(input: {
   });
   const rank = (s: UsNexusStateWatch) => (s.crossed ? 2 : s.warning ? 1 : 0);
   const reach = (s: UsNexusStateWatch) => Math.max(s.thisYear?.ratio ?? 0, s.lastYear?.ratio ?? 0);
-  states.sort((a, b) => rank(b) - rank(a) || reach(b) - reach(a) || a.state.localeCompare(b.state));
+  states.sort((a, b) => rank(b) - rank(a) || reach(b) - reach(a) || a.state.localeCompare(b.state) || a.entity.localeCompare(b.entity));
   return { asOf, states, unplacedDocuments };
 }

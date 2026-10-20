@@ -35,3 +35,18 @@ than $500,000 and more than 100 sales". At exactly $500,000 or 100 sales this ca
 the table's rule, so it is raised under Messages rather than changed here.
 
 Release gate: W8. The nexus watch is now on a screen; W8 stays Partly.
+
+**Review fixes (#241, merged; follow-up PR from main 9bfccab6).**
+1. **One currency.** The thresholds are US dollars, so books kept in another currency are refused with the reason.
+   Nothing is converted at a guessed rate.
+2. **Where a sale went.** A sale counts in its own tax place, then its ship-to state, and only then the customer's
+   place. Moving a customer no longer moves its past sales.
+3. **A capped customer list** marks the figures provisional.
+4. **States with no test** (OR, DE, MT, NH) say "No economic-nexus test in this state", never "Below 80%".
+5. **Each selling entity on its own.** Totals and the permit are per selling entity (PLAN §6). Two $300,000 Texas
+   entities are 60% each, never one $600,000 crossing. An entity that lists its own registrations does not inherit
+   the parent's permit.
+6. **The Reports period starts the watch**, and the date field still overrides it.
+
+The merged test's New York sales now carry the NY entity's label, so its permit counts for its own sales, as fix 5
+requires. The figures are unchanged.
