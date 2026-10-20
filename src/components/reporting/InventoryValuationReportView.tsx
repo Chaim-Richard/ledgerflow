@@ -38,11 +38,16 @@ export const InventoryValuationReportView: React.FC<{ asOfDate?: string }> = ({ 
   const [searchTerm, setSearchTerm] = useState('');
   const [asOfDate, setAsOfDate] = usePageSyncedState(pageAsOfDate || '', pageAsOfDate || undefined, getLocalDateISO);
 
-  const report = useMemo(() => computeInventoryValuation(inventory || [], accounts || [], transactions || [], asOfDate),
-    [inventory, accounts, transactions, asOfDate]);
+  const today = getLocalDateISO();
+  // a cleared date means today; a date after today is not a valuation date (the books are not compared for it)
+  const future = Boolean(asOfDate) && asOfDate > today;
+  const valuationDate = asOfDate && !future ? asOfDate : today;
+  const report = useMemo(() => computeInventoryValuation(inventory || [], accounts || [], transactions || [], valuationDate),
+    [inventory, accounts, transactions, valuationDate]);
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const ledgerPartial = useLedgerStore(s => Boolean(s.truncatedCollections?.transactions));
-  const today = getLocalDateISO();
+  // a capped item list can leave out an item with stock: the stock side is then not complete
+  const itemsPartial = useLedgerStore(s => Boolean(s.truncatedCollections?.inventory));
   // ISS-131: a past date takes its quantities and values from the stock history, never from today's items
   const past = Boolean(asOfDate) && asOfDate < today;
   const [history, setHistory] = useState<{ key: string; asOf?: InventoryAsOf; error?: string } | null>(null);
@@ -50,8 +55,8 @@ export const InventoryValuationReportView: React.FC<{ asOfDate?: string }> = ({ 
   useEffect(() => {
     if (!historyKey || !workspaceId) return;
     let live = true;
-    Promise.all([readHistory(workspaceId, asOfDate), readHistory(workspaceId, today)])
-      .then(([toDate, toToday]) => { if (live) setHistory({ key: historyKey, asOf: inventoryAsOf({ asOf: asOfDate, items: inventory || [], toDate, toToday }) }); })
+    readHistory(workspaceId, today)
+      .then(toToday => { if (live) setHistory({ key: historyKey, asOf: inventoryAsOf({ asOf: asOfDate, items: inventory || [], toToday }) }); })
       .catch((error: unknown) => { if (live) setHistory({ key: historyKey, error: error instanceof Error ? error.message : String(error) }); });
     return () => { live = false; };
   }, [historyKey, workspaceId, asOfDate, today, inventory]);
@@ -72,7 +77,7 @@ export const InventoryValuationReportView: React.FC<{ asOfDate?: string }> = ({ 
   }, [past, asOf, report.rows, inventory]);
   const stockValueCents = past ? asOf?.knownValueCents ?? 0 : report.totalValueCents;
   // the two sides are compared only when both are for the same date and both are complete
-  const comparable = !ledgerPartial && (!past || Boolean(asOf?.complete));
+  const comparable = !ledgerPartial && !itemsPartial && !future && (!past || Boolean(asOf?.complete));
   const differenceCents = stockValueCents - report.ledgerValueCents;
   const negativeStockItems = past ? asOf?.negativeStockItems ?? 0 : report.negativeStockItems;
 
@@ -82,6 +87,9 @@ export const InventoryValuationReportView: React.FC<{ asOfDate?: string }> = ({ 
   }, [rows, searchTerm]);
 
   const exportCsv = () => {
+    // nothing to export until the date's figures are known: an empty file would read as no stock
+    if (future) { toast.error(`${asOfDate} is after today: there is no stock valuation for it yet.`); return; }
+    if (past && !asOf) { toast.error(historyError ? `The stock on ${asOfDate} is not available: ${historyError}` : `The stock history for ${asOfDate} is still being read.`); return; }
     // what the file holds: the stock on the date from the history (unknowns say so, never 0), or today's stock
     downloadCsv(past ? `inventory_valuation_as_of_${asOfDate}.csv` : `inventory_valuation_${today}.csv`,
       ['Item', 'SKU', 'Category', past ? `On hand ${asOfDate}` : 'On hand', 'Unit cost', 'Value', 'Share %'],
@@ -149,10 +157,13 @@ export const InventoryValuationReportView: React.FC<{ asOfDate?: string }> = ({ 
       {historyError && <p role="alert" className="text-xs p-3 rounded-lg border border-[var(--brass)] text-[var(--text)]">
         The stock on {asOfDate} is not available: {historyError}. Today&rsquo;s stock is not shown in its place, and the books are not compared.
       </p>}
-      {rows.length > 0 && (
+      {future && <p role="alert" className="text-xs p-3 rounded-lg border border-[var(--brass)] text-[var(--text)]">{asOfDate} is after today, so there is no stock or books valuation for it yet. Today&rsquo;s stock is shown and not compared.</p>}
+      {rows.length > 0 && !future && (
         <p role="status" className={`text-xs p-3 rounded-lg border ${comparable && differenceCents === 0 ? 'border-[var(--line)] text-[var(--muted)]' : 'border-[var(--brass)] text-[var(--text)]'}`}>
           {past && asOf && !asOf.complete
             ? `${asOf.unknownItems} item(s) have no stock history that explains them on ${asOfDate}, so the stock value on that date is not complete and is not compared with the books.`
+            : itemsPartial
+              ? 'The loaded item list is capped, so the stock value here may leave items out and is not compared with the books.'
             : ledgerPartial
               ? 'The loaded entries are capped, so the Inventory account here may be incomplete and is not compared with the stock.'
               : differenceCents === 0

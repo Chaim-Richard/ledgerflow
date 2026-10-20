@@ -45,9 +45,10 @@ const items = [
   { id: 'screws', name: 'Screws', quantityAtHand: 7 },
   { id: 'hinges', name: 'Hinges', quantityAtHand: 4 },
   { id: 'pins', name: 'Pins', quantityAtHand: 12 },   // stock and no history at all
-  { id: 'clips', name: 'Clips', quantityAtHand: 0 },  // nothing, never moved
+  // nothing, never moved, created after the history began (1 Aug) — so a move would exist had it held stock (#243 review)
+  { id: 'clips', name: 'Clips', quantityAtHand: 0, createdAt: '2026-08-20T09:00:00Z' },
 ];
-const asOf = (date: string, list = items) => inventoryAsOf({ asOf: date, items: list, toDate: itemDetails(moves, START, date), toToday: itemDetails(moves, START, TODAY) });
+const asOf = (date: string, list = items) => inventoryAsOf({ asOf: date, items: list, toToday: itemDetails(moves, START, TODAY) });
 
 test('ISS-131 worked figures: as of 30 Sep, 10 bolts at $10.00 = $100.00, never today\'s 20 × $15.00', () => {
   const result = asOf('2026-09-30');
@@ -72,10 +73,11 @@ test('ISS-131: an item the history does not explain is unknown with the reason �
 
 test('ISS-131: with every item explained the total is the stock on the date', () => {
   const result = asOf('2026-09-30', items.filter(i => ['bolts', 'nuts', 'hinges', 'clips'].includes(i.id)));
-  // a deleted item is still read from its history: screws (from zero, 6 at $10.00) is known; washers (starts at 5) is not
-  assert.deepEqual([result.complete, result.knownValueCents, result.unknownItems], [false, 10_000 + 22_500 + 6_000, 1]);
-  assert.deepEqual(result.rows.find(r => r.itemId === 'screws')!.quantity, 6);
-  const onlyBolts = inventoryAsOf({ asOf: '2026-09-30', items: [items[0]], toDate: itemDetails(moves.filter(m => m.itemId === 'bolts'), START, '2026-09-30'), toToday: itemDetails(moves.filter(m => m.itemId === 'bolts'), START, TODAY) });
+  // #243 review: a deleted item whose history still holds stock is unknown (the deletion left no move saying when the
+  // stock went); washers (history starts at 5) is unknown too
+  assert.deepEqual([result.complete, result.knownValueCents, result.unknownItems], [false, 10_000 + 22_500, 2]);
+  assert.match(result.rows.find(r => r.itemId === 'screws')!.unknownReason || '', /deleted with 6 still in its stock history/);
+  const onlyBolts = inventoryAsOf({ asOf: '2026-09-30', items: [items[0]], toToday: itemDetails(moves.filter(m => m.itemId === 'bolts'), START, TODAY) });
   assert.deepEqual([onlyBolts.complete, onlyBolts.knownValueCents, onlyBolts.unknownItems], [true, 10_000, 0]);
 });
 
@@ -106,7 +108,7 @@ describe('ISS-131 on the Inventory Valuation screen', () => {
     const urls = await setUp(moves.filter(m => m.itemId === 'bolts'), [items[0]]);
     await waitFor(() => assert.match(document.body.textContent || '', /The stock list and the Inventory account agree\./));
     assert.match(document.body.textContent || '', /Stock on hand at cost on 2026-09-30, from the stock history/);
-    assert.ok(urls.some(u => /startDate=1900-01-01&endDate=2026-09-30/.test(u)), urls.join(' '));
+    assert.equal(urls.filter(u => /inventory-details\?workspaceId=w&startDate=1900-01-01&endDate=\d{4}-\d{2}-\d{2}$/.test(u)).length, 1, `one reading of the whole history: ${urls.join(' ')}`);
     assert.doesNotMatch(document.body.textContent || '', /\$300\.00|\$200\.00/, 'today\'s 20 × $15.00 is not shown for 30 Sep');
   });
 
@@ -128,5 +130,68 @@ describe('ISS-131 on the Inventory Valuation screen', () => {
     render(<InventoryValuationReportView asOfDate="2026-09-30" />);
     await waitFor(() => assert.match(screen.getByRole('alert').textContent || '', /The stock on 2026-09-30 is not available: Stock history is not set up in this database yet\. Today’s stock is not shown in its place, and the books are not compared\./));
     assert.match(document.body.textContent || '', /Not available/);
+  });
+});
+
+// ---- review fixes (#243) ----
+test('ISS-131 review: a backdated move counts on its own date, not in the order it was written', () => {
+  // buys of 10 on 1 Sep and 5 Oct, then a sale of 5 written last but dated 15 Sep: on 30 Sep there were 5, not 15
+  const backdated = [
+    move('rods', '2026-09-01', 10, 0, 10_000),
+    move('rods', '2026-10-05', 10, 10, 20_000),
+    move('rods', '2026-09-15', -5, 20, -5_000),
+  ];
+  const result = inventoryAsOf({ asOf: '2026-09-30', items: [{ id: 'rods', name: 'Rods', quantityAtHand: 15 }], toToday: itemDetails(backdated, START, TODAY) });
+  // 10 − 5 = 5 rods; 10,000 − 5,000 = 5,000 cents
+  assert.deepEqual([result.rows[0].quantity, result.rows[0].valueCents, result.complete], [5, 5_000, true]);
+});
+
+test('ISS-131 review: a never-moved item at zero today is zero on the date only when that is proven', () => {
+  const history = itemDetails(moves, START, TODAY); // the history begins on 1 Aug 2026
+  const base = (extra: Record<string, unknown>) => inventoryAsOf({ asOf: '2026-09-30', items: [{ id: 'legacy', name: 'Legacy', quantityAtHand: 0, ...extra }], toToday: history }).rows.find(r => r.itemId === 'legacy');
+  assert.match(base({ createdAt: '2025-03-01T00:00:00Z' })?.unknownReason || '', /may have held stock before the history was kept/, 'created before the history began');
+  assert.match(base({})?.unknownReason || '', /may have held stock/, 'no creation date: not proven');
+  assert.equal(base({ createdAt: '2026-10-10T00:00:00Z' }), undefined, 'created after the date: zero, so not listed');
+  assert.equal(base({ itemType: 'service' }), undefined, 'a service holds no stock');
+});
+
+describe('ISS-131 review on the screen', () => {
+  afterEach(() => cleanup());
+  const mount = async (asOfDate: string, truncated: Record<string, boolean>, fetchImpl?: typeof fetch) => {
+    const { useLedgerStore } = await import('../stores/useLedgerStore');
+    const { useAuthStore } = await import('../stores/useAuthStore');
+    const accounts = [makeChartAccount({ id: 'inv', name: 'Inventory', type: 'asset', category: 'Inventory' }), makeChartAccount({ id: 'bank', name: 'Bank', type: 'asset', category: 'Cash' })];
+    const tx = makeTransaction({ id: 'b1', date: '2026-09-01', lines: [{ accountId: 'inv', amountCents: 10_000 }, { accountId: 'bank', amountCents: -10_000 }] });
+    useAuthStore.setState({ currentWorkspaceId: 'w' } as never);
+    useLedgerStore.setState({ inventory: [{ ...items[0], quantityAtHand: 10, unitCostCents: 1_000 }], accounts, transactions: [tx], truncatedCollections: truncated } as never);
+    globalThis.fetch = fetchImpl || (async () => new Response(JSON.stringify({ items: itemDetails(moves.filter(m => m.itemId === 'bolts' && m.date < '2026-10-01'), START, TODAY) }), { status: 200, headers: { 'Content-Type': 'application/json' } })) as typeof fetch;
+    const { InventoryValuationReportView } = await import('../components/reporting/InventoryValuationReportView');
+    render(<InventoryValuationReportView asOfDate={asOfDate} />);
+  };
+
+  test('a capped item list: the stock may leave items out, so it is not compared with the books', async () => {
+    await mount('2026-09-30', { inventory: true });
+    await waitFor(() => assert.match(document.body.textContent || '', /The loaded item list is capped, so the stock value here may leave items out and is not compared with the books\./));
+    assert.doesNotMatch(document.body.textContent || '', /agree\./);
+  });
+
+  test('a date after today: said plainly, not compared', async () => {
+    await mount('2999-01-01', {});
+    assert.match(screen.getByRole('alert').textContent || '', /2999-01-01 is after today, so there is no stock or books valuation for it yet/);
+    assert.doesNotMatch(document.body.textContent || '', /agree\.|more than the Inventory account|less than the Inventory account/);
+  });
+
+  test('export waits for the history: no empty file while it is being read', async () => {
+    const { toast } = await import('sonner');
+    const errors: string[] = [];
+    const original = toast.error;
+    (toast as unknown as { error: (m: string) => void }).error = (m: string) => { errors.push(m); };
+    try {
+      await mount('2026-09-30', {}, (() => new Promise<Response>(() => {})) as unknown as typeof fetch); // never answers
+      screen.getByRole('button', { name: /export/i }).click();
+      assert.deepEqual(errors, ['The stock history for 2026-09-30 is still being read.']);
+    } finally {
+      (toast as unknown as { error: typeof original }).error = original;
+    }
   });
 });

@@ -41,3 +41,16 @@ loaded entries. When those are capped, the screen now withholds the comparison, 
 the books (issue point 4) is server work.
 
 Release gate: W13. The valuation on a past date is now truthful; W13 stays Partly (ISS-130, DIM-2).
+
+**Review fixes (#243, merged; follow-up PR from main 9bfccab6).**
+1. **Backdated moves.** The past quantity and value are the sums of the moves dated on or before the date, not the
+   last-written move's "quantity after". Rods bought 10 + 10, with a sale of 5 written last but dated 15 Sep, are 5
+   on 30 Sep (5,000 cents), not 15. Because of this, one reading of the history, to today, is enough; the second
+   reading is gone.
+2. **A capped item list** withholds the comparison and says why.
+3. **A date after today** says there is no valuation for it, and nothing is compared. A cleared date means today.
+4. **Export** refuses while the history is still being read or could not be read; no empty file.
+5. **A never-moved item at zero today** is zero on the date only when proven: it is a service, it was created after
+   the date, or it was created after the stock history began. Otherwise it is unknown.
+6. **A deleted item** whose history still holds stock is unknown: the deletion left no move saying when the stock
+   went. The merged test that read it as known is updated to match.
