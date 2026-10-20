@@ -76,11 +76,14 @@ export default function TaxPlaceSuggestion({ customer, date, lineLabels, lineCat
     );
   }
   if (tax.reason !== 'taxed') {
-    const differs = tax.reason !== 'no-rate-table' && currentRate > 0;
+    const noCode = tax.treatment && salesTreatments && !salesTreatments.includes(tax.treatment);
+    const differs = tax.reason !== 'no-rate-table' && !noCode && (currentRate > 0 || Boolean(tax.treatment && currentTreatment && currentTreatment !== tax.treatment));
     return (
       <p role="status" className="text-xs text-[var(--muted)]">
         {who}{SAYS[tax.reason]}.
-        {differs && <> <button type="button" onClick={() => onUseRate(0)} className="underline font-semibold text-[var(--text)]">Use no tax</button></>}
+        {tax.reason === 'export' && tax.treatment === 'zero_rated' && <> An export is zero-rated (VAT Law s.30): goods leaving Israel, or a service to a foreign resident that s.30 covers, with the export documents kept; a service used in Israel is taxed.</>}
+        {noCode && <> To record it, add a zero-rated sales tax code in Settings → Tax Manager; a 0% custom rate is not counted on the VAT report.</>}
+        {differs && <> <button type="button" onClick={() => onUseRate(0, tax.treatment)} className="underline font-semibold text-[var(--text)]">Use no tax</button></>}
       </p>
     );
   }
