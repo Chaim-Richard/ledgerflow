@@ -223,14 +223,18 @@
 /* Y-19: paper is white whatever the screen theme (the dark theme's light text would print faint on
    it); tables repeat their headings on each page and don't split a row across pages; no shadows. */
 @media print {
-  :root, .dark, .light {
-    --ink: #FFFFFF; --surface: #FFFFFF; --panel: #FFFFFF; --elevated: #FFFFFF;
+  :root, .dark, .light, [data-theme="dark"] {
+    --bg: #FFFFFF; --ink: #FFFFFF; --surface: #FFFFFF; --panel: #FFFFFF; --elevated: #FFFFFF;
     --line: #BFC8C6; --grid: transparent;
     --text: #0E2229; --muted: #3F5655; --faint: #4F6469;
     --brass: #7A550E; --pos: #0E2229; --neg: #0E2229;
     color-scheme: light;
   }
-  body { background: #FFFFFF !important; color: #0E2229; }
+  body { background: #FFFFFF !important; background-image: none !important; color: #0E2229 !important; }
+  .dark #main-content [class*="dark:bg-"],
+  .dark [data-print-root] [class*="dark:bg-"] { background-color: #FFFFFF !important; }
+  .dark #main-content [class*="dark:text-"],
+  .dark [data-print-root] [class*="dark:text-"] { color: #0E2229 !important; }
   thead { display: table-header-group; }
   tr, img, svg { break-inside: avoid; }
   * { box-shadow: none !important; text-shadow: none !important; }

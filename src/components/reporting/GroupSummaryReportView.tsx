@@ -4,6 +4,7 @@ import { getIdToken } from '../../firebase';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
+import { exportGroupSummaryCsv } from '../../lib/groupSummaryExport';
 import { ratesKey, type WorkspaceGroup } from '../../lib/workspaceGroups';
 import { averageFromTimeframe, parseRates, rateFromQuote, type TranslationRates } from '../../lib/translationRates';
 
@@ -176,7 +177,18 @@ export default function GroupSummaryReportView() {
 
   return (
     <section aria-labelledby="group-summary-title" className="space-y-4">
-      <h2 id="group-summary-title" className="text-lg font-bold text-[var(--text)]">Group summary</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="group-summary-title" className="text-lg font-bold text-[var(--text)]">Group summary</h2>
+        {summary && (
+          <button
+            type="button"
+            onClick={() => exportGroupSummaryCsv(summary, startDate, endDate)}
+            className="btn-secondary min-h-11 px-4 rounded-xl text-sm font-semibold"
+          >
+            Export CSV
+          </button>
+        )}
+      </div>
       {groups !== null && groups.length === 0 && !error && (
         <p className="text-sm text-[var(--muted)]">You have no groups of books yet (Settings → Groups of books). This workspace can be shown on its own, in another currency too.</p>
       )}

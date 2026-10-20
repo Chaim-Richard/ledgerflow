@@ -11,15 +11,19 @@ export const ConnectionBanner: React.FC = () => {
   useEffect(() => {
     if (!isOnline) {
       wasOfflineRef.current = true;
-      setShowReconnected(false);
+      const clearTimer = setTimeout(() => setShowReconnected(false), 0);
+      return () => clearTimeout(clearTimer);
     } else if (wasOfflineRef.current) {
       // Transitioned from offline to online
       wasOfflineRef.current = false;
-      setShowReconnected(true);
+      const showTimer = setTimeout(() => setShowReconnected(true), 0);
       const timer = setTimeout(() => {
         setShowReconnected(false);
       }, 3500);
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(showTimer);
+        clearTimeout(timer);
+      };
     }
   }, [isOnline]);
 
@@ -30,8 +34,11 @@ export const ConnectionBanner: React.FC = () => {
         role="alert" 
         className="bg-amber-500/15 border-b border-amber-500/30 text-amber-300 px-4 py-1.5 flex items-center justify-center gap-2 text-xs font-medium tracking-wide animate-in fade-in duration-200"
       >
-        <WifiOff className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+        <WifiOff className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
         <span>Working offline — changes will sync when you reconnect</span>
+        <a href="/status" className="underline font-semibold ml-1">
+          System status
+        </a>
       </div>
     );
   }

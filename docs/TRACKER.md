@@ -38,6 +38,7 @@ then the 488 LATER items. Claude works through them in that order and ticks them
 ### 33/33 browser tests, build)
 | Item | What |
 |---|---|
+| AI #8 (G-1..G-16, G-20..G-24, F-46, F-47) | Bilingual EN/HE help docs & 20 searchable how-to guides, guided first-month hub + Day 1/3/7 templates, IL/US 1-year balanced guest sample books + sandbox reset guard, weekly changelog, modules & keyboard shortcut reference sheets, WCAG 2.1 AA statement + EN/HE translation coverage tool, `/status` + `/c/<token>` portal + grouped notifications + owner feedback triage, dark-mode print light-paper override, Group Summary CSV export, and browser E2E specs for `W1`, `W10`, and `W12` (`docs/verification/ai8-verification-2026-10-20.md`) |
 | K-02 | Items on invoice lines: pick by name/SKU, price + cost filled, free text unlinks (tested) |
 | J-07 | Sales by Item: issued invoices only, base currency, real cost of goods sold or "(est.)", "No item" row, dark mode (tested) |
 | J-12 | Journal Sheet: posted entries only, base currency, unbalanced list, dark mode (tested) |

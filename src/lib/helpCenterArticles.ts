@@ -1,0 +1,450 @@
+export interface ScreenHelpDoc {
+  slug: string;
+  screenIds: readonly string[];
+  docPath: string;
+  titleEn: string;
+  titleHe: string;
+  summaryEn: string;
+  summaryHe: string;
+  keyTasksEn: readonly string[];
+  keyTasksHe: readonly string[];
+}
+
+export interface HowToArticle {
+  id: string;
+  screenId: string;
+  target: { tab: string; sub?: string };
+  category: string;
+  titleEn: string;
+  titleHe: string;
+  summaryEn: string;
+  summaryHe: string;
+  stepsEn: readonly string[];
+  stepsHe: readonly string[];
+  limitNoteEn?: string;
+  limitNoteHe?: string;
+}
+
+/**
+ * G-1: Bilingual EN/HE help guide metadata corresponding 1-to-1 with `docs/help/<slug>.md`,
+ * linked directly from each main screen's contextual `? Help` dialog and searchable in Help & Guide.
+ */
+export const SCREEN_HELP_DOCS: readonly ScreenHelpDoc[] = [
+  {
+    slug: 'overview',
+    screenIds: ['dashboard', 'overview'],
+    docPath: 'docs/help/overview.md',
+    titleEn: 'Overview & Dashboard',
+    titleHe: 'סקירה כללית ולוח בקרה',
+    summaryEn: 'Check cash on hand, money owed to and by the business, period profit, and open items needing attention.',
+    summaryHe: 'מעקב אחר יתרות מזומן, חובות לקוחות וספקים, רווח תקופתי ומשימות פתוחות לטיפול.',
+    keyTasksEn: ['Switch between Owner Lens and Accountant Lens.', 'Open any summary tile to drill into the report behind it.', 'Add a quick entry or open the setup checklist.'],
+    keyTasksHe: ['מעבר בין תצוגת בעלים לתצוגת רואה חשבון.', 'לחיצה על כל מדד לפתיחת הדוח המפורט.', 'הוספת פקודה מהירה או בדיקת רשימת ההקמה.'],
+  },
+  {
+    slug: 'transactions',
+    screenIds: ['transactions', 'journal-entries', 'general-ledger', 'register'],
+    docPath: 'docs/help/transactions.md',
+    titleEn: 'Transactions & General Ledger',
+    titleHe: 'תנועות יומן והספר הראשי',
+    summaryEn: 'Inspect, filter, and record balanced double-entry journal transactions across accounts.',
+    summaryHe: 'צפייה, סינון ורישום פקודות יומן כפולות ומאוזנות בכל חשבונות החברה.',
+    keyTasksEn: ['Filter entries by date, account, status, or text.', 'Verify every posted entry balances debits and credits.', 'Reverse and correct locked-period entries safely.'],
+    keyTasksHe: ['סינון פקודות לפי תאריך, חשבון, סטטוס או טקסט.', 'וידוא שכל פקודה מאושרת מאוזנת בין חובה לזכות.', 'ביצוע ביטול ותיקון לתנועות בתקופה נעולה.'],
+  },
+  {
+    slug: 'sales',
+    screenIds: ['sales', 'estimates', 'credit-notes', 'customers'],
+    docPath: 'docs/help/sales.md',
+    titleEn: 'Sales, Invoices & Customers',
+    titleHe: 'מכירות, חשבוניות ולקוחות',
+    summaryEn: 'Create quotes and sales invoices, apply customer payments or credit notes, and send statements.',
+    summaryHe: 'הפקת הצעות מחיר וחשבוניות, קליטת תקבולים וזיכויים מלקוחות ושליחת דוחות מצב חשבון.',
+    keyTasksEn: ['Issue customer invoices with line-level revenue accounts and tax codes.', 'Record full or partial customer receipts.', 'Share read-only customer portal or invoice links.'],
+    keyTasksHe: ['הפקת חשבוניות עם סיווג הכנסה וקודי מס לכל שורה.', 'רישום תקבול מלא או חלקי מלקוח.', 'שיתוף קישור צפייה ותשלום ללקוח.'],
+  },
+  {
+    slug: 'purchases',
+    screenIds: ['purchases', 'purchase-orders', 'vendors', 'inventory'],
+    docPath: 'docs/help/purchases.md',
+    titleEn: 'Purchases, Bills & Suppliers',
+    titleHe: 'רכש, חשבוניות ספקים ומלאי',
+    summaryEn: 'Record supplier bills, manage purchase orders and stock items, and schedule vendor payment runs.',
+    summaryHe: 'קליטת חשבוניות ספקים, ניהול הזמנות רכש ופריטי מלאי וביצוע סבבי תשלום לספקים.',
+    keyTasksEn: ['Enter vendor bills and attach source PDFs or images.', 'Run batch supplier payments with withholding checks.', 'Manage inventory items, units, and reorder thresholds.'],
+    keyTasksHe: ['רישום חשבוניות ספק וצירוף מסמכי מקור.', 'הכנת תשלומים מרוכזים לספקים כולל ניכוי מס במקור.', 'ניהול פריטי מלאי, יחידות מידה והתראות חוסר.'],
+  },
+  {
+    slug: 'banking',
+    screenIds: ['banking', 'bank-connections'],
+    docPath: 'docs/help/banking.md',
+    titleEn: 'Banking & Statement Imports',
+    titleHe: 'בנקאות וייבוא דפי חשבון',
+    summaryEn: 'Stage and review CSV, OFX, and QFX bank statements or manage connected feeds and cash movements.',
+    summaryHe: 'טעינה ובדיקה מוקדמת של דפי בנק בפורמט CSV, OFX ו-QFX וניהול תנועות קופה ובנק.',
+    keyTasksEn: ['Upload CSV, OFX, or QFX bank statements into staging review.', 'Verify counts and amounts before confirming import.', 'Record direct money-in or money-out cash movements.'],
+    keyTasksHe: ['העלאת קובצי CSV, OFX או QFX לבדיקה מוקדמת.', 'וידוא מספר השורות והסכומים לפני אישור הייבוא.', 'רישום הפקדות ומשיכות ישירות מחשבון הבנק.'],
+  },
+  {
+    slug: 'reconciliation',
+    screenIds: ['reconciliation'],
+    docPath: 'docs/help/reconciliation.md',
+    titleEn: 'Bank Reconciliation',
+    titleHe: 'התאמות בנקים',
+    summaryEn: 'Match bank statement lines against posted ledger entries and verify zero closing difference.',
+    summaryHe: 'התאמת שורות דף הבנק מול פקודות היומן בספרים עד לאיפוס ההפרש.',
+    keyTasksEn: ['Enter statement date and ending balance.', 'Match suggested pairs or create missing entries.', 'Finish reconciliation once difference equals zero.'],
+    keyTasksHe: ['הזנת תאריך דף הבנק ויתרת הסגירה.', 'אישור התאמות מוצעות או השלמת תנועות חסרות.', 'נעילת ההתאמה לאחר שההפרש עומד על אפס.'],
+  },
+  {
+    slug: 'reports',
+    screenIds: ['reports', 'statement', 'tax-liability'],
+    docPath: 'docs/help/reports.md',
+    titleEn: 'Financial Statements & Reports',
+    titleHe: 'דוחות כספיים וניתוחים',
+    summaryEn: 'Run Profit & Loss, Balance Sheet, Trial Balance, Customer/Vendor Statements, Tax Calculation views, and Report Packs.',
+    summaryHe: 'הפקת דוח רווח והפסד, מאזן, מאזן בוחן, כרטסות, דוחות מס לחישוב וחבילות דוחות להדפסה.',
+    keyTasksEn: ['Compare months, quarters, or prior periods across accrual or cash basis.', 'Choose visible columns and export clean CSV/PDF packs.', 'Click any figure to drill down to underlying entries.'],
+    keyTasksHe: ['השוואת תקופות על בסיס מצטבר או מזומן.', 'בחירת עמודות להצגה וייצוא לקובץ CSV או PDF.', 'לחיצה על כל סכום לצפייה בתנועות המרכיבות אותו.'],
+  },
+  {
+    slug: 'planning',
+    screenIds: ['planning', 'budgets', 'projects', 'forecaster'],
+    docPath: 'docs/help/planning.md',
+    titleEn: 'Budgets, Projects & Forecasting',
+    titleHe: 'תקציבים, פרויקטים ותחזית תזרים',
+    summaryEn: 'Set account budgets, track project profitability, and review 13-week cash forecasts.',
+    summaryHe: 'הגדרת תקציבים לחשבונות, מעקב רווחיות לפי פרויקט ובדיקת תחזית תזרים ל-13 שבועות.',
+    keyTasksEn: ['Edit monthly or annual account budgets inline.', 'Compare actual posted figures against budget.', 'Track revenue, bills, and margin by project.'],
+    keyTasksHe: ['עריכה ישירה של תקציב חודשי או שנתי לכל חשבון.', 'השוואת ביצוע בפועל מול תקציב.', 'מעקב הכנסות, הוצאות ורווחיות לפי פרויקט.'],
+  },
+  {
+    slug: 'forensics',
+    screenIds: ['forensics', 'audit-trail', 'data-health', 'month-end-close', 'time-machine', 'consolidation'],
+    docPath: 'docs/help/forensics.md',
+    titleEn: 'Data Health, Period Close & Audit Trail',
+    titleHe: 'תקינות נתונים, סגירת תקופה ונתיב ביקורת',
+    summaryEn: 'Check ledger balance health, review the immutable audit log, prepare workpapers, and lock closed months.',
+    summaryHe: 'בדיקת שלמות הספרים, צפייה ביומן הביקורת, ניהול ניירות עבודה ונעילת חודשים סגורים.',
+    keyTasksEn: ['Inspect Data Health for duplicates, missing accounts, or imbalances.', 'Attach month-end workpapers and lock completed periods.', 'Review consolidated Group Summary across multiple books.'],
+    keyTasksHe: ['בדיקת תקינות נתונים לאיתור כפילויות או חוסר איזון.', 'צירוף ניירות עבודה ונעילת תקופות חשבונאיות.', 'צפייה בדוח מאוחד לקבוצת חברות וייצואו ל-CSV.'],
+  },
+  {
+    slug: 'settings',
+    screenIds: ['settings', 'api-hub'],
+    docPath: 'docs/help/settings.md',
+    titleEn: 'Workspace Settings, Security & Backups',
+    titleHe: 'הגדרות מערכת, הרשאות וגיבויים',
+    summaryEn: 'Manage team roles, optional modules, tax profiles, appearance/locale formatting, keyboard shortcuts, and JSON backups.',
+    summaryHe: 'ניהול הרשאות צוות, מודולים אופציונליים, פרופילי מס, עיצוב ושפה, קיצורי מקלדת וגיבויי JSON.',
+    keyTasksEn: ['Export and verify checksummed JSON backups before major changes.', 'Invite team members as owner, accountant, bookkeeper, or viewer.', 'Turn optional modules on or off without losing records.'],
+    keyTasksHe: ['ייצוא ושחזור גיבוי JSON מאומת בחתימת SHA-256.', 'ניהול הרשאות משתמשים (בעלים, רו״ח, מנה״ח, צופה).', 'הפעלה או הסתרה של מודולים מבלי למחוק נתונים.'],
+  },
+  {
+    slug: 'tasks-and-time',
+    screenIds: ['tasks', 'time', 'support', 'help'],
+    docPath: 'docs/help/tasks-and-time.md',
+    titleEn: 'Tasks, Time Tracking, Help & Support',
+    titleHe: 'משימות, שעות עבודה, עזרה ותמיכה',
+    summaryEn: 'Track bookkeeping tasks and billable hours, search EN/HE how-to guides, and triage support feedback.',
+    summaryHe: 'ניהול משימות ושעות לחיוב, חיפוש במדריכי עזרה בעברית ובאנגלית וניהול פניות משוב.',
+    keyTasksEn: ['Track open close tasks and billable client hours.', 'Search 20 EN/HE step-by-step how-to guides.', 'Submit or triage workspace support tickets.'],
+    keyTasksHe: ['מעקב משימות פתוחות ורישום שעות עבודה.', 'חיפוש ב-20 מדריכי הפעלה קצרים בעברית ובאנגלית.', 'פתיחה וניהול סטטוס של קריאות משוב ותמיכה.'],
+  },
+];
+
+/**
+ * G-10: 20 concise, accurate bilingual (English + Hebrew) how-to articles linked from screens
+ * and searchable in Help & Guide (G-11). Claims follow docs/CAPABILITIES.md strictly.
+ */
+export const HOW_TO_ARTICLES: readonly HowToArticle[] = [
+  {
+    id: 'howto-01-setup-books',
+    screenId: 'dashboard',
+    target: { tab: 'dashboard' },
+    category: 'Onboarding',
+    titleEn: 'Set up your company details and chart template',
+    titleHe: 'הגדרת פרטי העסק ובחירת תבנית חשבונות',
+    summaryEn: 'Configure workspace currency, fiscal start month, and initial accounts in the first-run wizard.',
+    summaryHe: 'הגדרת מטבע בסיס, חודש פתיחת שנת מס ואינדקס חשבונות ראשוני באשף ההקמה.',
+    stepsEn: ['Confirm your business display name, base currency (ILS or USD), and fiscal year start month.', 'Select an industry chart template or review existing Cash, Receivables, Payables, and Equity accounts.', 'Enter opening balances or proceed directly to create your first invoice.'],
+    stepsHe: ['אשרו את שם העסק, מטבע הבסיס (ש״ח או דולר) וחודש תחילת שנת המס.', 'בחרו תבנית חשבונות מתאימה או בדקו שחשבונות קופה, לקוחות, ספקים והון קיימים.', 'הזינו יתרות פתיחה או המשיכו ישירות להפקת החשבונית הראשונה.'],
+  },
+  {
+    id: 'howto-02-opening-balances',
+    screenId: 'transactions',
+    target: { tab: 'transactions' },
+    category: 'Onboarding',
+    titleEn: 'Enter balanced opening balances safely',
+    titleHe: 'רישום יתרות פתיחה מאוזנות',
+    summaryEn: 'Post starting bank, customer, and supplier balances offset cleanly to Opening Balance Equity.',
+    summaryHe: 'רישום יתרות פתיחה לבנקים, לקוחות וספקים מול חשבון הון יתרת פתיחה.',
+    stepsEn: ['Gather closing balances from your prior accounting system as of your cutover date.', 'Enter positive asset balances and liability balances so debits equal credits.', 'Verify on the Trial Balance report that total debits equal total credits to the cent.'],
+    stepsHe: ['הכינו את מאזן הבוחן מהמערכת הקודמת ליום המעבר.', 'הזינו יתרות נכסים והתחייבויות מול חשבון יתרת פתיחה מאוזן.', 'בדקו בדוח מאזן הבוחן שסך החובה שווה בדיוק לסך הזכות.'],
+  },
+  {
+    id: 'howto-03-first-invoice',
+    screenId: 'sales',
+    target: { tab: 'sales' },
+    category: 'Sales',
+    titleEn: 'Create and send a customer invoice',
+    titleHe: 'הפקה ושליחה של חשבונית ללקוח',
+    summaryEn: 'Issue an itemized invoice mapped to revenue accounts and verify its receivable entry.',
+    summaryHe: 'הפקת חשבונית מפורטת המשויכת לחשבון הכנסות ובדיקת רישומה בכרטסת הלקוח.',
+    stepsEn: ['Open Sales and select New Invoice.', 'Pick or enter the customer, set invoice and due dates, and add descriptions, quantities, rates, and revenue accounts.', 'Click Send Invoice, then check Account Statement in Reports to confirm the open balance.'],
+    stepsHe: ['פתחו את מסך המכירות ולחצו על חשבונית חדשה.', 'בחרו לקוח, הגדירו תאריך ותנאי תשלום והוסיפו שורות פירוט, כמות, מחיר וחשבון הכנסה.', 'לחצו על שליחת חשבונית ובדקו את היתרה הפתוחה בדוח מצב חשבון לקוח.'],
+  },
+  {
+    id: 'howto-04-receive-payment',
+    screenId: 'sales',
+    target: { tab: 'sales' },
+    category: 'Sales',
+    titleEn: 'Record full or partial customer payments',
+    titleHe: 'קליטת תקבול מלא או חלקי מלקוח',
+    summaryEn: 'Allocate incoming bank transfers or checks across one or multiple open invoices.',
+    summaryHe: 'שיוך העברה בנקאית או שיק לחשבונית פתוחה אחת או למספר חשבוניות.',
+    stepsEn: ['Open Receive Payment from Sales.', 'Select the customer, deposit cash account, payment date, reference, and amount received.', 'Allocate the exact amount per invoice (or apply oldest first) and post the payment.'],
+    stepsHe: ['פתחו קבלת תשלום ממסך המכירות.', 'בחרו לקוח, חשבון בנק להפקדה, תאריך, אסמכתא וסכום התקבול.', 'שייכו את הסכום לחשבוניות הפתוחות ואשרו את הרישום.'],
+  },
+  {
+    id: 'howto-05-quotes-to-orders',
+    screenId: 'sales',
+    target: { tab: 'reports', sub: 'customer-quotes' },
+    category: 'Sales',
+    titleEn: 'Track quotes, deposits, and partial invoicing',
+    titleHe: 'מעקב הצעות מחיר, מקדמות וחשבוניות חלקיות',
+    summaryEn: 'Follow open quotes, collect customer deposits without double-charging on delivery, and copy follow-ups.',
+    summaryHe: 'מעקב הצעות מחיר פתוחות, גביית מקדמות ללא חיוב כפול והעתקת תזכורות ללקוח.',
+    stepsEn: ['Create an estimate in Sales and track open or expiring quotes in Reports -> Customer Quotes & Proposals.', 'Record an order deposit cleanly before partial progress invoices.', 'Copy plain follow-up text manually when following up with customers.'],
+    stepsHe: ['צרו הצעת מחיר במכירות ועקבו אחר הצעות פתוחות או פגות תוקף בדוח הצעות מחיר.', 'רשמו מקדמה על הזמנה לפני הפקת חשבוניות חלקיות.', 'העתיקו טיוטת תזכורת ידנית לשליחה ללקוח במידת הצורך.'],
+  },
+  {
+    id: 'howto-06-customer-portal',
+    screenId: 'sales',
+    target: { tab: 'sales' },
+    category: 'Sales',
+    titleEn: 'Share the read-only customer invoice portal',
+    titleHe: 'שיתוף פורטל חשבוניות לקריאה ללקוח',
+    summaryEn: 'Give a customer a tokenized link showing open, overdue, and paid invoices from the past year.',
+    summaryHe: 'שליחת קישור מאובטח ללקוח לצפייה בחשבוניות פתוחות, בפיגור ומשולמות.',
+    stepsEn: ['Open the customer record in Sales and generate or copy their portal link.', 'The portal displays total billed, still to pay, open estimates, and individual View and pay links.', 'Revoke or rotate the portal link anytime if contact details change.'],
+    stepsHe: ['פתחו את כרטיס הלקוח במכירות והעתיקו את קישור הפורטל האישי.', 'הלקוח רואה את סך החוב הפתוח, הצעות מחיר פתוחות וקישור לכל חשבונית.', 'ניתן לבטל או להחליף את הקישור בכל עת.'],
+  },
+  {
+    id: 'howto-07-vendor-bills',
+    screenId: 'purchases',
+    target: { tab: 'purchases' },
+    category: 'Purchases',
+    titleEn: 'Record supplier bills and attach documents',
+    titleHe: 'רישום חשבונית ספק וצירוף מסמך מקור',
+    summaryEn: 'Enter payable bills by expense account or label and attach the supplier invoice file.',
+    summaryHe: 'קליטת חשבונית ספק לפי סעיפי הוצאה ותגיות וצירוף קובץ המקור.',
+    stepsEn: ['Go to Purchases and click Record New Bill.', 'Choose the supplier, bill number, bill date, due date, and split lines across expense accounts.', 'Attach the supplier PDF or image receipt and save to post to Accounts Payable.'],
+    stepsHe: ['עברו לרכש ולחצו על רישום חשבונית ספק חדשה.', 'בחרו ספק, מספר חשבונית, תאריכים ופירוט שורות ההוצאה.', 'צרפו קובץ PDF או תמונה ושמרו לרישום מול ספקים.'],
+  },
+  {
+    id: 'howto-08-payment-run-withholding',
+    screenId: 'purchases',
+    target: { tab: 'reports', sub: 'vendor-withholding' },
+    category: 'Purchases',
+    titleEn: 'Pay vendor bills and review Israeli withholding',
+    titleHe: 'תשלום לספקים ובדיקת ניכוי מס במקור (856)',
+    summaryEn: 'Settle multiple open supplier bills in a payment run and audit recorded withholding certificates.',
+    summaryHe: 'תשלום מרוכז של חשבוניות ספקים ובדיקת ניכוי מס במקור ותוקף אישורים.',
+    stepsEn: ['Check vendor tax IDs and withholding certificate expiry dates in Reports -> Vendor tax records.', 'Run a vendor payment batch from Purchases and verify withheld amounts.', 'Review monthly totals in Vendor withholding and the human-review Form 856 worksheet.'],
+    stepsHe: ['בדקו תוקף אישורי ניכוי מס במקור בדוח פרטי מס ספקים.', 'בצעו סבב תשלום לספקים ובדקו את סכום המס שנוכה.', 'בדקו סיכום חודשי וגיליון בקרה לטופס 856 בדוחות.'],
+    limitNoteEn: 'Form 856 export is a human-review worksheet, not direct SHAAM electronic filing.',
+    limitNoteHe: 'ייצוא 856 משמש גיליון בקרה אנושי ואינו הגשה מקוונת ישירה לרשות המסים.',
+  },
+  {
+    id: 'howto-09-import-csv-ofx',
+    screenId: 'banking',
+    target: { tab: 'banking' },
+    category: 'Banking',
+    titleEn: 'Import CSV, OFX, or QFX bank statements safely',
+    titleHe: 'ייבוא מבוקר של דפי בנק בפורמט CSV, OFX או QFX',
+    summaryEn: 'Preview parsed bank lines, check source-to-server counts, and refuse malformed files before saving.',
+    summaryHe: 'תצוגה מקדימה של שורות הבנק, השוואת כמות הרשומות וסירוב לקבצים פגומים לפני שמירה.',
+    stepsEn: ['Open Banking -> Import Statement and select your bank account.', 'Upload a single-account CSV, OFX, or QFX download and inspect every staged date and amount.', 'Confirm import and verify that imported row counts match your source file.'],
+    stepsHe: ['פתחו בנקאות -> ייבוא דף חשבון ובחרו את חשבון הבנק המתאים.', 'העלו קובץ CSV, OFX או QFX ובדקו את התאריכים והסכומים בתצוגה המקדימה.', 'אשרו את הייבוא וודאו שמספר השורות שנקלטו תואם לקובץ המקור.'],
+  },
+  {
+    id: 'howto-10-reconcile-statement',
+    screenId: 'reconciliation',
+    target: { tab: 'reconciliation' },
+    category: 'Banking',
+    titleEn: 'Reconcile a bank account to a zero difference',
+    titleHe: 'התאמת חשבון בנק להפרש אפס',
+    summaryEn: 'Match imported bank lines to ledger entries and seal the statement closing balance.',
+    summaryHe: 'הצלבת שורות דף הבנק מול תנועות היומן ונעילת יתרת הסגירה.',
+    stepsEn: ['Open Reconciliation, select the bank account, and enter statement ending date and balance.', 'Tick matching ledger entries or post missing bank fees/interest.', 'Confirm Difference reads 0.00 before finishing the reconciliation.'],
+    stepsHe: ['פתחו התאמות, בחרו חשבון בנק והזינו תאריך ויתרת סגירה מהדף.', 'סמנו תנועות תואמות או השלימו עמלות בנק חסרות.', 'ודאו שההפרש עומד על 0.00 בדיוק לפני סיום ההתאמה.'],
+  },
+  {
+    id: 'howto-11-labels-dimensions',
+    screenId: 'reports',
+    target: { tab: 'reports', sub: 'label-profit' },
+    category: 'Reports',
+    titleEn: 'Tag lines with labels (property, project, location)',
+    titleHe: 'שימוש בתגיות (נכס, פרויקט, סניף) ודוח רווחיות לתגית',
+    summaryEn: 'Track income and expenses per property, department, or branch so totals tie back to P&L.',
+    summaryHe: 'מעקב הכנסות והוצאות לפי מרכז רווח, נכס או סניף בהתאמה מלאה לרווח והפסד.',
+    stepsEn: ['Configure label values in Settings -> Dimensions.', 'Assign labels on invoice, bill, or journal lines.', 'Open Reports -> Profit by Label to inspect per-label performance plus Unassigned lines.'],
+    stepsHe: ['הגדירו ממדים וערכים תחת הגדרות -> ממדים ותגיות.', 'שייכו תגית בשורות חשבונית, הוצאה או פקודת יומן.', 'פתחו דוחות -> רווח לפי תגית להשוואה מלאה מול דוח רווח והפסד.'],
+  },
+  {
+    id: 'howto-12-pnl-balance-sheet-cash-accrual',
+    screenId: 'reports',
+    target: { tab: 'reports' },
+    category: 'Reports',
+    titleEn: 'Compare P&L and Balance Sheet on accrual or cash basis',
+    titleHe: 'השוואת רווח והפסד ומאזן על בסיס מצטבר או מזומן',
+    summaryEn: 'Switch between monthly/quarterly columns, prior-period variance, and cash vs. accrual basis.',
+    summaryHe: 'מעבר בין עמודות חודשיות או רבעוניות, השוואה לתקופה קודמת ובסיס מצטבר מול מזומן.',
+    stepsEn: ['Open Reports and pick Profit & Loss or Balance Sheet.', 'Choose period bounds, toggle Compare or Monthly/Quarterly columns, or switch Basis to Cash.', 'Click any row balance to open DrillDownModal and inspect the exact posted lines.'],
+    stepsHe: ['פתחו דוחות ובחרו רווח והפסד או מאזן.', 'הגדירו טווח תאריכים, השוואה לתקופה קודמת או בסיס דיווח (מצטבר / מזומן).', 'לחצו על כל סכום לצפייה בפירוט התנועות המרכיבות אותו.'],
+  },
+  {
+    id: 'howto-13-israel-month-vat',
+    screenId: 'reports',
+    target: { tab: 'reports', sub: 'israel-month-journey' },
+    category: 'Tax Calculation',
+    titleEn: 'Review an Israeli VAT month and PCN874 draft',
+    titleHe: 'בדיקת חודש מע״מ בישראל וטיוטת PCN874',
+    summaryEn: 'Check allocation numbers, taxable/input VAT boxes, and historical draft outputs before accountant review.',
+    summaryHe: 'בדיקת מספרי הקצאה, עסקאות ותשומות מע״מ וטיוטת PCN874 לבקרת רואה חשבון.',
+    stepsEn: ['Configure your Israeli VAT registration in Settings -> Tax profiles.', 'Verify taxable sales, zero-rated exports/Eilat lines, fixed-asset inputs, and missing allocation numbers.', 'Inspect Reports -> Israel Month Journey and export calculation worksheets for your accountant.'],
+    stepsHe: ['הגדירו מספר עוסק בפרופילי המס תחת הגדרות.', 'בדקו עסקאות חייבות, עסקאות בשיעור אפס, תשומות ציוד ומספרי הקצאה.', 'עברו על מסלול החודש הישראלי בדוחות וייצאו גיליון בדיקה לרואה החשבון.'],
+    limitNoteEn: 'Calculation and draft review only — not direct electronic filing with the Israel Tax Authority.',
+    limitNoteHe: 'חישוב וטיוטת בקרה בלבד — אינו מהווה שידור ישיר לרשות המסים.',
+  },
+  {
+    id: 'howto-14-us-quarter-sales-tax-1099',
+    screenId: 'reports',
+    target: { tab: 'reports', sub: 'us-quarter-journey' },
+    category: 'Tax Calculation',
+    titleEn: 'Review a US quarter: state sales tax and 1099 readiness',
+    titleHe: 'בדיקת רבעון בארה״ב: מס מכירות מדינתי והיערכות ל-1099',
+    summaryEn: 'Check state permits, taxable vs. exempt sales, W-9 completeness, and yearly 1099 thresholds.',
+    summaryHe: 'בדיקת רישום מס לפי מדינה, עסקאות חייבות ופטורות, טופסי W-9 ותקרות דיווח 1099.',
+    stepsEn: ['Add state permits and EIN details in Settings -> Tax profiles.', 'Review state return summaries and customer exemption certificates in Reports.', 'Open Vendor 1099 Readiness and US Quarter Journey before locking the quarter.'],
+    stepsHe: ['הגדירו רישומי מס מדינתיים ו-EIN בהגדרות פרופילי מס.', 'בדקו סיכומי מס מכירות ותעודות פטור של לקוחות בדוחות.', 'פתחו דוח מוכנות 1099 ומסלול רבעון ארה״ב לפני סגירת הרבעון.'],
+    limitNoteEn: 'Calculation preview only — confirm W-9s and state local rates before external filing.',
+    limitNoteHe: 'תצוגת חישוב מקדימה בלבד — יש לאמת נתוני W-9 ושיעורי מס מקומיים לפני דיווח.',
+  },
+  {
+    id: 'howto-15-month-end-close-reopen',
+    screenId: 'forensics',
+    target: { tab: 'month-end-close' },
+    category: 'Controls',
+    titleEn: 'Close a month with workpapers or reopen with audit reason',
+    titleHe: 'סגירת חודש עם ניירות עבודה ופתיחה מחדש מתועדת',
+    summaryEn: 'Attach account workpapers, compare prior periods, seal the lock date, and log any reopen reason.',
+    summaryHe: 'צירוף ניירות עבודה לחשבונות, השוואה לתקופה קודמת, נעילת תאריך ותיעוד פתיחה מחדש.',
+    stepsEn: ['Open Month-End Close, review variance flags against last month, and attach account workpapers.', 'Set the close date so backdated postings into sealed months are refused.', 'If an adjustment requires reopening, provide an explicit audit reason that stays in the Audit Trail.'],
+    stepsHe: ['פתחו סגירת חודש, בדקו חריגות מול חודש קודם וצרפו ניירות עבודה.', 'הגדירו תאריך נעילה כך שרישום רטרואקטיבי ייחסם.', 'במידת הצורך בפתיחה מחדש, הזינו נימוק מלא המתועד ביומן הביקורת.'],
+  },
+  {
+    id: 'howto-16-backup-restore',
+    screenId: 'settings',
+    target: { tab: 'settings', sub: 'export' },
+    category: 'Controls',
+    titleEn: 'Export and verify a full JSON backup before changes',
+    titleHe: 'ייצוא ואימות גיבוי JSON מלא לפני שינויים',
+    summaryEn: 'Download a SHA-256 checksummed snapshot of accounts, entries, invoices, and settings.',
+    summaryHe: 'הורדת קובץ גיבוי מלא החתום בחתימת SHA-256 של כל החשבונות, הפקודות והמסמכים.',
+    stepsEn: ['Go to Settings -> Backup & Export and click Export JSON Backup.', 'Keep the dated JSON archive before bulk imports or structural account edits.', 'When restoring, LedgerFlow verifies schema version and SHA-256 checksum before sending the snapshot.'],
+    stepsHe: ['עברו להגדרות -> גיבוי וייצוא ולחצו על ייצוא גיבוי JSON.', 'שמרו את הקובץ המתוארך לפני ייבוא נתונים רחב או שינויי מבנה.', 'בעת שחזור המערכת מאמתת את מבנה הקובץ וחתימת SHA-256 לפני הביצוע.'],
+  },
+  {
+    id: 'howto-17-group-consolidation',
+    screenId: 'reports',
+    target: { tab: 'reports', sub: 'group-summary' },
+    category: 'Reports',
+    titleEn: 'Consolidate multiple books in Group Summary and export CSV',
+    titleHe: 'איחוד מספר מערכות ספרים בדוח קבוצה וייצוא ל-CSV',
+    summaryEn: 'View subsidiary books side by side, translate currencies, eliminate intercompany balances, and download CSV.',
+    summaryHe: 'הצגת חברות הקבוצה זו לצד זו, תרגום מטבעות, ביטול יתרות פנימיות וייצוא ל-CSV.',
+    stepsEn: ['Create a group of books in Settings -> Groups of books and set ownership percentages.', 'Open Reports -> Group Summary, enter or fill period FX rates if currencies differ, and inspect eliminations.', 'Click Export CSV to download member figures, group totals, and eliminated lines matching the screen.'],
+    stepsHe: ['הגדירו קבוצת ספרים תחת הגדרות -> קבוצות חברות ואחוזי החזקה.', 'פתחו דוחות -> סיכום קבוצה, הזינו שערי חליפין במידת הצורך ובדקו ביטולים פנימיים.', 'לחצו על ייצוא CSV להורדת הנתונים המדויקים המוצגים על המסך.'],
+  },
+  {
+    id: 'howto-18-inline-edit-shortcuts-pins',
+    screenId: 'settings',
+    target: { tab: 'settings', sub: 'shortcuts' },
+    category: 'Productivity',
+    titleEn: 'Edit fields in place, pin pages, and use keyboard shortcuts',
+    titleHe: 'עריכה ישירה במקום, נעיצת מסכים וקיצורי מקלדת',
+    summaryEn: 'Save edits with Enter, cancel with Esc, pin frequent screens to Alt+1..9, and press ? for all shortcuts.',
+    summaryHe: 'שמירה ב-Enter, ביטול ב-Esc, נעיצת דפים נפוצים ל-Alt+1..9 ולחיצה על ? לכל הקיצורים.',
+    stepsEn: ['Click any editable text field on lists to update it directly; press Enter to save or Esc to cancel.', 'Press Alt+P to pin the current page or configure custom speed dials in Settings -> Shortcuts.', 'Press ? anywhere outside text fields to inspect global and screen-specific shortcuts.'],
+    stepsHe: ['לחצו על שדה טקסט ברשימה לעריכה במקום; Enter לשמירה או Esc לביטול.', 'לחצו Alt+P לנעיצת המסך הנוכחי או הגדירו חיוג מהיר בהגדרות -> קיצורים.', 'לחצו על ? בכל מסך להצגת רשימת קיצורי המקלדת המלאה.'],
+  },
+  {
+    id: 'howto-19-print-light-report-packs',
+    screenId: 'reports',
+    target: { tab: 'reports' },
+    category: 'Reports',
+    titleEn: 'Print clean light-mode PDFs and client report packs',
+    titleHe: 'הדפסת דוחות וחבילות PDF על רקע בהיר גם במצב כהה',
+    summaryEn: 'Generate numbered multi-report client packs that always print crisp dark ink on white paper.',
+    summaryHe: 'הפקת חבילת דוחות ממוספרת להדפסה או PDF הנדפסת תמיד על רקע לבן וברור.',
+    stepsEn: ['Open Reports and choose Report Pack to bundle Cover Page, P&L, Balance Sheet, and Aging reports.', 'Use Print / Save as PDF — dark theme is automatically overridden to crisp white paper in print media.', 'Save custom column templates for recurring monthly CSV exports.'],
+    stepsHe: ['פתחו דוחות ובחרו בחבילת דוחות לאיחוד שער, רווח והפסד, מאזן וגיול חובות.', 'הדפיסו או שמרו ל-PDF — ערכת הנושא הכהה מוחלפת אוטומטית לרקע לבן ודיו כהה בהדפסה.', 'שמרו תבניות עמודות קבועות לייצוא CSV חודשי חוזר.'],
+  },
+  {
+    id: 'howto-20-demo-books-and-reset',
+    screenId: 'help',
+    target: { tab: 'help' },
+    category: 'Onboarding',
+    titleEn: 'Try Israel or US sample books and reset demo data safely',
+    titleHe: 'התנסות בחברת דמו (ישראל או ארה״ב) ואיפוס נתוני בדיקה',
+    summaryEn: 'Explore a full year of synthetic ILS or USD bookkeeping in guest mode without touching real workspaces.',
+    summaryHe: 'טעינת שנת פעילות מלאה בש״ח או בדולר במצב אורח מבלי לגעת בספרים אמיתיים.',
+    stepsEn: ['Open Help & Guide -> First month & demo while browsing as an unsigned guest.', 'Switch between the Israel (ILS, EN/HE) and United States (USD) synthetic 2025 companies.', 'Click Reset to starter demo or Clear to empty books anytime during testing.'],
+    stepsHe: ['פתחו עזרה ומדריכים -> חודש ראשון ודמו במצב אורח ללא התחברות.', 'עברו בין חברת הדמו הישראלית (ש״ח, עברית/אנגלית) לחברת הדמו האמריקאית (דולר).', 'לחצו על איפוס לדמו התחלתי או ניקוי מלא בכל שלב במהלך הבדיקות.'],
+  },
+];
+
+export function normalizeHelpQuery(query: string): string {
+  return query.trim().toLocaleLowerCase();
+}
+
+export function findScreenHelpDoc(activeTab: string): ScreenHelpDoc {
+  return (
+    SCREEN_HELP_DOCS.find(doc => doc.screenIds.includes(activeTab)) ||
+    SCREEN_HELP_DOCS[0]
+  );
+}
+
+export function articlesForScreen(activeTab: string): HowToArticle[] {
+  const direct = HOW_TO_ARTICLES.filter(article => article.screenId === activeTab);
+  return direct.length > 0 ? direct : HOW_TO_ARTICLES.slice(0, 3);
+}
+
+/** G-11: Bilingual search across all 20 EN/HE how-to articles AND screen help docs. */
+export function searchHowToArticles(
+  query: string,
+  category = 'All',
+): HowToArticle[] {
+  const normalized = normalizeHelpQuery(query);
+  return HOW_TO_ARTICLES.filter(article => {
+    if (category !== 'All' && article.category !== category) return false;
+    if (!normalized) return true;
+    const haystack = [
+      article.titleEn,
+      article.titleHe,
+      article.summaryEn,
+      article.summaryHe,
+      article.category,
+      article.screenId,
+      article.limitNoteEn || '',
+      article.limitNoteHe || '',
+      ...article.stepsEn,
+      ...article.stepsHe,
+    ]
+      .join(' ')
+      .toLocaleLowerCase();
+    return haystack.includes(normalized);
+  });
+}
