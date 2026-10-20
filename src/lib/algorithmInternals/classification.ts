@@ -98,8 +98,13 @@ export class BayesianClassifier {
    * to immediately learn and self-calibrate faster.
    * SECURITY: Bounds inputs to prevent algorithmic poisoning and out-of-memory errors.
    */
+  private isSafeObjectKey(key: string): boolean {
+    return key !== '__proto__' && key !== 'constructor' && key !== 'prototype';
+  }
+
   train(description: string, category: string, weight = 1.0) {
     if (!description || !category) return;
+    if (!this.isSafeObjectKey(category)) return;
 
     // Bounds and safety limits
     if (description.length > 500) {
@@ -121,6 +126,10 @@ export class BayesianClassifier {
     if (category.includes('>')) segments = category.split('>').map(s => s.trim()).filter(Boolean);
     else if (category.includes('/')) segments = category.split('/').map(s => s.trim()).filter(Boolean);
     else if (category.includes(':')) segments = category.split(':').map(s => s.trim()).filter(Boolean);
+
+    if (segments.length > 0 && segments.some(segment => !this.isSafeObjectKey(segment))) {
+      return;
+    }
 
     if (segments.length > 1) {
       let cumulative = segments[0];
