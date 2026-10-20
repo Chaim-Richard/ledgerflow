@@ -13,6 +13,7 @@ import { lockMessage, postingLock } from '../../../lib/periodLock';
 import { errorMessage, HttpError, requestUser } from '../../auth/requestUser';
 import { formatTzDate } from './helpers';
 import { refusedLabels, refusedLabelsMessage } from '../../../lib/requiredLabels';
+import { revaluationEntryLock } from '../../services/stockRevaluationService';
 
 /** Reversing an entry and intercompany transfers. Part of /api/v1/transactions (F-06), registered in the original order. */
 export function registerReverseRoutes(transactionRouter: express.Router): void {
@@ -72,6 +73,8 @@ export function registerReverseRoutes(transactionRouter: express.Router): void {
         if (origData.type === 'reversal') {
           throw new HttpError(`Cannot reverse a transaction that is already a reversal.`, 400);
         }
+        const revaluation = revaluationEntryLock(origData as never); // ISS-130
+        if (revaluation) throw new HttpError(revaluation, 409);
 
         // Status lock check on original
         if ((origData.status === 'certified' || origData.status === 'void') && !user.admin) {

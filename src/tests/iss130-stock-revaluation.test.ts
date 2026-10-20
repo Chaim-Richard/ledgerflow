@@ -47,6 +47,7 @@ describe('Stock revaluation', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, 
     process.env.DATABASE_URL = url;
     const express = (await import('express')).default;
     const { inventoryRouter } = await import('../server/routes/inventoryRoutes');
+    const { transactionRouter } = await import('../server/routes/transactionRoutes');
     const { getDb } = await import('../server/db/firestore');
     db = getDb();
     await db.collection('workspaces').doc(ws).set({ uid: 'owner', name: 'Reval Co', currency: 'USD', members: ['owner', 'acct', 'book', 'view'], roles: { acct: 'accountant', book: 'bookkeeper', view: 'viewer' } });
@@ -55,16 +56,22 @@ describe('Stock revaluation', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, 
     await account('inv', { type: 'asset', category: 'Inventory', code: '1300', name: 'Inventory' });
     await account('equity', { type: 'equity', category: 'Equity', code: '3900', name: 'Opening Balance Equity' });
     await account('reval', { type: 'expense', category: 'COGS', code: '5150', name: 'Inventory revaluation' });
+    await account('bank', { type: 'asset', category: 'Bank', code: '1000', name: 'Checking' });
+    await account('inv2', { type: 'asset', category: 'Inventory', code: '1310', name: 'Inventory 2' });
     const put = (name: string, fields: Record<string, unknown>) => db.collection('inventory').doc(id(name)).set({ workspaceId: ws, name, sku: name.toUpperCase(), unitPriceCents: 2_000, reorderPoint: 0, ...fields });
     await put('widgets', { quantityAtHand: 0, unitCostCents: 1_000 });
     await put('gears', { quantityAtHand: 3, unitCostCents: 333 });
     await put('rods', { quantityAtHand: 2.5, unitCostCents: 1_000 });
     await put('empty', { quantityAtHand: 0, unitCostCents: 500 });
+    await put('bolts', { quantityAtHand: 4, unitCostCents: 1_000 });
+    await put('dust', { quantityAtHand: 0.1, unitCostCents: 100 });
+    await put('short', { quantityAtHand: -2, unitCostCents: 700 });
     await db.collection('inventory').doc(`${other}_item`).set({ workspaceId: other, name: 'theirs', quantityAtHand: 3, unitCostCents: 100 });
     const app = express();
     app.use(express.json());
     app.use((req, _res, next) => { (req as unknown as { user: { uid: string } }).user = { uid: String(req.header('x-test-uid')) }; next(); });
     app.use('/api/v1/inventory', inventoryRouter);
+    app.use('/api/v1/transactions', transactionRouter);
     server = app.listen(0);
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   });
@@ -135,5 +142,53 @@ describe('Stock revaluation', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, 
     const locked = await revalue('owner', { itemId: id('rods'), newUnitCostCents: 900, date: '2026-06-15' });
     assert.notEqual(locked.status, 200, 'a locked period takes no revaluation');
     assert.equal((await item('rods'))?.unitCostCents, 1_001, 'nothing changed by the refused calls');
+  });
+
+  // ---- #259 review ----
+  test('refused: an offset that is cash or Inventory, a stock leg that is not Inventory, a date after today', async () => {
+    const bad = async (body: Record<string, unknown>) => (await (await revalue('owner', { itemId: id('bolts'), newUnitCostCents: 1_100, ...body })).json()).error as string;
+    assert.match(await bad({ offsetAccountId: id('bank') }), /cannot go to a bank or cash account/);
+    assert.match(await bad({ offsetAccountId: id('inv2') }), /cannot go to an Inventory account/);
+    assert.match(await bad({ inventoryAccountId: id('equity') }), /is not an Inventory account/);
+    assert.match(await bad({ date: '2099-01-01' }), /cannot be dated after today/);
+    assert.equal((await item('bolts'))?.unitCostCents, 1_000, 'nothing changed');
+  });
+
+  test('refused: a date before a later stock change of the item (today\'s quantity would be posted on an old date)', async () => {
+    // widgets were opened on 2026-07-10: a revaluation dated 2026-07-01 would revalue units not yet there
+    const res = await revalue('owner', { itemId: id('widgets'), newUnitCostCents: 1_300, date: '2026-07-01' });
+    assert.equal(res.status, 400);
+    assert.match((await res.json()).error, /stock changed on 2026-07-10, after 2026-07-01/);
+  });
+
+  test('refused: a change worth less than a cent (0.1 unit from 1.00 to 1.01) — nothing changes, so a retry is the same answer', async () => {
+    const requestId = `dust-${crypto.randomBytes(6).toString('hex')}`;
+    const first = await revalue('owner', { itemId: id('dust'), newUnitCostCents: 101, requestId });
+    assert.equal(first.status, 400);
+    assert.match((await first.json()).error, /less than a cent/);
+    assert.equal((await item('dust'))?.unitCostCents, 100);
+    assert.equal((await revalue('owner', { itemId: id('dust'), newUnitCostCents: 101, requestId })).status, 400);
+  });
+
+  test('stock below zero has no value to revalue: refused here, its cost stays editable on the item', async () => {
+    const res = await revalue('owner', { itemId: id('short'), newUnitCostCents: 800 });
+    assert.equal(res.status, 400);
+    assert.match((await res.json()).error, /no stock on hand/);
+  });
+
+  test('a revaluation entry cannot be edited, voided, deleted or reversed through the generic paths', async () => {
+    const reval = (await entries()).find(e => e.metadata?.type === 'stock-revaluation')!;
+    const send = (method: string, path: string, body?: unknown) => fetch(`${base}/api/v1/transactions${path}`, { method, headers: { 'Content-Type': 'application/json', 'x-test-uid': 'owner' }, ...(body ? { body: JSON.stringify(body) } : {}) });
+    const voided = await send('PUT', `/${reval.id}`, { partialUpdate: { status: 'void' } });
+    assert.equal(voided.status, 400);
+    assert.match((await voided.json()).error, /This entry is a stock revaluation of \w+\. To undo it, revalue/);
+    const edited = await send('PUT', `/${reval.id}`, { transaction: { ...reval, description: 'changed' } });
+    assert.match((await edited.json()).error || '', /stock revaluation/);
+    const deleted = await send('DELETE', `/${reval.id}?workspaceId=${ws}`);
+    assert.ok([403, 409].includes(deleted.status), 'refused (a posted entry is never deleted; a revaluation is refused too)');
+    const reversed = await send('POST', `/${reval.id}/reverse`, { workspaceId: ws, reversalDate: '2026-07-31', reason: 'undo' });
+    assert.equal(reversed.status, 409);
+    const still = (await db.collection('transactions').doc(reval.id).get()).data();
+    assert.deepEqual([still?.status, still?.reversalEventId, still?.description], ['approved', undefined, reval.description]);
   });
 });

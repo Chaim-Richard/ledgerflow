@@ -64,3 +64,24 @@ With the trigger dropped, the rule test fails ("expected to be refused, but it s
 paths, which the trigger does not restrict.
 
 Release gate: W13. Cost edits on stock in hand now reach the books; W13 stays Partly (DIM-2, full stock journey).
+
+## #259 review (8 findings)
+
+Each fix has a test, in `iss130-stock-revaluation.test.ts` (13/13 with the dialog test) or `rls.test.sql`.
+
+1. **Account roles.** The stock leg must be an Inventory account. The difference may go to neither an Inventory account
+   nor a bank/cash account.
+2. **Backdated.** A revaluation may not be dated before a later stock change of the item, because today's quantity would
+   be posted on an old date. Example: widgets opened on 10 Jul cannot be revalued on 1 Jul.
+3. **Future date.** A revaluation dated after today is refused, because the new cost applies from now.
+4. **Less than a cent.** 0.1 unit going from 1.00 to 1.01 moves the value by under a cent. It is refused and nothing
+   changes, so a retry gets the same answer and no cost changes without an entry.
+5. **Generic paths.** A revaluation entry cannot be edited, voided, deleted or reversed through the generic transaction
+   paths. Touches outside the stock files: one guard call each in `crudRoutes.ts` (PUT, partial status change, DELETE)
+   and `reverseRoutes.ts`. The guard itself is `revaluationEntryLock` in `stockRevaluationService.ts`. The undo is a
+   revaluation back to the earlier cost.
+6. **Workspace switch.** A revaluation draft is cleared when the workspace changes.
+7. **Item form.** The item form stays open under the revaluation dialog, so unsaved edits are kept.
+8. **Stock below zero** has no value on the books. Its cost stays editable in the browser: the migration and the screen
+   now lock the cost only when `quantityAtHand > 0`. The revaluation refuses it, consistently.
+   - RLS case: an item at −2 can have its cost set. The migration is not applied yet, so the file was changed in place.

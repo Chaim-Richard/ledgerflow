@@ -1,4 +1,5 @@
 import express from 'express';
+import { revaluationEntryLock } from '../../services/stockRevaluationService';
 import { ledgerCreate } from '../../services/ledgerDoor';
 import { FieldValue } from '../../db/firestore';
 import { TransactionValidator } from '../../../kernel/validation/TransactionValidator';
@@ -236,6 +237,8 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
              throw new Error(`Forbidden: Transaction status is locked (${txData?.status}).`);
            }
          
+           const revaluation = partialUpdate.status !== undefined ? revaluationEntryLock(txData) : null; // ISS-130
+           if (revaluation) throw new Error(revaluation);
            if (partialUpdate.lines !== undefined || partialUpdate.amountCents !== undefined || partialUpdate.totalAmountCents !== undefined || partialUpdate.workspaceId !== undefined || partialUpdate.date !== undefined || partialUpdate.uid !== undefined) {
              throw new Error('Restricted fields cannot be modified via partialUpdate. Use a full transaction update instead.');
            }
@@ -303,6 +306,8 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
         }
 
         if (doc.data()?.workspaceId !== transaction.workspaceId) throw new Error('Workspace mismatch');
+        const revaluation = revaluationEntryLock(doc.data()); // ISS-130
+        if (revaluation) throw new Error(revaluation);
         if ((doc.data()?.status === 'certified' || doc.data()?.status === 'void' || doc.data()?.isCleared === true) && !user.admin) {
           throw new Error('Cannot modify certified, cleared, or voided transactions');
         }
@@ -373,6 +378,8 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
 
       const lock = data?.date ? postingLock(data.date, wsData, user.uid) : null;
       if (lock) return res.status(400).json({ error: lockMessage(data?.date, lock) });
+      const revaluation = revaluationEntryLock(data); // ISS-130
+      if (revaluation) return res.status(409).json({ error: revaluation });
 
       if ((data?.status === 'certified' || data?.status === 'void' || data?.isCleared === true) && !user.admin) {
         return res.status(403).json({ error: `Forbidden: Transaction status is audited, cleared, or locked (${data?.status}). Destructive actions are restricted to administrators.` });
