@@ -84,7 +84,7 @@ export function pdfTextRuns(pdf: Buffer): string[] {
     // Chromium may write simple-font ASCII as literal strings, while Hebrew is
     // encoded using a composite font's hex glyphs. Both are valid text operators.
     const strings = /<[0-9a-fA-F\s]*>|\((?:\\[\s\S]|[^\\()])*\)/g;
-    for (const op of content.matchAll(/\/(F\d+)\s+[-\d.]+\s+Tf|\[((?:\((?:\\[\s\S]|[^\\()])*\)|[^\]])*)\]\s*TJ|(<[0-9a-fA-F\s]*>|\((?:\\[\s\S]|[^\\()])*\))\s*Tj/g)) {
+    for (const op of content.matchAll(/\/(F\d+)\s+[-\d.]+\s+Tf|\[((?:\((?:\\[\s\S]|[^\\()])*\)|[^\]()])*)\]\s*TJ|(<[0-9a-fA-F\s]*>|\((?:\\[\s\S]|[^\\()])*\))\s*Tj/g)) {
       if (op[1]) { font = fontMaps.get(op[1]); continue; }
       const encoded = op[2] !== undefined ? [...op[2].matchAll(strings)].map(match => match[0]) : [op[3]];
       let run = '';
