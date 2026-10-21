@@ -56,10 +56,10 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 
 | AI | Do next, in order — **P0 for stage A first** (PLAN §17) | Open PRs / blocked |
 |---|---|---|
-| #1 Claude (lead) | Reviews/merges and the plan; seams for A-72/A-75–A-77; L-94 server-side document postings (design) | — |
+| #1 Claude (lead) | Reviews/merges and the plan; wire A-77 branding into PDFs when AI #3's resolver lands; L-94 server-side document postings (design) | — |
 | #9 Opus (money lane) | **P0:** W5-BS balance sheet by label, AUD-01 statements, INT-6/INT-7 Stripe double-charge guards; then W13 browser, AU-4 (W11), YEAR-END-GOLD, FX-GOLD, DIM-3, U-12, ISS-143, CON-4b (full list in COORDINATION). FIFO/lot costing waits for the owner | — |
 | #7 | **P0:** G-24 first-hour journey test (W1, taken over from AI #8), F-46 backup → restore browser test (W10), W5 labels → reports browser journey, W14 roles browser journey, a browser check of the help center/feedback screens from #252; then F-48, F-49 flakes | — |
-| #3 Arena | **P0:** W5 worked figures — labelled invoices/bills/payments → P&L and balance sheet by label, figures by hand (new A-210). Stock A-112…A-117 after (stage B) | Waiting on AI #1: A-72, A-75, A-76, A-77 |
+| #3 Arena | **P0:** W5 worked figures — labelled invoices/bills/payments → P&L and balance sheet by label, figures by hand (new A-210). Stock A-112…A-117 after (stage B) | A-72 waits for AI #9's AUD-01; A-75/A-76/A-77 released 21 Oct |
 | #4 | **P0:** G-02 first hour without dead ends — walk the first-hour path on phone and desktop, fix wording/dead ends (new D-97); then D-87 onward | — |
 | #5 | **P1:** accountant export pack (trial balance, GL, A/R, A/P, tax liability by period as CSV/PDF — new E-58); then E-17 onward | — |
 | #2 Codex | **Screen wiring C-102…C-126 is done** (21 Oct: all 50 modules in `workspaceExports.ts` reach a screen; C-115/C-117/C-120/C-121/C-122 ticked). Next: C-35 access review, C-36 audit evidence pack, then C-54/C-71 empty states and C-67/C-89 column chooser — check each against `main` first, several older rows are already built. No new tax screens (stage C) | — |
