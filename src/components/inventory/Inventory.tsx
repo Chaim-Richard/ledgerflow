@@ -60,6 +60,7 @@ import CategoryManagerDialog from './CategoryManagerDialog';
 import { categoryCounts } from '../../lib/itemCategories';
 import { TAX_CATEGORIES, taxCategoryLabel, effectiveTaxCategory } from '../../lib/tax/taxCategories';
 import { isBundle, bundleSummary, type BundlePart } from '../../lib/itemBundles';
+import { parseLocationLevelsJson } from '../../lib/locationLevels';
 import ConsignmentStockPanel from './ConsignmentStockPanel';
 import { isConsignment } from '../../lib/consignmentStock';
 
@@ -172,6 +173,8 @@ export default function Inventory() {
       bundleParts: parseBundleParts(formData.get('bundleParts')),
       // A-34: the consignment mark (empty = ordinary stock)
       consignment: (formData.get('consignment') as string) || undefined,
+      // A-115: minimum/maximum per location (empty = no levels)
+      locationLevels: parseLocationLevelsJson(formData.get('locationLevels')),
     };
 
     try {
@@ -205,6 +208,7 @@ export default function Inventory() {
       productTaxCategory: (formData.get('productTaxCategory') as string) || undefined,
       bundleParts: parseBundleParts(formData.get('bundleParts')),
       consignment: (formData.get('consignment') as string) || undefined,
+      locationLevels: parseLocationLevelsJson(formData.get('locationLevels')),
       createdAt: new Date().toISOString()
     };
 

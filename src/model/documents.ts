@@ -473,6 +473,11 @@ export interface GoodsReceiptItem {
   unitPriceCents: number;
   condition: 'good' | 'damaged' | 'rejected';
   notes?: string;
+  /** A-112: serial numbers recorded for these units when they arrived (traceability only: no stock, cost or posting effect). */
+  serialNumbers?: string[];
+  /** A-112/A-113: the lot (batch) these units came from, and its expiry day (YYYY-MM-DD) when the goods expire. */
+  lotNumber?: string;
+  lotExpiryDate?: string;
 }
 
 export interface GoodsReceipt {

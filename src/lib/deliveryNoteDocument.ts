@@ -15,7 +15,7 @@ export type DeliveryNoteLanguage = 'en' | 'he';
 
 export const DELIVERY_NOTE_LANGUAGES: DeliveryNoteLanguage[] = ['en', 'he'];
 
-export type DeliveryNoteLabels = Record<'title' | 'number' | 'date' | 'customer' | 'order' | 'customerReference' | 'item' | 'quantity' | 'unitPrice' | 'amount' | 'total' | 'receivedBy' | 'receivedDate' | 'noPrices', string>;
+export type DeliveryNoteLabels = Record<'title' | 'number' | 'date' | 'customer' | 'order' | 'customerReference' | 'item' | 'quantity' | 'unitPrice' | 'amount' | 'total' | 'receivedBy' | 'receivedDate' | 'noPrices' | 'serials' | 'lot', string>;
 
 export const DELIVERY_NOTE_LABELS: Record<DeliveryNoteLanguage, DeliveryNoteLabels> = {
   en: {
@@ -33,6 +33,8 @@ export const DELIVERY_NOTE_LABELS: Record<DeliveryNoteLanguage, DeliveryNoteLabe
     receivedBy: 'Received by (name and signature)',
     receivedDate: 'Date received',
     noPrices: 'Goods only; prices are on the invoice.',
+    serials: 'Serials',
+    lot: 'Lot',
   },
   he: {
     title: 'תעודת משלוח',
@@ -49,6 +51,8 @@ export const DELIVERY_NOTE_LABELS: Record<DeliveryNoteLanguage, DeliveryNoteLabe
     receivedBy: 'התקבל על ידי (שם וחתימה)',
     receivedDate: 'תאריך קבלה',
     noPrices: 'סחורה בלבד; המחירים מופיעים בחשבונית.',
+    serials: 'מספרים סידוריים',
+    lot: 'סידרה',
   },
 };
 
@@ -82,6 +86,9 @@ export interface DeliveryNoteOrderLine {
   description?: string;
   unitPriceCents?: number;
   measurementUnit?: string;
+  /** A-112: the serials and lot this source line recorded (invoice lines only); printed when present */
+  serialNumbers?: string[];
+  lotNumber?: string;
 }
 
 export interface DeliveryNoteOrder {
@@ -101,6 +108,9 @@ export interface DeliveryNoteRow {
   /** shown only when the note carries prices */
   unitPriceCents?: number;
   amountCents?: number;
+  /** A-112: the source line's recorded serials (joined) and lot; absent when none were recorded */
+  serials?: string;
+  lot?: string;
 }
 
 export interface DeliveryNoteDocument {
@@ -134,8 +144,9 @@ export interface DeliveryNoteInput {
 /**
  * The delivery note for one delivery of an order, or null when the delivery has no lines on that
  * order. Only the quantities the delivery recorded are shown (never the order's full quantity), in
- * the order's own line order. Serial numbers are not printed: a delivery line does not record
- * which units left, so the note would have to guess.
+ * the order's own line order. Serials and the lot print only as the source line recorded them:
+ * an invoice line's recorded numbers print, while order and delivery lines record none and print
+ * none — nothing is ever guessed.
  */
 export function buildDeliveryNote(input: DeliveryNoteInput): DeliveryNoteDocument | null {
   const { order, delivery } = input;
@@ -158,6 +169,12 @@ export function buildDeliveryNote(input: DeliveryNoteInput): DeliveryNoteDocumen
       row.unitPriceCents = unitPriceCents;
       row.amountCents = Math.round(unitPriceCents * l.quantity);
     }
+    // A-112: the source line's recorded serials and lot print as they were recorded; lines that
+    // recorded none (order and delivery lines always) print no column.
+    const serials = (source.serialNumbers || []).map(serial => String(serial ?? '').trim()).filter(serial => serial);
+    if (serials.length) row.serials = clean(serials.join(', '), 200);
+    const lot = String(source.lotNumber ?? '').trim();
+    if (lot) row.lot = clean(lot, 40);
     return row;
   });
   const totalCents = showPrices ? rows.reduce((sum, r) => sum + (r.amountCents || 0), 0) : undefined;
@@ -179,10 +196,13 @@ export function buildDeliveryNote(input: DeliveryNoteInput): DeliveryNoteDocumen
   };
 }
 
-/** The note's columns for the chosen options (prices only when shown). */
-export function deliveryNoteColumns(showPrices: boolean, language: DeliveryNoteLanguage = 'en'): string[] {
+/** The note's columns for the chosen options (prices only when shown; serials/lot only when recorded). */
+export function deliveryNoteColumns(showPrices: boolean, language: DeliveryNoteLanguage = 'en', extra: { serials?: boolean; lot?: boolean } = {}): string[] {
   const labels = DELIVERY_NOTE_LABELS[language];
-  return showPrices
+  const base = showPrices
     ? [labels.item, labels.quantity, labels.unitPrice, labels.amount]
     : [labels.item, labels.quantity];
+  if (extra.serials) base.push(labels.serials);
+  if (extra.lot) base.push(labels.lot);
+  return base;
 }

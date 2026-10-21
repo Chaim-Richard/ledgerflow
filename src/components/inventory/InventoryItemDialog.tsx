@@ -5,7 +5,9 @@ import AsyncButton from '../ui/AsyncButton';
 import { useDialog } from '../../hooks/useDialog';
 import { TAX_CATEGORIES } from '../../lib/tax/taxCategories';
 import { useState, useMemo } from 'react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import { bundlePartChoices, bundleProblem, type BundlePart } from '../../lib/itemBundles';
+import { levelProblem } from '../../lib/locationLevels';
 import { UNITS } from '../../lib/units';
 import { CONSIGNMENT_OPTIONS } from '../../lib/consignmentStock';
 import RecordNotesPanel from '../common/RecordNotesPanel';
@@ -55,6 +57,29 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
     setParts(candidateParts);
     setPartToAdd(''); setPartQuantity('1');
   };
+  // A-115: minimum/maximum per location, held here and written into the form as JSON. The parent
+  // keys this dialog by item id, so switching items gives fresh state without an effect.
+  const dimensionNodes = useLedgerStore(s => s.dimensionNodes || []);
+  const [levelDrafts, setLevelDrafts] = useState<Record<string, { min: string; max: string }>>(() =>
+    Object.fromEntries(Object.entries(editingItem?.locationLevels || {}).map(([id, l]) => [id, { min: String(l.min), max: String(l.max) }])) as Record<string, { min: string; max: string }>);
+  const locationNodes = useMemo(() => {
+    const byId = new Map((dimensionNodes || []).filter(n => n.dimensionId === 'location').map(n => [n.id, n]));
+    const rows = [...byId.values()].filter(n => n.status !== 'archived');
+    for (const id of Object.keys(levelDrafts)) {
+      if (!rows.some(n => n.id === id) && (levelDrafts[id].min.trim() || levelDrafts[id].max.trim())) {
+        rows.push(byId.get(id) || { id, dimensionId: 'location', description: id });
+      }
+    }
+    return rows.sort((a, b) => a.description.localeCompare(b.description, undefined, { sensitivity: 'base' }));
+  }, [dimensionNodes, levelDrafts]);
+  const levelsProblem = locationNodes
+    .map(n => levelProblem(levelDrafts[n.id]?.min || '', levelDrafts[n.id]?.max || ''))
+    .find(Boolean) as string | undefined;
+  const levelsJson = JSON.stringify(Object.fromEntries(locationNodes.flatMap(n => {
+    const draft = levelDrafts[n.id] || { min: '', max: '' };
+    if ((!draft.min.trim() && !draft.max.trim()) || levelProblem(draft.min, draft.max)) return [];
+    return [[n.id, { min: Number(draft.min), max: Number(draft.max) }]];
+  })));
   return (
     <AnimatePresence>
         {open && (
@@ -251,6 +276,32 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                     className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
+                <fieldset className="space-y-2 md:col-span-2">
+                  <legend className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Stock levels per location</legend>
+                  <input type="hidden" name="locationLevels" value={levelsJson} />
+                  {locationNodes.length === 0 && (
+                    <p className="text-[10px] text-[var(--muted)]">No locations yet — add Location values under Settings → Dimensions &amp; Labels first.</p>
+                  )}
+                  {locationNodes.map(node => (
+                    <div key={node.id} className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-semibold min-w-28 flex-1">{node.description}</span>
+                      <label htmlFor={`inv-level-min-${node.id}`} className="sr-only">Minimum at {node.description}</label>
+                      <input id={`inv-level-min-${node.id}`} type="number" min="0" step="1" placeholder="Min"
+                        aria-label={`Minimum at ${node.description}`}
+                        value={levelDrafts[node.id]?.min || ''}
+                        onChange={e => setLevelDrafts(prev => ({ ...prev, [node.id]: { min: e.target.value, max: prev[node.id]?.max || '' } }))}
+                        className="w-24 px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-2xl font-bold text-sm" />
+                      <label htmlFor={`inv-level-max-${node.id}`} className="sr-only">Maximum at {node.description}</label>
+                      <input id={`inv-level-max-${node.id}`} type="number" min="0" step="1" placeholder="Max"
+                        aria-label={`Maximum at ${node.description}`}
+                        value={levelDrafts[node.id]?.max || ''}
+                        onChange={e => setLevelDrafts(prev => ({ ...prev, [node.id]: { min: prev[node.id]?.min || '', max: e.target.value } }))}
+                        className="w-24 px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-2xl font-bold text-sm" />
+                    </div>
+                  ))}
+                  {levelsProblem && <p role="alert" className="text-[10px] text-amber-600">{levelsProblem}</p>}
+                  <p className="text-[10px] text-[var(--muted)]">When a location falls below its minimum, the reorder suggestions offer to top it up to the maximum. Blank leaves the location out; this never moves stock by itself.</p>
+                </fieldset>
                 <div className="space-y-2">
                   <label htmlFor="inv-uom" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">UOM (e.g. pack, kg)</label>
                   <input 

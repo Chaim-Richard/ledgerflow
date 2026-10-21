@@ -5,7 +5,11 @@
  *
  * Display and record only: no cost, quantity or posting changes here. Documents are read, never
  * written, by this module. Pure.
+ *
+ * A-112/A-113: the same rules validate serials, lots and expiry dates typed on a goods receipt
+ * (PurchaseOrdersView's receive-goods dialog writes them onto the receipt's lines).
  */
+import { isIsoDate } from './warehouseRecordUtils';
 
 /** The part of a document line this module reads and writes. */
 export interface SerializedLine {
@@ -137,6 +141,45 @@ export function duplicateSerials(documents: Array<{ id: string; lines?: Serializ
     }
   }
   return [...seen.values()].filter(r => new Set(r.documents).size > 1).sort((a, b) => a.serial.localeCompare(b.serial));
+}
+
+/** Trim the lot as typed; the display keeps the person's own letters. */
+export function normalizeLot(lot: string): string {
+  return String(lot ?? '').trim().replace(/\s+/g, ' ');
+}
+
+/** Why this lot cannot be recorded, in plain words, or null when it can (empty = no lot). */
+export function lotProblem(lot: string): string | null {
+  const clean = normalizeLot(lot);
+  if (!clean) return null;
+  if (clean.length > 40) return 'A lot number can be up to 40 characters.';
+  return null;
+}
+
+/** Why this expiry day cannot be recorded, in plain words, or null (empty = no date). */
+export function lotExpiryProblem(expiry: string): string | null {
+  const clean = String(expiry ?? '').trim();
+  if (!clean) return null;
+  if (!isIsoDate(clean)) return 'Use a real date (YYYY-MM-DD) for the expiry.';
+  return null;
+}
+
+/** Split typed serials (commas or new lines) into clean numbers, dropping blanks. */
+export function parseSerialList(text: string): string[] {
+  return String(text ?? '').split(/[,\n]/).map(normalizeSerial).filter(s => s.length > 0);
+}
+
+/** Why this typed serial list cannot be recorded, in plain words, or null (empty = no serials). */
+export function serialListProblem(text: string): string | null {
+  const serials = parseSerialList(text);
+  const seen = new Set<string>();
+  for (const serial of serials) {
+    if (serial.length > 80) return 'A serial number can be up to 80 characters.';
+    const key = serial.toLocaleLowerCase();
+    if (seen.has(key)) return `"${serial}" is typed twice.`;
+    seen.add(key);
+  }
+  return null;
 }
 
 export const SERIAL_LOOKUP_CSV_HEADERS = ['Serial', 'Document', 'Type', 'Date', 'Line', 'Description', 'Lot'];

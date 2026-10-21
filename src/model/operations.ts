@@ -52,6 +52,8 @@ export interface InventoryItem {
   unitCostCents: number;
   quantityAtHand: number;
   reorderPoint: number;
+  /** A-115: minimum/maximum stock per Location label value, keyed by dimension node id (whole units, max at least min). Feeds the reorder suggestions' by-location mode; the global reorder point is unchanged. */
+  locationLevels?: Record<string, { min: number; max: number }>;
   measurementUnit?: string; // e.g. 'pack', 'kg', 'box'
   unitsPerPackage?: number; // e.g. 100
   /** A-34 (BF-05): consignment mark — 'from-supplier' (theirs, here) or 'at-customer' (ours, elsewhere) */

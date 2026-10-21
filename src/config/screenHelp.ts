@@ -119,6 +119,10 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "As of a day, each item's stock on hand split by how long ago those units came in, the latest units taken to be the ones still there. With its value and the last sale, so slow-moving stock shows first. Read from the stock history the server keeps.",
     "inventory-details":
       "For a period, each item's opening quantity and value, every movement (sold, bought, returned, adjusted, counted, moved) with its entry, and the closing quantity and value. Read from the stock history the server keeps with each change.",
+    "expiring-lots":
+      "Lots received on goods receipts with their expiry dates: how many days each lot has left, flagged expired or expiring soon, with the receipts and vendors. Units recorded with a lot at sale show as a reference only, because how much of a lot is still on hand is not tracked. Record the lot and its expiry while receiving goods on a purchase order.",
+    "stock-transfers":
+      "Every move of stock between locations, newest first, read back from the stock history as the pair the server wrote (moved out, moved in). A half whose pair is not in the loaded history shows on its own with the reason. Moving stock is done from an item's Stock history window; this screen only reports.",
     "by-label":
       "Choose a label (Property, Project, Location…) and a period: the income, costs and result of each of its values, and of the lines without one, account by account. Together the columns add up to the profit and loss of the period. Each figure opens the entries behind it.",
     "ask-books":
@@ -191,7 +195,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     "record-notes":
       "Every note kept on a customer, vendor, item, invoice, bill, estimate, entry or project, with who wrote it and when. Search finds a note by any word in it, its author name or its record; opening a record shows its notes, and a writer adds one there or changes their own. Notes are kept on each record and never change an amount, and a change to a document in a locked period is refused by the period lock like any other change.",
     "serial-lot-lookup":
-      "Search where a serial number has been: the document, the line and the lot it moved with, read from the numbers the documents carry. Below, one item's lots with their dates and units, and the same serial recorded twice for one item, which is a typing mistake to look at. Read-only: nothing is changed here, and recording a serial on a receipt or invoice line happens in that document's own form.",
+      "Search where a serial number has been: the document, the line and the lot it moved with, read from invoice lines and goods receipts. Below, one item's lots with their dates and units, and the same serial recorded twice for one item, which is a typing mistake to look at. Read-only: nothing is changed here; serials are recorded on the goods receipt (Purchase orders → Receive goods) or on the invoice's own form.",
     "cycle-count":
       "Count one place at a time: the sheet lists the items the stock-moves ledger puts there with the expected quantity and each item's own cost, you enter what you counted, and the sheet shows the variance in units and its value. A blank row is never read as zero and a row whose stock history does not explain its quantity is flagged, so the count is not blamed. Marking a sheet ready only records who checked it: posting the adjustment is the Inventory stock count (the server writes the entry and the history), and the count sheet is not saved to the workspace. The Warehouse operations workflow tab adds bins, pick/pack/ship tracking, two-person return authorizations and serial-based warranty dates; those are annotations only, and actual deliveries, stock returns, invoices and credits still use their existing workflows.",
     "registration-threshold-watch":
