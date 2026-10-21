@@ -10,6 +10,12 @@ import { downloadCsv } from '../../lib/csvExport';
 const field = 'min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]';
 const CSV_HEADERS = ['Entity', 'Form', 'Frequency', 'Due', 'Source', 'Status', 'Because', 'Kind'] as const;
 
+/** The year the calendar opens on: the local year today, never a stale hard-coded one. */
+function currentFilingYear(todayIso: string): number {
+  const year = Number(todayIso.slice(0, 4));
+  return Number.isInteger(year) && year >= 2020 && year <= 2099 ? year : 2026;
+}
+
 /**
  * C-115: Entity filings calendar — what each entity owes for a year, and why.
  * Uses composeFacts + filingPack entity-period rules on Dec 31 of the year.
@@ -18,8 +24,8 @@ export default function EntityFilingsCalendarView() {
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const dimensionNodes = useLedgerStore(s => s.dimensionNodes);
   const profiles = useMemo(() => workspace?.taxProfiles || {}, [workspace?.taxProfiles]);
-  const [year, setYear] = useState<number>(2026);
   const [today] = useState(getLocalDateISO());
+  const [year, setYear] = useState<number>(() => currentFilingYear(getLocalDateISO()));
 
   const entities = useMemo(() => {
     const labelKeys = Object.keys(profiles.labels || {});
@@ -28,16 +34,16 @@ export default function EntityFilingsCalendarView() {
     return [...new Set([...labelKeys, ...nodeKeys])];
   }, [profiles.labels, dimensionNodes]);
 
-  const sources = useMemo(() => factSources(profiles), [profiles]);
-
-  // We call entityFilings with entities list (without 'books' — it adds it)
-  const results = useMemo(() => {
+  // We call entityFilings with entities list (without 'books' — it adds it).
+  // Reading the profiles is part of the calculation: one unreadable profile must not blank the
+  // calendar, and a failure is reported as a failure — an empty table never reads as "nothing is due".
+  const { results, error } = useMemo<{ results: ReturnType<typeof entityFilings>; error: string | null }>(() => {
     try {
-      return entityFilings(sources, entities, year);
-    } catch {
-      return [];
+      return { results: entityFilings(factSources(profiles), entities, year), error: null };
+    } catch (e) {
+      return { results: [], error: e instanceof Error ? e.message : String(e) };
     }
-  }, [sources, entities, year]);
+  }, [profiles, entities, year]);
 
   const allRows = useMemo(() => results.flatMap(r =>
     r.due.map(d => ({ entity: r.entity, kind: 'due' as const, form: d.form, frequency: d.frequency, due: d.due, source: d.source, status: d.status, because: d.because.join('; ') }))
@@ -65,13 +71,14 @@ export default function EntityFilingsCalendarView() {
 
     <div className="flex flex-wrap gap-3 items-end p-3 rounded-lg border border-[var(--line)] bg-[var(--surface)]">
       <label className="block text-sm">Year
-        <input type="number" className={field + ' mt-1'} value={year} onChange={e => setYear(Number(e.target.value) || 2026)} min={2020} max={2099} />
+        <input type="number" className={field + ' mt-1'} value={year} onChange={e => setYear(Number(e.target.value) || currentFilingYear(getLocalDateISO()))} min={2020} max={2099} />
       </label>
-      <button type="button" className="min-h-11 px-4 rounded border border-[var(--line)]" onClick={handleCsv}>Export CSV</button>
+      <button type="button" className="min-h-11 px-4 rounded border border-[var(--line)]" onClick={handleCsv} disabled={Boolean(error)}>Export CSV</button>
       <span className="text-xs text-[var(--muted)]">{entities.length} label(s) + the books → {results.length} entity results · {allRows.length} due · {blocked.length} blocked · {undecided.length} undecided</span>
     </div>
 
-    <ReportTableScroll>
+      {error && <p role="alert" className="text-sm text-amber-700">Could not compute the filings for {year}: <bdi>{error}</bdi>. This is a failure to calculate, <b>not</b> an all-clear — do not treat the table as empty because nothing is due.</p>}
+      <ReportTableScroll>
       <table className="w-full text-sm">
         <caption className="text-left font-semibold text-[var(--text)] pb-1">Due filings — rule, form, frequency, due date, source, status and because</caption>
         <thead><tr className="border-b border-[var(--line)] text-xs text-[var(--muted)]">{['Entity', 'Form', 'Frequency', 'Due', 'Source', 'Status', 'Because'].map(h => <th key={h} scope="col" className="text-left py-1 px-2">{h}</th>)}</tr></thead>
@@ -79,7 +86,7 @@ export default function EntityFilingsCalendarView() {
           {allRows.map(r => <tr key={`${r.entity}|${r.form}|${r.due || ''}|${r.frequency || ''}`} className="border-b border-[var(--line)]/50 align-top"><th scope="row" className="text-left font-normal py-1 px-2"><bdi>{r.entity}</bdi></th><td className="py-1 px-2"><bdi>{r.form}</bdi></td><td className="py-1 px-2">{r.frequency || '—'}</td><td className="py-1 px-2 whitespace-nowrap">{r.due || '—'}</td><td className="py-1 px-2"><a href={r.source} target="_blank" rel="noopener noreferrer" className="underline break-all">source</a></td><td className="py-1 px-2">{r.status}</td><td className="py-1 px-2 text-xs max-w-[36ch]">{r.because || '—'}</td></tr>)}
         </tbody>
       </table>
-      {!allRows.length && <p className="text-sm text-[var(--muted)]">No due filing for {year} with the current profiles. Add a place/registration or mark a fact verified in Settings → Facts to see due rows; blocked and undecided are listed below.</p>}
+      {!allRows.length && !error && <p className="text-sm text-[var(--muted)]">No due filing for {year} with the current profiles. Add a place/registration or mark a fact verified in Settings → Facts to see due rows; blocked and undecided are listed below.</p>}
     </ReportTableScroll>
 
     {(blocked.length || undecided.length) ? <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
