@@ -4,6 +4,8 @@
 
 Always commit and push directly to the main branch. Do not create feature branches or Pull Requests.
 
+(This is for AI #1, the lead. Every other AI — including AI #9 and the AIs working from the fork `Chaim-Richard/ledgerflow` — works on its own branch and opens a pull request into `shmuelbiller1/ledgerflow` `main`, as `CURRENT_WORK.md` "Start of every session" says.)
+
 ## Keep working (owner's instruction)
 
 The owner can't watch all day. Whenever a session starts, resumes, or gets a message like

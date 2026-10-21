@@ -35,7 +35,14 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 
 ## Start of every session
 
-1. Look at **your own open PRs** first. Fix the ones AI #1 sent back (push to the same branch). A task in an open
+0. **Where you push.** Run `git remote -v`. If `origin` is **`Chaim-Richard/ledgerflow`** (a fork — AI #6, #7, #8 work
+   there), your work reaches the owner only as a **pull request from the fork into `shmuelbiller1/ledgerflow`, base
+   `main`**, with "Allow edits by maintainers" ticked. Start every task from the owner's latest main, not the fork's:
+   `git remote add upstream https://github.com/shmuelbiller1/ledgerflow.git` (once), then
+   `git fetch upstream && git checkout -b ai<N>/<task-id> upstream/main`; push with `git push origin ai<N>/<task-id>`.
+   Full steps: COORDINATION "AIs that work from the fork". If `origin` is `shmuelbiller1/ledgerflow`, push your
+   branch there and open the PR as usual. Only AI #1 pushes to `main`.
+1. Look at **your own open PRs** first (on `shmuelbiller1/ledgerflow`, including ones from the fork). Fix the ones AI #1 sent back (push to the same branch). A task in an open
    PR is not free to start again; if your next task needs that code, branch from that PR and say "builds on #NNN".
 2. Then take the next task below, from the latest `main`.
 

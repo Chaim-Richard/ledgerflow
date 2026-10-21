@@ -1,5 +1,7 @@
 # Project Architecture and Modification Guide
 
+> **Working from the fork `Chaim-Richard/ledgerflow` (AI #6, #7, #8)?** Branch from `upstream/main` (shmuelbiller1), push to the fork, and open the PR into `shmuelbiller1/ledgerflow` `main` with maintainer edits allowed — steps in [`CURRENT_WORK.md`](CURRENT_WORK.md) "Start of every session", step 0.
+>
 > **Every AI, start here:** read [`CURRENT_WORK.md`](CURRENT_WORK.md) — your next tasks, your open PRs, the rules —
 > then the rules in "NOW" at the top of [`docs/COORDINATION.md`](docs/COORDINATION.md) and your queue there.
 > The plan is [`docs/PLAN.md`](docs/PLAN.md) §15–§16; the finish line is [`docs/RELEASE_GATE.md`](docs/RELEASE_GATE.md)
