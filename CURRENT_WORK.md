@@ -13,8 +13,8 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 
 | Workflow | What is missing | Who |
 |---|---|---|
-| W1 sign-up → first report | worked figures + browser journey (G-24) | AI #7 |
-| W5 labels → reports by label | balance sheet by label (report path) + browser journey | AI #9, then AI #3 / AI #7 |
+| W1 sign-up → first report | browser journey merged (#282, 21 Oct); left: worked figures | AI #7 |
+| W5 labels → reports by label | balance sheet by label merged (#283, 21 Oct); left: AI #3's end-to-end worked check on the real report (A-210) + browser journey (F-50) | AI #3, AI #7 |
 | W10 backup → restore | browser test (F-46) | AI #7 |
 | W14 roles and access | browser journey | AI #7 |
 | G-02 first hour without dead ends | walk-through + fixes (D-97) | AI #4 |
