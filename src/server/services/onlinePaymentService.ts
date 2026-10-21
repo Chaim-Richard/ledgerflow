@@ -5,9 +5,15 @@
  * paid amount and status, and one ledger entry in the home currency. It lands in a "Stripe
  * Clearing" account (Stripe pays out to the bank later, minus its fees). Replays of the same
  * event do nothing; a payment in another currency than the invoice's is not booked.
+ * INT-7: money above what is still due (the invoice was paid by hand meanwhile, or twice online) is never applied
+ * twice: it is the customer's credit, kept in Customer Deposits (created on first use, so A/R never goes below
+ * zero), and the payment is flagged for refund review with a notice to the books' people.
  */
 import type { DocumentData, Firestore } from '../db/firestore';
 import { createPaymentInTransaction } from './paymentService';
+import { notify } from './notificationService';
+import { advanceAccount } from '../../lib/advancePayments';
+import type { ChartAccount } from '../../types';
 import { afterPaymentRecorded } from './afterPayment';
 import { logger } from '../utils/logger';
 import { calculateAmountDue } from '../../lib/documentMath';
@@ -23,7 +29,7 @@ export interface StripeInvoiceSession {
 }
 
 export type OnlinePaymentResult =
-  | { status: 'recorded'; paymentId: string }
+  | { status: 'recorded'; paymentId: string; overpaidCents?: number }
   | { status: 'already_processed' | 'pending' | 'not_found' | 'currency_mismatch' | 'nothing_due' };
 
 /** The workspace's Stripe clearing account, created on first use. */
@@ -45,6 +51,24 @@ async function clearingAccountId(db: Firestore, workspaceId: string): Promise<st
   }
   return id;
 }
+
+/** INT-7: where a customer's overpayment waits — the chart's Customer Deposits account, created on first use. */
+async function ensureCustomerDeposits(db: Firestore, workspaceId: string, mappings?: Record<string, string | undefined>): Promise<void> {
+  const chart = (await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as ChartAccount);
+  if (advanceAccount(chart, 'received', mappings)) return;
+  const id = `${workspaceId}_customer_deposits`;
+  const ref = db.collection('chartAccounts').doc(id);
+  if (!(await ref.get()).exists) {
+    await ref.set({
+      id, uid: 'system', workspaceId, name: 'Customer Deposits', code: '2150', type: 'liability', category: 'Current Liabilities',
+      description: 'Money customers paid before or above an invoice, until it is applied or refunded', isSystem: false,
+      createdAt: new Date().toISOString(),
+    });
+  }
+}
+
+/** A Customer Deposits account was missing when the overpayment was found inside the transaction: try again. */
+class RetryOverpayment extends Error {}
 
 export async function recordStripeInvoicePayment(db: Firestore, eventId: string, eventType: string, session: StripeInvoiceSession): Promise<OnlinePaymentResult> {
   const invoiceId = session.metadata?.invoiceId;
@@ -83,11 +107,22 @@ export async function recordStripeInvoicePayment(db: Firestore, eventId: string,
     return { status: 'nothing_due' };
   }
   const cashAccountId = await clearingAccountId(db, workspaceId);
+  // INT-7: more than is due → its own account first, so the rest never sits on A/R
+  const mappings = workspace.defaultAccountMappings as Record<string, string | undefined> | undefined;
+  if (paidCents > dueCents) await ensureCustomerDeposits(db, workspaceId, mappings);
   const paymentIntent = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
   const today = formatTzDate(new Date(), typeof workspace.timezone === 'string' ? workspace.timezone : 'UTC');
 
-  const result = await db.runTransaction(async (t) => {
+  const run = () => db.runTransaction(async (t) => {
     if ((await t.get(eventRef)).exists) return null;
+    // what is due now, inside the transaction: a payment recorded by hand a moment ago counts
+    const current = (await t.get(invoiceRef)).data() || invoice;
+    const due = calculateAmountDue(current as DocumentData);
+    const overpaidCents = Math.max(0, paidCents - due);
+    if (overpaidCents > 0) {
+      const chart = (await t.get(db.collection('chartAccounts').where('workspaceId', '==', workspaceId))).docs.map(d => ({ ...d.data(), id: d.id }) as ChartAccount);
+      if (!advanceAccount(chart, 'received', mappings)) throw new RetryOverpayment();
+    }
     const payment = await createPaymentInTransaction(db, t, {
       workspaceId,
       uid: 'system',
@@ -100,12 +135,34 @@ export async function recordStripeInvoicePayment(db: Firestore, eventId: string,
       entityName: String(invoice.customerName || ''),
       cashAccountId,
       // anything above what is due stays on the payment as unapplied (a credit for the customer)
-      allocations: dueCents > 0 ? [{ documentId: invoiceRef.id, documentType: 'invoice', amountCents: Math.min(paidCents, dueCents) }] : [],
+      allocations: due > 0 ? [{ documentId: invoiceRef.id, documentType: 'invoice', amountCents: Math.min(paidCents, due) }] : [],
     });
-    t.set(eventRef, { id: eventId, type: eventType, sessionId: session.id, paymentId: payment.paymentId, outcome: 'recorded', workspaceId, invoiceId: invoiceRef.id, amountCents: paidCents, processedAt: new Date().toISOString() });
-    return payment;
+    if (overpaidCents > 0) {
+      t.update(db.collection('payments').doc(payment.paymentId), {
+        refundReview: { status: 'open', overpaidCents, invoiceId: invoiceRef.id, reason: due > 0 ? 'paid_more_than_due' : 'invoice_already_paid', flaggedAt: new Date().toISOString() },
+      });
+    }
+    t.set(eventRef, { id: eventId, type: eventType, sessionId: session.id, paymentId: payment.paymentId, outcome: overpaidCents > 0 ? 'recorded_overpaid' : 'recorded', workspaceId, invoiceId: invoiceRef.id, amountCents: paidCents, ...(overpaidCents > 0 ? { overpaidCents } : {}), processedAt: new Date().toISOString() });
+    return { ...payment, overpaidCents };
   });
+  let result: Awaited<ReturnType<typeof run>>;
+  try {
+    result = await run();
+  } catch (err) {
+    if (!(err instanceof RetryOverpayment)) throw err;
+    // paid by hand between the first read and the transaction: make the deposits account, then once more
+    await ensureCustomerDeposits(db, workspaceId, mappings);
+    result = await run();
+  }
   if (!result) return { status: 'already_processed' };
   await afterPaymentRecorded(db, result.payment);
-  return { status: 'recorded', paymentId: result.paymentId };
+  if (result.overpaidCents > 0) {
+    const money = (cents: number) => `${(cents / 100).toFixed(2)} ${String(invoice.currency || workspace.currency || 'USD').toUpperCase()}`;
+    await notify(db, {
+      workspaceId, kind: 'payment.received', workspace, recordId: result.paymentId, eventKey: `refund-review:${result.paymentId}`,
+      title: `Overpaid online: ${money(result.overpaidCents)} to review for a refund`,
+      message: `${String(invoice.customerName || 'A customer')} paid ${money(paidCents)} online for invoice ${String(invoice.number || invoiceRef.id)}, ${money(result.overpaidCents)} more than was due. It is kept as the customer's credit (Customer Deposits) and was not applied twice; refund it or apply it to another invoice.`,
+    }).catch(err => logger.warn('refund review notice not sent', { workspaceId, paymentId: result?.paymentId, error: err instanceof Error ? err.message : String(err) }));
+  }
+  return { status: 'recorded', paymentId: result.paymentId, ...(result.overpaidCents > 0 ? { overpaidCents: result.overpaidCents } : {}) };
 }
