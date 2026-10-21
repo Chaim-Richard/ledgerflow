@@ -2,7 +2,7 @@ import './helpers/dom';
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
-import { act, cleanup, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import PlaidConnectButton from '../components/finance/PlaidConnectButton';
 import { auth } from '../firebase';
 import { getSupabase } from '../lib/db/client';
@@ -28,6 +28,8 @@ test('an unmounted reconnect never requests a link token after delayed authentic
   globalThis.fetch = async input => { calls.push(String(input)); return new Response('{}'); };
   try {
     const view = render(<PlaidConnectButton bankId="existing-bank" />);
+    assert.equal(tokenRequested, false, 'nothing is requested before the button is pressed');
+    fireEvent.click(screen.getByRole('button', { name: 'Reconnect bank' }));
     assert.equal(tokenRequested, true);
     view.unmount();
     await act(async () => { finish('delayed-token'); });
@@ -43,6 +45,9 @@ test('changing workspace aborts an in-flight link request and requests only the 
     return new Promise<Response>(() => {});
   };
   const view = render(<PlaidConnectButton bankId="existing-bank" />);
+  await act(async () => { await Promise.resolve(); });
+  assert.equal(calls.length, 0, 'no link token (and no Plaid script) until the button is pressed');
+  fireEvent.click(screen.getByRole('button', { name: 'Reconnect bank' }));
   await act(async () => { await Promise.resolve(); });
   assert.equal(calls.length, 1);
   await act(async () => { useAuthStore.setState({ currentWorkspaceId: 'next-workspace' }); });
