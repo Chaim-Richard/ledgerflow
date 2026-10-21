@@ -8,6 +8,7 @@ import { FileText, Printer, Eye, Download } from 'lucide-react';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { Labelled } from '../ui/Labelled';
+import { resolveStatementScope } from '../../lib/statementScope';
 
 export default function StatementView({ startDate: pageStartDate, endDate: pageEndDate }: { startDate?: string; endDate?: string } = {}) {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -26,6 +27,9 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
   const [startDate, setStartDate] = usePageSyncedState(JSON.stringify([pageStartDate, pageEndDate]), pageStartDate || undefined, `${workspaceYearMonth().year}-01-01`);
   const [endDate, setEndDate] = usePageSyncedState(JSON.stringify([pageStartDate, pageEndDate]), pageEndDate || undefined, getLocalDateISO());
   // Follow the Reports page period when it gives one
+  // AUD-01: the period the server JSON and the PDF use too — an empty field is the default, a backwards one is refused
+  const resolved = resolveStatementScope({ startDate, endDate }, getLocalDateISO());
+  const scope = 'scope' in resolved ? resolved.scope : null;
 
   // Default to first contact
   const selectedContact = useMemo(() => {
@@ -36,19 +40,21 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
     }
   }, [type, contactId, customers, vendors]);
 
+  const scopeStart = scope?.startDate;
+  const scopeEnd = scope?.endDate;
   const statementData = useMemo(() => {
-    if (!selectedContact) return null;
+    if (!selectedContact || !scopeStart || !scopeEnd) return null;
     return computeStatement(
       selectedContact,
       invoices,
       bills,
       payments,
-      startDate,
-      endDate,
+      scopeStart,
+      scopeEnd,
       type,
       type === 'customer' ? creditNotes : vendorCredits
     );
-  }, [selectedContact, invoices, bills, payments, creditNotes, vendorCredits, startDate, endDate, type]);
+  }, [selectedContact, invoices, bills, payments, creditNotes, vendorCredits, scopeStart, scopeEnd, type]);
 
   const handlePrint = () => {
     window.print();
@@ -71,7 +77,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
         </div>
 
         <div className="flex items-center gap-2">
-          {selectedContact && (
+          {selectedContact && scope && (
             <>
               <button
                 onClick={() => setIsPreviewOpen(true)}
@@ -81,7 +87,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
                 Preview PDF
               </button>
               <button
-                onClick={() => downloadDocumentPdf('statement', selectedContact.id, currentWorkspaceId || 'default', `statement_${selectedContact.name || selectedContact.id}.pdf`, { startDate, endDate })}
+                onClick={() => downloadDocumentPdf('statement', selectedContact.id, currentWorkspaceId || 'default', `statement_${selectedContact.name || selectedContact.id}.pdf`, scope)}
                 className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
               >
                 <Download className="w-4 h-4" />
@@ -163,8 +169,10 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
         </div>
       </div>
 
+      {'error' in resolved && <p role="status" className="text-xs text-amber-700 dark:text-amber-400 print:hidden">{resolved.error}.</p>}
+
       {/* Printable Statement Canvas */}
-      {!statementData || !selectedContact ? (
+      {'error' in resolved ? null : !statementData || !selectedContact ? (
         <div className="p-12 text-center text-sm text-[var(--muted)]">
           Please select a {type === 'customer' ? 'customer' : 'vendor'} to view statement.
         </div>
@@ -174,7 +182,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
           <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-800 pb-6">
             <div>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">STATEMENT OF ACCOUNT</h2>
-              <p className="text-xs text-[var(--muted)] mt-1">Period: {startDate} to {endDate}</p>
+              <p className="text-xs text-[var(--muted)] mt-1">Period: {statementData.startDate} to {statementData.endDate}</p>
             </div>
             <div className="text-right text-xs space-y-1">
               <div className="font-bold text-slate-900 dark:text-white">{selectedContact.name}</div>
@@ -222,7 +230,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-mono">
                 <tr className="bg-slate-50/50 dark:bg-slate-900/30 font-semibold">
-                  <td className="py-2.5 px-4 text-[var(--muted)]">{startDate}</td>
+                  <td className="py-2.5 px-4 text-[var(--muted)]">{statementData.startDate}</td>
                   <td className="py-2.5 px-4 font-sans italic text-[var(--muted)]" colSpan={4}>Opening Balance Brought Forward</td>
                   <td className="py-2.5 px-4 text-right font-bold text-slate-900 dark:text-white">
                     {formatCurrency(statementData.openingBalanceCents)}
@@ -251,7 +259,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
         </div>
       )}
 
-      {isPreviewOpen && selectedContact && (
+      {isPreviewOpen && selectedContact && scope && (
         <PdfPreviewModal
           isOpen={isPreviewOpen}
           onClose={() => setIsPreviewOpen(false)}
@@ -260,7 +268,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
           documentId={selectedContact.id}
           workspaceId={currentWorkspaceId || 'default'}
           filename={`statement_${selectedContact.name || selectedContact.id}.pdf`}
-          period={{ startDate, endDate }}
+          period={scope}
         />
       )}
     </div>
