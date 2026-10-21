@@ -141,7 +141,8 @@ test('the screen shows A\'s sheet beside the not labelled column, and says when 
   assert.ok(rows.some(t => /^2100 Accounts payable\$33\.34\$20\.00$/.test(t)), rows.join(' | '));
   assert.ok(rows.some(t => /^Total assets\$108\.89$/.test(t)), rows.join(' | '));
   assert.ok(rows.some(t => /^Total liabilities and equity\$88\.89\$20\.00$/.test(t)), rows.join(' | '));
-  assert.match(within(card).getByRole('alert').textContent || '', /does not balance by \$20\.00/);
+  // DIM-3: Property has no role here (informational), so the difference is a note, not an alarm
+  assert.match(within(card).getByRole('status').textContent || '', /does not balance by \$20\.00/);
 });
 
 const url = process.env.LF_TEST_DATABASE_URL;
