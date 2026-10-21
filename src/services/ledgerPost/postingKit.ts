@@ -69,12 +69,21 @@ async function sendToServer(
   // INT-2: the server says this save had already happened (an earlier save of the same posting); the
   // entries built here were not written, so they are not added to the local list either
   if (data.replayed) return;
+  // AUD-15: the entries as the server wrote them (its ids, owner, checks and stamps), not the ones sent; an answer
+  // without that list (a server from before AUD-15, during a deploy) leaves the sent ones as before
+  putWrittenEntries(workspaceId, Array.isArray(data.transactions) ? data.transactions as Transaction[] : (txs as unknown as Transaction[]));
+}
 
-  // the saved entries go into the screen's list at once (this host runs only in the browser)
+/**
+ * The saved entries go into the screen's list at once (this host runs only in the browser): only while the workspace
+ * they were saved in is still open, and by id — an entry the live updates already brought in, or a retried save, is
+ * replaced, never shown twice (BUG-05, AUD-15).
+ */
+function putWrittenEntries(workspaceId: string, written: Transaction[]) {
+  if (written.length === 0 || useAuthStore.getState().currentWorkspaceId !== workspaceId) return;
   const store = useLedgerStore.getState();
-  // BUG-05: replace by id instead of adding again — a retried or replayed save must not show twice
-  const posted = new Set((txs as unknown as Transaction[]).map(tx => tx.id));
-  store.setTransactions([...(txs as unknown as Transaction[]), ...(store.transactions || []).filter(tx => !posted.has(tx.id))]);
+  const posted = new Set(written.map(tx => tx.id));
+  store.setTransactions([...written, ...(store.transactions || []).filter(tx => !posted.has(tx.id))]);
 }
 
 /** POST /api/v1/documents/:type/:id/post: the document only; the entries the server wrote go into the screen's list. */
@@ -92,14 +101,8 @@ async function postDocumentToServer(workspaceId: string, entityMutation: EntityM
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || 'Server rejected the save');
   if (Array.isArray(data.warnings)) data.warnings.forEach((w: unknown) => toast.warning(String(w)));
-  const written = Array.isArray(data.transactions) ? data.transactions as Transaction[] : [];
-  if (data.replayed || written.length === 0) return;
-  // saved in the workspace it was asked in; when another workspace is open by now, its list is not touched
-  if (useAuthStore.getState().currentWorkspaceId !== workspaceId) return;
-  // the entries as the server wrote them, replacing any copy with the same id (BUG-05)
-  const store = useLedgerStore.getState();
-  const posted = new Set(written.map(tx => tx.id));
-  store.setTransactions([...written, ...(store.transactions || []).filter(tx => !posted.has(tx.id))]);
+  if (data.replayed) return;
+  putWrittenEntries(workspaceId, Array.isArray(data.transactions) ? data.transactions as Transaction[] : []);
 }
 
 registerPostingHost({
