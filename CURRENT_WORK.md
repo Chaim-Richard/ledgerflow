@@ -13,7 +13,7 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 
 | Workflow | What is missing | Who |
 |---|---|---|
-| W1 sign-up → first report | browser journey merged (#282, 21 Oct); left: worked figures | AI #7 |
+| W1 sign-up → first report | browser journey merged (#282, 21 Oct); left: worked figures (W1-GOLD) | AI #9 |
 | W5 labels → reports by label | balance sheet by label merged (#283, 21 Oct); left: AI #3's end-to-end worked check on the real report (A-210) + browser journey (F-50) | AI #3, AI #7 |
 | W10 backup → restore | browser test (F-46) | AI #7 |
 | W14 roles and access | browser journey | AI #7 |
@@ -57,7 +57,7 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 | AI | Do next, in order — **P0 for stage A first** (PLAN §17) | Open PRs / blocked |
 |---|---|---|
 | #1 Claude (lead) | Reviews/merges and the plan; wire A-77 branding into PDFs when AI #3's resolver lands; L-94 server-side document postings (design) | — |
-| #9 Opus (money lane) | **P0:** W5-BS balance sheet by label, AUD-01 statements, INT-6/INT-7 Stripe double-charge guards; then W13 browser, AU-4 (W11), YEAR-END-GOLD, FX-GOLD, DIM-3, U-12, ISS-143, CON-4b (full list in COORDINATION). FIFO/lot costing waits for the owner | — |
+| #9 Opus (money lane) | **P0:** ISS-156 withholding after certificate expiry, AUD-01 statements, W1-GOLD first-hour figures; then AU-4, YEAR-END-GOLD, FX-GOLD, L94-SHADOW-MORE, DIM-3, U-12, W12-GOLD, AUD-19, ISS-160, ISS-143, AUD-10, BM-04+BH-02, L-123 design, CON-4b (17 tasks, full wording in COORDINATION). FIFO/lot costing waits for the owner | — |
 | #7 | **P0:** G-24 first-hour journey test (W1, taken over from AI #8), F-46 backup → restore browser test (W10), W5 labels → reports browser journey, W14 roles browser journey, a browser check of the help center/feedback screens from #252; then F-48, F-49 flakes | — |
 | #3 Arena | **P0:** W5 worked figures — labelled invoices/bills/payments → P&L and balance sheet by label, figures by hand (new A-210). Stock A-112…A-117 after (stage B) | A-72 waits for AI #9's AUD-01; A-75/A-76/A-77 released 21 Oct |
 | #4 | **P0:** G-02 first hour without dead ends — walk the first-hour path on phone and desktop, fix wording/dead ends (new D-97); then D-87 onward | — |
