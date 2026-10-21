@@ -63,6 +63,14 @@ export function useReconciliationModel() {
     return safeBankLines.filter(line => line.status === 'matched' && (selectedAccountId === 'all' || !line.accountId || line.accountId === selectedAccountId));
   }, [safeBankLines, selectedAccountId]);
 
+  // Share of in-scope statement lines already matched. Numerator and denominator use the same
+  // account-scoped population; ignored lines are excluded so they cannot count as reconciled.
+  const reconciledPercent = useMemo(() => {
+    const matched = matchedBankLines.length;
+    const total = matched + unmatchedBankLines.length;
+    return total === 0 ? 0 : Math.round((matched / total) * 100);
+  }, [matchedBankLines, unmatchedBankLines]);
+
   // Uncleared internal ledger transactions (excluding void and reconciled)
   const unclearedLedgerTransactions = useMemo(() => {
     return safeTransactions.filter(tx => {
@@ -195,8 +203,8 @@ export function useReconciliationModel() {
   const handleAutoReconcile = async () => {
     setIsAutoReconciling(true);
     try {
+       // The action layer reports its own completion toasts (with the applied count, or no-match).
        await onAutoReconcile({ bankLines: unmatchedBankLines, transactions: unclearedLedgerTransactions });
-       toast.success("Automatic matching complete.");
     } catch (e) {
         toast.error("Could not finish automatic matching.", {
           description: `Please try again. (${errorMessage(e) || 'Network error'})`
@@ -292,5 +300,5 @@ export function useReconciliationModel() {
     );
   }, [unclearedLedgerTransactions, searchQuery]);
 
-  return { bankLines, accounts, onMatch, onIgnore, onAddFromBank, selectedBankId, setSelectedBankId, selectedLedgerId, setSelectedLedgerId, showAutoConfirm, setShowAutoConfirm, isProcessing, isAutoReconciling, viewMode, setViewMode, searchQuery, setSearchQuery, bankLineAction, setBankLineAction, selectedAccountId, setSelectedAccountId, selectedBatchIds, setSelectedBatchIds, safeTransactions, cashAccounts, unmatchedBankLines, matchedBankLines, unclearedLedgerTransactions, optimizedMatches, executeSelectedBatchMatches, handleAutoReconcile, handleUndoAlignment, selectedBankLine, selectedLedgerTx, checkSimilarity, filteredBankFeed, filteredLedgerEntries };
+  return { bankLines, accounts, onMatch, onIgnore, onAddFromBank, selectedBankId, setSelectedBankId, selectedLedgerId, setSelectedLedgerId, showAutoConfirm, setShowAutoConfirm, isProcessing, isAutoReconciling, viewMode, setViewMode, searchQuery, setSearchQuery, bankLineAction, setBankLineAction, selectedAccountId, setSelectedAccountId, selectedBatchIds, setSelectedBatchIds, safeTransactions, cashAccounts, unmatchedBankLines, matchedBankLines, reconciledPercent, unclearedLedgerTransactions, optimizedMatches, executeSelectedBatchMatches, handleAutoReconcile, handleUndoAlignment, selectedBankLine, selectedLedgerTx, checkSimilarity, filteredBankFeed, filteredLedgerEntries };
 }

@@ -74,13 +74,16 @@ Select a bank account to continue.**
 ## Evidence
 
 ### Unit / component tests
-- New `src/tests/plain-language-d97.test.tsx` (5 tests): the wizard's two-step wording and its no-account
+- New `src/tests/plain-language-d97.test.tsx` (8 tests): the wizard's two-step wording and its no-account
   refusal, the bank feed importer upload state, the chart table headers and empty state, the template
-  selector, each with an assertion that the old jargon cannot return. The wizard's animated step-2 body is
-  not mountable in jsdom (`AnimatePresence mode="wait"` waits on an exit event jsdom never fires), so its
-  body wording is covered by the browser spec below; header and footer wording is covered here.
-- `src/tests/reconciliation-screen.test.tsx` updated for the new control names (its 9 checks, including the
-  posted reconcile payload, are unchanged in behaviour).
+  selector, each with an assertion that the old jargon cannot return, plus three source guards covering
+  the action-boundary toasts, the importer's in-progress message and the `useDialog`/AI-card wording.
+  The wizard's animated step-2 body is not mountable in jsdom (`AnimatePresence mode="wait"` waits on an
+  exit event jsdom never fires), so its body wording is covered by the browser spec below; header and
+  footer wording is covered here.
+- `src/tests/reconciliation-screen.test.tsx` updated for the new control names (its 9 original checks,
+  including the posted reconcile payload, are unchanged in behaviour) and gains a tenth test pinning the
+  reconciled percentage against ignored lines and the account filter.
 - Full unit suite result recorded in the PR (no database URL in this sandbox, so database-gated suites skip
   exactly as on other local runs).
 
@@ -111,6 +114,50 @@ baselines for the reconcile screen will differ only in text and must be refreshe
 - `npx tsc --noEmit -p tsconfig.json`: pass.
 - ESLint: 0 errors, **205 warnings — unchanged cap** (one new-spec warning found during the run was removed).
 - No money, posting, tax, `src/server/`, migration or permission file is in the diff.
+
+## Review follow-up: five Codex P2 findings, all addressed
+
+The first PR push received an automated code review. Every finding was inside the display/wording lane
+and is fixed in the same PR:
+
+1. **Reconciled percentage could lie** (`ReconciliationView.tsx`). The old figure subtracted an
+   account-scoped unmatched count from a global line count and counted ignored lines as reconciled.
+   The model now exposes `reconciledPercent` = matched ÷ (matched + pending) over one account-scoped
+   population, with ignored lines excluded; 0% when the scope has no lines. A new component test pins
+   25% on the fixture, 33% once a line is ignored, and 0% inside a card-account scope that has no match.
+2. **The modal had dialog ARIA but no dialog behaviour**. It now uses the shared `useDialog` hook
+   (named title via `aria-labelledby`, initial focus, trapped Tab, Escape to close, focus restored to
+   the trigger), matching `src/components/AGENTS.md`. The browser spec asserts focus enters the dialog,
+   four Tabs stay inside it, Escape closes it, and focus returns to the trigger.
+3. **The AI template card promised editing the flow does not offer**. `AICustomBlueprint` only presents
+   a read-only review before "Apply & Save Blueprint", so the sentence now reads "Review every account
+   before applying it to your books."
+4. **Action-boundary toasts still used the old jargon** (`reconcileActions.ts`): "Alignment confirmed
+   and certified", "Atomic transaction synthesized and reconciled", "Re-inserted into potential
+   pipeline matches", "Optimal alignment complete. N nodes synchronized" and friends are now
+   "Match saved.", "Entry created and matched.", "Match undone. The line is back in To review.",
+   "Automatic matching complete. N matches applied." / "No confident matches found." The model
+   wrapper no longer fires a second success toast on top of the action-layer one. A source guard in
+   `plain-language-d97.test.tsx` locks these strings because Sonner does not render in jsdom.
+5. **The importer's in-progress toast** said "Analytical engine analyzing …" — it now reads
+   "Reading <file>…", also locked by the source guard.
+
+Re-validated after these changes: tsc pass; ESLint 0 errors / 205 warnings (cap unchanged); full unit
+suite **3,249 tests — 3,248 pass, 0 fail, 1 database-gated skip** (the skip is the same pre-existing
+one, absent `LF_TEST_DATABASE_URL`); `plain-language` browser spec 3/3 with the new keyboard
+assertions; reconciliation-navigation and W4 bank-CSV specs 2/2; production build pass.
+
+### GitHub CI and the visual baselines
+
+CI on the PR runs lint/typecheck/unit (both timezone jobs), the production build, CodeQL and two
+browser shards. The only failing job is browser shard 2; a local `--shard=2/2` reproduction shows
+every failure in that shard is a `visual-regression.spec.ts` screenshot comparison (the sandbox's
+npm Chromium renders fonts differently from CI, so all 40 references differ locally), and the only
+screen whose text this PR changes is reconciliation. The four reconcile references (desktop/phone ×
+light/dark) therefore need the repo's manual **"Refresh visual baselines"** workflow with the
+`reconcile` screen filter; that workflow commits candidate images to a separate review branch and
+never pushes to main. Workflow dispatch is not available to this integration token, so the refresh
+is left for the maintainer, as it was for D-95/D-96.
 
 ## Limits / what this does not certify
 
