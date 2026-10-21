@@ -34,7 +34,8 @@ interface InventoryItemDialogProps {
 /** The add / edit item form of the Inventory screen (F-16: moved out of Inventory.tsx). */
 export default function InventoryItemDialog({ open, editingItem, categories, taxCodes = [], allItems = [], canChangeStock, onClose, onSubmit, onItemImageChange, onAdjust, onRevalue }: InventoryItemDialogProps) {
   // ISS-130: with stock on hand the cost is on the books; it changes by a revaluation, never by this form
-  const costLocked = Boolean(editingItem?.quantityAtHand);
+  // ISS-130: stock above zero has a value on the books; its cost changes only through a revaluation
+  const costLocked = (Number(editingItem?.quantityAtHand) || 0) > 0;
   const { dialogProps: itemDialogProps, titleId: itemTitleId } = useDialog(onClose, open);
   // A-19: the bundle's parts, held here and written into the form as JSON. The parent keys this
   // dialog by item id, so switching items gives fresh state without an effect.

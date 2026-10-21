@@ -101,7 +101,10 @@ export default function Inventory() {
   const canChangeStock = role !== 'viewer';
   // ISS-130: revaluing changes book value, so owners and accountants (the server checks the same)
   const canRevalue = role === 'owner' || role === 'accountant';
-  const [revalueItem, setRevalueItem] = useState<InventoryItem | null>(null);
+  // #259 review: a revaluation draft belongs to the workspace it was opened in; after a switch it is not shown
+  const [revalueDraft, setRevalueDraft] = useState<{ item: InventoryItem; workspaceId: string | null } | null>(null);
+  const revalueItem = revalueDraft && revalueDraft.workspaceId === workspaceId ? revalueDraft.item : null;
+  const setRevalueItem = (item: InventoryItem | null) => setRevalueDraft(item ? { item, workspaceId } : null);
   const { setSafeTimeout } = useTimeout();
 
   useEffect(() => {
@@ -153,7 +156,7 @@ export default function Inventory() {
       description: formData.get('description') as string,
       unitPriceCents: TruthEngine.parseAmountToCents(formData.get('unitPrice') as string),
       // ISS-130: the cost of stock on hand changes only by a revaluation, so the form leaves it alone
-      ...(editingItem.quantityAtHand ? {} : { unitCostCents: TruthEngine.parseAmountToCents(formData.get('unitCost') as string) }),
+      ...((Number(editingItem.quantityAtHand) || 0) > 0 ? {} : { unitCostCents: TruthEngine.parseAmountToCents(formData.get('unitCost') as string) }),
       // the quantity changes only through Adjust stock, a count or a sale, which post to the books
       reorderPoint: parseInt(formData.get('reorderPoint') as string, 10) || 0,
       measurementUnit: formData.get('measurementUnit') as string || undefined,
@@ -545,9 +548,9 @@ export default function Inventory() {
                     </div>
                   ) : (
                     <div className="flex flex-col">
-                      <InlineEdit kind="money" value={item.unitCostCents} display={formatCurrency(item.unitCostCents)} label={`Unit cost of ${item.name}`} canEdit={canChangeStock && !item.quantityAtHand}
+                      <InlineEdit kind="money" value={item.unitCostCents} display={formatCurrency(item.unitCostCents)} label={`Unit cost of ${item.name}`} canEdit={canChangeStock && !(item.quantityAtHand > 0)}
                         onSave={v => saveItemField(item, 'unitCostCents', v)} className="text-sm font-bold text-zinc-500 font-mono tabular-nums" />
-                      {Boolean(item.quantityAtHand) && canRevalue && <button type="button" onClick={() => setRevalueItem(item)} className="min-h-11 self-start text-[10px] font-semibold text-emerald-700 hover:underline">Revalue {item.name}</button>}
+                      {item.quantityAtHand > 0 && canRevalue && <button type="button" onClick={() => setRevalueItem(item)} className="min-h-11 self-start text-[10px] font-semibold text-emerald-700 hover:underline">Revalue {item.name}</button>}
                       {item.unitsPerPackage && item.unitsPerPackage > 1 && (
                         <span className="text-[10px] font-black text-emerald-600 tracking-widest mt-0.5 uppercase tabular-nums">
                           {formatCurrency(Math.round(item.unitCostCents / item.unitsPerPackage))} / {item.measurementUnit || 'unit'}
@@ -693,7 +696,7 @@ export default function Inventory() {
         onClose={closeItemDialog} onSubmit={editingItem ? handleUpdate : handleAdd}
         onItemImageChange={itemId => setImageRefresh(current => ({ ...current, [itemId]: (current[itemId] || 0) + 1 }))}
         onAdjust={it => { setEditingItem(null); setAdjustItem(it); }}
-        onRevalue={canRevalue ? it => { setEditingItem(null); setRevalueItem(it); } : undefined} />
+        onRevalue={canRevalue ? it => setRevalueItem(it) : undefined} />
 
       {cogsItem && workspaceId && (
         <CogsDialog item={cogsItem} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setCogsItem(null)} />

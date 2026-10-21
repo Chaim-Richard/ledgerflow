@@ -186,6 +186,13 @@ select pg_temp.expect_denied('owner cannot either: only the revaluation changes 
   $$select lf_update('inventory','i1','{"unitCostCents":1200}'::jsonb)$$);
 select pg_temp.expect_ok('rename the stocked item in the browser (the cost is untouched)', 'u-book',
   $$select lf_update('inventory','i1','{"name":"Widget L"}'::jsonb)$$);
+-- #259 review: stock below zero has no value on the books, so its cost stays editable
+do $$ begin
+  perform set_config('request.jwt.claims', '', true);
+  update inventory set data = data || '{"quantityAtHand":-2}'::jsonb where id = 'i1';
+end $$;
+select pg_temp.expect_ok('set the cost of an item sold below zero (no value on the books)', 'u-book',
+  $$select lf_update('inventory','i1','{"unitCostCents":1250}'::jsonb)$$);
 
 -- only owners and accountants approve or send back an invoice (BE-04, L-191)
 select pg_temp.expect_ok('bookkeeper saves an invoice waiting for approval', 'u-book',
