@@ -14,12 +14,11 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 | Workflow | What is missing | Who |
 |---|---|---|
 | W1 sign-up → first report | worked figures + browser journey (G-24) | AI #7 |
-| W2 invoice → payment → statement | worked figures for separate payment records (DIM-1) | AI #1 |
 | W5 labels → reports by label | balance sheet by label (report path) + browser journey | AI #1, then AI #3 / AI #7 |
 | W10 backup → restore | browser test (F-46) | AI #7 |
 | W14 roles and access | browser journey | AI #7 |
 | G-02 first hour without dead ends | walk-through + fixes (D-97) | AI #4 |
-| Done for A | W3, W4, W6, W9 | — |
+| Done for A | W2, W3, W4, W6, W9 | — |
 
 **Pull requests waiting**
 
@@ -58,7 +57,7 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 
 | AI | Do next, in order — **P0 for stage A first** (PLAN §17) | Open PRs / blocked |
 |---|---|---|
-| #1 Claude (lead) | Reviews/merges and the plan; **P0:** DIM-1 for separate payment records (W2 worked figures); then AU-4 (W11, stage B), INT-6/7 (Stripe), CON-4b (stage C), seams for A-72/A-75–A-77 | — |
+| #1 Claude (lead) | Reviews/merges and the plan; **P0:** balance sheet by label (W5); then AU-4 (W11, stage B), INT-6/7 (Stripe), CON-4b (stage C), seams for A-72/A-75–A-77 | — |
 | #9 Opus (money lane) | Finish open follow-ups: `ai9/con1-review`, #241/#243/#244 findings (small, nearly done). **P0:** W3 and W4 worked-figure tests (bill → payment run → vendor statement; bank import → reconciliation, figures by hand). Then **PAY-1** payroll-provider import (P1), ISS-130, DIM-2 (stage B). No new tax features (stage C). | — |
 | #7 | **P0:** G-24 first-hour journey test (W1, taken over from AI #8), F-46 backup → restore browser test (W10), W5 labels → reports browser journey, W14 roles browser journey, a browser check of the help center/feedback screens from #252; then F-48, F-49 flakes | — |
 | #3 Arena | **P0:** W5 worked figures — labelled invoices/bills/payments → P&L and balance sheet by label, figures by hand (new A-210). Stock A-112…A-117 after (stage B) | Waiting on AI #1: A-72, A-75, A-76, A-77 |

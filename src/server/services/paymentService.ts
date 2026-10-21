@@ -11,6 +11,7 @@ import { formatCurrency } from '../../lib/utils';
 import { allocateInTransaction } from './numberingService';
 import { advanceAccount } from '../../lib/advancePayments';
 import type { DocumentReference, Firestore, Transaction } from '../db/firestore';
+import { allocateCents, spreadLabels, type LineAccountWeight } from '../../kernel/templates/TransactionTemplates';
 
 export interface CreatePaymentPayload {
   workspaceId: string;
@@ -79,6 +80,34 @@ export async function createPaymentIdempotent(db: Firestore, payload: CreatePaym
  * Records a payment inside an open database transaction (reads first, writes at the end), so a
  * caller can add its own writes, e.g. marking the bank line it came from as matched.
  */
+/**
+ * DIM-1: the labels of a paid invoice's items (or a bill's splits), as weights that add up to the
+ * amount this payment puts on it. Unlabelled lines keep an unlabelled share.
+ */
+export function documentLabelWeights(doc: Record<string, unknown>, type: string, paidCents: number): Array<{ cents: number; dimensions?: Record<string, string> }> {
+  const lines = (type === 'invoice' ? doc.items : doc.splits) as Array<{ amountCents?: number; dimensions?: Record<string, string> }> | undefined;
+  if (!Array.isArray(lines) || lines.length === 0) return [{ cents: paidCents }];
+  const parts = allocateCents(paidCents, lines.map(l => Math.max(0, Number(l.amountCents) || 0)));
+  return lines.map((l, i) => {
+    const labels = Object.fromEntries(Object.entries(l.dimensions || {}).filter(([k, v]) => k && typeof v === 'string' && v.trim() !== '').map(([k, v]) => [k, String(v).trim()]));
+    return { cents: parts[i], ...(Object.keys(labels).length ? { dimensions: labels } : {}) };
+  }).filter(w => w.cents > 0);
+}
+
+/**
+ * DIM-1: spreads a separately recorded payment's lines (bank, offset, deposit, withholding, FX) over the paid
+ * documents' labels in proportion, so each label's part of the entry balances; the part not applied to a
+ * document stays unlabelled. Amounts are in the payment's currency; only the proportions matter.
+ */
+function payeeLabels<T extends { accountId: string; amountCents: number }>(weights: Array<{ cents: number; dimensions?: Record<string, string> }>, paymentCents: number, lines: T[]): T[] {
+  const applied = weights.reduce((s, w) => s + w.cents, 0);
+  const all: LineAccountWeight[] = [
+    ...weights.map(w => ({ account: { id: '', name: '' }, weightCents: w.cents, ...(w.dimensions ? { dimensions: w.dimensions } : {}) })),
+    ...(paymentCents > applied ? [{ account: { id: '', name: '' }, weightCents: paymentCents - applied }] : []),
+  ];
+  return spreadLabels(lines as never, all) as unknown as T[];
+}
+
 export async function createPaymentInTransaction(db: any, tx: any, payload: CreatePaymentPayload) {
   const {
     workspaceId,
@@ -152,6 +181,8 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     const baseCurrency = String(wsData.currency || 'USD');
     let paymentCurrency: string | null = null;
     let paymentRate = 1;
+    // DIM-1: each paid document's lines' labels, weighted by what this payment puts on that document
+    const labelWeights: Array<{ cents: number; dimensions?: Record<string, string> }> = [];
 
     for (const alloc of allocations) {
       totalAllocatedCents += alloc.amountCents;
@@ -199,6 +230,8 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
           updatedAt: new Date().toISOString()
         }
       });
+
+      labelWeights.push(...documentLabelWeights(docData, alloc.documentType, alloc.amountCents));
 
       if (!resolvedOffsetAccountId) {
         resolvedOffsetAccountId = alloc.documentType === 'invoice'
@@ -339,7 +372,7 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
         ...(paymentRate !== 1 ? { documentCurrency: paymentCurrency, documentAmountCents: amountCents, documentExchangeRate: paymentRate } : {}),
         ...(realizedFxCents !== 0 ? { paymentExchangeRate: dayRate, realizedFxCents } : {})
       },
-      lines: [
+      lines: payeeLabels(labelWeights, amountCents, [
         {
           accountId: cashAccountId,
           amountCents: isReceipt ? cashBaseCents : -(cashBaseCents - withheld),
@@ -367,7 +400,7 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
           amountCents: isReceipt ? -realizedFxCents : realizedFxCents,
           description: `Realized exchange ${(isReceipt ? realizedFxCents > 0 : realizedFxCents < 0) ? 'gain' : 'loss'} for Payment ${paymentId}`
         }] : [])
-      ]
+      ])
     };
 
     if (realizedFxCents !== 0) Object.assign(paymentData, { paymentExchangeRate: dayRate, realizedFxCents });
@@ -454,6 +487,7 @@ export async function applyUnappliedPayment(db: Firestore, input: {
     const paymentCurrency = String(payment.currency || baseCurrency);
     const rate = typeof payment.exchangeRate === 'number' && payment.exchangeRate > 0 ? payment.exchangeRate : 1;
     const docUpdates: Array<{ ref: DocumentReference; updates: Record<string, unknown> }> = [];
+    const labelWeights: Array<{ cents: number; dimensions?: Record<string, string> }> = [];
     for (const alloc of allocations) {
       if (alloc.documentType !== wanted) throw new PaymentApplyError(400, `A payment ${received ? 'received' : 'made'} is applied to ${wanted}s`);
       const ref = db.collection(received ? 'invoices' : 'bills').doc(alloc.documentId);
@@ -465,6 +499,7 @@ export async function applyUnappliedPayment(db: Firestore, input: {
       const due = calculateAmountDue(doc);
       if (alloc.amountCents > due) throw new PaymentApplyError(409, `${doc.number || alloc.documentId} has only ${formatCurrency(due, paymentCurrency)} left to pay`);
       const paid = (Number(doc.amountPaidCents) || 0) + alloc.amountCents;
+      labelWeights.push(...documentLabelWeights(doc, alloc.documentType, alloc.amountCents));
       docUpdates.push({ ref, updates: {
         amountPaidCents: paid,
         settledByRecordsCents: (Number(doc.settledByRecordsCents) || 0) + alloc.amountCents,
@@ -486,9 +521,10 @@ export async function applyUnappliedPayment(db: Firestore, input: {
           id: db.collection('transactions').doc().id, workspaceId, uid, date, description, currency: baseCurrency, exchangeRate: 1,
           status: 'completed', type: 'actual', totalAmountCents: baseCents,
           metadata: { type: 'payment-application', paymentId, documents: allocations.map(a => a.documentId) },
-          lines: received
+          // DIM-1: the move to A/R or A/P carries the applied documents' labels
+          lines: payeeLabels(labelWeights, total, received
             ? [{ accountId: heldIn, amountCents: baseCents, description }, { accountId: offset, amountCents: -baseCents, description }]
-            : [{ accountId: offset, amountCents: baseCents, description }, { accountId: heldIn, amountCents: -baseCents, description }],
+            : [{ accountId: offset, amountCents: baseCents, description }, { accountId: heldIn, amountCents: -baseCents, description }]),
         },
         { workspaceId, user: { uid }, wsData }, undefined, tx,
       ) as unknown as Record<string, unknown>;
