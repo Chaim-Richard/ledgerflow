@@ -1,25 +1,22 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
-import { useEntityOperations } from '../../hooks/useEntityOperations';
+import { toast } from 'sonner';
+import { getIdToken } from '../../firebase';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { getLocalDateISO } from '../../lib/utils';
 import {
-  createReturnAuthorization,
-  returnAuthorizationId,
-  returnAuthorizationNumber,
+  RMAS_METADATA_FIELD,
   returnAuthorizationRequestProblem,
   returnAuthorizationCapacityProblem,
   returnAuthorizationsFromMetadata,
-  rmaFieldPath,
   transitionReturnAuthorization,
   type ReturnAuthorizationAction,
   type ReturnAuthorizationRecord,
   type ReturnAuthorizationRequestLine,
 } from '../../lib/warehouseRecords';
-import { randomWarehouseToken, type WorkflowActor } from '../../lib/warehouseRecordUtils';
+import { encodedPathPart, randomWarehouseToken, type WorkflowActor } from '../../lib/warehouseRecordUtils';
 import type { CreditNote, Customer, Invoice, InventoryItem } from '../../types';
 import ReportTableScroll from './ReportTableScroll';
 
@@ -49,7 +46,26 @@ export default function ReturnAuthorizationsPanel() {
   const isGuest = useAuthStore(state => state.isGuest);
   const role = useCurrentRole();
   const { loading } = useLedgerCollections('customers', 'invoices', 'inventory', 'creditNotes');
-  const { updateEntity } = useEntityOperations();
+  /**
+   * ISS-143: RMAs are written by the server (returnAuthorizationService.ts), which checks the role, the quantities
+   * left and the status it expects in one transaction; a browser write to them is refused by the database. The
+   * returned record is put into the customer in the store so the list shows it at once.
+   */
+  const postRma = async (path: string, body: Record<string, unknown>): Promise<ReturnAuthorizationRecord> => {
+    const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspaceId || '')}/return-authorizations${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` },
+      body: JSON.stringify({ ...body, requestKey: `rma-${randomWarehouseToken()}${randomWarehouseToken()}` }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.record) throw new Error(data.message || 'The return authorization could not be saved.');
+    const record = data.record as ReturnAuthorizationRecord;
+    const store = useLedgerStore.getState();
+    store.setCustomers((store.customers as Customer[]).map(c => (c.id !== record.customerId ? c : {
+      ...c, metadata: { ...(c.metadata || {}), [RMAS_METADATA_FIELD]: { ...((c.metadata?.[RMAS_METADATA_FIELD] as Record<string, unknown>) || {}), [encodedPathPart(record.id)]: record } },
+    })));
+    return record;
+  };
 
   const [invoiceId, setInvoiceId] = useState('');
   const [reason, setReason] = useState('');
@@ -108,9 +124,12 @@ export default function ReturnAuthorizationsPanel() {
     pendingRmaActions.current.add(rma.id);
     setSavingRmas(current => new Set(current).add(rma.id));
     try {
-      await updateEntity('customers', customer.id, {
-        [rmaFieldPath(rma.id)]: result.record,
-      } as Record<string, unknown>, `${rma.number} updated: ${STATUS_LABEL[result.record.status]}.`);
+      const saved = await postRma(`/${encodeURIComponent(rma.id)}`, {
+        customerId: customer.id, action: action.type, expectedStatus: rma.status,
+        ...('note' in action && action.note ? { note: action.note } : {}),
+        ...(action.type === 'link-credit-note' ? { creditNoteId: action.creditNote.id } : {}),
+      });
+      toast.success(`${rma.number} updated: ${STATUS_LABEL[saved.status]}.`);
       setActionProblems(current => ({ ...current, [rma.id]: '' }));
       return { ok: true };
     } catch (error) {
@@ -174,25 +193,12 @@ export default function ReturnAuthorizationsPanel() {
     requestPending.current = true;
     setSavingRequest(true);
     try {
-      let token = '';
-      let id = '';
-      let number = '';
-      for (let attempt = 0; attempt < 4; attempt += 1) {
-        token = randomWarehouseToken();
-        id = returnAuthorizationId(token);
-        number = returnAuthorizationNumber(getLocalDateISO(), token);
-        if (!allRmas.some(record => record.id === id || record.number === number)) break;
-        id = '';
-      }
-      if (!id) throw new Error('Could not create a unique RMA number. Try again.');
-      const record = createReturnAuthorization({
-        id, number, workspaceId, customerId: selectedCustomer.id, customerName: selectedCustomer.name,
-        invoiceId: selectedInvoice.id, invoiceNumber: selectedInvoice.number || selectedInvoice.id,
-        reason, lines, actor, at,
+      // the server numbers it and checks the invoice's quantities again, against every RMA in the database
+      const record = await postRma('', {
+        customerId: selectedCustomer.id, invoiceId: selectedInvoice.id, reason,
+        lines: lines.map(l => ({ invoiceLineId: l.invoiceLineId, quantity: l.quantity })),
       });
-      await updateEntity('customers', selectedCustomer.id, {
-        [rmaFieldPath(record.id)]: record,
-      } as Record<string, unknown>, `${record.number} requested. An owner or accountant must approve it.`);
+      toast.success(`${record.number} requested. An owner or accountant must approve it.`);
       locallySavedRequests.current.push(record);
       setReason('');
       setQuantityDrafts({ invoiceId: selectedInvoice.id, values: {} });

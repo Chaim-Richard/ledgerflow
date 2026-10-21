@@ -6,7 +6,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import ReturnAuthorizationsPanel from '../components/reporting/ReturnAuthorizationsPanel';
 import { createReturnAuthorization } from '../lib/warehouseRecords';
 import { setComponentWorkspace, markComponentCollectionsLoaded } from './helpers/componentFixtures';
-import { stubFetchWithBodies } from './helpers/dom';
+import { stubRmaServer, type RmaCall } from './helpers/rmaServer';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { getSupabase } from '../lib/db/client';
 import type { Customer, Invoice, InventoryItem } from '../types';
@@ -34,7 +34,7 @@ const oldRma = createReturnAuthorization({
   at: '2026-10-14T10:00:00.000Z',
 });
 const originalFetch = globalThis.fetch;
-let calls: ReturnType<typeof stubFetchWithBodies> = [];
+let calls: RmaCall[] = [];
 
 beforeEach(() => {
   setComponentWorkspace('owner');
@@ -43,7 +43,8 @@ beforeEach(() => {
     customers: [{ id: 'customer-1', uid: 'test-user', workspaceId: ws, name: 'Acme Co' }],
     invoices: [invoice], inventory: [item], creditNotes: [], truncatedCollections: {},
   });
-  calls = stubFetchWithBodies(200, null);
+  // ISS-143: the server answers RMA requests (helpers/rmaServer.ts)
+  calls = stubRmaServer({ workspaceId: ws, customerName: 'Acme Co', invoiceNumber: 'INV-1', line: () => ({ itemId: item.id, description: item.name, soldQuantity: 5 }) });
 });
 afterEach(async () => {
   cleanup();
@@ -51,7 +52,7 @@ afterEach(async () => {
   getSupabase().realtime.disconnect();
   await getSupabase().auth.dispose();
 });
-const writes = () => calls.filter(call => call.url.includes('/rpc/lf_update'));
+const writes = () => calls.filter(call => call.url.includes('/return-authorizations'));
 const enter = async (qty: string) => {
   await act(async () => {
     fireEvent.change(screen.getByLabelText('Return quantity for Blue Widget'), { target: { value: qty } });
