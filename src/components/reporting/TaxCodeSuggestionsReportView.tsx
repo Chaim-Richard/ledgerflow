@@ -48,27 +48,28 @@ export default function TaxCodeSuggestionsReportView() {
     return q;
   }, [contactId, itemId, entity]);
 
-  const suggestion = useMemo(() => {
-    if (!today || !/^\d{4}-\d{2}-\d{2}$/.test(today)) return null;
-    if (!query.contactId && !query.itemId && !query.entity) return null;
+  // A failure must not read as "no history": the two are different answers.
+  const { suggestion, suggestionError } = useMemo<{ suggestion: ReturnType<typeof suggestTaxCode> | null; suggestionError: string | null }>(() => {
+    if (!today || !/^\d{4}-\d{2}-\d{2}$/.test(today)) return { suggestion: null, suggestionError: null };
+    if (!query.contactId && !query.itemId && !query.entity) return { suggestion: null, suggestionError: null };
     try {
-      return suggestTaxCode(history, query, today, halfLifeDays);
-    } catch {
-      return null;
+      return { suggestion: suggestTaxCode(history, query, today, halfLifeDays), suggestionError: null };
+    } catch (e) {
+      return { suggestion: null, suggestionError: e instanceof Error ? e.message : String(e) };
     }
   }, [history, query, today, halfLifeDays]);
 
   // Unusual check: for a draft row
   const [checkDate, setCheckDate] = useState(getLocalDateISO());
   const [checkTaxCode, setCheckTaxCode] = useState('');
-  const unusual = useMemo(() => {
-    if (!checkTaxCode.trim() || !checkDate || !/^\d{4}-\d{2}-\d{2}$/.test(checkDate)) return null;
+  const { unusual, unusualError } = useMemo<{ unusual: ReturnType<typeof unusualTaxCode> | null; unusualError: string | null }>(() => {
+    if (!checkTaxCode.trim() || !checkDate || !/^\d{4}-\d{2}-\d{2}$/.test(checkDate)) return { unusual: null, unusualError: null };
     const row: TaxHistoryRow = { date: checkDate, taxCodeId: checkTaxCode.trim(), contactId: contactId.trim() || undefined, itemId: itemId.trim() || undefined, entity: entity.trim() || undefined };
-    if (!row.contactId && !row.itemId && !row.entity) return null;
+    if (!row.contactId && !row.itemId && !row.entity) return { unusual: null, unusualError: null };
     try {
-      return unusualTaxCode(history, row);
-    } catch {
-      return null;
+      return { unusual: unusualTaxCode(history, row), unusualError: null };
+    } catch (e) {
+      return { unusual: null, unusualError: e instanceof Error ? e.message : String(e) };
     }
   }, [history, checkDate, checkTaxCode, contactId, itemId, entity]);
 
@@ -113,7 +114,8 @@ export default function TaxCodeSuggestionsReportView() {
     <div className="rounded border border-[var(--line)] p-3 space-y-2 bg-[var(--panel)]">
       <h3 className="font-semibold">What would be suggested?</h3>
       {!query.contactId && !query.itemId && !query.entity && <p className="text-sm text-[var(--muted)]">Enter at least one of contact, item or entity to see a suggestion. The most specific match that has history wins: contact+item+entity → contact+item → contact → item → entity.</p>}
-      {(query.contactId || query.itemId || query.entity) && !suggestion && !loading && <p className="text-sm">No history for <bdi>{JSON.stringify(query)}</bdi> on or before {today}. Try a contact or item that has a past invoice/bill, or clear filters to the least specific.</p>}
+      {suggestionError && <p role="alert" className="text-sm text-amber-700">Could not compute a suggestion: <bdi>{suggestionError}</bdi>. This is <b>not</b> a statement that there is no history — the suggestion was not calculated.</p>}
+      {(query.contactId || query.itemId || query.entity) && !suggestion && !suggestionError && !loading && <p className="text-sm">No history for <bdi>{JSON.stringify(query)}</bdi> on or before {today}. Try a contact or item that has a past invoice/bill, or clear filters to the least specific.</p>}
       {suggestion && <div className="text-sm space-y-1">
         <p><b>Suggested code:</b> <code className="px-1 py-0.5 rounded bg-[var(--surface)] border border-[var(--line)]"><bdi>{suggestion.taxCodeId}</bdi></code> · <b>Share:</b> {(suggestion.share * 100).toFixed(0)}% · <b>Based on:</b> {suggestion.basedOn} document(s) · <b>Match:</b> {suggestion.match}</p>
         <p className="text-xs text-[var(--muted)]">Share is the weighted share (0.5 after one half-life) of documents with this code among the matched rows. Based on is the count of matched rows on or before {today}.</p>
@@ -132,7 +134,8 @@ export default function TaxCodeSuggestionsReportView() {
         </label>
       </div>
       {!checkTaxCode.trim() && <p className="text-sm text-[var(--muted)]">Enter a draft code to check.</p>}
-      {checkTaxCode.trim() && !unusual && <p className="text-sm">Not flagged as unusual (usual is {suggestion?.taxCodeId || 'none'} with share {suggestion ? `${(suggestion.share*100).toFixed(0)}% on ${suggestion.basedOn}` : 'insufficient history'}; needs 3+ docs and 80% share).</p>}
+      {unusualError && <p role="alert" className="text-sm text-amber-700">Could not check this code: <bdi>{unusualError}</bdi>. Not a statement that the code is usual.</p>}
+      {checkTaxCode.trim() && !unusual && !unusualError && <p className="text-sm">Not flagged as unusual (usual is {suggestion?.taxCodeId || 'none'} with share {suggestion ? `${(suggestion.share*100).toFixed(0)}% on ${suggestion.basedOn}` : 'insufficient history'}; needs 3+ docs and 80% share).</p>}
       {unusual && <p className="text-sm"><span className="font-semibold text-amber-700">Unusual:</span> this draft uses <code>{checkTaxCode.trim()}</code> but the same customer/item/entity usually got <code>{unusual.taxCodeId}</code> ({(unusual.share*100).toFixed(0)}% on {unusual.basedOn} docs, via {unusual.match}). Review whether the unusual code is intended.</p>}
     </div>
 

@@ -60,3 +60,14 @@ test('C-121 manual edit and invalid year handling', () => {
   fireEvent.change(year, { target: { value: '1800' } });
   assert.match(document.body.textContent || '', /Preview error/);
 });
+
+test('C-121 clearing the tax year falls back to the current year, not a fixed one', () => {
+  render(<Us1099PreviewReportView/>);
+  const year = screen.getByLabelText('Tax year') as HTMLInputElement;
+  assert.equal(year.value, String(new Date().getFullYear()));
+  fireEvent.change(year, { target: { value: '' } });
+  assert.equal((screen.getByLabelText('Tax year') as HTMLInputElement).value, String(new Date().getFullYear()));
+  // A typed year is still used exactly as typed (including an invalid one, which reports an error).
+  fireEvent.change(year, { target: { value: '2025' } });
+  assert.equal((screen.getByLabelText('Tax year') as HTMLInputElement).value, '2025');
+});

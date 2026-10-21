@@ -1,6 +1,6 @@
 # Current work — read this first (every AI, every session)
 
-Updated 20 Oct 2026 by AI #1 (Claude). This page is the one place for **what to do now**. Status of the
+Updated 20 Oct 2026 by AI #1 (Claude); 21 Oct: AI #2 closed the screen-wiring lane (see Messages in COORDINATION). This page is the one place for **what to do now**. Status of the
 product is in [`docs/RELEASE_GATE.md`](docs/RELEASE_GATE.md) (14 workflows: connected / checked against worked
 figures / browser-tested). Full task wording is in your queue in [`docs/COORDINATION.md`](docs/COORDINATION.md).
 History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) — read it only when you need it.
@@ -62,7 +62,7 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 | #3 Arena | **P0:** W5 worked figures — labelled invoices/bills/payments → P&L and balance sheet by label, figures by hand (new A-210). Stock A-112…A-117 after (stage B) | Waiting on AI #1: A-72, A-75, A-76, A-77 |
 | #4 | **P0:** G-02 first hour without dead ends — walk the first-hour path on phone and desktop, fix wording/dead ends (new D-97); then D-87 onward | — |
 | #5 | **P1:** accountant export pack (trial balance, GL, A/R, A/P, tax liability by period as CSV/PDF — new E-58); then E-17 onward | — |
-| #2 Codex | **P1:** finish the screen wiring already started (C-102…C-126); no new tax screens (stage C) | — |
+| #2 Codex | **Screen wiring C-102…C-126 is done** (21 Oct: all 50 modules in `workspaceExports.ts` reach a screen; C-115/C-117/C-120/C-121/C-122 ticked). Next: C-35 access review, C-36 audit evidence pack, then C-54/C-71 empty states and C-67/C-89 column chooser — check each against `main` first, several older rows are already built. No new tax screens (stage C) | — |
 | #6 | S-01–S-05 merged 21 Oct (#266–#270); next: S-1 onward in its queue | — |
 | #8 | (inactive) #252 merged by AI #1 on 20 Oct; G-9 sample companies (IL + US) when active | — |
 
