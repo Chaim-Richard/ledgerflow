@@ -2,8 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { TransactionTemplates, type LineAccountWeight } from '../kernel/templates/TransactionTemplates';
 import { getLineDimension } from '../lib/dimensionUtils';
-import { computeBalanceSheet } from '../server/reports/computeReports';
-import { profitByLabel } from '../server/reports/byLabel';
+import { balanceSheetByLabel, profitByLabel } from '../server/reports/byLabel';
 import { makeChartAccount, makeTransaction } from './fixtures';
 import type { Transaction } from '../types';
 
@@ -52,14 +51,6 @@ const ledger: Transaction[] = [
   })),
 ];
 
-function ledgerForProperty(value: string): Transaction[] {
-  return ledger.map(entry => ({
-    ...entry,
-    id: `${entry.id}-${value}`,
-    lines: (entry.lines || []).filter(line => getLineDimension(line, entry, dimension) === value),
-  }));
-}
-
 test('A-210 W5 worked figures: labelled invoice, bill, receipts and payments reconcile by property', () => {
   // Hand-worked P&L, in cents. Revenue is before tax; repairs are the bill's pretax amount.
   const pAndL = profitByLabel(accounts, ledger, dimension, '2026-01-01', '2026-01-31');
@@ -82,12 +73,15 @@ test('A-210 W5 worked figures: labelled invoice, bill, receipts and payments rec
   // Hand-worked balance sheet at 31 Jan: all balances below are positive normal balances.
   // A: cash 5,185 + A/R 3,704 = A/P 3,334 + net tax 555 + retained earnings 5,000 = 8,889.
   // B: cash 8,815 + A/R 6,296 = A/P 5,666 + net tax 945 + retained earnings 8,500 = 15,111.
+  // The figures come from the real balance-sheet-by-label report (balanceSheetByLabel), which
+  // selects only the posted lines that carry the value and never shares out unlabelled lines.
   const expected = {
     A: { cash: 5_185, ar: 3_704, ap: 3_334, tax: 555, netIncome: 5_000, assets: 8_889, claims: 8_889 },
     B: { cash: 8_815, ar: 6_296, ap: 5_666, tax: 945, netIncome: 8_500, assets: 15_111, claims: 15_111 },
   } as const;
   for (const property of ['A', 'B'] as const) {
-    const sheet = computeBalanceSheet(accounts, ledgerForProperty(property), '2026-01-31');
+    const report = balanceSheetByLabel(accounts, ledger, dimension, property, '2026-01-31');
+    const sheet = report.sheet;
     const figure = expected[property];
     assert.deepEqual({
       cash: sheet.assets.cash,
@@ -98,7 +92,10 @@ test('A-210 W5 worked figures: labelled invoice, bill, receipts and payments rec
       assets: sheet.totalAssets,
       claims: sheet.totalClaims,
       isBalanced: sheet.isBalanced,
-    }, { ...figure, isBalanced: true }, `property ${property} balance sheet equals the independent hand-worked figures`);
+    }, { ...figure, isBalanced: true }, `property ${property} balance sheet by label equals the independent hand-worked figures`);
     assert.equal(sheet.orphanedLines.length, 0);
+    // The real report never guesses unlabelled lines: this ledger has none for A/B
+    assert.equal(report.notLabelled.lines, 0, `property ${property}: no unlabelled lines`);
+    assert.equal(report.notLabelled.openings, 0, `property ${property}: no unlabelled opening balances`);
   }
 });
