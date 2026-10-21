@@ -60,6 +60,7 @@ import CategoryManagerDialog from './CategoryManagerDialog';
 import { categoryCounts } from '../../lib/itemCategories';
 import { TAX_CATEGORIES, taxCategoryLabel, effectiveTaxCategory } from '../../lib/tax/taxCategories';
 import { isBundle, bundleSummary, type BundlePart } from '../../lib/itemBundles';
+import { kitBuildableSummary } from '../../lib/kitAssembly';
 import { parseLocationLevelsJson } from '../../lib/locationLevels';
 import ConsignmentStockPanel from './ConsignmentStockPanel';
 import { isConsignment } from '../../lib/consignmentStock';
@@ -171,6 +172,8 @@ export default function Inventory() {
       productTaxCategory: (formData.get('productTaxCategory') as string) || undefined,
       // A-19: the bundle's parts (empty = an ordinary item)
       bundleParts: parseBundleParts(formData.get('bundleParts')),
+      // A-116: built out of its parts when needed (a note only)
+      assembleOnDemand: formData.get('assembleOnDemand') === 'on',
       // A-34: the consignment mark (empty = ordinary stock)
       consignment: (formData.get('consignment') as string) || undefined,
       // A-115: minimum/maximum per location (empty = no levels)
@@ -207,6 +210,7 @@ export default function Inventory() {
       defaultTaxCodeId: (formData.get('defaultTaxCodeId') as string) || undefined,
       productTaxCategory: (formData.get('productTaxCategory') as string) || undefined,
       bundleParts: parseBundleParts(formData.get('bundleParts')),
+      assembleOnDemand: formData.get('assembleOnDemand') === 'on',
       consignment: (formData.get('consignment') as string) || undefined,
       locationLevels: parseLocationLevelsJson(formData.get('locationLevels')),
       createdAt: new Date().toISOString()
@@ -495,7 +499,7 @@ export default function Inventory() {
                       className="text-sm font-black text-[var(--text)] block" />
                     {isBundle(item) && (
                       <p className="text-[10px] text-[var(--muted)] font-semibold" title={bundleSummary(item, items)}>
-                        Bundle · {bundleSummary(item, items)}
+                        Bundle · {bundleSummary(item, items)}{item.assembleOnDemand ? ` · ${kitBuildableSummary(item, items)}` : ''}
                       </p>
                     )}
                     <InlineEdit value={item.sku} label={`SKU of ${item.name}`} placeholder="Add SKU" canEdit={canChangeStock}
