@@ -298,6 +298,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Check a US routing number (9 digits, checksum) and an IBAN (country length and mod-97). This is a data-quality check only — calculation status — not a bank confirmation, and it never posts or moves money. IBAN lengths are from the SWIFT IBAN Registry (ISO 13616); the table and its CSV list 86 countries. A country not listed does not use IBAN or is not in this table.",
   },
   settings: {
+    "branding-profiles": "Choose the logo colour, address and footer that PDFs use for each label value, such as an entity or a branch. A value without its own branding inherits from its parent label, and then from the books. Owners and accountants edit it here; the saved branding applies to PDFs made after the save.",
     "tax-profiles": "Review declared country, place, accounting basis and registrations for the books and each label value. Grey values inherit from the nearest parent or the books. Owners and accountants edit supported profile fields here; save confirms the server response and keeps the draft on refusal. A saved declaration is not a verified registration or a completed tax filing.",
     "scheduled-reports":
       "Choose a report to be emailed by itself after each finished week or month: the profit and loss, the balance sheet or receivables aging. The figures are in the email with a spreadsheet attached, and each period is sent once. Send now emails the last finished period straight away.",

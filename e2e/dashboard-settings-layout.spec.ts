@@ -58,7 +58,7 @@ for (const width of [390, 1280]) for (const theme of ['light', 'dark']) {
     await page.goto('/#settings');
     const nav = page.getByRole('navigation', { name: 'Settings sections', exact: true });
     await expect(nav.getByRole('region')).toHaveCount(5);
-    await expect(nav.getByRole('button')).toHaveCount(31);
+    await expect(nav.getByRole('button')).toHaveCount(32);
     for (const button of await nav.getByRole('button').all()) expect(Number((await button.boundingBox())!.height.toFixed(3))).toBeGreaterThanOrEqual(44);
     const appearance = nav.getByRole('button', { name: 'Appearance & Display', exact: true });
     await appearance.focus(); await appearance.press('Enter');
@@ -74,7 +74,7 @@ for (const width of [390, 1280]) for (const theme of ['light', 'dark']) {
     await search.fill('אין התאמה xyz'); await expect(nav.getByRole('status')).toContainText('No settings match');
     await expect(heading).toHaveAttribute('data-preserved-draft', 'same-mounted-page');
     await nav.getByRole('button', { name: 'Clear search', exact: true }).click();
-    await expect(search).toHaveValue(''); await expect(nav.getByRole('button')).toHaveCount(31);
+    await expect(search).toHaveValue(''); await expect(nav.getByRole('button')).toHaveCount(32);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
