@@ -14,9 +14,9 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 | Workflow | What is missing | Who |
 |---|---|---|
 | W1 sign-up → first report | browser journey merged (#282, 21 Oct); left: worked figures (W1-GOLD) | AI #9 |
-| W5 labels → reports by label | A-210 done (21 Oct: by-label P&L + balance sheet browser journey on the real report, hand figures 2/2); left: F-50 wider labels journey + W14 (AI #7) | AI #7 |
-| W10 backup → restore | browser test (F-46) | AI #7 |
-| W14 roles and access | browser journey | AI #7 |
+| W5 labels → reports by label | A-210 done (21 Oct: by-label P&L + balance sheet browser journey on the real report, hand figures 2/2); browser journey and worked figures done | — |
+| W10 backup → restore | browser test (F-46, now D-98) | AI #4 |
+| W14 roles and access | browser journey (now D-99) | AI #4 |
 | G-02 first hour without dead ends | wording/dead-end fixes done (D-97 batches 1–2); left: AI #7's authenticated G-24 journey certifies G-02 | AI #4 / AI #7 |
 | Done for A | W2, W3, W4, W6, W9 | — |
 
@@ -58,13 +58,13 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 |---|---|---|
 | #1 Claude (lead) | Reviews/merges and the plan; wire A-77 branding into PDFs when AI #3's resolver lands; L-94 server-side document postings (design) | — |
 | #9 Opus (money lane) | **P0:** L94-STEP2 (the server builds invoice/bill entries); then ISS-160, PREV-5, AUD-15, L94-STEP2B, W7-GOLD, W8-GOLD, PREV-6, AUD-13, ISS-143+AUD-03, AUD-10, … (24 open, about 3 days; full order in COORDINATION). FIFO/lot costing waits for the owner | — |
-| #7 | **P0:** G-24 first-hour journey test (W1, taken over from AI #8), F-46 backup → restore browser test (W10), W5 labels → reports browser journey, W14 roles browser journey, a browser check of the help center/feedback screens from #252; then F-48, F-49 flakes | — |
+| #7 (fork: Chaim-Richard) | Not active recently — its stage-A tasks moved to AI #4. When active: F-48/F-49 flakes, stability queue (F-*). How to send work: COORDINATION "AIs that work from the fork" | — |
 | #3 Arena | Next three days in order (top of its queue in COORDINATION): data-quality checks A-194/196/197 → 12-month sample business A-148 → report speed A-206 → help A-201/202/149 → A-185, A-183, A-182, A-138, A-137, A-131/132, A-190/192/193, A-180, A-107, A-72 | — |
-| #4 | **D-97 wording pass complete (21 Oct, PR #295 on `arena/7b5d662c-ledgerflow`):** reconciliation, bank import, template selector and chart of accounts renamed to plain bookkeeping language; five Codex P2 review findings fixed (scoped reconciled %, `useDialog` modal, AI-card claim, action-boundary toasts, importer loading toast); reconcile visual baselines need the maintainer's refresh workflow. G-02 certification still waits on AI #7's G-24. Next: **D-89** list money alignment/sticky headers, then **D-91** icon-only button labels; D-44 report picker after | — |
+| #4 | **P0 first (moved from AI #7):** D-98 = F-46 backup → restore browser journey (W10), D-99 = W14 roles browser journey; then its D-queue | — |
 | #5 | **P1:** accountant export pack (trial balance, GL, A/R, A/P, tax liability by period as CSV/PDF — new E-58); then E-17 onward | — |
 | #2 Codex | **Screen wiring C-102…C-126 is done** (21 Oct: all 50 modules in `workspaceExports.ts` reach a screen; C-115/C-117/C-120/C-121/C-122 ticked). Next: C-35 access review, C-36 audit evidence pack, then C-54/C-71 empty states and C-67/C-89 column chooser — check each against `main` first, several older rows are already built. No new tax screens (stage C) | — |
-| #6 | S-01–S-05 merged 21 Oct (#266–#270); next: S-1 onward in its queue | — |
-| #8 | (inactive) #252 merged by AI #1 on 20 Oct; G-9 sample companies (IL + US) when active | — |
+| #6 (fork: Chaim-Richard) | S-01–S-05 merged 21 Oct (#266–#270); next: S-1 onward in its queue. How to send work: COORDINATION "AIs that work from the fork" | — |
+| #8 (fork: Chaim-Richard) | Works now and then: G-9 sample companies (IL + US), then its G-queue. How to send work: COORDINATION "AIs that work from the fork" | — |
 
 ## Where things are
 
