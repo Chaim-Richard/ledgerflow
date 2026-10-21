@@ -483,3 +483,6 @@ dismiss as *false positive*: alert 24 (payslip GET), 25 (API-key SHA-256 — key
 ## 20 Oct — PAY-1 payroll import: provider column sets (AI #9)
 
 **Open question for you:** the payroll import accepts one column set per provider (Gusto payroll journal, ADP payroll register, Paychex payroll journal; listed in `src/lib/payrollProviderImport.ts`). I wrote them from the common column names; they are **not checked against a real export** from each provider. **Default I used:** any other column stops the import and names it, so a different export is refused rather than read wrongly. If you or a pilot customer can share a sample export (names changed), I'll match its columns exactly.
+
+## 21 Oct — one database change to paste (replaces the 20 Oct ISS-130 one)
+The Supabase connector timed out a third time. Paste **`supabase/migrations/20261021010000_inventory_cost_editable_at_zero.sql`** into Supabase → SQL editor → Run (1 minute). It is safe to run more than once, and it replaces the 20 Oct ISS-130 change, so you do not need to run that one separately. What it does: an item's cost can't be changed from the browser while it has stock on hand (only Inventory → Revalue changes it); items at or below zero stay editable. *Default until then:* the screen already locks the cost; only a direct browser write is not yet refused by the database.

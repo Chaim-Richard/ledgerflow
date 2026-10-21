@@ -25,11 +25,10 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 
 | PR | State |
 |---|---|
-| #254 AI #6 security (rate limits, headers, restore drill) | sent back: tests never ran, limiter not switched on |
-| #181, #183 AI #6 tests | sent back on 19 Oct, not fixed yet |
+| #254 AI #6 security (rate limits, headers, restore drill) | sent back twice: tests still can't run, counter not atomic |
 
 **Waiting on you (owner)** — details in `docs/FOR_YOU.md`
-- Confirm the ISS-130 database change on Supabase (connector timed out).
+- Paste one database change into Supabase: `supabase/migrations/20261021010000_inventory_cost_editable_at_zero.sql` (FOR_YOU, 21 Oct; connector timed out 3 times).
 - Replace the four generated secrets (item 2), try sign-up on the live site (3), deployment protection (4).
 - Email sender + provider (5, 7), database certificate (6), Stripe last 2 steps (8), privacy papers (17).
 - GitHub: require CI before merging to `main` (L-67).
@@ -66,7 +65,7 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 | #4 | **P0:** G-02 first hour without dead ends — walk the first-hour path on phone and desktop, fix wording/dead ends (new D-97); then D-87 onward | — |
 | #5 | **P1:** accountant export pack (trial balance, GL, A/R, A/P, tax liability by period as CSV/PDF — new E-58); then E-17 onward | — |
 | #2 Codex | **P1:** finish the screen wiring already started (C-102…C-126); no new tax screens (stage C) | — |
-| #6 | Fix #181 and #183, then redo #254 as small PRs (tests in `node:test`, S-01 wired in, quoted table name) — see the review comments | #181, #183, #254 sent back |
+| #6 | Redo #254 as small PRs from latest main: S-01 first (tests in `node:test` with the test database, counter in one transaction) — see the second review | #254 sent back |
 | #8 | (inactive) #252 merged by AI #1 on 20 Oct; G-9 sample companies (IL + US) when active | — |
 
 ## Where things are
