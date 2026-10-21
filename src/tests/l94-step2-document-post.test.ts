@@ -6,6 +6,7 @@
  *          and the new one (A/R +495.00, Sales −450.00, VAT −45.00): A/R nets to 495.00
  *   INV-3  1 × 150.00 + 15.00 = 165.00, then back to a draft → only its reversal (A/R −165.00): A/R nets to 0
  *   BILL-1 1,000.00 of supplies + 18% tax 180.00 = 1,180.00 → A/P −1,180.00, the other side +1,180.00
+ *   OB-1   an opening balance of 40.00 owed to Paper Co → Opening Balance Equity +40.00, A/P −40.00
  * Every entry the route writes is the one the browser's builder makes from the same books (the same dates, accounts,
  * amounts and labels). And: a body carrying entries is refused (nothing written); the same key again answers as before
  * and writes nothing; two edits at once are saved one after the other or the later refused (409, INT-2), never both
@@ -20,6 +21,7 @@ import { postInvoiceLedger } from '../services/ledgerPost/invoicePosting';
 import { postBillLedger } from '../services/ledgerPost/billPosting';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from '../services/ledgerPost/postingCore';
 import { postingFingerprint } from '../server/services/postingShadowCheck';
+import { openingBalanceDocument } from '../lib/partyOpeningBalance';
 import type { Bill, ChartAccount, Invoice, Transaction, Workspace } from '../types';
 
 const url = process.env.LF_TEST_DATABASE_URL;
@@ -39,6 +41,7 @@ describe('L-94 step 2: invoices and bills posted by the server', { skip: !url &&
     { id: `${ws}_vat`, name: 'VAT Payable', type: 'liability', category: 'Tax', code: '2200' },
     { id: `${ws}_sales`, name: 'Sales', type: 'income', code: '4000' },
     { id: `${ws}_supplies`, name: 'Office Supplies', type: 'expense', code: '6000' },
+    { id: `${ws}_obe`, name: 'Opening Balance Equity', type: 'equity', code: '3900' },
   ].map(a => ({ ...a, workspaceId: ws })) as unknown as ChartAccount[];
   const workspace = { id: ws, uid: OWNER, name: 'L-94 step 2', currency: 'USD', timezone: 'UTC', defaultAccountMappings: { ar: `${ws}_ar`, ap: `${ws}_ap`, revenue: `${ws}_sales`, tax: `${ws}_vat` } } as unknown as Workspace;
   const invoice = (qty: number, id: string, date = '2026-10-21') => ({
@@ -126,6 +129,17 @@ describe('L-94 step 2: invoices and bills posted by the server', { skip: !url &&
     assert.deepEqual(postingFingerprint(written), expected);
     assert.deepEqual(rows(written, 'ap'), [-118_000]);
     assert.equal(written.flatMap(tx => tx.lines).filter(l => l.accountId !== `${ws}_ap`).reduce((s, l) => s + l.amountCents, 0), 118_000);
+  });
+
+  test('an opening balance owed to Paper Co (40.00): Opening Balance Equity +40.00, A/P −40.00', async () => {
+    // the bill as the contact page's opening balance makes it (PartyOpeningBalance)
+    const data = { ...openingBalanceDocument('vendor', { id: 'v1', name: 'Paper Co' }, { id: `${ws}_obe`, name: 'Opening Balance Equity' } as never, 4_000, '2026-01-01', 'USD'), id: `${ws}_bill2`, workspaceId: ws } as unknown as Bill;
+    const expected = postingFingerprint(await browserBuild('bills', data, 'create'));
+    const res = await post(OWNER, 'bills', data.id!, { workspaceId: ws, action: 'create', data });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    const written = await entriesOf('billId', data.id!);
+    assert.deepEqual(postingFingerprint(written), expected);
+    assert.deepEqual([rows(written, 'obe'), rows(written, 'ap')], [[4_000], [-4_000]]);
   });
 
   test('a body that carries entries is refused and nothing is written', async () => {

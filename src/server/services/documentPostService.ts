@@ -57,8 +57,8 @@ export async function postDocument(db: Firestore, user: RequestUser, input: Docu
 
   const existing = (await db.collection(collection).doc(docId).get()).data();
   if (existing && existing.workspaceId !== workspaceId) throw new BulkRefusal(403, { error: `Forbidden: Entity ${docId} does not belong to authorized workspace.` });
-  if (action === 'create' && existing) throw new BulkRefusal(409, { error: 'This document was already saved (another tab or an earlier save). Reload it and save again.' });
-  if (action === 'update' && !existing) throw new BulkRefusal(404, { error: 'This document is not saved yet, or was deleted' });
+  // as /transactions/bulk: the save merges into what is saved (an update of a document not saved yet makes it); a
+  // second live posting of the same document is refused at commit (INT-2)
 
   const document: Record<string, unknown> = { ...(existing || {}), ...input.data, id: docId, workspaceId };
   // the document's date against the closing date with the server's own rule (a reopened day included), as the browser
