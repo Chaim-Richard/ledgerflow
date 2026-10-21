@@ -108,8 +108,8 @@ export function brandingProfilesProblem(profiles: BrandingProfiles): string | nu
   // Guard obvious mistakes here:
   if (profiles.labels) {
     for (const [key, branding] of Object.entries(profiles.labels)) {
-      if (!key.includes(':')) return `Label key \"${key}\" must be \"dimension:node\"`;
-      if (!branding || typeof branding !== 'object') return `Branding for \"${key}\" must be an object`;
+      if (!key.includes(':')) return `Label key "${key}" must be "dimension:node"`;
+      if (!branding || typeof branding !== 'object') return `Branding for "${key}" must be an object`;
     }
   }
   return null;
