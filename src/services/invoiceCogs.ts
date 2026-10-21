@@ -26,6 +26,8 @@ export interface CogsEntry {
     quantity: number;
     /** W-01: the invoice line's Location label, where the units left from */
     locationId?: string;
+    /** DIM-2 phase 3: the customer the units went to */
+    customerId?: string;
   };
   lines: TransactionLine[];
 }
@@ -84,7 +86,7 @@ export function planInvoiceCogs(input: InvoiceCogsInput): InvoiceCogsPlan {
       status: 'completed',
       type: 'actual',
       createdAt: now,
-      metadata: { invoiceId, type: INVOICE_COGS_TYPE, cogsForInvoiceId: invoiceId, cogsForLineId: lineId, inventoryItemId: itemId, quantity, ...(line.dimensions?.location ? { locationId: line.dimensions.location } : {}) },
+      metadata: { invoiceId, type: INVOICE_COGS_TYPE, cogsForInvoiceId: invoiceId, cogsForLineId: lineId, inventoryItemId: itemId, quantity, ...(line.dimensions?.location ? { locationId: line.dimensions.location } : {}), ...(invoice.customerId ? { customerId: invoice.customerId } : {}) },
       lines: [
         // the invoice line's labels (BF-09) go with its cost, so margin by project or location adds up
         { accountId: cogsAccount.id, accountName: cogsAccount.name, amountCents: costCents, debitCents: costCents, creditCents: 0, description: `Cost of ${name}`, ...(line.dimensions ? { dimensions: line.dimensions } : {}) },

@@ -37,6 +37,14 @@ export interface StockMove {
   vendorId?: string;
   /** DIM-2 phase 2: for units sent back to a vendor, the bill they came in on */
   sourceBillId?: string;
+  /** DIM-2 phase 3: the customer the units went to (or came back from), as the entry named it */
+  customerId?: string;
+  /** DIM-2 phase 3: the invoice line the units were sold on (or returned against) */
+  documentLineId?: string;
+  /** DIM-2 phase 3: where the units went in the books: the sold line's labels (project, property, …), not its location */
+  labels?: Record<string, string>;
+  /** DIM-2 phase 3: why stock was adjusted, as the person wrote it */
+  purpose?: string;
   uid: string;
   createdAt: string;
 }

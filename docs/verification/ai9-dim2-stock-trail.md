@@ -102,3 +102,29 @@ The credit's own key is used, never `metadata.billId`, so a credit is never read
 - Voiding VC-1 brings the 2 chairs back with the same source.
 
 Both tests fail without the change.
+
+## Phase 3: where stock went is kept with the move (branch `ai9/DIM-2c`)
+
+| Move | What it now keeps | Where it is written |
+|---|---|---|
+| Sale | The customer (`customerId`), the invoice line (`documentLineId`), and that line's labels other than location (`labels`, e.g. project or property). The location stays in `locationId`. | `cogsStockService.ts`, from the cost-of-goods entry: `invoiceCogs.ts` now names the customer, and the line's labels were already on the cost line. |
+| Delivery | The customer and the order line (`documentLine`) the delivery entry names. | |
+| Customer return | The customer and the invoice line it came back against. | The return entry (`salesReturns.ts`, given the credit note's customer by `creditPosting.ts`). |
+| Reversal | The same as its original. | |
+| Stock adjustment | Why, as written (`purpose`, up to 200 characters). | `stockAdjustmentService.ts` |
+
+No migration is needed, and nothing is inferred.
+
+**Stock history window.** It shows the sold line's labels under the customer, and the reason for an adjustment ("Inside
+the business: Damaged in transit"). When an invoice can no longer be found, the customer kept with the move still
+names where the stock went. The link is still reported as missing.
+
+**Worked units** (`src/tests/dim2c-stock-destination.test.ts`, on the database). Each test fails without the change.
+
+| Event | Units | The move keeps |
+|---|---:|---|
+| INV-7 to Acme, line l1 (Project P1, Location L1) | −5 | Acme, l1, `{ project: P1 }`; location L1 |
+| CN-1 return | +2 | Acme, l1 |
+| Adjustment "Damaged in transit" | −1 | the reason as its purpose |
+
+On hand: 10 − 5 + 2 − 1 = 6.
