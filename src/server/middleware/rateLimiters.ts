@@ -21,7 +21,6 @@ export const authRateLimiter = createSharedRateLimitMiddleware(
  * Rate limiter for public invoice views.
  * 30 views per minute per IP.
  * 
- * S-01: Uses shared Postgres-backed limiter for cross-instance consistency.
  */
 export const publicInvoiceLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -91,8 +90,8 @@ export const apiKeyRateLimiter = rateLimit({
  * The app-wide limiters (F-01, moved from server.ts). A new set per app, so each app (and each
  * test) counts on its own.
  * 
- * S-01: These use express-rate-limit with in-memory storage. For true cross-instance
- * rate limiting, use the shared Postgres-backed limiters from sharedRateLimiter.ts.
+ * These app-wide limiters remain process-local; use shared storage before relying on them
+ * for cross-instance enforcement.
  */
 export function createAppRateLimiters() {
   // Rate Limiting - Increased for production SPA load
