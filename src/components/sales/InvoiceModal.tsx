@@ -19,7 +19,7 @@ import AsyncButton from '../ui/AsyncButton';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { formatCurrency, safeConfirm } from '../../lib/utils';
 import { customerPricer, findInventoryItem, lineAmountCents, setLineDescription, taxCodeToFillFromItem } from '../../lib/invoiceLines';
-import TaxExemptionNotice from './TaxExemptionNotice'; import { taxChoiceFor } from '../../lib/tax/resolveLineTax'; import { lineTaxCategory } from '../../lib/tax/usInvoiceTax';
+import TaxExemptionNotice from './TaxExemptionNotice'; import { taxChoiceFor } from '../../lib/tax/resolveLineTax'; import { lineTaxCategory, saleDestinationSnapshot } from '../../lib/tax/usInvoiceTax';
 import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import { depositAppliedCents } from '../../lib/documentMath';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
@@ -212,6 +212,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
           terms,
           emailSubject,
           emailBody,
+          ...saleDestinationSnapshot({ status: actionStatus, customerId: invoice.customerId, initial: initialInvoice, customers: safeCustomers }), // #255: where the sale went, kept
         },
         // files picked for a new invoice are kept with it once it has an id (Sales.tsx)
         ...(attachments.length > 0 && !invoice.id ? { attachmentFiles: attachments } : {}),

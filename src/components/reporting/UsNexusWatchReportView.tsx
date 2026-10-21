@@ -80,7 +80,7 @@ export function UsNexusWatchPanel({ watch, currency = 'USD', asOf, onAsOfChange,
         : 'No posted sale to a customer with a US tax place in these two years.'}
       {watch.unplacedDocuments ? ` ${watch.unplacedDocuments} posted sale(s) have a customer with no tax place recorded, so they are in no state: add the customer's tax place.` : ''}
       {watch.mixedEntityDocuments ? ` ${watch.mixedEntityDocuments} posted sale(s) have lines for different selling entities, so they are left out rather than split by a guess.` : ''}
-      {' '}A sale without its own tax place or ship-to is placed by its customer's tax place as recorded now.
+      {' '}Invoices keep their customer's tax place from the day they were issued; older invoices without one are placed by the customer's tax place as recorded now.
     </p>}
     {watch && watch.states.length > 0 && <ReportTableScroll>
       <table className="w-full text-sm">

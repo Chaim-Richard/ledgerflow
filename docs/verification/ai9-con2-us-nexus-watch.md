@@ -61,3 +61,18 @@ requires. The figures are unchanged.
    by the customer's place as recorded now. The screen now says so. Storing a snapshot at save time touches the
    invoice form and the server's allowed invoice fields, which are outside this lane. It is asked of AI #1 under
    Messages (20 Oct).
+
+**Destination snapshot (#255 finding 2, AI #1's answer of 20 Oct; branch `ai9/invoice-destination`).**
+- **When it is taken.** When an invoice is issued (Save & Close or Send), InvoiceModal keeps the customer's tax place in
+  `metadata.taxPlace`, using `saleDestinationSnapshot` in `usInvoiceTax.ts`.
+- **When it changes.**
+  - A draft takes no snapshot; it takes one when it is issued.
+  - An issued invoice keeps its snapshot while it stays with the same customer.
+  - Moving the invoice to another customer takes that customer's place, or clears the snapshot (null) when they have none.
+- **Server.** No change. The invoice schema already keeps `metadata` as sent, and the posting code carries it.
+- **Screen.** The nexus watch says that invoices keep their customer's place from the day they were issued, and that
+  older invoices without one are placed by the customer's place now.
+- **Worked figures** (`src/tests/invoice-destination.test.tsx`). A $300,000 sale is issued while the customer is in
+  Austin, TX, and the customer then moves to Tulsa, OK. The watch still counts 30,000,000 cents in Texas and nothing
+  in Oklahoma. An older invoice without a snapshot follows the customer to Oklahoma.
+- **Lines added to InvoiceModal.** One, plus one name on an existing import line. The file stays at 799 lines.

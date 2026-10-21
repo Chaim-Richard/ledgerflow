@@ -32,7 +32,8 @@ export interface NexusSaleDocument extends TaxableDocument {
   invoiceId?: string;
   /** where this sale went, when the document records it: it comes before the customer's own place */
   shippingAddress?: { country?: string; state?: string };
-  metadata?: { taxPlace?: TaxPlace } & Record<string, unknown>;
+  /** an issued invoice's place on the day it was issued (saleDestinationSnapshot); null = none recorded */
+  metadata?: { taxPlace?: TaxPlace | null } & Record<string, unknown>;
 }
 
 export interface NexusYear extends NexusWatchResult {
