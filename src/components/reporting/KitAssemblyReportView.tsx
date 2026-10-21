@@ -95,6 +95,7 @@ export default function KitAssemblyReportView() {
 
           <ReportTableScroll>
             <table className="w-full text-sm">
+              <caption className="sr-only">Components needed for this assembly</caption>
               <thead>
                 <tr className="border-b border-[var(--line)] text-left text-[var(--muted)]">
                   <th scope="col" className="py-2 pr-3">Part</th>

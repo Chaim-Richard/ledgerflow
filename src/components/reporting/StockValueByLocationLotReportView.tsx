@@ -178,7 +178,8 @@ export default function StockValueByLocationLotReportView({ purchaseOrders: purc
               explain is shown with the reason and is not split across locations — the same rule as Inventory Valuation.
             </p>
             <ReportTableScroll>
-              <table className="w-full text-sm" aria-label="Value by location">
+              <table className="w-full text-sm">
+                <caption className="sr-only">Value by location</caption>
                 <thead>
                   <tr className="border-b border-[var(--line)] text-left text-[var(--muted)]">
                     <th scope="col" className="py-2 pr-3">Location</th>
@@ -259,7 +260,8 @@ export default function StockValueByLocationLotReportView({ purchaseOrders: purc
           <p className="text-sm text-[var(--muted)]">No received lots yet: record a lot on a goods receipt (Purchase orders → Receive goods).</p>
         ) : (
           <ReportTableScroll>
-            <table className="w-full text-sm" aria-label="Value by lot">
+            <table className="w-full text-sm">
+              <caption className="sr-only">Value by lot</caption>
               <thead>
                 <tr className="border-b border-[var(--line)] text-left text-[var(--muted)]">
                   <th scope="col" className="py-2 pr-3">Item</th>
