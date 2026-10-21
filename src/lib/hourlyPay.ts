@@ -21,15 +21,41 @@ export function asPaidFor(e: Employee, minutes: number): Employee {
 
 export interface PayableTime { id: string; person: string; date: string; minutes: number; status: string; paidRunId?: string }
 
-/** By employee: the approved time not paid yet, up to the pay date (its minutes and which entries). */
+/**
+ * By employee: the approved time not paid yet, up to the pay date (its minutes and which entries). U-12: a time
+ * entry is paid once in a run — if two employees take their pay from the same person's time, only the first gets
+ * it (and `sharedTime` names them, so a run refuses before it gets here).
+ */
 export function hoursToPay(employees: Employee[], entries: PayableTime[], payDate: string): Map<string, { minutes: number; entryIds: string[] }> {
   const out = new Map<string, { minutes: number; entryIds: string[] }>();
+  const claimed = new Set<string>();
   for (const e of employees) {
     if (!isHourly(e) || !e.timeUid) continue;
-    const mine = entries.filter(t => t.person === e.timeUid && (t.status === 'approved' || t.status === 'invoiced') && !t.paidRunId && t.date <= payDate);
+    const mine = entries.filter(t => t.person === e.timeUid && (t.status === 'approved' || t.status === 'invoiced') && !t.paidRunId && t.date <= payDate && !claimed.has(t.id));
+    mine.forEach(t => claimed.add(t.id));
     out.set(e.id, { minutes: mine.reduce((s, t) => s + t.minutes, 0), entryIds: mine.map(t => t.id) });
   }
   return out;
+}
+
+/**
+ * U-12: the hourly employees of a run who take their pay from the same person's time and that person has time to
+ * pay — each group would be paid the same hours twice. Employees left out of the run (ended, another schedule) do
+ * not count; a shared link with no time to pay harms nothing.
+ */
+export function sharedTime(employees: Employee[], entries: PayableTime[], payDate: string, schedule = 'all'): Array<{ person: string; employees: Employee[] }> {
+  const inRun = employees.filter(e => isHourly(e) && e.timeUid && e.status !== 'Terminated' && (schedule === 'all' || e.payFrequency === schedule));
+  const byPerson = new Map<string, Employee[]>();
+  for (const e of inRun) byPerson.set(e.timeUid!, [...(byPerson.get(e.timeUid!) || []), e]);
+  return [...byPerson.entries()]
+    .filter(([person, group]) => group.length > 1 && entries.some(t => t.person === person && (t.status === 'approved' || t.status === 'invoiced') && !t.paidRunId && t.date <= payDate))
+    .map(([person, group]) => ({ person, employees: group }));
+}
+
+/** The sentence a run refuses with when time is shared (U-12). */
+export function sharedTimeMessage(groups: Array<{ employees: Pick<Employee, 'name'>[] }>): string {
+  const names = (g: { employees: Pick<Employee, 'name'>[] }) => g.employees.map(e => e.name || 'an employee').join(' and ');
+  return `${groups.map(names).join('; ')} are paid from the same person's time, so it would be paid twice: in Payroll, choose whose time pays each of them, then run payroll again.`;
 }
 
 /** What an hourly employee needs; null when it is fine (or they are paid a salary). */
