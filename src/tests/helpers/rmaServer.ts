@@ -5,7 +5,7 @@
  */
 import { createReturnAuthorization, transitionReturnAuthorization, type ReturnAuthorizationRecord } from '../../lib/warehouseRecords';
 
-export interface RmaCall { url: string; body: Record<string, unknown> | null }
+export interface RmaCall { url: string; method: string; body: Record<string, unknown> | null }
 
 export function stubRmaServer(options: {
   workspaceId: string;
@@ -22,7 +22,7 @@ export function stubRmaServer(options: {
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : null;
-    calls.push({ url, body });
+    calls.push({ url, method: String(init?.method || 'GET'), body });
     const json = (status: number, data: unknown) => new Response(data === null ? 'null' : JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
     if (options.refuse) return json(options.refuse.status, { status: 'error', message: options.refuse.message });
     const match = /\/return-authorizations(?:\/([^/?]+))?$/.exec(url.split('?')[0]);
