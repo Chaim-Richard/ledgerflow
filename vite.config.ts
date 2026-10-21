@@ -88,6 +88,9 @@ export default defineConfig({
     target: 'esnext'
   },
   optimizeDeps: {
+    // F-49: scan every screen up front. Lazily loaded screens otherwise reveal new dependencies mid-session,
+    // and the dev server reloads the page under a running browser test ("Failed to find script").
+    entries: ['index.html', 'src/**/*.tsx'],
     include: ['recharts', 'd3'],
     esbuildOptions: {
       target: 'esnext'
