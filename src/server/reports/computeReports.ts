@@ -451,7 +451,10 @@ export function computeStatement(
     });
   });
 
-  activityItems.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  // AUD-01: one order whatever order the rows were read in (the screen's store, the server's query): by date, then
+  // documents before payments before credits, then reference and id — so each row's running balance is the same
+  const rank = (t: string) => (t === 'Invoice' || t === 'Bill' ? 0 : t === 'Payment' ? 1 : 2);
+  activityItems.sort((a, b) => (a.date || '').localeCompare(b.date || '') || rank(a.type) - rank(b.type) || a.reference.localeCompare(b.reference, undefined, { numeric: true }) || a.id.localeCompare(b.id));
 
   let runningBalanceCents = openingBalanceCents;
   const entries = activityItems.map(item => {

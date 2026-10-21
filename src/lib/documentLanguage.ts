@@ -34,7 +34,7 @@ export type DocumentKind = 'invoice' | 'estimate' | 'creditNote' | 'payment' | '
 export interface DocumentWords {
   titles: Record<DocumentKind | 'saleReceipt' | 'salesOrder', string>;
   recipient: Record<DocumentKind, string>;
-  number: string; date: string; signedBy: string; validUntil: string; deliverBy: string; due: string; terms: string; yourReference: string;
+  number: string; date: string; signedBy: string; validUntil: string; deliverBy: string; due: string; terms: string; yourReference: string; period: string;
   paymentTerms: (code: string) => string | undefined;
   subtotal: string; discount: string; tax: string; included: string; total: string; balance: string; deposit: string; amountDue: string;
   description: string; quantity: string; amount: string; item: string; client: string;
@@ -59,7 +59,7 @@ export const DOCUMENT_WORDS: Record<DocumentLanguage, DocumentWords> = {
       invoice: 'BILLED TO', estimate: 'PREPARED FOR', creditNote: 'CREDITED TO', payment: 'RECEIVED FROM', statement: 'STATEMENT FOR',
       purchaseOrder: 'ORDERED FROM', bill: 'FROM VENDOR', vendorCredit: 'FROM VENDOR',
     },
-    number: 'Number', date: 'Date', signedBy: 'Signed by', validUntil: 'Valid until', deliverBy: 'Deliver by', due: 'Due', terms: 'Terms', yourReference: 'Your reference',
+    number: 'Number', date: 'Date', signedBy: 'Signed by', validUntil: 'Valid until', deliverBy: 'Deliver by', due: 'Due', terms: 'Terms', yourReference: 'Your reference', period: 'Period',
     paymentTerms: code => (code === 'due_on_receipt' ? 'Due on receipt' : NET.test(code) ? `Net ${code.match(NET)![1]}` : undefined),
     subtotal: 'Subtotal', discount: 'Discount', tax: 'Tax', included: 'incl.', total: 'TOTAL', balance: 'BALANCE', deposit: 'Deposit received', amountDue: 'AMOUNT DUE',
     description: 'DESCRIPTION', quantity: 'QTY', amount: 'AMOUNT', item: 'Item', client: 'Valued Client',
@@ -78,7 +78,7 @@ export const DOCUMENT_WORDS: Record<DocumentLanguage, DocumentWords> = {
       invoice: 'לכבוד', estimate: 'עבור', creditNote: 'זיכוי עבור', payment: 'התקבל מאת', statement: 'דף חשבון עבור',
       purchaseOrder: 'הוזמן מאת', bill: 'מהספק', vendorCredit: 'מהספק',
     },
-    number: 'מספר', date: 'תאריך', signedBy: 'נחתם על ידי', validUntil: 'בתוקף עד', deliverBy: 'מועד אספקה', due: 'לתשלום עד', terms: 'תנאי תשלום', yourReference: 'האסמכתא שלכם',
+    number: 'מספר', date: 'תאריך', signedBy: 'נחתם על ידי', validUntil: 'בתוקף עד', deliverBy: 'מועד אספקה', due: 'לתשלום עד', terms: 'תנאי תשלום', yourReference: 'האסמכתא שלכם', period: 'תקופה',
     paymentTerms: code => (code === 'due_on_receipt' ? 'מיידי' : NET.test(code) ? `תוך ${code.match(NET)![1]} ימים` : undefined),
     subtotal: 'סכום ביניים', discount: 'הנחה', tax: 'מס', included: 'כלול', total: 'סה״כ', balance: 'יתרה', deposit: 'מקדמה שהתקבלה', amountDue: 'לתשלום',
     description: 'תיאור', quantity: 'כמות', amount: 'סכום', item: 'פריט', client: 'לקוח',

@@ -48,6 +48,8 @@ export interface PdfDocument {
   taxBreakdown?: Array<{ name?: string; rate?: number; taxCents?: number }>;
   pricesIncludeTax?: boolean;
   depositCents?: number;
+  /** AUD-01: the period a statement covers, printed with it */
+  period?: { startDate: string; endDate: string };
   /** `saleReceipt` (K-03): an invoice paid on the spot, titled as a receipt */
   metadata?: { saleReceipt?: boolean; /** IL-6 */ ilAllocationNumber?: string };
   /** K-04: an estimate the customer accepted prints as a sales order, with their reference */
@@ -140,6 +142,7 @@ export function layoutDocumentPdf(
   if ((type === 'invoice' || type === 'estimate' || type === 'bill' || type === 'purchaseOrder') && doc.dueDate) {
     meta.push([type === 'estimate' ? words.validUntil : type === 'purchaseOrder' ? words.deliverBy : words.due, clean(doc.dueDate, 10)]);
   }
+  if (type === 'statement' && doc.period) meta.push([words.period, `${clean(doc.period.startDate, 10)} – ${clean(doc.period.endDate, 10)}`]);
   if (type === 'invoice' && doc.paymentTerms) meta.push([words.terms, words.paymentTerms(doc.paymentTerms) || clean(doc.paymentTerms, 40)]);
   if (type === 'invoice' && doc.metadata?.ilAllocationNumber) meta.push([words.allocationNumber, clean(doc.metadata.ilAllocationNumber, 12)]);
   const salesOrder = type === 'estimate' && Boolean(doc.orderedAt);
