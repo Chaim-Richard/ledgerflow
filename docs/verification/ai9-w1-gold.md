@@ -19,4 +19,4 @@ app makes (`openingBalanceDocument` → `postInvoiceLedger` / `postBillLedger`),
 - **Trial balance 31 Jan:** Checking DR 500,000; A/R DR 150,000; A/P CR 80,000; Opening Balance Equity DR 80,000 /
   CR 620,000 (net 540,000); Project Revenue CR 30,000 → **730,000 = 730,000**.
 
-With the browser journey (#282), RELEASE_GATE W1 "Verified" can move to Yes.
+RELEASE_GATE W1 "Verified" is Yes with this test (the browser journey is #282).
