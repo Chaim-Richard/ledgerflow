@@ -1,5 +1,9 @@
 import rateLimit from 'express-rate-limit';
-import { sharedAuthRateLimiter, sharedSignInRateLimiter, sharedPasswordResetRateLimiter } from './sharedRateLimiter';
+import {
+  createSharedRateLimitMiddleware,
+  sharedAuthRateLimiter,
+  sharedBrainRateLimiter,
+} from './sharedRateLimiter';
 
 /**
  * Strict rate limiter for Authentication and Password Reset endpoints.
@@ -8,17 +12,10 @@ import { sharedAuthRateLimiter, sharedSignInRateLimiter, sharedPasswordResetRate
  * S-01: Now uses Postgres-backed shared rate limiter so all server instances
  * share the same counter, not per-instance memory.
  */
-export const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    status: 'error',
-    code: 'RATE_LIMIT_EXCEEDED',
-    message: 'Too many authentication attempts. Please try again after 15 minutes.'
-  }
-});
+export const authRateLimiter = createSharedRateLimitMiddleware(
+  sharedAuthRateLimiter,
+  (req: any) => String(req.ip || req.socket?.remoteAddress || 'unknown'),
+);
 
 /**
  * Rate limiter for public invoice views.
@@ -62,17 +59,10 @@ export const pdfGenerationLimiter = rateLimit({
  * 
  * S-01: Uses shared Postgres-backed limiter for cross-instance consistency.
  */
-export const brainRateLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    status: 'error',
-    code: 'RATE_LIMIT_EXCEEDED',
-    message: 'AI Brain request quota temporarily exceeded. Please throttle request intensity.'
-  }
-});
+export const brainRateLimiter = createSharedRateLimitMiddleware(
+  sharedBrainRateLimiter,
+  (req: any) => String(req.user?.uid || req.user?.id || req.ip || req.socket?.remoteAddress || 'unknown'),
+);
 
 /** Z-02: an API key's own limit a minute (set when the key is made; 120 unless chosen). */
 export const API_KEY_DEFAULT_PER_MINUTE = 120;
