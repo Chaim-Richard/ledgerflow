@@ -60,6 +60,8 @@ export default function ReturnAuthorizationsPanel() {
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.record) throw new Error(data.message || 'The return authorization could not be saved.');
     const record = data.record as ReturnAuthorizationRecord;
+    // saved in the workspace it was asked in; when another workspace is open by now, its list is not touched
+    if (useAuthStore.getState().currentWorkspaceId !== workspaceId) return record;
     const store = useLedgerStore.getState();
     store.setCustomers((store.customers as Customer[]).map(c => (c.id !== record.customerId ? c : {
       ...c, metadata: { ...(c.metadata || {}), [RMAS_METADATA_FIELD]: { ...((c.metadata?.[RMAS_METADATA_FIELD] as Record<string, unknown>) || {}), [encodedPathPart(record.id)]: record } },
