@@ -123,3 +123,27 @@ export function lineTaxCategory(
   if (!item) return line.itemId || !complete ? undefined : null;
   return item.productTaxCategory || (item.itemType === 'service' ? 'services' : '');
 }
+
+/**
+ * #255 review (AI #1, 20 Oct): an issued invoice keeps where the sale went — the customer's tax place on the day it
+ * was issued — in `metadata.taxPlace`, so editing the customer's address later does not move a past sale between
+ * states (the nexus watch, usNexusWatch.ts, reads the invoice's own place first). A draft is not a sale yet: it takes
+ * no snapshot, and takes it when it is issued. An issued invoice keeps its snapshot while it stays with the same
+ * customer; changing the customer takes the new customer's place (or clears it, with null). Returns the metadata to
+ * merge (or nothing).
+ */
+export function saleDestinationSnapshot(input: {
+  status?: string;
+  customerId?: string;
+  /** the invoice as it was opened (its customer and its metadata) */
+  initial?: { customerId?: string; metadata?: Record<string, unknown> | null };
+  customers: Array<{ id: string; metadata?: unknown }>;
+}): { taxPlace?: TaxPlace | null } {
+  if (!input.customerId || ['draft', 'void', 'cancelled'].includes(String(input.status || ''))) return {};
+  const kept = input.initial?.metadata?.taxPlace as TaxPlace | undefined;
+  if (kept && input.initial?.customerId === input.customerId) return { taxPlace: kept };
+  const place = ((input.customers.find(c => c.id === input.customerId)?.metadata as { taxPlace?: TaxPlace } | undefined)?.taxPlace);
+  if (place?.country) return { taxPlace: { ...place } };
+  // another customer with no place recorded: the earlier customer's place must not stay on the sale
+  return kept ? { taxPlace: null } : {};
+}
