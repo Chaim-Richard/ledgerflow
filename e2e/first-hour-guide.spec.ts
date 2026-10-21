@@ -7,7 +7,11 @@ for (const width of [390, 1280]) for (const dark of [false, true]) {
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
     const diagnostics: string[] = [];
-    page.on('requestfailed', request => diagnostics.push(`request failed: ${request.method()} ${request.url()} — ${request.failure()?.errorText || 'unknown'}`));
+    // the app's own scripts must load; guest-mode data calls to the unconfigured database fail in CI by design
+    page.on('requestfailed', request => {
+      if (request.resourceType() !== 'script' || new URL(request.url()).origin !== new URL(page.url() || 'http://x').origin) return;
+      diagnostics.push(`request failed: ${request.method()} ${request.url()} — ${request.failure()?.errorText || 'unknown'}`);
+    });
     page.on('response', response => {
       if (response.status() >= 400 && /\\.(js|mjs|ts|tsx)(?:\\?|$)/.test(response.url())) {
         diagnostics.push(`script HTTP ${response.status()}: ${response.url()}`);
