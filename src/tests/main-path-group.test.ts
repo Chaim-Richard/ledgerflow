@@ -49,6 +49,7 @@ describe('The main path across a group of books', { skip: !process.env.LF_TEST_D
     app.use(express.json());
     app.use((req, _res, next) => { (req as unknown as { user: { uid: string; email: string } }).user = { uid: String(req.header('x-test-uid')), email: 'ann@example.test' }; next(); });
     app.use('/api/v1/transactions', transactionRouter);
+    app.use('/api/v1/documents', (await import('../server/routes/documentPostRoutes')).documentPostRouter);
     app.use('/api/v1/reports', reportRouter);
     app.use('/api/v1/account', accountRouter);
     server = app.listen(0);

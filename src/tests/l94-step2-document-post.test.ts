@@ -4,6 +4,7 @@
  *   INV-1  2 × 150.00 = 300.00 + 10% tax 30.00 = 330.00 → A/R +330.00, Sales −300.00, VAT −30.00
  *   edit   3 × 150.00 = 450.00 + 45.00 = 495.00 → the first entry reversed (A/R −330.00, Sales +300.00, VAT +30.00)
  *          and the new one (A/R +495.00, Sales −450.00, VAT −45.00): A/R nets to 495.00
+ *   INV-3  1 × 150.00 + 15.00 = 165.00, then back to a draft → only its reversal (A/R −165.00): A/R nets to 0
  *   BILL-1 1,000.00 of supplies + 18% tax 180.00 = 1,180.00 → A/P −1,180.00, the other side +1,180.00
  * Every entry the route writes is the one the browser's builder makes from the same books (the same dates, accounts,
  * amounts and labels). And: a body carrying entries is refused (nothing written); the same key again answers as before
@@ -162,6 +163,14 @@ describe('L-94 step 2: invoices and bills posted by the server', { skip: !url &&
     assert.equal(rows(all, 'ar').reduce((s, n) => s + n, 0), saved, 'A/R is the saved invoice, once');
     const reversed = new Set(all.map(tx => tx.metadata?.reversesTxId).filter(Boolean));
     assert.equal(all.filter(tx => tx.metadata?.type === 'invoice-accrual' && !reversed.has(tx.id)).length, 1, 'one live entry');
+  });
+
+  test('INV-3 back to a draft: the server reverses its 165.00 and posts nothing new', async () => {
+    const id = `${ws}_inv3`;
+    const res = await post(OWNER, 'invoices', id, { workspaceId: ws, action: 'update', data: { status: 'draft' } });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.deepEqual(rows(res.body.transactions, 'ar'), [-16_500], 'only the reversal of A/R +165.00');
+    assert.equal(rows(await entriesOf('invoiceId', id), 'ar').reduce((s, n) => s + n, 0), 0);
   });
 
   test('a viewer cannot post; a document dated in a closed month is refused', async () => {
