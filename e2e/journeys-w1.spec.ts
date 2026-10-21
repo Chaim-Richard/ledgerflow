@@ -35,7 +35,15 @@ async function shell(page: Page) {
     contentType: 'text/html',
     body: '<!doctype html><html lang="en" class="light"><head><title>W1 journey</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/index.css"></head><body><div id="root"></div></body></html>',
   }));
+  // Load the ordinary entry once so a fresh Vite cache has React's client module (as the other fixture specs do).
+  await page.goto('/');
+  await page.waitForFunction(() => Boolean(document.querySelector('#root')?.childElementCount));
   await page.goto('/w1-fixture');
+  // Components are imported straight into the fixture page: install the React refresh preamble first.
+  await page.evaluate(async () => {
+    const refresh = await import('/@react-refresh'); refresh.default.injectIntoGlobalHook(window);
+    Object.assign(window, { $RefreshReg$: () => {}, $RefreshSig$: () => (type: unknown) => type, __vite_plugin_react_preamble_installed__: true });
+  });
   return { errors };
 }
 
@@ -231,7 +239,7 @@ test('G-24 W1: first invoice through the invoice form, then the customer stateme
   }, { workspaceId: WORKSPACE, startDate, endDate, saved });
 
   await expect(page.getByRole('heading', { name: 'Account Statement' })).toBeVisible();
-  await expect(page.getByText('Acme Corp').first()).toBeVisible();
+  await expect(page.getByText('Acme Corp').locator('visible=true').first()).toBeVisible();
   await expect(page.getByText('$300.00').first()).toBeVisible();
   const table = page.locator('table');
   await expect(table).toContainText(saved.number || 'INV-');
