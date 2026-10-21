@@ -6,6 +6,13 @@ for (const width of [390, 1280]) for (const dark of [false, true]) {
     test.setTimeout(90_000);
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
+    const diagnostics: string[] = [];
+    page.on('requestfailed', request => diagnostics.push(`request failed: ${request.method()} ${request.url()} — ${request.failure()?.errorText || 'unknown'}`));
+    page.on('response', response => {
+      if (response.status() >= 400 && /\\.(js|mjs|ts|tsx)(?:\\?|$)/.test(response.url())) {
+        diagnostics.push(`script HTTP ${response.status()}: ${response.url()}`);
+      }
+    });
     await page.setViewportSize({ width, height: 900 });
     await page.route('**/api/**', route => route.fulfill({ json: {} }));
     await page.addInitScript(dark => {
@@ -92,6 +99,6 @@ for (const width of [390, 1280]) for (const dark of [false, true]) {
     await testInfo.attach('empty-books', { body: await page.screenshot({ path: testInfo.outputPath(`empty-${width}-${dark ? 'dark' : 'light'}.png`) }), contentType: 'image/png' });
     await main.getByRole('button', { name: 'Open invoices', exact: true }).click();
     await expect(main.getByRole('heading', { name: 'Invoicing & Customer Accounts', exact: true })).toBeVisible();
-    expect(errors).toEqual([]);
+    expect(errors, `Browser script diagnostics: ${diagnostics.join(' | ') || 'none'}`).toEqual([]);
   });
 }
