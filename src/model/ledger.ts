@@ -23,6 +23,11 @@ export interface DimensionDefinition {
   systemDefault?: boolean;
   /** Z-12: entries on these accounts need this label, from `since` (YYYY-MM-DD) on (src/lib/requiredLabels.ts) */
   requiredOn?: { accountIds: string[]; since: string; refuse?: boolean };
+  /**
+   * DIM-3: the label's accounting role (src/lib/labelRoles.ts): 'informational' (the default — no balancing),
+   * 'attributed' (every line of every entry has a value) or 'self-balancing' (and each value's lines in an entry net to zero)
+   */
+  role?: 'informational' | 'attributed' | 'self-balancing';
 }
 
 export interface DimensionNode {
