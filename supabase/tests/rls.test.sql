@@ -513,6 +513,13 @@ select pg_temp.expect_denied('bookkeeper adds a pay run from the browser', 'u-bo
   $$insert into "payRuns"(id,data) values ('pr2', '{"workspaceId":"ws1","date":"2026-02-15","status":"processed"}')$$);
 select pg_temp.expect_denied('owner deletes a pay run from the browser', 'u-owner', $$delete from "payRuns" where id = 'pr1'$$);
 
+-- S-01 rate-limit counters: server only — no member reads, writes or deletes them from the browser
+insert into "rateLimitEntries" (id, data) values ('rl_t1', '{"keyHash":"t1","count":1,"windowStart":0,"workspaceId":"ws1"}');
+select pg_temp.expect_denied('owner reads rate-limit counters', 'u-owner', $$select count(*) from "rateLimitEntries"$$);
+select pg_temp.expect_denied('owner resets a rate-limit counter', 'u-owner', $$select lf_update('rateLimitEntries','rl_t1','{"count":0}'::jsonb)$$);
+select pg_temp.expect_denied('owner writes a rate-limit counter', 'u-owner', $$select lf_set('rateLimitEntries','rl_t2','{"keyHash":"t2","count":0,"windowStart":0,"workspaceId":"ws1"}'::jsonb)$$);
+select pg_temp.expect_denied('owner deletes a rate-limit counter', 'u-owner', $$delete from "rateLimitEntries" where id = 'rl_t1'$$);
+
 -- purchase orders: members read; owners, accountants and bookkeepers write
 select pg_temp.expect_ok('bookkeeper saves a purchase order', 'u-book',
   $stmt$insert into "purchaseOrders"(id,data) values ('po1', '{"workspaceId":"ws1","poNumber":"PO-2026-001","vendorId":"v1","vendorName":"V","status":"approved","items":[],"totalAmountCents":1000,"receipts":[]}')$stmt$);
