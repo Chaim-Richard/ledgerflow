@@ -125,6 +125,10 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Lots received on goods receipts with their expiry dates: how many days each lot has left, flagged expired or expiring soon, with the receipts and vendors. Units recorded with a lot at sale show as a reference only, because how much of a lot is still on hand is not tracked. Record the lot and its expiry while receiving goods on a purchase order.",
     "stock-transfers":
       "Every move of stock between locations, newest first, read back from the stock history as the pair the server wrote (moved out, moved in). A half whose pair is not in the loaded history shows on its own with the reason. Moving stock is done from an item's Stock history window; this screen only reports.",
+    "kit-assembly":
+      "Choose a kit (an item that is a bundle of parts) and how many: what the parts on hand can build and what building that many would take, with any shortfall named. A kit assembled on demand is built from its parts when it is needed and keeps no stock of its own. This screen records nothing: no stock is reserved, issued or posted.",
+    "stock-value-by-location-lot":
+      "What the stock is worth where it sits, and what each received lot cost when it arrived. By location: the stock-moves ledger, valued as Inventory Valuation values it — an item its history does not explain is shown with the reason and is never split across locations. By lot: the goods receipts' lot, expiry and arrival price; how much of a lot is still on hand is not tracked and is never computed here.",
     "by-label":
       "Choose a label (Property, Project, Location…) and a period: the income, costs and result of each of its values, and of the lines without one, account by account. Together the columns add up to the profit and loss of the period. Each figure opens the entries behind it.",
     "balance-sheet-by-label":

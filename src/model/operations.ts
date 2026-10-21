@@ -67,6 +67,8 @@ export interface InventoryItem {
   productTaxCategory?: string;
   /** A-19 (BF-03): the items this one is a bundle of, with quantities; none = an ordinary item */
   bundleParts?: Array<{ itemId: string; quantity: number }>;
+  /** A-116: built out of its parts when it is needed (a note on the item only; a bundle keeps no stock — the parts' own stock is what the plan reads) */
+  assembleOnDemand?: boolean;
   createdAt: string;
   /** Set when the item came from a spreadsheet import; lets the import be undone. */
   importBatchId?: string;

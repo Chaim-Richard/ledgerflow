@@ -256,6 +256,10 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                   )}
                   {partsProblem && <p role="alert" className="text-[10px] text-amber-600">{partsProblem}</p>}
                   <p className="text-[10px] text-[var(--muted)]">Record the parts and quantities that define this bundle. Automatic expansion into invoice lines is not available here; saving this configuration does not move stock or post an entry.</p>
+                  <label className="flex items-center gap-2 text-[10px] text-[var(--muted)]">
+                    <input type="checkbox" name="assembleOnDemand" defaultChecked={Boolean(editingItem?.assembleOnDemand)} />
+                    Assemble on demand — the kit is built from its parts when it is needed (a note only; the Reports → Kit Assembly plan reads the parts’ stock)
+                  </label>
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <label htmlFor="inv-consignment" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Consignment</label>

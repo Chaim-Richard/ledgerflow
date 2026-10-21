@@ -281,6 +281,28 @@ export const TAX_TABLES: readonly TableSpec[] = [
     "amounts": [
       "rateCentsPerMile"
     ]
+  },
+  {
+    "file": "expenseRateTables.ts",
+    "name": "MILEAGE_RATE_ROWS",
+    "keys": [
+      "country",
+      "vehicle"
+    ],
+    "amounts": [
+      "rateThousandths"
+    ]
+  },
+  {
+    "file": "expenseRateTables.ts",
+    "name": "PER_DIEM_ROWS",
+    "keys": [
+      "country",
+      "area"
+    ],
+    "amounts": [
+      "dailyCents"
+    ]
   }
 ];
 /** Non-table modules are classified so a newly added module cannot silently escape review. */
