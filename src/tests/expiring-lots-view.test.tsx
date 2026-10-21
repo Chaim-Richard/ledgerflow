@@ -14,11 +14,13 @@ import { useLedgerStore } from '../stores/useLedgerStore';
 import { useDataNeedsStore } from '../stores/useDataNeedsStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { getSupabase } from '../lib/db/client';
+import { getLocalDateISO } from '../lib/utils';
 
+// Fixture days in the same zone the view reads "today" in (never UTC: the two differ by a day for part of each day).
 const day = (offset: number) => {
   const d = new Date();
   d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
+  return getLocalDateISO(d);
 };
 
 const inventory = [{ id: 'i1', name: 'Milk', sku: 'MLK', workspaceId: 'w1' }];
