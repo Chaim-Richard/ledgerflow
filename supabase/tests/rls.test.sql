@@ -341,35 +341,20 @@ begin
   end loop;
 end $$;
 
-<<<<<<< HEAD
--- AUD-09 / AI #6 S-37…S-40: a writer in ws1 cannot re-home an existing record into another workspace,
--- for each write family (documents, payments, credits, reconciliations, contacts).
-do $$
-=======
 -- AUD-09 / AI #6: every standard write family must reject cross-workspace moves by an authorized writer.
 do $audit$
->>>>>>> pr181
 declare
   t text;
 begin
   foreach t in array array[
-<<<<<<< HEAD
-    'invoices', 'bills', 'payments', 'creditNotes', 'vendorCredits',
-    'reconciliations', 'customers', 'vendors'
-=======
     'transactions', 'journalEntries', 'invoices', 'payments', 'bills', 'creditNotes', 'vendorCredits',
     'projects', 'estimates', 'inventory', 'recurring', 'budgets', 'autoRules', 'fixedAssets', 'assets',
     'taxRates', 'dimensionNodes', 'vendors', 'customers', 'rulePatterns', 'scenarios', 'loans',
     'employees', 'partners', 'reconciliations', 'workspaceShards'
->>>>>>> pr181
   ] loop
     if pg_temp.try_as('u-book', format('select lf_update(%L, %L, %L::jsonb)', t, 'iso-' || t, '{"workspaceId":"ws2"}')) then
       raise exception 'FAIL %: writer moved an existing record into another workspace', t;
     end if;
-<<<<<<< HEAD
-  end loop;
-end $$;
-=======
     -- A refused call is not enough: prove the durable record still belongs to ws1.
     if pg_temp.count_rows('u-view', format(
       'select count(*) from public.%I where id = %L and data->>''workspaceId'' = %L',
@@ -378,7 +363,6 @@ end $$;
     end if;
   end loop;
 end $audit$;
->>>>>>> pr181
 
 -- Every dated table: nothing is posted into, or moved into, a locked period (ws1 is locked to 2026-01-31).
 do $$
