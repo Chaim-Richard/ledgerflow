@@ -18,6 +18,11 @@ test('S-01 middleware refuses requests if the rate-limit database is unavailable
     res.json({ ok: true });
   });
   const server: Server = app.listen(0, '127.0.0.1');
+  await new Promise<void>((resolve, reject) => {
+    if (server.listening) { resolve(); return; }
+    server.once('listening', resolve);
+    server.once('error', reject);
+  });
   try {
     const port = (server.address() as AddressInfo).port;
     const response = await fetch(`http://127.0.0.1:${port}/protected`);
@@ -25,6 +30,6 @@ test('S-01 middleware refuses requests if the rate-limit database is unavailable
     assert.equal((await response.json()).code, 'RATE_LIMIT_UNAVAILABLE');
     assert.equal(reached, false);
   } finally {
-    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    await new Promise<void>(resolve => server.close(() => resolve()));
   }
 });
