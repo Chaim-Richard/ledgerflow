@@ -6,6 +6,7 @@ import { useUIStore } from '../stores/useUIStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { TaxReserveWidget } from './finance/TaxReserveWidget';
 import OnboardingView from './onboarding/OnboardingView';
+import FirstHourGuide from './onboarding/FirstHourGuide';
 import SetupWizard from './onboarding/SetupWizard';
 import { useDataNeedsStore } from '../stores/useDataNeedsStore';
 import { LoadingState } from './ui/LoadingState';
@@ -113,6 +114,11 @@ export default function Dashboard() {
         </div>
       </header>
 
+      <details className="border border-[var(--line)] rounded-xl p-4">
+        <summary className="min-h-11 flex items-center cursor-pointer font-semibold focus-visible:outline-2 focus-visible:outline-[var(--brass)]">First-hour bookkeeping guide</summary>
+        <FirstHourGuide />
+      </details>
+
       <DashboardWidgets>
         <SinceLastVisitCard />
         <NeedsAttentionCard />
@@ -128,7 +134,7 @@ export default function Dashboard() {
                 <h2 className="text-sm font-semibold text-[var(--text)]">Workspace Setup Checklist</h2>
               </div>
               <p className="text-xs text-[var(--muted)]">
-                Ensure your chart of accounts and transactions are configured for complete algorithmic accuracy.
+                Review your accounts and entries before relying on reports. This checklist does not verify their accuracy.
               </p>
             </div>
             <button

@@ -15,6 +15,7 @@ import ConnectedBanks from '../components/banking/ConnectedBanks';
 import { useDataNeedsStore } from '../stores/useDataNeedsStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { useUIStore } from '../stores/useUIStore';
 import { getSupabase } from '../lib/db/client';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import { stubFetch } from './helpers/dom';
@@ -98,4 +99,16 @@ test('the connections list renders nothing when the workspace has no connections
   await act(async () => {});
   assert.equal(document.querySelector('[aria-labelledby="connected-banks-title"]'), null);
   assert.equal(screen.queryByRole('alert'), null);
+});
+
+test('guest import refusal is explained beside the disabled action without granting access', () => {
+  useAuthStore.setState({ isGuest: true, user: null, currentWorkspaceId: 'demo' });
+  useUIStore.setState({ isImporterOpen: false });
+  render(<Banking />);
+  const button = screen.getByRole('button', { name: 'Import statement' }) as HTMLButtonElement;
+  assert.equal(button.disabled, true);
+  const explanation = document.getElementById(button.getAttribute('aria-describedby')!);
+  assert.match(explanation?.textContent || '', /Guest and viewer sessions cannot import bank data/);
+  fireEvent.click(button);
+  assert.equal(useUIStore.getState().isImporterOpen, false);
 });
