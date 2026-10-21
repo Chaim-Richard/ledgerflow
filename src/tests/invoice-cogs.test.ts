@@ -33,6 +33,8 @@ describe('Invoice cost of goods sold entries', () => {
     assert.deepEqual(entries[0].lines.map(l => [l.accountId, l.amountCents]), [['cogs', 1200], ['inv', -1200]]);
     assert.deepEqual(entries[0].metadata, {
       invoiceId: 'INV1', type: 'invoice-cogs-auto', cogsForInvoiceId: 'INV1', cogsForLineId: 'l1', inventoryItemId: 'item-w', quantity: 3,
+      // DIM-2 phase 3: the customer the units went to
+      customerId: 'cust-1',
     });
   });
 
