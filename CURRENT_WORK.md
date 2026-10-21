@@ -56,8 +56,8 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 
 | AI | Do next, in order — **P0 for stage A first** (PLAN §17) | Open PRs / blocked |
 |---|---|---|
-| #1 Claude (lead) | Reviews/merges and the plan; INT-6/7 (Stripe double-charge guards); seams for A-72/A-75–A-77 | — |
-| #9 Opus (money lane) | **P0:** W5-BS balance sheet by label (handed over from AI #1); then W13 browser journey, AU-4 (W11), CON-4b. FIFO/lot costing waits for the owner | — |
+| #1 Claude (lead) | Reviews/merges and the plan; seams for A-72/A-75–A-77; L-94 server-side document postings (design) | — |
+| #9 Opus (money lane) | **P0:** W5-BS balance sheet by label, AUD-01 statements, INT-6/INT-7 Stripe double-charge guards; then W13 browser, AU-4 (W11), YEAR-END-GOLD, FX-GOLD, DIM-3, U-12, ISS-143, CON-4b (full list in COORDINATION). FIFO/lot costing waits for the owner | — |
 | #7 | **P0:** G-24 first-hour journey test (W1, taken over from AI #8), F-46 backup → restore browser test (W10), W5 labels → reports browser journey, W14 roles browser journey, a browser check of the help center/feedback screens from #252; then F-48, F-49 flakes | — |
 | #3 Arena | **P0:** W5 worked figures — labelled invoices/bills/payments → P&L and balance sheet by label, figures by hand (new A-210). Stock A-112…A-117 after (stage B) | Waiting on AI #1: A-72, A-75, A-76, A-77 |
 | #4 | **P0:** G-02 first hour without dead ends — walk the first-hour path on phone and desktop, fix wording/dead ends (new D-97); then D-87 onward | — |
