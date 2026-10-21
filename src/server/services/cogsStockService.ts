@@ -128,12 +128,34 @@ function vendorReturnOut(tx: LedgerEntry): Array<{ itemId: string; quantity: num
  * (`returnsFromBillId`) and the vendor. A reversal keeps its original's. Nothing is inferred: what the entry does not
  * name is left out.
  */
-function sourceOf(p: PendingMove): { documentLine?: number; vendorId?: string; sourceBillId?: string } {
-  if (!p.kind.startsWith('purchase')) return {};
+function sourceOf(p: PendingMove): { documentLine?: number; vendorId?: string; sourceBillId?: string } & ReturnType<typeof destinationOf> {
+  if (!p.kind.startsWith('purchase')) return destinationOf(p);
   const meta = { ...(p.source?.metadata || {}), ...(p.entry.metadata || {}) } as Record<string, unknown>;
   const vendorId = typeof meta.vendorId === 'string' && meta.vendorId ? meta.vendorId : undefined;
   const fromBill = p.kind.startsWith('purchase-return') && typeof meta.returnsFromBillId === 'string' && meta.returnsFromBillId ? meta.returnsFromBillId : undefined;
   return { ...(p.line !== undefined ? { documentLine: p.line } : {}), ...(vendorId ? { vendorId } : {}), ...(fromBill ? { sourceBillId: fromBill } : {}) };
+}
+
+/**
+ * DIM-2 phase 3: where sold units went, kept with the move: the customer, the invoice line (or the order line of a
+ * delivery) and the sold line's labels (project, property, … — its location is already `locationId`). A return keeps
+ * the customer and the invoice line it came back against; a reversal keeps its original's. Only what the entry (or
+ * its original) names is kept.
+ */
+function destinationOf(p: PendingMove): { customerId?: string; documentLineId?: string; documentLine?: number; labels?: Record<string, string> } {
+  const original = p.source || p.entry;
+  const meta = { ...(original.metadata || {}), ...(p.entry.metadata || {}) } as Record<string, unknown>;
+  const text = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
+  const customerId = text(meta.customerId);
+  const documentLineId = text(meta.cogsForLineId) || text(meta.returnForLineId);
+  const orderLine = Number.isSafeInteger(meta.orderLine) && Number(meta.orderLine) >= 0 ? Number(meta.orderLine) : undefined;
+  // the labels the sold line carried, on the original entry's cost (or returned-cost) line
+  const labelled = ((original as { lines?: Array<{ dimensions?: Record<string, unknown> }> }).lines || []).find(l => l.dimensions && Object.keys(l.dimensions).length);
+  const labels = Object.fromEntries(Object.entries(labelled?.dimensions || {}).filter(([k, v]) => k !== 'location' && typeof v === 'string' && v));
+  return {
+    ...(customerId ? { customerId } : {}), ...(documentLineId ? { documentLineId } : {}), ...(orderLine !== undefined ? { documentLine: orderLine } : {}),
+    ...(Object.keys(labels).length ? { labels: labels as Record<string, string> } : {}),
+  };
 }
 
 /** What an entry does to stock: a sale takes units out, a return brings them back. */
@@ -224,7 +246,7 @@ export async function prepareStockMoves(
     if (!effect) return;
     const sign = effect.quantity > 0 ? -1 : 1;
     add(effect.itemId, -effect.quantity);
-    pending.push({ itemId: effect.itemId, quantity: -effect.quantity, kind: effect.kind === 'sale' ? 'sale-reversal' : 'return-reversal', entry: reversalOf.get(target) || original, valueCents: sign * Math.abs(Number(original.totalAmountCents) || 0), location: original.metadata?.locationId as string | undefined });
+    pending.push({ itemId: effect.itemId, quantity: -effect.quantity, kind: effect.kind === 'sale' ? 'sale-reversal' : 'return-reversal', entry: reversalOf.get(target) || original, valueCents: sign * Math.abs(Number(original.totalAmountCents) || 0), location: original.metadata?.locationId as string | undefined, source: original });
   };
 
   for (const tx of entries) {
@@ -239,7 +261,7 @@ export async function prepareStockMoves(
     const effect = stockEffect(tx);
     if (!effect) continue;
     add(effect.itemId, effect.quantity);
-    pending.push({ itemId: effect.itemId, quantity: effect.quantity, kind: effect.kind, entry: tx, valueCents: Math.sign(effect.quantity) * Math.abs(Number(tx.totalAmountCents) || 0), location: tx.metadata?.locationId as string | undefined });
+    pending.push({ itemId: effect.itemId, quantity: effect.quantity, kind: effect.kind, entry: tx, valueCents: Math.sign(effect.quantity) * Math.abs(Number(tx.totalAmountCents) || 0), location: tx.metadata?.locationId as string | undefined, source: tx });
   }
   await checkReturns(db, t, workspaceId, entries);
 

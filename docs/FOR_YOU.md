@@ -486,3 +486,8 @@ dismiss as *false positive*: alert 24 (payslip GET), 25 (API-key SHA-256 — key
 
 ## 21 Oct — ~~one database change to paste~~ **Done: run by the owner on 21 Oct ("Success. No rows returned").** (replaces the 20 Oct ISS-130 one)
 The Supabase connector timed out a third time. Paste **`supabase/migrations/20261021010000_inventory_cost_editable_at_zero.sql`** into Supabase → SQL editor → Run (1 minute). It is safe to run more than once, and it replaces the 20 Oct ISS-130 change, so you do not need to run that one separately. What it does: an item's cost can't be changed from the browser while it has stock on hand (only Inventory → Revalue changes it); items at or below zero stay editable. *Default until then:* the screen already locks the cost; only a direct browser write is not yet refused by the database.
+
+## 21 Oct — stock costing method (DIM-2 phase 5, AI #9)
+
+**Open question for you:** the books cost stock by **moving average** (each purchase changes the average; a sale costs at the average). The stock history now keeps where each unit came from and went (Reports → Stock Sources and Uses), but it does not tie a sale to the exact purchase lot. Phase 5 of GitHub #132 would add optional **FIFO or lot-specific costing**. That changes the cost of goods sold and the stock value, so it needs your decision (and your accountant's) first. **Default I used: stay on moving average; phase 5 is not started.** Say if a customer needs FIFO or lot costing.
+
