@@ -107,7 +107,7 @@ export default function Dashboard() {
         <button
           type="button"
           onClick={() => setQuickEntryOpen(true)}
-          className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[var(--brass)] px-4 text-sm font-semibold text-black hover:opacity-95 transition-opacity"
+          className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[var(--brass)] px-4 text-sm font-semibold text-[var(--ink)] hover:opacity-95 transition-opacity"
         >
           <Plus size={15} aria-hidden="true" />
           Add Entry

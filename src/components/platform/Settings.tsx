@@ -99,9 +99,9 @@ export default function Settings() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-6 lg:gap-10">
-        <nav aria-label="Settings sections" className="lg:max-h-[calc(100dvh-220px)] lg:overflow-y-auto custom-scrollbar lg:pe-2">
+        <nav aria-label="Settings sections" className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 lg:max-h-[calc(100dvh-220px)] lg:overflow-y-auto custom-scrollbar">
           {matchCount === 0 ? (
-            <div className="rounded-xl border border-dashed border-[var(--line)] p-4 text-sm">
+            <div className="rounded-xl border border-dashed border-[var(--line)] p-4 text-sm text-[var(--text)]">
               <p className="font-medium">No setting matches “{query}”.</p>
               <button type="button" onClick={() => { setQuery(''); searchRef.current?.focus(); }} className="mt-2 min-h-11 underline">
                 Show all settings
@@ -124,8 +124,8 @@ export default function Settings() {
                         className={cn(
                           'flex w-full min-h-11 items-center gap-2.5 rounded-lg px-3 py-2 text-start text-[13px] font-medium transition-colors',
                           active
-                            ? 'bg-[var(--brass-soft)] text-[var(--text)] ring-1 ring-[var(--brass-line)]'
-                            : 'text-[var(--muted)] hover:bg-[var(--elevated)] hover:text-[var(--text)]',
+                            ? 'bg-[var(--elevated)] text-[var(--text)] ring-1 ring-[var(--brass-line)]'
+                            : 'text-[var(--text)] hover:bg-[var(--elevated)]',
                         )}
                       >
                         <tab.icon size={15} aria-hidden="true" className={cn('shrink-0', active ? 'text-[var(--brass)]' : 'text-[var(--faint)]')} />
