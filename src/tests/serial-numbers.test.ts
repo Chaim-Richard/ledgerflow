@@ -6,7 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  SERIAL_LOOKUP_CSV_HEADERS, duplicateSerials, findSerial, lineSerials, lotRows, normalizeSerial, serialLookupCsvRows, serialProblem, serialsForItem, withSerial, withoutSerial,
+  SERIAL_LOOKUP_CSV_HEADERS, duplicateSerials, findSerial, lineSerials, lotProblem, lotRows, lotExpiryProblem, normalizeLot, normalizeSerial, parseSerialList, serialListProblem, serialLookupCsvRows, serialProblem, serialsForItem, withSerial, withoutSerial,
 } from '../lib/serialNumbers';
 
 const documents = [
@@ -56,4 +56,18 @@ test('lots are summarised per item and a serial on two documents is flagged', ()
   assert.equal(duplicates.length, 1, 'SN-101 vs sn-101 on two documents is one finding');
   assert.deepEqual(duplicates[0].documents, ['bill1', 'inv1']);
   assert.deepEqual(duplicateSerials([{ id: 'x', lines: [{ itemId: 'it1', serialNumbers: ['A'] }] }]), []);
+});
+
+test('A-112: lots, expiry days and typed serial lists are validated in plain words', () => {
+  assert.equal(normalizeLot('  LOT  1  '), 'LOT 1');
+  assert.equal(lotProblem(''), null);
+  assert.equal(lotProblem('LOT-1'), null);
+  assert.equal(lotProblem('x'.repeat(41)), 'A lot number can be up to 40 characters.');
+  assert.equal(lotExpiryProblem(''), null);
+  assert.equal(lotExpiryProblem('2026-10-20'), null);
+  assert.equal(lotExpiryProblem('soon'), 'Use a real date (YYYY-MM-DD) for the expiry.');
+  assert.deepEqual(parseSerialList('SN-1, sn-2\n\nSN-3'), ['SN-1', 'sn-2', 'SN-3']);
+  assert.equal(serialListProblem(''), null);
+  assert.equal(serialListProblem('SN-1, sn-1'), '"sn-1" is typed twice.');
+  assert.equal(serialListProblem('x'.repeat(81)), 'A serial number can be up to 80 characters.');
 });

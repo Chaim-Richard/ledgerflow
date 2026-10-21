@@ -13,6 +13,7 @@ import { EMAIL_MODE_LABEL, EMAIL_MODES, emailMode, type NotificationEmailMode } 
 import { getIdToken } from '../../firebase';
 import type { NotificationPrefs } from '../../lib/notifications';
 import { recordFromNotice } from '../../lib/watches';
+import { groupNotificationsByType } from '../../lib/feedbackTriage';
 import type { AppNotification } from '../../types';
 
 /**
@@ -116,6 +117,7 @@ export default function NotificationDrawer() {
   const setDrawerOpen = useNotificationStore(s => s.setDrawerOpen);
   const setActiveTab = useUIStore(s => s.setActiveTab);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [groupedView, setGroupedView] = useState(false);
   const [choosing, setChoosing] = useState(false);
 
   const { dialogProps, titleId } = useDialog(() => setDrawerOpen(false), isDrawerOpen);
@@ -124,6 +126,7 @@ export default function NotificationDrawer() {
 
   const unread = unreadCount(notifications);
   const shown = notifications.filter(n => filter === 'all' || !n.read);
+  const groups = groupNotificationsByType(shown);
 
   const markRead = (ids: string[]) => {
     markNotificationsRead(ids).catch(() => toast.error('Could not mark as read.'));
@@ -176,13 +179,23 @@ export default function NotificationDrawer() {
 
           {choosing ? <Preferences onDone={() => setChoosing(false)} /> : (
             <>
-              <div className="px-5 py-2.5 border-b border-[var(--line)] flex items-center gap-2" role="group" aria-label="Show">
-                {(['all', 'unread'] as const).map(f => (
-                  <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}
-                    className={`px-3 py-1 text-xs font-bold rounded-lg ${filter === f ? 'bg-[var(--elevated)] text-[var(--text)]' : 'text-[var(--muted)]'}`}>
-                    {f === 'all' ? `All (${notifications.length})` : `Unread (${unread})`}
-                  </button>
-                ))}
+              <div className="px-5 py-2.5 border-b border-[var(--line)] flex flex-wrap items-center justify-between gap-2" role="group" aria-label="Show">
+                <div className="flex items-center gap-2">
+                  {(['all', 'unread'] as const).map(f => (
+                    <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}
+                      className={`px-3 py-1 min-h-11 text-xs font-bold rounded-lg ${filter === f ? 'bg-[var(--elevated)] text-[var(--text)]' : 'text-[var(--muted)]'}`}>
+                      {f === 'all' ? `All (${notifications.length})` : `Unread (${unread})`}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  aria-pressed={groupedView}
+                  onClick={() => setGroupedView(prev => !prev)}
+                  className={`px-3 py-1 min-h-11 text-xs font-bold rounded-lg ${groupedView ? 'bg-[var(--elevated)] text-[var(--text)]' : 'text-[var(--muted)]'}`}
+                >
+                  Group by type
+                </button>
               </div>
               <ul className="flex-1 overflow-y-auto p-4 space-y-2.5">
                 {shown.length === 0 ? (
@@ -190,7 +203,31 @@ export default function NotificationDrawer() {
                     <Bell size={32} className="mx-auto mb-2" aria-hidden="true" />
                     <p className="text-xs font-semibold">{filter === 'unread' ? 'Nothing unread.' : 'No notifications yet. Payments, overdue invoices and bank problems show up here.'}</p>
                   </li>
-                ) : shown.map(n => (
+                ) : groupedView ? groups.map(group => (
+                  <li key={group.key} className="space-y-2">
+                    <div className="flex items-center justify-between px-1 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                      <span>{group.label}</span>
+                      <span className="tabular-nums">{group.items.length}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {group.items.map(n => (
+                        <button key={n.id} type="button" onClick={() => open(n)}
+                          className={`w-full text-left p-4 rounded-xl border transition-colors ${n.read ? 'border-[var(--line)] opacity-80' : 'border-[var(--brass)] bg-[var(--brass-soft)]'}`}>
+                          <div className="flex items-start gap-3">
+                            <span className="p-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] shrink-0"><KindIcon kind={n.kind} /></span>
+                            <span className="flex-1 min-w-0">
+                              <span className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-bold truncate">{n.title}</span>
+                                {!n.read && <span className="w-2 h-2 rounded-full bg-[var(--brass)] shrink-0" aria-label="unread" />}
+                              </span>
+                              <span className="block text-xs text-[var(--muted)] mt-1 leading-relaxed">{n.message}</span>
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </li>
+                )) : shown.map(n => (
                   <li key={n.id}>
                     <button type="button" onClick={() => open(n)}
                       className={`w-full text-left p-4 rounded-xl border transition-colors ${n.read ? 'border-[var(--line)] opacity-80' : 'border-[var(--brass)] bg-[var(--brass-soft)]'}`}>

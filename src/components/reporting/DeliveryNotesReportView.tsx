@@ -31,6 +31,12 @@ interface SourceEntry {
 
 export default function DeliveryNotesReportView() {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const userId = useAuthStore(s => s.user?.uid);
+  return <DeliveryNotesContent key={JSON.stringify([userId, workspaceId])} />;
+}
+
+function DeliveryNotesContent() {
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
   const homeCurrency = (workspace?.currency || 'USD').toUpperCase();
   const truncated = useLedgerStore(s => s.truncatedCollections);
@@ -137,6 +143,9 @@ export default function DeliveryNotesReportView() {
               description: l.description || item?.name || 'Item',
               unitPriceCents: l.rateCents,
               ...(item?.measurementUnit ? { measurementUnit: item.measurementUnit } : {}),
+              // A-112: the invoice line's recorded serials and lot print on the note; order and delivery lines record none
+              ...((l.serialNumbers || []).length ? { serialNumbers: l.serialNumbers } : {}),
+              ...(l.lotNumber ? { lotNumber: l.lotNumber } : {}),
             };
           }),
         };
@@ -173,7 +182,12 @@ export default function DeliveryNotesReportView() {
   const [customNumber, setCustomNumber] = useState<string>('');
   const [customDate, setCustomDate] = useState<string>('');
 
-  const selected = sources.find(s => s.key === selectedKey) || sources[0];
+  const [search, setSearch] = useState('');
+  const [sourceType, setSourceType] = useState('all');
+  const filteredSources = useMemo(() => sources.filter(source =>
+    (sourceType === 'all' || (sourceType === 'invoice' ? source.key.startsWith('invoice:') : source.key.startsWith('order'))) &&
+    source.label.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())), [sources, sourceType, search]);
+  const selected = filteredSources.find(s => s.key === selectedKey) || filteredSources[0];
   const effectiveNumber = customNumber.trim() || defaultNextNumber;
   const effectiveDate = customDate || selected?.delivery.date || today;
 
@@ -189,7 +203,12 @@ export default function DeliveryNotesReportView() {
     });
   }, [selected, effectiveNumber, effectiveDate, workspace, language, showPrices]);
 
-  const columns = useMemo(() => deliveryNoteColumns(showPrices, language), [showPrices, language]);
+  const hasSerials = useMemo(() => (doc?.rows || []).some(r => r.serials), [doc]);
+  const hasLots = useMemo(() => (doc?.rows || []).some(r => r.lot), [doc]);
+  const columns = useMemo(
+    () => deliveryNoteColumns(showPrices, language, { serials: hasSerials, lot: hasLots }),
+    [showPrices, language, hasSerials, hasLots],
+  );
 
   const partial = Boolean(
     truncated.estimates || truncated.invoices || truncated.inventory || truncated.customers ||
@@ -209,6 +228,8 @@ export default function DeliveryNotesReportView() {
             r.amountCents !== undefined ? (r.amountCents / 100).toFixed(2) : '',
           );
         }
+        if (hasSerials) base.push(r.serials || '');
+        if (hasLots) base.push(r.lot || '');
         return base;
       }),
     );
@@ -221,7 +242,8 @@ export default function DeliveryNotesReportView() {
           <h2>Delivery notes (EN / HE)</h2>
           <p className="text-sm text-[var(--muted)]">
             Printable delivery notes from sales orders and invoices, numbered in their own series ({defaultNextNumber}),
-            in English or Hebrew, with prices hidden by default.
+            in English or Hebrew, with prices hidden by default. Serials and lots print only when the source invoice
+            line recorded them; delivery entries record none, so those notes show none.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -229,7 +251,7 @@ export default function DeliveryNotesReportView() {
             type="button"
             onClick={() => window.print()}
             disabled={!doc}
-            className="px-3 py-1.5 rounded border text-sm disabled:opacity-50"
+            className="min-h-11 px-3 py-1.5 rounded border text-sm disabled:opacity-50"
           >
             Print delivery note
           </button>
@@ -237,7 +259,7 @@ export default function DeliveryNotesReportView() {
             type="button"
             onClick={exportCsv}
             disabled={!doc}
-            className="px-3 py-1.5 rounded border text-sm disabled:opacity-50"
+            className="min-h-11 px-3 py-1.5 rounded border text-sm disabled:opacity-50"
           >
             Download CSV
           </button>
@@ -252,15 +274,27 @@ export default function DeliveryNotesReportView() {
       )}
 
       <div className="flex flex-wrap items-end gap-3" data-print-hide>
+        <label className="flex flex-col gap-1 text-sm">Find source document
+          <input aria-label="Find source document" dir="auto" value={search} onChange={event => setSearch(event.target.value)}
+            className="min-h-11 max-w-full border rounded px-3 bg-[var(--panel)] text-[var(--text)]" />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">Source type
+          <select aria-label="Source type" value={sourceType} onChange={event => setSourceType(event.target.value)}
+            className="min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]">
+            <option value="all">All sources</option><option value="order">Sales orders and deliveries</option><option value="invoice">Invoices</option>
+          </select>
+        </label>
         <label className="flex flex-col gap-1 text-sm">
           Source document
           <select
             aria-label="Source document"
+            disabled={!filteredSources.length}
             value={selected?.key || ''}
             onChange={e => setSelectedKey(e.target.value)}
-            className="min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]"
+            className="min-h-11 max-w-full border rounded px-3 bg-[var(--panel)] text-[var(--text)]"
           >
-            {sources.map(s => (
+            {!filteredSources.length && <option value="">No matching sources</option>}
+            {filteredSources.map(s => (
               <option key={s.key} value={s.key}>{s.label}</option>
             ))}
           </select>
@@ -315,7 +349,7 @@ export default function DeliveryNotesReportView() {
 
       {!doc && !loading && (
         <p className="text-sm text-[var(--muted)]">
-          No sales orders or invoices with item lines are loaded in this workspace yet.
+          {sources.length ? 'No matching source documents. Clear the search or choose All sources.' : 'No sales orders or invoices with item lines are loaded in this workspace yet.'}
         </p>
       )}
 
@@ -373,6 +407,8 @@ export default function DeliveryNotesReportView() {
                         </td>
                       </>
                     )}
+                    {hasSerials && <td className="py-2 px-2"><bdi>{row.serials || '\u2014'}</bdi></td>}
+                    {hasLots && <td className="py-2 px-2"><bdi>{row.lot || '\u2014'}</bdi></td>}
                   </tr>
                 ))}
               </tbody>

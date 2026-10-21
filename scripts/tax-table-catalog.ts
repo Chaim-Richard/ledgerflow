@@ -34,6 +34,13 @@ export const TAX_TABLES: readonly TableSpec[] = [
     ]
   },
   {
+    "file": "ilAdvanceTaxCalendar.ts",
+    "name": "IL_ADVANCE_TAX_SCHEDULE",
+    "keys": [
+      "frequency"
+    ]
+  },
+  {
     "file": "ilAllocation.ts",
     "name": "IL_ALLOCATION_THRESHOLD",
     "keys": [],
@@ -50,6 +57,28 @@ export const TAX_TABLES: readonly TableSpec[] = [
     "fractions": [
       "rate"
     ]
+  },
+  {
+    "file": "ilSelfEmploymentNationalInsurance.ts",
+    "name": "IL_SELF_EMPLOYMENT_NI_ROWS",
+    "keys": [],
+    "amounts": [
+      "minMonthlyIncomeCents",
+      "reducedBandCeilingCents",
+      "maxMonthlyIncomeCents",
+      "publishedMinMonthlyAdvanceCents?",
+      "publishedMaxMonthlyAdvanceCents?",
+      "averageMonthlyWageCents?"
+    ]
+  },
+  {
+    "file": "ilOsekPaturThresholds.ts",
+    "name": "IL_OSEK_PATUR_CEILINGS",
+    "keys": [],
+    "amounts": [
+      "ceilingCents"
+    ],
+    "mode": "year"
   },
   {
     "file": "ilVatRates.ts",
@@ -121,6 +150,17 @@ export const TAX_TABLES: readonly TableSpec[] = [
     ]
   },
   {
+    "file": "us1099Thresholds.ts",
+    "name": "US_1099_THRESHOLDS",
+    "keys": [
+      "kind",
+      "form"
+    ],
+    "amounts": [
+      "thresholdCents"
+    ]
+  },
+  {
     "file": "us1099Preview.ts",
     "name": "US1099_THRESHOLDS",
     "keys": [],
@@ -186,6 +226,15 @@ export const TAX_TABLES: readonly TableSpec[] = [
     ]
   },
   {
+    "file": "usSalesTaxHolidayCalendar.ts",
+    "name": "US_SALES_TAX_HOLIDAY_CALENDAR",
+    "keys": [
+      "state",
+      "name"
+    ],
+    "mode": "holiday"
+  },
+  {
     "file": "usSalesTaxHolidays.ts",
     "name": "US_SALES_TAX_HOLIDAYS",
     "keys": [
@@ -224,6 +273,14 @@ export const TAX_TABLES: readonly TableSpec[] = [
       "country"
     ],
     "mode": "reference"
+  },
+  {
+    "file": "usMileageRates.ts",
+    "name": "US_MILEAGE_RATES",
+    "keys": [],
+    "amounts": [
+      "rateCentsPerMile"
+    ]
   }
 ];
 /** Non-table modules are classified so a newly added module cannot silently escape review. */
@@ -243,6 +300,8 @@ export const NON_TABLE_MODULES: Readonly<Record<string, string>> = {
   "stateLocalRateImporters.ts": "Import-time validation of supplied local-rate publications; no embedded legal rows.",
   "taxCategories.ts": "Application vocabulary, not a dated legal schedule.",
   "taxSuggestions.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
+  "usInvoiceTax.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
+  "usNexusWatch.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
   "usSalesTaxReturn.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
   "usTaxIdFormat.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
   "usUseTax.ts": "Calculation, review, profile or document helper; no embedded dated source table.",

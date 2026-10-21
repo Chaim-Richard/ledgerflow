@@ -227,7 +227,7 @@ const Reports = React.memo(() => {
   }, [accounts]);
 
   return (
-    <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-6" data-print-root>
+    <div className="sentence-case-controls w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-6" data-print-root>
       {/* Printed / PDF heading: the report and its period */}
       <div className="hidden print:block">
         <h1 className="text-xl font-bold">{(REPORT_TABS_REGISTRY.find(t => t.id === activeTab)?.label as Record<string, string> | undefined)?.en || 'Report'}</h1>
@@ -248,7 +248,7 @@ const Reports = React.memo(() => {
         </div>
       </section>
       <div data-print-hide role="region" aria-label="Report period" className="flex flex-wrap items-center gap-2 [&_button]:min-h-11 [&_select]:min-h-11 [&_button]:min-w-11">
-            <button onClick={() => onAction('generate')} className="px-3.5 py-1.5 rounded-lg text-sm font-medium bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] text-black hover:opacity-95 transition-all shadow-xs cursor-pointer">
+            <button onClick={() => onAction('generate')} className="px-3.5 py-1.5 rounded-lg text-sm font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] hover:border-[var(--brass)] transition-all shadow-xs cursor-pointer">
               Generate
             </button>
             
@@ -353,7 +353,7 @@ const Reports = React.memo(() => {
         <React.Suspense fallback={
           <div className="h-96 w-full flex flex-col items-center justify-center gap-4 opacity-50">
             <Loader2 className="animate-spin text-indigo-600" size={32} />
-            <p className="text-[10px] font-medium uppercase tracking-wider truncate">Assembling Financial Matrix...</p>
+            <p className="text-[10px] font-medium truncate">Loading report…</p>
           </div>
         }>
           <AnimatePresence mode="wait">

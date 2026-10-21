@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * A-69 screen: customer credit limits. Hand-checked from the loaded customers and invoices: the
  * customer past their limit is first with its excess, a customer without a limit is never over, a
@@ -51,10 +52,10 @@ describe('Customer credit limits screen', () => {
   test('the limit is an editable money field, and a customer without a record has nothing to edit', () => {
     useAuthStore.setState({ isGuest: false, user: { uid: 'u1' }, currentWorkspaceId: 'w1', workspaces: [{ id: 'w1', name: 'W', currency: 'USD', uid: 'u1' }] } as never);
     render(<CustomerCreditLimitReportView />);
-    const acmeLimit = screen.getByLabelText('Edit Credit limit of Acme Ltd');
+    const acmeLimit = screen.getByLabelText(inlineEditName('Edit Credit limit of Acme Ltd'));
     assert.equal(acmeLimit.tagName, 'BUTTON');
     assert.match(acmeLimit.textContent || '', /1,000\.00/);
-    const betaLimit = screen.getByLabelText('Edit Credit limit of Beta GmbH');
+    const betaLimit = screen.getByLabelText(inlineEditName('Edit Credit limit of Beta GmbH'));
     assert.equal(betaLimit.tagName, 'BUTTON');
     assert.match(betaLimit.textContent || '', /Set a limit/);
   });

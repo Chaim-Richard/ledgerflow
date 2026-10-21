@@ -90,6 +90,9 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Contact Balance Summary', componentName: 'ContactBalanceSummaryView' },
     { label: 'Inventory Valuation', componentName: 'InventoryValuationReportView' },
     { label: 'Inventory Item Details', componentName: 'InventoryDetailsReportView' },
+    { label: 'Stock Sources and Uses', componentName: 'StockSourcesUsesReportView' },
+    { label: 'Expiring Lots', componentName: 'ExpiringLotsReportView' },
+    { label: 'Stock Transfers', componentName: 'StockTransfersReportView' },
     { label: 'Transactions by Reference', componentName: 'TransactionsByReferenceView' },
     { label: 'Group Summary', componentName: 'GroupSummaryReportView' },
     { label: 'Ask the Books', componentName: 'AskBooksView' },
@@ -134,10 +137,17 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Duplicate Bill Review', componentName: 'DuplicateBillsReviewView' },
     { label: 'Document Number Gaps', componentName: 'DocumentNumberGapsReportView' },
     { label: '13-Week Cash Forecast', componentName: 'CashForecast13WeekView' },
+    { label: 'Tax Code Suggestions', componentName: 'TaxCodeSuggestionsReportView' },
+    { label: 'Entity Filings Calendar', componentName: 'EntityFilingsCalendarView' },
+    { label: 'Israeli Document Types', componentName: 'IsraeliDocumentTypesView' },
+    { label: 'US 1099 Preview', componentName: 'Us1099PreviewReportView' },
+    { label: 'US Filing Calendar', componentName: 'UsFilingCalendarReportView' },
     { label: 'Vendor 1099 Readiness', componentName: 'Vendor1099ReadinessReportView' },
     { label: 'Golden Tax Fixtures', componentName: 'GoldenTaxFixturesReportView' },
     { label: 'US Quarter Journey', componentName: 'UsQuarterJourneyReportView' },
     { label: 'Israel Month Journey', componentName: 'IsraelMonthJourneyReportView' },
+    { label: 'Israel: Self-Employed National Insurance', componentName: 'IlSelfEmploymentNiReportView' },
+    { label: 'Israel: Advance Tax Calendar (Mikdamot)', componentName: 'IsraelAdvanceTaxReportView' },
   ];
 
   test('Warehouse operations workflows are reachable from Inventory Cycle Count', async ({ page }) => {

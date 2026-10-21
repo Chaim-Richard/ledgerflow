@@ -107,3 +107,28 @@ describe('A-46 numbering: its own series', () => {
     assert.equal(nextDeliveryNoteNumber(['DN-2026-999'], '2026'), 'DN-2026-1000');
   });
 });
+
+describe('A-112 serials and lots on delivery notes', () => {
+  const recorded: DeliveryNoteOrder = {
+    ...order,
+    lines: [
+      { description: 'Pump', unitPriceCents: 9000, serialNumbers: ['SN-1', 'SN-2'], lotNumber: 'LOT-A' },
+      { description: 'Valve', unitPriceCents: 1200 },
+    ],
+  };
+  const twoLines = { deliveryId: 'd1', date: '2026-10-06', lines: [{ position: 0, itemId: 'p', quantity: 2, entryId: 'e1' }, { position: 1, itemId: 'v', quantity: 1, entryId: 'e2' }] };
+
+  test('recorded serials and lot print on the row; unrecorded lines print none', () => {
+    const note = built({ order: recorded, delivery: twoLines, number: 'DN-2026-009' });
+    assert.equal(note.rows[0].serials, 'SN-1, SN-2');
+    assert.equal(note.rows[0].lot, 'LOT-A');
+    assert.equal(note.rows[1].serials, undefined);
+    assert.equal(note.rows[1].lot, undefined);
+  });
+
+  test('the serials/lot columns exist only when a row recorded them', () => {
+    assert.deepEqual(deliveryNoteColumns(false), ['Item', 'Quantity']);
+    assert.deepEqual(deliveryNoteColumns(false, 'en', { serials: true, lot: true }), ['Item', 'Quantity', 'Serials', 'Lot']);
+    assert.deepEqual(deliveryNoteColumns(false, 'he', { serials: true, lot: true }), ['פריט', 'כמות', 'מספרים סידוריים', 'סידרה']);
+  });
+});

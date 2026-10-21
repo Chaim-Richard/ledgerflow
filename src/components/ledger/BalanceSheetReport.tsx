@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, Layers, HandCoins, ShieldCheck, Activity, Calendar, FileSpreadsheet, SplitSquareHorizontal, ArrowUp, ArrowDown, ExternalLink, CheckCircle2, RefreshCw } from 'lucide-react';
+import { AlertCircle, Layers, HandCoins, ShieldCheck, Activity, FileSpreadsheet, ArrowUp, ArrowDown, ExternalLink, CheckCircle2, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { ChartAccount } from '../../types';
 import { accountGroupLayout, groupSubtotals, toggleAccountGroup, visibleGroupRows } from '../../lib/accountGroups';
@@ -67,94 +67,53 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
         </div>
       ) : null}
 
-      {/* Date controls and configuration header */}
-      <div data-testid="report-controls" role="region" aria-label="Report filters" className="flex flex-wrap items-end justify-between p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs relative group gap-4">
-        <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />
-        <div className="contents">
+      {/* Period navigation/actions and aligned report filters. */}
+      <div data-testid="report-controls" role="region" aria-label="Report filters" className="p-4 sm:p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <MonthNavigator
             className="[&_button]:min-h-11 [&_button]:min-w-11 [&_button]:text-[var(--text)]"
             currentDate={asOfDate}
             onMonthChange={({ end }) => setAsOfDate(end)}
           />
-          <div className="flex flex-wrap items-center gap-3 min-w-0">
-            <div className="w-8 h-8 bg-[var(--ink)] border border-[var(--line)] rounded-lg hidden sm:flex items-center justify-center text-[var(--muted)] shrink-0">
-               <Calendar aria-hidden="true" size={13} />
-            </div>
-            <div className="flex flex-col">
-              <label htmlFor={`${formId}-as-of`} className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mb-0.5">As Of Reporting Date</label>
-              <input 
-                id={`${formId}-as-of`}
-                type="date" 
-                value={asOfDate}
-                onChange={(e) => setAsOfDate(e.target.value)}
-                className="bg-[var(--ink)] min-h-11 max-w-full border border-[var(--line)] text-xs font-semibold px-2.5 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)]"
-              />
-            </div>
-          </div>
-
-          <div className="hidden sm:block w-px h-8 bg-slate-200" />
-
-          {/* N-08: accrual or cash basis */}
-          <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text)]">Basis
-            <select aria-label="Basis" value={basis} onChange={e => chooseBasis(e.target.value === 'cash' ? 'cash' : 'accrual')} className="bg-[var(--ink)] min-h-11 max-w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md text-[var(--text)] normal-case tracking-normal">
-              <option value="accrual">Accrual (as posted)</option>
-              <option value="cash">Cash (when paid)</option>
+          {(basis === 'cash' || (columnMode === 'total' && !showPercent && !isComparative)) && <button data-report-primary-action
+            onClick={exportBalanceSheet}
+            className="flex min-h-11 items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider transition-all shadow-sm active:scale-95 group/btn w-full sm:w-auto cursor-pointer"
+           aria-label="Export to Excel">
+            <FileSpreadsheet aria-hidden="true" size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
+            <span>Export to Excel</span>
+          </button>}
+        </div>
+        <div data-testid="report-filter-grid" className={cn("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(130px,1fr)_minmax(146px,1.2fr)_minmax(128px,1fr)_minmax(210px,1.3fr)] gap-2 items-start", isComparative && "xl:grid-cols-[minmax(130px,1fr)_minmax(130px,1fr)_minmax(146px,1.2fr)_minmax(128px,1fr)_minmax(210px,1.3fr)]")}>
+          <label data-filter-group className="flex min-w-0 flex-col gap-1 text-[9px] font-bold text-[var(--text)]" htmlFor={`${formId}-as-of`}>As Of Reporting Date
+            <input id={`${formId}-as-of`} type="date" value={asOfDate} onChange={(e) => setAsOfDate(e.target.value)} className="bg-[var(--ink)] min-h-11 min-w-0 w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)] normal-case tracking-normal" />
+          </label>
+          {isComparative && <label data-filter-group className="flex min-w-0 flex-col gap-1 text-[9px] font-bold text-[var(--text)]" htmlFor={`${formId}-prior-as-of`}>Prior As Of Reference
+            <input id={`${formId}-prior-as-of`} type="date" value={priorDate} onChange={(e) => setPriorDate(e.target.value)} className="bg-[var(--ink)] min-h-11 min-w-0 w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)] normal-case tracking-normal" />
+          </label>}
+          <label data-filter-group className="flex min-w-0 flex-col gap-1 text-[9px] font-bold text-[var(--text)]">Basis
+            <select aria-label="Basis" value={basis} onChange={e => chooseBasis(e.target.value === 'cash' ? 'cash' : 'accrual')} className="bg-[var(--ink)] min-h-11 min-w-0 w-full border border-[var(--line)] text-xs font-semibold px-2 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)] normal-case tracking-normal">
+              <option value="accrual">Accrual (as posted)</option><option value="cash">Cash (when paid)</option>
             </select>
           </label>
-          {/* Comparative mode selector */}
-          <label htmlFor={`${formId}-comparative`} aria-label="Comparative Year-on-Year" className="flex min-h-11 items-center gap-2 cursor-pointer group/toggle rounded focus-within:outline focus-within:outline-2 focus-within:outline-indigo-500">
-            <input 
-               id={`${formId}-comparative`}
-               type="checkbox" 
-               className="sr-only"
-               checked={isComparative} 
-               disabled={basis === 'cash'}
-               onChange={(e) => setIsComparative(e.target.checked)} 
-            />
-            <div className={cn(
-               "w-8 h-4 rounded-full flex items-center p-0.5 transition-colors duration-300",
-               isComparative ? "bg-indigo-500" : "bg-slate-300"
-            )}>
-              <div className={cn(
-                "w-3 h-3 bg-[var(--surface)] rounded-full shadow-sm transition-transform duration-300",
-                isComparative ? "translate-x-4" : "translate-[0px]"
-              )} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-[var(--text)] uppercase tracking-wider group-hover/toggle:text-[var(--text)] transition-colors flex items-center gap-1">
-                Comparative Year-on-Year <SplitSquareHorizontal aria-hidden="true" size={10} className={cn(isComparative ? "text-indigo-500" : "text-[var(--muted)]")} />
+          <div data-filter-group className="flex min-w-0 flex-col gap-1 text-[9px] font-bold text-[var(--text)]">
+            <span>Comparison</span>
+            <label htmlFor={`${formId}-comparative`} aria-label="Comparative Year-on-Year" className="flex min-h-11 items-center gap-2 cursor-pointer rounded focus-within:outline focus-within:outline-2 focus-within:outline-[var(--brass)]">
+              <input id={`${formId}-comparative`} type="checkbox" className="sr-only" checked={isComparative} disabled={basis === 'cash'} onChange={(e) => setIsComparative(e.target.checked)} />
+              <span aria-hidden="true" className={cn("w-8 h-4 shrink-0 rounded-full flex items-center p-0.5", isComparative ? "bg-indigo-500" : "bg-slate-300")}>
+                <span className={cn("w-3 h-3 bg-[var(--surface)] rounded-full shadow-sm", isComparative ? "translate-x-4" : "translate-x-0")} />
               </span>
-              <span className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest">Compare historical snapshot balances</span>
-            </div>
-          </label>
-
-          {isComparative && (
-            <>
-              <div className="hidden sm:block w-px h-8 bg-[var(--ink)]" />
-              <div className="flex flex-col">
-                <label htmlFor={`${formId}-prior-as-of`} className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mb-0.5">Prior As Of Reference</label>
-                <input 
-                  id={`${formId}-prior-as-of`}
-                  type="date" 
-                  value={priorDate}
-                  onChange={(e) => setPriorDate(e.target.value)}
-                  className="bg-[var(--ink)] min-h-11 max-w-full border border-[var(--line)] text-xs font-semibold px-2.5 py-1 rounded-md focus-visible:ring-2 focus-visible:ring-[var(--brass)] outline-none text-[var(--text)]"
-                />
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="contents">
-          <div className="flex flex-wrap items-center gap-1.5 bg-[var(--ink)] p-1 rounded-lg">
-            <span className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider px-1">Sort:</span>
+              <span className="text-[10px] text-[var(--text)]">Previous year</span>
+            </label>
+          </div>
+          <div data-filter-group className="flex min-w-0 flex-col gap-1 text-[9px] font-bold text-[var(--text)]"><span>Sort</span>
+            <div className="flex items-center gap-1 bg-[var(--ink)] rounded-lg">
             {(['code', 'name', 'balance'] as const).map(field => (
               <button
                 key={field}
                 aria-pressed={sortBy === field}
                 onClick={() => toggleSort(field)}
                 className={cn(
-                  "min-h-11 min-w-11 px-2 py-1 text-[9px] font-bold uppercase tracking-wider rounded transition-colors flex items-center gap-1 cursor-pointer",
+                  "min-h-11 min-w-11 flex-1 justify-center px-2 py-1 text-[9px] font-bold tracking-normal rounded transition-colors flex items-center gap-1 cursor-pointer",
                   sortBy === field ? "bg-slate-900 text-white shadow-xs" : "text-[var(--text)] hover:text-[var(--text)]"
                 )}
               >
@@ -164,15 +123,8 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                 )}
               </button>
             ))}
+            </div>
           </div>
-
-          {(basis === 'cash' || (columnMode === 'total' && !showPercent && !isComparative)) && <button
-            onClick={exportBalanceSheet}
-            className="flex min-h-11 items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold uppercase text-[10px] tracking-wider transition-all shadow-sm active:scale-95 group/btn w-full lg:w-auto cursor-pointer"
-           aria-label="Export to Excel">
-            <FileSpreadsheet aria-hidden="true" size={13} className="text-emerald-400 group-hover/btn:text-emerald-300 transition-colors shrink-0" />
-            <span>Export to Excel</span>
-          </button>}
         </div>
       </div>
 
@@ -195,7 +147,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
           {isComparative && (
             <div className="text-right">
               <span className="block text-[8px] font-bold text-[var(--muted)] uppercase tracking-widest leading-none mb-1">As Of {priorDate}</span>
-              <span className="block text-xs font-mono font-medium text-[var(--muted)] tabular-nums">
+              <span className="block text-xs font-mono font-medium text-[var(--muted)] tabular-nums whitespace-nowrap">
                 <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.totalAssets)}</bdi> Assets / <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.totalClaims)}</bdi> Claims
               </span>
             </div>
@@ -297,17 +249,17 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-[var(--text)] group-hover/row:text-indigo-600 transition-colors uppercase tracking-tight truncate flex items-center gap-1.5">
-                          {acc.name}
+                          <span className="truncate" title={acc.name}>{acc.name}</span>
                           <ExternalLink aria-hidden="true" size={10} className="opacity-0 group-hover/row:opacity-100 text-indigo-500 transition-opacity" />
                         </p>
                         <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider truncate">{acc.category || 'Direct Asset'}</p>
                       </div>
                     </div>
                     <div className="flex flex-col items-end shrink-0 ml-2">
-                      <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(curVal)}</bdi></span>
+                      <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums whitespace-nowrap"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(curVal)}</bdi></span>
                       {isComparative && (
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prVal)}</bdi></span>
+                          <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums whitespace-nowrap">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prVal)}</bdi></span>
                           {variance.pct !== null && prVal !== 0 && (
                             <span className={cn("text-[8px] font-bold", variance.pct >= 0 ? "text-emerald-500" : "text-rose-500")}>
                               {variance.pct >= 0 ? '+' : ''}{variance.pct.toFixed(1)}%
@@ -327,7 +279,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                  <span className="text-[var(--text)] font-bold uppercase tracking-wider text-[9px]">Total {labels.assetsLabel}</span>
               </div>
               <div className="text-right">
-                <span className="text-lg font-mono font-bold text-[var(--text)] tracking-tight block leading-none tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalAssets)}</bdi></span>
+                <span className="text-lg font-mono font-bold text-[var(--text)] tracking-tight block leading-none tabular-nums whitespace-nowrap"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalAssets)}</bdi></span>
                 {isComparative && prevData.totalAssets !== 0 && (
                   <span className={cn("text-[9px] font-bold block mt-1", currentData.totalAssets >= prevData.totalAssets ? "text-emerald-500" : "text-rose-500")}>
                     {(((currentData.totalAssets - prevData.totalAssets) / Math.abs(prevData.totalAssets)) * 100).toFixed(1)}% vs Prior
@@ -386,17 +338,17 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-[var(--text)] group-hover/row:text-indigo-600 transition-colors uppercase tracking-tight truncate flex items-center gap-1.5">
-                            {acc.name}
+                            <span className="truncate" title={acc.name}>{acc.name}</span>
                             <ExternalLink aria-hidden="true" size={10} className="opacity-0 group-hover/row:opacity-100 text-indigo-500 transition-opacity" />
                           </p>
                           <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider truncate">{acc.category || 'Current Liability'}</p>
                         </div>
                       </div>
                       <div className="flex flex-col items-end shrink-0 ml-2">
-                        <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(curVal)}</bdi></span>
+                        <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums whitespace-nowrap"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(curVal)}</bdi></span>
                         {isComparative && (
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prVal)}</bdi></span>
+                            <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums whitespace-nowrap">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prVal)}</bdi></span>
                             {variance.pct !== null && prVal !== 0 && (
                               <span className={cn("text-[8px] font-bold", variance.pct <= 0 ? "text-emerald-500" : "text-rose-500")}>
                                 {variance.pct >= 0 ? '+' : ''}{variance.pct.toFixed(1)}%
@@ -412,12 +364,12 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                 {Boolean(currentData.notApplied) && (
                   <div className="flex justify-between items-center p-3 text-xs text-[var(--text)]">
                     <span>Paid, not yet applied to an invoice or bill</span>
-                    <span className="font-mono tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.notApplied || 0)}</bdi></span>
+                    <span className="font-mono tabular-nums whitespace-nowrap"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.notApplied || 0)}</bdi></span>
                   </div>
                 )}
                 <div className="flex justify-between items-center pt-2 text-[var(--muted)] text-[8px] font-bold uppercase tracking-wider">
                   <span>Sub-Total Liabilities</span>
-                  <span className="font-mono font-semibold tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalLiabilities)}</bdi></span>
+                  <span className="font-mono font-semibold tabular-nums whitespace-nowrap"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalLiabilities)}</bdi></span>
                 </div>
               </div>
 
@@ -452,17 +404,17 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-[var(--text)] group-hover/row:text-indigo-600 transition-colors uppercase tracking-tight truncate flex items-center gap-1.5">
-                            {acc.name}
+                            <span className="truncate" title={acc.name}>{acc.name}</span>
                             <ExternalLink aria-hidden="true" size={10} className="opacity-0 group-hover/row:opacity-100 text-indigo-500 transition-opacity" />
                           </p>
                           <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider truncate">{acc.category || 'Owner Equity'}</p>
                         </div>
                       </div>
                       <div className="flex flex-col items-end shrink-0 ml-2">
-                        <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(curVal)}</bdi></span>
+                        <span className="font-mono font-bold text-[var(--text)] text-xs tabular-nums whitespace-nowrap"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(curVal)}</bdi></span>
                         {isComparative && (
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prVal)}</bdi></span>
+                            <span className="font-mono text-[8px] text-[var(--muted)] tabular-nums whitespace-nowrap">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prVal)}</bdi></span>
                             {variance.pct !== null && prVal !== 0 && (
                               <span className={cn("text-[8px] font-bold", variance.pct <= 0 ? "text-emerald-500" : "text-rose-500")}>
                                 {variance.pct >= 0 ? '+' : ''}{variance.pct.toFixed(1)}%
@@ -501,12 +453,12 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                     </div>
                   </div>
                   <div className="flex flex-col items-end shrink-0 ml-2">
-                    <span className="font-mono font-bold text-xs text-[var(--text)] tabular-nums">
+                    <span className="font-mono font-bold text-xs text-[var(--text)] tabular-nums whitespace-nowrap">
                       <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.netIncome)}</bdi>
                     </span>
                     {isComparative && (
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="font-mono text-[8.5px] text-[var(--text)] tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.netIncome)}</bdi></span>
+                        <span className="font-mono text-[8.5px] text-[var(--text)] tabular-nums whitespace-nowrap">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.netIncome)}</bdi></span>
                         {prevData.netIncome !== 0 && (
                           <span className="text-[8.5px] font-bold text-[var(--text)]">
                             {(((currentData.netIncome - prevData.netIncome) / Math.abs(prevData.netIncome)) * 100).toFixed(1)}%
@@ -519,7 +471,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
 
                 <div className="flex justify-between items-center pt-2 text-[var(--muted)] text-[8px] font-bold uppercase tracking-wider">
                   <span>Sub-Total Equity</span>
-                  <span className="font-mono font-semibold tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalEquity + currentData.netIncome)}</bdi></span>
+                  <span className="font-mono font-semibold tabular-nums whitespace-nowrap"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalEquity + currentData.netIncome)}</bdi></span>
                 </div>
               </div>
             </div>
@@ -539,7 +491,7 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
                 )}
               </div>
               <div className="text-right shrink-0">
-                <span className="text-lg font-mono font-bold text-[var(--text)] tracking-tight block leading-none tabular-nums">
+                <span className="text-lg font-mono font-bold text-[var(--text)] tracking-tight block leading-none tabular-nums whitespace-nowrap">
                   <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalClaims)}</bdi>
                 </span>
                 {isComparative && prevData.totalClaims !== 0 && (

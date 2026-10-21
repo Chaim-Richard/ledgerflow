@@ -17,6 +17,11 @@ export interface UsNexusRow {
   transactions: number | null;
   /** 'either': sales or transactions cross it; 'both': both must */
   test: 'either' | 'both';
+  /**
+   * the state's wording is "more than": a figure exactly at the threshold has not crossed it (New York). Without it
+   * the threshold is met at "or more".
+   */
+  strict?: boolean;
   validFrom: string;
   validTo?: string;
   source: string;
@@ -68,7 +73,7 @@ export const US_NEXUS_THRESHOLDS: UsNexusRow[] = [
   { state: 'NH', stateName: 'New Hampshire', salesThresholdCents: null, transactions: null, test: 'either', validFrom: '2019-01-01', source: dor('www.revenue.nh.gov'), checked: CHECKED, note: 'no general sales tax' },
   either200('NJ', 'New Jersey', dor('www.nj.gov/treasury/taxation'), '2019-10-01'),
   simple('NM', 'New Mexico', dor('www.tax.newmexico.gov'), '2019-07-01', 'gross receipts tax, revenue only'),
-  { state: 'NY', stateName: 'New York', salesThresholdCents: usd(500_000), transactions: 100, test: 'both', validFrom: '2019-01-01', source: dor('www.tax.ny.gov'), checked: CHECKED, note: 'both tests: more than $500,000 and more than 100 sales in the last four quarters' },
+  { state: 'NY', stateName: 'New York', salesThresholdCents: usd(500_000), transactions: 100, test: 'both', strict: true, validFrom: '2019-01-01', source: dor('www.tax.ny.gov'), checked: CHECKED, note: 'both tests: more than $500,000 and more than 100 sales in the last four quarters' },
   simple('NC', 'North Carolina', dor('www.ncdor.gov'), '2024-07-01', 'the 200-transaction test was removed 1 Jul 2024'),
   either200('NC', 'North Carolina', dor('www.ncdor.gov'), '2019-01-01', 'before 1 Jul 2024: sales or 200 transactions', '2024-06-30'),
   simple('ND', 'North Dakota', dor('www.tax.nd.gov'), '2019-01-01'),
@@ -145,8 +150,10 @@ export function nexusWatch(input: NexusWatchInput, date: string): NexusWatchResu
   if (row.salesThresholdCents === null && row.transactions === null) return base;
   const salesRatio = row.salesThresholdCents === null ? null : input.salesCents / row.salesThresholdCents;
   const orderRatio = row.transactions === null ? null : input.orders / row.transactions;
-  const salesMet = salesRatio !== null && input.salesCents >= row.salesThresholdCents!;
-  const ordersMet = orderRatio !== null && input.orders >= row.transactions!;
+  // "more than" (strict) vs "or more": exactly at the threshold has crossed only in the second case
+  const meets = (value: number, threshold: number) => (row.strict ? value > threshold : value >= threshold);
+  const salesMet = salesRatio !== null && meets(input.salesCents, row.salesThresholdCents!);
+  const ordersMet = orderRatio !== null && meets(input.orders, row.transactions!);
   const crossed = row.test === 'both' ? salesMet && ordersMet : salesMet || ordersMet;
   const ratios = [salesRatio, orderRatio].filter((r): r is number => r !== null);
   const ratio = ratios.length ? Math.max(...ratios) : null;

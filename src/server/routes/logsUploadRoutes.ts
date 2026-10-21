@@ -1,6 +1,6 @@
 import { errorMessage, requestUser } from "../auth/requestUser";
 import { apiLogsForWorkspace } from "../http/apiRequestLog";
-import { formatTzDate, sendError, authorizeWorkspace, authenticate, upload } from "../http/serverKit";
+import { formatTzDate, sendError, authorizeWorkspace, authenticate, upload, uploadedFilePath } from "../http/serverKit";
 import type { AuthenticatedRequest, ServerContext } from "../http/serverKit";
 import { apiAuthenticate } from "../auth/apiAuthenticate";
 import express from "express";
@@ -36,15 +36,21 @@ export function registerLogsUploadRoutes(app: express.Express, ctx: ServerContex
   app.post("/api/upload-bank-csv", authenticate, upload.single("file"), async (req: express.Request, res: express.Response) => {
     const authReq = req as AuthenticatedRequest;
     if (!req.file) return sendError(res, "No file uploaded", 400);
+    let filePath: string;
+    try {
+      filePath = uploadedFilePath(req.file);
+    } catch {
+      return sendError(res, "Invalid upload", 400);
+    }
 
-    const validation = await validateUploadedFile(req.file.path);
+    const validation = await validateUploadedFile(filePath);
     if (!validation.valid) {
-      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       return sendError(res, validation.error || "Invalid file content", 400);
     }
 
     try {
-      const csvData = fs.readFileSync(req.file.path, "utf8");
+      const csvData = fs.readFileSync(filePath, "utf8");
       const records: Array<Record<string, string>> = parseCsv(csvData, {
         columns: true,
         skip_empty_lines: true,
@@ -53,7 +59,7 @@ export function registerLogsUploadRoutes(app: express.Express, ctx: ServerContex
       });
 
       if (!records || records.length === 0) {
-        if (req.file) fs.unlinkSync(req.file.path);
+        fs.unlinkSync(filePath);
         return res.json([]);
       }
 
@@ -147,10 +153,10 @@ export function registerLogsUploadRoutes(app: express.Express, ctx: ServerContex
         }
       });
 
-      fs.unlinkSync(req.file.path);
+      fs.unlinkSync(filePath);
       res.json(transactions);
     } catch (error) {
-      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       if (/not a member|API key is scoped/i.test(errorMessage(error))) return sendError(res, "Forbidden workspace access", 403);
       sendError(res, "Failed to parse CSV", 500, error);
     }

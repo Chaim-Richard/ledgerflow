@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
+import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
+import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { useCurrentRole, hasRoleAtLeast } from '../../hooks/useCurrentRole';
 import { Building, CheckCircle2, RefreshCw, Landmark, ArrowRightLeft, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,6 +17,8 @@ import { TransferModal } from './TransferModal';
 import MakeDepositDialog from './MakeDepositDialog';
 import CashMovementDialog from './CashMovementDialog';
 import ConnectedBanks from './ConnectedBanks';
+import { EmptyState } from '../ui/EmptyState';
+import { LoadingState } from '../ui/LoadingState';
 
 export default function Banking() {
   const canImport = hasRoleAtLeast(useCurrentRole(), 'bookkeeper');
@@ -27,6 +31,12 @@ export default function Banking() {
     a.category?.toLowerCase().includes('bank')
   );
   
+  // the chart of accounts loads when the workspace opens: say so while it is on its way, and say
+  // what happened if it could not be read (D-88: one action in each state)
+  // (the shared hook knows demo mode has no database, so a demo never waits forever)
+  const { loading } = useLedgerCollections('accounts');
+  const accountsError = useDataNeedsStore(s => s.failed.accounts);
+  const retryAccounts = useDataNeedsStore(s => s.retry);
   const [syncingAccountId, setSyncingAccountId] = useState<string | null>(null);
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [needsReconnect, setNeedsReconnect] = useState<{ bankId: string; institutionName: string }[]>([]);
@@ -111,7 +121,8 @@ export default function Banking() {
             <button type="button" onClick={() => setIsDepositOpen(true)} className="h-12 px-6 bg-[var(--surface)] hover:border-[var(--brass-line)] border border-[var(--line)] text-[var(--text)] font-black text-[10px] uppercase tracking-widest rounded-xl shadow-sm">
               Make deposit
             </button>
-            <PlaidConnectButton onSuccessSync={handleSyncSuccess} />
+            {/* the same control is the empty state's one action when there are no accounts yet */}
+            {accounts.length > 0 && <PlaidConnectButton onSuccessSync={handleSyncSuccess} />}
             {needsReconnect.map(b => (
               <div key={b.bankId} role="alert" className="flex items-center gap-3 rounded-xl border border-[var(--neg)] px-3 py-2 text-xs text-[var(--text)]">
                 <span>{b.institutionName || 'A bank'} needs you to log in again.</span>
@@ -123,59 +134,66 @@ export default function Banking() {
 
         <ConnectedBanks />
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {accounts.map(account => (
-            <div key={account.id} className="bg-white border border-[var(--color-ledger-line)] rounded-2xl p-5 shadow-xs flex flex-col">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600">
-                    <Building className="w-5 h-5" />
+        {accountsError && accounts.length === 0 ? (
+          <div role="alert" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-8 text-center">
+            <h2 className="text-lg font-bold text-[var(--text)]">We couldn't load your bank accounts</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">Your chart of accounts did not arrive, so nothing can be listed here yet.</p>
+            <button
+              type="button"
+              onClick={() => retryAccounts('accounts')}
+              className="mt-6 min-h-11 px-6 py-3 bg-[var(--text)] text-[var(--surface)] rounded-xl text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-opacity shadow-md"
+            >
+              Try again
+            </button>
+          </div>
+        ) : loading && accounts.length === 0 ? (
+          <LoadingState what="bank accounts" />
+        ) : accounts.length === 0 ? (
+          <EmptyState
+            title="No bank accounts yet"
+            description="Connect a bank to bring its transactions in, or add a bank account to your chart of accounts and import a statement."
+            action={<PlaidConnectButton onSuccessSync={handleSyncSuccess} />}
+          />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {accounts.map(account => (
+              <div key={account.id} className="bg-white border border-[var(--color-ledger-line)] rounded-2xl p-5 shadow-xs flex flex-col">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600">
+                      <Building className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-slate-900 text-sm leading-tight">{account.name}</h2>
+                      <p className="text-xs text-[var(--muted)] font-mono mt-0.5">{account.code ? `Acct ${account.code}` : 'Bank Account'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="font-semibold text-slate-900 text-sm leading-tight">{account.name}</h2>
-                    <p className="text-xs text-[var(--muted)] font-mono mt-0.5">{account.code ? `Acct ${account.code}` : 'Bank Account'}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full">
-                  <CheckCircle2 className="w-3 h-3" /> Ready
-                </div>
-              </div>
-              
-              <div className="mt-auto pt-4 border-t border-slate-100 space-y-4">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-[var(--muted)] font-medium">Type</span>
-                  <span className="text-slate-800 font-mono font-bold uppercase">{account.subtype || account.type || 'Asset'}</span>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => handleSyncNow(account.name, account.id)}
-                    disabled={syncingAccountId === account.id}
-                    className="flex-1 px-3 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50 cursor-pointer"
-                  >
-                    <RefreshCw className={cn("w-3.5 h-3.5", syncingAccountId === account.id && "animate-spin")} />
-                    <span>{syncingAccountId === account.id ? 'Syncing...' : 'Sync Feed'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
 
-          {accounts.length === 0 && (
-            <div className="col-span-full py-16 flex flex-col items-center justify-center text-center bg-white border border-[var(--color-ledger-line)] border-dashed rounded-3xl p-8">
-              <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4">
-                <Landmark className="w-7 h-7" />
+                  <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full">
+                    <CheckCircle2 className="w-3 h-3" /> Ready
+                  </div>
+                </div>
+
+                <div className="mt-auto pt-4 border-t border-slate-100 space-y-4">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-[var(--muted)] font-medium">Type</span>
+                    <span className="text-slate-800 font-mono font-bold uppercase">{account.subtype || account.type || 'Asset'}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleSyncNow(account.name, account.id)}
+                      disabled={syncingAccountId === account.id}
+                      className="flex-1 min-h-11 px-3 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50 cursor-pointer"
+                    >
+                      <RefreshCw className={cn("w-3.5 h-3.5", syncingAccountId === account.id && "animate-spin")} />
+                      <span>{syncingAccountId === account.id ? 'Syncing...' : 'Sync Feed'}</span>
+                    </button>
+                  </div>
+                </div>
               </div>
-              <h2 className="text-lg font-bold text-slate-900">No Bank Connections Found</h2>
-              <p className="text-[var(--muted)] mt-1 max-w-md text-sm leading-relaxed">
-                Connect your checking accounts, credit cards, or cash repositories via secure Plaid link to stream transactions automatically into your ledger.
-              </p>
-              <div className="mt-6">
-                <PlaidConnectButton onSuccessSync={handleSyncSuccess} />
-              </div>
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
       <TransferModal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} />
       {cashMovement && (

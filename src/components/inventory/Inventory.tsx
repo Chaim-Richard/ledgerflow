@@ -52,12 +52,15 @@ import CogsDialog from './CogsDialog';
 import StockPolicySwitch from './StockPolicySwitch';
 import StockHistoryDialog from './StockHistoryDialog';
 import InventoryItemDialog from './InventoryItemDialog';
+import { ItemImageThumb } from './ItemImagePanel';
 import StockAdjustDialog from './StockAdjustDialog';
+import StockRevalueDialog from './StockRevalueDialog';
 import StockCountDialog from './StockCountDialog';
 import CategoryManagerDialog from './CategoryManagerDialog';
 import { categoryCounts } from '../../lib/itemCategories';
 import { TAX_CATEGORIES, taxCategoryLabel, effectiveTaxCategory } from '../../lib/tax/taxCategories';
 import { isBundle, bundleSummary, type BundlePart } from '../../lib/itemBundles';
+import { parseLocationLevelsJson } from '../../lib/locationLevels';
 import ConsignmentStockPanel from './ConsignmentStockPanel';
 import { isConsignment } from '../../lib/consignmentStock';
 
@@ -95,7 +98,14 @@ export default function Inventory() {
   const [taxCategoryFilter, setTaxCategoryFilter] = useState('');
   const [isManagingCategories, setIsManagingCategories] = useState(false);
   const baseCurrency = useLedgerStore(s => s.baseCurrency) || 'USD';
-  const canChangeStock = useCurrentRole() !== 'viewer';
+  const role = useCurrentRole();
+  const canChangeStock = role !== 'viewer';
+  // ISS-130: revaluing changes book value, so owners and accountants (the server checks the same)
+  const canRevalue = role === 'owner' || role === 'accountant';
+  // #259 review: a revaluation draft belongs to the workspace it was opened in; after a switch it is not shown
+  const [revalueDraft, setRevalueDraft] = useState<{ item: InventoryItem; workspaceId: string | null } | null>(null);
+  const revalueItem = revalueDraft && revalueDraft.workspaceId === workspaceId ? revalueDraft.item : null;
+  const setRevalueItem = (item: InventoryItem | null) => setRevalueDraft(item ? { item, workspaceId } : null);
   const { setSafeTimeout } = useTimeout();
 
   useEffect(() => {
@@ -131,6 +141,7 @@ export default function Inventory() {
   }, [items, activeTransactions, accounts]);
 
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [imageRefresh, setImageRefresh] = useState<Record<string, number>>({});
   // A-7: the sales tax codes an item can default to (the same list the invoice offers)
   const taxRatesForItems = useLedgerStore(s => s.taxRates || []);
   const salesTaxCodes = useMemo(() => taxRatesForItems.filter(r => r.type === 'Sales' && r.appliesTo !== 'purchases').map(r => ({ id: r.id, name: r.name })), [taxRatesForItems]);
@@ -145,7 +156,8 @@ export default function Inventory() {
       sku: formData.get('sku') as string,
       description: formData.get('description') as string,
       unitPriceCents: TruthEngine.parseAmountToCents(formData.get('unitPrice') as string),
-      unitCostCents: TruthEngine.parseAmountToCents(formData.get('unitCost') as string),
+      // ISS-130: the cost of stock on hand changes only by a revaluation, so the form leaves it alone
+      ...((Number(editingItem.quantityAtHand) || 0) > 0 ? {} : { unitCostCents: TruthEngine.parseAmountToCents(formData.get('unitCost') as string) }),
       // the quantity changes only through Adjust stock, a count or a sale, which post to the books
       reorderPoint: parseInt(formData.get('reorderPoint') as string, 10) || 0,
       measurementUnit: formData.get('measurementUnit') as string || undefined,
@@ -161,6 +173,8 @@ export default function Inventory() {
       bundleParts: parseBundleParts(formData.get('bundleParts')),
       // A-34: the consignment mark (empty = ordinary stock)
       consignment: (formData.get('consignment') as string) || undefined,
+      // A-115: minimum/maximum per location (empty = no levels)
+      locationLevels: parseLocationLevelsJson(formData.get('locationLevels')),
     };
 
     try {
@@ -194,6 +208,7 @@ export default function Inventory() {
       productTaxCategory: (formData.get('productTaxCategory') as string) || undefined,
       bundleParts: parseBundleParts(formData.get('bundleParts')),
       consignment: (formData.get('consignment') as string) || undefined,
+      locationLevels: parseLocationLevelsJson(formData.get('locationLevels')),
       createdAt: new Date().toISOString()
     };
 
@@ -472,7 +487,9 @@ export default function Inventory() {
             {displayItems.map((item) => (
               <tr key={item.id} className="hover:bg-[var(--ink)]/50 transition-colors group">
                 <td className="px-8 py-5">
-                  <div>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <ItemImageThumb itemId={item.id} itemName={item.name} workspaceId={item.workspaceId || workspaceId || ''} refreshKey={imageRefresh[item.id] || 0} />
+                    <div className="min-w-0">
                     <InlineEdit value={item.name} label={`Name of ${item.name}`} canEdit={canChangeStock}
                       validate={v => String(v) ? null : 'An item needs a name'} onSave={v => saveItemField(item, 'name', v)}
                       className="text-sm font-black text-[var(--text)] block" />
@@ -483,6 +500,7 @@ export default function Inventory() {
                     )}
                     <InlineEdit value={item.sku} label={`SKU of ${item.name}`} placeholder="Add SKU" canEdit={canChangeStock}
                       onSave={v => saveItemField(item, 'sku', v)} className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest block" />
+                    </div>
                   </div>
                 </td>
                 <td className="px-8 py-5">
@@ -534,8 +552,9 @@ export default function Inventory() {
                     </div>
                   ) : (
                     <div className="flex flex-col">
-                      <InlineEdit kind="money" value={item.unitCostCents} display={formatCurrency(item.unitCostCents)} label={`Unit cost of ${item.name}`} canEdit={canChangeStock}
+                      <InlineEdit kind="money" value={item.unitCostCents} display={formatCurrency(item.unitCostCents)} label={`Unit cost of ${item.name}`} canEdit={canChangeStock && !(item.quantityAtHand > 0)}
                         onSave={v => saveItemField(item, 'unitCostCents', v)} className="text-sm font-bold text-zinc-500 font-mono tabular-nums" />
+                      {item.quantityAtHand > 0 && canRevalue && <button type="button" onClick={() => setRevalueItem(item)} className="min-h-11 self-start text-[10px] font-semibold text-emerald-700 hover:underline">Revalue {item.name}</button>}
                       {item.unitsPerPackage && item.unitsPerPackage > 1 && (
                         <span className="text-[10px] font-black text-emerald-600 tracking-widest mt-0.5 uppercase tabular-nums">
                           {formatCurrency(Math.round(item.unitCostCents / item.unitsPerPackage))} / {item.measurementUnit || 'unit'}
@@ -679,13 +698,18 @@ export default function Inventory() {
 
       <InventoryItemDialog key={editingItem?.id || 'new-item'} open={isAdding || !!editingItem} editingItem={editingItem} categories={categories} canChangeStock={canChangeStock} taxCodes={salesTaxCodes} allItems={items}
         onClose={closeItemDialog} onSubmit={editingItem ? handleUpdate : handleAdd}
-        onAdjust={it => { setEditingItem(null); setAdjustItem(it); }} />
+        onItemImageChange={itemId => setImageRefresh(current => ({ ...current, [itemId]: (current[itemId] || 0) + 1 }))}
+        onAdjust={it => { setEditingItem(null); setAdjustItem(it); }}
+        onRevalue={canRevalue ? it => setRevalueItem(it) : undefined} />
 
       {cogsItem && workspaceId && (
         <CogsDialog item={cogsItem} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setCogsItem(null)} />
       )}
       {adjustItem && workspaceId && (
         <StockAdjustDialog item={adjustItem} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setAdjustItem(null)} />
+      )}
+      {revalueItem && workspaceId && (
+        <StockRevalueDialog item={revalueItem} workspaceId={workspaceId} accounts={accounts} currency={baseCurrency} onClose={() => setRevalueItem(null)} />
       )}
       {historyItem && workspaceId && (
         <StockHistoryDialog item={historyItem} workspaceId={workspaceId} currency={baseCurrency} onClose={() => setHistoryItem(null)} />

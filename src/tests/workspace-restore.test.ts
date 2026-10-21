@@ -87,11 +87,52 @@ describe('Workspace restore', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, 
     assert.equal(data?.members, undefined);
   });
 
+  test('AUD-02: a document whose fields have the wrong type refuses the backup; a valid one keeps fields no schema knows', async () => {
+    await assert.rejects(restoreWorkspaceBackup(db, ws, {
+      invoices: [{ id: `${ws}_bad`, status: 'sent', amountCents: '100' }],
+    }), (err: unknown) => err instanceof RestoreError && err.status === 400 && /invoices\/.*_bad is not a valid invoice \(amountCents/.test(err.message));
+    assert.equal((await db.collection('invoices').doc(`${ws}_bad`).get()).exists, false);
+    await restoreWorkspaceBackup(db, ws, {
+      invoices: [{ id: `${ws}_good`, status: 'unpaid-legacy', amountCents: 100, someLaterField: 'kept' }],
+    });
+    const good = (await db.collection('invoices').doc(`${ws}_good`).get()).data();
+    assert.equal(good?.someLaterField, 'kept');
+    assert.equal(good?.status, 'unpaid-legacy');
+  });
+
   test('rejects malformed backups', async () => {
     for (const bad of [null, 'text', { workspace: { id: other } }, { schemaVersion: 2 },
       { customers: 'not-a-list' }, { customers: [42] }, { customers: [{ id: 'a/b' }] }]) {
       await assert.rejects(restoreWorkspaceBackup(db, ws, bad), (err: unknown) => err instanceof RestoreError && err.status === 400);
     }
+  });
+
+  test('AUD-07: refuses a backup older than the current closed period without changing records', async () => {
+    // Seed this test's own preconditions; do not rely on earlier tests' restore state.
+    await db.collection('workspaces').doc(ws).set({ name: 'Restored name', lockDate: '2026-09-30' }, { merge: true });
+    await db.collection('customers').doc(`${ws}_c1`).set({ workspaceId: ws, name: 'Existing customer for AUD-07' });
+    const existing = await db.collection('customers').doc(`${ws}_c1`).get();
+    assert.equal(existing.exists, true, 'precondition: this test seeded the current customer');
+
+    // A backup without a close date is older than the current closed books.
+    await assert.rejects(restoreWorkspaceBackup(db, ws, {
+      workspace: { id: ws, name: 'Must not replace closed books' },
+      customers: [{ id: `${ws}_replacement`, name: 'Must not be written' }],
+    }), (err: unknown) => err instanceof RestoreError && err.status === 409 && /Books are closed through 2026-09-30/.test(err.message));
+
+    // A dated backup is also refused when it predates the current lock date.
+    await assert.rejects(restoreWorkspaceBackup(db, ws, {
+      workspace: { id: ws, name: 'Also must not replace closed books', lockDate: '2026-08-31' },
+      customers: [{ id: `${ws}_replacement`, name: 'Must not be written' }],
+    }), (err: unknown) => err instanceof RestoreError && err.status === 409 && /can't replace the months closed since/.test(err.message));
+
+    assert.equal((await db.collection('customers').doc(`${ws}_c1`).get()).exists, true,
+      'refused restore preserves the existing customer');
+    assert.equal((await db.collection('customers').doc(`${ws}_replacement`).get()).exists, false,
+      'refused restore writes no replacement customer');
+    assert.equal((await db.collection('workspaces').doc(ws).get()).data()?.name, 'Restored name',
+      'refused restore preserves workspace settings');
+    await db.collection('workspaces').doc(ws).set({ lockDate: null }, { merge: true });
   });
 });
 

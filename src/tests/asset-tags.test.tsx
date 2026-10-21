@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * Asset tags (X-07): tags given in order after the highest in use, oldest assets first, disposed and
  * hand-typed ones left as they are; finding an asset by tag, name or place; on the register, giving
@@ -54,8 +55,8 @@ describe('Asset tags', () => {
     await waitFor(() => assert.equal(writes.length, 2));
     assert.deepEqual(writes.map(w => [w.p_id, w.p_set?.assetTag]), [['laptop', 'AT-0008'], ['van', 'AT-0009']]);
     fireEvent.change(screen.getByLabelText(/^Find/), { target: { value: 'AT-0007' } });
-    assert.ok(screen.getByRole('button', { name: 'Edit Name of Press' }));
-    assert.equal(screen.queryByRole('button', { name: 'Edit Name of Delivery van' }), null);
+    assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Name of Press') }));
+    assert.equal(screen.queryByRole('button', { name: inlineEditName('Edit Name of Delivery van') }), null);
     fireEvent.change(screen.getByLabelText(/^Find/), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'Print labels' }));
     const dialog = screen.getByRole('dialog', { name: 'Asset labels (2)' });

@@ -143,7 +143,7 @@ export async function postCreditNoteLedger(
     const cogsAccount = findAccount(accounts, mappings, ['cogs', 'cost of goods sold', 'direct costs'], a => resolveAccountRole(a) === 'cogs');
     if (!inventoryAccount || !cogsAccount) throw new Error('Returned goods need an Inventory account and a Cost of Goods Sold account in the chart of accounts.');
     txsToPost.push(...planReturnEntries({
-      creditNote: { id: creditNoteId, number: creditNoteData.number, invoiceId: creditNoteData.invoiceId, date: cnDate, returnedGoods: goods },
+      creditNote: { id: creditNoteId, number: creditNoteData.number, invoiceId: creditNoteData.invoiceId, date: cnDate, returnedGoods: goods, customerId: creditNoteData.customerId },
       lines, uid, workspaceId, baseCurrency: currentWs?.currency || 'USD', inventoryAccount, cogsAccount,
     }) as PostableTransaction[]);
   }
@@ -273,7 +273,10 @@ export async function postVendorCreditLedger(
       vendorCreditId,
       vendorId: vendorCreditData.vendorId,
       type: 'vendor-credit-issuance',
-      ...(goods.length ? { stockOut: goods.map((g, i) => ({ itemId: g.itemId, quantity: g.quantity, valueCents: goodsBase[i] })) } : {}),
+      // DIM-2 phase 2: each line sent back names the bill line it came in on (and the bill, under its own key so the
+      // entry is never mistaken for the bill's own)
+      ...(goods.length ? { stockOut: goods.map((g, i) => ({ itemId: g.itemId, quantity: g.quantity, valueCents: goodsBase[i], ...(Number.isSafeInteger(g.billLine) ? { billLine: g.billLine } : {}) })) } : {}),
+      ...(goods.length && vendorCreditData.billId ? { returnsFromBillId: vendorCreditData.billId } : {}),
     },
     lines: [
       { accountId: apAccount.id, accountName: apAccount.name, amountCents: amount, debitCents: amount, creditCents: 0, description: 'Accounts Payable Reduction' },

@@ -101,70 +101,21 @@ export default function Dashboard() {
 
   return (
     <div className="w-full p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1360px] mx-auto text-[var(--text)]">
-      <SinceLastVisitCard />
-      {/* DA-02: one queue of what needs doing */}
-      <NeedsAttentionCard />
-
-      {/* Header section with lens selector and subtle gold gradient backdrop */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-[var(--brass-soft)] via-[var(--surface)]/40 to-[var(--panel)] p-6 rounded-2xl border border-[var(--brass-line)]/50 shadow-sm">
-        {/* Subtle radial ambient glow */}
-        <div className="absolute -top-16 -left-16 w-56 h-56 bg-[var(--brass)] opacity-10 rounded-full blur-3xl hidden md:block pointer-events-none" />
-        <div className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-[var(--brass-soft)]/20 via-transparent to-transparent pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)]/60 text-[11px] font-mono text-[var(--brass)] font-semibold mb-2 shadow-xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--brass)] animate-pulse" />
-              FINANCIAL COMMAND CENTER
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              {lens === 'owner' ? 'Real-Time Financial Ledger' : 'Consolidated Double-Entry Trial Balance'}
-            </h1>
-            <p className="text-sm text-[var(--muted)] mt-1">
-              Connected to live store —{' '}
-              <span className="text-[var(--brass)] font-medium">
-                {lens === 'owner' ? 'owner perspective on assets, cash & net worth.' : 'audit-ready debits and credits.'}
-              </span>
-            </p>
+      <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+          {lens === 'owner' ? 'Real-Time Financial Ledger' : 'Consolidated Double-Entry Trial Balance'}
+        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex border border-[var(--line)] rounded-xl bg-[var(--panel)] text-xs">
+            {(['owner', 'accountant'] as const).map(value => <button key={value} type="button" aria-pressed={lens === value} onClick={() => setLens(value)} className={cn('min-h-11 px-3 rounded-xl', lens === value ? 'bg-[var(--brass-soft)] font-semibold' : 'text-[var(--muted)]')}>{value === 'owner' ? 'Owner Lens' : 'Accountant Lens'}</button>)}
           </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center bg-[var(--surface)]/80 border border-[var(--line)] rounded-xl p-1 text-xs font-medium shadow-inner backdrop-blur-sm">
-              <button
-                onClick={() => setLens('owner')}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-lg transition-all cursor-pointer",
-                  lens === 'owner' 
-                    ? "bg-gradient-to-r from-[var(--brass)] to-[#e5be6b] text-black font-semibold shadow-sm" 
-                    : "text-[var(--muted)] hover:text-[var(--text)]"
-                )}
-              >
-                Owner Lens
-              </button>
-              <button
-                onClick={() => setLens('accountant')}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-lg transition-all cursor-pointer",
-                  lens === 'accountant' 
-                    ? "bg-gradient-to-r from-[var(--brass)] to-[#e5be6b] text-black font-semibold shadow-sm" 
-                    : "text-[var(--muted)] hover:text-[var(--text)]"
-                )}
-              >
-                Accountant Lens
-              </button>
-            </div>
-
-            <button
-              onClick={() => setQuickEntryOpen(true)}
-              className="flex items-center gap-1.5 bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] hover:opacity-95 text-black px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md hover:shadow-lg cursor-pointer active:scale-95"
-            >
-              <Plus size={15} />
-              Add Entry
-            </button>
-          </div>
+          <button type="button" onClick={() => setQuickEntryOpen(true)} className="min-h-11 inline-flex items-center gap-1.5 bg-[var(--brass)] text-[var(--ink)] px-3 rounded-xl text-xs font-bold"><Plus size={15} aria-hidden="true" />Add Entry</button>
         </div>
-      </div>
+      </header>
 
+      <DashboardWidgets>
+        <SinceLastVisitCard />
+        <NeedsAttentionCard />
       {/* Setup Checklist Guidance Banner (when setup is incomplete) */}
       {isSetupIncomplete && (
         <div className="bg-gradient-to-r from-[var(--brass-soft)] via-[var(--panel)] to-[var(--surface)] border border-[var(--brass-line)] rounded-2xl p-4 sm:p-5 relative shadow-sm">
@@ -272,7 +223,7 @@ export default function Dashboard() {
       {/* Saved Views & Default Lenses Bar */}
       <SavedViewsBar />
 
-      <DashboardWidgets />
+      </DashboardWidgets>
       <details className="border border-[var(--line)] rounded-xl p-4"><summary className="min-h-11 flex items-center cursor-pointer font-semibold">Live tax and spending planning</summary><p className="text-sm text-[var(--muted)] mb-3">This planner uses current cash and future assumptions independently of the dashboard reporting dates.</p><TaxReserveWidget /></details>
     </div>
   );

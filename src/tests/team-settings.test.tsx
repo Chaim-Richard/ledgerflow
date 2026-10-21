@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 import './helpers/dom';
 import test, { beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,11 +29,11 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 const mutations = () => calls.filter(call => call.method !== 'GET');
-async function openTeam() { render(<TeamSettings />); await waitFor(() => assert.ok(screen.getByRole('button', { name: `Edit Role of ${member}` }))); }
+async function openTeam() { render(<TeamSettings />); await waitFor(() => assert.ok(screen.getByRole('button', { name: inlineEditName(`Edit Role of ${member}`) }))); }
 
 test('role changes save through the existing scoped PATCH; refusal keeps the typed selection', async () => {
   await openTeam();
-  fireEvent.click(screen.getByRole('button', { name: `Edit Role of ${member}` }));
+  fireEvent.click(screen.getByRole('button', { name: inlineEditName(`Edit Role of ${member}`) }));
   const input = screen.getByRole('combobox', { name: `Role of ${member}` });
   status = 403;
   fireEvent.change(input, { target: { value: 'accountant' } });
@@ -44,12 +45,12 @@ test('role changes save through the existing scoped PATCH; refusal keeps the typ
   assert.equal(mutations()[0].method, 'PATCH');
   status = 200;
   await act(async () => fireEvent.keyDown(screen.getByRole('combobox', { name: `Role of ${member}` }), { key: 'Enter' }));
-  await waitFor(() => assert.equal(screen.getByRole('button', { name: `Edit Role of ${member}` }).textContent, 'Accountant'));
+  await waitFor(() => assert.equal(screen.getByRole('button', { name: inlineEditName(`Edit Role of ${member}`) }).textContent, 'Accountant'));
 });
 
 test('invitation by typing and Enter validates email and retains draft on server refusal', async () => {
   await openTeam();
-  fireEvent.click(screen.getByRole('button', { name: 'Edit Invite team member email' }));
+  fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Invite team member email') }));
   let input = screen.getByRole('textbox', { name: 'Invite team member email' });
   fireEvent.change(input, { target: { value: 'bad-email' } });
   await act(async () => fireEvent.keyDown(input, { key: 'Enter' }));
@@ -62,7 +63,7 @@ test('invitation by typing and Enter validates email and retains draft on server
   assert.equal((input as HTMLInputElement).value, 'person@example.test');
   status = 200;
   await act(async () => fireEvent.keyDown(input, { key: 'Enter' }));
-  await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Edit Invite team member email' })));
+  await waitFor(() => assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Invite team member email') })));
   assert.deepEqual(mutations().map(call => call.body), [{ email: 'person@example.test', role: 'viewer' }, { email: 'person@example.test', role: 'viewer' }]);
 });
 
@@ -80,13 +81,13 @@ test('removal names the member, cancel writes nothing and refused removal remain
   await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Remove member' })));
   await waitFor(() => assert.equal(screen.queryByRole('dialog'), null));
   assert.ok(mutations().every(call => call.method === 'DELETE' && call.url.endsWith(encodeURIComponent(member))));
-  assert.equal(screen.queryByRole('button', { name: `Edit Role of ${member}` }), null);
+  assert.equal(screen.queryByRole('button', { name: inlineEditName(`Edit Role of ${member}`) }), null);
 });
 
 test('viewer sees role text and no invite editor or mutation controls', async () => {
   setComponentWorkspace('viewer'); render(<TeamSettings />);
   await waitFor(() => assert.ok(screen.getByText(member)));
-  assert.equal(screen.queryByRole('button', { name: `Edit Role of ${member}` }), null);
+  assert.equal(screen.queryByRole('button', { name: inlineEditName(`Edit Role of ${member}`) }), null);
   assert.equal(screen.queryByRole('textbox', { name: 'Invite team member email' }), null);
   assert.equal(mutations().length, 0);
   assert.equal(calls.some(call => call.url.endsWith('/invites')), false);
@@ -94,7 +95,7 @@ test('viewer sees role text and no invite editor or mutation controls', async ()
 
 test('pending mutation cannot be submitted twice and an old workspace response is discarded', async () => {
   await openTeam(); deferMutation = true;
-  fireEvent.click(screen.getByRole('button', { name: `Edit Role of ${member}` }));
+  fireEvent.click(screen.getByRole('button', { name: inlineEditName(`Edit Role of ${member}`) }));
   const input = screen.getByRole('combobox', { name: `Role of ${member}` });
   fireEvent.change(input, { target: { value: 'accountant' } });
   fireEvent.keyDown(input, { key: 'Enter' }); fireEvent.keyDown(input, { key: 'Enter' });
@@ -103,6 +104,6 @@ test('pending mutation cannot be submitted twice and an old workspace response i
   await act(async () => useAuthStore.setState({ currentWorkspaceId: 'other-workspace', workspaces: [] }));
   assert.equal(pending.signal?.aborted, true);
   await act(async () => hold!(new Response(JSON.stringify({ status: 'success' }), { status: 200 })));
-  assert.equal(screen.queryByRole('button', { name: `Edit Role of ${member}` }), null);
+  assert.equal(screen.queryByRole('button', { name: inlineEditName(`Edit Role of ${member}`) }), null);
   assert.equal(mutations().length, 1);
 });

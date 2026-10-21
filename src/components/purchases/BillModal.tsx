@@ -4,7 +4,7 @@ import { documentCurrencies } from '../../lib/exchangeRates';
 import { latestDocumentFor } from '../../lib/repeatDocument';
 import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Plus, Trash2, Save, CreditCard, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Bill, Vendor, ChartAccount } from '../../types';
@@ -106,6 +106,17 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
 
   const [memo, setMemo] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
+  // labels stay above their field and a refusal shows under the field that caused it (D-87, as D-86)
+  const formRef = useRef<HTMLFormElement>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fieldError = (id: string) => fieldErrors[id]
+    ? <p id={`${id}-error`} role="alert" className="text-xs text-rose-600 dark:text-rose-400 mt-1">{fieldErrors[id]}</p>
+    : null;
+  const showFieldError = (id: string, message: string) => {
+    setFieldErrors(prev => ({ ...prev, [id]: message }));
+    document.getElementById(id)?.focus();
+  };
 
   const [filledFrom, setFilledFrom] = useState<Partial<Bill> | undefined>(undefined);
   if (isOpen && initialBill && initialBill !== filledFrom) {
@@ -214,8 +225,19 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
 
   const handleAction = async (e: React.FormEvent, actionStatus: string) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    // the browser's own required-field messages show under the field that caused them
+    if (!formRef.current?.reportValidity()) return;
     if (!bill.vendorId) {
-      toast.error('Please select a vendor');
+      showFieldError('bill-vendor', 'Please select a vendor');
+      return;
+    }
+    // a stock line needs its units and what they cost before it can post (J-08); the refusal
+    // appears under the field it is about (the units, or the line's amount)
+    const stockProblemLine = splits.findIndex(sp => billItemProblem(sp));
+    if (stockProblemLine >= 0) {
+      const problem = String(billItemProblem(splits[stockProblemLine]));
+      showFieldError(/cost/i.test(problem) ? `bill-split-amount-${stockProblemLine}` : `bill-split-units-${stockProblemLine}`, problem);
       return;
     }
 
@@ -240,31 +262,36 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
       });
     }
 
-    await onSave({
-      ...bill,
-      ...(repeat ? { recurringInterval: repeat } : {}),
-      currency: billCurrency,
-      exchangeRate: billCurrency === workspaceCurrency ? 1 : (bill.exchangeRate || 1),
-      status: finalStatus as any,
-      // the total owed (tax included) and the tax, explicitly (taxCodes.ts)
-      amountCents: totals.amountCents,
-      lineSumCents: totals.subtotalCents,
-      taxAmountCents: totals.taxCents,
-      taxInclusive: true,
-      taxVersion: 2,
-      pricesIncludeTax,
-      taxCodeId: taxCode?.id,
-      taxTreatment: taxCode?.treatment,
-      taxBreakdown: totals.components,
-      selfAssessedTaxCents: totals.selfAssessedCents || undefined,
-      splits,
-      metadata: {
-        ...(bill.metadata || {}),
-        memo,
-      },
-      // files picked for a new bill are kept with it once it has an id (Purchases.tsx)
-      ...(attachments.length > 0 && !bill.id ? { attachmentFiles: attachments } : {}),
-    });
+    setIsSubmitting(true);
+    try {
+      await onSave({
+        ...bill,
+        ...(repeat ? { recurringInterval: repeat } : {}),
+        currency: billCurrency,
+        exchangeRate: billCurrency === workspaceCurrency ? 1 : (bill.exchangeRate || 1),
+        status: finalStatus as any,
+        // the total owed (tax included) and the tax, explicitly (taxCodes.ts)
+        amountCents: totals.amountCents,
+        lineSumCents: totals.subtotalCents,
+        taxAmountCents: totals.taxCents,
+        taxInclusive: true,
+        taxVersion: 2,
+        pricesIncludeTax,
+        taxCodeId: taxCode?.id,
+        taxTreatment: taxCode?.treatment,
+        taxBreakdown: totals.components,
+        selfAssessedTaxCents: totals.selfAssessedCents || undefined,
+        splits,
+        metadata: {
+          ...(bill.metadata || {}),
+          memo,
+        },
+        // files picked for a new bill are kept with it once it has an id (Purchases.tsx)
+        ...(attachments.length > 0 && !bill.id ? { attachmentFiles: attachments } : {}),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => handleAction(e, bill.status || 'pending');
@@ -287,7 +314,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   if (!isOpen) return null;
 
   return (
-    <div {...dialogProps} className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+    <div {...dialogProps} className="fixed inset-0 z-[600] flex items-center justify-center p-2 sm:p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -300,7 +327,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-[40px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[90dvh]"
+        className="relative w-full max-w-4xl bg-[var(--surface)] rounded-2xl sm:rounded-[32px] shadow-2xl border border-[var(--line)] overflow-hidden flex flex-col max-h-[96dvh] sm:max-h-[90dvh]"
       >
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
           <div className="flex items-center gap-4">
@@ -312,10 +339,24 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Purchases & Payables</p>
             </div>
           </div>
-          <button aria-label="Close" onClick={requestClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-400"><X size={24} /></button>
+          <button aria-label="Close" title="Close" onClick={requestClose} className="min-h-11 min-w-11 flex items-center justify-center p-2 hover:bg-[var(--elevated)] rounded-full transition-colors text-[var(--muted)]"><X size={24} /></button>
         </div>
 
-        <form onSubmit={handleSubmit} onChange={() => setDirty(true)} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar">
+        <form ref={formRef} onSubmit={handleSubmit} onInvalid={e => {
+          const field = e.target as unknown as HTMLInputElement;
+          if (field.id) setFieldErrors(prev => ({ ...prev, [field.id]: field.validationMessage }));
+        }} onChange={e => {
+          setDirty(true);
+          const field = e.target as unknown as HTMLInputElement;
+          // typing in a field clears its refusal; a stock line clears with its units or amount
+          const keys = field.id ? [field.id, field.id.replace(/^bill-split-(units|amount)-(\d+)$/, 'bill-split-units-$2')] : [];
+          setFieldErrors(prev => {
+            if (!keys.some(k => prev[k])) return prev;
+            const next = { ...prev };
+            for (const k of keys) delete next[k];
+            return next;
+          });
+        }} className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -329,13 +370,15 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               <select 
                 id="bill-vendor"
                 required
+                aria-invalid={Boolean(fieldErrors['bill-vendor'])}
+                aria-describedby={fieldErrors['bill-vendor'] ? 'bill-vendor-error' : undefined}
                 value={bill.vendorId || ''}
                 onChange={(e) => handleVendorSelect(e.target.value)}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full min-h-11 px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="">Select Vendor</option>
                 {safeVendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-              </select>
+              </select>{fieldError('bill-vendor')}
             </div>
             <div className="space-y-2">
               <label htmlFor="bill-number" className="micro-label">Bill Number</label>
@@ -343,24 +386,28 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                 id="bill-number"
                 type="text"
                 required
+                aria-invalid={Boolean(fieldErrors['bill-number'])}
+                aria-describedby={fieldErrors['bill-number'] ? 'bill-number-error' : undefined}
                 value={bill.number}
                 onChange={(e) => setBill({ ...bill, number: e.target.value })}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-mono font-bold"
-              />
+                className="w-full min-h-11 px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-mono font-bold"
+              />{fieldError('bill-number')}
             </div>
             <div className="space-y-2">
               <label htmlFor="bill-status" className="micro-label">Status</label>
               <select 
                 id="bill-status"
+                aria-invalid={Boolean(fieldErrors['bill-status'])}
+                aria-describedby={fieldErrors['bill-status'] ? 'bill-status-error' : undefined}
                 value={bill.status}
                 onChange={(e) => setBill({ ...bill, status: e.target.value as any })}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+                className="w-full min-h-11 px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="pending">Pending</option>
                 <option value="unpaid">Unpaid</option>
                 <option value="paid">Paid</option>
                 <option value="overdue">Overdue</option>
-              </select>
+              </select>{fieldError('bill-status')}
             </div>
           </div>
 
@@ -371,10 +418,12 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                 id="bill-date"
                 type="date"
                 required
+                aria-invalid={Boolean(fieldErrors['bill-date'])}
+                aria-describedby={fieldErrors['bill-date'] ? 'bill-date-error' : undefined}
                 value={bill.date}
                 onChange={(e) => setBill({ ...bill, date: e.target.value })}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
-              />
+                className="w-full min-h-11 px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+              />{fieldError('bill-date')}
             </div>
             <div className="space-y-2">
               <label htmlFor="bill-due-date" className="micro-label">Due Date</label>
@@ -382,10 +431,12 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                 id="bill-due-date"
                 type="date"
                 required
+                aria-invalid={Boolean(fieldErrors['bill-due-date'])}
+                aria-describedby={fieldErrors['bill-due-date'] ? 'bill-due-date-error' : undefined}
                 value={bill.dueDate}
                 onChange={(e) => setBill({ ...bill, dueDate: e.target.value })}
-                className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
-              />
+                className="w-full min-h-11 px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
+              />{fieldError('bill-due-date')}
             </div>
           </div>
 
@@ -464,7 +515,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                 type="button"
                 aria-label="Add Split Expense"
                 onClick={() => setSplits([...splits, { id: crypto.randomUUID(), amountCents: 0, accountId: '', description: '' }])}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all"
+                className="flex items-center gap-2 min-h-11 px-4 py-2 bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-[var(--elevated)] transition-all"
               >
                 <Plus size={14} />
                 Add Split
@@ -473,61 +524,68 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
             
             <div className="space-y-3">
               {splits.map((split, idx) => (
-                <div key={split.id} className="grid grid-cols-12 gap-4 items-end bg-[var(--ink)] p-4 rounded-[32px] border border-[var(--line)]">
-                  <div className="col-span-5 space-y-1">
-                    <label htmlFor={`bill-split-desc-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Description</label>
+                <div key={split.id} className="grid grid-cols-12 gap-3 md:gap-4 items-end bg-[var(--ink)] p-3 sm:p-4 rounded-2xl sm:rounded-[32px] border border-[var(--line)]">
+                  <div className="col-span-12 md:col-span-5 min-w-0 space-y-1">
+                    <label htmlFor={`bill-split-desc-${idx}`} className="text-[10px] font-bold text-[var(--muted)] uppercase">Description</label>
                     <input 
                       id={`bill-split-desc-${idx}`}
                       type="text"
+                      aria-invalid={Boolean(fieldErrors[`bill-split-desc-${idx}`])}
+                      aria-describedby={fieldErrors[`bill-split-desc-${idx}`] ? `bill-split-desc-${idx}-error` : undefined}
                       value={split.description}
                       onChange={(e) => {
                         const newSplits = [...splits];
-                        newSplits[idx].description = e.target.value;
+                        newSplits[idx] = { ...newSplits[idx], description: e.target.value };
                         setSplits(newSplits);
                       }}
                       placeholder="What was this for?"
-                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
-                    />
+                      className="w-full min-h-11 px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
+                    />{fieldError(`bill-split-desc-${idx}`)}
                   </div>
-                  <div className="col-span-3 space-y-1">
-                    <label htmlFor={`bill-split-acc-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Expense Account</label>
+                  <div className="col-span-12 md:col-span-3 min-w-0 space-y-1">
+                    <label htmlFor={`bill-split-acc-${idx}`} className="text-[10px] font-bold text-[var(--muted)] uppercase">Expense Account</label>
                     <select 
                       id={`bill-split-acc-${idx}`}
+                      aria-invalid={Boolean(fieldErrors[`bill-split-acc-${idx}`])}
+                      aria-describedby={fieldErrors[`bill-split-acc-${idx}`] ? `bill-split-acc-${idx}-error` : undefined}
                       value={split.accountId}
                       onChange={(e) => {
                         const newSplits = [...splits];
-                        newSplits[idx].accountId = e.target.value;
+                        newSplits[idx] = { ...newSplits[idx], accountId: e.target.value };
                         setSplits(newSplits);
                       }}
-                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
+                      className="w-full min-h-11 px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
                     >
                       <option value="">Select Account</option>
                       {safeAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
+                    </select>{fieldError(`bill-split-acc-${idx}`)}
                     {/* M-20: what is left of this account's budget for the bill's date */}
                     <BudgetLeft accountId={split.accountId} date={bill.date || ''} addingCents={Math.round(split.amountCents * (billCurrency === workspaceCurrency ? 1 : (bill.exchangeRate || 1)))} excludeDocumentId={bill.id} currency={workspaceCurrency} />
                   </div>
-                  <div className="col-span-3 space-y-1">
-                    <label htmlFor={`bill-split-amount-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Amount ({billCurrency})</label>
+                  <div className="col-span-8 md:col-span-3 min-w-0 space-y-1">
+                    <label htmlFor={`bill-split-amount-${idx}`} className="text-[10px] font-bold text-[var(--muted)] uppercase">Amount ({billCurrency})</label>
                     <input 
                       id={`bill-split-amount-${idx}`}
                       type="number"
                       step="0.01"
+                      aria-invalid={Boolean(fieldErrors[`bill-split-amount-${idx}`])}
+                      aria-describedby={fieldErrors[`bill-split-amount-${idx}`] ? `bill-split-amount-${idx}-error` : undefined}
                       value={split.amountCents / 100}
                       onChange={(e) => {
                         const newSplits = [...splits];
-                        newSplits[idx].amountCents = TruthEngine.parseAmountToCents(e.target.value || '0');
+                        newSplits[idx] = { ...newSplits[idx], amountCents: TruthEngine.parseAmountToCents(e.target.value || '0') };
                         setSplits(newSplits);
                       }}
-                      className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
-                    />
+                      className="w-full min-h-11 px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono tabular-nums"
+                    />{fieldError(`bill-split-amount-${idx}`)}
                   </div>
-                  <div className="col-span-1 pb-1">
+                  <div className="col-span-4 md:col-span-1 pb-1 flex justify-end">
                     <button 
                       type="button"
                       aria-label={`Remove split line ${idx + 1}`}
+                      title={`Remove split line ${idx + 1}`}
                       onClick={() => setSplits(splits.filter((_, i) => i !== idx))}
-                      className="p-2 text-zinc-300 hover:text-rose-500 transition-colors"
+                      className="min-h-11 min-w-11 flex items-center justify-center p-2 text-[var(--muted)] hover:text-rose-500 transition-colors"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -535,24 +593,28 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                   {/* J-08: stock bought on this line (it then posts to Inventory and the units come in) */}
                   {stockItems.length > 0 && (
                     <div className="col-span-12 flex flex-wrap items-end gap-3 text-xs">
-                      <label className="flex flex-col gap-1 text-zinc-400">Stock item (optional)
+                      <label className="flex flex-col gap-1 w-full sm:w-auto text-[var(--muted)]">Stock item (optional)
                         <select aria-label={`Stock item on line ${idx + 1}`} value={split.itemId || ''}
                           onChange={e => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, itemId: e.target.value || undefined, ...(e.target.value ? {} : { quantity: undefined }) } : sp)))}
-                          className="px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl">
+                          className="w-full sm:w-auto min-h-11 px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl">
                           <option value="">None</option>
                           {stockItems.map(it => <option key={it.id} value={it.id}>{it.name}</option>)}
                         </select>
                       </label>
                       {split.itemId && (
-                        <label className="flex flex-col gap-1 text-zinc-400">Units
-                          <input aria-label={`Units on line ${idx + 1}`} type="number" min="0" step="any" value={split.quantity ?? ''}
+                        <div className="flex flex-col gap-1 w-full sm:w-auto text-[var(--muted)]">
+                          <label htmlFor={`bill-split-units-${idx}`}>Units</label>
+                          <input id={`bill-split-units-${idx}`} aria-label={`Units on line ${idx + 1}`} type="number" min="0" step="any" value={split.quantity ?? ''}
+                            aria-invalid={Boolean(fieldErrors[`bill-split-units-${idx}`])}
+                            aria-describedby={fieldErrors[`bill-split-units-${idx}`] ? `bill-split-units-${idx}-error` : undefined}
                             onChange={e => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, quantity: e.target.value === '' ? undefined : Number(e.target.value) } : sp)))}
-                            className="w-24 px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-mono" />
-                        </label>
+                            className="w-full sm:w-24 min-h-11 px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-mono" />
+                          {fieldError(`bill-split-units-${idx}`)}
+                        </div>
                       )}
-                      {split.itemId && <span className="pb-2 text-[var(--muted)]">{billItemProblem(split) || 'Posts to Inventory; the units come in with the bill.'}</span>}
+                      {split.itemId && <span className="pb-2 w-full sm:w-auto text-[var(--muted)]">{billItemProblem(split) || 'Posts to Inventory; the units come in with the bill.'}</span>}
                       {!split.itemId && splits.some(sp => sp.itemId) && (
-                        <label className="flex items-center gap-2 pb-2 text-[var(--muted)]">
+                        <label className="flex items-center gap-2 pb-2 min-h-11 text-[var(--muted)]">
                           <input type="checkbox" checked={Boolean(split.landedCost)} aria-label={`Spread line ${idx + 1} over the items`}
                             onChange={e => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, landedCost: e.target.checked || undefined } : sp)))} />
                           Spread over the items (freight, duty): adds to what they cost
@@ -610,47 +672,50 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
           </div>
         </form>
 
-        <div className="p-4 md:p-8 border-t border-[var(--line)] bg-[var(--ink)]/50 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex flex-col w-full sm:w-auto">
+        <div id="bill-save-footer" className="shrink-0 p-3 md:p-6 border-t border-[var(--line)] bg-[var(--ink)]/50 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <div className="flex flex-col w-full sm:w-auto min-w-0">
             <dl className="text-xs text-[var(--muted)] grid grid-cols-[auto_auto] gap-x-4 mb-1 tabular-nums" aria-label="Bill totals">
               <dt>Lines</dt><dd className="text-right font-mono">{money(totals.subtotalCents)}</dd>
               {totals.components.map(c => <React.Fragment key={c.name}><dt>{c.name} {c.rate}%{totals.selfAssessedCents ? ' (reverse charge: you account for it)' : pricesIncludeTax ? ' (included)' : ''}</dt><dd className="text-right font-mono">{money(c.taxCents)}</dd></React.Fragment>)}
             </dl>
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Total Bill Amount</span>
-            <span className="text-3xl font-black text-[var(--text)] font-mono">
+            <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest">Total Bill Amount</span>
+            <span className="text-2xl sm:text-3xl font-black text-[var(--text)] font-mono tabular-nums">
               {money(totals.amountCents)}
             </span>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-3 w-full sm:w-auto">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
             <button 
               type="button"
               onClick={requestClose}
-              className="px-6 py-3.5 bg-[var(--surface)] border border-[var(--line)] text-zinc-600 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-[var(--ink)] transition-all"
+              className="min-h-11 px-4 sm:px-6 py-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-[var(--ink)] transition-all"
              aria-label="Cancel">
               Cancel
             </button>
             <AsyncButton 
               type="button"
+              disabled={isSubmitting}
               onClick={(e) => handleAction(e, 'draft')}
               loadingText="Saving..."
-              className="px-6 py-3.5 bg-zinc-100 text-zinc-700 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-200 transition-all flex items-center gap-2"
+              className="min-h-11 px-4 sm:px-6 py-3 bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-[var(--elevated)] transition-all flex items-center justify-center gap-2"
             >
               Save Draft
             </AsyncButton>
             <AsyncButton 
               type="submit"
+              disabled={isSubmitting}
               onClick={(e) => handleAction(e, 'pending')}
               loadingText="Saving..."
-              className="px-6 py-3.5 bg-zinc-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2"
+              className="min-h-11 px-4 sm:px-6 py-3 bg-zinc-900 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-zinc-800 transition-all shadow-lg flex items-center justify-center gap-2"
             >
               <Save size={16} />
               Save & Close
             </AsyncButton>
             <AsyncButton 
               type="button"
+              disabled={isSubmitting}
               onClick={(e) => handleAction(e, 'approved')}
               loadingText="Approving..."
-              className="px-6 py-3.5 bg-emerald-600 text-white rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2"
+              className="min-h-11 px-4 sm:px-6 py-3 bg-transparent border border-emerald-600 text-emerald-700 dark:text-emerald-400 rounded-[32px] font-medium uppercase tracking-wider text-[10px] hover:bg-emerald-600/10 transition-all flex items-center justify-center gap-2"
             >
               Approve Bill
             </AsyncButton>

@@ -219,7 +219,8 @@ export async function postBillLedger(
           exchangeRate: rate,
           cashAccount,
           offsetAccount: apAccount,
-          isReceipt: false
+          isReceipt: false,
+          lineAccounts: weights // DIM-1: the payment carries the bill lines' labels
         })
       };
       txsToPost.push(inBaseCurrency(paymentTx, workspaceId, context));

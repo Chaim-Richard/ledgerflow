@@ -7,7 +7,7 @@
  * Pure: the Stock history window and the nightly check read it.
  */
 
-export type StockMoveKind = 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'purchase-reversal' | 'purchase-return' | 'purchase-return-reversal' | 'opening' | 'adjustment' | 'count' | 'manual-cogs' | 'transfer-out' | 'transfer-in';
+export type StockMoveKind = 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'purchase-reversal' | 'purchase-return' | 'purchase-return-reversal' | 'opening' | 'adjustment' | 'count' | 'manual-cogs' | 'transfer-out' | 'transfer-in' | 'revaluation';
 
 export interface StockMove {
   id?: string;
@@ -31,6 +31,20 @@ export interface StockMove {
   seq: string;
   /** W-01: where the units are (a Location label value); none = no location */
   locationId?: string;
+  /** DIM-2 phase 2: the line of the document the units came in on (a bill's line) or went back from (a vendor credit's bill line) */
+  documentLine?: number;
+  /** DIM-2 phase 2: the vendor on a purchase or a return to the vendor, as the entry named it */
+  vendorId?: string;
+  /** DIM-2 phase 2: for units sent back to a vendor, the bill they came in on */
+  sourceBillId?: string;
+  /** DIM-2 phase 3: the customer the units went to (or came back from), as the entry named it */
+  customerId?: string;
+  /** DIM-2 phase 3: the invoice line the units were sold on (or returned against) */
+  documentLineId?: string;
+  /** DIM-2 phase 3: where the units went in the books: the sold line's labels (project, property, …), not its location */
+  labels?: Record<string, string>;
+  /** DIM-2 phase 3: why stock was adjusted, as the person wrote it */
+  purpose?: string;
   uid: string;
   createdAt: string;
 }
@@ -50,6 +64,8 @@ export const STOCK_MOVE_LABEL: Record<StockMoveKind, string> = {
   'manual-cogs': 'Cost of goods sold recorded',
   'transfer-out': 'Moved out',
   'transfer-in': 'Moved in',
+  // ISS-130: the cost of stock on hand changed, with its entry; no units move (quantity 0, the value change)
+  revaluation: 'Revalued',
 };
 
 /** W-01: the stock with no location (made before locations were used, or never placed). */
@@ -113,7 +129,7 @@ export interface ItemDetails {
   itemId: string;
   itemName: string;
   opening: { quantity: number; valueCents: number };
-  moves: Array<Pick<StockMove, 'date' | 'kind' | 'quantity' | 'quantityAfter' | 'valueCents' | 'unitCostCents' | 'transactionId' | 'documentType' | 'documentId' | 'locationId'> & { key: string }>;
+  moves: Array<Pick<StockMove, 'date' | 'kind' | 'quantity' | 'quantityAfter' | 'valueCents' | 'unitCostCents' | 'transactionId' | 'documentType' | 'documentId' | 'locationId' | 'documentLine' | 'vendorId' | 'sourceBillId' | 'customerId' | 'documentLineId' | 'labels' | 'purpose'> & { key: string; /** the day the move was written (its createdAt), when kept: the history's real start */ writtenOn?: string }>;
   received: number;
   issued: number;
   closing: { quantity: number; valueCents: number };
@@ -145,6 +161,10 @@ export function itemDetails(moves: StockMove[], startDate: string, endDate: stri
         key: m.id || `${m.seq}-${i}`, date: String(m.date).slice(0, 10), kind: m.kind, quantity: m.quantity, quantityAfter: m.quantityAfter, valueCents: m.valueCents, unitCostCents: m.unitCostCents,
         ...(m.transactionId ? { transactionId: m.transactionId } : {}), ...(m.documentType ? { documentType: m.documentType } : {}), ...(m.documentId ? { documentId: m.documentId } : {}),
         ...(m.locationId ? { locationId: m.locationId } : {}),
+        // DIM-2 phases 2-3: where the units came from and went, when the move keeps it
+        ...(m.documentLine !== undefined ? { documentLine: m.documentLine } : {}), ...(m.vendorId ? { vendorId: m.vendorId } : {}), ...(m.sourceBillId ? { sourceBillId: m.sourceBillId } : {}),
+        ...(m.customerId ? { customerId: m.customerId } : {}), ...(m.documentLineId ? { documentLineId: m.documentLineId } : {}), ...(m.labels ? { labels: m.labels } : {}), ...(m.purpose ? { purpose: m.purpose } : {}),
+        ...(/^\d{4}-\d{2}-\d{2}/.test(String(m.createdAt || '')) ? { writtenOn: String(m.createdAt).slice(0, 10) } : {}),
       })),
       received: round6(within.filter(m => m.quantity > 0).reduce((s, m) => s + m.quantity, 0)),
       issued: round6(-within.filter(m => m.quantity < 0).reduce((s, m) => s + m.quantity, 0)) || 0,

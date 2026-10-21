@@ -56,10 +56,22 @@ const CLOTHING_CAPPED: Partial<Record<string, string>> = {
   CT: 'exempt up to $50 an item', MA: 'exempt up to $175 an item', NY: 'exempt up to $110 an item',
 };
 /** Groceries not taxed at all. */
-const GROCERY_EXEMPT = ['AZ', 'CA', 'CO', 'FL', 'GA', 'IN', 'IA', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'NE', 'NV', 'NJ', 'NM', 'NC', 'ND', 'OH', 'PA', 'RI', 'SC', 'TX', 'VT', 'VA', 'WA', 'WI', 'WY'];
+// #258 review: Illinois (state 1% repealed 1 Jan 2026, Public Act 103-0781) and Arkansas (state 0.125% repealed 1 Jan
+// 2026, Act 1008 of 2025) no longer tax groceries at state level; local grocery taxes may remain (GROCERY_NOTE)
+const GROCERY_EXEMPT = ['AZ', 'AR', 'CA', 'CO', 'FL', 'GA', 'IL', 'IN', 'IA', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'NE', 'NV', 'NJ', 'NM', 'NC', 'ND', 'OH', 'PA', 'RI', 'SC', 'TX', 'VT', 'VA', 'WA', 'WI', 'WY'];
 /** Groceries taxed at a lower state rate (the rate is in the table below). */
 const GROCERY_REDUCED: Partial<Record<string, number>> = {
-  AL: 0.03, AR: 0.0125, IL: 0.01, KS: 0, MO: 0.01225, MS: 0.05, SD: 0.042, TN: 0.04, UT: 0.03, VA: 0.025,
+  // #258 review: Alabama 2% from 1 Sep 2025 (Act 2025-305); Utah's state part is 1.75% (3% with the 1% local and
+  // 0.25% county options); Virginia left the list (its state part is 0 since 2023, see GROCERY_NOTE)
+  AL: 0.02, KS: 0, MO: 0.01225, MS: 0.05, SD: 0.042, TN: 0.04, UT: 0.0175,
+};
+/** #258 review: the local grocery taxes that remain where the state part is exempt or reduced. */
+const GROCERY_NOTE: Partial<Record<string, string>> = {
+  IL: 'the state 1% ended 1 Jan 2026; a municipality or county may levy its own 1% grocery tax by ordinance, and the RTA and Metro-East rates remain',
+  AR: 'the state 0.125% ended 1 Jan 2026; city and county grocery taxes remain',
+  VA: 'the state part ended 1 Jan 2023; the 1% local tax applies in every locality',
+  UT: 'with the 1% local and 0.25% county options the rate is 3% everywhere',
+  AL: 'local food rates are set by each city and county',
 };
 /** Groceries taxed at the full state rate (the states that do, and are not in either list above). */
 const GROCERY_TAXABLE = ['HI', 'ID', 'OK'];
@@ -93,11 +105,13 @@ function treatmentFor(state: string, category: TaxCategoryId, noStateTax: boolea
       if (CLOTHING_EXEMPT.includes(state)) return { treatment: 'exempt' };
       if (state in CLOTHING_CAPPED) return { treatment: 'unclear' };
       return { treatment: 'taxable' };
-    case 'groceries':
-      if (GROCERY_EXEMPT.includes(state)) return { treatment: 'exempt' };
-      if (state in GROCERY_REDUCED) return { treatment: 'reduced', rate: GROCERY_REDUCED[state] };
+    case 'groceries': {
+      const note = GROCERY_NOTE[state] ? { note: GROCERY_NOTE[state] } : {};
+      if (GROCERY_EXEMPT.includes(state)) return { treatment: 'exempt', ...note };
+      if (state in GROCERY_REDUCED) return { treatment: 'reduced', rate: GROCERY_REDUCED[state], ...note };
       if (GROCERY_TAXABLE.includes(state)) return { treatment: 'taxable' };
       return { treatment: 'unclear' };
+    }
     case 'prescription-medicine':
       if (state in RX_REDUCED) return { treatment: 'reduced', rate: RX_REDUCED[state] };
       return { treatment: 'exempt' };

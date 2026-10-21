@@ -47,7 +47,7 @@ export function usSalesTaxHolidayPack(): TaxRulePack {
   const unmapped: UnmappedRow[] = [
     {
       row: 'TX water-efficient products / ENERGY STAR holiday (annual, Memorial Day weekend)',
-      reason: 'the Comptroller publishes the dates each year (2026: May 23–25) but this lane has not stated its qualifying product list and any dollar limit as a dated row; add it from publication 98-490 before relying on it',
+      reason: 'the 2026 dates (May 23–25) are stated in the A-109 calendar, so a planner can see the window; this lane has not stated its qualifying product list and any dollar limit as a dated row, so no rule exists — add it from publications 98-1018 and 96-1331 before relying on it',
     },
     {
       row: 'FL disaster preparedness holidays (two 14-day windows a year)',
@@ -58,8 +58,8 @@ export function usSalesTaxHolidayPack(): TaxRulePack {
       reason: 'a newer Florida window (2025: September 8 – December 31) whose 2026 dates and caps this lane has not stated from a Department TIP; add it before relying on it',
     },
     {
-      row: 'every other state’s sales tax holidays (about 20 states run at least one)',
-      reason: 'outside the two states this table states (TX and FL); each state’s own dated row is needed before any window is claimed',
+      row: 'every other state’s sales tax holidays',
+      reason: 'A-109 (src/lib/tax/usSalesTaxHolidayCalendar.ts) now states WHEN 21 states and Puerto Rico run their 2026 windows, with each state’s own page beside them; a window becomes a rule only when this table carries its item bands and caps from the state’s publication, which today is Texas (two windows) and Florida (one)',
     },
   ];
   return {

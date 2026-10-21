@@ -21,6 +21,10 @@ import { useUIStore } from "../../stores/useUIStore";
 import ReleaseNotes from "./ReleaseNotes";
 import AllScreensHelp from "./AllScreensHelp";
 import MainPathGuide from "./MainPathGuide";
+import GuestCountrySamplePicker from "./GuestCountrySamplePicker";
+import FirstMonthOnboardingHub from "./FirstMonthOnboardingHub";
+import AccessibilityAndLanguagePanel from "./AccessibilityAndLanguagePanel";
+import { HOW_TO_ARTICLES, SCREEN_HELP_DOCS, searchHowToArticles } from "../../lib/helpCenterArticles";
 
 interface SectionDoc {
   id: string;
@@ -178,11 +182,14 @@ const GUIDE_SECTIONS: SectionDoc[] = [
 ];
 
 export default function HelpGuideView() {
-  const [mode, setMode] = useState<"workflows" | "screens" | "main-path">("workflows");
+  const [mode, setMode] = useState<"workflows" | "screens" | "main-path" | "how-to" | "first-month" | "accessibility">("workflows");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedSection, setSelectedSection] = useState(GUIDE_SECTIONS[0]);
+  const [howToLang, setHowToLang] = useState<"en" | "he">("en");
   const setActiveTab = useUIStore(state => state.setActiveTab);
+  const goToPage = useUIStore(state => state.goToPage);
+  const matchingHowTo = searchHowToArticles(searchQuery);
 
   const categories = ["All", ...Array.from(new Set(GUIDE_SECTIONS.map(s => s.category)))];
 
@@ -212,24 +219,27 @@ export default function HelpGuideView() {
             </div>
           </div>
 
-          {mode === "workflows" && <div className="relative w-full md:w-80">
+          <div className="relative w-full md:w-80">
             <Search aria-hidden="true" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} />
             <input aria-label="Search guide and workflows"
               type="text"
-              placeholder="Search guide & workflows..."
+              placeholder="Search guide & workflows (EN / עברית)..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-[var(--panel)] border border-[var(--line)] rounded-xl text-sm font-medium outline-none focus:border-[var(--brass)] transition-colors placeholder:text-[var(--faint)]"
             />
-          </div>}
+          </div>
         </div>
 
         <ReleaseNotes />
         <button type="button" className="min-h-11 px-4 border rounded-lg mt-4" onClick={() => window.dispatchEvent(new Event('ledgerflow:feedback'))}>Send feedback</button>
-        <div className="max-w-7xl mx-auto flex gap-2 mt-4">
+        <div className="max-w-7xl mx-auto flex flex-wrap gap-2 mt-4">
           <button type="button" aria-pressed={mode === 'workflows'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('workflows')}>Workflows</button>
+          <button type="button" aria-pressed={mode === 'how-to'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('how-to')}>How-to ({HOW_TO_ARTICLES.length} EN/HE)</button>
+          <button type="button" aria-pressed={mode === 'first-month'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('first-month')}>First month &amp; demo</button>
           <button type="button" aria-pressed={mode === 'screens'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('screens')}>All screens</button>
           <button type="button" aria-pressed={mode === 'main-path'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('main-path')}>Main path</button>
+          <button type="button" aria-pressed={mode === 'accessibility'} className="min-h-11 px-4 border rounded-lg" onClick={() => setMode('accessibility')}>Accessibility &amp; language</button>
           <button type="button" className="min-h-11 px-4 border rounded-lg" onClick={startTour}>Take the tour</button>
         </div>
 
@@ -252,8 +262,59 @@ export default function HelpGuideView() {
         )}
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col md:flex-row max-w-7xl mx-auto w-full">
-        {mode === 'main-path' ? <MainPathGuide /> : mode === 'screens' ? <AllScreensHelp /> : <>
+      <div className="flex-1 overflow-y-auto flex flex-col md:flex-row max-w-7xl mx-auto w-full">
+        {mode === 'main-path' ? <MainPathGuide /> : mode === 'screens' ? <AllScreensHelp /> : mode === 'first-month' ? (
+          <div className="w-full p-6 space-y-6">
+            <GuestCountrySamplePicker />
+            <FirstMonthOnboardingHub />
+          </div>
+        ) : mode === 'accessibility' ? (
+          <div className="w-full p-6">
+            <AccessibilityAndLanguagePanel onOpenSupport={() => setActiveTab("support")} />
+          </div>
+        ) : mode === 'how-to' ? (
+          <section aria-labelledby="howto-library-heading" className="w-full p-6 space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 id="howto-library-heading" className="text-lg font-bold text-[var(--text)]">
+                  {howToLang === 'he' ? '20 מדריכי הפעלה קצרים (עברית ואנגלית)' : '20 Step-by-Step How-To Articles (English & עברית)'}
+                </h2>
+                <p className="text-xs text-[var(--muted)]">
+                  {matchingHowTo.length} of {HOW_TO_ARTICLES.length} articles · {SCREEN_HELP_DOCS.length} bilingual screen manuals
+                </p>
+              </div>
+              <div className="inline-flex rounded-lg border border-[var(--line)] overflow-hidden" role="group" aria-label="How-to article language">
+                <button type="button" aria-pressed={howToLang === 'en'} onClick={() => setHowToLang('en')} className={`min-h-11 px-3 text-xs font-medium ${howToLang === 'en' ? 'bg-[var(--text)] text-[var(--bg)]' : 'bg-[var(--surface)] text-[var(--text)]'}`}>English</button>
+                <button type="button" aria-pressed={howToLang === 'he'} onClick={() => setHowToLang('he')} className={`min-h-11 px-3 text-xs font-medium ${howToLang === 'he' ? 'bg-[var(--text)] text-[var(--bg)]' : 'bg-[var(--surface)] text-[var(--text)]'}`}>עברית</button>
+              </div>
+            </div>
+            <div dir={howToLang === 'he' ? 'rtl' : 'ltr'} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {matchingHowTo.map(article => (
+                <article key={article.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 flex flex-col justify-between gap-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-[var(--muted)]">
+                      <span className="font-semibold">{article.category}</span>
+                      <span className="font-mono">{article.screenId}</span>
+                    </div>
+                    <h3 className="font-bold text-sm text-[var(--text)]">{howToLang === 'he' ? article.titleHe : article.titleEn}</h3>
+                    <p className="text-xs text-[var(--muted)]">{howToLang === 'he' ? article.summaryHe : article.summaryEn}</p>
+                    <ol className="list-decimal pl-5 space-y-1 text-xs text-[var(--text)]">
+                      {(howToLang === 'he' ? article.stepsHe : article.stepsEn).map(st => <li key={st}>{st}</li>)}
+                    </ol>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => goToPage({ tab: article.target.tab, ...(article.target.sub ? { sub: article.target.sub } : {}) })}
+                    className="btn-secondary min-h-11 px-3 rounded-lg text-xs font-semibold inline-flex items-center justify-center gap-1.5"
+                  >
+                    <span>{howToLang === 'he' ? 'פתיחת המסך המתאים' : 'Open screen'}</span>
+                    <ArrowRight size={14} aria-hidden="true" />
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : <>
         <div className="w-full md:w-80 border-r border-[var(--line)] overflow-y-auto p-4 space-y-2 shrink-0 custom-scrollbar">
           {filteredSections.map(section => {
             const Icon = section.icon;

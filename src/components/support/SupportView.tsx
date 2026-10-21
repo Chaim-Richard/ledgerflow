@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useId } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useId } from 'react';
 import { 
   Headphones, 
   Send, 
@@ -19,6 +19,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useSupportStore } from '../../stores/useSupportStore';
+import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { useSupportData } from '../../hooks/useSupportData';
 import { SupportTicket, Priority, SupportMessage } from '../../types';
 import { getLatestErrorDiagnostic } from '../../lib/errorTracker';
@@ -30,6 +31,12 @@ import { doc, setDoc, updateDoc } from '../../lib/db/firestore';
 import { Labelled } from '../ui/Labelled';
 import AttachmentsPanel from '../common/AttachmentsPanel';
 import { maskCardNumbers } from '../../lib/cardNumberMask';
+import {
+  FEEDBACK_TAGS,
+  type FeedbackTag,
+  loadFeedbackTags,
+  toggleFeedbackTag,
+} from '../../lib/feedbackTriage';
 
 export default function SupportView() {
   const formId = useId();
@@ -52,6 +59,12 @@ export default function SupportView() {
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [adminFilter, setAdminFilter] = useState<'all' | 'open' | 'pending_support' | 'resolved'>('all');
+  const [tagFilter, setTagFilter] = useState<FeedbackTag | 'all'>('all');
+  const [tagRevision, setTagRevision] = useState(0);
+  const ticketTags = useMemo(
+    () => (tagRevision >= 0 ? loadFeedbackTags(currentWorkspace?.id) : {}),
+    [currentWorkspace?.id, tagRevision],
+  );
   const [attachDiagnostics, setAttachDiagnostics] = useState(true);
   const [showDiagnosticsDetail, setShowDiagnosticsDetail] = useState(false);
   const [copiedTrace, setCopiedTrace] = useState(false);
@@ -62,7 +75,7 @@ export default function SupportView() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' });
   };
 
   useEffect(() => {
@@ -70,17 +83,21 @@ export default function SupportView() {
   }, [messages, selectedTicketId]);
 
   const isAdmin = useAuthStore(s => s.isAdmin);
+  const role = useCurrentRole();
+  const canTriage = Boolean(isAdmin || role === 'owner');
 
   // Filter tickets
   const filteredTickets = tickets.filter(t => {
-    if (isAdmin) {
-      if (adminFilter === 'all') return true;
-      if (adminFilter === 'open') return t.status === 'open';
-      if (adminFilter === 'pending_support') return t.status === 'pending_support';
-      if (adminFilter === 'resolved') return t.status === 'resolved';
-      return true;
+    if (!isAdmin && t.workspaceId !== currentWorkspace?.id) {
+      return false;
     }
-    return t.workspaceId === currentWorkspace?.id;
+    if (canTriage) {
+      if (adminFilter === 'open' && t.status !== 'open') return false;
+      if (adminFilter === 'pending_support' && t.status !== 'pending_support') return false;
+      if (adminFilter === 'resolved' && t.status !== 'resolved') return false;
+      if (tagFilter !== 'all' && !(ticketTags[t.id] || []).includes(tagFilter)) return false;
+    }
+    return true;
   }).sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
 
   const selectedTicket = tickets.find(t => t.id === selectedTicketId);
@@ -227,7 +244,12 @@ export default function SupportView() {
   };
 
   const updateStatus = async (status: SupportTicket['status']) => {
-    if (!selectedTicketId || !isAdmin) return;
+    if (!selectedTicketId || !canTriage) return;
+    useSupportStore.setState(prev => ({
+      tickets: prev.tickets.map(ticket =>
+        ticket.id === selectedTicketId ? { ...ticket, status } : ticket,
+      ),
+    }));
     try {
       const idToken = await user?.getIdToken();
       let updatedViaApi = false;
@@ -286,20 +308,48 @@ export default function SupportView() {
           )}
         </div>
 
-        {isAdmin && (
-          <div className="p-4 border-b bg-slate-50 flex gap-2 overflow-x-auto">
-            {(['all', 'open', 'pending_support', 'resolved'] as const).map(f => (
+        {canTriage && (
+          <div className="p-4 border-b bg-slate-50 space-y-2">
+            <div className="flex gap-2 overflow-x-auto" role="group" aria-label="Filter support tickets by status">
+              {(['all', 'open', 'pending_support', 'resolved'] as const).map(f => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setAdminFilter(f)}
+                  className={cn(
+                    "px-3 py-1 min-h-11 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+                    adminFilter === f ? "bg-blue-100 text-blue-700" : "bg-white text-slate-600 border border-slate-200"
+                  )}
+                >
+                  {f.charAt(0).toUpperCase() + f.slice(1).replace('_', ' ')}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1.5 overflow-x-auto" role="group" aria-label="Filter support tickets by tag">
               <button
-                key={f}
-                onClick={() => setAdminFilter(f)}
+                type="button"
+                onClick={() => setTagFilter('all')}
                 className={cn(
-                  "px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
-                  adminFilter === f ? "bg-blue-100 text-blue-700" : "bg-white text-slate-600 border border-slate-200"
+                  "px-2.5 py-1 min-h-11 rounded-full text-xs font-medium whitespace-nowrap",
+                  tagFilter === 'all' ? "bg-slate-900 text-white" : "bg-white text-slate-700 border border-slate-200"
                 )}
               >
-                {f.charAt(0).toUpperCase() + f.slice(1).replace('_', ' ')}
+                All tags
               </button>
-            ))}
+              {FEEDBACK_TAGS.map(tag => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setTagFilter(tag)}
+                  className={cn(
+                    "px-2.5 py-1 min-h-11 rounded-full text-xs font-medium whitespace-nowrap",
+                    tagFilter === tag ? "bg-slate-900 text-white" : "bg-white text-slate-700 border border-slate-200"
+                  )}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -479,18 +529,20 @@ export default function SupportView() {
                   </div>
                 </div>
                 
-                {isAdmin && (
-                  <div className="flex gap-2">
+                {canTriage && (
+                  <div className="flex flex-wrap gap-2">
                     <button 
+                      type="button"
                       onClick={() => updateStatus('resolved')}
-                      className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-emerald-100"
+                      className="px-3 py-1.5 min-h-11 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-emerald-100"
                     >
                       <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5" />
-                      Resolve
+                      Mark done
                     </button>
                     <button 
+                      type="button"
                       onClick={() => updateStatus('closed')}
-                      className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-slate-200"
+                      className="px-3 py-1.5 min-h-11 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-slate-200"
                     >
                       <AlertCircle aria-hidden="true" className="w-3.5 h-3.5" />
                       Close
@@ -498,6 +550,34 @@ export default function SupportView() {
                   </div>
                 )}
               </div>
+
+              {canTriage && (
+                <div className="bg-white border-b px-4 py-2 flex flex-wrap items-center gap-1.5" role="group" aria-label="Ticket triage tags">
+                  <span className="text-xs font-semibold text-slate-600 mr-1">Tags:</span>
+                  {FEEDBACK_TAGS.map(tag => {
+                    const active = (ticketTags[selectedTicket.id] || []).includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => {
+                          toggleFeedbackTag(currentWorkspace?.id, selectedTicket.id, tag);
+                          setTagRevision(v => v + 1);
+                        }}
+                        className={cn(
+                          "px-2.5 py-1 min-h-11 rounded-lg text-xs font-medium border transition-colors",
+                          active
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                        )}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Diagnostic Error Panel if attached */}
               {selectedTicket.errorDiagnostics && (

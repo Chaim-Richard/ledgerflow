@@ -26,7 +26,7 @@ export function registerStripeWebhookRoutes(app: express.Express, _ctx: ServerCo
         event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
       } catch (err) {
         console.error('Webhook signature verification failed.', errorMessage(err));
-        return res.status(400).send(`Webhook Error: ${errorMessage(err)}`);
+        return res.status(400).send('Webhook Error: Invalid signature');
       }
 
       const eventId = event.id;

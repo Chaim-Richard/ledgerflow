@@ -179,7 +179,9 @@ test('W9 browser: the close journey shows each bank, the month’s open money, t
   expect(serious, JSON.stringify(serious.map(v => ({ id: v.id, nodes: v.nodes.length })))).toEqual([]);
 
   // The same panel in the app's dark theme (the `dark:` half of the attention colour).
+  // The theme swap changes colours through CSS transitions; let them finish so axe reads the settled colours.
   await page.evaluate(() => { document.documentElement.classList.remove('light'); document.documentElement.classList.add('dark'); });
+  await expect.poll(() => page.evaluate(() => document.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
   const darkAxe = await new AxeBuilder({ page }).include('section[aria-labelledby="close-journey"]').analyze();
   const darkSerious = darkAxe.violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
   await testInfo.attach('close-journey-axe-dark', { body: JSON.stringify(darkAxe.violations, null, 2), contentType: 'application/json' });

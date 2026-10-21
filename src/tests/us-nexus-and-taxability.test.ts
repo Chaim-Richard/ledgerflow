@@ -127,9 +127,11 @@ test('hand-checked treatments', () => {
   assert.equal(productTreatment('NY', 'clothing')?.treatment, 'unclear', 'New York’s $110 cap is not a yes/no');
   assert.equal(productIsExempt('CA', 'groceries'), true);
   assert.equal(productIsExempt('TX', 'groceries'), true);
-  assert.equal(productTreatment('IL', 'groceries')?.treatment, 'reduced');
-  assert.equal(productTreatment('IL', 'groceries')?.rate, 0.01);
-  assert.equal(productTreatment('AL', 'groceries')?.rate, 0.03);
+  // #258 review: Illinois's state 1% grocery tax ended 1 Jan 2026 (Public Act 103-0781); Alabama's food rate is 2%
+  // from 1 Sep 2025 (Act 2025-305)
+  assert.equal(productTreatment('IL', 'groceries')?.treatment, 'exempt');
+  assert.equal(productTreatment('IL', 'groceries')?.rate, undefined);
+  assert.equal(productTreatment('AL', 'groceries')?.rate, 0.02);
   assert.equal(productTreatment('NY', 'prescription-medicine')?.treatment, 'exempt');
   assert.equal(productTreatment('IL', 'prescription-medicine')?.treatment, 'reduced');
   assert.equal(productTreatment('TX', 'prepared-food')?.treatment, 'taxable');

@@ -22,9 +22,12 @@ const SHORTCUT_ICONS: Partial<Record<ShortcutId, LucideIcon>> = {
 export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProps) {
   const language = useUIStore(s => s.language);
   const speedDials = useUIStore(s => s.speedDials);
+  const [filterQuery, setFilterQuery] = React.useState('');
 
   const mac = isMacPlatform();
-  const shortcuts = SHORTCUTS.map(sc => ({ key: shortcutLabel(sc.keys[0], mac), desc: sc.label, icon: SHORTCUT_ICONS[sc.id] || Activity }));
+  const q = filterQuery.trim().toLowerCase();
+  const shortcuts = SHORTCUTS.map(sc => ({ key: shortcutLabel(sc.keys[0], mac), desc: sc.label, icon: SHORTCUT_ICONS[sc.id] || Activity }))
+    .filter(sc => !q || sc.desc.toLowerCase().includes(q) || sc.key.toLowerCase().includes(q));
   const { dialogProps, titleId } = useDialog(onClose, isOpen);
 
   const hasSpeedDials = speedDials && Object.keys(speedDials).length > 0;
@@ -70,6 +73,16 @@ export default function ShortcutOverlay({ isOpen, onClose }: ShortcutOverlayProp
             
             <div className="flex-1 overflow-y-auto p-8 md:p-10 space-y-12">
               <div>
+                <div className="mb-6">
+                  <input
+                    type="search"
+                    value={filterQuery}
+                    onChange={e => setFilterQuery(e.target.value)}
+                    placeholder="Filter shortcuts by action or key…"
+                    aria-label="Filter keyboard shortcuts"
+                    className="w-full px-4 py-2.5 min-h-11 rounded-xl border border-[var(--line)] bg-[var(--ink)]/40 text-sm text-[var(--text)]"
+                  />
+                </div>
                 <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider mb-6 flex items-center gap-2">
                   <Command size={14} className="text-[var(--muted)]" />
                   System Shortcuts

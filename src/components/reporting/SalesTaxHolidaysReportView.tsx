@@ -6,10 +6,20 @@ import {
   US_SALES_TAX_HOLIDAYS, type HolidayBand,
 } from '../../lib/tax/usSalesTaxHolidays';
 import ReportTableScroll from './ReportTableScroll';
+import {
+  HOLIDAY_CALENDAR_CSV_HEADERS, HOLIDAY_CALENDAR_NOT_STATED, US_SALES_TAX_HOLIDAY_CALENDAR,
+  holidayCalendarCsvRows, holidayCalendarMonthsForYear, holidayCalendarStatesForYear, holidayCalendarYears, nextHolidayWindow,
+} from '../../lib/tax/usSalesTaxHolidayCalendar';
 
 const field = 'min-h-11 border rounded px-3 bg-[var(--panel)] text-[var(--text)]';
 
 const capWords = bandCapWords;
+
+const KIND_WORDS: Record<string, string> = {
+  'exempt': 'qualifying items carry no sales tax in the window',
+  'reduced-rate': 'the rate falls — it is not zero, and local tax may still apply',
+  'restricted-purchaser': 'only a named class of buyer is relieved; the goods are not tax-free',
+};
 
 /**
  * A-58: US state sales tax holidays. The dated windows, the categories each one covers and the
@@ -25,6 +35,11 @@ export default function SalesTaxHolidaysReportView({ today = '' }: { today?: str
   const [checkState, setCheckState] = useState<string>('TX');
   const [checkBand, setCheckBand] = useState<string>('clothing-footwear');
   const [checkPrice, setCheckPrice] = useState<string>('45.00');
+  const [calYear, setCalYear] = useState<number>(() => {
+    const years = holidayCalendarYears();
+    const thisYear = Number((today || getLocalDateISO()).slice(0, 4));
+    return years.includes(thisYear) ? thisYear : years[years.length - 1];
+  });
 
   const rows = useMemo(() => (
     US_SALES_TAX_HOLIDAYS
@@ -32,6 +47,10 @@ export default function SalesTaxHolidaysReportView({ today = '' }: { today?: str
       .slice()
       .sort((a, b) => b.from.localeCompare(a.from) || a.state.localeCompare(b.state))
   ), [stateFilter]);
+
+  const calendarMonths = useMemo(() => holidayCalendarMonthsForYear(calYear), [calYear]);
+  const calendarStates = useMemo(() => holidayCalendarStatesForYear(calYear), [calYear]);
+  const nextWindow = useMemo(() => nextHolidayWindow(asOf), [asOf]);
 
   const inForce = useMemo(() => holidayRowsInForce(checkState, asOf), [checkState, asOf]);
   const checkBands = useMemo(() => {
@@ -125,9 +144,51 @@ export default function SalesTaxHolidaysReportView({ today = '' }: { today?: str
     </table></ReportTableScroll>
 
     <p className="text-xs text-[var(--muted)]">
-      Windows not stated here (Texas' water-efficient products holiday, Florida's disaster-preparedness and
-      hunting/fishing/camping windows, and every other state's holidays) are listed as rows to add in the tax rule
-      pack — never assumed absent.
+      Windows not stated in the table above (Florida's disaster-preparedness and hunting/fishing/camping windows,
+      Texas' water-efficient products holiday, and every state whose publication this lane has not read) are listed as
+      rows to add in the tax rule pack — never assumed absent. A-109's calendar below states WHEN most of them run a
+      window, which is not the same as what the window exempts.
+    </p>
+    <h3>A-109: the calendar — which states run a window, and when</h3>
+    <p className="text-sm text-[var(--muted)]">
+      {calendarStates.length} states and territories run {calendarMonths.reduce((n, m) => n + m.rows.length, 0)} windows in {calYear}. This section answers WHEN, not WHAT:
+      a calendar row has no item bands and no cap, so it never means nothing is taxed that week. A window turns into a rule only when the table above
+      states its qualifying items and price caps from the state's own publication. Read-only; nothing files or posts.
+    </p>
+    <div className="flex flex-wrap items-end gap-3">
+      <label className="flex flex-col gap-1 text-sm">Calendar year
+        <select aria-label="Calendar year" className={field} value={String(calYear)} onChange={e => setCalYear(Number(e.target.value))}>
+          {holidayCalendarYears().map(y => <option key={y} value={String(y)}>{y}</option>)}
+        </select>
+      </label>
+      <p className="text-sm py-2">Next window dated after {asOf}: <b>{nextWindow ? `${nextWindow.stateName} — ${nextWindow.name} (${nextWindow.from} → ${nextWindow.to})` : 'none dated'}</b></p>
+      <button type="button" className={field} onClick={() => downloadCsv('us-sales-tax-holiday-calendar', HOLIDAY_CALENDAR_CSV_HEADERS, holidayCalendarCsvRows())}>Export the calendar (CSV)</button>
+    </div>
+    <div className="space-y-3">
+      {calendarMonths.map(month => <div key={month.month} data-calendar-month={month.month}>
+        <h4 className="text-sm font-semibold">{month.month}</h4>
+        <ul className="space-y-1 text-sm">
+          {month.rows.map(row => <li key={row.id} data-calendar-row={row.id}>
+            <b>{row.stateName}</b> — <bdi>{row.name}</bdi> <span className="tabular-nums whitespace-nowrap">({row.from} → {row.to})</span>
+            <span className="text-xs text-[var(--muted)]"> · {KIND_WORDS[row.kind]}{row.pattern ? ` · ${row.pattern}` : ''}{row.statuteDerived ? ' · the agency had not posted this year when the source was compiled, so the date follows the published rule — confirm it' : ''}</span>
+            {row.statePageUrl ? <> <a className="underline text-xs" href={row.statePageUrl} target="_blank" rel="noopener noreferrer">{row.statePageRead ? "the state's own page (opened for this table)" : "the state's page (listed by the source, not opened here)"}</a></> : null}
+            {row.note ? <div className="text-xs text-[var(--muted)]"><bdi>{row.note}</bdi></div> : null}
+          </li>)}
+        </ul>
+      </div>)}
+      {calendarMonths.length === 0 ? <p className="text-sm">No window of this calendar falls in {calYear}.</p> : null}
+    </div>
+    <details data-calendar-gaps>
+      <summary className="text-sm">What this calendar does not state ({HOLIDAY_CALENDAR_NOT_STATED.length} things)</summary>
+      <ul className="text-sm list-disc ps-5 space-y-1">
+        {HOLIDAY_CALENDAR_NOT_STATED.map(gap => <li key={gap.row}><b>{gap.row}</b> — {gap.reason}</li>)}
+      </ul>
+    </details>
+    <p className="text-xs text-[var(--muted)]">
+      Every calendar row was read on {US_SALES_TAX_HOLIDAY_CALENDAR[0].source.retrieved} from the Federation of Tax Administrators' dated
+      state-by-state table, which lists each state's own page beside it; those pages are linked above and only the ones marked as opened were read for
+      this table. {US_SALES_TAX_HOLIDAY_CALENDAR.filter(r => r.statePageRead).length} of {US_SALES_TAX_HOLIDAY_CALENDAR.length} rows are read from the state's own page.
+      A commercial calendar listing Virginia's 2026 window as August 1-3 is wrong — the Department says August 7-9 and gives the rule that fixes it.
     </p>
   </section>;
 }

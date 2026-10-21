@@ -12,6 +12,9 @@ interface StockAccountFieldsProps {
   onInventoryChange: (id: string) => void;
   onOffsetChange: (id: string) => void;
   offsetLabel: string;
+  /** the note's label and whether it is required (a revaluation needs a reason) */
+  noteLabel?: string;
+  noteRequired?: boolean;
   date: string;
   onDateChange: (date: string) => void;
   note: string;
@@ -42,8 +45,8 @@ export function StockAccountFields(props: StockAccountFieldsProps) {
         <input id={`${id}-date`} type="date" required value={props.date} onChange={e => props.onDateChange(e.target.value)} className={fieldClass} />
       </div>
       <div>
-        <label htmlFor={`${id}-note`} className={labelClass}>Note (optional)</label>
-        <input id={`${id}-note`} type="text" maxLength={200} value={props.note} onChange={e => props.onNoteChange(e.target.value)} className={fieldClass} />
+        <label htmlFor={`${id}-note`} className={labelClass}>{props.noteLabel || 'Note (optional)'}</label>
+        <input id={`${id}-note`} type="text" maxLength={200} required={props.noteRequired} value={props.note} onChange={e => props.onNoteChange(e.target.value)} className={fieldClass} />
       </div>
     </div>
   );

@@ -1,20 +1,14 @@
 import rateLimit from 'express-rate-limit';
+import { sharedAuthRateLimiter, sharedBrainRateLimiter, sharedRateLimitMiddleware } from './sharedRateLimiter';
 
 /**
  * Strict rate limiter for Authentication and Password Reset endpoints.
  * 5 attempts per 15 minutes per IP.
  */
-export const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    status: 'error',
-    code: 'RATE_LIMIT_EXCEEDED',
-    message: 'Too many authentication attempts. Please try again after 15 minutes.'
-  }
-});
+export const authRateLimiter = sharedRateLimitMiddleware(
+  sharedAuthRateLimiter,
+  req => String(req.ip || req.socket.remoteAddress || 'unknown'),
+);
 
 /**
  * Rate limiter for public invoice views.
@@ -52,17 +46,12 @@ export const pdfGenerationLimiter = rateLimit({
  * Rate limiter for AI Brain & Financial LLM reasoning endpoints (/api/v1/brain/*).
  * 20 requests per minute per IP.
  */
-export const brainRateLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    status: 'error',
-    code: 'RATE_LIMIT_EXCEEDED',
-    message: 'AI Brain request quota temporarily exceeded. Please throttle request intensity.'
-  }
-});
+export const brainRateLimiter = sharedRateLimitMiddleware(
+  sharedBrainRateLimiter,
+  req => String((req as typeof req & { user?: { uid?: string; id?: string } }).user?.uid ||
+    (req as typeof req & { user?: { uid?: string; id?: string } }).user?.id ||
+    req.ip || req.socket.remoteAddress || 'unknown'),
+);
 
 /** Z-02: an API key's own limit a minute (set when the key is made; 120 unless chosen). */
 export const API_KEY_DEFAULT_PER_MINUTE = 120;

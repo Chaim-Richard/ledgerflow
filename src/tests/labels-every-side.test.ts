@@ -56,3 +56,33 @@ test('#152: odd cents in tax and discount — every label still balances exactly
     for (const loc of ['A', 'B']) assert.equal(sum(out, loc), 0, `entry ${i}: ${loc} balances`);
   }
 });
+
+test('DIM-1 payments: the payment of a labelled invoice carries its labels; each label balances and a full payment clears each label', () => {
+  const loc = (l: { dimensions?: Record<string, string> }) => l.dimensions?.location || '';
+  const sum = (lines: Array<{ accountId: string; amountCents: number; dimensions?: Record<string, string> }>, account: string, place: string) =>
+    lines.filter(l => l.accountId === account && loc(l) === place).reduce((n, l) => n + l.amountCents, 0);
+  let worst = 0;
+  for (let i = 0; i < 300; i++) {
+    const a = 1 + Math.floor(Math.random() * 50000), b = 1 + Math.floor(Math.random() * 50000), tax = Math.floor(Math.random() * 9000);
+    const lineAccounts = [
+      { account: acct('sales'), weightCents: a, dimensions: { location: 'Tel Aviv' } },
+      { account: acct('sales'), weightCents: b, dimensions: { location: 'Haifa' } },
+    ];
+    const total = a + b + tax;
+    const invoice = TransactionTemplates.buildInvoiceLines({ invoiceNumber: 'P', customerName: 'C', totalCents: total, taxCents: tax, arAccount: acct('ar'), revenueAccount: acct('sales'), taxAccount: acct('vat'), lineAccounts });
+    const payment = TransactionTemplates.buildPaymentLines({ documentNumber: 'P', entityName: 'C', amountCents: total, cashAccount: acct('bank'), offsetAccount: acct('ar'), isReceipt: true, lineAccounts });
+    assert.ok(payment.every(l => loc(l as { dimensions?: Record<string, string> })), 'every payment line has a location');
+    assert.equal(payment.reduce((n, l) => n + l.amountCents, 0), 0, 'the payment balances');
+    for (const place of ['Tel Aviv', 'Haifa']) {
+      assert.equal(payment.filter(l => loc(l as { dimensions?: Record<string, string> }) === place).reduce((n, l) => n + l.amountCents, 0), 0, `${place} balances on its own`);
+      worst = Math.max(worst, Math.abs(sum(invoice as never, 'ar', place) + sum(payment as never, 'ar', place)));
+    }
+  }
+  assert.equal(worst, 0, 'a full payment leaves no receivable on any label');
+});
+
+test('DIM-1 payments: a payment without labels is unchanged', () => {
+  const lines = TransactionTemplates.buildPaymentLines({ documentNumber: 'B', entityName: 'V', amountCents: 1000, cashAccount: acct('bank'), offsetAccount: acct('ap'), isReceipt: false });
+  assert.equal(lines.length, 2);
+  assert.ok(lines.every(l => !(l as { dimensions?: unknown }).dimensions));
+});

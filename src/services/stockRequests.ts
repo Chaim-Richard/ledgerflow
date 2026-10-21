@@ -57,3 +57,37 @@ export const adjustStockRequest = (body: AdjustStockBody) => postStock('/api/v1/
 
 /** Records counted quantities; differences go to the offset (variance) account in one entry. */
 export const countStockRequest = (body: CountStockBody) => postStock('/api/v1/inventory/count', body);
+
+export interface RevalueStockBody {
+  workspaceId: string;
+  itemId: string;
+  newUnitCostCents: number;
+  inventoryAccountId: string;
+  offsetAccountId: string;
+  reason: string;
+  /** one per revaluation, kept for retries: the server applies it once */
+  requestId: string;
+  date?: string;
+}
+
+export interface RevalueStockResult {
+  status: 'ok';
+  transactionId: string | null;
+  quantity: number;
+  oldUnitCostCents: number;
+  newUnitCostCents: number;
+  valueCents: number;
+  replayed: boolean;
+}
+
+/** ISS-130: revalues one item's stock on hand to a new cost; the server posts the difference and changes the cost together. */
+export async function revalueStockRequest(body: RevalueStockBody): Promise<RevalueStockResult> {
+  const res = await fetch('/api/v1/inventory/revalue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'The revaluation was not saved');
+  return data as RevalueStockResult;
+}

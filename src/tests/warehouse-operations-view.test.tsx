@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * A-64–A-67 on the existing Inventory Cycle Count host: bin metadata, an open-pick/packing-slip
  * view and tracking annotation, two-person return workflow, and serial-linked warranty dates.
@@ -92,7 +93,7 @@ describe('Warehouse operations views (A-64–A-67)', () => {
 
   test('bin assignment persists only an item Location/bin annotation', async () => {
     render(<WarehouseOperationsReportView />);
-    const editButton = await screen.findByRole('button', { name: 'Edit Bin for Blue Widget at Main warehouse' });
+    const editButton = await screen.findByRole('button', { name: inlineEditName('Edit Bin for Blue Widget at Main warehouse') });
     await act(async () => { fireEvent.click(editButton); });
     const input = screen.getByLabelText('Bin for Blue Widget at Main warehouse');
     await act(async () => {

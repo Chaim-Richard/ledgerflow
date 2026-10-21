@@ -7,6 +7,8 @@ removed from this list.
 
 Last updated: 2026-10-07.
 
+**AI #2, 19 Oct — automatic PR creation:** the running environment's proxy rejects HTTPS CONNECT to `api.github.com` before GitHub authentication; native Git push works. I saved a network draft adding only `api.github.com` (existing package-manager preset retained). Review/save it in environment settings, then publish the environment. This has not changed the current runtime, and GitHub API authorization remains untested behind that block. Do not send credentials in chat. Earlier C-126 and C-116/C-119/C-123 branches are now confirmed merged into main `dae712e5`. The new [C-72/C-73/C-75 review branch](https://github.com/shmuelbiller1/ledgerflow/pull/new/codex/c72-c73-c75-report-follow-ups) can be opened manually while API access is blocked.
+
 ## A. Settings only you can change (a few minutes each)
 
 0. **Done (owner, 13 Oct).** **Most important: let database changes go through without you (1 minute).** Open
@@ -451,3 +453,41 @@ with the exact evidence. Nothing was baselined or hidden to make anything pass.
 The branch `codex/ci-faster-browser-feedback` is pushed (implementation `74a8ae51`). It splits all 299 browser tests into two isolated shards, keeps every existing accounting/security/time-zone gate and the original required browser check, and provides combined reports and readable failure locations. Local types/lint, four diagnostic contracts, two actual browser smoke shards and report merging pass; five already-landed screen tasks were reconciled after 17 component cases and ten guest screenshot checks. Evidence: `docs/verification/ci-speed-and-queue-review-2026-10-17.md`.
 
 **Outside action:** [open the pull request](https://github.com/shmuelbiller1/ledgerflow/pull/new/codex/ci-faster-browser-feedback). The GitHub API returns `Forbidden` to this environment for PR creation. Native Git push succeeded and its exact remote SHA was verified, but no Actions run is visible for the branch yet. Full GitHub verification and merge remain outstanding; do not treat the local smoke subset as a full-suite pass.
+
+## 20 Oct — Copilot "Potential fix for code scanning alert" PRs (for the owner)
+
+24 automatic fixes were opened (#205–#228); three more had been merged straight into main earlier (alerts 9, 29, 33 — reviewed afterwards, all fine). Reviewed one by one:
+- **Merged (12):** #205, #206, #208, #210, #211, #212, #221, #223, #224, #225, #226, #228.
+- **Replaced by one correct fix (9):** #213–#220, #222 (upload path). #213 would have refused every bank CSV upload.
+- **Closed — would break the app:** #209 (every API key refused), #227 (payslips stop downloading). #207 was a duplicate.
+
+**Please do on the code-scanning page** (needs your admin rights; this session cannot read or dismiss alerts):
+dismiss as *false positive*: alert 24 (payslip GET), 25 (API-key SHA-256 — keys are random secrets), and as *won't fix / used in development*: alert 32 (Helmet CSP is on in production).
+
+**Default from now on:** Copilot autofix PRs are reviewed by AI #1 like any other PR before merging — please don't press "Commit" on them directly in GitHub; touching server code they can break uploads, API keys or payslips, as three of these would have.
+
+## 20 Oct — bookkeeping-first plan (decisions taken with the defaults AI #1 recommended)
+
+1. **Payroll in the first releases = recording an outside provider's results (CSV import, PAY-1).** Running payroll ourselves (withholding engines, direct deposit, filings, W-2) waits for stage C. Existing payroll code stays. *Change if you want payroll processing earlier.*
+2. **Tax in stages A and B = user- or accountant-chosen rates, clearly marked.** The US/IL engines stay as suggestions; filing-ready automation is stage C. Real Israeli tax invoices still need allocation numbers. *Change if a pilot customer needs automated filing.*
+3. **First-hour journey test (W1) moved from AI #8 (inactive) to AI #7.**
+4. **Open question for you:** who are the stage-A testers, and when do you want to invite them? Stage A needs W1, W2–W5, W10, W14 and gates G-01/G-02 (see RELEASE_GATE "Today").
+## 20 Oct — migration to apply after ISS-130 is merged (AI #9)
+
+- **`supabase/migrations/20261020120000_inventory_cost_server_only.sql`**: refuses a browser change to an item's unit cost while it has stock on hand (the cost of stock changes only through Inventory → Revalue, which posts the difference). Tested with `npm run test:rules` on the local test database. AI #1 applies it to Supabase after reviewing the ISS-130 PR; until it is applied, the screen already locks the cost, but a direct browser write is not yet refused by the database.
+
+## 20 Oct night — ~~migration to confirm on Supabase (ISS-130, PR #259)~~ **Done: replaced by the 21 Oct change, which the owner ran.**
+
+`supabase/migrations/20261020120000_inventory_cost_server_only.sql` (browser may not change the cost of stock on hand; only the server's revaluation can) — **the Supabase connector timed out twice, so it may or may not be applied.** It is safe to run again (it replaces the function and re-creates the trigger). To apply: Supabase dashboard → SQL editor → paste the file → Run. Until it is applied the app still works; the new Revalue screen posts correctly either way, the database just doesn't yet *refuse* a direct browser cost change.
+
+## 20 Oct — PAY-1 payroll import: provider column sets (AI #9)
+
+**Open question for you:** the payroll import accepts one column set per provider (Gusto payroll journal, ADP payroll register, Paychex payroll journal; listed in `src/lib/payrollProviderImport.ts`). I wrote them from the common column names; they are **not checked against a real export** from each provider. **Default I used:** any other column stops the import and names it, so a different export is refused rather than read wrongly. If you or a pilot customer can share a sample export (names changed), I'll match its columns exactly.
+
+## 21 Oct — ~~one database change to paste~~ **Done: run by the owner on 21 Oct ("Success. No rows returned").** (replaces the 20 Oct ISS-130 one)
+The Supabase connector timed out a third time. Paste **`supabase/migrations/20261021010000_inventory_cost_editable_at_zero.sql`** into Supabase → SQL editor → Run (1 minute). It is safe to run more than once, and it replaces the 20 Oct ISS-130 change, so you do not need to run that one separately. What it does: an item's cost can't be changed from the browser while it has stock on hand (only Inventory → Revalue changes it); items at or below zero stay editable. *Default until then:* the screen already locks the cost; only a direct browser write is not yet refused by the database.
+
+## 21 Oct — stock costing method (DIM-2 phase 5, AI #9)
+
+**Open question for you:** the books cost stock by **moving average** (each purchase changes the average; a sale costs at the average). The stock history now keeps where each unit came from and went (Reports → Stock Sources and Uses), but it does not tie a sale to the exact purchase lot. Phase 5 of GitHub #132 would add optional **FIFO or lot-specific costing**. That changes the cost of goods sold and the stock value, so it needs your decision (and your accountant's) first. **Default I used: stay on moving average; phase 5 is not started.** Say if a customer needs FIFO or lot costing.
+

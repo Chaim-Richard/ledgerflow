@@ -11,6 +11,7 @@ import { adjustStock, StockAdjustmentError } from '../services/stockAdjustmentSe
 import { setNegativeStockPolicy } from '../services/stockPolicyService';
 import { stockMovesReady, writeStockMoves } from '../services/stockMoveService';
 import { transferStock } from '../services/stockTransferService';
+import { revalueStock, StockRevaluationError } from '../services/stockRevaluationService';
 import { DeliveryError, deliverOrder, returnDelivered, setGoodsLeaveWith, undoDelivery } from '../services/deliveryService';
 import { LedgerPostingError } from '../services/cogsStockService';
 import { DELIVERY_ID, RETURN_ID } from '../../lib/deliveries';
@@ -238,6 +239,43 @@ inventoryRouter.post('/adjust', requireWorkspaceRole(STOCK_ROLES), (req, res) =>
 
 /** A stock count (W-04 W-05): the counted quantities; differences go to the offset (variance) account in one entry. */
 inventoryRouter.post('/count', requireWorkspaceRole(STOCK_ROLES), (req, res) => stockRequest(req, res, 'count'));
+
+const RevalueSchema = z.object({
+  workspaceId: z.string().min(1),
+  itemId: z.string().min(1),
+  newUnitCostCents: z.number().int().nonnegative(),
+  inventoryAccountId: z.string().min(1),
+  offsetAccountId: z.string().min(1),
+  reason: z.string().trim().min(1, 'Say why the cost changes').max(200),
+  requestId: z.string().regex(/^[A-Za-z0-9_-]{8,80}$/, 'A revaluation needs a request id'),
+  date: date.optional(),
+});
+
+/**
+ * ISS-130: revalues the stock on hand of one item to a new unit cost. The difference in value is posted to the
+ * Inventory account against the chosen offset account in the same database transaction that changes the cost
+ * (stockRevaluationService.ts). Owners and accountants: it changes book value without moving any stock.
+ */
+inventoryRouter.post('/revalue', requireWorkspaceRole(['owner', 'accountant']), async (req, res) => {
+  try {
+    const user = requestUser(req);
+    const db = getDb();
+    const parsed = RevalueSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Check the fields', details: parsed.error.issues });
+    const body = parsed.data;
+    const { data: wsData } = await validateWorkspaceMember(db, body.workspaceId, user);
+    const txDate = body.date || formatTzDate(new Date(), typeof wsData?.timezone === 'string' ? wsData.timezone : 'UTC');
+    const result = await revalueStock(db, {
+      workspaceId: body.workspaceId, user: { uid: user.uid, admin: user.admin }, wsData, date: txDate,
+      itemId: body.itemId, newUnitCostCents: body.newUnitCostCents, inventoryAccountId: body.inventoryAccountId,
+      offsetAccountId: body.offsetAccountId, reason: body.reason, requestId: body.requestId,
+    });
+    res.json({ status: 'ok', ...result });
+  } catch (e) {
+    if (e instanceof StockRevaluationError) return res.status(e.status).json({ error: e.message });
+    res.status(/Unauthorized|not a member/i.test(errorMessage(e)) ? 403 : 400).json({ error: errorMessage(e) });
+  }
+});
 
 /** W-06: an owner chooses whether a sale may take stock below zero (stockPolicyService.ts). */
 inventoryRouter.put('/stock-policy', requireWorkspaceRole(['owner']), async (req, res) => {

@@ -1,3 +1,4 @@
+import { inlineEditName } from './helpers/inlineEditName';
 /**
  * Warranty and insurance reminders for fixed assets (X-08): from 30 days before the date (and on the
  * day), never after it, never for a disposed asset; the nightly job tells the people who keep the
@@ -80,8 +81,8 @@ describe('Warranty and insurance on the register', () => {
     useLedgerStore.setState({ assets: [van], accounts: [] } as never);
     markComponentCollectionsLoaded('assets');
     render(<FixedAssetsView />);
-    assert.ok(screen.getByRole('button', { name: 'Edit Warranty ends for Delivery van' }));
-    assert.ok(screen.getByRole('button', { name: 'Edit Insurance renews for Delivery van' }));
+    assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Warranty ends for Delivery van') }));
+    assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Insurance renews for Delivery van') }));
     assert.ok(screen.getByText(`The warranty on Delivery van ends in 12 days (${addDaysYMD(today, 12)})`));
   });
 });

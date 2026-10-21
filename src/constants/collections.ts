@@ -58,6 +58,7 @@ export const WORKSPACE_PURGE_EXTRA = [
   'documents',
   'apiKeys',
   'idempotencyKeys',
+  'rateLimitEntries', // purge workspace-specific counters; server-only, not browser data
   'fixedAssets',
   'learnedDeltas',
   'presence',

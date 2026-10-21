@@ -1,12 +1,20 @@
-import React, { Suspense } from 'react';
-import { Terminal } from 'lucide-react';
+import React, { Suspense, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { SETTINGS_TABS_REGISTRY, SETTINGS_COMPONENTS } from '../../config/registry';
 import { useUIStore } from '../../stores/useUIStore';
 import { ViewErrorBoundary } from '../common/ViewErrorBoundary';
 
+const SETTINGS_GROUPS = [
+  { name: 'Workspace', ids: ['appearance', 'team', 'security', 'billing', 'modules', 'groups', 'shortcuts'] },
+  { name: 'Accounting', ids: ['defaults', 'tax-profiles', 'currencies', 'dimensions', 'tags', 'split-rules'] },
+  { name: 'Documents & sales', ids: ['templates', 'branding', 'numbering', 'price-lists', 'price-list-import', 'custom-fields', 'sales-reps', 'stages'] },
+  { name: 'Automation', ids: ['rules', 'rule', 'emails', 'schedule', 'incoming-events', 'scheduled-reports', 'alerts'] },
+  { name: 'Data & developer', ids: ['import', 'export', 'developer'] },
+];
+
 export default function Settings() {
+  const [search, setSearch] = useState('');
   const language = useUIStore(state => state.language);
   const activeSubTab = useUIStore(state => state.activeSettingsTab || 'appearance');
   const setActiveSubTab = useUIStore(state => state.setActiveSettingsTab);
@@ -14,41 +22,40 @@ export default function Settings() {
   const activeTabDef = SETTINGS_TABS_REGISTRY.find(t => t.id === activeSubTab);
   const ActiveComponent = activeTabDef ? SETTINGS_COMPONENTS[activeTabDef.componentName] : null;
 
+  const term = search.trim().toLocaleLowerCase();
+  const groups = SETTINGS_GROUPS.map(group => ({ ...group, tabs: SETTINGS_TABS_REGISTRY.filter(tab => group.ids.includes(tab.id) && (!term || `${group.name} ${tab.label.en} ${tab.label[language]} ${tab.id}`.toLocaleLowerCase().includes(term))) }));
+  const matchCount = groups.reduce((count, group) => count + group.tabs.length, 0);
+
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-12 py-6 px-4 md:py-12 md:px-8">
-      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-8 pb-12 border-b border-[var(--line)]">
-        <div className="space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-[0.3em]">
-            <Terminal size={12} />
-            Precision Core v2.0
-          </div>
-          <h1 className="text-4xl md:text-6xl font-black text-[var(--text)] tracking-tighter">Settings</h1>
-          <p className="text-[var(--muted)] font-medium text-lg max-w-xl">
-            Configure institutional rule bridges, developer integrations, and enterprise-grade security protocols.
-          </p>
+    <div className="sentence-case-controls w-full max-w-6xl mx-auto space-y-6 p-4 md:p-6 text-[var(--text)]">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Settings</h1>
+          <p className="text-sm text-[var(--muted)]">Manage your workspace, appearance, backups and integrations.</p>
         </div>
-
-        <div className="flex bg-[var(--surface)] p-1.5 rounded-[32px] border border-[var(--line)] overflow-x-auto custom-scrollbar whitespace-nowrap">
-          {SETTINGS_TABS_REGISTRY.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveSubTab(tab.id)}
-              className={cn(
-                "flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-medium uppercase tracking-wider transition-all",
-                activeSubTab === tab.id 
-                  ? "bg-[var(--surface)] text-[var(--text)] shadow-sm ring-1 ring-slate-200" 
-                  : "text-[var(--muted)] hover:text-[var(--text)]"
-              )}
-            >
-              <tab.icon size={14} />
-              {((tab as typeof tab & { name?: string }).label?.[language] || (tab as typeof tab & { name?: string }).label?.['en']) || (tab as typeof tab & { name?: string }).name || tab.id}
-            </button>
-          ))}
+        <div className="w-full md:w-72 shrink-0">
+          <label htmlFor="settings-search" className="block text-sm font-medium mb-1">Search settings</label>
+          <input id="settings-search" type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Find a setting" className="w-full min-h-11 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3" />
         </div>
-      </div>
+      </header>
+      <nav aria-label="Settings sections" className="space-y-3">
+        {term && <p role="status" className="text-sm text-[var(--muted)]">{matchCount ? `${matchCount} settings found` : 'No settings match your search.'} Your current page stays open.</p>}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {groups.filter(group => group.tabs.length).map(group => <section key={group.name} aria-label={group.name} className="min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+            <h2 className="text-sm font-semibold mb-2">{group.name}</h2>
+            <div className="flex flex-wrap gap-1">
+              {group.tabs.map(tab => <button type="button" key={tab.id} aria-current={activeSubTab === tab.id ? 'page' : undefined} onClick={() => setActiveSubTab(tab.id)} className={cn('min-h-11 max-w-full inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-start', activeSubTab === tab.id ? 'bg-[var(--brass-soft)] text-[var(--text)] ring-1 ring-[var(--brass-line)] font-semibold' : 'text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--text)]')}>
+                <tab.icon size={16} aria-hidden="true" className="shrink-0" />
+                <span className="min-w-0 break-words">{tab.label[language] || tab.label.en}</span>
+              </button>)}
+            </div>
+          </section>)}
+        </div>
+        {term && <button type="button" onClick={() => setSearch('')} className="min-h-11 px-3 underline">Clear search</button>}
+      </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
-        <div className="lg:col-span-2 space-y-12">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeSubTab}
@@ -71,10 +78,10 @@ export default function Settings() {
         {/* Global Sidebar Documentation Context (Could also be modularized later) */}
         <div className="space-y-10">
           <div className="p-4 md:p-10 bg-[var(--surface)] rounded-[40px] border border-[var(--line)] shadow-sm group hover:border-indigo-600 transition-all duration-500">
-            <h2 className="text-[11px] font-black text-[var(--text)] uppercase tracking-[0.3em] mb-6 opacity-40">Documentation Protocol</h2>
+            <h2 className="text-[11px] font-black text-[var(--text)] uppercase tracking-[0.3em] mb-6 opacity-40">About settings</h2>
             <div className="space-y-4">
-              <p className="text-[11px] text-[var(--muted)] leading-relaxed font-bold uppercase tracking-widest mb-8">
-                The architecture runs entirely on dynamic topological registries. Settings components are lazy-loaded on demand via the SETTINGS_COMPONENTS registry mapping.
+              <p className="text-[11px] text-[var(--muted)] leading-relaxed font-bold mb-8">
+                Choose a tab to review or update the settings for your workspace.
               </p>
             </div>
           </div>

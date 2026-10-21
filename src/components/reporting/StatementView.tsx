@@ -237,7 +237,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
                     <td className="py-2.5 px-4 text-right text-slate-900 dark:text-white">
                       {entry.debitCents > 0 ? formatCurrency(entry.debitCents) : '-'}
                     </td>
-                    <td className="py-2.5 px-4 text-right text-emerald-600 dark:text-emerald-400">
+                    <td className="py-2.5 px-4 text-right text-emerald-700 dark:text-emerald-400">
                       {entry.creditCents > 0 ? formatCurrency(entry.creditCents) : '-'}
                     </td>
                     <td className="py-2.5 px-4 text-right font-bold text-slate-900 dark:text-white">

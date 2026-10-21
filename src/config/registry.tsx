@@ -22,7 +22,7 @@ import {
   Target, Briefcase, Sparkles, CheckCircle2, Leaf,
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag, ArrowLeftRight
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText, Split, BadgePercent, UserCheck, ListChecks } from 'lucide-react';
+, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText, Split, BadgePercent, UserCheck, ListChecks, MapPin } from 'lucide-react';
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
@@ -367,6 +367,7 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'DepreciationLedgerReportView': lazy(() => import('../components/reporting/DepreciationLedgerReportView')),
   'BankClearanceReportView': lazy(() => import('../components/reporting/BankClearanceReportView')),
   'InventoryDetailsReportView': lazy(() => import('../components/reporting/InventoryDetailsReportView')),
+  'StockSourcesUsesReportView': lazy(() => import('../components/reporting/StockSourcesUsesReportView')),
   'CashFlowView': lazy(() => import('../components/ledger/CashFlowView')),
   'ARAgingReportView': lazy(() => import('../components/reporting/ARAgingReportView')),
   'APAgingReportView': lazy(() => import('../components/reporting/APAgingReportView')),
@@ -441,6 +442,18 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'SalesByItemReportView': lazy(() => import('../components/reporting/SalesByItemReportView')),
   'InventoryValuationReportView': lazy(() => import('../components/reporting/InventoryValuationReportView')),
   'JournalSheetReportView': lazy(() => import('../components/reporting/JournalSheetReportView')),
+  'MileageRatesReportView': lazy(() => import('../components/reporting/MileageRatesReportView')),
+  'IlSelfEmploymentNiReportView': lazy(() => import('../components/reporting/IlSelfEmploymentNiReportView')),
+  'IsraelAdvanceTaxReportView': lazy(() => import('../components/reporting/IsraelAdvanceTaxReportView')),
+  'BankingValidationReportView': lazy(() => import('../components/reporting/BankingValidationReportView')),
+  'UsNexusWatchReportView': lazy(() => import('../components/reporting/UsNexusWatchReportView')),
+  'TaxCodeSuggestionsReportView': lazy(() => import('../components/reporting/TaxCodeSuggestionsReportView')),
+  'EntityFilingsCalendarView': lazy(() => import('../components/reporting/EntityFilingsCalendarView')),
+  'IsraeliDocumentTypesView': lazy(() => import('../components/reporting/IsraeliDocumentTypesView')),
+  'Us1099PreviewReportView': lazy(() => import('../components/reporting/Us1099PreviewReportView')),
+  'UsFilingCalendarReportView': lazy(() => import('../components/reporting/UsFilingCalendarReportView')),
+  'ExpiringLotsReportView': lazy(() => import('../components/reporting/ExpiringLotsReportView')),
+  'StockTransfersReportView': lazy(() => import('../components/reporting/StockTransfersReportView')),
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = withScreenHelp([
@@ -508,6 +521,9 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'backorders', label: { en: 'Backorders', he: 'הזמנות ממתינות למלאי' }, componentName: 'BackordersReportView', icon: Package },
   { id: 'form-856', label: { en: 'Withholding Report (Form 856)', he: 'דוח ניכוי במקור (טופס 856)' }, componentName: 'Form856ReportView', icon: Receipt },
   { id: 'inventory-details', label: { en: 'Inventory Item Details', he: 'פירוט תנועות מלאי' }, componentName: 'InventoryDetailsReportView', icon: Package },
+  { id: 'stock-sources-uses', label: { en: 'Stock Sources and Uses', he: 'מקורות ושימושי מלאי' }, componentName: 'StockSourcesUsesReportView', icon: Package },
+  { id: 'expiring-lots', label: { en: 'Expiring Lots', he: 'סידות פגות תוקף' }, componentName: 'ExpiringLotsReportView', icon: Package },
+  { id: 'stock-transfers', label: { en: 'Stock Transfers', he: 'העברות מלאי' }, componentName: 'StockTransfersReportView', icon: ArrowLeftRight },
   { id: 'journal-sheet', label: { en: 'Journal Sheet', he: 'גיליון יומן' }, componentName: 'JournalSheetReportView', icon: BookOpen },
   { id: 'expense-by-category', label: { en: 'Expense by Category', he: 'הוצאות לפי קטגוריה' }, componentName: 'ExpenseByCategoryReportView', icon: PieChart },
   { id: 'income-by-source', label: { en: 'Income by Source', he: 'הכנסות לפי מקור' }, componentName: 'IncomeBySourceReportView', icon: TrendingUp },
@@ -545,6 +561,16 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'sales-tax-holidays', label: { en: 'Sales Tax Holidays', he: 'חגי מס מכירה' }, componentName: 'SalesTaxHolidaysReportView', icon: CalendarDays },
   { id: 'quote-versions', label: { en: 'Quote Versions', he: 'גרסאות הצעת מחיר' }, componentName: 'QuoteVersionsReportView', icon: FileSignature },
   { id: 'blanket-orders', label: { en: 'Blanket Purchase Orders', he: 'הזמנות רכש פתוחות' }, componentName: 'BlanketOrdersReportView', icon: Handshake },
+  { id: 'mileage-rates', label: { en: 'US Mileage Rates', he: 'תעריפי נסיעה ארה"ב' }, componentName: 'MileageRatesReportView', icon: Truck },
+  { id: 'israel-self-employment-ni', label: { en: 'Israel: Self-Employed National Insurance', he: 'ישראל: ביטוח לאומי לעצמאים' }, componentName: 'IlSelfEmploymentNiReportView', icon: Receipt },
+  { id: 'israel-advance-tax', label: { en: 'Israel: Advance Tax Calendar (Mikdamot)', he: 'ישראל: מקדמות מס הכנסה' }, componentName: 'IsraelAdvanceTaxReportView', icon: Calendar },
+  { id: 'banking-validation', label: { en: 'Banking Data Validation', he: 'אימות נתוני בנק' }, componentName: 'BankingValidationReportView', icon: ShieldCheck },
+  { id: 'us-nexus-watch', label: { en: 'US Nexus Watch', he: 'מעקב נקסוס בארה"ב' }, componentName: 'UsNexusWatchReportView', icon: MapPin },
+  { id: 'tax-code-suggestions', label: { en: 'Tax Code Suggestions', he: 'הצעות קוד מס' }, componentName: 'TaxCodeSuggestionsReportView', icon: Tag },
+  { id: 'entity-filings', label: { en: 'Entity Filings Calendar', he: 'יומן הגשות לישות' }, componentName: 'EntityFilingsCalendarView', icon: CalendarDays },
+  { id: 'israeli-document-types', label: { en: 'Israeli Document Types', he: 'סוגי מסמכים בישראל' }, componentName: 'IsraeliDocumentTypesView', icon: Receipt },
+  { id: 'us-1099-preview', label: { en: 'US 1099 Preview', he: 'תצוגת 1099 אמריקאי' }, componentName: 'Us1099PreviewReportView', icon: Users },
+  { id: 'us-filing-calendar', label: { en: 'US Filing Calendar', he: 'יומן הגשות ארה"ב' }, componentName: 'UsFilingCalendarReportView', icon: Calendar },
 ], 'reports');
 
 export const SETTINGS_TABS_REGISTRY = withScreenHelp([

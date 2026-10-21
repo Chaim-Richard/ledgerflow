@@ -6,6 +6,7 @@ import {
 import { downloadCsv } from '../../lib/csvExport';
 import ReportTableScroll from './ReportTableScroll';
 import { formatCurrency } from '../../lib/utils';
+import GoldenYearFixturesSection from './GoldenYearFixturesSection';
 
 const money = (cents: number, currency: string) => formatCurrency(cents, currency);
 
@@ -16,7 +17,10 @@ const money = (cents: number, currency: string) => formatCurrency(cents, currenc
  */
 export default function GoldenTaxFixturesReportView() {
   const result = useMemo(() => verifyGoldenFixtures(), []);
-  return <GoldenTaxFixturesPanel invoices={GOLDEN_INVOICES} bills={GOLDEN_BILLS} failures={result.failures} />;
+  return <>
+    <GoldenTaxFixturesPanel invoices={GOLDEN_INVOICES} bills={GOLDEN_BILLS} failures={result.failures} />
+    <GoldenYearFixturesSection />
+  </>;
 }
 
 export function GoldenTaxFixturesPanel({ invoices, bills, failures }: {

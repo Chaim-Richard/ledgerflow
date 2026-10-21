@@ -4,6 +4,7 @@ import { getDb } from '../db/firestore';
 import { approvePayRun, PayRunError, postPayRun, rejectPayRun, setPayrollApproval, undoPayRun } from '../services/payRunService';
 import { generatePayslipPdf, layoutPayslip } from '../services/payslipPdf';
 import type { PayRunEmployeeLine } from '../../lib/payRunPosting';
+import { payrollImportRouter } from './payrollImportRoutes';
 
 /**
  * Pay runs (U-02), mounted at /api/v1/workspaces/:workspaceId/pay-runs (workspaceRoutes.ts, owners
@@ -12,6 +13,8 @@ import type { PayRunEmployeeLine } from '../../lib/payRunPosting';
  * POST /:payRunId/approve or /reject, and PUT /approval turns approval on or off.
  */
 export const payRunRouter = express.Router({ mergeParams: true });
+// PAY-1: an outside payroll provider's results, one entry per pay date (payrollImportRoutes.ts)
+payRunRouter.use('/imports', payrollImportRouter);
 
 type AuthedRequest = express.Request & { user: { uid: string; email?: string } };
 const schema = z.object({

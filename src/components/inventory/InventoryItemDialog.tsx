@@ -5,11 +5,15 @@ import AsyncButton from '../ui/AsyncButton';
 import { useDialog } from '../../hooks/useDialog';
 import { TAX_CATEGORIES } from '../../lib/tax/taxCategories';
 import { useState, useMemo } from 'react';
+import { useLedgerStore } from '../../stores/useLedgerStore';
 import { bundlePartChoices, bundleProblem, type BundlePart } from '../../lib/itemBundles';
+import { levelProblem } from '../../lib/locationLevels';
 import { UNITS } from '../../lib/units';
 import { CONSIGNMENT_OPTIONS } from '../../lib/consignmentStock';
 import RecordNotesPanel from '../common/RecordNotesPanel';
 import type { InventoryItem } from '../../types';
+
+import ItemImagePanel from './ItemImagePanel';
 
 interface InventoryItemDialogProps {
   open: boolean;
@@ -22,12 +26,18 @@ interface InventoryItemDialogProps {
   canChangeStock: boolean;
   onClose: () => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  onItemImageChange?: (itemId: string) => void;
   /** Opens Adjust stock for the item being edited (its quantity changes only through the books). */
   onAdjust: (item: InventoryItem) => void;
+  /** ISS-130: the cost of stock on hand changes only by a revaluation (owners and accountants) */
+  onRevalue?: (item: InventoryItem) => void;
 }
 
 /** The add / edit item form of the Inventory screen (F-16: moved out of Inventory.tsx). */
-export default function InventoryItemDialog({ open, editingItem, categories, taxCodes = [], allItems = [], canChangeStock, onClose, onSubmit, onAdjust }: InventoryItemDialogProps) {
+export default function InventoryItemDialog({ open, editingItem, categories, taxCodes = [], allItems = [], canChangeStock, onClose, onSubmit, onItemImageChange, onAdjust, onRevalue }: InventoryItemDialogProps) {
+  // ISS-130: with stock on hand the cost is on the books; it changes by a revaluation, never by this form
+  // ISS-130: stock above zero has a value on the books; its cost changes only through a revaluation
+  const costLocked = (Number(editingItem?.quantityAtHand) || 0) > 0;
   const { dialogProps: itemDialogProps, titleId: itemTitleId } = useDialog(onClose, open);
   // A-19: the bundle's parts, held here and written into the form as JSON. The parent keys this
   // dialog by item id, so switching items gives fresh state without an effect.
@@ -47,6 +57,29 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
     setParts(candidateParts);
     setPartToAdd(''); setPartQuantity('1');
   };
+  // A-115: minimum/maximum per location, held here and written into the form as JSON. The parent
+  // keys this dialog by item id, so switching items gives fresh state without an effect.
+  const dimensionNodes = useLedgerStore(s => s.dimensionNodes || []);
+  const [levelDrafts, setLevelDrafts] = useState<Record<string, { min: string; max: string }>>(() =>
+    Object.fromEntries(Object.entries(editingItem?.locationLevels || {}).map(([id, l]) => [id, { min: String(l.min), max: String(l.max) }])) as Record<string, { min: string; max: string }>);
+  const locationNodes = useMemo(() => {
+    const byId = new Map((dimensionNodes || []).filter(n => n.dimensionId === 'location').map(n => [n.id, n]));
+    const rows = [...byId.values()].filter(n => n.status !== 'archived');
+    for (const id of Object.keys(levelDrafts)) {
+      if (!rows.some(n => n.id === id) && (levelDrafts[id].min.trim() || levelDrafts[id].max.trim())) {
+        rows.push(byId.get(id) || { id, dimensionId: 'location', description: id });
+      }
+    }
+    return rows.sort((a, b) => a.description.localeCompare(b.description, undefined, { sensitivity: 'base' }));
+  }, [dimensionNodes, levelDrafts]);
+  const levelsProblem = locationNodes
+    .map(n => levelProblem(levelDrafts[n.id]?.min || '', levelDrafts[n.id]?.max || ''))
+    .find(Boolean) as string | undefined;
+  const levelsJson = JSON.stringify(Object.fromEntries(locationNodes.flatMap(n => {
+    const draft = levelDrafts[n.id] || { min: '', max: '' };
+    if ((!draft.min.trim() && !draft.max.trim()) || levelProblem(draft.min, draft.max)) return [];
+    return [[n.id, { min: Number(draft.min), max: Number(draft.max) }]];
+  })));
   return (
     <AnimatePresence>
         {open && (
@@ -127,8 +160,14 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                     step="0.01" 
                     defaultValue={editingItem ? editingItem.unitCostCents / 100 : undefined}
                     required 
-                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
+                    readOnly={costLocked}
+                    aria-describedby={costLocked ? 'inv-unit-cost-locked' : undefined}
+                    className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold read-only:opacity-70" 
                   />
+                  {costLocked && editingItem && <p id="inv-unit-cost-locked" className="text-[10px] text-[var(--muted)]">
+                    It has stock on hand, so its cost is on the books: change it with a revaluation, which posts the difference.
+                    {onRevalue && <> <button type="button" onClick={() => onRevalue(editingItem)} className="min-h-11 px-1 font-semibold text-emerald-700 hover:underline">Revalue cost</button></>}
+                  </p>}
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="inv-unit-price" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Unit Price ($)</label>
@@ -237,6 +276,32 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                     className="w-full px-6 py-4 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-zinc-900 transition-all font-bold" 
                   />
                 </div>
+                <fieldset className="space-y-2 md:col-span-2">
+                  <legend className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Stock levels per location</legend>
+                  <input type="hidden" name="locationLevels" value={levelsJson} />
+                  {locationNodes.length === 0 && (
+                    <p className="text-[10px] text-[var(--muted)]">No locations yet — add Location values under Settings → Dimensions &amp; Labels first.</p>
+                  )}
+                  {locationNodes.map(node => (
+                    <div key={node.id} className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-semibold min-w-28 flex-1">{node.description}</span>
+                      <label htmlFor={`inv-level-min-${node.id}`} className="sr-only">Minimum at {node.description}</label>
+                      <input id={`inv-level-min-${node.id}`} type="number" min="0" step="1" placeholder="Min"
+                        aria-label={`Minimum at ${node.description}`}
+                        value={levelDrafts[node.id]?.min || ''}
+                        onChange={e => setLevelDrafts(prev => ({ ...prev, [node.id]: { min: e.target.value, max: prev[node.id]?.max || '' } }))}
+                        className="w-24 px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-2xl font-bold text-sm" />
+                      <label htmlFor={`inv-level-max-${node.id}`} className="sr-only">Maximum at {node.description}</label>
+                      <input id={`inv-level-max-${node.id}`} type="number" min="0" step="1" placeholder="Max"
+                        aria-label={`Maximum at ${node.description}`}
+                        value={levelDrafts[node.id]?.max || ''}
+                        onChange={e => setLevelDrafts(prev => ({ ...prev, [node.id]: { min: prev[node.id]?.min || '', max: e.target.value } }))}
+                        className="w-24 px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-2xl font-bold text-sm" />
+                    </div>
+                  ))}
+                  {levelsProblem && <p role="alert" className="text-[10px] text-amber-600">{levelsProblem}</p>}
+                  <p className="text-[10px] text-[var(--muted)]">When a location falls below its minimum, the reorder suggestions offer to top it up to the maximum. Blank leaves the location out; this never moves stock by itself.</p>
+                </fieldset>
                 <div className="space-y-2">
                   <label htmlFor="inv-uom" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">UOM (e.g. pack, kg)</label>
                   <input 
@@ -276,7 +341,9 @@ export default function InventoryItemDialog({ open, editingItem, categories, tax
                 </div>
               </form>
               {editingItem?.id && (
-                <div className="p-4 md:p-8 border-t border-[var(--line)]">
+                <div className="space-y-6 p-4 md:p-8 border-t border-[var(--line)]">
+                  <ItemImagePanel itemId={editingItem.id} itemName={editingItem.name || 'this item'} workspaceId={editingItem.workspaceId || ''}
+                    onChange={() => onItemImageChange?.(editingItem.id)} />
                   <RecordNotesPanel entityType="item" entityId={editingItem.id} entityName={editingItem.name || 'this item'}
                     metadata={(editingItem as { metadata?: Record<string, unknown> }).metadata}
                     canEdit={canChangeStock} />

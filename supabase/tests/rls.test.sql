@@ -172,6 +172,28 @@ select pg_temp.expect_ok('edit an item''s price', 'u-book',
 select pg_temp.expect_denied('change an item''s quantity in the browser', 'u-book',
   $$select lf_update('inventory','i1','{"quantityAtHand":50}'::jsonb)$$);
 
+-- the cost of stock on hand changes only through the server's revaluation (ISS-130)
+select pg_temp.expect_ok('set the cost of an item with nothing on hand (a template)', 'u-book',
+  $$select lf_update('inventory','i1','{"unitCostCents":450}'::jsonb)$$);
+-- the server (not a browser role) puts stock on hand, as Adjust stock does
+do $$ begin
+  perform set_config('request.jwt.claims', '', true);
+  update inventory set data = data || '{"quantityAtHand":10}'::jsonb where id = 'i1';
+end $$;
+select pg_temp.expect_denied('change the cost of stock on hand in the browser', 'u-book',
+  $$select lf_update('inventory','i1','{"unitCostCents":1200}'::jsonb)$$);
+select pg_temp.expect_denied('owner cannot either: only the revaluation changes it', 'u-owner',
+  $$select lf_update('inventory','i1','{"unitCostCents":1200}'::jsonb)$$);
+select pg_temp.expect_ok('rename the stocked item in the browser (the cost is untouched)', 'u-book',
+  $$select lf_update('inventory','i1','{"name":"Widget L"}'::jsonb)$$);
+-- #259 review: stock below zero has no value on the books, so its cost stays editable
+do $$ begin
+  perform set_config('request.jwt.claims', '', true);
+  update inventory set data = data || '{"quantityAtHand":-2}'::jsonb where id = 'i1';
+end $$;
+select pg_temp.expect_ok('set the cost of an item sold below zero (no value on the books)', 'u-book',
+  $$select lf_update('inventory','i1','{"unitCostCents":1250}'::jsonb)$$);
+
 -- only owners and accountants approve or send back an invoice (BE-04, L-191)
 select pg_temp.expect_ok('bookkeeper saves an invoice waiting for approval', 'u-book',
   $$insert into invoices(id,data) values ('inv-appr', '{"workspaceId":"ws1","customerId":"c2","amountCents":150000,"status":"pending","date":"2026-10-05","approval":{"state":"awaiting","thresholdCents":100000}}')$$);
@@ -319,6 +341,29 @@ begin
   end loop;
 end $$;
 
+-- AUD-09 / AI #6: every standard write family must reject cross-workspace moves by an authorized writer.
+do $audit$
+declare
+  t text;
+begin
+  foreach t in array array[
+    'transactions', 'journalEntries', 'invoices', 'payments', 'bills', 'creditNotes', 'vendorCredits',
+    'projects', 'estimates', 'inventory', 'recurring', 'budgets', 'autoRules', 'fixedAssets', 'assets',
+    'taxRates', 'dimensionNodes', 'vendors', 'customers', 'rulePatterns', 'scenarios', 'loans',
+    'employees', 'partners', 'reconciliations', 'workspaceShards'
+  ] loop
+    if pg_temp.try_as('u-book', format('select lf_update(%L, %L, %L::jsonb)', t, 'iso-' || t, '{"workspaceId":"ws2"}')) then
+      raise exception 'FAIL %: writer moved an existing record into another workspace', t;
+    end if;
+    -- A refused call is not enough: prove the durable record still belongs to ws1.
+    if pg_temp.count_rows('u-view', format(
+      'select count(*) from public.%I where id = %L and data->>''workspaceId'' = %L',
+      t, 'iso-' || t, 'ws1')) <> 1 then
+      raise exception 'FAIL %: cross-workspace move changed the durable workspaceId', t;
+    end if;
+  end loop;
+end $audit$;
+
 -- Every dated table: nothing is posted into, or moved into, a locked period (ws1 is locked to 2026-01-31).
 do $$
 declare t text;
@@ -459,14 +504,29 @@ select set_config('request.jwt.claims', '', true);
 insert into "payRuns" (id, data) values ('pr1', '{"workspaceId":"ws1","date":"2026-02-15","status":"awaiting_approval"}');
 select pg_temp.expect_count('viewer reads pay runs', 'u-view', $$select count(*) from "payRuns"$$, 1);
 select pg_temp.expect_count('outsider reads pay runs', 'u-out', $$select count(*) from "payRuns"$$, 0);
-select pg_temp.expect_denied('owner approves a pay run from the browser', 'u-owner', $$select lf_update('payRuns','pr1','{"status":"processed"}'::jsonb)$$);
+select pg_temp.expect_denied('owner approves a pay run from the browser', 'u-owner', $stmt$select lf_update('payRuns','pr1','{"status":"processed"}'::jsonb)$stmt$);
+select pg_temp.expect_denied('owner cannot move a pay run to another workspace', 'u-owner',
+  $stmt$select lf_update('payRuns','pr1','{"workspaceId":"ws2"}'::jsonb)$stmt$);
+select pg_temp.expect_value('refused pay-run move leaves workspace unchanged',
+  $q$select data->>'workspaceId' from "payRuns" where id = 'pr1'$q$, 'ws1');
 select pg_temp.expect_denied('bookkeeper adds a pay run from the browser', 'u-book',
   $$insert into "payRuns"(id,data) values ('pr2', '{"workspaceId":"ws1","date":"2026-02-15","status":"processed"}')$$);
 select pg_temp.expect_denied('owner deletes a pay run from the browser', 'u-owner', $$delete from "payRuns" where id = 'pr1'$$);
 
+-- S-01 rate-limit counters: server only — no member reads, writes or deletes them from the browser
+insert into "rateLimitEntries" (id, data) values ('rl_t1', '{"keyHash":"t1","count":1,"windowStart":0,"workspaceId":"ws1"}');
+select pg_temp.expect_denied('owner reads rate-limit counters', 'u-owner', $$select count(*) from "rateLimitEntries"$$);
+select pg_temp.expect_denied('owner resets a rate-limit counter', 'u-owner', $$select lf_update('rateLimitEntries','rl_t1','{"count":0}'::jsonb)$$);
+select pg_temp.expect_denied('owner writes a rate-limit counter', 'u-owner', $$select lf_set('rateLimitEntries','rl_t2','{"keyHash":"t2","count":0,"windowStart":0,"workspaceId":"ws1"}'::jsonb)$$);
+select pg_temp.expect_denied('owner deletes a rate-limit counter', 'u-owner', $$delete from "rateLimitEntries" where id = 'rl_t1'$$);
+
 -- purchase orders: members read; owners, accountants and bookkeepers write
 select pg_temp.expect_ok('bookkeeper saves a purchase order', 'u-book',
-  $$insert into "purchaseOrders"(id,data) values ('po1', '{"workspaceId":"ws1","poNumber":"PO-2026-001","vendorId":"v1","vendorName":"V","status":"approved","items":[],"totalAmountCents":1000,"receipts":[]}')$$);
+  $stmt$insert into "purchaseOrders"(id,data) values ('po1', '{"workspaceId":"ws1","poNumber":"PO-2026-001","vendorId":"v1","vendorName":"V","status":"approved","items":[],"totalAmountCents":1000,"receipts":[]}')$stmt$);
+select pg_temp.expect_denied('bookkeeper cannot move a purchase order to another workspace',
+  'u-book', $stmt$select lf_update('purchaseOrders','po1','{"workspaceId":"ws2"}'::jsonb)$stmt$);
+select pg_temp.expect_value('refused purchase-order move leaves workspace unchanged',
+  $q$select data->>'workspaceId' from "purchaseOrders" where id = 'po1'$q$, 'ws1');
 select pg_temp.expect_count('viewer reads purchase orders', 'u-view', $$select count(*) from "purchaseOrders"$$, 1);
 select pg_temp.expect_denied('viewer changes a purchase order', 'u-view', $$select lf_update('purchaseOrders','po1','{"status":"cancelled"}'::jsonb)$$);
 select pg_temp.expect_count('outsider reads purchase orders', 'u-out', $$select count(*) from "purchaseOrders"$$, 0);

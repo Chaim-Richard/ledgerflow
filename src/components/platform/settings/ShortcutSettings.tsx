@@ -14,13 +14,17 @@ export default function ShortcutSettings() {
   const [selectedTab, setSelectedTab] = useState('');
 
   
-  const ALL_TOOLS = [
-    ...APP_TABS,
-    ...SETTINGS_TABS_REGISTRY,
-    ...REPORT_TABS_REGISTRY,
-    ...INTELLIGENCE_TABS_REGISTRY,
-    ...ANALYTICAL_LENSES_REGISTRY
-  ];
+  const ALL_TOOLS = Array.from(
+    new Map(
+      [
+        ...APP_TABS,
+        ...SETTINGS_TABS_REGISTRY,
+        ...REPORT_TABS_REGISTRY,
+        ...INTELLIGENCE_TABS_REGISTRY,
+        ...ANALYTICAL_LENSES_REGISTRY,
+      ].map((tool) => [tool.id, tool]),
+    ).values(),
+  );
   
   const handleAdd = () => {
     if (newKey && selectedTab) {
