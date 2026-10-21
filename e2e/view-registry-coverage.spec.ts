@@ -90,6 +90,8 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Contact Balance Summary', componentName: 'ContactBalanceSummaryView' },
     { label: 'Inventory Valuation', componentName: 'InventoryValuationReportView' },
     { label: 'Inventory Item Details', componentName: 'InventoryDetailsReportView' },
+    { label: 'Expiring Lots', componentName: 'ExpiringLotsReportView' },
+    { label: 'Stock Transfers', componentName: 'StockTransfersReportView' },
     { label: 'Transactions by Reference', componentName: 'TransactionsByReferenceView' },
     { label: 'Group Summary', componentName: 'GroupSummaryReportView' },
     { label: 'Ask the Books', componentName: 'AskBooksView' },

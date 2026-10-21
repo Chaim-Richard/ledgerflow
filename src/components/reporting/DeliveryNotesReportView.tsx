@@ -143,6 +143,9 @@ function DeliveryNotesContent() {
               description: l.description || item?.name || 'Item',
               unitPriceCents: l.rateCents,
               ...(item?.measurementUnit ? { measurementUnit: item.measurementUnit } : {}),
+              // A-112: the invoice line's recorded serials and lot print on the note; order and delivery lines record none
+              ...((l.serialNumbers || []).length ? { serialNumbers: l.serialNumbers } : {}),
+              ...(l.lotNumber ? { lotNumber: l.lotNumber } : {}),
             };
           }),
         };
@@ -200,7 +203,12 @@ function DeliveryNotesContent() {
     });
   }, [selected, effectiveNumber, effectiveDate, workspace, language, showPrices]);
 
-  const columns = useMemo(() => deliveryNoteColumns(showPrices, language), [showPrices, language]);
+  const hasSerials = useMemo(() => (doc?.rows || []).some(r => r.serials), [doc]);
+  const hasLots = useMemo(() => (doc?.rows || []).some(r => r.lot), [doc]);
+  const columns = useMemo(
+    () => deliveryNoteColumns(showPrices, language, { serials: hasSerials, lot: hasLots }),
+    [showPrices, language, hasSerials, hasLots],
+  );
 
   const partial = Boolean(
     truncated.estimates || truncated.invoices || truncated.inventory || truncated.customers ||
@@ -220,6 +228,8 @@ function DeliveryNotesContent() {
             r.amountCents !== undefined ? (r.amountCents / 100).toFixed(2) : '',
           );
         }
+        if (hasSerials) base.push(r.serials || '');
+        if (hasLots) base.push(r.lot || '');
         return base;
       }),
     );
@@ -232,7 +242,8 @@ function DeliveryNotesContent() {
           <h2>Delivery notes (EN / HE)</h2>
           <p className="text-sm text-[var(--muted)]">
             Printable delivery notes from sales orders and invoices, numbered in their own series ({defaultNextNumber}),
-            in English or Hebrew, with prices hidden by default.
+            in English or Hebrew, with prices hidden by default. Serials and lots print only when the source invoice
+            line recorded them; delivery entries record none, so those notes show none.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -396,6 +407,8 @@ function DeliveryNotesContent() {
                         </td>
                       </>
                     )}
+                    {hasSerials && <td className="py-2 px-2"><bdi>{row.serials || '\u2014'}</bdi></td>}
+                    {hasLots && <td className="py-2 px-2"><bdi>{row.lot || '\u2014'}</bdi></td>}
                   </tr>
                 ))}
               </tbody>

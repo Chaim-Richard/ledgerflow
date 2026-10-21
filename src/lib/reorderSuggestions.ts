@@ -12,6 +12,9 @@
  *
  * `reorderDraftOrders` only builds draft purchase orders in memory. Saving them goes through the
  * purchase-order screen's own write path. Nothing is posted.
+ *
+ * A-115: the vendor-price lookup, the line builder and the grouping are shared with the by-location
+ * suggestions (src/lib/locationLevels.ts), so both modes price, group and order the same way.
  */
 import type { Bill, InventoryItem, PurchaseOrder, Vendor } from '../types';
 import { nextPoNumber } from './purchaseOrders';
@@ -28,6 +31,10 @@ export interface ReorderLine {
   unitCostCents: number;
   /** where the unit cost came from: this vendor's last price, or the item's own */
   costSource: 'vendor-history' | 'item';
+  /** A-115: set on by-location rows — the location this row suggests for, and its maximum (the minimum rides in reorderPoint) */
+  locationId?: string;
+  locationName?: string;
+  maxLevel?: number;
 }
 
 export interface ReorderGroup {
@@ -44,21 +51,39 @@ export interface ReorderInput {
   vendors: Array<Pick<Vendor, 'id' | 'name'>>;
 }
 
-const roundUpTo = (quantity: number, step: number) => (step > 1 ? Math.ceil(quantity / step) * step : quantity);
+/** Round a quantity up to whole packages (a pack of 1 changes nothing). */
+export function roundUpToPack(quantity: number, packSize: number): number {
+  return packSize > 1 ? Math.ceil(quantity / packSize) * packSize : quantity;
+}
 
-/** The reorder suggestions, grouped by vendor (vendors first, by name; no vendor last). */
-export function reorderSuggestions(input: ReorderInput): ReorderGroup[] {
-  const vendorName = new Map(input.vendors.map(v => [v.id, v.name] as const));
-  // The most recent purchase per vendor and item, from bills and purchase orders alike.
-  // Dates are compared as text (YYYY-MM-DD), so the input order does not matter.
-  type Purchase = { vendorId: string; date: string; unit: number };
-  const vendorLast = new Map<string, Purchase>(); // key: vendorId + item
-  const itemLast = new Map<string, Purchase>(); // key: item (any vendor)
-  const remember = (map: Map<string, Purchase>, key: string, purchase: Purchase) => {
+export interface VendorPrice {
+  vendorId: string;
+  date: string;
+  unit: number;
+}
+
+export interface VendorPriceMaps {
+  /** key: vendor + item */
+  vendorLast: Map<string, VendorPrice>;
+  /** key: item (any vendor) */
+  itemLast: Map<string, VendorPrice>;
+}
+
+type PriceBill = { vendorId: string; date?: string; splits?: Array<{ itemId?: string; quantity?: number; amountCents: number }> };
+type PriceOrder = { vendorId: string; issueDate: string; items?: Array<{ itemId?: string; unitPriceCents: number }> };
+
+/**
+ * The most recent purchase per vendor and item, from bills and purchase orders alike.
+ * Dates are compared as text (YYYY-MM-DD), so the input order does not matter.
+ */
+export function vendorPriceMaps(bills: PriceBill[], orders: PriceOrder[]): VendorPriceMaps {
+  const vendorLast = new Map<string, VendorPrice>();
+  const itemLast = new Map<string, VendorPrice>();
+  const remember = (map: Map<string, VendorPrice>, key: string, purchase: VendorPrice) => {
     const current = map.get(key);
     if (!current || purchase.date >= current.date) map.set(key, purchase);
   };
-  for (const bill of input.bills) {
+  for (const bill of bills) {
     for (const split of bill.splits || []) {
       if (!split.itemId || !bill.vendorId) continue;
       const unit = unitCostCents(split.amountCents, split.quantity ?? 0);
@@ -69,7 +94,7 @@ export function reorderSuggestions(input: ReorderInput): ReorderGroup[] {
     }
   }
   // A purchase order line is a price the vendor quoted for the item: it counts with the bills, by date.
-  for (const po of input.orders) {
+  for (const po of orders) {
     for (const line of po.items || []) {
       if (!line.itemId || !po.vendorId) continue;
       const purchase = { vendorId: po.vendorId, date: String(po.issueDate || '').slice(0, 10), unit: line.unitPriceCents || 0 };
@@ -77,20 +102,27 @@ export function reorderSuggestions(input: ReorderInput): ReorderGroup[] {
       remember(itemLast, line.itemId, purchase);
     }
   }
+  return { vendorLast, itemLast };
+}
 
-  const groups = new Map<string, ReorderGroup>();
-  for (const item of input.items) {
-    if (item.itemType === 'service' || item.consignment) continue;
-    const onHand = Number(item.quantityAtHand) || 0;
-    const reorderPoint = Number(item.reorderPoint) || 0;
-    if (!(onHand < reorderPoint)) continue;
-    const packSize = Number(item.unitsPerPackage) || 1;
-    const suggestedQuantity = roundUpTo(reorderPoint - onHand, packSize);
-    const latest = itemLast.get(item.id);
-    const vendorId = latest?.vendorId;
-    const known = vendorId ? vendorLast.get(`${vendorId}\u0000${item.id}`)?.unit : undefined;
-    const unit = known !== undefined && known > 0 ? known : (item.unitCostCents || 0);
-    const line: ReorderLine = {
+/**
+ * One suggestion row for an item below its threshold, priced from the vendor's most recent unit
+ * cost for the item (bill or order) else the item's own unit cost, with the vendor it was last
+ * bought from. The caller decides the threshold and the suggested quantity.
+ */
+export function reorderLineFor(
+  item: Pick<InventoryItem, 'id' | 'name' | 'sku' | 'measurementUnit' | 'unitCostCents'>,
+  onHand: number,
+  reorderPoint: number,
+  suggestedQuantity: number,
+  maps: VendorPriceMaps,
+): { line: ReorderLine; vendorId?: string } {
+  const latest = maps.itemLast.get(item.id);
+  const vendorId = latest?.vendorId;
+  const known = vendorId ? maps.vendorLast.get(`${vendorId}\u0000${item.id}`)?.unit : undefined;
+  const unit = known !== undefined && known > 0 ? known : (item.unitCostCents || 0);
+  return {
+    line: {
       itemId: item.id,
       name: item.name,
       sku: item.sku,
@@ -100,16 +132,43 @@ export function reorderSuggestions(input: ReorderInput): ReorderGroup[] {
       suggestedQuantity,
       unitCostCents: unit,
       costSource: known !== undefined && known > 0 ? 'vendor-history' : 'item',
-    };
+    },
+    vendorId,
+  };
+}
+
+/** Suggestion rows grouped by vendor (vendors first, by name; no vendor last), lines by item. */
+export function groupReorderLines(
+  rows: Array<{ line: ReorderLine; vendorId?: string }>,
+  vendorName: Map<string, string>,
+): ReorderGroup[] {
+  const groups = new Map<string, ReorderGroup>();
+  for (const { line, vendorId } of rows) {
     const key = vendorId || '';
     const group = groups.get(key) || { vendorId, vendorName: vendorId ? (vendorName.get(vendorId) || vendorId) : 'No preferred vendor yet', lines: [], totalCents: 0 };
     group.lines.push(line);
-    group.totalCents += Math.round(unit * suggestedQuantity);
+    group.totalCents += Math.round(line.unitCostCents * line.suggestedQuantity);
     groups.set(key, group);
   }
   return [...groups.values()]
     .map(g => ({ ...g, lines: g.lines.sort((a, b) => a.name.localeCompare(b.name) || a.itemId.localeCompare(b.itemId)) }))
     .sort((a, b) => (!a.vendorId ? 1 : 0) - (!b.vendorId ? 1 : 0) || a.vendorName.localeCompare(b.vendorName));
+}
+
+/** The reorder suggestions, grouped by vendor (vendors first, by name; no vendor last). */
+export function reorderSuggestions(input: ReorderInput): ReorderGroup[] {
+  const vendorName = new Map(input.vendors.map(v => [v.id, v.name] as const));
+  const maps = vendorPriceMaps(input.bills, input.orders);
+  const rows: Array<{ line: ReorderLine; vendorId?: string }> = [];
+  for (const item of input.items) {
+    if (item.itemType === 'service' || item.consignment) continue;
+    const onHand = Number(item.quantityAtHand) || 0;
+    const reorderPoint = Number(item.reorderPoint) || 0;
+    if (!(onHand < reorderPoint)) continue;
+    const packSize = Number(item.unitsPerPackage) || 1;
+    rows.push(reorderLineFor(item, onHand, reorderPoint, roundUpToPack(reorderPoint - onHand, packSize), maps));
+  }
+  return groupReorderLines(rows, vendorName);
 }
 
 /**

@@ -10,6 +10,7 @@ import { useCollection } from '../../hooks/useCollection';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { performThreeWayMatch } from '../../lib/threeWayMatchEngine';
+import { lotExpiryProblem, lotProblem, normalizeLot, parseSerialList, serialListProblem } from '../../lib/serialNumbers';
 import { addOrderItem, awaitingApproval, billLinesFromOrder, canChangeOrder, canDeleteOrder, canMoveDelivery, changeOrderItem, lastOrderLines, nextPoNumber, orderDecision, orderDecisionProblem, orderNeedsApproval, removeOrderItem, vendorsByOrders } from '../../lib/purchaseOrders';
 import { suggestionsFrom } from '../../lib/inlineEdit';
 import { isArchivedParty } from '../../lib/contacts';
@@ -60,6 +61,10 @@ export const PurchaseOrdersView: React.FC = () => {
   const [receivingPO, setReceivingPO] = useState<PurchaseOrder | null>(null);
   const [receivedCondition, setReceivedCondition] = useState<GoodsReceipt['items'][number]['condition']>('good');
   const [receivedQuantities, setReceivedQuantities] = useState<Record<string, number>>({});
+  // A-112/A-113: serials, lot and expiry typed per stock line while receiving; saved onto the receipt's lines
+  const [receivedSerials, setReceivedSerials] = useState<Record<string, string>>({});
+  const [receivedLots, setReceivedLots] = useState<Record<string, string>>({});
+  const [receivedExpiry, setReceivedExpiry] = useState<Record<string, string>>({});
   const [billingPO, setBillingPO] = useState<PurchaseOrder | null>(null);
   const [previewPO, setPreviewPO] = useState<PurchaseOrder | null>(null);
   const pdfWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -104,11 +109,21 @@ export const PurchaseOrdersView: React.FC = () => {
     setReceivingPO(po);
     setReceivedCondition('good');
     setReceivedQuantities(Object.fromEntries(po.items.map(i => [i.id, Math.max(0, i.quantity - (i.receivedQuantity || 0))])));
+    setReceivedSerials({});
+    setReceivedLots({});
+    setReceivedExpiry({});
   };
+
+  /** Why a received stock line's typed serials, lot or expiry cannot be saved, or null. */
+  const receivedLineProblem = (poItemId: string): string | null =>
+    serialListProblem(receivedSerials[poItemId] || '')
+    || lotProblem(receivedLots[poItemId] || '')
+    || lotExpiryProblem(receivedExpiry[poItemId] || '');
 
   const handleSaveGoodsReceipt = async () => {
     const po = receivingPO;
     if (!po) return;
+    if (po.items.some(item => item.itemId && receivedLineProblem(item.id))) return;
     const receipt: GoodsReceipt = {
       id: crypto.randomUUID(),
       uid: useAuthStore.getState().user?.uid || '',
@@ -119,7 +134,18 @@ export const PurchaseOrdersView: React.FC = () => {
       vendorId: po.vendorId,
       vendorName: po.vendorName,
       receivedDate: today,
-      items: po.items.map(item => ({ poItemId: item.id, description: item.description, quantityReceived: receivedQuantities[item.id] ?? 0, unitPriceCents: item.unitPriceCents, condition: receivedCondition })),
+      items: po.items.map(item => {
+        const serials = item.itemId ? parseSerialList(receivedSerials[item.id] || '') : [];
+        const lot = item.itemId ? normalizeLot(receivedLots[item.id] || '') : '';
+        const expiry = item.itemId ? (receivedExpiry[item.id] || '').trim() : '';
+        return {
+          poItemId: item.id, description: item.description, quantityReceived: receivedQuantities[item.id] ?? 0,
+          unitPriceCents: item.unitPriceCents, condition: receivedCondition,
+          ...(serials.length ? { serialNumbers: serials } : {}),
+          ...(lot ? { lotNumber: lot } : {}),
+          ...(expiry ? { lotExpiryDate: expiry } : {}),
+        };
+      }),
       status: receivedCondition === 'good' ? 'verified' : 'discrepancy',
       createdAt: new Date().toISOString(),
     };
@@ -346,7 +372,11 @@ export const PurchaseOrdersView: React.FC = () => {
                   <td className="py-3 px-4 font-mono">{gr.poNumber}</td>
                   <td className="py-3 px-4">{gr.vendorName}</td>
                   <td className="py-3 px-4 font-mono">{formatDate(gr.receivedDate)}</td>
-                  <td className="py-3 px-4">{gr.items.map(i => `${i.description} (${i.quantityReceived})`).join(', ')}</td>
+                  <td className="py-3 px-4">{gr.items.map(i => [
+                    `${i.description} (${i.quantityReceived})`,
+                    ...(i.lotNumber ? [`lot ${i.lotNumber}${i.lotExpiryDate ? `, expires ${i.lotExpiryDate}` : ''}`] : []),
+                    ...((i.serialNumbers || []).length ? [`serials: ${(i.serialNumbers || []).join(', ')}`] : []),
+                  ].join(' · ')).join(', ')}</td>
                   <td className="py-3 px-4 text-center">{gr.items[0]?.condition || '—'}</td>
                 </tr>
               ))}
@@ -438,18 +468,49 @@ export const PurchaseOrdersView: React.FC = () => {
               </div>
               <fieldset className="space-y-2">
                 <legend className="font-semibold">Quantities delivered now</legend>
-                {receivingPO.items.map(item => (
-                  <div key={item.id} className="flex items-center justify-between gap-2 p-2 rounded-lg border border-[var(--line)]">
-                    <label htmlFor={`${ids}-q-${item.id}`}>{item.description} <span className="text-[var(--muted)]">({item.receivedQuantity || 0} of {item.quantity} so far)</span></label>
-                    <input id={`${ids}-q-${item.id}`} type="number" min="0" step="any" value={receivedQuantities[item.id] ?? 0}
-                      onChange={e => setReceivedQuantities({ ...receivedQuantities, [item.id]: Number(e.target.value) || 0 })}
-                      className="w-20 p-1 bg-[var(--panel)] border border-[var(--line)] rounded-md text-center" />
-                  </div>
-                ))}
+                {receivingPO.items.map(item => {
+                  const problem = item.itemId ? receivedLineProblem(item.id) : null;
+                  return (
+                    <div key={item.id} className="p-2 rounded-lg border border-[var(--line)] space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <label htmlFor={`${ids}-q-${item.id}`}>{item.description} <span className="text-[var(--muted)]">({item.receivedQuantity || 0} of {item.quantity} so far)</span></label>
+                        <input id={`${ids}-q-${item.id}`} type="number" min="0" step="any" value={receivedQuantities[item.id] ?? 0}
+                          onChange={e => setReceivedQuantities({ ...receivedQuantities, [item.id]: Number(e.target.value) || 0 })}
+                          className="w-20 p-1 bg-[var(--panel)] border border-[var(--line)] rounded-md text-center" />
+                      </div>
+                      {item.itemId && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <label className="flex flex-col gap-1">Serial numbers
+                            <input value={receivedSerials[item.id] || ''} placeholder="Separated by commas" dir="auto"
+                              aria-label={`Serial numbers for ${item.description}`}
+                              onChange={e => setReceivedSerials({ ...receivedSerials, [item.id]: e.target.value })}
+                              className="p-1 bg-[var(--panel)] border border-[var(--line)] rounded-md" />
+                          </label>
+                          <label className="flex flex-col gap-1">Lot
+                            <input value={receivedLots[item.id] || ''} placeholder="Lot or batch" dir="auto"
+                              aria-label={`Lot for ${item.description}`}
+                              onChange={e => setReceivedLots({ ...receivedLots, [item.id]: e.target.value })}
+                              className="p-1 bg-[var(--panel)] border border-[var(--line)] rounded-md" />
+                          </label>
+                          <label className="flex flex-col gap-1">Lot expires
+                            <input type="date" value={receivedExpiry[item.id] || ''}
+                              aria-label={`Lot expiry for ${item.description}`}
+                              onChange={e => setReceivedExpiry({ ...receivedExpiry, [item.id]: e.target.value })}
+                              className="p-1 bg-[var(--panel)] border border-[var(--line)] rounded-md" />
+                          </label>
+                        </div>
+                      )}
+                      {item.itemId && (
+                        <p className="text-[var(--muted)]">Serials, lot and expiry are recorded for traceability; they change no stock, cost or posting.</p>
+                      )}
+                      {problem && <p role="alert" className="text-amber-700">{problem}</p>}
+                    </div>
+                  );
+                })}
               </fieldset>
               <div className="pt-3 flex items-center justify-end gap-2">
                 <button type="button" onClick={() => setReceivingPO(null)} className="px-4 py-2 font-semibold border border-[var(--line)] rounded-lg">Cancel</button>
-                <button type="button" disabled={saving} onClick={handleSaveGoodsReceipt} className="px-4 py-2 font-semibold bg-[var(--brass)] text-[var(--ink)] rounded-lg flex items-center gap-1.5 disabled:opacity-50">
+                <button type="button" disabled={saving || receivingPO.items.some(item => item.itemId && receivedLineProblem(item.id))} onClick={handleSaveGoodsReceipt} className="px-4 py-2 font-semibold bg-[var(--brass)] text-[var(--ink)] rounded-lg flex items-center gap-1.5 disabled:opacity-50">
                   <Check className="w-3.5 h-3.5" aria-hidden="true" /> Save
                 </button>
               </div>

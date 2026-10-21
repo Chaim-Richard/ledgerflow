@@ -451,6 +451,8 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'IsraeliDocumentTypesView': lazy(() => import('../components/reporting/IsraeliDocumentTypesView')),
   'Us1099PreviewReportView': lazy(() => import('../components/reporting/Us1099PreviewReportView')),
   'UsFilingCalendarReportView': lazy(() => import('../components/reporting/UsFilingCalendarReportView')),
+  'ExpiringLotsReportView': lazy(() => import('../components/reporting/ExpiringLotsReportView')),
+  'StockTransfersReportView': lazy(() => import('../components/reporting/StockTransfersReportView')),
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = withScreenHelp([
@@ -518,6 +520,8 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'backorders', label: { en: 'Backorders', he: 'הזמנות ממתינות למלאי' }, componentName: 'BackordersReportView', icon: Package },
   { id: 'form-856', label: { en: 'Withholding Report (Form 856)', he: 'דוח ניכוי במקור (טופס 856)' }, componentName: 'Form856ReportView', icon: Receipt },
   { id: 'inventory-details', label: { en: 'Inventory Item Details', he: 'פירוט תנועות מלאי' }, componentName: 'InventoryDetailsReportView', icon: Package },
+  { id: 'expiring-lots', label: { en: 'Expiring Lots', he: 'סידות פגות תוקף' }, componentName: 'ExpiringLotsReportView', icon: Package },
+  { id: 'stock-transfers', label: { en: 'Stock Transfers', he: 'העברות מלאי' }, componentName: 'StockTransfersReportView', icon: ArrowLeftRight },
   { id: 'journal-sheet', label: { en: 'Journal Sheet', he: 'גיליון יומן' }, componentName: 'JournalSheetReportView', icon: BookOpen },
   { id: 'expense-by-category', label: { en: 'Expense by Category', he: 'הוצאות לפי קטגוריה' }, componentName: 'ExpenseByCategoryReportView', icon: PieChart },
   { id: 'income-by-source', label: { en: 'Income by Source', he: 'הכנסות לפי מקור' }, componentName: 'IncomeBySourceReportView', icon: TrendingUp },

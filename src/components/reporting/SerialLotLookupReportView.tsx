@@ -9,6 +9,8 @@ import React, { useMemo, useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { useCollection } from '../../hooks/useCollection';
+import type { Invoice, PurchaseOrder } from '../../types';
 import { downloadCsv } from '../../lib/csvExport';
 import {
   duplicateSerials, findSerial, lineSerials, lotRows, serialLookupCsvRows, serialsForItem,
@@ -24,24 +26,52 @@ interface DocLike {
 }
 interface ItemLike { id: string; name?: string; sku?: string }
 
-export default function SerialLotLookupReportView() {
-  const invoices = useLedgerStore(s => s.invoices) as unknown as DocLike[];
-  const bills = useLedgerStore(s => s.bills) as unknown as DocLike[];
-  const creditNotes = useLedgerStore(s => s.creditNotes) as unknown as DocLike[];
-  const vendorCredits = useLedgerStore(s => s.vendorCredits) as unknown as DocLike[];
+export default function SerialLotLookupReportView({ purchaseOrders: purchaseOrdersProp }: { purchaseOrders?: PurchaseOrder[] } = {}) {
+  const invoices = useLedgerStore(s => s.invoices) as Invoice[];
   const items = useLedgerStore(s => s.inventory) as ItemLike[];
   const truncated = useLedgerStore(s => s.truncatedCollections);
   const failed = useDataNeedsStore(s => s.failed);
-  const { loading } = useLedgerCollections('inventory', 'invoices', 'bills', 'creditNotes', 'vendorCredits');
+  const { loading } = useLedgerCollections('inventory', 'invoices');
+  const { data: loadedOrders, loading: ordersLoading, truncated: ordersTruncated } = useCollection<PurchaseOrder>('purchaseOrders', { orderByField: 'createdAt', orderDirection: 'desc', limit: 500 });
+  const purchaseOrders = purchaseOrdersProp ?? loadedOrders;
   const [query, setQuery] = useState('');
   const [itemId, setItemId] = useState('');
 
-  const documents = useMemo(() => [
-    ...(invoices || []).map(d => ({ ...d, type: 'invoice' })),
-    ...(bills || []).map(d => ({ ...d, type: 'bill' })),
-    ...(creditNotes || []).map(d => ({ ...d, type: 'credit note' })),
-    ...(vendorCredits || []).map(d => ({ ...d, type: 'vendor credit' })),
-  ], [invoices, bills, creditNotes, vendorCredits]);
+  const documents = useMemo(() => {
+    const list: DocLike[] = [];
+    for (const inv of invoices || []) {
+      list.push({
+        id: inv.id,
+        type: 'invoice',
+        date: inv.date,
+        lines: (inv.items || []).map(l => ({
+          description: l.description,
+          itemId: l.itemId,
+          quantity: l.quantity,
+          ...((l.serialNumbers || []).length ? { serialNumbers: l.serialNumbers } : {}),
+          ...(l.lotNumber ? { lotNumber: l.lotNumber } : {}),
+        })),
+      });
+    }
+    for (const po of purchaseOrders || []) {
+      const itemOf = new Map((po.items || []).map(i => [i.id, i.itemId] as const));
+      for (const receipt of po.receipts || []) {
+        list.push({
+          id: receipt.receiptNumber,
+          type: 'goods receipt',
+          date: receipt.receivedDate,
+          lines: (receipt.items || []).map((line, index) => ({
+            description: line.description || `Line ${index + 1}`,
+            itemId: itemOf.get(line.poItemId),
+            quantity: line.quantityReceived,
+            ...((line.serialNumbers || []).length ? { serialNumbers: line.serialNumbers } : {}),
+            ...(line.lotNumber ? { lotNumber: line.lotNumber } : {}),
+          })),
+        });
+      }
+    }
+    return list;
+  }, [invoices, purchaseOrders]);
 
   /** Every line that carries a serial or a lot, with its item — the universe the lookup reads. */
   const tracked = useMemo(() => {
@@ -72,8 +102,7 @@ export default function SerialLotLookupReportView() {
     [documents, selected],
   );
   const duplicates = useMemo(() => duplicateSerials(documents), [documents]);
-  const partial = truncated.invoices || truncated.bills || truncated.inventory
-    || failed.invoices || failed.bills || failed.inventory;
+  const partial = Boolean(truncated.inventory || truncated.invoices || ordersTruncated || failed.inventory || failed.invoices);
   const itemName = (id: string) => {
     const item = (items || []).find(i => i.id === id);
     return item ? (item.name || item.sku || item.id) : id;
@@ -84,12 +113,12 @@ export default function SerialLotLookupReportView() {
       <h2>Serial &amp; lot lookup</h2>
       <p className="text-sm text-[var(--muted)]">
         Where a serial number has been: the document, the line and the lot it moved with. Below, one item&apos;s lots
-        and the same serial recorded twice for one item — a typo to look at. The numbers are read from the documents
-        that carry them; this screen changes no cost, quantity or posting. Recording a serial on a receipt or invoice
-        line happens in that document&apos;s own form.
+        and the same serial recorded twice for one item — a typo to look at. The numbers are read from invoice lines
+        and goods receipts; this screen changes no cost, quantity or posting. Recording happens on the goods receipt
+        (Purchase orders → Receive goods) or on the invoice&apos;s own form.
       </p>
 
-      {loading && <p role="status" className="text-sm text-[var(--muted)]">Loading items and documents…</p>}
+      {(loading || ordersLoading) && <p role="status" className="text-sm text-[var(--muted)]">Loading items and documents…</p>}
       {partial && <p role="alert" className="text-sm text-[var(--muted)]">
         The loaded items or documents are capped or failed at the database. What is shown may be incomplete.
       </p>}
@@ -152,8 +181,8 @@ export default function SerialLotLookupReportView() {
 
       {tracked.length === 0 && (
         <p className="text-sm text-[var(--muted)]">
-          No loaded document line carries a serial number or a lot yet. The numbers appear here when they are recorded
-          on a receipt or invoice line.
+          No loaded invoice or receipt line carries a serial number or a lot yet. The numbers appear here when they are recorded
+          on a goods receipt or invoice line.
         </p>
       )}
 

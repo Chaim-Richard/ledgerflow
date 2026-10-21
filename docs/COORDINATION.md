@@ -360,10 +360,10 @@ before:
 - [P] **A-104 US federal payroll tables by year: Social Security wage base, Medicare rates, FUTA (for payroll; tables only)** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
 - [P] **A-105 US state unemployment (SUTA) wage bases, top 10 states** *(LATER — parked 18 Oct, stage 3: build only for a verified customer need; see PLAN §15)*
 - [ ] **A-107 US federal per diem (GSA) table import for A-76**
-- [ ] **A-112 Inventory: serial numbers per item (capture on receipt, show on delivery note)**
-- [ ] **A-113 Inventory: lot numbers and expiry dates, with an expiring-lots report**
-- [ ] **A-114 Inventory: stock transfers between locations (document + report; postings stay AI #1's)**
-- [ ] **A-115 Inventory: minimum/maximum per location feeding reorder suggestions**
+- [~] **A-112 Inventory: serial numbers per item (capture on receipt, show on delivery note)** *(PR open, AI #3, 20 Oct, `arena/1ef775ce-ledgerflow` with A-113–A-115: serials/lot/expiry captured on the receive-goods dialog onto `GoodsReceiptItem`, validated in plain words; Serial & lot lookup fixed to read real invoice `items` plus goods receipts (the old `lines` mapping read a shape no document has); delivery notes print Serials/Lot when the invoice line recorded them. Invoice-line capture still needs AI #1's reserved InvoiceModal.)*
+- [~] **A-113 Inventory: lot numbers and expiry dates, with an expiring-lots report** *(PR open, AI #3, 20 Oct, same branch: Reports → Expiring Lots groups received lots by earliest expiry, flags expired/expiring, shows receipts/vendors/sale references; per-lot on-hand never computed (not tracked). `expiringLots.ts` + view tests.)*
+- [~] **A-114 Inventory: stock transfers between locations (document + report; postings stay AI #1's)** *(PR open, AI #3, 20 Oct, same branch: the move UI already exists in the Stock history window; Reports → Stock Transfers reads the transfer-out/in pairs back from `stockMoves` (newest 5,000), lone halves shown with the reason. `stockTransfers.ts` + view tests.)*
+- [~] **A-115 Inventory: minimum/maximum per location feeding reorder suggestions** *(PR open, AI #3, 20 Oct, same branch: `InventoryItem.locationLevels` edited on the item dialog; reorder Location mode suggests top-ups to the maximum where the move history proves the split, unprovable items unplaced with the reason; Total mode unchanged. `locationLevels.ts`, shared `reorderSuggestions.ts` helpers + lib/view tests.)*
 - [ ] **A-116 Inventory: kits assembled on demand (uses A-19 bundles)**
 - [ ] **A-117 Inventory: stock valuation report by location and lot**
 - [ ] **A-119 Purchasing: vendor quotes compare screen (several vendors per item)**
