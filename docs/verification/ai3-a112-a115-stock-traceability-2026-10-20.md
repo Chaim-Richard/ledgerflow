@@ -1,6 +1,6 @@
 # AI #3 A-112–A-115 — stock traceability batch (20 Oct 2026)
 
-**Branch:** `arena/1ef775ce-ledgerflow` (PR number recorded in Messages after opening). **Scope:** serial/lot capture and lookup, expiring lots, stock transfers report, per-location levels feeding reorder suggestions. No money, posting, tax maths, migrations or `src/server/` changes.
+**Branch:** `arena/1ef775ce-ledgerflow`, PR #265. **Scope:** serial/lot capture and lookup, expiring lots, stock transfers report, per-location levels feeding reorder suggestions. No money, posting, tax maths, migrations or `src/server/` changes.
 
 ## What each task delivers
 
