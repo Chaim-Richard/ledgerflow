@@ -57,10 +57,10 @@ jobs:
             'Unknown, dual-licensed and transitive packages require individual review.',
             '',
             '## Components missing license metadata',
-            ...unknown.map(item => '- ' + String(item.name || 'unnamed').replace(/[\\r\\n]/g, ' ')),
+            ...unknown.map(item => '- ' + String(item.name || 'unnamed').replace(/[\r\n]/g, ' ')),
             '',
           ];
-          fs.writeFileSync('sbom-summary.md', lines.join('\\n'));
+          fs.writeFileSync('sbom-summary.md', lines.join('\n'));
           NODE
       - name: Save SBOM evidence
         if: always()
