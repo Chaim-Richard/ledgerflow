@@ -49,3 +49,33 @@ Reviewed phone/light and desktop/dark captures for readable labels, stacking and
 3. Reconciliation still uses jargon (e.g. “Streams”, “Registry Unoccupied”, “Cognitive Alignments Panel”). Those existing screens and their contracts were not renamed in this small batch; finish that wording pass before claiming “every unclear word” is fixed.
 4. No live email delivery, bank-provider acceptance, actual transfer, tax filing, production configuration or deployment claim is made.
 5. AI #1 reviews/merges; this branch must not merge itself. Owner-paused Vercel previews are not treated as code test failures.
+
+## FINAL LOCAL HAND-OFF — 21 October 2026
+
+Implementation commit: `78653d3`. PR: [#275](https://github.com/shmuelbiller1/ledgerflow/pull/275).
+
+| Check | Final observed result |
+|---|---|
+| Whole unit suite, Node 24 + migrated PostgreSQL | **3,658 passed; 765 suites; 0 failures, skips or cancellations**; exit 0, 710.1s |
+| Types and whole-tree ESLint | pass; **0 errors / 207 warnings**, unchanged cap |
+| Clean lockfile install | `npm ci --ignore-scripts` on Node 24 passed; manifest/lockfile unchanged |
+| Production build after clean install | pass; Vite client + PWA service worker + bundled server generated; existing large-chunk warnings only |
+| Component checks repeated after clean install | **13/13**, no skips |
+| Browser checks | **7/7**, as detailed above |
+| RLS | **ALL RLS TESTS PASSED** |
+| Dependency audit high gate | pass; 2 moderate findings remain |
+| Independent GitHub CI | **not run**: no PR checks appeared, and manual dispatch returned HTTP 403 “Resource not accessible by integration” |
+| Coverage / all-browser suite / timezone matrix | not run locally; not substituted by targeted browser checks or unit pass counts |
+
+Full-suite command uses the repository's exact file globs, deterministic salt and test database, with Node 24 and explicit resource-bounded concurrency:
+
+```sh
+NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic \
+LF_TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lf_test \
+npx tsx --test --test-concurrency=4 \
+  src/tests/*.test.ts src/tests/*.test.tsx src/lib/*.test.ts src/server/utils/*.test.ts
+```
+
+**Tooling incident (resolved, not a product change):** installing temporary Chromium with `npm install --no-save` re-hoisted Babel 8 above Workbox's Babel 7 plugins. The first build failed while generating the service worker. Restoring the exact lockfile tree with `npm ci --ignore-scripts` restored root Babel 7.29.7 and the complete production build passed. No dependency “fix”, manifest change, override or relaxed build gate was committed. The full suite ran before this clean reinstall; targeted components were rerun afterwards. Browser binaries/runtime libraries remain outside the dependency tree for future local runs.
+
+Final for **this bounded implementation/audit hand-off**, not final certification of D-97, G-02, W1 or the release. Remaining wording audit also includes the existing chart selector's “Analytical Workspace Selector” / “Verified Invariant Maturation” labels, in addition to reconciliation jargon. Those are explicitly not claimed fixed by this batch. AI #1 can review this small batch independently; AI #7's authenticated first-hour proof and the remaining wording pass are still required.
