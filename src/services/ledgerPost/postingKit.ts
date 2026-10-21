@@ -94,6 +94,8 @@ async function postDocumentToServer(workspaceId: string, entityMutation: EntityM
   if (Array.isArray(data.warnings)) data.warnings.forEach((w: unknown) => toast.warning(String(w)));
   const written = Array.isArray(data.transactions) ? data.transactions as Transaction[] : [];
   if (data.replayed || written.length === 0) return;
+  // saved in the workspace it was asked in; when another workspace is open by now, its list is not touched
+  if (useAuthStore.getState().currentWorkspaceId !== workspaceId) return;
   // the entries as the server wrote them, replacing any copy with the same id (BUG-05)
   const store = useLedgerStore.getState();
   const posted = new Set(written.map(tx => tx.id));
