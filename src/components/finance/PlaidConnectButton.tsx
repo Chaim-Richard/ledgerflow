@@ -22,8 +22,37 @@ async function plaidPost(path: string, body: Record<string, unknown>, signal?: A
 /**
  * Connect a bank for the current workspace through Plaid Link. With `bankId` it reconnects an
  * existing connection whose bank asked the user to log in again (Plaid update mode).
+ *
+ * Plaid's script (cdn.plaid.com) and the link token are requested only after the button is pressed: loading
+ * them with every dashboard or Banking view asked the server for a token on each visit, and Plaid's script
+ * threw an uncaught "Failed to find script" when the screen was left before it finished (found by the
+ * first-hour guide browser test on CI).
  */
-export default function PlaidConnectButton({ onSuccessSync, bankId, label }: { onSuccessSync?: () => void; bankId?: string; label?: string }) {
+export default function PlaidConnectButton(props: { onSuccessSync?: () => void; bankId?: string; label?: string }) {
+  const [started, setStarted] = useState(false);
+  const closed = useCallback(() => setStarted(false), []);
+  const label = props.label || (props.bankId ? 'Reconnect bank' : 'Connect Bank');
+  if (!started) return <ConnectButton label={label} onClick={() => setStarted(true)} />;
+  return <PlaidLauncher {...props} label={label} onClosed={closed} />;
+}
+
+function ConnectButton({ label, onClick, busy = false }: { label: string; onClick: () => void; busy?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      aria-busy={busy || undefined}
+      className="h-12 px-6 bg-[var(--surface)] hover:border-[var(--brass-line)] border border-[var(--line)] text-[var(--text)] font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center gap-2 active:scale-95 disabled:opacity-50"
+    >
+      <Link2 size={14} aria-hidden="true" />
+      <span>{label}</span>
+    </button>
+  );
+}
+
+/** After the press: the link token, then Plaid's script, then Plaid Link opens by itself once it is ready. */
+function PlaidLauncher({ onSuccessSync, bankId, label, onClosed }: { onSuccessSync?: () => void; bankId?: string; label: string; onClosed: () => void }) {
   const workspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [token, setToken] = useState<{ workspaceId: string; bankId?: string; value: string } | null>(null);
   const linkToken = token?.workspaceId === workspaceId && token?.bankId === bankId ? token.value : null;
@@ -33,9 +62,14 @@ export default function PlaidConnectButton({ onSuccessSync, bankId, label }: { o
     const controller = new AbortController();
     plaidPost('create_link_token', { workspaceId, ...(bankId ? { bankId } : {}) }, controller.signal)
       .then(data => { if (!controller.signal.aborted) setToken({ workspaceId, bankId, value: data.link_token }); })
-      .catch(err => { if (!controller.signal.aborted) console.error('Error generating link token:', err); });
+      .catch(err => {
+        if (controller.signal.aborted) return;
+        console.error('Error generating link token:', err);
+        toast.error(err instanceof Error ? err.message : 'Bank connection failed');
+        onClosed();
+      });
     return () => { controller.abort(); };
-  }, [workspaceId, bankId]);
+  }, [workspaceId, bankId, onClosed]);
 
   const onSuccess = useCallback(
     async (public_token: string, metadata: { institution?: { name?: string } | null }) => {
@@ -50,22 +84,15 @@ export default function PlaidConnectButton({ onSuccessSync, bankId, label }: { o
         onSuccessSync?.();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to connect bank');
+      } finally {
+        onClosed();
       }
     },
-    [onSuccessSync, bankId, workspaceId]
+    [onSuccessSync, bankId, workspaceId, onClosed]
   );
 
-  const { open, ready } = usePlaidLink({ token: linkToken, onSuccess });
+  const { open, ready } = usePlaidLink({ token: linkToken, onSuccess, onExit: () => onClosed() });
+  useEffect(() => { if (ready) open(); }, [ready, open]);
 
-  return (
-    <button
-      type="button"
-      onClick={() => open()}
-      disabled={!ready}
-      className="h-12 px-6 bg-[var(--surface)] hover:border-[var(--brass-line)] border border-[var(--line)] text-[var(--text)] font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center gap-2 active:scale-95 disabled:opacity-50"
-    >
-      <Link2 size={14} aria-hidden="true" />
-      <span>{label || (bankId ? 'Reconnect bank' : 'Connect Bank')}</span>
-    </button>
-  );
+  return <ConnectButton label={label} onClick={() => { if (ready) open(); }} busy={!ready} />;
 }

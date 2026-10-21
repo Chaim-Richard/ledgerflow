@@ -8,7 +8,7 @@ import { ViewErrorBoundary } from '../common/ViewErrorBoundary';
 const SETTINGS_GROUPS = [
   { name: 'Workspace', ids: ['appearance', 'team', 'security', 'billing', 'modules', 'groups', 'shortcuts'] },
   { name: 'Accounting', ids: ['defaults', 'tax-profiles', 'currencies', 'dimensions', 'tags', 'split-rules'] },
-  { name: 'Documents & sales', ids: ['templates', 'branding', 'numbering', 'price-lists', 'price-list-import', 'custom-fields', 'sales-reps', 'stages'] },
+  { name: 'Documents & sales', ids: ['templates', 'branding', 'branding-profiles', 'numbering', 'price-lists', 'price-list-import', 'custom-fields', 'sales-reps', 'stages'] },
   { name: 'Automation', ids: ['rules', 'rule', 'emails', 'schedule', 'incoming-events', 'scheduled-reports', 'alerts'] },
   { name: 'Data & developer', ids: ['import', 'export', 'developer'] },
 ];

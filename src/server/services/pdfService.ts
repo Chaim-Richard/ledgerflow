@@ -22,7 +22,7 @@ import { DOCUMENT_WORDS, type DocumentLanguage, type DocumentWords } from '../..
 export type PdfDocumentType = BrandedDocument | 'bill' | 'vendorCredit';
 
 /** One printed row: invoice items, estimate lines or statement entries. */
-export interface PdfLine { description?: string; name?: string; quantity?: number; amountCents?: number | string }
+export interface PdfLine { description?: string; name?: string; quantity?: number; amountCents?: number | string; /** AUD-01: a statement row's balance after it */ balanceCents?: number }
 
 /** What a document PDF prints. Any saved invoice, estimate, credit note, payment or statement fits. */
 export interface PdfDocument {
@@ -48,6 +48,8 @@ export interface PdfDocument {
   taxBreakdown?: Array<{ name?: string; rate?: number; taxCents?: number }>;
   pricesIncludeTax?: boolean;
   depositCents?: number;
+  /** AUD-01: the period a statement covers, printed with it */
+  period?: { startDate: string; endDate: string };
   /** `saleReceipt` (K-03): an invoice paid on the spot, titled as a receipt */
   metadata?: { saleReceipt?: boolean; /** IL-6 */ ilAllocationNumber?: string };
   /** K-04: an estimate the customer accepted prints as a sales order, with their reference */
@@ -76,7 +78,7 @@ export interface PdfLayout {
   meta: Array<[string, string]>;
   recipientLabel: string;
   recipient: string;
-  rows: Array<{ description: string; quantity: string; amount: string }>;
+  rows: Array<{ description: string; quantity: string; amount: string; balance?: string }>;
   summary: Array<{ label: string; value: string; strong?: boolean }>;
   terms?: string;
   footer?: string;
@@ -92,6 +94,8 @@ export interface PdfLayout {
   style: 'classic' | 'bold' | 'minimal';
   /** Y-11: whether the quantity column is printed */
   quantityColumn: boolean;
+  /** AUD-01: a statement prints each row's running balance, as the screen and the JSON give it */
+  balanceColumn: boolean;
 }
 
 /** Text without control characters (tabs and new lines kept), trimmed and cut to `max`. */
@@ -140,6 +144,7 @@ export function layoutDocumentPdf(
   if ((type === 'invoice' || type === 'estimate' || type === 'bill' || type === 'purchaseOrder') && doc.dueDate) {
     meta.push([type === 'estimate' ? words.validUntil : type === 'purchaseOrder' ? words.deliverBy : words.due, clean(doc.dueDate, 10)]);
   }
+  if (type === 'statement' && doc.period) meta.push([words.period, `${clean(doc.period.startDate, 10)} – ${clean(doc.period.endDate, 10)}`]);
   if (type === 'invoice' && doc.paymentTerms) meta.push([words.terms, words.paymentTerms(doc.paymentTerms) || clean(doc.paymentTerms, 40)]);
   if (type === 'invoice' && doc.metadata?.ilAllocationNumber) meta.push([words.allocationNumber, clean(doc.metadata.ilAllocationNumber, 12)]);
   const salesOrder = type === 'estimate' && Boolean(doc.orderedAt);
@@ -154,7 +159,9 @@ export function layoutDocumentPdf(
       description: clean(item.description || item.name || words.item, 500),
       quantity: quantityColumn ? String(item.quantity ?? 1) : '',
       amount: money(Number(item.amountCents) || 0),
+      ...(typeof item.balanceCents === 'number' ? { balance: money(item.balanceCents) } : {}),
     }));
+  const balanceColumn = type === 'statement' && rows.some(r => r.balance !== undefined);
 
   // subtotal, discount and each tax part above the total (documents saved with the tax-code forms)
   const summary: PdfLayout['summary'] = [];
@@ -199,6 +206,7 @@ export function layoutDocumentPdf(
     words,
     style: branding.style === 'bold' || branding.style === 'minimal' ? branding.style : 'classic',
     quantityColumn,
+    balanceColumn,
   };
 }
 
@@ -270,7 +278,10 @@ export async function generateDocumentPdf(
 
   // --- the lines, over as many pages as needed
   const bottom = PAGE.height - PAGE.margin - FOOTER_SPACE;
-  const descWidth = 300;
+  const descWidth = layout.balanceColumn ? 230 : 300;
+  // a statement's amount moves left to make room for the balance after each row
+  const amountX = layout.balanceColumn ? 290 : 420;
+  const amountWidth = layout.balanceColumn ? 120 : RIGHT - 428;
   const tableHeader = () => {
     // Y-11: "minimal" has no coloured fill, only a thin line under the headings
     if (layout.style === 'minimal') {
@@ -282,7 +293,8 @@ export async function generateDocumentPdf(
     }
     text(layout.words.description, PAGE.margin + 8, y + 6, descWidth);
     if (layout.quantityColumn) text(layout.words.quantity, 360, y + 6, 50, 'right');
-    text(layout.words.amount, 420, y + 6, RIGHT - 428, 'right');
+    text(layout.words.amount, amountX, y + 6, amountWidth, 'right');
+    if (layout.balanceColumn) text(layout.words.balance, 420, y + 6, RIGHT - 428, 'right');
     y += 26;
   };
   const newPage = () => { pdf.addPage(); y = PAGE.margin; };
@@ -296,7 +308,8 @@ export async function generateDocumentPdf(
     ink();
     lines.forEach((line, i) => text(line, PAGE.margin + 8, y + i * 13, descWidth));
     if (row.quantity) text(row.quantity, 360, y, 50, 'right');
-    text(row.amount, 420, y, RIGHT - 428, 'right');
+    text(row.amount, amountX, y, amountWidth, 'right');
+    if (row.balance) text(row.balance, 420, y, RIGHT - 428, 'right');
     y += height;
     pdf.moveTo(PAGE.margin, y - 3).lineTo(RIGHT, y - 3).lineWidth(0.5).strokeColor('#E5E7EB').stroke();
   }

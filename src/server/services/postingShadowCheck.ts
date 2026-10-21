@@ -2,11 +2,14 @@ import type { Firestore } from '../db/firestore';
 import { logger } from '../utils/logger';
 import { postInvoiceLedger } from '../../services/ledgerPost/invoicePosting';
 import { postBillLedger } from '../../services/ledgerPost/billPosting';
+import { postCreditNoteLedger, postVendorCreditLedger } from '../../services/ledgerPost/creditPosting';
+import { effectiveLockDate } from '../../lib/periodLock';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from '../../services/ledgerPost/postingCore';
-import type { Bill, ChartAccount, InventoryItem, Invoice, Transaction, Workspace } from '../../types';
+import type { ChartAccount, InventoryItem, Invoice, Transaction, Workspace } from '../../types';
 
 /**
- * L-94 step 1 (shadow): after an invoice or bill save commits, the server rebuilds the entries the browser sent
+ * L-94 step 1 (shadow): after an invoice, bill, credit note or vendor credit save commits (L94-SHADOW-MORE added the
+ * last two; payments are not posted by the browser — POST /payments builds their entries on the server), the server rebuilds the entries the browser sent
  * with the same builder (postingCore, no browser code) from what is in the database, and compares them: the same
  * dates, accounts, amounts and labels. A difference is logged, never refused yet — the logs of the first testers
  * show whether the browser and the server ever disagree before step 1 starts refusing
@@ -22,7 +25,15 @@ export interface ShadowCheckInput {
 
 export type ShadowCheckResult = { checked: false; reason: string } | { checked: true; matched: boolean; expected: string[]; sent: string[] };
 
-const DOCUMENT_KEY: Record<string, 'invoiceId' | 'billId'> = { invoices: 'invoiceId', bills: 'billId' };
+type Builder = (id: string, data: Record<string, unknown>, workspaceId: string, uid: string, mutation: EntityMutation, context: LedgerPostContext) => Promise<unknown>;
+
+/** Each document the browser posts through /transactions/bulk (its allowlist): the metadata key its entries carry and its builder. */
+const BUILDERS: Record<string, { key: string; post: Builder }> = {
+  invoices: { key: 'invoiceId', post: (id, data, ws, uid, m, c) => postInvoiceLedger(id, data, ws, uid, m, c) },
+  bills: { key: 'billId', post: (id, data, ws, uid, m, c) => postBillLedger(id, data, ws, uid, m, c) },
+  creditNotes: { key: 'creditNoteId', post: (id, data, ws, uid, m, c) => postCreditNoteLedger(id, data, ws, uid, m, c) },
+  vendorCredits: { key: 'vendorCreditId', post: (id, data, ws, uid, m, c) => postVendorCreditLedger(id, data, ws, uid, m, c) },
+};
 
 /** The workspace's today (YYYY-MM-DD) in its time zone, else UTC. */
 function todayIn(timezone?: string): string {
@@ -44,8 +55,9 @@ export function postingFingerprint(txs: Array<Pick<Transaction, 'date' | 'lines'
 
 export async function shadowCheckDocumentPosting(db: Firestore, input: ShadowCheckInput): Promise<ShadowCheckResult> {
   const { workspaceId, uid, mutation, posted } = input;
-  const key = DOCUMENT_KEY[mutation.collection];
-  if (!key || (mutation.action !== 'create' && mutation.action !== 'update')) return { checked: false, reason: 'not an invoice or bill save' };
+  const builder = BUILDERS[mutation.collection];
+  if (!builder || (mutation.action !== 'create' && mutation.action !== 'update')) return { checked: false, reason: 'not a save of a document that posts' };
+  const { key } = builder;
 
   const [docSnap, wsSnap, chart, entries] = await Promise.all([
     db.collection(mutation.collection).doc(mutation.docId).get(),
@@ -71,20 +83,35 @@ export async function shadowCheckDocumentPosting(db: Firestore, input: ShadowChe
     return item && item.workspaceId === workspaceId ? ({ ...item, id } as InventoryItem) : null;
   }))).filter((i): i is InventoryItem => i !== null);
 
+  // a credit note that takes goods back needs the invoice it credits and that invoice's entries (what left stock)
+  const creditedId = mutation.collection === 'creditNotes' && typeof document.invoiceId === 'string' ? document.invoiceId : '';
+  const credited = creditedId ? (await db.collection('invoices').doc(creditedId).get()).data() : undefined;
+  const invoices = credited && credited.workspaceId === workspaceId ? [{ ...credited, id: creditedId } as Invoice] : [];
+  const ofInvoice = invoices.length
+    ? (await db.collection('transactions').where('workspaceId', '==', workspaceId).where('metadata.invoiceId', '==', creditedId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as Transaction)
+    : [];
+  // other credit notes' returns on this invoice, with their reversals (a deleted credit note's reversal carries only its creditNoteId)
+  const otherNotes = [...new Set(ofInvoice.map(tx => tx.metadata?.creditNoteId).filter((id): id is string => typeof id === 'string' && id !== mutation.docId))];
+  const ofOtherNotes = (await Promise.all(otherNotes.map(async id => (await db.collection('transactions').where('workspaceId', '==', workspaceId).where('metadata.creditNoteId', '==', id).get()).docs
+    .map(d => ({ ...d.data(), id: d.id }) as Transaction)))).flat();
+  const seen = new Set(before.map(tx => tx.id));
+  const invoiceEntries = [...ofInvoice, ...ofOtherNotes].filter(tx => !postedIds.has(tx.id) && !seen.has(tx.id) && (seen.add(tx.id), true));
+
   const context: LedgerPostContext = {
     accounts: chart.docs.map(d => ({ ...d.data(), id: d.id }) as ChartAccount),
     workspaces: [{ ...workspace, id: workspaceId } as Workspace],
-    transactions: before,
+    transactions: [...before, ...invoiceEntries],
+    invoices,
     inventory,
-    // the save already passed the server's own period check; the builder must not refuse it again
-    lockDate: null,
+    // the lock the browser's builder saw: it dates the reversals of entries in a closed period; the save already passed
+    // the server's own period check, so the builder must not refuse it again
+    lockDate: effectiveLockDate(workspace as never, uid),
+    lockChecked: true,
     uid,
     today: todayIn(workspace.timezone as string | undefined),
     capture: [],
   };
-  const data = { ...document, id: mutation.docId };
-  if (mutation.collection === 'invoices') await postInvoiceLedger(mutation.docId, data as Partial<Invoice>, workspaceId, uid, mutation, context);
-  else await postBillLedger(mutation.docId, data as Partial<Bill>, workspaceId, uid, mutation, context);
+  await builder.post(mutation.docId, { ...document, id: mutation.docId }, workspaceId, uid, mutation, context);
 
   const expected = postingFingerprint(context.capture!.flatMap(c => c.txs));
   const sent = postingFingerprint(posted);

@@ -13,12 +13,12 @@ import {
   computeBalanceSheet,
   computeTrialBalance,
   computeCashFlow,
-  computeGeneralLedger,
-  computeStatement
+  computeGeneralLedger
 } from "../reports/computeReports";
-import type { Bill, Budget, ChartAccount, CreditNote, Customer, Invoice, Payment, Transaction as LedgerTransaction, VendorCredit } from "../../types";
+import type { Bill, Budget, ChartAccount, Invoice, Transaction as LedgerTransaction } from "../../types";
 import { agingBucket, daysOverdue, outstandingBaseCents } from '../../lib/aging';
 import { GroupReportError, groupSummary } from '../reports/groupReport';
+import { loadStatement, StatementScopeError } from '../services/statementService';
 import { balanceSheetByLabel, profitByLabel } from '../reports/byLabel';
 import { cashBasisBalanceSheet, cashBasisEntries, type CashBasisPayment } from '../reports/cashBasis';
 import { explainFigure } from '../reports/explain';
@@ -476,6 +476,7 @@ reportRouter.get("/general-ledger", async (req, res) => {
   }
 });
 
+/** AUD-01: a customer's or vendor's statement, by the scope the screen and the PDF use (statementService.ts). */
 reportRouter.get("/statement", async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const result = WorkspaceIdSchema.extend({
@@ -485,40 +486,16 @@ reportRouter.get("/statement", async (req, res) => {
     endDate: z.string().optional()
   }).safeParse(req.query);
   if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
-  const { workspaceId, type, contactId, startDate = '1970-01-01', endDate = '2099-12-31' } = result.data;
+  const { workspaceId, type, contactId, startDate, endDate } = result.data;
 
   try {
     await authorizeWorkspace(authReq, workspaceId);
-    const db = getDb();
-
-    const contactCollection = type === 'customer' ? 'customers' : 'vendors';
-    const contactSnap = await db.collection(contactCollection).doc(contactId).get();
-    if (!contactSnap.exists) return sendError(res, "Contact not found", 404);
-
-    const [invSnap, billSnap, paySnap, creditSnap] = await Promise.all([
-      db.collection("invoices").where("workspaceId", "==", workspaceId).get(),
-      db.collection("bills").where("workspaceId", "==", workspaceId).get(),
-      db.collection("payments").where("workspaceId", "==", workspaceId).get(),
-      db.collection(type === 'customer' ? "creditNotes" : "vendorCredits").where("workspaceId", "==", workspaceId).get()
-    ]);
-
-    const invoices = invSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Invoice);
-    const bills = billSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Bill);
-    const payments = paySnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Payment);
-
-    const statement = computeStatement(
-      { id: contactSnap.id, ...contactSnap.data() } as unknown as Customer,
-      invoices,
-      bills,
-      payments,
-      startDate,
-      endDate,
-      type,
-      creditSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as CreditNote | VendorCredit)
-    );
-
-    res.json(statement);
+    // another workspace's contact answers like a missing one
+    const loaded = await loadStatement(getDb(), workspaceId, contactId, { startDate, endDate }, type);
+    if (!loaded) return sendError(res, "Contact not found", 404);
+    res.json(loaded.statement);
   } catch (error) {
+    if (error instanceof StatementScopeError) return sendError(res, error.message, 400);
     if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
     if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
     sendError(res, "Failed to generate Statement", 500, errorMessage(error));

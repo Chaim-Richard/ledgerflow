@@ -86,6 +86,8 @@ export interface Workspace {
   twoPersonRule?: boolean;
   /** PLAN §6: tax profiles of the books and of label values (src/lib/tax/profile.ts; set through the server, coming). */
   taxProfiles?: import('../lib/tax/profile').TaxProfiles;
+  /** A-77: branding overrides per label value, inherited down the label tree; set through the server (src/lib/entityBranding.ts). */
+  brandingProfiles?: import('../lib/entityBranding').BrandingProfiles;
   /** BC-02: each role's starting dashboard layout (src/lib/dashboardOverview.ts; set by owners, through the server). */
   roleDashboards?: RoleDashboards;
   /** BG-07: who approves invoices in an owner's or accountant's place, until when (set through the server). */
