@@ -14,7 +14,7 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 | Workflow | What is missing | Who |
 |---|---|---|
 | W1 sign-up → first report | browser journey merged (#282, 21 Oct); left: worked figures (W1-GOLD) | AI #9 |
-| W5 labels → reports by label | balance sheet by label merged (#283, 21 Oct); left: AI #3's end-to-end worked check on the real report (A-210) + browser journey (F-50) | AI #3, AI #7 |
+| W5 labels → reports by label | A-210 done (21 Oct: by-label P&L + balance sheet browser journey on the real report, hand figures 2/2); left: F-50 wider labels journey + W14 (AI #7) | AI #7 |
 | W10 backup → restore | browser test (F-46) | AI #7 |
 | W14 roles and access | browser journey | AI #7 |
 | G-02 first hour without dead ends | wording/dead-end fixes done (D-97 batches 1–2); left: AI #7's authenticated G-24 journey certifies G-02 | AI #4 / AI #7 |
@@ -59,7 +59,7 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 | #1 Claude (lead) | Reviews/merges and the plan; wire A-77 branding into PDFs when AI #3's resolver lands; L-94 server-side document postings (design) | — |
 | #9 Opus (money lane) | **P0:** ISS-156 withholding after certificate expiry, AUD-01 statements, W1-GOLD first-hour figures; then AU-4, YEAR-END-GOLD, FX-GOLD, L94-SHADOW-MORE, DIM-3, U-12, W12-GOLD, AUD-19, ISS-160, ISS-143, AUD-10, BM-04+BH-02, L-123 design, CON-4b (17 tasks, full wording in COORDINATION). FIFO/lot costing waits for the owner | — |
 | #7 | **P0:** G-24 first-hour journey test (W1, taken over from AI #8), F-46 backup → restore browser test (W10), W5 labels → reports browser journey, W14 roles browser journey, a browser check of the help center/feedback screens from #252; then F-48, F-49 flakes | — |
-| #3 Arena | **P0:** W5 worked figures — labelled invoices/bills/payments → P&L and balance sheet by label, figures by hand (new A-210). Stock A-112…A-117 after (stage B) | A-72 waits for AI #9's AUD-01; A-75/A-76/A-77 released 21 Oct |
+| #3 Arena | **A-210 done (21 Oct)** — by-label P&L + balance browser journey on the real report, hand figures. Next: stock **A-116, A-117** (A-112–A-115 merged #265), then **A-75/A-76/A-77** | A-72 waits for AI #9's AUD-01 |
 | #4 | **D-97 wording pass complete (21 Oct, batch 2 on `arena/7b5d662c-ledgerflow`):** reconciliation, bank import, template selector and chart of accounts renamed to plain bookkeeping language; G-02 certification still waits on AI #7's G-24. Next: **D-89** list money alignment/sticky headers, then **D-91** icon-only button labels; D-44 report picker after | — |
 | #5 | **P1:** accountant export pack (trial balance, GL, A/R, A/P, tax liability by period as CSV/PDF — new E-58); then E-17 onward | — |
 | #2 Codex | **Screen wiring C-102…C-126 is done** (21 Oct: all 50 modules in `workspaceExports.ts` reach a screen; C-115/C-117/C-120/C-121/C-122 ticked). Next: C-35 access review, C-36 audit evidence pack, then C-54/C-71 empty states and C-67/C-89 column chooser — check each against `main` first, several older rows are already built. No new tax screens (stage C) | — |
