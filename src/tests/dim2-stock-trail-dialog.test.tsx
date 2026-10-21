@@ -52,6 +52,6 @@ describe('DIM-2: where the stock came from, on the Stock history window', () => 
     await waitFor(() => assert.match(rows[1].textContent || '', /Dune LLC · Invoice INV-1/));
     assert.match(rows[2].textContent || '', /The bill it names \(B-9\) is not in the books\./);
     // 10 recorded; 4 on hand before the history began; 5 on a bill that cannot be found
-    assert.match(screen.getByTestId('stock-trail-summary').textContent || '', /10 came in on a recorded document .*; 4 with no recorded origin .*on hand before the history began\); 5 whose document is missing\./);
+    assert.match(screen.getByTestId('stock-trail-summary').textContent || '', /10 came in on a document with its vendor or customer; 4 with no recorded origin .*on hand before the history began\); 5 whose document is missing\./);
   });
 });

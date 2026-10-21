@@ -5,7 +5,7 @@
  * the history with each change (src/server/services/stockMoveService.ts). When the history does not
  * end at the quantity on hand it says so (the same rule as the nightly check).
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { db } from '../../firebase';
 import { collection, getDocs, query, where } from '../../lib/db/firestore';
@@ -55,12 +55,19 @@ export default function StockHistoryDialog({ item, workspaceId, currency, onClos
   const vendors = useLedgerStore(s => s.vendors);
   const customers = useLedgerStore(s => s.customers);
   const truncatedCollections = useLedgerStore(s => s.truncatedCollections);
-  const truncated = ['bills', 'invoices', 'creditNotes', 'vendorCredits', 'estimates', 'transactions'].some(k => truncatedCollections?.[k]);
-  const trail = moves && moves.length > 0 ? stockTrail(moves, {
-    bills, invoices, creditNotes, vendorCredits, orders, purchaseOrders: purchaseOrders || [], transactions, vendors, customers,
-    partial: docsLoading || ordersLoading || truncated || Boolean(ordersTruncated),
-  } as unknown as StockTrailDocs) : null;
-  const stepOf = new Map<string, TrailStep>((trail?.steps || []).map(st => [st.move.id || st.move.seq, st]));
+  // #260 review: each list's own completeness, and the trail worked out once per change of its inputs
+  const trail = useMemo(() => {
+    if (!moves || moves.length === 0) return null;
+    const cut = (k: string) => docsLoading || Boolean(truncatedCollections?.[k]);
+    return stockTrail(moves, {
+      bills, invoices, creditNotes, vendorCredits, orders, purchaseOrders: purchaseOrders || [], transactions, vendors, customers,
+      partial: {
+        bills: cut('bills'), invoices: cut('invoices'), creditNotes: cut('creditNotes'), vendorCredits: cut('vendorCredits'), orders: cut('estimates'),
+        transactions: cut('transactions'), purchaseOrders: ordersLoading || Boolean(ordersTruncated),
+      },
+    } as unknown as StockTrailDocs);
+  }, [moves, bills, invoices, creditNotes, vendorCredits, orders, purchaseOrders, transactions, vendors, customers, truncatedCollections, docsLoading, ordersLoading, ordersTruncated]);
+  const stepOf = useMemo(() => new Map<string, TrailStep>((trail?.steps || []).map(st => [st.move.id || st.move.seq, st])), [trail]);
   const problem = moves ? stockHistoryProblem(item, moves) : null;
   // W-01: where the units are (an item without a history has all its stock at no location)
   const at = moves && moves.length > 0 ? stockByLocation(moves) : new Map([[NO_LOCATION, Number(item.quantityAtHand) || 0]]);
@@ -177,7 +184,7 @@ export default function StockHistoryDialog({ item, workspaceId, currency, onClos
 function TrailCell({ step }: { step?: TrailStep }) {
   if (!step) return null;
   if (step.origin === 'not-recorded') return <span className="text-[var(--muted)]">Origin not recorded</span>;
-  if (step.origin === 'internal') return <span className="text-[var(--muted)]">Inside the business</span>;
+  if (step.origin === 'internal') return <span className="text-[var(--muted)]">{step.move.kind === 'purchase' || step.move.kind === 'purchase-reversal' ? 'Stock adjustment (no bill)' : 'Inside the business'}</span>;
   return (
     <span>
       {step.party && <bdi>{step.party.name}</bdi>}

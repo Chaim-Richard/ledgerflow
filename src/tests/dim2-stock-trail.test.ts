@@ -66,9 +66,9 @@ test('DIM-2 worked units: every change is followed to its document and party', (
   assert.deepEqual(trail.steps[0].purchaseOrder, { id: 'po7', label: 'Purchase order PO-7', receipts: ['GR-1 · 2026-06-02'] });
   assert.deepEqual(trail.steps[4].missing, ['The bill it names (B-9) is not in the books.']);
   assert.equal(trail.beforeHistory, 4);
-  assert.deepEqual(trail.unitsIn, { known: 11, notRecorded: 10, missingLink: 5 });
-  assert.deepEqual(trail.unitsOut, { known: 7, missingLink: 0, internal: 1 });
-  assert.equal(stockTrailSummary(trail), '11 came in on a recorded document (a bill, or a customer\'s return); 10 with no recorded origin (opening stock, an import, or on hand before the history began); 5 whose document is missing.');
+  assert.deepEqual(trail.unitsIn, { known: 11, notRecorded: 10, adjusted: 0, missingLink: 5, notLoaded: 0 });
+  assert.deepEqual(trail.unitsOut, { known: 7, missingLink: 0, notLoaded: 0, internal: 1 });
+  assert.equal(stockTrailSummary(trail), '11 came in on a document with its vendor or customer; 10 with no recorded origin (opening stock, an import, or on hand before the history began); 5 whose document is missing.');
 });
 
 test('DIM-2: imported opening stock is "origin not recorded" and never given a vendor', () => {
@@ -87,6 +87,50 @@ test('DIM-2: missing links are named — no document, a document with no party, 
 });
 
 test('DIM-2: with capped or loading document lists a document not found is not called missing from the books', () => {
-  const step = stockTrail([move('purchase', 1, { documentType: 'bill', documentId: 'B-9' })], { ...docs, partial: true }).steps[0];
-  assert.deepEqual(step.missing, ['The bill it names (B-9) is not among the documents loaded.']);
+  const trail = stockTrail([move('purchase', 1, { documentType: 'bill', documentId: 'B-9' })], { ...docs, partial: { bills: true } });
+  assert.deepEqual([trail.steps[0].origin, trail.steps[0].missing], ['not-loaded', ['The bill it names (B-9) is not among the documents loaded.']]);
+  // #260 review: not counted as a missing document
+  assert.deepEqual([trail.unitsIn.missingLink, trail.unitsIn.notLoaded], [0, 1]);
+  assert.match(stockTrailSummary(trail), /1 whose document is not loaded\./);
+});
+
+// ---- #260 review ----
+test('#260 review: only the list searched decides "not loaded" — a capped entry list does not hide a missing bill', () => {
+  const step = stockTrail([move('purchase', 1, { documentType: 'bill', documentId: 'B-9' })], { ...docs, partial: { transactions: true } }).steps[0];
+  assert.deepEqual([step.origin, step.missing], ['missing', ['The bill it names (B-9) is not in the books.']]);
+});
+
+test('#260 review: goods returned against a delivery follow its sales order to the customer', () => {
+  const back = move('return', 1, { documentType: 'delivery', documentId: 'DEL-1', transactionId: 'tx-ret' });
+  const step = stockTrail([back], { ...docs, transactions: [...docs.transactions, { id: 'tx-ret', metadata: { orderId: 'SO-1' } }] }).steps[0];
+  assert.deepEqual([step.origin, step.party?.name, step.document?.label], ['known', 'Elm Co', 'Order SO-1']);
+});
+
+test('#260 review: stock received with Adjust stock is a stock adjustment, not a missing bill', () => {
+  const trail = stockTrail([move('purchase', 4, { documentType: 'adjustment' })], docs);
+  assert.deepEqual([trail.steps[0].origin, trail.steps[0].missing, trail.unitsIn.adjusted, trail.unitsIn.missingLink], ['internal', [], 4, 0]);
+  assert.match(stockTrailSummary(trail), /4 by a stock adjustment \(no bill\)/);
+});
+
+test('#260 review: a bill that names its purchase order (metadata.poId) shows the order even when the order does not name the bill', () => {
+  const trail = stockTrail([move('purchase', 2, { documentType: 'bill', documentId: 'B-3' })], {
+    ...docs, bills: [...docs.bills, { id: 'B-3', number: 'B-3', vendorId: 'acme', metadata: { poId: 'po8' } }],
+    purchaseOrders: [...docs.purchaseOrders, { id: 'po8', poNumber: 'PO-8', vendorId: 'acme' }],
+  });
+  assert.equal(trail.steps[0].purchaseOrder?.label, 'Purchase order PO-8');
+});
+
+test('#260 review: an undone sale coming back in counts as recorded and the summary says so truthfully', () => {
+  const trail = stockTrail([move('sale-reversal', 3, { documentType: 'invoice', documentId: 'INV-1' })], docs);
+  assert.deepEqual([trail.steps[0].origin, trail.unitsIn.known], ['known', 3]);
+  assert.match(stockTrailSummary(trail), /^3 came in on a document with its vendor or customer/);
+});
+
+test('#260 review: a long history is worked out from indexed lists (5,000 moves against 10,000 invoices)', () => {
+  const invoices = Array.from({ length: 10_000 }, (_, i) => ({ id: `inv${i}`, number: String(i), customerId: 'dune' }));
+  const many = Array.from({ length: 5_000 }, (_, i) => ({ ...move('sale', -1, { documentType: 'invoice', documentId: `inv${i * 2}` }) }));
+  const started = Date.now();
+  const trail = stockTrail(many, { ...docs, invoices });
+  assert.equal(trail.unitsOut.known, 5_000);
+  assert.ok(Date.now() - started < 1_000, 'well under a second');
 });
