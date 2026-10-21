@@ -88,7 +88,7 @@ export function inventoryMarkdown(routes: WriteRouteFinding[]): string {
   const lines = [
     '# Financial write route inspection leads',
     '',
-    'This is an AST-discovered inventory of HTTP method declarations, **not** proof that any route is retry-safe.',
+    'This is an AST-discovered inventory of HTTP method declarations, not proof that any route is retry-safe.',
     'Routes registered dynamically or outside src/server/routes may be missing.',
     'A visible helper call does not prove stable idempotency keys or atomic writes.',
     '',
