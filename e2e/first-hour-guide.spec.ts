@@ -5,7 +5,7 @@ for (const width of [390, 1280]) for (const dark of [false, true]) {
   test(`first-hour guide: ${width}px ${dark ? 'dark' : 'light'} destinations and keyboard`, async ({ page }, testInfo) => {
     test.setTimeout(90_000);
     const errors: string[] = [];
-    page.on('pageerror', error => errors.push(error.message));
+    page.on('pageerror', error => errors.push(`${error.message} @ ${(error.stack || '').split('\n').slice(0, 6).join(' | ')} @ ${page.url()}`));
     const diagnostics: string[] = [];
     // the app's own scripts must load; guest-mode data calls to the unconfigured database fail in CI by design
     page.on('requestfailed', request => {
