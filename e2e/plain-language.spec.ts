@@ -54,7 +54,22 @@ test('reconciliation screen speaks plain language, desktop light', async ({ page
   const review = page.getByRole('button', { name: /Review \d+ suggested matches/ });
   await expect(review).toBeVisible();
   await review.click();
-  await expect(page.getByRole('heading', { name: 'Review suggested matches' })).toBeVisible();
+  const modal = page.getByRole('dialog', { name: 'Review suggested matches' });
+  await expect(modal).toBeVisible();
+  // useDialog contract: focus moves into the dialog and Tab stays trapped inside it.
+  await expect(modal.locator(':focus')).toHaveCount(1);
+  for (let i = 0; i < 4; i += 1) {
+    await page.keyboard.press('Tab');
+    expect(await modal.evaluate(node => node.contains(document.activeElement))).toBe(true);
+  }
+  // Escape closes the dialog and returns focus to the trigger.
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('heading', { name: 'Review suggested matches' })).toHaveCount(0);
+  await expect(review).toBeFocused();
+
+  // Reopen to keep the pointer (Cancel) path covered as well.
+  await review.click();
+  await expect(modal).toBeVisible();
   // The button's aria-label is its accessible name (the count stays in the visible text).
   await expect(page.getByRole('button', { name: 'Apply selected matches' })).toBeVisible();
   await expect(page.getByText(/Apply selected matches \(\d+\)/)).toBeVisible();
@@ -81,7 +96,6 @@ test('reconciliation screen speaks plain language, desktop light', async ({ page
   // The suggested-match review modal, captured on its own for the evidence pack.
   await page.setViewportSize({ width: 1280, height: 900 });
   await review.click();
-  const modal = page.getByRole('dialog', { name: 'Review suggested matches' });
   await expect(modal).toBeVisible();
   await modal.screenshot({ path: testInfo.outputPath('suggested-matches-1280-light.png') });
   await modal.screenshot({ path: 'docs/verification/images/d97b/suggested-matches-1280-light.png' });

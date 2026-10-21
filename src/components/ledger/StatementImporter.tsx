@@ -129,7 +129,7 @@ export default function StatementImporter({
 
     setIsParsing(true);
     setFileError('');
-    const loader = toast.loading(`Analytical engine analyzing ${file.name}...`);
+    const loader = toast.loading(`Reading ${file.name}…`);
     
     try {
       const labels = accounts.map(a => a.name);

@@ -17,6 +17,11 @@ import { useLedgerStore } from '../stores/useLedgerStore';
 import { markComponentCollectionsLoaded, setComponentWorkspace } from './helpers/componentFixtures';
 import { makeChartAccount } from './fixtures';
 import { stubFetchWithBodies } from './helpers/dom';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+const source = (path: string) =>
+  readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8');
 
 const accounts = [
   makeChartAccount({ id: 'bank', name: 'Business Checking', type: 'asset', category: 'Cash' }),
@@ -160,5 +165,41 @@ describe('D-97 plain language on the first-hour screens', () => {
     for (const word of ['Invariant', 'Blueprint', 'Topology', 'Engage', 'Synthesis', 'Cognitive', 'Protocol']) {
       assert.equal(document.body.textContent?.includes(word), false, `jargon returned: ${word}`);
     }
+  });
+});
+
+describe('D-97 plain language at the action boundary (source guards)', () => {
+  // Sonner does not render inside jsdom, so the toasts emitted by the reconciliation action
+  // layer and the importer upload handler are guarded at the source instead.
+  const reconcileActions = source('../hooks/transactionActions/reconcileActions.ts');
+  const statementImporter = source('../components/ledger/StatementImporter.tsx');
+  const reconciliationView = source('../components/ledger/ReconciliationView.tsx');
+  const templateSelector = source('../components/layout/TemplateSelector.tsx');
+
+  test('reconciliation action feedback uses bookkeeping words', () => {
+    for (const banned of [
+      'Alignment confirmed and certified', 'Atomic transaction synthesized', 'pipeline matches',
+      'Optimal alignment', 'nodes synchronized', 'Initiating auto-reconciliation',
+      'Matching cycle failed', 'Synthesis cycle', 'Re-inserted',
+    ]) {
+      assert.equal(reconcileActions.includes(banned), false, `jargon returned: ${banned}`);
+    }
+    for (const required of [
+      'Match saved.', 'Entry created and matched.', 'Match undone.',
+      'Automatic matching complete.', 'No confident matches found.',
+    ]) {
+      assert.ok(reconcileActions.includes(required), `expected plain wording: ${required}`);
+    }
+  });
+
+  test('the importer explains file reading in plain words, including the in-progress state', () => {
+    assert.equal(statementImporter.includes('Analytical engine'), false);
+    assert.ok(statementImporter.includes('Reading '));
+  });
+
+  test('the suggested-matches modal is a real dialog and the AI card does not promise editing', () => {
+    assert.ok(reconciliationView.includes('useDialog'), 'new overlays use the shared useDialog contract');
+    assert.equal(templateSelector.includes('Review and change every account'), false);
+    assert.ok(templateSelector.includes('Review every account before applying it to your books.'));
   });
 });

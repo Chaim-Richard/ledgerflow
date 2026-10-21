@@ -9,11 +9,15 @@ import { format } from 'date-fns';
 import AsyncButton from '../ui/AsyncButton';
 import BankLineActionDialog from './BankLineActionDialog';
 import BankLineName from '../ui/BankLineName';
+import { useDialog } from '../../hooks/useDialog';
 
 import type { useReconciliationModel } from './useReconciliationModel';
 
 export function ReconciliationView(model: ReturnType<typeof useReconciliationModel>) {
- const { bankLines, accounts, onMatch, onIgnore, onAddFromBank, selectedBankId, setSelectedBankId, selectedLedgerId, setSelectedLedgerId, showAutoConfirm, setShowAutoConfirm, isProcessing, isAutoReconciling, viewMode, setViewMode, searchQuery, setSearchQuery, bankLineAction, setBankLineAction, selectedAccountId, setSelectedAccountId, selectedBatchIds, setSelectedBatchIds, safeTransactions, cashAccounts, unmatchedBankLines, matchedBankLines, unclearedLedgerTransactions, optimizedMatches, executeSelectedBatchMatches, handleAutoReconcile, handleUndoAlignment, selectedBankLine, selectedLedgerTx, checkSimilarity, filteredBankFeed, filteredLedgerEntries } = model;
+ const { accounts, onMatch, onIgnore, onAddFromBank, selectedBankId, setSelectedBankId, selectedLedgerId, setSelectedLedgerId, showAutoConfirm, setShowAutoConfirm, isProcessing, isAutoReconciling, viewMode, setViewMode, searchQuery, setSearchQuery, bankLineAction, setBankLineAction, selectedAccountId, setSelectedAccountId, selectedBatchIds, setSelectedBatchIds, safeTransactions, cashAccounts, unmatchedBankLines, matchedBankLines, reconciledPercent, unclearedLedgerTransactions, optimizedMatches, executeSelectedBatchMatches, handleAutoReconcile, handleUndoAlignment, selectedBankLine, selectedLedgerTx, checkSimilarity, filteredBankFeed, filteredLedgerEntries } = model;
+ // Dialog contract (src/components/AGENTS.md): named title, initial focus, trapped Tab,
+ // Escape to close, focus restored to the trigger.
+ const batchDialog = useDialog<HTMLDivElement>(() => setShowAutoConfirm(false), showAutoConfirm);
  return (
     <div className="flex flex-col h-full bg-[var(--surface)] overflow-hidden min-h-0 flex-1 rounded-2xl border border-[var(--line)] shadow-sm">
 
@@ -28,7 +32,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
             <h1 className="text-xl md:text-2xl font-black text-[var(--text)] tracking-tight uppercase leading-none">Smart Matching & Bank Reconciliation</h1>
             <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-1.5 flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-[var(--pos)] animate-ping" />
-              Live • Reconciled: {((bankLines.length - unmatchedBankLines.length) / (bankLines.length || 1) * 100).toFixed(0)}%
+              Live • Reconciled: {reconciledPercent}%
             </p>
           </div>
         </div>
@@ -541,9 +545,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
              <>
                <div role="presentation" aria-hidden="true" className="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-[150]" onClick={() => setShowAutoConfirm(false)} />
                <motion.div
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby="review-suggested-matches-title"
+                  {...batchDialog.dialogProps}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
@@ -553,7 +555,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                     <div className="flex items-center gap-3">
                        <Zap aria-hidden="true" size={24} className="text-amber-500 fill-amber-500" />
                        <div>
-                         <h2 id="review-suggested-matches-title" className="text-xl font-black uppercase tracking-tight text-[var(--text)]">
+                         <h2 id={batchDialog.titleId} className="text-xl font-black uppercase tracking-tight text-[var(--text)]">
                             Review suggested matches
                          </h2>
                          <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-widest mt-0.5">Choose the matches to apply. Tick individual rows, or apply them all at once.</p>
