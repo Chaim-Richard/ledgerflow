@@ -105,12 +105,17 @@ export function performLocalRestoreDrill(inputUrl) {
       note: 'Schema list and per-row digests matched on a disposable local database; application-level restore and independently worked financial reports are NOT certified.',
     };
   } finally {
+    let cleanupFailure = false;
     if (created) {
       try {
         run('dropdb', ['--maintenance-db', admin.toString(), '--if-exists', '--force', restored]);
-      } catch { throw new Error('Temporary restore database cleanup failed; remove only ' + restored + ' manually.'); }
+      } catch { cleanupFailure = true; }
     }
+    // Remove the local dump even if dropping the temporary database failed.
     rmSync(dir, { recursive: true, force: true });
+    if (cleanupFailure) {
+      throw new Error('Temporary restore database cleanup failed; remove only ' + restored + ' manually.');
+    }
   }
 }
 
