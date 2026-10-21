@@ -266,20 +266,20 @@ function Scoped() {
               )}
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1 text-[var(--text)]">Brand colour</label>
+              <label htmlFor="branding-colour" className="block text-xs font-semibold mb-1 text-[var(--text)]">Brand colour</label>
               <div className="flex items-center gap-2">
-                <input type="color" value={editing.draft.color || DEFAULT_BRAND_COLOR} onChange={e => change({ ...editing.draft, color: e.target.value.toUpperCase() })} className="h-9 w-14 rounded border border-[var(--line)]" />
+                <input id="branding-colour" type="color" value={editing.draft.color || DEFAULT_BRAND_COLOR} onChange={e => change({ ...editing.draft, color: e.target.value.toUpperCase() })} className="h-9 w-14 rounded border border-[var(--line)]" />
                 <span className="font-mono text-xs text-[var(--muted)]">{(editing.draft.color || DEFAULT_BRAND_COLOR).toUpperCase()}</span>
                 <button type="button" onClick={() => change({ ...editing.draft, color: '' })} className="text-xs underline">Inherit</button>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1 text-[var(--text)]">Address under the company name</label>
-              <textarea ref={draftAddress} rows={3} maxLength={300} value={editing.draft.address || ''} onChange={e => change({ ...editing.draft, address: e.target.value })} className={areaField} placeholder="Leave empty to inherit" />
+              <label htmlFor="branding-address" className="block text-xs font-semibold mb-1 text-[var(--text)]">Address under the company name</label>
+              <textarea id="branding-address" ref={draftAddress} rows={3} maxLength={300} value={editing.draft.address || ''} onChange={e => change({ ...editing.draft, address: e.target.value })} className={areaField} placeholder="Leave empty to inherit" />
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1 text-[var(--text)]">Footer on every page</label>
-              <textarea rows={3} maxLength={300} value={editing.draft.footer || ''} onChange={e => change({ ...editing.draft, footer: e.target.value })} className={areaField} placeholder="Leave empty to inherit" />
+              <label htmlFor="branding-footer" className="block text-xs font-semibold mb-1 text-[var(--text)]">Footer on every page</label>
+              <textarea id="branding-footer" rows={3} maxLength={300} value={editing.draft.footer || ''} onChange={e => change({ ...editing.draft, footer: e.target.value })} className={areaField} placeholder="Leave empty to inherit" />
             </div>
             <button type="submit" className="min-h-11 border rounded px-3 text-sm font-semibold bg-[var(--brass)] text-[var(--ink)]">{busy ? 'Saving…' : 'Save branding'}</button>
           </fieldset>
