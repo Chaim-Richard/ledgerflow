@@ -146,6 +146,8 @@ export async function adjustStock(db: Firestore, input: StockAdjustmentInput): P
       quantity: Number(new Decimal(m.after).minus(m.before)), quantityBefore: m.before, quantityAfter: m.after,
       unitCostCents: m.unitCostCents, valueCents: m.valueCents, transactionId, documentType: 'adjustment' as const,
       uid: input.user.uid, ...(input.locationId ? { locationId: input.locationId } : {}),
+      // DIM-2 phase 3: why, as written with the adjustment
+      ...(typeof input.reason === 'string' && input.reason.trim() ? { purpose: input.reason.trim().slice(0, 200) } : {}),
     })));
     return { transactionId, valueCents, items: moves };
   });
