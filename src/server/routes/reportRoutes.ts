@@ -19,7 +19,7 @@ import {
 import type { Bill, Budget, ChartAccount, CreditNote, Customer, Invoice, Payment, Transaction as LedgerTransaction, VendorCredit } from "../../types";
 import { agingBucket, daysOverdue, outstandingBaseCents } from '../../lib/aging';
 import { GroupReportError, groupSummary } from '../reports/groupReport';
-import { profitByLabel } from '../reports/byLabel';
+import { balanceSheetByLabel, profitByLabel } from '../reports/byLabel';
 import { cashBasisBalanceSheet, cashBasisEntries, type CashBasisPayment } from '../reports/cashBasis';
 import { explainFigure } from '../reports/explain';
 import { stockMovesReady } from '../services/stockMoveService';
@@ -278,6 +278,22 @@ reportRouter.get("/by-label", async (req, res) => {
     if (/not a member|Unauthorized|FORBIDDEN/i.test(errorMessage(error))) return sendError(res, "Forbidden", 403);
     if (/not.found/i.test(errorMessage(error))) return sendError(res, "Workspace not found", 404);
     sendError(res, "Could not make the report by label", 500, errorMessage(error));
+  }
+});
+
+/** W5-BS: the balance sheet of one label value at a date, and what has no value for that label (byLabel.ts). */
+reportRouter.get("/balance-sheet-by-label", async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const parsed = z.object({ workspaceId: z.string().min(1).max(200), dimensionId: z.string().min(1).max(100), value: z.string().min(1).max(200), endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).safeParse(req.query);
+  if (!parsed.success) return sendError(res, "Choose a label, one of its values and the date", 400);
+  const q = parsed.data;
+  try {
+    const { accounts, transactions } = await getReportContext(authReq, q.workspaceId, undefined, q.endDate);
+    res.json(balanceSheetByLabel(accounts, transactions, q.dimensionId, q.value, q.endDate));
+  } catch (error) {
+    if (/not a member|Unauthorized|FORBIDDEN/i.test(errorMessage(error))) return sendError(res, "Forbidden", 403);
+    if (/not.found/i.test(errorMessage(error))) return sendError(res, "Workspace not found", 404);
+    sendError(res, "Could not make the balance sheet by label", 500, errorMessage(error));
   }
 });
 
