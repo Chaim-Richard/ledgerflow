@@ -1063,14 +1063,14 @@ never invent an account or a rate, posting goes through the server.
 - [ ] **D-82 Remove invented jargon from visible labels ("Worlds", "Financial Intelligence Hub", "Precision Core"…) — list in the PR, plain replacements**
 - [ ] **D-83 Profit and loss screen: one primary action, filters grouped on one row (desktop) / stacked (phone)**
 - [ ] **D-84 Balance sheet: same layout as P&L (D-83); account names truncate with tooltip, numbers never cut**
-- [ ] **D-85 Dashboard: first screen shows cash, owed to you, you owe, profit this month, tasks (P2-31); everything else below**
+- [x] **D-85 Dashboard: first screen shows cash, owed to you, you owe, profit this month, tasks (P2-31); everything else below** *(AI #4, 21 Oct: compact heading, the four cards first, setup checklist moved below — `arena/3f7e3a1d-ledgerflow`, W2/W5 screens; visual references pending review)*
 - [ ] **D-86 Invoice form: labels above fields, errors under the field, Save in the same place; phone layout checked**
 - [ ] **D-87 Bill form: same as D-86**
 - [ ] **D-88 Banking screen: empty, loading and error states with one action each (EmptyState/LoadingState)**
 - [ ] **D-89 Lists (transactions, invoices, bills, contacts): money right-aligned with tabular figures; sticky header**
-- [ ] **D-90 Settings: group the tabs into five sections with a search box (P2-30)**
-- [ ] **D-91 Icon-only buttons: aria-label + tooltip everywhere (P2-51); a test that fails on a new unlabeled icon button**
-- [ ] **D-92 Sidebar: clearer names and grouping; the "Worlds" balances box renamed and explained or removed**
+- [x] **D-90 Settings: group the tabs into five sections with a search box (P2-30)** *(AI #4, 21 Oct: `src/lib/settingsSections.ts` + `Settings.tsx`; every registered screen stays reachable and a new one without a section fails `settings-navigation.test.tsx`)*
+- [~] **D-91 Icon-only buttons: aria-label + tooltip everywhere (P2-51); a test that fails on a new unlabeled icon button** *(AI #4, 21 Oct: the guard test is in — `icon-button-labels.test.ts` fails on any new icon-only button without a name, with an exact-count list for the 7 inside AI #1's reserved `Sales.tsx`/`EstimatesView.tsx`. Left: the `title` tooltip on the ~90 existing buttons that already have a name (`BillModal`, `InvoiceModal`, `PurchaseOrdersView`, `TaxManager` are AI #1's) — next batch, one sweep.)*
+- [x] **D-92 Sidebar: clearer names and grouping; the "Worlds" balances box renamed and explained or removed** *(AI #4, 21 Oct: "Projects" or "Balances by account type", explained, one real action, fake row buttons removed)*
 - [x] **D-93 Test harness: rendering ProfitAndLossView/TrialBalanceView with `currentWorkspaceId` set hangs the node test runner (even with `--test-force-exit`); find what keeps running (live query / interval / render loop), fix it, then add the BUG-02 screen test: success for one period, failure for the next → no old figures, no server badge**
 
 - [ ] **D-94 Inline-edit buttons: label in name (axe 4.14 `label-content-name-mismatch`).** `InlineEdit` shows the stored value (e.g. a bin code) but is named `Edit <label>`, so its visible text is not in its accessible name. Give it a name that contains the visible value (e.g. `Edit Bin for X: A-01`) and update the ~118 tests that find these buttons by exact name; then remove the `[data-inline-edit]` exception in `e2e/warehouse-operations.spec.ts`. No change to what is saved.

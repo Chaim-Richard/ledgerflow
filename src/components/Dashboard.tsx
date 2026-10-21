@@ -48,9 +48,6 @@ export default function Dashboard() {
   const setupStarted = Boolean(currentWorkspaceId && setupStartedFor === currentWorkspaceId);
   const setupClosed = Boolean(currentWorkspaceId && setupClosedFor === currentWorkspaceId);
 
-  // Lens state: 'owner' vs 'accountant'
-  const [lens, setLens] = useState<'owner' | 'accountant'>('owner');
-
   // Track setup checklist banner dismissal in localStorage
   const [isChecklistDismissed, setIsChecklistDismissed] = useState<boolean>(() => {
     try {
@@ -101,104 +98,63 @@ export default function Dashboard() {
 
   return (
     <div className="w-full p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1360px] mx-auto text-[var(--text)]">
+      {/* D-85: a short heading, then the numbers a shop owner opens the page for. */}
+      <header className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[var(--line)]">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-[var(--muted)] mt-0.5">Cash, what customers owe you, what you owe, and profit for the selected period.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setQuickEntryOpen(true)}
+          className="flex min-h-11 items-center gap-1.5 rounded-lg bg-[var(--brass)] px-4 text-sm font-semibold text-[var(--ink)] hover:opacity-95 transition-opacity"
+        >
+          <Plus size={15} aria-hidden="true" />
+          Add Entry
+        </button>
+      </header>
+
       <SinceLastVisitCard />
       {/* DA-02: one queue of what needs doing */}
       <NeedsAttentionCard />
 
-      {/* Header section with lens selector and subtle gold gradient backdrop */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-[var(--brass-soft)] via-[var(--surface)]/40 to-[var(--panel)] p-6 rounded-2xl border border-[var(--brass-line)]/50 shadow-sm">
-        {/* Subtle radial ambient glow */}
-        <div className="absolute -top-16 -left-16 w-56 h-56 bg-[var(--brass)] opacity-10 rounded-full blur-3xl hidden md:block pointer-events-none" />
-        <div className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-[var(--brass-soft)]/20 via-transparent to-transparent pointer-events-none" />
+      <SavedViewsBar />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[var(--brass-soft)] border border-[var(--brass-line)]/60 text-[11px] font-mono text-[var(--brass)] font-semibold mb-2 shadow-xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--brass)] animate-pulse" />
-              FINANCIAL COMMAND CENTER
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              {lens === 'owner' ? 'Real-Time Financial Ledger' : 'Consolidated Double-Entry Trial Balance'}
-            </h1>
-            <p className="text-sm text-[var(--muted)] mt-1">
-              Connected to live store —{' '}
-              <span className="text-[var(--brass)] font-medium">
-                {lens === 'owner' ? 'owner perspective on assets, cash & net worth.' : 'audit-ready debits and credits.'}
-              </span>
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center bg-[var(--surface)]/80 border border-[var(--line)] rounded-xl p-1 text-xs font-medium shadow-inner backdrop-blur-sm">
-              <button
-                onClick={() => setLens('owner')}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-lg transition-all cursor-pointer",
-                  lens === 'owner' 
-                    ? "bg-gradient-to-r from-[var(--brass)] to-[#e5be6b] text-black font-semibold shadow-sm" 
-                    : "text-[var(--muted)] hover:text-[var(--text)]"
-                )}
-              >
-                Owner Lens
-              </button>
-              <button
-                onClick={() => setLens('accountant')}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-lg transition-all cursor-pointer",
-                  lens === 'accountant' 
-                    ? "bg-gradient-to-r from-[var(--brass)] to-[#e5be6b] text-black font-semibold shadow-sm" 
-                    : "text-[var(--muted)] hover:text-[var(--text)]"
-                )}
-              >
-                Accountant Lens
-              </button>
-            </div>
-
-            <button
-              onClick={() => setQuickEntryOpen(true)}
-              className="flex items-center gap-1.5 bg-gradient-to-r from-[var(--brass)] via-[#e5be6b] to-[var(--brass)] hover:opacity-95 text-black px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md hover:shadow-lg cursor-pointer active:scale-95"
-            >
-              <Plus size={15} />
-              Add Entry
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardWidgets />
 
       {/* Setup Checklist Guidance Banner (when setup is incomplete) */}
       {isSetupIncomplete && (
-        <div className="bg-gradient-to-r from-[var(--brass-soft)] via-[var(--panel)] to-[var(--surface)] border border-[var(--brass-line)] rounded-2xl p-4 sm:p-5 relative shadow-sm">
+        <div className="bg-[var(--panel)] border border-[var(--line)] rounded-2xl p-4 sm:p-5 relative">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="font-mono text-[10px] uppercase tracking-wider bg-[var(--brass)] text-[var(--ink)] px-2 py-0.5 rounded-md font-bold">
-                  Setup Progress ({setupStepCount}/3)
+                  Setup {setupStepCount} of 3
                 </span>
-                <h2 className="text-sm font-semibold text-[var(--text)]">Workspace Setup Checklist</h2>
+                <h2 className="text-sm font-semibold text-[var(--text)]">Finish setting up your books</h2>
               </div>
               <p className="text-xs text-[var(--muted)]">
-                Ensure your chart of accounts and transactions are configured for complete algorithmic accuracy.
+                Choose a chart of accounts, import your history and check the balances.
               </p>
             </div>
             <button
               type="button"
               onClick={dismissChecklist}
-              className="text-[var(--muted)] hover:text-[var(--text)] p-1 rounded-lg hover:bg-[var(--surface)] transition-colors cursor-pointer"
+              className="text-[var(--muted)] hover:text-[var(--text)] min-h-11 min-w-11 flex items-center justify-center rounded-lg hover:bg-[var(--surface)] transition-colors"
               title="Dismiss checklist"
-             aria-label="Dismiss checklist">
-              <X size={16} />
+              aria-label="Dismiss checklist">
+              <X size={16} aria-hidden="true" />
             </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-            {/* Step 1: Chart Template */}
             <button
               type="button"
               onClick={() => setTemplateSelectorOpen(true)}
               className={cn(
-                "flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer",
+                "flex items-center gap-3 p-3 rounded-xl border text-left transition-colors min-h-11",
                 hasAccounts
-                  ? "bg-[var(--surface)]/80 border-[var(--brass-line)]/50"
+                  ? "bg-[var(--surface)] border-[var(--brass-line)]/50"
                   : "bg-[var(--panel)] border-[var(--brass-line)] hover:border-[var(--brass)]"
               )}
             >
@@ -206,24 +162,23 @@ export default function Dashboard() {
                 "w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
                 hasAccounts ? "bg-emerald-500/10 text-emerald-500" : "bg-[var(--brass)]/10 text-[var(--brass)]"
               )}>
-                {hasAccounts ? <CheckCircle2 size={16} /> : <Layers size={16} />}
+                {hasAccounts ? <CheckCircle2 size={16} aria-hidden="true" /> : <Layers size={16} aria-hidden="true" />}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-[var(--text)] truncate">1. Chart Template</p>
+                <p className="text-xs font-semibold text-[var(--text)] truncate">1. Chart of accounts</p>
                 <p className="text-[10px] text-[var(--muted)] truncate">
-                  {hasAccounts ? `${accounts.length} accounts configured` : 'Select industry COA'}
+                  {hasAccounts ? `${accounts.length} accounts set up` : 'Choose a starting list'}
                 </p>
               </div>
             </button>
 
-            {/* Step 2: Bank Lines / Import */}
             <button
               type="button"
               onClick={() => setActiveTab('banking')}
               className={cn(
-                "flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer",
+                "flex items-center gap-3 p-3 rounded-xl border text-left transition-colors min-h-11",
                 hasTransactions
-                  ? "bg-[var(--surface)]/80 border-[var(--brass-line)]/50"
+                  ? "bg-[var(--surface)] border-[var(--brass-line)]/50"
                   : "bg-[var(--panel)] border-[var(--line)] hover:border-[var(--brass-line)]"
               )}
             >
@@ -231,24 +186,23 @@ export default function Dashboard() {
                 "w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
                 hasTransactions ? "bg-emerald-500/10 text-emerald-500" : "bg-indigo-500/10 text-indigo-500"
               )}>
-                {hasTransactions ? <CheckCircle2 size={16} /> : <UploadCloud size={16} />}
+                {hasTransactions ? <CheckCircle2 size={16} aria-hidden="true" /> : <UploadCloud size={16} aria-hidden="true" />}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-[var(--text)] truncate">2. Import History</p>
+                <p className="text-xs font-semibold text-[var(--text)] truncate">2. Import your history</p>
                 <p className="text-[10px] text-[var(--muted)] truncate">
-                  {hasTransactions ? `${rawTransactions.length} entries recorded` : 'Connect bank or CSV'}
+                  {hasTransactions ? `${rawTransactions.length} entries recorded` : 'Connect a bank or import a CSV'}
                 </p>
               </div>
             </button>
 
-            {/* Step 3: Recon / First Entry */}
             <button
               type="button"
               onClick={() => hasTransactions ? setActiveTab('reconciliation') : setQuickEntryOpen(true)}
               className={cn(
-                "flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer",
+                "flex items-center gap-3 p-3 rounded-xl border text-left transition-colors min-h-11",
                 hasTransactions
-                  ? "bg-[var(--surface)]/80 border-[var(--brass-line)]/50"
+                  ? "bg-[var(--surface)] border-[var(--brass-line)]/50"
                   : "bg-[var(--panel)] border-[var(--line)] hover:border-[var(--brass-line)]"
               )}
             >
@@ -256,12 +210,12 @@ export default function Dashboard() {
                 "w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
                 hasTransactions ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
               )}>
-                {hasTransactions ? <CheckCircle2 size={16} /> : <Sparkles size={16} />}
+                {hasTransactions ? <CheckCircle2 size={16} aria-hidden="true" /> : <Sparkles size={16} aria-hidden="true" />}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-[var(--text)] truncate">3. Reconcile & Verify</p>
+                <p className="text-xs font-semibold text-[var(--text)] truncate">3. Check the balances</p>
                 <p className="text-[10px] text-[var(--muted)] truncate">
-                  {hasTransactions ? 'Verify balances & rules' : 'Record manual entry'}
+                  {hasTransactions ? 'Reconcile and review the rules' : 'Record your first entry'}
                 </p>
               </div>
             </button>
@@ -269,10 +223,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Saved Views & Default Lenses Bar */}
-      <SavedViewsBar />
-
-      <DashboardWidgets />
       <details className="border border-[var(--line)] rounded-xl p-4"><summary className="min-h-11 flex items-center cursor-pointer font-semibold">Live tax and spending planning</summary><p className="text-sm text-[var(--muted)] mb-3">This planner uses current cash and future assumptions independently of the dashboard reporting dates.</p><TaxReserveWidget /></details>
     </div>
   );
