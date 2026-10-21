@@ -9,6 +9,7 @@ import { isPostable, lineAmount } from './txFilters';
 import { calculateAmountDue } from './documentMath';
 import { findTaxDifferences } from './taxRecompute';
 import { missingLabels } from './requiredLabels';
+import { labelRoleFindings } from './labelRoles';
 import { stockHistoryProblem, type StockMove } from './stockMoves';
 import { formatCurrency } from './utils';
 import type { RecordType } from './recordLinks';
@@ -356,6 +357,29 @@ export const DATA_CHECKS: DataCheck[] = [
         description: 'Reports by that label show this entry under "Unassigned" until it is filled in.',
         record: { type: 'transaction' as const, id: tx.id },
       }];
+      });
+    },
+  },
+  {
+    id: 'label-role',
+    label: 'Entries that do not meet a label\'s role (DIM-3)',
+    remedy: 'Open the entry and give every line a value of the label; for a self-balancing label, each value\'s lines must add up to zero (split the line). The roles are in Settings → Dimensions.',
+    run: ({ transactions, accounts, dimensions }) => {
+      const byEntry = new Map<string, ReturnType<typeof labelRoleFindings>>();
+      for (const p of labelRoleFindings(transactions, dimensions, accounts)) byEntry.set(p.transactionId, [...(byEntry.get(p.transactionId) || []), p]);
+      return [...byEntry.values()].map(problems => {
+        const first = problems[0];
+        const unbalanced = problems.some(p => p.kind === 'unbalanced');
+        return {
+          id: `label-role-${first.transactionId}`, checkId: 'label-role', severity: unbalanced ? 'medium' as const : 'low' as const,
+          title: `${first.description} (${first.date}): ${problems.map(p => (p.kind === 'unbalanced'
+            ? `${p.dimensionName} ${p.value} is off by ${((p.cents || 0) / 100).toFixed(2)}`
+            : `no ${p.dimensionName} on ${p.accountName}`)).join('; ')}`,
+          description: unbalanced
+            ? 'This label is self-balancing: its values\' balance sheets do not balance until each value\'s lines in this entry add up to zero.'
+            : 'This label is fully attributed: reports by it show this line under "Unassigned" until it is filled in.',
+          record: { type: 'transaction' as const, id: first.transactionId },
+        };
       });
     },
   },
