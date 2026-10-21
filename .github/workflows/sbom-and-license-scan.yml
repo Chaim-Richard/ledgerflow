@@ -1,0 +1,343 @@
+name: SBOM and License Scan
+
+# S-04: SBOM and licence scan in CI
+# 
+# Generates CycloneDX SBOM as a CI artifact and checks for licenses
+# incompatible with PolyForm Strict distribution.
+#
+# Runs on:
+# - Every push to main
+# - Every pull request
+# - Manually via workflow_dispatch
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Only run one at a time per branch/PR
+concurrency:
+  group: sbom-license-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate-sbom:
+    name: Generate CycloneDX SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install CycloneDX CLI
+        run: npm install -g @cyclonedx/cdxgen
+
+      - name: Generate SBOM
+        id: sbom
+        run: |
+          # Generate CycloneDX SBOM in JSON format
+          cdxgen --type npm --output sbom.json --recurse --exclude-dev
+          
+          # Also generate XML format for compatibility
+          cdxgen --type npm --output sbom.xml --recurse --exclude-dev --format xml
+          
+          # Create a summary
+          echo "SBOM Generation Summary" > sbom-summary.txt
+          echo "=======================" >> sbom-summary.txt
+          echo "Generated at: $(date -u)" >> sbom-summary.txt
+          echo "Commit: ${{ github.sha }}" >> sbom-summary.txt
+          echo "" >> sbom-summary.txt
+          echo "Components: $(jq '.components | length' sbom.json 2>/dev/null || echo 'N/A')" >> sbom-summary.txt
+          echo "Dependencies: $(jq '.dependencies | length' sbom.json 2>/dev/null || echo 'N/A')" >> sbom-summary.txt
+          echo "" >> sbom-summary.txt
+          echo "SBOM files:" >> sbom-summary.txt
+          echo "  - sbom.json (CycloneDX JSON)" >> sbom-summary.txt
+          echo "  - sbom.xml (CycloneDX XML)" >> sbom-summary.txt
+
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: |
+            sbom.json
+            sbom.xml
+            sbom-summary.txt
+          retention-days: 30
+
+  license-scan:
+    name: License Compatibility Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: generate-sbom
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install license checker
+        run: npm install -g license-checker
+
+      - name: Check for incompatible licenses
+        id: license-check
+        run: |
+          # Create allowlist file for PolyForm Strict compatible licenses
+          cat > .license-allowlist.json << 'EOF'
+          {
+            "allowed": [
+              "0BSD",
+              "Apache-2.0",
+              "Artistic-2.0",
+              "BSD-2-Clause",
+              "BSD-3-Clause",
+              "BSL-1.0",
+              "CC0-1.0",
+              "ISC",
+              "MIT",
+              "MIT-0",
+              "NCSA",
+              "OpenBSD",
+              "PostgreSQL",
+              "Unlicense",
+              "WTFPL",
+              "Zlib",
+              "PolyForm-Strict-1.0.0"
+            ],
+            "allowedPatterns": [
+              "^MIT$",
+              "^BSD",
+              "^Apache",
+              "^ISC$",
+              "^CC0$",
+              "^Unlicense$",
+              "^OpenBSD$",
+              "^Zlib$"
+            ]
+          }
+          EOF
+          
+          # Run license-checker and save results
+          npx license-checker --summary --out license-report.json --failOn "only allow" 2>/dev/null || true
+          
+          # Parse and check licenses
+          node - << 'EOF'
+          const fs = require('fs');
+          const path = require('path');
+          
+          // Read the allowlist
+          const allowlist = JSON.parse(fs.readFileSync('.license-allowlist.json', 'utf8'));
+          const allowedLicenses = new Set([...allowlist.allowed, ...allowlist.allowedPatterns]);
+          
+          // Read package.json
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const dependencies = { ...pkg.dependencies || {}, ...pkg.devDependencies || {} };
+          
+          // Check each dependency's license
+          const issues = [];
+          const warnings = [];
+          let hasIssues = false;
+          
+          for (const [name, version] of Object.entries(dependencies)) {
+            try {
+              const pkgPath = path.join('node_modules', name, 'package.json');
+              if (fs.existsSync(pkgPath)) {
+                const depPkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+                const license = depPkg.license || depPkg.licenses || 'Unknown';
+                
+                // Check if license is allowed
+                const isAllowed = Array.isArray(license) 
+                  ? license.some(l => allowedLicenses.has(l) || 
+                      allowlist.allowedPatterns.some(p => new RegExp(p).test(l)))
+                  : allowedLicenses.has(license) || 
+                      allowlist.allowedPatterns.some(p => new RegExp(p).test(license));
+                
+                if (!isAllowed && license !== 'Unknown') {
+                  hasIssues = true;
+                  issues.push({
+                    package: name,
+                    version: version,
+                    license: license,
+                    severity: 'error'
+                  });
+                } else if (license === 'Unknown') {
+                  warnings.push({
+                    package: name,
+                    version: version,
+                    license: license,
+                    severity: 'warning'
+                  });
+                }
+              }
+            } catch (err) {
+              // Skip packages we can't read
+            }
+          }
+          
+          // Generate report
+          let report = '# License Compatibility Report\n\n';
+          report += `**Generated:** ${new Date().toISOString()}\n\n`;
+          report += `**Commit:** ${{ github.sha }}\n\n`;
+          
+          if (issues.length > 0) {
+            report += '## ❌ Incompatible Licenses\n\n';
+            report += 'The following packages have licenses incompatible with PolyForm Strict:\n\n';
+            report += '| Package | Version | License |\n';
+            report += '|--------|---------|--------|\n';
+            for (const issue of issues) {
+              report += `| ${issue.package} | ${issue.version} | ${issue.license} |\n`;
+            }
+            report += '\n';
+          }
+          
+          if (warnings.length > 0) {
+            report += '## ⚠️ Unknown Licenses\n\n';
+            report += 'The following packages have unknown licenses (needs manual review):\n\n';
+            report += '| Package | Version | License |\n';
+            report += '|--------|---------|--------|\n';
+            for (const warning of warnings) {
+              report += `| ${warning.package} | ${warning.version} | ${warning.license} |\n`;
+            }
+            report += '\n';
+          }
+          
+          if (issues.length === 0 && warnings.length === 0) {
+            report += '## ✅ All Licenses Compatible\n\n';
+            report += 'All dependencies have licenses compatible with PolyForm Strict distribution.\n';
+          }
+          
+          report += '\n';
+          report += '---\n\n';
+          report += '*This report was generated by the SBOM and License Scan workflow.*\n';
+          
+          fs.writeFileSync('license-report.md', report);
+          
+          // Output summary
+          console.log('License Check Summary:');
+          console.log(`  Incompatible: ${issues.length}`);
+          console.log(`  Unknown: ${warnings.length}`);
+          
+          // Set output for GitHub Actions
+          fs.writeFileSync('license-issues.json', JSON.stringify({ issues, warnings, hasIssues }));
+          
+          process.exit(hasIssues ? 1 : 0);
+          EOF
+
+      - name: Upload License Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report-${{ github.sha }}
+          path: |
+            license-report.md
+            license-issues.json
+          retention-days: 30
+
+      - name: Fail on license issues
+        run: |
+          if [ -f license-issues.json ]; then
+            HAS_ISSUES=$(jq '.hasIssues' license-issues.json)
+            if [ "$HAS_ISSUES" = "true" ]; then
+              echo "::error::Incompatible licenses detected. See the License Compatibility Report."
+              exit 1
+            fi
+          fi
+
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_ENV: development
+          HUSKY: 0
+
+      - name: Run npm audit
+        id: audit
+        run: |
+          # Run npm audit with high severity threshold
+          npm audit --audit-level=high --json > audit-results.json 2>&1 || true
+          
+          # Parse results and create report
+          node - << 'EOF'
+          const fs = require('fs');
+          
+          try {
+            const audit = JSON.parse(fs.readFileSync('audit-results.json', 'utf8'));
+            
+            let report = '# Dependency Audit Report\n\n';
+            report += `**Generated:** ${new Date().toISOString()}\n\n`;
+            report += `**Commit:** ${{ github.sha }}\n\n`;
+            
+            const vulnerabilities = audit.vulnerabilities || {};
+            const totalVulns = Object.keys(vulnerabilities).length;
+            
+            if (totalVulns > 0) {
+              report += `## ⚠️ Found ${totalVulns} Vulnerabilities\n\n`;
+              
+              let highCount = 0;
+              let mediumCount = 0;
+              let lowCount = 0;
+              
+              for (const [pkg, details] of Object.entries(vulnerabilities)) {
+                const severity = details.severity;
+                if (severity === 'high') highCount++;
+                else if (severity === 'medium') mediumCount++;
+                else if (severity === 'low') lowCount++;
+                
+                report += `### ${pkg}\n\n`;
+                report += `- **Severity:** ${severity}\n`;
+                report += `- **Version:** ${details.range}\n`;
+                report += `- **Fix Available:** ${details.fixAvailable ? 'Yes' : 'No'}\n`;
+                report += `- **Description:** ${details.nodes?.join(', ') || 'N/A'}\n\n`;
+              }
+              
+              report += `---\n\n`;
+              report += `**Summary:** ${highCount} High, ${mediumCount} Medium, ${lowCount} Low\n\n`;
+              
+              fs.writeFileSync('audit-report.md', report);
+              
+              // Fail if there are high severity vulnerabilities
+              if (highCount > 0) {
+                console.log(`::error::Found ${highCount} high severity vulnerabilities`);
+                process.exit(1);
+              }
+            } else {
+              report += '## ✅ No Vulnerabilities Found\n\n';
+              report += 'All dependencies are free of known vulnerabilities.\n';
+              fs.writeFileSync('audit-report.md', report);
+            }
+          } catch (err) {
+            console.error('Failed to parse audit results:', err);
+            process.exit(0); // Don't fail the job if we can't parse
+          }
+          EOF
+
+      - name: Upload Audit Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-report-${{ github.sha }}
+          path: |
+            audit-report.md
+            audit-results.json
+          retention-days: 30

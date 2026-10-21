@@ -13,6 +13,7 @@
     "scaffold:report": "node scripts/scaffold.js report",
     "db:test-setup": "tsx scripts/db-test.ts setup",
     "grant-admin": "tsx scripts/grant-admin.ts",
+    "check:prod-env": "tsx scripts/check-prod-env.ts",
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=build/server.cjs",
     "lint": "npm run lint:types && npm run lint:eslint",

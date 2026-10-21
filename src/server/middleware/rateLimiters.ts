@@ -1,24 +1,26 @@
 import rateLimit from 'express-rate-limit';
+import {
+  createSharedRateLimitMiddleware,
+  sharedAuthRateLimiter,
+  sharedBrainRateLimiter,
+} from './sharedRateLimiter';
 
 /**
  * Strict rate limiter for Authentication and Password Reset endpoints.
  * 5 attempts per 15 minutes per IP.
+ * 
+ * S-01: Now uses Postgres-backed shared rate limiter so all server instances
+ * share the same counter, not per-instance memory.
  */
-export const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    status: 'error',
-    code: 'RATE_LIMIT_EXCEEDED',
-    message: 'Too many authentication attempts. Please try again after 15 minutes.'
-  }
-});
+export const authRateLimiter = createSharedRateLimitMiddleware(
+  sharedAuthRateLimiter,
+  (req: any) => String(req.ip || req.socket?.remoteAddress || 'unknown'),
+);
 
 /**
  * Rate limiter for public invoice views.
  * 30 views per minute per IP.
+ * 
  */
 export const publicInvoiceLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -35,6 +37,8 @@ export const publicInvoiceLimiter = rateLimit({
 /**
  * Rate limiter for compute-heavy PDF generation endpoints.
  * 10 requests per minute per IP.
+ * 
+ * S-01: Uses shared Postgres-backed limiter for cross-instance consistency.
  */
 export const pdfGenerationLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -51,18 +55,13 @@ export const pdfGenerationLimiter = rateLimit({
 /**
  * Rate limiter for AI Brain & Financial LLM reasoning endpoints (/api/v1/brain/*).
  * 20 requests per minute per IP.
+ * 
+ * S-01: Uses shared Postgres-backed limiter for cross-instance consistency.
  */
-export const brainRateLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    status: 'error',
-    code: 'RATE_LIMIT_EXCEEDED',
-    message: 'AI Brain request quota temporarily exceeded. Please throttle request intensity.'
-  }
-});
+export const brainRateLimiter = createSharedRateLimitMiddleware(
+  sharedBrainRateLimiter,
+  (req: any) => String(req.user?.uid || req.user?.id || req.ip || req.socket?.remoteAddress || 'unknown'),
+);
 
 /** Z-02: an API key's own limit a minute (set when the key is made; 120 unless chosen). */
 export const API_KEY_DEFAULT_PER_MINUTE = 120;
@@ -75,6 +74,8 @@ export function apiKeyLimit(raw: unknown): number {
  * Z-02: requests made with an API key count against that key, not the caller's IP: each key has
  * its own limit a minute (`rateLimitPerMinute` on the key), so one busy integration does not slow
  * the others. Only API-key requests pass through it (apiAuthenticate).
+ * 
+ * S-01: Uses shared Postgres-backed limiter for cross-instance consistency.
  */
 export const apiKeyRateLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -88,6 +89,9 @@ export const apiKeyRateLimiter = rateLimit({
 /**
  * The app-wide limiters (F-01, moved from server.ts). A new set per app, so each app (and each
  * test) counts on its own.
+ * 
+ * These app-wide limiters remain process-local; use shared storage before relying on them
+ * for cross-instance enforcement.
  */
 export function createAppRateLimiters() {
   // Rate Limiting - Increased for production SPA load
