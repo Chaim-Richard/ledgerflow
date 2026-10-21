@@ -74,7 +74,7 @@ describe('The dialog', () => {
     const sent: Array<{ url: string; body: Record<string, unknown> }> = [];
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       sent.push({ url: String(input), body: typeof init?.body === 'string' ? JSON.parse(init.body) : {} });
-      const body = String(input).endsWith('/transactions/bulk') ? { status: 'ok' } : /\/rpc\//.test(String(input)) ? null : [];
+      const body = /\/documents\/invoices\/[^/]+\/post$/.test(String(input)) ? { status: 'ok', transactions: [] } : /\/rpc\//.test(String(input)) ? null : [];
       return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }) as typeof fetch;
     render(<OpeningDocumentsDialog side="customer" onClose={() => {}} />);
@@ -86,8 +86,10 @@ describe('The dialog', () => {
     assert.match(screen.getByRole('table').textContent || '', /New Client \(new\)/);
     assert.match(screen.getByRole('table').textContent || '', /The date must be written YYYY-MM-DD/);
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add 2 opening invoices' })); });
-    await waitFor(() => assert.equal(sent.filter(s => s.url.endsWith('/transactions/bulk')).length, 2));
-    const invoices = sent.filter(s => s.url.endsWith('/transactions/bulk')).map(s => (s.body.entityMutation as { data: Record<string, unknown> }).data);
+    // each invoice is sent alone to the server, which posts it (L94-STEP2)
+    const saves = () => sent.filter(s => /\/api\/v1\/documents\/invoices\/[^/]+\/post$/.test(s.url));
+    await waitFor(() => assert.equal(saves().length, 2));
+    const invoices = saves().map(s => s.body.data as Record<string, unknown>);
     assert.deepEqual(invoices.map(i => [i.number, i.dueDate, i.amountCents, (i.metadata as { type: string }).type]), [['INV-0912', '2026-09-13', 125000, 'opening-balance'], ['INV-0920', '2026-08-30', 40000, 'opening-balance']]);
     const newCustomer = sent.find(s => /\/rpc\/lf_set/.test(s.url) && (s.body as { p_table?: string }).p_table === 'customers');
     assert.equal((newCustomer?.body.p_data as { name: string }).name, 'New Client');
