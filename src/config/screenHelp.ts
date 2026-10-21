@@ -127,6 +127,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Every move of stock between locations, newest first, read back from the stock history as the pair the server wrote (moved out, moved in). A half whose pair is not in the loaded history shows on its own with the reason. Moving stock is done from an item's Stock history window; this screen only reports.",
     "by-label":
       "Choose a label (Property, Project, Location…) and a period: the income, costs and result of each of its values, and of the lines without one, account by account. Together the columns add up to the profit and loss of the period. Each figure opens the entries behind it.",
+    "balance-sheet-by-label":
+      "Choose a label (Property, Project, Location…), one of its values and a date: the assets, liabilities, equity and profit to date of the posted lines that carry that value. Lines with no value for the label and opening balances are shown in their own column and never shared out. When the value's sheet does not balance, the screen says by how much.",
     "ask-books":
       "Ask about an account, a label and a period in words. The question is read into filters you can see and change; the figure is calculated from all posted entries in the workspace's currency, and the entries behind it are listed. It reads names and dates, not any sentence.",
     "balance-sheet":

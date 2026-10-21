@@ -7,7 +7,8 @@
  */
 import type { ChartAccount, Transaction } from '../../types';
 import { getLineDimension } from '../../lib/dimensionUtils';
-import { computeProfitAndLoss } from './computeReports';
+import { isPostable } from '../../lib/txFilters';
+import { computeBalanceSheet, computeProfitAndLoss } from './computeReports';
 
 export const UNASSIGNED = 'Unassigned';
 type Section = 'income' | 'cogs' | 'expense';
@@ -66,4 +67,51 @@ export function profitByLabel(accounts: ChartAccount[], transactions: Transactio
     .map(([id, a]) => ({ id, name: a.name, ...(a.code ? { code: a.code } : {}), section }))
     .sort((a, b) => (a.code || '￿').localeCompare(b.code || '￿', undefined, { numeric: true }) || a.name.localeCompare(b.name)));
   return { dimensionId, startDate, endDate, columns, total, rows };
+}
+
+export interface LabelBalanceSheet {
+  dimensionId: string;
+  value: string;
+  endDate: string;
+  /** the balance sheet of the value's lines alone; it need not balance when an entry's sides were labelled apart */
+  sheet: ReturnType<typeof computeBalanceSheet>;
+  /** lines with no value for this label (and the accounts' opening balances, which carry no label): never guessed */
+  notLabelled: { lines: number; openings: number; sheet: ReturnType<typeof computeBalanceSheet> };
+  /** the accounts with a figure on either sheet, assets → liabilities → equity */
+  rows: Array<{ id: string; name: string; code?: string; type: 'asset' | 'liability' | 'equity' }>;
+}
+
+/**
+ * W5-BS: the balance sheet of one label value (Property A, Project P1…) at a date, from the posted lines that carry
+ * that value (`getLineDimension`, the profit by label's reading), with the balance sheet's own code. Lines with no
+ * value for the label and the accounts' opening balances are not shared out: they are their own "not labelled"
+ * sheet with its totals, so a value's sheet that does not balance says so instead of being made to.
+ */
+export function balanceSheetByLabel(accounts: ChartAccount[], transactions: Transaction[], dimensionId: string, value: string, endDate: string): LabelBalanceSheet {
+  const mine: Transaction[] = [];
+  const none: Transaction[] = [];
+  let lines = 0;
+  for (const tx of transactions) {
+    if (!isPostable(tx) || String(tx.date || '').slice(0, 10) > endDate) continue;
+    const own: NonNullable<Transaction['lines']> = [];
+    const unlabelled: NonNullable<Transaction['lines']> = [];
+    for (const line of tx.lines || []) {
+      const v = getLineDimension(line, tx, dimensionId);
+      if (v === value) own.push(line);
+      else if (!v || v === UNASSIGNED) unlabelled.push(line);
+    }
+    if (own.length) mine.push({ ...tx, lines: own });
+    if (unlabelled.length) { none.push({ ...tx, lines: unlabelled }); lines += unlabelled.length; }
+  }
+  const noOpenings = accounts.map(a => ({ ...a, openingBalanceCents: 0 }));
+  const sheet = computeBalanceSheet(noOpenings, mine, endDate);
+  const rest = computeBalanceSheet(accounts, none, endDate);
+  const openings = accounts.filter(a => ['asset', 'liability', 'equity'].includes(a.type) && Number(a.openingBalanceCents)).length;
+  const order = { asset: 0, liability: 1, equity: 2 } as const;
+  const rows = accounts
+    .filter((a): a is ChartAccount & { type: 'asset' | 'liability' | 'equity' } => a.type in order)
+    .filter(a => [sheet, rest].some(s => (a.type === 'asset' ? s.assets : a.type === 'liability' ? s.liabilities : s.equity)[a.id]))
+    .map(a => ({ id: a.id, name: a.name, ...(a.code ? { code: a.code } : {}), type: a.type }))
+    .sort((a, b) => order[a.type] - order[b.type] || (a.code || '￿').localeCompare(b.code || '￿', undefined, { numeric: true }) || a.name.localeCompare(b.name));
+  return { dimensionId, value, endDate, sheet, notLabelled: { lines, openings, sheet: rest }, rows };
 }
