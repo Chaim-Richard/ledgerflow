@@ -80,14 +80,14 @@ export default function Us1099PreviewReportView() {
     <div className="space-y-1">
       <h2>US 1099 Preview (review only)</h2>
       <p className="text-sm text-[var(--muted)]">
-        Conservative draft from <b>posted payments to vendors marked as 1099 vendors</b> — not an IRS paper form or IRIS upload. Payer/recipient TINs, state data, corrections and specialized boxes need the tax workflow. Thresholds: <b>{threshold !== null ? formatCurrency(threshold, workspace?.currency || 'USD') : '—'}</b> for {form} box {box} in {taxYear} (IRS 2026 instructions). <b>filingReady false</b> — deliberately not for filing.
+        Conservative draft from <b>posted payments to vendors marked as 1099 vendors</b> — not an IRS paper form or IRIS upload. Payer/recipient TINs, state data, corrections and specialized boxes need the tax workflow. Thresholds: <b>{threshold !== null ? formatCurrency(threshold, workspace?.currency || 'USD') : '—'}</b> for {form} box {box} in {taxYear} (the IRS thresholds in force for that year). <b>filingReady false</b> — deliberately not for filing.
       </p>
       <p className="text-xs text-[var(--muted)]">Sources: <a className="underline" href="https://www.irs.gov/businesses/small-businesses-self-employed/am-i-required-to-file-a-form-1099-or-other-information-return" target="_blank" rel="noopener noreferrer">IRS 1099 filing guide</a> and <a className="underline" href="https://www.irs.gov/instructions/i1099mec" target="_blank" rel="noopener noreferrer">i1099mec</a>. Box 2 royalties $10, box 10 attorney $600, otherwise {taxYear >= 2026 ? '$2,000' : '$600'} — see <code>src/lib/tax/us1099Preview.ts</code>.</p>
     </div>
 
     <div className="flex flex-wrap gap-3 items-end p-3 rounded-lg border border-[var(--line)] bg-[var(--surface)]">
       <label className="block text-sm">Tax year
-        <input type="number" className={field + ' mt-1'} value={taxYear} onChange={e => setTaxYear(Number(e.target.value) || 2026)} min={2020} max={2099} />
+        <input type="number" className={field + ' mt-1'} value={taxYear} onChange={e => setTaxYear(Number(e.target.value) || new Date().getFullYear())} min={2020} max={2099} />
       </label>
       <label className="block text-sm">Form
         <select className={field + ' mt-1'} value={form} onChange={e => { const v = e.target.value as typeof form; setForm(v); setBox(v === '1099-NEC' ? '1a' : '1'); setManualEdits(null); }}>
