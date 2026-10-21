@@ -14,13 +14,17 @@ import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
-import { checkoutIdempotencyKey, isIdempotencyInFlight } from '../server/services/stripeService';
+import { checkoutIdempotencyKey, checkoutParamsFingerprint, isIdempotencyInFlight } from '../server/services/stripeService';
 
 test('the key: the same parts give the same key, any other amount another; unsafe characters are replaced; at most 255', () => {
   assert.equal(checkoutIdempotencyKey('inv1', 100_000, 'tok'), checkoutIdempotencyKey('inv1', 100_000, 'tok'));
   assert.notEqual(checkoutIdempotencyKey('inv1', 100_000, 'tok'), checkoutIdempotencyKey('inv1', 60_000, 'tok'));
   assert.equal(checkoutIdempotencyKey('a b', 'c/d'), 'checkout_a-b_c-d');
   assert.equal(checkoutIdempotencyKey('x'.repeat(400)).length, 255);
+  // the same parameters, the same fingerprint; a renamed invoice at the same amount gets another one (no 24-hour lock-out)
+  const params = { line_items: [{ price_data: { unit_amount: 100_000, product_data: { name: 'Invoice INV-1' } } }] };
+  assert.equal(checkoutParamsFingerprint(params), checkoutParamsFingerprint(structuredClone(params)));
+  assert.notEqual(checkoutParamsFingerprint(params), checkoutParamsFingerprint({ line_items: [{ price_data: { unit_amount: 100_000, product_data: { name: 'Invoice INV-1A' } } }] }));
   assert.equal(isIdempotencyInFlight({ type: 'StripeIdempotencyError' }), true);
   assert.equal(isIdempotencyInFlight(new Error('card declined')), false);
 });
@@ -93,14 +97,16 @@ describe('Checkout sessions with a mocked Stripe', { skip: !url && 'LF_TEST_DATA
     assert.deepEqual([first.status, second.status], [200, 200]);
     assert.equal(first.body.url, second.body.url, 'the same session both times');
     assert.equal(calls.length, 2);
-    assert.deepEqual(calls.map(c => c.key), [checkoutIdempotencyKey(invoiceId, 100_000, token.slice(-16)), checkoutIdempotencyKey(invoiceId, 100_000, token.slice(-16))]);
+    assert.equal(calls[0].key, calls[1].key, 'a double click sends the same key');
+    assert.ok(calls[0].key?.startsWith(checkoutIdempotencyKey(invoiceId, 100_000, token.slice(-16))), 'keyed by invoice and amount');
     assert.deepEqual(calls.map(c => c.params.line_items[0].price_data.unit_amount), [100_000, 100_000]);
 
     await db.collection('invoices').doc(invoiceId).update({ amountPaidCents: 40_000, status: 'sent' });
     const third = await post(`/api/v1/invoices/public/${token}/pay`);
     assert.equal(third.status, 200);
     assert.notEqual(third.body.url, first.body.url);
-    assert.equal(calls[2].key, checkoutIdempotencyKey(invoiceId, 60_000, token.slice(-16)), '100,000 − 40,000');
+    assert.ok(calls[2].key?.startsWith(checkoutIdempotencyKey(invoiceId, 60_000, token.slice(-16))), '100,000 − 40,000');
+    assert.notEqual(calls[2].key, calls[0].key);
     assert.equal(calls[2].params.line_items[0].price_data.unit_amount, 60_000);
   });
 
@@ -118,6 +124,6 @@ describe('Checkout sessions with a mocked Stripe', { skip: !url && 'LF_TEST_DATA
     await db.collection('workspaces').doc(ws).update({ stripeSubscriptionId: 'sub_old' });
     await post('/api/v1/billing/checkout', { workspaceId: ws, plan: 'pro' });
     assert.notEqual(calls[3].key, calls[0].key);
-    assert.match(String(calls[3].key), /_sub_old$/);
+    assert.match(String(calls[3].key), /_sub_old_[0-9a-f]{16}$/);
   });
 });

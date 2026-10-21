@@ -3,7 +3,7 @@ import { planFor } from '../../lib/plans';
 import express from "express";
 import crypto from "crypto";
 import { getDb, validateWorkspaceMember, FieldValue } from "../db/firestore.ts";
-import { checkoutIdempotencyKey, getStripe, isIdempotencyInFlight } from "../services/stripeService.ts";
+import { checkoutIdempotencyKey, checkoutParamsFingerprint, getStripe, isIdempotencyInFlight } from "../services/stripeService.ts";
 import { getTrustedAppUrl } from "../utils/urlHelper.ts";
 import { roleInWorkspace } from "../middleware/requireLedgerWriter.ts";
 import { incrementShardedCounter, getShardedCounterValue } from "../services/shardedCounterService.ts";
@@ -57,7 +57,7 @@ billingRouter.post("/checkout", async (req: express.Request, res: express.Respon
     // Use trusted app URL helper to prevent Host-header poisoning (#85-R, N6)
     const baseUrl = getTrustedAppUrl(req);
 
-    const session = await stripe.checkout.sessions.create({
+    const params = {
       payment_method_types: ['card'],
       line_items: [priceInfo],
       mode: 'subscription',
@@ -73,10 +73,11 @@ billingRouter.post("/checkout", async (req: express.Request, res: express.Respon
           plan: plan || 'pro'
         }
       }
-    }, {
+    } satisfies Parameters<typeof stripe.checkout.sessions.create>[0];
+    const session = await stripe.checkout.sessions.create(params, {
       // INT-6: one key per workspace, plan, price and current subscription — a double click gets the same session,
       // not two subscriptions; after a subscription ends (its id cleared by the webhook) a new checkout gets a new key
-      idempotencyKey: checkoutIdempotencyKey('subscription', workspaceId, chosen.id, priceInfo.price_data.unit_amount, String(workspace?.stripeSubscriptionId || 'none')),
+      idempotencyKey: checkoutIdempotencyKey('subscription', workspaceId, chosen.id, priceInfo.price_data.unit_amount, String(workspace?.stripeSubscriptionId || 'none'), checkoutParamsFingerprint(params)),
     });
 
     res.json({ url: session.url });

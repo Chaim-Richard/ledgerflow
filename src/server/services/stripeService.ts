@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import Stripe from "stripe";
 
 let stripeClient: Stripe | null = null;
@@ -20,6 +21,13 @@ export type { Stripe };
  */
 export const checkoutIdempotencyKey = (...parts: Array<string | number>) =>
   `checkout_${parts.map(p => String(p).replace(/[^A-Za-z0-9_-]/g, '-')).join('_')}`.slice(0, 255);
+
+/**
+ * A short fingerprint of a Checkout request's parameters, added to its key: Stripe refuses a key reused with other
+ * parameters, so an invoice renamed at the same amount would otherwise be locked out of paying for 24 hours.
+ */
+export const checkoutParamsFingerprint = (params: unknown) =>
+  createHash('sha256').update(JSON.stringify(params)).digest('hex').slice(0, 16);
 
 /** Stripe refuses a key that is still being used by a request in flight (two clicks at once). */
 export const isIdempotencyInFlight = (err: unknown) => {

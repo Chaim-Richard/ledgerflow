@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getDb } from '../db/firestore';
 import { getTrustedAppUrl } from '../utils/urlHelper';
 import { calculateAmountDue, depositAppliedCents } from '../../lib/documentMath';
-import { checkoutIdempotencyKey, getStripe, isIdempotencyInFlight } from '../services/stripeService';
+import { checkoutIdempotencyKey, checkoutParamsFingerprint, getStripe, isIdempotencyInFlight } from '../services/stripeService';
 import { publicPortalRouter } from './customerPortalRoutes';
 import { publicEstimateRouter } from './estimateSignRoutes';
 import { recordInvoiceView } from '../services/invoiceViewService';
@@ -154,9 +154,7 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
     const origin = getTrustedAppUrl(req);
 
     // INT-6: one key per invoice and amount still due — a double click gets the same session, not a second one
-    const idempotencyKey = checkoutIdempotencyKey(doc.id, remainingBalance, token.slice(-16));
-
-    const session = await stripe.checkout.sessions.create({
+    const params = {
       payment_method_types: ['card', 'us_bank_account'],
       line_items: [
         {
@@ -180,9 +178,10 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
         workspaceId: invoice.workspaceId,
         paymentToken: token
       }
-    }, {
-      idempotencyKey
-    });
+    } satisfies Parameters<typeof stripe.checkout.sessions.create>[0];
+    // the same parameters get the same key; changed ones (another amount, a renamed invoice) a new one
+    const idempotencyKey = checkoutIdempotencyKey(doc.id, remainingBalance, token.slice(-16), checkoutParamsFingerprint(params));
+    const session = await stripe.checkout.sessions.create(params, { idempotencyKey });
 
     res.json({ url: session.url });
 
