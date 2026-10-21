@@ -119,6 +119,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "As of a day, each item's stock on hand split by how long ago those units came in, the latest units taken to be the ones still there. With its value and the last sale, so slow-moving stock shows first. Read from the stock history the server keeps.",
     "inventory-details":
       "For a period, each item's opening quantity and value, every movement (sold, bought, returned, adjusted, counted, moved) with its entry, and the closing quantity and value. Read from the stock history the server keeps with each change.",
+    "stock-sources-uses":
+      "For a period, each item's opening stock, where its units came from (each vendor, Adjust stock, opening stock with no recorded origin) and where they went (each customer and the sold line's project or other label, vendors they were sent back to, adjustments by their reason), then its closing stock. A check says whether opening plus what came in less what went out equals closing. Units with no vendor, customer or reason recorded are flagged, never guessed.",
     "expiring-lots":
       "Lots received on goods receipts with their expiry dates: how many days each lot has left, flagged expired or expiring soon, with the receipts and vendors. Units recorded with a lot at sale show as a reference only, because how much of a lot is still on hand is not tracked. Record the lot and its expiry while receiving goods on a purchase order.",
     "stock-transfers":
