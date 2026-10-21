@@ -273,7 +273,10 @@ export async function postVendorCreditLedger(
       vendorCreditId,
       vendorId: vendorCreditData.vendorId,
       type: 'vendor-credit-issuance',
-      ...(goods.length ? { stockOut: goods.map((g, i) => ({ itemId: g.itemId, quantity: g.quantity, valueCents: goodsBase[i] })) } : {}),
+      // DIM-2 phase 2: each line sent back names the bill line it came in on (and the bill, under its own key so the
+      // entry is never mistaken for the bill's own)
+      ...(goods.length ? { stockOut: goods.map((g, i) => ({ itemId: g.itemId, quantity: g.quantity, valueCents: goodsBase[i], ...(Number.isSafeInteger(g.billLine) ? { billLine: g.billLine } : {}) })) } : {}),
+      ...(goods.length && vendorCreditData.billId ? { returnsFromBillId: vendorCreditData.billId } : {}),
     },
     lines: [
       { accountId: apAccount.id, accountName: apAccount.name, amountCents: amount, debitCents: amount, creditCents: 0, description: 'Accounts Payable Reduction' },

@@ -49,6 +49,9 @@ interface PendingMove {
   entry: LedgerEntry;
   valueCents: number;
   location?: string;
+  /** DIM-2 phase 2: the document line the units came in on or went back from, and the entry that names them */
+  line?: number;
+  source?: LedgerEntry;
 }
 
 const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
@@ -79,7 +82,7 @@ function returnMove(tx: { metadata?: Record<string, unknown> }): { itemId: strin
  * J-08: the item lines of a bill (`metadata.stockIn` on its entry, src/lib/billStock.ts): each brings
  * units in at the value its line posted to Inventory.
  */
-function billStockIn(tx: LedgerEntry): Array<{ itemId: string; quantity: number; valueCents: number }> {
+function billStockIn(tx: LedgerEntry): Array<{ itemId: string; quantity: number; valueCents: number; line?: number }> {
   const lines = tx.metadata?.stockIn;
   if (lines === undefined) return [];
   if (tx.metadata?.type !== BILL_ACCRUAL_TYPE || !Array.isArray(lines) || lines.length > 500) {
@@ -92,7 +95,8 @@ function billStockIn(tx: LedgerEntry): Array<{ itemId: string; quantity: number;
     if (typeof l.itemId !== 'string' || !l.itemId || !Number.isFinite(quantity) || quantity <= 0 || !Number.isSafeInteger(valueCents) || valueCents < 0) {
       throw new LedgerPostingError(400, 'Each item line of a bill needs the item, a positive quantity and its value in whole cents.');
     }
-    return { itemId: l.itemId, quantity, valueCents };
+    // DIM-2 phase 2: the bill's own line (src/lib/billStock.ts keeps its index), when it is a whole number
+    return { itemId: l.itemId, quantity, valueCents, ...(Number.isSafeInteger(l.line) && Number(l.line) >= 0 ? { line: Number(l.line) } : {}) };
   });
 }
 
@@ -100,7 +104,7 @@ function billStockIn(tx: LedgerEntry): Array<{ itemId: string; quantity: number;
  * BF-07: the stock a vendor credit sends back (`metadata.stockOut` on its entry, src/lib/vendorReturns.ts):
  * each takes units out at the value its line took off Inventory.
  */
-function vendorReturnOut(tx: LedgerEntry): Array<{ itemId: string; quantity: number; valueCents: number }> {
+function vendorReturnOut(tx: LedgerEntry): Array<{ itemId: string; quantity: number; valueCents: number; line?: number }> {
   const lines = tx.metadata?.stockOut;
   if (lines === undefined) return [];
   if (tx.metadata?.type !== 'vendor-credit-issuance' || !Array.isArray(lines) || lines.length > 500) {
@@ -113,8 +117,23 @@ function vendorReturnOut(tx: LedgerEntry): Array<{ itemId: string; quantity: num
     if (typeof l.itemId !== 'string' || !l.itemId || !Number.isFinite(quantity) || quantity <= 0 || !Number.isSafeInteger(valueCents) || valueCents < 0) {
       throw new LedgerPostingError(400, 'Each line sent back to a vendor needs the item, a positive quantity and its value in whole cents.');
     }
-    return { itemId: l.itemId, quantity, valueCents };
+    // DIM-2 phase 2: the line of the bill the units go back from
+    return { itemId: l.itemId, quantity, valueCents, ...(Number.isSafeInteger(l.billLine) && Number(l.billLine) >= 0 ? { line: Number(l.billLine) } : {}) };
   });
+}
+
+/**
+ * DIM-2 phase 2 (GitHub #132): where stock came from, kept with the move when it is received. A bill's units keep the
+ * bill line they came in on and the vendor; units sent back keep the line of the bill they go back from
+ * (`returnsFromBillId`) and the vendor. A reversal keeps its original's. Nothing is inferred: what the entry does not
+ * name is left out.
+ */
+function sourceOf(p: PendingMove): { documentLine?: number; vendorId?: string; sourceBillId?: string } {
+  if (!p.kind.startsWith('purchase')) return {};
+  const meta = { ...(p.source?.metadata || {}), ...(p.entry.metadata || {}) } as Record<string, unknown>;
+  const vendorId = typeof meta.vendorId === 'string' && meta.vendorId ? meta.vendorId : undefined;
+  const fromBill = p.kind.startsWith('purchase-return') && typeof meta.returnsFromBillId === 'string' && meta.returnsFromBillId ? meta.returnsFromBillId : undefined;
+  return { ...(p.line !== undefined ? { documentLine: p.line } : {}), ...(vendorId ? { vendorId } : {}), ...(fromBill ? { sourceBillId: fromBill } : {}) };
 }
 
 /** What an entry does to stock: a sale takes units out, a return brings them back. */
@@ -194,12 +213,12 @@ export async function prepareStockMoves(
     // J-08: a bill's item lines go back out with it
     for (const line of billStockIn(original)) {
       add(line.itemId, -line.quantity);
-      pending.push({ itemId: line.itemId, quantity: -line.quantity, kind: 'purchase-reversal', entry: reversalOf.get(target) || original, valueCents: -line.valueCents, location: original.metadata?.locationId as string | undefined });
+      pending.push({ itemId: line.itemId, quantity: -line.quantity, kind: 'purchase-reversal', entry: reversalOf.get(target) || original, valueCents: -line.valueCents, location: original.metadata?.locationId as string | undefined, line: line.line, source: original });
     }
     // BF-07: stock sent back to a vendor comes back in when the credit is undone
     for (const line of vendorReturnOut(original)) {
       add(line.itemId, line.quantity);
-      pending.push({ itemId: line.itemId, quantity: line.quantity, kind: 'purchase-return-reversal', entry: reversalOf.get(target) || original, valueCents: line.valueCents, location: original.metadata?.locationId as string | undefined });
+      pending.push({ itemId: line.itemId, quantity: line.quantity, kind: 'purchase-return-reversal', entry: reversalOf.get(target) || original, valueCents: line.valueCents, location: original.metadata?.locationId as string | undefined, line: line.line, source: original });
     }
     const effect = stockEffect(original);
     if (!effect) return;
@@ -211,11 +230,11 @@ export async function prepareStockMoves(
   for (const tx of entries) {
     for (const line of vendorReturnOut(tx)) {
       add(line.itemId, -line.quantity);
-      pending.push({ itemId: line.itemId, quantity: -line.quantity, kind: 'purchase-return', entry: tx, valueCents: -line.valueCents, location: tx.metadata?.locationId as string | undefined });
+      pending.push({ itemId: line.itemId, quantity: -line.quantity, kind: 'purchase-return', entry: tx, valueCents: -line.valueCents, location: tx.metadata?.locationId as string | undefined, line: line.line, source: tx });
     }
     for (const line of billStockIn(tx)) {
       add(line.itemId, line.quantity);
-      pending.push({ itemId: line.itemId, quantity: line.quantity, kind: 'purchase', entry: tx, valueCents: line.valueCents, location: tx.metadata?.locationId as string | undefined });
+      pending.push({ itemId: line.itemId, quantity: line.quantity, kind: 'purchase', entry: tx, valueCents: line.valueCents, location: tx.metadata?.locationId as string | undefined, line: line.line, source: tx });
     }
     const effect = stockEffect(tx);
     if (!effect) continue;
@@ -319,6 +338,7 @@ export async function prepareStockMoves(
           transactionId: p.entry.id, ...document,
           // W-01: where the units left from or came back to (a reversal is where its original was)
           ...(typeof p.location === 'string' && p.location ? { locationId: p.location } : {}),
+          ...sourceOf(p),
           uid: String(p.entry.uid || ''),
         });
         before = after;

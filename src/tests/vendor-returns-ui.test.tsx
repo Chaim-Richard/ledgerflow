@@ -62,7 +62,8 @@ describe('Sending stock back on a vendor credit', () => {
     assert.deepEqual(body.entityMutation.data.returnedGoods, [{ billLine: 0, itemId: 'chair', quantity: 2, valueCents: 2000 }]);
     const entry = body.transactions.find(t => t.metadata?.type === 'vendor-credit-issuance')!;
     assert.deepEqual(entry.lines.map(l => [l.accountId, l.amountCents]), [['ap', 2000], ['inv-acct', -2000]]);
-    assert.deepEqual(entry.metadata?.stockOut, [{ itemId: 'chair', quantity: 2, valueCents: 2000 }]);
+    // DIM-2 phase 2: each line sent back also names the bill line it came in on
+    assert.deepEqual(entry.metadata?.stockOut, [{ itemId: 'chair', quantity: 2, valueCents: 2000, billLine: 0 }]);
   });
 
   test('more than the bill brought in is refused before saving', async () => {
