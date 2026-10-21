@@ -12,7 +12,7 @@ import { isMailConfigured, sendMail } from './mailer';
 import { notify } from './notificationService';
 import { generateDocumentPdf } from './pdfService';
 import { contactTerms, documentLanguage } from '../../lib/documentLanguage';
-import { loadStatement } from './statementService';
+import { loadStatement, StatementScopeError } from './statementService';
 import { isArchivedParty } from '../../lib/contacts';
 import { againstPreference, sendsByEmail } from '../../lib/delivery';
 import { approvalDecision, approvalStatus, holdsSending, isApproverRole } from '../../lib/invoiceApproval';
@@ -252,7 +252,10 @@ export async function emailStatements(db: Firestore, input: { workspaceId: strin
   const result: StatementBatchResult = { sent: [], skipped: [], failed: [] };
   const template = resolveTemplate('statement', workspace.emailTemplates as EmailTemplates | undefined);
   for (const id of ids) {
-    const statement = await loadStatement(db, input.workspaceId, id, { startDate: input.startDate, endDate: input.endDate });
+    const statement = await loadStatement(db, input.workspaceId, id, { startDate: input.startDate, endDate: input.endDate }).catch(err => {
+      if (err instanceof StatementScopeError) throw new EmailSendError(400, err.message);
+      throw err;
+    });
     if (!statement || statement.contactType !== 'customer') { result.skipped.push({ id, name: id, reason: 'not a customer here' }); continue; }
     const name = String(statement.contact.name || id);
     const to = String(statement.contact.email || '').trim().toLowerCase();
