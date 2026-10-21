@@ -16,14 +16,18 @@ export interface LoadedStatement {
   pdf: PdfDocument;
 }
 
-export interface StatementPeriod { startDate?: string; endDate?: string }
+export interface StatementPeriod { startDate?: unknown; endDate?: unknown }
 
 /** A period that is not real dates, or that starts after it ends (AUD-01: refused, never widened to all history). */
 export class StatementScopeError extends Error {}
 
-/** A YYYY-MM-DD date from a query string, or undefined when none was given (ISS-141: the PDF follows the screen's period) */
-export function statementDate(value: unknown): string | undefined {
-  return typeof value === 'string' && value !== '' ? value : undefined;
+/**
+ * A date from a query string, as given, or undefined when none was given (ISS-141: the PDF follows the screen's
+ * period). Anything else — a repeated parameter Express hands over as a list — is passed on to be refused, never
+ * read as "no date".
+ */
+export function statementDate(value: unknown): unknown {
+  return value === undefined || value === '' ? undefined : value;
 }
 
 /**
@@ -67,7 +71,7 @@ export async function loadStatement(db: Firestore, workspaceId: string, contactI
       period: scope,
       customerName: stmt.contactName,
       amountCents: stmt.endingBalanceCents,
-      transactions: statementRows(stmt).map(row => ({ description: `${row.date} ${row.type}${row.reference ? ` ${row.reference}` : ''}`, amountCents: row.amountCents })),
+      transactions: statementRows(stmt).map(row => ({ description: `${row.date} ${row.type}${row.reference ? ` ${row.reference}` : ''}`, amountCents: row.amountCents, balanceCents: row.runningBalanceCents })),
     },
   };
 }

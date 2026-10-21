@@ -32,6 +32,16 @@ import { makeCreditNote, makeCustomer, makeInvoice, makePayment } from './fixtur
 import { pdfText } from './helpers/pdfText';
 import type { Workspace } from '../types';
 
+test('same-day references sort in one fixed locale (en), whatever the runtime\'s language', async () => {
+  const { computeStatement } = await import('../server/reports/computeReports');
+  const c = makeCustomer({ id: 'c' });
+  const two = [makeInvoice({ id: 'a', number: 'חשבונית-2', customerId: 'c', amountCents: 100, date: '2026-04-05', status: 'sent' }), makeInvoice({ id: 'b', number: 'INV-2', customerId: 'c', amountCents: 200, date: '2026-04-05', status: 'sent' })];
+  const order = (list: typeof two) => computeStatement(c, list, [], [], '2026-04-01', '2026-04-30', 'customer').entries.map(e => e.reference);
+  const en = ['INV-2', 'חשבונית-2'].sort((x, y) => x.localeCompare(y, 'en', { numeric: true }));
+  assert.deepEqual(order(two), en);
+  assert.deepEqual(order([...two].reverse()), en);
+});
+
 test('the scope: defaults to this year to today; refuses dates that are not real and a backwards period', () => {
   assert.deepEqual(resolveStatementScope({}, '2026-10-21'), { scope: { startDate: '2026-01-01', endDate: '2026-10-21' } });
   assert.deepEqual(resolveStatementScope({ startDate: '', endDate: '2026-06-30' }, '2026-10-21'), { scope: { startDate: '2026-01-01', endDate: '2026-06-30' } });
@@ -160,6 +170,14 @@ describe('the server JSON and the PDF on a real database', { skip: !url && 'LF_T
       && at('2026-04-05 Payment PAY-2') < at('2026-05-02 Credit note (part refunded) CN-2'), text);
     assert.match(text, /-USD 100\.00/);
     assert.match(text, /USD 400\.00/);
+    // each row's balance after it, as on the screen and in the JSON: 250.00, 350.00, 550.00, 450.00, 400.00
+    assert.match(text, /BALANCE/);
+    let from = 0;
+    for (const balance of ['USD 250.00', 'USD 350.00', 'USD 550.00', 'USD 450.00', 'USD 400.00']) {
+      const at = text.indexOf(balance, from);
+      assert.ok(at >= 0, `${balance} after ${from}: ${text}`);
+      from = at + balance.length;
+    }
     for (const left of ['INV-1 ', 'INV-3', 'INV-4', 'INV-9', 'PAY-3']) assert.ok(!text.includes(left), `${left} is not in the period`);
   });
 
@@ -177,6 +195,9 @@ describe('the server JSON and the PDF on a real database', { skip: !url && 'LF_T
     assert.equal((await json('&startDate=2026-07-01&endDate=2026-06-30')).status, 400);
     assert.equal((await pdf('&startDate=2026-02-30')).status, 400);
     assert.equal((await pdf('&startDate=2026-07-01&endDate=2026-06-30')).status, 400);
+    // a repeated date is not read as "no date" (it would have widened the PDF to this year)
+    assert.equal((await pdf('&startDate=2026-04-01&startDate=2026-05-01&endDate=2026-06-30')).status, 400);
+    assert.equal((await json('&startDate=2026-04-01&startDate=2026-05-01')).status, 400);
     assert.equal((await get(`/api/v1/reports/statement?workspaceId=${WS}&type=customer&contactId=${id('elsewhere')}`)).status, 404);
     assert.equal((await get(`/api/v1/reports/statement?workspaceId=${WS}&type=vendor&contactId=${ACME}`)).status, 404, 'Acme is a customer, not a vendor');
   });
