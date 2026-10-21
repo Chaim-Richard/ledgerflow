@@ -1,0 +1,5 @@
+*Code,*Name,*Type,*Tax Code,Description,Dashboard,Expense Claims,Enable Payments,Balance
+090,Business Bank Account,Bank,Tax Exempt (0%),,Yes,No,No,"5,000.00"
+200,Sales,Revenue,GST on Income,Income from any normal business activity,No,No,No,
+310,Cost of Goods Sold,Direct Costs,GST on Expenses,,No,No,No,
+800,Accounts Payable,Current Liability,BAS Excluded,,No,No,No,
