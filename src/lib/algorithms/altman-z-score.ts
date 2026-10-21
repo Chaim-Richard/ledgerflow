@@ -42,21 +42,24 @@ export const ALTMAN_Z_SCORE_ALGO: AlgorithmDefinition = {
       }
     });
 
-    // Approximate EBIT from transactions
+    // EBIT from the posted lines, each with its own sign (AUD-19): revenue is a credit (negative), so a sale adds
+    // and its reversal (a debit) takes it away again; costs are debits, so a cost subtracts and its reversal adds
+    // back. Interest and income tax are left out (earnings before interest and taxes), found by the account's name
+    // or category — an expense account's type is only ever "expense".
+    const beforeInterestAndTax = (accountId: string) => {
+      const acc = accounts.find(a => a.id === accountId);
+      const words = `${acc?.name || ''} ${acc?.category || ''}`.toLowerCase();
+      return !/\binterest\b|income tax|tax expense|corporate tax/.test(words);
+    };
     let ebit = 0;
     transactions.forEach(t => {
       if (!isPostable(t)) return;
       t.lines.forEach(l => {
         const amt = lineAmount(l, t);
         if (accounting.isRevenue(l.accountId)) {
-          ebit += Math.abs(amt);
-        } else if (accounting.isExpense(l.accountId) || accounting.isCOGS(l.accountId)) {
-          // Exclude tax and interest
-          const acc = accounts.find(a => a.id === l.accountId);
-          const type = acc?.type?.toLowerCase() || '';
-          if (!type.includes('tax') && !type.includes('interest')) {
-            ebit -= Math.abs(amt);
-          }
+          ebit -= amt;
+        } else if ((accounting.isExpense(l.accountId) || accounting.isCOGS(l.accountId)) && beforeInterestAndTax(l.accountId)) {
+          ebit -= amt;
         }
       });
     });
