@@ -71,3 +71,14 @@ test('L-94 guard: nothing the entry builders import reaches browser-only code', 
   assert.deepEqual(offenders, []);
   assert.ok(seen.size > 5, 'the walk followed the imports');
 });
+
+test('L-94 guard: every builder passes its context when it sends (or the server rebuild would post for real)', () => {
+  const missing: string[] = [];
+  for (const builder of ['invoicePosting', 'billPosting', 'creditPosting', 'paymentPosting', 'deletePostings']) {
+    const file = `src/services/ledgerPost/${builder}.ts`;
+    fs.readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+      if (/postTxsServerApi\(/.test(line) && !/,\s*context\s*\)/.test(line)) missing.push(`${file}:${i + 1}`);
+    });
+  }
+  assert.deepEqual(missing, []);
+});

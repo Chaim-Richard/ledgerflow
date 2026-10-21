@@ -104,7 +104,7 @@ export async function postInvoiceLedger(
     // If setting to draft, rejected, voided, or cancelled, reversing prior postings (if any) is sufficient
     // the document itself is saved with them; a new draft has nothing to reverse and is still saved
     if (txsToPost.length > 0 || entityMutation) {
-      await postTxsServerApi(txsToPost, workspaceId, entityMutation);
+      await postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
     }
     return {};
   }
@@ -112,7 +112,7 @@ export async function postInvoiceLedger(
   const rawAmount = invoiceData.amountCents || 0;
   const rate = invoiceData.exchangeRate || 1;
   const amount = roundCents(rawAmount * rate);
-  if (amount <= 0) { if (entityMutation) { await postTxsServerApi([], workspaceId, entityMutation); } return {}; }
+  if (amount <= 0) { if (entityMutation) { await postTxsServerApi([], workspaceId, entityMutation, context); } return {}; }
 
   const invoiceNum = invoiceData.number || invoiceId;
   const customer = invoiceData.customerName || 'Customer';

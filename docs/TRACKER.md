@@ -1320,7 +1320,7 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] L-67 Protect `main`: require both CI jobs before merging (GitHub setting — you) — would have blocked 5119ad2
 - [ ] L-83 Verify the database TLS certificate (`DATABASE_CA_CERT`) — **waits for you** (docs/FOR_YOU.md #6): the server already verifies the certificate as soon as `DATABASE_CA_CERT` is set in Vercel (`src/server/db/pgFirestore.ts`); without it the connection is encrypted but not verified
 - [ ] L-84 Custom SMTP sender for sign-up / reset emails
-- [~] L-94 Build invoice/bill postings on the server (with the document engine) — design 21 Oct: `docs/design/L-94-server-postings.md`; **step 0 done 21 Oct**: entry builders import only `postingCore.ts` (no Firebase client, stores, toasts), the browser registers its host in `postingKit.ts`, `context.capture` collects entries, guard test `l94-posting-core.test.ts`. Next: step 1 (server rebuilds and compares, shadow then enforce)
+- [~] L-94 Build invoice/bill postings on the server (with the document engine) — design 21 Oct: `docs/design/L-94-server-postings.md`; **step 0 done 21 Oct**: entry builders import only `postingCore.ts` (no Firebase client, stores, toasts), the browser registers its host in `postingKit.ts`, `context.capture` collects entries, guard test `l94-posting-core.test.ts`. **step 1 shadow done 21 Oct** (`postingShadowCheck.ts` logs any difference after each invoice/bill save). Next: read the logs of the first testers; then refuse a mismatch (409), then step 2
 - [ ] L-123 Later: balances and reports need every entry in the browser. Move them to the server (opening balances per closed year) so the browser can load only open years (with C-19)
 
 # SECTION AA–AI — DEFECTS FOUND BY EXECUTION

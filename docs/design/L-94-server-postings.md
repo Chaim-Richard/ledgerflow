@@ -32,7 +32,7 @@ filled context to the builders. Each builder gets a pure twin, e.g. `buildInvoic
 passes unchanged, and a new test imports the pure builders with the browser modules stubbed to throw.
 
 
-**Step 1 — the server rebuilds and compares (shadow, then enforce).**
+**Step 1 — the server rebuilds and compares (shadow, then enforce).** *Shadow part done 21 Oct:* `src/server/services/postingShadowCheck.ts`, called by `bulkRoutes.ts` after the commit for invoice and bill saves; it logs `L-94 shadow: …` (match, difference with the missing/extra lines, or could not rebuild). Test `l94-shadow-check.test.ts` (match, a tampered but balanced entry, an edit with its reversal).
 The builders are already pure apart from their context (`getAccounts(context)`, `getTransactions(context)`).
 In `bulkRoutes.ts`, when the request carries an invoice/bill mutation, the server builds a context from the
 database **inside the same transaction** (chart, workspace mappings, that document's live entries) and runs the

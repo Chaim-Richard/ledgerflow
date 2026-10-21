@@ -1,4 +1,5 @@
 import { ApprovalRefused, serverApproval } from '../../services/invoiceApprovalGuard';
+import { logShadowCheck } from '../../services/postingShadowCheck';
 import { approvalEvent, notifyApproval, type ApprovalEvent } from '../../services/approvalNotifications';
 import type { InvoiceApprovalRecord } from '../../../lib/invoiceApproval';
 import express from 'express';
@@ -269,6 +270,10 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
 
       const notice = approvalNotice as { invoiceId: string; invoice: Record<string, unknown>; event: ApprovalEvent } | null;
       if (notice) await notifyApproval(db, { workspaceId: wsId, ...notice, actorUid: user.uid });
+      // L-94 step 1 (shadow): rebuild the document's entries on the server and log any difference; never blocks
+      if (entityMutation && validatedTransactions.length > 0 && !body.replayed) {
+        await logShadowCheck(db, { workspaceId: wsId, uid: user.uid, mutation: entityMutation, posted: validatedTransactions });
+      }
       res.json(body);
     } catch (e) {
       console.error('[BULK TRANSACTIONS ERROR]', e);

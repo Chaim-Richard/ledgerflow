@@ -102,7 +102,7 @@ export async function postBillLedger(
   if (status === 'draft' || status === 'rejected' || status === 'void' || status === 'cancelled') {
     // the document itself is saved with them; a new draft has nothing to reverse and is still saved
     if (txsToPost.length > 0 || entityMutation) {
-      await postTxsServerApi(txsToPost, workspaceId, entityMutation);
+      await postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
     }
     return;
   }
@@ -110,7 +110,7 @@ export async function postBillLedger(
   const rawAmount = billData.amountCents || 0;
   const rate = billData.exchangeRate || 1;
   const amount = roundCents(rawAmount * rate);
-  if (amount <= 0) { if (entityMutation) { await postTxsServerApi([], workspaceId, entityMutation); } return; }
+  if (amount <= 0) { if (entityMutation) { await postTxsServerApi([], workspaceId, entityMutation, context); } return; }
 
   const billNum = billData.number || billId;
   const vendor = billData.vendorName || 'Vendor';
