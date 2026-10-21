@@ -102,3 +102,66 @@ The credit's own key is used, never `metadata.billId`, so a credit is never read
 - Voiding VC-1 brings the 2 chairs back with the same source.
 
 Both tests fail without the change.
+
+## Phase 3: where stock went is kept with the move (branch `ai9/DIM-2c`)
+
+| Move | What it now keeps | Where it is written |
+|---|---|---|
+| Sale | The customer (`customerId`), the invoice line (`documentLineId`), and that line's labels other than location (`labels`, e.g. project or property). The location stays in `locationId`. | `cogsStockService.ts`, from the cost-of-goods entry: `invoiceCogs.ts` now names the customer, and the line's labels were already on the cost line. |
+| Delivery | The customer and the order line (`documentLine`) the delivery entry names. | |
+| Customer return | The customer and the invoice line it came back against. | The return entry (`salesReturns.ts`, given the credit note's customer by `creditPosting.ts`). |
+| Reversal | The same as its original. | |
+| Stock adjustment | Why, as written (`purpose`, up to 200 characters). | `stockAdjustmentService.ts` |
+
+No migration is needed, and nothing is inferred.
+
+**Stock history window.** It shows the sold line's labels under the customer, and the reason for an adjustment ("Inside
+the business: Damaged in transit"). When an invoice can no longer be found, the customer kept with the move still
+names where the stock went. The link is still reported as missing.
+
+**Worked units** (`src/tests/dim2c-stock-destination.test.ts`, on the database). Each test fails without the change.
+
+| Event | Units | The move keeps |
+|---|---:|---|
+| INV-7 to Acme, line l1 (Project P1, Location L1) | −5 | Acme, l1, `{ project: P1 }`; location L1 |
+| CN-1 return | +2 | Acme, l1 |
+| Adjustment "Damaged in transit" | −1 | the reason as its purpose |
+
+On hand: 10 − 5 + 2 − 1 = 6.
+
+## Phase 4: Stock sources and uses (branch `ai9/DIM-2d`, on top of phase 3)
+
+Reports → **Stock Sources and Uses** (`StockSourcesUsesReportView.tsx`, `src/lib/stockSourcesUses.ts`). For a period,
+it shows each item's:
+- opening stock;
+- where its units came from: each vendor, Adjust stock (no bill), origin not recorded, adjustments up, returns by
+  customer;
+- where they went: each customer with the sold line's labels, vendors they were sent back to, and adjustments down by
+  the reason written;
+- cost changes (value with no units) and moves between locations (netted, never counted twice);
+- closing stock, with the check opening + came from − went to = closing.
+
+**Unknowns are flagged, never assigned.** That covers a purchase with no vendor, a sale with no customer, an
+adjustment with no reason, and origin not recorded. A history that does not add up says by how many units. The CSV
+export holds every line and the check.
+
+**Data.** The report reads the existing `/reports/inventory-details` history. `itemDetails` now passes on the phase 2–3
+fields of each move. Nothing is written, there is no second ledger, and the valuation stays moving average: a use's
+value is what its move was booked at.
+
+**Touches outside the stock files, one line each:** `registry.tsx` (the view and its menu entry), `screenHelp.ts` (3
+sentences) and the `view-registry-coverage` spec (the view is mounted).
+
+**Worked figures** (`src/tests/dim2d-stock-sources-uses.test.tsx`, the issue's own example), in cents:
+
+| Step | Units | Value |
+|---|---:|---:|
+| Received from Supplier A (goods 200,000 + freight 20,000) | +100 | 220,000 |
+| Moved between locations | 50 out, 50 in | none |
+| Property A construction | −30 | 66,000 |
+| Property B maintenance | −20 | 44,000 |
+| Sold to Acme, Project P1 | −40 | 88,000 |
+| **Closing** | **10** | **22,000** |
+
+The check: 0 + 100 − 90 + 0 = 10. A second item shows two vendors at two prices kept apart, an undone sale netting
+its customer's line, and 10 unknown units (6 with no origin, 4 sold to no recorded customer) flagged.

@@ -161,7 +161,7 @@ export default function StockHistoryDialog({ item, workspaceId, currency, onClos
                     <td className={`py-1 text-right font-mono ${m.quantity < 0 ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-400'}`}>{signed(m.quantity)}</td>
                     <td className="py-1 text-right font-mono">{m.quantityAfter}</td>
                     <td className="py-1 text-right font-mono">{formatCurrency(m.valueCents, currency)}</td>
-                    <td className="py-1 pl-3"><TrailCell step={stepOf.get(m.id || m.seq)} /></td>
+                    <td className="py-1 pl-3"><TrailCell step={stepOf.get(m.id || m.seq)} labelName={(dim, id) => resolveDimensionLabel(nodes, dim, id)} /></td>
                     <td className="py-1 text-right">
                       {m.transactionId && (
                         <button type="button" onClick={() => { onClose(); openRecord({ type: 'transaction', id: String(m.transactionId) }); }} className="text-indigo-600 dark:text-indigo-400 hover:underline">
@@ -181,16 +181,17 @@ export default function StockHistoryDialog({ item, workspaceId, currency, onClos
 }
 
 /** DIM-2: the document and party of one change; a missing link is named, an unrecorded origin says so. */
-function TrailCell({ step }: { step?: TrailStep }) {
+function TrailCell({ step, labelName }: { step?: TrailStep; labelName: (dimensionId: string, id: string) => string }) {
   if (!step) return null;
   if (step.origin === 'not-recorded') return <span className="text-[var(--muted)]">Origin not recorded</span>;
-  if (step.origin === 'internal') return <span className="text-[var(--muted)]">{step.move.kind === 'purchase' || step.move.kind === 'purchase-reversal' ? 'Stock adjustment (no bill)' : 'Inside the business'}</span>;
+  if (step.origin === 'internal') return <span className="text-[var(--muted)]">{step.move.kind === 'purchase' || step.move.kind === 'purchase-reversal' ? 'Stock adjustment (no bill)' : 'Inside the business'}{step.purpose ? <>: <bdi>{step.purpose}</bdi></> : null}</span>;
   return (
     <span>
       {step.party && <bdi>{step.party.name}</bdi>}
       {step.document && <span className="text-[var(--muted)]">{step.party ? ' · ' : ''}{step.document.label}</span>}
       {step.sourceLine && <span className="text-[var(--muted)]">{step.document?.type === 'vendor-credit' ? ' · ' : ', '}{step.sourceLine}</span>}
       {step.purchaseOrder && <span className="text-[var(--muted)]"> · {step.purchaseOrder.label}{step.purchaseOrder.receipts.length ? ` (received ${step.purchaseOrder.receipts.join(', ')})` : ''}</span>}
+      {step.labels && <span className="block text-[var(--muted)]">{Object.entries(step.labels).map(([dim, id]) => <bdi key={dim}>{labelName(dim, id)}</bdi>).reduce<React.ReactNode[]>((all, el, i) => (i ? [...all, ' · ', el] : [el]), [])}</span>}
       {step.missing.map(m => <span key={m} className="block text-amber-700 dark:text-amber-400">{m}</span>)}
     </span>
   );

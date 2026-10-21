@@ -83,7 +83,7 @@ export function returnProblem(goods: ReturnedGoods[], lines: ReturnableLine[]): 
 
 /** The entries a credit note's returned goods post: stock back in at the cost it left at. */
 export function planReturnEntries(input: {
-  creditNote: Pick<CreditNote, 'id' | 'number' | 'invoiceId' | 'date'> & { returnedGoods?: ReturnedGoods[] };
+  creditNote: Pick<CreditNote, 'id' | 'number' | 'invoiceId' | 'date'> & { returnedGoods?: ReturnedGoods[]; customerId?: string };
   lines: ReturnableLine[];
   uid: string;
   workspaceId: string;
@@ -106,7 +106,7 @@ export function planReturnEntries(input: {
       uid: input.uid, workspaceId: input.workspaceId, date: creditNote.date,
       description: `Goods returned: ${name} × ${g.quantity} (Credit note ${creditNote.number || creditNote.id})`,
       totalAmountCents: cents, currency: input.baseCurrency, exchangeRate: 1, status: 'completed', type: 'actual', createdAt: new Date().toISOString(),
-      metadata: { type: SALES_RETURN_TYPE, creditNoteId: creditNote.id, invoiceId: creditNote.invoiceId, returnForLineId: g.invoiceLineId, inventoryItemId: g.itemId, quantity: g.quantity, ...(line.locationId ? { locationId: line.locationId } : {}) },
+      metadata: { type: SALES_RETURN_TYPE, creditNoteId: creditNote.id, invoiceId: creditNote.invoiceId, returnForLineId: g.invoiceLineId, inventoryItemId: g.itemId, quantity: g.quantity, ...(line.locationId ? { locationId: line.locationId } : {}), ...(creditNote.customerId ? { customerId: creditNote.customerId } : {}) },
       lines: entryLines,
     } as Omit<Transaction, 'id'>];
   });

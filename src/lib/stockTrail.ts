@@ -49,6 +49,9 @@ export interface TrailStep {
   purchaseOrder?: { id: string; label: string; receipts: string[] };
   /** DIM-2 phase 2: the bill line the units came in on ("line 2"), or for units sent back, the bill and line */
   sourceLine?: string;
+  /** DIM-2 phase 3: where sold units went in the books (the sold line's labels), and why stock was adjusted */
+  labels?: Record<string, string>;
+  purpose?: string;
   origin: TrailOrigin;
   /** the links that should be there and are not (or are not loaded), in words */
   missing: string[];
@@ -152,14 +155,17 @@ function step(move: StockMove, ix: TrailIndex): TrailStep {
     viaOrder();
   } else if (move.kind === 'sale' || move.kind === 'sale-reversal') {
     const invoice = lookFor('invoice', 'invoices', 'Invoice', 'invoice');
+    // phase 3: the customer kept with the move names the destination even when its invoice is not found
+    if (!invoice && move.customerId) s.party = party('customer', move.customerId, undefined, ix.customers);
     if (invoice) {
-      s.party = party('customer', invoice.customerId, invoice.customerName, ix.customers);
+      s.party = party('customer', invoice.customerId || move.customerId, invoice.customerName, ix.customers);
       if (!s.party) s.missing.push(`${s.document!.label} names no customer.`);
     }
   } else if (move.kind === 'return' || move.kind === 'return-reversal') {
     const credit = lookFor('credit-note', 'creditNotes', 'Credit note', 'credit note');
+    if (!credit && move.customerId) s.party = party('customer', move.customerId, undefined, ix.customers);
     if (credit) {
-      s.party = party('customer', credit.customerId, credit.customerName, ix.customers);
+      s.party = party('customer', credit.customerId || move.customerId, credit.customerName, ix.customers);
       if (!s.party) s.missing.push(`${s.document!.label} names no customer.`);
     }
   } else if (move.kind === 'opening' || move.documentType === 'import') {
@@ -168,6 +174,8 @@ function step(move: StockMove, ix: TrailIndex): TrailStep {
     // adjustments, counts, moves between locations and value changes: inside the business, no party
     s.origin = 'internal';
   }
+  if (move.labels && Object.keys(move.labels).length) s.labels = move.labels;
+  if (move.purpose) s.purpose = move.purpose;
   if (s.missing.length) s.origin = notLoaded ? 'not-loaded' : 'missing';
   return s;
 }
