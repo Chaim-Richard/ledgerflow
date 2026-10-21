@@ -30,6 +30,8 @@ import {
 } from './tax/pcn874Draft';
 import { registrationKey, registrationsOn, type TaxProfiles } from './tax/profile';
 import { ilVatReportPeriod, type IlVatReportPeriod } from './tax/ilVatFilingFrequency';
+import { withEquipment } from './tax/ilVatEquipment';
+import type { ChartAccount } from '../types';
 
 /** A document as the screens hold it: the VAT fields, its own number, currency and party. */
 export interface IlJourneyDocument extends IlVatDocument {
@@ -136,6 +138,8 @@ export interface IsraelMonthInput {
   vendorCredits?: IlJourneyDocument[];
   customers?: IlJourneyParty[];
   vendors?: IlJourneyParty[];
+  /** ISS-160: the chart of accounts, so saved bills on fixed-asset accounts are reported as equipment (ilVatEquipment.ts) */
+  accounts?: ChartAccount[];
   /** the close state of the month; a month not listed is open */
   periods?: Array<{ month: string; state: MonthCloseState }>;
   /** returns the server keeps for this workspace: a return for exactly this period counts as filed */
@@ -485,12 +489,21 @@ export function ilPcn874Preview(input: IlPcn874Input & {
 // The journey
 // ---------------------------------------------------------------------------------------------
 
-export function israelMonthJourney(input: IsraelMonthInput): IsraelMonth {
-  const currency = input.currency || 'ILS';
-  const period = israelMonthOf(input.month);
+export function israelMonthJourney(given: IsraelMonthInput): IsraelMonth {
+  const currency = given.currency || 'ILS';
+  const period = israelMonthOf(given.month);
   const problems: string[] = [];
-  const monthProblem = israelMonthProblem(input.month, input.today);
+  const monthProblem = israelMonthProblem(given.month, given.today);
   if (monthProblem) problems.push(monthProblem);
+  // ISS-160: equipment input VAT from the saved bills' accounts; a bill mixing equipment and other purchases is named
+  const equipment = given.accounts ? withEquipment(given.bills || [], given.vendorCredits || [], given.accounts) : null;
+  const input: IsraelMonthInput = equipment ? { ...given, bills: equipment.bills, vendorCredits: equipment.vendorCredits } : given;
+  for (const bill of equipment?.mixed || []) {
+    const day = String(bill.date || bill.issueDate || '').slice(0, 10);
+    if (period && day >= period.startDate && day <= period.endDate) {
+      problems.push(`Bill ${bill.number || bill.id} (${day}) has both equipment and other purchases: its input VAT is reported as other input VAT. To report the equipment part on its own line, split it into two bills.`);
+    }
+  }
   const month = period?.month || String(input.month || '');
   const startDate = period?.startDate || '';
   const endDate = period?.endDate || '';
