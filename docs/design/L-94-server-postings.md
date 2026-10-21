@@ -19,7 +19,18 @@ browser. A stale tab (an old chart, missing earlier entries to reverse) or a mod
 that balances but does not equal the invoice: wrong revenue account, wrong tax, a missing reversal. Nothing in
 the books catches it until a report looks wrong.
 
-## The plan (three steps, each shippable)
+## The plan (four steps, each shippable)
+
+**Step 0 — split the builders from the browser (found 21 Oct).**
+`postingKit.ts` imports the browser Firebase client, the screen stores (`useLedgerStore`, `useAuthStore`) and
+`sonner` toasts, and `getAccounts/getTransactions/getWorkspaces` fall back to the stores when no context is given.
+The server must not load any of that. Move the pure parts (`findAccount`, `resolveAccount`, `lineAccounts`,
+`inBaseCurrency`, `reversalDate`, `verifyLockDate`, the context getters **without** store fallback) to
+`src/lib/posting/postingCore.ts`; `postingKit.ts` keeps the store fallbacks and `postTxsServerApi`, and passes a
+filled context to the builders. Each builder gets a pure twin, e.g. `buildInvoiceEntries(id, data, ws, uid, ctx)
+→ PostableTransaction[]`, which `postInvoiceLedger` calls and then sends. Test: every existing posting suite
+passes unchanged, and a new test imports the pure builders with the browser modules stubbed to throw.
+
 
 **Step 1 — the server rebuilds and compares (shadow, then enforce).**
 The builders are already pure apart from their context (`getAccounts(context)`, `getTransactions(context)`).
