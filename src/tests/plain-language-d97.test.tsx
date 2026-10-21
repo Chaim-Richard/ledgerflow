@@ -1,0 +1,164 @@
+/**
+ * D-97 (G-02): the first-hour screens name things the way a bookkeeper would.
+ * These guards lock the plain-language pass on the reconciliation wizard, the bank
+ * feed importer, the chart of accounts and the chart template selector: the old
+ * invented jargon must never come back. Display-only wording; no money or server code.
+ */
+import './helpers/dom';
+import test, { afterEach, beforeEach, describe } from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import ReconciliationWizard from '../components/ledger/ReconciliationWizard';
+import BankFeedImport from '../components/ledger/BankFeedImport';
+import ChartOfAccountsView from '../components/ledger/ChartOfAccountsView';
+import TemplateSelector from '../components/layout/TemplateSelector';
+import { useLedgerStore } from '../stores/useLedgerStore';
+import { markComponentCollectionsLoaded, setComponentWorkspace } from './helpers/componentFixtures';
+import { makeChartAccount } from './fixtures';
+import { stubFetchWithBodies } from './helpers/dom';
+
+const accounts = [
+  makeChartAccount({ id: 'bank', name: 'Business Checking', type: 'asset', category: 'Cash' }),
+  makeChartAccount({ id: 'card', name: 'Savings Bank', type: 'asset', category: 'Cash' }),
+];
+
+const JARGON = [
+  'Synapse', 'Cognitive', 'Invariant', 'Topology', 'Protocol Engaged', 'Blueprint',
+  'Registry Unoccupied', 'Assert Match', 'Revert Verification', 'Abort Mission',
+  'NODES DETECTED', 'Import Vectors', 'Orphaned Nodes', 'Finalize Alignment',
+  'Matching Protocol', 'Bank Feed Ingestion', 'Node ID', 'Total Aggregate',
+];
+
+beforeEach(() => {
+  stubFetchWithBodies(200, {});
+  setComponentWorkspace('owner');
+  markComponentCollectionsLoaded('bankLines', 'transactions', 'accounts', 'reconciliations');
+  useLedgerStore.setState({ accounts, transactions: [], bankLines: [], autoRules: [] });
+});
+
+afterEach(() => cleanup());
+
+describe('D-97 plain language on the first-hour screens', () => {
+  test('reconciliation wizard uses bookkeeping words on both steps', () => {
+    render(
+      <ReconciliationWizard
+        isOpen
+        onClose={() => {}}
+        accounts={accounts}
+        onComplete={() => {}}
+        formatCurrency={(cents) => `$${(cents / 100).toFixed(2)}`}
+      />
+    );
+    assert.ok(screen.getByRole('heading', { name: 'Reconcile account' }));
+    assert.ok(screen.getByText(/Statement details/));
+    assert.ok(screen.getByText('Bank account'));
+    assert.ok(screen.getByRole('option', { name: 'Select an account...' }));
+    assert.ok(screen.getByText('Statement date'));
+    assert.ok(screen.getByText('Statement ending balance ($)'));
+    assert.ok(screen.getByText(/Enter the ending date and balance exactly as shown on the bank statement/));
+    assert.ok(screen.getByRole('button', { name: 'Continue' }));
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Business Checking' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    // The header and footer render outside the animated step body, so they are
+    // reachable in jsdom; the step-2 body wording is covered in the browser spec.
+    assert.ok(screen.getByText(/Match transactions/));
+    assert.ok(screen.getByRole('button', { name: 'Auto-match' }));
+    assert.ok(screen.getByRole('button', { name: 'Finish reconciliation' }));
+    assert.ok(screen.getByRole('button', { name: 'Back' }));
+
+    for (const word of JARGON) {
+      assert.equal(document.body.textContent?.includes(word), false, `jargon returned: ${word}`);
+    }
+  });
+
+  test('the wizard refuses to continue without an account, in plain words', () => {
+    render(
+      <ReconciliationWizard
+        isOpen
+        onClose={() => {}}
+        accounts={accounts}
+        onComplete={() => {}}
+        formatCurrency={(cents) => `$${(cents / 100).toFixed(2)}`}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    // still on step 1 and the refusal names the missing field
+    assert.ok(screen.getByText('Bank account'));
+  });
+
+  test('bank feed importer explains the upload without jargon', () => {
+    render(
+      <BankFeedImport
+        workspaceId="component-workspace"
+        accounts={accounts}
+        onImport={() => {}}
+        onClose={() => {}}
+      />
+    );
+    assert.ok(screen.getByRole('heading', { name: 'Import bank feed' }));
+    assert.ok(screen.getByText('Upload bank statement'));
+    assert.ok(screen.getByText('Drop a CSV file here, or click to browse'));
+    assert.ok(screen.getByText('CSV import with rule-based categorization'));
+    assert.ok(screen.getByRole('button', { name: 'Cancel' }));
+    for (const word of ['Ingestion', 'Vectors', 'NODES', 'Abort', 'Topology', 'Deploy Ledger']) {
+      assert.equal(document.body.textContent?.includes(word), false, `jargon returned: ${word}`);
+    }
+  });
+
+  test('chart of accounts uses plain table headers and a helpful empty state', () => {
+    const { rerender } = render(
+      <ChartOfAccountsView
+        accounts={[]}
+        searchTerm=""
+        formatCurrency={(cents) => `$${(cents / 100).toFixed(2)}`}
+        onDrillDown={() => {}}
+        onDeleteAccount={() => {}}
+      />
+    );
+    assert.ok(screen.getByText('No accounts yet'));
+    assert.ok(screen.getByText('Choose a chart of accounts to get started, or add your first account.'));
+
+    rerender(
+      <ChartOfAccountsView
+        accounts={[makeChartAccount({ id: 'sales', name: 'Sales', type: 'revenue', category: 'Revenue', balanceCents: 50000 })]}
+        searchTerm=""
+        formatCurrency={(cents) => `$${(cents / 100).toFixed(2)}`}
+        onDrillDown={() => {}}
+        onDeleteAccount={() => {}}
+      />
+    );
+    for (const header of ['Code', 'Account name', 'Type', 'Category', 'Balance']) {
+      assert.ok(screen.getByRole('columnheader', { name: header }), header);
+    }
+    assert.equal(document.body.textContent?.includes('Node ID'), false);
+    assert.equal(document.body.textContent?.includes('Topology Type'), false);
+  });
+
+  test('template selector explains chart templates in plain language', () => {
+    render(
+      <TemplateSelector
+        isOpen
+        onClose={() => {}}
+        onSelect={() => {}}
+        onOpenAI={() => {}}
+        currentType=""
+      />
+    );
+    assert.ok(screen.getByRole('heading', { name: 'Choose a chart of accounts' }));
+    assert.ok(screen.getByText('Ready-to-use templates'));
+    assert.ok(screen.getByText('Ready-made templates'));
+    assert.ok(screen.getByText('AI-built chart of accounts'));
+    assert.ok(screen.getAllByRole('button', { name: 'Use template' }).length >= 1);
+    assert.ok(screen.getByText('Key equation'));
+    assert.ok(screen.getByText('Accounts in this template'));
+    assert.ok(screen.getByText('How the accounts connect'));
+    assert.ok(screen.getByText('Balanced books, enforced'));
+    assert.ok(screen.getByRole('button', { name: /Use this template/ }));
+    for (const word of ['Invariant', 'Blueprint', 'Topology', 'Engage', 'Synthesis', 'Cognitive', 'Protocol']) {
+      assert.equal(document.body.textContent?.includes(word), false, `jargon returned: ${word}`);
+    }
+  });
+});

@@ -83,8 +83,8 @@ test('W4 browser: a bank CSV is previewed and imported exactly, line by line', a
   await remountJourney(page, [{ module: '/src/components/ledger/Reconciliation.tsx' }]);
 
   await expect(page.getByRole('heading', { name: 'Smart Matching & Bank Reconciliation' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Streams \(3\)/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Auto Align All' }).click();
+  await expect(page.getByRole('button', { name: /To review \(3\)/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Auto-match all' }).click();
 
   // The screen posts the three matches (each line to its ledger entry, the entry marked reconciled).
   await expect.poll(() => requests.filter(r => r.url.endsWith('/api/v1/transactions/reconcile')).length).toBe(1);
@@ -108,7 +108,7 @@ test('W4 browser: a bank CSV is previewed and imported exactly, line by line', a
     return lines.filter(l => l.accountId === 'bank-1000').reduce((sum, l) => sum + l.amountCents, 0);
   });
   expect(ledgerBalance, 'ledger balance of Bank 1000 equals the statement closing balance').toBe(68000);
-  await expect(page.getByRole('button', { name: /Matched History \(3\)/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Matched \(3\)/ })).toBeVisible();
 
   const axe = await new AxeBuilder({ page }).analyze();
   const serious = axe.violations.filter(v => v.impact === 'critical');

@@ -57,8 +57,8 @@ describe('Bank reconciliation screen', () => {
   test('lists pending bank lines and uncleared posted entries (no drafts, no reconciled ones)', () => {
     stubFetchWithBodies(200, {});
     render(<Reconciliation />);
-    assert.ok(screen.getByRole('button', { name: /Streams \(3\)/ }));
-    assert.ok(screen.getByRole('button', { name: /Matched History \(1\)/ }));
+    assert.ok(screen.getByRole('button', { name: /To review \(3\)/ }));
+    assert.ok(screen.getByRole('button', { name: /Matched \(1\)/ }));
     for (const text of ['ACME CORP DEP 4411', 'LANDLORD LTD OCT', 'Coffee shop', 'Payment from Acme Corp', 'October office rent']) assert.ok(screen.getByText(text), text);
     assert.equal(screen.queryByText('Draft entry never shown'), null);
     assert.equal(screen.queryByText('September deposit'), null);
@@ -69,9 +69,9 @@ describe('Bank reconciliation screen', () => {
     const calls = stubFetchWithBodies(200, { status: 'ok' });
     render(<Reconciliation />);
     await click(screen.getByText('ACME CORP DEP 4411'));
-    assert.ok(screen.getByText('Select internal General Ledger node to match sequence'));
+    assert.ok(screen.getByText('Select a ledger entry to match, or create an entry from this bank line'));
     await click(screen.getByText('Payment from Acme Corp'));
-    await click(screen.getByText('Assert Match Verification'));
+    await click(screen.getByText('Confirm match'));
     await waitFor(() => assert.equal(calls.length, 1));
     assert.equal(calls[0].url, '/api/v1/transactions/reconcile');
     assert.deepEqual(calls[0].body, { workspaceId: 'component-workspace', operations: [
@@ -92,12 +92,12 @@ describe('Bank reconciliation screen', () => {
   test('suggested pairs: review and apply them', async () => {
     const calls = stubFetchWithBodies(200, { status: 'ok' });
     render(<Reconciliation />);
-    const review = screen.getByText(/Review \d+ Synapse Pairs/);
+    const review = screen.getByText(/Review \d+ suggested matches/);
     const pairs = Number(/Review (\d+)/.exec(review.textContent || '')?.[1]);
     assert.ok(pairs >= 1);
     await click(review);
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
-    const apply = screen.getByRole('button', { name: /Apply Checked Synapses Now/ });
+    const apply = screen.getByRole('button', { name: /Apply selected matches/ });
     await click(apply);
     await waitFor(() => assert.equal(calls.length, pairs));
     const matched = calls.map(c => operations(c.body)[0] as { id: string; data: { matchedTransactionId: string } });
@@ -107,7 +107,7 @@ describe('Bank reconciliation screen', () => {
   test('automatic matching sends every confident pair in one request', async () => {
     const calls = stubFetchWithBodies(200, { status: 'ok' });
     render(<Reconciliation />);
-    await click(screen.getByRole('button', { name: 'Auto Align All' }));
+    await click(screen.getByRole('button', { name: 'Auto-match all' }));
     await waitFor(() => assert.equal(calls.length, 1));
     const ops = operations(calls[0].body) as Array<{ type: string; id: string }>;
     assert.ok(ops.some(op => op.type === 'updateBankLine' && op.id === 'b1'));
@@ -119,14 +119,14 @@ describe('Bank reconciliation screen', () => {
     useLedgerStore.setState({ bankLines: bankLines.map(l => ({ ...l, uid: 'server-import' } as BankStatementLine)) });
     const calls = stubFetchWithBodies(200, { status: 'ok' });
     render(<Reconciliation />);
-    await click(screen.getByRole('button', { name: 'Auto Align All' }));
+    await click(screen.getByRole('button', { name: 'Auto-match all' }));
     await waitFor(() => assert.equal(calls.length, 1));
     assert.ok((operations(calls[0].body) as Array<{ id: string }>).some(op => op.id === 'b1'), 'not limited to the signed-in person\'s lines');
     cleanup();
     calls.length = 0;
     render(<Reconciliation />);
     fireEvent.change(screen.getByLabelText('Reconciliation account'), { target: { value: 'card' } });
-    await click(screen.getByRole('button', { name: 'Auto Align All' }));
+    await click(screen.getByRole('button', { name: 'Auto-match all' }));
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
     assert.equal(calls.length, 0, 'nothing on the card account matches, so nothing is sent');
   });
@@ -134,10 +134,10 @@ describe('Bank reconciliation screen', () => {
   test('history: undo a match puts the line back to pending and the entry back to completed', async () => {
     const calls = stubFetchWithBodies(200, { status: 'ok' });
     render(<Reconciliation />);
-    await click(screen.getByRole('button', { name: /Matched History \(1\)/ }));
+    await click(screen.getByRole('button', { name: /Matched \(1\)/ }));
     assert.ok(screen.getByText('DEPOSIT 0901'));
     assert.ok(screen.getByText('September deposit'));
-    await click(screen.getByText('Revert Verification'));
+    await click(screen.getByText('Undo match'));
     await waitFor(() => assert.equal(calls.length, 1));
     assert.deepEqual(operations(calls[0].body), [
       { type: 'updateBankLine', id: 'm1', data: { status: 'pending', matchedTransactionId: null } },
@@ -149,7 +149,7 @@ describe('Bank reconciliation screen', () => {
     stubFetchWithBodies(200, {});
     render(<Reconciliation />);
     fireEvent.change(screen.getByLabelText('Reconciliation account'), { target: { value: 'card' } });
-    assert.ok(screen.getByRole('button', { name: /Streams \(1\)/ }));
+    assert.ok(screen.getByRole('button', { name: /To review \(1\)/ }));
     assert.ok(screen.getByText('Coffee shop'));
     assert.equal(screen.queryByText('Payment from Acme Corp'), null, 'entries that do not touch the account are hidden');
     fireEvent.change(screen.getByLabelText('Reconciliation account'), { target: { value: 'all' } });
@@ -163,7 +163,7 @@ describe('Bank reconciliation screen', () => {
     render(<Reconciliation />);
     await click(screen.getByText('ACME CORP DEP 4411'));
     await click(screen.getByText('Payment from Acme Corp'));
-    await click(screen.getByText('Assert Match Verification'));
+    await click(screen.getByText('Confirm match'));
     await waitFor(() => assert.equal(calls.length, 1));
   });
 });

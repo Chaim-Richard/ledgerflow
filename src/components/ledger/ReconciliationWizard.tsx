@@ -194,8 +194,8 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               <RefreshCw aria-hidden="true" size={32} />
             </div>
             <div>
-              <h2 id={overlayTitleId} className="text-2xl font-black text-[var(--text)] uppercase italic tracking-tighter">Reconciliation Wizard</h2>
-              <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1 opacity-40">Step {step} of 2 // {step === 1 ? 'Statement Target Definition' : 'Rule Transaction Alignment'}</p>
+              <h2 id={overlayTitleId} className="text-2xl font-black text-[var(--text)] uppercase italic tracking-tighter">Reconcile account</h2>
+              <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1 opacity-40">Step {step} of 2 // {step === 1 ? 'Statement details' : 'Match transactions'}</p>
             </div>
           </div>
           <button aria-label="Close" onClick={onClose} className="w-12 h-12 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-[var(--muted)] transition-all"><X aria-hidden="true" size={24} /></button>
@@ -213,13 +213,13 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               >
                 <div className="space-y-8">
                   <div className="space-y-3">
-                    <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] italic ml-2" label="Select Target Topology">
+                    <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] italic ml-2" label="Bank account">
                       <select 
                         value={selectedAccount}
                         onChange={(e) => setSelectedAccount(e.target.value)}
                         className="w-full px-8 py-5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-black text-[var(--text)] uppercase italic tracking-tight"
                       >
-                        <option value="" className="bg-[var(--ink)]">Protocol pending selection...</option>
+                        <option value="" className="bg-[var(--ink)]">Select an account...</option>
                         {accounts.filter(a => a.type === 'asset' || a.type === 'liability').map(acc => (
                           <option key={acc.id} value={acc.name} className="bg-[var(--ink)] uppercase">{acc.name}</option>
                         ))}
@@ -229,7 +229,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
 
                   <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-3">
-                      <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] italic ml-2" label="Statement Horizon">
+                      <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] italic ml-2" label="Statement date">
                         <input 
                           type="date"
                           value={statementDate}
@@ -239,7 +239,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                       </Labelled>
                     </div>
                     <div className="space-y-3">
-                      <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] italic ml-2" label="Terminal Amount Balance ($)">
+                      <Labelled labelClassName="block text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] italic ml-2" label="Statement ending balance ($)">
                         <input 
                           type="number"
                           step="0.01"
@@ -255,7 +255,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                 <div className="p-4 md:p-8 bg-[var(--ink)]/40 border border-[var(--line)] rounded-[32px] flex gap-5 shadow-inner">
                   <AlertCircle aria-hidden="true" className="text-indigo-600 shrink-0" size={24} />
                   <p className="text-[11px] text-[var(--muted)] leading-relaxed font-bold italic opacity-70">
-                    Precision is mandatory. Enter terminal statement values exactly as specified by the regulatory entity. This defines the target resonance for the rule alignment phase.
+                    Enter the ending date and balance exactly as shown on the bank statement. They determine which transactions should be cleared.
                   </p>
                 </div>
               </motion.div>
@@ -270,15 +270,15 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                 {/* Summary Bar */}
                 <div className="grid grid-cols-4 gap-6">
                   <div className="p-7 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-inner">
-                    <p className="text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mb-2 italic">Statement Horizon</p>
+                    <p className="text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mb-2 italic">Statement ending balance</p>
                     <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight tabular-nums">{formatCurrency(stats.targetBalance)}</p>
                   </div>
                   <div className="p-7 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-inner">
-                    <p className="text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mb-2 italic">Aligned Quanta</p>
+                    <p className="text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mb-2 italic">Cleared in this session</p>
                     <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight tabular-nums">{formatCurrency(stats.cleared)}</p>
                   </div>
                   <div className="p-7 bg-[var(--ink)] rounded-[32px] border border-[var(--line)] shadow-inner">
-                    <p className="text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mb-2 italic">Current Registry</p>
+                    <p className="text-[9px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mb-2 italic">Book balance</p>
                     <p className="text-xl font-black text-[var(--text)] font-mono italic tracking-tight tabular-nums">{formatCurrency(stats.currentBalance)}</p>
                   </div>
                   <div className={cn(
@@ -288,7 +288,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                     <p className={cn(
                       "text-[9px] font-black uppercase tracking-[0.2em] mb-2 italic",
                       Math.abs(stats.difference) < 1 ? "text-indigo-600" : "text-rose-500"
-                    )}>Topology Drift</p>
+                    )}>Difference</p>
                     <p className={cn(
                       "text-xl font-black font-mono italic",
                       Math.abs(stats.difference) < 1 ? "text-indigo-600" : "text-rose-500"
@@ -300,14 +300,14 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                 <div className="bg-[var(--surface)] rounded-[40px] border border-[var(--line)] overflow-hidden shadow-sm">
                   <div className="p-6 border-b border-[var(--line)] bg-[var(--ink)]/30 flex justify-between items-center">
                     <div>
-                        <h3 className="text-[10px] font-black text-[var(--text)] uppercase tracking-[0.3em] italic">Orphaned Nodes</h3>
-                        <p className="text-[8px] font-black text-[var(--muted)] uppercase mt-1 opacity-40">Awaiting registry alignment</p>
+                        <h3 className="text-[10px] font-black text-[var(--text)] uppercase tracking-[0.3em] italic">Transactions to clear</h3>
+                        <p className="text-[8px] font-black text-[var(--muted)] uppercase mt-1 opacity-40">Tick the entries shown on the statement</p>
                     </div>
                     <div className="relative">
                       <Search aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={14} />
                       <input aria-label="Search ledger transactions"
                         type="text" 
-                        placeholder="Search Registry..."
+                        placeholder="Search transactions..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-11 pr-5 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[10px] font-black uppercase italic tracking-tight focus:outline-none focus:ring-1 focus:ring-indigo-600 text-[var(--text)] w-64 transition-all"
@@ -333,7 +333,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                           </div>
                           <div>
                             <p className="text-xs font-black text-[var(--text)] uppercase italic tracking-tight">{t.description}</p>
-                            <p className="text-[9px] text-[var(--muted)] font-black uppercase tracking-[0.2em] mt-1 opacity-50">{formatDate(t.date)} // NODE_ID: {t.id.substring(0,8)}</p>
+                            <p className="text-[9px] text-[var(--muted)] font-black uppercase tracking-[0.2em] mt-1 opacity-50">{formatDate(t.date)} · Ref {t.id.substring(0,8)}</p>
                           </div>
                         </div>
                         <p className="text-sm font-black font-mono text-[var(--text)] italic tracking-tight tabular-nums">
@@ -342,7 +342,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                       </button>
                     ))}
                     {filteredTransactions.length === 0 && (
-                      <div className="p-24 text-center text-[var(--muted)] font-medium uppercase tracking-wider truncate text-[10px] italic opacity-20">No orphaned directives detected in current topology</div>
+                      <div className="p-24 text-center text-[var(--muted)] font-medium uppercase tracking-wider truncate text-[10px] italic opacity-20">No transactions to clear for this statement date.</div>
                     )}
                   </div>
                 </div>
@@ -359,7 +359,7 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               className="flex items-center gap-3 px-8 py-4 bg-[var(--ink)] text-[var(--muted)] rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] border border-[var(--line)] hover:text-[var(--text)] transition-all"
             >
               <ChevronLeft aria-hidden="true" size={18} />
-              Rollback
+              Back
             </button>
           )}
           <div className="flex-1" />
@@ -367,14 +367,14 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
             <button 
               onClick={() => {
                 if (!selectedAccount) {
-                  toast.error('TOPOLOGY PENDING: SELECT ACCOUNT');
+                  toast.error('Select a bank account to continue.');
                   return;
                 }
                 setStep(2);
               }}
               className="flex items-center gap-3 px-12 py-4 bg-indigo-600 text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-[10px] hover:brightness-110 transition-all shadow-xl shadow-ledger-accent/20"
             >
-              Initialize Matching Protocol
+              Continue
               <ChevronRight aria-hidden="true" size={18} />
             </button>
           ) : (
@@ -382,9 +382,9 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
               <button 
                 onClick={handleAutoMatch}
                 className="flex items-center gap-3 px-8 py-4 bg-[var(--ink)] text-indigo-600 rounded-[32px] font-black uppercase tracking-[0.1em] text-[10px] border border-indigo-600/20 hover:bg-indigo-600/10 transition-all"
-               aria-label="Rule Auto-Match">
+               aria-label="Auto-match">
                 <Sparkles aria-hidden="true" size={18} />
-                Rule Auto-Match
+                Auto-match
               </button>
               <button 
                 onClick={handleFinalize}
@@ -394,9 +394,9 @@ export default function ReconciliationWizard({ isOpen, onClose, accounts, onComp
                     ? "bg-slate-900 text-white hover:brightness-110 shadow-ledger-google-blue/20" 
                     : "bg-[var(--ink)] text-slate-500/30 cursor-not-allowed border border-[var(--line)] grayscale"
                 )}
-               aria-label="Finalize Alignment">
+               aria-label="Finish reconciliation">
                 <CheckCircle2 aria-hidden="true" size={18} />
-                Finalize Alignment
+                Finish reconciliation
               </button>
             </div>
           )}

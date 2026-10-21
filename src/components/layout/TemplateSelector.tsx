@@ -58,7 +58,7 @@ const TEMPLATE_FORMULAS: Record<string, string> = {
   saas: "Net Operating Margin = MRR (Subscription Sales) - Platform Fees - Cloud Infrastructure - CAC Offsets",
   retail: "Gross Merchant Margin = Gross Receipts - COGS (Inventory Asset Valuation) - Logistics & Shipping",
   creative: "Project Ledger Yield = Gross Contract Billings - Subcontractor Outlays - Production/Software Licenses",
-  realestate: "Net Operating Income (NOI) = Rent Received - Maintenance Maintenance OpEx - Aggregated Property Taxes",
+  realestate: "Net Operating Income (NOI) = Rent Received - Maintenance costs - Aggregated Property Taxes",
   nonprofit: "Fund Allocation Status = (Grants + Donations Received) - Core Program Services - Admin/Operations",
   service: "Service Gross Income = Fixed Fee/Timesheet Revenue - Professional Contractor Labor - Software/Overhead",
   manufacturing: "Cost of Manufactured Goods (COGM) = Raw Materials Overhead + Labor Overhead - Sinking Funds",
@@ -142,15 +142,15 @@ export default function TemplateSelector({
           <div>
             <div className="flex items-center gap-3">
               <span className="px-2.5 py-1 bg-slate-900 text-emerald-400 font-mono text-[9px] font-medium uppercase tracking-wider rounded-lg">
-                Blueprint Studio
+                Chart of accounts
               </span>
               <span className="text-[10px] text-[var(--muted)] font-black uppercase tracking-[0.2em]">
-                Verified Invariant Maturation
+                Ready-to-use templates
               </span>
             </div>
             <h2 id={overlayTitleId} className="text-3xl font-black text-[var(--text)] mt-2 tracking-tight flex items-center gap-3 uppercase italic leading-none">
               <Plus className="text-[var(--text)]" size={24} />
-              Analytical Workspace Selector
+              Choose a chart of accounts
             </h2>
           </div>
           <button 
@@ -171,7 +171,7 @@ export default function TemplateSelector({
             {/* AI Custom Builder Card */}
             <div className="space-y-6">
               <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500/40 flex items-center gap-3">
-                Adaptive Synthesis
+                Custom build
                 <div className="h-px bg-slate-200 flex-grow" />
               </h3>
               <div className="grid grid-cols-1 gap-6">
@@ -189,9 +189,9 @@ export default function TemplateSelector({
                       <Wand2 size={32} />
                     </div>
                     <div className="flex-grow">
-                      <h3 className="text-xl font-black text-[var(--text)] uppercase italic tracking-tight">AI Generated Blueprint</h3>
+                      <h3 className="text-xl font-black text-[var(--text)] uppercase italic tracking-tight">AI-built chart of accounts</h3>
                       <p className="text-xs text-[var(--muted)] font-medium max-w-2xl mt-1.5 leading-relaxed">
-                        Synthesize a proprietary chart of accounts aligned immediately. Describe your operational models or industry constraints to automate deterministic graph configuration.
+                        Describe your business and get a chart of accounts built for it. Review and change every account before saving.
                       </p>
                     </div>
                     <div className="w-12 h-12 rounded-full bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center text-slate-500 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-md mt-4 sm:mt-0">
@@ -205,7 +205,7 @@ export default function TemplateSelector({
             {/* Standard Protocols List */}
             <div className="space-y-6">
               <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500/40 flex items-center gap-3">
-                Standard Invariant Templates
+                Ready-made templates
                 <div className="h-px bg-slate-200 flex-grow" />
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -256,7 +256,7 @@ export default function TemplateSelector({
                         <span className={cn(
                           isActive ? "text-emerald-600" : isInspected ? "text-[var(--text)]" : "text-[var(--muted)]"
                         )}>
-                          {isActive ? 'Protocol Engaged' : isInspected ? 'Inspecting Concept' : 'Investigate Blueprint'}
+                          {isActive ? 'In use' : isInspected ? 'Selected' : 'Select template'}
                         </span>
                         <div className="flex items-center gap-2">
                           <button
@@ -266,7 +266,7 @@ export default function TemplateSelector({
                             }}
                             className="px-3.5 py-1.5 bg-slate-900 text-white hover:bg-emerald-500 transition-all text-[8px] font-medium uppercase tracking-wider rounded-lg flex items-center gap-1.5"
                           >
-                            Engage
+                            Use template
                           </button>
                         </div>
                       </div>
@@ -280,7 +280,7 @@ export default function TemplateSelector({
             {(customTemplates.length > 0 || onSaveCurrent) && (
               <div className="space-y-6">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500/40 flex items-center gap-3">
-                  Snapshotted Topologies
+                  Saved templates
                   <div className="h-px bg-slate-200 flex-grow" />
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -293,8 +293,8 @@ export default function TemplateSelector({
                       <div className="w-10 h-10 rounded-xl bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center mb-4 group-hover:bg-[var(--surface)] group-hover:text-[var(--text)] transition-all shadow-sm">
                         <Plus size={18} />
                       </div>
-                      <h3 className="text-sm font-black text-[var(--text)] group-hover:text-white mb-1 uppercase tracking-wider">Save Current Topology</h3>
-                      <p className="text-[9px] font-bold text-slate-500 group-hover:text-white/60 uppercase tracking-widest">Store snapshot</p>
+                      <h3 className="text-sm font-black text-[var(--text)] group-hover:text-white mb-1 uppercase tracking-wider">Save current chart</h3>
+                      <p className="text-[9px] font-bold text-slate-500 group-hover:text-white/60 uppercase tracking-widest">Save as a template</p>
                     </motion.div>
                   )}
 
@@ -313,7 +313,7 @@ export default function TemplateSelector({
                         <p className="text-xs text-[var(--muted)] leading-relaxed font-semibold opacity-70 mb-6">-</p>
                       </div>
                       <div className="flex items-center justify-between text-[9px] font-medium uppercase tracking-wider text-[var(--muted)] mt-auto pt-4 border-t border-[var(--line)]/50">
-                        Initialize Template
+                        Use template
                         <ArrowRight size={12} />
                       </div>
                     </motion.div>
@@ -336,7 +336,7 @@ export default function TemplateSelector({
                   </div>
                   <div>
                     <span className="text-[8px] font-black tracking-widest text-emerald-600 bg-emerald-500/5 border border-emerald-500/10 px-2 py-0.5 rounded uppercase">
-                      GAAP Core Target
+                      GAAP-based
                     </span>
                     <h3 className="text-xl font-black text-[var(--text)] uppercase tracking-tight italic mt-1 leading-none">
                       {activeInspected.name}
@@ -351,7 +351,7 @@ export default function TemplateSelector({
               {/* SECTION 1: THE MATHEMATICAL INVARIANT INTEGRITY EQUATION */}
               <div className="p-6 bg-[var(--surface)] border border-[var(--line)] rounded-[32px] shadow-sm space-y-3">
                 <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2">
-                  <Cpu size={12} className="text-indigo-500" /> Core Equation Invariant
+                  <Cpu size={12} className="text-indigo-500" /> Key equation
                 </span>
                 
                 <div className="p-3 bg-slate-900 text-slate-100 rounded-xl font-mono text-[10px] leading-relaxed break-words border border-slate-800">
@@ -359,14 +359,14 @@ export default function TemplateSelector({
                 </div>
                 
                 <p className="text-[9px] text-[var(--muted)] font-medium leading-normal">
-                  Our double-entry resolution pipeline continuously solves this objective function. If transactional components drifts, an immediate ledger shadow alert is broadcasted.
+                  Every entry stays in balance: debits equal credits. An entry that would unbalance the books is refused.
                 </p>
               </div>
 
               {/* SECTION 2: CHARTS OF ACCOUNTS TARGET LIST */}
               <div className="space-y-4">
                 <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2">
-                  <Layers size={12} className="text-emerald-500" /> Structure Protocol Accounts
+                  <Layers size={12} className="text-emerald-500" /> Accounts in this template
                 </span>
 
                 <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-2 bg-[var(--surface)]/40 p-3 rounded-[32px] border border-[var(--line)]/60">
@@ -394,7 +394,7 @@ export default function TemplateSelector({
               {/* SECTION 3: CORE WORKSPACE FLOW GRAPH SCHEMATIC */}
               <div className="space-y-4">
                 <span className="text-[8px] font-black text-[var(--muted)] uppercase tracking-[0.2em] flex items-center gap-2">
-                  <Network size={12} className="text-amber-500" /> Consensus Invariant Map
+                  <Network size={12} className="text-amber-500" /> How the accounts connect
                 </span>
 
                 {activeInspected.topology?.nodes ? (
@@ -415,7 +415,7 @@ export default function TemplateSelector({
                   </div>
                 ) : (
                   <div className="p-4 bg-[var(--surface)]/50 border border-[var(--line)] border-dashed rounded-[32px] text-[10px] text-[var(--muted)] text-center italic">
-                    Abstract accounting nodes
+                    No connection map for this template
                   </div>
                 )}
               </div>
@@ -427,10 +427,10 @@ export default function TemplateSelector({
               <div className="p-4 bg-emerald-500/5 text-emerald-800 border border-emerald-500/10 rounded-[32px] space-y-2">
                 <div className="flex items-center gap-2">
                   <ShieldCheck size={14} className="text-emerald-500 inline shrink-0" />
-                  <span className="text-[9px] font-black uppercase tracking-wider leading-none">Ledger Equilibrium Certified</span>
+                  <span className="text-[9px] font-black uppercase tracking-wider leading-none">Balanced books, enforced</span>
                 </div>
                 <p className="text-[9.5px] font-medium leading-relaxed text-emerald-700">
-                  Unlike Excel which allows manual cell overwrites or QuickBooks with tags that lose context, LedgerFlow enforces complete cryptographically checked balancing.
+                  Unlike spreadsheets, LedgerFlow only posts balanced double entries, so the books cannot drift out of balance.
                 </p>
               </div>
 
@@ -438,7 +438,7 @@ export default function TemplateSelector({
                 onClick={() => onSelect(activeInspected.id)}
                 className="w-full h-12 bg-slate-900 hover:bg-emerald-500 text-white rounded-[32px] text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg hover:-translate-y-0.5"
               >
-                Engage Blueprint <ArrowRight size={14} />
+                Use this template <ArrowRight size={14} />
               </button>
             </div>
 
