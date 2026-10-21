@@ -95,9 +95,11 @@ describe('Workspace restore', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, 
   });
 
   test('AUD-07: refuses a backup older than the current closed period without changing records', async () => {
-    await db.collection('workspaces').doc(ws).set({ lockDate: '2026-09-30' }, { merge: true });
+    // Seed this test's own preconditions; do not rely on earlier tests' restore state.
+    await db.collection('workspaces').doc(ws).set({ name: 'Restored name', lockDate: '2026-09-30' }, { merge: true });
+    await db.collection('customers').doc(`${ws}_c1`).set({ workspaceId: ws, name: 'Existing customer for AUD-07' });
     const existing = await db.collection('customers').doc(`${ws}_c1`).get();
-    assert.equal(existing.exists, true, 'precondition: the current customer exists');
+    assert.equal(existing.exists, true, 'precondition: this test seeded the current customer');
 
     // A backup without a close date is older than the current closed books.
     await assert.rejects(restoreWorkspaceBackup(db, ws, {
