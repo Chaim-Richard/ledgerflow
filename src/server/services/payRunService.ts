@@ -4,7 +4,7 @@ import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import { lockMessage, postingLock, workspaceRole } from '../../lib/periodLock';
 import { mayApprove, TWO_PERSON_REFUSAL, twoPersonOn } from '../../lib/twoPersonRule';
-import { hoursToPay, type PayableTime } from '../../lib/hourlyPay';
+import { hoursToPay, sharedTime, sharedTimeMessage, type PayableTime } from '../../lib/hourlyPay';
 import { TIME_KIND } from '../../lib/timeEntries';
 import { payRunLines, payRunTotals, totalsOfLines, type PayRunAccounts, type PayRunEmployeeLine, type PayRunTotals, type PaySchedule } from '../../lib/payRunPosting';
 import { isCashAccount } from '../../lib/txFilters';
@@ -143,7 +143,11 @@ export async function postPayRun(db: Firestore, input: PostPayRunInput) {
     const chosen = await chooseAccounts(t, db, input.workspaceId, input);
     const employees = (await t.get(db.collection('employees').where('workspaceId', '==', input.workspaceId))).docs.map(d => ({ ...d.data(), id: d.id }) as Employee);
     const schedule: PaySchedule = input.schedule || 'all';
-    const hours = hoursToPay(employees, await payableTime(t, db, input.workspaceId), input.date);
+    const time = await payableTime(t, db, input.workspaceId);
+    // U-12: one person's time pays one employee
+    const shared = sharedTime(employees, time, input.date, schedule);
+    if (shared.length > 0) throw new PayRunError(409, sharedTimeMessage(shared));
+    const hours = hoursToPay(employees, time, input.date);
     const totals = payRunTotals(employees, Number(input.date.slice(0, 4)), schedule, hours);
     if (totals.employees.length === 0) throw new PayRunError(400, schedule === 'all' ? 'There is nobody on the payroll' : `Nobody is paid ${schedule.toLowerCase()}`);
     await refuseSameDay(t, db, input.workspaceId, input.date, totals, Boolean(input.again));
