@@ -3,13 +3,13 @@ import { logger } from '../utils/logger';
 import { postInvoiceLedger } from '../../services/ledgerPost/invoicePosting';
 import { postBillLedger } from '../../services/ledgerPost/billPosting';
 import { postCreditNoteLedger, postVendorCreditLedger } from '../../services/ledgerPost/creditPosting';
-import { postPaymentLedger } from '../../services/ledgerPost/paymentPosting';
+import { effectiveLockDate } from '../../lib/periodLock';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from '../../services/ledgerPost/postingCore';
 import type { ChartAccount, InventoryItem, Invoice, Transaction, Workspace } from '../../types';
 
 /**
- * L-94 step 1 (shadow): after an invoice, bill, credit note, vendor credit or payment save commits (L94-SHADOW-MORE
- * added the last three), the server rebuilds the entries the browser sent
+ * L-94 step 1 (shadow): after an invoice, bill, credit note or vendor credit save commits (L94-SHADOW-MORE added the
+ * last two; payments are not posted by the browser — POST /payments builds their entries on the server), the server rebuilds the entries the browser sent
  * with the same builder (postingCore, no browser code) from what is in the database, and compares them: the same
  * dates, accounts, amounts and labels. A difference is logged, never refused yet — the logs of the first testers
  * show whether the browser and the server ever disagree before step 1 starts refusing
@@ -27,13 +27,12 @@ export type ShadowCheckResult = { checked: false; reason: string } | { checked: 
 
 type Builder = (id: string, data: Record<string, unknown>, workspaceId: string, uid: string, mutation: EntityMutation, context: LedgerPostContext) => Promise<unknown>;
 
-/** Each document the browser posts through /transactions/bulk: the metadata key its entries carry and its builder. */
+/** Each document the browser posts through /transactions/bulk (its allowlist): the metadata key its entries carry and its builder. */
 const BUILDERS: Record<string, { key: string; post: Builder }> = {
   invoices: { key: 'invoiceId', post: (id, data, ws, uid, m, c) => postInvoiceLedger(id, data, ws, uid, m, c) },
   bills: { key: 'billId', post: (id, data, ws, uid, m, c) => postBillLedger(id, data, ws, uid, m, c) },
   creditNotes: { key: 'creditNoteId', post: (id, data, ws, uid, m, c) => postCreditNoteLedger(id, data, ws, uid, m, c) },
   vendorCredits: { key: 'vendorCreditId', post: (id, data, ws, uid, m, c) => postVendorCreditLedger(id, data, ws, uid, m, c) },
-  payments: { key: 'paymentId', post: (id, data, ws, uid, m, c) => postPaymentLedger(id, data, ws, uid, m, c) },
 };
 
 /** The workspace's today (YYYY-MM-DD) in its time zone, else UTC. */
@@ -88,10 +87,15 @@ export async function shadowCheckDocumentPosting(db: Firestore, input: ShadowChe
   const creditedId = mutation.collection === 'creditNotes' && typeof document.invoiceId === 'string' ? document.invoiceId : '';
   const credited = creditedId ? (await db.collection('invoices').doc(creditedId).get()).data() : undefined;
   const invoices = credited && credited.workspaceId === workspaceId ? [{ ...credited, id: creditedId } as Invoice] : [];
-  const invoiceEntries = invoices.length
-    ? (await db.collection('transactions').where('workspaceId', '==', workspaceId).where('metadata.invoiceId', '==', creditedId).get()).docs
-      .map(d => ({ ...d.data(), id: d.id }) as Transaction).filter(tx => !postedIds.has(tx.id) && !before.some(b => b.id === tx.id))
+  const ofInvoice = invoices.length
+    ? (await db.collection('transactions').where('workspaceId', '==', workspaceId).where('metadata.invoiceId', '==', creditedId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as Transaction)
     : [];
+  // other credit notes' returns on this invoice, with their reversals (a deleted credit note's reversal carries only its creditNoteId)
+  const otherNotes = [...new Set(ofInvoice.map(tx => tx.metadata?.creditNoteId).filter((id): id is string => typeof id === 'string' && id !== mutation.docId))];
+  const ofOtherNotes = (await Promise.all(otherNotes.map(async id => (await db.collection('transactions').where('workspaceId', '==', workspaceId).where('metadata.creditNoteId', '==', id).get()).docs
+    .map(d => ({ ...d.data(), id: d.id }) as Transaction)))).flat();
+  const seen = new Set(before.map(tx => tx.id));
+  const invoiceEntries = [...ofInvoice, ...ofOtherNotes].filter(tx => !postedIds.has(tx.id) && !seen.has(tx.id) && (seen.add(tx.id), true));
 
   const context: LedgerPostContext = {
     accounts: chart.docs.map(d => ({ ...d.data(), id: d.id }) as ChartAccount),
@@ -99,8 +103,10 @@ export async function shadowCheckDocumentPosting(db: Firestore, input: ShadowChe
     transactions: [...before, ...invoiceEntries],
     invoices,
     inventory,
-    // the save already passed the server's own period check; the builder must not refuse it again
-    lockDate: null,
+    // the lock the browser's builder saw: it dates the reversals of entries in a closed period; the save already passed
+    // the server's own period check, so the builder must not refuse it again
+    lockDate: effectiveLockDate(workspace as never, uid),
+    lockChecked: true,
     uid,
     today: todayIn(workspace.timezone as string | undefined),
     capture: [],

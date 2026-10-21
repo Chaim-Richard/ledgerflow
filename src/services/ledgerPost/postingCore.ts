@@ -32,6 +32,8 @@ export interface LedgerPostContext {
   today?: string;
   /** L-94: collect the entries a builder would send here, instead of sending them */
   capture?: Array<{ txs: PostableTransaction[]; entityMutation?: EntityMutation }>;
+  /** the save already passed the period check (the server's shadow rebuild): the lock date still dates reversals, but refuses nothing */
+  lockChecked?: boolean;
 }
 
 export type PostableTransaction = Omit<Partial<Transaction>, 'lines' | 'status' | 'type'> & {
@@ -134,7 +136,7 @@ export function inBaseCurrency<T extends { currency?: string; exchangeRate?: num
  * Period Lock Guard
  */
 export function verifyLockDate(dateStr: string, context?: LedgerPostContext): void {
-  if (!dateStr) return;
+  if (!dateStr || context?.lockChecked) return;
   const lockDate = getLockDate(context);
   if (isLockedDate(dateStr, lockDate, lockException(context) as never)) {
     throw new Error(`Period is locked on or before ${lockDate}. Cannot post or modify transaction on ${dateStr}.`);
