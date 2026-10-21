@@ -229,11 +229,11 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
           <caption className="sr-only">Chart of accounts</caption>
           <thead>
             <tr className="border-b border-[var(--line)] bg-[var(--ink)]/70 text-[var(--muted)] font-bold uppercase tracking-wider">
-              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)]">Node ID</th>
-              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)]">Entity Identity</th>
-              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)]">Topology Type</th>
-              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)]">Classification</th>
-              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)] text-right">Total Aggregate</th>
+              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)]">Code</th>
+              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)]">Account name</th>
+              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)]">Type</th>
+              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)]">Category</th>
+              <th scope="col" className="p-4 font-bold text-[9px] text-[var(--muted)] text-right">Balance</th>
               <th scope="col" className="p-4 w-10"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
@@ -250,8 +250,8 @@ export default function ChartOfAccountsView({ accounts, searchTerm, formatCurren
                       <BookOpen aria-hidden="true" size={20} />
                     </div>
                     <div>
-                      <p className="font-bold text-[var(--text)] uppercase tracking-wide text-xs">Void Detection</p>
-                      <p className="text-[11px] text-[var(--muted)] mt-1">Initialize the chart of nodes to establish financial signals. No architectural entities found.</p>
+                      <p className="font-bold text-[var(--text)] uppercase tracking-wide text-xs">No accounts yet</p>
+                      <p className="text-[11px] text-[var(--muted)] mt-1">Choose a chart of accounts to get started, or add your first account.</p>
                     </div>
                   </div>
                 </td>

@@ -24,12 +24,12 @@ test.beforeEach(async ({ page }) => {
     useAuthStore.setState({ user, isGuest: false, currentWorkspaceId: 'ai4-browser', workspaces: [{ id: 'ai4-browser', uid: user.uid, name: 'Parser test', currency: 'USD', businessType: 'custom', createdAt: '2026-01-01' }] });
   });
   await page.getByRole('button', { name: 'Import statement', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Statement Intelligence' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Import bank statement' })).toBeVisible();
 });
 
 for (const order of ['mdy', 'dmy']) {
   test(`QIF ${order} uses numeric dates, preserves cents, and returns keyboard focus`, async ({ page }) => {
-    const dialog = page.getByRole('dialog', { name: 'Statement Intelligence' });
+    const dialog = page.getByRole('dialog', { name: 'Import bank statement' });
     await dialog.getByLabel('QIF date order').selectOption(order);
     await dialog.locator('input[type=file]').setInputFiles({ name: 'checking.qif', mimeType: 'text/plain', buffer: fixture(`checking-${order}.qif`) });
     await expect(dialog.getByText('שכירות Office - October rent', { exact: true })).toBeVisible();
@@ -45,7 +45,7 @@ for (const order of ['mdy', 'dmy']) {
 test('BAI2 continuations reach review and no parsing request is sent', async ({ page }) => {
   const parserRequests: string[] = [];
   page.on('request', request => { if (/upload-bank|parse-statement|generate/.test(request.url())) parserRequests.push(request.url()); });
-  const dialog = page.getByRole('dialog', { name: 'Statement Intelligence' });
+  const dialog = page.getByRole('dialog', { name: 'Import bank statement' });
   await dialog.locator('input[type=file]').setInputFiles({ name: 'checking.bai2', mimeType: 'text/plain', buffer: fixture('checking.bai2') });
   await expect(dialog.getByText('Customer payment, Acme תשלום October', { exact: true })).toBeVisible();
   await expect(dialog.getByText('Office supplies', { exact: true })).toBeVisible();
@@ -56,7 +56,7 @@ test('BAI2 continuations reach review and no parsing request is sent', async ({ 
 });
 
 test('a bad BAI2 control total names its line and leaves the file ready for retry', async ({ page }) => {
-  const dialog = page.getByRole('dialog', { name: 'Statement Intelligence' });
+  const dialog = page.getByRole('dialog', { name: 'Import bank statement' });
   const buffer = Buffer.from(fixture('checking.bai2').toString().replace('49,255100,6', '49,1,6'));
   await dialog.locator('input[type=file]').setInputFiles({ name: 'bad.bai', mimeType: 'text/plain', buffer });
   await expect(dialog.getByRole('alert')).toContainText('BAI2 line 8: Account control total');
@@ -66,7 +66,7 @@ test('a bad BAI2 control total names its line and leaves the file ready for retr
 });
 
 test('QIF requires a date order before it reads ambiguous dates', async ({ page }) => {
-  const dialog = page.getByRole('dialog', { name: 'Statement Intelligence' });
+  const dialog = page.getByRole('dialog', { name: 'Import bank statement' });
   await dialog.locator('input[type=file]').setInputFiles({ name: 'checking.qif', mimeType: 'text/plain', buffer: fixture('checking-mdy.qif') });
   await expect(dialog.getByRole('alert')).toContainText('Choose the QIF date order');
   await expect(dialog.getByLabel('QIF date order')).toHaveValue('');
@@ -74,7 +74,7 @@ test('QIF requires a date order before it reads ambiguous dates', async ({ page 
 
 test('phone upload and review stay within the viewport with reachable new controls', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  const dialog = page.getByRole('dialog', { name: 'Statement Intelligence' });
+  const dialog = page.getByRole('dialog', { name: 'Import bank statement' });
   const order = dialog.getByLabel('QIF date order');
   // the dialog scales in: measure once it has settled, not mid-animation
   await expect.poll(async () => (await order.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
@@ -90,7 +90,7 @@ test('phone upload and review stay within the viewport with reachable new contro
 
 
 test('E-27 Wells Fargo headerless export retains first transaction and requires explicit layout', async ({ page }) => {
-  const dialog = page.getByRole('dialog', { name: 'Statement Intelligence' });
+  const dialog = page.getByRole('dialog', { name: 'Import bank statement' });
   await dialog.getByLabel('US bank CSV layout').selectOption('wells-fargo-checking');
   await dialog.locator('input[type=file]').setInputFiles({
     name: 'wells-fargo.csv', mimeType: 'text/csv', buffer: fixture('us-wells-fargo.csv'),
@@ -103,7 +103,7 @@ test('E-27 Wells Fargo headerless export retains first transaction and requires 
 });
 
 test('E-27 BofA checking discards summary and informational opening balance', async ({ page }) => {
-  const dialog = page.getByRole('dialog', { name: 'Statement Intelligence' });
+  const dialog = page.getByRole('dialog', { name: 'Import bank statement' });
   await dialog.getByLabel('US bank CSV layout').selectOption('boa-checking');
   await dialog.locator('input[type=file]').setInputFiles({
     name: 'bofa.csv', mimeType: 'text/csv', buffer: fixture('us-boa-checking.csv'),
@@ -115,7 +115,7 @@ test('E-27 BofA checking discards summary and informational opening balance', as
 });
 
 test('E-27 wrong selected bank header refuses rather than creating review entries', async ({ page }) => {
-  const dialog = page.getByRole('dialog', { name: 'Statement Intelligence' });
+  const dialog = page.getByRole('dialog', { name: 'Import bank statement' });
   await dialog.getByLabel('US bank CSV layout').selectOption('chase-checking');
   await dialog.locator('input[type=file]').setInputFiles({
     name: 'wrong.csv', mimeType: 'text/csv', buffer: fixture('us-boa-card.csv'),

@@ -305,10 +305,10 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
       >
         <div className="p-4 md:p-8 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/30">
           <div>
-            <h2 id={overlayTitleId} className="text-xl font-black text-[var(--text)] uppercase italic tracking-tighter">Bank Feed Ingestion</h2>
-            <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1 opacity-40">Rule CSV parsing & topological mapping</p>
+            <h2 id={overlayTitleId} className="text-xl font-black text-[var(--text)] uppercase italic tracking-tighter">Import bank feed</h2>
+            <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] mt-1 opacity-40">CSV import with rule-based categorization</p>
           </div>
-          <button onClick={onClose} className="w-10 h-10 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-[var(--muted)] transition-all" aria-label="Alert Circle action">
+          <button onClick={onClose} className="w-10 h-10 bg-[var(--ink)] hover:bg-slate-200 rounded-[32px] flex items-center justify-center text-[var(--muted)] transition-all" aria-label="Close">
             <AlertCircle aria-hidden="true" className="rotate-45" size={20} />
           </button>
         </div>
@@ -329,20 +329,20 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
               {file ? (
                 <div className="text-center">
                   <p className="text-lg font-black text-[var(--text)] italic uppercase tracking-tight">{file.name}</p>
-                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mt-1">{(file.size / 1024).toFixed(1)} KB DATA PACKET</p>
+                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest mt-1">{(file.size / 1024).toFixed(1)} KB file</p>
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleUpload(); }}
                     disabled={isUploading}
                     className="mt-10 px-10 py-3 bg-indigo-600 text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-xs hover:brightness-110 transition-all flex items-center gap-3 shadow-xl shadow-ledger-accent/20"
                   >
                     {isUploading ? <Loader2 aria-hidden="true" className="animate-spin" size={18} /> : <ArrowRight aria-hidden="true" size={18} />}
-                    Initialize Upload
+                    Upload file
                   </button>
                 </div>
               ) : (
                 <div className="text-center flex flex-col items-center">
-                  <p className="text-lg font-black text-[var(--text)] uppercase italic tracking-tighter">Deploy Ledger Source</p>
-                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.3em] mt-2 opacity-40 mb-8">Drop CSV or click to browse system</p>
+                  <p className="text-lg font-black text-[var(--text)] uppercase italic tracking-tighter">Upload bank statement</p>
+                  <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.3em] mt-2 opacity-40 mb-8">Drop a CSV file here, or click to browse</p>
                   
                   <div role="presentation" className="flex gap-4 items-center mt-4" onClick={(e) => e.stopPropagation()}>
                     <PlaidConnectButton />
@@ -364,7 +364,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                 <div className="flex items-center gap-3">
                    <div className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
                    <p className="text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em]">
-                    {isMapping ? "Rule categorizer active..." : `${mappedTransactions.length} NODES DETECTED`}
+                    {isMapping ? "Categorizing with rules..." : `${mappedTransactions.length} rows ready`}
                   </p>
                 </div>
                 {!isMapping && (
@@ -372,7 +372,7 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                     onClick={() => setSelectedIndices(new Set(mappedTransactions.keys()))}
                     className="text-[10px] text-indigo-600 font-black uppercase tracking-[0.2em] hover:underline"
                   >
-                    Mark All Nodes
+                    Select all
                   </button>
                 )}
               </div>
@@ -383,10 +383,10 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
                   <thead>
                     <tr className="bg-[var(--ink)]/50 border-b border-[var(--line)]">
                       <th scope="col" className="px-6 py-4 w-12"><span className="sr-only">Actions</span></th>
-                      <th scope="col" className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Timestamp</th>
+                      <th scope="col" className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Date</th>
                       <th scope="col" className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Description</th>
                       <th scope="col" className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Amount</th>
-                      <th scope="col" className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">AI Topology Hint</th>
+                      <th scope="col" className="px-4 py-4 font-black text-[var(--muted)] uppercase tracking-widest text-[9px]">Suggested category</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ledger-line/50">
@@ -448,15 +448,15 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
         </div>
 
         <div className="p-4 md:p-8 border-t border-[var(--line)] flex items-center justify-end gap-5 bg-[var(--ink)]/20">
-          <button onClick={onClose} className="px-8 py-3 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] hover:text-[var(--text)] transition-all" aria-label="Abort Mission">
-            Abort Mission
+          <button onClick={onClose} className="px-8 py-3 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] hover:text-[var(--text)] transition-all" aria-label="Cancel">
+            Cancel
           </button>
           <button 
             onClick={handleConfirm}
             disabled={!selectedIndices.size || isMapping}
             className="px-10 py-3 bg-indigo-600 text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-xs hover:brightness-110 disabled:opacity-30 disabled:grayscale transition-all shadow-xl shadow-ledger-accent/20"
-           aria-label="Import Vectors">
-            Import {selectedIndices.size} Vectors
+           aria-label="Import selected rows">
+            Import {selectedIndices.size} rows
           </button>
         </div>
       </motion.div>

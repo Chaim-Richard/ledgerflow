@@ -28,7 +28,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
             <h1 className="text-xl md:text-2xl font-black text-[var(--text)] tracking-tight uppercase leading-none">Smart Matching & Bank Reconciliation</h1>
             <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-1.5 flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-[var(--pos)] animate-ping" />
-              Ingress Channel Live • Reconciliation Integrity: {((bankLines.length - unmatchedBankLines.length) / (bankLines.length || 1) * 100).toFixed(0)}%
+              Live • Reconciled: {((bankLines.length - unmatchedBankLines.length) / (bankLines.length || 1) * 100).toFixed(0)}%
             </p>
           </div>
         </div>
@@ -46,7 +46,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                )}
              >
                <Layers aria-hidden="true" size={11} />
-               Streams ({unmatchedBankLines.length})
+               To review ({unmatchedBankLines.length})
              </button>
              <button
                onClick={() => { setViewMode('history'); setSelectedBankId(null); setSelectedLedgerId(null); }}
@@ -56,7 +56,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                )}
              >
                <History aria-hidden="true" size={11} />
-               Matched History ({matchedBankLines.length})
+               Matched ({matchedBankLines.length})
              </button>
            </div>
 
@@ -66,7 +66,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                 className="flex items-center gap-2 px-4 h-10 bg-[var(--brass-soft)] text-[var(--brass)] font-bold rounded-xl text-[10px] uppercase tracking-wider hover:opacity-90 transition-all border border-[var(--brass-line)] cursor-pointer shadow-sm"
              >
                 <Zap aria-hidden="true" size={14} className="fill-[var(--brass)]" />
-                Review {Array.from(optimizedMatches.values()).length} Synapse Pairs
+                Review {Array.from(optimizedMatches.values()).length} suggested matches
              </button>
            )}
 
@@ -75,9 +75,9 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                onClick={handleAutoReconcile}
                disabled={isAutoReconciling}
                className="flex items-center gap-2 px-5 h-10 bg-[var(--brass)] text-[var(--ink)] font-bold rounded-xl text-[10px] uppercase tracking-wider hover:opacity-90 transition-all shadow-md disabled:opacity-50 cursor-pointer"
-              aria-label="Auto Align All">
+              aria-label="Auto-match all">
                {isAutoReconciling ? <Loader2 aria-hidden="true" size={14} className="animate-spin" /> : <Sparkles aria-hidden="true" size={14} />}
-               Auto Align All
+               Auto-match all
              </button>
            )}
 
@@ -93,8 +93,8 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
           <Info aria-hidden="true" size={14} className="text-[var(--brass)] shrink-0" />
           <span>
             {viewMode === 'pending'
-              ? "Select an isolated bank statement entry and trace its corresponding entry inside the internal ledger."
-              : "Review completed configurations. Click any row to view full structural linkages or break erroneous alignment vectors."}
+              ? "Pick a bank statement line, then pick the ledger entry that matches it."
+              : "Review completed matches. Click a row to see the linked entries or undo a wrong match."}
           </span>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
@@ -140,8 +140,8 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
           {/* Left Column: Input Stream Feed */}
           <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)] overflow-hidden flex flex-col shadow-sm">
              <div className="px-5 py-4 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
-                <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Bank Data Stream</span>
-                <span className="text-[10px] font-mono font-bold bg-[var(--brass-soft)] text-[var(--brass)] px-2 py-0.5 rounded border border-[var(--brass-line)]">{filteredBankFeed.length} entries pending</span>
+                <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Bank statement lines</span>
+                <span className="text-[10px] font-mono font-bold bg-[var(--brass-soft)] text-[var(--brass)] px-2 py-0.5 rounded border border-[var(--brass-line)]">{filteredBankFeed.length} to review</span>
              </div>
              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
                 {filteredBankFeed.map(btx => {
@@ -203,8 +203,8 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                 {filteredBankFeed.length === 0 && (
                   <div className="h-full py-20 flex flex-col items-center justify-center p-10 text-center opacity-70">
                      <ShieldCheck aria-hidden="true" size={40} className="text-[var(--pos)] mb-3" />
-                     <h2 className="font-bold text-sm text-[var(--text)] uppercase tracking-tight">Zero Pending Streams</h2>
-                     <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-1">Bank Statement Feed is pre-synchronized</p>
+                     <h2 className="font-bold text-sm text-[var(--text)] uppercase tracking-tight">Nothing to review</h2>
+                     <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-1">Every bank statement line is matched</p>
                   </div>
                 )}
              </div>
@@ -213,7 +213,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
           {/* Right Column: Internal Registry Validation */}
           <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)] overflow-hidden flex flex-col shadow-sm">
              <div className="px-5 py-4 border-b border-[var(--line)] flex items-center justify-between bg-[var(--ink)]/50">
-                <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">General Ledger Records</span>
+                <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Ledger entries</span>
                 <span className="text-[10px] font-mono font-bold bg-[var(--brass-soft)] text-[var(--brass)] px-2 py-0.5 rounded border border-[var(--brass-line)]">{filteredLedgerEntries.length} uncleared items</span>
              </div>
              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
@@ -259,8 +259,8 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                 {filteredLedgerEntries.length === 0 && (
                   <div className="h-full py-20 flex flex-col items-center justify-center p-10 text-center opacity-70">
                      <ShieldCheck aria-hidden="true" size={40} className="text-indigo-500 mb-3" />
-                     <h2 className="font-extrabold text-sm text-[var(--text)] uppercase tracking-tight">Registry Unoccupied</h2>
-                     <p className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-widest mt-1">No unverified entries on the active chart</p>
+                     <h2 className="font-extrabold text-sm text-[var(--text)] uppercase tracking-tight">No ledger entries to match</h2>
+                     <p className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-widest mt-1">All posted entries are cleared</p>
                   </div>
                 )}
              </div>
@@ -272,12 +272,12 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
           <div className="bg-[var(--surface)] rounded-[32px] border border-[var(--line)] shadow-xs overflow-hidden flex flex-col h-full flex-1 min-h-0">
             <div className="px-5 py-4 border-b border-[var(--line)] bg-[var(--ink)]/50 flex items-center justify-between">
               <div>
-                <span className="text-xs font-black text-[var(--text)] uppercase tracking-wider">Audit Matrix logs</span>
-                <p className="text-[10px] text-[var(--muted)] uppercase tracking-widest font-semibold mt-0.5">Physical deposits & ledgers permanently welded and locked</p>
+                <span className="text-xs font-black text-[var(--text)] uppercase tracking-wider">Matched history</span>
+                <p className="text-[10px] text-[var(--muted)] uppercase tracking-widest font-semibold mt-0.5">Bank lines matched to ledger entries and cleared</p>
               </div>
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-1">
                  <Lock aria-hidden="true" size={12} />
-                 <span>Cleared Protection System Active</span>
+                 <span>Cleared items are locked</span>
               </div>
             </div>
 
@@ -285,9 +285,9 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                {filteredBankFeed.length === 0 ? (
                  <div className="py-24 text-center text-[var(--muted)] flex flex-col items-center justify-center space-y-3">
                    <History aria-hidden="true" size={36} className="text-slate-300" />
-                   <h3 className="font-extrabold text-[11px] uppercase tracking-widest">No cleared alignment history found</h3>
+                   <h3 className="font-extrabold text-[11px] uppercase tracking-widest">No matched items yet</h3>
                    <p className="text-[10px] font-medium uppercase tracking-tight text-[var(--muted)] max-w-xs leading-normal">
-                     Use the Pending Streams tab to forge balances and trace links
+                     Use the To review tab to match bank lines with ledger entries.
                    </p>
                  </div>
                ) : (
@@ -306,10 +306,10 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                              <button type="button" aria-expanded={isSelected} className="w-full text-left flex-1 min-w-0">
                                <div className="flex items-center gap-2 flex-wrap mb-1">
                                  <span className="text-[8px] font-black uppercase text-[var(--muted)] font-mono tracking-wider">{line.date}</span>
-                                 <span className="px-2 py-0.2 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[7px] font-black uppercase tracking-wider">Locked Status</span>
+                                 <span className="px-2 py-0.2 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[7px] font-black uppercase tracking-wider">Cleared</span>
                                </div>
                                <h4 className="font-extrabold text-sm text-[var(--text)] min-w-0"><BankLineName text={line.description} /></h4>
-                               <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 tabular-nums">Statement Amount: {formatCurrency(line.amountCents)}</p>
+                               <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 tabular-nums">Statement amount: {formatCurrency(line.amountCents)}</p>
                              </button>
 
                              {/* Connector Node */}
@@ -320,9 +320,9 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
 
                              {/* Internal Ledger Match Info */}
                              <div className="flex-1 min-w-0">
-                               <span className="text-[8px] font-black uppercase text-indigo-400 font-mono tracking-wider">Linked Registry Record</span>
-                               <h4 className="font-bold text-sm text-slate-700 truncate">{linkedTx?.description || 'Legacy Synapsed Node'}</h4>
-                               <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 mt-0.5 tabular-nums">Registry value: {linkedTx ? formatCurrency(linkedTx.totalAmountCents) : 'N/A'}</p>
+                               <span className="text-[8px] font-black uppercase text-indigo-400 font-mono tracking-wider">Matched ledger entry</span>
+                               <h4 className="font-bold text-sm text-slate-700 truncate">{linkedTx?.description || 'Linked entry no longer found'}</h4>
+                               <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 mt-0.5 tabular-nums">Ledger amount: {linkedTx ? formatCurrency(linkedTx.totalAmountCents) : 'N/A'}</p>
                              </div>
 
                              {/* Revert controls directly */}
@@ -332,10 +332,10 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                                    e.stopPropagation();
                                    return handleUndoAlignment(line.id, line.matchedTransactionId);
                                  }}
-                                 loadingText="Reverting..."
+                                 loadingText="Undoing..."
                                  className="px-4 py-2 bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100 hover:text-rose-700 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-1 leading-none shadow-xs"
                                >
-                                 <X aria-hidden="true" size={10} strokeWidth={2.5} /> Revert Verification
+                                 <X aria-hidden="true" size={10} strokeWidth={2.5} /> Undo match
                                </AsyncButton>
                              </div>
                           </div>
@@ -361,15 +361,13 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
             className="fixed bottom-20 lg:bottom-10 left-1/2 -translate-x-1/2 w-full max-w-6xl z-[80] px-4 md:px-6"
           >
             <div className="bg-[var(--surface)] text-[var(--text)] p-5 md:p-6 rounded-2xl border border-[var(--line)] shadow-2xl flex flex-col gap-5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 font-mono text-[9px] text-[var(--muted)] opacity-30 uppercase select-none font-bold">Rule Processor Grid</div>
-
               {/* Top row - Side-by-side nodes comparison matrix */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-center">
 
                 {/* Node A */}
                 <div className="md:col-span-2 flex flex-col bg-[var(--ink)]/50 p-4 rounded-xl border border-[var(--line)] relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-2 opacity-10"><Layers aria-hidden="true" size={36} /></div>
-                  <span className="text-[8px] font-bold text-[var(--pos)] uppercase tracking-wider font-mono">Statement Node A</span>
+                  <span className="text-[8px] font-bold text-[var(--pos)] uppercase tracking-wider font-mono">Bank statement</span>
                   <BankLineName text={selectedBankLine.description} className="text-md font-bold mt-1 tracking-tight" />
                   <div className="flex items-center justify-between mt-3 flex-wrap gap-1">
                     <span className="text-[10px] font-mono text-[var(--muted)]">{selectedBankLine.date}</span>
@@ -379,7 +377,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
 
                 {/* Heuristic Probability Weight Indicator */}
                 <div className="text-center flex flex-col items-center justify-center p-2">
-                  <span className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-wider">Alignment probability</span>
+                  <span className="text-[8px] font-bold text-[var(--muted)] uppercase tracking-wider">Match confidence</span>
                   {viewMode === 'pending' ? (
                      <>
                        <div className="text-2xl md:text-3xl font-mono font-bold tracking-tight text-[var(--pos)] animate-pulse mt-1">
@@ -388,7 +386,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
 
                        {/* Likeness descriptor */}
                        <div className="text-[7px] font-bold uppercase tracking-wider text-[var(--muted)] mt-2">
-                         {checkSimilarity.overall >= 90 ? 'High Fidelity' : checkSimilarity.overall >= 75 ? 'Optimal Match' : 'Manual verification'}
+                         {checkSimilarity.overall >= 90 ? 'Strong match' : checkSimilarity.overall >= 75 ? 'Good match' : 'Check manually'}
                        </div>
 
                        {/* Interactive similarity progress tube */}
@@ -401,7 +399,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                         <div className="w-10 h-10 bg-[var(--pos)]/10 border border-[var(--pos)]/20 rounded-full flex items-center justify-center text-[var(--pos)] mt-2">
                           <Lock aria-hidden="true" size={16} />
                         </div>
-                        <span className="text-[7px] text-[var(--pos)] font-bold uppercase mt-2">Strict Clear</span>
+                        <span className="text-[7px] text-[var(--pos)] font-bold uppercase mt-2">Cleared</span>
                      </>
                   )}
                 </div>
@@ -409,8 +407,8 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                 {/* Node B */}
                 <div className="md:col-span-2 flex flex-col bg-[var(--ink)]/50 p-4 rounded-xl border border-[var(--line)] relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-2 opacity-10"><Maximize2 aria-hidden="true" size={36} /></div>
-                  <span className="text-[8px] font-bold text-[var(--brass)] uppercase tracking-wider font-mono">Ledger Node B</span>
-                  <span className="text-md font-bold truncate mt-1 tracking-tight">{selectedLedgerTx?.description || 'Orphan Ledger'}</span>
+                  <span className="text-[8px] font-bold text-[var(--brass)] uppercase tracking-wider font-mono">Ledger entry</span>
+                  <span className="text-md font-bold truncate mt-1 tracking-tight">{selectedLedgerTx?.description || 'No ledger entry selected'}</span>
                   <div className="flex items-center justify-between mt-3 flex-wrap gap-1">
                     <span className="text-[10px] font-mono text-[var(--muted)]">{selectedLedgerTx?.date || 'N/A'}</span>
                     <span className="text-sm font-bold font-mono text-[var(--text)] tabular-nums">
@@ -431,7 +429,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
                         <span className="text-[10px] text-slate-350 font-bold uppercase tracking-tight">
-                          Date Separation: <strong className={cn(checkSimilarity.dateDiff > 3 ? "text-amber-300" : "text-emerald-400")}>{checkSimilarity.dateDiff} Days</strong>
+                          Date difference: <strong className={cn(checkSimilarity.dateDiff > 3 ? "text-amber-300" : "text-emerald-400")}>{checkSimilarity.dateDiff} days</strong>
                         </span>
                       </div>
 
@@ -439,7 +437,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
                         <span className="text-[10px] text-slate-350 font-bold uppercase tracking-tight">
-                          Description Likeness: <strong className="text-indigo-300">{checkSimilarity.textScore}% match</strong>
+                          Description similarity: <strong className="text-indigo-300">{checkSimilarity.textScore}%</strong>
                         </span>
                       </div>
 
@@ -447,8 +445,8 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
                         <span className="text-[10px] text-slate-350 font-bold uppercase tracking-tight">
-                          Data Price Difference: <strong className={cn(checkSimilarity.amountDiff !== 0 ? "text-amber-400" : "text-emerald-400", "tabular-nums")}>
-                            {checkSimilarity.amountDiff === 0 ? "Perfect Price Match" : `${formatCurrency(Math.abs(checkSimilarity.amountDiff))} Delta`}
+                          Amount difference: <strong className={cn(checkSimilarity.amountDiff !== 0 ? "text-amber-400" : "text-emerald-400", "tabular-nums")}>
+                            {checkSimilarity.amountDiff === 0 ? "Amounts match" : `${formatCurrency(Math.abs(checkSimilarity.amountDiff))} difference`}
                           </strong>
                         </span>
                       </div>
@@ -458,7 +456,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                    {checkSimilarity.amountDiff !== 0 && (
                      <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-amber-300 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 leading-none">
                        <AlertCircle aria-hidden="true" size={10} />
-                       <span>Fee or conversion delta absorbed</span>
+                       <span>Difference may be a bank fee or currency conversion</span>
                      </div>
                    )}
                 </div>
@@ -470,7 +468,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                   onClick={() => { setSelectedBankId(null); setSelectedLedgerId(null); }}
                   className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/30 hover:text-white transition-colors cursor-pointer w-full sm:w-auto"
                 >
-                  Deselect Node Links
+                  Cancel
                 </button>
 
                 <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
@@ -484,16 +482,16 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                       className="px-8 h-12 bg-emerald-600 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-emerald-500 transition-all cursor-pointer shadow-lg shadow-emerald-900/30 w-full sm:w-auto"
                     >
                       <ShieldCheck aria-hidden="true" size={18} />
-                      Assert Match Verification
+                      Confirm match
                     </button>
                   ) : (
                     <AsyncButton
                       onClick={() => handleUndoAlignment(selectedBankLine!.id, selectedBankLine!.matchedTransactionId)}
-                      loadingText="Unbinding..."
+                      loadingText="Undoing..."
                       className="px-8 h-12 bg-rose-600 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-rose-500 transition-all cursor-pointer shadow-lg shadow-rose-900/30 w-full sm:w-auto"
                     >
                       <X aria-hidden="true" size={18} />
-                      Unbind & Reopen Vector
+                      Undo match
                     </AsyncButton>
                   )}
                 </div>
@@ -518,7 +516,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                   </span>
-                  <span className="text-xs font-bold text-zinc-400">Select internal General Ledger node to match sequence</span>
+                  <span className="text-xs font-bold text-zinc-400">Select a ledger entry to match, or create an entry from this bank line</span>
                </div>
                <button
                  onClick={async () => {
@@ -530,7 +528,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                  }}
                  className="px-5 py-2.5 bg-[var(--surface)]/10 hover:bg-[var(--surface)]/20 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all cursor-pointer border border-white/10 hover:border-white/20 shadow-sm whitespace-nowrap"
                >
-                 Synthesize Record
+                 Create entry
                </button>
             </div>
           </motion.div>
@@ -543,6 +541,9 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
              <>
                <div role="presentation" aria-hidden="true" className="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-[150]" onClick={() => setShowAutoConfirm(false)} />
                <motion.div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="review-suggested-matches-title"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
@@ -552,10 +553,10 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                     <div className="flex items-center gap-3">
                        <Zap aria-hidden="true" size={24} className="text-amber-500 fill-amber-500" />
                        <div>
-                         <h2 className="text-xl font-black uppercase tracking-tight text-[var(--text)]">
-                            Cognitive Alignments Panel
+                         <h2 id="review-suggested-matches-title" className="text-xl font-black uppercase tracking-tight text-[var(--text)]">
+                            Review suggested matches
                          </h2>
-                         <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-widest mt-0.5">Select synapses to reconcile at once. Toggle individual checkboxes or apply bulk verification instantly.</p>
+                         <p className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-widest mt-0.5">Choose the matches to apply. Tick individual rows, or apply them all at once.</p>
                        </div>
                     </div>
                     {/* Header check/uncheck shortcuts */}
@@ -610,7 +611,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                               <div className="flex-1 grid grid-cols-1 md:grid-cols-11 gap-4 items-center overflow-hidden">
                                 {/* Bank Item info */}
                                 <div className="md:col-span-5 overflow-hidden">
-                                   <span className="text-[8px] uppercase tracking-widest font-black text-[var(--muted)] block mb-0.5">Physical Inflow Node</span>
+                                   <span className="text-[8px] uppercase tracking-widest font-black text-[var(--muted)] block mb-0.5">Bank statement line</span>
                                    <div className="font-bold text-[var(--text)] text-sm"><BankLineName text={btx.description} /></div>
                                    <p className="text-[10px] font-semibold text-[var(--muted)] font-mono mt-0.5">{btx.date} • {formatCurrency(btx.amountCents)}</p>
                                 </div>
@@ -622,7 +623,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
 
                                 {/* Mapped registry internal record item info */}
                                 <div className="md:col-span-5 overflow-hidden text-right">
-                                   <span className="text-[8px] uppercase tracking-widest font-black text-[var(--muted)] block mb-0.5">Assigned Target record</span>
+                                   <span className="text-[8px] uppercase tracking-widest font-black text-[var(--muted)] block mb-0.5">Ledger entry</span>
                                    <p className="font-bold text-[var(--text)] truncate text-sm">{matchedLtx.description}</p>
                                    <p className="text-[10px] font-semibold text-[var(--muted)] font-mono mt-0.5">{matchedLtx.date} • {formatCurrency(matchedLtx.totalAmountCents)}</p>
                                    {Math.abs(btx.amountCents) !== Math.abs(matchedLtx.totalAmountCents) && (
@@ -641,15 +642,15 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                   {/* Batch validation button stripe */}
                   <div className="border-t pt-5 flex items-center justify-between shrink-0">
                      <button onClick={() => setShowAutoConfirm(false)} className="px-6 py-3 font-bold text-xs uppercase tracking-widest text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer">
-                        Dismiss alignments panel
+                        Cancel
                      </button>
                      <button
                         onClick={executeSelectedBatchMatches}
                         disabled={isProcessing}
                         className="bg-emerald-600 hover:bg-emerald-500 cursor-pointer transition-all text-white px-8 h-12 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2.5 disabled:opacity-50"
-                      aria-label="Apply Checked Synapses Now ( )">
+                      aria-label="Apply selected matches">
                         {isProcessing ? <Loader2 aria-hidden="true" size={16} className="animate-spin" /> : <ShieldCheck aria-hidden="true" size={16} />}
-                        Apply Checked Synapses Now ({Object.values(selectedBatchIds).filter(Boolean).length})
+                        Apply selected matches ({Object.values(selectedBatchIds).filter(Boolean).length})
                      </button>
                   </div>
                </motion.div>

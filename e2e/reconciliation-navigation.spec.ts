@@ -25,12 +25,12 @@ test('reconciliation retains mixed-language search between empty streams and mat
     createRoot(host).render(React.createElement(Reconciliation));
   });
   const screen = page.locator('#reconciliation-navigation-probe');
-  await expect(screen.getByText('Zero Pending Streams')).toBeVisible();
+  await expect(screen.getByText('Nothing to review')).toBeVisible();
   const search = screen.getByRole('textbox', { name: 'Search reconciliation amounts or descriptions' });
   await search.fill('קבלה receipt');
-  await screen.getByRole('button', { name: 'Matched History (0)' }).click();
-  await expect(screen.getByText('No cleared alignment history found')).toBeVisible();
+  await screen.getByRole('button', { name: 'Matched (0)' }).click();
+  await expect(screen.getByText('No matched items yet')).toBeVisible();
   await expect(search).toHaveValue('קבלה receipt');
-  await screen.getByRole('button', { name: 'Streams (0)' }).click();
-  await expect(screen.getByText('Zero Pending Streams')).toBeVisible();
+  await screen.getByRole('button', { name: 'To review (0)' }).click();
+  await expect(screen.getByText('Nothing to review')).toBeVisible();
 });

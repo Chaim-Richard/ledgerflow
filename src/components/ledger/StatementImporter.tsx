@@ -179,9 +179,9 @@ export default function StatementImporter({
         }
         if (results && results.length > 0) {
           processResults(results as unknown as StatementResult[]);
-          toast.success(`Analytical Intelligence extracted ${results.length} nodes from ${file.name}`, { id: loader });
+          toast.success(`Extracted ${results.length} rows from ${file.name}`, { id: loader });
         } else {
-          toast.error('AI was unable to identify fiscal nodes in this file.', { id: loader });
+          toast.error('Could not read any rows from this file.', { id: loader });
         }
       } else if (fileName.endsWith('.csv') || fileName.endsWith('.txt') || fileType.includes('csv') || fileType.includes('text')) {
         const fileContent = await file.text();
@@ -225,9 +225,9 @@ export default function StatementImporter({
         results = await aiService.parseStatement(file, businessContext, undefined, patternCache, labels) as unknown as StatementResult[];
         if (results && results.length > 0) {
           processResults(results as unknown as StatementResult[]);
-          toast.success(`Analytical Intelligence extracted ${results.length} nodes from ${file.name}`, { id: loader });
+          toast.success(`Extracted ${results.length} rows from ${file.name}`, { id: loader });
         } else {
-          toast.error('AI was unable to identify fiscal nodes in this file.', { id: loader });
+          toast.error('Could not read any rows from this file.', { id: loader });
         }
       }
     } catch (error) {
@@ -472,8 +472,8 @@ export default function StatementImporter({
               <FileText aria-hidden="true" size={24} />
             </div>
             <div>
-              <h2 id={overlayTitleId} className="text-2xl font-black text-[var(--text)] tracking-tight">Statement Intelligence</h2>
-              <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-wider">Rule Parsing & Causal Deduplication</p>
+              <h2 id={overlayTitleId} className="text-2xl font-black text-[var(--text)] tracking-tight">Import bank statement</h2>
+              <p className="text-xs text-[var(--muted)] font-bold uppercase tracking-wider">Review each line before importing</p>
             </div>
           </div>
           <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-[var(--ink)] rounded-full transition-all text-[var(--muted)] cursor-pointer"><X aria-hidden="true" size={24} /></button>
@@ -548,8 +548,8 @@ export default function StatementImporter({
                 className="space-y-8"
               >
                 <div className="p-6 bg-[var(--ink)] border border-[var(--line)] rounded-2xl text-[var(--text)]">
-                  <h3 className="text-xl font-black mb-1 uppercase tracking-tight">Configure Deterministic Mapping</h3>
-                  <p className="text-xs text-[var(--muted)] font-medium">Match your file columns to the LedgerFlow protocol fields.</p>
+                  <h3 className="text-xl font-black mb-1 uppercase tracking-tight">Map file columns</h3>
+                  <p className="text-xs text-[var(--muted)] font-medium">Match each column in your file to the LedgerFlow field it contains.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -744,15 +744,15 @@ export default function StatementImporter({
                 className="px-8 py-3 bg-[var(--brass)] text-[var(--ink)] rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-xs uppercase tracking-wider cursor-pointer"
                >
                 {isParsing ? <Loader2 aria-hidden="true" className="animate-spin" size={16} /> : <ArrowRight aria-hidden="true" size={16} />}
-                {isParsing ? 'Rule Analysis...' : 'Unstructured Parse'}
+                {isParsing ? 'Reading file...' : 'Parse statement'}
               </button>
             ) : step === 'mapping' ? (
               <button 
                 onClick={handleMapColumns}
                 className="px-8 py-3 bg-[var(--brass)] text-[var(--ink)] rounded-xl font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-md text-xs uppercase tracking-wider cursor-pointer"
-               aria-label="Process Deterministic Mapping">
+               aria-label="Review and continue">
                 <ArrowRight aria-hidden="true" size={16} />
-                Process Deterministic Mapping
+                Review and continue
               </button>
             ) : (
               <AsyncButton 

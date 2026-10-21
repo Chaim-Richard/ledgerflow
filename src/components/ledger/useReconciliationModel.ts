@@ -171,7 +171,7 @@ export function useReconciliationModel() {
     }).filter(p => p.ledgerId && p.isChecked);
 
     if (pairsToMatch.length === 0) {
-        toast.info("No alignment nodes selected for integration.");
+        toast.info("No matches selected.");
         setIsProcessing(false);
         return;
     }
@@ -181,11 +181,11 @@ export function useReconciliationModel() {
            await onMatch(pair.bankId, pair.ledgerId!);
            matchedCount++;
         }
-        toast.success(`Synapses Active: Successfully integrated ${matchedCount} verified bonds.`);
+        toast.success(`${matchedCount} match${matchedCount === 1 ? "" : "es"} applied.`);
         setShowAutoConfirm(false);
     } catch (err) {
-        toast.error("Could not complete reconciliation cycle.", {
-          description: `Please try again. (${errorMessage(err) || 'Network sync error'})`
+        toast.error("Could not apply the matches.", {
+          description: `Please try again. (${errorMessage(err) || 'Network error'})`
         });
     } finally {
         setIsProcessing(false);
@@ -196,10 +196,10 @@ export function useReconciliationModel() {
     setIsAutoReconciling(true);
     try {
        await onAutoReconcile({ bankLines: unmatchedBankLines, transactions: unclearedLedgerTransactions });
-       toast.success("Autonomous batch matching complete!");
+       toast.success("Automatic matching complete.");
     } catch (e) {
-        toast.error("Could not complete batch alignment.", {
-          description: `Please try again. (${errorMessage(e) || 'Network sync error'})`
+        toast.error("Could not finish automatic matching.", {
+          description: `Please try again. (${errorMessage(e) || 'Network error'})`
         });
     } finally {
        setIsAutoReconciling(false);
@@ -209,7 +209,7 @@ export function useReconciliationModel() {
   // Revert / Undo a confirmed reconciliation link
   const handleUndoAlignment = async (bankLineId: string, matchedTxId?: string) => {
     if (!onUndoMatch) {
-      toast.error("Reversion interface not enabled on this workspace container.");
+      toast.error("Undoing matches is not available in this workspace.");
       return;
     }
 
@@ -217,7 +217,7 @@ export function useReconciliationModel() {
     try {
       await onUndoMatch(bankLineId, matchedTxId);
     } catch (e) {
-      toast.error("Failed to break alignment link: " + errorMessage(e));
+      toast.error("Could not undo the match: " + errorMessage(e));
     } finally {
       setIsProcessing(false);
     }

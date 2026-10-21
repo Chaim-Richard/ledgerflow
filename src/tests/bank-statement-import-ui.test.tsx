@@ -151,7 +151,7 @@ test("#101: CSV keeps O'Brien's amount, reads a quoted line break as one row, an
   const rows: Array<{ description: string; amountCents: number }> = [];
   render(<StatementImporter isOpen onClose={() => {}} onImport={r => { rows.push(...(r as typeof rows)); }} existingTransactions={[]} businessContext="" accounts={[]} patternCache={{}} />);
   await upload('bank.csv', 'Date,Description,Amount\n2026-10-12,O\'Brien Coffee,-12.50\n2026-10-13,"Multi-line memo\nsecond line",10.00\n2026-10-14,No amount,\n');
-  await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Process Deterministic Mapping' })); });
+  await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Review and continue' })); });
   assert.ok(await screen.findByText("O'Brien Coffee"));
   assert.ok(screen.getByText('-$12.50'));
   assert.equal(screen.queryByText('No amount'), null, 'a row without an amount is skipped, not imported as $0');
