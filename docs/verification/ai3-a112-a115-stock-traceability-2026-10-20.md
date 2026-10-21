@@ -22,10 +22,10 @@
 
 ## Verification (local, this branch)
 
-- Full unit suite: **3,160 pass / 0 fail / 1 skipped / 755 suites, exit 0** (no `LF_TEST_DATABASE_URL`, so the database-gated suite skips as usual).
+- Full unit suite: **3,198 pass / 0 fail / 1 skipped / 762 suites, exit 0** on the rebased head (no `LF_TEST_DATABASE_URL`, so the database-gated suite skips as usual).
 - `tsc --noEmit` clean; ESLint 0 errors / 209 warnings (at the cap, none added); production build passes; quality ratchet passes.
 - New/affected suites, all green: `expiring-lots`, `stock-transfers`, `location-levels`, `serial-numbers` (+validators), `serial-lot-lookup-view` (rewritten to real shapes), `expiring-lots-view`, `stock-transfers-view`, `reorder-suggestions-view`, `reorder-suggestions-location-view`, `delivery-note(s)`, `screen-help`, `inventory-item-controls`, `purchase-orders(-inline)`.
-- Browser: not run locally (no downloadable Chromium in the sandbox); the two new report tabs are added to `e2e/view-registry-coverage.spec.ts` for GitHub CI's browser shards. Labels and lazy component entries verified against the registry by hand.
+- Browser: not run locally (no downloadable Chromium in the sandbox); GitHub CI's browser shards (both) and the Playwright smoke suite pass with the two new report tabs in `e2e/view-registry-coverage.spec.ts`.
 
 ## Limits and asks
 
