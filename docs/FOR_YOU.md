@@ -476,7 +476,7 @@ dismiss as *false positive*: alert 24 (payslip GET), 25 (API-key SHA-256 — key
 
 - **`supabase/migrations/20261020120000_inventory_cost_server_only.sql`**: refuses a browser change to an item's unit cost while it has stock on hand (the cost of stock changes only through Inventory → Revalue, which posts the difference). Tested with `npm run test:rules` on the local test database. AI #1 applies it to Supabase after reviewing the ISS-130 PR; until it is applied, the screen already locks the cost, but a direct browser write is not yet refused by the database.
 
-## 20 Oct night — migration to confirm on Supabase (ISS-130, PR #259)
+## 20 Oct night — ~~migration to confirm on Supabase (ISS-130, PR #259)~~ **Done: replaced by the 21 Oct change, which the owner ran.**
 
 `supabase/migrations/20261020120000_inventory_cost_server_only.sql` (browser may not change the cost of stock on hand; only the server's revaluation can) — **the Supabase connector timed out twice, so it may or may not be applied.** It is safe to run again (it replaces the function and re-creates the trigger). To apply: Supabase dashboard → SQL editor → paste the file → Run. Until it is applied the app still works; the new Revalue screen posts correctly either way, the database just doesn't yet *refuse* a direct browser cost change.
 
@@ -484,5 +484,5 @@ dismiss as *false positive*: alert 24 (payslip GET), 25 (API-key SHA-256 — key
 
 **Open question for you:** the payroll import accepts one column set per provider (Gusto payroll journal, ADP payroll register, Paychex payroll journal; listed in `src/lib/payrollProviderImport.ts`). I wrote them from the common column names; they are **not checked against a real export** from each provider. **Default I used:** any other column stops the import and names it, so a different export is refused rather than read wrongly. If you or a pilot customer can share a sample export (names changed), I'll match its columns exactly.
 
-## 21 Oct — one database change to paste (replaces the 20 Oct ISS-130 one)
+## 21 Oct — ~~one database change to paste~~ **Done: run by the owner on 21 Oct ("Success. No rows returned").** (replaces the 20 Oct ISS-130 one)
 The Supabase connector timed out a third time. Paste **`supabase/migrations/20261021010000_inventory_cost_editable_at_zero.sql`** into Supabase → SQL editor → Run (1 minute). It is safe to run more than once, and it replaces the 20 Oct ISS-130 change, so you do not need to run that one separately. What it does: an item's cost can't be changed from the browser while it has stock on hand (only Inventory → Revalue changes it); items at or below zero stay editable. *Default until then:* the screen already locks the cost; only a direct browser write is not yet refused by the database.

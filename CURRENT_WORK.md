@@ -27,7 +27,6 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 | #254 AI #6 security (rate limits, headers, restore drill) | sent back twice: tests still can't run, counter not atomic |
 
 **Waiting on you (owner)** — details in `docs/FOR_YOU.md`
-- Paste one database change into Supabase: `supabase/migrations/20261021010000_inventory_cost_editable_at_zero.sql` (FOR_YOU, 21 Oct; connector timed out 3 times).
 - Replace the four generated secrets (item 2), try sign-up on the live site (3), deployment protection (4).
 - Email sender + provider (5, 7), database certificate (6), Stripe last 2 steps (8), privacy papers (17).
 - GitHub: require CI before merging to `main` (L-67).
