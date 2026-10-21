@@ -1,29 +1,30 @@
 /**
- * L94-SHADOW-MORE: the L-94 server shadow check (postingShadowCheck.ts) now also rebuilds credit notes, vendor
- * credits and payments saved through /transactions/bulk, with the same builders the browser uses, and compares.
+ * L94-SHADOW-MORE: the L-94 server shadow check (postingShadowCheck.ts) now also rebuilds credit notes and vendor
+ * credits saved through /transactions/bulk, with the same builders the browser uses, and compares. (Payments are not
+ * in it: nothing posts them through /transactions/bulk — POST /payments builds their entries on the server.)
  * For each, on the local test database (cents):
  *   credit note CN-1 200.00 for Acme      → Sales DR 20,000 / A/R CR 20,000
  *   vendor credit VC-1 80.00 from Globex  → A/P DR 8,000 / the rebate account CR 8,000
- *   payment PMT-1 330.00 received         → Bank DR 33,000 / A/R CR 33,000
  * and three cases each:
  *   - the browser's own entry → the rebuild matches;
  *   - one line moved to another account of the same kind (still balanced) → the difference is named, line by line;
- *   - an edit (to 300.00, 120.00, 495.00) after the first entry is in the books → the rebuild reverses the first
+ *   - an edit (to 300.00, 120.00) after the first entry is in the books → the rebuild reverses the first
  *     entry and posts the new one, as the browser's builder did: e.g. the credit note's Sales lines are
  *     −20,000 (reversal) and +30,000.
+ * And the lock: CN-9 first posted on 2026-09-10, the books locked through 2026-09-30, edited to 150.00 on 2026-10-21 →
+ * the browser reverses the locked entry today (2026-10-21), not on 09-10; the rebuild uses the same lock and agrees.
  */
 import test, { before, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import { postCreditNoteLedger, postVendorCreditLedger } from '../services/ledgerPost/creditPosting';
-import { postPaymentLedger } from '../services/ledgerPost/paymentPosting';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from '../services/ledgerPost/postingCore';
 import { postingFingerprint, shadowCheckDocumentPosting } from '../server/services/postingShadowCheck';
 import type { ChartAccount, Transaction, Workspace } from '../types';
 
 const url = process.env.LF_TEST_DATABASE_URL;
 
-describe('L-94 shadow check: credit notes, vendor credits, payments', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
+describe('L-94 shadow check: credit notes and vendor credits', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
   const ws = `ws_l94m_${crypto.randomBytes(4).toString('hex')}`;
   const OWNER = 'owner-l94m';
   const a = (s: string) => `${ws}_${s}`;
@@ -43,7 +44,7 @@ describe('L-94 shadow check: credit notes, vendor credits, payments', { skip: !u
     defaultAccountMappings: { ar: a('ar'), ap: a('ap'), revenue: a('sales'), expense: a('supplies'), cash: a('bank') },
   } as unknown as Workspace;
 
-  type Kind = 'creditNotes' | 'vendorCredits' | 'payments';
+  type Kind = 'creditNotes' | 'vendorCredits';
   const KINDS: Array<{
     kind: Kind; key: string; post: (id: string, data: never, ws: string, uid: string, m: EntityMutation, c: LedgerPostContext) => Promise<unknown>;
     doc: (id: string, cents: number) => Record<string, unknown>; first: number; edited: number;
@@ -56,19 +57,14 @@ describe('L-94 shadow check: credit notes, vendor credits, payments', { skip: !u
       kind: 'vendorCredits', key: 'vendorCreditId', post: postVendorCreditLedger as never, first: 8_000, edited: 12_000,
       doc: (id, cents) => ({ id, workspaceId: ws, number: 'VC-1', vendorId: 'v1', vendorName: 'Globex', date: '2026-10-21', status: 'open', currency: 'USD', amountCents: cents }),
     },
-    {
-      kind: 'payments', key: 'paymentId', post: postPaymentLedger as never, first: 33_000, edited: 49_500,
-      doc: (id, cents) => ({ id, workspaceId: ws, number: 'PMT-1', reference: 'PMT-1', direction: 'received', contactId: 'c1', contactName: 'Acme', date: '2026-10-21', status: 'posted',
-        currency: 'USD', amountCents: cents, method: 'bank_transfer', depositAccountId: a('bank'), allocations: [], unappliedCents: cents }),
-    },
   ];
   /** the other account of the same kind a tampered line is moved to */
   const SWAP: Record<string, string> = { [a('sales')]: a('other'), [a('other')]: a('sales'), [a('supplies')]: a('misc'), [a('misc')]: a('supplies'), [a('bank')]: a('petty'), [a('petty')]: a('bank') };
 
   const entries = async (key: string, docId: string) => (await db.collection('transactions').where('workspaceId', '==', ws).where(`metadata.${key}`, '==', docId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as Transaction);
   /** what the browser's builder would send for this save, given what is in the books now */
-  const build = async (k: typeof KINDS[number], data: Record<string, unknown>, mutation: EntityMutation): Promise<PostableTransaction[]> => {
-    const context: LedgerPostContext = { accounts, workspaces: [workspace], transactions: await entries(k.key, String(data.id)), inventory: [], lockDate: null, uid: OWNER, today: '2026-10-21', capture: [] };
+  const build = async (k: typeof KINDS[number], data: Record<string, unknown>, mutation: EntityMutation, lockDate: string | null = null): Promise<PostableTransaction[]> => {
+    const context: LedgerPostContext = { accounts, workspaces: [workspace], transactions: await entries(k.key, String(data.id)), inventory: [], lockDate, uid: OWNER, today: '2026-10-21', capture: [] };
     await k.post(String(data.id), data as never, ws, OWNER, mutation, context);
     return context.capture!.flatMap(c => c.txs).map(tx => ({ ...tx, id: tx.id || crypto.randomUUID() }));
   };
@@ -136,8 +132,23 @@ describe('L-94 shadow check: credit notes, vendor credits, payments', { skip: !u
     assert.deepEqual(rows, [`2026-10-21|${a('ar')}|-20000|[]`, `2026-10-21|${a('sales')}|20000|[]`].sort());
   });
 
-  test('the payment\'s own figures: Bank DR 33,000 / A/R CR 33,000', async () => {
-    const rows = postingFingerprint(await entries('paymentId', a('payments_1')));
-    assert.deepEqual(rows, [`2026-10-21|${a('ar')}|-33000|[]`, `2026-10-21|${a('bank')}|33000|[]`].sort());
+
+  test('an edit of a credit note whose first entry is in a locked period: reversed today, as the browser does', async () => {
+    const k = KINDS[0];
+    const first: Record<string, unknown> = { ...k.doc(a('cn_locked'), 20_000), number: 'CN-9', date: '2026-09-10' };
+    await save(k.kind, first, await build(k, first, { collection: k.kind, docId: String(first.id), action: 'create', data: first }));
+    await db.collection('workspaces').doc(ws).update({ lockDate: '2026-09-30' });
+    try {
+      const edited: Record<string, unknown> = { ...first, amountCents: 15_000, date: '2026-10-21' };
+      const update: EntityMutation = { collection: k.kind, docId: String(edited.id), action: 'update', data: edited };
+      const posted = await build(k, edited, update, '2026-09-30');
+      assert.deepEqual(postingFingerprint(posted).filter(r => r.includes(`|${a('sales')}|`)), [`2026-10-21|${a('sales')}|-20000|[]`, `2026-10-21|${a('sales')}|15000|[]`], 'the locked 09-10 entry is reversed on 10-21');
+      await save(k.kind, edited, posted);
+      const result = await check(update, posted);
+      assert.ok(result.checked);
+      assert.equal(result.matched, true, JSON.stringify(result));
+    } finally {
+      await db.collection('workspaces').doc(ws).update({ lockDate: null });
+    }
   });
 });
