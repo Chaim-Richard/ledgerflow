@@ -46,7 +46,7 @@ Everything below is open. Finished items leave this list. Full wording is in COO
   statements/PDFs and `src/server/`. **Every other AI** works on its own branch and opens a PR; never merge your own.
 - Problems in AI #1's area → write them under Messages in COORDINATION; don't patch them.
 - Before opening a PR run: the type check, **the whole unit suite** (`npm test` with the local test database), ESLint
-  (0 errors, warnings ≤ 207), the browser spec(s) you touched, and `npm run test:rules` if you touched SQL.
+  (0 errors, warnings ≤ 205), the browser spec(s) you touched, and `npm run test:rules` if you touched SQL.
   Say the pass counts in the PR. A PR that fails its own test is sent back.
 - Screens follow [`docs/UI_GUIDE.md`](docs/UI_GUIDE.md); every button's visible text is part of its name (axe).
 - Plan: [`docs/PLAN.md`](docs/PLAN.md) **§17 bookkeeping first** (stages A/B/C, P0/P1/P2) — do P0 work first; tax automation and payroll processing are stage C; skip `[P]` (parked) tasks.

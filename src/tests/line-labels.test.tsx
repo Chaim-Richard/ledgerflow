@@ -21,6 +21,8 @@ import { useLedgerStore } from '../stores/useLedgerStore';
 import { getSupabase } from '../lib/db/client';
 import { makeChartAccount, makeInvoice, makeVendor } from './fixtures';
 import type { DimensionDefinition, TransactionLine, Workspace } from '../types';
+// the browser's posting host (stores + upload), as LedgerPostService registers it in the app (L-94)
+import '../services/ledgerPost/postingKit';
 
 const ap = makeChartAccount({ id: 'ap', code: '2000', name: 'Accounts Payable', type: 'liability', category: 'Accounts Payable' });
 const bank = makeChartAccount({ id: 'bank', code: '1000', name: 'Checking', type: 'asset', category: 'Cash' });

@@ -22,6 +22,8 @@ import { postInvoiceLedger } from '../services/ledgerPost/invoicePosting';
 import { postBillLedger } from '../services/ledgerPost/billPosting';
 import type { LedgerPostContext } from '../services/ledgerPost/postingKit';
 import type { ChartAccount, Workspace } from '../types';
+// the browser's posting host (stores + upload), as LedgerPostService registers it in the app (L-94)
+import '../services/ledgerPost/postingKit';
 
 const url = process.env.LF_TEST_DATABASE_URL;
 

@@ -1,13 +1,13 @@
 import { isIncomeAccount, resolveAccountRole } from '../../lib/accountUtils';
-import { getLocalDateISO, roundCents } from '../../lib/utils';
+import { roundCents } from '../../lib/cents';
 import { Invoice } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { calculateDocumentTax, cashPostedWithDocumentCents, depositAppliedCents } from '../../lib/documentMath';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
 import { INVOICE_COGS_TYPE, planInvoiceCogs } from '../invoiceCogs';
 import { goodsLeaveWith } from '../../lib/deliveries';
-import { getAccounts, getTransactions, getWorkspaces, loadInventory, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate } from './postingKit';
-import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
+import { getAccounts, getTransactions, getWorkspaces, loadInventory, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate, postingToday } from './postingCore';
+import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
 import { isOpeningBalanceEquity } from '../../lib/openingBalances';
 
 /**
@@ -30,7 +30,7 @@ export async function postInvoiceLedger(
     throw new Error('This invoice is spread over months: undo the spread first (Sales → Undo spread)');
   }
 
-  const invoiceDate = invoiceData.date || getLocalDateISO();
+  const invoiceDate = invoiceData.date || postingToday(context);
   verifyLockDate(invoiceDate, context);
 
   const accounts = getAccounts(context);
@@ -74,7 +74,7 @@ export async function postInvoiceLedger(
   );
 
   const txsToPost: PostableTransaction[] = [];
-  const today = getLocalDateISO();
+  const today = postingToday(context);
 
   // 1. Reversing entries for existing postings
   for (const prevTx of existingTxs) {

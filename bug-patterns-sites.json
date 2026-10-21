@@ -42,7 +42,6 @@
   "silent-catch|src/hooks/useLedgerData.ts|(anonymous)": 1,
   "silent-catch|src/hooks/useTransactionColumnLayout.ts|persistLayout": 1,
   "silent-catch|src/hooks/useTransactionColumnLayout.ts|toggleColumnVisibility": 1,
-  "silent-catch|src/services/ledgerPost/postingKit.ts|postTxsServerApi": 1,
   "silent-catch|src/services/strategicEngine.ts|(anonymous)": 1,
   "silent-catch|src/stores/useRecentRecordsStore.ts|remember": 1,
   "silent-catch|src/stores/useSavedViewsStore.ts|loadViewsFromStorage": 1,
@@ -128,7 +127,6 @@
   "stale-async|src/components/sales/PublicInvoicePage.tsx|handlePay": 1,
   "stale-async|src/components/transactions/TransactionEditModalView.tsx|(anonymous)": 1,
   "stale-async|src/services/documentDownloads.ts|downloadDocumentsZip": 1,
-  "stale-async|src/services/ledgerPost/postingKit.ts|postTxsServerApi": 1,
   "stale-async|src/services/spreadActions.ts|undoSpreadRequest": 1,
   "success-after-call|src/components/assets/FixedAssetsView.tsx|updateEntity": 1,
   "success-after-call|src/components/assets/MaintenanceLog.tsx|updateEntity": 1,
@@ -236,7 +234,6 @@
   "swallowing-action|src/hooks/useEntityOperations.ts|recordLearnedPattern": 1,
   "swallowing-action|src/hooks/useEntityOperations.ts|updateEntity": 1,
   "swallowing-action|src/hooks/useEntityOperations.ts|deleteEntity": 1,
-  "swallowing-action|src/services/ledgerPost/postingKit.ts|postTxsServerApi": 1,
   "unchecked-write|src/components/platform/SystemCommandCenter.tsx|fetchWithAuth": 1,
   "unchecked-write|src/hooks/transactionActions/entryActions.ts|fetch": 1,
   "write-in-loop|src/components/assets/FixedAssetsView.tsx|updateEntity": 1,
@@ -248,5 +245,7 @@
   "write-in-loop|src/components/migration/QBOMigrationWizard.tsx|fetch": 1,
   "write-in-loop|src/components/platform/SystemCommandCenter.tsx|fetchWithAuth": 1,
   "write-in-loop|src/services/attachmentActions.ts|addDoc": 1,
-  "write-in-loop|src/services/bulkDocumentActions.ts|post": 2
+  "write-in-loop|src/services/bulkDocumentActions.ts|post": 2,
+  "stale-async|src/services/ledgerPost/postingKit.ts|sendToServer": 1,
+  "swallowing-action|src/services/ledgerPost/postingKit.ts|sendToServer": 1
 }

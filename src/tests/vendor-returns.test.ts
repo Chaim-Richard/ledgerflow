@@ -15,6 +15,8 @@ import { postBillLedger } from '../services/ledgerPost/billPosting';
 import { postVendorCreditLedger } from '../services/ledgerPost/creditPosting';
 import type { LedgerPostContext } from '../services/ledgerPost/postingKit';
 import type { Bill, ChartAccount, Transaction, VendorCredit, Workspace } from '../types';
+// the browser's posting host (stores + upload), as LedgerPostService registers it in the app (L-94)
+import '../services/ledgerPost/postingKit';
 
 const bill = { id: 'b1', splits: [
   { amountCents: 3000, accountId: 'x', description: 'Chairs', itemId: 'chair', quantity: 3 },

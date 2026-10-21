@@ -1,10 +1,10 @@
 import { resolveAccountRole } from '../../lib/accountUtils';
-import { getLocalDateISO, roundCents } from '../../lib/utils';
+import { roundCents } from '../../lib/cents';
 import { Payment } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
-import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi, reversalDate } from './postingKit';
-import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
+import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi, reversalDate, postingToday } from './postingCore';
+import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
 
 /**
  * Post double-entry journal entries for a payment document.
@@ -19,7 +19,7 @@ export async function postPaymentLedger(
 ) {
   if (!workspaceId || !paymentId) return;
 
-  const paymentDate = paymentData.date || getLocalDateISO();
+  const paymentDate = paymentData.date || postingToday(context);
   verifyLockDate(paymentDate, context);
 
   const accounts = getAccounts(context);
@@ -63,7 +63,7 @@ export async function postPaymentLedger(
   );
 
   const txsToPost: PostableTransaction[] = [];
-  const today = getLocalDateISO();
+  const today = postingToday(context);
 
   for (const prevTx of existingTxs) {
     txsToPost.push({

@@ -12,18 +12,7 @@ Decimal.set({ rounding: Decimal.ROUND_HALF_UP });
 /**
  * Specialized financial rounding using Decimal.js to prevent half-cent floating point drift.
  */
-export function roundCents(cents: number | string): number {
-  if (typeof cents === 'number' && isNaN(cents)) return 0;
-  return new Decimal(cents || 0).round().toNumber();
-}
-
-/**
- * Safely converts monetary values with exchange rates or tax factors to exact integer cents.
- */
-export function calculateFXCents(amountCents: number, exchangeRate: number): number {
-  if (!exchangeRate || exchangeRate <= 0) return roundCents(amountCents);
-  return new Decimal(amountCents).mul(exchangeRate).round().toNumber();
-}
+export { roundCents, calculateFXCents } from './cents';
 
 /**
  * Safely parses string or numeric monetary inputs into integer cents without floating point precision errors.

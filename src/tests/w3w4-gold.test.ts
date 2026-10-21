@@ -50,6 +50,8 @@ import { parseUsBankCsv } from '../lib/usBankCsv';
 import { bankClearance } from '../lib/bankClearance';
 import { reconciliationDrift } from '../lib/reconciliationDrift';
 import type { BankStatementLine, Bill, ChartAccount, Transaction, Workspace } from '../types';
+// the browser's posting host (stores + upload), as LedgerPostService registers it in the app (L-94)
+import '../services/ledgerPost/postingKit';
 
 const url = process.env.LF_TEST_DATABASE_URL;
 

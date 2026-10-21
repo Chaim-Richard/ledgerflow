@@ -26,6 +26,8 @@ import type { LedgerPostContext } from '../services/ledgerPost/postingKit';
 import { itemDetails, type StockMove } from '../lib/stockMoves';
 import { inventoryAsOf } from '../lib/inventoryAsOf';
 import type { ChartAccount, InventoryItem, Transaction, Workspace } from '../types';
+// the browser's posting host (stores + upload), as LedgerPostService registers it in the app (L-94)
+import '../services/ledgerPost/postingKit';
 
 const url = process.env.LF_TEST_DATABASE_URL;
 

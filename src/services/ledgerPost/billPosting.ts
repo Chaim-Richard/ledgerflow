@@ -1,13 +1,13 @@
 import { resolveAccountRole } from '../../lib/accountUtils';
-import { getLocalDateISO, roundCents } from '../../lib/utils';
+import { roundCents } from '../../lib/cents';
 import { Bill } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { calculateDocumentTax, cashPostedWithDocumentCents } from '../../lib/documentMath';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
 import { allocateCents } from '../../lib/Allocation';
 import { BILL_ACCRUAL_TYPE, billItemProblem, billStockLines } from '../../lib/billStock';
-import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate } from './postingKit';
-import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
+import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate, postingToday } from './postingCore';
+import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
 
 /**
  * Post standard double-entry journal entries for a bill.
@@ -29,7 +29,7 @@ export async function postBillLedger(
     throw new Error('This bill is spread over months: undo the spread first (Purchases → Undo spread)');
   }
 
-  const billDate = billData.date || getLocalDateISO();
+  const billDate = billData.date || postingToday(context);
   verifyLockDate(billDate, context);
 
   const accounts = getAccounts(context);
@@ -73,7 +73,7 @@ export async function postBillLedger(
   );
 
   const txsToPost: PostableTransaction[] = [];
-  const today = getLocalDateISO();
+  const today = postingToday(context);
 
   // 1. Reversing entries for existing postings
   for (const prevTx of existingTxs) {

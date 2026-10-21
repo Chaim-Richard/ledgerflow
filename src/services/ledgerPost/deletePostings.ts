@@ -1,9 +1,7 @@
-import { getLocalDateISO } from '../../lib/utils';
-import { useAuthStore } from '../../stores/useAuthStore';
 import { isPostable } from '../../lib/txFilters';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
-import { getTransactions, verifyLockDate, postTxsServerApi, reversalDate } from './postingKit';
-import type { EntityMutation, LedgerPostContext } from './postingKit';
+import { getTransactions, verifyLockDate, postTxsServerApi, reversalDate, postingToday, postingUid } from './postingCore';
+import type { EntityMutation, LedgerPostContext } from './postingCore';
 
 /**
  * Reverse all postings when an invoice or bill is deleted.
@@ -28,8 +26,8 @@ export async function deletePostings(
 
   if (existingTxs.length === 0) { if (entityMutation) { await postTxsServerApi([], workspaceId, entityMutation, context); } return; }
 
-  const today = getLocalDateISO();
-  const uid = context?.uid || useAuthStore.getState().user?.uid || 'system';
+  const today = postingToday(context);
+  const uid = postingUid(context);
 
   const reversals = existingTxs.map(prevTx => {
     verifyLockDate(prevTx.date, context);

@@ -20,6 +20,8 @@ import type { LedgerPostContext } from '../services/ledgerPost/postingKit';
 import { stockTrail, type StockTrailDocs } from '../lib/stockTrail';
 import type { StockMove } from '../lib/stockMoves';
 import type { Bill, ChartAccount, Transaction, VendorCredit, Workspace } from '../types';
+// the browser's posting host (stores + upload), as LedgerPostService registers it in the app (L-94)
+import '../services/ledgerPost/postingKit';
 
 const move = (over: Partial<StockMove>): StockMove => ({
   workspaceId: 'w', itemId: 'chair', date: '2026-04-01', kind: 'purchase', quantity: 4, quantityBefore: 0, quantityAfter: 4,

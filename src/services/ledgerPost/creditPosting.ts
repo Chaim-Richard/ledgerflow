@@ -1,11 +1,11 @@
-import { getLocalDateISO, roundCents } from '../../lib/utils';
+import { roundCents } from '../../lib/cents';
 import { planReturnEntries, returnableLines, returnProblem } from '../../lib/salesReturns';
 import { isIncomeAccount, resolveAccountRole } from '../../lib/accountUtils';
 import { CreditNote, VendorCredit } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
-import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi, reversalDate, findAccount, getInvoices } from './postingKit';
-import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingKit';
+import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi, reversalDate, findAccount, getInvoices, postingToday } from './postingCore';
+import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
 
 /**
  * Post double-entry journal entries for a Customer Credit Note.
@@ -20,7 +20,7 @@ export async function postCreditNoteLedger(
 ) {
   if (!workspaceId || !creditNoteId) return;
 
-  const cnDate = creditNoteData.date || getLocalDateISO();
+  const cnDate = creditNoteData.date || postingToday(context);
   verifyLockDate(cnDate, context);
 
   const accounts = getAccounts(context);
@@ -55,7 +55,7 @@ export async function postCreditNoteLedger(
   );
 
   const txsToPost: PostableTransaction[] = [];
-  const today = getLocalDateISO();
+  const today = postingToday(context);
 
   for (const prevTx of existingTxs) {
     txsToPost.push({
@@ -164,7 +164,7 @@ export async function postVendorCreditLedger(
 ) {
   if (!workspaceId || !vendorCreditId) return;
 
-  const vcDate = vendorCreditData.date || getLocalDateISO();
+  const vcDate = vendorCreditData.date || postingToday(context);
   verifyLockDate(vcDate, context);
 
   const accounts = getAccounts(context);
@@ -199,7 +199,7 @@ export async function postVendorCreditLedger(
   );
 
   const txsToPost: PostableTransaction[] = [];
-  const today = getLocalDateISO();
+  const today = postingToday(context);
 
   for (const prevTx of existingTxs) {
     txsToPost.push({
