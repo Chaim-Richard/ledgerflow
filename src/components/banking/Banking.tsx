@@ -93,9 +93,10 @@ export default function Banking() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" disabled={!canImport} onClick={() => { if (canImport) useUIStore.getState().setImporterOpen(true); }} className="min-h-11 px-4 py-2 bg-white text-neutral-800 text-xs font-bold rounded-xl border border-neutral-200 disabled:opacity-50">
+            <button type="button" disabled={!canImport} aria-describedby={!canImport ? 'bank-import-permission' : undefined} onClick={() => { if (canImport) useUIStore.getState().setImporterOpen(true); }} className="min-h-11 px-4 py-2 bg-white text-neutral-800 text-xs font-bold rounded-xl border border-neutral-200 disabled:opacity-50">
               Import statement
             </button>
+            {!canImport && <p id="bank-import-permission" className="w-full text-sm text-[var(--muted)]">Importing a statement requires a signed-in workspace owner, accountant or bookkeeper. Guest and viewer sessions cannot import bank data.</p>}
             {/* money that arrives or leaves with no document behind it (BA-17) */}
             <button
               onClick={() => setCashMovement('in')}
