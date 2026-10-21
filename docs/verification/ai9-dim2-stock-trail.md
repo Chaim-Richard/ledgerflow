@@ -76,3 +76,29 @@ Each fix has a test in `dim2-stock-trail.test.ts` (10/10).
    sales and undone vendor returns.
 7. **Speed.** The lists are indexed once and the dialog memoizes the trail. A test runs 5,000 moves against 10,000
    invoices in well under a second.
+
+## Phase 2: the source is kept when stock is received (branch `ai9/DIM-2b`)
+
+`cogsStockService.ts` now writes new fields on the stock move, in the same transaction as the move itself. No
+migration is needed, and nothing is inferred: a field the entry does not name is left out.
+
+| Move | Fields written |
+|---|---|
+| Bill's units | `documentLine` (its line index; bills already record it in `stockIn`) and `vendorId` (from the bill's entry) |
+| Units sent back to a vendor | `documentLine` (the bill line they go back from), `sourceBillId` and `vendorId` |
+| A reversal | Its original's fields |
+
+**Vendor credit entries.** These now record each line's `billLine` in `stockOut`, and the bill as `returnsFromBillId`.
+The credit's own key is used, never `metadata.billId`, so a credit is never read as the bill's own entry.
+
+**Stock history window.**
+- Shows "Bill B-1, line 2" for a purchase, and "Vendor credit VC-1 · from Bill B-1, line 2" for a return.
+- When a bill can no longer be found, the vendor saved on the move still names the source, and the link is still
+  reported as missing.
+
+**Worked units** (`src/tests/dim2b-stock-source.test.ts`, on the database):
+- Bill B-1 has a service line and 4 chairs on its line 2. The chairs' move keeps line 2 and vendor v1.
+- Vendor credit VC-1 sends 2 back from line 2. That move keeps bill B-1, line 2 and v1.
+- Voiding VC-1 brings the 2 chairs back with the same source.
+
+Both tests fail without the change.

@@ -31,6 +31,12 @@ export interface StockMove {
   seq: string;
   /** W-01: where the units are (a Location label value); none = no location */
   locationId?: string;
+  /** DIM-2 phase 2: the line of the document the units came in on (a bill's line) or went back from (a vendor credit's bill line) */
+  documentLine?: number;
+  /** DIM-2 phase 2: the vendor on a purchase or a return to the vendor, as the entry named it */
+  vendorId?: string;
+  /** DIM-2 phase 2: for units sent back to a vendor, the bill they came in on */
+  sourceBillId?: string;
   uid: string;
   createdAt: string;
 }

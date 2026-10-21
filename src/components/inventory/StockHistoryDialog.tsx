@@ -189,6 +189,7 @@ function TrailCell({ step }: { step?: TrailStep }) {
     <span>
       {step.party && <bdi>{step.party.name}</bdi>}
       {step.document && <span className="text-[var(--muted)]">{step.party ? ' · ' : ''}{step.document.label}</span>}
+      {step.sourceLine && <span className="text-[var(--muted)]">{step.document?.type === 'vendor-credit' ? ' · ' : ', '}{step.sourceLine}</span>}
       {step.purchaseOrder && <span className="text-[var(--muted)]"> · {step.purchaseOrder.label}{step.purchaseOrder.receipts.length ? ` (received ${step.purchaseOrder.receipts.join(', ')})` : ''}</span>}
       {step.missing.map(m => <span key={m} className="block text-amber-700 dark:text-amber-400">{m}</span>)}
     </span>

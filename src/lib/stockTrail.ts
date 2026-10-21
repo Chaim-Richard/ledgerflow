@@ -47,6 +47,8 @@ export interface TrailStep {
   party?: { kind: 'vendor' | 'customer'; id: string; name: string };
   /** the purchase order a bill was made from, and its goods receipts */
   purchaseOrder?: { id: string; label: string; receipts: string[] };
+  /** DIM-2 phase 2: the bill line the units came in on ("line 2"), or for units sent back, the bill and line */
+  sourceLine?: string;
   origin: TrailOrigin;
   /** the links that should be there and are not (or are not loaded), in words */
   missing: string[];
@@ -122,8 +124,11 @@ function step(move: StockMove, ix: TrailIndex): TrailStep {
     s.origin = 'internal';
   } else if (move.kind === 'purchase' || move.kind === 'purchase-reversal') {
     const bill = lookFor('bill', 'bills', 'Bill', 'bill');
+    if (move.documentLine !== undefined) s.sourceLine = `line ${move.documentLine + 1}`;
+    // phase 2: the vendor kept with the move names the source even when its bill is not found
+    if (!bill && move.vendorId) s.party = party('vendor', move.vendorId, undefined, ix.vendors);
     if (bill) {
-      s.party = party('vendor', bill.vendorId, bill.vendorName, ix.vendors);
+      s.party = party('vendor', bill.vendorId || move.vendorId, bill.vendorName, ix.vendors);
       if (!s.party) s.missing.push(`${s.document!.label} names no vendor.`);
       // #260 review: the order the bill names (metadata.poId) when the order does not name the bill
       const poId = typeof bill.metadata?.poId === 'string' ? bill.metadata.poId : undefined;
@@ -132,9 +137,15 @@ function step(move: StockMove, ix: TrailIndex): TrailStep {
     }
   } else if (move.kind === 'purchase-return' || move.kind === 'purchase-return-reversal') {
     const credit = lookFor('vendor-credit', 'vendorCredits', 'Vendor credit', 'vendor credit');
+    if (!credit && move.vendorId) s.party = party('vendor', move.vendorId, undefined, ix.vendors);
     if (credit) {
-      s.party = party('vendor', credit.vendorId, credit.vendorName, ix.vendors);
+      s.party = party('vendor', credit.vendorId || move.vendorId, credit.vendorName, ix.vendors);
       if (!s.party) s.missing.push(`${s.document!.label} names no vendor.`);
+    }
+    // phase 2: the bill (and line) the units go back from
+    if (move.sourceBillId) {
+      const from = ix.bills.get(move.sourceBillId);
+      s.sourceLine = `from ${from ? label('Bill', from) : `bill ${move.sourceBillId}`}${move.documentLine !== undefined ? `, line ${move.documentLine + 1}` : ''}`;
     }
   } else if ((move.kind === 'sale' || move.kind === 'sale-reversal' || move.kind === 'return' || move.kind === 'return-reversal') && move.documentType === 'delivery') {
     // a delivery, or goods returned against one (#260 review): the delivery's entry names the sales order
