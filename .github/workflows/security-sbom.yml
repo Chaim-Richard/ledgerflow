@@ -1,0 +1,74 @@
+name: Dependency SBOM evidence
+
+# S-04, extracted from #254: one bounded, read-only inventory job.
+# The existing CI already enforces npm audit; do not duplicate its workload.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sbom-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  dependency-sbom:
+    name: Produce CycloneDX inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install pinned lockfile dependencies
+        run: npm ci --ignore-scripts
+        env:
+          HUSKY: '0'
+          NODE_ENV: development
+          npm_config_production: 'false'
+      - name: Generate CycloneDX software bill of materials
+        run: npm sbom --sbom-format=cyclonedx > sbom.json
+      - name: Check inventory and record license metadata
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const document = JSON.parse(fs.readFileSync('sbom.json', 'utf8'));
+          if (document.bomFormat !== 'CycloneDX' || !Array.isArray(document.components) || document.components.length === 0) {
+            throw new Error('SBOM missing CycloneDX components');
+          }
+          const unknown = document.components.filter(item => !Array.isArray(item.licenses) || !item.licenses.length);
+          const lines = [
+            '# Dependency SBOM evidence',
+            '',
+            'Commit: ' + process.env.GITHUB_SHA,
+            'Components: ' + document.components.length,
+            'Components without supplied license metadata: ' + unknown.length,
+            '',
+            'This is dependency and license metadata inventory, **not** a legal compatibility certification.',
+            'Unknown, dual-licensed and transitive packages require individual review.',
+            '',
+            '## Components missing license metadata',
+            ...unknown.map(item => '- ' + String(item.name || 'unnamed').replace(/[\\r\\n]/g, ' ')),
+            '',
+          ];
+          fs.writeFileSync('sbom-summary.md', lines.join('\\n'));
+          NODE
+      - name: Save SBOM evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: |
+            sbom.json
+            sbom-summary.md
+          if-no-files-found: ignore
+          retention-days: 30
