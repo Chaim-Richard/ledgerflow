@@ -30,9 +30,9 @@ export function createReconcileActions(ctx: ActionContext, posting: PostingHelpe
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Server error on match');
-      toast.success('Alignment confirmed and certified.');
+      toast.success('Match saved.');
     } catch (error) {
-      toast.error('Matching cycle failed: ' + (errorMessage(error) || 'Network error'));
+      toast.error('Could not save the match: ' + (errorMessage(error) || 'Network error'));
     } finally {
       setIsSyncing(false);
     }
@@ -66,7 +66,7 @@ export function createReconcileActions(ctx: ActionContext, posting: PostingHelpe
     try {
       const txId = doc(collection(db, 'transactions')).id;
       const targetAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id;
-      if (!targetAccId) throw new Error('No valid account node found to target.');
+      if (!targetAccId) throw new Error('No expense account is available for the new entry.');
       
       const rawLines = [{ accountId: targetAccId, accountName: 'General Expense', amountCents: bankLine.amountCents }];
       const balancedLines = balanceTransactionLines(rawLines, bankLine.amountCents);
@@ -93,11 +93,11 @@ export function createReconcileActions(ctx: ActionContext, posting: PostingHelpe
         ]})
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to synthesize transaction');
-      toast.success('Atomic transaction synthesized and reconciled.');
+      if (!res.ok) throw new Error(data.error || 'Could not create the entry');
+      toast.success('Entry created and matched.');
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'bankLines/synthesis');
-      toast.error('Synthesis cycle interrupted: ' + (errorMessage(error) || 'Network error'));
+      handleFirestoreError(error, OperationType.WRITE, 'bankLines/create');
+      toast.error('Could not create the entry: ' + (errorMessage(error) || 'Network error'));
     } finally {
       setIsSyncing(false);
     }
@@ -117,9 +117,9 @@ export function createReconcileActions(ctx: ActionContext, posting: PostingHelpe
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to revert reconcile alignment');
+        throw new Error(errData.error || 'Could not undo the match');
       }
-      toast.success('Alignment reverted successfully. Re-inserted into potential pipeline matches.');
+      toast.success('Match undone. The line is back in To review.');
     } catch {
       toast.error('Failed to undo match.');
     } finally {
@@ -136,7 +136,7 @@ export function createReconcileActions(ctx: ActionContext, posting: PostingHelpe
   const handleAutoReconcile = async (scope?: { bankLines: BankStatementLine[]; transactions: Transaction[] }) => {
     if (!user || !currentWorkspaceId) return;
     setIsSyncing(true);
-    const loader = toast.loading('Initiating auto-reconciliation...');
+    const loader = toast.loading('Auto-matching…');
     
     try {
       const loaded = useLedgerStore.getState();
@@ -236,12 +236,12 @@ export function createReconcileActions(ctx: ActionContext, posting: PostingHelpe
       }
 
       if (matchCount > 0) {
-        toast.success(`Optimal alignment complete. ${matchCount} nodes synchronized.`, { id: loader });
+        toast.success(`Automatic matching complete. ${matchCount} matches applied.`, { id: loader });
       } else {
-        toast.info('Scan complete. No high-confidence matches found.', { id: loader });
+        toast.info('No confident matches found.', { id: loader });
       }
     } catch (error) {
-      toast.error('Reconciliation cycle interrupted: ' + (errorMessage(error) || 'Error occurred'), { id: loader });
+      toast.error('Could not finish automatic matching: ' + (errorMessage(error) || 'Error occurred'), { id: loader });
     } finally {
       setIsSyncing(false);
     }

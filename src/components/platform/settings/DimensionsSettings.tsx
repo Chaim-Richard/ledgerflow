@@ -2,6 +2,7 @@ import { mergeDimensionDrafts } from '../../../lib/dimensionDrafts';
 import { RecordInlineField } from '../../ui/RecordInlineField';
 import { WorkspaceDimensionName } from './WorkspaceDimensionName';
 import { RequiredLabelRules } from './RequiredLabelRules';
+import { LabelRoles } from './LabelRoles';
 import { useCurrentRole } from '../../../hooks/useCurrentRole';
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Archive, Check, Database, Layers, RefreshCw, ShieldCheck, Lock } from 'lucide-react';
@@ -631,6 +632,7 @@ function DimensionsSettingsContent() {
 
       <RequiredLabelRules dimensions={dimensions}
         onSaved={saved => setDimensions(prev => prev.map(d => ({ ...d, requiredOn: saved.find(x => x.id === d.id)?.requiredOn })))} />
+      <LabelRoles dimensions={dimensions} onSaved={saved => setDimensions(prev => prev.map(d => ({ ...d, role: saved.find(x => x.id === d.id)?.role })))} />
 
       {/* Save Button Bar */}
       <div className="flex justify-end pt-6 border-t border-[var(--line)]">

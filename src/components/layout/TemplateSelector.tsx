@@ -191,7 +191,7 @@ export default function TemplateSelector({
                     <div className="flex-grow">
                       <h3 className="text-xl font-black text-[var(--text)] uppercase italic tracking-tight">AI-built chart of accounts</h3>
                       <p className="text-xs text-[var(--muted)] font-medium max-w-2xl mt-1.5 leading-relaxed">
-                        Describe your business and get a chart of accounts built for it. Review and change every account before saving.
+                        Describe your business and get a chart of accounts built for it. Review every account before applying it to your books.
                       </p>
                     </div>
                     <div className="w-12 h-12 rounded-full bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center text-slate-500 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-md mt-4 sm:mt-0">

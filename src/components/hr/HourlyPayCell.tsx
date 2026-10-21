@@ -28,6 +28,8 @@ export function HourlyPayCell({ employee, canWrite }: { employee: Employee; canW
   if (employee.workerType === 'contractor') return null;
   const draft = { payType: hourly ? 'hourly' as const : 'salary' as const, hourlyRateCents: Math.round(Number(rate.replace(',', '.')) * 100), timeUid };
   const problem = hourlyProblem(draft);
+  // U-12: one person's time pays one employee — a run with two of them refuses
+  const alsoPaid = hourly && timeUid ? employees.filter(e => e.id !== employee.id && isHourly(e) && e.timeUid === timeUid && e.status !== 'Terminated') : [];
 
   const save = async () => {
     if (problem) { setError(problem); return; }
@@ -60,6 +62,7 @@ export function HourlyPayCell({ employee, canWrite }: { employee: Employee; canW
                     {people.map(p => <option key={p.uid} value={p.uid}>{p.email || `A teammate (${p.role})`}</option>)}
                   </select>
                 </label>
+                {alsoPaid.length > 0 && <p role="status" className="text-amber-700">{alsoPaid.map(e => e.name).join(' and ')} {alsoPaid.length === 1 ? 'is' : 'are'} already paid from this person's time: a pay run with both refuses, so the same hours are not paid twice.</p>}
                 <p className="text-neutral-600">Each pay run pays their approved time up to the pay date that no earlier run paid. Taxes and deductions work as for a salary.</p>
               </div>
             )}
