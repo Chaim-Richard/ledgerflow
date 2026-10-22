@@ -24,7 +24,11 @@ Since 22 Oct:
 - the unit suite runs as **four parts** (`node --test --test-shard=n/4`, `npm run test:shard:cov`), each writing its
   coverage as lcov; `scripts/coverage-merge.mjs` merges them (covered in any part = covered) and applies the same
   thresholds as `test:cov`, counting lines as Node does (checked: one run and the merged parts give the same
-  percentages). `scripts/coverage-merge.test.mjs` keeps the two sets of thresholds equal;
+  percentages). Measured 22 Oct on the full suite (3,889 tests, the same in one run and in the four parts): one run
+  81.66% lines / 79.19% branches / 82.60% functions; four parts merged 81.70 / **77.32** / 82.60. Branches come out
+  about 2 points *lower* when merged (a block a part never entered is listed only where it was, and Node numbers
+  blocks per run, so the merge matches them by line), so the gate is slightly stricter than one run, never laxer.
+  `scripts/coverage-merge.test.mjs` keeps the two sets of thresholds equal;
 - each time zone runs in **two parts**;
 - the browser tests run in **four shards** instead of two. Playwright stays at `workers: 1` inside a shard: the tests
   in a shard share one dev server and one database, so more workers there would be a real isolation change, not a
