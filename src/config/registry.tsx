@@ -114,6 +114,8 @@ export const VIEW_COMPONENTS: Record<string, ElementType> = {
 
 export interface AppTabDefinition {
   help: string;
+  /** A-201: the same description in Hebrew, attached by `withScreenHelp()` */
+  helpHe?: string;
   id: string;
   label: Record<string, string>;
   icon: LucideIcon;
@@ -530,7 +532,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'form-856', label: { en: 'Withholding Report (Form 856)', he: 'דוח ניכוי במקור (טופס 856)' }, componentName: 'Form856ReportView', icon: Receipt },
   { id: 'inventory-details', label: { en: 'Inventory Item Details', he: 'פירוט תנועות מלאי' }, componentName: 'InventoryDetailsReportView', icon: Package },
   { id: 'stock-sources-uses', label: { en: 'Stock Sources and Uses', he: 'מקורות ושימושי מלאי' }, componentName: 'StockSourcesUsesReportView', icon: Package },
-  { id: 'expiring-lots', label: { en: 'Expiring Lots', he: 'סידות פגות תוקף' }, componentName: 'ExpiringLotsReportView', icon: Package },
+  { id: 'expiring-lots', label: { en: 'Expiring Lots', he: 'אצוות שפג תוקפן' }, componentName: 'ExpiringLotsReportView', icon: Package },
   { id: 'stock-transfers', label: { en: 'Stock Transfers', he: 'העברות מלאי' }, componentName: 'StockTransfersReportView', icon: ArrowLeftRight },
   { id: 'kit-assembly', label: { en: 'Kit Assembly', he: 'הרכבת ערכות' }, componentName: 'KitAssemblyReportView', icon: Package },
   { id: 'stock-value-by-location-lot', label: { en: 'Stock Value by Location & Lot', he: 'שווי מלאי לפי מיקום ואצווה' }, componentName: 'StockValueByLocationLotReportView', icon: Package },
@@ -566,7 +568,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'us-quarter-journey', label: { en: 'US Quarter Journey', he: 'מסלול רבעון אמריקאי' }, componentName: 'UsQuarterJourneyReportView', icon: ListChecks },
   { id: 'il-month-journey', label: { en: 'Israel Month Journey', he: 'מסלול חודש ישראלי' }, componentName: 'IsraelMonthJourneyReportView', icon: ClipboardCheck },
   { id: 'record-notes', label: { en: 'Record Notes', he: 'הערות על רשומות' }, componentName: 'RecordNotesReportView', icon: FileText },
-  { id: 'serial-lot-lookup', label: { en: 'Serial & Lot Lookup', he: 'חיפוש מספרי סידוריים וסידות' }, componentName: 'SerialLotLookupReportView', icon: Barcode },
+  { id: 'serial-lot-lookup', label: { en: 'Serial & Lot Lookup', he: 'חיפוש מספרים סידוריים ואצוות' }, componentName: 'SerialLotLookupReportView', icon: Barcode },
   { id: 'landed-cost-preview', label: { en: 'Landed Cost Preview', he: 'תצוגת עלות משלוח ומכס' }, componentName: 'LandedCostPreviewReportView', icon: Package },
   { id: 'delivery-notes', label: { en: 'Delivery Notes', he: 'תעודות משלוח' }, componentName: 'DeliveryNotesReportView', icon: FileText },
   { id: 'customer-quotes', label: { en: 'Customer Quotes & Proposals', he: 'הצעות מחיר ללקוחות' }, componentName: 'CustomerQuotesReportView', icon: FileText },
