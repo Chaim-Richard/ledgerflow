@@ -136,11 +136,8 @@ export default function ReceivePaymentModal({
   // BM-04: amounts typed in the payment's currency, in its own decimals (whole yen, three-decimal dinars)
   const digits = currencyDigits(payCurrency);
   const toMinor = (text: string) => { const p = parseFloat(text); return isNaN(p) || p <= 0 ? 0 : Math.round(p * 10 ** digits); };
-  const paymentAmountCents = useMemo(() => toMinor(amountDollars), [amountDollars, digits]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const totalAllocatedCents = useMemo(() => {
-    return Object.values(allocationsMap).reduce((sum, val) => sum + toMinor(val), 0);
-  }, [allocationsMap, digits]); // eslint-disable-line react-hooks/exhaustive-deps
+  const paymentAmountCents = toMinor(amountDollars);
+  const totalAllocatedCents = Object.values(allocationsMap).reduce((sum, val) => sum + toMinor(val), 0);
 
   const unappliedCents = Math.max(0, paymentAmountCents - totalAllocatedCents);
 
