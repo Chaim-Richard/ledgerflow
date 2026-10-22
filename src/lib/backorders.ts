@@ -58,6 +58,26 @@ export function backorders(orders: Estimate[], entries: Transaction[], items: In
   return rows;
 }
 
+/**
+ * A-121: the release list — order lines the stock on hand already covers in full, in the same
+ * oldest-first order `backorders` allocated it. A line that is only partly covered is not on the
+ * list: releasing part of a line is a delivery decision made on the order itself. The list is
+ * computed, not held: nothing is reserved, so a delivery recorded elsewhere can take the stock.
+ */
+export function releasableLines(rows: BackorderLine[]): BackorderLine[] {
+  return rows.filter(r => r.left > 0 && r.short <= 0);
+}
+
+/** The orders every line of which can be released today (the whole order can go out). */
+export function ordersReadyToRelease(rows: BackorderLine[]): string[] {
+  const waiting = new Set(rows.filter(r => r.short > 0).map(r => r.orderId));
+  const ready: string[] = [];
+  for (const r of rows) {
+    if (!waiting.has(r.orderId) && !ready.includes(r.orderId)) ready.push(r.orderId);
+  }
+  return ready;
+}
+
 /** What each item is short in all, with what is on order, most short first. */
 export function shortages(rows: BackorderLine[]): Array<{ itemId: string; item: string; short: number; onOrder: number }> {
   const byItem = new Map<string, { itemId: string; item: string; short: number; onOrder: number }>();
