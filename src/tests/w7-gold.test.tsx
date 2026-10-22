@@ -149,6 +149,7 @@ describe('W7 with worked figures', { skip: !url && 'LF_TEST_DATABASE_URL not set
     app.use(express.json());
     app.use((req, _res, next) => { (req as unknown as { user: { uid: string; email: string } }).user = { uid: String(req.header('x-test-uid')), email: 'owner@telaviv.test' }; next(); });
     app.use('/api/v1/transactions', transactionRouter);
+    app.use('/api/v1/documents', (await import('../server/routes/documentPostRoutes')).documentPostRouter);
     server = app.listen(0);
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
