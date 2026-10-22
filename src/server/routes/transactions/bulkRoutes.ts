@@ -1,4 +1,3 @@
-import { logShadowCheck } from '../../services/postingShadowCheck';
 import express from 'express';
 import { FieldValue } from '../../db/firestore';
 import { DoubleEntryValidator } from '../../../kernel/validation/DoubleEntryValidator';
@@ -15,6 +14,20 @@ import { workspaceRole } from '../../../lib/periodLock';
 import { BulkRefusal, commitLedgerBulk } from '../../services/ledgerBulkCommit';
 
 
+const SERVER_POSTED: Record<string, string> = { invoices: 'Invoices', bills: 'Bills', creditNotes: 'Credit notes', vendorCredits: 'Vendor credits' };
+const DOCUMENT_KEYS: Record<string, string> = { invoiceId: 'Invoices', billId: 'Bills', creditNoteId: 'Credit notes', vendorCreditId: 'Vendor credits' };
+
+/** The kind of document a bulk request saves or posts entries for, when the server must build them instead. */
+export function documentPostedByServer(body: { entityMutation?: { collection?: unknown }; transactions?: unknown } | undefined): string | null {
+  const collection = String(body?.entityMutation?.collection ?? '');
+  if (SERVER_POSTED[collection]) return SERVER_POSTED[collection];
+  for (const tx of Array.isArray(body?.transactions) ? body!.transactions as Array<{ metadata?: Record<string, unknown> }> : []) {
+    const key = Object.keys(DOCUMENT_KEYS).find(k => tx?.metadata?.[k] != null && tx.metadata[k] !== '');
+    if (key) return DOCUMENT_KEYS[key];
+  }
+  return null;
+}
+
 /** Many entries at once: posting in bulk and batch updates. Part of /api/v1/transactions (F-06), registered in the original order. */
 export function registerTransactionBulkRoutes(transactionRouter: express.Router): void {
   // A bulk creation endpoint for atomic multiple postings with chunking support
@@ -22,12 +35,11 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
     try {
       const user = requestUser(req);
       const db = getDb();
+      // L94-STEP2B: invoices, bills, credit notes and vendor credits, and their entries, are posted by the server
+      // (POST /api/v1/documents/:type/:id/post); this route takes journals, bank lines and the documents that post nothing
+      const docKey = documentPostedByServer(req.body);
+      if (docKey) return res.status(400).json({ error: `${docKey} are saved and posted by the server: POST /api/v1/documents/:type/:id/post with the document` });
       const { body, transactions, committed } = await commitLedgerBulk(db, user, req.body, { idempotencyKey: req.headers['idempotency-key'] as string | undefined });
-      // L-94 step 1 (shadow): rebuild the document's entries on the server and log any difference; never blocks
-      const { entityMutation, workspaceId } = req.body;
-      if (committed && entityMutation && transactions.length > 0 && !body.replayed) {
-        await logShadowCheck(db, { workspaceId: workspaceId || transactions[0]?.workspaceId, uid: user.uid, mutation: entityMutation, posted: transactions });
-      }
       // AUD-15: the entries as written, for the browser's list (not kept with the idempotency record: a replay wrote nothing)
       res.json({ ...body, transactions: committed && !body.replayed ? transactions : [] });
     } catch (e) {
