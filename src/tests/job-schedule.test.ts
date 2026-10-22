@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DAILY_JOBS, DAILY_LATE_HOURS, DAILY_RUN_AT_UTC, describeSchedule, nextDailyRunAt } from '../lib/jobSchedule';
 import { readSchedule } from '../server/routes/scheduleRoutes';
+import { jobsFor } from '../server/jobs/jobRegistry';
 import type { Firestore } from '../server/db/firestore';
 
 const root = path.resolve(import.meta.dirname, '../..');
@@ -19,10 +20,8 @@ const at = (iso: string) => new Date(iso);
 
 describe('the two lists are the same list', () => {
   test('every job the cron route runs is described, and nothing is described that it does not run', () => {
-    const source = fs.readFileSync(path.join(root, 'src/server/routes/cronRoutes.ts'), 'utf8');
-    const block = source.slice(source.indexOf('const DAILY_JOBS'), source.indexOf('cronRouter.get'));
-    const running = [...block.matchAll(/\['([a-zA-Z]+)',/g)].map(m => m[1]);
-    assert.ok(running.length >= 5, `the cron route's jobs were not read (${running.length})`);
+    const running = jobsFor('daily').map(j => j.id);
+    assert.ok(running.length >= 5, `the daily jobs were not read (${running.length})`);
     assert.deepEqual(DAILY_JOBS.map(j => j.id), running, 'the screen describes exactly what runs, in the order it runs');
   });
 

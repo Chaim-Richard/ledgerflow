@@ -1,25 +1,16 @@
 import express from 'express';
 import crypto from 'crypto';
-import { runDailyMaintenance } from '../services/maintenanceService';
-import { processAllRecurring } from '../services/recurringService';
-import { processErrorDigest } from '../services/errorDigestService';
-import { runNotificationJobs } from '../services/notificationService';
-import { runDailyReminders, runDailyStatements } from '../services/reminderService';
-import { recordDailyJobRun } from '../services/statusService';
-import { runDailyRetention } from '../services/retentionService';
-import { runDailyScheduledReports } from '../services/scheduledReportService';
-import { runDailyLedgerHealth } from '../services/ledgerHealthService';
-import { runDailyBookAlerts } from '../services/bookAlertService';
-import { runDailyAssetReminders } from '../services/assetReminderService';
-import { runDailyWatches } from '../services/watchService';
-import { runDailyNotificationDigest } from '../services/notificationEmailService';
-import { getDb } from '../db/firestore';
+import { CRON_SCHEDULES, runCron } from '../jobs/jobRegistry';
 
 /**
  * Scheduled jobs for Vercel Cron (see vercel.json). Vercel calls them with
  * "Authorization: Bearer <CRON_SECRET>"; without that secret they refuse to run.
+ * Which jobs run, and when, is jobs/jobRegistry.ts — the standalone server's timer reads the same list.
  */
 export const cronRouter = express.Router();
+
+/** where the router is mounted (server.ts); the registry's paths are full paths */
+export const CRON_MOUNT = '/api/cron';
 
 function isCronRequest(req: express.Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -29,39 +20,13 @@ function isCronRequest(req: express.Request): boolean {
   return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
 }
 
-const DAILY_JOBS: [string, () => Promise<unknown>][] = [
-  ['maintenance', runDailyMaintenance],
-  ['recurring', processAllRecurring],
-  ['errorDigest', () => processErrorDigest()],
-  ['notifications', runNotificationJobs],
-  ['reminders', runDailyReminders],
-  ['statements', runDailyStatements],
-  ['scheduledReports', runDailyScheduledReports],
-  ['ledgerHealth', runDailyLedgerHealth],
-  ['bookAlerts', runDailyBookAlerts],
-  ['assetReminders', runDailyAssetReminders],
-  ['watches', runDailyWatches],
-  ['notificationDigest', runDailyNotificationDigest],
-  ['retention', runDailyRetention],
-];
-
-cronRouter.get('/daily', async (req, res) => {
-  if (!isCronRequest(req)) {
-    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
-  }
-  const startedAt = new Date().toISOString();
-  const results: Record<string, string> = {};
-  for (const [name, job] of DAILY_JOBS) {
-    try {
-      await job();
-      results[name] = 'ok';
-    } catch (err) {
-      console.error(`[Cron] ${name} failed:`, err);
-      results[name] = `failed: ${err instanceof Error ? err.message : String(err)}`;
+for (const cron of CRON_SCHEDULES) {
+  if (!cron.path.startsWith(`${CRON_MOUNT}/`)) throw new Error(`cron ${cron.id}: ${cron.path} is not under ${CRON_MOUNT}`);
+  cronRouter.get(cron.path.slice(CRON_MOUNT.length), async (req, res) => {
+    if (!isCronRequest(req)) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
     }
-  }
-  const failed = Object.values(results).some(r => r !== 'ok');
-  // for the status page (L-17)
-  await recordDailyJobRun(getDb(), startedAt, results).catch(err => console.error('[Cron] could not record the run:', err));
-  res.status(failed ? 500 : 200).json({ status: failed ? 'error' : 'ok', results });
-});
+    const { failed, results } = await runCron(cron.id);
+    res.status(failed ? 500 : 200).json({ status: failed ? 'error' : 'ok', results });
+  });
+}

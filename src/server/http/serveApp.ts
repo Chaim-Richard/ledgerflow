@@ -1,23 +1,17 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { runDailyMaintenance } from "../services/maintenanceService";
-import { processAllRecurring } from "../services/recurringService";
-import { processErrorDigest } from "../services/errorDigestService";
+import { startStandaloneScheduler } from "../jobs/standaloneScheduler";
 
 /**
  * Long-running server (npm run dev / npm start), F-01 moved from server.ts: the API app plus the
- * web pages (Vite in development, dist/ in production), the daily timers and a graceful shutdown.
- * On Vercel none of this runs: api/index.mjs serves createApp() and the cron jobs run the timers.
+ * web pages (Vite in development, dist/ in production), the background jobs' timer and a graceful
+ * shutdown. On Vercel none of this runs: api/index.mjs serves createApp() and vercel.json's cron calls
+ * /api/cron/*. Both run the one list in jobs/jobRegistry.ts (AUD-05).
  */
 export async function serveApp(app: express.Express, PORT: number): Promise<void> {
   const http = await import('http');
   const httpServer = http.createServer(app);
-
-  // Daily maintenance (on Vercel the cron job runs it instead)
-  setInterval(() => {
-    runDailyMaintenance().catch(e => console.error("[Data Lifecycle] Cleanup job failed", e));
-  }, 24 * 60 * 60 * 1000);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
@@ -59,16 +53,11 @@ export async function serveApp(app: express.Express, PORT: number): Promise<void
     console.debug(`🚀 [Server] Production Ready: http://localhost:${PORT}`);
     console.debug(`📂 [Server] Serving static assets from: ${process.env.NODE_ENV === "production" ? "dist" : "Vite Dev Server"}`);
 
-    // Single boot check for due recurring items with idempotency protection.
-    // Ongoing processing runs through the authenticated /api/v1/system/recurring/process endpoint.
-    processAllRecurring().catch(err => console.error('[RecurringService] Initial boot run failed:', err));
-
-    // Daily error telemetry digest schedule (24h cadence).
-    // Can also be triggered on-demand via POST /api/v1/system/telemetry/errors/digest.
-    const ERROR_DIGEST_INTERVAL_MS = 24 * 60 * 60 * 1000;
-    setInterval(() => {
-      processErrorDigest().catch(err => console.warn('[ErrorDigestService] Scheduled digest run failed:', err));
-    }, ERROR_DIGEST_INTERVAL_MS);
+    // Every background job, at the times vercel.json gives Vercel Cron (jobs/jobRegistry.ts), plus the
+    // start-up pass the registry asks for. Admins can still run some by hand (/api/v1/system/...).
+    for (const cron of startStandaloneScheduler()) {
+      console.debug(`⏰ [Jobs] ${cron.id} (${cron.schedule} UTC) next runs at ${cron.nextRunAt}`);
+    }
   });
 
   const gracefulShutdown = (signal: string) => {

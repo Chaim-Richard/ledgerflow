@@ -1,13 +1,13 @@
 /**
  * The daily run, in words (BB-06): which jobs it covers, what each one is for, and whether the last
  * run went through. Nothing here decides when anything runs — that is the installation's schedule
- * (`vercel.json`'s cron, which is the only thing that calls `/api/cron/daily`) — this is the reading of
- * it for the Settings → Schedule screen, so a person can see whether a reminder is late because the
+ * (src/server/jobs/jobRegistry.ts: `vercel.json`'s cron calls `/api/cron/daily`, a standalone server
+ * runs the same list on its own timer) — this is the reading of it for the Settings → Schedule screen, so a person can see whether a reminder is late because the
  * job did not run rather than because nothing was due.
  *
  * It is deliberately a list of *what is promised*, kept next to the list of what runs:
- * `src/tests/job-schedule.test.ts` fails if a job is in the cron route and not here, or here and not in
- * the cron route, so the screen cannot quietly start describing a schedule that no longer exists.
+ * `src/tests/job-schedule.test.ts` fails if a job is in the registry and not here, or here and not in
+ * the registry, so the screen cannot quietly start describing a schedule that no longer exists.
  */
 import { addDaysYMD } from './fiscalCalendar';
 import { formatTzDate } from './utils';
