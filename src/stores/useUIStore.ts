@@ -193,7 +193,7 @@ export const useUIStore = create<UIState>((set) => ({
   theme: (() => {
     try {
       return (localStorage.getItem('lf_theme') as 'light' | 'dark' | 'system') || 'system';
-    } catch (e) {
+    } catch {
       return 'system';
     }
   })(),
@@ -205,7 +205,7 @@ export const useUIStore = create<UIState>((set) => ({
     try {
       const saved = typeof window !== 'undefined' ? localStorage.getItem('lf_lexicon_overrides') : null;
       return saved ? JSON.parse(saved) : {};
-    } catch (e) {
+    } catch {
       return {};
     }
   })(),
@@ -232,14 +232,14 @@ export const useUIStore = create<UIState>((set) => ({
     try {
       const saved = typeof window !== 'undefined' ? localStorage.getItem('lf_speed_dials') : null;
       return saved ? JSON.parse(saved) : {};
-    } catch (e) {
+    } catch {
       return {};
     }
   })(),
 
   // Preferences Defaults from LocalStorage
   fontSizeScale: (() => {
-    try { return Number(localStorage.getItem('lf_font_size_scale')) || 100; } catch (e) { return 100; }
+    try { return Number(localStorage.getItem('lf_font_size_scale')) || 100; } catch { return 100; }
   })(),
   fontSizePreset: (() => {
     return storedChoice('lf_font_size_preset', ['small', 'normal', 'medium', 'large', 'xlarge'] as const, 'normal');
@@ -254,72 +254,72 @@ export const useUIStore = create<UIState>((set) => ({
     return storedChoice('lf_accent_color', ['emerald', 'indigo', 'amber', 'teal', 'violet', 'rose', 'slate'] as const, 'emerald');
   })(),
   highContrast: (() => {
-    try { return localStorage.getItem('lf_high_contrast') === 'true'; } catch (e) { return false; }
+    try { return localStorage.getItem('lf_high_contrast') === 'true'; } catch { return false; }
   })(),
   reduceMotion: (() => {
-    try { return localStorage.getItem('lf_reduce_motion') === 'true'; } catch (e) { return false; }
+    try { return localStorage.getItem('lf_reduce_motion') === 'true'; } catch { return false; }
   })(),
   defaultLandingTab: (() => {
-    try { return localStorage.getItem('lf_default_landing') || 'dashboard'; } catch (e) { return 'dashboard'; }
+    try { return localStorage.getItem('lf_default_landing') || 'dashboard'; } catch { return 'dashboard'; }
   })(),
   dateFormatPref: (() => {
     // the same default as formatDate (src/lib/utils.ts)
-    try { return localStorage.getItem('lf_date_format') || 'MMM DD, YYYY'; } catch (_e) { return 'MMM DD, YYYY'; }
+    try { return localStorage.getItem('lf_date_format') || 'MMM DD, YYYY'; } catch { return 'MMM DD, YYYY'; }
   })(),
   numberDecimals: (() => {
     try {
       const val = localStorage.getItem('lf_number_decimals');
       return val !== null && val !== '' ? Number(val) : 2;
-    } catch (e) { return 2; }
+    } catch { return 2; }
   })(),
 
   // Preference Setters
   setFontSizeScale: (fontSizeScale) => {
-    try { localStorage.setItem('lf_font_size_scale', String(fontSizeScale)); } catch (_e) { /* ignore storage error */ }
+    try { localStorage.setItem('lf_font_size_scale', String(fontSizeScale)); } catch { /* ignore storage error */ }
     set({ fontSizeScale });
   },
   setFontSizePreset: (fontSizePreset) => {
-    try { localStorage.setItem('lf_font_size_preset', fontSizePreset); } catch (_e) { /* ignore storage error */ }
+    try { localStorage.setItem('lf_font_size_preset', fontSizePreset); } catch { /* ignore storage error */ }
     let scale = 100;
     if (fontSizePreset === 'small') scale = 90;
     if (fontSizePreset === 'normal') scale = 100;
     if (fontSizePreset === 'medium') scale = 110;
     if (fontSizePreset === 'large') scale = 120;
     if (fontSizePreset === 'xlarge') scale = 130;
-    try { localStorage.setItem('lf_font_size_scale', String(scale)); } catch (_e) { /* ignore storage error */ }
+    try { localStorage.setItem('lf_font_size_scale', String(scale)); } catch { /* ignore storage error */ }
     set({ fontSizePreset, fontSizeScale: scale });
   },
   setFontFamily: (fontFamily) => {
-    try { localStorage.setItem('lf_font_family', fontFamily); } catch (_e) { /* ignore storage error */ }
+    try { localStorage.setItem('lf_font_family', fontFamily); } catch { /* ignore storage error */ }
     set({ fontFamily });
   },
   setRowDensity: (rowDensity) => {
-    try { localStorage.setItem('lf_row_density', rowDensity); } catch (_e) { /* ignore storage error */ }
+    try { localStorage.setItem('lf_row_density', rowDensity); } catch { /* ignore storage error */ }
     set({ rowDensity });
   },
   setAccentColor: (accentColor) => {
-    try { localStorage.setItem('lf_accent_color', accentColor); } catch (_e) { /* ignore storage error */ }
+    try { localStorage.setItem('lf_accent_color', accentColor); } catch { /* ignore storage error */ }
     set({ accentColor });
   },
   setHighContrast: (highContrast) => {
-    try { localStorage.setItem('lf_high_contrast', String(highContrast)); } catch (_e) { /* ignore storage error */ }
+    try { localStorage.setItem('lf_high_contrast', String(highContrast)); } catch { /* ignore storage error */ }
     set({ highContrast });
   },
   setReduceMotion: (reduceMotion) => {
-    try { localStorage.setItem('lf_reduce_motion', String(reduceMotion)); } catch (_e) { /* ignore storage error */ }
+    try { localStorage.setItem('lf_reduce_motion', String(reduceMotion)); } catch { /* ignore storage error */ }
     set({ reduceMotion });
   },
   setDefaultLandingTab: (defaultLandingTab) => {
-    try { localStorage.setItem('lf_default_landing', defaultLandingTab); } catch (_e) { /* ignore storage error */ }
+    try { localStorage.setItem('lf_default_landing', defaultLandingTab); } catch { /* ignore storage error */ }
     set({ defaultLandingTab });
   },
   setDateFormatPref: (dateFormatPref) => {
-    try { localStorage.setItem('lf_date_format', dateFormatPref); } catch (_e) { /* ignore storage error */ }
+    try { localStorage.setItem('lf_date_format', dateFormatPref); } catch { /* ignore storage error */ }
     setDateDisplayFormat(dateFormatPref);
     set({ dateFormatPref });
   },
   setNumberDecimals: (numberDecimals) => {
-    try { localStorage.setItem('lf_number_decimals', String(numberDecimals)); } catch (_e) { /* ignore storage error */ }
+    try { localStorage.setItem('lf_number_decimals', String(numberDecimals)); } catch { /* ignore storage error */ }
     set({ numberDecimals });
   },
 
@@ -404,7 +404,7 @@ export const useUIStore = create<UIState>((set) => ({
   setTheme: (theme) => {
     try {
       localStorage.setItem('lf_theme', theme);
-    } catch (_e) {
+    } catch {
       // Ignore storage error
     }
     set({ theme });
@@ -420,7 +420,7 @@ export const useUIStore = create<UIState>((set) => ({
     };
     try {
       localStorage.setItem('lf_lexicon_overrides', JSON.stringify(nextOverrides));
-    } catch (_e) {
+    } catch {
       // Ignore storage error
     }
     return { lexiconOverrides: nextOverrides };
@@ -428,7 +428,7 @@ export const useUIStore = create<UIState>((set) => ({
   resetLexiconOverrides: () => set(() => {
     try {
       localStorage.removeItem('lf_lexicon_overrides');
-    } catch (_e) {
+    } catch {
       // Ignore storage error
     }
     return { lexiconOverrides: {} };
@@ -442,7 +442,7 @@ export const useUIStore = create<UIState>((set) => ({
       const wsId = typeof window !== 'undefined' ? localStorage.getItem('ledgerflow_current_workspace') : null;
       const key = wsId ? `lf_hidden_tabs_${wsId}` : 'lf_hidden_tabs';
       localStorage.setItem(key, JSON.stringify(nextHidden));
-    } catch (_e) {
+    } catch {
       // Ignore storage error
     }
     return { hiddenTabs: nextHidden };
@@ -451,7 +451,7 @@ export const useUIStore = create<UIState>((set) => ({
     const nextSpeedDials = { ...state.speedDials, [key]: tabId };
     try {
       localStorage.setItem('lf_speed_dials', JSON.stringify(nextSpeedDials));
-    } catch (_e) {
+    } catch {
       // Ignore storage error
     }
     return { speedDials: nextSpeedDials };
@@ -460,7 +460,7 @@ export const useUIStore = create<UIState>((set) => ({
     const { [key]: _, ...nextSpeedDials } = state.speedDials;
     try {
       localStorage.setItem('lf_speed_dials', JSON.stringify(nextSpeedDials));
-    } catch (_e) {
+    } catch {
       // Ignore storage error
     }
     return { speedDials: nextSpeedDials };

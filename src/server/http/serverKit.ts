@@ -31,7 +31,7 @@ export function formatTzDate(d: Date = new Date(), timezone = 'UTC'): string {
     const m = parts.find(p => p.type === 'month')?.value;
     const day = parts.find(p => p.type === 'day')?.value;
     if (y && m && day) return `${y}-${m}-${day}`;
-  } catch (_e) {
+  } catch {
     // fallback
   }
   const year = d.getUTCFullYear();
@@ -87,7 +87,7 @@ export async function syncGlobalAdminConfig() {
       });
       console.debug("🌀 [Global Billing Config Sync] Loaded from database:", globalAdminConfig);
     }
-  } catch (err) {
+  } catch {
     console.debug("🌀 [Global Billing Config Sync] Bypassed (Using default settings)");
   }
 }
@@ -256,7 +256,7 @@ export const authenticate = async (req: express.Request, res: express.Response, 
           decodedToken.admin = true;
           decodedToken.role = 'admin';
         }
-      } catch (dbErr) {
+      } catch {
         // Fallback silently if DB read restricted
       }
     }
@@ -287,7 +287,7 @@ export const optionalAuthenticate = async (req: express.Request, res: express.Re
   try {
     const decodedToken = await verifyIdToken(idToken) as AuthUser;
     (req as AuthenticatedRequest).user = decodedToken;
-  } catch (_err) {
+  } catch {
     // Non-blocking: unauthenticated telemetry fallback
   }
   next();

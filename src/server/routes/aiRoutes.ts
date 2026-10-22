@@ -57,7 +57,7 @@ aiRouter.post("/process", async (req: express.Request, res: express.Response) =>
   let decodedToken: any;
   try {
     decodedToken = await verifyIdToken(token);
-  } catch (_e) {
+  } catch {
     return res.status(401).json({ status: "error", message: "Unauthenticated: Invalid token" });
   }
 

@@ -3,7 +3,7 @@
  * Date/order/sign cannot be guessed from a headerless file. No posting, lookup
  * or rate conversion happens here; outputs feed the existing review stage.
  */
-import { parseCsv } from './csv';
+import { parseCsvChecked } from './csv';
 import { bankStatementDate } from './bankStatementDate';
 import type { ParsedBankLine } from './mt940Parser';
 
@@ -83,7 +83,7 @@ export function parseUsBankCsv(content: string, format: UsBankCsvFormat): Parsed
   if (!Object.prototype.hasOwnProperty.call({
     'chase-checking': 1, 'chase-card': 1, 'boa-checking': 1, 'boa-card': 1, 'wells-fargo-checking': 1,
   }, format)) throw new Error('Choose a supported US bank CSV layout.');
-  const rows = parseCsv(content);
+  const rows = parseCsvChecked(content);
   if (rows.length > 50001) throw new Error('Bank CSV exceeds the 50,000-row preview limit.');
   const result: ParsedBankLine[] = [];
   if (format === 'wells-fargo-checking') {

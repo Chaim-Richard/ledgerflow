@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import { aiService } from '../../services/aiService';
 import { DoubleEntryAuditor } from '../../services/auditor';
 import { getLocalDateISO } from '../../lib/utils';
-import { handleFirestoreError, OperationType } from '../../lib/firebaseUtils';
+import { describeError } from '../../lib/errorRemedies';
+import { savedInOtherWorkspace, workspaceChangedSince } from '../../lib/saveWorkspace';
 import type { ActionContext, ImportedTransaction, ImportedBankLine } from './shared';
 import type { PostingHelpers } from './postingHelpers';
 import type { EntryActions } from './entryActions';
@@ -54,6 +55,8 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
 
       const processedTxs: Transaction[] = [];
       const bankLineRecords: ImportedBankLine[] = [];
+      // PREV-5: learned only once the server stored the import (a refused import taught the rules anyway)
+      const toLearn: Array<Parameters<typeof recordRulePattern>> = [];
 
       txsToMatch.forEach(tx => {
         const defaultAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || '';
@@ -204,7 +207,7 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
               if (line.accountName && line.accountName !== 'Uncategorized' && line.accountName !== 'Manual Review') {
                 const searchDesc = line.description || (finalTx.lines.length === 1 ? finalTx.description : undefined);
                 if (searchDesc) {
-                  recordRulePattern(searchDesc, line.accountId || 'uncategorized', line.accountName, line.tags, line.dimensions);
+                  toLearn.push([searchDesc, line.accountId || 'uncategorized', line.accountName, line.tags, line.dimensions]);
                 }
               }
             });
@@ -237,13 +240,23 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
         }
       }
 
+      toLearn.forEach(args => { void recordRulePattern(...args); });
+      // PREV-5: another workspace was opened while the import was on its way: its entries stay out
+      // of that workspace's list, and the message says where they went
+      if (workspaceChangedSince(currentWorkspaceId)) {
+        toast.info(savedInOtherWorkspace(`The import of ${newTransactions.length} transactions`, currentWorkspaceId), { id: loader });
+        return true;
+      }
       const current = useLedgerStore.getState().transactions;
       setTransactions([...processedTxs, ...current]);
       toast.success(`Imported ${newTransactions.length} transactions with heuristic mapping.`, { id: loader });
       return true;
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'transactions-batch-import');
-      toast.error('Import failed. Nothing was imported; your selection is kept so you can try again.', { id: loader });
+      // PREV-5: handleFirestoreError rethrows, so this message never showed and the import rejected
+      // instead of returning false; the reason now goes into the one message shown
+      console.error('[FORENSIC ERROR] WRITE: transactions-batch-import', error);
+      const described = describeError(error, 'write');
+      toast.error(`Import failed: ${described.title.charAt(0).toLowerCase()}${described.title.slice(1)}. Nothing was imported; your selection is kept so you can try again.`, { id: loader, description: described.remedy });
       return false;
     } finally {
       setIsSyncing(false);
