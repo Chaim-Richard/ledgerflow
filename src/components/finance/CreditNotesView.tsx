@@ -8,7 +8,7 @@ import ApplyCreditsButton from './ApplyCreditsButton';
 import type { CreditActionTarget } from './CreditActionDialog';
 import { EmptyState } from '../ui/EmptyState';
 import { Money } from '../ui/Money';
-import { Plus, Users, Building2, RotateCcw, Eye, Download } from 'lucide-react';
+import { Plus, Users, Building2, RotateCcw, Eye, Download, Paperclip } from 'lucide-react';
 import { getLocalDateISO } from '../../lib/utils';
 import { toast } from 'sonner';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
@@ -25,12 +25,19 @@ import { creditDateEditable, duplicateNumber } from '../../lib/creditEdits';
 import { returnableLines, returnProblem } from '../../lib/salesReturns';
 import ReturnedGoodsFields from './ReturnedGoodsFields';
 import VendorReturnFields from './VendorReturnFields';
+import AttachmentsPanel from '../common/AttachmentsPanel';
 import { returnableBillLines, vendorReturnLines, vendorReturnProblem } from '../../lib/vendorReturns';
 
 export default function CreditNotesView() {
   const [activeTab, setActiveTab] = useState<'customer' | 'vendor'>('customer');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [filesFor, setFilesFor] = useState<{ workspaceId: string; key: string } | null>(null);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const filesWorkspaceId = currentWorkspaceId || '';
+  const filesOpen = (key: string) => filesFor?.workspaceId === filesWorkspaceId && filesFor.key === key;
+  const toggleFiles = (key: string) => setFilesFor(current =>
+    current?.workspaceId === filesWorkspaceId && current.key === key ? null : { workspaceId: filesWorkspaceId, key },
+  );
   const [previewCreditNote, setPreviewCreditNote] = useState<((CreditNote | VendorCredit) & { pdfKind?: 'vendorCredit' }) | null>(null);
 
   const customers = useLedgerStore(s => s.customers);
@@ -265,8 +272,12 @@ export default function CreditNotesView() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                  {creditNotes.map((cn) => (
-                    <tr key={cn.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  {creditNotes.map(cn => {
+                    const attachmentKey = `creditNotes:${cn.id}`;
+                    const label = `Credit note ${cn.number || cn.id}`;
+                    return (
+                      <React.Fragment key={attachmentKey}>
+                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <td className="p-3 font-mono font-medium text-indigo-600 dark:text-indigo-400">
                         <InlineEdit value={cn.number} label={`Number of credit note ${cn.number || ''}`.trim()} canEdit={canEdit}
                           validate={x => duplicateNumber(creditNotes, cn.id, String(x))}
@@ -290,6 +301,11 @@ export default function CreditNotesView() {
                       </td>
                       <td className="p-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <button type="button" aria-expanded={filesOpen(attachmentKey)} aria-label={`Manage files for credit note ${cn.number || ''}`.trim()}
+                            onClick={() => toggleFiles(attachmentKey)}
+                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-gray-500 hover:text-indigo-600 focus-visible:outline focus-visible:outline-2" title="Files">
+                            <Paperclip className="w-4 h-4" aria-hidden="true" />
+                          </button>
                           {usable(cn) && (
                             <>
                               <button type="button" onClick={() => setCreditAction({ kind: 'customer', mode: 'apply', id: cn.id, number: cn.number, partyId: cn.customerId, partyName: cn.customerName, remainingCents: cn.remainingCents, currency: cn.currency })} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">Apply</button>
@@ -313,7 +329,12 @@ export default function CreditNotesView() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    {filesOpen(attachmentKey) && <tr><td colSpan={8} className="bg-[var(--surface)] p-3">
+                      <AttachmentsPanel target={{ collection: 'creditNotes', id: cn.id, label }} />
+                    </td></tr>}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -345,8 +366,12 @@ export default function CreditNotesView() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                  {vendorCredits.map((vc) => (
-                    <tr key={vc.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  {vendorCredits.map(vc => {
+                    const attachmentKey = `vendorCredits:${vc.id}`;
+                    const label = `Vendor credit ${vc.number || vc.id}`;
+                    return (
+                      <React.Fragment key={attachmentKey}>
+                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <td className="p-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
                         <InlineEdit value={vc.number} label={`Number of vendor credit ${vc.number || ''}`.trim()} canEdit={canEdit}
                           validate={x => duplicateNumber(vendorCredits, vc.id, String(x))}
@@ -370,6 +395,11 @@ export default function CreditNotesView() {
                       </td>
                       <td className="p-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <button type="button" aria-expanded={filesOpen(attachmentKey)} aria-label={`Manage files for vendor credit ${vc.number || ''}`.trim()}
+                            onClick={() => toggleFiles(attachmentKey)}
+                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-gray-500 hover:text-indigo-600 focus-visible:outline focus-visible:outline-2" title="Files">
+                            <Paperclip className="w-4 h-4" aria-hidden="true" />
+                          </button>
                           {usable(vc) && (<>
                             <button type="button" onClick={() => setCreditAction({ kind: 'vendor', mode: 'apply', id: vc.id, number: vc.number, partyId: vc.vendorId, partyName: vc.vendorName, remainingCents: vc.remainingCents, currency: vc.currency })} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">Apply</button>
                             <button type="button" onClick={() => setCreditAction({ kind: 'vendor', mode: 'refund', id: vc.id, number: vc.number, partyId: vc.vendorId, partyName: vc.vendorName, remainingCents: vc.remainingCents, currency: vc.currency })} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs font-bold hover:border-[var(--brass-line)]">Refund</button>
@@ -378,7 +408,12 @@ export default function CreditNotesView() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    {filesOpen(attachmentKey) && <tr><td colSpan={8} className="bg-[var(--surface)] p-3">
+                      <AttachmentsPanel target={{ collection: 'vendorCredits', id: vc.id, label }} />
+                    </td></tr>}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

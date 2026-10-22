@@ -16,6 +16,7 @@ import { suggestionsFrom } from '../../lib/inlineEdit';
 import { isArchivedParty } from '../../lib/contacts';
 import { formatCurrency, formatDate, formatTzDate } from '../../lib/utils';
 import BillModal from './BillModal';
+import AttachmentsPanel from '../common/AttachmentsPanel';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 /**
@@ -303,6 +304,7 @@ export const PurchaseOrdersView: React.FC = () => {
                   <tr>
                     <td colSpan={7} className="px-4 pb-4 bg-[var(--panel)]">
                       <OrderLines po={po} canEdit={canEdit && canChangeOrder(po)} suggestions={itemSuggestions} onSave={saveOrder} />
+                      <AttachmentsPanel target={{ collection: 'purchaseOrders', id: po.id, label: `Purchase order ${po.poNumber}` }} workspaceId={po.workspaceId} className="mt-3 border-t border-[var(--line)] pt-3" />
                     </td>
                   </tr>
                 )}

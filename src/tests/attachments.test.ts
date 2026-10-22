@@ -11,7 +11,7 @@ import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import type { Firestore } from '../server/db/pgFirestore';
-import { MAX_ATTACHMENT_BYTES, attachmentProblem, attachmentRecord, attachmentsOf, formatBytes, mayRemoveAttachment } from '../lib/attachments';
+import { MAX_ATTACHMENT_BYTES, attachmentPreviewKind, attachmentProblem, attachmentRecord, attachmentsOf, formatBytes, mayRemoveAttachment } from '../lib/attachments';
 import { attachSummary } from '../services/attachmentActions';
 
 describe('The rules', () => {
@@ -33,6 +33,25 @@ describe('The rules', () => {
       { ...rec, id: 'd', linkedId: 'inv2' },
     ];
     assert.deepEqual(attachmentsOf(files, target).map(f => f.id), ['b', 'a']);
+  });
+
+  test('only embedded PDF, JPEG, PNG and WebP files are previewed', () => {
+    assert.equal(attachmentPreviewKind({ mimeType: 'application/pdf', fileUrl: 'data:application/pdf;base64,JVBERi0=' }), 'pdf');
+    for (const mimeType of ['image/jpeg', 'image/png', 'image/webp']) {
+      assert.equal(attachmentPreviewKind({ mimeType, fileUrl: `data:${mimeType};base64,AA==` }), 'image');
+    }
+    assert.equal(attachmentPreviewKind({ mimeType: 'image/svg+xml', fileUrl: 'data:image/svg+xml;base64,PHN2Zz4=' }), null);
+    assert.equal(attachmentPreviewKind({ mimeType: 'text/html', fileUrl: 'data:text/html;base64,PGgxPg==' }), null);
+    assert.equal(attachmentPreviewKind({ mimeType: 'application/pdf', fileUrl: 'javascript:alert(1)' }), null);
+    assert.equal(attachmentPreviewKind({ mimeType: 'application/pdf', fileUrl: 'https://example.test/document.pdf' }), null);
+  });
+
+  test('credit-note and vendor-credit attachments retain their own typed document identity', () => {
+    const credit = attachmentRecord({ name: 'return.pdf', size: 12, type: 'application/pdf' }, 'data:application/pdf;base64,AA==',
+      { collection: 'creditNotes', id: 'cn1', label: 'Credit note CN-1' }, { uid: 'u1', workspaceId: 'w1' }, '2026-10-06T10:00:00Z');
+    const vendor = { ...credit, linkedCollection: 'vendorCredits' as const, linkedId: 'vc1' };
+    assert.deepEqual(attachmentsOf([{ ...credit, id: 'a' }, { ...vendor, id: 'b' }], { collection: 'creditNotes', id: 'cn1' }).map(file => file.id), ['a']);
+    assert.deepEqual(attachmentsOf([{ ...credit, id: 'a' }, { ...vendor, id: 'b' }], { collection: 'vendorCredits', id: 'vc1' }).map(file => file.id), ['b']);
   });
 
   test('who may remove: writers any file, others only their own', () => {
