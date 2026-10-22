@@ -20,8 +20,8 @@ const DOLLAR_CODES = new Set(['USD', 'CAD', 'AUD', 'NZD']);
 const CODE = /\b(USD|EUR|GBP|ILS|NIS|CAD|AUD|NZD)\b/g;
 // An amount with dot decimals. Comma thousands anywhere; space / no-break-space thousands only right after a symbol
 // ("$1 234.56"). The look-behind keeps a digit group from being split, so "1 234.56" is never read as 234.56.
-const AMOUNT = /(?<![\d.,]|\d[   ])(?:([$€£₪])\s*(\d{1,3}(?:[   ]\d{3})+(?![\d,])|\d{1,3}(?:,\d{3})+|\d+)|(\d{1,3}(?:,\d{3})+|\d+))\.(\d{2})(?!\d)/;
-const SPACED = /\d[   ]\d{3}\.\d{2}(?!\d)/;
+const AMOUNT = /(?<![\d.,]|\d[ \u00a0\u202f])(?:([$€£₪])\s*(\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?![\d,])|\d{1,3}(?:,\d{3})+|\d+)|(\d{1,3}(?:,\d{3})+|\d+))\.(\d{2})(?!\d)/;
+const SPACED = /\d[ \u00a0\u202f]\d{3}\.\d{2}(?!\d)/;
 const DATE = /(?<!\d)(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/.-]\d{1,2}[/.-](?:\d{4}|\d{2}))(?!\d)/g;
 const PAYABLE = /\b(?:grand\s+total|amount\s+due|balance\s+due|total\s+due|total)\b/i;
 const QUALIFIED = /sub\s*-?\s*total|\btotal\s+(?:savings?|saved|tax(?:es)?|discounts?|items?|qty|quantity)\b|\b(?:savings?|tax(?:es)?|discounts?|items?|qty|quantity)\s+total\b/i;
