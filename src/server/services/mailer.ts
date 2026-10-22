@@ -20,6 +20,8 @@ export interface MailMessage {
   text?: string;
   replyTo?: string;
   attachments?: MailAttachment[];
+  /** the same key again within the provider's window is not delivered twice (Resend's Idempotency-Key; AUD-04) */
+  idempotencyKey?: string;
 }
 
 export interface MailResult {
@@ -63,7 +65,7 @@ export async function sendMail(input: MailMessage): Promise<MailResult> {
     const res = await safeFetch('https://api.resend.com/emails', {
       allowedHostnames: ['api.resend.com'],
       method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json', ...(message.idempotencyKey ? { 'Idempotency-Key': message.idempotencyKey.slice(0, 256) } : {}) },
       body: JSON.stringify({
         from: message.from, to: [message.to], subject: message.subject, html: message.html, text: message.text,
         ...(message.replyTo ? { reply_to: message.replyTo } : {}),

@@ -15,14 +15,14 @@ import { withScreenHelp } from './screenHelp';
 import type { ComponentType, ElementType } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
-  CalendarClock,
-  LayoutGrid, BarChart3, Activity, FileText, Database, Layers, 
-  ArrowDownRight, ArrowUpRight, FolderKanban, Users, RefreshCw, 
+  FileArchive, CalendarClock,
+  BarChart3, Activity, FileText, Database, Layers, 
+  ArrowDownRight, ArrowUpRight, Users, RefreshCw, 
   ShieldCheck, Terminal as TerminalIcon, Settings, Building, Cpu as CpuIcon,
-  Target, Briefcase, Sparkles, CheckCircle2, Leaf,
+  Target, Briefcase, Sparkles, 
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
-  Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag, ArrowLeftRight
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText, Split, BadgePercent, UserCheck, ListChecks, MapPin } from 'lucide-react';
+  Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, Search, Package, CalendarDays, Globe, Truck, Handshake, ClipboardCheck, GitMerge, Scale, Barcode, RotateCcw, Coins, Wallet, Filter, MailWarning, Blocks, PackageCheck, ArrowLeftRight
+, Receipt, Tag , PieChart, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText, Split, BadgePercent, UserCheck, ListChecks, MapPin } from 'lucide-react';
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
@@ -375,6 +375,7 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'GeneralLedgerView': lazy(() => import('../components/ledger/GeneralLedgerView')),
   'StatementView': lazy(() => import('../components/reporting/StatementView')),
   'TaxLiabilityView': lazy(() => import('../components/reporting/TaxLiabilityView')),
+  'AccountantExportPackView': lazy(() => import('../components/reporting/AccountantExportPackView')),
   'ExpenseByCategoryReportView': lazy(() => import('../components/reporting/ExpenseByCategoryReportView')),
   'IncomeBySourceReportView': lazy(() => import('../components/reporting/IncomeBySourceReportView')),
   'TopExpensesIncomeReportView': lazy(() => import('../components/reporting/TopExpensesIncomeReportView')),
@@ -546,6 +547,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'general-ledger', label: { en: 'General Ledger', he: 'ספר ראשי' }, componentName: 'GeneralLedgerView', icon: BookOpen },
   { id: 'statement', label: { en: 'Account Statement', he: 'דף חשבון' }, componentName: 'StatementView', icon: FileText },
   { id: 'tax-liability', label: { en: 'Sales Tax Liability', he: 'חבות מס קניה' }, componentName: 'TaxLiabilityView', icon: Receipt },
+  { id: 'accountant-export-pack', label: { en: 'Accountant export pack', he: 'חבילת ייצוא לרואה חשבון' }, componentName: 'AccountantExportPackView', icon: FileArchive },
   { id: 'rule-pack-coverage', label: { en: 'Tax Rule Coverage', he: 'כיסוי חוקי מס' }, componentName: 'RulePackCoverageReportView', icon: ShieldCheck },
   { id: 'customer-credit-limits', label: { en: 'Customer Credit Limits', he: 'מסגרות אשראי ללקוחות' }, componentName: 'CustomerCreditLimitReportView', icon: Wallet },
   { id: 'milestone-billing', label: { en: 'Milestone Billing', he: 'חיוב לפי אבני דרך' }, componentName: 'MilestoneBillingReportView', icon: CalendarDays },

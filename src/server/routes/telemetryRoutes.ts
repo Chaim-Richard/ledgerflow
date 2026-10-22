@@ -43,7 +43,7 @@ export function registerTelemetryRoutes(app: express.Express, _ctx: ServerContex
           }
           validatedUserId = authUser.uid;
           validatedUserEmail = authUser.email;
-        } catch (_wsErr) {
+        } catch {
           validatedWorkspaceId = 'unauthenticated';
         }
       }

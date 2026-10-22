@@ -149,9 +149,10 @@ export default function IsraelMonthJourneyReportView() {
       creditNotes: inWorkspace(creditNotes, workspaceId) as IlJourneyDocument[],
       bills: inWorkspace(bills, workspaceId) as IlJourneyDocument[],
       vendorCredits: inWorkspace(vendorCredits, workspaceId) as IlJourneyDocument[],
+      accounts,
       returns: own ? [own] : returns,
     });
-  }, [monthText, currency, dealerId, journey, workspace, customers, vendors, workspaceId, invoices, creditNotes, bills, vendorCredits]);
+  }, [monthText, currency, dealerId, journey, workspace, customers, vendors, workspaceId, invoices, creditNotes, bills, vendorCredits, accounts]);
 
   return <IsraelMonthJourneyPanel
     journey={journey}

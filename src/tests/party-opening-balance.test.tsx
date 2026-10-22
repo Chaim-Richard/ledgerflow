@@ -99,11 +99,13 @@ describe('On the contact page', () => {
     fireEvent.change(screen.getByLabelText('Opening balance date'), { target: { value: '2026-01-01' } });
     fireEvent.change(screen.getByLabelText('Opening balance of Paper Co'), { target: { value: '40.00' } });
     await act(async () => { fireEvent.keyDown(screen.getByLabelText('Opening balance of Paper Co'), { key: 'Enter' }); });
-    await waitFor(() => assert.ok(calls.some(c => c.url === '/api/v1/transactions/bulk')));
-    const body = calls.find(c => c.url === '/api/v1/transactions/bulk')!.body as { transactions: Transaction[]; entityMutation?: { collection: string; data: Record<string, unknown> } };
-    assert.equal(body.entityMutation?.collection, 'bills');
-    assert.deepEqual([body.entityMutation?.data.vendorId, body.entityMutation?.data.amountCents, body.entityMutation?.data.date], ['v1', 4000, '2026-01-01']);
-    assert.deepEqual(body.transactions[0].lines.map(l => [l.accountId, l.amountCents]), [['obe', 4000], ['ap', -4000]]);
+    // the bill alone goes to the server, which builds its entry (Opening Balance Equity +40.00 / A/P −40.00:
+    // l94-step2-document-post.test.ts) — L94-STEP2
+    const isSave = (c: { url: string }) => /^\/api\/v1\/documents\/bills\/[^/]+\/post$/.test(c.url);
+    await waitFor(() => assert.ok(calls.some(isSave)));
+    const body = calls.find(isSave)!.body as { action: string; data: Record<string, unknown>; transactions?: unknown };
+    assert.equal(body.transactions, undefined, 'no entries are sent');
+    assert.deepEqual([body.action, body.data.vendorId, body.data.amountCents, body.data.date, (body.data.metadata as { type?: string } | undefined)?.type], ['create', 'v1', 4000, '2026-01-01', 'opening-balance']);
   });
 
   test('once entered it is shown, not entered again; viewers only read', () => {

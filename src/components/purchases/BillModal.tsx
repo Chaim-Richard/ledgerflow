@@ -1,3 +1,4 @@
+import { amountStep, minorToMajor } from '../../lib/currencyMinorUnits';
 import { useDialog } from '../../hooks/useDialog';
 import { useSuggestedRate } from '../../hooks/useSuggestedRate';
 import { documentCurrencies } from '../../lib/exchangeRates';
@@ -289,6 +290,12 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
         // files picked for a new bill are kept with it once it has an id (Purchases.tsx)
         ...(attachments.length > 0 && !bill.id ? { attachmentFiles: attachments } : {}),
       });
+      return true;
+    } catch (err) {
+      // PREV-5: the save already said why it failed (its own message); the dialog stays open with
+      // the draft, and the caller is told it was not saved
+      console.warn('Bill not saved:', err);
+      return false;
     } finally {
       setIsSubmitting(false);
     }
@@ -567,13 +574,13 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                     <input 
                       id={`bill-split-amount-${idx}`}
                       type="number"
-                      step="0.01"
+                      step={amountStep(billCurrency)}
                       aria-invalid={Boolean(fieldErrors[`bill-split-amount-${idx}`])}
                       aria-describedby={fieldErrors[`bill-split-amount-${idx}`] ? `bill-split-amount-${idx}-error` : undefined}
-                      value={split.amountCents / 100}
+                      value={minorToMajor(split.amountCents, billCurrency)}
                       onChange={(e) => {
                         const newSplits = [...splits];
-                        newSplits[idx] = { ...newSplits[idx], amountCents: TruthEngine.parseAmountToCents(e.target.value || '0') };
+                        newSplits[idx] = { ...newSplits[idx], amountCents: TruthEngine.parseAmountToCents(e.target.value || '0', billCurrency) };
                         setSplits(newSplits);
                       }}
                       className="w-full min-h-11 px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono tabular-nums"

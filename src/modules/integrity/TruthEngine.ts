@@ -1,3 +1,4 @@
+import { currencyDigits } from '../../lib/currencyMinorUnits';
 import { parseLocalDate } from '../../lib/utils';
 // Architecture: Core Integrity Engine
 // Enforces that numbers, facts, and validations are strictly correct. No false info.
@@ -70,7 +71,8 @@ export class TruthEngine {
     return debitSum || Math.abs(lineAmount(lines[0] as unknown as import("../../types").TransactionLine));
   }
 
-  static parseAmountToCents(amountString: string | number | null | undefined): number {
+  /** Minor units of `currency` (BM-04: whole yen, three-decimal dinars); cents when no currency is given. */
+  static parseAmountToCents(amountString: string | number | null | undefined, currency?: string | null): number {
     if (amountString === null || amountString === undefined) {
       throw new Error('Integrity Violation: Amount cannot be empty');
     }
@@ -99,10 +101,13 @@ export class TruthEngine {
     try {
       let val: number;
       // If the string contains arithmetic operators (+, -, *, /, or parenthesis), route through evaluateAmountExpression
+      const digits = currencyDigits(currency);
       if (/[+\-*/(]/.test(s) && !/^-?[0-9.]+$/.test(s)) {
-        val = evaluateAmountExpression(s);
+        // the expression is worked out in cents; another currency's units are scaled from them
+        const cents = evaluateAmountExpression(s);
+        val = digits === 2 ? cents : Math.round(cents * 10 ** (digits - 2));
       } else {
-        val = new Decimal(s).mul(100).round().toNumber();
+        val = new Decimal(s).mul(10 ** digits).round().toNumber();
       }
       if (isNaN(val)) throw new Error('Integrity Violation: Parsed amount is NaN');
       if (isCR) val = -Math.abs(val);
@@ -113,12 +118,12 @@ export class TruthEngine {
     }
   }
 
-  static parseAmountToCentsOrZero(amountString: string | number | null | undefined): number {
+  static parseAmountToCentsOrZero(amountString: string | number | null | undefined, currency?: string | null): number {
     if (amountString === null || amountString === undefined) return 0;
     const s = String(amountString).trim();
     if (!s) return 0;
     try {
-      return TruthEngine.parseAmountToCents(s);
+      return TruthEngine.parseAmountToCents(s, currency);
     } catch {
       return 0;
     }
