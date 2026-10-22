@@ -11,8 +11,6 @@ import { commitAsServer } from './helpers/serverCommit';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import React from 'react';
-import type { AddressInfo } from 'node:net';
-import type { Server } from 'node:http';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { planReturnEntries, returnableLines, returnProblem, SALES_RETURN_TYPE } from '../lib/salesReturns';
 import { planInvoiceCogs } from '../services/invoiceCogs';
@@ -73,8 +71,6 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
   const ws = `ws_returns_${crypto.randomBytes(4).toString('hex')}`;
   const item = `${ws}_chair`;
   const invId = `${ws}_inv`;
-  let server: Server;
-  let base = '';
   let db: import('../server/db/pgFirestore').Firestore;
   // L94-STEP2B: entries that name a document are the server's own (its posting builds them); sent to the shared commit as the server does
   const post = (transactions: unknown[]) => commitAsServer(db, 'owner-1', { workspaceId: ws, transactions: transactions as never });
@@ -92,28 +88,18 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
 
   before(async () => {
     process.env.DATABASE_URL = process.env.LF_TEST_DATABASE_URL;
-    const express = (await import('express')).default;
-    const { transactionRouter } = await import('../server/routes/transactionRoutes');
     const { getDb } = await import('../server/db/firestore');
     db = getDb();
     await db.collection('workspaces').doc(ws).set({ uid: 'owner-1', name: 'Chairs', currency: 'USD', members: ['owner-1'] });
     await db.collection('chartAccounts').doc(`${ws}_inv_acct`).set({ workspaceId: ws, name: 'Inventory', type: 'asset', category: 'Inventory', code: '1300' });
     await db.collection('chartAccounts').doc(`${ws}_cogs`).set({ workspaceId: ws, name: 'COGS', type: 'expense', category: 'COGS', code: '5000' });
     await db.collection('inventory').doc(item).set({ workspaceId: ws, name: 'Chair', sku: 'CH-1', unitCostCents: 400, unitPriceCents: 9000, quantityAtHand: 10 });
-    const app = express();
-    app.use(express.json());
-    app.use((req, _res, next) => { (req as unknown as { user: { uid: string } }).user = { uid: String(req.header('x-test-uid')) }; next(); });
-    app.use('/api/v1/transactions', transactionRouter);
-    app.use('/api/v1/documents', (await import('../server/routes/documentPostRoutes')).documentPostRouter);
-    server = app.listen(0);
-    base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     const [sale] = cogsOf({ ...invoice(invId, item), workspaceId: ws } as Invoice, ws, { inv: `${ws}_inv_acct`, cogs: `${ws}_cogs` })
       .map(e => ({ ...e, id: `${ws}_sale`, metadata: { ...e.metadata, inventoryItemId: item } }));
     assert.equal((await post([sale])).status, 200);
   });
 
   after(async () => {
-    server?.close();
     for (const table of ['transactions', 'inventory', 'stockMoves', 'chartAccounts', 'workspaces']) {
       await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
     }

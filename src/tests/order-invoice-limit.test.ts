@@ -8,15 +8,11 @@ import { after, before, describe, test } from 'node:test';
 import { commitAsServer } from './helpers/serverCommit';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
-import type { AddressInfo } from 'node:net';
-import type { Server } from 'node:http';
 
 const url = process.env.LF_TEST_DATABASE_URL;
 describe('order invoices never pass the order total (database)', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
   const ws = `ws_dep_${crypto.randomBytes(4).toString('hex')}`;
   const order = `${ws}_order`;
-  let server: Server;
-  let base = '';
   let db: import('../server/db/pgFirestore').Firestore;
   // L94-STEP2B: entries that name a document are the server's own (its posting builds them); sent to the shared commit as the server does
   const invoice = (docId: string, amountCents: number) => commitAsServer(db, 'owner-1', { workspaceId: ws, transactions: [], entityMutation: { collection: 'invoices', docId: `${ws}_${docId}`, action: 'create',
@@ -24,23 +20,13 @@ describe('order invoices never pass the order total (database)', { skip: !url &&
 
   before(async () => {
     process.env.DATABASE_URL = url;
-    const express = (await import('express')).default;
-    const { transactionRouter } = await import('../server/routes/transactionRoutes');
     const { getDb } = await import('../server/db/firestore');
     db = getDb();
     await db.collection('workspaces').doc(ws).set({ uid: 'owner-1', name: 'Shop', members: ['owner-1'] });
     await db.collection('estimates').doc(order).set({ workspaceId: ws, number: 'EST-1', customerName: 'Acme', status: 'accepted', orderedAt: '2026-05-01', amountCents: 110000,
       lines: [{ description: 'Goods', quantity: 1, unitPriceCents: 100000, amountCents: 100000 }, { description: 'Delivery', quantity: 1, unitPriceCents: 10000, amountCents: 10000 }] });
-    const app = express();
-    app.use(express.json());
-    app.use((req, _res, next) => { (req as unknown as { user: { uid: string } }).user = { uid: String(req.header('x-test-uid')) }; next(); });
-    app.use('/api/v1/transactions', transactionRouter);
-    app.use('/api/v1/documents', (await import('../server/routes/documentPostRoutes')).documentPostRouter);
-    server = app.listen(0);
-    base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   });
   after(async () => {
-    server?.close();
     for (const table of ['invoices', 'estimates', 'workspaces']) await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
     await db.terminate();
   });
