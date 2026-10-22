@@ -70,6 +70,7 @@ describe('W1 the first hour, with worked figures', { skip: !url && 'LF_TEST_DATA
     app.use((req, _res, next) => { (req as unknown as { user: { uid: string; email: string } }).user = { uid: String(req.header('x-test-uid')), email: 'owner@northwind.test' }; next(); });
     app.use('/api/v1/workspaces', workspaceRouter);
     app.use('/api/v1/transactions', transactionRouter);
+    app.use('/api/v1/documents', (await import('../server/routes/documentPostRoutes')).documentPostRouter);
     app.use('/api/v1/reports', reportRouter);
     server = app.listen(0);
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;

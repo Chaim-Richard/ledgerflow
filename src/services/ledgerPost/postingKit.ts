@@ -39,6 +39,12 @@ async function sendToServer(
   entityMutation?: EntityMutation,
   context?: LedgerPostContext
 ) {
+  // L-94 step 2: an invoice or bill is saved by the server, which builds its entries itself; the lines built here
+  // are not sent (they served the checks the browser shows before saving: the closing date, the accounts)
+  if (entityMutation && (entityMutation.collection === 'invoices' || entityMutation.collection === 'bills')
+    && (entityMutation.action === 'create' || entityMutation.action === 'update')) {
+    return postDocumentToServer(workspaceId, entityMutation, context);
+  }
   // Ids are chosen here so the entries added to the local store below carry the same ids as the
   // server copies; a quick second edit can then link its reversals to them.
   txs = (txs || []).map(tx => (tx.id ? tx : { ...tx, id: crypto.randomUUID() }));
@@ -69,6 +75,31 @@ async function sendToServer(
   // BUG-05: replace by id instead of adding again — a retried or replayed save must not show twice
   const posted = new Set((txs as unknown as Transaction[]).map(tx => tx.id));
   store.setTransactions([...(txs as unknown as Transaction[]), ...(store.transactions || []).filter(tx => !posted.has(tx.id))]);
+}
+
+/** POST /api/v1/documents/:type/:id/post: the document only; the entries the server wrote go into the screen's list. */
+async function postDocumentToServer(workspaceId: string, entityMutation: EntityMutation, context?: LedgerPostContext) {
+  const token = await getIdToken().catch(() => null);
+  const response = await fetch(`/api/v1/documents/${entityMutation.collection}/${encodeURIComponent(entityMutation.docId)}/post`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': context?.idempotencyKey || crypto.randomUUID(),
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ workspaceId, action: entityMutation.action, data: entityMutation.data || {} })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Server rejected the save');
+  if (Array.isArray(data.warnings)) data.warnings.forEach((w: unknown) => toast.warning(String(w)));
+  const written = Array.isArray(data.transactions) ? data.transactions as Transaction[] : [];
+  if (data.replayed || written.length === 0) return;
+  // saved in the workspace it was asked in; when another workspace is open by now, its list is not touched
+  if (useAuthStore.getState().currentWorkspaceId !== workspaceId) return;
+  // the entries as the server wrote them, replacing any copy with the same id (BUG-05)
+  const store = useLedgerStore.getState();
+  const posted = new Set(written.map(tx => tx.id));
+  store.setTransactions([...written, ...(store.transactions || []).filter(tx => !posted.has(tx.id))]);
 }
 
 registerPostingHost({
