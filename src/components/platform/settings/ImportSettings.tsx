@@ -17,6 +17,7 @@ import { normalizeFreshBooksCsv } from '../../../lib/freshBooksImport';
 import { normalizeQuickBooksCsv } from '../../../lib/quickBooksCsvImport';
 import { reconcileImportCounts } from '../../../lib/importCountReconciliation';
 import { MigrationTrialBalanceProof } from './MigrationTrialBalanceProof';
+import XeroDocumentsImport from './XeroDocumentsImport';
 
 type CsvSource = 'generic' | 'freshbooks' | 'quickbooks';
 const normalizeSourceTable = (source: CsvSource, kind: ImportKind, cells: string[][]): string[][] =>
@@ -440,6 +441,8 @@ export default function ImportSettings() {
           </div>
         )}
       </section>
+
+      <XeroDocumentsImport />
 
       <MigrationTrialBalanceProof key={workspaceId} workspaceId={workspaceId} />
 
