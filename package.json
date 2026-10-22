@@ -36,7 +36,10 @@
     "diff:rule-packs": "tsx scripts/rule-pack-diff.ts",
     "test:mutation": "stryker run",
     "test:mutation:unit": "NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic node scripts/test-money-mutation.mjs",
-    "check:tax-tables": "tsx scripts/validate-tax-tables.ts"
+    "check:tax-tables": "tsx scripts/validate-tax-tables.ts",
+    "load:signin": "k6 run scripts/load/sign-in.js",
+    "load:read": "k6 run scripts/load/dashboard-read.js",
+    "load:post": "k6 run scripts/load/post-invoice.js"
   },
   "dependencies": {
     "@google/genai": "^1.51.0",
