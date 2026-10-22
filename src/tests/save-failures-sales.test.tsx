@@ -58,9 +58,6 @@ describeSaveFailures({
     assert.equal(value('Item / Description'), DRAFT_TEXT);
     assert.equal(value(/^Rate/), '150');
   },
-  todo: {
-    switchThenOk: "postingKit.sendToServer adds the saved entries to the open workspace's list without checking it is still the one they were posted to (A's entries show in B). Fix: return before the store write when useAuthStore's currentWorkspaceId is no longer the posting's workspaceId; postingKit.ts is being changed by L94-STEP2, so the fix goes there",
-  },
 });
 
 describeSaveFailures({
@@ -80,9 +77,6 @@ describeSaveFailures({
     assert.equal(value(/^Rate/), '75');
     assert.equal(useLedgerStore.getState().invoices.find(i => i.id === 'a-inv')?.amountCents, 5000, 'the saved invoice is as it was');
   },
-  todo: {
-    switchThenOk: 'as for a new invoice: postingKit.sendToServer writes the reply into the workspace opened since (fix in postingKit.ts, owned by L94-STEP2)',
-  },
 });
 
 describeSaveFailures({
@@ -100,9 +94,6 @@ describeSaveFailures({
     assert.ok(screen.getByRole('button', { name: 'Save & Post' }), 'the form stays open');
     assert.equal(value('Select Customer'), 'c1');
     assert.equal(value('Amount (USD)'), '12.50');
-  },
-  todo: {
-    switchThenOk: "two leaks, both in files L94-STEP2 is changing: useEntityOperations.addEntity shows 'Credit Note … issued successfully!' in the workspace opened since, and postingKit.sendToServer adds A's entries to B's list. Fix: check useAuthStore's currentWorkspaceId against the save's workspace before the toast and before the store write",
   },
 });
 
@@ -122,9 +113,6 @@ describeSaveFailures({
     assert.ok(screen.getByRole('button', { name: 'Save & Post' }), 'the form stays open');
     assert.equal(value('Select Vendor'), 'v1');
     assert.equal(value('Amount (USD)'), '8.25');
-  },
-  todo: {
-    switchThenOk: "as for a credit note: 'Vendor Credit … logged successfully!' (useEntityOperations.addEntity) and A's entries (postingKit.sendToServer) reach the workspace opened since; both files are being changed by L94-STEP2",
   },
 });
 
