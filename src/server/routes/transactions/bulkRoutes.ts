@@ -28,7 +28,8 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
       if (committed && entityMutation && transactions.length > 0 && !body.replayed) {
         await logShadowCheck(db, { workspaceId: workspaceId || transactions[0]?.workspaceId, uid: user.uid, mutation: entityMutation, posted: transactions });
       }
-      res.json(body);
+      // AUD-15: the entries as written, for the browser's list (not kept with the idempotency record: a replay wrote nothing)
+      res.json({ ...body, transactions: committed && !body.replayed ? transactions : [] });
     } catch (e) {
       if (e instanceof BulkRefusal) return res.status(e.status).json(e.body);
       console.error('[BULK TRANSACTIONS ERROR]', e);
