@@ -1,3 +1,4 @@
+import { minorUnitRate } from '../../lib/currencyMinorUnits';
 import { createHash } from 'node:crypto';
 import { ledgerCreate } from './ledgerDoor';
 import { deriveScopedOperationKey } from '../utils/idempotency';
@@ -324,16 +325,17 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     // 5. Build General Ledger Transaction
     const isReceipt = isReceiptPayment;
     const ledgerTxRef = db.collection('transactions').doc();
-    const baseAmountCents = Math.round(amountCents * paymentRate);
+    // BM-04: minor units of the payment's currency → minor units of the books' (¥ has none, KWD three)
+    const baseAmountCents = Math.round(amountCents * minorUnitRate(paymentRate, paymentCurrency, baseCurrency));
     // L-192: a foreign document paid at another day's rate: the bank gets what really arrived (or left),
     // the receivable/payable is cleared at the document's own rate, and the difference is realized
     // exchange gain or loss. Without a payment-day rate, both sides stay at the document's rate.
     const dayRate = payload.paymentExchangeRate;
     const foreignPayment = paymentCurrency !== null && paymentCurrency !== baseCurrency;
-    const cashBaseCents = foreignPayment && typeof dayRate === 'number' && dayRate > 0 ? Math.round(amountCents * dayRate) : baseAmountCents;
+    const cashBaseCents = foreignPayment && typeof dayRate === 'number' && dayRate > 0 ? Math.round(amountCents * minorUnitRate(dayRate, paymentCurrency, baseCurrency)) : baseAmountCents;
     const realizedFxCents = cashBaseCents - baseAmountCents;
     // the unmatched part goes to the deposits/prepayments account when there is one (BE-12)
-    const advanceBaseCents = advance ? baseAmountCents - Math.round(totalAllocatedCents * paymentRate) : 0;
+    const advanceBaseCents = advance ? baseAmountCents - Math.round(totalAllocatedCents * minorUnitRate(paymentRate, paymentCurrency, baseCurrency)) : 0;
     const offsetBaseCents = baseAmountCents - advanceBaseCents;
     let fxAccount: { id: string; name?: string } | undefined;
     if (realizedFxCents !== 0) {
@@ -513,7 +515,7 @@ export async function applyUnappliedPayment(db: Firestore, input: {
     const offset = String(payment.offsetAccountId || '');
     let ledgerTx: Record<string, unknown> | null = null;
     if (heldIn && offset && heldIn !== offset) {
-      const baseCents = Math.round(total * rate);
+      const baseCents = Math.round(total * minorUnitRate(rate, paymentCurrency, baseCurrency));
       const description = `Payment ${payment.number || paymentId} applied (${received ? 'customer deposit' : 'vendor prepayment'})`;
       const { TransactionValidator } = await import('../../kernel/validation/TransactionValidator');
       ledgerTx = await TransactionValidator.validateAndPrepare(

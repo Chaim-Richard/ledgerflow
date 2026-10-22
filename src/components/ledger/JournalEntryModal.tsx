@@ -28,6 +28,8 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { DEFAULT_WORKSPACE_DIMENSIONS } from '../../lib/dimensionUtils';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isLockedDate } from '../../lib/periodLock';
+import { describeError } from '../../lib/errorRemedies';
+import { savedInOtherWorkspace, workspaceChangedSince } from '../../lib/saveWorkspace';
 import { formLines, templateLines, templateProblem, templateSummary, type JournalTemplate } from '../../lib/journalTemplates';
 import { listJournalTemplates, removeJournalTemplate, saveJournalTemplate } from '../../services/journalTemplateActions';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
@@ -363,7 +365,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         throw new Error(errObj.error || `HTTP error ${res.status}`);
       }
 
-      toast.success(autoReverse ? `Journal entry recorded; it reverses on ${reverseOn}` : 'Journal entry recorded');
+      // PREV-5: another workspace was opened while the entry was on its way: say where it went
+      if (workspaceChangedSince(workspaceId)) toast.info(savedInOtherWorkspace('The journal entry', workspaceId));
+      else toast.success(autoReverse ? `Journal entry recorded; it reverses on ${reverseOn}` : 'Journal entry recorded');
       onClose();
       // Reset form
       setAutoReverse(false);
@@ -377,7 +381,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
       setLineKeys(['initial-first', 'initial-second']);
     } catch (error) {
       console.error("Journal Entry Error:", error);
-      toast.error('Failed to record journal entry');
+      // PREV-5: why, in words (it said only "Failed to record journal entry"); the entry stays in the form
+      const described = describeError(error, 'create');
+      toast.error(`Journal entry not recorded: ${described.title.charAt(0).toLowerCase()}${described.title.slice(1)}`, { description: described.remedy });
     }
   };
 

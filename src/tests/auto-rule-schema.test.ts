@@ -47,7 +47,7 @@ describe('AutoRule Schema & Security Guard Suite (Prompt D)', () => {
   });
 
   it('rejects targetCategory or targetProject not in workspace categories/projects with 422', async () => {
-    const { AIBackendService } = await import('../server/services/aiBackendService');
+    await import('../server/services/aiBackendService');
     
     // Test invalid target category validation function directly or via processTask
     const validCategories = ['Software', 'Office Supplies'];
