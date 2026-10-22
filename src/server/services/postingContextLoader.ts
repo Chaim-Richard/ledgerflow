@@ -6,9 +6,9 @@ import type { ChartAccount, InventoryItem, Invoice, Transaction, Workspace } fro
 /**
  * L-94: what a document's entry builder (postingCore, no browser code) needs, read from the database — the chart,
  * the workspace (mappings, base currency, closing date), the document's earlier entries, the stock items an invoice
- * sells and, for a credit note, the invoice it credits with that invoice's entries. Used by the shadow check after a
- * browser save (postingShadowCheck.ts) and by POST /documents/:type/:id/post, which builds the entries itself
- * (documentPostService.ts). Moved here from postingShadowCheck.ts unchanged.
+ * sells and, for a credit note, the invoice it credits with that invoice's entries. Used by POST
+ * /documents/:type/:id/post, which builds the entries itself (documentPostService.ts). Moved here unchanged from the
+ * L-94 shadow check (now src/tests/helpers/postingShadowCheck.ts: the browser no longer sends document entries).
  */
 
 /** Each document that posts: the metadata key its entries carry. */
@@ -24,12 +24,25 @@ export function todayIn(timezone?: string): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+const DAY_MS = 86_400_000;
+
+/**
+ * The day to build with (L-94): the browser's, when it is a real date within one day of the server's own today (near
+ * midnight a browser in another time zone is a day apart: the person sees that day, and it dates reversals into a
+ * closed period); else the server's. Moved here from the shadow check, which now lives in the tests.
+ */
+export function agreedPostingDay(serverToday: string, browserDay: unknown): string {
+  if (typeof browserDay !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(browserDay)) return serverToday;
+  const gap = Math.abs(Date.parse(`${browserDay}T00:00:00Z`) - Date.parse(`${serverToday}T00:00:00Z`));
+  return Number.isFinite(gap) && gap <= DAY_MS ? browserDay : serverToday;
+}
+
 export async function loadPostingContext(db: Firestore, input: {
   workspaceId: string; uid: string; collection: string; docId: string;
   document: Record<string, unknown>; workspace: Record<string, unknown>;
-  /** entries to leave out (the shadow check: what the request it checks has just written) */
+  /** entries to leave out (the tests' shadow rebuild: what the request it checks has just written) */
   exclude?: Set<string>;
-  /** the save already passed the server's period check (the shadow check): the closing date dates reversals but refuses nothing */
+  /** the save already passed the server's period check: the closing date dates reversals but refuses nothing */
   lockChecked: boolean;
 }): Promise<LedgerPostContext> {
   const { workspaceId, uid, collection, docId, document, workspace } = input;

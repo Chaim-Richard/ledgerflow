@@ -1,6 +1,6 @@
 import { recategorizeLines } from '../../lib/accountChoices';
-import { workspaceScope } from '../../lib/serverAction';
-import { useAuthStore } from '../../stores/useAuthStore';
+import { identityScope } from '../../lib/serverAction';
+import { currentIdentity, useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { Transaction, TransactionLine } from '../../types';
 import { toast } from 'sonner';
@@ -391,7 +391,7 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
   const handleUpdateTransaction = async (id: string, updates: Partial<Transaction>): Promise<boolean> => {
     if (!user || !currentWorkspaceId) return false;
     // #107: a reply for this workspace never changes another workspace's list
-    const scope = workspaceScope(() => useAuthStore.getState().currentWorkspaceId);
+    const scope = identityScope(currentIdentity, () => useAuthStore.getState().currentWorkspaceId);
     
     const originalTransactions = [...useLedgerStore.getState().transactions];
     const txIndex = originalTransactions.findIndex(t => t.id === id);

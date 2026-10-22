@@ -11,6 +11,7 @@
  */
 import './helpers/dom';
 import test, { after, before, describe } from 'node:test';
+import { commitAsServer } from './helpers/serverCommit';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
@@ -92,7 +93,7 @@ describe('Where stock went, kept when it goes', { skip: !process.env.LF_TEST_DAT
       invoiceId: invId, invoice: invoice(), date: '2026-05-05', uid: 'owner-1', workspaceId: ws, baseCurrency: 'USD',
       inventoryAccount: { id: `${ws}_inv_acct`, name: 'Inventory' }, cogsAccount: { id: `${ws}_cogs`, name: 'COGS' }, items: [{ id: item, name: 'Chair', unitCostCents: 400 }],
     }).entries.map(e => ({ ...e, id: `${ws}_sale` }));
-    const res = await send('/api/v1/transactions/bulk', { workspaceId: ws, transactions: [sale] });
+    const res = await commitAsServer(db, 'owner-1', { workspaceId: ws, transactions: [sale] });
     assert.equal(res.status, 200, JSON.stringify(res.body));
     const [m] = await moves();
     assert.deepEqual([m.kind, m.quantity, m.customerId, m.documentLineId, m.labels, m.locationId], ['sale', -5, 'acme', 'l1', { project: 'P1' }, 'L1']);
@@ -104,7 +105,7 @@ describe('Where stock went, kept when it goes', { skip: !process.env.LF_TEST_DAT
       lines: [{ invoiceLineId: 'l1', itemId: item, description: 'Chair', sold: 5, returned: 0, returnable: 5, unitCostCents: 400, unitPriceCents: 9000 }],
       uid: 'owner-1', workspaceId: ws, baseCurrency: 'USD', inventoryAccount: { id: `${ws}_inv_acct`, name: 'Inventory' }, cogsAccount: { id: `${ws}_cogs`, name: 'COGS' },
     });
-    const res = await send('/api/v1/transactions/bulk', { workspaceId: ws, transactions: [{ ...entry, id: `${ws}_ret` }] });
+    const res = await commitAsServer(db, 'owner-1', { workspaceId: ws, transactions: [{ ...entry, id: `${ws}_ret` }] });
     assert.equal(res.status, 200, JSON.stringify(res.body));
     const back = (await moves()).find(m => m.kind === 'return')!;
     assert.deepEqual([back.quantity, back.customerId, back.documentLineId], [2, 'acme', 'l1']);

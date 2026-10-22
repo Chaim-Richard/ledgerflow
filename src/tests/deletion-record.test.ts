@@ -68,9 +68,10 @@ describe('Deleting (database)', { skip: !url && 'LF_TEST_DATABASE_URL not set' }
   });
 
   test('deleting a draft invoice through the posting route keeps what it was', async () => {
-    const res = await fetch(`${base}/api/v1/transactions/bulk`, {
+    // a document is deleted through the server's posting route (L94-STEP2B), which reverses its entries itself
+    const res = await fetch(`${base}/api/v1/documents/invoices/${id('inv')}/post`, {
       method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': 'owner-1' },
-      body: JSON.stringify({ workspaceId: ws, transactions: [], entityMutation: { collection: 'invoices', docId: id('inv'), action: 'delete' } }),
+      body: JSON.stringify({ workspaceId: ws, action: 'delete' }),
     });
     assert.equal(res.status, 200, await res.clone().text());
     assert.equal((await db.collection('invoices').doc(id('inv')).get()).exists, false);

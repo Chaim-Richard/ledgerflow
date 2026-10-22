@@ -33,16 +33,19 @@ async function loadInventoryFromStore(invoiceData: Partial<Invoice>): Promise<In
 /**
  * Send transactions array to Server API endpoint (/api/v1/transactions/bulk) atomically.
  */
+/** Documents whose entries the server builds (L94-STEP2, L94-STEP2B): /transactions/bulk takes none of them. */
+const SERVER_POSTED = new Set(['invoices', 'bills', 'creditNotes', 'vendorCredits']);
+
 async function sendToServer(
   txs: PostableTransaction[],
   workspaceId: string,
   entityMutation?: EntityMutation,
   context?: LedgerPostContext
 ) {
-  // L-94 step 2: an invoice or bill is saved by the server, which builds its entries itself; the lines built here
-  // are not sent (they served the checks the browser shows before saving: the closing date, the accounts)
-  if (entityMutation && (entityMutation.collection === 'invoices' || entityMutation.collection === 'bills')
-    && (entityMutation.action === 'create' || entityMutation.action === 'update')) {
+  // L-94 step 2: an invoice, bill, credit note or vendor credit is saved or deleted by the server, which builds its
+  // entries itself; the lines built here are not sent (they served the checks the browser shows before saving: the
+  // closing date, the accounts)
+  if (entityMutation && SERVER_POSTED.has(entityMutation.collection)) {
     return postDocumentToServer(workspaceId, entityMutation, context);
   }
   // Ids are chosen here so the entries added to the local store below carry the same ids as the
@@ -97,7 +100,7 @@ async function postDocumentToServer(workspaceId: string, entityMutation: EntityM
       'Idempotency-Key': context?.idempotencyKey || crypto.randomUUID(),
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     },
-    body: JSON.stringify({ workspaceId, action: entityMutation.action, data: entityMutation.data || {} })
+    body: JSON.stringify({ workspaceId, action: entityMutation.action, ...(entityMutation.action === 'delete' ? {} : { data: entityMutation.data || {} }), postingDay: postingToday(context) })
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || 'Server rejected the save');

@@ -11,6 +11,7 @@
  */
 import './helpers/dom';
 import test, { after, afterEach, before, describe } from 'node:test';
+import { commitAsServer } from './helpers/serverCommit';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import React from 'react';
@@ -103,11 +104,11 @@ describe('Recorded with each change (database)', { skip: !url && 'LF_TEST_DATABA
   test('opening stock, then a sale, two sales together, a reversal and a count: one record each, in order', async () => {
     const opening = await call('POST', '/api/v1/inventory/adjust', { workspaceId: ws, itemId: item, quantityChange: 10, type: 'opening', inventoryAccountId: `${ws}_inv`, offsetAccountId: `${ws}_obe`, date: '2026-05-01' });
     assert.equal(opening.status, 200, JSON.stringify(opening.body));
-    assert.equal((await call('POST', '/api/v1/transactions/bulk', { workspaceId: ws, transactions: [sold.first] })).status, 200);
-    assert.equal((await call('POST', '/api/v1/transactions/bulk', { workspaceId: ws, transactions: [sale('s2', 2), sale('s3', 1)] })).status, 200);
+    assert.equal((await commitAsServer(db, OWNER, { workspaceId: ws, transactions: [sold.first] })).status, 200);
+    assert.equal((await commitAsServer(db, OWNER, { workspaceId: ws, transactions: [sale('s2', 2), sale('s3', 1)] })).status, 200);
     const reversal = { ...sold.first, id: `${ws}_r1`, description: 'Reversal', metadata: { invoiceId: sold.first.metadata.invoiceId, isReversal: true, reversesTxId: sold.first.id },
       lines: sold.first.lines.map(l => ({ ...l, amountCents: -l.amountCents, debitCents: l.creditCents, creditCents: l.debitCents })) };
-    assert.equal((await call('POST', '/api/v1/transactions/bulk', { workspaceId: ws, transactions: [reversal] })).status, 200);
+    assert.equal((await commitAsServer(db, OWNER, { workspaceId: ws, transactions: [reversal] })).status, 200);
     const count = await call('POST', '/api/v1/inventory/count', { workspaceId: ws, inventoryAccountId: `${ws}_inv`, offsetAccountId: `${ws}_shrink`, date: '2026-05-20', counts: [{ itemId: item, counted: 9 }] });
     assert.equal(count.status, 200, JSON.stringify(count.body));
 
