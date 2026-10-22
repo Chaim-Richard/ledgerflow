@@ -312,6 +312,7 @@ export const NON_TABLE_MODULES: Readonly<Record<string, string>> = {
   "form856ReviewExport.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
   "ilImportServices.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
   "ilVatReturn.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
+  "ilVatEquipment.ts": "Classifies saved purchases as equipment for the VAT report from their accounts; no embedded dated source table.",
   "israel102Review.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
   "israeliDocumentTypes.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
   "israeliIdentifiers.ts": "Calculation, review, profile or document helper; no embedded dated source table.",

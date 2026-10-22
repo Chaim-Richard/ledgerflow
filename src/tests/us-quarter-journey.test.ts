@@ -202,6 +202,18 @@ test('the certificate check behind the quarter’s zero-tax sales', () => {
   assert.equal(none.status, 'not-applicable');
 });
 
+test('W8-GOLD: a zero-tax sale exempt by its product (Texas groceries) needs no certificate; a free-text or unloaded line still does', () => {
+  const grocery = [{ id: 'itm-food', productTaxCategory: 'groceries' }, ...items];
+  const step = (lines: Array<{ itemId?: string }>, list = grocery) => usQuarterJourney({
+    quarter: QUARTER, today: TODAY, profiles, order: ['world'], customers, items: list,
+    invoices: [doc('i7', 'dallas-none', 25000, 0, [], { date: '2026-09-10', items: lines } as Partial<UsSalesDocument>)],
+  }).steps.find(s => s.id === 'certificates')!;
+  assert.equal(step([{ itemId: 'itm-food' }]).status, 'not-applicable');
+  assert.equal(step([{ itemId: 'itm-food' }, { itemId: 'itm-1' }]).figures.find(f => f.label === 'Certificate missing')!.count, 1, 'a general-goods line needs one');
+  assert.equal(step([{ itemId: 'itm-food' }, {}]).figures.find(f => f.label === 'Certificate missing')!.count, 1, 'a free-text line needs one');
+  assert.equal(step([{ itemId: 'itm-food' }], items).figures.find(f => f.label === 'Certificate missing')!.count, 1, 'an item not loaded needs one');
+});
+
 test('use tax on the quarter’s untaxed purchases', () => {
   const step = journey().steps.find(s => s.id === 'use-tax')!;
   assert.equal(step.status, 'attention');

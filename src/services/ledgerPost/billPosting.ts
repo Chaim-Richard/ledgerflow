@@ -41,7 +41,7 @@ export async function postBillLedger(
     accounts,
     mappings,
     ['ap', 'accounts payable', 'payables', 'payable'],
-    a => a.type === 'liability' && (a.category === 'Payables' || a.name.toLowerCase().includes('payable') || a.code === '2000'),
+    a => a.type === 'liability' && (a.category === 'Payables' || resolveAccountRole(a) === 'ap' || a.code === '2000'),
     'Accounts Payable (A/P)'
   );
 
