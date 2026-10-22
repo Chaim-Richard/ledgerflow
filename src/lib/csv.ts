@@ -24,6 +24,22 @@ export function detectDelimiter(text: string): string {
 }
 
 export function parseCsv(input: string, delimiter = detectDelimiter(input.replace(/^\uFEFF/, ''))): string[][] {
+  return readCsv(input, delimiter).rows;
+}
+
+/**
+ * PREV-6: like parseCsv, but a quoted cell that never closes (a truncated download, or a stray
+ * quote) refuses the whole file instead of swallowing the rest of it into one cell.
+ */
+export function parseCsvChecked(input: string, delimiter = detectDelimiter(input.replace(/^\uFEFF/, ''))): string[][] {
+  const { rows, unclosedQuote } = readCsv(input, delimiter);
+  if (unclosedQuote) {
+    throw new Error('CSV: a quoted cell is never closed (the file may be cut off or have a stray quote). Nothing was imported.');
+  }
+  return rows;
+}
+
+function readCsv(input: string, delimiter: string): { rows: string[][]; unclosedQuote: boolean } {
   const text = input.replace(/^\uFEFF/, '');
   const rows: string[][] = [];
   let row: string[] = [];
@@ -59,6 +75,7 @@ export function parseCsv(input: string, delimiter = detectDelimiter(input.replac
       cell += ch;
     }
   }
+  const unclosedQuote = quoted;
   if (cell !== '' || row.length > 0) endRow();
-  return rows.map(r => r.map(c => c.trim()));
+  return { rows: rows.map(r => r.map(c => c.trim())), unclosedQuote };
 }

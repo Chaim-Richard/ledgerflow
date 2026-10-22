@@ -443,9 +443,25 @@ function isLocalHost(url: URL): boolean {
   return ['localhost', '127.0.0.1', '::1', ''].includes(host) || (url.searchParams.get('host') || '').startsWith('/');
 }
 
-export function poolConfigFromEnv(settings: FirestoreSettings = {}): pg.PoolConfig {
+/** Startup warning when a remote database is reached without certificate verification. */
+export const DATABASE_CA_WARNING = '[Database] DATABASE_CA_CERT is not set: the connection to the remote database is '
+  + 'encrypted but the server certificate is NOT verified. Set DATABASE_CA_CERT to the database CA certificate '
+  + '(Supabase dashboard > Database > SSL) to verify it.';
+
+let caWarningLogged = false;
+const warnOnceAtStartup = (message: string): void => {
+  if (caWarningLogged) return;
+  caWarningLogged = true;
+  console.warn(message);
+};
+
+export function poolConfigFromEnv(
+  settings: FirestoreSettings = {},
+  env: NodeJS.ProcessEnv = process.env,
+  warn: (message: string) => void = warnOnceAtStartup,
+): pg.PoolConfig {
   const raw = settings.connectionString
-    || process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_DB_URL;
+    || env.DATABASE_URL || env.POSTGRES_URL || env.SUPABASE_DB_URL;
   if (!raw) {
     throw new FirestoreError(14, 'No database configured. Set DATABASE_URL (or POSTGRES_URL) to the Supabase Postgres connection string.');
   }
@@ -455,18 +471,23 @@ export function poolConfigFromEnv(settings: FirestoreSettings = {}): pg.PoolConf
   for (const param of ['sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'uselibpqcompat', 'supa', 'pgbouncer']) {
     url.searchParams.delete(param);
   }
-  const ca = process.env.DATABASE_CA_CERT?.replace(/\\n/g, '\n');
+  const ca = env.DATABASE_CA_CERT?.replace(/\\n/g, '\n').trim();
   let ssl: pg.PoolConfig['ssl'];
   if (!local) {
     // Supabase signs its database certificates with its own root CA. With DATABASE_CA_CERT
     // (the CA from the Supabase dashboard) the certificate is verified; without it the
-    // connection is still encrypted.
-    ssl = ca ? { ca, rejectUnauthorized: true } : { rejectUnauthorized: false };
+    // connection is still encrypted but the server is not authenticated, so say so (AUD-20).
+    if (ca) {
+      ssl = { ca, rejectUnauthorized: true };
+    } else {
+      ssl = { rejectUnauthorized: false };
+      warn(DATABASE_CA_WARNING);
+    }
   }
   return {
     connectionString: url.toString(),
     ssl,
-    max: settings.max || Number(process.env.PG_POOL_MAX) || 10,
+    max: settings.max || Number(env.PG_POOL_MAX) || 10,
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 15_000,
   };

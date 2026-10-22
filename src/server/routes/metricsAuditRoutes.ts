@@ -309,7 +309,6 @@ export function registerMetricsAuditRoutes(app: express.Express, _ctx: ServerCon
       const wsData = wsDoc.data() || {};
 
       const nowMs = Date.now();
-      let totalAssessedAssets = 0;
       let totalRevenue = 0;
       let totalExpense = 0;
 
@@ -323,7 +322,6 @@ export function registerMetricsAuditRoutes(app: express.Express, _ctx: ServerCon
 
       accounts.forEach(a => {
         const bal = balances[a.id] || 0;
-        if (a.type === 'asset') totalAssessedAssets += bal;
         if (a.type === 'revenue') totalRevenue -= bal;
         if (a.type === 'expense') totalExpense += bal;
       });

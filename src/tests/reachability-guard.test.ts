@@ -118,14 +118,7 @@ test('Reachability Guard: True import graph walk from entry points (static + dyn
   });
 
   const ignoredFiles = [
-    'src/types.ts', // Global type definitions module
     'src/vite-env.d.ts', // Vite type declarations
-    'src/domain/Accounts.ts', // Domain model type definitions
-    'src/infra/auth/FirebaseAuthAdapter.ts', // Infrastructure auth adapter interface implementation
-    'src/lib/paymentTerms.ts', // Pure payment terms definition constants
-    'src/constants.ts', // Global application constants
-    'src/services/auth/index.ts', // Auth service singleton exports
-    'src/services/auth/types.ts', // Auth service type definitions
     'vite.config.ts' // Vite bundler configuration file
   ];
 
