@@ -16,13 +16,13 @@ import type { ComponentType, ElementType } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   FileArchive, CalendarClock,
-  LayoutGrid, BarChart3, Activity, FileText, Database, Layers, 
-  ArrowDownRight, ArrowUpRight, FolderKanban, Users, RefreshCw, 
+  BarChart3, Activity, FileText, Database, Layers, 
+  ArrowDownRight, ArrowUpRight, Users, RefreshCw, 
   ShieldCheck, Terminal as TerminalIcon, Settings, Building, Cpu as CpuIcon,
-  Target, Briefcase, Sparkles, CheckCircle2, Leaf,
+  Target, Briefcase, Sparkles, 
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
-  Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, ShieldAlert, Network, Search, Package, CalendarDays, Star, Globe, Award, Truck, Handshake, ClipboardCheck, GitMerge, Trash2, Scale, Barcode, RotateCcw, Coins, HardHat, Wallet, Filter, MailWarning, Blocks, PackageCheck, ShoppingBag, ArrowLeftRight
-, Store, Receipt, PenTool as Tool, Tag , PieChart, Wrench, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText, Split, BadgePercent, UserCheck, ListChecks, MapPin } from 'lucide-react';
+  Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, Search, Package, CalendarDays, Globe, Truck, Handshake, ClipboardCheck, GitMerge, Scale, Barcode, RotateCcw, Coins, Wallet, Filter, MailWarning, Blocks, PackageCheck, ArrowLeftRight
+, Receipt, Tag , PieChart, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText, Split, BadgePercent, UserCheck, ListChecks, MapPin } from 'lucide-react';
 import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)

@@ -143,7 +143,7 @@ export interface IsraelMonthInput {
   /** the close state of the month; a month not listed is open */
   periods?: Array<{ month: string; state: MonthCloseState }>;
   /** returns the server keeps for this workspace: a return for exactly this period counts as filed */
-  filedPeriods?: Array<{ startDate: string; endDate: string }>;
+  filedPeriods?: Array<{ startDate: string; endDate: string; /** CON-4b: the registration a return was filed for ('vat:IL:…'); absent: the whole workspace */ registration?: string }>;
 }
 
 const MONTH_TEXT = /^(\d{4})-(0[1-9]|1[0-2])$/;
@@ -322,6 +322,8 @@ export interface IlPcn874Input {
   vendors?: IlJourneyParty[];
   /** the workspace currency, used when a document does not state one */
   currency?: string;
+  /** ISS-160 / W7-GOLD: the chart, so a saved bill on a fixed-asset account is an equipment row (R), as in the VAT report */
+  accounts?: ChartAccount[];
 }
 
 /**
@@ -330,7 +332,10 @@ export interface IlPcn874Input {
  * own amounts rounded; only documents in shekels are written, because the layout takes whole NIS
  * from the source of record and no rate is invented here.
  */
-export function ilPcn874Rows(input: IlPcn874Input): IlPcn874Mapping {
+export function ilPcn874Rows(given: IlPcn874Input): IlPcn874Mapping {
+  // the bills classified the way the VAT report classifies them (ilVatEquipment.ts), so the two never disagree
+  const equipment = given.accounts ? withEquipment(given.bills || [], given.vendorCredits || [], given.accounts) : null;
+  const input: IlPcn874Input = equipment ? { ...given, bills: equipment.bills, vendorCredits: equipment.vendorCredits } : given;
   const currency = input.currency || 'ILS';
   const rows: Pcn874FixtureDocument[] = [];
   const unmapped: IlPcn874Unmapped[] = [];
@@ -542,9 +547,11 @@ export function israelMonthJourney(given: IsraelMonthInput): IsraelMonth {
         ...(own ? { dueDate: own.dueDate } : {}),
         startMonth: own?.startMonth || month,
         endMonth: own?.endMonth || month,
-        // a recorded return carries dates, not a registration: with several registrations it cannot be told whose it is
-        filed: registrations.length === 1 && (input.filedPeriods || []).some(r => r.startDate === from && r.endDate === to),
-        recordedForDates: (input.filedPeriods || []).some(r => r.startDate === from && r.endDate === to),
+        // CON-4b: a return filed for this registration counts; one filed for the whole workspace (no registration) can be
+        // told whose it is only when there is one registration
+        filed: (input.filedPeriods || []).some(r => r.startDate === from && r.endDate === to
+          && (r.registration ? r.registration === registration.registration : registrations.length === 1)),
+        recordedForDates: (input.filedPeriods || []).some(r => r.startDate === from && r.endDate === to && !r.registration),
         pending: (own?.endMonth || month) > month,
       };
     })

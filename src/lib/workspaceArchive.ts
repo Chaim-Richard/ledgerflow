@@ -4,8 +4,10 @@
  * ZIP is stored (no compression, no new dependency). Every collection present
  * in metadata.counts gets its own exact JSON and spreadsheet-safe UTF-8 CSV.
  * The original checksum-protected backup.json is retained for normal restore.
- * Ancillary workspace tables and uploaded file bytes NOT in that server backup
- * are not included: do not call this a database-wide disaster-recovery copy.
+ * BK-10: the backup holds every workspace record table and the attachment list
+ * (details and checksums); the system tables it leaves out on purpose and the
+ * uploaded file bytes are named in the manifest notes. The restore screen reads
+ * this ZIP back with backupFromWorkspaceArchive (the same restore, no second path).
  */
 import { toCsv } from './csvExport';
 import { recordExportTable } from './workspaceExports';
@@ -98,6 +100,15 @@ export function makeStoredZip(files: readonly ZipEntry[]): Blob {
   return new Blob([...chunks, ...central, end.buffer as ArrayBuffer], { type: 'application/zip' });
 }
 
+/** The server computes SHA-256 over the backup before appending metadata.checksum. */
+async function backupChecksumMatches(payload: JsonObject): Promise<boolean> {
+  if (!obj(payload.metadata)) return false;
+  const { checksum, ...withoutChecksum } = payload.metadata;
+  const original = { ...payload, metadata: withoutChecksum };
+  const digest = await crypto.subtle.digest('SHA-256', textEncoder.encode(JSON.stringify(original)));
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('') === checksum;
+}
+
 export interface WorkspaceArchiveResult {
   blob: Blob;
   collections: { key: string; count: number }[];
@@ -116,12 +127,8 @@ export async function buildWorkspaceArchive(payload: unknown, workspaceId: strin
     throw new Error('A verified server-authored backup is required; cached browser records are not sufficient.');
   }
 
-  // The existing server computes SHA-256 before appending metadata.checksum.
-  const { checksum, ...withoutChecksum } = meta;
-  const original = { ...payload, metadata: withoutChecksum };
-  const digest = await crypto.subtle.digest('SHA-256', textEncoder.encode(JSON.stringify(original)));
-  const actual = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
-  if (actual !== checksum) throw new Error('Server backup checksum verification failed.');
+  const checksum = meta.checksum;
+  if (!await backupChecksumMatches(payload)) throw new Error('Server backup checksum verification failed.');
 
   const keys = Object.keys(meta.counts).sort();
   if (!keys.length || !keys.includes('transactions') || !keys.includes('accounts')) {
@@ -163,11 +170,68 @@ export async function buildWorkspaceArchive(payload: unknown, workspaceId: strin
     restoreFile: 'backup.json',
     notes: [
       'All arrays in the existing authoritative JSON backup are included, including empty collections.',
-      'This is NOT a full database or uploaded-file archive: tables not present in the server backup, stored attachments and provider credentials are not collected.',
-      'CSV is for human review, with a Record JSON column; use backup.json through the normal verified restore workflow.',
+      'The backup holds every workspace record table, the workspace settings (workspace.json) and the attachment list (collections/attachments: each file\'s name, size, record and SHA-256).',
+      'Not included: the bytes of uploaded files (they stay in the workspace; the restore reports any listed file that is missing), members and invitations, API keys, bank connections and their tokens, the audit trail, notifications and e-mail logs, support tickets, and system tables.',
+      'To restore, choose this ZIP (or its backup.json) in Settings → Backup & Export → Restore Workspace; it uses the normal verified restore.',
+      'CSV is for human review, with a Record JSON column.',
       'The ZIP uses stored (uncompressed) entries; store this sensitive archive securely.',
     ],
   };
   files.unshift({ path: 'manifest.json', content: JSON.stringify(manifest, null, 2) });
   return { blob: makeStoredZip(files), collections, manifest };
+}
+
+/** The stored entries of a ZIP made by makeStoredZip, CRC-checked, by name. */
+export function readStoredZip(bytes: Uint8Array): Map<string, Uint8Array> {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const bad = () => new Error('This file is not a readable workspace archive.');
+  let end = bytes.length - 22;
+  while (end >= 0 && view.getUint32(end, true) !== 0x06054b50) end--;
+  if (end < 0 || bytes.length - end > 22 + 65535) throw bad();
+  const total = view.getUint16(end + 10, true);
+  let at = view.getUint32(end + 16, true);
+  const entries = new Map<string, Uint8Array>();
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  for (let i = 0; i < total; i++) {
+    if (at + 46 > end || view.getUint32(at, true) !== 0x02014b50) throw bad();
+    const method = view.getUint16(at + 10, true);
+    const crc = view.getUint32(at + 16, true);
+    const size = view.getUint32(at + 24, true);
+    const nameLength = view.getUint16(at + 28, true);
+    const local = view.getUint32(at + 42, true);
+    if (method !== 0 || view.getUint32(at + 20, true) !== size || at + 46 + nameLength > end) throw bad();
+    const name = decoder.decode(bytes.subarray(at + 46, at + 46 + nameLength));
+    if (local + 30 > bytes.length || view.getUint32(local, true) !== 0x04034b50) throw bad();
+    const start = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
+    const data = bytes.subarray(start, start + size);
+    if (data.length !== size || zipCrc32(data) !== crc) throw new Error('The archive is damaged: ' + name + ' does not match its checksum.');
+    entries.set(name, data);
+    at += 46 + nameLength + view.getUint16(at + 30, true) + view.getUint16(at + 32, true);
+  }
+  return entries;
+}
+
+/**
+ * BK-10: the backup inside a workspace archive, for the normal restore. The ZIP checksums, the
+ * manifest and the backup's own SHA-256 are all checked; `text` is backup.json exactly as archived.
+ */
+export async function backupFromWorkspaceArchive(bytes: Uint8Array): Promise<{ text: string; backup: JsonObject }> {
+  const entries = readStoredZip(bytes);
+  const decoder = new TextDecoder();
+  const read = (name: string): unknown => {
+    const data = entries.get(name);
+    if (!data) throw new Error('The archive has no ' + name + '.');
+    try { return JSON.parse(decoder.decode(data)); } catch { throw new Error('The archive\'s ' + name + ' is not readable.'); }
+  };
+  const manifest = read('manifest.json');
+  if (!obj(manifest) || manifest.format !== 'ledgerflow-backup-archive-v1' || manifest.restoreFile !== 'backup.json') {
+    throw new Error('This ZIP is not a LedgerFlow workspace archive.');
+  }
+  const backup = read('backup.json');
+  if (!obj(backup) || !obj(backup.metadata) || backup.metadata.checksum !== manifest.sourceChecksumSha256
+    || !obj(backup.workspace) || backup.workspace.id !== manifest.workspaceId) {
+    throw new Error('The archive\'s backup does not match its manifest.');
+  }
+  if (!await backupChecksumMatches(backup)) throw new Error('Backup file corrupted: Checksum verification failed.');
+  return { text: decoder.decode(entries.get('backup.json')), backup };
 }

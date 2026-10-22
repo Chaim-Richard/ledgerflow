@@ -54,6 +54,8 @@ export interface TransactionLine {
   debitCents?: number;
   creditCents?: number;
   exchangeRate?: number;
+  /** BM-06: the rate this line was converted at (lib/rateUsed.ts: the entry's metadata.rateUsed or ratesUsed) */
+  rateUsedId?: string;
   /** BUG-07: the line in the home currency, fixed at posting so the entry balances there too */
   baseAmountCents?: number;
   description?: string;

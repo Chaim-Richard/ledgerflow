@@ -1,3 +1,5 @@
+import { rateUsedFor, rateUsedId, type RateUsed } from '../../lib/rateUsed';
+import { minorUnitRate } from '../../lib/currencyMinorUnits';
 import { createHash } from 'node:crypto';
 import { ledgerCreate } from './ledgerDoor';
 import { deriveScopedOperationKey } from '../utils/idempotency';
@@ -28,6 +30,8 @@ export interface CreatePaymentPayload {
   offsetAccountId?: string;
   /** The rate on the payment day for a foreign document (home units per 1); the difference from its own rate is a realized exchange gain or loss (L-192). */
   paymentExchangeRate?: number;
+  /** BM-06: where the payment day's rate came from (the form's suggestion, or typed) */
+  paymentRateSource?: 'typed' | 'last-used' | 'live' | 'books-on-date';
   /** A deposit for this estimate (BE-05): the customer's own, not yet converted; it waits unapplied until the invoice is issued. */
   estimateId?: string;
   /** IL-5: tax withheld at source from a payment to a vendor (home currency): the vendor gets the rest, the tax authority is owed this */
@@ -181,6 +185,7 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     const baseCurrency = String(wsData.currency || 'USD');
     let paymentCurrency: string | null = null;
     let paymentRate = 1;
+    let documentRate: { recorded?: Partial<RateUsed>; date: string } | undefined;
     // DIM-1: each paid document's lines' labels, weighted by what this payment puts on that document
     const labelWeights: Array<{ cents: number; dimensions?: Record<string, string> }> = [];
 
@@ -209,6 +214,8 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       }
       paymentCurrency = docCurrency;
       paymentRate = docCurrency === baseCurrency ? 1 : docRate;
+      // BM-06: the rate the document was booked at, as its form recorded it (date and source)
+      if (!documentRate) documentRate = { recorded: (docData.metadata as { rateUsed?: Partial<RateUsed> } | undefined)?.rateUsed, date: String(docData.date || docData.issueDate || paymentDate) };
 
       const currentPaid = docData.amountPaidCents || 0;
       const remainingBalance = calculateAmountDue(docData);
@@ -324,16 +331,17 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     // 5. Build General Ledger Transaction
     const isReceipt = isReceiptPayment;
     const ledgerTxRef = db.collection('transactions').doc();
-    const baseAmountCents = Math.round(amountCents * paymentRate);
+    // BM-04: minor units of the payment's currency → minor units of the books' (¥ has none, KWD three)
+    const baseAmountCents = Math.round(amountCents * minorUnitRate(paymentRate, paymentCurrency, baseCurrency));
     // L-192: a foreign document paid at another day's rate: the bank gets what really arrived (or left),
     // the receivable/payable is cleared at the document's own rate, and the difference is realized
     // exchange gain or loss. Without a payment-day rate, both sides stay at the document's rate.
     const dayRate = payload.paymentExchangeRate;
     const foreignPayment = paymentCurrency !== null && paymentCurrency !== baseCurrency;
-    const cashBaseCents = foreignPayment && typeof dayRate === 'number' && dayRate > 0 ? Math.round(amountCents * dayRate) : baseAmountCents;
+    const cashBaseCents = foreignPayment && typeof dayRate === 'number' && dayRate > 0 ? Math.round(amountCents * minorUnitRate(dayRate, paymentCurrency, baseCurrency)) : baseAmountCents;
     const realizedFxCents = cashBaseCents - baseAmountCents;
     // the unmatched part goes to the deposits/prepayments account when there is one (BE-12)
-    const advanceBaseCents = advance ? baseAmountCents - Math.round(totalAllocatedCents * paymentRate) : 0;
+    const advanceBaseCents = advance ? baseAmountCents - Math.round(totalAllocatedCents * minorUnitRate(paymentRate, paymentCurrency, baseCurrency)) : 0;
     const offsetBaseCents = baseAmountCents - advanceBaseCents;
     let fxAccount: { id: string; name?: string } | undefined;
     if (realizedFxCents !== 0) {
@@ -354,6 +362,13 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       if (!withholdingAccount) throw new Error('Add a liability account for tax withheld at source (for example "Tax withheld at source") first');
     }
 
+    // BM-06: the two rates a foreign payment's entry uses: the document's on what it clears, the payment day's on the cash
+    const bookedRate = foreignPayment ? rateUsedFor({ currency: paymentCurrency!, base: baseCurrency, rate: paymentRate, date: documentRate?.date || paymentDate, recorded: documentRate?.recorded }) : null;
+    const cashRate = foreignPayment && realizedFxCents !== 0 && typeof dayRate === 'number'
+      ? { currency: paymentCurrency!, base: baseCurrency, rate: dayRate, date: paymentDate, source: (payload.paymentRateSource || 'typed') as RateUsed['source'] }
+      : bookedRate;
+    const rateOn = (r: RateUsed | null) => (r ? { rateUsedId: rateUsedId(r) } : {});
+
     const ledgerTxData = {
       id: ledgerTxRef.id,
       uid,
@@ -370,13 +385,15 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
         paymentId,
         type: 'payment-posting',
         ...(paymentRate !== 1 ? { documentCurrency: paymentCurrency, documentAmountCents: amountCents, documentExchangeRate: paymentRate } : {}),
-        ...(realizedFxCents !== 0 ? { paymentExchangeRate: dayRate, realizedFxCents } : {})
+        ...(realizedFxCents !== 0 ? { paymentExchangeRate: dayRate, realizedFxCents } : {}),
+        ...(bookedRate ? { ratesUsed: cashRate && cashRate !== bookedRate ? [bookedRate, cashRate] : [bookedRate] } : {}),
       },
       lines: payeeLabels(labelWeights, amountCents, [
         {
           accountId: cashAccountId,
           amountCents: isReceipt ? cashBaseCents : -(cashBaseCents - withheld),
-          description: `Cash ${isReceipt ? 'Debit' : 'Credit'} for Payment ${paymentId}`
+          description: `Cash ${isReceipt ? 'Debit' : 'Credit'} for Payment ${paymentId}`,
+          ...rateOn(cashRate),
         },
         ...(withholdingAccount ? [{
           accountId: withholdingAccount.id,
@@ -387,7 +404,8 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
         ...(offsetBaseCents !== 0 || !advance ? [{
           accountId: resolvedOffsetAccountId,
           amountCents: isReceipt ? -offsetBaseCents : offsetBaseCents,
-          description: `Offset ${isReceipt ? 'Credit' : 'Debit'} for Payment ${paymentId}`
+          description: `Offset ${isReceipt ? 'Credit' : 'Debit'} for Payment ${paymentId}`,
+          ...rateOn(bookedRate),
         }] : []),
         ...(advance && advanceBaseCents > 0 ? [{
           accountId: advance.id,
@@ -513,7 +531,7 @@ export async function applyUnappliedPayment(db: Firestore, input: {
     const offset = String(payment.offsetAccountId || '');
     let ledgerTx: Record<string, unknown> | null = null;
     if (heldIn && offset && heldIn !== offset) {
-      const baseCents = Math.round(total * rate);
+      const baseCents = Math.round(total * minorUnitRate(rate, paymentCurrency, baseCurrency));
       const description = `Payment ${payment.number || paymentId} applied (${received ? 'customer deposit' : 'vendor prepayment'})`;
       const { TransactionValidator } = await import('../../kernel/validation/TransactionValidator');
       ledgerTx = await TransactionValidator.validateAndPrepare(

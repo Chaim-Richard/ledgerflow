@@ -7,6 +7,7 @@
  */
 import './helpers/dom';
 import test, { after, afterEach, before, describe } from 'node:test';
+import { commitAsServer } from './helpers/serverCommit';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import React from 'react';
@@ -47,7 +48,8 @@ describe('Against the database', { skip: !url && 'LF_TEST_DATABASE_URL not set' 
     lines: target.lines.map(l => ({ ...l, amountCents: -l.amountCents, debitCents: l.creditCents, creditCents: l.debitCents })),
   });
   const policy = (uid: string, body: unknown) => call('/api/v1/inventory/stock-policy', 'PUT', uid, body);
-  const post = (uid: string, transactions: unknown[]) => call('/api/v1/transactions/bulk', 'POST', uid, { workspaceId: ws, transactions });
+  // L94-STEP2B: entries that name a document are the server's own (its posting builds them); sent to the shared commit as the server does
+  const post = (uid: string, transactions: unknown[]) => commitAsServer(db, uid, { workspaceId: ws, transactions: transactions as never });
 
   before(async () => {
     process.env.DATABASE_URL = url;

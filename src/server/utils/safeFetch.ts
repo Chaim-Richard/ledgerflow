@@ -1,12 +1,29 @@
 import { errorMessage } from '../auth/requestUser';
 import dns from 'node:dns/promises';
 import net from 'node:net';
+import http from 'node:http';
+import https from 'node:https';
+import zlib from 'node:zlib';
+import { Readable } from 'node:stream';
+
+/** Resolves a hostname to every address it has (dns.lookup with all: true). Injectable for tests. */
+export type HostResolver = (hostname: string) => Promise<Array<{ address: string; family: number }>>;
 
 export interface SafeFetchOptions extends RequestInit {
   allowedHostnames?: string[];
   timeoutMs?: number;
-  maxRedirects?: number;
+  /** Tests only: replaces DNS. The answer is checked once and the connection is pinned to it. */
+  resolver?: HostResolver;
 }
+
+/** The checked destination: the URL plus the one address the connection will be made to. */
+export interface SafeTarget {
+  url: URL;
+  address: string;
+  family: 4 | 6;
+}
+
+const systemResolver: HostResolver = hostname => dns.lookup(hostname, { all: true });
 
 /**
  * Checks if an IPv4 address is in a private, loopback, link-local, or reserved range.
@@ -91,10 +108,15 @@ export function isPrivateOrReservedIPv6(ip: string): boolean {
 }
 
 /**
- * Validates a target URL and checks DNS resolution to prevent SSRF attacks.
- * Throws an Error if the URL resolves to an internal/private/loopback/cloud metadata IP.
+ * Validates a target URL, resolves its host once and checks every address it resolves to.
+ * Returns the address the connection must use (AUD-11: the checked address is the one connected to).
+ * Throws if the URL resolves to an internal/private/loopback/cloud metadata IP.
  */
-export async function validateSafeUrl(urlString: string, allowedHostnames?: string[]): Promise<URL> {
+export async function resolveSafeTarget(
+  urlString: string,
+  allowedHostnames?: string[],
+  resolver: HostResolver = systemResolver,
+): Promise<SafeTarget> {
   let url: URL;
   try {
     url = new URL(urlString);
@@ -110,7 +132,7 @@ export async function validateSafeUrl(urlString: string, allowedHostnames?: stri
 
   // Check against optional allowlist
   if (allowedHostnames && allowedHostnames.length > 0) {
-    const isAllowed = allowedHostnames.some(allowed => 
+    const isAllowed = allowedHostnames.some(allowed =>
       hostname === allowed.toLowerCase() || hostname.endsWith(`.${allowed.toLowerCase()}`)
     );
     if (!isAllowed) {
@@ -123,23 +145,25 @@ export async function validateSafeUrl(urlString: string, allowedHostnames?: stri
     throw new Error(`SSRF Prevention: Access to localhost or metadata services is strictly forbidden.`);
   }
 
-  // Check if hostname is an IP literal
-  const isIP = net.isIP(hostname);
+  // Check if hostname is an IP literal (URL keeps IPv6 literals in brackets)
+  const literal = hostname.replace(/^\[|\]$/g, '');
+  const isIP = net.isIP(literal);
   if (isIP === 4) {
-    if (isPrivateOrReservedIPv4(hostname)) {
-      throw new Error(`SSRF Prevention: Access to private/reserved IP (${hostname}) is strictly forbidden.`);
+    if (isPrivateOrReservedIPv4(literal)) {
+      throw new Error(`SSRF Prevention: Access to private/reserved IP (${literal}) is strictly forbidden.`);
     }
-    return url;
+    return { url, address: literal, family: 4 };
   } else if (isIP === 6) {
-    if (isPrivateOrReservedIPv6(hostname)) {
-      throw new Error(`SSRF Prevention: Access to private/reserved IPv6 (${hostname}) is strictly forbidden.`);
+    if (isPrivateOrReservedIPv6(literal)) {
+      throw new Error(`SSRF Prevention: Access to private/reserved IPv6 (${literal}) is strictly forbidden.`);
     }
-    return url;
+    return { url, address: literal, family: 6 };
   }
 
-  // Resolve DNS to verify all underlying IP addresses
+  // Resolve DNS once and verify all underlying IP addresses
+  let pinned: SafeTarget | null = null;
   try {
-    const lookupResults = await dns.lookup(hostname, { all: true });
+    const lookupResults = await resolver(hostname);
     if (!lookupResults || lookupResults.length === 0) {
       throw new Error(`Unable to resolve host: ${hostname}`);
     }
@@ -153,7 +177,10 @@ export async function validateSafeUrl(urlString: string, allowedHostnames?: stri
         if (isPrivateOrReservedIPv6(record.address)) {
           throw new Error(`SSRF Prevention: Host ${hostname} resolves to forbidden IPv6 ${record.address}.`);
         }
+      } else {
+        throw new Error(`SSRF Prevention: Host ${hostname} resolves to an unrecognised address ${record.address}.`);
       }
+      pinned ??= { url, address: record.address, family: record.family === 6 ? 6 : 4 };
     }
   } catch (err) {
     if (errorMessage(err).includes('SSRF Prevention')) {
@@ -162,32 +189,124 @@ export async function validateSafeUrl(urlString: string, allowedHostnames?: stri
     throw new Error(`DNS resolution failed for host ${hostname}: ${errorMessage(err)}`, { cause: err });
   }
 
-  return url;
+  return pinned!;
+}
+
+/**
+ * Validates a target URL and checks DNS resolution to prevent SSRF attacks.
+ * Throws an Error if the URL resolves to an internal/private/loopback/cloud metadata IP.
+ */
+export async function validateSafeUrl(urlString: string, allowedHostnames?: string[], resolver?: HostResolver): Promise<URL> {
+  return (await resolveSafeTarget(urlString, allowedHostnames, resolver)).url;
+}
+
+type LookupCallback = (err: NodeJS.ErrnoException | null, address: string | Array<{ address: string; family: number }>, family?: number) => void;
+
+/**
+ * A socket `lookup` that never asks DNS again: it answers with the address that was checked,
+ * and only for the hostname that was checked.
+ */
+export function pinnedLookup(target: SafeTarget) {
+  const expected = target.url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  return (hostname: string, options: { all?: boolean } | number | undefined, callback: LookupCallback): void => {
+    if (hostname.toLowerCase() !== expected) {
+      callback(Object.assign(new Error(`SSRF Prevention: unexpected lookup for ${hostname}.`), { code: 'ENOTFOUND' }), '');
+      return;
+    }
+    if (typeof options === 'object' && options?.all) callback(null, [{ address: target.address, family: target.family }]);
+    else callback(null, target.address, target.family);
+  };
+}
+
+/** Options for http(s).request: the original hostname (Host header, TLS SNI and certificate check) on the pinned address. */
+export function pinnedRequestOptions(target: SafeTarget, method: string, headers: Record<string, string>): https.RequestOptions {
+  const { url } = target;
+  const hostname = url.hostname.replace(/^\[|\]$/g, '');
+  return {
+    protocol: url.protocol,
+    hostname,
+    port: url.port || (url.protocol === 'https:' ? 443 : 80),
+    path: `${url.pathname}${url.search}`,
+    method,
+    headers,
+    lookup: pinnedLookup(target) as unknown as net.LookupFunction,
+    agent: false,
+    ...(url.protocol === 'https:' && !net.isIP(hostname) ? { servername: hostname } : {}),
+  };
+}
+
+function requestBody(body: RequestInit['body']): Buffer | undefined {
+  if (body == null) return undefined;
+  if (typeof body === 'string') return Buffer.from(body);
+  if (body instanceof URLSearchParams) return Buffer.from(body.toString());
+  if (body instanceof ArrayBuffer) return Buffer.from(body);
+  if (ArrayBuffer.isView(body)) return Buffer.from(body.buffer, body.byteOffset, body.byteLength);
+  throw new Error('safeFetch: unsupported request body type (use a string, URLSearchParams or bytes).');
+}
+
+function decoded(res: http.IncomingMessage): Readable {
+  const encoding = String(res.headers['content-encoding'] || '').toLowerCase();
+  if (encoding === 'gzip' || encoding === 'x-gzip') return res.pipe(zlib.createGunzip());
+  if (encoding === 'deflate') return res.pipe(zlib.createInflate());
+  if (encoding === 'br') return res.pipe(zlib.createBrotliDecompress());
+  return res;
+}
+
+/** Sends the request to the pinned address. Does not validate: call resolveSafeTarget first. */
+export function requestPinned(target: SafeTarget, init: RequestInit = {}, signal?: AbortSignal): Promise<Response> {
+  const headers: Record<string, string> = {};
+  new Headers(init.headers).forEach((value, key) => { headers[key] = value; });
+  headers['accept-encoding'] ??= 'gzip, deflate, br';
+  const payload = requestBody(init.body);
+  if (payload) headers['content-length'] = String(payload.length);
+  const method = (init.method || 'GET').toUpperCase();
+  const transport = target.url.protocol === 'https:' ? https : http;
+
+  return new Promise<Response>((resolve, reject) => {
+    const req = transport.request(pinnedRequestOptions(target, method, headers), res => {
+      const status = res.statusCode || 0;
+      if (status >= 300 && status < 400 && res.headers.location) {
+        res.resume();
+        reject(new Error(`safeFetch: redirect to ${res.headers.location} refused (redirects are not followed).`));
+        return;
+      }
+      const responseHeaders = new Headers();
+      for (const [key, value] of Object.entries(res.headers)) {
+        if (value === undefined || key === 'content-encoding' || key === 'content-length') continue;
+        for (const v of Array.isArray(value) ? value : [value]) responseHeaders.append(key, v);
+      }
+      const noBody = method === 'HEAD' || status === 204 || status === 304;
+      if (noBody) res.resume();
+      const stream = noBody ? null : Readable.toWeb(decoded(res)) as ReadableStream<Uint8Array>;
+      try {
+        resolve(new Response(stream, { status, statusText: res.statusMessage, headers: responseHeaders }));
+      } catch (err) {
+        reject(err);
+      }
+    });
+    const onAbort = () => req.destroy(new Error(`safeFetch: request to ${target.url.host} timed out.`));
+    if (signal?.aborted) onAbort();
+    signal?.addEventListener('abort', onAbort, { once: true });
+    req.on('error', reject);
+    req.on('close', () => signal?.removeEventListener('abort', onAbort));
+    req.end(payload);
+  });
 }
 
 /**
  * SSRF-Safe HTTP Fetch wrapper.
- * Rejects access to internal metadata, loopback, private networks, and disables automatic redirects.
+ * Rejects access to internal metadata, loopback and private networks, connects to the exact
+ * address that was checked (no second DNS lookup) and refuses redirects.
  */
 export async function safeFetch(inputUrl: string, options: SafeFetchOptions = {}): Promise<Response> {
-  const { allowedHostnames, timeoutMs = 10000, ...fetchOptions } = options;
+  const { allowedHostnames, timeoutMs = 10000, resolver, ...fetchOptions } = options;
 
-  await validateSafeUrl(inputUrl, allowedHostnames);
-
-  // Disable automatic redirects to prevent open-redirect SSRF bounces
-  const fetchConfig: RequestInit = {
-    ...fetchOptions,
-    redirect: 'error' // Disallow redirect bouncing to internal metadata
-  };
+  const target = await resolveSafeTarget(inputUrl, allowedHostnames, resolver);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  fetchConfig.signal = controller.signal;
-
   try {
-    // eslint-disable-next-line no-restricted-syntax
-    const response = await fetch(inputUrl, fetchConfig);
-    return response;
+    return await requestPinned(target, fetchOptions, controller.signal);
   } finally {
     clearTimeout(timeoutId);
   }

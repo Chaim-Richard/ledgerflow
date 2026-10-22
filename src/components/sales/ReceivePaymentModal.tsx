@@ -1,3 +1,4 @@
+import { currencyDigits, minorToMajor, minorUnitRate } from '../../lib/currencyMinorUnits';
 import { useDialog } from '../../hooks/useDialog';
 import { operationIdFor } from '../../lib/serverAction';
 import React, { useRef, useState, useMemo, useEffect } from 'react';
@@ -55,6 +56,8 @@ export default function ReceivePaymentModal({
   const homeCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   // L-192: the rate on the payment day for a foreign document (what really reached the bank)
   const [dayRate, setDayRate] = useState<number | null>(null);
+  // BM-06: where the day's rate came from, sent with the payment
+  const [dayRateSource, setDayRateSource] = useState<'typed' | 'last-used' | 'live' | 'books-on-date'>('typed');
   const [withholding, setWithholding] = useState<Withholding | null>(null); // IL-5
   const [rateTyped, setRateTyped] = useState(false);
 
@@ -123,36 +126,31 @@ export default function ReceivePaymentModal({
     if (defaultDocumentId && openDocs.some(d => d.id === defaultDocumentId)) {
       const target = openDocs.find(d => d.id === defaultDocumentId);
       if (target) {
-        setAmountDollars((target.remainingCents / 100).toFixed(2));
-        setAllocationsMap({ [defaultDocumentId]: (target.remainingCents / 100).toFixed(2) });
+        const own = currencyDigits(target.currency);
+        setAmountDollars(minorToMajor(target.remainingCents, target.currency).toFixed(own));
+        setAllocationsMap({ [defaultDocumentId]: minorToMajor(target.remainingCents, target.currency).toFixed(own) });
       }
     }
   }, [defaultDocumentId, openDocs]);
 
-  const paymentAmountCents = useMemo(() => {
-    const parsed = parseFloat(amountDollars);
-    return isNaN(parsed) || parsed <= 0 ? 0 : Math.round(parsed * 100);
-  }, [amountDollars]);
-
-  const totalAllocatedCents = useMemo(() => {
-    return Object.values(allocationsMap).reduce((sum, val) => {
-      const p = parseFloat(val);
-      return sum + (isNaN(p) || p <= 0 ? 0 : Math.round(p * 100));
-    }, 0);
-  }, [allocationsMap]);
-
-  const unappliedCents = Math.max(0, paymentAmountCents - totalAllocatedCents);
-
   // the currency of what is being paid: the documents chosen (one payment is one currency)
   const payDoc = openDocs.find(d => parseFloat(allocationsMap[d.id] || '') > 0) || openDocs.find(d => d.id === defaultDocumentId);
   const payCurrency = payDoc?.currency || homeCurrency;
+  // BM-04: amounts typed in the payment's currency, in its own decimals (whole yen, three-decimal dinars)
+  const digits = currencyDigits(payCurrency);
+  const toMinor = (text: string) => { const p = parseFloat(text); return isNaN(p) || p <= 0 ? 0 : Math.round(p * 10 ** digits); };
+  const paymentAmountCents = toMinor(amountDollars);
+  const totalAllocatedCents = Object.values(allocationsMap).reduce((sum, val) => sum + toMinor(val), 0);
+
+  const unappliedCents = Math.max(0, paymentAmountCents - totalAllocatedCents);
+
   const isForeign = payCurrency !== homeCurrency;
   const rateNote = useSuggestedRate({
     currency: payCurrency, homeCurrency, enabled: isForeign && !rateTyped,
-    docs: [...(invoices || []), ...(bills || [])], onRate: rate => setDayRate(rate), date,
+    docs: [...(invoices || []), ...(bills || [])], onRate: (rate, from) => { setDayRate(rate); setDayRateSource(from.source); }, date,
   });
-  const bookedCents = payDoc ? Math.round(paymentAmountCents * payDoc.rate) : 0;
-  const arrivedCents = dayRate ? Math.round(paymentAmountCents * dayRate) : bookedCents;
+  const bookedCents = payDoc ? Math.round(paymentAmountCents * minorUnitRate(payDoc.rate, payCurrency, homeCurrency)) : 0;
+  const arrivedCents = dayRate ? Math.round(paymentAmountCents * minorUnitRate(dayRate, payCurrency, homeCurrency)) : bookedCents;
   const fxCents = (direction === 'received' ? 1 : -1) * (arrivedCents - bookedCents);
 
   const handleAutoAllocate = () => {
@@ -162,7 +160,7 @@ export default function ReceivePaymentModal({
     for (const docItem of openDocs) {
       if (remainingToDistribute <= 0) break;
       const alloc = Math.min(docItem.remainingCents, remainingToDistribute);
-      nextMap[docItem.id] = (alloc / 100).toFixed(2);
+      nextMap[docItem.id] = minorToMajor(alloc, payCurrency).toFixed(digits);
       remainingToDistribute -= alloc;
     }
 
@@ -200,7 +198,7 @@ export default function ReceivePaymentModal({
       const allocations: { documentId: string; documentType: 'invoice' | 'bill'; amountCents: number }[] = [];
       Object.entries(allocationsMap).forEach(([docId, valStr]) => {
         const p = parseFloat(valStr);
-        const cents = isNaN(p) || p <= 0 ? 0 : Math.round(p * 100);
+        const cents = isNaN(p) || p <= 0 ? 0 : Math.round(p * 10 ** digits);
         if (cents > 0) {
           allocations.push({
             documentId: docId,
@@ -225,7 +223,7 @@ export default function ReceivePaymentModal({
           vendorId: contactType === 'vendor' ? contactId : undefined,
           entityName: contactName,
           cashAccountId: depositAccountId,
-          ...(isForeign && dayRate ? { paymentExchangeRate: dayRate } : {}),
+          ...(isForeign && dayRate ? { paymentExchangeRate: dayRate, paymentRateSource: dayRateSource } : {}),
           ...(direction === 'made' && withholding ? { withheldCents: withholding.withheldCents, withholdingRatePercent: withholding.ratePercent, ...(withholding.certificate ? { withholdingCertificate: withholding.certificate } : {}) } : {}),
           allocations: allocations.map(a => ({
             documentId: a.documentId,
@@ -378,7 +376,7 @@ export default function ReceivePaymentModal({
                   {homeCurrency} for 1 {payCurrency} on the payment day
                 </label>
                 <input id="pay-day-rate" type="number" step="0.000001" min="0" placeholder={String(payDoc?.rate || '')}
-                  value={dayRate ?? ''} onChange={e => { setRateTyped(true); const n = parseFloat(e.target.value); setDayRate(Number.isFinite(n) && n > 0 ? n : null); }}
+                  value={dayRate ?? ''} onChange={e => { setRateTyped(true); setDayRateSource('typed'); const n = parseFloat(e.target.value); setDayRate(Number.isFinite(n) && n > 0 ? n : null); }}
                   className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono" />
                 <p className="mt-1 text-[11px] text-[var(--muted)]" role="status">
                   {dayRate
@@ -498,7 +496,7 @@ export default function ReceivePaymentModal({
                         type="number"
                         step="0.01"
                         min="0"
-                        max={(docItem.remainingCents / 100).toFixed(2)}
+                        max={minorToMajor(docItem.remainingCents, docItem.currency).toFixed(currencyDigits(docItem.currency))}
                         placeholder="0.00"
                         value={allocationsMap[docItem.id] || ''}
                         onChange={e => {
@@ -516,7 +514,7 @@ export default function ReceivePaymentModal({
 
           {direction === 'made' && !isForeign && contactId && (
             <WithholdingField vendor={vendors.find(v => v.id === contactId)} date={date} bills={bills || []} currency={payCurrency}
-              allocations={Object.fromEntries(Object.entries(allocationsMap).map(([k, v]) => [k, Math.round((parseFloat(v) || 0) * 100)]))} onChange={setWithholding} />
+              allocations={Object.fromEntries(Object.entries(allocationsMap).map(([k, v]) => [k, toMinor(v)]))} onChange={setWithholding} />
           )}
 
           {/* Payment Summary Footer */}

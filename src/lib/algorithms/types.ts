@@ -10,7 +10,9 @@ export type AlgoInput =
   | { kind: 'dateRange'; key: string; label: string; defaultValue: { start: string; end: string } }
   | { kind: 'select'; key: string; label: string; options: { value: string; label: string }[]; defaultValue: string }
   | { kind: 'boolean'; key: string; label: string; defaultValue: boolean }
-  | { kind: 'account'; key: string; label: string; defaultValue?: string; multiple?: boolean };
+  | { kind: 'account'; key: string; label: string; defaultValue?: string; multiple?: boolean }
+  /** AUD-14: text the person pastes (a receipt's lines) */
+  | { kind: 'text'; key: string; label: string; defaultValue: string; placeholder?: string };
 
 export interface AlgoResultRow {
   [key: string]: unknown;

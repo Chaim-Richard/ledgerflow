@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Lint, Typecheck, and Test
+    name: Lint, Typecheck, and Database rules
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -76,6 +76,9 @@ jobs:
       - name: Test ESLint warning ratchet
         run: node --test scripts/eslint-warning-ratchet.test.mjs
 
+      - name: Test the coverage merge of the unit shards
+        run: node --test scripts/coverage-merge.test.mjs
+
       - name: ESLint (errors fail; warnings may not exceed --max-warnings in package.json)
         run: npm run lint:eslint
 
@@ -85,48 +88,19 @@ jobs:
       - name: Database security rules tests
         run: npm run test:rules
 
-      - name: Run Accounting & Security Test Suites (with the coverage gate; it only goes up)
-        run: npm run test:cov
-
       - name: Security audit
         run: npm audit --audit-level=high
 
-  # Build the exact deployable artifacts rather than relying on a separate hosting status.
-  build:
-    name: Production build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci
-        env:
-          NODE_ENV: development
-          npm_config_production: false
-          HUSKY: 0
-      - name: Build production client and server
-        run: npm run build
-      - name: Confirm deployable artifacts exist
-        run: |
-          test -s dist/index.html
-          test -s build/server.cjs
-
-  # The whole unit suite again in a time zone ahead of and one behind UTC, in parallel with the
-  # job above (run one after the other they took the job past its time limit).
-  timezones:
-    name: Unit tests in ${{ matrix.tz }}
+  # The unit suite in four parallel parts (audit 22 Oct, §7.1: the single run was 14 of the 16 minutes every change
+  # waited for). Each part writes its coverage; the next job merges them and applies the same thresholds.
+  unit:
+    name: Unit tests ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        tz: [Pacific/Auckland, America/Los_Angeles]
+        shard: [1, 2, 3, 4]
 
     services:
       postgres:
@@ -165,19 +139,137 @@ jobs:
       - name: Prepare the test database (Supabase migrations)
         run: npm run db:test-setup
 
-      - name: Unit tests
-        run: npm test
+      - name: Unit tests, this part (with coverage)
+        run: npm run test:shard:cov
+        env:
+          TEST_SHARD: ${{ matrix.shard }}/4
+          TEST_SHARD_INDEX: ${{ matrix.shard }}
+
+      - name: Keep this part's coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-shard-${{ matrix.shard }}
+          path: coverage/shard-${{ matrix.shard }}.lcov
+          if-no-files-found: error
+          retention-days: 3
+
+  # One check for the whole unit suite: every part passed, and the merged coverage meets the thresholds (it only goes up).
+  unit_gate:
+    name: Accounting & Security Test Suites (coverage gate)
+    if: always()
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every part to pass
+        env:
+          UNIT_RESULT: ${{ needs.unit.result }}
+        run: test "$UNIT_RESULT" = success
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Collect the coverage of the four parts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-shard-*
+          path: coverage
+          merge-multiple: true
+
+      - name: Coverage gate (all parts merged)
+        run: |
+          test "$(ls coverage/shard-*.lcov | wc -l)" -eq 4
+          npm run coverage:gate
+
+  # Build the exact deployable artifacts rather than relying on a separate hosting status.
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_ENV: development
+          npm_config_production: false
+          HUSKY: 0
+      - name: Build production client and server
+        run: npm run build
+      - name: Confirm deployable artifacts exist
+        run: |
+          test -s dist/index.html
+          test -s build/server.cjs
+
+  # The whole unit suite again in a time zone ahead of and one behind UTC, in parallel with the
+  # job above (run one after the other they took the job past its time limit).
+  timezones:
+    name: Unit tests in ${{ matrix.tz }} (${{ matrix.shard }}/2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        tz: [Pacific/Auckland, America/Los_Angeles]
+        shard: [1, 2]
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lf_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      LF_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/lf_test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_ENV: development
+          npm_config_production: false
+          HUSKY: 0
+
+      - name: Prepare the test database (Supabase migrations)
+        run: npm run db:test-setup
+
+      - name: Unit tests, this part
+        run: npm run test:shard
         env:
           TZ: ${{ matrix.tz }}
+          TEST_SHARD: ${{ matrix.shard }}/2
 
   e2e_shards:
-    name: Browser shard ${{ matrix.shard }}/2
+    name: Browser shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
 
     services:
       postgres:
@@ -226,7 +318,7 @@ jobs:
           PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/playwright-results-${{ matrix.shard }}.json
         run: |
           set +e
-          npm run test:e2e -- --shard=${{ matrix.shard }}/2 --reporter=list,json,blob
+          npm run test:e2e -- --shard=${{ matrix.shard }}/4 --reporter=list,json,blob
           browser_exit=$?
           node scripts/playwright-ci-feedback.mjs "$PLAYWRIGHT_JSON_OUTPUT_NAME"
           exit "$browser_exit"
@@ -258,7 +350,7 @@ jobs:
       - run: npm ci
         env:
           HUSKY: 0
-      - name: Download both shard reports
+      - name: Download every shard report
         uses: actions/download-artifact@v4
         with:
           pattern: playwright-shard-*

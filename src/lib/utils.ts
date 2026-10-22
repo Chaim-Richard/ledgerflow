@@ -1,3 +1,4 @@
+import { currencyDigits } from './currencyMinorUnits';
 import { moneyText, type MoneyDisplaySettings } from './moneyFormat';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -28,26 +29,12 @@ export function parseAmountToCents(val: string | number | undefined | null): num
   return new Decimal(cleanStr).mul(100).round().toNumber();
 }
 
-/**
- * Known 3-decimal currencies per ISO 4217:
- * KWD (Kuwaiti Dinar), BHD (Bahraini Dinar), OMR (Omani Rial),
- * JOD (Jordanian Dinar), TND (Tunisian Dinar), LYD (Libyan Dinar), IQD (Iraqi Dinar).
- */
-export const THREE_DECIMAL_CURRENCIES = new Set(['BHD', 'JOD', 'KWD', 'LYD', 'OMR', 'TND', 'IQD']);
+/** Known 3-decimal currencies per ISO 4217 (KWD, BHD, OMR, JOD, TND, LYD, IQD); one list with the storage rule (BM-04). */
+export { THREE_DECIMAL_CURRENCIES, amountStep, minorToMajor } from './currencyMinorUnits';
 
+/** The decimals amounts in this currency are stored and shown with (BM-04: src/lib/currencyMinorUnits.ts). */
 export function getCurrencyFractionDigits(currency?: string): number {
-  const code = currency?.toUpperCase();
-  if (code && THREE_DECIMAL_CURRENCIES.has(code)) {
-    return 3;
-  }
-  if (!code) return 2;
-  try {
-    const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: code });
-    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits;
-    return typeof fractionDigits === 'number' ? fractionDigits : 2;
-  } catch {
-    return 2;
-  }
+  return currencyDigits(currency);
 }
 
 export function getCurrencyDivisor(currency?: string): number {

@@ -243,6 +243,15 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
                            </select>
                          )}
                          
+                         {kind === 'text' && (
+                           <textarea aria-label={inp.label} rows={8}
+                             value={(params[inp.key] as string | undefined) || ''}
+                             placeholder={(inp as { placeholder?: string }).placeholder}
+                             onChange={e => setParams({...params, [inp.key]: e.target.value})}
+                             className="w-full p-2 border border-[var(--line)] rounded-lg bg-[var(--panel)] text-[var(--text)] text-xs font-mono"
+                           />
+                         )}
+
                          {kind === 'dateRange' && (
                            <div className="grid grid-cols-2 gap-2">
                              <input aria-label={`${inp.label} start date`}

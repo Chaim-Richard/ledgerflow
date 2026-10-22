@@ -161,9 +161,7 @@ You MUST output a valid JSON object matching this schema exactly:
         const { credits: weightScore, cents: deltaCents } = calculateWorkspaceCharges(wsData, baseWeight, baseCents, isCustomKeyUsed);
 
         const currentCents = wsData.apiQuotaTotalCentsUsed || 0;
-        const currentQueries = wsData.totalQueriesThisMonth || 0;
         const currentHardness = wsData.computeHardnessScore || 0;
-        const currentCredit = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 100000;
 
         await wsRef.update({
           apiQuotaTotalCentsUsed: currentCents + deltaCents,
@@ -199,7 +197,7 @@ You MUST output a valid JSON object matching this schema exactly:
       let parsedJson: unknown;
       try {
         parsedJson = JSON.parse(responseText);
-      } catch (e) {
+      } catch {
         parsedJson = { analysis: responseText };
       }
 
@@ -261,9 +259,7 @@ You MUST output a valid JSON object matching this schema exactly:
           const { credits: weightScore, cents: deltaCents } = calculateWorkspaceCharges(wsData, baseWeight, baseCents, false);
 
           const currentCents = wsData.apiQuotaTotalCentsUsed || 0;
-          const currentQueries = wsData.totalQueriesThisMonth || 0;
           const currentHardness = wsData.computeHardnessScore || 0;
-          const currentCredit = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 100000;
 
           await wsRef.update({
             apiQuotaTotalCentsUsed: currentCents + deltaCents,

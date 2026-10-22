@@ -39,7 +39,7 @@ class AIService {
       try {
         const err = await response.json();
         message = err.error?.message || err.message || message;
-      } catch (e) {
+      } catch {
         try {
           const rawText = await response.text();
           if (rawText && rawText.length < 200) {
@@ -47,7 +47,7 @@ class AIService {
           } else {
             message = `HTTP Error ${response.status} ${response.statusText}`;
           }
-        } catch (_textErr) {
+        } catch {
           // Ignore text parsing fallback error
         }
       }
@@ -68,7 +68,7 @@ class AIService {
   async generateStrategicAnalysis(
     mode: 'growth' | 'stability' | 'tax-optimization' | 'exit',
     data: { metrics: AnalyticalMetrics; projects: Project[] },
-    userApiKey?: string
+    _userApiKey?: string
   ): Promise<StrategicDirectives> {
     try {
       return await this.callBackend<StrategicDirectives>('strategic-analysis', { mode, data });
@@ -79,10 +79,10 @@ class AIService {
     }
   }
 
-  async generateForecast(transactions: Transaction[], horizon: number, userApiKey?: string) {
+  async generateForecast(transactions: Transaction[], horizon: number, _userApiKey?: string) {
     try {
       return await this.callBackend<{ points: { date: string; value: number }[]; confidence: number | null; degraded?: boolean; anomalies: unknown[] }>('generate-forecast', { transactions, horizon });
-    } catch (error) {
+    } catch {
       return {
         points: transactions.map(t => ({ date: t.date, value: t.totalAmountCents / 100 })),
         confidence: null,
@@ -95,7 +95,7 @@ class AIService {
   async mapTransactions(transactions: Transaction[], accounts: ChartAccount[], context: string) {
     try {
       return await this.callBackend<Transaction[]>('map-transactions', { transactions, accounts, context });
-    } catch (error) {
+    } catch {
       return [];
     }
   }
@@ -103,7 +103,7 @@ class AIService {
   async analyzeTrends(transactions: Transaction[], context: string) {
     try {
       return await this.callBackend<{ trends: unknown[]; anomalies: unknown[]; strategicAdvice: string[] }>('analyze-trends', { transactions, context });
-    } catch (error) {
+    } catch {
       return { trends: [], anomalies: [], strategicAdvice: ["AI analysis layer encountered an anomaly."] };
     }
   }
@@ -116,7 +116,7 @@ class AIService {
 
     try {
       return await this.callBackend<ReturnType<typeof IntentResolver.resolve>>('parse-query', { query, context, categories, projects });
-    } catch (error) {
+    } catch {
       return {};
     }
   }
@@ -124,7 +124,7 @@ class AIService {
   async parseMagicEntry(input: string, categories: string[] = [], accounts: ChartAccount[] = [], projects: string[] = [], patternContext: string = "") {
     try {
       return await this.callBackend<ResolvedEntry[]>('parse-magic-entry', { input, categories, accounts, projects, patternContext });
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -142,7 +142,7 @@ class AIService {
         mimeType: file.type, 
         context: labels.join(', ') + (heuristicCache ? JSON.stringify(heuristicCache) : '')
       });
-    } catch (error) {
+    } catch {
        return null;
     }
   }
@@ -179,7 +179,7 @@ class AIService {
   }> {
     try {
       return await this.callBackend('parse-personal-tax-profile', { message });
-    } catch (error) {
+    } catch {
       // Fallback in case of server offline/not responding during dev
       const text = message.toLowerCase();
       let filingStatus: 'Single' | 'Married Filing Jointly' | 'Married Filing Separately' | 'Head of Household' = 'Single';

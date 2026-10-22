@@ -21,7 +21,7 @@ const populateUserAuth = async (req: express.Request, res: express.Response, nex
     try {
       const decoded = await verifyIdToken(token);
       (req as UserRequest).user = decoded;
-    } catch (e) {
+    } catch {
       // Ignore token decoding failure for public GET lookup
     }
   }

@@ -12,6 +12,11 @@ describe('Quality Ratchet Suite', () => {
     const baseline: QualityMetrics = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
     const current = computeQualityMetrics();
 
+    // every metric must have a baseline: a metric missing from the file (renamed, or added without one) would
+    // otherwise never be checked at all (audit 22 Oct, §5.4)
+    const missing = Object.keys(current).filter(key => !(key in baseline));
+    assert.deepEqual(missing, [], `metrics with no baseline in quality-baseline.json: ${missing.join(', ')} (run scripts/update-ratchet.ts)`);
+
     for (const key of Object.keys(current) as (keyof QualityMetrics)[]) {
       const currentVal = current[key];
       const baselineVal = baseline[key];

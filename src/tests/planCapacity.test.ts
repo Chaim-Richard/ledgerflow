@@ -160,7 +160,7 @@ describe('Server Plan Capacity Middleware (402 Payment Required Enforcement)', (
       collection: (col: string) => {
         if (col === 'workspaces') {
           return {
-            doc: (id: string) => ({
+            doc: (_id: string) => ({
               get: async () => ({
                 exists: true,
                 data: () => ({ plan: 'free', members: ['user-1'] })

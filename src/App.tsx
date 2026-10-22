@@ -52,9 +52,6 @@ export default function App() {
   const [legalModalTab, setLegalModalTab] = useState<'terms' | 'privacy'>('privacy');
   const user = useAuthStore(state => state.user);
   const setUser = useAuthStore(state => state.setUser);
-  const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
-  const workspaces = useAuthStore(state => state.workspaces);
-  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId);
 
   
   const language = useUIStore(state => state.language);
@@ -146,12 +143,11 @@ export default function App() {
   const isArchitectureOpen = useUIStore(state => state.isArchitectureOpen);
   const setArchitectureOpen = useUIStore(state => state.setArchitectureOpen);
   const toggleFocusMode = useUIStore(state => state.toggleFocusMode);
-  const setTemplateSelectorOpen = useUIStore(state => state.setTemplateSelectorOpen);
 
   // High-Performance Data Ingress
   useLedgerData();
-  const txActions = useTransactionActions();
-  const ai = useAIActions();
+  useTransactionActions();
+  useAIActions();
   
   const { handleAction } = useCommandDispatcher();
   
