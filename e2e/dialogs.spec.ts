@@ -45,6 +45,50 @@ test.describe('Dialogs', () => {
       await expect(dialog).toBeVisible();
       await page.waitForTimeout(600); // entrance animation
       expect(await dialog.evaluate(el => el.contains(document.activeElement))).toBe(true);
+
+      // D-51: the tested dialogs keep keyboard focus in the real tab order and expose the shared
+      // visible focus ring. Exercise both ends, not just the initial autofocus.
+      const focusable = dialog.locator([
+        'button:not([disabled]):visible',
+        'input:not([disabled]):visible',
+        'select:not([disabled]):visible',
+        'textarea:not([disabled]):visible',
+        'a[href]:visible',
+        '[tabindex]:not([tabindex="-1"]):visible',
+      ].join(', '));
+      const focusableCount = await focusable.count();
+      expect(focusableCount, `${d.name} needs at least two keyboard stops`).toBeGreaterThanOrEqual(2);
+      const first = focusable.first();
+      const second = focusable.nth(1);
+      const last = focusable.nth(focusableCount - 1);
+      await first.focus();
+      await page.keyboard.press('Tab');
+      await expect(second).toBeFocused();
+      const visibleFocus = await second.evaluate(element => ({
+        keyboard: element.matches(':focus-visible'),
+        outlineWidth: Number.parseFloat(getComputedStyle(element).outlineWidth),
+        outlineStyle: getComputedStyle(element).outlineStyle,
+        boxShadow: getComputedStyle(element).boxShadow,
+        outlineColor: getComputedStyle(element).outlineColor,
+      }));
+      expect(visibleFocus.keyboard, `${d.name} next tab stop is keyboard-focused`).toBe(true);
+      const indicator = await second.evaluate(element => {
+        const style = getComputedStyle(element);
+        const outline = style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) >= 2
+          && style.outlineColor !== 'rgba(0, 0, 0, 0)' && style.outlineColor !== 'transparent';
+        const colors = [...style.boxShadow.matchAll(/rgba?\(([^)]+)\)/g)].map(match => match[1].split(',').map(part => Number.parseFloat(part.trim())));
+        const shadow = colors.some(parts => parts.slice(0, 3).some(channel => channel > 0) && (parts.length < 4 || parts[3] > 0));
+        return outline || shadow;
+      });
+      expect(indicator, `${d.name} has a visible keyboard focus indicator (${JSON.stringify(visibleFocus)})`).toBe(true);
+      await page.keyboard.press('Shift+Tab');
+      await expect(first).toBeFocused();
+      await last.focus();
+      await page.keyboard.press('Tab');
+      await expect(first).toBeFocused();
+      await page.keyboard.press('Shift+Tab');
+      await expect(last).toBeFocused();
+
       const results = await new AxeBuilder({ page }).include('[role="dialog"]').disableRules(['color-contrast']).analyze();
       expect(results.violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
       await page.keyboard.press('Escape');
