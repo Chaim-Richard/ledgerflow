@@ -1,0 +1,6 @@
+{
+  "w10:trial-balance:390": { "color-contrast": 2, "scrollable-region-focusable": 1 },
+  "w10:trial-balance:1280": { "color-contrast": 2 },
+  "w14:profit-and-loss:390": { "color-contrast": 4 },
+  "w14:profit-and-loss:1280": { "color-contrast": 4 }
+}

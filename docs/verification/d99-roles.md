@@ -65,3 +65,11 @@ changing the books requires the owner, accountant or bookkeeper role"*.
   this test (G-24 owns the authenticated journey).
 - Stub messages in the fixture are not the assertion; the assertion is the screens' own gating and
   the server lists read from source.
+
+## Accessibility findings
+
+Axe on the last screen of the journey (the profit & loss statement, viewer signed in) finds **serious**
+`color-contrast` issues: **4 nodes** at both widths, on the statement's small upper-case labels and
+muted figures in light mode. They are recorded in `e2e/journey-a11y-baseline.json` (may only go down)
+and reported to the lead with the same finding from D-98: the contrast suite measures the Reports
+tab's landing screen, so the statements' own text had never been measured in CI.

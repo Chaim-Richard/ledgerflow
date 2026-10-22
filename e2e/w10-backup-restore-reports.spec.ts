@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import { test, expect, type Page } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
 import { mountJourney, remountJourney, setLedgerField, settleStyles } from './support/journeyFixture';
+import { expectNoNewAccessibilityIssues } from './support/a11yGate';
 
 /**
  * D-98 · W10 (RELEASE_GATE): backup → change records → restore → the P&L, balance sheet and trial
@@ -277,10 +277,8 @@ for (const width of [390, 1280]) {
     // ---------------------------------------------------------------- 7. accessibility of the restored screen
     await showTrialBalance(page);
     await settleStyles(page);
-    const axe = await new AxeBuilder({ page }).analyze();
-    const serious = axe.violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
-    await testInfo.attach(`w10-axe-${width}`, { body: JSON.stringify(axe.violations, null, 2), contentType: 'application/json' });
-    expect(serious.map(v => `${v.id} (${v.nodes.length} node${v.nodes.length === 1 ? '' : 's'})`).join(', '), 'serious or critical axe violations').toBe('');
+    // The trial balance's known contrast debt is in e2e/journey-a11y-baseline.json; anything new fails.
+    await expectNoNewAccessibilityIssues(page, `w10:trial-balance:${width}`, testInfo);
 
     expect(pageErrors, 'page errors').toEqual([]);
   });

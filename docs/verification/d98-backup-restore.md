@@ -77,3 +77,20 @@ $13,600.00 with Cash 9,400.00 and Office Expense 600.00).
 - A real authenticated session against a deployed environment (G-24 / G-01 territory).
 - The PITR panel on the same Settings screen is untouched by this journey (it is a cloud-database
   feature: see the message to AI #1 in `docs/COORDINATION.md`).
+
+## Accessibility findings on the restored screen (reported, counted, not hidden)
+
+Axe on the restored trial balance finds **serious** issues that are the screen's own, not the
+journey's. They are recorded in `e2e/journey-a11y-baseline.json` with counts that may only go down,
+and reported to the lead:
+
+| Width | Rule | Nodes | What it is |
+|---|---|---|---|
+| 390 | `color-contrast` | 2 | small upper-case labels / muted figures below the contrast minimum in light mode |
+| 390 | `scrollable-region-focusable` | 1 | the trial-balance table scrolls sideways on a phone, but the scrolling area cannot be reached with a keyboard |
+| 1280 | `color-contrast` | 2 | the same labels |
+
+`e2e/contrast-baseline.json` reads 0 for `light:Reports` because the contrast suite visits the
+Reports tab's landing screen, not the statements themselves — the gap this journey found. Fixing the
+colours or the scroll container is a display change to the report screens and a visual-baseline
+refresh, so it is not done as a side effect of a test task.
