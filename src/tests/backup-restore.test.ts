@@ -77,4 +77,23 @@ describe('Backup and restore (database)', { skip: !url && 'LF_TEST_DATABASE_URL 
     await assert.rejects(restoreWorkspaceBackup(db, ws, backup), (e: unknown) => e instanceof RestoreError && e.status === 409 && /closed through 2026-08-31/.test(e.message));
     await db.collection('workspaces').doc(ws).update({ lockDate: null });
   });
+
+  test('a restore whose transaction is retried reports each record once (3 entries, not 6)', async () => {
+    const backup = await exportWorkspaceBackup(db, ws, 'owner-1');
+    // the database asks for a retry after the first attempt ran in full (a serialization conflict under load)
+    let attempt = 0;
+    const retrying = new Proxy(db, {
+      get(target, key, receiver) {
+        if (key !== 'runTransaction') return Reflect.get(target, key, receiver);
+        return async <T,>(fn: (t: unknown) => Promise<T>) => {
+          if (attempt++ === 0) await target.runTransaction(async t => { await fn(t); throw new Error('retry'); }).catch(() => undefined);
+          return target.runTransaction(fn as never);
+        };
+      },
+    }) as Firestore;
+    const result = await restoreWorkspaceBackup(retrying, ws, backup);
+    assert.equal(attempt, 1);
+    assert.equal(result.counts.transactions, backup.metadata.transactionCount);
+    assert.equal((await ids('transactions')).length, backup.metadata.transactionCount);
+  });
 });
