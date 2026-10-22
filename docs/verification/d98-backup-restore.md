@@ -101,3 +101,15 @@ contrast baseline entry, like `e2e/contrast-baseline.json`), and it is with the 
 Reports tab's landing screen, not the statements themselves — the gap this journey found. Fixing the
 colours or the scroll container is a display change to the report screens and a visual-baseline
 refresh, so it is not done as a side effect of a test task.
+
+## Verified in CI (GitHub Actions, PR #324)
+
+`Browser shard 4/4` — the shard that runs this spec, at 390 px and 1280 px — **passed**, together with
+the whole workflow: browser shards 1–4, the four unit shards in UTC, both in `Pacific/Auckland` and
+`America/Los_Angeles`, lint/typecheck/database rules, the coverage gate, the production build, CodeQL,
+the SBOM and the required "Playwright E2E Smoke Suite" check. This is the first green browser run for
+W10; the earlier PR (#323) failed its own lint check and its trial-balance figures were wrong.
+
+The assertions above were also what failed and then passed on the way there — the CI annotations for
+the intermediate runs name each failure (figures, then the accessibility gate), which is why the counts
+in the accessibility section are the real ones from those runs rather than guesses.

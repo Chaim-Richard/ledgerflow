@@ -77,3 +77,12 @@ reason (a flaky gate gets ignored). Every other serious or critical rule fails u
 `e2e/journey-a11y-baseline.json` allows it — currently one phone-only `scrollable-region-focusable` on
 the trial balance, from D-98. The gap itself is real and worth fixing: the contrast suite measures the
 Reports tab's landing screen, so the statements' own text had never been measured in CI.
+
+## Verified in CI (GitHub Actions, PR #324)
+
+`Browser shard 4/4` — which runs this spec at 390 px and 1280 px — **passed** in the same green run as
+D-98 (all four browser shards, four unit shards in UTC plus both time zones, lint/typecheck/database
+rules, the coverage gate, the build, CodeQL, the SBOM and the smoke check). The intermediate CI
+annotations are also evidence the checks bite: the first run of this journey failed at
+`E2E/w14-roles-access.spec.ts` for a real reason (a test that could not settle on a live screen) and the
+next for the measured contrast finding above — both are fixed or recorded, not silenced.
