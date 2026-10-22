@@ -1,3 +1,4 @@
+import { minorUnitRate } from '../../lib/currencyMinorUnits';
 import type { DocumentData, Firestore, Transaction } from '../db/firestore';
 import { ledgerCreate } from './ledgerDoor';
 import { FieldValue } from '../db/firestore';
@@ -89,7 +90,8 @@ export async function spreadDocument(db: Firestore, kind: SpreadKind, input: Doc
     if (docData[side.field]?.id) throw new PrepaidError(409, `This ${kind} is already spread over months`);
     const date = String(docData.date || docData.issueDate || '').slice(0, 10);
     const rate = typeof docData.exchangeRate === 'number' && docData.exchangeRate > 0 ? docData.exchangeRate : 1;
-    const docBaseCents = Math.round((Number(docData.amountCents) || 0) * rate);
+    // BM-04: the document's minor units → the books'
+    const docBaseCents = Math.round((Number(docData.amountCents) || 0) * minorUnitRate(rate, String(docData.currency || workspace.currency || 'USD'), String(workspace.currency || 'USD')));
     const spread = { date, amountCents: input.amountCents, months: input.months, startMonth: input.startMonth || date.slice(0, 7) };
     const problem = spreadProblem(spread, docBaseCents, kind);
     if (problem) throw new PrepaidError(400, problem);

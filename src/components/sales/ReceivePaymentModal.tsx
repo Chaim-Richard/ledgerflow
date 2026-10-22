@@ -1,3 +1,4 @@
+import { currencyDigits, minorToMajor, minorUnitRate } from '../../lib/currencyMinorUnits';
 import { useDialog } from '../../hooks/useDialog';
 import { operationIdFor } from '../../lib/serverAction';
 import React, { useRef, useState, useMemo, useEffect } from 'react';
@@ -122,36 +123,34 @@ export default function ReceivePaymentModal({
     if (defaultDocumentId && openDocs.some(d => d.id === defaultDocumentId)) {
       const target = openDocs.find(d => d.id === defaultDocumentId);
       if (target) {
-        setAmountDollars((target.remainingCents / 100).toFixed(2));
-        setAllocationsMap({ [defaultDocumentId]: (target.remainingCents / 100).toFixed(2) });
+        const own = currencyDigits(target.currency);
+        setAmountDollars(minorToMajor(target.remainingCents, target.currency).toFixed(own));
+        setAllocationsMap({ [defaultDocumentId]: minorToMajor(target.remainingCents, target.currency).toFixed(own) });
       }
     }
   }, [defaultDocumentId, openDocs]);
 
-  const paymentAmountCents = useMemo(() => {
-    const parsed = parseFloat(amountDollars);
-    return isNaN(parsed) || parsed <= 0 ? 0 : Math.round(parsed * 100);
-  }, [amountDollars]);
-
-  const totalAllocatedCents = useMemo(() => {
-    return Object.values(allocationsMap).reduce((sum, val) => {
-      const p = parseFloat(val);
-      return sum + (isNaN(p) || p <= 0 ? 0 : Math.round(p * 100));
-    }, 0);
-  }, [allocationsMap]);
-
-  const unappliedCents = Math.max(0, paymentAmountCents - totalAllocatedCents);
-
   // the currency of what is being paid: the documents chosen (one payment is one currency)
   const payDoc = openDocs.find(d => parseFloat(allocationsMap[d.id] || '') > 0) || openDocs.find(d => d.id === defaultDocumentId);
   const payCurrency = payDoc?.currency || homeCurrency;
+  // BM-04: amounts typed in the payment's currency, in its own decimals (whole yen, three-decimal dinars)
+  const digits = currencyDigits(payCurrency);
+  const toMinor = (text: string) => { const p = parseFloat(text); return isNaN(p) || p <= 0 ? 0 : Math.round(p * 10 ** digits); };
+  const paymentAmountCents = useMemo(() => toMinor(amountDollars), [amountDollars, digits]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const totalAllocatedCents = useMemo(() => {
+    return Object.values(allocationsMap).reduce((sum, val) => sum + toMinor(val), 0);
+  }, [allocationsMap, digits]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const unappliedCents = Math.max(0, paymentAmountCents - totalAllocatedCents);
+
   const isForeign = payCurrency !== homeCurrency;
   const rateNote = useSuggestedRate({
     currency: payCurrency, homeCurrency, enabled: isForeign && !rateTyped,
     docs: [...(invoices || []), ...(bills || [])], onRate: rate => setDayRate(rate), date,
   });
-  const bookedCents = payDoc ? Math.round(paymentAmountCents * payDoc.rate) : 0;
-  const arrivedCents = dayRate ? Math.round(paymentAmountCents * dayRate) : bookedCents;
+  const bookedCents = payDoc ? Math.round(paymentAmountCents * minorUnitRate(payDoc.rate, payCurrency, homeCurrency)) : 0;
+  const arrivedCents = dayRate ? Math.round(paymentAmountCents * minorUnitRate(dayRate, payCurrency, homeCurrency)) : bookedCents;
   const fxCents = (direction === 'received' ? 1 : -1) * (arrivedCents - bookedCents);
 
   const handleAutoAllocate = () => {
@@ -161,7 +160,7 @@ export default function ReceivePaymentModal({
     for (const docItem of openDocs) {
       if (remainingToDistribute <= 0) break;
       const alloc = Math.min(docItem.remainingCents, remainingToDistribute);
-      nextMap[docItem.id] = (alloc / 100).toFixed(2);
+      nextMap[docItem.id] = minorToMajor(alloc, payCurrency).toFixed(digits);
       remainingToDistribute -= alloc;
     }
 
@@ -199,7 +198,7 @@ export default function ReceivePaymentModal({
       const allocations: { documentId: string; documentType: 'invoice' | 'bill'; amountCents: number }[] = [];
       Object.entries(allocationsMap).forEach(([docId, valStr]) => {
         const p = parseFloat(valStr);
-        const cents = isNaN(p) || p <= 0 ? 0 : Math.round(p * 100);
+        const cents = isNaN(p) || p <= 0 ? 0 : Math.round(p * 10 ** digits);
         if (cents > 0) {
           allocations.push({
             documentId: docId,
@@ -495,7 +494,7 @@ export default function ReceivePaymentModal({
                         type="number"
                         step="0.01"
                         min="0"
-                        max={(docItem.remainingCents / 100).toFixed(2)}
+                        max={minorToMajor(docItem.remainingCents, docItem.currency).toFixed(currencyDigits(docItem.currency))}
                         placeholder="0.00"
                         value={allocationsMap[docItem.id] || ''}
                         onChange={e => {
@@ -513,7 +512,7 @@ export default function ReceivePaymentModal({
 
           {direction === 'made' && !isForeign && contactId && (
             <WithholdingField vendor={vendors.find(v => v.id === contactId)} date={date} bills={bills || []} currency={payCurrency}
-              allocations={Object.fromEntries(Object.entries(allocationsMap).map(([k, v]) => [k, Math.round((parseFloat(v) || 0) * 100)]))} onChange={setWithholding} />
+              allocations={Object.fromEntries(Object.entries(allocationsMap).map(([k, v]) => [k, toMinor(v)]))} onChange={setWithholding} />
           )}
 
           {/* Payment Summary Footer */}
