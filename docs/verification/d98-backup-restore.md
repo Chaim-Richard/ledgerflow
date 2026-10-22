@@ -86,9 +86,16 @@ and reported to the lead:
 
 | Width | Rule | Nodes | What it is |
 |---|---|---|---|
-| 390 | `color-contrast` | 2 | small upper-case labels / muted figures below the contrast minimum in light mode |
-| 390 | `scrollable-region-focusable` | 1 | the trial-balance table scrolls sideways on a phone, but the scrolling area cannot be reached with a keyboard |
+| 390 | `scrollable-region-focusable` | 1 | the trial-balance table scrolls sideways on a phone, but the scrolling area cannot be reached with a keyboard (gated by the baseline) |
+| 390 | `color-contrast` | 2 (measured; 4–6 on the P&L) | small upper-case labels / muted figures below the contrast minimum in light mode |
 | 1280 | `color-contrast` | 2 | the same labels |
+
+`scrollable-region-focusable` **fails the gate** if it appears anywhere else (baseline
+`e2e/journey-a11y-baseline.json`, which may only go down). `color-contrast` is measured and printed on
+every run but does not fail it: axe reads the colours at the instant of the scan and these screens fade
+their figures in, so the same screen reports 4 nodes on one run and 6 on the next — a gate that fails on
+that would only teach people to ignore it. The fix is a display change to the report screens (or its own
+contrast baseline entry, like `e2e/contrast-baseline.json`), and it is with the lead.
 
 `e2e/contrast-baseline.json` reads 0 for `light:Reports` because the contrast suite visits the
 Reports tab's landing screen, not the statements themselves — the gap this journey found. Fixing the

@@ -69,7 +69,11 @@ changing the books requires the owner, accountant or bookkeeper role"*.
 ## Accessibility findings
 
 Axe on the last screen of the journey (the profit & loss statement, viewer signed in) finds **serious**
-`color-contrast` issues: **4 nodes** at both widths, on the statement's small upper-case labels and
-muted figures in light mode. They are recorded in `e2e/journey-a11y-baseline.json` (may only go down)
-and reported to the lead with the same finding from D-98: the contrast suite measures the Reports
-tab's landing screen, so the statements' own text had never been measured in CI.
+`color-contrast` issues on the statement's small upper-case labels and muted figures in light mode:
+**4 nodes** at both widths on one run and **6** at 390 px on another, because the figures fade in and
+axe reads the colours at the instant of the scan. The count is printed on every run and attached to the
+report, and the same finding is written up in D-98 with the lead; it does not fail the gate for that
+reason (a flaky gate gets ignored). Every other serious or critical rule fails unless
+`e2e/journey-a11y-baseline.json` allows it — currently one phone-only `scrollable-region-focusable` on
+the trial balance, from D-98. The gap itself is real and worth fixing: the contrast suite measures the
+Reports tab's landing screen, so the statements' own text had never been measured in CI.
