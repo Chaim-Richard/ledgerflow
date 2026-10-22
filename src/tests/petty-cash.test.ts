@@ -248,6 +248,7 @@ describe('Petty cash against a real database', { skip: !url && 'LF_TEST_DATABASE
     app.use(express.json());
     app.use((req, _res, next) => { (req as unknown as { user: { uid: string; email: string } }).user = { uid: String(req.header('x-test-uid')), email: `${req.header('x-test-uid')}@test.local` }; next(); });
     app.use('/api/v1/transactions', transactionRouter);
+    app.use('/api/v1/documents', (await import('../server/routes/documentPostRoutes')).documentPostRouter);
     server = app.listen(0);
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   });

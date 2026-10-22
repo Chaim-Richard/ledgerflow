@@ -35,6 +35,8 @@ import { parseBAI2Statement } from '../../lib/bai2Parser';
 import { parseOFXStatement } from '../../lib/ofxParser';
 import { parseCamt053Import } from '../../lib/camt053Import';
 import { parseUsBankCsv, type UsBankCsvFormat } from '../../lib/usBankCsv';
+import { readIsraeliBankCsv, type IsraeliBankDateOrder } from '../../lib/israeliBankCsv';
+import StatementFormatControls from './StatementFormatControls';
 
 function withOccurrenceKeys<T>(items: readonly T[], identity: (item: T) => string) {
   const occurrences = new Map<string, number>();
@@ -105,6 +107,9 @@ export default function StatementImporter({
   const [csvData, setCsvData] = useState<string[][]>([]);
   const [qifDateOrder, setQifDateOrder] = useState<QIFDateOrder | ''>('');
   const [usBankCsvFormat, setUsBankCsvFormat] = useState<UsBankCsvFormat | ''>('');
+  // E-26/E-43: Israeli banks' activity CSVs, chosen deliberately and read by column names only.
+  const [israeliBankCsv, setIsraeliBankCsv] = useState(false);
+  const [israeliDateOrder, setIsraeliDateOrder] = useState<IsraeliBankDateOrder | ''>('');
   const [fileError, setFileError] = useState('');
   const csvHeaders = withOccurrenceKeys(csvData[0] || [], column => column);
   const csvPreview = withOccurrenceKeys(csvData.slice(1, 6), row => JSON.stringify(row));
@@ -153,6 +158,22 @@ export default function StatementImporter({
           : isOfx ? parseOFXStatement(content, currency) : isCamt ? parseCamt053Import(content, currency) : parseBAI2Statement(content, currency);
         processResults(bankLines);
         toast.success(`Loaded ${bankLines.length} statement entries from ${file.name}. Review before importing.`, { id: loader });
+      } else if (israeliBankCsv && (fileName.endsWith('.csv') || fileName.endsWith('.txt'))) {
+        // E-26/E-43: the date order is chosen, never inferred; the parser reads columns by header name.
+        const workspaceId = useAuthStore.getState().currentWorkspaceId;
+        const userId = useAuthStore.getState().user?.uid;
+        if (!israeliDateOrder) throw new Error('Choose the statement date order before uploading an Israeli bank file.');
+        const content = await file.text();
+        if (workspaceId !== useAuthStore.getState().currentWorkspaceId || userId !== useAuthStore.getState().user?.uid)
+          throw new Error('Workspace or user changed. Upload the statement again in the current workspace.');
+        const currency = useAuthStore.getState().getCurrentWorkspace()?.currency || 'USD';
+        if (getCurrencyDivisor(currency) !== 100)
+          throw new Error('Israeli bank CSV import requires a two-decimal workspace currency. No amount was imported.');
+        const read = readIsraeliBankCsv(content, israeliDateOrder);
+        processResults(read.lines);
+        const used = [read.columns.date, read.columns.description, read.columns.reference, read.columns.debit, read.columns.credit, read.columns.amount]
+          .filter(Boolean).join(' · ');
+        toast.success(`Loaded ${read.lines.length} bank entries from ${file.name} (columns: ${used}). Review before importing.`, { id: loader });
       } else if (usBankCsvFormat && (fileName.endsWith('.csv') || fileName.endsWith('.txt'))) {
         // E-27: deliberate bank selection; particularly important for Wells Fargo's headerless export.
         const workspaceId = useAuthStore.getState().currentWorkspaceId;
@@ -511,24 +532,17 @@ export default function StatementImporter({
                       </label>
                     </div>
                   </div>
-                  <Labelled label="QIF date order">
-                    <select value={qifDateOrder} onChange={e => setQifDateOrder(e.target.value as QIFDateOrder | '')} disabled={isParsing} className="min-h-11 px-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-sm text-[var(--text)]">
-                      <option value="">Choose for QIF files…</option>
-                      <option value="mdy">Month / day / year</option>
-                      <option value="dmy">Day / month / year</option>
-                    </select>
-                  </Labelled>
-                  <Labelled label="US bank CSV layout">
-                    <select value={usBankCsvFormat} onChange={e => setUsBankCsvFormat(e.target.value as UsBankCsvFormat | '')} disabled={isParsing} className="min-h-11 px-3 bg-[var(--surface)] border border-[var(--line)] rounded-xl text-sm text-[var(--text)]">
-                      <option value="">Other CSV: review column mapping</option>
-                      <option value="chase-checking">Chase checking / savings</option>
-                      <option value="chase-card">Chase credit card</option>
-                      <option value="boa-checking">Bank of America checking / savings</option>
-                      <option value="boa-card">Bank of America credit card</option>
-                      <option value="wells-fargo-checking">Wells Fargo checking / savings (no header)</option>
-                    </select>
-                  </Labelled>
-                  <p className="text-xs text-[var(--muted)]">Choose a US bank layout only for its matching CSV export; Wells Fargo CSV has no header, so the first row is a transaction. Unknown layouts should use manual mapping, not guesswork. QIF, BAI2, OFX/QFX and CAMT.053 use separate parsers; XML uploads must be a single-account CAMT.053 statement. Bank-specific imports need a two-decimal workspace currency. All entries go to review before import.</p>
+                  <StatementFormatControls
+                    disabled={isParsing}
+                    qifDateOrder={qifDateOrder}
+                    onQifDateOrder={setQifDateOrder}
+                    usBankCsvFormat={usBankCsvFormat}
+                    onUsBankCsvFormat={setUsBankCsvFormat}
+                    israeliBankCsv={israeliBankCsv}
+                    onIsraeliBankCsv={setIsraeliBankCsv}
+                    israeliDateOrder={israeliDateOrder}
+                    onIsraeliDateOrder={setIsraeliDateOrder}
+                  />
                   {fileError && <p role="alert" className="text-sm text-rose-600">{fileError}</p>}
                   <textarea
                     id={`${formId}-statement-text`}

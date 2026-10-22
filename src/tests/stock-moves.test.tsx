@@ -85,6 +85,7 @@ describe('Recorded with each change (database)', { skip: !url && 'LF_TEST_DATABA
     app.use(express.json());
     app.use((req, _res, next) => { (req as unknown as { user: { uid: string } }).user = { uid: String(req.header('x-test-uid')) }; next(); });
     app.use('/api/v1/transactions', transactionRouter);
+    app.use('/api/v1/documents', (await import('../server/routes/documentPostRoutes')).documentPostRouter);
     app.use('/api/v1/inventory', inventoryRouter);
     app.use('/api/v1/workspaces', workspaceRouter);
     server = app.listen(0);

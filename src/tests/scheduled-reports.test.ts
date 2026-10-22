@@ -1,7 +1,7 @@
 /**
  * Scheduled reports (K-28): the last finished week (Monday to Sunday) or month; schedules checked
  * (report, frequency, 1–10 real addresses); the email and spreadsheet carry the report's own figures;
- * the daily job sends each period once and records it first; "Send now" for owners and accountants;
+ * the daily job sends each period once (claimed and recorded per address: aud04-scheduled-report-delivery.test.ts); "Send now" for owners and accountants;
  * the database refuses a malformed schedule list. The database part runs when LF_TEST_DATABASE_URL is set.
  */
 import test, { after, before, describe } from 'node:test';
