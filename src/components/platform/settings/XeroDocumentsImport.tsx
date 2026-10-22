@@ -17,6 +17,7 @@ import { useEntityOperations } from '../../../hooks/useEntityOperations';
 import { cn, formatCurrency } from '../../../lib/utils';
 import { readXeroDocumentsCsv, type XeroDateOrder, type XeroDocumentKind, type XeroDraftDocument } from '../../../lib/xeroDocumentsImport';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
+import { allSettledWrites } from '../../../lib/serverAction';
 
 const KIND_LABEL: Record<XeroDocumentKind, string> = { invoices: 'Sales invoices', bills: 'Bills' };
 
@@ -187,14 +188,25 @@ export default function XeroDocumentsImport({ onSave }: XeroDocumentsImportProps
     }
   };
 
+  /**
+   * Writes every draft, then reports exactly which ones failed (src/lib/serverAction.ts,
+   * allSettledWrites). A loop that awaited one write at a time could report "done" for half a
+   * batch — and the repo's bug-pattern guard rightly refuses it.
+   */
   async function saveDrafts(documents: XeroDraftPayload[]): Promise<number> {
-    let saved = 0;
-    for (const payload of documents) {
+    const { done, failures } = await allSettledWrites(documents, async payload => {
       const ref = await addEntity(kind === 'invoices' ? 'invoices' : 'bills', payload);
-      if (!ref) throw new Error(`Draft ${payload.number} was not saved. Stop here and check the error message.`);
-      saved++;
+      if (!ref) throw new Error(`${payload.number} was not saved`);
+      return ref;
+    });
+    if (failures.length) {
+      const numbers = failures.slice(0, 3).map(failure => failure.item.number).join(', ');
+      throw new Error(
+        `${done.length} of ${documents.length} drafts were saved; ${failures.length} failed (${numbers}${failures.length > 3 ? ', …' : ''}). ` +
+        'Nothing was sent or posted. Fix the reason and upload the file again: the drafts already saved are kept and their numbers are skipped as duplicates.',
+      );
     }
-    return saved;
+    return done.length;
   }
 
   const money = (cents: number) => formatCurrency(cents, currency);
