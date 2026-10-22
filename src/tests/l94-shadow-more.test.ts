@@ -22,6 +22,9 @@ import type { EntityMutation, LedgerPostContext, PostableTransaction } from '../
 import { postingFingerprint, shadowCheckDocumentPosting } from '../server/services/postingShadowCheck';
 import type { ChartAccount, Transaction, Workspace } from '../types';
 
+// the browser and the server both reverse a locked entry on today's date (the workspace's time zone, UTC here)
+const TODAY = new Date().toISOString().slice(0, 10);
+
 const url = process.env.LF_TEST_DATABASE_URL;
 
 describe('L-94 shadow check: credit notes and vendor credits', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
@@ -64,7 +67,7 @@ describe('L-94 shadow check: credit notes and vendor credits', { skip: !url && '
   const entries = async (key: string, docId: string) => (await db.collection('transactions').where('workspaceId', '==', ws).where(`metadata.${key}`, '==', docId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as Transaction);
   /** what the browser's builder would send for this save, given what is in the books now */
   const build = async (k: typeof KINDS[number], data: Record<string, unknown>, mutation: EntityMutation, lockDate: string | null = null): Promise<PostableTransaction[]> => {
-    const context: LedgerPostContext = { accounts, workspaces: [workspace], transactions: await entries(k.key, String(data.id)), inventory: [], lockDate, uid: OWNER, today: '2026-10-21', capture: [] };
+    const context: LedgerPostContext = { accounts, workspaces: [workspace], transactions: await entries(k.key, String(data.id)), inventory: [], lockDate, uid: OWNER, today: TODAY, capture: [] };
     await k.post(String(data.id), data as never, ws, OWNER, mutation, context);
     return context.capture!.flatMap(c => c.txs).map(tx => ({ ...tx, id: tx.id || crypto.randomUUID() }));
   };
@@ -142,7 +145,7 @@ describe('L-94 shadow check: credit notes and vendor credits', { skip: !url && '
       const edited: Record<string, unknown> = { ...first, amountCents: 15_000, date: '2026-10-21' };
       const update: EntityMutation = { collection: k.kind, docId: String(edited.id), action: 'update', data: edited };
       const posted = await build(k, edited, update, '2026-09-30');
-      assert.deepEqual(postingFingerprint(posted).filter(r => r.includes(`|${a('sales')}|`)), [`2026-10-21|${a('sales')}|-20000|[]`, `2026-10-21|${a('sales')}|15000|[]`], 'the locked 09-10 entry is reversed on 10-21');
+      assert.deepEqual(postingFingerprint(posted).filter(r => r.includes(`|${a('sales')}|`)), [`${TODAY}|${a('sales')}|-20000|[]`, `2026-10-21|${a('sales')}|15000|[]`].sort(), 'the locked 09-10 entry is reversed today, not on 09-10');
       await save(k.kind, edited, posted);
       const result = await check(update, posted);
       assert.ok(result.checked);
