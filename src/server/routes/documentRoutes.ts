@@ -12,8 +12,11 @@ import { ChequeError, generateChequePdf, layoutCheque } from '../services/cheque
 import { getTrustedAppUrl } from '../utils/urlHelper';
 import { zipStore } from '../utils/zip';
 import { z } from 'zod';
+import { documentPostRouter } from './documentPostRoutes';
 
 export const documentRouter = express.Router();
+// L-94 step 2: POST /:type/:id/post saves an invoice or bill and builds its entries on the server
+documentRouter.use(documentPostRouter);
 
 /** Stored documents a PDF can be made of: collection and the name used in "not found". */
 const PDF_SOURCES = {
