@@ -78,3 +78,10 @@ panel and read the Current ratio explanation.
 These tasks do not change a W-row's Connected/Verified/Browser status. They support **G-02 (one first
 hour without dead ends)** by making the `? Help` dialog tell the truth about the screen the reader is
 on, in the reader's language, and by naming what each headline total does not prove.
+
+## Small Hebrew label fixes on the way (same file, same branch)
+
+While reading every report's Hebrew name I found two labels from my own earlier stock work that
+called a lot "סידות" instead of "אצווה": `expiring-lots` (now **אצוות שפג תוקפן**) and
+`serial-lot-lookup` (now **חיפוש מספרים סידוריים ואצוות**). Labels only — no behaviour, and no test
+referred to the old strings. If a reader preferred the old wording, it is a one-line revert each.
