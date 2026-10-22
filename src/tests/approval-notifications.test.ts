@@ -32,9 +32,10 @@ describe('Approval notifications (database)', { skip: !url && 'LF_TEST_DATABASE_
   let server: Server;
   let base = '';
   const save = async (uid: string, data: Record<string, unknown>) => {
-    const res = await fetch(`${base}/api/v1/transactions/bulk`, {
+    // the invoice is saved as the screen saves it: the document alone, its entries built by the server (L94-STEP2B)
+    const res = await fetch(`${base}/api/v1/documents/invoices/${inv}/post`, {
       method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': uid },
-      body: JSON.stringify({ workspaceId: ws, transactions: [], entityMutation: { collection: 'invoices', action: 'update', docId: inv, data } }),
+      body: JSON.stringify({ workspaceId: ws, action: 'update', data }),
     });
     return res.status;
   };
@@ -47,6 +48,9 @@ describe('Approval notifications (database)', { skip: !url && 'LF_TEST_DATABASE_
     db = getDb();
     await db.collection('workspaces').doc(ws).set({ uid: 'owner-1', name: 'Approve Co', currency: 'USD', members: ['owner-1', 'acct-1', 'book-1'],
       roles: { 'acct-1': 'accountant', 'book-1': 'bookkeeper' }, invoiceApproval: { enabled: true, thresholdCents: 100000 } });
+    for (const [id, name, type, category] of [['ar', 'Accounts Receivable', 'asset', 'Receivables'], ['sales', 'Sales', 'income', 'Revenue'], ['bank', 'Bank', 'asset', 'Cash']]) {
+      await db.collection('chartAccounts').doc(`${ws}_${id}`).set({ workspaceId: ws, name, type, category });
+    }
     await db.collection('invoices').doc(inv).set({ workspaceId: ws, uid: 'book-1', number: 'INV-50', customerName: 'Acme', status: 'draft', date: '2026-10-01', dueDate: '2026-10-31', amountCents: 250000, currency: 'USD' });
     const express = (await import('express')).default;
     const { transactionRouter } = await import('../server/routes/transactionRoutes');
@@ -61,7 +65,7 @@ describe('Approval notifications (database)', { skip: !url && 'LF_TEST_DATABASE_
 
   after(async () => {
     server?.close();
-    for (const table of ['invoices', 'notifications', 'auditLogs', 'workspaces']) await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
+    for (const table of ['invoices', 'transactions', 'chartAccounts', 'idempotencyKeys', 'notifications', 'auditLogs', 'workspaces']) await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]);
     await db.terminate();
   });
 
