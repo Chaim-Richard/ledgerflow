@@ -85,6 +85,75 @@ export function openBalanceCents(invoice: CreditLimitInvoice): number {
   return owed > 0 ? owed : 0;
 }
 
+/** An issued status: an invoice that is a sale (not a draft, void or cancelled). */
+export function isIssuedStatus(status: unknown): boolean {
+  return ISSUED.has(String(status));
+}
+
+/** Whether an invoice counts against the limit: only invoices in the base currency (no conversion). */
+export function inBaseCurrency(invoice: CreditLimitInvoice, homeCurrency: string): boolean {
+  return (invoice.currency || homeCurrency) === homeCurrency;
+}
+
+/** What an invoice adds to the exposure: its unpaid part when it is issued and in the base currency, otherwise 0. */
+export function exposureCents(invoice: CreditLimitInvoice, homeCurrency: string): number {
+  return inBaseCurrency(invoice, homeCurrency) ? openBalanceCents(invoice) : 0;
+}
+
+export interface CreditLimitCheck {
+  limitCents: number;
+  /** the customer's other issued invoices, unpaid part, base currency */
+  owedCents: number;
+  /** this invoice's unpaid part (0 when it is in another currency) */
+  thisCents: number;
+  totalCents: number;
+  /** total above the limit, and this save raises the exposure (an update that lowers or keeps it never is) */
+  over: boolean;
+  /** this invoice's currency when it is not the base one: not counted, not converted */
+  foreignCurrency?: string;
+}
+
+/**
+ * EG-5: the check made when an invoice is saved as issued, with the very rules of the report above. `others` are the
+ * customer's other invoices (this one is left out by id); `before` is this invoice as it was saved, for an update.
+ * Nothing (undefined) when the customer has no limit or this save is not an issued invoice.
+ */
+export function creditLimitCheck(input: {
+  customer: CreditLimitCustomer;
+  others: CreditLimitInvoice[];
+  invoice: CreditLimitInvoice;
+  before?: CreditLimitInvoice;
+  homeCurrency?: string;
+}): CreditLimitCheck | undefined {
+  const home = input.homeCurrency || 'USD';
+  const limitCents = creditLimitOf(input.customer);
+  if (limitCents === undefined || !isIssuedStatus(input.invoice.status)) return undefined;
+  const owedCents = input.others
+    .filter(i => i.id !== input.invoice.id && i.customerId === input.customer.id)
+    .reduce((sum, i) => sum + exposureCents(i, home), 0);
+  const thisCents = exposureCents(input.invoice, home);
+  const beforeCents = input.before && input.before.customerId === input.customer.id ? exposureCents(input.before, home) : 0;
+  const totalCents = owedCents + thisCents;
+  return {
+    limitCents, owedCents, thisCents, totalCents,
+    over: totalCents > limitCents && thisCents > beforeCents,
+    ...(!inBaseCurrency(input.invoice, home) ? { foreignCurrency: String(input.invoice.currency) } : {}),
+  };
+}
+
+const money = (cents: number, currency: string) => new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
+
+/** "Over Acme's credit limit: limit $5,000.00, owed $4,200.00, this invoice $1,000.00 → $5,200.00" */
+export function creditLimitRefusalMessage(name: string, check: CreditLimitCheck, homeCurrency = 'USD'): string {
+  return `Over ${name}'s credit limit: limit ${money(check.limitCents, homeCurrency)}, owed ${money(check.owedCents, homeCurrency)}, `
+    + `this invoice ${money(check.thisCents, homeCurrency)} → ${money(check.totalCents, homeCurrency)}`;
+}
+
+/** The note for an invoice in another currency: not counted against the limit and not converted. */
+export function creditLimitForeignNote(name: string, check: CreditLimitCheck, homeCurrency = 'USD'): string {
+  return `This invoice is in ${check.foreignCurrency}: it is not counted against ${name}'s credit limit (in ${homeCurrency}) and not converted`;
+}
+
 export function customerCreditLimits(input: CustomerCreditLimitsInput): CreditLimitRow[] {
   const home = input.homeCurrency || 'USD';
   const byCustomer = new Map<string, CreditLimitRow & { currencies: Map<string, number> }>();
@@ -103,15 +172,15 @@ export function customerCreditLimits(input: CustomerCreditLimitsInput): CreditLi
   for (const invoice of input.invoices) {
     const row = invoice.customerId ? byCustomer.get(invoice.customerId) : undefined;
     if (!row) continue;
-    if (!ISSUED.has(String(invoice.status))) continue;
+    if (!isIssuedStatus(invoice.status)) continue;
     row.invoices += 1;
     const open = openBalanceCents(invoice);
     if (open <= 0) continue;
     row.openInvoices += 1;
     const currency = invoice.currency || home;
     row.currencies.set(currency, (row.currencies.get(currency) || 0) + open);
-    if (currency === home) {
-      row.openCents += open;
+    if (inBaseCurrency(invoice, home)) {
+      row.openCents += exposureCents(invoice, home);
       const due = (invoice.dueDate || invoice.date || '').slice(0, 10);
       if (input.asOfDate && due && due < input.asOfDate) row.overdueCents += open;
       if (due && (!row.oldestDueDate || due < row.oldestDueDate)) row.oldestDueDate = due;

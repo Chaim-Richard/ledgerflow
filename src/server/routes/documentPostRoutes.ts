@@ -10,7 +10,7 @@ import { postDocument } from '../services/documentPostService';
 /**
  * L-94 step 2: POST /api/v1/documents/:type/:id/post — save or delete an invoice, bill, credit note or vendor credit;
  * the server builds its entries (documentPostService.ts). Body: { workspaceId, action: 'create' | 'update' | 'delete',
- * data }, header Idempotency-Key. Nothing
+ * data, creditLimitOverride? (EG-5) }, header Idempotency-Key. Nothing
  * else is accepted: a body that carries entries is refused. Answer: the bulk answer plus the entries as written.
  */
 export const documentPostRouter = express.Router();
@@ -21,6 +21,8 @@ const bodySchema = z.object({
   data: z.record(z.string(), z.unknown()).optional(),
   /** the day the browser counted as today (L-94): used within one day of the server's, never part of the hash */
   postingDay: z.string().max(10).optional(),
+  /** EG-5: issue an invoice over the customer's credit limit anyway; owner or accountant only, the reason is kept */
+  creditLimitOverride: z.object({ reason: z.string().trim().min(1).max(500) }).strict().optional(),
 }).strict();
 
 const TYPES = new Set(['invoices', 'bills', 'creditNotes', 'vendorCredits']);
@@ -35,6 +37,7 @@ documentPostRouter.post('/:type/:id/post', requireLedgerWriter, async (req, res)
       collection: type as 'invoices', docId: String(req.params.id), workspaceId: parsed.data.workspaceId, action: parsed.data.action,
       data: parsed.data.action === 'delete' ? {} : parsed.data.data || {},
       ...(parsed.data.postingDay ? { postingDay: parsed.data.postingDay } : {}),
+      ...(parsed.data.creditLimitOverride ? { creditLimitOverride: parsed.data.creditLimitOverride } : {}),
       idempotencyKey: req.headers['idempotency-key'] as string | undefined,
     });
     res.json({ ...body, transactions, ...(cogsPendingReason ? { cogsPendingReason } : {}) });

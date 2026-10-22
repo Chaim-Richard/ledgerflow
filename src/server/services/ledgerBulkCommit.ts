@@ -12,7 +12,7 @@ import { isPostable } from '../../lib/txFilters';
 import { errorMessage, type RequestUser } from '../auth/requestUser';
 import { assertSameRequest, requestPayloadHash } from '../utils/idempotency';
 import { LEDGER_WRITER_ROLES, roleInWorkspace } from '../middleware/requireLedgerWriter';
-import { writeServerAuditLog } from './auditLogService';
+import { writeServerAuditLog, type AuditLogEntryInput } from './auditLogService';
 import { deletionSentence, deletionSnapshot } from './deletionRecord';
 import { refusedLabels, refusedLabelsMessage } from '../../lib/requiredLabels';
 import { DELIVERY_COGS_TYPE, DELIVERY_RETURN_TYPE } from '../../lib/deliveries';
@@ -47,7 +47,11 @@ export interface BulkResult {
   committed: boolean;
 }
 
-export async function commitLedgerBulk(db: Firestore, user: RequestUser, request: BulkRequest, options: { idempotencyKey?: string; hashOf?: unknown } = {}): Promise<BulkResult> {
+/** EG-5: a check made inside the commit's transaction (reads only); may add invoice metadata, answer fields and an audit entry written with the save */
+export type BeforeWrite = (t: Parameters<Parameters<Firestore['runTransaction']>[0]>[0], state: { existingEntity?: Record<string, unknown>; workspace?: Record<string, unknown> }) =>
+  Promise<{ metadata?: Record<string, unknown>; body?: Record<string, unknown>; audit?: AuditLogEntryInput }>;
+
+export async function commitLedgerBulk(db: Firestore, user: RequestUser, request: BulkRequest, options: { idempotencyKey?: string; hashOf?: unknown; beforeWrite?: BeforeWrite } = {}): Promise<BulkResult> {
   const { transactions, workspaceId } = request;
   // may be absent: every use below checks it first (the request body was untyped before the move)
   const entityMutation = request.entityMutation as NonNullable<BulkRequest['entityMutation']>;
@@ -173,6 +177,8 @@ export async function commitLedgerBulk(db: Firestore, user: RequestUser, request
         throw new LedgerPostingError(403, `Forbidden: Entity ${entityMutation.docId} does not belong to authorized workspace.`);
       }
     }
+    // EG-5: the credit limit (documentPostService), with what this transaction reads; fresh on each attempt
+    const extra = options.beforeWrite ? await options.beforeWrite(t, { existingEntity, workspace: wsNow }) : {};
     // DEP-1: an invoice made from an estimate/order never takes the order past its total — the
     // invoices already made from it are read here, inside the save, so two people invoicing the
     // same order at once cannot both get through (a deposit is a payment, not an invoice)
@@ -267,6 +273,7 @@ export async function commitLedgerBulk(db: Firestore, user: RequestUser, request
           throw err;
         }
       }
+      if (extra.metadata) validatedData.metadata = { ...((existingEntity?.metadata as object) || {}), ...((validatedData.metadata as object) || {}), ...extra.metadata };
       t.set(entityRef, { ...validatedData, uid: user.uid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     } else if (entityRef && entityMutation.action === 'delete') {
       t.delete(entityRef);
@@ -283,6 +290,8 @@ export async function commitLedgerBulk(db: Firestore, user: RequestUser, request
     stock.apply();
     bankLines.forEach((b, j) => t.create(bankLineRefs[j], { ...b, matchedTransactionId: b.matchedTransactionId ?? null, workspaceId: wsId, uid: user.uid, createdAt: new Date().toISOString() }));
     if (stock.warnings.length > 0) body = { ...body, warnings: stock.warnings };
+    if (extra.body) body = { ...body, ...extra.body };
+    if (extra.audit) await writeServerAuditLog(extra.audit, { db, tx: t });
     if (idempotencyRef) t.set(idempotencyRef, { createdAt: FieldValue.serverTimestamp(), code: 200, body, workspaceId: wsId, actor: user.uid, payloadHash });
   });
 
