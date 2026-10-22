@@ -16,7 +16,7 @@ interface AuthScreenProps {
   language: string;
 }
 
-export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onPasswordReset, onGuest, language }: AuthScreenProps) {
+export function AuthScreen({ onLogin, onEmailLogin, onEmailSignup, onPasswordReset, onGuest, language: _language }: AuthScreenProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

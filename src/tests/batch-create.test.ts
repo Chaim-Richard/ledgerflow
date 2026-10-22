@@ -41,6 +41,7 @@ describe('Batch create (database)', { skip: !url && 'LF_TEST_DATABASE_URL not se
     app.use(express.json());
     app.use((req, _res, next) => { (req as unknown as { user: { uid: string } }).user = { uid: 'owner-1' }; next(); });
     app.use('/api/v1/transactions', transactionRouter);
+    app.use('/api/v1/documents', (await import('../server/routes/documentPostRoutes')).documentPostRouter);
     server = app.listen(0);
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   });

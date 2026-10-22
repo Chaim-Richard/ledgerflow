@@ -322,6 +322,8 @@ export interface IlPcn874Input {
   vendors?: IlJourneyParty[];
   /** the workspace currency, used when a document does not state one */
   currency?: string;
+  /** ISS-160 / W7-GOLD: the chart, so a saved bill on a fixed-asset account is an equipment row (R), as in the VAT report */
+  accounts?: ChartAccount[];
 }
 
 /**
@@ -330,7 +332,10 @@ export interface IlPcn874Input {
  * own amounts rounded; only documents in shekels are written, because the layout takes whole NIS
  * from the source of record and no rate is invented here.
  */
-export function ilPcn874Rows(input: IlPcn874Input): IlPcn874Mapping {
+export function ilPcn874Rows(given: IlPcn874Input): IlPcn874Mapping {
+  // the bills classified the way the VAT report classifies them (ilVatEquipment.ts), so the two never disagree
+  const equipment = given.accounts ? withEquipment(given.bills || [], given.vendorCredits || [], given.accounts) : null;
+  const input: IlPcn874Input = equipment ? { ...given, bills: equipment.bills, vendorCredits: equipment.vendorCredits } : given;
   const currency = input.currency || 'ILS';
   const rows: Pcn874FixtureDocument[] = [];
   const unmapped: IlPcn874Unmapped[] = [];

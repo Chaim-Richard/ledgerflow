@@ -174,6 +174,7 @@ describe('W8 with worked figures', { skip: !url && 'LF_TEST_DATABASE_URL not set
     app.use((req, _res, next) => { (req as unknown as { user: { uid: string; email: string } }).user = { uid: String(req.header('x-test-uid')), email: 'owner@lonestar.test' }; next(); });
     app.use('/api/v1/workspaces', workspaceRouter);
     app.use('/api/v1/transactions', transactionRouter);
+    app.use('/api/v1/documents', (await import('../server/routes/documentPostRoutes')).documentPostRouter);
     app.use('/api/v1/reports', reportRouter);
     app.use('/api/v1/inventory', inventoryRouter);
     app.use('/api/v1/payments', paymentRouter);

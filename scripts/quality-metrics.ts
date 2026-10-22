@@ -10,7 +10,8 @@ export interface QualityMetrics {
   serverTsLines: number;
   filesOver800: number;
   orphanFiles: number;
-  eslintWarnings: number;
+  /** eslint-disable, @ts-ignore and @ts-expect-error in non-test source (the real ESLint warning count is the --max-warnings ceiling in package.json) */
+  suppressionCount: number;
   untestedViews: number;
   /** full-screen overlays (`fixed inset-0`) not marked as a dialog (useDialog / role="dialog") or hidden */
   overlaysWithoutDialog: number;
@@ -123,14 +124,7 @@ function computeOrphanFiles(rootDir: string): number {
   });
 
   const ignoredFiles = new Set([
-    'src/types.ts',
     'src/vite-env.d.ts',
-    'src/domain/Accounts.ts',
-    'src/infra/auth/FirebaseAuthAdapter.ts',
-    'src/lib/paymentTerms.ts',
-    'src/constants.ts',
-    'src/services/auth/index.ts',
-    'src/services/auth/types.ts',
     'vite.config.ts'
   ]);
 
@@ -232,7 +226,7 @@ export function computeQualityMetrics(rootDir: string = process.cwd()): QualityM
 
   const orphanFiles = computeOrphanFiles(rootDir);
   const untestedViews = computeUntestedViews(rootDir);
-  const eslintWarnings = computeEslintWarnings(rootDir);
+  const suppressionCount = computeSuppressionCount(rootDir);
 
   return {
     anyCount,
@@ -243,7 +237,7 @@ export function computeQualityMetrics(rootDir: string = process.cwd()): QualityM
     serverTsLines,
     filesOver800,
     orphanFiles,
-    eslintWarnings,
+    suppressionCount,
     untestedViews,
     overlaysWithoutDialog,
   };
@@ -279,7 +273,7 @@ function computeUntestedViews(rootDir: string): number {
   return untested;
 }
 
-function computeEslintWarnings(rootDir: string): number {
+function computeSuppressionCount(rootDir: string): number {
   let count = 0;
   function scan(dir: string) {
     if (!fs.existsSync(dir)) return;

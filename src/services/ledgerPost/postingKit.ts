@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { Transaction, Invoice, InventoryItem } from '../../types';
-import { registerPostingHost } from './postingCore';
+import { postingToday, registerPostingHost } from './postingCore';
 import { getLocalDateISO } from '../../lib/utils';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
 
@@ -39,6 +39,12 @@ async function sendToServer(
   entityMutation?: EntityMutation,
   context?: LedgerPostContext
 ) {
+  // L-94 step 2: an invoice or bill is saved by the server, which builds its entries itself; the lines built here
+  // are not sent (they served the checks the browser shows before saving: the closing date, the accounts)
+  if (entityMutation && (entityMutation.collection === 'invoices' || entityMutation.collection === 'bills')
+    && (entityMutation.action === 'create' || entityMutation.action === 'update')) {
+    return postDocumentToServer(workspaceId, entityMutation, context);
+  }
   // Ids are chosen here so the entries added to the local store below carry the same ids as the
   // server copies; a quick second edit can then link its reversals to them.
   txs = (txs || []).map(tx => (tx.id ? tx : { ...tx, id: crypto.randomUUID() }));
@@ -51,7 +57,8 @@ async function sendToServer(
       'Idempotency-Key': idempotencyKey,
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     },
-    body: JSON.stringify({ transactions: txs, workspaceId, entityMutation })
+    // the day this posting counted as today, so the server's check rebuilds it with the same day (L-94)
+    body: JSON.stringify({ transactions: txs, workspaceId, entityMutation, postingDay: postingToday(context) })
   });
 
   const data = await response.json().catch(() => ({}));
@@ -63,12 +70,40 @@ async function sendToServer(
   // INT-2: the server says this save had already happened (an earlier save of the same posting); the
   // entries built here were not written, so they are not added to the local list either
   if (data.replayed) return;
+  // AUD-15: the entries as the server wrote them (its ids, owner, checks and stamps), not the ones sent; an answer
+  // without that list (a server from before AUD-15, during a deploy) leaves the sent ones as before
+  putWrittenEntries(workspaceId, Array.isArray(data.transactions) ? data.transactions as Transaction[] : (txs as unknown as Transaction[]));
+}
 
-  // the saved entries go into the screen's list at once (this host runs only in the browser)
+/**
+ * The saved entries go into the screen's list at once (this host runs only in the browser): only while the workspace
+ * they were saved in is still open, and by id — an entry the live updates already brought in, or a retried save, is
+ * replaced, never shown twice (BUG-05, AUD-15).
+ */
+function putWrittenEntries(workspaceId: string, written: Transaction[]) {
+  if (written.length === 0 || useAuthStore.getState().currentWorkspaceId !== workspaceId) return;
   const store = useLedgerStore.getState();
-  // BUG-05: replace by id instead of adding again — a retried or replayed save must not show twice
-  const posted = new Set((txs as unknown as Transaction[]).map(tx => tx.id));
-  store.setTransactions([...(txs as unknown as Transaction[]), ...(store.transactions || []).filter(tx => !posted.has(tx.id))]);
+  const posted = new Set(written.map(tx => tx.id));
+  store.setTransactions([...written, ...(store.transactions || []).filter(tx => !posted.has(tx.id))]);
+}
+
+/** POST /api/v1/documents/:type/:id/post: the document only; the entries the server wrote go into the screen's list. */
+async function postDocumentToServer(workspaceId: string, entityMutation: EntityMutation, context?: LedgerPostContext) {
+  const token = await getIdToken().catch(() => null);
+  const response = await fetch(`/api/v1/documents/${entityMutation.collection}/${encodeURIComponent(entityMutation.docId)}/post`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': context?.idempotencyKey || crypto.randomUUID(),
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ workspaceId, action: entityMutation.action, data: entityMutation.data || {} })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Server rejected the save');
+  if (Array.isArray(data.warnings)) data.warnings.forEach((w: unknown) => toast.warning(String(w)));
+  if (data.replayed) return;
+  putWrittenEntries(workspaceId, Array.isArray(data.transactions) ? data.transactions as Transaction[] : []);
 }
 
 registerPostingHost({

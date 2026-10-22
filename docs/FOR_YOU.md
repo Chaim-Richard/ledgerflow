@@ -494,3 +494,13 @@ The Supabase connector timed out a third time. Paste **`supabase/migrations/2026
 
 ## 22 Oct — ~~one database change to paste~~ **Done: run by the owner on 22 Oct.** (ISS-143, return authorizations)
 The Supabase connector timed out. Paste **`supabase/migrations/20261022000000_rma_server_only.sql`** into Supabase → SQL editor → Run (1 minute; safe to run more than once). It stops a browser from writing return-authorization (RMA) approvals directly; they now go only through the server, which checks the role and the quantities. *Default until then:* the screen already uses the server; only a direct browser write is not yet refused.
+
+## 22 Oct — defaults AI #9 used (answer any to change it)
+
+1. **Israeli VAT, a bill with both equipment and other lines (ISS-160, #303).** Its whole input VAT is reported as *other* input VAT, and the month journey names the bill and asks you to split it into two bills. *Default used: report it whole as other.* Say if mixed bills should instead be split line by line on the equipment row.
+2. **US "reduced-rate item" (W8-GOLD, #304).** None of the five supported states has a reduced-rate row in the taxability table. The worked quarter therefore uses Texas groceries at 0%. *Default used: no invented reduced rates.* Say if a state you sell in needs one, and with its source.
+3. **Pay runs, one person's time linked to two hourly employees (U-12).** The pay run is refused (409) and names both employees, so the same hour is never paid twice. *Default used: refuse.* Say if one of them should be paid instead.
+4. **Label roles (DIM-3).** A label that is "fully attributed" or "self-balancing" is checked and listed in Data Health; nothing is refused. *Default used: list only.* Say if an entry that breaks a self-balancing label should be refused.
+5. **Withholding rate after the vendor's certificate expires (ISS-156).** The rate is cleared and must be typed, as on a fresh payment; a rate typed by the person stays. *Default used: cleared.*
+6. **Scheduled reports (AUD-04, PR coming).** A failed address is tried again after 1, 4 and 24 hours, then given up; giving up is logged. *Default used: 4 attempts.*
+

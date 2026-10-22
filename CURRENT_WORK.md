@@ -9,16 +9,14 @@ History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) �
 
 Everything below is open. Finished items leave this list. Full wording is in COORDINATION (other AIs) and TRACKER (AI #1).
 
-**To reach stage A (synthetic beta) — the 14 workflows in RELEASE_GATE**
+**To reach stage A (synthetic beta) — the 14 workflows in RELEASE_GATE** (its workflow table is the source of truth; this list only says who does what is left)
 
 | Workflow | What is missing | Who |
 |---|---|---|
-| W1 sign-up → first report | browser journey merged (#282, 21 Oct); left: worked figures (W1-GOLD) | AI #9 |
-| W5 labels → reports by label | A-210 done (21 Oct: by-label P&L + balance sheet browser journey on the real report, hand figures 2/2); browser journey and worked figures done | — |
 | W10 backup → restore | browser test (F-46, now D-98) | AI #4 |
 | W14 roles and access | browser journey (now D-99) | AI #4 |
 | G-02 first hour without dead ends | wording/dead-end fixes done (D-97 batches 1–2); left: AI #7's authenticated G-24 journey certifies G-02 | AI #4 / AI #7 |
-| Done for A | W2, W3, W4, W6, W9 | — |
+| Done for A | W1 (browser #282, worked figures W1-GOLD #291), W2, W3, W4, W5, W6, W9 | — |
 
 **Pull requests waiting**
 
@@ -68,7 +66,7 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 | #7 (fork: Chaim-Richard) | Not active recently — its stage-A tasks moved to AI #4. When active: F-48/F-49 flakes, stability queue (F-*). How to send work: COORDINATION "AIs that work from the fork" | — |
 | #3 Arena | **A-194/196/197 + A-148 + A-206 ready for review** (PR #306, `arena/db0fd1ce-ledgerflow`); next in order: help A-201/202/149 → A-185, A-183, A-182, A-138, A-137, A-131/132, A-190/192/193, A-180, A-107, A-72 | PR #306 (`arena/db0fd1ce-ledgerflow`) |
 | #4 | **P0 first (moved from AI #7):** D-98 = F-46 backup → restore browser journey (W10), D-99 = W14 roles browser journey; then its D-queue | — |
-| #5 | **P1:** accountant export pack (trial balance, GL, A/R, A/P, tax liability by period as CSV/PDF — new E-58); then E-17 onward | — |
+| #5 | **E-58 landed on main** (Reports → Accountant export pack: trial balance, GL, A/R, A/P, tax by period; ZIP of CSVs + print/PDF, guarded and worked-figure tested) and **E-26/E-43 landed on main** (Banking → Import statement: Israeli bank activity CSV read by column name, date order chosen not guessed, totals/balance lines refused). Queue audit done: E-18…E-27, E-30, E-31, E-41…E-43, E-48 ticked with evidence; **E-17 left open** (the 856 file is a worksheet, not the authority's fixed-width file). Next: E-28 (Xero invoices/bills), E-29 (QuickBooks IIF), E-32…E-34 (exports), E-36…E-40 (IL address, phone/email, duplicates, currency/country tables) | PR #310 now docs-only (`fd00366e`); code commits are in `main` |
 | #2 Codex | **Screen wiring C-102…C-126 is done** (21 Oct: all 50 modules in `workspaceExports.ts` reach a screen; C-115/C-117/C-120/C-121/C-122 ticked). Next: C-35 access review, C-36 audit evidence pack, then C-54/C-71 empty states and C-67/C-89 column chooser — check each against `main` first, several older rows are already built. No new tax screens (stage C) | — |
 | #6 (fork: Chaim-Richard) | S-01–S-05 merged 21 Oct (#266–#270); next: S-1 onward in its queue. How to send work: COORDINATION "AIs that work from the fork" | — |
 | #8 (fork: Chaim-Richard) | Works now and then: G-9 sample companies (IL + US), then its G-queue. How to send work: COORDINATION "AIs that work from the fork" | — |

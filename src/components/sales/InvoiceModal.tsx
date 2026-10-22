@@ -122,7 +122,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const [memo, setMemo] = useState(() => savedText('memo'));
   const [terms, setTerms] = useState(() => savedText('terms'));
   const [emailSubject, setEmailSubject] = useState(() => savedText('emailSubject'));
-  const [emailBody, setEmailBody] = useState(() => savedText('emailBody'));
+  const [emailBody] = useState(() => savedText('emailBody'));
   const formRef = useRef<HTMLFormElement>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const fieldError = (id: string) => fieldErrors[id]
@@ -217,9 +217,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
         // files picked for a new invoice are kept with it once it has an id (Sales.tsx)
         ...(attachments.length > 0 && !invoice.id ? { attachmentFiles: attachments } : {}),
       });
-    } finally {
-      setIsSubmitting(false);
-    }
+      return true;
+    } catch (err) { console.warn('Invoice not saved (PREV-5: the save said why; the draft stays open):', err); return false; }
+    finally { setIsSubmitting(false); }
   };
 
   const handleSubmit = (e: React.FormEvent) => handleAction(e, invoice.status || 'pending');
