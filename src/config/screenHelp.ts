@@ -374,7 +374,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     developer:
       "Manage API keys and webhook controls. Review scopes and endpoints before making changes. Only authorized members can manage credentials and integrations.",
     import:
-      "Import contacts, items or accounts from CSV or Excel. Map columns, preview problems and submit valid rows. This workflow accepts supported fields and creates identities rather than restoring a complete backup.",
+      "Import contacts, items or accounts from CSV or Excel. For customers and vendors an address book also works: a vCard (.vcf) file or the CSV that Google Contacts exports. Map columns, preview problems and submit valid rows; a duplicate check compares the rows with the records already here before anything is saved. This workflow accepts supported fields and creates identities rather than restoring a complete backup.",
     emails:
       "Configure document emails, reminders and invoice approval. Review delivery preferences and the existing send workflow. Sending rules do not change invoice posting.",
     branding:

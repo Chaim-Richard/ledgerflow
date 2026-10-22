@@ -89,6 +89,35 @@ test("A-201: every report on the Reports tab has its own Hebrew help, and it is 
   );
 });
 
+test("A-149: AI #3's non-report screens have their own Hebrew help too", () => {
+  const hebrew = /[\u05d0-\u05ea]/;
+  const sentences = (text: string) =>
+    text.split(/[.!?](?:\s|$)/).filter((part) => part.trim()).length;
+  const main = (id: string) => APP_TABS.find((entry) => entry.id === id);
+  const setting = (id: string) =>
+    SETTINGS_TABS_REGISTRY.find((entry) => entry.id === id);
+  const entries = [
+    main("petty-cash"),
+    setting("custom-fields"),
+    setting("branding-profiles"),
+    setting("price-list-import"),
+    setting("import"),
+  ];
+  for (const entry of entries) {
+    assert.ok(entry, "screen is registered");
+    assert.ok(
+      entry.helpHe && entry.helpHe.trim().length > 0,
+      `${entry.id} has no Hebrew help — add it to src/config/screenHelpHe.ts`,
+    );
+    assert.match(entry.helpHe, hebrew, `${entry.id}'s Hebrew help is not Hebrew`);
+    assert.ok(
+      sentences(entry.helpHe) >= 2 && sentences(entry.helpHe) <= 4,
+      `${entry.id} needs 2–4 Hebrew help sentences`,
+    );
+    assert.notEqual(entry.helpHe, entry.help);
+  }
+});
+
 test("A-201: the help dialog shows a report's own Hebrew description, not the page summary", () => {
   useUIStore.setState({ activeReportTab: "financial-ratios" });
   render(<ScreenHelpHeader activeTab="reports" />);
