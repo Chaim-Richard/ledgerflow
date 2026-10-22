@@ -19,7 +19,7 @@ import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import { postCreditNoteLedger, postVendorCreditLedger } from '../services/ledgerPost/creditPosting';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from '../services/ledgerPost/postingCore';
-import { postingFingerprint, shadowCheckDocumentPosting } from '../server/services/postingShadowCheck';
+import { postingFingerprint, shadowCheckDocumentPosting } from './helpers/postingShadowCheck';
 import type { ChartAccount, Transaction, Workspace } from '../types';
 
 // the browser and the server both reverse a locked entry on today's date (the workspace's time zone, UTC here)

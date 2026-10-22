@@ -5,6 +5,7 @@
  * The database part runs when LF_TEST_DATABASE_URL is set.
  */
 import test, { after, before, describe } from 'node:test';
+import { commitAsServer } from './helpers/serverCommit';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
@@ -81,14 +82,8 @@ describe('Posting endpoint: cost of goods sold moves stock', { skip: !url && 'LF
   let base = '';
   let db: import('../server/db/pgFirestore').Firestore;
 
-  const post = async (uid: string, body: unknown, key?: string) => {
-    const res = await fetch(`${base}/api/v1/transactions/bulk`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-test-uid': uid, ...(key ? { 'idempotency-key': key } : {}) },
-      body: JSON.stringify(body),
-    });
-    return { status: res.status, body: await res.json() as Record<string, unknown> };
-  };
+  // L94-STEP2B: entries that name a document are the server's own (its posting builds them); sent to the shared commit as the server does
+  const post = (uid: string, body: unknown, key?: string) => commitAsServer(db, uid, body as never, key);
   const stock = async (id = item) => (await db.collection('inventory').doc(id).get()).data()?.quantityAtHand;
   const cogsEntry = (id: string, quantity: number, itemId = item) => {
     const invoice = makeInvoice({ id: `${ws}_inv`, items: [line({ id: 'l1', itemId, quantity, unitCostCents: 400 })] });

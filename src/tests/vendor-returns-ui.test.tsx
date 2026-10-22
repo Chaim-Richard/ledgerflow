@@ -13,16 +13,19 @@ import { markComponentCollectionsLoaded, setComponentWorkspace } from './helpers
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { getSupabase } from '../lib/db/client';
 import { makeChartAccount } from './fixtures';
-import type { Bill, Transaction, Vendor } from '../types';
+import { postVendorCreditLedger } from '../services/ledgerPost/creditPosting';
+import type { LedgerPostContext } from '../services/ledgerPost/postingCore';
+import type { Bill, Vendor, Workspace } from '../types';
 
 const bill = { id: 'b1', workspaceId: 'component-workspace', vendorId: 'v1', vendorName: 'Furniture Co', number: 'B-1', date: '2026-04-01', dueDate: '2026-05-01', status: 'pending', currency: 'USD', amountCents: 4500,
   splits: [{ amountCents: 4000, accountId: 'office', description: 'Chairs', itemId: 'chair', quantity: 4 }, { amountCents: 500, accountId: 'office', description: 'Delivery' }] } as unknown as Bill;
 
 describe('Sending stock back on a vendor credit', () => {
+  let workspace: Workspace;
   let calls: Array<{ url: string; body: Record<string, unknown> }> = [];
   beforeEach(() => {
     calls = [];
-    setComponentWorkspace('owner');
+    workspace = setComponentWorkspace('owner');
     markComponentCollectionsLoaded('bills', 'creditNotes', 'customers', 'invoices', 'vendorCredits', 'vendors');
     useLedgerStore.setState({
       creditNotes: [], vendorCredits: [], invoices: [], customers: [], transactions: [], bills: [bill],
@@ -57,13 +60,20 @@ describe('Sending stock back on a vendor credit', () => {
     fireEvent.click(screen.getByRole('button', { name: /Credit their cost: \$20\.00/ }));
     assert.equal((screen.getByLabelText(/^Amount \(/) as HTMLInputElement).value, '20.00');
     await act(async () => { fireEvent.submit(screen.getByLabelText(/^Amount \(/).closest('form')!); });
-    await waitFor(() => assert.ok(calls.some(c => c.url.endsWith('/transactions/bulk'))));
-    const body = calls.find(c => c.url.endsWith('/transactions/bulk'))!.body as { transactions: Transaction[]; entityMutation: { data: Record<string, unknown> } };
-    assert.deepEqual(body.entityMutation.data.returnedGoods, [{ billLine: 0, itemId: 'chair', quantity: 2, valueCents: 2000 }]);
-    const entry = body.transactions.find(t => t.metadata?.type === 'vendor-credit-issuance')!;
+    // L94-STEP2B: the vendor credit goes to the server's document route; the entry is built there from the same builder
+    const route = /\/documents\/vendorCredits\/[^/]+\/post$/;
+    await waitFor(() => assert.ok(calls.some(c => route.test(c.url))));
+    const body = calls.find(c => route.test(c.url))!.body as { action: string; data: Record<string, unknown> };
+    assert.equal(body.action, 'create');
+    assert.deepEqual(body.data.returnedGoods, [{ billLine: 0, itemId: 'chair', quantity: 2, valueCents: 2000 }]);
+    const context: LedgerPostContext = { accounts: useLedgerStore.getState().accounts, workspaces: [workspace], transactions: [], inventory: [], lockDate: null, uid: 'u1', today: '2026-10-22', capture: [] };
+    const id = String(body.data.id || calls.find(c => route.test(c.url))!.url.split('/').slice(-2)[0]);
+    await postVendorCreditLedger(id, body.data as never, workspace.id, 'u1', { collection: 'vendorCredits', docId: id, action: 'create', data: body.data }, context);
+    const entry = context.capture!.flatMap(c => c.txs).find(t => t.metadata?.type === 'vendor-credit-issuance')!;
     assert.deepEqual(entry.lines.map(l => [l.accountId, l.amountCents]), [['ap', 2000], ['inv-acct', -2000]]);
     // DIM-2 phase 2: each line sent back also names the bill line it came in on
     assert.deepEqual(entry.metadata?.stockOut, [{ itemId: 'chair', quantity: 2, valueCents: 2000, billLine: 0 }]);
+    assert.equal(calls.some(c => c.url.endsWith('/transactions/bulk')), false, 'no entries from the browser');
   });
 
   test('more than the bill brought in is refused before saving', async () => {
@@ -71,6 +81,6 @@ describe('Sending stock back on a vendor credit', () => {
     fireEvent.change(screen.getByLabelText('How many of Chairs go back'), { target: { value: '5' } });
     fireEvent.change(screen.getByLabelText(/^Amount \(/), { target: { value: '100' } });
     await act(async () => { fireEvent.submit(screen.getByLabelText(/^Amount \(/).closest('form')!); });
-    assert.equal(calls.some(c => c.url.endsWith('/transactions/bulk')), false);
+    assert.equal(calls.some(c => /\/transactions\/bulk$|\/documents\//.test(c.url)), false);
   });
 });

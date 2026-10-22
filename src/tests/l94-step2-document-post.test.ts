@@ -20,7 +20,7 @@ import type { Server } from 'node:http';
 import { postInvoiceLedger } from '../services/ledgerPost/invoicePosting';
 import { postBillLedger } from '../services/ledgerPost/billPosting';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from '../services/ledgerPost/postingCore';
-import { postingFingerprint } from '../server/services/postingShadowCheck';
+import { postingFingerprint } from './helpers/postingShadowCheck';
 import { openingBalanceDocument } from '../lib/partyOpeningBalance';
 import type { Bill, ChartAccount, Invoice, Transaction, Workspace } from '../types';
 
