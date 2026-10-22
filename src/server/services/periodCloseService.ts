@@ -7,6 +7,7 @@ import { closeStepsProblem, STEP_PREFIX, type CloseStep } from '../../lib/closeS
 import { formatTzDate } from '../../lib/utils';
 import { dayNumber } from '../../lib/fiscalCalendar';
 import { writeServerAuditLog } from './auditLogService';
+import { rebuildSnapshots } from './balanceService';
 import { addToDateISO } from '../../lib/utils';
 import { balancesAsOf, snapshotChanges, takeClosingSnapshot, type ClosingSnapshot } from '../../lib/closingSnapshot';
 import type { ChartAccount, Transaction as LedgerEntry } from '../../types';
@@ -192,13 +193,16 @@ export async function partialUnlock(db: Firestore, input: Actor & { fromDate: st
 }
 
 export async function relock(db: Firestore, input: Actor) {
-  return db.runTransaction(async (t) => {
+  const result = await db.runTransaction(async (t) => {
     const { ref, ws } = await loadWorkspace(db, t, input, CLOSE_ROLES, 'lock the period again');
     if (!ws.lockException) throw new PeriodCloseError(409, 'Nothing is unlocked');
     t.update(ref, { lockException: null, updatedAt: new Date().toISOString() });
     await audit(db, t, input, 'PERIOD_RELOCKED', `Closed ${ws.lockException.fromDate} to ${ws.lockException.toDate} again`, { fromDate: ws.lockException.fromDate, toDate: ws.lockException.toDate });
-    return { lockException: null };
+    return { lockException: null as null };
   });
+  // L-123: the range is closed again, so the year-end snapshots it made stale are rebuilt at once
+  await rebuildSnapshots(db, input.workspaceId, input.uid).catch(err => console.warn('[balances] rebuilding after the relock failed:', err instanceof Error ? err.message : err));
+  return result;
 }
 
 export async function signOff(db: Firestore, input: Actor & { month: string; itemId: string; note?: string; remove?: boolean }) {
