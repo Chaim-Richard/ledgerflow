@@ -59,9 +59,12 @@ export function resolveAccountRole(account: ChartAccount | undefined | null): Ac
   }
 
   if (type === 'liability') {
-    if (category === 'payables' || category === 'accounts payable' || category === 'payable' || subtype.includes('payable') || name.includes('payable')) {
+    if (category === 'payables' || category === 'accounts payable' || category === 'payable' || subtype.includes('payable')) {
       return 'ap';
     }
+    // W8-GOLD: "Sales Tax Payable" (the business templates' 2100, category Tax) is a tax liability, not
+    // Accounts Payable; read as A/P, bills and their payments could land on two different accounts
+    if (name.includes('payable') && !name.includes('tax') && category !== 'tax' && category !== 'taxes') return 'ap';
     return 'liability';
   }
 

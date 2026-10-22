@@ -629,5 +629,24 @@ select pg_temp.expect_denied('the owner renames it from the browser', 'u-owner',
 select pg_temp.expect_denied('someone adds a group from the browser', 'u-out',
   $$insert into "workspaceGroups"(id,data) values ('grp_out1', '{"ownerUid":"u-out","name":"Theirs","workspaceIds":["ws1"]}')$$);
 
+-- return authorizations (RMAs) are written only by the server (ISS-143)
+select pg_temp.expect_ok('a bookkeeper still edits a customer', 'u-book',
+  $$select lf_update('customers','c2','{"phone":"555-0101"}'::jsonb)$$);
+select pg_temp.expect_denied('a bookkeeper writes an RMA into a customer from the browser', 'u-book',
+  $$select lf_update('customers','c2','{"metadata.returnAuthorizationsById.rma_x":{"id":"rma_x","status":"approved"}}'::jsonb)$$);
+select pg_temp.expect_denied('the owner cannot either: approvals go through the server', 'u-owner',
+  $$select lf_update('customers','c2','{"metadata":{"returnAuthorizationsById":{"rma_x":{"id":"rma_x","status":"approved"}}}}'::jsonb)$$);
+select pg_temp.expect_denied('a new customer with an RMA already in it', 'u-book',
+  $$insert into customers(id,data) values ('c-rma', '{"workspaceId":"ws1","name":"R","metadata":{"returnAuthorizationsById":{"rma_y":{"id":"rma_y","status":"closed"}}}}')$$);
+do $$ begin
+  perform set_config('request.jwt.claims', '', true);
+  update customers set data = jsonb_set(data, '{metadata}', '{"returnAuthorizationsById":{"rma_s":{"id":"rma_s","status":"requested"}}}'::jsonb) where id = 'c2';
+end $$;
+select pg_temp.expect_value('the server writes it', $$select data->'metadata'->'returnAuthorizationsById'->'rma_s'->>'status' from customers where id='c2'$$, 'requested');
+select pg_temp.expect_ok('a browser edit elsewhere on that customer keeps the server''s RMA', 'u-book',
+  $$select lf_update('customers','c2','{"phone":"555-0102"}'::jsonb)$$);
+select pg_temp.expect_denied('and cannot change its status', 'u-acct',
+  $$select lf_update('customers','c2','{"metadata.returnAuthorizationsById.rma_s.status":"approved"}'::jsonb)$$);
+
 select 'ALL RLS TESTS PASSED' as result;
 rollback;
