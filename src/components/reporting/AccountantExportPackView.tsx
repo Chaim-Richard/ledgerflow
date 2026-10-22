@@ -187,7 +187,7 @@ export default function AccountantExportPackView({ startDate: pageStartDate, end
           <div>
             <h2 id="accountant-pack-title" className="text-lg font-semibold">Accountant export pack</h2>
             <p className="text-sm text-[var(--muted)]">
-              Trial balance, general ledger, A/R, A/P and tax liability by period for one period, in one ZIP of CSV files and one printable pack.
+              Trial balance, general ledger, A/R, A/P and tax liability by month for the period you choose, in one ZIP of CSV files and one printable pack.
               Read-only: nothing here posts, files a return or changes a rate.
             </p>
           </div>

@@ -27,7 +27,7 @@ import type { Bill, ChartAccount, CreditNote, Customer, Invoice, Transaction, Ve
 
 export const ACCOUNTANT_PACK_FORMAT = 'ledgerflow-accountant-pack-v1';
 /** More general-ledger lines than this in one pack is refused: narrow the period instead. */
-export const ACCOUNTANT_PACK_MAX_LEDGER_ROWS = 200000;
+export const ACCOUNTANT_PACK_MAX_LEDGER_ROWS = 100000;
 
 export type AccountantSectionKey = 'trial-balance' | 'general-ledger' | 'receivables' | 'payables' | 'tax-by-period';
 

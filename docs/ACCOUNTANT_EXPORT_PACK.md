@@ -75,7 +75,7 @@ until it is prepared again. So a downloaded ZIP always matches the dates on scre
   documents left out, home currency, reverse-charge handled as box 2/3.
 - Accounts with no opening balance and no movement are left out of the trial balance unless the
   checkbox asks for the whole chart (the note in the section says which).
-- A general ledger with more than **200,000** lines is refused with a message to narrow the period.
+- A general ledger with more than **100,000** lines is refused with a message to narrow the period.
 - The pack is **not** a statutory filing, not a substitute for the accountant's own procedures, and
   says so in the screen and the README.
 

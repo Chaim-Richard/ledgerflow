@@ -118,6 +118,19 @@ test('E-58 the demo workspace and an incomplete browser list block the download 
   assert.equal((screen.getByRole('button', { name: 'Prepare pack' }) as HTMLButtonElement).disabled, true);
 });
 
+test('E-58 records of another workspace never reach the pack', async () => {
+  useLedgerStore.setState({
+    customers: [...customers, { id: 'c9', workspaceId: 'ws2', name: 'Other Workspace Ltd' }] as never,
+    invoices: [...invoices, { id: 'inv9', workspaceId: 'ws2', customerId: 'c9', date: '2026-02-01', dueDate: '2026-02-01', status: 'sent', amountCents: 999900, taxCents: 0 }] as never,
+  } as never);
+  render(<AccountantExportPackView startDate="2026-01-01" endDate="2026-02-28" />);
+  await prepare();
+  assert.doesNotMatch(document.body.textContent || '', /Other Workspace Ltd/);
+  assert.doesNotMatch(document.body.textContent || '', /9,999\.00/);
+  // the workspace's own receivable figure is unchanged
+  assert.match(document.body.textContent || '', /Accounts receivable open\$550\.00/);
+});
+
 test('E-58 an impossible period is refused before anything is read', () => {
   render(<AccountantExportPackView startDate="2026-02-28" endDate="2026-01-01" />);
   assert.match(screen.getByRole('alert', { name: 'Why the pack cannot be prepared' }).textContent || '', /start not after the end/);
