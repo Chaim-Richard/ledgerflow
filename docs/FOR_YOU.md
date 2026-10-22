@@ -504,3 +504,34 @@ The Supabase connector timed out. Paste **`supabase/migrations/20261022000000_rm
 5. **Withholding rate after the vendor's certificate expires (ISS-156).** The rate is cleared and must be typed, as on a fresh payment; a rate typed by the person stays. *Default used: cleared.*
 6. **Scheduled reports (AUD-04, PR coming).** A failed address is tried again after 1, 4 and 24 hours, then given up; giving up is logged. *Default used: 4 attempts.*
 
+7. **Israeli VAT, the Eilat area's subsections and the PCN874 header month for two-monthly filers (CON-4b).** I could not open www.gov.il or www.nevo.co.il from here, so neither was checked against the law's text. *Default used:* a sale in Eilat by an Eilat dealer is exempt (s.5 as the app already applies it), and a two-monthly PCN874 file names the first month of the pair. Say if either is wrong; to let me check, allow those two sites under the cloud environment's network access.
+8. **Database certificate (AUD-20).** Paste the Supabase certificate into Vercel as `DATABASE_CA_CERT` (Settings → Environment Variables; one line with `\n` works). Until then the connection is encrypted but the server's certificate is not checked, and the logs say so once.
+9. **If you change the Supabase project (AUD-12).** Set `VITE_SUPABASE_URL` and `SUPABASE_URL`, then run `npm run csp:vercel` and commit `vercel.json`. The build stops on purpose until you do, so the browser is never blocked from the new project.
+10. **Yen and dinars on the other forms (BM-04).** The invoice, bill and payment forms now read amounts in the document's own decimals. Credit notes, vendor credits, journals, expense claims and imports still read two decimals. *Default used: left for a follow-up.* That is right for every two-decimal currency, but a yen or dinar amount typed on those forms must be checked.
+11. **Bank import into a locked month (PREV-6).** Rows dated before the lock date are left out, but the success message still counts them. *Default used: left as is (reported).* Say if the import should be refused whole instead.
+
+## 22 Oct — the outside ERPNext comparison: what is true, and what AI #9 recommends
+
+You shared a comparison of LedgerFlow with ERPNext. AI #9 checked its claims against the code on main (22 Oct).
+
+**True, and worth doing** (in this order):
+1. **Credit limit is only a report (EG-5).** An invoice over the customer's limit saves without a warning. *Recommend: next, small.* The server refuses it unless an owner gives a reason.
+2. **No repair path after a backdated fix (EG-1).** If an old entry is corrected, nothing recomputes what depends on it (stock values, payment allocations). *Recommend: design now, build with L-123* (the closed-year balances already in progress), because both need the same "what changed since" machinery.
+3. **Payment allocations have no ledger of their own (EG-2).** Which payment paid which invoice lives inside the payment records; there is no report to check it against the books. *Recommend: after EG-1.*
+4. **Closing a year is a lock and a checklist, not a document (EG-3).** *Recommend: a posted closing record per year, after L-123.*
+5. **Landed cost is a preview only (EG-6, already listed as BF-04)** and **no stock snapshot at period end (EG-7).** *Recommend: before promising stock (W13) to a real client.*
+6. **Smaller:**
+   - the tax breakdown kept on each posted line (EG-12): a check first, it may already be true;
+   - bank rules applied on the server (EG-9);
+   - a budget check when posting (EG-4);
+   - importing open invoices at migration (EG-14).
+
+**Out of date in the comparison** (already fixed today):
+- return approvals (RMA) are decided by the server (#302);
+- scheduled reports cannot be sent twice (#311).
+
+**Your decision, still open:** FIFO / lot costing (EG-8, the DIM-2 phase 5 question above). Until you answer, stock stays at moving average.
+
+**Agreed not to build:** manufacturing, CRM, POS, quality, helpdesk, a generic workflow engine, a report builder or a print-format designer. They add a lot of work without making the books more reliable.
+
+The full list is in COORDINATION (22 Oct, AI #9 → AI #1) for AI #1 to queue.
