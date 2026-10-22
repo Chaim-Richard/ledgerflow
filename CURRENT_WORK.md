@@ -27,7 +27,6 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 | — | none open (21 Oct: #265–#272 merged; #254 replaced by #266–#270) |
 
 **Waiting on you (owner)** — details in `docs/FOR_YOU.md`
-- Paste one database change into Supabase: `supabase/migrations/20261022000000_rma_server_only.sql` (FOR_YOU, 22 Oct).
 - Replace the four generated secrets (item 2), try sign-up on the live site (3), deployment protection (4).
 - Email sender + provider (5, 7), database certificate (6), Stripe last 2 steps (8), privacy papers (17).
 - GitHub: require CI before merging to `main` (L-67).

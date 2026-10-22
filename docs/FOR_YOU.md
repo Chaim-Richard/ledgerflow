@@ -492,5 +492,5 @@ The Supabase connector timed out a third time. Paste **`supabase/migrations/2026
 **Open question for you:** the books cost stock by **moving average** (each purchase changes the average; a sale costs at the average). The stock history now keeps where each unit came from and went (Reports → Stock Sources and Uses), but it does not tie a sale to the exact purchase lot. Phase 5 of GitHub #132 would add optional **FIFO or lot-specific costing**. That changes the cost of goods sold and the stock value, so it needs your decision (and your accountant's) first. **Default I used: stay on moving average; phase 5 is not started.** Say if a customer needs FIFO or lot costing.
 
 
-## 22 Oct — one database change to paste (ISS-143, return authorizations)
+## 22 Oct — ~~one database change to paste~~ **Done: run by the owner on 22 Oct.** (ISS-143, return authorizations)
 The Supabase connector timed out. Paste **`supabase/migrations/20261022000000_rma_server_only.sql`** into Supabase → SQL editor → Run (1 minute; safe to run more than once). It stops a browser from writing return-authorization (RMA) approvals directly; they now go only through the server, which checks the role and the quantities. *Default until then:* the screen already uses the server; only a direct browser write is not yet refused.
