@@ -39,6 +39,10 @@ const ROLES: Role[] = ['owner', 'accountant', 'bookkeeper', 'viewer'];
 
 // ---------------------------------------------------------------------------------------------
 // The server's policy, read from the source that enforces it
+//
+// Read inside the tests, never at load: a spec that throws while Playwright collects the files stops
+// the whole browser run, and a role list this test cannot find must fail these checks with a reason,
+// not take every other screen's test down with it.
 // ---------------------------------------------------------------------------------------------
 function source(path: string): string {
   return fs.readFileSync(path, 'utf8');
@@ -52,26 +56,43 @@ function rolesFrom(sourceText: string, anchor: string): Role[] {
   return match[1].split(',').map(part => part.trim().replace(/['"`]/g, '') as Role).filter(Boolean);
 }
 
-const workspaceRoutes = source('src/server/routes/workspaceRoutes.ts');
-const workspaceApiRoutes = source('src/server/routes/workspaceApiRoutes.ts');
-const ledgerWriter = source('src/server/middleware/requireLedgerWriter.ts');
+interface Policy {
+  close: Role[];
+  payRun: Role[];
+  restore: Role[];
+  accountTemplate: Role[];
+  members: Role[];
+  ledgerWrite: Role[];
+}
 
-const POLICY = {
-  close: (() => {
+let cachedPolicy: Policy | null = null;
+
+/** The role lists the server enforces, read from the files that enforce them. */
+function serverPolicy(): Policy {
+  if (cachedPolicy) return cachedPolicy;
+  const workspaceRoutes = source('src/server/routes/workspaceRoutes.ts');
+  const workspaceApiRoutes = source('src/server/routes/workspaceApiRoutes.ts');
+  const ledgerWriter = source('src/server/middleware/requireLedgerWriter.ts');
+  const close = (() => {
     const match = /CLOSE_ROLES[^=]*=\s*\[([^\]]*)\]/.exec(source('src/lib/periodLock.ts'));
     if (!match) throw new Error('CLOSE_ROLES is not in src/lib/periodLock.ts any more');
     return match[1].split(',').map(part => part.trim().replace(/['"`]/g, '') as Role).filter(Boolean);
-  })(),
-  payRun: rolesFrom(workspaceRoutes, "'/:workspaceId/pay-runs'"),
-  restore: rolesFrom(workspaceApiRoutes, '/restore"'),
-  accountTemplate: rolesFrom(workspaceRoutes, "'/:workspaceId/apply-template'"),
-  members: rolesFrom(workspaceApiRoutes, '/members"'),
-  ledgerWrite: (() => {
+  })();
+  const ledgerWrite = (() => {
     const match = /LEDGER_WRITER_ROLES\s*=\s*\[([^\]]*)\]/.exec(ledgerWriter);
     if (!match) throw new Error('LEDGER_WRITER_ROLES is not in requireLedgerWriter.ts any more');
     return match[1].split(',').map(part => part.trim().replace(/['"`]/g, '') as Role).filter(Boolean);
-  })(),
-};
+  })();
+  cachedPolicy = {
+    close,
+    payRun: rolesFrom(workspaceRoutes, "'/:workspaceId/pay-runs'"),
+    restore: rolesFrom(workspaceApiRoutes, 'app.post("/api/v1/workspaces/:workspaceId/restore"'),
+    accountTemplate: rolesFrom(workspaceRoutes, "'/:workspaceId/apply-template'"),
+    members: rolesFrom(workspaceApiRoutes, 'app.post("/api/v1/workspaces/:workspaceId/members"'),
+    ledgerWrite,
+  };
+  return cachedPolicy;
+}
 
 /** "owner, accountant" → "Owners and accountants", the words the screen uses for the same rule. */
 const roleWords = (roles: Role[]) => roles.map(role => role[0].toUpperCase() + role.slice(1) + 's').join(' and ');
@@ -112,6 +133,7 @@ for (const width of [390, 1280]) {
   test(`W14 roles: owner, accountant, bookkeeper and viewer on the same books at ${width}px`, async ({ page }, testInfo) => {
     test.setTimeout(240_000);
     await page.setViewportSize({ width, height: 900 });
+    const POLICY = serverPolicy();
     const pageErrors: string[] = [];
     page.on('pageerror', error => pageErrors.push(error.message));
 
@@ -205,6 +227,8 @@ for (const width of [390, 1280]) {
 }
 
 test('W14 the role lists the screens use are the server’s own lists', () => {
+  const POLICY = serverPolicy();
+  const ledgerWriter = source('src/server/middleware/requireLedgerWriter.ts');
   // Every list must be non-empty, and the wider "may change the books" list must contain the
   // narrower "may close the books" one — otherwise a bookkeeper could be refused by the close
   // screen for a permission the server does grant.
