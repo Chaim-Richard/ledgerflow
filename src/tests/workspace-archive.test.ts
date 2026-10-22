@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { buildWorkspaceArchive, zipCrc32 } from '../lib/workspaceArchive';
+import { backupFromWorkspaceArchive, buildWorkspaceArchive, zipCrc32 } from '../lib/workspaceArchive';
 
 function signedBackup() {
   const source = {
@@ -83,4 +83,18 @@ test('E-21 altered checksum, wrong workspace and incomplete lists are refused', 
     metadata: { ...valid.metadata, counts: { transactions: 2, accounts: 1, vendors: 0 } },
   });
   await assert.rejects(buildWorkspaceArchive(wrongCount, 'ws1'), /count mismatch/);
+});
+
+test('BK-10 the restore reads the archive back to its exact backup.json; a damaged or foreign ZIP is refused', async () => {
+  const source = signedBackup();
+  const { blob } = await buildWorkspaceArchive(source, 'ws1');
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const { text, backup } = await backupFromWorkspaceArchive(bytes);
+  assert.equal(text, JSON.stringify(source, null, 2));
+  assert.deepEqual(backup, source);
+
+  const damaged = bytes.slice();
+  damaged[Buffer.from(damaged).indexOf('SUM(A1')] ^= 1;
+  await assert.rejects(backupFromWorkspaceArchive(damaged), /damaged/);
+  await assert.rejects(backupFromWorkspaceArchive(new TextEncoder().encode('{"not":"a zip"}')), /not a readable workspace archive/);
 });

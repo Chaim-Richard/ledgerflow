@@ -9,7 +9,7 @@ import {
   ilPcn874Preview, ilReturnForDealer, type IlJourneyDocument, type IlJourneyParty, type IlMonthStepStatus, type IsraelMonth,
 } from '../../lib/israelMonthJourney';
 import { downloadCsv } from '../../lib/csvExport';
-import { monthCloseState } from '../../lib/periodLock';
+import { monthCloseState, workspaceRole } from '../../lib/periodLock';
 import { getIdToken } from '../../firebase';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import ReportTableScroll from './ReportTableScroll';
@@ -61,7 +61,8 @@ export default function IsraelMonthJourneyReportView() {
   const [monthText, setMonthText] = useState(() => previousMonthOf(getLocalDateISO()));
   const [typedDealerId, setTypedDealerId] = useState<string | null>(null);
   // the returns the server has recorded for this workspace, so "recorded as filed" is a fact, not a guess
-  const [filedPeriods, setFiledPeriods] = useState<Array<{ startDate: string; endDate: string }> | null>(null);
+  const [filedPeriods, setFiledPeriods] = useState<Array<{ startDate: string; endDate: string; registration?: string }> | null>(null);
+  const [filedReload, setFiledReload] = useState(0);
   const currency = workspace?.currency || 'ILS';
   useEffect(() => {
     let cancelled = false;
@@ -73,14 +74,29 @@ export default function IsraelMonthJourneyReportView() {
         });
         const data = await res.json().catch(() => ({}));
         if (cancelled) return;
-        setFiledPeriods(((data.returns || []) as Array<{ startDate?: string; endDate?: string }>)
+        setFiledPeriods(((data.returns || []) as Array<{ startDate?: string; endDate?: string; registration?: string }>)
           .filter(r => typeof r.startDate === 'string' && typeof r.endDate === 'string')
-          .map(r => ({ startDate: r.startDate!, endDate: r.endDate! })));
+          .map(r => ({ startDate: r.startDate!, endDate: r.endDate!, ...(typeof r.registration === 'string' ? { registration: r.registration } : {}) })));
       } catch { if (!cancelled) setFiledPeriods([]); }
     };
     void load();
     return () => { cancelled = true; };
-  }, [workspaceId]);
+  }, [workspaceId, filedReload]);
+
+  // CON-4b: an owner or accountant records one registration's return as filed (the server keeps a copy of its figures)
+  const user = useAuthStore(state => state.user);
+  const canFile = Boolean(user && workspace && ['owner', 'accountant'].includes(workspaceRole(workspace as never, user.uid)));
+  const recordFiled = async (r: { registration: string; startDate: string; endDate: string }) => {
+    const asked = workspaceId;
+    const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspaceId || '')}/tax-returns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` },
+      body: JSON.stringify({ startDate: r.startDate, endDate: r.endDate, registration: r.registration }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'The return could not be recorded');
+    if (useAuthStore.getState().currentWorkspaceId === asked) setFiledReload(n => n + 1);
+  };
   const partial = Boolean(truncated.invoices || truncated.bills || truncated.creditNotes
     || failed.invoices || failed.bills || failed.creditNotes || failed.customers || failed.vendors);
 
@@ -148,6 +164,7 @@ export default function IsraelMonthJourneyReportView() {
     onDealerIdChange={setTypedDealerId}
     loading={loading || !filedPeriods}
     partial={partial}
+    {...(canFile ? { onRecordFiled: recordFiled } : {})}
   />;
 }
 
@@ -163,7 +180,9 @@ function downloadText(name: string, text: string) {
   URL.revokeObjectURL(url);
 }
 
-export function IsraelMonthJourneyPanel({ journey, preview, currency = 'ILS', monthText, onMonthChange, dealerId, onDealerIdChange, loading = false, partial = false }: {
+export function IsraelMonthJourneyPanel({ journey, preview, currency = 'ILS', monthText, onMonthChange, dealerId, onDealerIdChange, loading = false, partial = false, onRecordFiled }: {
+  /** CON-4b: owners and accountants record one registration's return as filed */
+  onRecordFiled?: (r: { registration: string; startDate: string; endDate: string }) => Promise<void>;
   journey: IsraelMonth | null;
   preview: ReturnType<typeof ilPcn874Preview> | null;
   currency?: string;
@@ -229,7 +248,7 @@ export function IsraelMonthJourneyPanel({ journey, preview, currency = 'ILS', mo
             {figure.note ? <span className="text-[var(--muted)]"> ({figure.note})</span> : null}
           </li>)}
         </ul>}
-        {step.returns.length > 0 && <VatReturnTable returns={step.returns} currency={currency} />}
+        {step.returns.length > 0 && <VatReturnTable returns={step.returns} currency={currency} onRecordFiled={onRecordFiled} />}
         {step.allocation.length > 0 && <AllocationTable cases={step.allocation} currency={currency} />}
         {step.id === 'pcn874'
           ? <p className="text-sm text-[var(--muted)]">The draft, every document that cannot be written and the comparison with the report are below.</p>
@@ -289,8 +308,17 @@ export function IsraelMonthJourneyPanel({ journey, preview, currency = 'ILS', mo
   </section>;
 }
 
-function VatReturnTable({ returns, currency }: { returns: IsraelMonth['steps'][number]['returns']; currency: string }) {
+function VatReturnTable({ returns, currency, onRecordFiled }: { returns: IsraelMonth['steps'][number]['returns']; currency: string; onRecordFiled?: (r: { registration: string; startDate: string; endDate: string }) => Promise<void> }) {
+  const [saving, setSaving] = useState('');
+  const [problem, setProblem] = useState('');
+  const record = async (r: IsraelMonth['steps'][number]['returns'][number]) => {
+    if (!onRecordFiled || saving) return;
+    setSaving(r.registration);
+    setProblem('');
+    try { await onRecordFiled(r); } catch (err) { setProblem(err instanceof Error ? err.message : String(err)); } finally { setSaving(''); }
+  };
   return <ReportTableScroll>
+    {problem && <p role="alert" className="text-sm text-[var(--danger)]">{problem}</p>}
     <table className="w-full text-sm">
       <caption className="text-left font-semibold text-[var(--text)] pb-1">The VAT report each registration files for this month (its own monthly or two-month period), as the return screen computes it</caption>
       <thead><tr className="border-b border-[var(--line)] text-xs text-[var(--muted)]">
@@ -308,7 +336,10 @@ function VatReturnTable({ returns, currency }: { returns: IsraelMonth['steps'][n
           <td className="py-1 px-2 tabular-nums whitespace-nowrap">{formatCurrency(r.fixedAssetInputVatCents, currency)}</td>
           <td className="py-1 px-2 tabular-nums whitespace-nowrap">{formatCurrency(Math.abs(r.toPayCents), currency)}{r.toPayCents < 0 ? ' (reclaim)' : ''}</td>
           <td className="py-1 px-2 whitespace-nowrap">{r.dueDate || (r.filing ? `${r.filing} report` : 'not stated')}</td>
-          <td className="py-1 px-2">{r.filed ? 'Yes' : 'Not recorded here'}</td>
+          <td className="py-1 px-2">{r.filed ? 'Yes' : onRecordFiled && !r.pending
+            ? <button type="button" className="min-h-11 px-3 rounded border border-[var(--line)]" disabled={saving === r.registration}
+              onClick={() => { void record(r); }}>{saving === r.registration ? 'Recording…' : `Record ${r.registration.split(':').pop()} as filed`}</button>
+            : 'Not recorded here'}</td>
         </tr>)}
       </tbody>
     </table>

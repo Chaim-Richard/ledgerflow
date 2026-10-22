@@ -129,7 +129,7 @@ export async function postCreditNoteLedger(
       { accountId: arAccount.id, accountName: arAccount.name, amountCents: -amount, debitCents: 0, creditCents: amount, description: 'Accounts Receivable Credit' }
     ]
   };
-  txsToPost.push(inBaseCurrency(cnTx, workspaceId, context));
+  txsToPost.push(inBaseCurrency(cnTx, workspaceId, context, creditNoteData.metadata?.rateUsed as never));
 
   // BF-06: goods the customer sent back go back into stock, at the cost they left at
   const goods = (creditNoteData.returnedGoods || []).filter(g => g.quantity > 0);
@@ -287,7 +287,7 @@ export async function postVendorCreditLedger(
       ...(vcTax > 0 && vcTaxAccount ? [{ accountId: vcTaxAccount.id, accountName: vcTaxAccount.name, amountCents: -vcTax, debitCents: 0, creditCents: vcTax, description: 'Input tax reversed by the credit' }] : [])
     ]
   };
-  txsToPost.push(inBaseCurrency(vcTx, workspaceId, context));
+  txsToPost.push(inBaseCurrency(vcTx, workspaceId, context, vendorCreditData.metadata?.rateUsed as never));
 
   await postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
 }

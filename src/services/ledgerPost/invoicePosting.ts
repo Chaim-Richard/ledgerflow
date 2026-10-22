@@ -182,7 +182,7 @@ export async function postInvoiceLedger(
     },
     lines: accrualLines
   };
-  txsToPost.push(inBaseCurrency(accrualTx, workspaceId, context));
+  txsToPost.push(inBaseCurrency(accrualTx, workspaceId, context, invoiceData.metadata?.rateUsed as never));
 
   // 2.2 Deposit received in advance (AF-03): the money was booked to a Customer Deposits liability
   // when it came in; the invoice moves it against the receivable. Tax stays on the full invoice.
@@ -212,7 +212,7 @@ export async function postInvoiceLedger(
         { accountId: depositAccount.id, accountName: depositAccount.name, amountCents: depositAmount, description, exchangeRate: rate },
         { accountId: arAccount.id, accountName: arAccount.name, amountCents: -depositAmount, description, exchangeRate: rate },
       ],
-    }, workspaceId, context));
+    }, workspaceId, context, invoiceData.metadata?.rateUsed as never));
   }
 
   // 2.5 Cost of goods sold for lines that sell inventory items (the server moves the stock). Where
@@ -265,7 +265,7 @@ export async function postInvoiceLedger(
           lineAccounts: docLines // DIM-1: the payment carries the invoice lines' labels
         })
       };
-      txsToPost.push(inBaseCurrency(paymentTx, workspaceId, context));
+      txsToPost.push(inBaseCurrency(paymentTx, workspaceId, context, invoiceData.metadata?.rateUsed as never));
     }
   }
 

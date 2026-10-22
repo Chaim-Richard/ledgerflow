@@ -15,6 +15,8 @@ const periodSchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   reference: z.string().max(100).optional(),
+  /** CON-4b: the registration the return is for ('vat:IL:514000001'); absent: the whole workspace */
+  registration: z.string().max(120).regex(/^[a-z_]+:[^:]{2,60}:[^:]{1,40}$/).optional(),
 }).strict();
 
 function fail(res: express.Response, err: unknown) {
@@ -33,7 +35,7 @@ taxRouter.get('/', async (req, res) => {
 
 taxRouter.get('/preview', async (req, res) => {
   try {
-    const { startDate, endDate } = periodSchema.omit({ reference: true }).parse({ startDate: req.query.startDate, endDate: req.query.endDate });
+    const { startDate, endDate } = periodSchema.omit({ reference: true, registration: true }).parse({ startDate: req.query.startDate, endDate: req.query.endDate });
     res.json({ status: 'success', return: await computeWorkspaceTaxReturn(getDb(), String((req.params as Record<string, string>).workspaceId), startDate, endDate) });
   } catch (err) {
     fail(res, err);

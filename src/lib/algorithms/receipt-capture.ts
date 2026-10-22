@@ -1,96 +1,109 @@
 import { AlgorithmDefinition } from './types';
 
-// OCR output simulator and positional heuristic parser
-export function parseReceiptOCR(ocrLines: string[], existingMerchants: string[]) {
-    let total = 0;
-    let dateStr = '';
-    let merchant = ocrLines[0] || 'Unknown';
-
-    // 1. Merchant: Top line or existing merchant match
-    for (const line of ocrLines.slice(0, 5)) {
-        const match = existingMerchants.find(m => line.toLowerCase().includes(m.toLowerCase()));
-        if (match) {
-            merchant = match;
-            break;
-        }
-    }
-
-    // 2. Date regex
-    for (const line of ocrLines) {
-        const dateMatch = line.match(/\d{1,2}[/-]\d{1,2}[/-]\d{2,4}/);
-        if (dateMatch) {
-            dateStr = dateMatch[0];
-            break;
-        }
-    }
-
-    // 3. Total: Look for "total" and grab largest currency number nearby, or just largest currency at bottom
-    let maxCurrency = 0;
-    let foundTotalKeyword = false;
-    
-    // Look from bottom up
-    for (let i = ocrLines.length - 1; i >= 0; i--) {
-        const line = ocrLines[i].toLowerCase();
-        if (line.includes('total')) foundTotalKeyword = true;
-
-        const currencyMatch = line.match(/\$?\s*(\d+\.\d{2})/);
-        if (currencyMatch) {
-            const val = parseFloat(currencyMatch[1]);
-            if (foundTotalKeyword) {
-                total = val;
-                break; // First currency near bottom after seeing "total"
-            }
-            if (val > maxCurrency) maxCurrency = val;
-        }
-    }
-
-    if (total === 0) total = maxCurrency; // Fallback to largest currency number
-
-    return { merchant, dateStr, totalCents: Math.round(total * 100) };
+/**
+ * AUD-14: reads the merchant, date and total from a receipt's text lines (from a scanner or OCR) with simple positional
+ * rules — no model. It reads the text the person pastes; the built-in receipt is shown only as a labelled example. What
+ * the rules cannot be sure of is a warning, never a confident answer: more than one total, more than one date, a total
+ * found without the word "total", a currency that is not stated. No accuracy figure is claimed: none was measured.
+ */
+export interface ReceiptReading {
+  merchant: string;
+  dateStr: string;
+  totalCents: number;
+  /** the currency the receipt states ($, €, £, ₪ or a code), when it states one */
+  currency?: string;
+  warnings: string[];
 }
+
+const SYMBOLS: Record<string, string> = { '$': 'USD', '€': 'EUR', '£': 'GBP', '₪': 'ILS' };
+const AMOUNT = /(?:([$€£₪])\s*)?(\d{1,3}(?:,\d{3})*|\d+)\.(\d{2})\b/;
+const DATE = /\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b|\b\d{4}-\d{2}-\d{2}\b/g;
+
+const cents = (whole: string, fraction: string) => Number(whole.replace(/,/g, '')) * 100 + Number(fraction);
+
+export function parseReceiptOCR(ocrLines: string[], existingMerchants: string[]): ReceiptReading {
+  const lines = ocrLines.map(l => l.trim()).filter(Boolean);
+  const warnings: string[] = [];
+
+  // 1. Merchant: a known merchant in the first lines, else the first line
+  let merchant = lines[0] || 'Unknown';
+  for (const line of lines.slice(0, 5)) {
+    const match = existingMerchants.find(m => m && line.toLowerCase().includes(m.toLowerCase()));
+    if (match) { merchant = match; break; }
+  }
+  if (!lines.length) warnings.push('The receipt has no text.');
+
+  // 2. Date: the first one; a second, different one is a warning
+  const dates = [...new Set(lines.flatMap(l => l.match(DATE) || []))];
+  const dateStr = dates[0] || '';
+  if (!dateStr) warnings.push('No date was found.');
+  if (dates.length > 1) warnings.push(`More than one date (${dates.join(', ')}): the first is used — check it.`);
+
+  // 3. Total: the amount on a line that says "total" (not "subtotal"), from the bottom; else the largest amount
+  const totals = lines.filter(l => /\btotal\b/i.test(l) && !/sub\s*-?\s*total/i.test(l)).map(l => l.match(AMOUNT)).filter((m): m is RegExpMatchArray => Boolean(m));
+  const amounts = lines.map(l => l.match(AMOUNT)).filter((m): m is RegExpMatchArray => Boolean(m));
+  let chosen: RegExpMatchArray | undefined = totals[totals.length - 1];
+  if (!chosen) {
+    chosen = [...amounts].sort((a, b) => cents(b[2], b[3]) - cents(a[2], a[3]))[0];
+    if (chosen) warnings.push('No line says "total": the largest amount is used — check it.');
+  } else if (new Set(totals.map(m => cents(m[2], m[3]))).size > 1) {
+    warnings.push(`More than one total (${totals.map(m => `${m[2]}.${m[3]}`).join(', ')}): the last is used — check it.`);
+  }
+  if (!chosen) warnings.push('No amount was found.');
+  const totalCents = chosen ? cents(chosen[2], chosen[3]) : 0;
+
+  // 4. Currency: a symbol or code on the receipt; none stated is a warning
+  const symbol = chosen?.[1] || lines.map(l => l.match(/[$€£₪]/)?.[0]).find(Boolean);
+  const code = lines.map(l => l.match(/\b(USD|EUR|GBP|ILS|NIS|CAD|AUD)\b/)?.[1]).find(Boolean);
+  const currency = symbol ? SYMBOLS[symbol] : code === 'NIS' ? 'ILS' : code;
+  if (!currency) warnings.push('The receipt states no currency: check which it is in.');
+
+  return { merchant, dateStr, totalCents, ...(currency ? { currency } : {}), warnings };
+}
+
+/** A sample receipt, shown only when no text was pasted, and labelled as an example. */
+const EXAMPLE = [
+  'HOME DEPOT 123',
+  '123 MAIN ST',
+  '04/15/2026 14:23',
+  'HAMMER      12.99',
+  'NAILS        5.49',
+  'SUBTOTAL    18.48',
+  'TAX          1.52',
+  'TOTAL      $20.00',
+  'VISA **** 1234',
+];
 
 export const RECEIPT_CAPTURE_ALGO: AlgorithmDefinition = {
   id: 'receipt_capture',
   domain: 'operations',
   name: 'Positional Receipt Capture (No ML)',
-  description: 'Parses raw OCR text lines using spatial heuristics to extract Merchant, Date, and Total without a costly vision model.',
-  inputs: [],
-  compute: (ctx, _inputs) => {
+  description: 'Reads the merchant, date and total from the text of a receipt you paste (from a scanner or OCR), with positional rules and no vision model. What it cannot be sure of is listed as a warning.',
+  inputs: [{ kind: 'text', key: 'receiptText', label: 'Receipt text (one line per row)', defaultValue: '', placeholder: 'Paste the text of a receipt' }],
+  compute: (ctx, inputs) => {
     const { transactions } = ctx;
     const start = performance.now();
-    
-    // Test OCR lines for algorithm demonstration
-    const testOCRData = [
-        "HOME DEPOT 123",
-        "123 MAIN ST",
-        "04/15/2026 14:23",
-        "HAMMER      12.99",
-        "NAILS        5.49",
-        "SUBTOTAL    18.48",
-        "TAX          1.52",
-        "TOTAL      $20.00",
-        "VISA **** 1234"
-    ];
-
+    const pasted = String(inputs.receiptText || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const example = pasted.length === 0;
     const merchants = Array.from(new Set<string>(transactions.map(t => t.payee || t.description || ''))).filter(m => m.length > 3);
-    if (!merchants.includes('Home Depot')) merchants.push('Home Depot');
-
-    const result = parseReceiptOCR(testOCRData, merchants);
+    const result = parseReceiptOCR(example ? EXAMPLE : pasted, merchants);
     const ms = performance.now() - start;
+    const money = result.currency ? `${result.currency} ${(result.totalCents / 100).toFixed(2)}` : (result.totalCents / 100).toFixed(2);
 
     return {
       metrics: [
         { label: 'Merchant', value: result.merchant },
         { label: 'Date', value: result.dateStr || 'Not found' },
-        { label: 'Total Parsed', value: `$${(result.totalCents/100).toFixed(2)}` },
-        { label: 'Execution Time', value: `${ms.toFixed(2)} ms` }
+        { label: 'Total', value: money },
+        { label: 'Warnings', value: result.warnings.length },
       ],
       charts: [],
       insights: [
-        `Parsed successfully using spatial heuristics in ${ms.toFixed(2)}ms.`,
-        'Merchant: First line / known merchant list. Date: Regex. Total: Largest currency near the bottom.',
-        'This gets you 90% accuracy instantly and for free. Send only the 10% failures to an LLM.'
-      ]
+        ...(example ? ['Example only: no receipt text was pasted, so this reads a built-in sample receipt. Paste a receipt\'s text to read yours.'] : []),
+        ...result.warnings,
+        'How it reads: merchant from a known payee in the first lines (else the first line); date by pattern; total from the last line that says "total" (not subtotal), else the largest amount.',
+        `Read in ${ms.toFixed(2)} ms. Nothing is posted: check the figures before using them.`,
+      ],
     };
-  }
+  },
 };
