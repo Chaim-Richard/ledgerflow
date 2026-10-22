@@ -78,7 +78,7 @@ export const BANK_CALENDARS: Record<BankCalendarId, BankCalendar> = {
     id: 'TARGET',
     name: 'Euro area (TARGET)',
     weekend: [0, 6],
-    source: { authority: 'European Central Bank — TARGET closing days', url: 'https://www.ecb.europa.eu/paym/groups/shared/docs/calendars.en.html', retrieved: RETRIEVED },
+    source: { authority: 'European Central Bank — TARGET closing days', url: 'https://www.ecb.europa.eu/press/pr/date/2000/html/pr001214_4.en.html', retrieved: RETRIEVED },
     note: 'The days the TARGET system itself is closed; each euro-area country also has national bank holidays that are not in this list.',
   },
 };
