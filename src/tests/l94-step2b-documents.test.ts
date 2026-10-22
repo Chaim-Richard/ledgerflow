@@ -17,7 +17,7 @@ import type { Server } from 'node:http';
 import { postCreditNoteLedger, postVendorCreditLedger } from '../services/ledgerPost/creditPosting';
 import { deletePostings } from '../services/ledgerPost/deletePostings';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from '../services/ledgerPost/postingCore';
-import { postingFingerprint } from '../server/services/postingShadowCheck';
+import { postingFingerprint } from './helpers/postingShadowCheck';
 import type { ChartAccount, CreditNote, Transaction, VendorCredit, Workspace } from '../types';
 
 const url = process.env.LF_TEST_DATABASE_URL;
