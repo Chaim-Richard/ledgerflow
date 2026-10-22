@@ -22,11 +22,13 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
     try {
       const user = requestUser(req);
       const db = getDb();
-      const { body, transactions, committed } = await commitLedgerBulk(db, user, req.body, { idempotencyKey: req.headers['idempotency-key'] as string | undefined });
+      // the day the browser used (L-94 shadow check) is not part of what a retry must repeat: a retry after midnight is the same save
+      const { postingDay: _day, ...hashed } = (req.body || {}) as Record<string, unknown>;
+      const { body, transactions, committed } = await commitLedgerBulk(db, user, req.body, { idempotencyKey: req.headers['idempotency-key'] as string | undefined, hashOf: hashed });
       // L-94 step 1 (shadow): rebuild the document's entries on the server and log any difference; never blocks
-      const { entityMutation, workspaceId } = req.body;
+      const { entityMutation, workspaceId, postingDay } = req.body;
       if (committed && entityMutation && transactions.length > 0 && !body.replayed) {
-        await logShadowCheck(db, { workspaceId: workspaceId || transactions[0]?.workspaceId, uid: user.uid, mutation: entityMutation, posted: transactions });
+        await logShadowCheck(db, { workspaceId: workspaceId || transactions[0]?.workspaceId, uid: user.uid, mutation: entityMutation, posted: transactions, postingDay });
       }
       // AUD-15: the entries as written, for the browser's list (not kept with the idempotency record: a replay wrote nothing)
       res.json({ ...body, transactions: committed && !body.replayed ? transactions : [] });

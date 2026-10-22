@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { Transaction, Invoice, InventoryItem } from '../../types';
-import { registerPostingHost } from './postingCore';
+import { postingToday, registerPostingHost } from './postingCore';
 import { getLocalDateISO } from '../../lib/utils';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
 
@@ -57,7 +57,8 @@ async function sendToServer(
       'Idempotency-Key': idempotencyKey,
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     },
-    body: JSON.stringify({ transactions: txs, workspaceId, entityMutation })
+    // the day this posting counted as today, so the server's check rebuilds it with the same day (L-94)
+    body: JSON.stringify({ transactions: txs, workspaceId, entityMutation, postingDay: postingToday(context) })
   });
 
   const data = await response.json().catch(() => ({}));

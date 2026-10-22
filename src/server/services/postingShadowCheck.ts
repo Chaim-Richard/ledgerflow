@@ -21,6 +21,20 @@ export interface ShadowCheckInput {
   mutation: EntityMutation;
   /** the entries this request wrote, as written */
   posted: Array<Pick<Transaction, 'id' | 'date' | 'lines'>>;
+  /** the day the browser counted as today for this save (it dates reversals into a closed period) */
+  postingDay?: unknown;
+}
+
+const DAY_MS = 86_400_000;
+
+/**
+ * The day to rebuild with: the browser's, when it is a real date within one day of the server's own today (near
+ * midnight a browser in another time zone is a day apart; that is not a difference in the entries); else the server's.
+ */
+export function agreedPostingDay(serverToday: string, browserDay: unknown): string {
+  if (typeof browserDay !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(browserDay)) return serverToday;
+  const gap = Math.abs(Date.parse(`${browserDay}T00:00:00Z`) - Date.parse(`${serverToday}T00:00:00Z`));
+  return Number.isFinite(gap) && gap <= DAY_MS ? browserDay : serverToday;
 }
 
 export type ShadowCheckResult = { checked: false; reason: string } | { checked: true; matched: boolean; expected: string[]; sent: string[] };
@@ -59,6 +73,7 @@ export async function shadowCheckDocumentPosting(db: Firestore, input: ShadowChe
   // the document's entries as they were before this request (everything except what it just wrote); the save already
   // passed the server's own period check, so the builder must not refuse it again
   const context = await loadPostingContext(db, { workspaceId, uid, collection: mutation.collection, docId: mutation.docId, document, workspace, exclude: new Set(posted.map(tx => tx.id)), lockChecked: true });
+  context.today = agreedPostingDay(context.today || new Date().toISOString().slice(0, 10), input.postingDay);
   await builder.post(mutation.docId, { ...document, id: mutation.docId }, workspaceId, uid, mutation, context);
 
   const expected = postingFingerprint(context.capture!.flatMap(c => c.txs));
