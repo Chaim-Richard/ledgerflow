@@ -14,7 +14,7 @@ export class SecurityService {
 
   static canonicalForensicPayload(data: unknown): unknown {
     if (data === null || typeof data !== 'object') return data;
-    const { verification, ...rest } = data as Record<string, unknown>;
+    const { verification: _verification, ...rest } = data as Record<string, unknown>;
     return rest;
   }
 

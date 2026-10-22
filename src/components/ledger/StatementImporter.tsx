@@ -1,7 +1,7 @@
 import { useDialog } from '../../hooks/useDialog';
-import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { parseCsv } from '../../lib/csv';
+import { parseCsvChecked } from '../../lib/csv';
+import { assertReadableText, mapBankCsvRows } from '../../lib/bankCsvRows';
 import { headerSignature, mappingToSaved, savedToMapping } from '../../lib/importColumnMaps';
 import type { LedgerState } from '../../stores/useLedgerStore';
 import type { ColumnMapping } from '../../lib/importColumnMaps';
@@ -28,7 +28,6 @@ import AsyncButton from '../ui/AsyncButton';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { BloomFilter, MinHash, AnalyticalMatcher, generateImportIdentity } from '../../lib/algorithms';
 import CategoryWhyPopover from '../common/CategoryWhyPopover';
-import { normalizeDateString } from '../../lib/dateParsing';
 import { Labelled } from '../ui/Labelled';
 import { parseQIFStatement, type QIFDateOrder } from '../../lib/qifParser';
 import { parseBAI2Statement } from '../../lib/bai2Parser';
@@ -111,22 +110,14 @@ export default function StatementImporter({
   const [israeliBankCsv, setIsraeliBankCsv] = useState(false);
   const [israeliDateOrder, setIsraeliDateOrder] = useState<IsraeliBankDateOrder | ''>('');
   const [fileError, setFileError] = useState('');
+  const [mappingError, setMappingError] = useState('');
   const csvHeaders = withOccurrenceKeys(csvData[0] || [], column => column);
   const csvPreview = withOccurrenceKeys(csvData.slice(1, 6), row => JSON.stringify(row));
   const [mapping, setMapping] = useState({ date: -1, description: -1, amount: -1, debit: -1, credit: -1, payee: -1, memo: -1, skipRows: 1 });
 
   // #101: the shared RFC 4180 reader — only double quotes quote, so "O'Brien" stays one cell, and
   // quoted commas, line breaks and doubled quotes are kept
-  const parseCsvText = (text: string): string[][] => parseCsv(text).map(row => row.map(cell => cell.trim()));
-
-  const cleanAmountStr = (str: string): string => {
-    if (!str) return '0';
-    let s = str.trim();
-    if (s.startsWith('(') && s.endsWith(')')) {
-      s = '-' + s.slice(1, -1);
-    }
-    return s.replace(/[$,]/g, '');
-  };
+  const parseCsvText = (text: string): string[][] => parseCsvChecked(text).map(row => row.map(cell => cell.trim()));
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -147,6 +138,7 @@ export default function StatementImporter({
         const userId = useAuthStore.getState().user?.uid;
         const content = await file.text();
         if (workspaceId !== useAuthStore.getState().currentWorkspaceId || userId !== useAuthStore.getState().user?.uid) throw new Error('Workspace or user changed. Upload the statement again in the current workspace.');
+        assertReadableText(content, file.name);
         const isOfx = fileName.endsWith('.ofx') || fileName.endsWith('.qfx');
         const isCamt = fileName.endsWith('.xml') || fileName.endsWith('.camt053');
         if (fileName.endsWith('.qif') && !qifDateOrder) throw new Error('Choose the QIF date order before uploading the statement.');
@@ -184,6 +176,7 @@ export default function StatementImporter({
         const currency = useAuthStore.getState().getCurrentWorkspace()?.currency || 'USD';
         if (getCurrencyDivisor(currency) !== 100)
           throw new Error('Selected US bank CSV import requires a two-decimal workspace currency. No amount was imported.');
+        assertReadableText(content, file.name);
         const bankLines = parseUsBankCsv(content, usBankCsvFormat);
         processResults(bankLines);
         toast.success(`Loaded ${bankLines.length} bank entries from ${file.name}. Review before importing.`, { id: loader });
@@ -206,7 +199,9 @@ export default function StatementImporter({
         }
       } else if (fileName.endsWith('.csv') || fileName.endsWith('.txt') || fileType.includes('csv') || fileType.includes('text')) {
         const fileContent = await file.text();
+        assertReadableText(fileContent, file.name);
         const rows = parseCsvText(fileContent);
+        setMappingError('');
         if (rows.length > 0) {
           setCsvData(rows);
           // Auto detect headers
@@ -262,62 +257,19 @@ export default function StatementImporter({
     }
   };
 
-  const [, setSkippedCount] = useState(0);
-
   const handleMapColumns = () => {
-    const hasAmount = mapping.amount !== -1;
-    const hasDebitCredit = mapping.debit !== -1 && mapping.credit !== -1;
-    
-    if (mapping.date === -1 || mapping.description === -1 || (!hasAmount && !hasDebitCredit)) {
-      toast.error("Please map Date, Description, and either Amount OR Debit & Credit.");
+    // #101 / PREV-6: an empty or unreadable amount is never $0, and the whole file or nothing is
+    // imported: a row that cannot be read is named in the message instead of being skipped
+    let results: ReturnType<typeof mapBankCsvRows>;
+    try {
+      results = mapBankCsvRows(csvData, mapping);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The file could not be read.';
+      setMappingError(message);
+      toast.error(message);
       return;
     }
-
-    const dataRows = csvData.slice(mapping.skipRows !== undefined ? mapping.skipRows : 1);
-    
-    let skipped = 0;
-    
-    const results = dataRows.map(row => {
-      // #101: an empty or unreadable amount makes the row invalid (counted as skipped), never $0
-      const money = (cell: string | undefined) => {
-        const cleaned = cleanAmountStr(cell ?? '');
-        return cell !== undefined && cell.trim() !== '' && /^[+-]?\d+(\.\d+)?$/.test(cleaned) ? TruthEngine.parseAmountToCentsOrZero(cleaned) : NaN;
-      };
-      let amountCents: number;
-      if (hasAmount) {
-        amountCents = money(row[mapping.amount]);
-      } else {
-        const debitCell = row[mapping.debit];
-        const creditCell = row[mapping.credit];
-        const debit = debitCell?.trim() ? money(debitCell) : 0;
-        const credit = creditCell?.trim() ? money(creditCell) : 0;
-        amountCents = !debitCell?.trim() && !creditCell?.trim() ? NaN : credit - debit;
-      }
-      
-      const rawDate = row[mapping.date];
-      const date = normalizeDateString(rawDate);
-      
-      const descArr = [row[mapping.description]];
-      if (mapping.payee !== undefined && mapping.payee !== -1 && row[mapping.payee]) {
-        descArr.push(row[mapping.payee]);
-      }
-      if (mapping.memo !== undefined && mapping.memo !== -1 && row[mapping.memo]) {
-        descArr.push(row[mapping.memo]);
-      }
-      
-      return {
-        date,
-        description: descArr.filter(Boolean).join(' - '),
-        amountCents,
-        _originalDate: rawDate
-      };
-    }).filter(tx => {
-      const isValid = tx.date && tx.description && !isNaN(tx.amountCents);
-      if (!isValid) skipped++;
-      return isValid;
-    });
-
-    setSkippedCount(skipped);
+    setMappingError('');
     processResults(results as unknown as StatementResult[]);
     if (results.length > 0 && csvData[0]) saveColumnLayout(csvData[0], mapping as ColumnMapping);
   };
@@ -734,6 +686,7 @@ export default function StatementImporter({
               </motion.div>
             )}
           </AnimatePresence>
+          {step === 'mapping' && mappingError && <p role="alert" className="mt-4 text-sm text-rose-600">{mappingError}</p>}
         </div>
 
         {/* Footer */}
