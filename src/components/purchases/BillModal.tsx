@@ -21,7 +21,7 @@ import AsyncButton from '../ui/AsyncButton';
 import { evaluateApprovalRequirement } from '../../lib/approvalWorkflow';
 import { addComment } from '../../lib/commentService';
 import { documentTotals, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
-import { formatCurrency, safeConfirm } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO, safeConfirm } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import AttachmentsPanel from '../common/AttachmentsPanel';
 import { attachmentProblem } from '../../lib/attachments';
@@ -164,7 +164,8 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
   const [rateTyped, setRateTyped] = useState(false);
   const rateNote = useSuggestedRate({
     currency: billCurrency, homeCurrency: workspaceCurrency, enabled: !editingExisting && !rateTyped, docs: storeBills, date: bill.date,
-    onRate: rate => setBill(prev => ({ ...prev, exchangeRate: rate })),
+    // BM-06: where the rate came from, kept with the bill
+    onRate: (rate, from) => setBill(prev => ({ ...prev, exchangeRate: rate, metadata: { ...prev.metadata, rateUsed: { rate, ...from } } })),
   });
   const money = (cents: number) => formatCurrency(cents, billCurrency);
 
@@ -468,7 +469,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
               <div className="space-y-2">
                 <label htmlFor="bill-exchange-rate" className="micro-label">1 {billCurrency} = ? {workspaceCurrency}</label>
                 <input id="bill-exchange-rate" type="number" step="0.0001" min="0.0001" value={bill.exchangeRate || 1}
-                  onChange={(e) => { setRateTyped(true); setBill({ ...bill, exchangeRate: parseFloat(e.target.value || '1') }); }}
+                  onChange={(e) => { setRateTyped(true); const rate = parseFloat(e.target.value || '1'); setBill({ ...bill, exchangeRate: rate, metadata: { ...bill.metadata, rateUsed: { rate, date: bill.date || getLocalDateISO(), source: 'typed' } } }); }}
                   className="w-full px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] outline-none font-bold" />
                 {rateNote && <p role="status" className="text-[11px] text-[var(--muted)] px-2">{rateNote}</p>}
               </div>

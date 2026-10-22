@@ -188,7 +188,7 @@ export async function postBillLedger(
     },
     lines: accrualLines
   };
-  txsToPost.push(inBaseCurrency(accrualTx, workspaceId, context));
+  txsToPost.push(inBaseCurrency(accrualTx, workspaceId, context, billData.metadata?.rateUsed as never));
 
   // 3. Transaction 2: Payment Posting (DR A/P, CR Cash)
   if (status === 'paid' || status === 'partially_paid') {
@@ -223,7 +223,7 @@ export async function postBillLedger(
           lineAccounts: weights // DIM-1: the payment carries the bill lines' labels
         })
       };
-      txsToPost.push(inBaseCurrency(paymentTx, workspaceId, context));
+      txsToPost.push(inBaseCurrency(paymentTx, workspaceId, context, billData.metadata?.rateUsed as never));
     }
   }
 
