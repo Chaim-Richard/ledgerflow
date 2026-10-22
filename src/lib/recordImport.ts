@@ -342,6 +342,10 @@ export function prepareImport(kind: ImportKind, rows: ImportRow[], firstRowNumbe
       if (error !== undefined) {
         errors.push({ row, field: field.key, message: `${field.label}: ${error}` });
         rowOk = false;
+      } else if (field.required && (value === undefined || value === '')) {
+        // PREV-6: a cell of only control characters is empty once cleaned
+        errors.push({ row, field: field.key, message: `${field.label} is missing` });
+        rowOk = false;
       } else if (value !== undefined && value !== '') {
         data[field.key] = value;
         Object.assign(implied, extra);

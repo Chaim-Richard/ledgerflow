@@ -5,7 +5,8 @@ import { useAuthStore } from '../../../stores/useAuthStore';
 import { useCurrentRole } from '../../../hooks/useCurrentRole';
 import { db, getIdToken } from '../../../firebase';
 import { collection, getDocs, limit, orderBy, query, where } from '../../../lib/db/firestore';
-import { parseCsv } from '../../../lib/csv';
+import { parseCsvChecked } from '../../../lib/csv';
+import { assertReadableText } from '../../../lib/bankCsvRows';
 import { parseExcelToRows } from '../../../lib/excelExport';
 import { cn, formatCurrency, getLocalDateISO } from '../../../lib/utils';
 import {
@@ -19,6 +20,12 @@ import { readIif, type IifReadResult } from '../../../lib/iifImport';
 import { reconcileImportCounts } from '../../../lib/importCountReconciliation';
 import { MigrationTrialBalanceProof } from './MigrationTrialBalanceProof';
 import XeroDocumentsImport from './XeroDocumentsImport';
+
+/** PREV-6: a garbled (non-UTF-8) or cut-off CSV is refused whole, with a message. */
+const readCsvUpload = (text: string): string[][] => {
+  assertReadableText(text);
+  return parseCsvChecked(text);
+};
 
 type CsvSource = 'generic' | 'freshbooks' | 'quickbooks' | 'iif';
 const normalizeSourceTable = (source: CsvSource, kind: ImportKind, cells: string[][]): string[][] =>
@@ -165,7 +172,7 @@ export default function ImportSettings() {
       setIif(null);
       const cells = lower.endsWith('.xlsx')
         ? (await parseExcelToRows(await file.arrayBuffer())).map(r => r.map(c => (c === null || c === undefined ? '' : String(c).trim())))
-        : parseCsv(await file.text());
+        : readCsvUpload(await file.text());
       if (cells.length < 2) {
         toast.error('The file needs a header row and at least one row of data.');
         return;

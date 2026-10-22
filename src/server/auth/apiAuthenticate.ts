@@ -158,7 +158,7 @@ export const apiAuthenticate = async (req: express.Request, res: express.Respons
           lastUsedAt: new Date().toISOString(),
           totalRequests: FieldValue.increment(1)
         }).catch((err: unknown) => console.error("[Deep Auth] Failed incrementing API key metrics: ", err));
-      } catch (mErr) {
+      } catch {
         // stats silently fail with safety
       }
 

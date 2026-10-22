@@ -1,5 +1,5 @@
 import './helpers/dom';
-import test, { afterEach, beforeEach, describe } from 'node:test';
+import test, { afterEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';

@@ -96,6 +96,8 @@ export function parseCamt053Import(xmlSource: string, expectedCurrency: string):
   } catch { fail('Unsupported currency.'); }
 
   const entries = blocks(statement, 'Ntry');
+  // PREV-6: an entry outside the statement would otherwise be dropped silently.
+  if (blocks(xml, 'Ntry').length !== entries.length) fail('An entry is outside the statement; the file is damaged.');
   if (!entries.length || entries.length > MAX_ENTRIES)
     fail('Expected 1–50,000 complete entries.');
   const parsed: ParsedBankLine[] = [];

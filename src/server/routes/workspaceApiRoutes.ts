@@ -133,12 +133,12 @@ export function registerWorkspaceApiRoutes(app: express.Express, _ctx: ServerCon
               try {
                 const snap = await query.get();
                 resolve(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-              } catch (fallbackErr) {
+              } catch {
                 reject(err);
               }
             });
           });
-        } catch (err) {
+        } catch {
           return [];
         }
       };
@@ -217,7 +217,7 @@ export function registerWorkspaceApiRoutes(app: express.Express, _ctx: ServerCon
         try {
           const userByEmail = await authAdmin.getUserByEmail(email);
           targetUid = userByEmail.uid;
-        } catch (authErr) {
+        } catch {
           // If auth user not found by email, use hashed/sanitized placeholder ID
           targetUid = `uid_${crypto.createHash('md5').update(email.toLowerCase().trim()).digest('hex').slice(0, 16)}`;
         }

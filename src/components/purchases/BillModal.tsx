@@ -291,6 +291,12 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
         // files picked for a new bill are kept with it once it has an id (Purchases.tsx)
         ...(attachments.length > 0 && !bill.id ? { attachmentFiles: attachments } : {}),
       });
+      return true;
+    } catch (err) {
+      // PREV-5: the save already said why it failed (its own message); the dialog stays open with
+      // the draft, and the caller is told it was not saved
+      console.warn('Bill not saved:', err);
+      return false;
     } finally {
       setIsSubmitting(false);
     }

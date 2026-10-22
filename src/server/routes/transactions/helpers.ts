@@ -19,7 +19,7 @@ export function formatTzDate(d: Date = new Date(), timezone = 'UTC'): string {
     const m = parts.find(p => p.type === 'month')?.value;
     const day = parts.find(p => p.type === 'day')?.value;
     if (y && m && day) return `${y}-${m}-${day}`;
-  } catch (_e) {
+  } catch {
     // fallback
   }
   const year = d.getUTCFullYear();

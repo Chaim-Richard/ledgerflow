@@ -354,9 +354,7 @@ export function registerDeveloperApiRoutes(app: express.Express, _ctx: ServerCon
           const { credits: weightScore, cents: deltaCents } = calculateWorkspaceCharges(wsData, baseWeight, baseCents, false);
 
           const currentCents = wsData.apiQuotaTotalCentsUsed || 0;
-          const currentQueries = wsData.totalQueriesThisMonth || 0;
           const currentHardness = wsData.computeHardnessScore || 0;
-          const currentCredit = wsData.computeCreditBalance !== undefined ? wsData.computeCreditBalance : 100000;
 
           await wsRef.update({
             apiQuotaTotalCentsUsed: currentCents + deltaCents,

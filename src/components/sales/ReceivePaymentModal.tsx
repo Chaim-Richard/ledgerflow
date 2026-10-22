@@ -10,6 +10,7 @@ import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { toast } from 'sonner';
 import { calculateAmountDue } from '../../lib/documentMath';
 import { describeError } from '../../lib/errorRemedies';
+import { savedInOtherWorkspace, workspaceChangedSince } from '../../lib/saveWorkspace';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { useSuggestedRate } from '../../hooks/useSuggestedRate';
 import WithholdingField, { type Withholding } from '../purchases/WithholdingField';
@@ -246,7 +247,9 @@ export default function ReceivePaymentModal({
         throw new Error(errJson.message || 'Payment processing failed');
       }
 
-      toast.success(`Payment of ${formatCurrency(paymentAmountCents, payCurrency)} recorded successfully!`);
+      // PREV-5: another workspace was opened while the payment was on its way: say where it went
+      if (workspaceChangedSince(currentWorkspaceId)) toast.info(savedInOtherWorkspace(`The payment of ${formatCurrency(paymentAmountCents, payCurrency)}`, currentWorkspaceId));
+      else toast.success(`Payment of ${formatCurrency(paymentAmountCents, payCurrency)} recorded successfully!`);
       onClose();
     } catch (err) {
       console.error('Failed to post payment:', err);
