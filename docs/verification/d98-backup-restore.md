@@ -1,0 +1,79 @@
+# D-98 · W10 — backup → change → restore, and the reports are exactly what they were
+
+**Task:** D-98 = F-46, P0 for stage A. Browser journey: make a backup, change records, restore it →
+P&L, balance sheet and trial balance equal the figures from before the change (exact amounts),
+phone and desktop, with axe.
+
+**Spec:** `e2e/w10-backup-restore-reports.spec.ts` (390 px and 1280 px).
+
+## What the journey really does
+
+It drives the app's own Settings → Backup & Export screen
+(`src/components/platform/settings/BackupExportSettings.tsx`), not a stand-in:
+
+1. **Make the backup** — clicks **Export JSON Backup**. The screen fetches the server export
+   (`GET /api/v1/workspaces/:id/export`) and downloads a file; the test reads the downloaded file
+   from disk, so the assertion is on the bytes a user would keep. It re-computes the file's SHA-256
+   the same way the restore code does and checks the file is self-consistent.
+2. **The backup's own reports** — the real `ProfitAndLossView`, `BalanceSheetView` and
+   `TrialBalanceView` are mounted against the app's stores and show the worked figures below.
+3. **Change the records** — the extra January expense is added to the store (what the live
+   subscription delivers after the server posts it) and each report moves as the arithmetic says.
+4. **Restore that file** — the downloaded file is put back through the real **Restore backup file**
+   control. The client verifies the checksum, then POSTs the file; the test asserts the request body
+   is **byte-identical** to the file that was exported (`postData() === file text`). The restore
+   transaction then removes the change (the test applies the restored rows as the subscription would).
+5. **Parity** — P&L, balance sheet and trial balance are the backup's figures again, to the cent, and
+   the trial balance still says *Balanced Double-Entry*.
+6. **A damaged file is refused whole** — one amount in the file is changed and uploaded. The client
+   fails the checksum, clears the input, and **nothing is posted** (`/restore` request count
+   unchanged). A half-restored workspace is impossible from this screen.
+7. **Axe** — no serious or critical violations on the restored trial balance.
+
+Only the HTTP boundary is stubbed: the export body, the restore reply, and report endpoints (500, so
+the screens use their own ledger fallback). The posting and the server's restore transaction are
+covered elsewhere: `src/tests/backup-restore.test.ts`, `src/server/services/workspaceRestoreService.ts`
+and `src/tests/server-write-roles.test.ts`.
+
+## Worked figures (USD cents, January 2026)
+
+Accounts (opening balances): `1000 Cash` asset 1,000,000c; `1200 Accounts Receivable` asset 0;
+`2000 Accounts Payable` liability 0; `3000 Retained Earnings` equity 1,000,000c; `4000 Sales`
+income 0; `6000 Office Expense` expense 0.
+
+| # | date | entry | debit | credit |
+|---|---|---|---|---|
+| t1 | 2026-01-05 | sale to Acme | Receivables 360,000 | Sales 360,000 |
+| t2 | 2026-01-10 | office rent | Office Expense 60,000 | Cash 60,000 |
+
+**In the backup**
+
+| Report | Working | Figure |
+|---|---|---|
+| P&L | income 3,600.00 − expense 600.00 | **$3,000.00** |
+| Balance sheet | assets Cash 9,400.00 + Receivables 3,600.00 | **$13,000.00** |
+| | claims equity 10,000.00 + profit 3,000.00 | **$13,000.00** → balanced |
+| Trial balance | debits Cash 9,400 + Receivables 3,600 + Office Expense 600 | **$13,600.00** |
+| | credits equity 10,000 + Sales 3,600 | **$13,600.00** → balanced |
+
+**After the change** — t3 2026-01-20 extra office cost 275,000c: Office Expense / Cash
+
+| Report | Working | Figure |
+|---|---|---|
+| P&L | income 3,600.00 − expense 3,350.00 | **$250.00** |
+| Balance sheet | Cash 6,650.00 + Receivables 3,600.00 | **$10,250.00** |
+| Trial balance | Cash row 6,650.00, Office Expense row 3,350.00 | total still **$13,600.00** |
+
+The trial-balance total is deliberately unchanged: a posted expense moves money between two
+accounts, it does not create or destroy any, so the totals must stay equal. The change is asserted
+on the two account rows instead — that is where a restore either brings the money back or does not.
+
+**After the restore** — every figure above is the backup's again ($3,000.00 / $13,000.00 /
+$13,600.00 with Cash 9,400.00 and Office Expense 600.00).
+
+## What this does not prove
+
+- The server's restore transaction (a real database) — covered by the server suites named above.
+- A real authenticated session against a deployed environment (G-24 / G-01 territory).
+- The PITR panel on the same Settings screen is untouched by this journey (it is a cloud-database
+  feature: see the message to AI #1 in `docs/COORDINATION.md`).
