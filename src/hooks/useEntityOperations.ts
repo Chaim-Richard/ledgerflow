@@ -1,3 +1,4 @@
+import { savedInOtherWorkspace, workspaceChangedSince } from '../lib/saveWorkspace';
 import { collection, updateDoc, deleteDoc, doc, setDoc, query, where, getDocs, getDoc } from '../lib/db/firestore';
 import { learnedPatternId } from '../lib/learnedPatterns';
 import { db, getIdToken } from '../firebase';
@@ -144,6 +145,11 @@ export function useEntityOperations() {
     return stamp ? { approval: stamp } : {};
   };
 
+  const announceSaved = (message: string, workspaceId: string | null | undefined) => {
+    if (workspaceId && workspaceChangedSince(workspaceId)) toast.info(savedInOtherWorkspace('It', workspaceId));
+    else toast.success(message);
+  };
+
   const addEntity = async <T extends object>(path: string, data: T & EntityInput, successMsg?: string) => {
     if (!user || !currentWorkspaceId) return;
     try {
@@ -191,7 +197,8 @@ export function useEntityOperations() {
         }
       }
 
-      if (successMsg) toast.success(successMsg);
+      // PREV-5: a reply after another workspace was opened says where it was saved, never "saved" here
+      if (successMsg) announceSaved(successMsg, currentWorkspaceId);
       // A new invoice saved as "sent" is emailed once it is posted
       if (path === 'invoices' && finalData.status === 'sent') await sendInvoiceEmail(docId, finalData);
 
@@ -291,7 +298,8 @@ export function useEntityOperations() {
         await updateDoc(doc(db, path, id), finalData);
       }
 
-      if (successMsg) toast.success(successMsg);
+      // PREV-5: a reply after another workspace was opened says where it was saved, never "saved" here
+      if (successMsg) announceSaved(successMsg, currentWorkspaceId);
       if (emailAfterSave) await sendInvoiceEmail(id, { ...(previousInvoice || {}), ...finalData });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `${path}/${id}`);
@@ -320,7 +328,8 @@ export function useEntityOperations() {
         await deleteDoc(doc(db, path, id));
       }
 
-      if (successMsg) toast.success(successMsg);
+      // PREV-5: a reply after another workspace was opened says where it was saved, never "saved" here
+      if (successMsg) announceSaved(successMsg, currentWorkspaceId);
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `${path}/${id}`);
     }
