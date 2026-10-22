@@ -126,6 +126,8 @@ export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string,
   // or added, between checking and writing can no longer slip past the checks.
   const counts: Record<string, number> = {};
   await db.runTransaction(async t => {
+    // a retried transaction (serialization conflict) counts again from zero, or the answer doubles
+    for (const key of Object.keys(counts)) delete counts[key];
     // Closed books are never replaced by an older state: a backup may be restored over closed periods
     // only if it was made when the books were closed at least as far as they are now, so its closed
     // months are those closed books. (Refusing every restore once a month was closed left no way to

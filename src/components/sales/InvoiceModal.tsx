@@ -217,9 +217,9 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
         // files picked for a new invoice are kept with it once it has an id (Sales.tsx)
         ...(attachments.length > 0 && !invoice.id ? { attachmentFiles: attachments } : {}),
       });
-    } finally {
-      setIsSubmitting(false);
-    }
+      return true;
+    } catch (err) { console.warn('Invoice not saved (PREV-5: the save said why; the draft stays open):', err); return false; }
+    finally { setIsSubmitting(false); }
   };
 
   const handleSubmit = (e: React.FormEvent) => handleAction(e, invoice.status || 'pending');
