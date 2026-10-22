@@ -33,6 +33,14 @@ interface AuthState {
   getCurrentWorkspace: () => Workspace | undefined;
 }
 
+/** AUD-13: one number per sign-in (setUser call); an answer started under an older one is dropped, even for the same account. */
+let authSession = 0;
+/** The signed-in account and its sign-in, for checks after an await (identityScope); null when nobody is signed in. */
+export const currentIdentity = () => {
+  const uid = useAuthStore.getState().user?.uid;
+  return uid ? `${uid}#${authSession}` : null;
+};
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isGuest: typeof localStorage !== "undefined" ? localStorage.getItem("isGuest") === "true" : false,
@@ -46,12 +54,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // AUD-13: another account (or none) is a new identity: what the previous one could see goes with it, and an answer
     // still on its way for the previous one is dropped (the uid checks below)
     const before = get().user?.uid ?? null;
-    if ((user?.uid ?? null) !== before) set({ isAdmin: false, userProfile: null, workspaces: [] });
+    const session = ++authSession;
+    if ((user?.uid ?? null) !== before) {
+      set({ isAdmin: false, userProfile: null, workspaces: [], currentProjectId: null });
+      // the previous account's books (the open workspace and its cached lists) go too; a first sign-in keeps the
+      // remembered workspace
+      if (before) get().setCurrentWorkspaceId(null);
+    }
     set({ user });
     if (user) {
-      const uid = user.uid;
       user.getIdTokenResult().then((res) => {
-        if (get().user?.uid !== uid) return;
+        if (authSession !== session) return;
         const tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
         set({ isAdmin: tokenIsAdmin });
       }).catch((err) => {
@@ -72,7 +85,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isAdmin: false });
       return false;
     }
-    const uid = user.uid;
+    const session = authSession;
     try {
       let res = await user.getIdTokenResult();
       let tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
@@ -83,7 +96,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
       }
       // AUD-13: the answer is the user's who asked; another account signed in meanwhile keeps its own
-      if (get().user?.uid !== uid) return false;
+      if (authSession !== session) return false;
       set({ isAdmin: tokenIsAdmin });
       return tokenIsAdmin;
     } catch (err) {
@@ -94,7 +107,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setUserProfile: (userProfile) => {
     // AUD-13: a profile read for an account that is no longer the signed-in one is not shown or used
     const current = get().user?.uid;
-    if (userProfile && current && userProfile.uid && userProfile.uid !== current) return;
+    if (userProfile && (!current || (userProfile.uid && userProfile.uid !== current))) return;
     set({ userProfile });
     const { user, isAdmin } = get();
     const profileIsAdmin = userProfile?.role === 'admin';

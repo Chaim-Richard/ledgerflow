@@ -7,7 +7,8 @@
  */
 import test, { beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { useAuthStore } from '../stores/useAuthStore';
+import { currentIdentity, useAuthStore } from '../stores/useAuthStore';
+import { useLedgerStore } from '../stores/useLedgerStore';
 import { identityScope } from '../lib/serverAction';
 
 /** A signed-in account whose token answer the test releases when it wants. */
@@ -88,4 +89,35 @@ test('identityScope: the same account and workspace, or the answer is stale', ()
   assert.equal(scope.isCurrent(), false, 'another account');
   uid = null;
   assert.equal(scope.isCurrent(), false, 'signed out');
+});
+
+test('a profile that arrives after sign-out is not used', () => {
+  useAuthStore.getState().setUser(account('admin-1', true).user);
+  useAuthStore.getState().setUser(null);
+  useAuthStore.getState().setUserProfile({ uid: 'admin-1', role: 'admin' } as never);
+  assert.deepEqual([useAuthStore.getState().userProfile, useAuthStore.getState().isAdmin], [null, false]);
+});
+
+test('switching straight from one account to another closes the first one\'s books and their cached lists', () => {
+  useAuthStore.getState().setUser(account('a-1', false).user);
+  useAuthStore.setState({ currentWorkspaceId: 'ws-a', currentProjectId: 'p-a' });
+  useLedgerStore.setState({ transactions: [{ id: 't-a' } as never] });
+  useAuthStore.getState().setUser(account('b-1', false).user);
+  assert.deepEqual([useAuthStore.getState().currentWorkspaceId, useAuthStore.getState().currentProjectId, useLedgerStore.getState().transactions.length], [null, null, 0]);
+});
+
+test('the same account signed in again: an answer from the earlier sign-in is dropped, the new one counts', async () => {
+  const first = account('u-1', true);
+  useAuthStore.getState().setUser(first.user);
+  const scope = identityScope(currentIdentity, () => 'w1');
+  const second = account('u-1', false);
+  useAuthStore.getState().setUser(null);
+  useAuthStore.getState().setUser(second.user);
+  assert.equal(scope.isCurrent(), false, 'another sign-in, same account');
+  first.release();
+  await tick();
+  assert.equal(useAuthStore.getState().isAdmin, false, 'the earlier sign-in\'s admin answer is dropped');
+  second.release();
+  await tick();
+  assert.equal(useAuthStore.getState().isAdmin, false);
 });
