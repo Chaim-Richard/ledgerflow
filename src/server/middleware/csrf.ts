@@ -58,7 +58,7 @@ export function csrfProtection(options: CsrfOptions) {
             message: 'Referer header does not match permitted domain origins.'
           });
         }
-      } catch (_e) {
+      } catch {
         return res.status(403).json({
           status: 'error',
           code: 'CSRF_INVALID_REFERER',

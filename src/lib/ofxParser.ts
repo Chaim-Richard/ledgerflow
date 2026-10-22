@@ -83,6 +83,10 @@ export function parseOFXStatement(source: string, expectedCurrency?: string): Pa
   if (listOpenings.length !== 1 || lists.length !== 1) refuse('A complete BANKTRANLIST is required.');
   const bankLines = lists[0][1];
   const txOpenings = bankLines.match(/<STMTTRN(?:\s[^<>]*)?>/gi) || [];
+  // PREV-6: a transaction outside the statement's BANKTRANLIST would otherwise be dropped silently.
+  if ((text.match(/<STMTTRN(?:\s[^<>]*)?>/gi) || []).length !== txOpenings.length) {
+    refuse('A transaction is outside the statement transaction list; the file is damaged or has several lists.');
+  }
   const txBlocks = [...bankLines.matchAll(/<STMTTRN(?:\s[^<>]*)?>([\s\S]*?)<\/STMTTRN\s*>/gi)];
   if (!txBlocks.length || txOpenings.length !== txBlocks.length || txBlocks.length > MAX_TRANSACTIONS) {
     refuse('Transaction blocks are missing, truncated or exceed the 50,000-entry limit.');

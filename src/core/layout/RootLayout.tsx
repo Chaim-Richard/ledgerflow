@@ -36,7 +36,6 @@ export function RootLayout() {
   const txActions = useTransactionActions();
   const ai = useAIActions();
   const { handleLoginPrompt, handleLogout, handleApplyAITemplate, handleSelectTemplate, handleSaveCurrentTemplate, handleCreateWorkspace } = useSystemActions();
-  const isPending = false;
   const activeTab = useUIStore(state => state.activeTab);
   const setActiveTab = useUIStore(state => state.setActiveTab);
   
@@ -47,7 +46,6 @@ export function RootLayout() {
   const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
   const projects = useLedgerStore(state => state.projects);
 
-  const isPrivacyMode = useUIStore(state => state.isPrivacyMode);
   const isSidebarOpen = useUIStore(state => state.isSidebarOpen);
   const toggleSidebar = useUIStore(state => state.toggleSidebar);
   const isFocusMode = useUIStore(state => state.isFocusMode);
@@ -59,8 +57,6 @@ export function RootLayout() {
   const isShortcutOverlayOpen = useUIStore(state => state.isShortcutOverlayOpen);
   const setShortcutOverlayOpen = useUIStore(state => state.setShortcutOverlayOpen);
   
-  const isGuideOpen = useUIStore(state => state.isGuideOpen);
-  const setGuideOpen = useUIStore(state => state.setGuideOpen);
 
   const isDiagnosticConsoleOpen = useUIStore(state => state.isDiagnosticConsoleOpen);
   const setDiagnosticConsoleOpen = useUIStore(state => state.setDiagnosticConsoleOpen);

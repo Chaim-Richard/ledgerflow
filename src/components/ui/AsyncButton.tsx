@@ -3,7 +3,8 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface AsyncButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => Promise<void> | void;
+  /** may resolve to a result (e.g. whether a save went through); the button only waits for it */
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => Promise<unknown> | void;
   loading?: boolean;
   loadingText?: string;
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';

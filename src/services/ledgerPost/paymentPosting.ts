@@ -3,7 +3,7 @@ import { roundCents } from '../../lib/cents';
 import { Payment } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
-import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi, reversalDate, postingToday } from './postingCore';
+import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi, reversalDate, postingToday, documentMinorRate } from './postingCore';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
 
 /**
@@ -95,7 +95,8 @@ export async function postPaymentLedger(
   }
 
   const rawAmount = paymentData.amountCents || 0;
-  const rate = paymentData.exchangeRate || 1;
+  // BM-04: minor units of the document's currency → minor units of the books' (¥ has none, KWD three)
+  const rate = documentMinorRate(paymentData, workspaceId, context);
   const amount = roundCents(rawAmount * rate);
   if (amount <= 0) return;
 
@@ -109,7 +110,7 @@ export async function postPaymentLedger(
     description: `${isReceipt ? 'Payment Received from' : 'Payment Made to'} ${paymentData.contactName || 'Contact'} (${paymentData.method || 'Direct'})`,
     totalAmountCents: amount,
     currency: paymentData.currency || 'USD',
-    exchangeRate: rate,
+    exchangeRate: paymentData.exchangeRate || 1,
     status: 'completed',
     type: 'actual',
     createdAt: new Date().toISOString(),
@@ -123,7 +124,7 @@ export async function postPaymentLedger(
       documentNumber: paymentData.reference || paymentId,
       entityName: paymentData.contactName || 'Contact',
       amountCents: amount,
-      exchangeRate: rate,
+      exchangeRate: paymentData.exchangeRate || 1,
       cashAccount,
       offsetAccount,
       isReceipt

@@ -7,7 +7,7 @@
   "serverTsLines": 188,
   "filesOver800": 0,
   "orphanFiles": 0,
-  "eslintWarnings": 3,
+  "suppressionCount": 3,
   "untestedViews": 44,
   "overlaysWithoutDialog": 0
 }

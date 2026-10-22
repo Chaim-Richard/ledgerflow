@@ -135,8 +135,8 @@ interface TaxManagerProps {
 }
 
 export default function TaxManager({ 
-  user, 
-  workspaceId = 'default', 
+  user: _user,
+  workspaceId: _workspaceId = 'default',
   accounts: accountsProp,
   taxRates: taxRatesProp,
   onAddTaxRate: onAddProp,

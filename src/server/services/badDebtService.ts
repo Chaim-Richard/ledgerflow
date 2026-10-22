@@ -1,3 +1,4 @@
+import { minorUnitRate } from '../../lib/currencyMinorUnits';
 import type { DocumentData, Firestore, Transaction } from '../db/firestore';
 import { ledgerCreate, ledgerMark } from './ledgerDoor';
 import { FieldValue } from '../db/firestore';
@@ -79,7 +80,8 @@ export async function writeOffInvoice(db: Firestore, input: Input & { badDebtAcc
     const dueCents = calculateAmountDue(invoice);
     if (dueCents <= 0) throw new BadDebtError(409, 'Nothing is left to write off');
     const rate = typeof invoice.exchangeRate === 'number' && invoice.exchangeRate > 0 ? invoice.exchangeRate : 1;
-    const baseCents = Math.round(dueCents * rate);
+    // BM-04: the invoice's minor units → the books'
+    const baseCents = Math.round(dueCents * minorUnitRate(rate, String(invoice.currency || workspace.currency || 'USD'), String(workspace.currency || 'USD')));
 
     const ar = receivablesAccount(invoice, workspace, accounts);
     const chosen = input.badDebtAccountId ? accounts.find(a => a.id === input.badDebtAccountId) : undefined;
