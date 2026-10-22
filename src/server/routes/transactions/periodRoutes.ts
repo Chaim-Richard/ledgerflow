@@ -1,13 +1,14 @@
 import express from 'express';
 import { z } from 'zod';
 import { calculateNetIncome } from '../../../lib/txFilters';
-import type { ChartAccount, Transaction } from '../../../types';
+import type { Transaction } from '../../../types';
 import { getDb } from '../../db/firestore';
 import { writeServerAuditLog } from '../../services/auditLogService';
 import { closePeriod, PeriodCloseError } from '../../services/periodCloseService';
 import { errorMessage, requestUser } from '../../auth/requestUser';
 import { FxRevaluationError, revaluateForeignBalances, undoRevaluation } from '../../services/fxRevaluationService';
 import { formatTzDate } from './helpers';
+import { periodBalancesReady, readSnapshotInputs, rebuildSnapshots, snapshotFromEntries, writeSnapshot } from '../../services/balanceService';
 
 const revaluationBodySchema = z.object({
   workspaceId: z.string().min(1).max(200),
@@ -113,22 +114,29 @@ export function registerPeriodRoutes(transactionRouter: express.Router): void {
         return res.status(400).json({ error: `Cannot close future accounting period. Closing date (${closingDate}) is ahead of current date (${today}).` });
       }
 
-      // The year's profit, for the record: the twelve months ending on the closing date
-      const accountsSnap = await db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get();
-      const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }) as ChartAccount);
-      const txSnap = await db.collection('transactions')
-        .where('workspaceId', '==', workspaceId)
-        .where('date', '<=', closingDate)
-        .get();
-      const transactions = txSnap.docs.map(d => ({ id: d.id, ...d.data() }) as Transaction);
-      const yearStart = fiscalYearStart(closingDate);
-      const year = calculateNetIncome(transactions, accounts, yearStart, closingDate);
-
+      // The year's profit, for the record: the twelve months ending on the closing date.
       // No closing entry is posted (CA-07): the balance sheet already carries every past year's profit
       // in retained earnings, and an entry moving revenue and expenses to retained earnings made the
       // closed year's profit and loss show zero. Closing a year locks it (when asked) and records it.
-      if (lockPeriod) {
-        await db.collection('workspaces').doc(workspaceId).update({ lockDate: closingDate, updatedAt: new Date().toISOString() });
+      // L-123: a locked close also writes the year end's balance snapshot, in the same serializable
+      // transaction that moves the lock date, from the same entries (everything is returned from the
+      // callback, so a retried attempt starts afresh).
+      const yearStart = fiscalYearStart(closingDate);
+      const withSnapshot = Boolean(lockPeriod) && await periodBalancesReady(db);
+      const { year, locked } = await db.runTransaction(async (t) => {
+        const wsNow = (await t.get(db.collection('workspaces').doc(workspaceId))).data() || {};
+        if (wsNow.lockDate && wsNow.lockDate >= closingDate) return { year: null, locked: String(wsNow.lockDate) };
+        const { accounts, entries } = await readSnapshotInputs(db, t, workspaceId, closingDate);
+        const transactions = entries as Transaction[];
+        const yearFigures = calculateNetIncome(transactions, accounts, yearStart, closingDate);
+        if (lockPeriod) {
+          t.update(db.collection('workspaces').doc(workspaceId), { lockDate: closingDate, updatedAt: new Date().toISOString() });
+          if (withSnapshot) writeSnapshot(db, t, snapshotFromEntries(workspaceId, closingDate, accounts, entries, user.uid));
+        }
+        return { year: yearFigures, locked: null };
+      });
+      if (!year) {
+        return res.status(400).json({ error: `Cannot close year: Period is already locked through ${locked}.` });
       }
 
       await writeServerAuditLog({
@@ -155,6 +163,23 @@ export function registerPeriodRoutes(transactionRouter: express.Router): void {
         netIncomeCents: year.netIncome,
         yearStart,
       });
+    } catch (e) {
+      res.status(500).json({ error: errorMessage(e) });
+    }
+  });
+
+  // L-123: "Recalculate opening balances": the snapshots of years closed before L-123, and every stale one,
+  // rebuilt by the server (balanceService.rebuildSnapshots). Owners and platform admins, like /close-year.
+  transactionRouter.post('/period-balances/rebuild', async (req, res) => {
+    try {
+      const workspaceId = typeof req.body?.workspaceId === 'string' ? req.body.workspaceId : '';
+      const user = requestUser(req);
+      if (!workspaceId) return res.status(400).json({ error: 'Missing required parameter: workspaceId.' });
+      const db = getDb();
+      const wsDoc = await db.collection('workspaces').doc(workspaceId).get();
+      if (!wsDoc.exists) return res.status(404).json({ error: 'Workspace not found.' });
+      if (wsDoc.data()?.uid !== user.uid && !user.admin) return res.status(403).json({ error: 'Only the owner can recalculate the opening balances.' });
+      res.json({ status: 'ok', ...(await rebuildSnapshots(db, workspaceId, user.uid)) });
     } catch (e) {
       res.status(500).json({ error: errorMessage(e) });
     }

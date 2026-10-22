@@ -130,7 +130,7 @@ export async function postPaymentLedger(
       isReceipt
     })
   };
-  txsToPost.push(inBaseCurrency(paymentTx, workspaceId, context));
+  txsToPost.push(inBaseCurrency(paymentTx, workspaceId, context, (paymentData as { metadata?: { rateUsed?: unknown } }).metadata?.rateUsed as never));
 
   await postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
 }

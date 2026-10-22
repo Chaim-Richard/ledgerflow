@@ -92,8 +92,9 @@ function WorkspaceArchiveExportBody() {
         in that backup, including empty collections. CSV keeps nested values in a Record JSON column.
       </p>
       <p className="mb-5 text-xs text-[var(--muted)]">
-        This is not a full database or uploaded-file archive: other workspace tables and file attachments
-        are not included. The ZIP contains sensitive financial and payroll records. Store it securely.
+        It holds every record and the settings, and lists each attached file (name, size, checksum) without
+        the file itself. Members, API keys, bank connections and the audit trail are not included. Restore it
+        with Restore Workspace below. The ZIP contains sensitive financial and payroll records. Store it securely.
         Only a signed-in workspace owner can start this download; no demo or browser-cache fallback.
       </p>
       {error && <p role="alert" className="mb-3 text-xs text-[var(--neg)]">{error}</p>}

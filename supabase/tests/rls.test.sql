@@ -648,5 +648,21 @@ select pg_temp.expect_ok('a browser edit elsewhere on that customer keeps the se
 select pg_temp.expect_denied('and cannot change its status', 'u-acct',
   $$select lf_update('customers','c2','{"metadata.returnAuthorizationsById.rma_s.status":"approved"}'::jsonb)$$);
 
+-- balance snapshots (L-123): written only by the server; members read; an entry written in a covered date by a
+-- member still marks the snapshot stale (the trigger runs as its owner)
+select set_config('request.jwt.claims', '', true);
+insert into "periodBalances" (id, data) values ('ws1_2026-12-31', '{"workspaceId":"ws1","asOf":"2026-12-31","accounts":{"a1":100},"stale":false}');
+select pg_temp.expect_count('viewer reads the balance snapshot', 'u-view', $$select count(*) from "periodBalances"$$, 1);
+select pg_temp.expect_count('outsider reads no balance snapshot', 'u-out', $$select count(*) from "periodBalances"$$, 0);
+select pg_temp.expect_denied('owner rewrites a balance snapshot from the browser', 'u-owner', $$select lf_update('periodBalances','ws1_2026-12-31','{"accounts":{"a1":999}}'::jsonb)$$);
+select pg_temp.expect_denied('owner writes a balance snapshot with lf_set', 'u-owner', $$select lf_set('periodBalances','ws1_2025-12-31','{"workspaceId":"ws1","asOf":"2025-12-31","accounts":{}}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper adds a balance snapshot from the browser', 'u-book',
+  $$insert into "periodBalances"(id,data) values ('ws1_2024-12-31', '{"workspaceId":"ws1","asOf":"2024-12-31","accounts":{}}')$$);
+select pg_temp.expect_denied('owner deletes a balance snapshot from the browser', 'u-owner', $$delete from "periodBalances" where id = 'ws1_2026-12-31'$$);
+select pg_temp.expect_value('the refused writes left it as it was', $q$select data->'accounts'->>'a1' from "periodBalances" where id = 'ws1_2026-12-31'$q$, '100');
+select pg_temp.expect_ok('bookkeeper posts an entry the snapshot covers', 'u-book',
+  $$insert into transactions(id,data) values ('tx-l123', '{"workspaceId":"ws1","date":"2026-06-01","lines":[]}')$$);
+select pg_temp.expect_value('that entry marked the snapshot stale', $q$select data->>'stale' from "periodBalances" where id = 'ws1_2026-12-31'$q$, 'true');
+
 select 'ALL RLS TESTS PASSED' as result;
 rollback;

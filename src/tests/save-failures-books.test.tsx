@@ -37,7 +37,6 @@ function seedA() {
 
 const DRAFT_TEXT = 'Printer paper, 40 boxes';
 const billCollections = ['bills', 'vendors', 'recurring'] as const;
-const billTodo = "useEntityOperations shows 'Bill successfully recorded' / 'Bill updated' in the workspace opened since, and postingKit.sendToServer adds A's entries to B's list. Both files are being changed by L94-STEP2; fix there: check useAuthStore's currentWorkspaceId against the save's workspace before the success message and before the store write";
 
 describeSaveFailures({
   name: 'bill create (Purchases screen)',
@@ -58,7 +57,6 @@ describeSaveFailures({
     assert.equal(value('Description'), DRAFT_TEXT);
     assert.equal(value(/^Amount \(/), '120');
   },
-  todo: { switchThenOk: billTodo },
 });
 
 describeSaveFailures({
@@ -78,7 +76,6 @@ describeSaveFailures({
     assert.equal(value(/^Amount \(/), '55');
     assert.equal(useLedgerStore.getState().bills.find(b => b.id === 'a-bill')?.amountCents, 4000, 'the saved bill is as it was');
   },
-  todo: { switchThenOk: billTodo },
 });
 
 let journalClosed = 0;

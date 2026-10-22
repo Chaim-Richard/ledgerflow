@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import { postInvoiceLedger } from '../services/ledgerPost/invoicePosting';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from '../services/ledgerPost/postingCore';
-import { postingFingerprint, shadowCheckDocumentPosting } from '../server/services/postingShadowCheck';
+import { postingFingerprint, shadowCheckDocumentPosting } from './helpers/postingShadowCheck';
 import type { ChartAccount, Invoice, Transaction, Workspace } from '../types';
 
 const url = process.env.LF_TEST_DATABASE_URL;

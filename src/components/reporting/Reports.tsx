@@ -16,6 +16,7 @@ import { REPORT_TABS_REGISTRY, REPORT_COMPONENTS } from '../../config/registry';
 import { useUIStore } from '../../stores/useUIStore';
 import { getCachedReport, setCachedReport } from '../../lib/reportCache';
 import { ViewErrorBoundary } from '../common/ViewErrorBoundary';
+import ReportTotalExplainer from './ReportTotalExplainer';
 
 
 
@@ -397,6 +398,9 @@ const Reports = React.memo(() => {
           </AnimatePresence>
         </React.Suspense>
       </div>
+
+      {/* A-202: what the report's main totals mean, in the reader's language */}
+      <ReportTotalExplainer reportId={activeTab} />
 
       {/* Footer Actions */}
       <div data-print-hide className="flex justify-center pt-12">

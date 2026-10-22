@@ -8,6 +8,7 @@
  */
 import './helpers/dom';
 import test, { after, afterEach, before, describe } from 'node:test';
+import { commitAsServer } from './helpers/serverCommit';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import React from 'react';
@@ -94,7 +95,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
   test('opening stock at TLV, a sale from TLV, a move to HFA, a count at HFA, a return to TLV', async () => {
     assert.equal((await call('/api/v1/inventory/adjust', { workspaceId: ws, itemId: item, quantityChange: 10, type: 'opening', ...accounts, date: '2026-05-01', locationId: 'TLV' })).status, 200);
     assert.deepEqual(await at(), { TLV: 10 });
-    assert.equal((await call('/api/v1/transactions/bulk', { workspaceId: ws, transactions: [sale()] })).status, 200);
+    assert.equal((await commitAsServer(db, 'owner-1', { workspaceId: ws, transactions: [sale()] })).status, 200);
     assert.deepEqual(await at(), { TLV: 7 }, 'sold from where the invoice line says');
 
     const entriesBefore = (await db.collection('transactions').where('workspaceId', '==', ws).get()).size;
@@ -115,7 +116,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     const lines = returnableLines({ ...sold, workspaceId: ws } as Invoice, [{ ...sale(), status: 'completed' } as unknown as Transaction]);
     const [back] = planReturnEntries({ creditNote: { id: `${ws}_cn`, invoiceId: sold.id, date: '2026-05-08', returnedGoods: [{ invoiceLineId: 'l1', itemId: item, quantity: 1 }] },
       lines, uid: 'owner-1', workspaceId: ws, baseCurrency: 'USD', inventoryAccount: { id: `${ws}_inv`, name: 'Inventory' }, cogsAccount: { id: `${ws}_cogs`, name: 'COGS' } });
-    assert.equal((await call('/api/v1/transactions/bulk', { workspaceId: ws, transactions: [{ ...back, id: `${ws}_back` }] })).status, 200);
+    assert.equal((await commitAsServer(db, 'owner-1', { workspaceId: ws, transactions: [{ ...back, id: `${ws}_back` }] })).status, 200);
     assert.deepEqual(await at(), { TLV: 4, HFA: 3 }, 'the return comes back to where it left from');
     assert.equal(await onHand(), 7);
   });

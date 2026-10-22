@@ -8,6 +8,8 @@
  *    first is pending is ignored (double submits, #105, #97).
  *  - `workspaceScope`: capture the workspace before an await; after it, `isCurrent()` says
  *    whether the user is still in the same books (stale-async, #99, #100, #102, #107).
+ *  - `identityScope`: the same for the signed-in account and the workspace together (AUD-13): an
+ *    answer that arrives after a sign-out, another sign-in or a workspace switch is dropped.
  *  - `allSettledWrites`: when several rows must be written from the client, write all, then
  *    report exactly which failed — never "done" for a partial batch (write-in-loop). A real
  *    all-or-nothing change belongs in one server route.
@@ -48,6 +50,13 @@ export const isRunning = (key: string) => pending.has(key);
 export function workspaceScope(getWorkspaceId: () => string | null | undefined) {
   const at = getWorkspaceId() ?? null;
   return { workspaceId: at, isCurrent: () => (getWorkspaceId() ?? null) === at };
+}
+
+/** AUD-13: the account and the workspace at the start of an async request; `isCurrent()` after it says both are unchanged. */
+export function identityScope(getUid: () => string | null | undefined, getWorkspaceId: () => string | null | undefined) {
+  const uid = getUid() ?? null;
+  const workspace = workspaceScope(getWorkspaceId);
+  return { uid, workspaceId: workspace.workspaceId, isCurrent: () => (getUid() ?? null) === uid && workspace.isCurrent() };
 }
 
 /** Writes every item, then says exactly which ones failed (no partial "done"). */
