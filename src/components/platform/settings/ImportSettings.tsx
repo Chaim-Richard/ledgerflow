@@ -16,8 +16,10 @@ import type { FieldMapping, ImportIssue, ImportKind } from '../../../lib/recordI
 import { downloadCsv } from '../../../lib/csvExport';
 import { normalizeFreshBooksCsv } from '../../../lib/freshBooksImport';
 import { normalizeQuickBooksCsv } from '../../../lib/quickBooksCsvImport';
+import { readIif, type IifReadResult } from '../../../lib/iifImport';
 import { reconcileImportCounts } from '../../../lib/importCountReconciliation';
 import { MigrationTrialBalanceProof } from './MigrationTrialBalanceProof';
+import XeroDocumentsImport from './XeroDocumentsImport';
 
 /** PREV-6: a garbled (non-UTF-8) or cut-off CSV is refused whole, with a message. */
 const readCsvUpload = (text: string): string[][] => {
@@ -25,10 +27,12 @@ const readCsvUpload = (text: string): string[][] => {
   return parseCsvChecked(text);
 };
 
-type CsvSource = 'generic' | 'freshbooks' | 'quickbooks';
+type CsvSource = 'generic' | 'freshbooks' | 'quickbooks' | 'iif';
 const normalizeSourceTable = (source: CsvSource, kind: ImportKind, cells: string[][]): string[][] =>
   source === 'freshbooks' ? normalizeFreshBooksCsv(kind, cells) :
   source === 'quickbooks' ? normalizeQuickBooksCsv(kind, cells) : cells;
+// E-29: an IIF carries several list sections at once, so the file is read once and its section for
+// the chosen kind is used (readIif in src/lib/iifImport.ts).
 
 /**
  * Settings → Import data (K-01): customers, vendors, items or accounts from a CSV or Excel file.
@@ -101,7 +105,11 @@ export default function ImportSettings() {
   const [source, setSource] = useState<CsvSource>('generic');
   const [fileName, setFileName] = useState('');
   const [rawTable, setRawTable] = useState<string[][]>([]);
-  const table = useMemo(() => normalizeSourceTable(source, kind, rawTable), [kind, source, rawTable]);
+  const [iif, setIif] = useState<IifReadResult | null>(null);
+  const table = useMemo(
+    () => (iif ? iif.tables[kind] : normalizeSourceTable(source, kind, rawTable)),
+    [iif, kind, source, rawTable],
+  );
   const [mapping, setMapping] = useState<FieldMapping>({});
   const [openingDate, setOpeningDate] = useState(() => getLocalDateISO());
   const [busy, setBusy] = useState(false);
@@ -140,7 +148,7 @@ export default function ImportSettings() {
 
   const chooseKind = (next: ImportKind) => {
     setKind(next);
-    const preview = normalizeSourceTable(source, next, rawTable);
+    const preview = iif ? iif.tables[next] : normalizeSourceTable(source, next, rawTable);
     setMapping(preview.length ? guessMapping(next, preview[0]) : {});
     resetResults();
   };
@@ -150,6 +158,18 @@ export default function ImportSettings() {
     resetResults();
     try {
       const lower = file.name.toLowerCase();
+      if (lower.endsWith('.iif') || lower.endsWith('.qbi')) {
+        const read = readIif(await file.text());
+        setFileName(file.name);
+        setIif(read);
+        setRawTable([]);
+        setSource('iif');
+        const rowsForKind = read.tables[kind];
+        setMapping(rowsForKind.length ? guessMapping(kind, rowsForKind[0]) : {});
+        if (!read.counts[kind]) toast.error(`This IIF has no ${definition.label.toLowerCase()} section. Choose the type that the file does contain.`);
+        return;
+      }
+      setIif(null);
       const cells = lower.endsWith('.xlsx')
         ? (await parseExcelToRows(await file.arrayBuffer())).map(r => r.map(c => (c === null || c === undefined ? '' : String(c).trim())))
         : readCsvUpload(await file.text());
@@ -230,17 +250,43 @@ export default function ImportSettings() {
         <div className="flex flex-wrap gap-3 items-end">
           <label className="text-xs font-bold flex flex-col gap-1">CSV source
             <select aria-label="CSV source" value={source} onChange={e => {
-              const next: CsvSource = e.target.value === 'freshbooks' ? 'freshbooks' : e.target.value === 'quickbooks' ? 'quickbooks' : 'generic';
+              const next: CsvSource = e.target.value === 'freshbooks' ? 'freshbooks' : e.target.value === 'quickbooks' ? 'quickbooks' : e.target.value === 'iif' ? 'iif' : 'generic';
+              if (next !== 'iif') setIif(null);
               setSource(next);
               const converted = normalizeSourceTable(next, kind, rawTable);
               setMapping(converted.length ? guessMapping(kind, converted[0]) : {});
               resetResults();
             }} className="min-h-11 border rounded px-3 bg-[var(--panel)] text-sm">
-              <option value="generic">Standard spreadsheet / Wave</option><option value="freshbooks">FreshBooks CSV</option><option value="quickbooks">QuickBooks Online CSV</option>
+              <option value="generic">Standard spreadsheet / Wave</option><option value="freshbooks">FreshBooks CSV</option><option value="quickbooks">QuickBooks Online CSV</option><option value="iif">QuickBooks Desktop IIF</option>
             </select>
           </label>
           {source === 'freshbooks' && <p className="text-xs text-[var(--muted)]">Choose a FreshBooks Clients, Vendors, or Items export. We combine name and address columns for preview, then use the normal validated import. No transactions are imported. <a className="underline" href="https://support.freshbooks.com/hc/en-us/articles/360032628152-How-do-I-export-my-data" target="_blank" rel="noopener noreferrer">Export instructions</a>.</p>}
+          {source === 'iif' && <p className="text-xs text-[var(--muted)]">Choose the <strong>.iif</strong> file QuickBooks Desktop writes (File → Utilities → Export → Lists). Accounts, customers, vendors and items are read; the file&rsquo;s journals, invoices, bills and payments are <strong>not</strong> imported — a list import never posts. Nothing is guessed: a row with an unknown account type or no name is listed with its line number.</p>}
           {source === 'quickbooks' && <p className="text-xs text-[var(--muted)]">Choose a QuickBooks Online Account List, Customer Contact List, Vendor Contact List, or Products &amp; Services export. Put headers on the first row; review mappings and check before importing. Account balances, existing stock quantities and transactions are not carried over. <a className="underline" href="https://quickbooks.intuit.com/learn-support/en-us/help-article/list-management/export-reports-lists-data-quickbooks-online/L1xleDrLp_US_en_US" target="_blank" rel="noopener noreferrer">QBO export instructions</a>.</p>}
+
+          {iif && (
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 space-y-1" role="status">
+              <p className="text-xs text-[var(--text)]">
+                IIF read: <strong>{iif.counts.accounts}</strong> accounts · <strong>{iif.counts.customers}</strong> customers ·{' '}
+                <strong>{iif.counts.vendors}</strong> vendors · <strong>{iif.counts.items}</strong> items.
+              </p>
+              {iif.transactionsRefused > 0 && (
+                <p className="text-xs text-amber-700" role="alert">
+                  This file also holds <strong>{iif.transactionsRefused}</strong> transaction record{iif.transactionsRefused === 1 ? '' : 's'} (journals, invoices, bills or payments). They were <strong>not</strong> imported: this import moves lists only and never posts.
+                </p>
+              )}
+              {iif.unknownSections.length > 0 && (
+                <p className="text-xs text-[var(--muted)]">Not imported (sections this import does not handle): {iif.unknownSections.join(', ')}.</p>
+              )}
+              {iif.skipped.length > 0 && (
+                <ul className="text-xs text-rose-600 space-y-0.5" aria-label="IIF rows that were not imported">
+                  {iif.skipped.map(entry => (
+                    <li key={`iif-${entry.line}-${entry.type}`}>Line {entry.line} ({entry.type}): {entry.reason}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
         <fieldset className="space-y-3">
           <legend className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">1. What are you importing?</legend>
@@ -277,7 +323,7 @@ export default function ImportSettings() {
             <input
               id="import-file"
               type="file"
-              accept=".csv,.txt,.xlsx,text/csv"
+              accept=".csv,.txt,.xlsx,.iif,.qbi,text/csv"
               onChange={e => { onFile(e.target.files?.[0]); e.target.value = ''; }}
               className="text-sm text-[var(--text)] file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border file:border-[var(--line)] file:bg-[var(--panel)] file:text-[var(--text)]"
             />
@@ -447,6 +493,8 @@ export default function ImportSettings() {
           </div>
         )}
       </section>
+
+      <XeroDocumentsImport />
 
       <MigrationTrialBalanceProof key={workspaceId} workspaceId={workspaceId} />
 

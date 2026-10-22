@@ -128,6 +128,40 @@ test('QIF refuses zero- and three-decimal workspace currencies before scaling or
   assert.equal(aiCalls, 0);
 });
 
+test('E-26/E-43 an Israeli bank CSV needs its date order, reviews the rows, and never imports a closing balance', async () => {
+  let saved: unknown[] = [];
+  render(<StatementImporter isOpen onClose={() => {}} onImport={rows => { saved = rows; }} existingTransactions={[]} businessContext="" accounts={[]} patternCache={{}} />);
+  fireEvent.change(screen.getByLabelText('Israeli bank CSV'), { target: { value: 'israeli' } });
+  await upload('hapoalim.csv', fixture('il-debit-credit.csv'));
+  assert.match(screen.getByRole('alert').textContent || '', /Choose the statement date order/);
+  assert.equal(saved.length, 0);
+  fireEvent.change(screen.getByLabelText('Statement date order'), { target: { value: 'dmy' } });
+  await upload('hapoalim.csv', fixture('il-debit-credit.csv'));
+  assert.ok(await screen.findByText('העברה לספק שכירות'));
+  assert.ok(screen.getByText('עמלת בנק'));
+  // the closing-balance line is not a transaction
+  assert.equal(screen.queryByText('יתרת סגירה'), null);
+  assert.equal(screen.getAllByRole('button', { name: /^Select .+ on / }).length, 3);
+  assert.equal(saved.length, 0, 'parsing is not a posting');
+  assert.equal(aiCalls, 0);
+});
+
+test('E-26 the Israeli bank reader refuses a three-decimal workspace currency and an unreadable layout', async () => {
+  let calls = 0;
+  render(<StatementImporter isOpen onClose={() => {}} onImport={() => { calls++; }} existingTransactions={[]} businessContext="" accounts={[]} patternCache={{}} />);
+  fireEvent.change(screen.getByLabelText('Israeli bank CSV'), { target: { value: 'israeli' } });
+  fireEvent.change(screen.getByLabelText('Statement date order'), { target: { value: 'dmy' } });
+  const ws = useAuthStore.getState().getCurrentWorkspace()!;
+  useAuthStore.setState({ workspaces: [{ ...ws, currency: 'KWD' }] });
+  await upload('hapoalim.csv', fixture('il-debit-credit.csv'));
+  assert.match(screen.getByRole('alert').textContent || '', /two-decimal workspace currency/);
+  useAuthStore.setState({ workspaces: [ws] });
+  await upload('other.csv', 'שם,כתובת\nא,ב');
+  assert.match(screen.getByRole('alert').textContent || '', /No date column/);
+  assert.equal(calls, 0);
+  assert.equal(aiCalls, 0);
+});
+
 test('#110: a refused import keeps the review open with the selection; a stored one closes it', async () => {
   let closed = 0;
   let answer = false;

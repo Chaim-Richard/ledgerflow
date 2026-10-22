@@ -103,9 +103,12 @@ describe('On the estimates screen', () => {
     return calls;
   };
   type Row = Record<string, unknown>;
-  // database writes (p_table + p_set/p_data) and documents saved through the server's posting (entityMutation)
+  // database writes (p_table + p_set/p_data) and documents saved through the server's posting (entityMutation, or
+  // an invoice or bill sent to /documents/:type/:id/post, L94-STEP2)
   const written = (calls: Array<{ url: string; body: unknown }>, table: string): Row[] => calls.flatMap(c => {
     const body = (c.body || {}) as { p_table?: string; p_set?: Row; p_data?: Row; entityMutation?: { collection: string; data: Row } };
+    const post = c.url.match(/\/api\/v1\/documents\/(invoices|bills)\/[^/]+\/post$/);
+    if (post) return post[1] === table ? [(body as { data: Row }).data] : [];
     if (c.url.endsWith('/transactions/bulk')) return body.entityMutation?.collection === table ? [body.entityMutation.data] : [];
     return /\/rpc\/lf_\w+/.test(c.url) && body.p_table === table ? [(body.p_set || body.p_data)!] : [];
   });
