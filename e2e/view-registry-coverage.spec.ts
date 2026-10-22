@@ -154,6 +154,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Israel Month Journey', componentName: 'IsraelMonthJourneyReportView' },
     { label: 'Israel: Self-Employed National Insurance', componentName: 'IlSelfEmploymentNiReportView' },
     { label: 'Israel: Advance Tax Calendar (Mikdamot)', componentName: 'IsraelAdvanceTaxReportView' },
+    { label: 'Accountant export pack', componentName: 'AccountantExportPackView', id: 'accountant-export-pack' },
   ];
 
   test('Warehouse operations workflows are reachable from Inventory Cycle Count', async ({ page }) => {

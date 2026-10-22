@@ -15,7 +15,7 @@ import { withScreenHelp } from './screenHelp';
 import type { ComponentType, ElementType } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
-  CalendarClock,
+  FileArchive, CalendarClock,
   LayoutGrid, BarChart3, Activity, FileText, Database, Layers, 
   ArrowDownRight, ArrowUpRight, FolderKanban, Users, RefreshCw, 
   ShieldCheck, Terminal as TerminalIcon, Settings, Building, Cpu as CpuIcon,
@@ -375,6 +375,7 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'GeneralLedgerView': lazy(() => import('../components/ledger/GeneralLedgerView')),
   'StatementView': lazy(() => import('../components/reporting/StatementView')),
   'TaxLiabilityView': lazy(() => import('../components/reporting/TaxLiabilityView')),
+  'AccountantExportPackView': lazy(() => import('../components/reporting/AccountantExportPackView')),
   'ExpenseByCategoryReportView': lazy(() => import('../components/reporting/ExpenseByCategoryReportView')),
   'IncomeBySourceReportView': lazy(() => import('../components/reporting/IncomeBySourceReportView')),
   'TopExpensesIncomeReportView': lazy(() => import('../components/reporting/TopExpensesIncomeReportView')),
@@ -546,6 +547,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'general-ledger', label: { en: 'General Ledger', he: 'ספר ראשי' }, componentName: 'GeneralLedgerView', icon: BookOpen },
   { id: 'statement', label: { en: 'Account Statement', he: 'דף חשבון' }, componentName: 'StatementView', icon: FileText },
   { id: 'tax-liability', label: { en: 'Sales Tax Liability', he: 'חבות מס קניה' }, componentName: 'TaxLiabilityView', icon: Receipt },
+  { id: 'accountant-export-pack', label: { en: 'Accountant export pack', he: 'חבילת ייצוא לרואה חשבון' }, componentName: 'AccountantExportPackView', icon: FileArchive },
   { id: 'rule-pack-coverage', label: { en: 'Tax Rule Coverage', he: 'כיסוי חוקי מס' }, componentName: 'RulePackCoverageReportView', icon: ShieldCheck },
   { id: 'customer-credit-limits', label: { en: 'Customer Credit Limits', he: 'מסגרות אשראי ללקוחות' }, componentName: 'CustomerCreditLimitReportView', icon: Wallet },
   { id: 'milestone-billing', label: { en: 'Milestone Billing', he: 'חיוב לפי אבני דרך' }, componentName: 'MilestoneBillingReportView', icon: CalendarDays },
