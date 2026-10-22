@@ -20,7 +20,17 @@ export class RestoreError extends Error {
   }
 }
 
-export const RESTORE_COLLECTIONS: { key: string; coll: string }[] = [
+/**
+ * One table of the backup. `onlyIfInBackup` (BK-10 additions): replaced only when the backup has the
+ * key, so an older backup leaves that table as it is. `holds`: the table's rows this key carries (the
+ * `documents` table also keeps the uploaded files, which a backup never carries or replaces).
+ */
+export interface RestoreTable { key: string; coll: string; onlyIfInBackup?: true; holds?: (data: DocumentData) => boolean }
+
+/** A row of `documents` that keeps an uploaded file (an attachment or a Vault file): never restored. */
+export const isStoredFile = (data: DocumentData) => typeof data.fileUrl === 'string' && data.fileUrl !== '';
+
+export const RESTORE_COLLECTIONS: RestoreTable[] = [
   { key: 'transactions', coll: 'transactions' },
   { key: 'accounts', coll: 'chartAccounts' },
   { key: 'projects', coll: 'projects' },
@@ -52,7 +62,43 @@ export const RESTORE_COLLECTIONS: { key: string; coll: string }[] = [
   { key: 'periods', coll: 'periods' },
   // W-02: the stock history goes with the quantities (an older backup without it clears it)
   { key: 'stockMoves', coll: 'stockMoves' },
+  // BK-10: the rest of the workspace's own records — templates, learned bank-rule patterns, forecast
+  // scenarios, loans, filed tax returns, the fixed-asset table, client queries, and the `documents`
+  // rows that are records (tasks, time entries, stage and rate settings), not files.
+  { key: 'customTemplates', coll: 'customTemplates', onlyIfInBackup: true },
+  { key: 'rulePatterns', coll: 'rulePatterns', onlyIfInBackup: true },
+  { key: 'scenarios', coll: 'scenarios', onlyIfInBackup: true },
+  { key: 'loans', coll: 'loans', onlyIfInBackup: true },
+  { key: 'taxReturns', coll: 'taxReturns', onlyIfInBackup: true },
+  { key: 'fixedAssets', coll: 'fixedAssets', onlyIfInBackup: true },
+  { key: 'clientQueries', coll: 'clientQueries', onlyIfInBackup: true },
+  { key: 'documentRecords', coll: 'documents', onlyIfInBackup: true, holds: data => !isStoredFile(data) },
 ];
+
+/**
+ * BK-10: workspace tables a backup leaves out on purpose, and why (the archive's notes repeat it).
+ * Uploaded file bytes are not carried either: the backup lists them (`attachments`) and the restore
+ * reports which are not in the workspace.
+ */
+export const NOT_IN_BACKUP: Record<string, string> = {
+  members: 'who may open the workspace: membership is never restored from a file',
+  invites: 'open invitations carry sign-in tokens',
+  apiKeys: 'secrets',
+  banks: 'bank connections carry provider tokens; reconnect the bank after a restore',
+  auditLogs: 'the audit trail is kept as it is and never replaced',
+  notifications: 'messages already shown', emailEvents: 'delivery log of e-mails already sent',
+  supportTickets: 'shared with support staff', supportMessages: 'shared with support staff',
+  learnedDeltas: 'derived training data, rebuilt from use',
+  workspaceShards: 'system counters', billingLedgerTraces: 'billing system records',
+  idempotencyKeys: 'system state', rateLimitEntries: 'system state', presence: 'system state',
+  deepAuditJobs: 'system jobs', errorLogs: 'system log',
+};
+
+/** The attachment list a backup carries: each stored file's details and SHA-256, never its bytes. */
+export function attachmentListEntry(id: string, data: DocumentData, sha256: (text: string) => string): Record<string, unknown> {
+  const { fileUrl, ...details } = data;
+  return { id, ...details, fileSha256: sha256(String(fileUrl)), fileInBackup: false };
+}
 
 /** Workspace fields a backup may not change: ownership, membership, billing, closing and system state. */
 export const PROTECTED_WORKSPACE_FIELDS = new Set([
@@ -73,7 +119,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export interface RestoreResult {
   restoredCollections: string[];
   counts: Record<string, number>;
+  /** BK-10: the backup's attachment list against the files in the workspace (files are never restored). */
+  attachments?: { listed: number; present: number; missing: string[] };
 }
+
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
 
 /** The later of two YYYY-MM-DD dates ('' when neither is set). */
 function latestDate(a: unknown, b: unknown): string {
@@ -105,8 +155,16 @@ export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string,
       if (typeof id !== 'string' || !VALID_ID.test(id)) {
         throw new RestoreError(400, `Backup field "${key}" contains an invalid record id`);
       }
+      if (coll === 'documents' && isStoredFile(data)) {
+        throw new RestoreError(400, `Backup field "${key}" carries a file (${id}); files are not restored from a backup`);
+      }
       records.set(`${coll}/${id}`, { coll, id, data: { ...data, workspaceId } });
     }
+  }
+  const attachmentList = backup.attachments;
+  if (attachmentList !== undefined && attachmentList !== null
+    && (!Array.isArray(attachmentList) || !attachmentList.every(a => isRecord(a) && typeof a.id === 'string'))) {
+    throw new RestoreError(400, 'Backup field "attachments" must be a list of files');
   }
 
   // AUD-02: every ledger entry in the backup must be one the ledger door would accept (its workspace,
@@ -125,6 +183,7 @@ export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string,
   // inside the one serializable transaction that writes the backup — a month closed, or a record moved
   // or added, between checking and writing can no longer slip past the checks.
   const counts: Record<string, number> = {};
+  let attachments: RestoreResult['attachments'];
   await db.runTransaction(async t => {
     // Closed books are never replaced by an older state: a backup may be restored over closed periods
     // only if it was made when the books were closed at least as far as they are now, so its closed
@@ -167,15 +226,33 @@ export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string,
         if (foreign) {
           throw new RestoreError(409, `Backup record ${coll}/${foreign.id} belongs to another workspace; nothing was restored`);
         }
+        const file = coll === 'documents' && snaps.find(s => s.exists && isStoredFile(s.data() || {}));
+        if (file) {
+          throw new RestoreError(409, `Backup record documents/${file.id} would replace a stored file; nothing was restored`);
+        }
       }
     }
 
     // 3. Delete this workspace's records, write the backup, update safe settings.
-    const colls = Array.from(new Set(RESTORE_COLLECTIONS.map(c => c.coll)));
+    const tables = RESTORE_COLLECTIONS.filter(c => !c.onlyIfInBackup || backup[c.key] != null);
+    const colls = Array.from(new Set(tables.map(c => c.coll)));
     // every read happens before the first write (a transaction rule)
     const existing = [];
-    for (const coll of colls) existing.push(await t.get(db.collection(coll).where('workspaceId', '==', workspaceId)));
-    for (const snap of existing) snap.docs.forEach(doc => t.delete(doc.ref));
+    for (const coll of colls) {
+      const snap = await t.get(db.collection(coll).where('workspaceId', '==', workspaceId));
+      const holds = tables.find(c => c.coll === coll)?.holds;
+      existing.push(holds ? snap.docs.filter(doc => holds(doc.data() || {})) : snap.docs);
+    }
+    if (Array.isArray(attachmentList)) {
+      const { createHash } = await import('node:crypto');
+      const files = await t.get(db.collection('documents').where('workspaceId', '==', workspaceId));
+      const sums = new Map(files.docs.filter(d => isStoredFile(d.data() || {}))
+        .map(d => [d.id, createHash('sha256').update(String(d.data()?.fileUrl)).digest('hex')]));
+      const missing = (attachmentList as Array<{ id: string; fileSha256?: unknown }>)
+        .filter(a => !sums.has(a.id) || (typeof a.fileSha256 === 'string' && sums.get(a.id) !== a.fileSha256)).map(a => a.id);
+      attachments = { listed: attachmentList.length, present: attachmentList.length - missing.length, missing };
+    }
+    for (const docs of existing) docs.forEach(doc => t.delete(doc.ref));
     for (const r of records.values()) {
       t.set(db.collection(r.coll).doc(r.id), r.data);
       counts[r.coll] = (counts[r.coll] || 0) + 1;
@@ -185,6 +262,14 @@ export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string,
       for (const [k, v] of Object.entries(backupWorkspace)) {
         if (!PROTECTED_WORKSPACE_FIELDS.has(k)) safe[k] = v;
       }
+      // BK-10: the close dates come back only forward (a backup never reopens a closed month: the
+      // check above already refused one closed less far), and the opening-balance date only where none is set.
+      for (const k of ['lockDate', 'softLockDate'] as const) {
+        const v = backupWorkspace[k];
+        if (typeof v === 'string' && YMD.test(v) && v > (typeof current[k] === 'string' ? current[k] : '')) safe[k] = v;
+      }
+      const opening = backupWorkspace.openingBalanceDate;
+      if (!current.openingBalanceDate && typeof opening === 'string' && YMD.test(opening)) safe.openingBalanceDate = opening;
       if (Object.keys(safe).length > 0) t.set(db.collection('workspaces').doc(workspaceId), safe, { merge: true });
     }
   });
@@ -192,6 +277,7 @@ export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string,
   return {
     restoredCollections: Array.from(new Set(RESTORE_COLLECTIONS.filter(c => backup[c.key] != null).map(c => c.key))),
     counts,
+    ...(attachments ? { attachments } : {}),
   };
 }
 
@@ -199,20 +285,25 @@ export async function restoreWorkspaceBackup(db: Firestore, workspaceId: string,
 const BACKUP_TABLES = RESTORE_COLLECTIONS.filter(c => c.key !== 'recurring');
 
 /**
- * The backup file (export): every collection RESTORE_COLLECTIONS restores, the workspace's
- * settings, counts, and a SHA-256 checksum over the payload without it (the Settings screen checks
+ * The backup file (export): every collection RESTORE_COLLECTIONS restores, the attachment list
+ * (BK-10, details only), the workspace's settings, counts, and a SHA-256 checksum over the payload without it (the Settings screen checks
  * it before restoring).
  */
 export async function exportWorkspaceBackup(db: Firestore, workspaceId: string, exportedBy: string): Promise<Record<string, unknown> & { metadata: Record<string, unknown> }> {
   // AUD-02: every table is read inside one transaction, so the backup is one consistent moment of the
   // books — a save made while the export runs is either wholly in it or wholly out of it.
+  const { createHash } = await import('node:crypto');
+  const sha256 = (text: string) => createHash('sha256').update(text).digest('hex');
   const tables: Record<string, Array<Record<string, unknown>>> = {};
   const wsData = await db.runTransaction(async t => {
     const wsDoc = await t.get(db.collection('workspaces').doc(workspaceId));
-    for (const { key, coll } of BACKUP_TABLES) {
+    for (const { key, coll, holds } of BACKUP_TABLES) {
       const snap = await t.get(db.collection(coll).where('workspaceId', '==', workspaceId));
-      tables[key] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      tables[key] = snap.docs.filter(d => !holds || holds(d.data() || {})).map(d => ({ id: d.id, ...d.data() }));
     }
+    // BK-10: the attachment list (each file's details and checksum; the bytes stay in the workspace)
+    const files = await t.get(db.collection('documents').where('workspaceId', '==', workspaceId));
+    tables.attachments = files.docs.filter(d => isStoredFile(d.data() || {})).map(d => attachmentListEntry(d.id, d.data() || {}, sha256));
     return wsDoc.exists ? wsDoc.data() || {} : {};
   }, { readOnly: true });
   const payload: Record<string, unknown> & { metadata: Record<string, unknown> } = {
@@ -222,7 +313,7 @@ export async function exportWorkspaceBackup(db: Firestore, workspaceId: string, 
     metadata: {},
   };
   const counts: Record<string, number> = {};
-  for (const { key } of BACKUP_TABLES) {
+  for (const key of [...BACKUP_TABLES.map(c => c.key), 'attachments']) {
     payload[key] = tables[key];
     counts[key] = tables[key].length;
   }
@@ -233,8 +324,7 @@ export async function exportWorkspaceBackup(db: Firestore, workspaceId: string, 
     exportedBy,
     serverAuthoritative: true,
   };
-  const { createHash } = await import('node:crypto');
-  payload.metadata.checksum = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  payload.metadata.checksum = sha256(JSON.stringify(payload));
   return payload;
 }
 

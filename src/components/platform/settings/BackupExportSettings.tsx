@@ -8,6 +8,7 @@ import { recordBackupCompleted } from '../../../lib/ledgerBackupHealth';
 import { isPostable } from '../../../lib/txFilters';
 import WorkspaceExportDialog from './WorkspaceExportDialog';
 import WorkspaceArchiveExport from './WorkspaceArchiveExport';
+import { backupFromWorkspaceArchive } from '../../../lib/workspaceArchive';
 
 export default function BackupExportSettings() {
   const [exportOpen, setExportOpen] = useState(false);
@@ -131,7 +132,10 @@ export default function BackupExportSettings() {
         throw new Error("No active workspace selected");
       }
 
-      const text = await file.text();
+      // BK-10: a workspace archive (ZIP) is read back to its backup.json, then restored the same way
+      const text = /\.zip$/i.test(file.name)
+        ? (await backupFromWorkspaceArchive(new Uint8Array(await file.arrayBuffer()))).text
+        : await file.text();
       const payload = JSON.parse(text);
 
       if (!payload.schemaVersion || !payload.metadata || !payload.metadata.checksum) {
@@ -243,13 +247,13 @@ export default function BackupExportSettings() {
             <h3 className="font-bold text-[var(--text)]">Restore Backup</h3>
           </div>
           <p className="text-sm text-zinc-500 mb-6 min-h-[40px]">
-            Restore your workspace from a verified JSON backup file. Validates checksum and schema integrity before importing.
+            Restore your workspace from a verified JSON backup file or a workspace archive (ZIP). Validates checksum and schema integrity before importing.
           </p>
           <input aria-label="Restore backup file"
             type="file" 
             ref={fileInputRef} 
             onChange={handleFileSelect}
-            accept=".json" 
+            accept=".json,.zip" 
             className="hidden" 
           />
           <button 
