@@ -3,8 +3,7 @@ import { notify } from '../services/notificationService';
 import express from 'express';
 import type { DecodedIdToken } from '../auth/supabaseAuth';
 import { z } from 'zod';
-import { getDb, validateWorkspaceMember, FieldValue } from '../db/firestore';
-import type { Firestore } from '../db/firestore';
+import { getDb, validateWorkspaceMember, FieldValue, type Firestore } from '../db/firestore';
 import { writeServerAuditLog } from '../services/auditLogService';
 import { seedDemoWorkspace } from '../../lib/demoWorkspaceSeeder';
 import { formatTzDate } from './transactionRoutes';
@@ -12,6 +11,7 @@ import { applyAccountTemplate, TemplateError } from '../services/templateService
 import { importRecords, undoImport, ImportError } from '../services/recordImportService';
 import { IMPORT_KINDS, MAX_IMPORT_ROWS } from '../../lib/recordImport';
 import { periodRouter } from './periodRoutes';
+import { returnAuthorizationRouter } from './returnAuthorizationRoutes';
 import { badDebtRouter } from './badDebtRoutes';
 import { prepaidRouter, revenueSpreadRouter } from './prepaidRoutes';
 import { attachmentRouter } from './attachmentRoutes';
@@ -155,6 +155,7 @@ workspaceRouter.post('/:workspaceId/import-maps', requireWorkspaceRole(['owner',
 
 // Closing the books: close / reopen / partial unlock / sign-offs (src/server/routes/periodRoutes.ts)
 workspaceRouter.use('/:workspaceId/periods', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), periodRouter);
+workspaceRouter.use('/:workspaceId/return-authorizations', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), returnAuthorizationRouter);
 // Emails to customers and their send log (src/server/routes/emailRoutes.ts)
 workspaceRouter.use('/:workspaceId/emails', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), emailRouter);
 // Tax returns: members see them; filing checks owner/accountant in taxReturnService.ts

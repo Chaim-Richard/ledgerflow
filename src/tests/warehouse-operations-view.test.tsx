@@ -17,6 +17,7 @@ import { getLocalDateISO } from '../lib/utils';
 import { getSupabase } from '../lib/db/client';
 import { markComponentCollectionsLoaded, setComponentWorkspace } from './helpers/componentFixtures';
 import { stubFetchWithBodies } from './helpers/dom';
+import { stubRmaServer } from './helpers/rmaServer';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import type { Customer, Estimate, Invoice, InventoryItem, Transaction } from '../types';
@@ -148,7 +149,9 @@ describe('Warehouse operations views (A-64–A-67)', () => {
     assert.equal(calls.some(call => call.url.includes('/rpc/lf_batch') || call.url.includes('stockMoves')), false);
   });
 
-  test('RMA request stores selected invoice lines and reason on the customer, not a credit or stock movement', async () => {
+  test('RMA request sends the selected invoice lines and reason to the server, not a credit or stock movement', async () => {
+    // ISS-143: the RMA is written by the server (returnAuthorizationService.ts), never by a browser write to the customer
+    calls = stubRmaServer({ workspaceId: customer.workspaceId, customerName: customer.name, line: () => ({ itemId: 'item-1', description: 'Blue Widget', soldQuantity: 2 }) });
     render(<WarehouseOperationsReportView />);
     await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Return authorizations' })); });
     await act(async () => {
@@ -156,21 +159,17 @@ describe('Warehouse operations views (A-64–A-67)', () => {
       fireEvent.change(screen.getByLabelText('RMA reason'), { target: { value: 'Customer ordered the wrong size' } });
       fireEvent.click(screen.getByRole('button', { name: 'Submit RMA request' }));
     });
-    await waitFor(() => assert.equal(rpcWrites().length, 1));
-    const body = rpcWrites()[0].body as { p_table: string; p_id: string; p_set: Record<string, unknown> };
-    assert.equal(body.p_table, 'customers');
-    assert.equal(body.p_id, customer.id);
-    const path = Object.keys(body.p_set).find(key => key.startsWith('metadata.returnAuthorizationsById.'));
-    assert.ok(path);
-    const saved = body.p_set[path!] as { number: string; status: string; reason: string; invoiceId: string; lines: Array<{ quantity: number; invoiceLineId: string }>; events: unknown[] };
-    assert.match(saved.number, /^RMA-\d{4}-[A-HJ-NP-Z2-9]{12}$/);
-    assert.equal(saved.status, 'requested');
-    assert.equal(saved.reason, 'Customer ordered the wrong size');
-    assert.equal(saved.invoiceId, invoice.id);
-    assert.deepEqual(saved.lines.map(line => [line.invoiceLineId, line.quantity]), [['invoice-line-1', 1]]);
-    assert.equal(saved.events.length, 1);
-    assert.equal('amountCents' in saved, false);
-    assert.equal(calls.some(call => (call.body as { p_table?: string } | undefined)?.p_table === 'creditNotes'), false);
+    const rma = () => calls.filter(call => call.url.includes('/return-authorizations'));
+    await waitFor(() => assert.equal(rma().length, 1));
+    const body = rma()[0].body as { customerId: string; invoiceId: string; reason: string; lines: Array<{ invoiceLineId: string; quantity: number }>; requestKey: string };
+    assert.equal(body.customerId, customer.id);
+    assert.equal(body.invoiceId, invoice.id);
+    assert.equal(body.reason, 'Customer ordered the wrong size');
+    assert.deepEqual(body.lines.map(line => [line.invoiceLineId, line.quantity]), [['invoice-line-1', 1]]);
+    assert.match(body.requestKey, /^[A-Za-z0-9_-]{8,100}$/);
+    assert.equal('amountCents' in body, false);
+    assert.equal(rpcWrites().length, 0, 'no browser write to the customer');
+    assert.equal(calls.some(call => (call.body as { p_table?: string } | null)?.p_table === 'creditNotes'), false);
   });
 
   test('warranty end date is keyed to the issued invoice serial and keeps its editor history', async () => {
@@ -304,20 +303,21 @@ describe('Warehouse operations views (A-64–A-67)', () => {
     await waitFor(() => assert.equal((screen.getByLabelText('Shipment tracking number') as HTMLInputElement).value, ''));
     assert.equal(rpcWrites().length, 1);
 
-    calls = stubFetchWithBodies(403, { message: 'RMA metadata refused', code: '42501' });
+    const line = () => ({ itemId: 'item-1', description: 'Blue Widget', soldQuantity: 2 });
+    calls = stubRmaServer({ workspaceId: customer.workspaceId, line, refuse: { status: 409, message: 'RMA refused by the server' } });
     await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Return authorizations' })); });
     await act(async () => {
       fireEvent.change(screen.getByLabelText('Return quantity for Blue Widget'), { target: { value: '1' } });
       fireEvent.change(screen.getByLabelText('RMA reason'), { target: { value: 'Keep this reason' } });
       fireEvent.click(screen.getByRole('button', { name: 'Submit RMA request' }));
     });
-    await waitFor(() => assert.match(screen.getByRole('alert').textContent || '', /RMA metadata refused/));
+    await waitFor(() => assert.match(screen.getByRole('alert').textContent || '', /RMA refused by the server/));
     assert.equal((screen.getByLabelText('RMA reason') as HTMLTextAreaElement).value, 'Keep this reason');
     assert.equal((screen.getByLabelText('Return quantity for Blue Widget') as HTMLInputElement).value, '1');
-    calls = stubFetchWithBodies(200, null);
+    calls = stubRmaServer({ workspaceId: customer.workspaceId, line });
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Submit RMA request' })); });
     await waitFor(() => assert.equal((screen.getByLabelText('RMA reason') as HTMLTextAreaElement).value, ''));
-    assert.equal(rpcWrites().length, 1);
+    assert.equal(calls.filter(call => call.url.includes('/return-authorizations')).length, 1);
   });
 
   test('viewers cannot edit warehouse metadata in any of the four panels', async () => {
