@@ -60,8 +60,8 @@ paused launch work; no coordination update from Claude was needed for this autho
 4. Never change a test's inputs or expected numbers. Never raise `quality-baseline.json` or the
    `--max-warnings` number in `package.json`. When your change lowers the warning count, lower
    `--max-warnings` to the new count and run `npm run ratchet:update`.
-5. If removing an unused import makes `src/tests/no-orphan-modules.test.ts` fail, put that
-   import back (it keeps a file reachable) and move on.
+5. If removing an unused import makes `src/tests/reachability-guard.test.ts` fail (it replaced the weaker
+   `no-orphan-modules` test on 22 Oct), the file it kept reachable is dead: delete it too, or put the import back.
 6. Pull request title: `codex: <task id> <what>`, e.g. `codex: C-2 stable list keys in 12 files`.
    In the description: the warning count before and after, and the check results.
 7. In `docs/TRACKER.md`, tick the items the task closes (`- [x] G-02 ... (codex, PR #n)`).
@@ -72,6 +72,11 @@ paused launch work; no coordination update from Claude was needed for this autho
    - AI suggests; the server calculates and posts.
    - Say only what is true (DA-05).
    - Each tracker item has a bucket (V1 / Later / Add-on / Research). Never move one into V1 yourself; ask under **Messages**.
+10. **Batch small tasks; run the checks before pushing (strategy audit, 22 Oct).** Each push to a PR is a full CI run.
+   The audit counted commits per task: AI #3 needs **1.7**, which batches 5–15 independent tasks in one PR; AI #5 needed
+   **7.3**, about one CI run per commit. When your next tasks are independent and small (a reader, a screen, a test), put
+   **up to five in one PR**, and run the whole local check (`tsc`, `npm test` with the database, `npm run lint:eslint`)
+   *before* the first push, not after CI fails. One PR per task is still right for a large or risky task.
 
 ## NOW — every AI works by the plan (owner, 18 Oct). Read this before your queue.
 

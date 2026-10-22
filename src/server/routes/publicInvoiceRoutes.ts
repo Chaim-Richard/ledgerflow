@@ -128,21 +128,7 @@ publicInvoiceRouter.post('/:token/pay', async (req, res) => {
     }
 
     const stripe = getStripe();
-    const lineTotal = Array.isArray(invoice.lines)
-      ? invoice.lines.reduce((sum: number, l: any) => {
-          const lineAmt = typeof l.amountCents === 'number' 
-            ? l.amountCents 
-            : Math.round((Number(l.quantity) || 1) * (Number(l.unitPriceCents) || 0));
-          return sum + lineAmt;
-        }, 0)
-      : 0;
 
-    const totalInvoiceAmount = typeof invoice.amountCents === 'number'
-      ? invoice.amountCents
-      : lineTotal;
-    const amountPaid = typeof invoice.amountPaidCents === 'number' 
-      ? invoice.amountPaidCents 
-      : 0;
     // What is still due, by the one money rule (discounts, retainage, credits, payments)
     const remainingBalance = calculateAmountDue(invoice);
 

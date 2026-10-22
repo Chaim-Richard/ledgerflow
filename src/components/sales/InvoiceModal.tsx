@@ -122,7 +122,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const [memo, setMemo] = useState(() => savedText('memo'));
   const [terms, setTerms] = useState(() => savedText('terms'));
   const [emailSubject, setEmailSubject] = useState(() => savedText('emailSubject'));
-  const [emailBody, setEmailBody] = useState(() => savedText('emailBody'));
+  const [emailBody] = useState(() => savedText('emailBody'));
   const formRef = useRef<HTMLFormElement>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const fieldError = (id: string) => fieldErrors[id]
