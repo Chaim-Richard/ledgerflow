@@ -43,16 +43,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   currentProjectId: null,
 
   setUser: (user) => {
+    // AUD-13: another account (or none) is a new identity: what the previous one could see goes with it, and an answer
+    // still on its way for the previous one is dropped (the uid checks below)
+    const before = get().user?.uid ?? null;
+    if ((user?.uid ?? null) !== before) set({ isAdmin: false, userProfile: null, workspaces: [] });
     set({ user });
     if (user) {
+      const uid = user.uid;
       user.getIdTokenResult().then((res) => {
+        if (get().user?.uid !== uid) return;
         const tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
         set({ isAdmin: tokenIsAdmin });
       }).catch((err) => {
         console.error(err);
       });
-    } else {
-      set({ isAdmin: false });
     }
   },
   setIsGuest: (isGuest) => {
@@ -68,6 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isAdmin: false });
       return false;
     }
+    const uid = user.uid;
     try {
       let res = await user.getIdTokenResult();
       let tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
@@ -77,6 +82,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         res = await user.getIdTokenResult();
         tokenIsAdmin = Boolean(res.claims.admin || res.claims.role === 'admin');
       }
+      // AUD-13: the answer is the user's who asked; another account signed in meanwhile keeps its own
+      if (get().user?.uid !== uid) return false;
       set({ isAdmin: tokenIsAdmin });
       return tokenIsAdmin;
     } catch (err) {
@@ -85,6 +92,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   setUserProfile: (userProfile) => {
+    // AUD-13: a profile read for an account that is no longer the signed-in one is not shown or used
+    const current = get().user?.uid;
+    if (userProfile && current && userProfile.uid && userProfile.uid !== current) return;
     set({ userProfile });
     const { user, isAdmin } = get();
     const profileIsAdmin = userProfile?.role === 'admin';
