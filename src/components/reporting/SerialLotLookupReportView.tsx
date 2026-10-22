@@ -84,17 +84,19 @@ export default function SerialLotLookupReportView({ purchaseOrders: purchaseOrde
     return (items || []).filter(item => ids.has(item.id));
   }, [documents, items]);
 
+  const itemNameById = useMemo(
+    () => new Map((items || []).map(item => [item.id, item.name || item.sku || item.id] as const)),
+    [items],
+  );
+
   const placements = useMemo(
     () => tracked.flatMap(item => serialsForItem(documents, item.id).map(row => ({ ...row, itemId: item.id }))),
     [documents, tracked],
   );
-  const matches = useMemo(() => {
-    const rows: Array<SerialPlacement & { itemId: string }> = [];
-    for (const item of tracked) {
-      rows.push(...findSerial(serialsForItem(documents, item.id), query).map(row => ({ ...row, itemId: item.id })));
-    }
-    return rows;
-  }, [documents, tracked, query]);
+  const matches = useMemo(
+    () => findSerial(placements, query) as Array<SerialPlacement & { itemId: string }>,
+    [placements, query],
+  );
   const selected = tracked.find(item => item.id === itemId) || tracked[0];
   const lots = useMemo(() => (selected ? lotRows(documents, selected.id) : []), [documents, selected]);
   const selectedSerials = useMemo(
@@ -103,10 +105,7 @@ export default function SerialLotLookupReportView({ purchaseOrders: purchaseOrde
   );
   const duplicates = useMemo(() => duplicateSerials(documents), [documents]);
   const partial = Boolean(truncated.inventory || truncated.invoices || ordersTruncated || failed.inventory || failed.invoices);
-  const itemName = (id: string) => {
-    const item = (items || []).find(i => i.id === id);
-    return item ? (item.name || item.sku || item.id) : id;
-  };
+  const itemName = (id: string) => itemNameById.get(id) || id;
 
   return (
     <section aria-label="Serial and lot lookup" className="p-4 space-y-4 min-w-0">
@@ -253,7 +252,7 @@ export default function SerialLotLookupReportView({ purchaseOrders: purchaseOrde
           </thead>
           <tbody>
             {duplicates.map(row => (
-              <tr key={row.serial} className="border-b border-[var(--line)]/50">
+              <tr key={`${(row as { itemId?: string }).itemId || ''}:${row.serial}:${row.documents.join('|')}`} className="border-b border-[var(--line)]/50">
                 <th scope="row" className="text-left font-normal py-1 px-2"><bdi>{row.serial}</bdi></th>
                 <td className="py-1 px-2">{row.documents.join(', ')}</td>
               </tr>

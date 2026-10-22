@@ -42,17 +42,24 @@ export default function DataHealthView() {
   const inventory = useLedgerStore(s => s.inventory);
   const bankLines = useLedgerStore(s => s.bankLines);
   const payments = useLedgerStore(s => s.payments);
+  const customers = useLedgerStore(s => s.customers);
+  const vendors = useLedgerStore(s => s.vendors);
   const { loading } = useLedgerCollections('bankLines', 'bills', 'inventory', 'invoices', 'recurring', 'payments');
-  const baseCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
-  const dimensions = useAuthStore(s => s.getCurrentWorkspace()?.dimensions);
-  const nightly = useAuthStore(s => s.getCurrentWorkspace()?.ledgerHealth);
+  useLedgerCollections('customers', 'vendors');
+  const workspace = useAuthStore(s => s.getCurrentWorkspace());
+  const baseCurrency = workspace?.currency || 'USD';
+  const workspaceCountry = workspace?.taxProfiles?.books?.place?.country;
+  const dimensions = workspace?.dimensions;
+  const nightly = workspace?.ledgerHealth;
   const openRecord = useUIStore(s => s.openRecord);
   const [only, setOnly] = useState<string>('all');
 
   const findings = useMemo(() => runDataChecks({
     transactions: transactions || [], accounts: accounts || [], invoices: invoices || [], bills: bills || [],
-    recurring: recurring || [], inventory: inventory || [], bankLines: bankLines || [], payments: payments || [], today: getLocalDateISO(), baseCurrency, dimensions,
-  }), [transactions, accounts, invoices, bills, recurring, inventory, bankLines, payments, baseCurrency, dimensions]);
+    recurring: recurring || [], inventory: inventory || [], bankLines: bankLines || [], payments: payments || [],
+    customers: customers || [], vendors: vendors || [], workspaceCountry,
+    today: getLocalDateISO(), baseCurrency, dimensions,
+  }), [transactions, accounts, invoices, bills, recurring, inventory, bankLines, payments, customers, vendors, workspaceCountry, baseCurrency, dimensions]);
 
   const byCheck = useMemo(() => DATA_CHECKS.map(check => ({ check, findings: findings.filter(f => f.checkId === check.id) })), [findings]);
   const shown = byCheck.filter(g => g.findings.length > 0 && (only === 'all' || g.check.id === only));

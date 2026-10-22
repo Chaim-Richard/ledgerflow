@@ -458,6 +458,8 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'UsFilingCalendarReportView': lazy(() => import('../components/reporting/UsFilingCalendarReportView')),
   'ExpiringLotsReportView': lazy(() => import('../components/reporting/ExpiringLotsReportView')),
   'StockTransfersReportView': lazy(() => import('../components/reporting/StockTransfersReportView')),
+  'DataQualityReportView': lazy(() => import('../components/reporting/DataQualityReportView')),
+  'SampleYearBenchmarkReportView': lazy(() => import('../components/reporting/SampleYearBenchmarkReportView')),
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = withScreenHelp([
@@ -579,6 +581,8 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'israeli-document-types', label: { en: 'Israeli Document Types', he: 'סוגי מסמכים בישראל' }, componentName: 'IsraeliDocumentTypesView', icon: Receipt },
   { id: 'us-1099-preview', label: { en: 'US 1099 Preview', he: 'תצוגת 1099 אמריקאי' }, componentName: 'Us1099PreviewReportView', icon: Users },
   { id: 'us-filing-calendar', label: { en: 'US Filing Calendar', he: 'יומן הגשות ארה"ב' }, componentName: 'UsFilingCalendarReportView', icon: Calendar },
+  { id: 'data-quality-checks', label: { en: 'Data Quality Checks', he: 'בדיקות איכות נתונים' }, componentName: 'DataQualityReportView', icon: ShieldCheck },
+  { id: 'sample-year-benchmark', label: { en: '12-Month Sample Year & Speed', he: 'שנת עסק לדוגמה ומהירות דוחות' }, componentName: 'SampleYearBenchmarkReportView', icon: Activity },
 ], 'reports');
 
 export const SETTINGS_TABS_REGISTRY = withScreenHelp([
