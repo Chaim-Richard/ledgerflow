@@ -280,7 +280,7 @@ for (const width of [390, 1280]) {
     const axe = await new AxeBuilder({ page }).analyze();
     const serious = axe.violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
     await testInfo.attach(`w10-axe-${width}`, { body: JSON.stringify(axe.violations, null, 2), contentType: 'application/json' });
-    expect(serious.map(v => ({ id: v.id, nodes: v.nodes.length })), 'serious or critical axe violations').toEqual([]);
+    expect(serious.map(v => `${v.id} (${v.nodes.length} node${v.nodes.length === 1 ? '' : 's'})`).join(', '), 'serious or critical axe violations').toBe('');
 
     expect(pageErrors, 'page errors').toEqual([]);
   });

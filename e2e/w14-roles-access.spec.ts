@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { mountJourney, remountJourney, settleStyles } from './support/journeyFixture';
+import { mountJourney, remountJourney } from './support/journeyFixture';
 
 /**
  * D-99 · W14 (RELEASE_GATE): roles and access. The same books, four people — owner, accountant,
@@ -216,11 +216,12 @@ for (const width of [390, 1280]) {
       expect(errors, `page errors while signed in as ${role}`).toEqual([]);
     }
 
-    await settleStyles(page);
+    // no settleStyles() here: the screen being checked is a live report with running animations, and
+    // waiting for every animation to stop would wait forever. Axe does not need them to be finished.
     const axe = await new AxeBuilder({ page }).exclude('#role-gate-probe').analyze();
     const serious = axe.violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
     await testInfo.attach(`w14-axe-${width}`, { body: JSON.stringify(axe.violations, null, 2), contentType: 'application/json' });
-    expect(serious.map(v => ({ id: v.id, nodes: v.nodes.length })), 'serious or critical axe violations').toEqual([]);
+    expect(serious.map(v => `${v.id} (${v.nodes.length} node${v.nodes.length === 1 ? '' : 's'})`).join(', '), 'serious or critical axe violations').toBe('');
 
     expect(pageErrors, 'page errors').toEqual([]);
   });
