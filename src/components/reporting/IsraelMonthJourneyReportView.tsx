@@ -313,6 +313,8 @@ function VatReturnTable({ returns, currency, onRecordFiled }: { returns: IsraelM
   const [problem, setProblem] = useState('');
   const record = async (r: IsraelMonth['steps'][number]['returns'][number]) => {
     if (!onRecordFiled || saving) return;
+    // CON-4b review: the same question as filing the whole workspace's return (TaxLiabilityView), naming the registration
+    if (!window.confirm(`File the return of ${r.registration.split(':').pop()} for ${r.startDate} to ${r.endDate}? A copy is kept and can't be changed.`)) return;
     setSaving(r.registration);
     setProblem('');
     try { await onRecordFiled(r); } catch (err) { setProblem(err instanceof Error ? err.message : String(err)); } finally { setSaving(''); }

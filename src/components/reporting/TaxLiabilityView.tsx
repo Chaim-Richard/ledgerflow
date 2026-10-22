@@ -18,7 +18,12 @@ import { useLedgerCollections } from '../../hooks/useLedgerCollections';
  * on the server (T-07); later changes to that period show as differences against the copy.
  */
 
-interface FiledReturn { id: string; startDate: string; endDate: string; boxes: TaxReturnBox[]; filedAt: string; reference?: string }
+/** The return filed for the whole workspace for exactly this period (one filed for a single registration is not it). */
+export function wholeWorkspaceReturn<R extends { startDate: string; endDate: string; registration?: string }>(filed: R[] | null | undefined, startDate: string, endDate: string): R | undefined {
+  return filed?.find(r => !r.registration && r.startDate === startDate && r.endDate === endDate);
+}
+
+interface FiledReturn { id: string; startDate: string; endDate: string; boxes: TaxReturnBox[]; filedAt: string; reference?: string; registration?: string }
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, { ...init, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}`, ...(init?.headers || {}) } });
@@ -71,7 +76,8 @@ export default function TaxLiabilityView({ startDate: pageStartDate, endDate: pa
     return () => { cancelled = true; };
   }, [base, workspaceId, version]);
 
-  const filedThisPeriod = filed?.find(r => r.startDate === startDate && r.endDate === endDate);
+  // CON-4b review: this view is the whole workspace's return; a return filed for one registration is not compared with it
+  const filedThisPeriod = wholeWorkspaceReturn(filed, startDate, endDate);
   const changes = filedThisPeriod ? returnChanges(filedThisPeriod, taxReturn) : [];
   const money = (cents: number) => formatCurrency(cents, currency);
 
