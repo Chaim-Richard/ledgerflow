@@ -1,4 +1,11 @@
-/** Screen descriptions are part of the registry contract; no generic fallback hides missing help. */
+/**
+ * Screen descriptions are part of the registry contract; no generic fallback hides missing help.
+ * A-201: the Hebrew half lives in `screenHelpHe.ts` (`SCREEN_HELP_HE`) and is attached by
+ * `withScreenHelp()` below, so a screen's `? Help` dialog can show the same description in Hebrew
+ * instead of the general page summary.
+ */
+import { SCREEN_HELP_HE } from "./screenHelpHe";
+
 export const SCREEN_HELP: Record<string, Record<string, string>> = {
   main: {
     practice:
@@ -100,7 +107,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     "group-summary":
       "Choose one of your groups of books (Settings → Groups of books) and a period: each company's income, costs, profit, assets, liabilities and equity side by side, with the group's total when all keep their books in one currency (or translated into one). Each figure opens that company's own report. Balances and sales between the companies are taken out of the total; with a parent, the other owners' part is shown. Account by account lists each account across the companies, matched by code or name.",
     backorders:
-      "Items sold on sales orders and not delivered yet, the oldest order first, against the stock on hand: what each line can take from stock and what it is short. Above, each short item in all with what is already on order from vendors and what is still to buy. Nothing is reserved or posted.",
+      "Items sold on sales orders and not delivered yet, the oldest order first, against the stock on hand: what each line can take from stock and what it is short. First comes the release list — the lines the stock on hand already covers in full, where a goods receipt appears when stock arrives — then each short item in all with what is already on order from vendors and what is still to buy. The cover is computed in the same oldest-first order and held for no one: nothing is reserved or posted.",
     commissions:
       "Choose a period: for each sales rep, every payment their customers made against an invoice, the part before tax, and the rep's commission on it, with their total. Commission follows what was paid, not what was invoiced. Reps, their percentages and customers are kept in Settings → Sales reps; nothing is posted.",
     "goods-not-billed":
@@ -214,6 +221,20 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review recorded bills of the period whose vendor's recorded country is not Israel: an Israeli business accounts for the Israeli VAT itself — on services by self-assessment in the periodic return (VAT Law Section 20), on goods at the import, where customs collects — and this screen lists the bills with the rate in force on each date and a reference amount. It never decides which a bill was, posts, accrues or files anything; vendors with no recorded country are counted for review, and bills in another currency are counted, never converted.",
     "customer-credit-limits":
       "What each customer owes now against the credit limit recorded on their own record, in the workspace base currency: the unpaid part of issued invoices, how much of it is already past its due date, the headroom left and how much of the limit is used. A customer with no recorded limit is shown as no limit recorded and is never treated as over it, and balances in another currency are listed beside the row, never added in or converted. Click a limit to type a new one; read-only otherwise — nothing is posted, no sale is blocked and no amount is changed.",
+    "aged-receivables-by-rep":
+      "The A/R Aging figures grouped by the sales rep recorded for each customer in Settings → Sales reps, so overdue follow-up has an owner. Open issued invoices only, after deposits, payments and credits, in the base currency at each invoice's own rate, exactly as A/R Aging reads them. A customer no rep looks after is listed under No sales rep; the grouping changes nothing about who owes what and nothing is posted.",
+    "gross-margin-by-item-group":
+      "Gross margin percent by item group for each month of a year: Sales by Item's own sales and cost (issued invoices, base currency) rolled up to the category recorded on each item. Cost is the posted cost of goods sold or an estimate from recorded unit costs, marked with an asterisk where estimated, and a line with no item carries no invented cost. A month with no sales shows a dash, never 0%, and nothing is posted.",
+    "top-customers-vendors":
+      "The twenty customers invoiced most in the period (or the twenty vendors who billed most), from the customer and supplier period summaries, with what was paid and credited in the period and the summary balance at its end. The small line is the same invoiced or billed figure for each of the last twelve months; ranking is by the gross period amount, so it is not a statement of who is most profitable. Foreign-currency documents count at their own recorded rate, as in the summaries.",
+    "inventory-turnover":
+      "How many times each item's average stock sold through in the period, read from the server's stock history: net units sold (returns netted against sales) over the average of opening and closing stock, in units and in value. Stock that left for another reason is counted as issued, never as sold, and the average is a two-point average, not a daily one. Where nothing sold or the average is not positive the turnover is shown as a dash, and negative stock is named on the row.",
+    "expense-by-employee":
+      "Expense claims grouped by the employee each claim bill is owed to: the total claimed in each currency, how many claims are waiting, approved or rejected, and how many have receipt evidence recorded — the Expense Receipt Checklist's own reading, where a linked file is evidence recorded, not a receipt inspected. Amounts stay in each bill's own currency and are never added across currencies, and a missing receipt is a review cue, not a decision about the claim.",
+    "time-by-project":
+      "Who logged time on which project in one month, from the same time entries the Time screen keeps. Every entry counts toward the minutes whatever its state, with the billable part and the part still waiting for approval shown inside the total, never added to it, and an entry with no project is No project recorded. It answers where the time went; approving and billing time stay on the Time screen and nothing is posted.",
+    "bank-holidays":
+      "The days banks are closed in the United States (Federal Reserve), Israel (Bank of Israel), England and Wales (GOV.UK) and the euro area's TARGET system, generated from each authority's own rules with the source and the day it was read on screen. A due date can be checked against the chosen calendar: it is kept when banks work that day and moved to the next day they do. One-off holidays an authority announces, such as an election day in Israel, are not generated by any rule and must be checked on the authority's list.",
     "rule-pack-coverage":
       "What the tax rule packs cover on a chosen date: every place — a country, or a state or province inside one — with how many rate, taxability, nexus, registration and filing rules it has, the packs behind them and the distinct authority pages they were read from. A place that is not listed is one this lane has written no rules for, never a statement that no tax applies there, and the gaps list names the covered places missing a kind so the next table to write is visible. Read-only: every row is 'calculation' content, and nothing here files, accrues or posts.",
     "use-tax-review":
@@ -353,7 +374,7 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
     developer:
       "Manage API keys and webhook controls. Review scopes and endpoints before making changes. Only authorized members can manage credentials and integrations.",
     import:
-      "Import contacts, items or accounts from CSV or Excel. Map columns, preview problems and submit valid rows. This workflow accepts supported fields and creates identities rather than restoring a complete backup.",
+      "Import contacts, items or accounts from CSV or Excel. For customers and vendors an address book also works: a vCard (.vcf) file or the CSV that Google Contacts exports. Map columns, preview problems and submit valid rows; a duplicate check compares the rows with the records already here before anything is saved. This workflow accepts supported fields and creates identities rather than restoring a complete backup.",
     emails:
       "Configure document emails, reminders and invoice approval. Review delivery preferences and the existing send workflow. Sending rules do not change invoice posting.",
     branding:
@@ -400,9 +421,11 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
 export function withScreenHelp<T extends { id: string }>(
   entries: T[],
   group: string,
-): (T & { help: string })[] {
+): (T & { help: string; helpHe: string })[] {
   return entries.map((entry) => ({
     ...entry,
     help: SCREEN_HELP[group]?.[entry.id] || "",
+    // A-201: empty until that screen has a Hebrew description; the guard test requires one per report
+    helpHe: SCREEN_HELP_HE[group]?.[entry.id] || "",
   }));
 }

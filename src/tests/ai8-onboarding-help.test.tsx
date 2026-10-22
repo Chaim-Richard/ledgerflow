@@ -219,7 +219,9 @@ describe('UI component rendering: HelpGuideView, GuestCountrySamplePicker, First
           group: 'Core',
           label: 'Sales',
           labels: ['Sales'],
+          labelHe: 'מכירות',
           help: 'Create and track invoices.',
+          helpHe: 'יצירה ומעקב אחר חשבוניות.',
         }}
         activeTab="sales"
         onClose={() => {}}

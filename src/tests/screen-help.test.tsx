@@ -63,6 +63,77 @@ test("every registered main screen, report, setting and lens has two to four hel
     );
   assert.ok(APP_TABS.every((entry) => entry.help.trim()));
 });
+test("A-201: every report on the Reports tab has its own Hebrew help, and it is Hebrew", () => {
+  const hebrew = /[\u05d0-\u05ea]/;
+  const sentences = (text: string) =>
+    text.split(/[.!?](?:\s|$)/).filter((part) => part.trim()).length;
+  for (const entry of REPORT_TABS_REGISTRY) {
+    assert.equal(typeof entry.helpHe, "string", `${entry.id} has no helpHe field`);
+    assert.ok(
+      entry.helpHe.trim().length > 0,
+      `${entry.id} has no Hebrew help — add it to src/config/screenHelpHe.ts`,
+    );
+    assert.match(entry.helpHe, hebrew, `${entry.id}'s Hebrew help is not Hebrew`);
+    assert.ok(
+      sentences(entry.helpHe) >= 2 && sentences(entry.helpHe) <= 4,
+      `${entry.id} needs 2–4 Hebrew help sentences`,
+    );
+    // it must be the report's own description, not a copy of the English or of a sibling
+    assert.notEqual(entry.helpHe, entry.help);
+  }
+  const all = REPORT_TABS_REGISTRY.map((entry) => entry.helpHe);
+  assert.equal(
+    new Set(all).size,
+    all.length,
+    "two reports share the same Hebrew help",
+  );
+});
+
+test("A-149: AI #3's non-report screens have their own Hebrew help too", () => {
+  const hebrew = /[\u05d0-\u05ea]/;
+  const sentences = (text: string) =>
+    text.split(/[.!?](?:\s|$)/).filter((part) => part.trim()).length;
+  const main = (id: string) => APP_TABS.find((entry) => entry.id === id);
+  const setting = (id: string) =>
+    SETTINGS_TABS_REGISTRY.find((entry) => entry.id === id);
+  const entries = [
+    main("petty-cash"),
+    setting("custom-fields"),
+    setting("branding-profiles"),
+    setting("price-list-import"),
+    setting("import"),
+  ];
+  for (const entry of entries) {
+    assert.ok(entry, "screen is registered");
+    assert.ok(
+      entry.helpHe && entry.helpHe.trim().length > 0,
+      `${entry.id} has no Hebrew help — add it to src/config/screenHelpHe.ts`,
+    );
+    assert.match(entry.helpHe, hebrew, `${entry.id}'s Hebrew help is not Hebrew`);
+    assert.ok(
+      sentences(entry.helpHe) >= 2 && sentences(entry.helpHe) <= 4,
+      `${entry.id} needs 2–4 Hebrew help sentences`,
+    );
+    assert.notEqual(entry.helpHe, entry.help);
+  }
+});
+
+test("A-201: the help dialog shows a report's own Hebrew description, not the page summary", () => {
+  useUIStore.setState({ activeReportTab: "financial-ratios" });
+  render(<ScreenHelpHeader activeTab="reports" />);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Help for Financial Ratios" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "עברית" }));
+  const dialog = screen.getByRole("dialog", { name: /יחסים פיננסיים/ });
+  assert.match(dialog.textContent || "", /חלוקה באפס נשארת כלא מוגדרת/);
+  assert.doesNotMatch(
+    dialog.textContent || "",
+    /Check cash on hand, money owed/,
+    "the Hebrew view fell back to the general reports page summary",
+  );
+});
+
 test("help searches normalized Hebrew names, English descriptions and mixed words", () => {
   const entries = screenHelpIndex();
   assert.ok(

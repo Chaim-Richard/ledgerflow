@@ -8,7 +8,7 @@ import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
-import { backorders, shortages } from '../lib/backorders';
+import { backorders, ordersReadyToRelease, releasableLines, shortages } from '../lib/backorders';
 import { DELIVERY_COGS_TYPE } from '../lib/deliveries';
 import BackordersReportView from '../components/reporting/BackordersReportView';
 import { markComponentCollectionsLoaded, setComponentWorkspace } from './helpers/componentFixtures';
@@ -42,6 +42,17 @@ test('oldest first takes the stock; what is short; on order from vendors', () =>
   const tight = backorders(orders, entries, [{ ...chair, quantityAtHand: 3 }, desk], pos);
   assert.deepEqual(tight.map(r => r.short), [0, 2, 2]);
   assert.deepEqual(shortages(tight), [{ itemId: 'chair', item: 'Chair', short: 2, onOrder: 0 }, { itemId: 'desk', item: 'Desk', short: 2, onOrder: 6 }]);
+
+  // A-121: the release list is the lines the same allocation already covers in full.
+  // With 5 chairs: SO1's last chair and SO2's four can go; SO1 as a whole cannot (desks short).
+  assert.deepEqual(releasableLines(rows).map(r => [r.number, r.itemId, r.left]), [
+    ['SO1', 'chair', 1],
+    ['SO2', 'chair', 4],
+  ]);
+  assert.deepEqual(ordersReadyToRelease(rows), ['so2']);
+  // with only 3 chairs the partly covered SO2 line is not released: part-cover is the order's call
+  assert.deepEqual(releasableLines(tight).map(r => [r.number, r.itemId]), [['SO1', 'chair']]);
+  assert.deepEqual(ordersReadyToRelease(tight), []);
 });
 
 afterEach(async () => { cleanup(); getSupabase().realtime.disconnect(); await getSupabase().auth.dispose(); });
@@ -55,4 +66,7 @@ test('the report shows short items and order lines', () => {
   assert.ok(screen.getByText('Short items (1)'));
   assert.ok(screen.getByRole('rowheader', { name: 'Desk' }));
   assert.ok(screen.getByText('Order lines to deliver (3)'));
+  // A-121: the release list leads, with the one order that can go out in full said in words
+  assert.ok(screen.getByText('Ready to release (2)'));
+  assert.ok(screen.getByText(/1 order\(s\) can be delivered in full from stock on hand/));
 });

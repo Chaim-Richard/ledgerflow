@@ -17,6 +17,13 @@ import { downloadCsv } from '../../../lib/csvExport';
 import { normalizeFreshBooksCsv } from '../../../lib/freshBooksImport';
 import { normalizeQuickBooksCsv } from '../../../lib/quickBooksCsvImport';
 import { readIif, type IifReadResult } from '../../../lib/iifImport';
+import {
+  contactImportDuplicates, googleContactsToContactTable, isGoogleContactsHeader, vCardToContactTable,
+  type ContactFileRead,
+} from '../../../lib/contactFileImport';
+import type { ReviewContact } from '../../../lib/contactDuplicateReview';
+import { useLedgerStore } from '../../../stores/useLedgerStore';
+import { useLedgerCollections } from '../../../hooks/useLedgerCollections';
 import { reconcileImportCounts } from '../../../lib/importCountReconciliation';
 import { MigrationTrialBalanceProof } from './MigrationTrialBalanceProof';
 import XeroDocumentsImport from './XeroDocumentsImport';
@@ -106,9 +113,11 @@ export default function ImportSettings() {
   const [fileName, setFileName] = useState('');
   const [rawTable, setRawTable] = useState<string[][]>([]);
   const [iif, setIif] = useState<IifReadResult | null>(null);
+  // A-182: an address-book file (vCard / Google Contacts CSV) already converted to import columns.
+  const [contactFile, setContactFile] = useState<ContactFileRead | null>(null);
   const table = useMemo(
-    () => (iif ? iif.tables[kind] : normalizeSourceTable(source, kind, rawTable)),
-    [iif, kind, source, rawTable],
+    () => (iif ? iif.tables[kind] : contactFile ? contactFile.table : normalizeSourceTable(source, kind, rawTable)),
+    [iif, kind, source, rawTable, contactFile],
   );
   const [mapping, setMapping] = useState<FieldMapping>({});
   const [openingDate, setOpeningDate] = useState(() => getLocalDateISO());
@@ -132,6 +141,33 @@ export default function ImportSettings() {
   }) : null;
   const ready = table.length > 1 && prepared.errors.length === 0 && prepared.records.length > 0 && !tooMany;
 
+  // A-182: pre-import duplicate check against the records already in this workspace.
+  const { loading: contactsLoading } = useLedgerCollections('customers', 'vendors');
+  const storeCustomers = useLedgerStore(s => s.customers);
+  const storeVendors = useLedgerStore(s => s.vendors);
+  const duplicateCheck = useMemo(() => {
+    if ((kind !== 'customers' && kind !== 'vendors') || prepared.records.length === 0) return null;
+    const sourceList = kind === 'customers' ? storeCustomers : storeVendors;
+    const existing: ReviewContact[] = sourceList
+      .filter(c => !workspaceId || (c as { workspaceId?: string }).workspaceId === workspaceId || !(c as { workspaceId?: string }).workspaceId)
+      .map(c => ({
+        id: c.id,
+        kind: kind === 'customers' ? 'customer' : 'vendor',
+        name: c.name ?? '',
+        email: (c as { email?: string }).email,
+        phone: (c as { phone?: string }).phone,
+        taxId: (c as { taxId?: string }).taxId,
+      }));
+    const incoming = prepared.records.map(r => ({
+      row: r.row,
+      name: String(r.data.name ?? ''),
+      email: r.data.email != null ? String(r.data.email) : undefined,
+      phone: r.data.phone != null ? String(r.data.phone) : undefined,
+      taxId: r.data.taxId != null ? String(r.data.taxId) : undefined,
+    }));
+    return contactImportDuplicates(kind, incoming, existing);
+  }, [kind, prepared, storeCustomers, storeVendors, workspaceId]);
+
   useEffect(() => {
     let cancelled = false;
     loadRecentImports(workspaceId).then(list => { if (!cancelled) setRecent(list); });
@@ -147,8 +183,13 @@ export default function ImportSettings() {
   };
 
   const chooseKind = (next: ImportKind) => {
+    // A-182: an address book only ever becomes customers or vendors — say so instead of going blank.
+    if (contactFile && next !== 'customers' && next !== 'vendors') {
+      toast.error('This address-book file imports as customers or vendors. Choose a different file for items or accounts.');
+      return;
+    }
     setKind(next);
-    const preview = iif ? iif.tables[next] : normalizeSourceTable(source, next, rawTable);
+    const preview = iif ? iif.tables[next] : contactFile ? contactFile.table : normalizeSourceTable(source, next, rawTable);
     setMapping(preview.length ? guessMapping(next, preview[0]) : {});
     resetResults();
   };
@@ -162,11 +203,27 @@ export default function ImportSettings() {
         const read = readIif(await file.text());
         setFileName(file.name);
         setIif(read);
+        setContactFile(null);
         setRawTable([]);
         setSource('iif');
         const rowsForKind = read.tables[kind];
         setMapping(rowsForKind.length ? guessMapping(kind, rowsForKind[0]) : {});
         if (!read.counts[kind]) toast.error(`This IIF has no ${definition.label.toLowerCase()} section. Choose the type that the file does contain.`);
+        return;
+      }
+      // A-182: a vCard address book (.vcf from a phone, Outlook or Apple Contacts).
+      if (lower.endsWith('.vcf')) {
+        if (kind !== 'customers' && kind !== 'vendors') {
+          toast.error('An address-book file imports as customers or vendors. Choose one of those types first.');
+          return;
+        }
+        const read = vCardToContactTable(await file.text());
+        setFileName(file.name);
+        setIif(null);
+        setContactFile(read);
+        setRawTable([]);
+        setMapping(guessMapping(kind, read.table[0]));
+        if (read.table.length < 2) toast.error(read.problems[0] ?? 'No contacts could be read from this file.');
         return;
       }
       setIif(null);
@@ -179,6 +236,15 @@ export default function ImportSettings() {
       }
       setFileName(file.name);
       setRawTable(cells);
+      // A-182: a Google Contacts CSV is recognised by its own column names and reshaped.
+      if ((kind === 'customers' || kind === 'vendors') && isGoogleContactsHeader(cells[0] ?? [])) {
+        const read = googleContactsToContactTable(cells);
+        setContactFile(read);
+        setMapping(guessMapping(kind, read.table[0]));
+        if (read.table.length < 2) toast.error(read.problems[0] ?? 'No contacts could be read from this file.');
+        return;
+      }
+      setContactFile(null);
       const converted = normalizeSourceTable(source, kind, cells);
       setMapping(guessMapping(kind, converted[0]));
     } catch (err) {
@@ -252,6 +318,7 @@ export default function ImportSettings() {
             <select aria-label="CSV source" value={source} onChange={e => {
               const next: CsvSource = e.target.value === 'freshbooks' ? 'freshbooks' : e.target.value === 'quickbooks' ? 'quickbooks' : e.target.value === 'iif' ? 'iif' : 'generic';
               if (next !== 'iif') setIif(null);
+              setContactFile(null);
               setSource(next);
               const converted = normalizeSourceTable(next, kind, rawTable);
               setMapping(converted.length ? guessMapping(kind, converted[0]) : {});
@@ -263,6 +330,21 @@ export default function ImportSettings() {
           {source === 'freshbooks' && <p className="text-xs text-[var(--muted)]">Choose a FreshBooks Clients, Vendors, or Items export. We combine name and address columns for preview, then use the normal validated import. No transactions are imported. <a className="underline" href="https://support.freshbooks.com/hc/en-us/articles/360032628152-How-do-I-export-my-data" target="_blank" rel="noopener noreferrer">Export instructions</a>.</p>}
           {source === 'iif' && <p className="text-xs text-[var(--muted)]">Choose the <strong>.iif</strong> file QuickBooks Desktop writes (File → Utilities → Export → Lists). Accounts, customers, vendors and items are read; the file&rsquo;s journals, invoices, bills and payments are <strong>not</strong> imported — a list import never posts. Nothing is guessed: a row with an unknown account type or no name is listed with its line number.</p>}
           {source === 'quickbooks' && <p className="text-xs text-[var(--muted)]">Choose a QuickBooks Online Account List, Customer Contact List, Vendor Contact List, or Products &amp; Services export. Put headers on the first row; review mappings and check before importing. Account balances, existing stock quantities and transactions are not carried over. <a className="underline" href="https://quickbooks.intuit.com/learn-support/en-us/help-article/list-management/export-reports-lists-data-quickbooks-online/L1xleDrLp_US_en_US" target="_blank" rel="noopener noreferrer">QBO export instructions</a>.</p>}
+
+          {contactFile && (
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 space-y-1" role="status">
+              <p className="text-xs text-[var(--text)]">
+                Address book read: <strong>{contactFile.table.length - 1}</strong> contact{contactFile.table.length === 2 ? '' : 's'}. Extra email addresses and phone numbers were kept in each contact&rsquo;s notes, not dropped.
+              </p>
+              {contactFile.problems.length > 0 && (
+                <ul className="text-xs text-rose-600 space-y-0.5" aria-label="Contacts that were not imported">
+                  {contactFile.problems.map(problem => (
+                    <li key={problem}>{problem}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {iif && (
             <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 space-y-1" role="status">
@@ -323,7 +405,7 @@ export default function ImportSettings() {
             <input
               id="import-file"
               type="file"
-              accept=".csv,.txt,.xlsx,.iif,.qbi,text/csv"
+              accept=".csv,.txt,.xlsx,.iif,.qbi,.vcf,text/csv,text/vcard"
               onChange={e => { onFile(e.target.files?.[0]); e.target.value = ''; }}
               className="text-sm text-[var(--text)] file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border file:border-[var(--line)] file:bg-[var(--panel)] file:text-[var(--text)]"
             />
@@ -333,7 +415,7 @@ export default function ImportSettings() {
               </span>
             )}
           </div>
-          <p className="text-[11px] text-[var(--muted)]">The first row must be the column names. Up to {MAX_IMPORT_ROWS} rows per file.</p>
+          <p className="text-[11px] text-[var(--muted)]">The first row must be the column names. Up to {MAX_IMPORT_ROWS} rows per file. For customers and vendors you can also choose an address book: a vCard (.vcf) from your phone, Outlook or Apple Contacts, or the CSV Google Contacts exports — names, emails, phones and addresses are matched for you and every contact is still checked before anything is saved.</p>
         </div>
 
         {table.length > 1 && (
@@ -368,6 +450,41 @@ export default function ImportSettings() {
               {issues.length > 0 && <>, <strong className="text-[var(--neg)]">{new Set(issues.map(i => i.row)).size}</strong> with problems (fix them in the file and choose it again)</>}.
               {tooMany && <span className="text-[var(--neg)]"> The file has more than {MAX_IMPORT_ROWS} rows; split it.</span>}
             </p>
+
+            {(kind === 'customers' || kind === 'vendors') && prepared.records.length > 0 && (
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 space-y-2">
+                <h4 className="text-xs font-bold text-[var(--text)]">Duplicate check</h4>
+                {contactsLoading || !duplicateCheck ? (
+                  <p className="text-xs text-[var(--muted)]">Still loading your existing {kind === 'customers' ? 'customers' : 'vendors'} — the check against them will appear here before you import.</p>
+                ) : (
+                  <>
+                    {duplicateCheck.willSkipTotal === 0 && duplicateCheck.possibleTotal === 0 && (
+                      <p className="text-xs text-[var(--muted)]">No row matches an existing {kind === 'customers' ? 'customer' : 'vendor'} by name, email address, phone number or tax ID.</p>
+                    )}
+                    {duplicateCheck.willSkipTotal > 0 && (
+                      <>
+                        <p className="text-xs text-[var(--text)]"><strong>{duplicateCheck.willSkipTotal}</strong> row{duplicateCheck.willSkipTotal === 1 ? '' : 's'} {duplicateCheck.willSkipTotal === 1 ? 'has' : 'have'} exactly the same name as a {kind === 'customers' ? 'customer' : 'vendor'} already here, so the import will skip {duplicateCheck.willSkipTotal === 1 ? 'it' : 'them'} — nobody is created twice.</p>
+                        <ul className="text-xs text-[var(--muted)] space-y-0.5" aria-label="Rows that will be skipped as duplicates">
+                          {duplicateCheck.willSkip.map(d => (
+                            <li key={`skip-${d.row}`}>Row {d.row}: &ldquo;{d.name}&rdquo; matches &ldquo;{d.existingName}&rdquo;</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                    {duplicateCheck.possibleTotal > 0 && (
+                      <>
+                        <p className="text-xs text-[var(--text)]"><strong>{duplicateCheck.possibleTotal}</strong> row{duplicateCheck.possibleTotal === 1 ? '' : 's'} share{duplicateCheck.possibleTotal === 1 ? 's' : ''} an email address, phone number or tax ID with an existing {kind === 'customers' ? 'customer' : 'vendor'} but the name is different, so importing <strong>will</strong> create a second record. Check {duplicateCheck.possibleTotal === 1 ? 'it' : 'them'} first:</p>
+                        <ul className="text-xs text-[var(--muted)] space-y-0.5" aria-label="Rows that look like existing contacts">
+                          {duplicateCheck.possible.map(d => (
+                            <li key={`possible-${d.row}`}>Row {d.row}: &ldquo;{d.name}&rdquo; looks like &ldquo;{d.existingName}&rdquo; (same {d.signals.map(s => (s === 'tax-id' ? 'tax ID' : s === 'email' ? 'email address' : 'phone number')).join(' and ')})</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {issues.length > 0 && (
               <div className="max-h-64 overflow-auto border border-[var(--line)] rounded-xl">

@@ -31,15 +31,16 @@ export function ScreenHelpDialog({
         className="w-full max-w-xl max-h-[85dvh] overflow-y-auto p-5 space-y-4 rounded-xl border bg-[var(--panel)] text-[var(--text)]"
       >
         <h2 id={titleId} className="text-xl font-semibold">
-          {lang === "he" ? screenDoc.titleHe : `Help for ${entry.label}`}
+          {lang === "he" ? `עזרה: ${entry.labelHe}` : `Help for ${entry.label}`}
         </h2>
-        <p dir={lang === "he" ? "rtl" : "ltr"}>
-          {lang === "he" ? screenDoc.summaryHe : entry.help}
+        {/* A-201: the screen's own description in Hebrew; the general page summary only when it has none */}
+        <p dir={lang === "he" ? "rtl" : "ltr"} lang={lang}>
+          {lang === "he" ? entry.helpHe || screenDoc.summaryHe : entry.help}
         </p>
-        <p className="text-sm text-[var(--muted)]">
-          Related metadata can be edited in the shared side drawer where
-          offered. Use the existing header pin control to keep a page handy
-          while visiting another screen.
+        <p className="text-sm text-[var(--muted)]" dir={lang === "he" ? "rtl" : "ltr"}>
+          {lang === "he"
+            ? "אפשר לערוך נתונים משויכים במגירה הצדית שבה היא מוצעת. השתמשו בכפתור ההצמדה בכותרת כדי לשמור דף בהישג יד במעבר למסך אחר."
+            : "Related metadata can be edited in the shared side drawer where offered. Use the existing header pin control to keep a page handy while visiting another screen."}
         </p>
 
         {/* Close help MUST stay first interactive element and Open Help & Guide MUST stay last for focus wrap */}

@@ -114,6 +114,8 @@ export const VIEW_COMPONENTS: Record<string, ElementType> = {
 
 export interface AppTabDefinition {
   help: string;
+  /** A-201: the same description in Hebrew, attached by `withScreenHelp()` */
+  helpHe?: string;
   id: string;
   label: Record<string, string>;
   icon: LucideIcon;
@@ -405,6 +407,13 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'CustomerLifetimeValueReportView': lazy(() => import('../components/reporting/CustomerLifetimeValueReportView')),
   'RulePackCoverageReportView': lazy(() => import('../components/reporting/RulePackCoverageReportView')),
   'CustomerCreditLimitReportView': lazy(() => import('../components/reporting/CustomerCreditLimitReportView')),
+  'AgedReceivablesByRepReportView': lazy(() => import('../components/reporting/AgedReceivablesByRepReportView')),
+  'GrossMarginByItemGroupReportView': lazy(() => import('../components/reporting/GrossMarginByItemGroupReportView')),
+  'TopPartiesReportView': lazy(() => import('../components/reporting/TopPartiesReportView')),
+  'InventoryTurnoverReportView': lazy(() => import('../components/reporting/InventoryTurnoverReportView')),
+  'ExpenseByEmployeeReportView': lazy(() => import('../components/reporting/ExpenseByEmployeeReportView')),
+  'TimeByProjectReportView': lazy(() => import('../components/reporting/TimeByProjectReportView')),
+  'BankHolidaysReportView': lazy(() => import('../components/reporting/BankHolidaysReportView')),
   'ThreeWayMatchReviewView': lazy(() => import('../components/reporting/ThreeWayMatchReviewView')),
   'ExpenseReceiptChecklistReportView': lazy(() => import('../components/reporting/ExpenseReceiptChecklistReportView')),
   'MilestoneBillingReportView': lazy(() => import('../components/reporting/MilestoneBillingReportView')),
@@ -530,7 +539,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'form-856', label: { en: 'Withholding Report (Form 856)', he: 'דוח ניכוי במקור (טופס 856)' }, componentName: 'Form856ReportView', icon: Receipt },
   { id: 'inventory-details', label: { en: 'Inventory Item Details', he: 'פירוט תנועות מלאי' }, componentName: 'InventoryDetailsReportView', icon: Package },
   { id: 'stock-sources-uses', label: { en: 'Stock Sources and Uses', he: 'מקורות ושימושי מלאי' }, componentName: 'StockSourcesUsesReportView', icon: Package },
-  { id: 'expiring-lots', label: { en: 'Expiring Lots', he: 'סידות פגות תוקף' }, componentName: 'ExpiringLotsReportView', icon: Package },
+  { id: 'expiring-lots', label: { en: 'Expiring Lots', he: 'אצוות שפג תוקפן' }, componentName: 'ExpiringLotsReportView', icon: Package },
   { id: 'stock-transfers', label: { en: 'Stock Transfers', he: 'העברות מלאי' }, componentName: 'StockTransfersReportView', icon: ArrowLeftRight },
   { id: 'kit-assembly', label: { en: 'Kit Assembly', he: 'הרכבת ערכות' }, componentName: 'KitAssemblyReportView', icon: Package },
   { id: 'stock-value-by-location-lot', label: { en: 'Stock Value by Location & Lot', he: 'שווי מלאי לפי מיקום ואצווה' }, componentName: 'StockValueByLocationLotReportView', icon: Package },
@@ -550,6 +559,13 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'accountant-export-pack', label: { en: 'Accountant export pack', he: 'חבילת ייצוא לרואה חשבון' }, componentName: 'AccountantExportPackView', icon: FileArchive },
   { id: 'rule-pack-coverage', label: { en: 'Tax Rule Coverage', he: 'כיסוי חוקי מס' }, componentName: 'RulePackCoverageReportView', icon: ShieldCheck },
   { id: 'customer-credit-limits', label: { en: 'Customer Credit Limits', he: 'מסגרות אשראי ללקוחות' }, componentName: 'CustomerCreditLimitReportView', icon: Wallet },
+  { id: 'aged-receivables-by-rep', label: { en: 'Aged Receivables by Sales Rep', he: 'גיול חובות לקוחות לפי איש מכירות' }, componentName: 'AgedReceivablesByRepReportView', icon: UserCheck },
+  { id: 'gross-margin-by-item-group', label: { en: 'Gross Margin by Item Group', he: 'רווח גולמי לפי קבוצת פריטים' }, componentName: 'GrossMarginByItemGroupReportView', icon: PieChart },
+  { id: 'top-customers-vendors', label: { en: 'Top Customers and Vendors', he: 'לקוחות וספקים מובילים' }, componentName: 'TopPartiesReportView', icon: TrendingUp },
+  { id: 'inventory-turnover', label: { en: 'Inventory Turnover', he: 'מחזור מלאי לפי פריט' }, componentName: 'InventoryTurnoverReportView', icon: RefreshCw },
+  { id: 'expense-by-employee', label: { en: 'Expense by Employee', he: 'הוצאות לפי עובד' }, componentName: 'ExpenseByEmployeeReportView', icon: Receipt },
+  { id: 'time-by-project', label: { en: 'Time by Person and Project', he: 'שעות לפי עובד ופרויקט' }, componentName: 'TimeByProjectReportView', icon: Clock },
+  { id: 'bank-holidays', label: { en: 'Bank Holidays and Due Dates', he: 'ימי חג בנקאיים ומועדי פירעון' }, componentName: 'BankHolidaysReportView', icon: CalendarDays },
   { id: 'milestone-billing', label: { en: 'Milestone Billing', he: 'חיוב לפי אבני דרך' }, componentName: 'MilestoneBillingReportView', icon: CalendarDays },
   { id: 'reorder-suggestions', label: { en: 'Reorder Suggestions', he: 'הצעות להזמנה חוזרת' }, componentName: 'ReorderSuggestionsReportView', icon: PackageCheck },
   { id: 'dunning-letters', label: { en: 'Dunning Letters', he: 'מכתבי דרישת תשלום' }, componentName: 'DunningLettersReportView', icon: MailWarning },
@@ -566,7 +582,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'us-quarter-journey', label: { en: 'US Quarter Journey', he: 'מסלול רבעון אמריקאי' }, componentName: 'UsQuarterJourneyReportView', icon: ListChecks },
   { id: 'il-month-journey', label: { en: 'Israel Month Journey', he: 'מסלול חודש ישראלי' }, componentName: 'IsraelMonthJourneyReportView', icon: ClipboardCheck },
   { id: 'record-notes', label: { en: 'Record Notes', he: 'הערות על רשומות' }, componentName: 'RecordNotesReportView', icon: FileText },
-  { id: 'serial-lot-lookup', label: { en: 'Serial & Lot Lookup', he: 'חיפוש מספרי סידוריים וסידות' }, componentName: 'SerialLotLookupReportView', icon: Barcode },
+  { id: 'serial-lot-lookup', label: { en: 'Serial & Lot Lookup', he: 'חיפוש מספרים סידוריים ואצוות' }, componentName: 'SerialLotLookupReportView', icon: Barcode },
   { id: 'landed-cost-preview', label: { en: 'Landed Cost Preview', he: 'תצוגת עלות משלוח ומכס' }, componentName: 'LandedCostPreviewReportView', icon: Package },
   { id: 'delivery-notes', label: { en: 'Delivery Notes', he: 'תעודות משלוח' }, componentName: 'DeliveryNotesReportView', icon: FileText },
   { id: 'customer-quotes', label: { en: 'Customer Quotes & Proposals', he: 'הצעות מחיר ללקוחות' }, componentName: 'CustomerQuotesReportView', icon: FileText },
