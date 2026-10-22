@@ -50,7 +50,9 @@ export interface DocumentPostResult {
 
 export async function postDocument(db: Firestore, user: RequestUser, input: DocumentPostInput): Promise<DocumentPostResult> {
   const { collection, docId, workspaceId, action } = input;
-  const hashOf = { collection, docId, workspaceId, action, data: input.data, ...(input.creditLimitOverride ? { creditLimitOverride: input.creditLimitOverride } : {}) };
+  const hashOf = { collection, docId, workspaceId, action, data: input.data };
+  // EG-5: an override is part of the request (a resend with one is another request); the day still is not
+  const hashed = input.creditLimitOverride ? { ...hashOf, creditLimitOverride: input.creditLimitOverride } : hashOf;
   const mutationOf = (data?: Record<string, unknown>): EntityMutation => ({ collection, docId, action, ...(data ? { data } : {}) });
 
   if (user.developerWorkspaceId && user.developerWorkspaceId !== workspaceId) {
@@ -62,7 +64,7 @@ export async function postDocument(db: Firestore, user: RequestUser, input: Docu
   }
   // the same key again: the first answer (or 409 for another request under that key), decided by the commit
   if (input.idempotencyKey && (await db.collection('idempotencyKeys').doc(`${workspaceId}_${input.idempotencyKey}`).get()).exists) {
-    const { body } = await commitLedgerBulk(db, user, { workspaceId, entityMutation: mutationOf(input.data) }, { idempotencyKey: input.idempotencyKey, hashOf });
+    const { body } = await commitLedgerBulk(db, user, { workspaceId, entityMutation: mutationOf(input.data) }, { idempotencyKey: input.idempotencyKey, hashOf: hashed });
     return { body, transactions: [] };
   }
 
@@ -103,6 +105,6 @@ export async function postDocument(db: Firestore, user: RequestUser, input: Docu
   const beforeWrite: BeforeWrite | undefined = collection === 'invoices'
     ? (t, state) => enforceCreditLimit(db, t, { user, workspaceId, workspace: state.workspace, docId, action, data: input.data, existing: state.existingEntity, override: input.creditLimitOverride })
     : undefined;
-  const result = await commitLedgerBulk(db, user, { workspaceId, transactions, entityMutation: captured[0].entityMutation || mutation }, { idempotencyKey: input.idempotencyKey, hashOf, beforeWrite });
+  const result = await commitLedgerBulk(db, user, { workspaceId, transactions, entityMutation: captured[0].entityMutation || mutation }, { idempotencyKey: input.idempotencyKey, hashOf: hashed, beforeWrite });
   return { body: result.body, transactions: result.committed && !result.body.replayed ? result.transactions : [], ...(cogsPendingReason ? { cogsPendingReason } : {}) };
 }
