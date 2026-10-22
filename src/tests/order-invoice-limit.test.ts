@@ -5,6 +5,7 @@
  * even when two people invoice the same order at the same moment.
  */
 import { after, before, describe, test } from 'node:test';
+import { commitAsServer } from './helpers/serverCommit';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
@@ -17,11 +18,9 @@ describe('order invoices never pass the order total (database)', { skip: !url &&
   let server: Server;
   let base = '';
   let db: import('../server/db/pgFirestore').Firestore;
-  const invoice = (docId: string, amountCents: number) => fetch(`${base}/api/v1/transactions/bulk`, {
-    method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': 'owner-1' },
-    body: JSON.stringify({ workspaceId: ws, transactions: [], entityMutation: { collection: 'invoices', docId: `${ws}_${docId}`, action: 'create',
-      data: { customerId: 'c1', customerName: 'Acme', invoiceNumber: docId, date: '2026-06-01', dueDate: '2026-07-01', status: 'draft', amountCents, currency: 'USD', metadata: { convertedFromEstimateId: order } } } }),
-  }).then(async r => ({ status: r.status, body: await r.json() as Record<string, unknown> }));
+  // L94-STEP2B: entries that name a document are the server's own (its posting builds them); sent to the shared commit as the server does
+  const invoice = (docId: string, amountCents: number) => commitAsServer(db, 'owner-1', { workspaceId: ws, transactions: [], entityMutation: { collection: 'invoices', docId: `${ws}_${docId}`, action: 'create',
+    data: { customerId: 'c1', customerName: 'Acme', invoiceNumber: docId, date: '2026-06-01', dueDate: '2026-07-01', status: 'draft', amountCents, currency: 'USD', metadata: { convertedFromEstimateId: order } } } });
 
   before(async () => {
     process.env.DATABASE_URL = url;

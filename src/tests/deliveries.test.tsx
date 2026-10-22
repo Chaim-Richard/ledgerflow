@@ -8,6 +8,7 @@
  */
 import './helpers/dom';
 import test, { after, afterEach, before, describe } from 'node:test';
+import { commitAsServer } from './helpers/serverCommit';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
@@ -106,7 +107,8 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     metadata: { type: 'invoice-cogs-auto', invoiceId, cogsForInvoiceId: invoiceId, cogsForLineId: 'l1', inventoryItemId: chair, quantity: 1, ...extra },
     lines: [{ accountId: `${ws}_cogs`, amountCents: 400 }, { accountId: `${ws}_inv`, amountCents: -400 }],
   });
-  const post = (transactions: unknown[]) => call('/api/v1/transactions/bulk', 'POST', 'owner-1', { workspaceId: ws, transactions });
+  // an invoice's cost entries are made by the server's posting (L94-STEP2B): sent to the shared commit as the server does
+  const post = (transactions: unknown[]) => commitAsServer(db, 'owner-1', { workspaceId: ws, transactions: transactions as never });
   const d1 = 'dlv_aaaaaaaa11';
   const d2 = 'dlv_bbbbbbbb22';
 

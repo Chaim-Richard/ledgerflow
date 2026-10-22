@@ -7,6 +7,7 @@
  */
 import './helpers/dom';
 import test, { after, afterEach, before, beforeEach, describe } from 'node:test';
+import { commitAsServer } from './helpers/serverCommit';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import React from 'react';
@@ -75,10 +76,8 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
   let server: Server;
   let base = '';
   let db: import('../server/db/pgFirestore').Firestore;
-  const post = async (transactions: unknown[]) => {
-    const res = await fetch(`${base}/api/v1/transactions/bulk`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': 'owner-1' }, body: JSON.stringify({ workspaceId: ws, transactions }) });
-    return { status: res.status, body: await res.json() as Record<string, unknown> };
-  };
+  // L94-STEP2B: entries that name a document are the server's own (its posting builds them); sent to the shared commit as the server does
+  const post = (transactions: unknown[]) => commitAsServer(db, 'owner-1', { workspaceId: ws, transactions: transactions as never });
   const stock = async () => (await db.collection('inventory').doc(item).get()).data()?.quantityAtHand;
   const ret = (id: string, quantity: number) => {
     const inv = { ...invoice(invId, item), workspaceId: ws } as Invoice;
@@ -182,11 +181,13 @@ describe('In the credit note form', () => {
     fireEvent.click(screen.getByRole('button', { name: /Credit their price: \$180\.00/ }));
     assert.equal((screen.getByLabelText(/^Amount \(/) as HTMLInputElement).value, '180.00');
     await act(async () => { fireEvent.submit(screen.getByLabelText(/^Amount \(/).closest('form')!); });
-    await waitFor(() => assert.ok(calls.some(c => c.url.endsWith('/transactions/bulk'))));
-    const body = calls.find(c => c.url.endsWith('/transactions/bulk'))!.body as { transactions: Transaction[]; entityMutation: { data: Record<string, unknown> } };
-    assert.deepEqual(body.entityMutation.data.returnedGoods, [{ invoiceLineId: 'l1', itemId: 'chair', quantity: 2 }]);
-    const stockBack = body.transactions.find(t => t.metadata?.type === SALES_RETURN_TYPE)!;
-    assert.deepEqual(stockBack.lines.map(l => [l.accountId, l.amountCents]), [['inv-acct', 800], ['cogs-acct', -800]]);
+    // the credit note alone goes to the server, which builds its entries and the stock coming back (L94-STEP2B; the
+    // 2 × 4.00 = 8.00 back to Inventory is the return entry checked above)
+    const isSave = (c: { url: string }) => /\/api\/v1\/documents\/creditNotes\/[^/]+\/post$/.test(c.url);
+    await waitFor(() => assert.ok(calls.some(isSave)));
+    const body = calls.find(isSave)!.body as { action: string; data: Record<string, unknown>; transactions?: unknown };
+    assert.equal(body.transactions, undefined, 'no entries are sent');
+    assert.deepEqual(body.data.returnedGoods, [{ invoiceLineId: 'l1', itemId: 'chair', quantity: 2 }]);
   });
 
   test('more than was sold is refused before saving', async () => {
@@ -197,6 +198,6 @@ describe('In the credit note form', () => {
     fireEvent.change(screen.getByLabelText('How many of Chair came back'), { target: { value: '6' } });
     fireEvent.change(screen.getByLabelText(/^Amount \(/), { target: { value: '100' } });
     await act(async () => { fireEvent.submit(screen.getByLabelText(/^Amount \(/).closest('form')!); });
-    assert.equal(calls.some(c => c.url.endsWith('/transactions/bulk')), false);
+    assert.equal(calls.some(c => c.url.includes('/transactions/bulk') || c.url.includes('/documents/creditNotes/')), false);
   });
 });

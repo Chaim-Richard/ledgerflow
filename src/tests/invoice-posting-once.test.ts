@@ -5,6 +5,7 @@
  * leave exactly one live posting.
  */
 import { after, before, describe, test } from 'node:test';
+import { commitAsServer } from './helpers/serverCommit';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
@@ -26,11 +27,9 @@ describe('an invoice is posted once (database)', { skip: !url && 'LF_TEST_DATABA
     metadata: { invoiceId, type: 'invoice-reversal', reversesTxId: of.id, isReversal: true },
     lines: of.lines.map(l => ({ accountId: l.accountId, amountCents: -l.amountCents })),
   });
-  const save = (txs: unknown[], invoiceId: string, cents: number) => fetch(`${base}/api/v1/transactions/bulk`, {
-    method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': 'owner-1' },
-    body: JSON.stringify({ workspaceId: ws, transactions: txs, entityMutation: { collection: 'invoices', docId: `${ws}_${invoiceId}`, action: 'create',
-      data: { customerId: 'c1', customerName: 'Acme', invoiceNumber: invoiceId, date: '2026-06-01', dueDate: '2026-07-01', status: 'sent', amountCents: cents, currency: 'USD' } } }),
-  }).then(async r => ({ status: r.status, body: await r.json() as Record<string, unknown> }));
+  // L94-STEP2B: entries that name a document are the server's own (its posting builds them); sent to the shared commit as the server does
+  const save = (txs: unknown[], invoiceId: string, cents: number) => commitAsServer(db, 'owner-1', { workspaceId: ws, transactions: txs as never, entityMutation: { collection: 'invoices', docId: `${ws}_${invoiceId}`, action: 'create',
+    data: { customerId: 'c1', customerName: 'Acme', invoiceNumber: invoiceId, date: '2026-06-01', dueDate: '2026-07-01', status: 'sent', amountCents: cents, currency: 'USD' } } });
   const live = async (invoiceId: string) => {
     const { rows } = await db.pool.query(`select id, data from public."transactions" where workspace_id = $1 and data->'metadata'->>'invoiceId' = $2`, [ws, invoiceId]);
     const reversed = new Set(rows.filter(r => r.data.metadata?.isReversal).map(r => r.data.metadata.reversesTxId));
@@ -92,8 +91,7 @@ describe('an invoice is posted once (database)', { skip: !url && 'LF_TEST_DATABA
   test('bills too: a stale retry posts nothing more, a stale changed save is refused', async () => {
     const bill = (cents: number) => ({ id: crypto.randomUUID(), workspaceId: ws, date: '2026-06-02', description: 'Bill B-1', status: 'completed', type: 'actual', totalAmountCents: cents, currency: 'USD',
       metadata: { billId: 'B-1', type: 'bill-accrual' }, lines: [{ accountId: `${ws}_rent`, amountCents: cents }, { accountId: `${ws}_ap`, amountCents: -cents }] });
-    const post = (tx: unknown) => fetch(`${base}/api/v1/transactions/bulk`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': 'owner-1' }, body: JSON.stringify({ workspaceId: ws, transactions: [tx] }) })
-      .then(async r => ({ status: r.status, body: await r.json() as Record<string, unknown> }));
+    const post = (tx: unknown) => commitAsServer(db, 'owner-1', { workspaceId: ws, transactions: [tx] as never });
     assert.equal((await post(bill(3000))).status, 200);
     const retry = await post(bill(3000));
     assert.equal(retry.status, 200); assert.equal(retry.body.replayed, true);
