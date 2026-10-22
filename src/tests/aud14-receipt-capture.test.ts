@@ -50,3 +50,57 @@ test('nothing pasted: the sample is read and labelled; pasted text is read inste
 
   assert.ok(![RECEIPT_CAPTURE_ALGO.description, ...sample.insights].some(t => /\d+\s*%|accura/i.test(t)), 'no accuracy figure');
 });
+
+// Review fixes, by hand:
+//   TOTAL SAVINGS $5.00 / TOTAL TAX $2.00 / TOTAL ITEMS 3 / TOTAL $40.00 → 4,000 (the qualified totals are skipped)
+//   AMOUNT DUE 18.00 is a payable label → 1,800; TOTAL $1 234.56 (space or no-break space) → 123,456, never 23,456
+//   "TOTAL CAD $25.00" → CAD with a "$ is ambiguous" warning; "$" alone → USD, no warning
+//   99/99/9999 and 12-34-56 are not dates; 31/12/2026 is; payee "Mart" does not match WALMART
+test('qualified totals are skipped and payable labels are read', () => {
+  const r = parseReceiptOCR(['SHOP', '2026-10-05', 'TOTAL SAVINGS $5.00', 'TOTAL TAX $2.00', 'TOTAL ITEMS 3', 'TOTAL $40.00', 'TOTAL SAVED 1.00'], []);
+  assert.deepEqual([r.totalCents, r.currency, r.warnings], [4_000, 'USD', []]);
+  assert.equal(parseReceiptOCR(['SHOP', '2026-10-05', 'ITEM 18.00', 'AMOUNT DUE 18.00 GBP'], []).totalCents, 1_800);
+  assert.equal(parseReceiptOCR(['SHOP', '2026-10-05', 'TOTAL TAX $2.00', 'BALANCE DUE $9.00'], []).totalCents, 900);
+});
+
+test('space thousands are read whole, never split', () => {
+  assert.equal(parseReceiptOCR(['SHOP', '2026-10-05', 'TOTAL $1 234.56'], []).totalCents, 123_456);
+  assert.equal(parseReceiptOCR(['SHOP', '2026-10-05', 'TOTAL $1 234.56'], []).totalCents, 123_456);
+  assert.equal(parseReceiptOCR(['SHOP', '2026-10-05', 'TOTAL $1,234.56'], []).totalCents, 123_456);
+  const bare = parseReceiptOCR(['SHOP', '2026-10-05', 'TOTAL 1 234.56', 'USD'], []);
+  assert.notEqual(bare.totalCents, 23_456);
+  assert.equal(bare.totalCents, 0);
+  assert.ok(bare.warnings.some(w => /split by a space/.test(w)));
+});
+
+test('a code overrides "$", with a warning; "$" alone is USD', () => {
+  const cad = parseReceiptOCR(['SHOP', '2026-10-05', 'TOTAL CAD $25.00'], []);
+  assert.deepEqual([cad.totalCents, cad.currency], [2_500, 'CAD']);
+  assert.deepEqual(cad.warnings, ['"$" alone is ambiguous and the receipt says CAD: CAD is used — check it.']);
+  assert.equal(parseReceiptOCR(['SHOP', 'PRICES IN AUD', '2026-10-05', 'TOTAL $25.00'], []).currency, 'AUD');
+  assert.deepEqual(parseReceiptOCR(['SHOP', '2026-10-05', 'TOTAL $25.00'], []).warnings, []);
+  const clash = parseReceiptOCR(['SHOP', '2026-10-05', 'TOTAL €25.00 USD'], []);
+  assert.equal(clash.currency, 'EUR');
+  assert.ok(clash.warnings.some(w => /disagree/.test(w)));
+});
+
+test('impossible dates are refused', () => {
+  const bad = parseReceiptOCR(['SHOP', '99/99/9999', '12-34-56', 'TOTAL $1.00'], []);
+  assert.equal(bad.dateStr, '');
+  assert.match(bad.warnings[0], /No valid date was found \(99\/99\/9999, 12-34-56/);
+  assert.equal(parseReceiptOCR(['SHOP', '99/99/9999', '31/12/2026', 'TOTAL $1.00'], []).dateStr, '31/12/2026');
+  assert.equal(parseReceiptOCR(['SHOP', '2026-02-30', 'TOTAL $1.00'], []).dateStr, '');
+});
+
+test('a known payee matches only on whole words', () => {
+  assert.equal(parseReceiptOCR(['WALMART #12', '2026-10-05', 'TOTAL $1.00'], ['Mart']).merchant, 'WALMART #12');
+  assert.equal(parseReceiptOCR(['QUICK-MART', '2026-10-05', 'TOTAL $1.00'], ['Mart']).merchant, 'Mart');
+});
+
+test('help states the method, an example and the limits', () => {
+  const h = RECEIPT_CAPTURE_ALGO.help;
+  assert.ok(h && h.method && h.example);
+  for (const s of [/dot decimals/i, /English "total"/, /date/i, /CAD/, /no vision model/i, /nothing is posted/i]) assert.match(h.limits, s);
+  const ex = parseReceiptOCR(['SHOP', '15/09/2026', 'TOTAL SAVINGS $5.00', 'TOTAL CAD $1 234.56'], []);
+  assert.deepEqual([ex.dateStr, ex.totalCents, ex.currency], ['15/09/2026', 123_456, 'CAD']);
+});
