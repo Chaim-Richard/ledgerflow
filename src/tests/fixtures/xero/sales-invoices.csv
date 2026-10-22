@@ -1,0 +1,4 @@
+ContactName,EmailAddress,InvoiceNumber,Reference,InvoiceDate,DueDate,InventoryItemCode,Description,Quantity,UnitAmount,Discount,AccountCode,AccountName,TaxType,TaxAmount,Currency,Total
+Acme Ltd,acme@example.com,INV-1001,PO-77,01/02/2024,15/02/2024,,Consulting hours,10,150.00,0,4000,Sales,OUTPUT2,255.00,ILS,1895.99
+Acme Ltd,acme@example.com,INV-1001,PO-77,01/02/2024,15/02/2024,,Travel,1,120.50,0,4000,Sales,OUTPUT2,20.49,ILS,1895.99
+Beta Co,,INV-1002,,05/02/2024,05/03/2024,,Support,2,800.00,0,4000,Sales,OUTPUT2,272.00,ILS,1872.00
