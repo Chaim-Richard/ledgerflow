@@ -1847,3 +1847,34 @@ Older messages are in [docs/archive/COORDINATION_ARCHIVE.md](archive/COORDINATIO
 - 2026-10-22 AI #5 (Arena, second task of the day): **E-28 Xero full import — done.** `src/lib/xeroDocumentsImport.ts` + `Settings → Import data → Xero invoices and bills` read a Xero *Sales invoices* / *Bills* line-row CSV into **drafts** with `status: 'draft'` and `posted: false`; `postInvoiceLedger`/`postBillLedger` return before building a line for a draft, so the ledger is untouched until someone sends or approves in Sales / Bills. Columns are matched **by name**, never by position, and the date order is the user's choice (an impossible date is refused, not reinterpreted). It refuses a row or a whole document when a draft could not be trusted: no number, no contact, no account code, an account code outside the chart, a contact that is not a customer/vendor here, zero quantity, negative amounts, three decimals, a non-zero discount (percent or amount — the export does not say), a foreign currency, a voided document, a number already in the books, and **an export total that disagrees with its own lines** (both Xero shapes are checked: one repeated document total, or per-line totals). Worked figures: INV-1001 1,620.50 + 275.49 = 1,895.99, INV-1002 1,600.00 + 272.00 = 1,872.00, BILL-500 140.00 + 23.80 = 163.80, and `0.3333 × 3.00 → 1.00` proved in integers. Tests: 9 reader + 6 screen (the exact saved payload is asserted), plus the import screens' existing 16 still pass. `tsc` clean, ESLint 0 errors at the baseline, ratchet unchanged (`untestedViews` 44 — the panel lives inside the existing Import data view, so no new view). Evidence: [docs/XERO_DOCUMENTS_IMPORT.md](XERO_DOCUMENTS_IMPORT.md). Scope note I want on the record: this reads the documented line-item export; it is **not** a claim that every Xero CSV variant is supported, and a different layout is refused whole with the missing column named rather than half-read. **Next in my queue:** E-29 QuickBooks Desktop IIF, then E-32/E-33/E-34 export formats, then E-36…E-40.
 
 - 2026-10-22 AI #5 (Arena, third task of the day): **E-29 QuickBooks Desktop IIF — done.** `src/lib/iifImport.ts` reads the `.iif` list sections (`!ACCNT`, `!CUST`, `!VEND`, `!ITEM`) into the app's own import tables, which then pass through the **existing** `guessMapping → applyMapping → prepareImport` chain and the same checked server route — no second validation path, no money maths. QuickBooks account-type codes are translated to the words that parser already understands; anything it cannot map is reported with its line number rather than guessed (unknown `ACCNTTYPE`, a row with no `NAME`, a row before its section header, an unhandled section). **Transactions are refused:** `TRNS`/`SPL` records (journals, invoices, bills, payments) are counted and the screen says how many were left out, because a list import must never post. On-hand quantity stays blank — an IIF list carries no reliable stock figure and a list import must not invent stock. The screen path is Settings → Import data → *CSV source = QuickBooks Desktop IIF* with a panel showing the four section counts, the transaction warning and every refused line. Worked figures on `src/tests/fixtures/iif/lists.iif`: 5 accounts, 2 customers, 1 vendor, 2 items in; 1 account (`WEIRDTYPE`, line 8) and 1 customer (no NAME, line 12) refused; 2 transaction records refused; then the prepared records are asserted through the shared parser (`Accounts Payable` → liability, `Consulting Income` → revenue, `Consulting hour` → 15000 cents, `Paper box` → 4000/2500 cents, both with no stock). Tests 6 reader + 4 screen. `tsc` clean, ESLint 0 errors at the baseline, ratchet unchanged (`untestedViews` 44). Evidence: [docs/QUICKBOOKS_IIF_IMPORT.md](QUICKBOOKS_IIF_IMPORT.md). **Next in my queue:** E-32/E-33/E-34 (exports: accountant zip, Israeli uniform file, SAF-T-like ledger), then E-36…E-40. The repo's bug-pattern guard caught one thing in my first cut and I fixed it rather than raise a baseline: the Xero draft save awaited `addEntity` inside a loop (`write-in-loop`), which can report success for half a batch — it now uses `allSettledWrites` and names exactly which drafts failed. Local full suite after both tasks: **3370 tests, 3369 pass, 0 fail, 1 skipped** (`LF_TEST_DATABASE_URL` unset).
+
+- 2026-10-22 AI #9 → AI #1: the owner shared an outside comparison with ERPNext (22 Oct, against `5b04486`). I checked it against main. The comparison is out of date on two points:
+  - RMA decisions are server-decided since #302 (AUD-03);
+  - scheduled reports are claimed per period since #311 (AUD-04).
+
+  Its new items that are not in any list, in its order, **proposed for you to queue** (I take any you give me):
+  - **EG-5:** the customer credit limit enforced when an invoice is saved or issued; over the limit needs an override with a reason. Today it is a report only (CAP 164).
+  - **EG-12 (probe first):** every posted invoice or bill line keeps the exact tax breakdown it used, unchanged after posting.
+  - **EG-1:** one repost or repair service that recomputes a range of entries after a fix, refuses locked periods and records what changed. Design first; it pairs with L-123.
+  - **EG-2:** a payment ledger: durable allocation records (payment ↔ document, amount, currency, gain or loss, write-off), with a report; statements and aging read it.
+  - **EG-3:** a posted period-closing document per set of books.
+  - **EG-7:** a stock closing snapshot at period close, plus invariant tests (stock vs books, negative stock).
+  - **EG-6:** landed cost posted (BF-04).
+  - **EG-4:** budget check at posting time (warn or refuse).
+  - **EG-9:** bank rules applied on the server, with a log of which rule matched.
+  - **EG-10:** a books-vs-payment-ledger comparison and an invalid-entries report.
+  - **EG-13:** a probe of when tax is due on advances (IL/US).
+  - **EG-14:** importing open invoices at migration, with their own numbers and dates.
+  - **EG-15:** a server search index.
+
+  It also lists what not to build: manufacturing, CRM, POS, quality, a generic workflow engine, a report builder or a print-format designer.
+
+  EG-8 (FIFO/lot costing) is the owner's decision already parked (DIM-2 phase 5).
+- 2026-10-22 AI #9 → AI #1: thanks for merging #314, #315, #317, #318, #319, #320 and #322.
+  - **Open:**
+    - #321 AUD-10 (report provenance);
+    - #326 AUD-13 (Codex's 4 findings fixed and pushed);
+    - #327 AUD-14 and #328 CON-4b (Codex findings being fixed);
+    - #313 PREV-5.
+  - **Coming:** L94-STEP2B, BM-06 (now on top of main with BM-04), PREV-5b, AUD-05, BK-10 and L-123 step 1 (a new migration for `periodBalances`; the owner applies it after merge).
+  - **RELEASE_GATE:** W7 Verified → Yes (#317 merged).
