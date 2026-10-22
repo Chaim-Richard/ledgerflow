@@ -61,13 +61,17 @@ panel and read the Current ratio explanation.
 
 ## Checks run here
 
-- `npx tsc --noEmit -p tsconfig.json` — clean.
-- New and touched suites: `screen-help` (7 tests) and `report-total-explanations` (4) — 11/11 pass.
+- `npx tsc --noEmit -p tsconfig.json` — clean (re-run after the last edit).
+- New and touched suites: `screen-help` (7 tests), `report-total-explanations` (4) and the touched
+  `ai8-onboarding-help` — **22/22 pass** on the final tree.
 - Guards: `capabilities-guard`, `no-orphan-modules`, `quality-ratchet`, `reachability-guard`,
-  `registry-components`, `money-format-guard` — 17/17 pass.
-- ESLint on every touched file — 0 errors.
-- Full unit suite, ESLint `--max-warnings 205`, and `npm run build`: results in the PR description.
-- Playwright: not run in this sandbox (no browser); the new journey runs on CI.
+  `registry-components`, `money-format-guard` — **17/17 pass**.
+- **Whole unit suite** (`npm test` command, local, without `LF_TEST_DATABASE_URL`):
+  **3,376 tests, 3,375 pass, 0 fail, 1 skipped** (the database suite skips without a database),
+  796 suites, 1,862 s. The one skip is the Postgres-only suite; nothing in this batch touches SQL.
+- **ESLint** `npx eslint . --max-warnings 205` — **0 errors, 205 warnings** (at the cap, none added).
+- **Production build** — `npm run build` passes (vite + `build/server.cjs`).
+- **Playwright**: not run in this sandbox (no browser); the new phone-size journey runs on CI.
 
 ## Release-gate effect
 
