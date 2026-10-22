@@ -8,7 +8,7 @@ import { deletePostings } from '../../services/ledgerPost/deletePostings';
 import { isPostable } from '../../lib/txFilters';
 import type { EntityMutation, LedgerPostContext } from '../../services/ledgerPost/postingCore';
 import type { Bill, CreditNote, Invoice, Transaction, VendorCredit } from '../../types';
-import { DOCUMENT_ENTRY_KEY, loadPostingContext, todayIn } from './postingContextLoader';
+import { agreedPostingDay, DOCUMENT_ENTRY_KEY, loadPostingContext, todayIn } from './postingContextLoader';
 import { assertPostingOpen } from '../../lib/periodLock';
 import { BulkRefusal, commitLedgerBulk } from './ledgerBulkCommit';
 
@@ -34,6 +34,8 @@ export interface DocumentPostInput {
   /** create: the whole document; update: the changed fields; delete: nothing */
   data: Record<string, unknown>;
   idempotencyKey?: string;
+  /** the day the browser counted as today; used within one day of the server's (agreedPostingDay), never hashed */
+  postingDay?: string;
 }
 
 export interface DocumentPostResult {
@@ -70,10 +72,11 @@ export async function postDocument(db: Firestore, user: RequestUser, input: Docu
   // the closing date with the server's own rule (a reopened day included), as the browser checked it before sending: a
   // save by the document's date; a delete by the date of each entry it reverses. The entries' dates are checked again at commit
   const context: LedgerPostContext = await loadPostingContext(db, { workspaceId, uid: user.uid, collection, docId, document, workspace, lockChecked: true });
+  context.today = agreedPostingDay(context.today || todayIn(workspace.timezone as string | undefined), input.postingDay);
   const key = DOCUMENT_ENTRY_KEY[collection];
   const dates = action === 'delete'
     ? (context.transactions || []).filter(tx => tx.metadata?.[key] === docId && isPostable(tx) && !tx.metadata?.isReversal).map(tx => String(tx.date))
-    : [String(document.date || todayIn(workspace.timezone as string | undefined))];
+    : [String(document.date || context.today)];
   try {
     for (const date of dates) assertPostingOpen(date, workspace as never, user.uid);
   } catch (err) {

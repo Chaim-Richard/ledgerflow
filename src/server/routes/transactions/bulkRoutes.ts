@@ -39,7 +39,9 @@ export function registerTransactionBulkRoutes(transactionRouter: express.Router)
       // (POST /api/v1/documents/:type/:id/post); this route takes journals, bank lines and the documents that post nothing
       const docKey = documentPostedByServer(req.body);
       if (docKey) return res.status(400).json({ error: `${docKey} are saved and posted by the server: POST /api/v1/documents/:type/:id/post with the document` });
-      const { body, transactions, committed } = await commitLedgerBulk(db, user, req.body, { idempotencyKey: req.headers['idempotency-key'] as string | undefined });
+      // the day the browser used is not part of what a retry must repeat: a retry after midnight is the same save
+      const { postingDay: _day, ...hashed } = (req.body || {}) as Record<string, unknown>;
+      const { body, transactions, committed } = await commitLedgerBulk(db, user, req.body, { idempotencyKey: req.headers['idempotency-key'] as string | undefined, hashOf: hashed });
       // AUD-15: the entries as written, for the browser's list (not kept with the idempotency record: a replay wrote nothing)
       res.json({ ...body, transactions: committed && !body.replayed ? transactions : [] });
     } catch (e) {

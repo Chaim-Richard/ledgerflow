@@ -2,7 +2,7 @@ import type { Firestore } from '../../server/db/firestore';
 import { postInvoiceLedger } from '../../services/ledgerPost/invoicePosting';
 import { postBillLedger } from '../../services/ledgerPost/billPosting';
 import { postCreditNoteLedger, postVendorCreditLedger } from '../../services/ledgerPost/creditPosting';
-import { loadPostingContext } from '../../server/services/postingContextLoader';
+import { agreedPostingDay, loadPostingContext } from '../../server/services/postingContextLoader';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from '../../services/ledgerPost/postingCore';
 import type { Transaction } from '../../types';
 
@@ -25,6 +25,8 @@ export interface ShadowCheckInput {
   mutation: EntityMutation;
   /** the entries this request wrote, as written */
   posted: Array<Pick<Transaction, 'id' | 'date' | 'lines'>>;
+  /** the day the browser counted as today for this save (it dates reversals into a closed period) */
+  postingDay?: unknown;
 }
 
 export type ShadowCheckResult = { checked: false; reason: string } | { checked: true; matched: boolean; expected: string[]; sent: string[] };
@@ -63,6 +65,7 @@ export async function shadowCheckDocumentPosting(db: Firestore, input: ShadowChe
   // the document's entries as they were before this request (everything except what it just wrote); the save already
   // passed the server's own period check, so the builder must not refuse it again
   const context = await loadPostingContext(db, { workspaceId, uid, collection: mutation.collection, docId: mutation.docId, document, workspace, exclude: new Set(posted.map(tx => tx.id)), lockChecked: true });
+  context.today = agreedPostingDay(context.today || new Date().toISOString().slice(0, 10), input.postingDay);
   await builder.post(mutation.docId, { ...document, id: mutation.docId }, workspaceId, uid, mutation, context);
 
   const expected = postingFingerprint(context.capture!.flatMap(c => c.txs));

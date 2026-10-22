@@ -24,6 +24,19 @@ export function todayIn(timezone?: string): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+const DAY_MS = 86_400_000;
+
+/**
+ * The day to build with (L-94): the browser's, when it is a real date within one day of the server's own today (near
+ * midnight a browser in another time zone is a day apart: the person sees that day, and it dates reversals into a
+ * closed period); else the server's. Moved here from the shadow check, which now lives in the tests.
+ */
+export function agreedPostingDay(serverToday: string, browserDay: unknown): string {
+  if (typeof browserDay !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(browserDay)) return serverToday;
+  const gap = Math.abs(Date.parse(`${browserDay}T00:00:00Z`) - Date.parse(`${serverToday}T00:00:00Z`));
+  return Number.isFinite(gap) && gap <= DAY_MS ? browserDay : serverToday;
+}
+
 export async function loadPostingContext(db: Firestore, input: {
   workspaceId: string; uid: string; collection: string; docId: string;
   document: Record<string, unknown>; workspace: Record<string, unknown>;

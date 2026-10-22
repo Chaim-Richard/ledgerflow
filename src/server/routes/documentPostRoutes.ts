@@ -19,6 +19,8 @@ const bodySchema = z.object({
   workspaceId: z.string().min(1).max(200),
   action: z.enum(['create', 'update', 'delete']),
   data: z.record(z.string(), z.unknown()).optional(),
+  /** the day the browser counted as today (L-94): used within one day of the server's, never part of the hash */
+  postingDay: z.string().max(10).optional(),
 }).strict();
 
 const TYPES = new Set(['invoices', 'bills', 'creditNotes', 'vendorCredits']);
@@ -32,6 +34,7 @@ documentPostRouter.post('/:type/:id/post', requireLedgerWriter, async (req, res)
     const { body, transactions, cogsPendingReason } = await postDocument(getDb(), requestUser(req), {
       collection: type as 'invoices', docId: String(req.params.id), workspaceId: parsed.data.workspaceId, action: parsed.data.action,
       data: parsed.data.action === 'delete' ? {} : parsed.data.data || {},
+      ...(parsed.data.postingDay ? { postingDay: parsed.data.postingDay } : {}),
       idempotencyKey: req.headers['idempotency-key'] as string | undefined,
     });
     res.json({ ...body, transactions, ...(cogsPendingReason ? { cogsPendingReason } : {}) });
