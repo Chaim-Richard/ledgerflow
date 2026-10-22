@@ -8,6 +8,7 @@ import ImportSettings from '../components/platform/settings/ImportSettings';
 import { setComponentWorkspace, markComponentCollectionsLoaded } from './helpers/componentFixtures';
 import { stubFetch } from './helpers/dom';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { getSupabase } from '../lib/db/client';
 
 /**
  * E-29 screen: choosing a QuickBooks Desktop IIF in Settings → Import data.
@@ -18,11 +19,11 @@ const fixture = (name: string) => readFileSync(new URL('./fixtures/iif/' + name,
 
 beforeEach(() => {
   setComponentWorkspace('owner');
-  markComponentCollectionsLoaded('customers', 'vendors', 'items', 'accounts', 'transactions');
+  markComponentCollectionsLoaded('customers', 'vendors', 'inventory', 'accounts', 'transactions');
   useLedgerStore.setState({ customers: [], vendors: [], inventory: [], accounts: [] } as never);
   stubFetch(200, {});
 });
-afterEach(() => cleanup());
+afterEach(async () => { cleanup(); await getSupabase().auth.dispose(); });
 
 const uploadIif = async (name: string, text: string) => {
   const input = document.querySelector('input[type=file]') as HTMLInputElement;
