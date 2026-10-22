@@ -56,6 +56,8 @@ export default function ReceivePaymentModal({
   const homeCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   // L-192: the rate on the payment day for a foreign document (what really reached the bank)
   const [dayRate, setDayRate] = useState<number | null>(null);
+  // BM-06: where the day's rate came from, sent with the payment
+  const [dayRateSource, setDayRateSource] = useState<'typed' | 'last-used' | 'live' | 'books-on-date'>('typed');
   const [withholding, setWithholding] = useState<Withholding | null>(null); // IL-5
   const [rateTyped, setRateTyped] = useState(false);
 
@@ -145,7 +147,7 @@ export default function ReceivePaymentModal({
   const isForeign = payCurrency !== homeCurrency;
   const rateNote = useSuggestedRate({
     currency: payCurrency, homeCurrency, enabled: isForeign && !rateTyped,
-    docs: [...(invoices || []), ...(bills || [])], onRate: rate => setDayRate(rate), date,
+    docs: [...(invoices || []), ...(bills || [])], onRate: (rate, from) => { setDayRate(rate); setDayRateSource(from.source); }, date,
   });
   const bookedCents = payDoc ? Math.round(paymentAmountCents * minorUnitRate(payDoc.rate, payCurrency, homeCurrency)) : 0;
   const arrivedCents = dayRate ? Math.round(paymentAmountCents * minorUnitRate(dayRate, payCurrency, homeCurrency)) : bookedCents;
@@ -221,7 +223,7 @@ export default function ReceivePaymentModal({
           vendorId: contactType === 'vendor' ? contactId : undefined,
           entityName: contactName,
           cashAccountId: depositAccountId,
-          ...(isForeign && dayRate ? { paymentExchangeRate: dayRate } : {}),
+          ...(isForeign && dayRate ? { paymentExchangeRate: dayRate, paymentRateSource: dayRateSource } : {}),
           ...(direction === 'made' && withholding ? { withheldCents: withholding.withheldCents, withholdingRatePercent: withholding.ratePercent, ...(withholding.certificate ? { withholdingCertificate: withholding.certificate } : {}) } : {}),
           allocations: allocations.map(a => ({
             documentId: a.documentId,
@@ -374,7 +376,7 @@ export default function ReceivePaymentModal({
                   {homeCurrency} for 1 {payCurrency} on the payment day
                 </label>
                 <input id="pay-day-rate" type="number" step="0.000001" min="0" placeholder={String(payDoc?.rate || '')}
-                  value={dayRate ?? ''} onChange={e => { setRateTyped(true); const n = parseFloat(e.target.value); setDayRate(Number.isFinite(n) && n > 0 ? n : null); }}
+                  value={dayRate ?? ''} onChange={e => { setRateTyped(true); setDayRateSource('typed'); const n = parseFloat(e.target.value); setDayRate(Number.isFinite(n) && n > 0 ? n : null); }}
                   className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono" />
                 <p className="mt-1 text-[11px] text-[var(--muted)]" role="status">
                   {dayRate

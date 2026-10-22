@@ -1,3 +1,4 @@
+import { rateUsedId, rateUsedText, type RateUsed } from '../../lib/rateUsed';
 import React from 'react';
 import { X, Calendar, FileText, Building2, Trash2, Plus, ShieldAlert, Hash, Sliders, RefreshCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -303,6 +304,8 @@ export function TransactionEditModalView({ transaction, accounts, lockDate, onCl
               )}
 
             </div>
+
+            <RatesUsed metadata={transaction?.metadata} />
 
             {/* Structural Double-Entry Ledger Lines splits section */}
             <div className="space-y-4">
@@ -616,4 +619,15 @@ export function TransactionEditModalView({ transaction, accounts, lockDate, onCl
       </div>
     </AnimatePresence>
   );
+}
+
+/** BM-06: the exchange rates this entry was converted at (one, or two on a payment: the document's and the day's). */
+function RatesUsed({ metadata }: { metadata?: Record<string, unknown> | null }) {
+  const rates = ((metadata?.ratesUsed as RateUsed[] | undefined) || (metadata?.rateUsed ? [metadata.rateUsed as RateUsed] : []))
+    .filter(r => r && typeof r.rate === 'number' && typeof r.currency === 'string');
+  if (rates.length === 0) return null;
+  return <section aria-label="Exchange rates used" className="text-xs text-[var(--text)] space-y-1">
+    <h3 className="font-bold uppercase tracking-wider text-[10px] text-zinc-500">Exchange rates used</h3>
+    <ul className="list-disc ps-5">{rates.map(r => <li key={rateUsedId(r)}>{rateUsedText(r)}</li>)}</ul>
+  </section>;
 }
