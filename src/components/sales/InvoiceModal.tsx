@@ -1,4 +1,3 @@
-import { amountStep, minorToMajor } from '../../lib/currencyMinorUnits';
 import { useDialog } from '../../hooks/useDialog';
 import { useSuggestedRate } from '../../hooks/useSuggestedRate';
 import { documentCurrencies } from '../../lib/exchangeRates';
@@ -18,7 +17,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
-import { formatCurrency, safeConfirm } from '../../lib/utils';
+import { amountStep, formatCurrency, minorToMajor, safeConfirm } from '../../lib/utils';
 import { customerPricer, findInventoryItem, lineAmountCents, setLineDescription, taxCodeToFillFromItem } from '../../lib/invoiceLines';
 import TaxExemptionNotice from './TaxExemptionNotice'; import { taxChoiceFor } from '../../lib/tax/resolveLineTax'; import { lineTaxCategory, saleDestinationSnapshot } from '../../lib/tax/usInvoiceTax';
 import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';

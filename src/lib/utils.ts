@@ -30,7 +30,7 @@ export function parseAmountToCents(val: string | number | undefined | null): num
 }
 
 /** Known 3-decimal currencies per ISO 4217 (KWD, BHD, OMR, JOD, TND, LYD, IQD); one list with the storage rule (BM-04). */
-export { THREE_DECIMAL_CURRENCIES } from './currencyMinorUnits';
+export { THREE_DECIMAL_CURRENCIES, amountStep, minorToMajor } from './currencyMinorUnits';
 
 /** The decimals amounts in this currency are stored and shown with (BM-04: src/lib/currencyMinorUnits.ts). */
 export function getCurrencyFractionDigits(currency?: string): number {
