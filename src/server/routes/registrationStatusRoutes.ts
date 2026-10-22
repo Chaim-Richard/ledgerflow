@@ -16,7 +16,7 @@ export function registerRegistrationStatusRoutes(app: express.Express, _ctx: Ser
         try {
           await verifyIdToken(idToken);
           isAuthenticated = true;
-        } catch (_e) {
+        } catch {
           // Token invalid or expired
         }
       }
@@ -32,7 +32,7 @@ export function registerRegistrationStatusRoutes(app: express.Express, _ctx: Ser
           totalUsers = userCount;
         }
         registrationAllowed = userCount < limit;
-      } catch (_err) {
+      } catch {
         // DB fallback
       }
 
@@ -48,7 +48,7 @@ export function registerRegistrationStatusRoutes(app: express.Express, _ctx: Ser
       }
 
       res.json(payload);
-    } catch (_err) {
+    } catch {
       res.json({
         status: "success",
         maxRegistrationLimit: globalAdminConfig.maxRegistrationLimit || 100,

@@ -15,7 +15,7 @@ function updateBaseline() {
     serverTsLines: Infinity,
     filesOver800: Infinity,
     orphanFiles: Infinity,
-    eslintWarnings: Infinity,
+    suppressionCount: Infinity,
     untestedViews: Infinity,
     overlaysWithoutDialog: Infinity,
   };

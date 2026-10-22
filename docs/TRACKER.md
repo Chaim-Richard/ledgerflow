@@ -202,7 +202,7 @@ projects (V 9), fixed assets (X 9), inventory depth (W 8).
 | 7 | Field / SchemaForm | ◐ 1 screen (Chart of Accounts) |
 | 8 | Registry smoke + accessibility | ✔ every view mounts and passes its accessibility limit |
 | 9 | Delete / defer decisions | ⏸ **waiting for you** (~71 items) |
-| 10 | Mechanical cleanup via ratchet | ◐ `any` 1,287 → **1,210** · UTC 40 · array keys 64 · console.log 8 · files > 800 lines 15 |
+| 10 | Mechanical cleanup via ratchet | ◐ (22 Oct, `quality-baseline.json`) `any` 1,287 → **50** · UTC dates 40 → **35** · array keys 64 → **0** · console.log 8 → **0** · files > 800 lines 15 → **0** · views without a registry smoke test 77 → **44** (the one still open) |
 | 11 | Data-health checks registry | ☐ |
 | 12 | Import adapter registry | ☐ |
 | 13 | Money display | ✔ one rule (`formatCurrency` takes cents), guard test bans `/100` |
@@ -721,19 +721,26 @@ code — and the bug classes disappear because nobody hand-writes the wiring any
 
 ## What the code shows (measured)
 
+**Re-measured 22 Oct** (strategy audit `audit/STRATEGY_AND_SPEED_AUDIT_2026-10-22.md` §5, then AI #1): several numbers below had
+gone stale; the corrected ones say how they were measured. Method for the pairs: non-blank trimmed lines after swapping
+Purchases/Vendor/Bill/AP/payable for Sales/Customer/Invoice/AR/receivable; *ordered* = Python
+`difflib.SequenceMatcher(autojunk=False).ratio()`, *distinct* = shared distinct lines / all distinct lines. **Rule from now
+on: a refactor justified by a similarity or size number includes the command that produced it.**
+
 | Finding | Number |
 |---|---|
-| `Sales.tsx` vs `Purchases.tsx` | **61% identical** after swapping customer↔vendor |
-| `ARAgingReportView` vs `APAgingReportView` | **70% identical** |
-| `CustomerDetailView` vs `VendorDetailView` | **78% identical** |
-| `InvoiceModal` + `BillModal` + `JournalEntryModal` + `TransactionEditModal` | **2,529 lines**, four separate line-item editors |
+| `Sales.tsx` vs `Purchases.tsx` | ~~61% identical~~ → **21% ordered / 14% distinct** (774 vs 533 lines): not a strong case any more |
+| `ARAgingReportView` vs `APAgingReportView` | ~~70% identical~~ → **already collapsed**: both are 5-line wrappers of one aging view |
+| `CustomerDetailView` vs `VendorDetailView` | **84% ordered / 63% distinct** (190 vs 188 lines) — the strongest remaining mirror |
+| `InvoiceModal` + `BillModal` + `JournalEntryModal` + `TransactionEditModal` | **2,530 lines** (799 + 727 + 763 + 241), four separate line-item editors; InvoiceModal vs BillModal **38% ordered** |
 | 6 financial statement views | **3,438 lines**; every report builds its own table and export |
 | `documentRoutes.ts` | an `if (type === 'invoice') … else if …` chain, not a lookup |
 | Audit-log writes | **13 hand-written** across 8 files; no event bus exists |
 | `useLedgerData.ts` | **24 listeners** in one hook, loaded on login for every view |
-| `src/components/platform/` | **10,945 lines** — nearly as big as the accounting core (`ledger/`, 12,274) |
-| `SystemCommandCenter.tsx` | 1,783 lines, runs on `simulatedQueries` / `simulatedLogs` |
-| `eslint-plugin-react` | not installed — so `no-array-index-key` and `jsx-no-target-blank` can't run |
+| `src/components/platform/` | ~~10,945~~ → **16,293 lines** — now *bigger* than the accounting core (`ledger/`, 14,562); `reporting/` is 18,109 |
+| `SystemCommandCenter.tsx` | ~~1,783~~ → **380 lines**, still names `simulatedQueries` / `simulatedLogs` (4 places) |
+| `eslint-plugin-react` | ~~not installed~~ → **installed** (`package.json`); array-index keys are at 0 |
+| Built, not on a screen (22 Oct) | `PartyDetailView.tsx`, `config/partySides.ts` (the start of shortcut 1), `lib/entityFramework.ts`, `lib/taxRateDefaults.ts` are reachable **only through unused imports** in `Sales.tsx` and `registry.tsx` (the last 5 unused-import warnings). Wire them into a screen or delete them; then remove the imports |
 
 The sales/purchases mirroring matters most: **every feature on one side has to be built
 twice.** Credit notes and vendor credits, customer and vendor balance summaries,
@@ -765,7 +772,7 @@ Build a quality ratchet.
      serverTsLines       wc -l server.ts
      filesOver800        source files over 800 lines
      orphanFiles         result of the reachability walk
-     eslintWarnings      total eslint warnings
+     suppressionCount    eslint-disable / @ts-ignore / @ts-expect-error markers (renamed from eslintWarnings, 22 Oct)
      untestedViews       registered views not covered by the registry smoke test
 2. quality-baseline.json — commit the current values.
 3. src/tests/quality-ratchet.test.ts — runs the metrics and FAILS if any value is
@@ -1223,9 +1230,9 @@ PROMPT A — Ratchet (step 0b). Do this right after the CI fix.
 ```
 PROMPT B — Collapse the customer/vendor mirrors (shortcut 1).
 
-Sales.tsx and Purchases.tsx are 61% identical after swapping customer<->vendor and
-invoice<->bill. CustomerDetailView/VendorDetailView are 78% identical;
-ARAgingReportView/APAgingReportView are 70% identical; CustomerModal/VendorModal 39%.
+(Re-measured 22 Oct: Sales.tsx/Purchases.tsx 21%, CustomerDetailView/VendorDetailView 84%;
+the aging views and CustomerModal/VendorModal are already one component each. Start with the
+detail views, then InvoiceModal/BillModal at 38%; not the list screens.)
 
 1. Create src/config/partySides.ts exporting CUSTOMER_SIDE and VENDOR_SIDE:
    { side, partyCollection: 'customers'|'vendors', documentCollection: 'invoices'|'bills',

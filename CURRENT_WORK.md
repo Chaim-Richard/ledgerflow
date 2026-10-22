@@ -9,16 +9,14 @@ History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) �
 
 Everything below is open. Finished items leave this list. Full wording is in COORDINATION (other AIs) and TRACKER (AI #1).
 
-**To reach stage A (synthetic beta) — the 14 workflows in RELEASE_GATE**
+**To reach stage A (synthetic beta) — the 14 workflows in RELEASE_GATE** (its workflow table is the source of truth; this list only says who does what is left)
 
 | Workflow | What is missing | Who |
 |---|---|---|
-| W1 sign-up → first report | browser journey merged (#282, 21 Oct); left: worked figures (W1-GOLD) | AI #9 |
-| W5 labels → reports by label | A-210 done (21 Oct: by-label P&L + balance sheet browser journey on the real report, hand figures 2/2); browser journey and worked figures done | — |
 | W10 backup → restore | browser test (F-46, now D-98) | AI #4 |
 | W14 roles and access | browser journey (now D-99) | AI #4 |
 | G-02 first hour without dead ends | wording/dead-end fixes done (D-97 batches 1–2); left: AI #7's authenticated G-24 journey certifies G-02 | AI #4 / AI #7 |
-| Done for A | W2, W3, W4, W6, W9 | — |
+| Done for A | W1 (browser #282, worked figures W1-GOLD #291), W2, W3, W4, W5, W6, W9 | — |
 
 **Pull requests waiting**
 

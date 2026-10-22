@@ -312,7 +312,7 @@ export class StrategicEngine {
     return insights;
   }
 
-  private static runMonteCarlo(metrics: AnalyticalMetrics, transactions: Transaction[]) {
+  private static runMonteCarlo(metrics: AnalyticalMetrics, _transactions: Transaction[]) {
     const dailyOutflows = metrics.timeSeries.filter(d => d.outflow > 0).map(d => d.outflow);
     if (dailyOutflows.length < 10) return null;
 
@@ -485,8 +485,6 @@ export class StrategicEngine {
 
     const now = new Date().getTime();
     const accountMap = new Map(accounts.map(a => [a.id, a]));
-    const itemsBySku = new Map(items.map(i => [i.sku.toLowerCase(), i]));
-    const itemsByName = new Map(items.map(i => [i.name.toLowerCase(), i]));
 
     const totalInventoryValue = items.reduce((sum, item) => sum + (item.unitCostCents * (item.quantityAtHand || 0)), 0) || 1;
     
@@ -621,7 +619,7 @@ export class StrategicEngine {
         const orderCost = 2000;
         const holdingCost = Math.max(1, Math.round(item.unitCostCents * 0.2));
         eoq = TruthEngine.calculateEconomicOrderQuantity(Math.max(1, annualDemandEstimate), orderCost, holdingCost);
-      } catch(e) {
+      } catch {
         // Safe fallback
       }
 
