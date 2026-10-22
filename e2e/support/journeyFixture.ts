@@ -18,7 +18,13 @@ export interface JourneyMount {
   module: string;
   /** named export; the default export when omitted */
   exportName?: string;
-  /** JSON-serialisable props; `onClose` and `onBack` are supplied by the fixture. "__capture:name" makes a callback that records its arguments (see captured()). */
+  /**
+   * JSON-serialisable props; `onClose` and `onBack` are supplied by the fixture. Two strings are not
+   * passed as they are, because a screen needs a real function:
+   *  - "__capture:name" makes a callback that records its arguments (see captured());
+   *  - "__fn:formatCurrency" is the app's own formatCurrency (src/lib/utils.ts), so a figure is
+   *    compared in the app's real money format, and "__fn:noop" is a function that does nothing.
+   */
   props?: Record<string, unknown>;
 }
 
@@ -44,6 +50,8 @@ export interface JourneyOptions {
   api?: JourneyApiHandler;
   /** workspace role for the signed-in test user (defaults to owner) */
   role?: 'owner' | 'accountant' | 'bookkeeper' | 'viewer';
+  /** uid of the workspace's creator. Needed only for a non-owner role, because the creator is the owner. */
+  ownerUid?: string;
 }
 
 export interface JourneyHandle {
@@ -92,7 +100,7 @@ export async function mountJourney(page: Page, options: JourneyOptions): Promise
   const ledger: Record<string, unknown[]> = {};
   for (const field of LEDGER_FIELDS) ledger[field] = options.ledger[field] ?? [];
 
-  await page.evaluate(async ({ workspaceId, user, role, ledger, mounts, loadedKeys, ledgerFields }) => {
+  await page.evaluate(async ({ workspaceId, user, role, ownerUid, ledger, mounts, loadedKeys, ledgerFields }) => {
     const refresh = await import('/@react-refresh');
     refresh.default.injectIntoGlobalHook(window);
     Object.assign(window, { $RefreshReg$: () => {}, $RefreshSig$: () => (type: unknown) => type, __vite_plugin_react_preamble_installed__: true });
@@ -107,7 +115,7 @@ export async function mountJourney(page: Page, options: JourneyOptions): Promise
 
     const signedIn = { ...user, isAnonymous: false, getIdToken: async () => 'browser-fixture-token' };
     const workspace = {
-      id: workspaceId, uid: user.uid, name: 'Journey Books', currency: 'USD', fiscalYearStartMonth: 1,
+      id: workspaceId, uid: ownerUid, name: 'Journey Books', currency: 'USD', fiscalYearStartMonth: 1,
       roles: { [user.uid]: role },
     };
     useAuthStore.setState({ user: signedIn, isGuest: false, currentWorkspaceId: workspaceId, workspaces: [workspace] } as never);
@@ -137,6 +145,11 @@ export async function mountJourney(page: Page, options: JourneyOptions): Promise
               (captures[name] ??= []).push(JSON.parse(JSON.stringify(args)));
               return true;
             };
+          } else if (typeof value === 'string' && value === '__fn:formatCurrency') {
+            // the app's own formatter, not a stand-in: a screen's figures are checked as users see them
+            props[key] = (await import('/src/lib/utils.ts')).formatCurrency;
+          } else if (typeof value === 'string' && value === '__fn:noop') {
+            props[key] = () => {};
           } else props[key] = value;
         }
         children.push(React.createElement(Component, { key: mount.module + (mount.exportName ?? ''), onClose: noop, onBack: noop, ...props }));
@@ -145,7 +158,17 @@ export async function mountJourney(page: Page, options: JourneyOptions): Promise
     };
     (window as unknown as { __journeyRender: typeof renderMounts }).__journeyRender = renderMounts;
     await renderMounts(mounts);
-  }, { workspaceId: options.workspaceId, user, role: options.role ?? 'owner', ledger, mounts: options.mounts, loadedKeys: LOADED_KEYS, ledgerFields: [...LEDGER_FIELDS] });
+  }, {
+    workspaceId: options.workspaceId,
+    user,
+    role: options.role ?? 'owner',
+    // the workspace's creator is its owner (useCurrentRole), so another role needs a different creator
+    ownerUid: (options.role ?? 'owner') === 'owner' ? user.uid : (options.ownerUid ?? 'journey-owner'),
+    ledger,
+    mounts: options.mounts,
+    loadedKeys: LOADED_KEYS,
+    ledgerFields: [...LEDGER_FIELDS],
+  });
 
   return { errors, requests };
 }

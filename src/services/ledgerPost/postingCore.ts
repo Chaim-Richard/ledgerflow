@@ -1,6 +1,8 @@
 import { ChartAccount, Transaction, TransactionLine, Workspace, Invoice, InventoryItem } from '../../types';
 import type { LineAccountWeight } from '../../kernel/templates/TransactionTemplates';
 import { isLockedDate } from '../../lib/periodLock';
+import { rateUsedFor, rateUsedId, type RateUsed } from '../../lib/rateUsed';
+import { minorUnitRate } from '../../lib/currencyMinorUnits';
 
 // What every posting needs (F-11, moved from LedgerPostService): the data to post against, the
 // period-lock check, account lookup and the one call that sends entries to the server.
@@ -119,17 +121,32 @@ export async function loadInventory(invoiceData: Partial<Invoice>, context?: Led
  * carry rate 1; otherwise lineAmount() would apply the rate a second time. The document's own
  * currency and rate are kept in metadata. Reversals keep the rates of what they reverse.
  */
-export function inBaseCurrency<T extends { currency?: string; exchangeRate?: number; lines: TransactionLine[]; metadata?: Record<string, unknown> }>(
-  tx: T, workspaceId: string, context?: LedgerPostContext,
+export function inBaseCurrency<T extends { currency?: string; exchangeRate?: number; date?: string; lines: TransactionLine[]; metadata?: Record<string, unknown> }>(
+  tx: T, workspaceId: string, context?: LedgerPostContext, recordedRate?: Partial<RateUsed> | null,
 ): T {
   const baseCurrency = getWorkspaces(context).find(w => w.id === workspaceId)?.currency || 'USD';
+  const documentCurrency = tx.currency || baseCurrency;
+  // BM-06: a converted entry says which rate it used (its day and where it came from), on the entry and on each line
+  const rateUsed = documentCurrency !== baseCurrency
+    ? rateUsedFor({ currency: documentCurrency, base: baseCurrency, rate: tx.exchangeRate || 1, date: String(tx.date || ''), recorded: recordedRate })
+    : null;
   return {
     ...tx,
     currency: baseCurrency,
     exchangeRate: 1,
-    metadata: { ...(tx.metadata || {}), documentCurrency: tx.currency || baseCurrency, documentExchangeRate: tx.exchangeRate || 1 },
-    lines: tx.lines.map(l => ({ ...l, exchangeRate: 1 })),
+    metadata: { ...(tx.metadata || {}), documentCurrency, documentExchangeRate: tx.exchangeRate || 1, ...(rateUsed ? { rateUsed } : {}) },
+    lines: tx.lines.map(l => ({ ...l, exchangeRate: 1, ...(rateUsed ? { rateUsedId: rateUsedId(rateUsed) } : {}) })),
   };
+}
+
+/**
+ * BM-04: the factor from a document's amounts (minor units of its currency) to the books' (minor units of the
+ * workspace currency): the document's exchange rate × 10^(books' decimals − document's). A document in the books'
+ * currency, or one of the same decimals, converts by its rate alone, as before.
+ */
+export function documentMinorRate(doc: { currency?: string; exchangeRate?: number }, workspaceId: string, context?: LedgerPostContext): number {
+  const baseCurrency = getWorkspaces(context).find(w => w.id === workspaceId)?.currency || 'USD';
+  return minorUnitRate(doc.exchangeRate || 1, doc.currency || baseCurrency, baseCurrency);
 }
 
 /**

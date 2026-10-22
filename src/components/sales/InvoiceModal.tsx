@@ -17,7 +17,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
-import { formatCurrency, safeConfirm } from '../../lib/utils';
+import { amountStep, formatCurrency, getLocalDateISO, minorToMajor, safeConfirm } from '../../lib/utils';
 import { customerPricer, findInventoryItem, lineAmountCents, setLineDescription, taxCodeToFillFromItem } from '../../lib/invoiceLines';
 import TaxExemptionNotice from './TaxExemptionNotice'; import { taxChoiceFor } from '../../lib/tax/resolveLineTax'; import { lineTaxCategory, saleDestinationSnapshot } from '../../lib/tax/usInvoiceTax';
 import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
@@ -148,7 +148,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const [rateTyped, setRateTyped] = useState(false);
   const rateNote = useSuggestedRate({
     currency, homeCurrency: workspaceCurrency, enabled: !editingExisting && !rateTyped, docs: pastInvoices, date: invoice.date,
-    onRate: rate => setInvoice(prev => ({ ...prev, exchangeRate: rate })),
+    onRate: (rate, from) => setInvoice(prev => ({ ...prev, exchangeRate: rate, metadata: { ...prev.metadata, rateUsed: { rate, ...from } } })), // BM-06: where it came from
   });
   // I-23: a new invoice for a customer can copy the lines of their latest invoice
   const lastForCustomer = !editingExisting && invoice.customerId
@@ -415,16 +415,16 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
              <div className="space-y-2">
                <label htmlFor="inv-discount" className="micro-label">Discount ({currency})</label>
                <input id="inv-discount" aria-invalid={Boolean(fieldErrors["inv-discount"])} aria-describedby={fieldErrors["inv-discount"] ? 'inv-discount-error' : undefined}
-                 type="number" step="0.01" min="0" value={(invoice.discountCents || 0) / 100}
-                 onChange={(e) => setInvoice({ ...invoice, discountCents: TruthEngine.parseAmountToCents(e.target.value || '0') })}
+                 type="number" step={amountStep(currency)} min="0" value={minorToMajor(invoice.discountCents || 0, currency)}
+                 onChange={(e) => setInvoice({ ...invoice, discountCents: TruthEngine.parseAmountToCents(e.target.value || '0', currency) })}
                  className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                />{fieldError("inv-discount")}
              </div>
              <div className="space-y-2">
                <label htmlFor="inv-deposit" className="micro-label">Deposit ({currency})</label>
                <input id="inv-deposit" aria-invalid={Boolean(fieldErrors["inv-deposit"])} aria-describedby={fieldErrors["inv-deposit"] ? "inv-deposit-help inv-deposit-error" : "inv-deposit-help"}
-                 type="number" step="0.01" min="0" value={(invoice.depositCents || 0) / 100}
-                 onChange={(e) => setInvoice({ ...invoice, depositCents: TruthEngine.parseAmountToCents(e.target.value || '0') })}
+                 type="number" step={amountStep(currency)} min="0" value={minorToMajor(invoice.depositCents || 0, currency)}
+                 onChange={(e) => setInvoice({ ...invoice, depositCents: TruthEngine.parseAmountToCents(e.target.value || '0', currency) })}
                  className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                />{fieldError("inv-deposit")}
                <p id="inv-deposit-help" className="text-[11px] text-[var(--muted)]">Paid in advance (booked to Customer Deposits). Tax stays on the full total; the deposit lowers the amount due.</p>
@@ -432,8 +432,8 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
              <div className="space-y-2">
                <label htmlFor="inv-retainage" className="micro-label">Retainage ({currency})</label>
                <input id="inv-retainage" aria-invalid={Boolean(fieldErrors["inv-retainage"])} aria-describedby={fieldErrors["inv-retainage"] ? 'inv-retainage-error' : undefined}
-                 type="number" step="0.01" min="0" value={(invoice.retainageCents || 0) / 100}
-                 onChange={(e) => setInvoice({ ...invoice, retainageCents: TruthEngine.parseAmountToCents(e.target.value || '0') })}
+                 type="number" step={amountStep(currency)} min="0" value={minorToMajor(invoice.retainageCents || 0, currency)}
+                 onChange={(e) => setInvoice({ ...invoice, retainageCents: TruthEngine.parseAmountToCents(e.target.value || '0', currency) })}
                  className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                />{fieldError("inv-retainage")}
              </div>
@@ -488,7 +488,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  <label htmlFor="inv-exchange-rate" className="micro-label">Exchange Rate</label>
                  <input id="inv-exchange-rate" aria-invalid={Boolean(fieldErrors["inv-exchange-rate"])} aria-describedby={fieldErrors["inv-exchange-rate"] ? 'inv-exchange-rate-error' : undefined}
                    type="number" step="0.0001" min="0.0001" value={invoice.exchangeRate || 1}
-                   onChange={(e) => { setRateTyped(true); setInvoice({ ...invoice, exchangeRate: parseFloat(e.target.value || '1') }); }}
+                   onChange={(e) => { setRateTyped(true); const rate = parseFloat(e.target.value || '1'); setInvoice({ ...invoice, exchangeRate: rate, metadata: { ...invoice.metadata, rateUsed: { rate, date: invoice.date || getLocalDateISO(), source: 'typed' } } }); }}
                    className="w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl focus:ring-2 focus:ring-zinc-900 outline-none font-mono"
                  />{fieldError("inv-exchange-rate")}
                  {rateNote && <p role="status" className="text-[11px] text-[var(--muted)] px-2">{rateNote}</p>}
@@ -562,12 +562,12 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                     <label htmlFor={`inv-item-rate-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Rate ({currency})</label>
                     <input id={`inv-item-rate-${idx}`} aria-invalid={Boolean(fieldErrors[`inv-item-rate-${idx}`])} aria-describedby={fieldErrors[`inv-item-rate-${idx}`] ? `${`inv-item-rate-${idx}`}-error` : undefined}
                       type="number"
-                      step="0.01"
+                      step={amountStep(currency)}
                       min="0"
-                      value={item.rateCents / 100}
+                      value={minorToMajor(item.rateCents, currency)}
                       onChange={(e) => {
                         const newItems = [...items];
-                        const rateCents = TruthEngine.parseAmountToCents(e.target.value || '0');
+                        const rateCents = TruthEngine.parseAmountToCents(e.target.value || '0', currency);
                         newItems[idx] = { ...newItems[idx], rateCents, amountCents: lineAmountCents(newItems[idx].quantity, rateCents) };
                         setItems(newItems);
                       }}

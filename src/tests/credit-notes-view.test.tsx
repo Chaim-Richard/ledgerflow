@@ -24,6 +24,7 @@ const note = (over: Partial<CreditNote>): CreditNote => ({
 const unused = note({});
 const used = note({ id: 'cn2', number: 'CN-2026-0002', remainingCents: 2000, status: 'partially_applied', reason: 'Price adjustment' });
 
+// a credit note is saved through the server's posting route (L94-STEP2B: /api/v1/documents/creditNotes/:id/post)
 let calls: { url: string; body: Record<string, unknown> }[] = [];
 let numberStatus = 200;
 beforeEach(() => {
@@ -71,9 +72,9 @@ test('a new credit note takes the next number of the series; without one nothing
 
   numberStatus = 200;
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save & Post' })); });
-  await waitFor(() => assert.ok(calls.some(c => c.url.includes('/transactions/bulk'))));
+  await waitFor(() => assert.ok(calls.some(c => c.url.includes('/documents/creditNotes/'))));
   assert.equal(calls.filter(c => c.url.endsWith('/next-number')).length, 2);
-  const posted = JSON.stringify(calls.find(c => c.url.includes('/transactions/bulk'))?.body);
+  const posted = JSON.stringify(calls.find(c => c.url.includes('/documents/creditNotes/'))?.body);
   assert.match(posted, /CN-2026-0003/);
   assert.doesNotMatch(posted, /CN-\d{4}"/, 'no random number');
 });
@@ -93,8 +94,8 @@ test('number, reason and date change in place; the date stays fixed once the cre
   fireEvent.click(screen.getByRole('button', { name: inlineEditName('Edit Reason for credit note CN-2026-0001') }));
   fireEvent.change(screen.getByLabelText('Reason for credit note CN-2026-0001'), { target: { value: 'Damaged on arrival' } });
   await act(async () => { fireEvent.keyDown(screen.getByLabelText('Reason for credit note CN-2026-0001'), { key: 'Enter' }); });
-  await waitFor(() => assert.ok(calls.some(c => c.url.includes('/transactions/bulk'))));
-  assert.match(JSON.stringify(calls.find(c => c.url.includes('/transactions/bulk'))?.body), /Damaged on arrival/);
+  await waitFor(() => assert.ok(calls.some(c => c.url.includes('/documents/creditNotes/'))));
+  assert.match(JSON.stringify(calls.find(c => c.url.includes('/documents/creditNotes/'))?.body), /Damaged on arrival/);
 
   cleanup();
   setComponentWorkspace('viewer');

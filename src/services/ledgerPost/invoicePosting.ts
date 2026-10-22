@@ -6,7 +6,7 @@ import { calculateDocumentTax, cashPostedWithDocumentCents, depositAppliedCents 
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
 import { INVOICE_COGS_TYPE, planInvoiceCogs } from '../invoiceCogs';
 import { goodsLeaveWith } from '../../lib/deliveries';
-import { getAccounts, getTransactions, getWorkspaces, loadInventory, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate, postingToday } from './postingCore';
+import { getAccounts, getTransactions, getWorkspaces, loadInventory, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate, postingToday, documentMinorRate } from './postingCore';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
 import { isOpeningBalanceEquity } from '../../lib/openingBalances';
 
@@ -110,7 +110,8 @@ export async function postInvoiceLedger(
   }
 
   const rawAmount = invoiceData.amountCents || 0;
-  const rate = invoiceData.exchangeRate || 1;
+  // BM-04: minor units of the document's currency → minor units of the books' (¥ has none, KWD three)
+  const rate = documentMinorRate(invoiceData, workspaceId, context);
   const amount = roundCents(rawAmount * rate);
   if (amount <= 0) { if (entityMutation) { await postTxsServerApi([], workspaceId, entityMutation, context); } return {}; }
 
@@ -154,7 +155,7 @@ export async function postInvoiceLedger(
     taxCents: taxAmount,
     discountCents: discountAmount,
     retainageCents: retainageAmount,
-    exchangeRate: rate,
+    exchangeRate: invoiceData.exchangeRate || 1,
     arAccount,
     revenueAccount,
     lineAccounts: docLines,
@@ -170,7 +171,7 @@ export async function postInvoiceLedger(
     description: `Invoice ${invoiceNum} - ${customer}`,
     totalAmountCents: amount,
     currency: invoiceData.currency || 'USD',
-    exchangeRate: rate,
+    exchangeRate: invoiceData.exchangeRate || 1,
     status: 'completed',
     type: 'actual',
     createdAt: new Date().toISOString(),
@@ -181,7 +182,7 @@ export async function postInvoiceLedger(
     },
     lines: accrualLines
   };
-  txsToPost.push(inBaseCurrency(accrualTx, workspaceId, context));
+  txsToPost.push(inBaseCurrency(accrualTx, workspaceId, context, invoiceData.metadata?.rateUsed as never));
 
   // 2.2 Deposit received in advance (AF-03): the money was booked to a Customer Deposits liability
   // when it came in; the invoice moves it against the receivable. Tax stays on the full invoice.
@@ -202,7 +203,7 @@ export async function postInvoiceLedger(
       description,
       totalAmountCents: depositAmount,
       currency: invoiceData.currency || 'USD',
-      exchangeRate: rate,
+      exchangeRate: invoiceData.exchangeRate || 1,
       status: 'completed',
       type: 'actual',
       createdAt: new Date().toISOString(),
@@ -211,7 +212,7 @@ export async function postInvoiceLedger(
         { accountId: depositAccount.id, accountName: depositAccount.name, amountCents: depositAmount, description, exchangeRate: rate },
         { accountId: arAccount.id, accountName: arAccount.name, amountCents: -depositAmount, description, exchangeRate: rate },
       ],
-    }, workspaceId, context));
+    }, workspaceId, context, invoiceData.metadata?.rateUsed as never));
   }
 
   // 2.5 Cost of goods sold for lines that sell inventory items (the server moves the stock). Where
@@ -244,7 +245,7 @@ export async function postInvoiceLedger(
         description: `Payment Received for Invoice ${invoiceNum} - ${customer}`,
         totalAmountCents: paidAmtCents,
         currency: invoiceData.currency || 'USD',
-        exchangeRate: rate,
+        exchangeRate: invoiceData.exchangeRate || 1,
         status: 'completed',
         type: 'actual',
         createdAt: new Date().toISOString(),
@@ -257,14 +258,14 @@ export async function postInvoiceLedger(
           documentNumber: String(invoiceNum),
           entityName: customer,
           amountCents: paidAmtCents,
-          exchangeRate: rate,
+          exchangeRate: invoiceData.exchangeRate || 1,
           cashAccount,
           offsetAccount: arAccount,
           isReceipt: true,
           lineAccounts: docLines // DIM-1: the payment carries the invoice lines' labels
         })
       };
-      txsToPost.push(inBaseCurrency(paymentTx, workspaceId, context));
+      txsToPost.push(inBaseCurrency(paymentTx, workspaceId, context, invoiceData.metadata?.rateUsed as never));
     }
   }
 

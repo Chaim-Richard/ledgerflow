@@ -8,7 +8,8 @@ interface Options {
   /** False once the person typed a rate, or for a document that already exists. */
   enabled: boolean;
   docs: Array<{ currency?: string; exchangeRate?: number; date?: string }>;
-  onRate: (rate: number) => void;
+  /** BM-06: with where the rate came from and the day it is for */
+  onRate: (rate: number, from: { source: 'last-used' | 'live' | 'books-on-date'; date: string }) => void;
   /** The document's date: a past one gets the rate used on (or just before) that day, not today's (K-29). */
   date?: string;
 }
@@ -32,16 +33,16 @@ export function useSuggestedRate({ currency, homeCurrency, enabled, docs, onRate
       void Promise.resolve().then(() => {
         if (cancelled) return;
         const used = rateOn(currency, day, latest.current.docs);
-        if (used) { latest.current.onRate(used.rate); setNote(used.date === day ? `Rate used on ${day}` : `Rate used on ${used.date} (the closest before ${day})`); }
+        if (used) { latest.current.onRate(used.rate, { source: 'books-on-date', date: used.date }); setNote(used.date === day ? `Rate used on ${day}` : `Rate used on ${used.date} (the closest before ${day})`); }
         else setNote(`No ${currency} rate recorded on or before ${day}: type that day's rate`);
       });
       return () => { cancelled = true; };
     }
     void Promise.resolve().then(async () => {
       const last = lastUsedRate(currency, latest.current.docs);
-      if (last && !cancelled) { latest.current.onRate(last); setNote(`Last rate used for ${currency}`); }
+      if (last && !cancelled) { latest.current.onRate(last, { source: 'last-used', date: getLocalDateISO() }); setNote(`Last rate used for ${currency}`); }
       const live = await fetchLiveRate(currency, homeCurrency);
-      if (live && !cancelled) { latest.current.onRate(live); setNote(`Today's rate for ${currency}`); }
+      if (live && !cancelled) { latest.current.onRate(live, { source: 'live', date: getLocalDateISO() }); setNote(`Today's rate for ${currency}`); }
       else if (!last && !cancelled) setNote(`No rate found for ${currency}: type it`);
     });
     return () => { cancelled = true; };

@@ -1,6 +1,6 @@
 import { TransactionGridView } from './TransactionGridView';
-import { useAuthStore } from '../../stores/useAuthStore';
-import { workspaceScope } from '../../lib/serverAction';
+import { currentIdentity, useAuthStore } from '../../stores/useAuthStore';
+import { identityScope } from '../../lib/serverAction';
 
 import React, { useId, useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Transaction, FilterCriteria } from '../../types';
@@ -396,7 +396,7 @@ function useTransactionGridModel() {
     const engine = new MatchingEngine(rules, state.analyticalPatternCache, undefined, state.matchingThreshold, transactionsWithBalance, state.dimensionNodes, accounts);
 
     // #108: the books may change while suggestions are computed; only confirmed saves are counted
-    const scope = workspaceScope(() => useAuthStore.getState().currentWorkspaceId);
+    const scope = identityScope(currentIdentity, () => useAuthStore.getState().currentWorkspaceId);
     const suggestions = await engine.suggestCategoriesAsync(transactionsWithBalance, Math.round);
     if (!scope.isCurrent()) { toast.dismiss(loaderId); return; }
 

@@ -6,7 +6,7 @@ import { calculateDocumentTax, cashPostedWithDocumentCents } from '../../lib/doc
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
 import { allocateCents } from '../../lib/Allocation';
 import { BILL_ACCRUAL_TYPE, billItemProblem, billStockLines } from '../../lib/billStock';
-import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate, postingToday } from './postingCore';
+import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate, postingToday, documentMinorRate } from './postingCore';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
 
 /**
@@ -108,7 +108,8 @@ export async function postBillLedger(
   }
 
   const rawAmount = billData.amountCents || 0;
-  const rate = billData.exchangeRate || 1;
+  // BM-04: minor units of the document's currency → minor units of the books' (¥ has none, KWD three)
+  const rate = documentMinorRate(billData, workspaceId, context);
   const amount = roundCents(rawAmount * rate);
   if (amount <= 0) { if (entityMutation) { await postTxsServerApi([], workspaceId, entityMutation, context); } return; }
 
@@ -147,7 +148,7 @@ export async function postBillLedger(
     vendorName: vendor,
     totalCents: amount,
     taxCents: taxAmount,
-    exchangeRate: rate,
+    exchangeRate: billData.exchangeRate || 1,
     apAccount,
     expenseAccount,
     taxAccount,
@@ -176,7 +177,7 @@ export async function postBillLedger(
     description: `Bill ${billNum} - ${vendor}`,
     totalAmountCents: amount,
     currency: billData.currency || 'USD',
-    exchangeRate: rate,
+    exchangeRate: billData.exchangeRate || 1,
     status: 'completed',
     type: 'actual',
     createdAt: new Date().toISOString(),
@@ -188,7 +189,7 @@ export async function postBillLedger(
     },
     lines: accrualLines
   };
-  txsToPost.push(inBaseCurrency(accrualTx, workspaceId, context));
+  txsToPost.push(inBaseCurrency(accrualTx, workspaceId, context, billData.metadata?.rateUsed as never));
 
   // 3. Transaction 2: Payment Posting (DR A/P, CR Cash)
   if (status === 'paid' || status === 'partially_paid') {
@@ -203,7 +204,7 @@ export async function postBillLedger(
         description: `Payment Sent for Bill ${billNum} - ${vendor}`,
         totalAmountCents: paidAmtCents,
         currency: billData.currency || 'USD',
-        exchangeRate: rate,
+        exchangeRate: billData.exchangeRate || 1,
         status: 'completed',
         type: 'actual',
         createdAt: new Date().toISOString(),
@@ -216,14 +217,14 @@ export async function postBillLedger(
           documentNumber: String(billNum),
           entityName: vendor,
           amountCents: paidAmtCents,
-          exchangeRate: rate,
+          exchangeRate: billData.exchangeRate || 1,
           cashAccount,
           offsetAccount: apAccount,
           isReceipt: false,
           lineAccounts: weights // DIM-1: the payment carries the bill lines' labels
         })
       };
-      txsToPost.push(inBaseCurrency(paymentTx, workspaceId, context));
+      txsToPost.push(inBaseCurrency(paymentTx, workspaceId, context, billData.metadata?.rateUsed as never));
     }
   }
 

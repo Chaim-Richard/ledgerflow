@@ -1,13 +1,17 @@
-import type { Firestore } from '../db/firestore';
-import { logger } from '../utils/logger';
+import type { Firestore } from '../../server/db/firestore';
 import { postInvoiceLedger } from '../../services/ledgerPost/invoicePosting';
 import { postBillLedger } from '../../services/ledgerPost/billPosting';
 import { postCreditNoteLedger, postVendorCreditLedger } from '../../services/ledgerPost/creditPosting';
-import { loadPostingContext } from './postingContextLoader';
+import { agreedPostingDay, loadPostingContext } from '../../server/services/postingContextLoader';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from '../../services/ledgerPost/postingCore';
 import type { Transaction } from '../../types';
 
 /**
+ * L-94 step 1 (shadow), kept for the tests after L94-STEP2B: the browser no longer sends document entries, so the
+ * server never had anything to compare; what this still proves is that the server, from the database alone, rebuilds
+ * exactly the entries the browser's builder makes (the same context L94-STEP2's route uses). Was
+ * src/server/services/postingShadowCheck.ts.
+ *
  * L-94 step 1 (shadow): after an invoice, bill, credit note or vendor credit save commits (L94-SHADOW-MORE added the
  * last two; payments are not posted by the browser — POST /payments builds their entries on the server), the server rebuilds the entries the browser sent
  * with the same builder (postingCore, no browser code) from what is in the database, and compares them: the same
@@ -23,18 +27,6 @@ export interface ShadowCheckInput {
   posted: Array<Pick<Transaction, 'id' | 'date' | 'lines'>>;
   /** the day the browser counted as today for this save (it dates reversals into a closed period) */
   postingDay?: unknown;
-}
-
-const DAY_MS = 86_400_000;
-
-/**
- * The day to rebuild with: the browser's, when it is a real date within one day of the server's own today (near
- * midnight a browser in another time zone is a day apart; that is not a difference in the entries); else the server's.
- */
-export function agreedPostingDay(serverToday: string, browserDay: unknown): string {
-  if (typeof browserDay !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(browserDay)) return serverToday;
-  const gap = Math.abs(Date.parse(`${browserDay}T00:00:00Z`) - Date.parse(`${serverToday}T00:00:00Z`));
-  return Number.isFinite(gap) && gap <= DAY_MS ? browserDay : serverToday;
 }
 
 export type ShadowCheckResult = { checked: false; reason: string } | { checked: true; matched: boolean; expected: string[]; sent: string[] };
@@ -79,24 +71,4 @@ export async function shadowCheckDocumentPosting(db: Firestore, input: ShadowChe
   const expected = postingFingerprint(context.capture!.flatMap(c => c.txs));
   const sent = postingFingerprint(posted);
   return { checked: true, matched: JSON.stringify(expected) === JSON.stringify(sent), expected, sent };
-}
-
-/** Runs the shadow check and logs what it found; never throws (the save has already committed). */
-export async function logShadowCheck(db: Firestore, input: ShadowCheckInput): Promise<void> {
-  try {
-    const result = await shadowCheckDocumentPosting(db, input);
-    if (!result.checked) return;
-    if (result.matched) {
-      logger.info('L-94 shadow: the server rebuilt the same entries', { workspaceId: input.workspaceId, collection: input.mutation.collection, docId: input.mutation.docId, lines: result.sent.length });
-      return;
-    }
-    const missing = result.expected.filter(r => !result.sent.includes(r));
-    const extra = result.sent.filter(r => !result.expected.includes(r));
-    logger.warn('L-94 shadow: the browser sent other entries than the server rebuilt', {
-      workspaceId: input.workspaceId, collection: input.mutation.collection, docId: input.mutation.docId, uid: input.uid,
-      missingOnBrowser: missing.slice(0, 20), extraFromBrowser: extra.slice(0, 20),
-    });
-  } catch (err) {
-    logger.warn('L-94 shadow: could not rebuild the entries', { workspaceId: input.workspaceId, collection: input.mutation.collection, docId: input.mutation.docId, error: err instanceof Error ? err.message : String(err) });
-  }
 }
