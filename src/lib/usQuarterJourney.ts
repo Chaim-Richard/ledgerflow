@@ -28,6 +28,8 @@ import { nexusThreshold } from './tax/usNexus';
 import { usSalesTaxReturn, type UsSalesDocument } from './tax/usSalesTaxReturn';
 import { NO_STATE_SALES_TAX, US_STATE_SALES_TAX } from './tax/usStateSalesTax';
 import { reviewUseTax, type UseTaxBill, type UseTaxItem, type UseTaxReview } from './tax/usUseTax';
+import { productTaxabilityRows } from './tax/usProductTaxability';
+import { effectiveTaxCategory } from './tax/taxCategories';
 import {
   vendor1099Readiness,
   type ReadinessPayment, type ReadinessVendor, type VendorReadinessReport,
@@ -294,7 +296,19 @@ export function usQuarterJourney(input: UsQuarterInput): UsQuarter {
   //    state return's own (counted status, the period, the seller's permit, the buyer's state with
   //    the seller's place as the over-the-counter fallback), so the two counts agree; credit notes
   //    are a reversal of a sale, not a new one, and are not counted here.
+  //    W8-GOLD: a sale whose every line is a loaded item in a category the state's own table exempts on the date
+  //    (Texas groceries) needs no certificate — the exemption is the product's, not the buyer's. A line with no
+  //    item, or an item not loaded, still counts, so a missing certificate is never hidden.
   const customersById = new Map(customers.map(c => [c.id, c]));
+  const itemCategory = new Map((input.items || []).map(item => [item.id, effectiveTaxCategory(item.productTaxCategory)]));
+  const exemptByProduct = (doc: UsSalesDocument, state: string, date: string) => {
+    const lines = (doc as { items?: Array<{ itemId?: string }> }).items || [];
+    return lines.length > 0 && lines.every(line => {
+      const category = line.itemId ? itemCategory.get(line.itemId) : undefined;
+      return category !== undefined && productTaxabilityRows(state, category)
+        .some(r => r.treatment === 'exempt' && r.validFrom <= date && (!r.validTo || date <= r.validTo));
+    });
+  };
   const certificates = { counted: 0, missing: 0, expired: 0 };
   for (const doc of invoices) {
     const date = String(doc.date || doc.issueDate || '').slice(0, 10);
@@ -306,7 +320,7 @@ export function usQuarterJourney(input: UsQuarterInput): UsQuarter {
     const customer = doc.customerId ? customersById.get(doc.customerId) : undefined;
     const place = (customer?.metadata as { taxPlace?: { country?: string; state?: string } } | undefined)?.taxPlace;
     const buyerState = place?.country === 'US' ? place.state : seller.place?.state;
-    if (!buyerState) continue;
+    if (!buyerState || exemptByProduct(doc, buyerState, date)) continue;
     certificates.counted++;
     const found = exemptionOn(customer, date);
     if (!found) certificates.missing++;

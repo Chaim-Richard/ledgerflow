@@ -300,6 +300,10 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "US state sales-tax filing frequencies and due days for all fifty states and DC, each with its revenue-department source and the date it was checked. Enter a period end to preview a due date, with weekend due dates moved to Monday. Planning status only: state holidays are not moved and nothing here files or pays.",
     "banking-validation":
       "Check a US routing number (9 digits, checksum) and an IBAN (country length and mod-97). This is a data-quality check only — calculation status — not a bank confirmation, and it never posts or moves money. IBAN lengths are from the SWIFT IBAN Registry (ISO 13616); the table and its CSV list 86 countries. A country not listed does not use IBAN or is not in this table.",
+    "data-quality-checks":
+      "Review posted entries missing required labels, customers and suppliers missing a tax ID or postal address needed for active filings, and catalogue items missing unit cost or selling price. Filter by check group, jump straight to each entry, document or item, and export CSV. Read-only: recorded tax IDs show masked last digits only, are never verified with a tax authority, and nothing here alters your books.",
+    "sample-year-benchmark":
+      "Inspect a deterministic 12-month small-business fixture across sales, purchases, stock moves, warehouse lots and serials, payments, bank statements, reconciliations and balanced journal entries, and run the report speed check against the 1,000 ms budget. Fixture and calculation status only: nothing here reads from, writes to or alters your workspace books.",
   },
   settings: {
     "branding-profiles": "Choose the logo colour, address and footer that PDFs use for each label value, such as an entity or a branch. A value without its own branding inherits from its parent label, and then from the books. Owners and accountants edit it here; the saved branding applies to PDFs made after the save.",

@@ -48,6 +48,8 @@ export default function IsraelMonthJourneyReportView() {
   const invoices = useLedgerStore(state => state.invoices);
   const creditNotes = useLedgerStore(state => state.creditNotes);
   const bills = useLedgerStore(state => state.bills);
+  // ISS-160: which bills are equipment comes from the accounts they are posted to
+  const accounts = useLedgerStore(state => state.accounts);
   const vendorCredits = useLedgerStore(state => state.vendorCredits);
   const customers = useLedgerStore(state => state.customers);
   const vendors = useLedgerStore(state => state.vendors);
@@ -99,8 +101,9 @@ export default function IsraelMonthJourneyReportView() {
       creditNotes: inWorkspace(creditNotes, workspaceId) as IlJourneyDocument[],
       bills: inWorkspace(bills, workspaceId) as IlJourneyDocument[],
       vendorCredits: inWorkspace(vendorCredits, workspaceId) as IlJourneyDocument[],
+      accounts,
     });
-  }, [monthText, currency, workspace, customers, vendors, workspaceId, invoices, creditNotes, bills, vendorCredits, filedPeriods]);
+  }, [monthText, currency, workspace, customers, vendors, workspaceId, invoices, creditNotes, bills, vendorCredits, filedPeriods, accounts]);
 
   const suggestedDealerId = useMemo(() => {
     const registration = journey?.steps.find(s => s.id === 'vat-report')?.returns[0]?.registration || '';
