@@ -39,7 +39,8 @@ export interface GroupMarginRow {
 /** First and last day of a YYYY-MM month (pure calendar maths, no time zone involved). */
 export function monthRange(month: string): { startDate: string; endDate: string } {
   const [year, m] = month.split('-').map(Number);
-  const last = new Date(Date.UTC(year, m, 0)).getUTCDate();
+  const last = [31, (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28,
+    31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
   return { startDate: `${month}-01`, endDate: `${month}-${String(last).padStart(2, '0')}` };
 }
 

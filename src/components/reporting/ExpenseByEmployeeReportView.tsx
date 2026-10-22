@@ -114,7 +114,7 @@ export default function ExpenseByEmployeeReportView({ startDate = '', endDate = 
         <table className="w-full text-sm">
           <caption>Every expense claim in the period with its receipt record</caption>
           <thead>
-            <tr>{['Employee', 'Date', 'Claim', 'State', 'Amount', 'Receipt record'].map((head, i) =>
+            <tr>{['Employee', 'Date', 'Claim', 'State', 'Amount', 'Receipt record'].map(head =>
               <th key={head} scope="col" className={`${head === 'Amount' ? 'text-right' : 'text-left'} py-1 px-2`}>{head}</th>)}
             </tr>
           </thead>

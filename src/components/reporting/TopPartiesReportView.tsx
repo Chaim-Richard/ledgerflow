@@ -5,7 +5,7 @@ import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { downloadCsv } from '../../lib/csvExport';
-import { topParties, topPartiesCsvHeaders, topPartiesCsvRows, type TopPartyRow } from '../../lib/topParties';
+import { topParties, topPartiesCsvHeaders, topPartiesCsvRows } from '../../lib/topParties';
 import ReportTableScroll from './ReportTableScroll';
 
 /** A tiny 12-month line. Decorative beside the numbers; the full series is in the label and the CSV. */

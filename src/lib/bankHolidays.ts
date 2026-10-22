@@ -85,13 +85,34 @@ export const BANK_CALENDARS: Record<BankCalendarId, BankCalendar> = {
 
 export const BANK_CALENDAR_IDS = Object.keys(BANK_CALENDARS) as BankCalendarId[];
 
-// ---------- civil-date helpers (no time zones: UTC day numbers only) ----------
+// ---------- civil-date helpers (pure integer maths, the same Hinnant algorithms as utils.ts) ----------
 
-const dayNumber = (year: number, month: number, day: number) => Date.UTC(year, month - 1, day) / 86_400_000;
-const fromDayNumber = (n: number): string => new Date(n * 86_400_000).toISOString().slice(0, 10);
+function dayNumber(year: number, month: number, day: number): number {
+  const y = month <= 2 ? year - 1 : year;
+  const era = Math.floor(y / 400);
+  const yoe = y - era * 400;
+  const doy = Math.floor((153 * (month + (month > 2 ? -3 : 9)) + 2) / 5) + day - 1;
+  const doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
+  return era * 146097 + doe;
+}
+
+function fromDayNumber(days: number): string {
+  const era = Math.floor(days / 146097);
+  const doe = days - era * 146097;
+  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
+  const mp = Math.floor((5 * doy + 2) / 153);
+  const day = doy - Math.floor((153 * mp + 2) / 5) + 1;
+  const month = mp < 10 ? mp + 3 : mp - 9;
+  const year = yoe + era * 400 + (month <= 2 ? 1 : 0);
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 const parseIso = (iso: string) => (iso || '').slice(0, 10).split('-').map(Number) as [number, number, number];
 const isoDayNumber = (iso: string) => { const [y, m, d] = parseIso(iso); return dayNumber(y, m, d); };
-const weekdayOf = (iso: string) => new Date(isoDayNumber(iso) * 86_400_000).getUTCDay();
+/** 0 = Sunday … 6 = Saturday (day number 719468 is 1970-01-01, a Thursday). */
+const weekdayFromDayNumber = (n: number) => (((n - 719468 + 4) % 7) + 7) % 7;
+const weekdayOf = (iso: string) => weekdayFromDayNumber(isoDayNumber(iso));
 const iso = (year: number, month: number, day: number) =>
   `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
@@ -99,12 +120,16 @@ const iso = (year: number, month: number, day: number) =>
 function nthWeekday(year: number, month: number, weekday: number, n: number): string {
   if (n > 0) {
     const first = dayNumber(year, month, 1);
-    const shift = (weekday - new Date(first * 86_400_000).getUTCDay() + 7) % 7;
+    const shift = (weekday - weekdayFromDayNumber(first) + 7) % 7;
     return fromDayNumber(first + shift + (n - 1) * 7);
   }
-  const last = dayNumber(year, month + 1, 0);
-  const shift = (new Date(last * 86_400_000).getUTCDay() - weekday + 7) % 7;
+  const last = dayNumber(year, month, 1) + daysInMonthFor(year, month) - 1;
+  const shift = (weekdayFromDayNumber(last) - weekday + 7) % 7;
   return fromDayNumber(last - shift + (n + 1) * 7);
+}
+
+function daysInMonthFor(year: number, month: number): number {
+  return [31, (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
 }
 
 /** Easter Sunday (Gregorian computus) as YYYY-MM-DD. */
@@ -192,10 +217,11 @@ const hebrewParts = new Intl.DateTimeFormat('en-u-ca-hebrew', { timeZone: 'UTC',
 function hebrewDays(year: number): Array<{ date: string; month: string; day: number }> {
   const out: Array<{ date: string; month: string; day: number }> = [];
   for (let n = dayNumber(year, 1, 1); n <= dayNumber(year, 12, 31); n += 1) {
-    const parts = hebrewParts.formatToParts(new Date(n * 86_400_000 + 43_200_000));
+    const date = fromDayNumber(n);
+    const parts = hebrewParts.formatToParts(new Date(`${date}T12:00:00Z`));
     const month = parts.find(p => p.type === 'month')?.value || '';
     const day = Number(parts.find(p => p.type === 'day')?.value || 0);
-    out.push({ date: fromDayNumber(n), month, day });
+    out.push({ date, month, day });
   }
   return out;
 }

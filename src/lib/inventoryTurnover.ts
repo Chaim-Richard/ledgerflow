@@ -43,11 +43,20 @@ export interface TurnoverRow {
   note: '' | 'negative-stock';
 }
 
+/** Day count of a civil date (H. Hinnant's algorithm, as in utils.ts): pure integer maths. */
+function daysFromCivil(year: number, month: number, day: number): number {
+  const y = month <= 2 ? year - 1 : year;
+  const era = Math.floor(y / 400);
+  const yoe = y - era * 400;
+  const doy = Math.floor((153 * (month + (month > 2 ? -3 : 9)) + 2) / 5) + day - 1;
+  return era * 146097 + yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
+}
+
 /** Whole days from one YYYY-MM-DD to another (civil dates; end − start). */
 function dayDiff(startDate: string, endDate: string): number {
   const days = (iso: string) => {
     const [y, m, d] = iso.split('-').map(Number);
-    return Date.UTC(y, m - 1, d) / 86_400_000;
+    return daysFromCivil(y, m, d);
   };
   return days(endDate) - days(startDate);
 }
