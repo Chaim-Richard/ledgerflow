@@ -183,13 +183,35 @@ test('#110: a refused import keeps the review open with the selection; a stored 
 
 test("#101: CSV keeps O'Brien's amount, reads a quoted line break as one row, and never turns a missing amount into $0", async () => {
   const rows: Array<{ description: string; amountCents: number }> = [];
-  render(<StatementImporter isOpen onClose={() => {}} onImport={r => { rows.push(...(r as typeof rows)); }} existingTransactions={[]} businessContext="" accounts={[]} patternCache={{}} />);
-  await upload('bank.csv', 'Date,Description,Amount\n2026-10-12,O\'Brien Coffee,-12.50\n2026-10-13,"Multi-line memo\nsecond line",10.00\n2026-10-14,No amount,\n');
+  const view = () => render(<StatementImporter isOpen onClose={() => {}} onImport={r => { rows.push(...(r as typeof rows)); }} existingTransactions={[]} businessContext="" accounts={[]} patternCache={{}} />);
+  const good = 'Date,Description,Amount\n2026-10-12,O\'Brien Coffee,-12.50\n2026-10-13,"Multi-line memo\nsecond line",10.00\n';
+  // PREV-6: a row without an amount refuses the whole file (named in the message), never $0 and never a partial import
+  view();
+  await upload('bank.csv', good + '2026-10-14,No amount,\n');
+  await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Review and continue' })); });
+  assert.match((await screen.findByRole('alert')).textContent || '', /nothing was imported: row 4: the amount is empty/);
+  assert.ok(screen.getByRole('button', { name: 'Review and continue' }), 'the mapping stays open to fix');
+  assert.equal(screen.queryByRole('button', { name: /^Import \d+ Entries/ }), null);
+  assert.equal(screen.queryByText("O'Brien Coffee"), null, 'no row of the refused file reaches review');
+  cleanup();
+  view();
+  await upload('bank.csv', good);
   await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Review and continue' })); });
   assert.ok(await screen.findByText("O'Brien Coffee"));
   assert.ok(screen.getByText('-$12.50'));
-  assert.equal(screen.queryByText('No amount'), null, 'a row without an amount is skipped, not imported as $0');
+  assert.ok(screen.getByRole('button', { name: 'Import 2 Entries' }), 'the quoted line break is one row');
   assert.equal(screen.queryAllByText('$0.00').length, 0);
+  assert.equal(rows.length, 0, 'review is not an import');
+});
+
+test('PREV-6: a semicolon CSV with comma decimals reviews exact amounts; a garbled (non-UTF-8) file is refused', async () => {
+  render(<StatementImporter isOpen onClose={() => {}} onImport={() => {}} existingTransactions={[]} businessContext="" accounts={[]} patternCache={{}} />);
+  await upload('latin1.csv', 'Date,Description,Amount\n2026-10-16,Caf\uFFFD,-7.20\n');
+  assert.match(screen.getByRole('alert').textContent || '', /latin1\.csv is not UTF-8 text/);
+  await upload('eu.csv', 'Date;Description;Amount\n01.10.2026;Miete;-1.250,00\n02.10.2026;Kaffee;-4,5\n');
+  await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Review and continue' })); });
+  assert.ok(await screen.findByText('-$1,250.00'), 'comma decimal, not ×100');
+  assert.ok(screen.getByText('-$4.50'));
 });
 
 

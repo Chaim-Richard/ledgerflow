@@ -1,0 +1,3 @@
+Customer,Company Name,Email,Phone Numbers,Billing Street,Billing City,Billing State,Billing ZIP,Billing Country,Open Balance
+Acme LLC,Acme Inc.,OFFICE@example.test,555-1212,11 Main St,Albany,NY,12207,US,"1,200.00"
+"Baker, Smith & Co",,ap@baker.example,,,Boston,MA,02110,US,0.00
