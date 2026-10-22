@@ -38,7 +38,7 @@ import { getStripe } from "./src/server/services/stripeService";
 export { getStripe };
 import express from "express";
 import { currencyRouter, taxDataRouter } from "./src/server/routes/externalDataRoutes.ts";
-import { cronRouter } from "./src/server/routes/cronRoutes.ts";
+import { cronRouter, CRON_MOUNT } from "./src/server/routes/cronRoutes.ts";
 import { statusRouter } from "./src/server/routes/statusRoutes.ts";
 import { csrfProtection } from "./src/server/middleware/csrf.ts";
 import { loadServerEnv } from "./src/server/config/env.ts";
@@ -151,8 +151,8 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   app.use("/api/v1/ai", aiRouter);
   app.use("/api/v1/invites", invitePublicRouter);
 
-  // Scheduled jobs (Vercel Cron calls them with CRON_SECRET)
-  app.use("/api/cron", cronRouter);
+  // Scheduled jobs (Vercel Cron calls them with CRON_SECRET; a standalone server runs the same list on its own timer)
+  app.use(CRON_MOUNT, cronRouter);
 
   // API 404 handler for unmatched /api/* routes
   app.use('/api', (req, res) => {

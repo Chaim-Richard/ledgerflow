@@ -1,5 +1,6 @@
 import type { Firestore } from '../db/firestore';
 import { isMailConfigured } from './mailer';
+import { isJobScheduleConfigured } from '../jobs/schedulerState';
 
 /**
  * System status (L-17): what the public status page shows. Checks only what the server can
@@ -72,7 +73,7 @@ export async function checkSystemStatus(db: Firestore, env: NodeJS.ProcessEnv = 
     run = (await db.collection('jobRuns').doc(DAILY_RUN_ID).get()).data() as Partial<DailyJobRun> | undefined;
     const ms = Date.now() - started;
     components.push({ id: 'database', name: 'Database', state: ms > 2000 ? 'degraded' : 'operational', detail: ms > 2000 ? `Slow (${ms} ms).` : 'Answering.' });
-    components.push(dailyJobComponent(run, Boolean(env.CRON_SECRET), now));
+    components.push(dailyJobComponent(run, isJobScheduleConfigured(env), now));
   } catch {
     components.push({ id: 'database', name: 'Database', state: 'down', detail: 'Not answering.' });
   }
