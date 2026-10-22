@@ -7,6 +7,7 @@ import { Transaction, Invoice, InventoryItem } from '../../types';
 import { postingToday, registerPostingHost } from './postingCore';
 import { getLocalDateISO } from '../../lib/utils';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
+import { reportCreditLimitRefusal } from '../../lib/creditLimitPrompt';
 
 // The browser's side of posting (L-94 step 0): the pure helpers are in postingCore.ts; this file
 // gives them the screen's data (the stores) and the one call that sends entries to the server, and
@@ -93,6 +94,8 @@ function putWrittenEntries(workspaceId: string, written: Transaction[]) {
 /** POST /api/v1/documents/:type/:id/post: the document only; the entries the server wrote go into the screen's list. */
 async function postDocumentToServer(workspaceId: string, entityMutation: EntityMutation, context?: LedgerPostContext) {
   const token = await getIdToken().catch(() => null);
+  // EG-5: an override of the credit limit rides with the invoice from the form; it is sent beside the document, never saved as a field
+  const { creditLimitOverride, ...data } = (entityMutation.data || {}) as Record<string, unknown>;
   const response = await fetch(`/api/v1/documents/${entityMutation.collection}/${encodeURIComponent(entityMutation.docId)}/post`, {
     method: 'POST',
     headers: {
@@ -100,13 +103,17 @@ async function postDocumentToServer(workspaceId: string, entityMutation: EntityM
       'Idempotency-Key': context?.idempotencyKey || crypto.randomUUID(),
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     },
-    body: JSON.stringify({ workspaceId, action: entityMutation.action, ...(entityMutation.action === 'delete' ? {} : { data: entityMutation.data || {} }), postingDay: postingToday(context) })
+    body: JSON.stringify({ workspaceId, action: entityMutation.action, ...(entityMutation.action === 'delete' ? {} : { data }), postingDay: postingToday(context), ...(creditLimitOverride ? { creditLimitOverride } : {}) })
   });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || 'Server rejected the save');
-  if (Array.isArray(data.warnings)) data.warnings.forEach((w: unknown) => toast.warning(String(w)));
-  if (data.replayed) return;
-  putWrittenEntries(workspaceId, Array.isArray(data.transactions) ? data.transactions as Transaction[] : []);
+  const answer = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (response.status === 409 && answer.code === 'CREDIT_LIMIT') reportCreditLimitRefusal({ docId: entityMutation.docId, message: String(answer.error), canOverride: answer.canOverride === true });
+    throw new Error(answer.error || 'Server rejected the save');
+  }
+  if (Array.isArray(answer.warnings)) answer.warnings.forEach((w: unknown) => toast.warning(String(w)));
+  if (typeof answer.creditLimitNote === 'string') toast.info(answer.creditLimitNote);
+  if (answer.replayed) return;
+  putWrittenEntries(workspaceId, Array.isArray(answer.transactions) ? answer.transactions as Transaction[] : []);
 }
 
 registerPostingHost({

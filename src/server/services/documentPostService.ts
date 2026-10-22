@@ -10,7 +10,8 @@ import type { EntityMutation, LedgerPostContext } from '../../services/ledgerPos
 import type { Bill, CreditNote, Invoice, Transaction, VendorCredit } from '../../types';
 import { agreedPostingDay, DOCUMENT_ENTRY_KEY, loadPostingContext, todayIn } from './postingContextLoader';
 import { assertPostingOpen } from '../../lib/periodLock';
-import { BulkRefusal, commitLedgerBulk } from './ledgerBulkCommit';
+import { BulkRefusal, commitLedgerBulk, type BeforeWrite } from './ledgerBulkCommit';
+import { enforceCreditLimit } from './creditLimitGuard';
 
 /**
  * L-94 step 2 (docs/design/L-94-server-postings.md): an invoice or bill is saved and its entries are built **here**,
@@ -36,6 +37,8 @@ export interface DocumentPostInput {
   idempotencyKey?: string;
   /** the day the browser counted as today; used within one day of the server's (agreedPostingDay), never hashed */
   postingDay?: string;
+  /** EG-5: issue an invoice over the customer's credit limit anyway (owner or accountant, with a reason) */
+  creditLimitOverride?: { reason: string };
 }
 
 export interface DocumentPostResult {
@@ -47,7 +50,7 @@ export interface DocumentPostResult {
 
 export async function postDocument(db: Firestore, user: RequestUser, input: DocumentPostInput): Promise<DocumentPostResult> {
   const { collection, docId, workspaceId, action } = input;
-  const hashOf = { collection, docId, workspaceId, action, data: input.data };
+  const hashOf = { collection, docId, workspaceId, action, data: input.data, ...(input.creditLimitOverride ? { creditLimitOverride: input.creditLimitOverride } : {}) };
   const mutationOf = (data?: Record<string, unknown>): EntityMutation => ({ collection, docId, action, ...(data ? { data } : {}) });
 
   if (user.developerWorkspaceId && user.developerWorkspaceId !== workspaceId) {
@@ -96,6 +99,10 @@ export async function postDocument(db: Firestore, user: RequestUser, input: Docu
   const captured = context.capture || [];
   if (captured.length !== 1) throw new BulkRefusal(500, { error: `The ${NAMES[collection]} could not be posted (built ${captured.length} saves)` });
   const transactions = captured[0].txs.map(tx => ({ ...tx, id: tx.id || crypto.randomUUID() })) as unknown as Transaction[];
-  const result = await commitLedgerBulk(db, user, { workspaceId, transactions, entityMutation: captured[0].entityMutation || mutation }, { idempotencyKey: input.idempotencyKey, hashOf });
+  // EG-5: an invoice saved as issued stays within the customer's credit limit, checked inside the commit's transaction
+  const beforeWrite: BeforeWrite | undefined = collection === 'invoices'
+    ? (t, state) => enforceCreditLimit(db, t, { user, workspaceId, workspace: state.workspace, docId, action, data: input.data, existing: state.existingEntity, override: input.creditLimitOverride })
+    : undefined;
+  const result = await commitLedgerBulk(db, user, { workspaceId, transactions, entityMutation: captured[0].entityMutation || mutation }, { idempotencyKey: input.idempotencyKey, hashOf, beforeWrite });
   return { body: result.body, transactions: result.committed && !result.body.replayed ? result.transactions : [], ...(cogsPendingReason ? { cogsPendingReason } : {}) };
 }

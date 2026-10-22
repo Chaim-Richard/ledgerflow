@@ -19,7 +19,7 @@ import AsyncButton from '../ui/AsyncButton';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { amountStep, formatCurrency, minorToMajor, safeConfirm } from '../../lib/utils';
 import { customerPricer, findInventoryItem, lineAmountCents, setLineDescription, taxCodeToFillFromItem } from '../../lib/invoiceLines';
-import TaxExemptionNotice from './TaxExemptionNotice'; import { taxChoiceFor } from '../../lib/tax/resolveLineTax'; import { lineTaxCategory, saleDestinationSnapshot } from '../../lib/tax/usInvoiceTax';
+import TaxExemptionNotice from './TaxExemptionNotice'; import { taxChoiceFor } from '../../lib/tax/resolveLineTax'; import { lineTaxCategory, saleDestinationSnapshot } from '../../lib/tax/usInvoiceTax'; import CreditLimitRefusalPanel from './CreditLimitRefusalPanel'; import { reportCreditLimitRefusal } from '../../lib/creditLimitPrompt';
 import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import { depositAppliedCents } from '../../lib/documentMath';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
@@ -132,7 +132,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     setFieldErrors(prev => ({ ...prev, [id]: message }));
     document.getElementById(id)?.focus();
   };
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); const lastStatus = useRef('pending'); // EG-5: the status a credit-limit override resends
   const [attachments, setAttachments] = useState<File[]>([]);
   const total = items.reduce((sum, item) => sum + item.amountCents, 0);
   // Tax: a saved tax code (Settings → Tax), or a custom rate typed here (older invoices)
@@ -168,8 +168,8 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const currencyChoices = useMemo(() => documentCurrencies(workspaceCurrency, currency, [...pastInvoices, ...safeCustomers]), [workspaceCurrency, currency, pastInvoices, safeCustomers]);
   const money = (cents: number) => formatCurrency(cents, currency);
 
-  const handleAction = async (e: React.FormEvent, actionStatus: string) => {
-    e.preventDefault();
+  const handleAction = async (e: React.FormEvent | null, actionStatus: string, creditLimitOverride?: { reason: string }) => {
+    e?.preventDefault();
     if (isSubmitting) return;
     if (!formRef.current?.reportValidity()) return;
     if (!invoice.customerId) {
@@ -185,11 +185,11 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
       return;
     }
     
-    setIsSubmitting(true);
+    setIsSubmitting(true); lastStatus.current = actionStatus; reportCreditLimitRefusal(null);
     try {
       await onSave({
         ...invoice,
-        status: actionStatus as any,
+        status: actionStatus as any, ...(creditLimitOverride ? { creditLimitOverride } : {}), // EG-5: sent beside the document (postingKit)
         ...(receipt ? { paymentTerms: 'due_on_receipt', dueDate: invoice.date, receiptPayment: { cashAccountId: paidIntoId, method: receiptMethod } as ReceiptPayment } : {}),
         currency,
         // the total owed (after the discount, tax included) and the tax, explicitly (taxCodes.ts)
@@ -675,7 +675,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
             </div>
           </div>
         </form>
-
+        <div className="px-3 md:px-6"><CreditLimitRefusalPanel busy={isSubmitting} onIssueAnyway={reason => handleAction(null, lastStatus.current, { reason })} /></div>
         <div className="shrink-0 p-3 md:p-6 border-t border-[var(--line)] bg-[var(--ink)]/50 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex flex-col w-full sm:w-auto">
             <dl className="text-xs text-[var(--muted)] grid grid-cols-[auto_auto] gap-x-4 mb-1 tabular-nums" aria-label="Invoice totals">
