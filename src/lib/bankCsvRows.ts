@@ -55,7 +55,8 @@ export function bankCsvAmountCents(raw: string | undefined): number | null {
   if (!s) return null;
   let negative = false;
   if (/^\(.*\)$/.test(s)) { negative = true; s = s.slice(1, -1); }
-  if (/^[+-]?[$€£₪]/.test(s)) s = s.replace(/[$€£₪]/, '');
+  // one leading currency sign, after an optional sign (a second sign is left in, so the amount is refused)
+  s = s.replace(/^([+-]?)[$€£₪]/, '$1');
   s = s.replace(/^([+-]?\d[\d.,]*)[$€£₪]$/, '$1');
   if (s.endsWith('-') && !s.startsWith('-')) { negative = !negative; s = s.slice(0, -1); }
   if (s.startsWith('-')) { negative = !negative; s = s.slice(1); } else if (s.startsWith('+')) s = s.slice(1);
