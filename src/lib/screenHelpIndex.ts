@@ -11,8 +11,13 @@ export interface ScreenHelpEntry {
   group: string;
   id: string;
   label: string;
+  /** the screen's own-names, every registered language */
   labels: string[];
+  /** the label in the reader's language; the English one when Hebrew has none */
+  labelHe: string;
   help: string;
+  /** A-201: the same description in Hebrew; empty when the screen has none yet */
+  helpHe: string;
 }
 export function screenHelpIndex(): ScreenHelpEntry[] {
   const groups = [
@@ -29,7 +34,9 @@ export function screenHelpIndex(): ScreenHelpEntry[] {
       id: entry.id,
       label: entry.label.en,
       labels: Object.values(entry.label),
+      labelHe: entry.label.he || entry.label.en,
       help: entry.help,
+      helpHe: entry.helpHe || "",
     })),
   );
 }
@@ -39,8 +46,9 @@ export function searchScreenHelp(
 ): ScreenHelpEntry[] {
   const words = normalizeSearchText(query).split(/\s+/).filter(Boolean);
   return entries.filter((entry) => {
+    // A-201: Hebrew help is searchable too, so a Hebrew word in a report's description finds it
     const text = normalizeSearchText(
-      [entry.label, ...entry.labels, entry.help].join(" "),
+      [entry.label, ...entry.labels, entry.help, entry.helpHe].join(" "),
     );
     return words.every((word) => text.includes(word));
   });

@@ -114,6 +114,8 @@ export const VIEW_COMPONENTS: Record<string, ElementType> = {
 
 export interface AppTabDefinition {
   help: string;
+  /** A-201: the same description in Hebrew, attached by `withScreenHelp()` */
+  helpHe?: string;
   id: string;
   label: Record<string, string>;
   icon: LucideIcon;

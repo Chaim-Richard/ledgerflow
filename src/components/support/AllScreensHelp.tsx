@@ -36,6 +36,12 @@ export default function AllScreensHelp() {
               {entry.group}: {entry.label}
             </h3>
             <p>{entry.help}</p>
+            {/* A-201: Hebrew readers see the same description without switching screens */}
+            {entry.helpHe && (
+              <p dir="rtl" lang="he" className="text-sm text-[var(--muted)]">
+                {entry.helpHe}
+              </p>
+            )}
           </li>
         ))}
       </ul>

@@ -1,4 +1,11 @@
-/** Screen descriptions are part of the registry contract; no generic fallback hides missing help. */
+/**
+ * Screen descriptions are part of the registry contract; no generic fallback hides missing help.
+ * A-201: the Hebrew half lives in `screenHelpHe.ts` (`SCREEN_HELP_HE`) and is attached by
+ * `withScreenHelp()` below, so a screen's `? Help` dialog can show the same description in Hebrew
+ * instead of the general page summary.
+ */
+import { SCREEN_HELP_HE } from "./screenHelpHe";
+
 export const SCREEN_HELP: Record<string, Record<string, string>> = {
   main: {
     practice:
@@ -400,9 +407,11 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
 export function withScreenHelp<T extends { id: string }>(
   entries: T[],
   group: string,
-): (T & { help: string })[] {
+): (T & { help: string; helpHe: string })[] {
   return entries.map((entry) => ({
     ...entry,
     help: SCREEN_HELP[group]?.[entry.id] || "",
+    // A-201: empty until that screen has a Hebrew description; the guard test requires one per report
+    helpHe: SCREEN_HELP_HE[group]?.[entry.id] || "",
   }));
 }
