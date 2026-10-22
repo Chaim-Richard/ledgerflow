@@ -60,10 +60,15 @@ test("A-201/A-202: a report's help opens in its own Hebrew, and its totals expla
   const dismiss = page.getByRole("button", { name: "Dismiss cookie banner" });
   if (await dismiss.isVisible()) await dismiss.click();
 
-  // A-201: the Hebrew view is the report's own description, not the general reports page summary
+  // A-201: the Hebrew view is the report's own description, not the general reports page summary.
+  // The dialog is named in English until the language button is pressed, so find that button in
+  // the English-named dialog first (the same order the unit test uses), then re-find it in Hebrew.
   await page.getByRole("button", { name: "Help for Financial Ratios", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Help for Financial Ratios", exact: true })
+    .getByRole("button", { name: "עברית" })
+    .click();
   const dialog = page.getByRole("dialog", { name: /יחסים פיננסיים/ });
-  await dialog.getByRole("button", { name: "עברית" }).click();
   await expect(dialog).toContainText("חלוקה באפס נשארת כלא מוגדרת");
   await expect(dialog).not.toContainText("Check cash on hand");
   const hebrewAxe = await new AxeBuilder({ page })
