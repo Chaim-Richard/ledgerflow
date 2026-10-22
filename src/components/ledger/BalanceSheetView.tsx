@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { BalanceSheetReport } from './BalanceSheetReport';
 import type { ReportColumnMode } from '../../lib/reportColumns';
 import { getFiscalYearBounds } from '../../lib/fiscalCalendar';
+import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
+import { provenanceFromResponse } from '../../lib/reportProvenance';
 
 interface BalanceSheetViewProps {
   accounts: ChartAccount[];
@@ -39,11 +41,12 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [drillDownTarget, setDrillDownTarget] = useState<{ accountName: string; transactions: Transaction[]; explain?: ExplainRequest } | null>(null);
 
-  const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
   const { fetchBalanceSheet, loadingStates } = useFinancialReporting();
   const [serverData, setServerData] = useState<ServerBalanceSheetData | null>(null);
   const [serverPrevData, setServerPrevData] = useState<ServerBalanceSheetData | null>(null);
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
+  const [serverFailed, setServerFailed] = useState(false);
+  const browserFigures = useBrowserProvenance(STATEMENT_COLLECTIONS, serverFailed);
   const reportGen = useRef(0);
 
   // N-08: accrual (as posted) or cash (without trade receivables and payables; from the server only)
@@ -56,6 +59,7 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
       if (gen !== reportGen.current) return;
       setServerData(res || null);
       setIsServerAuthoritative(Boolean(res));
+      setServerFailed(!res);
       if (isComparative) {
         const prevRes = await fetchBalanceSheet(priorDate, basis === 'cash' ? 'cash' : undefined);
         if (gen !== reportGen.current) return;
@@ -63,6 +67,7 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
       }
     } catch {
       setIsServerAuthoritative(false);
+      setServerFailed(true);
     }
   }, [fetchBalanceSheet, asOfDate, priorDate, isComparative, basis]);
 
@@ -223,11 +228,16 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
   const emptyBs: ServerBalanceSheetData = { assets: {}, liabilities: {}, equity: {}, totalAssets: 0, totalLiabilities: 0, totalEquity: 0, netIncome: 0, totalClaims: 0, isBalanced: true };
   const currentData: ServerBalanceSheetData = basis === 'cash' ? (cashReady ? serverData! : emptyBs) : isServerAuthoritative && serverData ? serverData : localCalculation.currentData;
   const prevData: ServerBalanceSheetData = basis === 'cash' ? currentData : isServerAuthoritative && serverPrevData ? serverPrevData : localCalculation.prevData;
+  // AUD-10: the server's answer, or the figures worked out here; cash basis shows only the server's
+  const provenance = basis === 'cash' ? (cashReady ? provenanceFromResponse(serverData) : null)
+    : isServerAuthoritative && serverData ? provenanceFromResponse(serverData)
+    : serverFailed || browserFigures.completeness !== 'complete' ? browserFigures : null;
   const chooseBasis = (next: 'accrual' | 'cash') => {
     setBasis(next);
     setServerData(null);
     setServerPrevData(null);
     setIsServerAuthoritative(false);
+    setServerFailed(false);
     if (next === 'cash') { setColumnMode('total'); setShowPercent(false); setIsComparative(false); }
   };
   /** the entries behind a figure are those as posted, so on cash basis they are not listed */
@@ -351,7 +361,7 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
     return { diff, pct };
   };
 
-  return { columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget: openDrill, basis, chooseBasis, cashReady, isDataTruncated, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct };
+  return { columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget: openDrill, basis, chooseBasis, cashReady, provenance, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct };
 }
 
 export type BalanceSheetModel = ReturnType<typeof useBalanceSheetModel>;

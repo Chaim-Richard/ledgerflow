@@ -39,20 +39,15 @@ test(
         await waitFor(() =>
           assert.ok(screen.queryAllByText("$987.65").length > 0),
         );
-        assert.ok(
-          screen.getByText(
-            "Server-Authoritative Report (Full Streaming History Verified)",
-          ),
-        );
+        // AUD-10: the server badge is now the provenance note
+        assert.ok(screen.getByText(/Worked out by the server from every entry\./));
         view.rerender(
           <ProfitAndLossView startDate="2026-06-01" endDate="2026-06-30" />,
         );
         await waitFor(() => {
           assert.equal(screen.queryAllByText("$987.65").length, 0);
           assert.equal(
-            screen.queryByText(
-              "Server-Authoritative Report (Full Streaming History Verified)",
-            ),
+            screen.queryByText(/Worked out by the server/),
             null,
           );
         });
@@ -120,20 +115,15 @@ test(
         await waitFor(() =>
           assert.ok(screen.queryAllByText("$987.65").length > 0),
         );
-        assert.ok(
-          screen.getByText(
-            "Server-Authoritative Trial Balance (Full History Verified)",
-          ),
-        );
+        // AUD-10: the server badge is now the provenance note
+        assert.ok(screen.getByText(/Worked out by the server from every entry\./));
         fireEvent.change(screen.getByLabelText("As of date"), {
           target: { value: "2027-06-30" },
         });
         await waitFor(() => {
           assert.equal(screen.queryAllByText("$987.65").length, 0);
           assert.equal(
-            screen.queryByText(
-              "Server-Authoritative Trial Balance (Full History Verified)",
-            ),
+            screen.queryByText(/Worked out by the server/),
             null,
           );
         });

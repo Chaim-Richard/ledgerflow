@@ -2,8 +2,10 @@ import ExportTemplateControls from '../reporting/ExportTemplateControls';
 import React, { useId, useMemo, useState } from "react";
 import type { ChartAccount, Transaction } from "../../types";
 import { useAuthStore } from "../../stores/useAuthStore";
-import { useLedgerStore } from "../../stores/useLedgerStore";
 import { useStatementColumns } from "../../hooks/useStatementColumns";
+import { STATEMENT_COLLECTIONS, useBrowserProvenance } from "../../hooks/useBrowserProvenance";
+import { ReportProvenanceNote } from "../reporting/ReportProvenanceNote";
+import { combineProvenance, provenanceFromResponse } from "../../lib/reportProvenance";
 import {
   splitReportPeriods,
   statementFigures,
@@ -87,7 +89,6 @@ export function StatementColumns(props: StatementColumnsProps) {
     useAuthStore(
       (state) => state.getCurrentWorkspace()?.fiscalYearStartMonth,
     ) || 1;
-  const truncated = useLedgerStore((state) => state.isDataTruncated);
   const periods = useMemo(
     () => splitReportPeriods(startDate, endDate, mode, fiscalStart),
     [startDate, endDate, mode, fiscalStart],
@@ -160,6 +161,17 @@ export function StatementColumns(props: StatementColumnsProps) {
       : undefined,
   }));
   const complete = mode === "total" ? totalAuthoritative : report.authoritative;
+  // AUD-10: the period columns' provenance; the total column is the statement's own (its note)
+  const browserFigures = useBrowserProvenance(STATEMENT_COLLECTIONS, report.incomplete);
+  const truncated = browserFigures.completeness !== "complete";
+  const provenance =
+    mode === "total"
+      ? null
+      : report.authoritative
+        ? combineProvenance(columns.map((column) => provenanceFromResponse(column.data)))
+        : report.loading && !truncated
+          ? null
+          : browserFigures;
   const drillDown = (row: StatementRow, period: ReportPeriod) =>
     onDrillDown(
       `${row.label} · ${period.startDate} to ${period.endDate}`,
@@ -263,19 +275,10 @@ export function StatementColumns(props: StatementColumnsProps) {
               Loading full period reports…
             </p>
           )}
+          <ReportProvenanceNote provenance={provenance} />
           {truncated && !complete && (
-            <p
-              role="status"
-              className="rounded-lg border border-amber-500 p-3 text-sm"
-            >
-              Period figures use the loaded ledger and may be incomplete. CSV
-              export is available after the full reports load.
-            </p>
-          )}
-          {mode !== "total" && report.incomplete && !truncated && (
             <p role="status" className="text-sm">
-              Some server reports could not load. Showing figures from the local
-              ledger.
+              CSV export is available after the full reports load.
             </p>
           )}
           {compare && previousPeriods.length !== periods.length && (
