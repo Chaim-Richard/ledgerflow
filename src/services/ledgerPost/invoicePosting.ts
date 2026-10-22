@@ -6,7 +6,7 @@ import { calculateDocumentTax, cashPostedWithDocumentCents, depositAppliedCents 
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
 import { INVOICE_COGS_TYPE, planInvoiceCogs } from '../invoiceCogs';
 import { goodsLeaveWith } from '../../lib/deliveries';
-import { getAccounts, getTransactions, getWorkspaces, loadInventory, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate, postingToday } from './postingCore';
+import { getAccounts, getTransactions, getWorkspaces, loadInventory, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate, postingToday, documentMinorRate } from './postingCore';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
 import { isOpeningBalanceEquity } from '../../lib/openingBalances';
 
@@ -110,7 +110,8 @@ export async function postInvoiceLedger(
   }
 
   const rawAmount = invoiceData.amountCents || 0;
-  const rate = invoiceData.exchangeRate || 1;
+  // BM-04: minor units of the document's currency → minor units of the books' (¥ has none, KWD three)
+  const rate = documentMinorRate(invoiceData, workspaceId, context);
   const amount = roundCents(rawAmount * rate);
   if (amount <= 0) { if (entityMutation) { await postTxsServerApi([], workspaceId, entityMutation, context); } return {}; }
 
@@ -154,7 +155,7 @@ export async function postInvoiceLedger(
     taxCents: taxAmount,
     discountCents: discountAmount,
     retainageCents: retainageAmount,
-    exchangeRate: rate,
+    exchangeRate: invoiceData.exchangeRate || 1,
     arAccount,
     revenueAccount,
     lineAccounts: docLines,
@@ -170,7 +171,7 @@ export async function postInvoiceLedger(
     description: `Invoice ${invoiceNum} - ${customer}`,
     totalAmountCents: amount,
     currency: invoiceData.currency || 'USD',
-    exchangeRate: rate,
+    exchangeRate: invoiceData.exchangeRate || 1,
     status: 'completed',
     type: 'actual',
     createdAt: new Date().toISOString(),
@@ -202,7 +203,7 @@ export async function postInvoiceLedger(
       description,
       totalAmountCents: depositAmount,
       currency: invoiceData.currency || 'USD',
-      exchangeRate: rate,
+      exchangeRate: invoiceData.exchangeRate || 1,
       status: 'completed',
       type: 'actual',
       createdAt: new Date().toISOString(),
@@ -244,7 +245,7 @@ export async function postInvoiceLedger(
         description: `Payment Received for Invoice ${invoiceNum} - ${customer}`,
         totalAmountCents: paidAmtCents,
         currency: invoiceData.currency || 'USD',
-        exchangeRate: rate,
+        exchangeRate: invoiceData.exchangeRate || 1,
         status: 'completed',
         type: 'actual',
         createdAt: new Date().toISOString(),
@@ -257,7 +258,7 @@ export async function postInvoiceLedger(
           documentNumber: String(invoiceNum),
           entityName: customer,
           amountCents: paidAmtCents,
-          exchangeRate: rate,
+          exchangeRate: invoiceData.exchangeRate || 1,
           cashAccount,
           offsetAccount: arAccount,
           isReceipt: true,

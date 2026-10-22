@@ -2,6 +2,7 @@ import { ChartAccount, Transaction, TransactionLine, Workspace, Invoice, Invento
 import type { LineAccountWeight } from '../../kernel/templates/TransactionTemplates';
 import { isLockedDate } from '../../lib/periodLock';
 import { rateUsedFor, rateUsedId, type RateUsed } from '../../lib/rateUsed';
+import { minorUnitRate } from '../../lib/currencyMinorUnits';
 
 // What every posting needs (F-11, moved from LedgerPostService): the data to post against, the
 // period-lock check, account lookup and the one call that sends entries to the server.
@@ -136,6 +137,16 @@ export function inBaseCurrency<T extends { currency?: string; exchangeRate?: num
     metadata: { ...(tx.metadata || {}), documentCurrency, documentExchangeRate: tx.exchangeRate || 1, ...(rateUsed ? { rateUsed } : {}) },
     lines: tx.lines.map(l => ({ ...l, exchangeRate: 1, ...(rateUsed ? { rateUsedId: rateUsedId(rateUsed) } : {}) })),
   };
+}
+
+/**
+ * BM-04: the factor from a document's amounts (minor units of its currency) to the books' (minor units of the
+ * workspace currency): the document's exchange rate × 10^(books' decimals − document's). A document in the books'
+ * currency, or one of the same decimals, converts by its rate alone, as before.
+ */
+export function documentMinorRate(doc: { currency?: string; exchangeRate?: number }, workspaceId: string, context?: LedgerPostContext): number {
+  const baseCurrency = getWorkspaces(context).find(w => w.id === workspaceId)?.currency || 'USD';
+  return minorUnitRate(doc.exchangeRate || 1, doc.currency || baseCurrency, baseCurrency);
 }
 
 /**

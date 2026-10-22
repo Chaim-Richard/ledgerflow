@@ -4,7 +4,7 @@ import { isIncomeAccount, resolveAccountRole } from '../../lib/accountUtils';
 import { CreditNote, VendorCredit } from '../../types';
 import { isPostable } from '../../lib/txFilters';
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
-import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi, reversalDate, findAccount, getInvoices, postingToday } from './postingCore';
+import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, resolveAccount, postTxsServerApi, reversalDate, findAccount, getInvoices, postingToday, documentMinorRate } from './postingCore';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
 
 /**
@@ -93,7 +93,8 @@ export async function postCreditNoteLedger(
   }
 
   const rawAmount = creditNoteData.amountCents || 0;
-  const rate = creditNoteData.exchangeRate || 1;
+  // BM-04: minor units of the document's currency → minor units of the books'
+  const rate = documentMinorRate(creditNoteData, workspaceId, context);
   const amount = roundCents(rawAmount * rate);
   if (amount <= 0) return;
   // The credited invoice's share of tax comes off tax payable too (L-118)
@@ -113,7 +114,7 @@ export async function postCreditNoteLedger(
     description: `Credit Note ${creditNoteData.number || creditNoteId}: ${creditNoteData.customerName || 'Customer'}`,
     totalAmountCents: amount,
     currency: creditNoteData.currency || 'USD',
-    exchangeRate: rate,
+    exchangeRate: creditNoteData.exchangeRate || 1,
     status: 'completed',
     type: 'actual',
     createdAt: new Date().toISOString(),
@@ -235,7 +236,8 @@ export async function postVendorCreditLedger(
   }
 
   const rawAmount = vendorCreditData.amountCents || 0;
-  const rate = vendorCreditData.exchangeRate || 1;
+  // BM-04: minor units of the document's currency → minor units of the books'
+  const rate = documentMinorRate(vendorCreditData, workspaceId, context);
   const amount = roundCents(rawAmount * rate);
   if (amount <= 0) return;
   // The credited bill's share of input tax is no longer reclaimable (L-118)
@@ -265,7 +267,7 @@ export async function postVendorCreditLedger(
     description: `Vendor Credit ${vendorCreditData.number || vendorCreditId}: ${vendorCreditData.vendorName || 'Vendor'}`,
     totalAmountCents: amount,
     currency: vendorCreditData.currency || 'USD',
-    exchangeRate: rate,
+    exchangeRate: vendorCreditData.exchangeRate || 1,
     status: 'completed',
     type: 'actual',
     createdAt: new Date().toISOString(),
