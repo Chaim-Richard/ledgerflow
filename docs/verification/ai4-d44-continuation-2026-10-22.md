@@ -30,3 +30,9 @@ Native details/select avoid a custom popup's focus trap and keyboard simulation.
 - Full unit suite started locally without `LF_TEST_DATABASE_URL`; result recorded in PR follow-up. Database suites are not claimed as passed.
 
 **Status: implementation checkpoint, not final launch sign-off.** D-44 remains open until browser/visual evidence is reviewed. No production operation, self-merge, financial/server/SQL edit, or baseline increase.
+
+## Guard follow-up
+
+The first whole-suite run caught a new `silent-catch` location in recent-history persistence. Fixed without raising a baseline: failed device storage now visibly says the report opened but recent history could not be saved. Picker plus bug-pattern suites on the corrected tree: **15/15 pass**. The initial whole-suite run is not an all-pass result; final integrated verification belongs to the updated PR CI.
+
+Saved for review as **draft PR #340**. This is the final handoff for this implementation checkpoint, not a claim that D-44's browser/visual gate is complete.

@@ -138,6 +138,7 @@ function readRecentReports(): string[] {
 export default function ReportPicker({ activeTab, onSelect }: { activeTab: string; onSelect: (id: string) => void }) {
   const [query, setQuery] = useState('');
   const [recent, setRecent] = useState(readRecentReports);
+  const [storageFailed, setStorageFailed] = useState(false);
   const pins = useUIStore(s => s.pinnedPages);
   const label = (id: string) => REPORT_TABS_REGISTRY.find(r => r.id === id)?.label.en || id;
   const filtered = REPORT_TABS_REGISTRY.filter(r => `${r.label.en} ${r.label.he} ${r.id}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
@@ -146,7 +147,7 @@ export default function ReportPicker({ activeTab, onSelect }: { activeTab: strin
     if (!REPORT_TABS_REGISTRY.some(r => r.id === id)) return;
     const next = [id, ...recent.filter(r => r !== id)].slice(0, 5);
     setRecent(next);
-    try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* Navigation works without storage. */ }
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); setStorageFailed(false); } catch { setStorageFailed(true); }
     onSelect(id);
   };
   return <details className="rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--text)] p-2">
@@ -168,6 +169,7 @@ export default function ReportPicker({ activeTab, onSelect }: { activeTab: strin
         <h2 className="font-semibold">{title}</h2>
         <div className="flex flex-wrap gap-2">{(ids as string[]).length ? (ids as string[]).map(id => <button type="button" key={id} onClick={() => select(id)} className="min-h-11 px-3 border border-[var(--line)] rounded text-start">{label(id)}</button>) : <p className="text-sm">{title === 'Pinned reports' ? 'Use Alt+P to pin the current report.' : 'Reports selected here appear here on this device.'}</p>}</div>
       </section>)}
+      {storageFailed && <p role="status">The report opened, but recent reports could not be saved on this device.</p>}
       <p className="text-sm">Recent reports and existing page pins are saved on this device, not synced between devices.</p>
     </div>
   </details>;
