@@ -5,7 +5,7 @@ import pg from 'pg';
 import { binLocationFieldPath, createShipmentRecord, shipmentFieldPath, shipmentSourcesForOrder } from '../lib/warehouseWorkflows';
 import {
   createReturnAuthorization, createWarrantyRecord, returnAuthorizationsFromMetadata,
-  rmaFieldPath, transitionReturnAuthorization, warrantyCandidates, warrantyFieldPath, warrantyRecordsFromMetadata,
+  rmaFieldPath, warrantyCandidates, warrantyFieldPath, warrantyRecordsFromMetadata,
 } from '../lib/warehouseRecords';
 import type { Customer, Estimate, InventoryItem, Invoice } from '../types';
 
@@ -35,6 +35,7 @@ describe('Warehouse metadata persistence (A-64–A-67)', { skip: !process.env.LF
     items: [{ id: 'line-01', itemId: item.id, description: item.name, quantity: 5, rateCents: 1000, amountCents: 5000, accountId: 'income', serialNumbers: ['SN-אב-01'], metadata: { orderLine: 0 } }],
   };
   let client: pg.Client;
+  let serverDb: import('../server/db/pgFirestore').Firestore | undefined;
   async function asUser(userId: string, operation: () => Promise<void>) {
     await client.query('begin');
     try {
@@ -61,6 +62,7 @@ describe('Warehouse metadata persistence (A-64–A-67)', { skip: !process.env.LF
     }
   });
   after(async () => {
+    await serverDb?.terminate();
     if (!client) return;
     for (const table of ['inventory', 'estimates', 'customers', 'invoices']) {
       await client.query(`delete from public."${table}" where workspace_id = $1`, [workspaceId]);
@@ -90,23 +92,36 @@ describe('Warehouse metadata persistence (A-64–A-67)', { skip: !process.env.LF
     assert.deepEqual(await read<Invoice>('invoices', invoice.id), invoice);
   });
 
-  test('RMA request and screen-validated transition persist alongside existing customer metadata', async () => {
-    const record = createReturnAuthorization({
+  test('RMA request and transition persist through the server alongside existing customer metadata; a browser write is refused', async () => {
+    // ISS-143: RMAs are written only by returnAuthorizationService.ts (20261022000000_rma_server_only.sql)
+    const draft = createReturnAuthorization({
       id: 'rma_persistence', number: 'RMA-2026-TEST', workspaceId, customerId: customer.id, customerName: customer.name,
       invoiceId: invoice.id, invoiceNumber: invoice.number!, reason: 'מידה שגויה Wrong size', actor, at,
       lines: [{ invoiceLineId: 'line-01', itemId: item.id, description: item.name, quantity: 1, soldQuantity: 5 }],
     });
-    await patch('customers', customer.id, { [rmaFieldPath(record.id)]: record });
+    await assert.rejects(patch('customers', customer.id, { [rmaFieldPath(draft.id)]: draft }), /through the server/);
+    process.env.DATABASE_URL = process.env.LF_TEST_DATABASE_URL;
+    const { getDb } = await import('../server/db/firestore');
+    const { requestReturnAuthorization, moveReturnAuthorization } = await import('../server/services/returnAuthorizationService');
+    const db = serverDb = getDb();
+    const requestKey = `persist-${randomBytes(6).toString('hex')}`;
+    const { record } = await requestReturnAuthorization(db, {
+      workspaceId, actor: { uid: book, name: actor.name }, customerId: customer.id, invoiceId: invoice.id,
+      reason: 'מידה שגויה Wrong size', lines: [{ invoiceLineId: 'line-01', quantity: 1 }], requestKey,
+    });
     let saved = await read<Customer>('customers', customer.id);
     assert.deepEqual(returnAuthorizationsFromMetadata(saved.metadata, customer.id, workspaceId), [record]);
-    const approved = transitionReturnAuthorization(record, { type: 'approve' }, { uid, role: 'owner', name: 'Owner' }, '2026-10-16T11:00:00.000Z');
-    if (!approved.ok) assert.fail(approved.reason);
-    await patch('customers', customer.id, { [rmaFieldPath(record.id)]: approved.record }, uid);
+    await moveReturnAuthorization(db, {
+      workspaceId, actor: { uid, name: 'Owner' }, customerId: customer.id, rmaId: record.id, expectedStatus: 'requested',
+      action: 'approve', requestKey: `${requestKey}-approve`,
+    });
     saved = await read<Customer>('customers', customer.id);
     assert.equal(saved.metadata?.existingNote, 'Keep this');
     const [reopened] = returnAuthorizationsFromMetadata(saved.metadata, customer.id, workspaceId);
     assert.equal(reopened.status, 'approved');
     assert.deepEqual(reopened.events.map(event => [event.status, event.byUid]), [['requested', book], ['approved', uid]]);
+    await client.query('delete from public."idempotencyKeys" where workspace_id = $1', [workspaceId]);
+    await client.query('delete from public."auditLogs" where workspace_id = $1', [workspaceId]);
   });
 
   test('warranty history is retained after reopening and editing a serial date again', async () => {

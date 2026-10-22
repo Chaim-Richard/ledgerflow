@@ -95,6 +95,8 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Stock Transfers', componentName: 'StockTransfersReportView' },
     { label: 'Kit Assembly', componentName: 'KitAssemblyReportView' },
     { label: 'Stock Value by Location & Lot', componentName: 'StockValueByLocationLotReportView' },
+    { label: 'Data Quality Checks', componentName: 'DataQualityReportView' },
+    { label: '12-Month Sample Year & Speed', componentName: 'SampleYearBenchmarkReportView' },
     { label: 'Transactions by Reference', componentName: 'TransactionsByReferenceView' },
     { label: 'Group Summary', componentName: 'GroupSummaryReportView' },
     { label: 'Ask the Books', componentName: 'AskBooksView' },

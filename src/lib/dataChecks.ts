@@ -4,13 +4,14 @@
  * registry and links each finding to its record (Z-32). Adding a check = adding one entry.
  * Money is compared in integer cents with lineAmount() on postable entries (AGENTS.md).
  */
-import type { BankStatementLine, Bill, ChartAccount, DimensionDefinition, Invoice, RecurringTransaction, Transaction } from '../types';
+import type { BankStatementLine, Bill, ChartAccount, Customer, DimensionDefinition, Invoice, Payment, RecurringTransaction, Transaction, Vendor } from '../types';
 import { isPostable, lineAmount } from './txFilters';
 import { calculateAmountDue } from './documentMath';
 import { findTaxDifferences } from './taxRecompute';
 import { missingLabels } from './requiredLabels';
 import { labelRoleFindings } from './labelRoles';
 import { stockHistoryProblem, type StockMove } from './stockMoves';
+import { contactsMissingFilingDetails, itemsMissingPricing } from './dataQualityChecks';
 import { formatCurrency } from './utils';
 import type { RecordType } from './recordLinks';
 
@@ -34,18 +35,34 @@ export interface CheckContext {
   invoices: Invoice[];
   bills: Bill[];
   recurring: RecurringTransaction[];
-  inventory?: Array<{ id: string; name?: string; quantityAtHand?: number }>;
+  inventory?: Array<{
+    id: string;
+    sku?: string;
+    name?: string;
+    quantityAtHand?: number;
+    unitCostCents?: number;
+    unitPriceCents?: number;
+    itemType?: 'stock' | 'service';
+    consignment?: string;
+    bundleParts?: Array<{ itemId: string; quantity: number }>;
+    status?: string;
+  }>;
   bankLines?: BankStatementLine[];
   /** The workspace's today (YYYY-MM-DD). */
   today: string;
   /** Home currency, for documents without one. */
   baseCurrency: string;
+  /** Optional home country from workspace tax profiles, for filing-readiness checks (A-196). */
+  workspaceCountry?: string;
+  /** Customers and vendors, for filing tax-ID and address checks (A-196). */
+  customers?: Array<Partial<Customer> & { id: string; name?: string; metadata?: Record<string, unknown> }>;
+  vendors?: Array<Partial<Vendor> & { id: string; name?: string; is1099?: boolean; isForeign?: boolean; country?: string; metadata?: Record<string, unknown> }>;
   /** The workspace's labels, with their required-label rules (Z-12). */
   dimensions?: DimensionDefinition[];
   /** The stock-moves ledger (W-02); the nightly check reads it, the browser does not load it. */
   stockMoves?: StockMove[];
   /** Payment records (CB-23: each has its entry in the ledger). */
-  payments?: Array<{ id: string; number?: string; status?: string; amountCents?: number; exchangeRate?: number; paymentExchangeRate?: number; paymentDate?: string; date?: string; contactName?: string; entityName?: string }>;
+  payments?: Array<Partial<Payment> & { id: string; number?: string; status?: string; amountCents?: number; exchangeRate?: number; paymentExchangeRate?: number; paymentDate?: string; date?: string; contactName?: string; entityName?: string }>;
 }
 
 export interface DataCheck {
@@ -395,6 +412,47 @@ export const DATA_CHECKS: DataCheck[] = [
         const problem = stockHistoryProblem(item, byItem.get(item.id) || []);
         return problem ? [{ id: `stock-history-${item.id}`, checkId: 'stock-history', severity: 'medium' as const, title: problem, description: 'The quantity changed without a recorded reason, or a change was recorded twice.', record: { type: 'item' as const, id: item.id } }] : [];
       });
+    },
+  },
+  {
+    id: 'filing-party-details',
+    label: 'Customers and vendors missing tax IDs or addresses needed for filings (A-196)',
+    remedy: 'Add the contact\'s tax/VAT ID and postal address on Sales or Purchases before preparing the return.',
+    run: ({ customers, vendors, invoices, bills, payments, today, baseCurrency, workspaceCountry }) => {
+      const taxYear = Number(today.slice(0, 4)) || 2026;
+      return contactsMissingFilingDetails({
+        customers,
+        vendors,
+        invoices,
+        bills,
+        payments: (payments || []) as Payment[],
+        taxYear,
+        homeCurrency: baseCurrency,
+        workspaceCountry,
+      }).map(row => ({
+        id: `filing-party-details-${row.kind}-${row.contactId}`,
+        checkId: 'filing-party-details',
+        severity: 'low' as const,
+        title: `${row.name}: missing ${row.missingFields.map(f => (f === 'taxId' ? 'tax ID' : 'address')).join(' and ')}`,
+        description: `${row.filingReasons.join('; ')}. Tax ID status: ${row.maskedTaxId}.`,
+        record: row.record,
+      }));
+    },
+  },
+  {
+    id: 'item-missing-pricing',
+    label: 'Items without cost or selling price (A-197)',
+    remedy: 'Open the item on Inventory and fill in its unit cost and selling price so invoices and COGS post real amounts.',
+    run: ({ inventory }) => {
+      const fullItems = (inventory || []).filter(i => typeof i.unitCostCents === 'number' || typeof i.unitPriceCents === 'number');
+      return itemsMissingPricing(fullItems).map(row => ({
+        id: `item-missing-pricing-${row.itemId}`,
+        checkId: 'item-missing-pricing',
+        severity: 'low' as const,
+        title: `${row.name}: missing ${row.missingFields.map(f => (f === 'cost' ? 'unit cost' : 'selling price')).join(' and ')}`,
+        description: row.reason,
+        record: row.record,
+      }));
     },
   },
 ];

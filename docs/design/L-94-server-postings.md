@@ -49,6 +49,12 @@ Payments, credit notes and stock (COGS) follow the same route one at a time.
 
 **Step 3 — remove the browser builders** from the save path (keep them only for previews, marked so).
 
+## Before enforcing (found 22 Oct)
+"Today" decides the date of a reversal when the original entry is in a closed period. The browser and the server
+must use the same today: the workspace's time zone, taken once per save. Near midnight a browser in another time zone
+can be a day apart from the server, so the save request should carry the day the browser used and the server should
+check it is within one day of its own before comparing; otherwise the shadow check reports a false difference.
+
 ## What does not change
 How amounts are calculated: the same builders, the same worked-figure tests (DIM-1, W2, W3W4-GOLD, W13-GOLD,
 PAY-1). Only *where* they run moves.

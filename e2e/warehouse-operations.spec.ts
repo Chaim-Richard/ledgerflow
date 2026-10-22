@@ -163,8 +163,26 @@ test('phone warehouse edits retain refused drafts, retry, export Hebrew CSV and 
     }
     await route.fulfill({ json: request.method() === 'GET' ? [] : null });
   });
-  await page.route('**/api/**', route => {
-    expect(route.request().method()).toBe('GET');
+  // ISS-143: an RMA is requested through the server, which answers with the record it saved
+  const rmaRequests: Array<Record<string, unknown>> = [];
+  await page.route('**/api/**', async route => {
+    const request = route.request();
+    if (request.method() === 'POST' && /\/return-authorizations$/.test(new URL(request.url()).pathname)) {
+      const body = request.postDataJSON();
+      rmaRequests.push(body);
+      const record = await page.evaluate(async body => {
+        const path = '/src/lib/warehouseRecords.ts';
+        const { createReturnAuthorization } = await import(path);
+        return createReturnAuthorization({
+          id: 'rma_browser1', number: 'RMA-2026-BROWSERTEST1', workspaceId: 'warehouse-browser', customerId: body.customerId, customerName: 'לקוח Customer',
+          invoiceId: body.invoiceId, invoiceNumber: 'INV-2026-001', reason: body.reason, at: new Date().toISOString(),
+          actor: { uid: 'warehouse-user', name: 'בודק Tester', role: 'owner' },
+          lines: body.lines.map((l: { invoiceLineId: string; quantity: number }) => ({ ...l, itemId: 'item-1', description: 'ציוד Widget', soldQuantity: 2 })),
+        });
+      }, body);
+      return route.fulfill({ json: { status: 'success', record, replayed: false } });
+    }
+    expect(request.method()).toBe('GET');
     return route.fulfill({ json: {} });
   });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -202,11 +220,14 @@ test('phone warehouse edits retain refused drafts, retry, export Hebrew CSV and 
   await page.getByRole('button', { name: 'Export warranty CSV' }).click();
   const csv = await readFile((await (await downloadPromise).path())!, 'utf8');
   expect(csv).toContain('לקוח Customer'); expect(csv).toContain('SN-אב-01'); expect(csv).toContain('2027-10-15');
-  expect(writes).toHaveLength(5);
+  // the bin twice (refused, then saved), the shipment and the warranty; the RMA went to the server (ISS-143)
+  expect(writes).toHaveLength(4);
   for (const write of writes) {
     expect(['inventory', 'estimates', 'customers']).toContain(write.p_table);
-    expect(Object.keys(write.p_set).every(key => key === 'updatedAt' || key.startsWith('binLocations.') || key.startsWith('metadata.warehouseShipmentsBySource.') || key.startsWith('metadata.returnAuthorizationsById.') || key.startsWith('metadata.warrantiesById.'))).toBe(true);
+    expect(Object.keys(write.p_set).every(key => key === 'updatedAt' || key.startsWith('binLocations.') || key.startsWith('metadata.warehouseShipmentsBySource.') || key.startsWith('metadata.warrantiesById.'))).toBe(true);
   }
+  expect(rmaRequests).toHaveLength(1);
+  expect(rmaRequests[0]).toMatchObject({ customerId: 'customer-1', invoiceId: 'invoice-1', reason: 'מידה שגויה Wrong size', lines: [{ invoiceLineId: 'line-1', quantity: 1 }] });
   await expectBounded(page);
 });
 
