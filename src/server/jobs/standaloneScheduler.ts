@@ -1,6 +1,7 @@
 import { BACKGROUND_JOBS, CRON_SCHEDULES, runCron, type CronSchedule } from './jobRegistry';
 import { markStandaloneScheduler } from './schedulerState';
 import { getDb, FirestoreError } from '../db/firestore';
+import { addDaysYMD } from '../../lib/fiscalCalendar';
 
 /**
  * The standalone server's timer (AUD-05): `npm start` / `npm run dev` runs every CRON_SCHEDULES entry
@@ -21,9 +22,10 @@ export function nextRunAfter(schedule: string, now: Date): Date {
   const daily = fields.length === 5 && fields.slice(2).every(f => f === '*')
     && Number.isInteger(minute) && minute >= 0 && minute < 60 && Number.isInteger(hour) && hour >= 0 && hour < 24;
   if (!daily) throw new Error(`only daily "M H * * *" schedules can run on the standalone timer, not "${schedule}"`);
-  const due = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour, minute));
-  if (due.getTime() <= now.getTime()) due.setUTCDate(due.getUTCDate() + 1);
-  return due;
+  const at = (day: string) => new Date(`${day}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00Z`);
+  const today = now.toISOString().slice(0, 10);
+  const due = at(today);
+  return due.getTime() > now.getTime() ? due : at(addDaysYMD(today, 1));
 }
 
 /** true when this replica may run the schedule due at `dueAt` */

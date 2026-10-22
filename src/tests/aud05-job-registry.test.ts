@@ -50,7 +50,7 @@ const read = (rel: string) => fs.readFileSync(path.join(root, rel), 'utf8');
 const HAND_WORKED = [
   'maintenance', 'recurring', 'errorDigest', 'notifications', 'reminders', 'statements', 'scheduledReports',
   'ledgerHealth', 'bookAlerts', 'assetReminders', 'watches', 'notificationDigest', 'retention',
-].map(id => ({ id, cron: 'daily', path: '/api/cron/daily', schedule: '10 6 * * *', standaloneBoot: id === 'recurring' }));
+].map(id => ({ id, cron: 'daily', path: `/api/cron/daily`, schedule: '10 6 * * *', standaloneBoot: id === 'recurring' }));
 
 /** every server-side source file: server.ts, api/, src/server/ (no tests) */
 function serverFiles(): string[] {
