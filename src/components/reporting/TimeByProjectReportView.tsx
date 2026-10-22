@@ -29,7 +29,7 @@ export default function TimeByProjectReportView() {
 
   useEffect(() => {
     if (!workspaceId) return;
-    let live = true;
+    let alive = true;
     (async () => {
       try {
         const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}/time`, {
@@ -37,12 +37,12 @@ export default function TimeByProjectReportView() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.message || data.error || `The time entries could not be read (${res.status})`);
-        if (live) setState({ workspaceId, entries: data.entries || [] });
+        if (alive) setState({ workspaceId, entries: data.entries || [] });
       } catch (error) {
-        if (live) setState({ workspaceId, error: error instanceof Error ? error.message : String(error) });
+        if (alive) setState({ workspaceId, error: error instanceof Error ? error.message : String(error) });
       }
     })();
-    return () => { live = false; };
+    return () => { alive = false; };
   }, [workspaceId, attempt]);
 
   const current = state && state.workspaceId === workspaceId ? state : null;

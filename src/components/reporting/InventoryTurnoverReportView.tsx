@@ -30,19 +30,19 @@ export default function InventoryTurnoverReportView() {
 
   useEffect(() => {
     if (!key) return;
-    let live = true;
+    let alive = true;
     (async () => {
       try {
         const query = new URLSearchParams({ workspaceId, startDate: from, endDate: to }).toString();
         const res = await fetch(`/api/v1/reports/inventory-details?${query}`, { headers: { Authorization: `Bearer ${await getIdToken()}` } });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.message || data.error || `The stock history could not be read (${res.status})`);
-        if (live) setResult({ key, items: data.items || [] });
+        if (alive) setResult({ key, items: data.items || [] });
       } catch (error) {
-        if (live) setResult({ key, error: error instanceof Error ? error.message : String(error) });
+        if (alive) setResult({ key, error: error instanceof Error ? error.message : String(error) });
       }
     })();
-    return () => { live = false; };
+    return () => { alive = false; };
   }, [key, workspaceId, from, to]);
 
   const current = result && result.key === key ? result : null;
