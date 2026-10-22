@@ -6,6 +6,7 @@ import morgan from "morgan";
 import { supabaseUrl } from "../auth/supabaseAuth";
 import { isAiStudioProxy } from "./origins";
 import { safeRequestTarget } from "./safeRequestTarget";
+import { configuredSupabaseConnectSources, connectSources } from "./contentSecurityPolicy";
 
 /** CORS, proxy trust, compression, security headers and request logging (F-01, moved from server.ts). */
 export function applySecurityMiddleware(app: express.Express, isAllowedOrigin: (origin: string) => boolean): void {
@@ -30,8 +31,8 @@ export function applySecurityMiddleware(app: express.Express, isAllowedOrigin: (
         scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.plaid.com"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         imgSrc: ["'self'", "data:", "blob:", "https:"],
-        // Supabase: data (https) and live updates (wss)
-        connectSrc: ["'self'", supabaseUrl(), supabaseUrl().replace(/^http/, "ws"), "https://*.plaid.com", "https://*.googleapis.com"],
+        // The configured Supabase project(s): data/auth (https) and live updates (wss) — AUD-12
+        connectSrc: connectSources(configuredSupabaseConnectSources(process.env, supabaseUrl())),
         fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
         frameSrc: ["'self'", "https://*.stripe.com", "https://cdn.plaid.com"],
         frameAncestors: aiStudioProxy ? ["*"] : ["'self'"]
