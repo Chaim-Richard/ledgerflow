@@ -200,7 +200,7 @@ function generalLedgerSection(input: AccountantPackInput): { section: Accountant
       key: 'general-ledger',
       title: 'General ledger',
       fileName: 'general-ledger.csv',
-      headers: ['Account code', 'Account name', 'Date', 'Row', 'Transaction', 'Description', 'Reference', `Debit (${currency})`, `Credit (${currency})`, `Running balance (${currency})`],
+      headers: ['Account code', 'Account name', 'Date', 'Row type', 'Transaction', 'Description', 'Reference', `Debit (${currency})`, `Credit (${currency})`, `Running balance (${currency})`],
       rows,
       notes: [
         `Posted entries from ${input.startDate} to ${input.endDate}, one block per account with its opening balance.`,
