@@ -57,6 +57,7 @@ test('an open order: vendor, delivery and lines change in place, and the total f
   fireEvent.keyDown(screen.getByLabelText('Expected delivery of PO-2026-001'), { key: 'Escape' });
 
   fireEvent.click(screen.getByRole('button', { name: 'Lines of PO-2026-001' }));
+  await waitFor(() => assert.ok(screen.getByRole('region', { name: 'Files of Purchase order PO-2026-001' })));
   await type('Quantity of Paper', '6');
   await waitFor(() => assert.equal(writes.length, 1));
   const set = (writes[0].body.p_set || writes[0].body.p_data) as Record<string, unknown>;

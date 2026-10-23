@@ -79,6 +79,21 @@ test('a new credit note takes the next number of the series; without one nothing
   assert.doesNotMatch(posted, /CN-\d{4}"/, 'no random number');
 });
 
+test('customer and vendor credits expose their own linked-file panels', async () => {
+  useLedgerStore.setState({ vendorCredits: [{
+    id: 'vc1', uid: 'test-user', workspaceId: 'component-workspace', vendorId: 'vendor1', vendorName: 'North Supply', number: 'VC-1',
+    amountCents: 2000, remainingCents: 2000, date: '2026-10-01', status: 'open', createdAt: '2026-10-01T00:00:00Z',
+  } as never] });
+  render(<CreditNotesView />);
+  const customerFiles = screen.getByRole('button', { name: 'Manage files for credit note CN-2026-0001' });
+  fireEvent.click(customerFiles);
+  await waitFor(() => assert.ok(screen.getByRole('region', { name: 'Files of Credit note CN-2026-0001' })));
+  assert.ok(calls.some(call => call.url.includes('linkedId=eq.cn1')));
+
+  fireEvent.click(screen.getByRole('button', { name: /^Vendor Credits \(A\/P\)/ }));
+  assert.ok(screen.getByRole('button', { name: 'Manage files for vendor credit VC-1' }));
+});
+
 test('number, reason and date change in place; the date stays fixed once the credit was used', async () => {
   render(<CreditNotesView />);
   assert.ok(screen.getByRole('button', { name: inlineEditName('Edit Date of credit note CN-2026-0001') }));

@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, formatDate, getLocalDateISO } from '../../lib/utils';
-import { Plus, ArrowRight, FileText, Eye, Download } from 'lucide-react';
+import { Plus, ArrowRight, FileText, Eye, Download, Paperclip } from 'lucide-react';
 import { collection, addDoc, doc, updateDoc } from '../../lib/db/firestore';
 import { db, getIdToken } from '../../firebase';
 import { nextDocumentNumber } from '../../services/documentNumbers';
@@ -18,6 +18,7 @@ import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { convertEstimateToInvoice } from '../../lib/estimateConverter';
 import { estimateDeposits } from '../../lib/advancePayments';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
+import AttachmentsPanel from '../common/AttachmentsPanel';
 import EstimateDepositDialog from './EstimateDepositDialog';
 import OrderInvoiceDialog from './OrderInvoiceDialog';
 import OrderDeliveryDialog from './OrderDeliveryDialog';
@@ -46,6 +47,12 @@ const STAGE_STYLE: Record<OrderStage, string> = {
 export default function EstimatesView() {
   const user = useAuthStore(s => s.user);
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const [filesFor, setFilesFor] = useState<{ workspaceId: string; key: string } | null>(null);
+  const filesWorkspaceId = currentWorkspaceId || '';
+  const filesOpen = (key: string) => filesFor?.workspaceId === filesWorkspaceId && filesFor.key === key;
+  const toggleFiles = (key: string) => setFilesFor(current =>
+    current?.workspaceId === filesWorkspaceId && current.key === key ? null : { workspaceId: filesWorkspaceId, key },
+  );
   // quotes are in the workspace's currency (they were all saved as USD)
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
   const { addEntity } = useEntityOperations();
@@ -393,8 +400,12 @@ export default function EstimatesView() {
               {shownRows.length === 0 && (
                 <tr><td colSpan={6} className="p-6 text-center text-[var(--muted)]">Nothing here.</td></tr>
               )}
-              {shownRows.map(({ est, progress, stage }) => (
-                <tr key={est.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+              {shownRows.map(({ est, progress, stage }) => {
+                const attachmentKey = `estimates:${est.id}`;
+                const label = `Estimate ${est.number || est.id}`;
+                return (
+                  <React.Fragment key={attachmentKey}>
+                <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
                   <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white"><RecordInlineField collection="estimates" record={est} field="number" label={`Reference of estimate ${est.number}`} display={`#${est.number}`} canEdit={est.status === 'draft'} /><div><RecordInlineField collection="estimates" record={est} field="notes" kind="textarea" label={`Notes of estimate ${est.number}`} canEdit={est.status === 'draft'} placeholder="Add notes" /></div></td>
                   <td className="py-3 px-4 text-slate-800 dark:text-slate-200 font-medium">{est.customerName}</td>
                   <td className="py-3 px-4 text-[var(--muted)]"><RecordInlineField collection="estimates" record={est} field="date" kind="date" label={`Date of estimate ${est.number}`} canEdit={est.status === 'draft'} /><div>Expires: <RecordInlineField collection="estimates" record={est} field="expiryDate" kind="date" label={`Expiry of estimate ${est.number}`} canEdit={est.status === 'draft'} placeholder="Add expiry" /></div></td>
@@ -423,6 +434,10 @@ export default function EstimatesView() {
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
+                      <button type="button" aria-expanded={filesOpen(attachmentKey)} aria-label={`Manage files for estimate ${est.number || est.id}`}
+                        onClick={() => toggleFiles(attachmentKey)} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-slate-500 hover:text-indigo-600 focus-visible:outline focus-visible:outline-2" title="Files">
+                        <Paperclip className="w-4 h-4" aria-hidden="true" />
+                      </button>
                       <button
                         onClick={() => setPreviewEstimate(est)}
                         className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
@@ -498,7 +513,12 @@ export default function EstimatesView() {
                     )}
                   </td>
                 </tr>
-              ))}
+                {filesOpen(attachmentKey) && <tr><td colSpan={6} className="bg-[var(--surface)] p-3">
+                  <AttachmentsPanel target={{ collection: 'estimates', id: est.id, label }} workspaceId={est.workspaceId} />
+                </td></tr>}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         )}

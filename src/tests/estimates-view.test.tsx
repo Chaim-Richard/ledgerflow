@@ -35,6 +35,18 @@ test('estimate creation preserves mixed-language fields in the persisted request
   await waitFor(() => assert.equal(view.queryByRole('button', { name: 'Save Estimate' }), null));
 });
 
+test('saved estimates have a linked-file panel in the workspace scope', async () => {
+  const calls = stubFetchWithBodies(200, []);
+  useLedgerStore.setState({ estimates: [{
+    id: 'est-1', uid: 'test-user', workspaceId: 'component-workspace', customerId: 'cust-1', customerName: 'לקוח Acme',
+    number: 'EST-1', amountCents: 12345, date: '2026-10-01', status: 'draft', lines: [], createdAt: '2026-10-01T00:00:00Z',
+  } as never] });
+  const view = render(<EstimatesView />);
+  fireEvent.click(view.getByRole('button', { name: 'Manage files for estimate EST-1' }));
+  await waitFor(() => assert.ok(view.getByRole('region', { name: 'Files of Estimate EST-1' })));
+  assert.ok(calls.some(call => call.url.includes('linkedId=eq.est-1')));
+});
+
 test('estimate validation and Cancel send no create request', () => {
   const calls = stubFetchWithBodies(200, {});
   const view = render(<EstimatesView />);
