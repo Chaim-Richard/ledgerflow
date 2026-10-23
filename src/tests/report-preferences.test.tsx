@@ -184,6 +184,23 @@ describe('D-47 live sync hook', () => {
     assert.deepEqual(fake.saves[2].pinnedPages, [{ tab: 'reports', sub: 'pnl' }]);
   });
 
+  test('profile completion retries a first-login edit whose first update found no profile', async () => {
+    const fake = fakeAdapter();
+    await mount(fake);
+    act(() => fake.emit('user-a|ws-a', undefined));
+    await waitFor(() => assert.equal(useUIStore.getState().reportPreferencesStatus, 'synced'));
+
+    fake.failSave();
+    act(() => useUIStore.getState().recordRecentReport('pnl'));
+    await waitFor(() => assert.equal(fake.saves.length, 1));
+    await waitFor(() => assert.equal(useUIStore.getState().reportPreferencesStatus, 'error'));
+    fake.succeedSave();
+    act(() => fake.emit('user-a|ws-a', undefined)); // useLedgerData has now created the profile
+    await waitFor(() => assert.equal(fake.saves.length, 2));
+    await waitFor(() => assert.equal(useUIStore.getState().reportPreferencesStatus, 'synced'));
+    assert.deepEqual(fake.saves[1].recentReportIds, ['pnl']);
+  });
+
   test('a remote answer during a pending local write cannot clobber the edit', async () => {
     const fake = fakeAdapter();
     const release = fake.holdSave();

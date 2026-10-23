@@ -171,7 +171,12 @@ export function useReportPreferencesSync(adapter: ReportPreferencesSyncAdapter =
         }
         return;
       }
-      if (!snapshot) return;
+      if (!snapshot) {
+        // The app's profile-creation write may finish just after a first-login preference edit.
+        // Its empty scoped snapshot is the signal that updateDoc can now succeed.
+        if (saveRequested || revision !== savedRevision) requestSave();
+        return;
+      }
       if (writeInFlight || revision !== savedRevision) {
         // The in-flight/next local write is already the later user action. Its echo must not schedule
         // another write; a genuinely newer local edit calls requestSave from the store subscription.
