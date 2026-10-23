@@ -555,3 +555,19 @@ Paste **`supabase/migrations/20261024000000_period_closings.sql`** into Supabase
 - It adds the year-end closing record (`periodClosings`): one fixed record per closed year with the profit, the transfer to retained earnings and the balance-sheet totals. It is readable by members and written only by the server.
 
 *Until then:* closing a year works as before, without the closing record.
+
+## 23 Oct — one more database change to paste, after #363 merges (EG-7, AI #9)
+Paste **`supabase/migrations/20261025000000_stock_closings.sql`** into Supabase → SQL editor → Run.
+- It adds the stock closing record (`stockClosings`): each item's quantity and value at a locked period end. It is readable by members and written only by the server.
+
+*Until then:* the stock checks still run, but no stock closing can be saved.
+
+## 23 Oct — one more database change to paste, after #364 merges (EG-2 step 1, AI #9)
+Paste **`supabase/migrations/20261025010000_payment_allocations.sql`** into Supabase → SQL editor → Run.
+- It adds the payment ledger (`paymentAllocations`), which records which invoice or bill each payment paid, at what rate and on what date.
+- It also adds `allocationOperations`, which keeps retried payments from being recorded twice.
+- Both are readable by members and written only by the server.
+
+*Until then:* payments work as before, no ledger rows are written, and the server logs which file to apply.
+
+*New rule in #364 (default I used):* a payment dated before the invoice or bill it pays is refused. Say if you want it allowed.
