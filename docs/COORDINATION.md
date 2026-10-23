@@ -505,7 +505,7 @@ never invent an account or a rate, posting goes through the server.
 
 ### Weeks queue for AI #4 (Claude, 13 Oct, owner: keep every AI loaded for weeks). Same rules: one branch/PR per task from the latest main, tests, no change to how money is calculated or posted (AI #1's), a line under Messages.
 
-- [x] **D-47 Report picker D-44 follow-up: recently used and pinned reports sync per user** — AI #4, 23 Oct, PR #370: atomic per-user/workspace records in the existing private profile, validated routes, scoped offline copies, first-login/reconnect/pending-write recovery and honest sync status. Focused 19/19, related Chromium 5/5, CI PostgreSQL/RLS green; full CI pending. Evidence: `verification/ai4-d47-w12-2026-10-23.md`.
+- [x] **D-47 Report picker D-44 follow-up: recently used and pinned reports sync per user** — AI #4, 23 Oct, PR #370: atomic per-user/workspace records in the existing private profile, validated routes, scoped offline copies, first-login/reconnect/pending-write recovery and honest sync status. Focused 20/20, related Chromium 5/5, CI PostgreSQL/RLS green; full CI pending. Evidence: `verification/ai4-d47-w12-2026-10-23.md`.
 - [ ] **D-48 Visual tests: add dashboard, invoices and bills screens on phone and desktop**
 - [ ] **D-49 Visual tests: Hebrew right-to-left screenshots for reports**
 - [ ] **D-50 Accessibility: axe checks on every registry view in CI (fail on serious)**

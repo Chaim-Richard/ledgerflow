@@ -7,6 +7,8 @@ import {
   localReportPreferencesKey,
   normalizeRecentReports,
   normalizeReportPreferences,
+  PINNED_PAGES_KEY,
+  RECENT_REPORTS_KEY,
   reportPreferenceScopeKey,
   type ReportPreferenceSnapshot,
 } from '../lib/reportPreferences';
@@ -140,6 +142,19 @@ describe('D-47 preference validation and identity', () => {
 });
 
 describe('D-47 live sync hook', () => {
+  test('a signed-in scope never inherits another user\'s old device-global cache', async () => {
+    localStorage.setItem(RECENT_REPORTS_KEY, JSON.stringify(['pnl']));
+    localStorage.setItem(PINNED_PAGES_KEY, JSON.stringify([{ tab: 'reports', sub: 'pnl' }]));
+    const fake = fakeAdapter();
+    const mounted = await mount(fake);
+    assert.deepEqual(useUIStore.getState().recentReports, []);
+    assert.deepEqual(useUIStore.getState().pinnedPages, []);
+    act(() => fake.emit('user-a|ws-a', remote(['cash-flow'], '2026-10-24T10:00:00Z')));
+    await waitFor(() => assert.deepEqual(useUIStore.getState().recentReports, ['cash-flow']));
+    assert.deepEqual(useUIStore.getState().pinnedPages, []);
+    mounted.unmount();
+  });
+
   test('the first remote snapshot and a second device update replace a clean device cache without a write loop', async () => {
     const fake = fakeAdapter();
     localStorage.setItem(localReportPreferencesKey('user-a', 'ws-a'), JSON.stringify({ recentReportIds: ['cash-flow'], pinnedPages: [], pendingSync: false }));

@@ -28,13 +28,16 @@ function readLocal(uid: string, workspaceId: string): { preferences: LocalReport
         failed: false,
       };
     }
-    // D-44/I-21 kept one device-global copy. Use it as the initial value for this user/workspace,
-    // then leave it in place for older app versions instead of destructively migrating it.
-    const legacy = normalizeReportPreferences({
-      recentReportIds: parseRecentReports(localStorage.getItem(RECENT_REPORTS_KEY)),
-      pinnedPages: parsePinned(localStorage.getItem(PINNED_PAGES_KEY)),
-    });
-    return { preferences: { ...legacy, pendingSync: false }, failed: false };
+    // Only guests inherit D-44/I-21's device-global copy. An authenticated scope must never
+    // attribute another signed-in user's unscoped values to this user or workspace.
+    if (uid === 'guest') {
+      const legacy = normalizeReportPreferences({
+        recentReportIds: parseRecentReports(localStorage.getItem(RECENT_REPORTS_KEY)),
+        pinnedPages: parsePinned(localStorage.getItem(PINNED_PAGES_KEY)),
+      });
+      return { preferences: { ...legacy, pendingSync: false }, failed: false };
+    }
+    return { preferences: { recentReportIds: [], pinnedPages: [], pendingSync: false }, failed: false };
   } catch {
     return { preferences: { recentReportIds: [], pinnedPages: [], pendingSync: false }, failed: true };
   }
