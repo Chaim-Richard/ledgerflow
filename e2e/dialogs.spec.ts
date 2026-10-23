@@ -59,35 +59,72 @@ test.describe('Dialogs', () => {
       const focusableCount = await focusable.count();
       expect(focusableCount, `${d.name} needs at least two keyboard stops`).toBeGreaterThanOrEqual(2);
       const first = focusable.first();
-      const second = focusable.nth(1);
-      const last = focusable.nth(focusableCount - 1);
       await first.focus();
       await page.keyboard.press('Tab');
-      await expect(second).toBeFocused();
-      const visibleFocus = await second.evaluate(element => ({
-        keyboard: element.matches(':focus-visible'),
-        outlineWidth: Number.parseFloat(getComputedStyle(element).outlineWidth),
-        outlineStyle: getComputedStyle(element).outlineStyle,
-        boxShadow: getComputedStyle(element).boxShadow,
-        outlineColor: getComputedStyle(element).outlineColor,
-      }));
-      expect(visibleFocus.keyboard, `${d.name} next tab stop is keyboard-focused`).toBe(true);
-      const indicator = await second.evaluate(element => {
-        const style = getComputedStyle(element);
-        const outline = style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) >= 2
-          && style.outlineColor !== 'rgba(0, 0, 0, 0)' && style.outlineColor !== 'transparent';
-        const colors = [...style.boxShadow.matchAll(/rgba?\(([^)]+)\)/g)].map(match => match[1].split(',').map(part => Number.parseFloat(part.trim())));
-        const shadow = colors.some(parts => parts.slice(0, 3).some(channel => channel > 0) && (parts.length < 4 || parts[3] > 0));
-        return outline || shadow;
-      });
-      expect(indicator, `${d.name} has a visible keyboard focus indicator (${JSON.stringify(visibleFocus)})`).toBe(true);
-      await page.keyboard.press('Shift+Tab');
-      await expect(first).toBeFocused();
-      await last.focus();
-      await page.keyboard.press('Tab');
-      await expect(first).toBeFocused();
-      await page.keyboard.press('Shift+Tab');
-      await expect(last).toBeFocused();
+      const startIndex = await focusable.evaluateAll(elements => elements.findIndex(element => element === document.activeElement));
+      expect(startIndex, `${d.name} first keyboard step lands on a collected dialog control`).toBeGreaterThanOrEqual(0);
+
+      // Follow the browser's actual tab order (not assumed DOM order), checking every visible
+      // candidate exactly once before wrapping. This catches skipped/reordered intermediate stops.
+      const visited = new Set<number>();
+      const visitOrder: number[] = [];
+      let currentIndex = startIndex;
+      let wrapped = false;
+      for (let step = 0; step < focusableCount; step += 1) {
+        expect(currentIndex, `${d.name} tab stays on a collected dialog control`).toBeGreaterThanOrEqual(0);
+        expect(visited.has(currentIndex), `${d.name} tab order repeats before wrapping`).toBe(false);
+        visited.add(currentIndex);
+        visitOrder.push(currentIndex);
+        const current = focusable.nth(currentIndex);
+        await expect(current, `${d.name} dialog tab stop ${visited.size}/${focusableCount}`).toBeFocused();
+        const visibleFocus = await current.evaluate(element => {
+          const style = getComputedStyle(element);
+          const outline = style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) >= 2
+            && style.outlineColor !== 'rgba(0, 0, 0, 0)' && style.outlineColor !== 'transparent';
+          const shadows = [...style.boxShadow.matchAll(/(?:rgba?|oklch|oklab|lab|lch|color)\(([^)]+)\)/g)];
+          const shadow = shadows.some(([, value]) => {
+            const alpha = value.includes('/')
+              ? value.split('/').at(-1)?.trim()
+              : value.split(',').length === 4 ? value.split(',').at(-1)?.trim() : undefined;
+            return alpha === undefined || Number.parseFloat(alpha) > 0;
+          });
+          return { keyboard: element.matches(':focus-visible'), indicator: outline || shadow };
+        });
+        expect(visibleFocus.keyboard, `${d.name} dialog tab stop ${visited.size} is keyboard-focused`).toBe(true);
+        expect(visibleFocus.indicator, `${d.name} dialog tab stop ${visited.size} has a visible focus indicator`).toBe(true);
+
+        // Native date/number inputs may consume a Tab for an internal sub-control while the DOM
+        // activeElement remains the same. Keep stepping through those sub-controls, with a bound.
+        let nextIndex = currentIndex;
+        for (let attempt = 0; attempt < 4 && nextIndex === currentIndex; attempt += 1) {
+          await page.keyboard.press('Tab');
+          nextIndex = await focusable.evaluateAll(elements => elements.findIndex(element => element === document.activeElement));
+        }
+        expect(nextIndex, `${d.name} Tab leaves stop ${visited.size}`).toBeGreaterThanOrEqual(0);
+        if (nextIndex === startIndex) {
+          wrapped = true;
+          break;
+        }
+        expect(visited.has(nextIndex), `${d.name} tab order does not skip back before wrapping`).toBe(false);
+        currentIndex = nextIndex;
+      }
+      expect(wrapped, `${d.name} reaches the starting stop only after traversing the whole order`).toBe(true);
+      expect(visited.size, `${d.name} keyboard traversal visits every collected tab stop`).toBe(focusableCount);
+
+      // Only after visiting every stop, confirm wrapping in both directions at this actual order's ends.
+      const lastInTabOrder = focusable.nth(visitOrder[visitOrder.length - 1]);
+      let previousIndex = startIndex;
+      for (let attempt = 0; attempt < 4 && previousIndex !== visitOrder[visitOrder.length - 1]; attempt += 1) {
+        await page.keyboard.press('Shift+Tab');
+        previousIndex = await focusable.evaluateAll(elements => elements.findIndex(element => element === document.activeElement));
+      }
+      await expect(lastInTabOrder).toBeFocused();
+      let nextIndex = previousIndex;
+      for (let attempt = 0; attempt < 4 && nextIndex !== startIndex; attempt += 1) {
+        await page.keyboard.press('Tab');
+        nextIndex = await focusable.evaluateAll(elements => elements.findIndex(element => element === document.activeElement));
+      }
+      await expect(focusable.nth(startIndex)).toBeFocused();
 
       const results = await new AxeBuilder({ page }).include('[role="dialog"]').disableRules(['color-contrast']).analyze();
       expect(results.violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
