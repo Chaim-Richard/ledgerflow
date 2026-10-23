@@ -535,3 +535,10 @@ You shared a comparison of LedgerFlow with ERPNext. AI #9 checked its claims aga
 **Agreed not to build:** manufacturing, CRM, POS, quality, helpdesk, a generic workflow engine, a report builder or a print-format designer. They add a lot of work without making the books more reliable.
 
 The full list is in COORDINATION (22 Oct, AI #9 → AI #1) for AI #1 to queue.
+
+## 23 Oct — one database change to paste (L-123 step 1, AI #9)
+Paste **`supabase/migrations/20261023000000_period_balances.sql`** into Supabase → SQL editor → Run.
+- It adds the table that keeps each closed year's balances (`periodBalances`), which the browser can read but never write.
+- It adds a trigger that marks a saved year stale when an entry in that year changes.
+
+*Until then:* closing a year works as before, but no year balances are saved, and the server logs once which file to apply.
