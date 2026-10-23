@@ -7,7 +7,7 @@
  * Pure: the Stock history window and the nightly check read it.
  */
 
-export type StockMoveKind = 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'purchase-reversal' | 'purchase-return' | 'purchase-return-reversal' | 'opening' | 'adjustment' | 'count' | 'manual-cogs' | 'transfer-out' | 'transfer-in' | 'revaluation';
+export type StockMoveKind = 'sale' | 'sale-reversal' | 'return' | 'return-reversal' | 'purchase' | 'purchase-reversal' | 'purchase-return' | 'purchase-return-reversal' | 'opening' | 'adjustment' | 'count' | 'manual-cogs' | 'transfer-out' | 'transfer-in' | 'revaluation' | 'cost-repost';
 
 export interface StockMove {
   id?: string;
@@ -43,6 +43,10 @@ export interface StockMove {
   documentLineId?: string;
   /** DIM-2 phase 3: where the units went in the books: the sold line's labels (project, property, …), not its location */
   labels?: Record<string, string>;
+  /** EG-1 review: the database's insert order (a sequence set by a trigger); none on moves written before it */
+  dbSeq?: number;
+  /** EG-1: for a cost-repost move, the sale's entry whose cost it corrects */
+  correctsTxId?: string;
   /** DIM-2 phase 3: why stock was adjusted, as the person wrote it */
   purpose?: string;
   uid: string;
@@ -66,6 +70,8 @@ export const STOCK_MOVE_LABEL: Record<StockMoveKind, string> = {
   'transfer-in': 'Moved in',
   // ISS-130: the cost of stock on hand changed, with its entry; no units move (quantity 0, the value change)
   revaluation: 'Revalued',
+  // EG-1: a sale's cost corrected after a backdated purchase; no units move (quantity 0, the value change)
+  'cost-repost': 'Cost corrected (repost)',
 };
 
 /** W-01: the stock with no location (made before locations were used, or never placed). */
@@ -76,6 +82,34 @@ const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
 /** The moves of one item in the order they happened. */
 export function orderedMoves(moves: StockMove[]): StockMove[] {
   return [...moves].sort((a, b) => String(a.seq).localeCompare(String(b.seq)));
+}
+
+/**
+ * The replay order (review): by date, then the database's own insert order (`dbSeq`, from the sequence set by the
+ * stockMoves trigger of migration 20261023010000; moves written before it have none and come first), then the
+ * writer's `seq`, then the id, so the order is total and the same on every run.
+ */
+export function compareMoves(a: Pick<StockMove, 'date' | 'seq'> & { id?: string; dbSeq?: unknown }, b: typeof a): number {
+  const seqOf = (m: typeof a) => (Number.isSafeInteger(Number(m.dbSeq)) && m.dbSeq !== undefined && m.dbSeq !== null ? Number(m.dbSeq) : -1);
+  return String(a.date).slice(0, 10).localeCompare(String(b.date).slice(0, 10)) || seqOf(a) - seqOf(b)
+    || String(a.seq).localeCompare(String(b.seq)) || String(a.id || '').localeCompare(String(b.id || ''));
+}
+
+/**
+ * EG-1 (review finding 7): one item's moves in date order (ties: the order written), with the quantity before and
+ * after each derived from the quantities moved, starting where the history starts. A move written after later-dated
+ * ones (a backdated bill) keeps, as stored, the quantity of the moment it was written; the derived quantities are
+ * those of its date, so "as of" a day reads the stock of that day.
+ */
+export function datedMoves(moves: StockMove[]): StockMove[] {
+  const bySeq = orderedMoves(moves);
+  let at = round6(Number(bySeq[0]?.quantityBefore) || 0);
+  return [...bySeq].sort(compareMoves)
+    .map(m => {
+      const before = at;
+      at = round6(at + (Number(m.quantity) || 0));
+      return { ...m, quantityBefore: before, quantityAfter: at };
+    });
 }
 
 /**
@@ -146,7 +180,7 @@ export function itemDetails(moves: StockMove[], startDate: string, endDate: stri
   for (const m of moves) byItem.set(m.itemId, [...(byItem.get(m.itemId) || []), m]);
   const out: ItemDetails[] = [];
   for (const [itemId, list] of byItem) {
-    const ordered = orderedMoves(list).filter(m => String(m.date).slice(0, 10) <= endDate);
+    const ordered = datedMoves(list).filter(m => String(m.date).slice(0, 10) <= endDate);
     const before = ordered.filter(m => String(m.date).slice(0, 10) < startDate);
     const within = ordered.filter(m => String(m.date).slice(0, 10) >= startDate);
     const value = (ms: StockMove[]) => ms.reduce((s, m) => s + (Number(m.valueCents) || 0), 0);
@@ -220,10 +254,12 @@ const days = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:0
  */
 export function stockAging(moves: StockMove[], asOf: string): StockAge[] {
   const byItem = new Map<string, StockMove[]>();
-  for (const m of moves) if (String(m.date).slice(0, 10) <= asOf) byItem.set(m.itemId, [...(byItem.get(m.itemId) || []), m]);
+  for (const m of moves) byItem.set(m.itemId, [...(byItem.get(m.itemId) || []), m]);
   const out: StockAge[] = [];
   for (const [itemId, list] of byItem) {
-    const ordered = orderedMoves(list);
+    // the quantities of the day, from the whole history (a move written later but dated earlier counts on its date)
+    const ordered = datedMoves(list).filter(m => String(m.date).slice(0, 10) <= asOf);
+    if (ordered.length === 0) continue;
     const quantity = round6(Number(ordered[ordered.length - 1]?.quantityAfter) || 0);
     if (quantity <= 0) continue;
     const layers: Array<{ date: string; units: number }> = [];

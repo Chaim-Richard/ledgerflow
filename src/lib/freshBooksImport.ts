@@ -47,11 +47,12 @@ export function normalizeFreshBooksCsv(kind: ImportKind, table: readonly (readon
     ]),
   ];
   if (kind === 'vendors') return [
-    ['Name', 'Email', 'Phone', 'Category'],
+    ['Name', 'Email', 'Phone', 'Address', 'Category'],
     ...rows.map(row => [
       contactName([...headers], row),
       cell([...headers], row, 'Email', 'Email Address', 'Vendor Email'),
       cell([...headers], row, 'Phone', 'Phone Number'),
+      address([...headers], row),
       cell([...headers], row, 'Category', 'Vendor Type'),
     ]),
   ];

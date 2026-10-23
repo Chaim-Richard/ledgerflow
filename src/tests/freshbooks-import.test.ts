@@ -18,18 +18,19 @@ test('E-7 FreshBooks clients: company name wins; names and multi-column addresse
   assert.deepEqual(out.errors, []);
   assert.equal(out.records[0].data.name, 'Acme LLC');
   assert.equal(out.records[0].data.address, '1 Pine St, Suite 2, Portland, OR, 97201, US');
-  assert.equal(out.records[0].data.email, 'sara@example.com');
+  assert.equal(out.records[0].data.email, 'SAra@example.com', 'the ordinary checked import preserves email case unless cleanup is accepted in the screen');
   assert.equal(out.records[1].data.name, 'Avi Levy');
 });
 test('E-7 vendors: company or personal name and email, no invoice or payment records', () => {
   const out = prepared('vendors', [
-    ['First Name', 'Last Name', 'Company Name', 'Email', 'Phone'],
-    ['David', 'M', '', 'vendor@example.com', '555-0100'],
-    ['', '', 'Supplier Co', 'supplier@example.com', '555-0123'],
+    ['First Name', 'Last Name', 'Company Name', 'Email', 'Phone', 'Address Line 1', 'City', 'State', 'Zip Code', 'Country'],
+    ['David', 'M', '', 'vendor@example.com', '555-0100', '10 Main St', 'Buffalo', 'NY', '14202', 'US'],
+    ['', '', 'Supplier Co', 'supplier@example.com', '555-0123', '', '', '', '', ''],
   ]);
   assert.deepEqual(out.errors, []);
   assert.deepEqual(out.records.map(r => r.data.name), ['David M', 'Supplier Co']);
-  assert.deepEqual(Object.keys(out.records[0].data).sort(), ['category', 'email', 'name', 'phone', 'status']);
+  assert.equal(out.records[0].data.address, '10 Main St, Buffalo, NY, 14202, US');
+  assert.deepEqual(Object.keys(out.records[0].data).sort(), ['address', 'category', 'email', 'name', 'phone', 'status']);
 });
 test('E-7 items: FreshBooks Rate becomes cents and duplicate names are refused by existing validation', () => {
   const out = prepared('items', [

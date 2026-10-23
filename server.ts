@@ -140,7 +140,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   app.use("/api/v1/revenue", apiAuthenticate, revenueRouter);
   app.use("/api/v1/consolidation", apiAuthenticate, consolidationRouter);
   app.use("/api/v1/lease", apiAuthenticate, leaseRouter);
-  app.use("/api/v1/inventory", apiAuthenticate, inventoryRouter);
+  app.use("/api/v1/inventory", apiAuthenticate, inventoryRouter).use("/api/v1/repost", apiAuthenticate, (await import("./src/server/routes/repostRoutes")).repostRouter);
   app.use("/api/v1/fx", apiAuthenticate, fxRouter);
   app.use("/api/v1/support", authenticate, supportRouter);
   app.use("/api/v1/payments", apiAuthenticate, paymentRouter);

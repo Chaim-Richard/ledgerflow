@@ -664,5 +664,30 @@ select pg_temp.expect_ok('bookkeeper posts an entry the snapshot covers', 'u-boo
   $$insert into transactions(id,data) values ('tx-l123', '{"workspaceId":"ws1","date":"2026-06-01","lines":[]}')$$);
 select pg_temp.expect_value('that entry marked the snapshot stale', $q$select data->>'stale' from "periodBalances" where id = 'ws1_2026-12-31'$q$, 'true');
 
+-- period-closing documents (EG-3): written only by the server; members read; the browser can neither write one nor
+-- mark one superseded
+select set_config('request.jwt.claims', '', true);
+insert into "periodClosings" (id, data) values ('ws1_2026-12-31_v1', '{"workspaceId":"ws1","yearEnd":"2026-12-31","version":1,"status":"current","profitAndLoss":{"netIncome":200000}}');
+select pg_temp.expect_count('viewer reads the closing document', 'u-view', $$select count(*) from "periodClosings"$$, 1);
+select pg_temp.expect_count('outsider reads no closing document', 'u-out', $$select count(*) from "periodClosings"$$, 0);
+select pg_temp.expect_denied('owner marks a closing document superseded from the browser', 'u-owner', $$select lf_update('periodClosings','ws1_2026-12-31_v1','{"status":"superseded"}'::jsonb)$$);
+select pg_temp.expect_denied('owner writes a closing document with lf_set', 'u-owner', $$select lf_set('periodClosings','ws1_2026-12-31_v2','{"workspaceId":"ws1","yearEnd":"2026-12-31","version":2}'::jsonb)$$);
+select pg_temp.expect_denied('accountant adds a closing document from the browser', 'u-acct',
+  $$insert into "periodClosings"(id,data) values ('ws1_2025-12-31_v1', '{"workspaceId":"ws1","yearEnd":"2025-12-31"}')$$);
+select pg_temp.expect_denied('owner deletes a closing document from the browser', 'u-owner', $$delete from "periodClosings" where id = 'ws1_2026-12-31_v1'$$);
+select pg_temp.expect_value('the refused writes left it as it was', $q$select data->>'status' from "periodClosings" where id = 'ws1_2026-12-31_v1'$q$, 'current');
+
+-- repost queue (EG-1): written only by the server; members read; nobody writes it from the browser
+select set_config('request.jwt.claims', '', true);
+insert into "repostQueue" (id, data) values ('ws1_stock-cost_i1', '{"workspaceId":"ws1","kind":"stock-cost","key":"i1","fromDate":"2026-01-03","status":"dirty"}');
+select pg_temp.expect_count('viewer reads the repost queue', 'u-view', $$select count(*) from "repostQueue"$$, 1);
+select pg_temp.expect_count('outsider reads no repost queue', 'u-out', $$select count(*) from "repostQueue"$$, 0);
+select pg_temp.expect_denied('owner marks a queue row clean from the browser', 'u-owner', $$select lf_update('repostQueue','ws1_stock-cost_i1','{"status":"clean"}'::jsonb)$$);
+select pg_temp.expect_denied('owner writes a queue row with lf_set', 'u-owner', $$select lf_set('repostQueue','ws1_stock-cost_i2','{"workspaceId":"ws1","kind":"stock-cost","key":"i2","status":"dirty"}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper adds a queue row from the browser', 'u-book',
+  $$insert into "repostQueue"(id,data) values ('ws1_stock-cost_i3', '{"workspaceId":"ws1","kind":"stock-cost","key":"i3","status":"dirty"}')$$);
+select pg_temp.expect_denied('owner deletes a queue row from the browser', 'u-owner', $$delete from "repostQueue" where id = 'ws1_stock-cost_i1'$$);
+select pg_temp.expect_value('the refused writes left it as it was', $q$select data->>'status' from "repostQueue" where id = 'ws1_stock-cost_i1'$q$, 'dirty');
+
 select 'ALL RLS TESTS PASSED' as result;
 rollback;
