@@ -24,17 +24,21 @@ test.describe('Data Quality Checks & 12-Month Sample Year Benchmark', () => {
 
     await page.locator('button:has-text("Reports")').first().click();
 
-    const dqTab = page.locator('button:has-text("Data Quality Checks")').first();
-    await expect(dqTab).toBeVisible({ timeout: 10000 });
-    await dqTab.click();
+    const nav = page.getByRole('navigation', { name: 'Report pages', exact: true });
+    const details = nav.locator('details');
+    await expect(details).toBeVisible({ timeout: 10000 });
+    if (!(await details.evaluate((el: HTMLDetailsElement) => el.open))) {
+      await details.locator('summary').click();
+    }
+    const chooser = nav.getByLabel('Choose report', { exact: true });
+
+    await chooser.selectOption({ label: 'Data Quality Checks' });
     await expect(page.getByRole('heading', { name: 'Data quality checks' })).toBeVisible();
     await settleStyles(page);
     const axeDq = await new AxeBuilder({ page }).analyze();
     expect(axeDq.violations.filter(v => v.impact === 'critical' || v.impact === 'serious')).toEqual([]);
 
-    const benchTab = page.locator('button:has-text("12-Month Sample Year & Speed")').first();
-    await expect(benchTab).toBeVisible({ timeout: 10000 });
-    await benchTab.click();
+    await chooser.selectOption({ label: '12-Month Sample Year & Speed' });
     await expect(page.getByRole('heading', { name: /12-month sample business & report speed/i })).toBeVisible();
     await expect(page.getByText(/All 12 months verified/)).toBeVisible();
     await page.getByLabel('Volume scale').selectOption('2');
