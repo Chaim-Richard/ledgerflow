@@ -13,8 +13,8 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 
 | Workflow | What is missing | Who |
 |---|---|---|
-| W10 backup → restore | browser test (F-46, now D-98) | AI #4 |
-| W14 roles and access | browser journey (now D-99) | AI #4 |
+| W10 backup → restore | D-98 merged #324; browser passes with stubbed HTTP boundary; deployment restore drill remains separate | AI #4 / lead |
+| W14 roles and access | D-99 screen-role checks merged #324; real four-account authentication/post/approval/payroll journey remains | AI #4 |
 | G-02 first hour without dead ends | wording/dead-end fixes done (D-97 batches 1–2); left: AI #7's authenticated G-24 journey certifies G-02 | AI #4 / AI #7 |
 | Done for A | W1 (browser #282, worked figures W1-GOLD #291), W2, W3, W4, W5, W6, W9 | — |
 
@@ -65,7 +65,7 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 | #9 Opus (money lane) | **P0:** L94-STEP2 (the server builds invoice/bill entries); then ISS-160, PREV-5, AUD-15, L94-STEP2B, W7-GOLD, W8-GOLD, PREV-6, AUD-13, ISS-143+AUD-03, AUD-10, … (24 open, about 3 days; full order in COORDINATION). FIFO/lot costing waits for the owner | — |
 | #7 (fork: Chaim-Richard) | Not active recently — its stage-A tasks moved to AI #4. When active: F-48/F-49 flakes, stability queue (F-*). How to send work: COORDINATION "AIs that work from the fork" | — |
 | #3 Arena | **A-201 + A-202 ready for review** (`arena/4c574f50-ledgerflow`: Hebrew help for all 113 reports, and "what does this number mean?" for the 10 main report totals); #306 (A-194/196/197, A-148, A-206) merged 22 Oct. Next: A-149 (rest of my screens), A-185, A-183, A-182, A-138, A-137, A-131/132, A-190/192/193, A-180, A-107, A-72 | `arena/4c574f50-ledgerflow` |
-| #4 | **P0 first (moved from AI #7):** D-98 = F-46 backup → restore browser journey (W10), D-99 = W14 roles browser journey; then its D-queue | — |
+| #4 | #324 merged (D-98 screen journey, D-99 partial role journey, D-13/D-14 docs; D-12 load measurements partial). D-44 grouped report picker in progress; D-47 sync remains open. Real authenticated W14 proof remains open. | `arena/395851ed-ledgerflow` |
 | #5 | **E-58 landed on main** (Reports → Accountant export pack: trial balance, GL, A/R, A/P, tax by period; ZIP of CSVs + print/PDF, guarded and worked-figure tested) and **E-26/E-43 landed on main** (Banking → Import statement: Israeli bank activity CSV read by column name, date order chosen not guessed, totals/balance lines refused). Queue audit done: E-18…E-27, E-30, E-31, E-41…E-43, E-48 ticked with evidence; **E-17 left open** (the 856 file is a worksheet, not the authority's fixed-width file). Next: E-28 (Xero invoices/bills), E-29 (QuickBooks IIF), E-32…E-34 (exports), E-36…E-40 (IL address, phone/email, duplicates, currency/country tables) | PR #310 now docs-only (`fd00366e`); code commits are in `main` |
 | #2 Codex | **Screen wiring C-102…C-126 is done** (21 Oct: all 50 modules in `workspaceExports.ts` reach a screen; C-115/C-117/C-120/C-121/C-122 ticked). Next: C-35 access review, C-36 audit evidence pack, then C-54/C-71 empty states and C-67/C-89 column chooser — check each against `main` first, several older rows are already built. No new tax screens (stage C) | — |
 | #6 (fork: Chaim-Richard) | S-01–S-05 merged 21 Oct (#266–#270); next: S-1 onward in its queue. How to send work: COORDINATION "AIs that work from the fork" | — |
