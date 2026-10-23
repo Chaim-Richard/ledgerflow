@@ -78,7 +78,12 @@ describe('L-123 step 2: the server reports read balancesAsOf', { skip: !url && '
     const res = await realFetch(`${base}/api/v1/reports/${path}?${new URLSearchParams(q)}`, { headers: { 'x-test-uid': OWNER } });
     const text = await res.text();
     assert.equal(res.status, 200, `${path} ${JSON.stringify(q)}: ${text}`);
-    return text;
+    if (path === 'balance-sheet-by-label') return text;
+    // AUD-10: the statement routes attach `provenance` (with `cachedAt` on a cache hit); check it and compare the figures.
+    const { provenance, ...rest } = JSON.parse(text) as { provenance?: { source?: string; completeness?: string } } & Record<string, unknown>;
+    assert.equal(provenance?.source, 'server', `${path}: missing server provenance`);
+    assert.equal(provenance?.completeness, 'complete', `${path}: expected complete provenance`);
+    return JSON.stringify(rest);
   };
   const workspaces: string[] = [];
   const newWorkspace = async (prefix: string) => {

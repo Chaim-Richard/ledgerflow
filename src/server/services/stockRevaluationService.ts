@@ -65,6 +65,11 @@ export interface StockRevaluationResult {
  * is another revaluation back to the earlier cost. Returns the refusal, or null for any other entry.
  */
 export function revaluationEntryLock(entry: { metadata?: Record<string, unknown> } | undefined | null): string | null {
+  // EG-1 review: a repost correction moves with its item's cost and its cost-repost stock move in the same way
+  if (entry?.metadata?.type === 'repost-cogs-adjust') {
+    const name = String(entry.metadata.itemName || entry.metadata.itemId || 'the item');
+    return `This entry corrects the cost of ${name} after a backdated change (repost). It is undone only with the entry it corrects (edit or void that document); changing, voiding, deleting or reversing it here would leave the stock history and the books apart.`;
+  }
   if (entry?.metadata?.type !== 'stock-revaluation') return null;
   const item = String(entry.metadata.itemName || entry.metadata.itemId || 'the item');
   return `This entry is a stock revaluation of ${item}. To undo it, revalue ${item} back to its earlier cost (Inventory → Revalue cost); changing, voiding, deleting or reversing the entry here would leave the item's cost out of step with the books.`;

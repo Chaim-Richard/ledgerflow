@@ -2,6 +2,8 @@
  * Server report routes against the database (GET /api/v1/reports/aging and /budget-vs-actual).
  * Fixed: aging ignored deposits, foreign currency and approved bills; budget-vs-actual read
  * `accountId`, which budgets don't have (they keep `targetId`), and summed raw line amounts.
+ * AUD-10: P&L, balance sheet, trial balance, cash flow and general ledger say where they come from
+ * (`provenance`): the server reads every entry; a P&L or balance sheet from the 60-second cache says when.
  * Runs when LF_TEST_DATABASE_URL is set.
  */
 import test, { after, before, describe } from 'node:test';
@@ -95,5 +97,62 @@ describe('Report routes', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () =
       assert.equal(row.actual, 1100);
     }
     assert.deepEqual(rows.map(r => r.variance).sort((a, b) => a - b), [-100, 900]);
+  });
+
+  // AUD-10: report routes cache by URL; each test reads its own URL (`_read`)
+  test('P&L: fresh answer is complete with no cache time; the repeat within a minute is the cached one and says when', async () => {
+    const path = `/profit-and-loss?workspaceId=${ws}&startDate=2026-05-01&endDate=2026-05-31&_read=aud10-pl`;
+    const before = Date.now();
+    const first = await get(path);
+    assert.equal(first.status, 200);
+    // posted May rent 1000 at 1.1 = 1100; the draft is left out
+    assert.equal((first.body.expense as { total: number }).total, 1100);
+    assert.equal(first.body.netIncome, -1100);
+    assert.deepEqual(first.body.provenance, { source: 'server', completeness: 'complete' });
+    // a new posted entry of 400 inside the minute: the cached answer still says 1100, and when it was worked out
+    await db.collection('transactions').doc(id('t3')).set({ workspaceId: ws, date: '2026-05-12', status: 'completed', description: 'More rent',
+      lines: [{ accountId: id('rent'), amountCents: 400 }, { accountId: id('bank'), amountCents: -400 }] });
+    try {
+      const second = await get(path);
+      assert.equal((second.body.expense as { total: number }).total, 1100);
+      const p = second.body.provenance as { source: string; completeness: string; cachedAt: string };
+      assert.equal(p.source, 'server');
+      assert.equal(p.completeness, 'complete');
+      const at = Date.parse(p.cachedAt);
+      assert.ok(at >= before - 1000 && at <= Date.now(), `cachedAt ${p.cachedAt} is when the first answer was worked out`);
+      const { provenance: _a, ...figures1 } = first.body; const { provenance: _b, ...figures2 } = second.body;
+      assert.deepEqual(figures2, figures1, 'the cache changes no figure');
+      // a new URL reads again: 1100 + 400 = 1500, fresh
+      const third = await get(`${path}-2`);
+      assert.equal((third.body.expense as { total: number }).total, 1500);
+      assert.deepEqual(third.body.provenance, { source: 'server', completeness: 'complete' });
+    } finally {
+      await db.collection('transactions').doc(id('t3')).delete();
+    }
+  });
+
+  test('balance sheet: fresh then cached, same figures (bank -1100)', async () => {
+    const path = `/balance-sheet?workspaceId=${ws}&endDate=2026-05-31&_read=aud10-bs`;
+    const first = await get(path);
+    assert.equal(first.status, 200);
+    assert.equal((first.body.assets as Record<string, number>)[id('bank')], -1100);
+    assert.deepEqual(first.body.provenance, { source: 'server', completeness: 'complete' });
+    const second = await get(path);
+    assert.equal((second.body.assets as Record<string, number>)[id('bank')], -1100);
+    assert.equal(typeof (second.body.provenance as { cachedAt?: string }).cachedAt, 'string');
+  });
+
+  test('trial balance, cash flow and general ledger are never cached: complete, no cache time, even repeated', async () => {
+    for (const path of [`/trial-balance?workspaceId=${ws}&asOfDate=2026-05-31&_read=aud10`, `/cash-flow?workspaceId=${ws}&startDate=2026-05-01&endDate=2026-05-31&_read=aud10`,
+      `/general-ledger?workspaceId=${ws}&startDate=2026-05-01&endDate=2026-05-31&_read=aud10`]) {
+      for (let i = 0; i < 2; i++) {
+        const { status, body } = await get(path);
+        assert.equal(status, 200, path);
+        assert.deepEqual(body.provenance, { source: 'server', completeness: 'complete' }, path);
+      }
+    }
+    const tb = await get(`/trial-balance?workspaceId=${ws}&asOfDate=2026-05-31&_read=aud10-figures`);
+    assert.equal(tb.body.totalDebit, 1100);
+    assert.equal(tb.body.totalCredit, 1100);
   });
 });

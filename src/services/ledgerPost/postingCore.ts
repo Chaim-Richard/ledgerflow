@@ -250,3 +250,21 @@ export async function postTxsServerApi(
   if (!host) throw new Error('Postings cannot be sent here: no posting host is registered (pass context.capture to collect them)');
   await host.send(txs, workspaceId, entityMutation, context);
 }
+
+/**
+ * EG-12: what an invoice's or bill's tax entry line keeps of the tax it used, as the document saved it: the code, its
+ * treatment and each part's rate and amount, and `taxRate` when the code has one part. Read from the
+ * document, never from the workspace's current rates, so the entry shows the breakdown it was posted with.
+ */
+export function taxLineStamp(doc: { taxCodeId?: string; taxTreatment?: TransactionLine['taxTreatment']; taxBreakdown?: Array<{ name: string; rate: number; taxCents: number }> }): Partial<TransactionLine> {
+  const parts = (Array.isArray(doc.taxBreakdown) ? doc.taxBreakdown : [])
+    .filter(p => p && Number.isFinite(Number(p.rate)))
+    .map(p => ({ name: String(p.name), rate: Number(p.rate), taxCents: Math.round(Number(p.taxCents) || 0) }));
+  if (!doc.taxCodeId && parts.length === 0) return {};
+  return {
+    ...(parts.length === 1 ? { taxRate: parts[0].rate } : {}),
+    ...(doc.taxCodeId ? { taxCodeId: doc.taxCodeId } : {}),
+    ...(doc.taxTreatment ? { taxTreatment: doc.taxTreatment } : {}),
+    ...(parts.length ? { taxBreakdown: parts } : {}),
+  };
+}

@@ -63,6 +63,10 @@ export interface TransactionLine {
   total_impact?: number; // Risk/Impact factor
   taxRate?: number;
   taxAmountCents?: number;
+  /** EG-12: on an invoice's or bill's tax line, the tax the document used (postingCore taxLineStamp) */
+  taxCodeId?: string;
+  taxTreatment?: TaxTreatment;
+  taxBreakdown?: Array<{ name: string; rate: number; taxCents: number }>;
   project?: string;
   department?: string;
   location?: string;

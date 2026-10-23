@@ -25,7 +25,9 @@ import type { ReviewContact } from '../../../lib/contactDuplicateReview';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useLedgerCollections } from '../../../hooks/useLedgerCollections';
 import { reconcileImportCounts } from '../../../lib/importCountReconciliation';
+import { cleanupContactImportRows } from '../../../lib/contactImportCleanup';
 import { MigrationTrialBalanceProof } from './MigrationTrialBalanceProof';
+import ContactImportQualityReview from './ContactImportQualityReview';
 import XeroDocumentsImport from './XeroDocumentsImport';
 
 /** PREV-6: a garbled (non-UTF-8) or cut-off CSV is refused whole, with a message. */
@@ -64,7 +66,7 @@ interface RecentImport {
 
 const KIND_HELP: Record<ImportKind, string> = {
   customers: 'Name, email, phone, address, tax ID, terms…',
-  vendors: 'Name, email, phone, category, 1099…',
+  vendors: 'Name, email, phone, address, category, 1099…',
   items: 'Name, SKU, price, cost, quantity on hand…',
   accounts: 'Name, code, type (asset, bank, income…)',
 };
@@ -120,6 +122,9 @@ export default function ImportSettings() {
     [iif, kind, source, rawTable, contactFile],
   );
   const [mapping, setMapping] = useState<FieldMapping>({});
+  const [phoneCountry, setPhoneCountry] = useState('');
+  const [acceptEmailSuggestions, setAcceptEmailSuggestions] = useState(false);
+  const [acceptPhoneSuggestions, setAcceptPhoneSuggestions] = useState(false);
   const [openingDate, setOpeningDate] = useState(() => getLocalDateISO());
   const [busy, setBusy] = useState(false);
   const [check, setCheck] = useState<ImportResult | null>(null);
@@ -131,7 +136,12 @@ export default function ImportSettings() {
 
   const definition = IMPORT_DEFINITIONS[kind];
   const columns = useMemo(() => (table[0] || []).map((name, position) => ({ name, position })), [table]);
-  const rows = useMemo(() => applyMapping(kind, table.slice(1), mapping), [kind, table, mapping]);
+  const mappedRows = useMemo(() => applyMapping(kind, table.slice(1), mapping), [kind, table, mapping]);
+  const contactCleanup = useMemo(() => cleanupContactImportRows(kind, mappedRows, phoneCountry, {
+    acceptEmailSuggestions,
+    acceptPhoneSuggestions,
+  }), [kind, mappedRows, phoneCountry, acceptEmailSuggestions, acceptPhoneSuggestions]);
+  const rows = contactCleanup.rows;
   const prepared = useMemo(() => prepareImport(kind, rows), [kind, rows]);
   const stockCents = kind === 'items' ? openingStockCents(prepared.records) : 0;
   const issues = serverIssues.length > 0 ? serverIssues : prepared.errors;
@@ -182,6 +192,11 @@ export default function ImportSettings() {
     setServerIssues([]);
   };
 
+  const resetContactCleanupAcceptance = () => {
+    setAcceptEmailSuggestions(false);
+    setAcceptPhoneSuggestions(false);
+  };
+
   const chooseKind = (next: ImportKind) => {
     // A-182: an address book only ever becomes customers or vendors — say so instead of going blank.
     if (contactFile && next !== 'customers' && next !== 'vendors') {
@@ -189,6 +204,7 @@ export default function ImportSettings() {
       return;
     }
     setKind(next);
+    resetContactCleanupAcceptance();
     const preview = iif ? iif.tables[next] : contactFile ? contactFile.table : normalizeSourceTable(source, next, rawTable);
     setMapping(preview.length ? guessMapping(next, preview[0]) : {});
     resetResults();
@@ -197,6 +213,8 @@ export default function ImportSettings() {
   const onFile = async (file: File | undefined) => {
     if (!file) return;
     resetResults();
+    resetContactCleanupAcceptance();
+    setPhoneCountry('');
     try {
       const lower = file.name.toLowerCase();
       if (lower.endsWith('.iif') || lower.endsWith('.qbi')) {
@@ -319,6 +337,8 @@ export default function ImportSettings() {
               const next: CsvSource = e.target.value === 'freshbooks' ? 'freshbooks' : e.target.value === 'quickbooks' ? 'quickbooks' : e.target.value === 'iif' ? 'iif' : 'generic';
               if (next !== 'iif') setIif(null);
               setContactFile(null);
+              setPhoneCountry('');
+              resetContactCleanupAcceptance();
               setSource(next);
               const converted = normalizeSourceTable(next, kind, rawTable);
               setMapping(converted.length ? guessMapping(kind, converted[0]) : {});
@@ -430,7 +450,11 @@ export default function ImportSettings() {
                   <select
                     id={`map-${field.key}`}
                     value={mapping[field.key] ?? -1}
-                    onChange={e => { setMapping({ ...mapping, [field.key]: Number(e.target.value) }); resetResults(); }}
+                    onChange={e => {
+                      setMapping({ ...mapping, [field.key]: Number(e.target.value) });
+                      resetContactCleanupAcceptance();
+                      resetResults();
+                    }}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] text-sm text-[var(--text)]"
                   >
                     <option value={-1}>(not in the file)</option>
@@ -484,6 +508,25 @@ export default function ImportSettings() {
                   </>
                 )}
               </div>
+            )}
+
+            {(kind === 'customers' || kind === 'vendors') && (
+              <ContactImportQualityReview
+                key={`${fileName}:${kind}`}
+                kind={kind}
+                sourceRows={mappedRows}
+                cleanup={contactCleanup}
+                phoneCountry={phoneCountry}
+                onPhoneCountryChange={country => {
+                  setPhoneCountry(country);
+                  setAcceptPhoneSuggestions(false);
+                  resetResults();
+                }}
+                acceptEmailSuggestions={acceptEmailSuggestions}
+                acceptPhoneSuggestions={acceptPhoneSuggestions}
+                onAcceptEmailSuggestionsChange={accepted => { setAcceptEmailSuggestions(accepted); resetResults(); }}
+                onAcceptPhoneSuggestionsChange={accepted => { setAcceptPhoneSuggestions(accepted); resetResults(); }}
+              />
             )}
 
             {issues.length > 0 && (

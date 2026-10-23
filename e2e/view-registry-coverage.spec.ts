@@ -164,11 +164,19 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Accountant export pack', componentName: 'AccountantExportPackView', id: 'accountant-export-pack' },
   ];
 
+  async function chooseReport(page: import('@playwright/test').Page, label: string) {
+    const nav = page.getByRole('navigation', { name: 'Report pages', exact: true });
+    const details = nav.locator('details');
+    await expect(details).toBeVisible({ timeout: 10000 });
+    if (!(await details.evaluate((el: HTMLDetailsElement) => el.open))) {
+      await details.locator('summary').click();
+    }
+    await nav.getByLabel('Choose report', { exact: true }).selectOption({ label });
+  }
+
   test('Warehouse operations workflows are reachable from Inventory Cycle Count', async ({ page }) => {
     await page.locator('button:has-text("Reports")').first().click();
-    const cycleCount = page.locator('button:has-text("Inventory Cycle Count")').first();
-    await expect(cycleCount).toBeVisible({ timeout: 10000 });
-    await cycleCount.click();
+    await chooseReport(page, 'Inventory Cycle Count');
     await page.getByRole('tab', { name: 'Warehouse operations' }).click();
     await expect(page.getByRole('heading', { name: 'Warehouse operations' })).toBeVisible();
     await expect(page.getByRole('tablist', { name: 'Warehouse operations views' })).toBeVisible();
@@ -182,9 +190,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
   for (const report of reportTabs) {
     test(`Report tab mounts: ${report.label} (${report.componentName})`, async ({ page }) => {
       await page.locator('button:has-text("Reports")').first().click();
-      const tab = page.locator(`button:has-text("${report.label}")`).first();
-      await expect(tab).toBeVisible({ timeout: 10000 });
-      await tab.click();
+      await chooseReport(page, report.label);
       await page.waitForTimeout(500);
 
       const bodyText = await page.locator('body').innerText();

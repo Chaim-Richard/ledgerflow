@@ -1,7 +1,7 @@
 import { usePageSyncedState } from '../../hooks/usePageSyncedState';
 import type { Transaction } from '../../types';
 import React, { useId, useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { TrendingUp, TrendingDown, FileSpreadsheet, Activity, Target, Zap, ArrowUp, ArrowDown, ExternalLink, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, FileSpreadsheet, Activity, Target, Zap, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn, getLocalDateISO, monthBoundsISO, formatCurrency } from '../../lib/utils';
 import { toast } from 'sonner';
@@ -19,6 +19,9 @@ import DrillDownModal, { type ExplainRequest } from '../layout/DrillDownModal';
 import { accountGroupLayout, groupSubtotals, hasAccountGroups, toggleAccountGroup, visibleGroupRows } from '../../lib/accountGroups';
 import { AccountGroupRow, AccountGroupSubtotal } from './AccountGroupControls';
 import { lineHasLabel } from '../../lib/dimensionUtils';
+import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
+import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
+import { provenanceFromResponse } from '../../lib/reportProvenance';
 
 /** A P&L line as the report holds it; `parentId` is only for account groups (K-14). */
 interface PLAccount { name: string; code?: string; balance: number; parentId?: string }
@@ -83,11 +86,12 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   // N-08: accrual (as posted) or cash (invoices and bills when paid, from the server only)
   const [basis, setBasis] = useState<'accrual' | 'cash'>('accrual');
 
-  const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
   const { fetchPL, loadingStates } = useFinancialReporting();
   const [serverData, setServerData] = useState<PLData | null>(null);
   const [serverPrevData, setServerPrevData] = useState<PLData | null>(null);
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
+  const [serverFailed, setServerFailed] = useState(false);
+  const browserFigures = useBrowserProvenance(STATEMENT_COLLECTIONS, serverFailed);
   const reportGen = useRef(0);
 
   // Follow the Reports page period and comparison
@@ -109,6 +113,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
       if (gen !== reportGen.current) return;
       setServerData(res || null);
       setIsServerAuthoritative(Boolean(res));
+      setServerFailed(!res);
       if (isComparative) {
         const prevRes = await fetchPL(prevRange.start, prevRange.end, cashBasis);
         if (gen !== reportGen.current) return;
@@ -116,6 +121,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
       }
     } catch {
       setIsServerAuthoritative(false);
+      setServerFailed(true);
     }
   }, [fetchPL, dateRange.start, dateRange.end, isComparative, prevRange, basis]);
 
@@ -271,12 +277,18 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   const emptyPl: PLData = { income: { total: 0, accounts: {} }, cogs: { total: 0, accounts: {} }, expense: { total: 0, accounts: {} }, grossProfit: 0, netIncome: 0 };
   const useServer = isServerAuthoritative && !labelFilter;
   const data = basis === 'cash' ? (cashReady ? serverData! : emptyPl) : useServer && serverData ? serverData : localCalculation.data;
+  // AUD-10: the server's answer, or the figures worked out here; cash basis shows only the server's
+  const provenance = basis === 'cash'
+    ? (cashReady ? provenanceFromResponse(serverData) : null)
+    : useServer && serverData ? provenanceFromResponse(serverData)
+    : serverFailed || labelFilter || browserFigures.completeness !== 'complete' ? browserFigures : null;
   const prevData = basis === 'cash' ? (cashReady && serverPrevData?.basis === 'cash' ? serverPrevData : emptyPl) : useServer && serverPrevData ? serverPrevData : localCalculation.prevData;
   const chooseBasis = (next: 'accrual' | 'cash') => {
     setBasis(next);
     setServerData(null);
     setServerPrevData(null);
     setIsServerAuthoritative(false);
+    setServerFailed(false);
     // the period columns are read from the entries as posted: on cash basis the one total is shown
     if (next === 'cash') { setColumnMode('total'); setShowPercent(false); setIsComparative(false); }
   };
@@ -315,38 +327,8 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
 
   return (
     <div className="space-y-6">
-      {/* Authoritative / Truncation Status Banner */}
-      {!useServer && isDataTruncated ? (
-        <div id="pl-statement-truncation-banner" className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-medium">
-          <div className="flex items-center gap-2">
-            <AlertCircle aria-hidden="true" className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Showing 2,000 of N transactions — totals are incomplete</span>
-          </div>
-          <button
-            onClick={loadServerReport}
-            disabled={loadingStates.pl}
-            className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded text-xs transition flex items-center gap-1.5"
-          >
-            {loadingStates.pl ? <RefreshCw aria-hidden="true" className="w-3.5 h-3.5 animate-spin" /> : null}
-            <span>{loadingStates.pl ? "Loading Server..." : "Load Full Server Report"}</span>
-          </button>
-        </div>
-      ) : useServer ? (
-        <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-between text-xs font-semibold">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Server-Authoritative Report (Full Streaming History Verified)</span>
-          </div>
-          <button 
-            onClick={loadServerReport} 
-            title="Refresh server report"
-            aria-label="Refresh server report"
-            className="text-emerald-400/80 hover:text-emerald-300 p-0.5 rounded transition"
-          >
-            <RefreshCw aria-hidden="true" className={cn("w-3 h-3", loadingStates.pl && "animate-spin")} />
-          </button>
-        </div>
-      ) : null}
+      {/* AUD-10: where these figures come from */}
+      <ReportProvenanceNote id="pl-statement-provenance" provenance={provenance} onRefresh={loadServerReport} busy={loadingStates.pl} />
 
       {/* Period navigation/actions and aligned report filters. */}
       <div data-testid="report-controls" role="region" aria-label="Report filters" className="p-4 sm:p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs space-y-4">

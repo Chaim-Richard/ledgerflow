@@ -38,6 +38,7 @@ export default function ReportTotalExplainer({ reportId }: { reportId: string })
   return (
     <details
       data-print-hide
+      data-testid="report-total-explainer"
       className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-2"
       dir={language === 'he' ? 'rtl' : 'ltr'}
       lang={language}
