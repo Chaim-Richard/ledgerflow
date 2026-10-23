@@ -56,6 +56,15 @@ interface PendingMove {
 
 const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
 
+/**
+ * The moving-average cost after units come in (or go back) at a value: what was on hand (never below zero) at the old
+ * cost plus the value, over what is on hand after. Shared by the posting (below) and the EG-1 repost replay
+ * (repostService.ts), so a replay with nothing backdated finds the very same figures.
+ */
+export function movingAverageCents(before: number, costCents: number, valueCents: number, after: number): number {
+  return Math.round((Math.max(0, before) * costCents + valueCents) / after);
+}
+
 function cogsMove(tx: { metadata?: Record<string, unknown> }): { itemId: string; quantity: number } | null {
   const meta = tx.metadata;
   if (meta?.type !== INVOICE_COGS_TYPE && meta?.type !== DELIVERY_COGS_TYPE) return null;
@@ -340,7 +349,7 @@ export async function prepareStockMoves(
         const after = round6(before + p.quantity);
         // what is bought or sent back (or either undone) moves the average cost by its own value
         if (['purchase', 'purchase-reversal', 'purchase-return', 'purchase-return-reversal'].includes(p.kind) && after > 0) {
-          cost = Math.round((Math.max(0, before) * cost + p.valueCents) / after);
+          cost = movingAverageCents(before, cost, p.valueCents, after);
           costChanged = true;
         }
         const invoiceId = typeof p.entry.metadata?.invoiceId === 'string' ? p.entry.metadata.invoiceId : undefined;

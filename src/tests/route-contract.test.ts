@@ -60,6 +60,7 @@ describe('Route Contract Guard Suite (§0c Route Contract)', () => {
       '/api/v1/consolidation',
       '/api/v1/lease',
       '/api/v1/inventory',
+      '/api/v1/repost', // EG-1 repost run and queue (server.ts repostRouter)
       '/api/v1/fx',
       '/api/v1/support',
       '/api/v1/payments',
