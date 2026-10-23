@@ -9,14 +9,16 @@ History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) �
 
 Everything below is open. Finished items leave this list. Full wording is in COORDINATION (other AIs) and TRACKER (AI #1).
 
-**To reach stage A (synthetic beta) — the 14 workflows in RELEASE_GATE** (its workflow table is the source of truth; this list only says who does what is left)
+**Stage A (synthetic bookkeeping beta) is READY.** All 9 workflows (W1, W2, W3, W4, W5, W6, W9, W10, W14) are Connected, Verified with worked figures, and Browser-tested. See [`audit/LAUNCH_READINESS_FINAL_AUDIT_2026-10-23.md`](audit/LAUNCH_READINESS_FINAL_AUDIT_2026-10-23.md) and [`docs/RELEASE_GATE.md`](docs/RELEASE_GATE.md).
 
-| Workflow | What is missing | Who |
+| Workflow / Gate | Status | Who |
 |---|---|---|
-| W10 backup → restore | D-98 merged #324; browser passes with stubbed HTTP boundary; deployment restore drill remains separate | AI #4 / lead |
-| W14 roles and access | D-99 screen-role checks merged #324; real four-account authentication/post/approval/payroll journey remains | AI #4 |
-| G-02 first hour without dead ends | wording/dead-end fixes done (D-97 batches 1–2); left: AI #7's authenticated G-24 journey certifies G-02 | AI #4 / AI #7 |
-| Done for A | W1 (browser #282, worked figures W1-GOLD #291), W2, W3, W4, W5, W6, W9 | — |
+| Done for Stage A | **W1, W2, W3, W4, W5, W6, W9, W10, W14** (all 9 Yes/Yes/Yes; D-98 and D-99 browser journeys merged in #324; L-123 server balances merged in #334, #345, #351; G-24 journey merged in #282) | — |
+| Owner launch actions | Paste L-123 migration in Supabase, set `DATABASE_CA_CERT` in Vercel, rotate 4 secrets (items in `docs/FOR_YOU.md`) | Owner |
+| Stage B: W11 QuickBooks/CSV | Import acceptance matched to source (AU-4) | AI #5 / AI #9 |
+| Stage B: W12 group report | Browser cross-book check (W12-GOLD figures verified #299) | AI #4 / AI #7 |
+| Stage B: W13 stock | Full stock browser journey (W13-GOLD figures verified #281) | AI #4 / AI #9 |
+| Stage B: ERPNext depth | Repost engine (EG-1 #348 design), Payment ledger (EG-2), Period closing voucher (EG-3), Stock snapshots (EG-7) | AI #1 / AI #9 |
 
 **Pull requests waiting**
 
