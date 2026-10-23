@@ -9,7 +9,7 @@
  */
 import type { ChartAccount, Transaction } from '../types';
 import { LedgerEngine } from '../kernel/ledger/LedgerEngine';
-import { transactionDate } from './txFilters';
+import { isPostable, lineAmount, transactionDate } from './txFilters';
 
 /** What the server answered: base-currency cents per account id, debit positive, entries dated ≤ asOf (no account openings). */
 export interface ServerOpening {
@@ -61,12 +61,12 @@ export const SERVER_OPENING_ENTRY_ID = 'l123-server-opening';
 export function foldServerOpening(transactions: Transaction[], opening: ServerOpening | null): Transaction[] {
   if (!opening) return transactions;
   const lines = Object.entries(opening.accounts).filter(([, cents]) => cents).map(([accountId, amountCents]) => ({ accountId, amountCents }));
-  const total = lines.reduce((sum, l) => sum + Math.max(0, l.amountCents), 0);
+  const total = lines.reduce((sum, l) => sum + Math.max(0, lineAmount(l)), 0);
   const folded = {
     id: SERVER_OPENING_ENTRY_ID, workspaceId: opening.workspaceId, date: opening.asOf, description: `Balances through ${opening.asOf} (server)`,
     totalAmountCents: total, status: 'completed', type: 'journal', lines,
   } as unknown as Transaction;
-  return [folded, ...entriesAfter(transactions, opening.asOf)];
+  return [folded, ...entriesAfter(transactions, opening.asOf).filter(isPostable)];
 }
 
 /** True when a period starting at `startDate` reaches the day the server's sum covers (its figures would mix). */
