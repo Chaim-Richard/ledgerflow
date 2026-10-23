@@ -542,3 +542,16 @@ Paste **`supabase/migrations/20261023000000_period_balances.sql`** into Supabase
 - It adds a trigger that marks a saved year stale when an entry in that year changes.
 
 *Until then:* closing a year works as before, but no year balances are saved, and the server logs once which file to apply.
+
+## 23 Oct — one more database change to paste, after #359 merges (EG-1 step 1, AI #9)
+Paste **`supabase/migrations/20261023010000_repost_queue.sql`** into Supabase → SQL editor → Run.
+- It adds the list of items whose stock cost needs a repair after a backdated entry (`repostQueue`, readable by members, written only by the server).
+- It adds a trigger that puts an item on that list when one of its stock moves is dated before later ones.
+
+*Until then:* the repair screen has nothing to repair; the books are unchanged.
+
+## 23 Oct — one more database change to paste, after EG-3 merges (AI #9)
+Paste **`supabase/migrations/20261024000000_period_closings.sql`** into Supabase → SQL editor → Run.
+- It adds the year-end closing record (`periodClosings`): one fixed record per closed year with the profit, the transfer to retained earnings and the balance-sheet totals. It is readable by members and written only by the server.
+
+*Until then:* closing a year works as before, without the closing record.
