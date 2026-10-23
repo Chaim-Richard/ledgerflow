@@ -2,12 +2,14 @@
  * EG-6 (BF-04): preview → post for landed cost, owners and accountants. The charge is a bill's freight, duty or other
  * line (or a manual amount against an offset account); it is spread over the goods of the chosen receipts by value,
  * quantity or weight. "Review what will post" asks the server (dryRun) for the exact entry and the new unit costs;
- * "Post landed cost" posts that same allocation (landedCostService.ts). The same allocation posts once.
+ * "Post landed cost" posts exactly the reviewed plan (its planHash; a changed plan is shown again, not posted), and
+ * "Undo landed cost" reverses a posted one. The same allocation posts once. The parent keys this panel by workspace,
+ * and an answer to an earlier request (or for another workspace) is ignored.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { formatCurrency } from '../../lib/utils';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
-import { landedCostRequest, type LandedCostPostResult } from '../../services/stockRequests';
+import { LandedCostRequestError, landedCostRequest, undoLandedCostRequest, type LandedCostPostResult } from '../../services/stockRequests';
 import type { SpreadBasis } from '../../lib/landedCostPreview';
 import type { Bill, ChartAccount } from '../../types';
 
@@ -39,6 +41,8 @@ export default function LandedCostPostPanel({ workspaceId, currency, bills, acco
   const [plan, setPlan] = useState<LandedCostPostResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [postedId, setPostedId] = useState<string | null>(null);
+  const request = useRef(0);
 
   const manualCents = TruthEngine.parseAmountToCents(amount || '0');
   const charge = chargeKey === MANUAL
@@ -50,21 +54,47 @@ export default function LandedCostPostPanel({ workspaceId, currency, bills, acco
     : chargeKey === MANUAL && !offsetId ? 'Choose the account the amount comes from.'
     : chosen.length === 0 ? 'Choose the receipts the charge is for.' : '';
 
-  const send = async (dryRun: boolean) => {
-    if (problem) return;
+  /** runs one request; its answer is used only while it is still the latest one */
+  const run = async (work: () => Promise<void>, onError: (e: unknown) => void = e => setNotice(e instanceof Error ? e.message : String(e))) => {
+    const mine = ++request.current;
     setBusy(true);
     setNotice(null);
+    const latest = () => mine === request.current;
     try {
-      const result = await landedCostRequest({ ...body, dryRun });
-      setPlan(result);
-      if (!dryRun) setNotice(result.replayed ? `Already posted as ${result.entryId}: nothing was posted again.` : `Posted ${result.entryId} on ${result.date}${result.movedToOpenDay ? ' (the day asked for is locked, so it is dated today)' : ''}.`);
-    } catch (e) {
-      setNotice(e instanceof Error ? e.message : String(e));
+      await work().then(() => undefined, e => { if (latest()) onError(e); });
     } finally {
-      setBusy(false);
+      if (latest()) setBusy(false);
     }
   };
-  const change = (fn: () => void) => { fn(); setPlan(null); setNotice(null); };
+  const send = (dryRun: boolean) => {
+    if (problem) return;
+    const mine = request.current + 1;
+    void run(async () => {
+      const result = await landedCostRequest({ ...body, dryRun, ...(!dryRun && plan?.planHash ? { expectedPlanHash: plan.planHash } : {}) });
+      if (mine !== request.current) return;
+      setPlan(result);
+      if (!dryRun) {
+        setPostedId(result.entryId);
+        setNotice(result.replayed ? `Already posted as ${result.entryId}: nothing was posted again.` : `Posted ${result.entryId} on ${result.date}${result.movedToOpenDay ? ' (the day asked for is locked, so it is dated today)' : ''}.`);
+      }
+    }, e => {
+      // what would post changed since the review: show the new plan to review, post nothing
+      if (e instanceof LandedCostRequestError && e.plan) setPlan(e.plan);
+      setNotice(e instanceof Error ? e.message : String(e));
+    });
+  };
+  const undo = () => {
+    if (!postedId) return;
+    const mine = request.current + 1;
+    void run(async () => {
+      const result = await undoLandedCostRequest(workspaceId, postedId);
+      if (mine !== request.current) return;
+      setPostedId(null);
+      setPlan(null);
+      setNotice(`Undone: ${result.undoEntryId} on ${result.date} reverses ${result.entryId} and its stock moves.`);
+    });
+  };
+  const change = (fn: () => void) => { fn(); request.current++; setBusy(false); setPlan(null); setNotice(null); setPostedId(null); };
 
   return (
     <section aria-label="Post landed cost" className="space-y-3 border-t pt-4">
@@ -113,6 +143,7 @@ export default function LandedCostPostPanel({ workspaceId, currency, bills, acco
       <div className="flex flex-wrap gap-2">
         <button type="button" disabled={Boolean(problem) || busy} onClick={() => send(true)} className="min-h-11 px-3 rounded border text-sm disabled:opacity-50">Review what will post</button>
         <button type="button" disabled={!plan || plan.replayed || !plan.dryRun || busy} onClick={() => send(false)} className="min-h-11 px-3 rounded border text-sm disabled:opacity-50">Post landed cost</button>
+        {postedId && <button type="button" disabled={busy} onClick={undo} className="min-h-11 px-3 rounded border text-sm disabled:opacity-50">Undo landed cost</button>}
       </div>
       {notice && <p role="status" className="text-sm">{notice}</p>}
       {plan && (

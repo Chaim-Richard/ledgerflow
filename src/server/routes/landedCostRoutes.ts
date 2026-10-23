@@ -1,7 +1,8 @@
 /**
  * EG-6 (BF-04): landed cost (src/server/services/landedCostService.ts), mounted on the inventory router.
  * POST /api/v1/inventory/landed-cost  { workspaceId, charge, receiptBillIds, basis, weights?, date?, inventoryAccountId?, dryRun? }
- *   owners and accountants; `dryRun` answers what would post and writes nothing; a retry posts nothing (`replayed`).
+ *   owners and accountants; `dryRun` answers what would post (with its planHash) and writes nothing; a retry posts nothing
+ *   (`replayed`); with expectedPlanHash, a plan that changed since the review is refused (409 with `plan`).
  * POST /api/v1/inventory/landed-cost/:entryId/undo  { workspaceId }: reverses the entry and its stock moves together.
  */
 import express from 'express';
@@ -29,11 +30,14 @@ export const LandedCostSchema = z.object({
   weights: z.record(z.string(), z.number().nonnegative()).optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date: YYYY-MM-DD').optional(),
   inventoryAccountId: z.string().min(1).optional(),
+  cogsAccountId: z.string().min(1).optional(),
+  /** the planHash of the reviewed dry run: a different plan now is refused (409, with the new plan) */
+  expectedPlanHash: z.string().regex(/^[0-9a-f]{32}$/, 'expectedPlanHash: the planHash of the reviewed plan').optional(),
   dryRun: z.boolean().optional(),
 });
 
 const fail = (res: express.Response, e: unknown) => {
-  if (e instanceof LandedCostError) return res.status(e.status).json({ error: e.message });
+  if (e instanceof LandedCostError) return res.status(e.status).json({ error: e.message, ...(e.plan ? { plan: e.plan } : {}) });
   res.status(/Unauthorized|not a member|FORBIDDEN/i.test(errorMessage(e)) ? 403 : 400).json({ error: errorMessage(e) });
 };
 

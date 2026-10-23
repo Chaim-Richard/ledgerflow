@@ -15,6 +15,15 @@
  *   chairs (6 × 5,000 + 3,000) / 6 = 5,500; tables as above 16,500 (all 10 on hand)
  *   COGS for chairs = 4 × 5,000 (the sale) + 2,000 = 22,000 = 4 × 5,500
  * Locked through 10-10: a manual 1,000 asked for 10-05 is dated today (the reversalDate rule).
+ * Review fixes (Codex on #367):
+ *   stock on hand before the receipt (stools): opening 100 @ 5,000, Bill 10 @ 5,000 → pool 110, 50 sold → 60 on hand;
+ *     freight 1,100 on the receipt: Inventory 1,100 × 60/110 = 600, COGS 1,100 × 50/110 = 500;
+ *     cost (60 × 5,000 + 600) / 60 = 5,010 (the old rule, units received − on hand = 10 − 60 < 0, put all 1,100 in Inventory)
+ *   undo restores the stored cost (lamps): 2 @ 1,000 + 1 cent → round(2,001 / 2) = 1,001; the inverse round((2,002 − 1) / 2)
+ *     = 1,001 would stay wrong; undo gives 1,000
+ *   all sold (vases): 2 bought, 2 sold, 100 landed → COGS 100, no move; the undo is still allowed
+ *   one move per item (rugs): lines of 1 and 2 units, 300 by quantity → 100 + 200, one landed-cost move of 300
+ *   a backdated purchase before a landed cost (desks) is refused by the repost run, nothing posted
  */
 import './helpers/dom';
 import test, { after, before, describe } from 'node:test';
@@ -27,6 +36,8 @@ import { postInvoiceLedger } from '../services/ledgerPost/invoicePosting';
 import type { LedgerPostContext } from '../services/ledgerPost/postingKit';
 import type { ChartAccount, InventoryItem, Transaction, Workspace } from '../types';
 import { formatTzDate } from '../lib/utils';
+import { landedCostBaseId, remainingShare } from '../server/services/landedCostService';
+import type { StockMove } from '../lib/stockMoves';
 import '../services/ledgerPost/postingKit';
 
 const url = process.env.LF_TEST_DATABASE_URL;
@@ -35,8 +46,8 @@ type Json = Record<string, unknown> & { lines?: Array<Record<string, number | st
 describe('EG-6: posting landed cost', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
   const ws = `ws_eg6_${crypto.randomBytes(4).toString('hex')}`;
   const OWNER = 'owner-1';
-  const [chair, table, chair3, table3] = ['chair', 'table', 'chair3', 'table3'].map(n => `${ws}_${n}`);
-  const ITEMS: Array<[string, string]> = [[chair, 'Chair'], [table, 'Table'], [chair3, 'Chair B'], [table3, 'Table B']];
+  const [chair, table, chair3, table3, stool, lamp, vase, rug, desk] = ['chair', 'table', 'chair3', 'table3', 'stool', 'lamp', 'vase', 'rug', 'desk'].map(n => `${ws}_${n}`);
+  const ITEMS: Array<[string, string]> = [[chair, 'Chair'], [table, 'Table'], [chair3, 'Chair B'], [table3, 'Table B'], [stool, 'Stool'], [lamp, 'Lamp'], [vase, 'Vase'], [rug, 'Rug'], [desk, 'Desk']];
   let server: Server;
   let base = '';
   let db: import('../server/db/pgFirestore').Firestore;
@@ -68,6 +79,17 @@ describe('EG-6: posting landed cost', { skip: !url && 'LF_TEST_DATABASE_URL not 
     { amountCents: 150_000, accountId: acct['1300'].id, description: 'Tables', itemId: t, quantity: 10 },
   ];
   const freight = (id: string) => postBill(id, '2026-10-02', [{ amountCents: 20_000, accountId: acct['5100'].id, description: 'Freight' }]);
+  const sell = async (id: string, itemId: string, quantity: number, date = '2026-10-03') => {
+    const data = {
+      id, workspaceId: ws, uid: OWNER, number: id.slice(-4), customerId: 'acme', customerName: 'Acme', date, dueDate: date, status: 'sent' as const,
+      amountCents: quantity * 30_000, amountPaidCents: 0, currency: 'USD', taxVersion: 2, taxAmountCents: 0,
+      items: [{ id: 'l1', itemId, description: 'Stock', quantity, rateCents: 30_000, amountCents: quantity * 30_000, accountId: acct['4000'].id }],
+    };
+    await postInvoiceLedger(id, data as never, ws, OWNER, { collection: 'invoices', docId: id, action: 'create', data }, await context());
+  };
+  const stockLine = (itemId: string, quantity: number, unit: number) => ({ amountCents: quantity * unit, accountId: acct['1300'].id, description: 'Stock', itemId, quantity });
+  const manual = (allocationId: string, amountCents: number) => ({ kind: 'manual', amountCents, accountId: acct['5100'].id, allocationId });
+  const idOf = (charge: Record<string, unknown>, n: number) => `${landedCostBaseId(ws, charge as never)}-${n}`;
   const moves = async (itemId: string) => (await all<Record<string, unknown>>('stockMoves')).filter(m => m.itemId === itemId && m.kind === 'landed-cost');
   const sum = async (code: string, entryId: string) => ((await db.collection('transactions').doc(entryId).get()).data()?.lines as Array<{ accountId: string; amountCents: number }>)
     .filter(l => l.accountId === acct[code].id).reduce((s, l) => s + l.amountCents, 0);
@@ -87,6 +109,7 @@ describe('EG-6: posting landed cost', { skip: !url && 'LF_TEST_DATABASE_URL not 
     app.use('/api/v1/transactions', transactionRouter);
     app.use('/api/v1/documents', (await import('../server/routes/documentPostRoutes')).documentPostRouter);
     app.use('/api/v1/inventory', (await import('../server/routes/inventoryRoutes')).inventoryRouter);
+    app.use('/api/v1/repost', (await import('../server/routes/repostRoutes')).repostRouter);
     server = app.listen(0);
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -142,7 +165,7 @@ describe('EG-6: posting landed cost', { skip: !url && 'LF_TEST_DATABASE_URL not 
     const res = await land({ charge, receiptBillIds: [`${ws}_bill01`] });
     assert.equal(res.status, 200, JSON.stringify(res.body));
     const id = String(res.body.entryId);
-    assert.equal(id, `landed-cost-bill-${ws}_frt001-0-0`);
+    assert.equal(id, idOf(charge, 0));
     assert.deepEqual([res.body.posted, res.body.replayed, res.body.date], [true, false, today]);
     assert.deepEqual([(await item(chair)).unitCostCents, (await item(table)).unitCostCents], [5_500, 16_500]);
     assert.deepEqual([await sum('1300', id), await sum('5100', id), await sum('5000', id)], [20_000, -20_000, 0]);
@@ -159,7 +182,7 @@ describe('EG-6: posting landed cost', { skip: !url && 'LF_TEST_DATABASE_URL not 
     const count = (await all('transactions')).length;
     const again = await land({ charge, receiptBillIds: [`${ws}_bill01`] });
     assert.equal(again.status, 200, JSON.stringify(again.body));
-    assert.deepEqual([again.body.replayed, again.body.posted, again.body.entryId], [true, false, `landed-cost-bill-${ws}_frt001-0-0`]);
+    assert.deepEqual([again.body.replayed, again.body.posted, again.body.entryId], [true, false, idOf(charge, 0)]);
     assert.equal((await all('transactions')).length, count, 'nothing posted twice');
     assert.equal((await moves(chair)).length, 1);
     const id = String(again.body.entryId);
@@ -178,7 +201,7 @@ describe('EG-6: posting landed cost', { skip: !url && 'LF_TEST_DATABASE_URL not 
     assert.equal((await send('POST', `/api/v1/inventory/landed-cost/${id}/undo`, { workspaceId: ws })).body.replayed, true, 'an undo retried does nothing');
     // after its undo the charge may be landed again, under the next id
     const relanded = await land({ charge, receiptBillIds: [`${ws}_bill01`] });
-    assert.equal(relanded.body.entryId, `landed-cost-bill-${ws}_frt001-0-1`);
+    assert.equal(relanded.body.entryId, idOf(charge, 1));
     assert.deepEqual([(await item(chair)).unitCostCents, (await item(table)).unitCostCents], [5_500, 16_500]);
   });
 
@@ -228,5 +251,113 @@ describe('EG-6: posting landed cost', { skip: !url && 'LF_TEST_DATABASE_URL not 
     assert.equal((await land({ charge: { kind: 'manual', amountCents: 100, accountId: acct['5100'].id, allocationId: 'alloc-wt-00001' }, receiptBillIds: [`${ws}_bill01`], basis: 'weight' })).status, 400);
     const weighed = await land({ charge: { kind: 'manual', amountCents: 300, accountId: acct['5100'].id, allocationId: 'alloc-wt-00002' }, receiptBillIds: [`${ws}_bill01`], basis: 'weight', weights: { [`${ws}_bill01:0`]: 2, [`${ws}_bill01:1`]: 1 }, dryRun: true });
     assert.deepEqual(weighed.body.lines!.map(l => l.allocatedCents), [200, 100], 'by weight 2 : 1');
+  });
+
+  test('review: ids are a hash of the exact charge, so ids that sanitized alike no longer collide', () => {
+    const a = landedCostBaseId('w', { kind: 'bill', billId: 'a/b', line: 0 });
+    assert.notEqual(a, landedCostBaseId('w', { kind: 'bill', billId: 'a_b', line: 0 }));
+    assert.notEqual(a, landedCostBaseId('w2', { kind: 'bill', billId: 'a/b', line: 0 }));
+    assert.match(a, /^landed-cost-bill-[0-9a-f]{32}$/);
+  });
+
+  test('review: remainingShare takes each sale from the pool on hand then', () => {
+    const m = (kind: string, date: string, quantity: number, before: number, extra: Record<string, unknown> = {}) => ({ kind, date, seq: `${date}#0`, quantity, quantityBefore: before, quantityAfter: before + quantity, ...extra }) as unknown as StockMove;
+    const history = [m('opening', '2026-09-30', 100, 0), m('purchase', '2026-10-01', 10, 100, { documentType: 'bill', documentId: 'b', documentLine: 0 }), m('sale', '2026-10-03', -50, 110), m('transfer-out', '2026-10-04', -5, 60)];
+    assert.equal(remainingShare(history, 'b', 0), 60 / 110);
+    assert.equal(remainingShare(history, 'other', 0), 0);
+  });
+
+  test('review: stock on hand before the receipt shares the sales: 60/110 to Inventory, 50/110 to COGS', async () => {
+    await db.collection('inventory').doc(stool).update({ unitCostCents: 5_000 });
+    const opening = await send('POST', '/api/v1/inventory/adjust', { workspaceId: ws, itemId: stool, quantityChange: 100, type: 'opening', inventoryAccountId: acct['1300'].id, offsetAccountId: acct['3900'].id, date: '2026-09-30', unitCostCents: 5_000 });
+    assert.equal(opening.status, 200, JSON.stringify(opening.body));
+    await postBill(`${ws}_bill04`, '2026-10-01', [stockLine(stool, 10, 5_000)]);
+    await sell(`${ws}_inv4`, stool, 50);
+    assert.deepEqual([(await item(stool)).quantityAtHand, (await item(stool)).unitCostCents], [60, 5_000]);
+    const res = await land({ charge: manual('alloc-stool-001', 1_100), receiptBillIds: [`${ws}_bill04`] });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.deepEqual(res.body.lines!.map(l => [l.allocatedCents, l.inventoryCents, l.cogsCents, l.unitCostAfterCents]), [[1_100, 600, 500, 5_010]]);
+    assert.equal((await item(stool)).unitCostCents, 5_010);
+  });
+
+  test('review: a charge bill whose posting was reversed is refused', async () => {
+    const billId = `${ws}_frt004`;
+    await freight(billId);
+    const entry = (await all<Transaction>('transactions')).find(t => t.metadata?.billId === billId && !t.metadata?.reversesTxId)!;
+    await db.collection('transactions').doc(`${entry.id}-rev`).set({ ...entry, id: `${entry.id}-rev`, lines: entry.lines.map(l => ({ ...l, amountCents: -l.amountCents })), metadata: { ...entry.metadata, reversesTxId: entry.id } });
+    const res = await land({ charge: { kind: 'bill', billId, line: 0 }, receiptBillIds: [`${ws}_bill01`], dryRun: true });
+    assert.equal(res.status, 400, JSON.stringify(res.body));
+    assert.match(String(res.body.error), /not in the books/);
+  });
+
+  test('review: undo restores the stored cost, and a landed cost that went all to COGS can be undone', async () => {
+    await postBill(`${ws}_bill05`, '2026-10-01', [stockLine(lamp, 2, 1_000)]);
+    const lamped = await land({ charge: manual('alloc-lamp-0001', 1), receiptBillIds: [`${ws}_bill05`] });
+    assert.equal((await item(lamp)).unitCostCents, 1_001, 'round(2,001 / 2)');
+    assert.equal((await send('POST', `/api/v1/inventory/landed-cost/${lamped.body.entryId}/undo`, { workspaceId: ws })).status, 200);
+    assert.equal((await item(lamp)).unitCostCents, 1_000, 'the stored cost, not round((2,002 − 1) / 2) = 1,001');
+
+    await postBill(`${ws}_bill06`, '2026-10-01', [stockLine(vase, 2, 1_000)]);
+    await sell(`${ws}_inv6`, vase, 2);
+    const vased = await land({ charge: manual('alloc-vase-0001', 100), receiptBillIds: [`${ws}_bill06`] });
+    assert.equal(vased.status, 200, JSON.stringify(vased.body));
+    assert.deepEqual(vased.body.lines!.map(l => [l.inventoryCents, l.cogsCents]), [[0, 100]]);
+    assert.equal((await moves(vase)).length, 0, 'nothing on hand: no move');
+    const undo = await send('POST', `/api/v1/inventory/landed-cost/${vased.body.entryId}/undo`, { workspaceId: ws });
+    assert.equal(undo.status, 200, JSON.stringify(undo.body));
+  });
+
+  test('review: several lines of one item write one move; Post with a stale planHash is refused with the new plan', async () => {
+    await postBill(`${ws}_bill07`, '2026-10-01', [stockLine(rug, 1, 1_000), stockLine(rug, 2, 1_000)]);
+    const body = { charge: manual('alloc-rug-00001', 300), receiptBillIds: [`${ws}_bill07`], basis: 'quantity' };
+    const dry = await land({ ...body, dryRun: true });
+    assert.match(String(dry.body.planHash), /^[0-9a-f]{32}$/);
+    const stale = await land({ ...body, expectedPlanHash: 'f'.repeat(32) });
+    assert.equal(stale.status, 409, JSON.stringify(stale.body));
+    assert.equal((stale.body.plan as Json).planHash, dry.body.planHash, 'the new plan comes back to review');
+    assert.equal((await moves(rug)).length, 0, 'nothing posted');
+    const res = await land({ ...body, expectedPlanHash: dry.body.planHash });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.deepEqual(res.body.lines!.map(l => l.allocatedCents), [100, 200]);
+    assert.deepEqual((await moves(rug)).map(m => m.valueCents), [300], 'one move for the item');
+    assert.equal((await item(rug)).unitCostCents, 1_100, '(3 × 1,000 + 300) / 3');
+  });
+
+  test('review: several Inventory accounts and no mapping → choose one; the mapping is used', async () => {
+    const add = await send('POST', `/api/v1/workspaces/${ws}/import-records`, { kind: 'accounts', rows: [{ name: 'Inventory 2', code: '1310', type: 'Inventory' }] });
+    assert.equal(add.status, 200, JSON.stringify(add.body));
+    const inv2 = (await all<ChartAccount>('chartAccounts')).find(a => a.code === '1310')!;
+    const body = { charge: manual('alloc-map-00001', 100), receiptBillIds: [`${ws}_bill01`], dryRun: true };
+    const refused = await land(body);
+    assert.equal(refused.status, 400, JSON.stringify(refused.body));
+    assert.match(String(refused.body.error), /several/);
+    await db.collection('workspaces').doc(ws).update({ defaultAccountMappings: { inventory: inv2.id } });
+    try {
+      const mapped = await land(body);
+      assert.equal(mapped.status, 200, JSON.stringify(mapped.body));
+      assert.equal(mapped.body.inventoryAccountId, inv2.id);
+      assert.equal((await land({ ...body, inventoryAccountId: acct['1300'].id })).body.inventoryAccountId, acct['1300'].id, 'an explicit account wins');
+    } finally {
+      await db.collection('workspaces').doc(ws).update({ defaultAccountMappings: null });
+      await db.collection('chartAccounts').doc(inv2.id).delete();
+    }
+  });
+
+  test('review: a partial update cannot strip the landed-cost type', async () => {
+    const id = idOf(charge, 1);
+    const res = await send('PUT', `/api/v1/transactions/${id}`, { partialUpdate: { metadata: { type: 'journal' } } });
+    assert.ok(res.status >= 400, JSON.stringify(res.body));
+    assert.equal((await db.collection('transactions').doc(id).get()).data()?.metadata?.type, 'landed-cost');
+  });
+
+  test('review: a backdated purchase before a landed cost is refused by the repost run', async () => {
+    await postBill(`${ws}_bill08`, '2026-10-05', [stockLine(desk, 5, 1_000)]);
+    assert.equal((await land({ charge: manual('alloc-desk-0001', 500), receiptBillIds: [`${ws}_bill08`] })).status, 200);
+    await postBill(`${ws}_bill09`, '2026-10-01', [stockLine(desk, 5, 1_000)]);
+    const before = (await all('transactions')).length;
+    const run = await send('POST', '/api/v1/repost', { workspaceId: ws, runId: 'run-desk-00001', keys: [desk] });
+    assert.equal(run.status, 409, JSON.stringify(run.body));
+    assert.match(String(run.body.error), /landed cost was posted on .*undo it/);
+    assert.equal((await all('transactions')).length, before, 'nothing posted');
   });
 });

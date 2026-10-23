@@ -12,17 +12,20 @@
  * landed cost dated before a later move is refused), so the lf_repost_mark trigger never marks it, and a repost
  * replay only revalues sales dated after a backdated change; the sold units would never be corrected. Putting their
  * share to COGS now keeps Inventory = units on hand × average, in the same entry, with nothing left pending.
- * Which units are "sold": for each item, the units received on the chosen lines less the units on hand now (never
- * below zero, never more than received); e.g. 10 received, 6 on hand → 4/10 of the line's share is COGS.
+ * Which units are "sold" (review 4361811480): from the item's history in date order, each depletion after the line's
+ * purchase takes its part of the pool then on hand (moving average), so stock on hand before the receipt shares the
+ * sales: 100 on hand + 10 received = 110, 50 sold → 60/110 of the line's share stays in Inventory, 50/110 is COGS.
  *
- * - Idempotent: the entry id is fixed by the allocation (`landed-cost-bill-{bill}-{line}-{n}` for a bill's charge
- *   line, `landed-cost-manual-{allocationId}-{n}` for a manual amount; n counts earlier undone postings). A retry
+ * - Idempotent: the entry id is fixed by the allocation (`landed-cost-bill-{hash of workspace, bill, line}-{n}`, or
+ *   `landed-cost-manual-{hash of workspace, allocationId}-{n}`; n counts earlier undone postings; the stored charge is
+ *   compared on replay). A retry
  *   finds the live entry and posts nothing (`replayed: true`). A charge line can be landed once (until undone).
  * - Dating (as `reversalDate`): the requested day (default today) when open, else today.
  * - Undo (`undoLandedCost`): reverses the entry and its stock moves together, refused once any of the items has moved
  *   since. The generic edit, void, delete and reverse paths refuse both entries (revaluationEntryLock).
  * - Home currency only: the charge (a bill in another currency is refused) and the stock values are in it.
  */
+import crypto from 'crypto';
 import type { Firestore, Transaction as DbTransaction } from '../db/firestore';
 import { FieldValue } from '../db/firestore';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
@@ -31,6 +34,7 @@ import { isPostable } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { formatTzDate } from '../../lib/utils';
 import { spreadCents, type SpreadBasis } from '../../lib/landedCostPreview';
+import { compareMoves, type StockMove } from '../../lib/stockMoves';
 import type { ChartAccount } from '../../types';
 import { movingAverageCents } from './cogsStockService';
 import { ledgerWrite } from './ledgerDoor';
@@ -42,10 +46,11 @@ export const LANDED_COST_UNDO_TYPE = 'landed-cost-undo';
 const DEAD_BILL = ['draft', 'void', 'cancelled', 'rejected'];
 const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
 const text = (v: unknown) => (typeof v === 'string' && v ? v : '');
-const safe = (s: string) => s.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120);
+const hash = (...parts: string[]) => crypto.createHash('sha256').update(parts.join('\u0000')).digest('hex');
+const TRANSFER_KINDS = ['transfer-in', 'transfer-out'];
 
 export class LandedCostError extends Error {
-  constructor(readonly status: number, message: string) {
+  constructor(readonly status: number, message: string, readonly plan?: LandedCostResult) {
     super(message);
     this.name = 'LandedCostError';
   }
@@ -65,6 +70,9 @@ export interface LandedCostInput {
   weights?: Record<string, number>;
   date?: string;
   inventoryAccountId?: string;
+  cogsAccountId?: string;
+  /** the planHash of the plan the person reviewed: when the plan now differs, nothing is posted (409 with the new plan) */
+  expectedPlanHash?: string;
   dryRun?: boolean;
 }
 
@@ -97,13 +105,21 @@ export interface LandedCostResult {
   posted: boolean;
   replayed: boolean;
   dryRun: boolean;
+  /** a hash of what posts (id, date, lines, unit costs): sent back as expectedPlanHash to post exactly what was reviewed */
+  planHash: string;
 }
 
 type Doc = Record<string, unknown>;
 type Split = { amountCents?: number; accountId?: string; description?: string; itemId?: string; quantity?: number; landedCost?: boolean; dimensions?: Record<string, string> };
 
-export const landedCostBaseId = (charge: LandedCharge) =>
-  charge.kind === 'bill' ? `landed-cost-bill-${safe(charge.billId)}-${charge.line}` : `landed-cost-manual-${safe(charge.allocationId)}`;
+/** EG-6 review: a hash of the exact charge (and workspace), so no two charges share an id; the stored charge is checked on replay. */
+export const landedCostBaseId = (workspaceId: string, charge: LandedCharge) =>
+  charge.kind === 'bill' ? `landed-cost-bill-${hash(workspaceId, charge.billId, String(charge.line)).slice(0, 32)}` : `landed-cost-manual-${hash(workspaceId, charge.allocationId).slice(0, 32)}`;
+function sameCharge(a: LandedCharge | undefined, b: LandedCharge): boolean {
+  if (!a || a.kind !== b.kind) return false;
+  if (a.kind === 'bill' && b.kind === 'bill') return a.billId === b.billId && a.line === b.line;
+  return a.kind === 'manual' && b.kind === 'manual' && a.allocationId === b.allocationId;
+}
 export const landedCostUndoId = (entryId: string) => `${entryId}-undo`;
 
 /** The allocation's entry id for this attempt: the live one (a retry), or the next free one. */
@@ -121,7 +137,44 @@ async function accountsOf(db: Firestore, t: DbTransaction, workspaceId: string):
   return (await t.get(db.collection('chartAccounts').where('workspaceId', '==', workspaceId))).docs
     .map(d => ({ ...d.data(), id: d.id }) as ChartAccount).filter(a => !a.isArchived);
 }
-const byCode = (a: ChartAccount, b: ChartAccount) => String(a.code || '').localeCompare(String(b.code || '')) || a.id.localeCompare(b.id);
+
+/**
+ * EG-6 review: the account for a role, as the posting code finds it: the one asked for, else the workspace's mapping
+ * (defaultAccountMappings, the keys billPosting and invoicePosting use), else the only account of that role. With
+ * several and no mapping the caller must choose, rather than taking whichever sorts first.
+ */
+function roleAccount(accounts: ChartAccount[], mappings: Record<string, string>, role: 'inventory' | 'cogs', keys: string[], asked: string | undefined, what: string): ChartAccount {
+  const ofRole = accounts.filter(a => resolveAccountRole(a) === role);
+  if (asked) {
+    const acc = ofRole.find(a => a.id === asked);
+    if (!acc) throw new LandedCostError(400, `Choose ${what} from this workspace`);
+    return acc;
+  }
+  for (const key of keys) {
+    const acc = ofRole.find(a => a.id === mappings[key]);
+    if (acc) return acc;
+  }
+  if (ofRole.length === 1) return ofRole[0];
+  throw new LandedCostError(400, ofRole.length ? `This workspace has several ${what}s and none is mapped: choose one` : `Add ${what} to the chart of accounts`);
+}
+const INVENTORY_KEYS = ['inventory', 'stock', 'inventory asset'];
+const COGS_KEYS = ['cogs', 'cost of goods sold', 'direct costs'];
+
+/** The share of a received line's units still on hand: each later depletion of the item takes its part of the pool. */
+export function remainingShare(moves: Array<StockMove & { id?: string }>, billId: string, line: number): number {
+  const sorted = [...moves].sort(compareMoves);
+  const start = sorted.findIndex(m => m.kind === 'purchase' && m.documentType === 'bill' && m.documentId === billId && Number(m.documentLine) === line);
+  if (start < 0) return 0;
+  let share = 1;
+  for (const m of sorted.slice(start + 1)) {
+    const q = Number(m.quantity) || 0;
+    if (q >= 0 || TRANSFER_KINDS.includes(m.kind)) continue;
+    if (m.documentType === 'bill' && m.documentId === billId && Number(m.documentLine) === line) continue; // its own reversal: the net received is used
+    const before = Number(m.quantityBefore) || 0;
+    share = before <= 0 ? 0 : share * Math.max(0, Number(m.quantityAfter) || 0) / before;
+  }
+  return Math.min(1, Math.max(0, share));
+}
 
 /** What the charge is: its amount, account and labels. */
 async function readCharge(db: Firestore, t: DbTransaction, input: LandedCostInput, accounts: ChartAccount[], currency: string) {
@@ -142,8 +195,11 @@ async function readCharge(db: Firestore, t: DbTransaction, input: LandedCostInpu
   if (split.itemId || split.landedCost) throw new LandedCostError(400, `Line ${c.line + 1} of bill ${text(bill.number) || c.billId} is ${split.itemId ? 'an item line' : 'already spread over that bill\'s items'}: choose a freight, duty or other charge line`);
   const cents = Math.round(Number(split.amountCents) || 0);
   if (cents <= 0) throw new LandedCostError(400, 'The charge line has no amount to land');
-  const posted = (await t.get(db.collection('transactions').where('workspaceId', '==', input.workspaceId).where('metadata.billId', '==', c.billId))).docs
-    .some(d => isPostable(d.data() as never) && !d.data().metadata?.reversesTxId);
+  // EG-6 review: a live posting is one that is neither a reversal, nor marked reversed, nor reversed by another entry
+  const postings = (await t.get(db.collection('transactions').where('workspaceId', '==', input.workspaceId).where('metadata.billId', '==', c.billId))).docs
+    .map(d => ({ id: d.id, data: d.data() })).filter(d => isPostable(d.data as never));
+  const reversedIds = new Set(postings.map(d => text(d.data.metadata?.reversesTxId)).filter(Boolean));
+  const posted = postings.some(d => !d.data.metadata?.reversesTxId && !d.data.reversalEventId && !reversedIds.has(d.id));
   if (!posted) throw new LandedCostError(400, `Bill ${text(bill.number) || c.billId} is not in the books yet: post it first`);
   const acc = accounts.find(a => a.id === split.accountId);
   if (!acc) throw new LandedCostError(400, 'The charge line\'s account is not in this workspace');
@@ -156,21 +212,21 @@ async function landInTransaction(db: Firestore, t: DbTransaction, input: LandedC
   const ws = (await t.get(db.collection('workspaces').doc(workspaceId))).data() || {};
   const currency = String(ws.currency || 'USD');
   const today = formatTzDate(new Date(), text(ws.timezone) || 'UTC');
-  const { id: entryId, live } = await allocationEntryId(db, t, landedCostBaseId(input.charge));
+  const { id: entryId, live } = await allocationEntryId(db, t, landedCostBaseId(workspaceId, input.charge));
   if (live) {
-    if (live.workspaceId !== workspaceId) throw new LandedCostError(409, 'This allocation id was used elsewhere; send a new one');
     const m = (live.metadata || {}) as Doc;
+    if (live.workspaceId !== workspaceId || !sameCharge(m.charge as LandedCharge | undefined, input.charge)) throw new LandedCostError(409, 'This allocation id was used for another charge; send a new one');
     return {
       entryId, date: String(live.date), movedToOpenDay: Boolean(m.movedToOpenDay), chargeCents: Number(m.chargeCents) || 0, chargeAccountId: text(m.chargeAccountId),
       inventoryAccountId: text(m.inventoryAccountId), cogsAccountId: text(m.cogsAccountId) || null, lines: (m.allocation as LandedCostLinePlan[]) || [],
-      entryLines: ((live.lines as LandedCostResult['entryLines']) || []), posted: false, replayed: true, dryRun: Boolean(input.dryRun),
+      entryLines: ((live.lines as LandedCostResult['entryLines']) || []), posted: false, replayed: true, dryRun: Boolean(input.dryRun), planHash: text(m.planHash),
     };
   }
   const accounts = await accountsOf(db, t, workspaceId);
   const charge = await readCharge(db, t, input, accounts, currency);
   if (resolveAccountRole(charge.account) === 'inventory') throw new LandedCostError(400, 'The charge cannot come from an Inventory account');
-  const inventoryAcc = input.inventoryAccountId ? accounts.find(a => a.id === input.inventoryAccountId) : accounts.filter(a => resolveAccountRole(a) === 'inventory').sort(byCode)[0];
-  if (!inventoryAcc || resolveAccountRole(inventoryAcc) !== 'inventory') throw new LandedCostError(400, 'Add (or choose) an Inventory account in this workspace');
+  const mappings = (ws.defaultAccountMappings || {}) as Record<string, string>;
+  const inventoryAcc = roleAccount(accounts, mappings, 'inventory', INVENTORY_KEYS, input.inventoryAccountId, 'an Inventory account');
 
   // the received lines: each item line of the chosen bills, at what its stock moves brought in (net of reversals)
   const recv: Array<Omit<LandedCostLinePlan, 'allocatedCents' | 'inventoryCents' | 'cogsCents' | 'unitCostBeforeCents' | 'unitCostAfterCents' | 'itemName'> & { weight: number }> = [];
@@ -200,14 +256,19 @@ async function landInTransaction(db: Firestore, t: DbTransaction, input: LandedC
   // the items, their stock now, and the day of their last move
   const itemIds = [...new Set(recv.map(r => r.itemId))];
   const items = new Map<string, Doc>();
+  const history = new Map<string, Array<StockMove & { id: string }>>();
   let lastMove = '';
+  let seqMark = '';
   for (const itemId of itemIds) {
     const snap = await t.get(db.collection('inventory').doc(itemId));
     if (!snap.exists || snap.data()?.workspaceId !== workspaceId) throw new LandedCostError(404, `Item ${itemId} not found`);
     items.set(itemId, snap.data() || {});
-    for (const d of (await t.get(db.collection('stockMoves').where('workspaceId', '==', workspaceId).where('itemId', '==', itemId))).docs) {
-      const day = String(d.data().date || '').slice(0, 10);
+    const moves = (await t.get(db.collection('stockMoves').where('workspaceId', '==', workspaceId).where('itemId', '==', itemId))).docs.map(d => ({ ...d.data(), id: d.id }) as StockMove & { id: string });
+    history.set(itemId, moves);
+    for (const m of moves) {
+      const day = String(m.date || '').slice(0, 10);
       if (day > lastMove) lastMove = day;
+      if (String(m.seq || '') > seqMark) seqMark = String(m.seq || '');
     }
   }
   let date = (input.date || today).slice(0, 10);
@@ -220,11 +281,12 @@ async function landInTransaction(db: Firestore, t: DbTransaction, input: LandedC
   for (const itemId of itemIds) {
     const item = items.get(itemId) || {};
     const onHand = Number(item.quantityAtHand) || 0;
-    const received = round6(recv.filter(r => r.itemId === itemId).reduce((s, r) => s + r.quantity, 0));
     const before = Math.round(Number(item.unitCostCents) || 0);
     const mine = recv.map((r, i) => ({ r, cents: allocated[i] })).filter(x => x.r.itemId === itemId);
     const plans = mine.map(({ r, cents }): LandedCostLinePlan => {
-      const inventoryCents = onHand <= 0 ? 0 : onHand >= received ? cents : Math.round(cents * onHand / received);
+      // EG-6 review: the sold share comes from the history (the pool each later sale took its part of), so stock
+      // that was on hand before the receipt shares the sales with it
+      const inventoryCents = onHand <= 0 ? 0 : Math.round(cents * remainingShare(history.get(itemId) || [], r.billId, r.line));
       return { key: r.key, billId: r.billId, line: r.line, itemId, quantity: r.quantity, goodsCents: r.goodsCents, ...(r.dimensions ? { dimensions: r.dimensions } : {}), itemName: String(item.name || itemId), allocatedCents: cents, inventoryCents, cogsCents: cents - inventoryCents, unitCostBeforeCents: before, unitCostAfterCents: before };
     });
     const into = plans.reduce((s, p) => s + p.inventoryCents, 0);
@@ -232,8 +294,7 @@ async function landInTransaction(db: Firestore, t: DbTransaction, input: LandedC
     for (const p of plans) lines.push({ ...p, unitCostAfterCents: after });
   }
   lines.sort((a, b) => recv.findIndex(r => r.key === a.key) - recv.findIndex(r => r.key === b.key));
-  const cogsAcc = lines.some(l => l.cogsCents !== 0) ? accounts.filter(a => resolveAccountRole(a) === 'cogs').sort(byCode)[0] : undefined;
-  if (lines.some(l => l.cogsCents !== 0) && !cogsAcc) throw new LandedCostError(400, 'Some of these goods are sold already: add a Cost of Goods Sold account for their share');
+  const cogsAcc = lines.some(l => l.cogsCents !== 0) ? roleAccount(accounts, mappings, 'cogs', COGS_KEYS, input.cogsAccountId, 'a Cost of Goods Sold account') : undefined;
 
   const entryLines: LandedCostResult['entryLines'] = [];
   for (const l of lines) {
@@ -244,9 +305,12 @@ async function landInTransaction(db: Firestore, t: DbTransaction, input: LandedC
   entryLines.push({ accountId: charge.account.id, accountName: charge.account.name, amountCents: -charge.cents, description: charge.label, ...(charge.dimensions && Object.keys(charge.dimensions).length ? { dimensions: { ...charge.dimensions } } : {}) });
   const result: LandedCostResult = {
     entryId, date, movedToOpenDay: Boolean(lock), chargeCents: charge.cents, chargeAccountId: charge.account.id, inventoryAccountId: inventoryAcc.id,
-    cogsAccountId: cogsAcc?.id || null, lines, entryLines, posted: false, replayed: false, dryRun: Boolean(input.dryRun),
+    cogsAccountId: cogsAcc?.id || null, lines, entryLines, posted: false, replayed: false, dryRun: Boolean(input.dryRun), planHash: '',
   };
+  result.planHash = hash(JSON.stringify({ entryId, date, entryLines, lines: lines.map(l => [l.key, l.allocatedCents, l.inventoryCents, l.cogsCents, l.unitCostBeforeCents, l.unitCostAfterCents]) })).slice(0, 32);
   if (input.dryRun) return result;
+  // EG-6 review: post only what was reviewed
+  if (input.expectedPlanHash && input.expectedPlanHash !== result.planHash) throw new LandedCostError(409, 'What would post has changed since it was reviewed (stock, costs or the date moved): review it again', { ...result, dryRun: true });
 
   const ref = db.collection('transactions').doc(entryId);
   const tx = await TransactionValidator.validateAndPrepare({
@@ -256,20 +320,26 @@ async function landInTransaction(db: Firestore, t: DbTransaction, input: LandedC
       type: LANDED_COST_TYPE, charge: input.charge, ...(input.charge.kind === 'bill' ? { chargeBillId: input.charge.billId } : {}),
       receiptBillIds: [...new Set(input.receiptBillIds)], basis: input.basis, chargeCents: charge.cents, chargeAccountId: charge.account.id,
       inventoryAccountId: inventoryAcc.id, cogsAccountId: cogsAcc?.id || null, movedToOpenDay: Boolean(lock), requestedDate: input.date || null,
-      itemIds, allocation: lines,
+      itemIds, allocation: lines, planHash: result.planHash, seqMark,
+      costBefore: Object.fromEntries(itemIds.map(id => [id, Math.round(Number(items.get(id)?.unitCostCents) || 0)])),
     },
     lines: entryLines.map((l, i) => ({ id: `line-${i + 1}`, ...l })),
   }, { workspaceId, user: { uid: user.uid, admin: user.admin }, wsData: ws as never }, undefined, t);
   // not metadata.billId: that names a bill's own posting (billPosting.ts), which this entry is not
   await ledgerWrite(t, ref, { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() } as never);
-  writeStockMoves(db, t, lines.filter(l => l.inventoryCents !== 0).map(l => {
-    const onHand = Number(items.get(l.itemId)?.quantityAtHand) || 0;
+  // EG-6 review: one move per item (its lines together), so a replay adds the value once, as the posting averaged it
+  writeStockMoves(db, t, itemIds.map(itemId => {
+    const mine = lines.filter(l => l.itemId === itemId);
+    const valueCents = mine.reduce((s, l) => s + l.inventoryCents, 0);
+    const onHand = Number(items.get(itemId)?.quantityAtHand) || 0;
+    const one = mine.length === 1 ? mine[0] : null;
+    const bills = [...new Set(mine.map(l => l.billId))];
     return {
-      workspaceId, itemId: l.itemId, itemName: l.itemName, date, kind: 'landed-cost' as const, quantity: 0, quantityBefore: onHand, quantityAfter: onHand,
-      unitCostCents: l.unitCostAfterCents, valueCents: l.inventoryCents, transactionId: entryId, documentType: 'bill' as const, documentId: l.billId, documentLine: l.line,
-      ...(l.dimensions ? { labels: { ...l.dimensions } } : {}), uid: user.uid,
+      workspaceId, itemId, itemName: mine[0].itemName, date, kind: 'landed-cost' as const, quantity: 0, quantityBefore: onHand, quantityAfter: onHand,
+      unitCostCents: mine[0].unitCostAfterCents, valueCents, transactionId: entryId, documentType: 'bill' as const,
+      ...(bills.length === 1 ? { documentId: bills[0] } : {}), ...(one ? { documentLine: one.line } : {}), ...(one?.dimensions ? { labels: { ...one.dimensions } } : {}), uid: user.uid,
     };
-  }));
+  }).filter(m => m.valueCents !== 0));
   for (const itemId of itemIds) {
     const after = lines.find(l => l.itemId === itemId)?.unitCostAfterCents;
     if (after !== undefined && after !== Math.round(Number(items.get(itemId)?.unitCostCents) || 0)) t.update(db.collection('inventory').doc(itemId), { unitCostCents: after, updatedAt: FieldValue.serverTimestamp() });
@@ -312,8 +382,10 @@ export async function undoLandedCost(db: Firestore, input: { workspaceId: string
       const moves = (await t.get(db.collection('stockMoves').where('workspaceId', '==', workspaceId).where('itemId', '==', itemId))).docs.map(d => d.data());
       const mine = moves.filter(m => m.transactionId === entryId);
       own.push(...mine);
-      const lastOwn = mine.map(m => String(m.seq || '')).sort().pop() || '';
-      const later = moves.filter(m => m.transactionId !== entryId && String(m.seq || '') > lastOwn);
+      // EG-6 review: against the posting's own mark (the item's last move when it posted), so a landed cost that put
+      // everything to COGS (and so wrote no move) can still be undone
+      const mark = text(meta.seqMark) || mine.map(m => String(m.seq || '')).sort().pop() || '';
+      const later = moves.filter(m => m.transactionId !== entryId && String(m.seq || '') > mark);
       const name = String(mine[0]?.itemName || itemId);
       if (later.length) throw new LandedCostError(409, `${name} has moved since the landed cost was posted (${String(later[0].kind)} on ${String(later[0].date).slice(0, 10)}): it can no longer be undone as a whole; post a correcting landed cost instead`);
       const itemSnap = await t.get(db.collection('inventory').doc(itemId));
@@ -346,10 +418,13 @@ export async function undoLandedCost(db: Firestore, input: { workspaceId: string
         ...(m.labels ? { labels: m.labels as Record<string, string> } : {}), correctsTxId: entryId, uid: user.uid,
       };
     }));
-    for (const [itemId, value] of back) {
+    // EG-6 review: nothing has moved since, so the cost goes back exactly to what it was before (not a rounded inverse)
+    const costBefore = (meta.costBefore || {}) as Record<string, number>;
+    for (const itemId of itemIds) {
       const item = items.get(itemId) || {};
-      const onHand = Number(item.quantityAtHand) || 0;
-      if (onHand > 0) t.update(db.collection('inventory').doc(itemId), { unitCostCents: movingAverageCents(onHand, Math.round(Number(item.unitCostCents) || 0), -value, onHand), updatedAt: FieldValue.serverTimestamp() });
+      const was = Number.isSafeInteger(costBefore[itemId]) ? costBefore[itemId]
+        : movingAverageCents(Number(item.quantityAtHand) || 0, Math.round(Number(item.unitCostCents) || 0), -(back.get(itemId) || 0), Number(item.quantityAtHand) || 1);
+      if (was !== Math.round(Number(item.unitCostCents) || 0)) t.update(db.collection('inventory').doc(itemId), { unitCostCents: was, updatedAt: FieldValue.serverTimestamp() });
     }
     await writeServerAuditLog({
       workspaceId, uid: user.uid, email: user.email, action: 'landed-cost-undo', entityType: 'transaction', entityId: entryId,

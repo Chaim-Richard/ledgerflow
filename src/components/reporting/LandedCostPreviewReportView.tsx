@@ -363,6 +363,7 @@ export default function LandedCostPreviewReportView() {
 
       {canPost && workspaceId && (
         <LandedCostPostPanel
+          key={workspaceId}
           workspaceId={workspaceId}
           currency={homeCurrency}
           bills={(bills || []).filter(b => !workspaceId || !b.workspaceId || b.workspaceId === workspaceId)}

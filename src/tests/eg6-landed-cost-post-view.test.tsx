@@ -12,6 +12,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import LandedCostPreviewReportView from '../components/reporting/LandedCostPreviewReportView';
 import { markComponentCollectionsLoaded, setComponentWorkspace } from './helpers/componentFixtures';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { useAuthStore } from '../stores/useAuthStore';
 import { useDataNeedsStore } from '../stores/useDataNeedsStore';
 import type { Bill, ChartAccount, InventoryItem } from '../types';
 
@@ -27,8 +28,9 @@ const bills = [
     splits: [{ accountId: 'freight', description: 'Freight', amountCents: 20000 }] },
 ] as Bill[];
 const accounts = [{ id: 'inv', workspaceId: W, name: 'Inventory', code: '1300' }, { id: 'freight', workspaceId: W, name: 'Freight in', code: '5100' }] as ChartAccount[];
-const plan = (dryRun: boolean) => ({
-  status: 'ok', entryId: 'landed-cost-bill-frt-1-0-0', date: '2026-10-23', movedToOpenDay: false, chargeCents: 20000, posted: !dryRun, replayed: false, dryRun,
+const HASH = 'a'.repeat(32);
+const plan = (dryRun: boolean, planHash = HASH) => ({
+  status: 'ok', entryId: 'landed-cost-bill-frt-1-0-0', date: '2026-10-23', movedToOpenDay: false, chargeCents: 20000, posted: !dryRun, replayed: false, dryRun, planHash,
   lines: [
     { key: 'bill-1:0', itemName: 'Chair', quantity: 10, allocatedCents: 5000, inventoryCents: 5000, cogsCents: 0, unitCostBeforeCents: 5000, unitCostAfterCents: 5500 },
     { key: 'bill-1:1', itemName: 'Table', quantity: 10, allocatedCents: 15000, inventoryCents: 15000, cogsCents: 0, unitCostBeforeCents: 15000, unitCostAfterCents: 16500 },
@@ -42,11 +44,16 @@ const plan = (dryRun: boolean) => ({
 
 describe('EG-6 landed cost: preview → post on screen', () => {
   let sent: Array<{ url: string; body: Record<string, unknown> }> = [];
+  /** answers the next post (not a dry run) with this, once */
+  let nextPost: Response | null = null;
   beforeEach(() => {
     sent = [];
+    nextPost = null;
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body || '{}'));
       sent.push({ url: String(input), body });
+      if (String(input).endsWith('/undo')) return new Response(JSON.stringify({ status: 'ok', entryId: 'landed-cost-bill-frt-1-0-0', undoEntryId: 'landed-cost-bill-frt-1-0-0-undo', date: '2026-10-23', replayed: false }), { status: 200 });
+      if (!body.dryRun && nextPost) { const r = nextPost; nextPost = null; return r; }
       return new Response(JSON.stringify(plan(Boolean(body.dryRun))), { status: 200 });
     }) as typeof fetch;
     markComponentCollectionsLoaded('bills', 'inventory', 'vendors');
@@ -74,8 +81,45 @@ describe('EG-6 landed cost: preview → post on screen', () => {
     await act(async () => { fireEvent.click(post); });
     assert.equal(sent.length, 2);
     assert.equal(sent[1].body.dryRun, false);
+    assert.equal(sent[1].body.expectedPlanHash, HASH, 'posts exactly the reviewed plan');
     assert.match(screen.getByRole('status').textContent || '', /Posted landed-cost-bill-frt-1-0-0 on 2026-10-23/);
     assert.equal((within(panel).getByRole('button', { name: 'Post landed cost' }) as HTMLButtonElement).disabled, true, 'posted once');
+    // review finding: an Undo action, through the undo route
+    await act(async () => { fireEvent.click(within(panel).getByRole('button', { name: 'Undo landed cost' })); });
+    assert.equal(sent[2].url, '/api/v1/inventory/landed-cost/landed-cost-bill-frt-1-0-0/undo');
+    assert.deepEqual(sent[2].body, { workspaceId: W });
+    assert.match(screen.getByRole('status').textContent || '', /Undone: landed-cost-bill-frt-1-0-0-undo/);
+    assert.equal(within(panel).queryByRole('button', { name: 'Undo landed cost' }), null);
+  });
+
+  test('a plan that changed since the review is shown again, not posted', async () => {
+    setComponentWorkspace('accountant');
+    render(<LandedCostPreviewReportView />);
+    const panel = screen.getByRole('region', { name: 'Post landed cost' });
+    await act(async () => { fireEvent.click(within(panel).getByRole('button', { name: 'Review what will post' })); });
+    const changed = { ...plan(true, 'b'.repeat(32)), lines: plan(true).lines.map(l => (l.itemName === 'Chair' ? { ...l, unitCostAfterCents: 5600 } : l)) };
+    nextPost = new Response(JSON.stringify({ error: 'What would post has changed since it was reviewed', plan: changed }), { status: 409 });
+    await act(async () => { fireEvent.click(within(panel).getByRole('button', { name: 'Post landed cost' })); });
+    assert.match(screen.getByRole('status').textContent || '', /changed since it was reviewed/);
+    assert.match(panel.textContent || '', /Will post on/);
+    assert.match(panel.textContent || '', /\$50\.00 → \$56\.00/, 'the new plan is on screen');
+    assert.equal(within(panel).queryByRole('button', { name: 'Undo landed cost' }), null, 'nothing posted');
+    await act(async () => { fireEvent.click(within(panel).getByRole('button', { name: 'Post landed cost' })); });
+    assert.equal(sent[sent.length - 1].body.expectedPlanHash, 'b'.repeat(32), 'the next post confirms the new plan');
+  });
+
+  test('switching workspace resets the panel and ignores an answer for the old one', async () => {
+    setComponentWorkspace('owner');
+    let release: (r: Response) => void = () => {};
+    globalThis.fetch = (() => new Promise<Response>(resolve => { release = resolve; })) as typeof fetch;
+    render(<LandedCostPreviewReportView />);
+    await act(async () => { fireEvent.click(within(screen.getByRole('region', { name: 'Post landed cost' })).getByRole('button', { name: 'Review what will post' })); });
+    await act(async () => {
+      const ws = useAuthStore.getState().workspaces[0];
+      useAuthStore.setState({ workspaces: [ws, { ...ws, id: 'other-workspace' }], currentWorkspaceId: 'other-workspace' });
+    });
+    await act(async () => { release(new Response(JSON.stringify(plan(true)), { status: 200 })); });
+    assert.doesNotMatch(document.body.textContent || '', /Will post on/, 'the old workspace\'s plan is not shown');
   });
 
   test('a viewer sees the preview only', () => {
