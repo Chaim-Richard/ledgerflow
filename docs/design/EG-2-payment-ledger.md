@@ -285,7 +285,7 @@ a 10-31 revaluation would be its own line in the check).
 5. **Backfill of applied credits with no matching evidence:** oldest-first match, or leave unmatched?
    *Default: oldest-first only when the party's totals match exactly; otherwise unmatched.*
 6. **Payment void:** reversal rows dated the void date, or the payment date? *Default: `reversalDate` rule* (the
-   payment's date while open, else the first open day), same as the reversal entry.
+   payment's date while open, else today: `reversalDate` in postingCore.ts), same as the reversal entry.
 7. **Refunds of credits** as rows in this table or a separate credit-movements view? *Default: a view in step 6*;
    the table stays about documents.
 
