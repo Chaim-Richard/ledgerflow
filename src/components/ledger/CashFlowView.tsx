@@ -5,10 +5,13 @@ import { getComparePeriod } from '../../lib/fiscalCalendar';
 import { formatCurrency, cn, getLocalDateISO, monthBoundsISO } from '../../lib/utils';
 import { exportToExcel } from '../../lib/excelExport';
 import { computeCashFlow } from '../../server/reports/computeReports';
-import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal } from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useFinancialReporting, ServerCashFlowData } from '../../hooks/useFinancialReporting';
 import MonthNavigator from '../ui/MonthNavigator';
+import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
+import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
+import { provenanceFromResponse } from '../../lib/reportProvenance';
 
 interface CashFlowViewProps {
   /** Period and comparison chosen on the Reports page; the view follows them when given. */
@@ -37,11 +40,12 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
   const [isComparative, setIsComparative] = usePageSyncedState(
     JSON.stringify([startDate, compareStartDate]), startDate ? Boolean(compareStartDate) : undefined, false);
 
-  const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
   const { fetchCashFlow, loadingStates } = useFinancialReporting();
   const [serverData, setServerData] = useState<ServerCashFlowData | null>(null);
   const [serverPrevData, setServerPrevData] = useState<ServerCashFlowData | null>(null);
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
+  const [serverFailed, setServerFailed] = useState(false);
+  const browserFigures = useBrowserProvenance(STATEMENT_COLLECTIONS, serverFailed);
   const reportGen = useRef(0);
 
   // The page's comparison period, else the calendar period just before
@@ -59,6 +63,7 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
       if (gen !== reportGen.current) return;
       setServerData(res || null);
       setIsServerAuthoritative(Boolean(res));
+      setServerFailed(!res);
       if (isComparative) {
         const prev = getPrevPeriod(dateRange.start, dateRange.end);
         const prevRes = await fetchCashFlow(prev.start, prev.end);
@@ -67,6 +72,7 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
       }
     } catch {
       setIsServerAuthoritative(false);
+      setServerFailed(true);
     }
   }, [fetchCashFlow, dateRange.start, dateRange.end, isComparative, getPrevPeriod]);
 
@@ -158,6 +164,10 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
     return localCalculation.currentData;
   }, [isServerAuthoritative, serverData, localCalculation]);
 
+  // AUD-10: the server's answer, or the figures worked out here
+  const provenance = isServerAuthoritative && serverData ? provenanceFromResponse(serverData)
+    : serverFailed || browserFigures.completeness !== 'complete' ? browserFigures : null;
+
   const prevData = useMemo(() => {
     if (isServerAuthoritative && serverPrevData) {
       return {
@@ -217,36 +227,9 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
 
   return (
     <div className="space-y-6">
-      {/* Authoritative / Truncation Status Banner */}
-      {!isServerAuthoritative && isDataTruncated ? (
-        <div id="cf-statement-truncation-banner" className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-medium">
-          <div className="flex items-center gap-2">
-            <AlertCircle aria-hidden="true" className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Showing 2,000 of N transactions — totals are incomplete without server sync</span>
-          </div>
-          <button
-            onClick={() => loadServerReport()}
-            className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 rounded-lg text-xs transition-colors shrink-0 cursor-pointer"
-          >
-            {loadingStates.cf ? <RefreshCw aria-hidden="true" className="w-3.5 h-3.5 animate-spin" /> : null}
-            <span>{loadingStates.cf ? "Loading Server..." : "Load Full Server Report"}</span>
-          </button>
-        </div>
-      ) : isServerAuthoritative ? (
-        <div id="cf-statement-authoritative-badge" className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-between text-xs font-semibold">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Server-Authoritative Statement (Full Streaming History Verified)</span>
-          </div>
-          <button
-            onClick={() => loadServerReport()}
-            className="flex items-center gap-1 text-[11px] hover:underline cursor-pointer"
-          >
-            {loadingStates.cf ? <RefreshCw aria-hidden="true" className="w-3 h-3 animate-spin" /> : null}
-            <span>Refresh</span>
-          </button>
-        </div>
-      ) : null}
+      {/* AUD-10: where these figures come from */}
+      <ReportProvenanceNote id="cf-statement-provenance" provenance={provenance} onRefresh={() => loadServerReport()} busy={loadingStates.cf} />
+
 
       {/* Date Range & Controls */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs relative overflow-hidden group gap-4">
