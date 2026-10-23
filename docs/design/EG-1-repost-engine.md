@@ -129,6 +129,14 @@ recompute(db, t, ws, key, fromDate) → { corrections: PostableTransaction[], st
    (its first move's `quantityBefore` ≠ 0: stock from before the history, with no opening average), the item is
    **refused** ("history incomplete", `blocked`, `blockedBy: 'history-incomplete'`) rather than given an invented
    average. A later step may seed it from an explicit opening valuation.
+10. **Second review (#359).** Opening stock (`opening` moves, item import) is a basis like a purchase. Adjustments,
+   counts and manual cost of goods dated after the change are revalued at the replayed average (their Inventory
+   line and offset), so Inventory equals the stock value; a revaluation after the change, or a stock change without
+   its entry, refuses the item. Replay order is total: date, then `dbSeq` (a database sequence set on insert), then
+   `seq`, then id. Repost entries are base currency with `exchangeRate: 1`; they cannot be edited, voided, deleted
+   or reversed on their own, and are undone only with the entry they correct (with a compensating `cost-repost`
+   move). `keys: []` is refused. A failed run-summary audit write is returned with the committed result
+   (`summaryAuditError`); each key's audit row is in its own transaction.
 9. **Stale quantities.** The stored `quantityBefore/After` of a move are those of the moment it was written. Readers
    that show a day's stock (`itemDetails`, `stockAging` in `src/lib/stockMoves.ts`) derive the quantities in date
    order from the moves' deltas (`datedMoves`), so "as of 01-07" counts a backdated bill on its own date. The

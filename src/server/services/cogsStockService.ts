@@ -7,6 +7,7 @@ import { isPostable } from '../../lib/txFilters';
 import { BILL_ACCRUAL_TYPE } from '../../lib/billStock';
 import type { Transaction } from '../../types';
 import { stockMovesReady, writeStockMoves, type NewStockMove } from './stockMoveService';
+import { REPOST_COGS_TYPE } from './repostMarker';
 
 /**
  * Stock follows the ledger: a cost-of-goods-sold entry for an invoice line (metadata.type
@@ -239,7 +240,10 @@ export async function prepareStockMoves(
   const reversalOf = new Map(entries.filter(e => typeof e.metadata?.reversesTxId === 'string').map(e => [String(e.metadata!.reversesTxId), e]));
   // invoices whose earlier cost entry this request reverses (an edit keeps how that invoice ships)
   const reshipped = new Set<string>();
+  // EG-1 review: repost corrections undone with the entry they correct (a document edited or voided)
+  const repostUndo: Array<{ entry: LedgerEntry; original: LedgerEntry }> = [];
   const putBack = (target: string, original: LedgerEntry) => {
+    if (original.metadata?.type === REPOST_COGS_TYPE) { repostUndo.push({ entry: reversalOf.get(target) || original, original }); return; }
     if (original.metadata?.type === INVOICE_COGS_TYPE) reshipped.add(String(original.metadata.invoiceId));
     // J-08: a bill's item lines go back out with it
     for (const line of billStockIn(original)) {
@@ -306,6 +310,12 @@ export async function prepareStockMoves(
     }
   }
 
+  // a repost correction is undone only together with the entry it corrects, and its stock value goes with it
+  for (const u of repostUndo) {
+    if (!targets.includes(String(u.original.metadata?.correctsTxId || ''))) {
+      throw new LedgerPostingError(409, `Entry ${u.original.id} corrects the cost of ${String(u.original.metadata?.itemName || 'an item')} after a backdated change; it is undone only with the entry it corrects (edit or void that document).`);
+    }
+  }
   const itemIds = Array.from(deltas.keys()).filter(id => deltas.get(id) !== 0);
   const warnings: string[] = [];
   const writes: { id: string; quantityAtHand: number; unitCostCents?: number }[] = [];
@@ -376,6 +386,20 @@ export async function prepareStockMoves(
       }
       writes.push({ id: snap.id, quantityAtHand, ...(costChanged ? { unitCostCents: cost } : {}) });
     }
+  }
+
+  for (const u of repostUndo) {
+    const itemId = String(u.original.metadata?.itemId || '');
+    const snap = await t.get(db.collection('inventory').doc(itemId));
+    if (!snap.exists || snap.data()?.workspaceId !== workspaceId) continue;
+    const onHand = writes.find(w => w.id === itemId)?.quantityAtHand ?? (Number(snap.data()?.quantityAtHand) || 0);
+    const valueCents = -(Number(u.original.metadata?.stockValueCents) || 0);
+    if (valueCents === 0) continue;
+    moves.push({
+      workspaceId, itemId, itemName: String(snap.data()?.name || ''), date: String(u.entry.date || '').slice(0, 10), kind: 'cost-repost',
+      quantity: 0, quantityBefore: onHand, quantityAfter: onHand, unitCostCents: 0, valueCents, transactionId: u.entry.id,
+      correctsTxId: String(u.original.metadata?.correctsTxId || ''), uid: String(u.entry.uid || ''),
+    });
   }
 
   return {

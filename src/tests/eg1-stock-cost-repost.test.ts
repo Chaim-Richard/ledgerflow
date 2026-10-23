@@ -52,7 +52,9 @@ describe('EG-1 step 1: stock cost after a backdated purchase', { skip: !url && '
   const bolt = `${ws}_bolt`;
   const sprocket = `${ws}_sprocket`;
   const gizmo = `${ws}_gizmo`;
-  const ITEMS: Array<[string, string, number]> = [[widget, 'Widget', 0], [gadget, 'Gadget', 0], [bolt, 'Bolt', 0], [sprocket, 'Sprocket', 0], [gizmo, 'Gizmo', 5]];
+  const opener = `${ws}_opener`;
+  const counter = `${ws}_counter`;
+  const ITEMS: Array<[string, string, number, number]> = [[widget, 'Widget', 0, 0], [gadget, 'Gadget', 0, 0], [bolt, 'Bolt', 0, 0], [sprocket, 'Sprocket', 0, 0], [gizmo, 'Gizmo', 5, 1_000], [opener, 'Opener', 0, 1_000], [counter, 'Counter', 0, 0]];
   let server: Server;
   let base = '';
   let db: import('../server/db/pgFirestore').Firestore;
@@ -114,6 +116,7 @@ describe('EG-1 step 1: stock cost after a backdated purchase', { skip: !url && '
     app.use('/api/v1/transactions', transactionRouter);
     app.use('/api/v1/documents', (await import('../server/routes/documentPostRoutes')).documentPostRouter);
     app.use('/api/v1/repost', repostRouter);
+    app.use('/api/v1/inventory', (await import('../server/routes/inventoryRoutes')).inventoryRouter);
     server = app.listen(0);
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -129,11 +132,12 @@ describe('EG-1 step 1: stock cost after a backdated purchase', { skip: !url && '
       { name: 'Sales', code: '4000', type: 'Income' },
       { name: 'Cost of goods sold', code: '5000', type: 'Cost of goods sold' },
       { name: 'Office expenses', code: '6000', type: 'Expense' },
+      { name: 'Opening Balance Equity', code: '3900', type: 'Equity' },
     ] });
     assert.equal(accounts.status, 200, JSON.stringify(accounts.body));
     for (const a of await all<ChartAccount>('chartAccounts')) acct[String(a.code)] = a;
-    for (const [id, name, onHand] of ITEMS) {
-      await db.collection('inventory').doc(id).set({ workspaceId: ws, name, sku: name.toUpperCase(), itemType: 'stock', quantityAtHand: onHand, unitCostCents: onHand ? 1_000 : 0, unitPriceCents: 3_000, reorderPoint: 0, uid: OWNER });
+    for (const [id, name, onHand, cost] of ITEMS) {
+      await db.collection('inventory').doc(id).set({ workspaceId: ws, name, sku: name.toUpperCase(), itemType: 'stock', quantityAtHand: onHand, unitCostCents: cost, unitPriceCents: 3_000, reorderPoint: 0, uid: OWNER });
     }
   });
 
@@ -289,6 +293,64 @@ describe('EG-1 step 1: stock cost after a backdated purchase', { skip: !url && '
     assert.match(String(run.body.error), /history incomplete/);
     assert.equal((await all<Transaction>('transactions')).length, count);
     assert.deepEqual([(await queueRow(gizmo))?.status, (await queueRow(gizmo))?.blockedBy], ['blocked', 'history-incomplete']);
+  });
+
+  const adjust = (body: Record<string, unknown>) => send('POST', '/api/v1/inventory/adjust', { workspaceId: ws, inventoryAccountId: acct['1300'].id, ...body });
+
+  test('review: opening stock from an import is the replay\'s basis, not free units', async () => {
+    const opening = await adjust({ itemId: opener, quantityChange: 10, type: 'opening', offsetAccountId: acct['3900'].id, date: '2026-01-05' });
+    assert.equal(opening.status, 200, JSON.stringify(opening.body));
+    await invoice(`${ws}_o_inv`, opener, '2026-01-10', 5);
+    await bill(`${ws}_o_bB`, opener, '2026-01-03', 10, 2_000);
+    const run = await repost({ runId: 'run-opener-0001', keys: [opener] });
+    assert.equal(run.status, 200, JSON.stringify(run.body));
+    // 01-03 10 @ 20.00, 01-05 opening 10 @ 10.00 → 15.00; the sale 5 × 15.00 = 75.00 (+25.00), as for a bill
+    assert.deepEqual(run.body.keys![0].corrections.map(c => [c.beforeCents, c.afterCents, c.deltaCents]), [[5_000, 7_500, 2_500]]);
+    assert.equal((await item(opener)).unitCostCents, 1_500);
+    const fix = (await all<Transaction>('transactions')).find(t => t.metadata?.type === 'repost-cogs-adjust' && t.metadata?.itemId === opener)!;
+    assert.deepEqual([fix.currency, fix.exchangeRate], ['USD', 1], 'a base-currency entry with its rate');
+  });
+
+  test('review: a stock adjustment after the change is revalued too, so Inventory equals the stock value', async () => {
+    await bill(`${ws}_c_bA`, counter, '2026-01-05', 10, 1_000);
+    const out = await adjust({ itemId: counter, quantityChange: -5, type: 'adjustment', offsetAccountId: acct['6000'].id, date: '2026-01-10', reason: 'damaged' });
+    assert.equal(out.status, 200, JSON.stringify(out.body));
+    await bill(`${ws}_c_bB`, counter, '2026-01-03', 10, 2_000);
+    const run = await repost({ runId: 'run-counter-0001', keys: [counter] });
+    assert.equal(run.status, 200, JSON.stringify(run.body));
+    assert.deepEqual(run.body.keys![0].corrections.map(c => [c.of, c.beforeCents, c.afterCents, c.deltaCents]), [['adjustment', 5_000, 7_500, 2_500]]);
+    const fix = (await all<Transaction>('transactions')).find(t => t.metadata?.type === 'repost-cogs-adjust' && t.metadata?.itemId === counter)!;
+    assert.deepEqual(fix.lines.map(l => [l.accountId, l.amountCents]).sort(), [[acct['1300'].id, -2_500], [acct['6000'].id, 2_500]].sort());
+    const inventory = (await all<Transaction>('transactions')).filter(t => t.id === fix.id || t.metadata?.billId?.toString().includes('_c_') || (t.lines || []).some(l => l.description?.includes('Counter')))
+      .flatMap(t => t.lines || []).filter(l => l.accountId === acct['1300'].id).reduce((x, l) => x + l.amountCents, 0);
+    const moves = (await all<StockMove>('stockMoves')).filter(m => m.itemId === counter);
+    assert.equal(moves.reduce((x, m) => x + m.valueCents, 0), 22_500, 'the stock ledger: 15 × 15.00');
+    assert.equal(inventory, 22_500, 'the Inventory account agrees');
+    assert.equal((await item(counter)).unitCostCents, 1_500);
+    // review: every move gets a database order, increasing in the order written
+    const bySeq = [...moves].sort((a, b) => String(a.seq).localeCompare(String(b.seq)));
+    assert.ok(bySeq.every((m, i) => i === 0 || Number(m.dbSeq) > Number(bySeq[i - 1].dbSeq)), 'dbSeq follows the write order');
+  });
+
+  test('review: a repost correction cannot be reversed or voided on its own; an empty key list is refused', async () => {
+    const fix = (await all<Transaction>('transactions')).find(t => t.metadata?.type === 'repost-cogs-adjust' && t.metadata?.itemId === widget)!;
+    const reversed = await send('POST', `/api/v1/transactions/${fix.id}/reverse`, { workspaceId: ws, date: '2026-01-31' });
+    assert.equal(reversed.status, 409, JSON.stringify(reversed.body));
+    assert.match(String(reversed.body.error), /repost/);
+    const bulk = await commitAsServer(db, OWNER, { workspaceId: ws, transactions: [{
+      ...fix, id: `${ws}_undo_fix`, date: '2026-01-31', metadata: { ...fix.metadata, isReversal: true, reversesTxId: fix.id },
+      lines: fix.lines.map(l => ({ ...l, amountCents: -l.amountCents })),
+    } as never] });
+    assert.equal(bulk.status, 409, JSON.stringify(bulk.body));
+    assert.equal((await repost({ runId: 'run-empty-keys', keys: [] })).status, 400);
+    assert.equal((await repost({ runId: 'run-empty-kind', kinds: [] })).status, 400);
+  });
+
+  test('review: the replay order is total (date, database order, seq, id)', async () => {
+    const { compareMoves } = await import('../lib/stockMoves');
+    const m = (date: string, dbSeq: number | undefined, seq: string, id: string) => ({ date, dbSeq, seq, id });
+    const sorted = [m('2026-01-02', 9, 'z', 'a'), m('2026-01-01', 5, 'b', 'b'), m('2026-01-01', 3, 'c', 'c'), m('2026-01-01', undefined, 'd', 'd'), m('2026-01-01', 5, 'b', 'a')].sort(compareMoves);
+    assert.deepEqual(sorted.map(x => x.id), ['d', 'c', 'a', 'b', 'a']);
   });
 
   test('the queue can be read by any member; GET needs a workspace', async () => {

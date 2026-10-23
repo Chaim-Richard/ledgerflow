@@ -74,3 +74,25 @@ revoke execute on function public.lf_repost_mark() from public, anon, authentica
 drop trigger if exists lf_repost_mark on public."stockMoves";
 create trigger lf_repost_mark after insert on public."stockMoves"
   for each row execute function public.lf_repost_mark();
+
+-- The lookup above, by workspace, item and day (review: without it each stock move scans the workspace's history).
+create index if not exists "stockMoves_item_date_idx" on public."stockMoves" (workspace_id, (data->>'itemId'), (left(data->>'date', 10)));
+
+-- A total order for moves written on the same day (review): `seq` comes from the writing process's clock, which
+-- two servers (or two writes in one millisecond) do not order reliably. Each new move gets `dbSeq` from a database
+-- sequence as it is inserted; the replay orders by date, then dbSeq (moves from before this migration have none and
+-- come first), then seq, then id (src/lib/stockMoves.ts compareMoves).
+create sequence if not exists public."stockMoves_db_seq";
+revoke all on sequence public."stockMoves_db_seq" from public, anon, authenticated;
+create or replace function public.lf_stock_move_db_seq() returns trigger
+language plpgsql security definer set search_path = public
+as $$
+begin
+  new.data := new.data || jsonb_build_object('dbSeq', nextval('public."stockMoves_db_seq"'));
+  return new;
+end;
+$$;
+revoke execute on function public.lf_stock_move_db_seq() from public, anon, authenticated;
+drop trigger if exists lf_stock_move_db_seq on public."stockMoves";
+create trigger lf_stock_move_db_seq before insert on public."stockMoves"
+  for each row execute function public.lf_stock_move_db_seq();

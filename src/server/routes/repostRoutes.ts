@@ -17,8 +17,8 @@ export const repostRouter = express.Router();
 const RunSchema = z.object({
   workspaceId: z.string().min(1),
   runId: z.string().regex(/^[A-Za-z0-9_-]{8,80}$/, 'runId: 8–80 letters, digits, - or _').optional(),
-  kinds: z.array(z.string().min(1)).max(10).optional(),
-  keys: z.array(z.string().min(1)).max(500).optional(),
+  kinds: z.array(z.string().min(1)).min(1, 'kinds: choose at least one, or leave it out').max(10).optional(),
+  keys: z.array(z.string().min(1)).min(1, 'keys: choose at least one item, or leave it out to run every open row').max(500).optional(),
   dryRun: z.boolean().optional(),
   strictLock: z.boolean().optional(),
 });

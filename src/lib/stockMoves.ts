@@ -43,6 +43,8 @@ export interface StockMove {
   documentLineId?: string;
   /** DIM-2 phase 3: where the units went in the books: the sold line's labels (project, property, …), not its location */
   labels?: Record<string, string>;
+  /** EG-1 review: the database's insert order (a sequence set by a trigger); none on moves written before it */
+  dbSeq?: number;
   /** EG-1: for a cost-repost move, the sale's entry whose cost it corrects */
   correctsTxId?: string;
   /** DIM-2 phase 3: why stock was adjusted, as the person wrote it */
@@ -83,6 +85,17 @@ export function orderedMoves(moves: StockMove[]): StockMove[] {
 }
 
 /**
+ * The replay order (review): by date, then the database's own insert order (`dbSeq`, from the sequence set by the
+ * stockMoves trigger of migration 20261023010000; moves written before it have none and come first), then the
+ * writer's `seq`, then the id, so the order is total and the same on every run.
+ */
+export function compareMoves(a: Pick<StockMove, 'date' | 'seq'> & { id?: string; dbSeq?: unknown }, b: typeof a): number {
+  const seqOf = (m: typeof a) => (Number.isSafeInteger(Number(m.dbSeq)) && m.dbSeq !== undefined && m.dbSeq !== null ? Number(m.dbSeq) : -1);
+  return String(a.date).slice(0, 10).localeCompare(String(b.date).slice(0, 10)) || seqOf(a) - seqOf(b)
+    || String(a.seq).localeCompare(String(b.seq)) || String(a.id || '').localeCompare(String(b.id || ''));
+}
+
+/**
  * EG-1 (review finding 7): one item's moves in date order (ties: the order written), with the quantity before and
  * after each derived from the quantities moved, starting where the history starts. A move written after later-dated
  * ones (a backdated bill) keeps, as stored, the quantity of the moment it was written; the derived quantities are
@@ -91,7 +104,7 @@ export function orderedMoves(moves: StockMove[]): StockMove[] {
 export function datedMoves(moves: StockMove[]): StockMove[] {
   const bySeq = orderedMoves(moves);
   let at = round6(Number(bySeq[0]?.quantityBefore) || 0);
-  return [...bySeq].sort((a, b) => String(a.date).slice(0, 10).localeCompare(String(b.date).slice(0, 10)) || String(a.seq).localeCompare(String(b.seq)))
+  return [...bySeq].sort(compareMoves)
     .map(m => {
       const before = at;
       at = round6(at + (Number(m.quantity) || 0));

@@ -12,6 +12,8 @@
 import type { Firestore } from '../db/firestore';
 
 export const STOCK_COST_KIND = 'stock-cost';
+/** the metadata type of a repost correction entry (repostService.ts) */
+export const REPOST_COGS_TYPE = 'repost-cogs-adjust';
 export const REPOST_QUEUE = 'repostQueue';
 
 export const repostQueueId = (workspaceId: string, kind: string, key: string) => `${workspaceId}_${kind}_${key}`;

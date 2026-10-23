@@ -31,15 +31,16 @@ import { formatTzDate } from '../../lib/utils';
 import { INVOICE_COGS_TYPE } from '../../services/invoiceCogs';
 import { DELIVERY_COGS_TYPE } from '../../lib/deliveries';
 import { SALES_RETURN_TYPE } from '../../lib/salesReturns';
-import type { StockMove } from '../../lib/stockMoves';
+import { compareMoves, type StockMove } from '../../lib/stockMoves';
 import type { Transaction } from '../../types';
 import { movingAverageCents } from './cogsStockService';
 import { ledgerWrite } from './ledgerDoor';
 import { stockMovesReady, writeStockMoves } from './stockMoveService';
 import { writeServerAuditLog } from './auditLogService';
-import { REPOST_QUEUE, STOCK_COST_KIND, repostQueueReady, type RepostQueueRow } from './repostMarker';
+import { REPOST_COGS_TYPE, REPOST_QUEUE, STOCK_COST_KIND, repostQueueReady, type RepostQueueRow } from './repostMarker';
 
-export const REPOST_COGS_TYPE = 'repost-cogs-adjust';
+export { REPOST_COGS_TYPE };
+
 export const HISTORY_INCOMPLETE = 'history-incomplete';
 const PURCHASE_KINDS = ['purchase', 'purchase-reversal', 'purchase-return', 'purchase-return-reversal'];
 const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
@@ -57,12 +58,14 @@ export interface RepostCorrection {
   entryId: string;
   correctsTxId: string;
   /** what the corrected entry is: a sale's cost, or a customer return's */
-  of: 'sale' | 'return';
+  of: 'sale' | 'return' | 'adjustment';
   entryDate: string;
   date: string;
   movedToOpenDay: boolean;
-  /** the cost of goods account (debit side of a sale's entry) */
+  /** the account on the other side of Inventory (cost of goods, or an adjustment's offset) */
   account: string;
+  /** +1 when the corrected move put value into Inventory, −1 when it took value out */
+  direction: number;
   beforeCents: number;
   afterCents: number;
   deltaCents: number;
@@ -106,43 +109,60 @@ export interface RepostRunResult {
   posted: number;
   blocked: number;
   refused: number;
+  /** set when every key committed but the run's summary audit row could not be written */
+  summaryAuditError?: string;
 }
 
 type Entry = Transaction & { id: string };
 type Move = StockMove & { id: string };
+
 const text = (v: unknown) => (typeof v === 'string' && v ? v : '');
 
-/** The replay of one item's history: the average, and what each sale and customer return should have been valued at. */
-function replay(moves: Move[], entries: Map<string, Entry>, fromDate: string) {
-  const byDate = [...moves].sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.seq).localeCompare(String(b.seq)));
+/** Stock changes valued at the average of their day and corrected with it: sales, customer returns, and the moves
+ * an owner records on Inventory (adjustments, counts, manual cost of goods). Opening stock is a basis, like a purchase. */
+const ADJUST_KINDS = ['adjustment', 'count', 'manual-cogs'];
+const BASIS_KINDS = [...PURCHASE_KINDS, 'opening'];
+
+/** The replay of one item's history: the average, and what each sale, return or adjustment should have been valued at. */
+export function replay(moves: Move[], entries: Map<string, Entry>, fromDate: string) {
+  const byDate = [...moves].sort(compareMoves);
   let qty = 0;
   let cost = 0;
   const saleUnit = new Map<string, number>();
-  const valued: Array<{ entry: Entry; of: 'sale' | 'return'; date: string; cents: number }> = [];
+  const valued: Array<{ entry: Entry; move: Move; of: RepostCorrection['of']; date: string; cents: number }> = [];
   const notCorrected: RepostKeyResult['notCorrected'] = [];
+  let refuse = '';
   for (const m of byDate) {
     const q = Number(m.quantity) || 0;
-    if (m.kind === 'cost-repost') continue;
-    if (m.kind === 'revaluation') { cost = Math.round(Number(m.unitCostCents) || 0); continue; }
-    const after = round6(qty + q);
-    if (PURCHASE_KINDS.includes(m.kind) && after > 0) cost = movingAverageCents(qty, cost, Number(m.valueCents) || 0, after);
-    const entry = m.transactionId ? entries.get(m.transactionId) : undefined;
     const day = String(m.date).slice(0, 10);
+    if (m.kind === 'cost-repost') continue;
+    if (m.kind === 'revaluation') {
+      // its entry revalued the quantity of that day at the old average: both may now be wrong
+      if (day >= fromDate && !refuse) refuse = `it was revalued on ${day}, after the change: revalue it again instead`;
+      cost = Math.round(Number(m.unitCostCents) || 0);
+      continue;
+    }
+    const after = round6(qty + q);
+    if (BASIS_KINDS.includes(m.kind) && after > 0) cost = movingAverageCents(qty, cost, Number(m.valueCents) || 0, after);
+    const entry = m.transactionId ? entries.get(m.transactionId) : undefined;
     const meta = (entry?.metadata || {}) as Record<string, unknown>;
     if (entry && m.kind === 'sale') {
       saleUnit.set(`${text(meta.invoiceId)}|${text(meta.cogsForLineId)}`, cost);
       if (day >= fromDate) {
         if (after < 0) notCorrected.push({ transactionId: entry.id, date: day, reason: 'sold below zero: count the stock' });
-        else valued.push({ entry, of: 'sale', date: day, cents: Math.round(-q * cost) });
+        else valued.push({ entry, move: m, of: 'sale', date: day, cents: Math.round(-q * cost) });
       }
     } else if (entry && m.kind === 'return' && day >= fromDate) {
       const unit = meta.type === SALES_RETURN_TYPE ? saleUnit.get(`${text(meta.invoiceId)}|${text(meta.returnForLineId)}`) : undefined;
       if (unit === undefined) notCorrected.push({ transactionId: entry.id, date: day, reason: 'a return whose sale is not in the replay' });
-      else valued.push({ entry, of: 'return', date: day, cents: Math.round(q * unit) });
+      else valued.push({ entry, move: m, of: 'return', date: day, cents: Math.round(q * unit) });
+    } else if (ADJUST_KINDS.includes(m.kind) && q !== 0 && day >= fromDate) {
+      if (!entry) { if (!refuse) refuse = `its ${m.kind} on ${day} has no entry in the books to correct`; }
+      else valued.push({ entry, move: m, of: 'adjustment', date: day, cents: Math.round(Math.abs(q) * cost) });
     }
     qty = after;
   }
-  return { valued, notCorrected, cost, qty };
+  return { valued, notCorrected, cost, qty, refuse };
 }
 
 /** Reads, replays and (unless a dry run or refused) writes one key, in the transaction `t`. */
@@ -170,14 +190,15 @@ async function repostStockCost(db: Firestore, t: DbTransaction, input: RepostRun
   const moves = (await t.get(db.collection('stockMoves').where('workspaceId', '==', workspaceId).where('itemId', '==', itemId))).docs
     .map(d => ({ ...d.data(), id: d.id }) as Move);
   // no opening basis: the first move kept starts from stock whose average is not in the history (finding 6)
-  const first = [...moves].sort((a, b) => String(a.seq).localeCompare(String(b.seq)))[0];
+  const first = [...moves].sort((a, b) => compareMoves({ ...a, date: '' }, { ...b, date: '' }))[0];
   if (first && round6(Number(first.quantityBefore) || 0) !== 0) {
     result.status = 'refused';
     result.reason = `${result.name}: its stock history starts at ${first.quantityBefore} units already on hand, with no opening average, so the cost cannot be replayed (history incomplete). Count and revalue the stock instead.`;
     if (!input.dryRun) t.set(queueRef, { status: 'blocked', blockedBy: HISTORY_INCOMPLETE, ...stamp() }, { merge: true });
     return result;
   }
-  const ids = [...new Set(moves.filter(m => (m.kind === 'sale' || m.kind === 'return') && m.transactionId).map(m => String(m.transactionId)))];
+  const ids = [...new Set(moves.filter(m => (m.kind === 'sale' || m.kind === 'return' || ADJUST_KINDS.includes(m.kind)) && m.transactionId).map(m => String(m.transactionId)))];
+  const adjustIds = new Set(moves.filter(m => ADJUST_KINDS.includes(m.kind)).map(m => String(m.transactionId || '')));
   const snaps = ids.length ? await t.getAll(...ids.map(id => db.collection('transactions').doc(id))) : [];
   const reversed = new Set<string>();
   for (let i = 0; i < ids.length; i += 100) {
@@ -188,7 +209,7 @@ async function repostStockCost(db: Firestore, t: DbTransaction, input: RepostRun
   for (const s of snaps) {
     const e = s.exists ? ({ ...s.data(), id: s.id } as Entry) : null;
     const type = e?.metadata?.type;
-    if (!e || e.workspaceId !== workspaceId || ![INVOICE_COGS_TYPE, DELIVERY_COGS_TYPE, SALES_RETURN_TYPE].includes(String(type))) continue;
+    if (!e || e.workspaceId !== workspaceId || (!adjustIds.has(e.id) && ![INVOICE_COGS_TYPE, DELIVERY_COGS_TYPE, SALES_RETURN_TYPE].includes(String(type)))) continue;
     if (!isPostable(e) || e.reversalEventId || reversed.has(e.id)) continue;
     entries.set(e.id, e);
   }
@@ -196,8 +217,8 @@ async function repostStockCost(db: Firestore, t: DbTransaction, input: RepostRun
   const earlier = (await t.get(db.collection('transactions').where('workspaceId', '==', workspaceId).where('metadata.repostKey', '==', itemId))).docs
     .map(d => ({ ...d.data(), id: d.id }) as Entry).filter(e => e.metadata?.repostKind === STOCK_COST_KIND);
   const earlierReversed = new Set<string>();
-  if (earlier.length) {
-    const snap = await t.get(db.collection('transactions').where('workspaceId', '==', workspaceId).where('metadata.reversesTxId', 'in', earlier.slice(0, 100).map(e => e.id)));
+  for (let i = 0; i < earlier.length; i += 100) {
+    const snap = await t.get(db.collection('transactions').where('workspaceId', '==', workspaceId).where('metadata.reversesTxId', 'in', earlier.slice(i, i + 100).map(e => e.id)));
     snap.docs.filter(d => isPostable(d.data() as Transaction)).forEach(d => earlierReversed.add(String(d.data().metadata?.reversesTxId)));
   }
   const correctedBy = new Map<string, { cents: number; count: number }>();
@@ -209,31 +230,45 @@ async function repostStockCost(db: Firestore, t: DbTransaction, input: RepostRun
   }
 
   const replayed = replay(moves, entries, row.fromDate);
+  if (replayed.refuse) {
+    result.status = 'refused';
+    result.reason = `${result.name}: ${replayed.refuse}. Nothing was posted for it.`;
+    if (!input.dryRun) t.set(queueRef, { status: 'blocked', blockedBy: 'not-repairable', ...stamp() }, { merge: true });
+    return result;
+  }
   result.notCorrected = replayed.notCorrected;
   result.state.after = { unitCostCents: replayed.cost, quantityAtHand: quantity, inventoryValueCents: Math.round(quantity * replayed.cost) };
   const today = formatTzDate(new Date(), text(ws.timezone) || 'UTC');
   for (const v of replayed.valued) {
     const prior = correctedBy.get(v.entry.id) || { cents: 0, count: 0 };
-    const beforeCents = Math.abs(Number(v.entry.totalAmountCents) || 0) + prior.cents;
+    // what the move put in or took out of Inventory (an adjustment entry may hold several items), plus earlier corrections
+    const moved = Number(v.move.valueCents) || 0;
+    const beforeCents = Math.abs(moved) + prior.cents;
     const deltaCents = v.cents - beforeCents;
     if (deltaCents === 0) continue;
     const original = v.entry.lines || [];
-    if (original.length !== 2 || !original.some(l => Number(l.amountCents) > 0) || !original.some(l => Number(l.amountCents) < 0)) {
-      result.notCorrected.push({ transactionId: v.entry.id, date: v.date, reason: 'its entry is not one debit and one credit line' });
-      continue;
+    // the Inventory line is the one that moved the item's value; the other side is the line of the opposite sign
+    const stockLine = original.find(l => Number(l.amountCents) === moved && moved !== 0);
+    const offsetLine = [...original].reverse().find(l => Math.sign(Number(l.amountCents)) === -Math.sign(moved));
+    if (!stockLine || !offsetLine) {
+      result.status = 'refused';
+      result.reason = `${result.name}: the entry ${v.entry.id} does not show which lines moved its value, so it cannot be corrected. Nothing was posted for it.`;
+      if (!input.dryRun) t.set(queueRef, { status: 'blocked', blockedBy: 'not-repairable', ...stamp() }, { merge: true });
+      return result;
     }
-    // finding 8: the correction keeps the entry's accounts and labels
-    const lines = original.map(l => ({
-      accountId: l.accountId, ...(l.accountName ? { accountName: l.accountName } : {}),
-      amountCents: Math.sign(Number(l.amountCents)) * deltaCents,
+    // review finding 8: the correction keeps the entry's accounts and labels
+    const line = (l: typeof stockLine, cents: number) => ({
+      accountId: l.accountId, ...(l.accountName ? { accountName: l.accountName } : {}), amountCents: cents,
       ...(l.dimensions && Object.keys(l.dimensions).length ? { dimensions: { ...l.dimensions } } : {}),
-    }));
+    });
+    const sign = Math.sign(moved);
+    // in the entry's own line order
+    const lines = original.filter(l => l === stockLine || l === offsetLine).map(l => line(l, (l === stockLine ? sign : -sign) * deltaCents));
     const lock = postingLock(v.date, ws as never, user.uid);
     result.corrections.push({
       entryId: repostEntryId(STOCK_COST_KIND, itemId, v.entry.id, prior.count), correctsTxId: v.entry.id, of: v.of, entryDate: v.date,
       date: lock ? today : v.date, movedToOpenDay: Boolean(lock),
-      account: String(original.find(l => (v.of === 'sale' ? Number(l.amountCents) > 0 : Number(l.amountCents) < 0))?.accountId || ''),
-      beforeCents, afterCents: v.cents, deltaCents, lines,
+      account: offsetLine.accountId, direction: sign, beforeCents, afterCents: v.cents, deltaCents, lines,
     });
   }
   result.movedToOpenDay = result.corrections.some(c => c.movedToOpenDay);
@@ -254,12 +289,12 @@ async function repostStockCost(db: Firestore, t: DbTransaction, input: RepostRun
     const meta = (entries.get(c.correctsTxId)?.metadata || {}) as Record<string, unknown>;
     const keep = Object.fromEntries(['invoiceId', 'deliveryId', 'creditNoteId', 'customerId', 'locationId'].filter(k => text(meta[k])).map(k => [k, meta[k]]));
     const tx = await TransactionValidator.validateAndPrepare({
-      id: c.entryId, workspaceId, uid: user.uid, date: c.date, currency, type: 'journal', status: 'completed',
+      id: c.entryId, workspaceId, uid: user.uid, date: c.date, currency, exchangeRate: 1, type: 'journal', status: 'completed',
       description: `Cost of goods corrected after a backdated change: ${result.name} (${c.beforeCents} → ${c.afterCents} cents)`,
       totalAmountCents: Math.abs(c.deltaCents), createdAt: new Date().toISOString(),
       metadata: {
         type: REPOST_COGS_TYPE, repostRunId: input.runId, repostKind: STOCK_COST_KIND, repostKey: itemId, correctsTxId: c.correctsTxId, correctsKind: c.of,
-        beforeCents: c.beforeCents, afterCents: c.afterCents, deltaCents: c.deltaCents, entryDate: c.entryDate, movedToOpenDay: c.movedToOpenDay,
+        beforeCents: c.beforeCents, afterCents: c.afterCents, deltaCents: c.deltaCents, stockValueCents: c.direction * c.deltaCents, entryDate: c.entryDate, movedToOpenDay: c.movedToOpenDay,
         itemId, itemName: result.name, ...keep,
       },
       lines: c.lines.map((l, i) => ({ id: `line-${i + 1}`, ...l, description: `${result.name}: cost of goods corrected` })),
@@ -275,7 +310,7 @@ async function repostStockCost(db: Firestore, t: DbTransaction, input: RepostRun
         : text(meta.deliveryId) ? { documentType: 'delivery' as const, documentId: text(meta.deliveryId) } : {};
     writtenMoves.push({
       workspaceId, itemId, itemName: result.name, date: c.date, kind: 'cost-repost' as const, quantity: 0, quantityBefore: quantity, quantityAfter: quantity,
-      unitCostCents: replayed.cost, valueCents: c.of === 'sale' ? -c.deltaCents : c.deltaCents, transactionId: c.entryId, correctsTxId: c.correctsTxId, ...doc, uid: user.uid,
+      unitCostCents: replayed.cost, valueCents: c.direction * c.deltaCents, transactionId: c.entryId, correctsTxId: c.correctsTxId, ...doc, uid: user.uid,
     });
   }
   writeStockMoves(db, t, writtenMoves);
@@ -303,11 +338,12 @@ export async function repostQueueOf(db: Firestore, workspaceId: string): Promise
 /** POST /api/v1/repost: every open row (or the chosen keys), one database transaction per key. */
 export async function runRepost(db: Firestore, input: RepostRunInput): Promise<RepostRunResult> {
   if (!/^[A-Za-z0-9_-]{8,80}$/.test(input.runId)) throw new RepostError(400, 'A repost run needs a run id (8–80 letters, digits, - or _)');
+  if ((input.keys && input.keys.length === 0) || (input.kinds && input.kinds.length === 0)) throw new RepostError(400, 'Choose at least one item (keys) or kind, or leave the list out to run every open row');
   if (input.kinds && input.kinds.some(k => k !== STOCK_COST_KIND)) throw new RepostError(400, `Only ${STOCK_COST_KIND} can be reposted so far`);
   if (!(await repostQueueReady(db))) throw new RepostError(503, 'The repost queue is not set up on this database yet (migration 20261023010000_repost_queue.sql)');
   await stockMovesReady(db);
   const rows = (await repostQueueOf(db, input.workspaceId))
-    .filter(r => r.kind === STOCK_COST_KIND && (!input.keys?.length || input.keys.includes(r.key)))
+    .filter(r => r.kind === STOCK_COST_KIND && (input.keys === undefined || input.keys.includes(r.key)))
     .filter(r => r.status !== 'clean')
     .sort((a, b) => a.id.localeCompare(b.id));
   const keys: RepostKeyResult[] = [];
@@ -324,15 +360,23 @@ export async function runRepost(db: Firestore, input: RepostRunInput): Promise<R
   const posted = keys.reduce((s, k) => s + k.posted, 0);
   const blocked = keys.filter(k => k.status === 'blocked').length;
   const refused = keys.filter(k => k.status === 'refused').length;
+  let summaryAuditError = '';
   if (!input.dryRun && keys.length > 0) {
     const moved: Record<string, number> = {};
     for (const c of keys.filter(k => k.status === 'clean').flatMap(k => k.corrections)) {
       for (const l of c.lines) moved[l.accountId] = (moved[l.accountId] || 0) + l.amountCents;
     }
-    await writeServerAuditLog({
+    // review: the keys are committed already; a failed summary write is reported with the result, not as a failure
+    // (each key's own audit row was written in its transaction)
+    try {
+      await writeServerAuditLog({
       workspaceId: input.workspaceId, uid: input.user.uid, email: input.user.email, action: 'repost', entityType: 'repostRun', entityId: input.runId,
       details: { description: `Repost run: ${keys.length} key(s), ${posted} entr${posted === 1 ? 'y' : 'ies'} posted, ${blocked} refused for a locked period, ${refused} not repairable`, keys: keys.map(k => `${k.kind}/${k.key}`), posted, blocked, refused, movedByAccount: moved },
-    }, { db });
+      }, { db });
+    } catch (err) {
+      summaryAuditError = err instanceof Error ? err.message : String(err);
+      console.error('[repost] the run summary audit row was not written; the keys above are committed', summaryAuditError);
+    }
   }
-  return { runId: input.runId, dryRun: Boolean(input.dryRun), keys, posted, blocked, refused };
+  return { runId: input.runId, dryRun: Boolean(input.dryRun), keys, posted, blocked, refused, ...(summaryAuditError ? { summaryAuditError } : {}) };
 }
