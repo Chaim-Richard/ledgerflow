@@ -16,7 +16,7 @@
 import type { ChartAccount, Transaction } from '../types';
 import { resolveAccountRole } from './accountUtils';
 import { isPostable, lineAmount, transactionDate } from './txFilters';
-import { NO_LOCATION, orderedMoves, type StockMove } from './stockMoves';
+import { datedMoves, NO_LOCATION, orderedMoves, type StockMove } from './stockMoves';
 import type { CheckFinding, DataCheck } from './dataChecks';
 
 export interface StockClosingRow {
@@ -173,11 +173,10 @@ export function datedQuantities(moves: StockMove[]): Map<string, Array<{ date: s
   for (const m of moves) if (day(m.date)) byItem.set(m.itemId, [...(byItem.get(m.itemId) || []), m]);
   const out = new Map<string, Array<{ date: string; quantity: number }>>();
   for (const [itemId, list] of byItem) {
-    const start = round6(Number(orderedMoves(list)[0].quantityBefore) || 0);
-    const byDay = new Map<string, number>();
-    for (const m of list) byDay.set(day(m.date), round6((byDay.get(day(m.date)) || 0) + (Number(m.quantity) || 0)));
-    let q = start;
-    out.set(itemId, [...byDay].sort(([a], [b]) => a.localeCompare(b)).map(([date, change]) => ({ date, quantity: (q = round6(q + change)) })));
+    // EG-1's datedMoves: in date order, the quantities derived from the quantities moved; the last move of a day ends it
+    const endOfDay = new Map<string, number>();
+    for (const m of datedMoves(list)) endOfDay.set(day(m.date), m.quantityAfter);
+    out.set(itemId, [...endOfDay].map(([date, quantity]) => ({ date, quantity })));
   }
   return out;
 }

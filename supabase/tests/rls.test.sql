@@ -675,6 +675,17 @@ select pg_temp.expect_denied('bookkeeper adds a stock closing from the browser',
   $$insert into "stockClosings"(id,data) values ('ws1_2024-12-31', '{"workspaceId":"ws1","asOf":"2024-12-31","rows":[]}')$$);
 select pg_temp.expect_denied('owner deletes a stock closing from the browser', 'u-owner', $$delete from "stockClosings" where id = 'ws1_2026-12-31'$$);
 select pg_temp.expect_value('the refused writes left the stock closing as it was', $q$select data->>'stockValueCents' from "stockClosings" where id = 'ws1_2026-12-31'$q$, '100');
+-- repost queue (EG-1): written only by the server; members read; nobody writes it from the browser
+select set_config('request.jwt.claims', '', true);
+insert into "repostQueue" (id, data) values ('ws1_stock-cost_i1', '{"workspaceId":"ws1","kind":"stock-cost","key":"i1","fromDate":"2026-01-03","status":"dirty"}');
+select pg_temp.expect_count('viewer reads the repost queue', 'u-view', $$select count(*) from "repostQueue"$$, 1);
+select pg_temp.expect_count('outsider reads no repost queue', 'u-out', $$select count(*) from "repostQueue"$$, 0);
+select pg_temp.expect_denied('owner marks a queue row clean from the browser', 'u-owner', $$select lf_update('repostQueue','ws1_stock-cost_i1','{"status":"clean"}'::jsonb)$$);
+select pg_temp.expect_denied('owner writes a queue row with lf_set', 'u-owner', $$select lf_set('repostQueue','ws1_stock-cost_i2','{"workspaceId":"ws1","kind":"stock-cost","key":"i2","status":"dirty"}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper adds a queue row from the browser', 'u-book',
+  $$insert into "repostQueue"(id,data) values ('ws1_stock-cost_i3', '{"workspaceId":"ws1","kind":"stock-cost","key":"i3","status":"dirty"}')$$);
+select pg_temp.expect_denied('owner deletes a queue row from the browser', 'u-owner', $$delete from "repostQueue" where id = 'ws1_stock-cost_i1'$$);
+select pg_temp.expect_value('the refused writes left it as it was', $q$select data->>'status' from "repostQueue" where id = 'ws1_stock-cost_i1'$q$, 'dirty');
 
 select 'ALL RLS TESTS PASSED' as result;
 rollback;

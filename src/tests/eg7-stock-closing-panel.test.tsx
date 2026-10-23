@@ -39,5 +39,5 @@ test('EG-7 panel: no closing yet, and a refused read says why', async () => {
   cleanup();
   stubFetchWithBodies(403, { error: 'Forbidden' });
   render(<StockClosingPanel workspaceId="ws2" />);
-  await waitFor(() => assert.ok(screen.getByRole('alert')));
+  await waitFor(() => assert.ok(screen.getByText(/Stock checks not available: Forbidden/)));
 });
