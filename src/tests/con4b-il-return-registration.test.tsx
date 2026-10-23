@@ -21,7 +21,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { israelMonthJourney } from '../lib/israelMonthJourney';
 import type { TaxProfiles } from '../lib/tax/profile';
 import { IsraelMonthJourneyPanel } from '../components/reporting/IsraelMonthJourneyReportView';
-import { wholeWorkspaceReturn } from '../components/reporting/TaxLiabilityView';
+import { wholeWorkspaceReturn } from '../lib/tax/filedReturns';
 import { belongsTo, documentEntityLabels } from '../lib/tax/ilVatReturn';
 
 const PROFILES: TaxProfiles = {

@@ -11,17 +11,13 @@ import type { TaxableDocument } from '../../lib/taxReturnDocs';
 import { TAX_TREATMENTS } from '../../lib/taxCodes';
 import type { TaxReturnBox, TaxTreatment } from '../../lib/taxCodes';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { wholeWorkspaceReturn } from '../../lib/tax/filedReturns';
 
 /**
  * The tax return for a period (T-06): boxes in the home currency from invoices, bills, credit
  * notes and vendor credits, plus sales and purchases by treatment. "File this return" keeps a copy
  * on the server (T-07); later changes to that period show as differences against the copy.
  */
-
-/** The return filed for the whole workspace for exactly this period (one filed for a single registration is not it). */
-export function wholeWorkspaceReturn<R extends { startDate: string; endDate: string; registration?: string }>(filed: R[] | null | undefined, startDate: string, endDate: string): R | undefined {
-  return filed?.find(r => !r.registration && r.startDate === startDate && r.endDate === endDate);
-}
 
 interface FiledReturn { id: string; startDate: string; endDate: string; boxes: TaxReturnBox[]; filedAt: string; reference?: string; registration?: string }
 
