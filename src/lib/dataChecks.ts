@@ -11,6 +11,7 @@ import { findTaxDifferences } from './taxRecompute';
 import { missingLabels } from './requiredLabels';
 import { labelRoleFindings } from './labelRoles';
 import { stockHistoryProblem, type StockMove } from './stockMoves';
+import { STOCK_INVARIANT_CHECKS, type StockClosing } from './stockInvariants';
 import { contactsMissingFilingDetails, itemsMissingPricing } from './dataQualityChecks';
 import { formatCurrency } from './utils';
 import type { RecordType } from './recordLinks';
@@ -61,6 +62,8 @@ export interface CheckContext {
   dimensions?: DimensionDefinition[];
   /** The stock-moves ledger (W-02); the nightly check reads it, the browser does not load it. */
   stockMoves?: StockMove[];
+  /** EG-7: the stock closing snapshots (server-only), checked against the moves they cover */
+  stockClosings?: StockClosing[];
   /** Payment records (CB-23: each has its entry in the ledger). */
   payments?: Array<Partial<Payment> & { id: string; number?: string; status?: string; amountCents?: number; exchangeRate?: number; paymentExchangeRate?: number; paymentDate?: string; date?: string; contactName?: string; entityName?: string }>;
 }
@@ -455,6 +458,8 @@ export const DATA_CHECKS: DataCheck[] = [
       }));
     },
   },
+  // EG-7: stock against the books, stock below zero on a day, stale stock closings (src/lib/stockInvariants.ts)
+  ...STOCK_INVARIANT_CHECKS,
 ];
 
 const SUSPENSE = /suspense|uncategori[sz]ed|ask my accountant|clearing/i;

@@ -29,6 +29,8 @@ const SOURCES = {
   reconciliations: { table: 'reconciliations', cap: 1000 },
   // W-02: the stock history, checked against each item's quantity
   stockMoves: { table: 'stockMoves', cap: 50000 },
+  // EG-7: the stock closings, checked against the moves they cover
+  stockClosings: { table: 'stockClosings', cap: 200 },
 } as const;
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;

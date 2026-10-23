@@ -16,12 +16,15 @@ import { DeliveryError, deliverOrder, returnDelivered, setGoodsLeaveWith, undoDe
 import { LedgerPostingError } from '../services/cogsStockService';
 import { DELIVERY_ID, RETURN_ID } from '../../lib/deliveries';
 import { generateDeliveryNotePdf, layoutDeliveryNote } from '../services/deliveryNotePdf';
+import { registerStockClosingRoutes } from './stockClosingRoutes';
 import type { Estimate, Transaction as LedgerTransaction } from '../../types';
 
 /** Who may change stock or record its cost (viewers read only). */
 const STOCK_ROLES = ['owner', 'accountant', 'bookkeeper'];
 
 export const inventoryRouter = express.Router();
+// EG-7: the stock closing of a locked period, and the stock invariant checks
+registerStockClosingRoutes(inventoryRouter);
 
 /**
  * Recognizes COGS for a sale. Reduces quantity on hand.
