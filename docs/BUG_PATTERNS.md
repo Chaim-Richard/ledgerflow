@@ -2,12 +2,12 @@
 
 | Pattern | Count |
 |---|---:|
-| swallowing-action | 96 |
+| swallowing-action | 95 |
 | success-after-call | 12 |
 | unchecked-write | 2 |
 | write-in-loop | 13 |
-| stale-async | 81 |
-| silent-catch | 54 |
+| stale-async | 79 |
+| silent-catch | 53 |
 | effect-before-write | 0 |
 
 - [ ] `silent-catch` src/components/admin/AuditLogViewer.tsx:39 — fetchLogs
@@ -16,7 +16,7 @@
 - [ ] `silent-catch` src/components/collaboration/TimeTimer.tsx:30 — start
 - [ ] `silent-catch` src/components/collaboration/TimeTimer.tsx:36 — stop
 - [ ] `silent-catch` src/components/dashboard/DashboardWidgets.tsx:99 — resetLayout
-- [ ] `silent-catch` src/components/finance/CreditNotesView.tsx:80 — (anonymous)
+- [ ] `silent-catch` src/components/finance/CreditNotesView.tsx:87 — (anonymous)
 - [ ] `silent-catch` src/components/finance/PettyCashView.tsx:65 — writePreference
 - [ ] `silent-catch` src/components/finance/TaxManager.tsx:201 — (anonymous)
 - [ ] `silent-catch` src/components/forensics/ForensicAudit.tsx:80 — scan
@@ -25,11 +25,11 @@
 - [ ] `silent-catch` src/components/hr/DirectDepositDialog.tsx:62 — download
 - [ ] `silent-catch` src/components/intelligence/AICustomBlueprint.tsx:60 — handleGenerate
 - [ ] `silent-catch` src/components/ledger/ReconciliationWizard.tsx:165 — handleFinalize
-- [ ] `silent-catch` src/components/ledger/StatementImporter.tsx:322 — saveColumnLayout
-- [ ] `silent-catch` src/components/ledger/StatementImporter.tsx:339 — handleParse
+- [ ] `silent-catch` src/components/ledger/StatementImporter.tsx:295 — saveColumnLayout
+- [ ] `silent-catch` src/components/ledger/StatementImporter.tsx:312 — handleParse
 - [ ] `silent-catch` src/components/ledger/TransactionGridShared.tsx:56 — handleEvaluateAndSave
 - [ ] `silent-catch` src/components/migration/QBOMigrationWizard.tsx:526 — handleNext
-- [ ] `silent-catch` src/components/platform/settings/BackupExportSettings.tsx:54 — exportJSON
+- [ ] `silent-catch` src/components/platform/settings/BackupExportSettings.tsx:55 — exportJSON
 - [ ] `silent-catch` src/components/platform/settings/BillingSettings.tsx:28 — fetchStatus
 - [ ] `silent-catch` src/components/platform/settings/BlueprintSettings.tsx:150 — handleSaveCurrency
 - [ ] `silent-catch` src/components/platform/SystemCommandCenter.tsx:325 — fetchUsersData
@@ -38,23 +38,22 @@
 - [ ] `silent-catch` src/components/platform/useApiHubModel.ts:86 — loadBillingStatus
 - [ ] `silent-catch` src/components/platform/useApiHubModel.ts:139 — loadWorkspaceKeys
 - [ ] `silent-catch` src/components/platform/useApiHubModel.ts:158 — fetchLogs
-- [ ] `silent-catch` src/components/purchases/BillModal.tsx:95 — fetchNextNumber
-- [ ] `silent-catch` src/components/purchases/ExpenseClaims.tsx:26 — saveRates
-- [ ] `silent-catch` src/components/sales/EstimatesView.tsx:163 — nextInvoiceNumber
+- [ ] `silent-catch` src/components/purchases/BillModal.tsx:96 — fetchNextNumber
+- [ ] `silent-catch` src/components/purchases/ExpenseClaims.tsx:27 — saveRates
+- [ ] `silent-catch` src/components/sales/EstimatesView.tsx:170 — nextInvoiceNumber
 - [ ] `silent-catch` src/components/sales/InvoiceModal.tsx:109 — fetchNextNumber
-- [ ] `silent-catch` src/components/support/SupportView.tsx:139 — handleCreateTicket
-- [ ] `silent-catch` src/components/support/SupportView.tsx:193 — handleSendMessage
-- [ ] `silent-catch` src/components/support/SupportView.tsx:246 — updateStatus
+- [ ] `silent-catch` src/components/support/SupportView.tsx:156 — handleCreateTicket
+- [ ] `silent-catch` src/components/support/SupportView.tsx:210 — handleSendMessage
+- [ ] `silent-catch` src/components/support/SupportView.tsx:268 — updateStatus
 - [ ] `silent-catch` src/hooks/transactionActions/postingHelpers.ts:97 — recordRulePattern
 - [ ] `silent-catch` src/hooks/useCollaborators.ts:43 — updatePresence
-- [ ] `silent-catch` src/hooks/useEntityOperations.ts:88 — syncEntityBalance
-- [ ] `silent-catch` src/hooks/useEntityOperations.ts:126 — recordLearnedPattern
+- [ ] `silent-catch` src/hooks/useEntityOperations.ts:89 — syncEntityBalance
+- [ ] `silent-catch` src/hooks/useEntityOperations.ts:127 — recordLearnedPattern
 - [ ] `silent-catch` src/hooks/useLedgerData.ts:228 — loadReferenceData
 - [ ] `silent-catch` src/hooks/useLedgerData.ts:318 — (anonymous)
 - [ ] `silent-catch` src/hooks/useTransactionColumnLayout.ts:18 — persistLayout
 - [ ] `silent-catch` src/hooks/useTransactionColumnLayout.ts:35 — toggleColumnVisibility
-- [ ] `silent-catch` src/services/ledgerPost/postingKit.ts:235 — postTxsServerApi
-- [ ] `silent-catch` src/services/strategicEngine.ts:624 — (anonymous)
+- [ ] `silent-catch` src/services/strategicEngine.ts:622 — (anonymous)
 - [ ] `silent-catch` src/stores/useRecentRecordsStore.ts:29 — remember
 - [ ] `silent-catch` src/stores/useSavedViewsStore.ts:166 — loadViewsFromStorage
 - [ ] `silent-catch` src/stores/useSavedViewsStore.ts:213 — (anonymous)
@@ -79,7 +78,6 @@
 - [ ] `stale-async` src/components/collaboration/HandOver.tsx:18 — give
 - [ ] `stale-async` src/components/collaboration/TimeRatesPanel.tsx:30 — save
 - [ ] `stale-async` src/components/collaboration/TimeView.tsx:102 — makeInvoice
-- [ ] `stale-async` src/components/common/AttachmentsPanel.tsx:29 — (anonymous)
 - [ ] `stale-async` src/components/common/MergePartyDialog.tsx:51 — submit
 - [ ] `stale-async` src/components/common/PartyRowActions.tsx:29 — remove
 - [ ] `stale-async` src/components/common/SpreadDialog.tsx:81 — submit
@@ -93,23 +91,23 @@
 - [ ] `stale-async` src/components/hr/PayRunHistory.tsx:52 — undoRun
 - [ ] `stale-async` src/components/intelligence/AICommandCenter.tsx:41 — runQuery
 - [ ] `stale-async` src/components/inventory/CogsDialog.tsx:32 — submit
-- [ ] `stale-async` src/components/inventory/StockHistoryDialog.tsx:68 — doMove
+- [ ] `stale-async` src/components/inventory/StockHistoryDialog.tsx:75 — doMove
 - [ ] `stale-async` src/components/inventory/StockPolicySwitch.tsx:34 — save
-- [ ] `stale-async` src/components/layout/NotificationDrawer.tsx:56 — save
+- [ ] `stale-async` src/components/layout/NotificationDrawer.tsx:57 — save
 - [ ] `stale-async` src/components/ledger/BankFeedImport.tsx:61 — handleUpload
 - [ ] `stale-async` src/components/ledger/BankFeedImport.tsx:124 — handleAutoMap
 - [ ] `stale-async` src/components/ledger/BankLineActionDialog.tsx:60 — submit
 - [ ] `stale-async` src/components/ledger/ClosingBalanceCheck.tsx:26 — (anonymous)
-- [ ] `stale-async` src/components/ledger/JournalEntryModal.tsx:250 — handleSubmit
+- [ ] `stale-async` src/components/ledger/JournalEntryModal.tsx:252 — handleSubmit
 - [ ] `stale-async` src/components/ledger/MagicEntry.tsx:36 — (anonymous)
-- [ ] `stale-async` src/components/ledger/StatementImporter.tsx:327 — handleParse
+- [ ] `stale-async` src/components/ledger/StatementImporter.tsx:300 — handleParse
 - [ ] `stale-async` src/components/migration/QBOMigrationWizard.tsx:59 — parseSpreadsheetData
 - [ ] `stale-async` src/components/platform/settings/AlertsSettings.tsx:33 — save
 - [ ] `stale-async` src/components/platform/settings/AllocationRulesSettings.tsx:47 — save
 - [ ] `stale-async` src/components/platform/settings/ApprovalDelegatePanel.tsx:35 — save
-- [ ] `stale-async` src/components/platform/settings/ImportSettings.tsx:141 — onFile
-- [ ] `stale-async` src/components/platform/settings/ImportSettings.tsx:162 — send
-- [ ] `stale-async` src/components/platform/settings/ImportSettings.tsx:188 — undo
+- [ ] `stale-async` src/components/platform/settings/ImportSettings.tsx:197 — onFile
+- [ ] `stale-async` src/components/platform/settings/ImportSettings.tsx:255 — send
+- [ ] `stale-async` src/components/platform/settings/ImportSettings.tsx:281 — undo
 - [ ] `stale-async` src/components/platform/settings/IncomingEventsSettings.tsx:34 — (anonymous)
 - [ ] `stale-async` src/components/platform/settings/ModulesSettings.tsx:35 — change
 - [ ] `stale-async` src/components/platform/settings/PriceListsSettings.tsx:54 — save
@@ -129,25 +127,24 @@
 - [ ] `stale-async` src/components/platform/SystemCommandCenter.tsx:332 — fetchGlobalConfig
 - [ ] `stale-async` src/components/reporting/CustomerTaxCertificatesView.tsx:37 — refresh
 - [ ] `stale-async` src/components/reporting/DiscountMismatchView.tsx:33 — refresh
-- [ ] `stale-async` src/components/reporting/GroupSummaryReportView.tsx:100 — combine
+- [ ] `stale-async` src/components/reporting/GroupSummaryReportView.tsx:101 — combine
 - [ ] `stale-async` src/components/reporting/PurchaseItemTrendsView.tsx:47 — load
 - [ ] `stale-async` src/components/reporting/VendorTaxRecordsView.tsx:23 — refresh
 - [ ] `stale-async` src/components/reporting/VendorWithholdingView.tsx:27 — refresh
 - [ ] `stale-async` src/components/sales/CustomerPortalLink.tsx:23 — call
-- [ ] `stale-async` src/components/sales/CustomerPortalPage.tsx:34 — (anonymous)
+- [ ] `stale-async` src/components/sales/CustomerPortalPage.tsx:47 — (anonymous)
 - [ ] `stale-async` src/components/sales/EmailStatementsButton.tsx:21 — run
 - [ ] `stale-async` src/components/sales/EstimateDepositDialog.tsx:40 — save
 - [ ] `stale-async` src/components/sales/EstimateSignLink.tsx:15 — ask
 - [ ] `stale-async` src/components/sales/OrderDeliveryDialog.tsx:66 — openNote
 - [ ] `stale-async` src/components/sales/PublicEstimatePage.tsx:35 — sign
 - [ ] `stale-async` src/components/sales/PublicInvoicePage.tsx:44 — handlePay
-- [ ] `stale-async` src/components/transactions/TransactionEditModalView.tsx:260 — (anonymous)
+- [ ] `stale-async` src/components/transactions/TransactionEditModalView.tsx:261 — (anonymous)
 - [ ] `stale-async` src/services/documentDownloads.ts:5 — downloadDocumentsZip
-- [ ] `stale-async` src/services/ledgerPost/postingKit.ts:191 — postTxsServerApi
 - [ ] `stale-async` src/services/spreadActions.ts:10 — undoSpreadRequest
 - [ ] `success-after-call` src/components/assets/FixedAssetsView.tsx:79 — updateEntity
 - [ ] `success-after-call` src/components/assets/MaintenanceLog.tsx:46 — updateEntity
-- [ ] `success-after-call` src/components/inventory/Inventory.tsx:212 — recordOpeningStock
+- [ ] `success-after-call` src/components/inventory/Inventory.tsx:223 — recordOpeningStock
 - [ ] `success-after-call` src/components/ledger/MonthEndCloseView.tsx:173 — updateEntity
 - [ ] `success-after-call` src/components/platform/settings/BlueprintSettings.tsx:133 — handleCloseMonth
 - [ ] `success-after-call` src/components/platform/settings/SecuritySettings.tsx:141 — handleCloseMonth
@@ -161,7 +158,7 @@
 - [ ] `swallowing-action` src/components/auth/AcceptInviteView.tsx:65 — handleAcceptInvite
 - [ ] `swallowing-action` src/components/banking/Banking.tsx:47 — handleSyncNow
 - [ ] `swallowing-action` src/components/common/SchemaForm.tsx:60 — handleSubmit
-- [ ] `swallowing-action` src/components/finance/AccountRegisterView.tsx:144 — handleToggleCleared
+- [ ] `swallowing-action` src/components/finance/AccountRegisterView.tsx:150 — handleToggleCleared
 - [ ] `swallowing-action` src/components/finance/IntercompanyManager.tsx:51 — handlePostIntercompany
 - [ ] `swallowing-action` src/components/finance/LoansView.tsx:177 — saveLoan
 - [ ] `swallowing-action` src/components/finance/LoansView.tsx:216 — recordMoneyArriving
@@ -178,36 +175,36 @@
 - [ ] `swallowing-action` src/components/hr/PayrollView.tsx:196 — handlePostPayRunToLedger
 - [ ] `swallowing-action` src/components/intelligence/AICustomBlueprint.tsx:44 — handleGenerate
 - [ ] `swallowing-action` src/components/intelligence/DiagnosticConsole.tsx:51 — handleCommand
-- [ ] `swallowing-action` src/components/inventory/Inventory.tsx:145 — handleUpdate
-- [ ] `swallowing-action` src/components/inventory/Inventory.tsx:183 — handleAdd
-- [ ] `swallowing-action` src/components/inventory/Inventory.tsx:220 — recordOpeningStock
+- [ ] `swallowing-action` src/components/inventory/Inventory.tsx:150 — handleUpdate
+- [ ] `swallowing-action` src/components/inventory/Inventory.tsx:192 — handleAdd
+- [ ] `swallowing-action` src/components/inventory/Inventory.tsx:231 — recordOpeningStock
 - [ ] `swallowing-action` src/components/ledger/AskLoop.tsx:46 — handleResolve
 - [ ] `swallowing-action` src/components/ledger/BankFeedImport.tsx:61 — handleUpload
 - [ ] `swallowing-action` src/components/ledger/BankFeedImport.tsx:124 — handleAutoMap
-- [ ] `swallowing-action` src/components/ledger/JournalEntryModal.tsx:110 — saveTemplate
-- [ ] `swallowing-action` src/components/ledger/JournalEntryModal.tsx:125 — removeTemplate
-- [ ] `swallowing-action` src/components/ledger/JournalEntryModal.tsx:250 — handleSubmit
-- [ ] `swallowing-action` src/components/ledger/Ledger.tsx:175 — handleAddAccount
+- [ ] `swallowing-action` src/components/ledger/JournalEntryModal.tsx:112 — saveTemplate
+- [ ] `swallowing-action` src/components/ledger/JournalEntryModal.tsx:127 — removeTemplate
+- [ ] `swallowing-action` src/components/ledger/JournalEntryModal.tsx:252 — handleSubmit
+- [ ] `swallowing-action` src/components/ledger/Ledger.tsx:184 — handleAddAccount
 - [ ] `swallowing-action` src/components/ledger/ReconciliationWizard.tsx:148 — handleFinalize
-- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:126 — handleFileUpload
-- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:305 — saveColumnLayout
-- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:327 — handleParse
-- [ ] `swallowing-action` src/components/ledger/useReconciliationModel.ts:195 — handleAutoReconcile
-- [ ] `swallowing-action` src/components/ledger/useReconciliationModel.ts:210 — handleUndoAlignment
+- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:122 — handleFileUpload
+- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:278 — saveColumnLayout
+- [ ] `swallowing-action` src/components/ledger/StatementImporter.tsx:300 — handleParse
+- [ ] `swallowing-action` src/components/ledger/useReconciliationModel.ts:203 — handleAutoReconcile
+- [ ] `swallowing-action` src/components/ledger/useReconciliationModel.ts:218 — handleUndoAlignment
 - [ ] `swallowing-action` src/components/migration/QBOMigrationWizard.tsx:357 — handleNext
 - [ ] `swallowing-action` src/components/planning/BudgetManager.tsx:53 — handleAddBudget
 - [ ] `swallowing-action` src/components/platform/settings/AISettings.tsx:76 — handleSave
 - [ ] `swallowing-action` src/components/platform/settings/AISettings.tsx:110 — handleWipeRuleCache
 - [ ] `swallowing-action` src/components/platform/settings/AppearanceSettings.tsx:55 — handleTimezoneChange
 - [ ] `swallowing-action` src/components/platform/settings/AppearanceSettings.tsx:79 — handleFiscalStartChange
-- [ ] `swallowing-action` src/components/platform/settings/BackupExportSettings.tsx:122 — handleFileSelect
+- [ ] `swallowing-action` src/components/platform/settings/BackupExportSettings.tsx:123 — handleFileSelect
 - [ ] `swallowing-action` src/components/platform/settings/BillingSettings.tsx:80 — handleCheckout
 - [ ] `swallowing-action` src/components/platform/settings/BillingSettings.tsx:110 — handleOpenPortal
 - [ ] `swallowing-action` src/components/platform/settings/BlueprintSettings.tsx:88 — handleSaveMappings
 - [ ] `swallowing-action` src/components/platform/settings/BlueprintSettings.tsx:142 — handleSaveCurrency
-- [ ] `swallowing-action` src/components/platform/settings/DimensionsSettings.tsx:186 — handleSaveChanges
-- [ ] `swallowing-action` src/components/platform/settings/DimensionsSettings.tsx:231 — handleRunMigration
-- [ ] `swallowing-action` src/components/platform/settings/DimensionsSettings.tsx:304 — handleRunBackfillOnly
+- [ ] `swallowing-action` src/components/platform/settings/DimensionsSettings.tsx:187 — handleSaveChanges
+- [ ] `swallowing-action` src/components/platform/settings/DimensionsSettings.tsx:232 — handleRunMigration
+- [ ] `swallowing-action` src/components/platform/settings/DimensionsSettings.tsx:305 — handleRunBackfillOnly
 - [ ] `swallowing-action` src/components/platform/settings/RulesSettings.tsx:90 — handleToggleGroup
 - [ ] `swallowing-action` src/components/platform/settings/RulesSettings.tsx:282 — handleGenerateAiRule
 - [ ] `swallowing-action` src/components/platform/settings/SecuritySettings.tsx:151 — handleSystemPurge
@@ -222,16 +219,16 @@
 - [ ] `swallowing-action` src/components/projects/Projects.tsx:74 — handleAddProject
 - [ ] `swallowing-action` src/components/projects/Projects.tsx:99 — handleUpdateProject
 - [ ] `swallowing-action` src/components/projects/Projects.tsx:113 — handleDeleteProject
-- [ ] `swallowing-action` src/components/sales/EstimatesView.tsx:87 — handleCreateEstimate
-- [ ] `swallowing-action` src/components/sales/EstimatesView.tsx:170 — handleConvertToInvoice
+- [ ] `swallowing-action` src/components/sales/EstimatesView.tsx:94 — handleCreateEstimate
+- [ ] `swallowing-action` src/components/sales/EstimatesView.tsx:177 — handleConvertToInvoice
 - [ ] `swallowing-action` src/components/sales/OrderDeliveryDialog.tsx:79 — recordReturn
 - [ ] `swallowing-action` src/components/sales/PublicInvoicePage.tsx:44 — handlePay
-- [ ] `swallowing-action` src/components/sales/ReceivePaymentModal.tsx:171 — handleSubmit
+- [ ] `swallowing-action` src/components/sales/ReceivePaymentModal.tsx:170 — handleSubmit
 - [ ] `swallowing-action` src/components/sales/WriteOffModal.tsx:38 — handleWriteOff
-- [ ] `swallowing-action` src/components/support/SupportView.tsx:90 — handleCreateTicket
-- [ ] `swallowing-action` src/components/support/SupportView.tsx:169 — handleSendMessage
-- [ ] `swallowing-action` src/components/support/SupportView.tsx:229 — updateStatus
-- [ ] `swallowing-action` src/hooks/transactionActions/importActions.ts:253 — handleParseReceipt
+- [ ] `swallowing-action` src/components/support/SupportView.tsx:107 — handleCreateTicket
+- [ ] `swallowing-action` src/components/support/SupportView.tsx:186 — handleSendMessage
+- [ ] `swallowing-action` src/components/support/SupportView.tsx:246 — updateStatus
+- [ ] `swallowing-action` src/hooks/transactionActions/importActions.ts:266 — handleParseReceipt
 - [ ] `swallowing-action` src/hooks/transactionActions/integrityActions.ts:17 — handleBulkRepair
 - [ ] `swallowing-action` src/hooks/transactionActions/postingHelpers.ts:15 — recordRulePattern
 - [ ] `swallowing-action` src/hooks/transactionActions/reconcileActions.ts:20 — handleReconcileMatch
@@ -249,10 +246,9 @@
 - [ ] `swallowing-action` src/hooks/transactionActions/workspaceActions.ts:179 — handleCloseMonth
 - [ ] `swallowing-action` src/hooks/useAIActions.ts:20 — handleAnalyzeTrends
 - [ ] `swallowing-action` src/hooks/useCollaborators.ts:33 — updatePresence
-- [ ] `swallowing-action` src/hooks/useEntityOperations.ts:93 — recordLearnedPattern
-- [ ] `swallowing-action` src/hooks/useEntityOperations.ts:249 — updateEntity
-- [ ] `swallowing-action` src/hooks/useEntityOperations.ts:301 — deleteEntity
-- [ ] `swallowing-action` src/services/ledgerPost/postingKit.ts:191 — postTxsServerApi
+- [ ] `swallowing-action` src/hooks/useEntityOperations.ts:94 — recordLearnedPattern
+- [ ] `swallowing-action` src/hooks/useEntityOperations.ts:256 — updateEntity
+- [ ] `swallowing-action` src/hooks/useEntityOperations.ts:309 — deleteEntity
 - [ ] `unchecked-write` src/components/platform/SystemCommandCenter.tsx:142 — fetchWithAuth
 - [ ] `unchecked-write` src/hooks/transactionActions/entryActions.ts:370 — fetch
 - [ ] `write-in-loop` src/components/assets/FixedAssetsView.tsx:79 — updateEntity
@@ -265,21 +261,23 @@
 - [ ] `write-in-loop` src/components/migration/QBOMigrationWizard.tsx:512 — fetch
 - [ ] `write-in-loop` src/components/migration/QBOMigrationWizard.tsx:533 — addEntity
 - [ ] `write-in-loop` src/components/platform/SystemCommandCenter.tsx:142 — fetchWithAuth
-- [ ] `write-in-loop` src/services/attachmentActions.ts:34 — addDoc
+- [ ] `write-in-loop` src/services/attachmentActions.ts:50 — addDoc
 - [ ] `write-in-loop` src/services/bulkDocumentActions.ts:34 — post
 - [ ] `write-in-loop` src/services/bulkDocumentActions.ts:64 — post
 
 ## Server and database integrity review (not confirmed incidents)
 
-- [ ] `server-partial-batch-commit` src/server/routes/transactions/periodRoutes.ts:225 — batch.commit
+- [ ] `server-partial-batch-commit` src/server/routes/transactions/periodRoutes.ts:250 — batch.commit
 - [ ] `server-partial-batch-commit` src/server/services/maintenanceService.ts:24 — batch.commit
 - [ ] `server-partial-batch-commit` src/server/services/notificationService.ts:161 — batch.commit
 - [ ] `server-partial-batch-commit` src/server/services/retentionService.ts:57 — batch.commit
 - [ ] `server-partial-batch-commit` src/server/services/workspacePurgeService.ts:80 — batch.commit
-- [ ] `server-unkeyed-payment-path` src/server/routes/paymentRoutes.ts:79 — createPaymentAtomic (#114)
+- [ ] `server-unkeyed-payment-path` src/server/routes/paymentRoutes.ts:80 — createPaymentAtomic (#114)
 - [ ] `sql-trusted-server-exemption` supabase/migrations/20260924190000_init.sql:198 — lf_guard
 - [ ] `sql-trusted-server-exemption` supabase/migrations/20260924190000_init.sql:279 — lf_guard
 - [ ] `sql-trusted-server-exemption` supabase/migrations/20260924210000_server_ids.sql:29 — lf_guard
 - [ ] `sql-trusted-server-exemption` supabase/migrations/20260925000000_workspace_fields.sql:32 — lf_guard
 - [ ] `sql-trusted-server-exemption` supabase/migrations/20261008000000_invoice_approval_guard.sql:11 — lf_guard
 - [ ] `sql-trusted-server-exemption` supabase/migrations/20261020120000_inventory_cost_server_only.sql:11 — lf_guard
+- [ ] `sql-trusted-server-exemption` supabase/migrations/20261021010000_inventory_cost_editable_at_zero.sql:13 — lf_guard
+- [ ] `sql-trusted-server-exemption` supabase/migrations/20261022000000_rma_server_only.sql:13 — lf_guard
