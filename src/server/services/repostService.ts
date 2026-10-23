@@ -142,6 +142,11 @@ export function replay(moves: Move[], entries: Map<string, Entry>, fromDate: str
       cost = Math.round(Number(m.unitCostCents) || 0);
       continue;
     }
+    if (m.kind === 'landed-cost') {
+      // EG-6: value landed on the units on hand (or taken back by its undo) raises (or lowers) their average
+      if (qty > 0) cost = movingAverageCents(qty, cost, Number(m.valueCents) || 0, qty);
+      continue;
+    }
     const after = round6(qty + q);
     if (BASIS_KINDS.includes(m.kind) && after > 0) cost = movingAverageCents(qty, cost, Number(m.valueCents) || 0, after);
     const entry = m.transactionId ? entries.get(m.transactionId) : undefined;

@@ -91,3 +91,28 @@ export async function revalueStockRequest(body: RevalueStockBody): Promise<Reval
   if (!res.ok) throw new Error(data.error || 'The revaluation was not saved');
   return data as RevalueStockResult;
 }
+
+/** EG-6: what a landed cost posts (or, with dryRun, would post); the server's LandedCostResult. */
+export interface LandedCostPostResult {
+  entryId: string;
+  date: string;
+  movedToOpenDay: boolean;
+  chargeCents: number;
+  lines: Array<{ key: string; itemName: string; quantity: number; allocatedCents: number; inventoryCents: number; cogsCents: number; unitCostBeforeCents: number; unitCostAfterCents: number }>;
+  entryLines: Array<{ accountId: string; accountName?: string; amountCents: number; description: string }>;
+  posted: boolean;
+  replayed: boolean;
+  dryRun: boolean;
+}
+
+/** EG-6: previews (dryRun) or posts a landed cost; the same body twice posts once. */
+export async function landedCostRequest(body: Record<string, unknown>): Promise<LandedCostPostResult> {
+  const res = await fetch('/api/v1/inventory/landed-cost', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getIdToken()}` },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'The landed cost was not posted');
+  return data as LandedCostPostResult;
+}
