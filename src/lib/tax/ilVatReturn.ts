@@ -14,7 +14,7 @@ import { buildTaxReturn, type TaxableDocument } from '../taxReturnDocs';
 import { registrationKey, registrationsOn, resolveSellerProfile, type TaxProfiles } from './profile';
 
 export interface IlVatDocument extends TaxableDocument {
-  /** the labels of the document's first line (its entity) */
+  /** labels kept on the document itself (older records); the screens keep them on the first line */
   dimensions?: Record<string, string>;
   /** a bill whose lines are fixed assets (its input VAT is reported apart) */
   fixedAsset?: boolean;
@@ -35,10 +35,23 @@ export interface IlVatReturn {
   documentCount: number;
 }
 
+/**
+ * CON-4b review: the entity labels of a document as the invoice and bill screens save them — the first line's
+ * (items[0] on invoices, splits[0] on bills); labels on the document itself only when its first line has none.
+ */
+export function documentEntityLabels(doc: { dimensions?: Record<string, string>; items?: unknown; splits?: unknown }): Record<string, string> | undefined {
+  const firstLine = (lines: unknown) => {
+    const line: unknown = Array.isArray(lines) ? lines[0] : undefined;
+    const labels = line && typeof line === 'object' ? (line as { dimensions?: unknown }).dimensions : undefined;
+    return labels && typeof labels === 'object' ? labels as Record<string, string> : undefined;
+  };
+  return firstLine(doc.items) || firstLine(doc.splits) || doc.dimensions;
+}
+
 /** Whether a document belongs to this VAT registration (by its entity label, else the books). */
 export function belongsTo(doc: IlVatDocument, profiles: TaxProfiles | null | undefined, order: string[], registration: string): boolean {
   const date = String(doc.date || doc.issueDate || '').slice(0, 10);
-  const seller = resolveSellerProfile(profiles, doc.dimensions, order);
+  const seller = resolveSellerProfile(profiles, documentEntityLabels(doc as IlVatDocument & { items?: unknown; splits?: unknown }), order);
   return registrationsOn(seller, 'vat', date || '9999-12-31').some(r => registrationKey(r) === registration);
 }
 
