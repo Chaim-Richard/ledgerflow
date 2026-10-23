@@ -1,6 +1,6 @@
 # AI #3 — A-183 attachment workflow checkpoint (partial)
 
-**Code revision:** `906edbdda88dd3aeb1a31d4abecd48bfb3021349`  
+**Code revision:** `906edbdda88dd3aeb1a31d4abecd48bfb3021349`
 **Initial base:** `9254fdda4dda3cc9b3605f183b76ae9bd73ce528`
 
 **Latest main integrated before final validation:** `c01983da3169ce98f356ab26e69cf051ebcd04ae` (includes #325/#316 and #334).
