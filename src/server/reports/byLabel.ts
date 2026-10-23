@@ -8,7 +8,7 @@
 import type { ChartAccount, Transaction } from '../../types';
 import { getLineDimension } from '../../lib/dimensionUtils';
 import { isPostable } from '../../lib/txFilters';
-import { computeBalanceSheet, computeProfitAndLoss } from './computeReports';
+import { computeBalanceSheet, computeProfitAndLoss, type OpeningCents } from './computeReports';
 
 export const UNASSIGNED = 'Unassigned';
 type Section = 'income' | 'cogs' | 'expense';
@@ -87,10 +87,13 @@ export interface LabelBalanceSheet {
  * value for the label and the accounts' opening balances are not shared out: they are their own "not labelled"
  * sheet with its totals, so a value's sheet that does not balance says so instead of being made to.
  */
-export function balanceSheetByLabel(accounts: ChartAccount[], transactions: Transaction[], dimensionId: string, value: string, endDate: string): LabelBalanceSheet {
+/** L-123: what the entries before the ones given add, for the value and for the lines with no value (`balancesAsOf` by label). */
+export interface LabelOpening { value: OpeningCents; notLabelled: OpeningCents; notLabelledLines: number }
+
+export function balanceSheetByLabel(accounts: ChartAccount[], transactions: Transaction[], dimensionId: string, value: string, endDate: string, opening?: LabelOpening): LabelBalanceSheet {
   const mine: Transaction[] = [];
   const none: Transaction[] = [];
-  let lines = 0;
+  let lines = opening?.notLabelledLines || 0;
   for (const tx of transactions) {
     if (!isPostable(tx) || String(tx.date || '').slice(0, 10) > endDate) continue;
     const own: NonNullable<Transaction['lines']> = [];
@@ -104,8 +107,8 @@ export function balanceSheetByLabel(accounts: ChartAccount[], transactions: Tran
     if (unlabelled.length) { none.push({ ...tx, lines: unlabelled }); lines += unlabelled.length; }
   }
   const noOpenings = accounts.map(a => ({ ...a, openingBalanceCents: 0 }));
-  const sheet = computeBalanceSheet(noOpenings, mine, endDate);
-  const rest = computeBalanceSheet(accounts, none, endDate);
+  const sheet = computeBalanceSheet(noOpenings, mine, endDate, opening?.value);
+  const rest = computeBalanceSheet(accounts, none, endDate, opening?.notLabelled);
   const openings = accounts.filter(a => ['asset', 'liability', 'equity'].includes(a.type) && Number(a.openingBalanceCents)).length;
   const order = { asset: 0, liability: 1, equity: 2 } as const;
   const rows = accounts

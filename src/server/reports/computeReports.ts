@@ -65,13 +65,26 @@ export function computeProfitAndLoss(accounts: ChartAccount[], transactions: Tra
   return pl;
 }
 
-export function computeBalanceSheet(accounts: ChartAccount[], transactions: Transaction[], endDate?: string) {
+/**
+ * L-123: what the entries before the ones given add to each account, debit positive, base-currency cents (a
+ * balance snapshot plus the entries after it, `balancesAsOf`). Only accounts of the chart: a caller with lines on
+ * other accounts reads every entry instead, so the orphaned lines stay listed.
+ */
+export type OpeningCents = Record<string, number>;
+
+/** The profit those balances carry, by today's chart (the profit and loss's own reading, calculateNetIncome). */
+export function openingNetIncome(accounts: ChartAccount[], opening: OpeningCents): number {
+  const lines = Object.entries(opening).map(([accountId, cents]) => ({ accountId, amountCents: cents, baseAmountCents: cents }));
+  return calculateNetIncome([{ id: 'opening', date: '1970-01-01', status: 'completed', lines } as unknown as Transaction], accounts, '1970-01-01', '2099-12-31').netIncome;
+}
+
+export function computeBalanceSheet(accounts: ChartAccount[], transactions: Transaction[], endDate?: string, opening?: OpeningCents) {
   const end = endDate || "2099-12-31";
 
   const balances: Record<string, number> = {};
   accounts.forEach((acc) => {
     // N-13: kept in the account's own direction; the books are debit-positive
-    balances[acc.id] = openingDebitCents(acc);
+    balances[acc.id] = openingDebitCents(acc) + (opening?.[acc.id] || 0);
   });
 
   const orphanedLines: Array<{ accountId: string; transactionId?: string; date?: string; amountCents: number }> = [];
@@ -93,7 +106,7 @@ export function computeBalanceSheet(accounts: ChartAccount[], transactions: Tran
     });
   }
 
-  const { netIncome } = calculateNetIncome(transactions, accounts, "1970-01-01", end);
+  const netIncome = calculateNetIncome(transactions, accounts, "1970-01-01", end).netIncome + (opening ? openingNetIncome(accounts, opening) : 0);
 
   const assets: Record<string, number> = {};
   const liabilities: Record<string, number> = {};
@@ -137,11 +150,14 @@ export function computeBalanceSheet(accounts: ChartAccount[], transactions: Tran
   };
 }
 
-export function computeTrialBalance(accounts: ChartAccount[], transactions: Transaction[], asOfDate?: string) {
+/** L-123: the trial balance's opening, gross: each account's debits and credits (both positive) before the entries given. */
+export interface OpeningGross { debits: OpeningCents; credits: OpeningCents }
+
+export function computeTrialBalance(accounts: ChartAccount[], transactions: Transaction[], asOfDate?: string, opening?: OpeningGross) {
   const trialBalance: Record<string, { name: string; code?: string; type: string; debit: number; credit: number; netSigned: number }> = {};
   accounts.forEach((acc) => {
     // N-13: the opening balance is in the account's own direction (netSigned's sign); debit and credit are the books'
-    const opening = acc.openingBalanceCents || 0;
+    const openingSigned = acc.openingBalanceCents || 0;
     const asDebit = openingDebitCents(acc);
     trialBalance[acc.id] = {
       name: acc.name,
@@ -149,8 +165,15 @@ export function computeTrialBalance(accounts: ChartAccount[], transactions: Tran
       type: acc.type,
       debit: asDebit > 0 ? asDebit : 0,
       credit: asDebit < 0 ? Math.abs(asDebit) : 0,
-      netSigned: opening
+      netSigned: openingSigned
     };
+    if (opening) {
+      const [debit, credit] = [opening.debits[acc.id] || 0, opening.credits[acc.id] || 0];
+      const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(acc.type);
+      trialBalance[acc.id].debit += debit;
+      trialBalance[acc.id].credit += credit;
+      trialBalance[acc.id].netSigned += isDebitNature ? debit - credit : credit - debit;
+    }
   });
   for (const tx of transactions) {
     if (!isPostable(tx)) continue;
@@ -249,7 +272,7 @@ export function computeCashFlow(accounts: ChartAccount[], transactions: Transact
   return cashFlow;
 }
 
-export function computeGeneralLedger(accounts: ChartAccount[], transactions: Transaction[], startDate?: string, endDate?: string, targetAccountId?: string) {
+export function computeGeneralLedger(accounts: ChartAccount[], transactions: Transaction[], startDate?: string, endDate?: string, targetAccountId?: string, opening?: OpeningCents) {
   const start = startDate || "1970-01-01";
   const end = endDate || "2099-12-31";
 
@@ -260,6 +283,8 @@ export function computeGeneralLedger(accounts: ChartAccount[], transactions: Tra
   const resultAccounts = targetAccounts.map((acc) => {
     let openingBalanceCents = acc.openingBalanceCents || 0;
     const isDebitNature = ['asset', 'expense', 'cost_of_goods'].includes(acc.type);
+    // L-123: the entries before the period, summed already (the transactions given then start at the period)
+    if (opening) openingBalanceCents += isDebitNature ? (opening[acc.id] || 0) : -(opening[acc.id] || 0);
 
     // Compute prior period postings
     transactions.forEach((tx) => {

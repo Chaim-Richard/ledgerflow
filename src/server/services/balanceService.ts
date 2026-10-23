@@ -9,7 +9,11 @@
  *   so each kind adds back to `accounts`);
  * - `retainedEarnings`: the cumulative profit (income − cost of goods − expenses, profit positive, the balance
  *   sheet's `netIncome`);
- * - `entryCount` and `checksum` (sha256 over the ids and update times of the entries it sums).
+ * - `entryCount` and `checksum` (sha256 over the ids and update times of the entries it sums);
+ * - (step 2, for reports that show more than a net balance) `debits` and `credits` per account (each positive),
+ *   `lines` (how many lines each account has) and `labelLines` (kind → value → number of lines). A snapshot built
+ *   before step 2 has none of them: `balancesAsOf` then leaves them out, and the reports that need them read every
+ *   entry as before until the snapshot is rebuilt.
  *
  * The rule: balance at D = the newest fresh snapshot with `asOf` ≤ D, plus the postable entries dated after `asOf`
  * and on or before D. (The design says `asOf` < D; at D = `asOf` both give the same figures, and ≤ spares the
@@ -34,6 +38,10 @@ export interface PeriodBalances {
   retainedEarnings: number;
   entryCount: number;
   checksum: string;
+  debits?: Cents;
+  credits?: Cents;
+  lines?: Cents;
+  labelLines?: Record<string, Cents>;
   builtAt: string;
   builtBy: string;
   stale?: boolean;
@@ -46,6 +54,12 @@ export interface BalancesAsOf {
   accounts: Cents;
   retainedEarnings: number;
   byLabel?: LabelCents;
+  /** gross debits and credits (both positive) and line counts per account; absent when the snapshot read predates them */
+  debits?: Cents;
+  credits?: Cents;
+  lines?: Cents;
+  /** with byLabel: kind → value → number of lines (absent as above) */
+  labelLines?: Record<string, Cents>;
   /** the snapshot read, or null when every entry was summed */
   snapshot: { asOf: string; checksum: string } | null;
   /** how many entries were read besides the snapshot */
@@ -103,11 +117,17 @@ export function labelKinds(entries: Transaction[]): Set<string> {
 }
 
 /** Sums postable entries (already chosen by date) into accounts and, for the given kinds, by label. */
-export function sumEntries(entries: Transaction[], kinds: Iterable<string> = []): { accounts: Cents; byLabel: LabelCents; count: number } {
+export interface Sums { accounts: Cents; byLabel: LabelCents; count: number; debits: Cents; credits: Cents; lines: Cents; labelLines: Record<string, Cents> }
+
+export function sumEntries(entries: Transaction[], kinds: Iterable<string> = []): Sums {
   const accounts: Cents = {};
+  const debits: Cents = {};
+  const credits: Cents = {};
+  const lines: Cents = {};
   const byLabel: LabelCents = {};
+  const labelLines: Record<string, Cents> = {};
   const kindList = [...kinds];
-  kindList.forEach(k => { byLabel[k] = {}; });
+  kindList.forEach(k => { byLabel[k] = {}; labelLines[k] = {}; });
   let count = 0;
   for (const tx of entries) {
     if (!isPostable(tx)) continue;
@@ -116,13 +136,17 @@ export function sumEntries(entries: Transaction[], kinds: Iterable<string> = [])
       if (!line || typeof line.accountId !== 'string') continue;
       const cents = lineAmount(line, tx);
       add(accounts, line.accountId, cents);
+      add(lines, line.accountId, 1);
+      if (cents > 0) add(debits, line.accountId, cents);
+      if (cents < 0) add(credits, line.accountId, -cents);
       for (const kind of kindList) {
         const value = getLineDimension(line, tx, kind) || UNASSIGNED;
         add(byLabel[kind][value] ||= {}, line.accountId, cents);
+        add(labelLines[kind], value, 1);
       }
     }
   }
-  return { accounts, byLabel, count };
+  return { accounts, byLabel, count, debits, credits, lines, labelLines };
 }
 
 function checksumOf(entries: Entry[]): string {
@@ -141,7 +165,8 @@ export function snapshotFromEntries(workspaceId: string, asOf: string, accounts:
   return {
     workspaceId, asOf, accounts: prune(sums.accounts), byLabel,
     retainedEarnings: calculateNetIncome(mine, accounts, '1970-01-01', asOf).netIncome,
-    entryCount: sums.count, checksum: checksumOf(mine), builtAt: new Date().toISOString(), builtBy, stale: false,
+    entryCount: sums.count, checksum: checksumOf(mine),
+    debits: sums.debits, credits: sums.credits, lines: sums.lines, labelLines: sums.labelLines, builtAt: new Date().toISOString(), builtBy, stale: false,
   };
 }
 
@@ -175,19 +200,31 @@ export async function buildSnapshot(db: Firestore, workspaceId: string, asOf: st
   });
 }
 
-async function snapshotsOf(db: Firestore, workspaceId: string): Promise<PeriodBalances[]> {
+/** Every snapshot of the workspace, fresh or stale (none while the table is missing). */
+export async function snapshotsOf(db: Firestore, workspaceId: string): Promise<PeriodBalances[]> {
   if (!(await periodBalancesReady(db))) return [];
   const snap = await db.collection('periodBalances').where('workspaceId', '==', workspaceId).get();
   return snap.docs.map(d => d.data() as PeriodBalances);
 }
 
-/** Every account's balance (and, on request, by label) at the end of `date`. */
-export async function balancesAsOf(db: Firestore, workspaceId: string, date: string, options: { byLabel?: boolean } = {}): Promise<BalancesAsOf> {
-  if (!DATE.test(date)) throw new Error(`A balance date is YYYY-MM-DD (got "${date}")`);
+/** The snapshot `balancesAsOf(db, ws, date)` reads: the newest fresh one on or before `date`, or null. */
+export async function freshSnapshot(db: Firestore, workspaceId: string, date: string): Promise<PeriodBalances | null> {
   const fresh = (await snapshotsOf(db, workspaceId))
     .filter(s => s.stale !== true && DATE.test(s.asOf) && s.asOf <= date)
     .sort((a, b) => b.asOf.localeCompare(a.asOf));
-  const snapshot = fresh[0] || null;
+  return fresh[0] || null;
+}
+
+const plus = (base: Cents | undefined, more: Cents): Cents => {
+  const total: Cents = { ...(base || {}) };
+  Object.entries(more).forEach(([k, c]) => add(total, k, c));
+  return total;
+};
+
+/** Every account's balance (and, on request, by label) at the end of `date`. */
+export async function balancesAsOf(db: Firestore, workspaceId: string, date: string, options: { byLabel?: boolean } = {}): Promise<BalancesAsOf> {
+  if (!DATE.test(date)) throw new Error(`A balance date is YYYY-MM-DD (got "${date}")`);
+  const snapshot = await freshSnapshot(db, workspaceId, date);
   let query = db.collection('transactions').where('workspaceId', '==', workspaceId).where('date', '<', nextDay(date));
   if (snapshot) query = query.where('date', '>=', nextDay(snapshot.asOf));
   const [accountsSnap, entriesSnap] = await Promise.all([
@@ -209,6 +246,13 @@ export async function balancesAsOf(db: Firestore, workspaceId: string, date: str
     snapshot: snapshot ? { asOf: snapshot.asOf, checksum: snapshot.checksum } : null,
     entriesRead: entries.length,
   };
+  // the gross figures, when the snapshot has them (or there is none)
+  const gross = !snapshot || (snapshot.debits && snapshot.credits && snapshot.lines && snapshot.labelLines);
+  if (gross) {
+    result.debits = prune(plus(snapshot?.debits, sums.debits));
+    result.credits = prune(plus(snapshot?.credits, sums.credits));
+    result.lines = prune(plus(snapshot?.lines, sums.lines));
+  }
   if (options.byLabel) {
     const byLabel: LabelCents = {};
     for (const kind of kinds) {
@@ -222,6 +266,15 @@ export async function balancesAsOf(db: Firestore, workspaceId: string, date: str
       byLabel[kind] = Object.fromEntries(Object.entries(merged).map(([v, c]) => [v, prune(c)]).filter(([, c]) => Object.keys(c).length > 0));
     }
     result.byLabel = byLabel;
+    if (gross) {
+      const labelLines: Record<string, Cents> = {};
+      for (const kind of kinds) {
+        // as above: a kind the snapshot did not carry had every line "Unassigned"
+        const base = snapshot ? (snapshot.labelLines?.[kind] || { [UNASSIGNED]: Object.values(snapshot.lines || {}).reduce((a, b) => a + b, 0) }) : {};
+        labelLines[kind] = prune(plus(base, sums.labelLines[kind] || {}));
+      }
+      result.labelLines = labelLines;
+    }
   }
   return result;
 }
