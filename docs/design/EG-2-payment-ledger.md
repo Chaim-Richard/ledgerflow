@@ -209,7 +209,7 @@ marks `fx-settlement` / documentId from `min(row.date)` — EG-1's table, owned 
      document, and running it twice writes nothing.
 4. **Payment void on the server.** `POST /api/v1/payments/:id/void`: reversal entry (as `paymentPosting.ts`),
    `reversal` rows, reversals of the payment's `payment-application` entries, documents' `amountPaidCents` from Σ rows, `unappliedCents` 0.
-   - *Test:* void the 10-15 payment of the example: invoice open €900 again; statement shows the reversal.
+   - *Test:* void the 10-15 payment of the example on 10-25: invoice open €900 again (€400 if voided after PAY-2 on 11-02); statement shows the reversal.
 5. **Refund movements, then aging and statements read rows.** Dated `creditMovements` (refunds, from
    `refundCredit` and backfilled from its entries) ship **first in this step**: "unapplied credits as of D"
    needs them (a credit refunded in November was still outstanding on 10-31). Then `asOf` aging (server route and `PartyAgingReportView`), statement with
