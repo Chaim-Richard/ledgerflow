@@ -121,6 +121,14 @@ export function sameText(actual: string | undefined, expected: string): boolean 
   return typeof actual === 'string' && fold(actual) === fold(expected);
 }
 
+const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/** Days in a month, leap years by the Gregorian rule (no Date object: a calendar count, not an instant). */
+export function daysInMonth(year: number, month: number): number {
+  if (month === 2) return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28;
+  return MONTH_DAYS[month - 1] ?? 0;
+}
+
 /* ------------------------------------------------------------------ the fixture's own arithmetic ----------- */
 
 /**
@@ -170,7 +178,7 @@ export function checkFixture(fixture: ReceiptFixture): string[] {
   const printed = fixture.datePrinted.match(/\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}/);
   if (!printed) add('the printed date is not a date on the paper');
   else if (!fixture.ocrText.some((line) => line.includes(printed[0]))) add(`the transcription does not show the printed date ${printed[0]}`);
-  const valid = (y: number, m: number, d: number) => y >= 2000 && m >= 1 && m <= 12 && d >= 1 && d <= new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const valid = (y: number, m: number, d: number) => y >= 2000 && m >= 1 && m <= 12 && d >= 1 && d <= daysInMonth(y, m);
   const wanted = (() => {
     const [y, m, d] = fixture.dateISO.split('-').map(Number);
     return y * 10000 + m * 100 + d;
