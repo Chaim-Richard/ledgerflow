@@ -67,6 +67,7 @@ export const WORKSPACE_PURGE_EXTRA = [
   'clientQueries',
   'stockMoves',
   'periodBalances', // L-123 balance snapshots: server-written, rebuilt from the entries, never restored
+  'periodClosings', // EG-3 period-closing documents: server-written, never restored from a backup
 ] as const;
 
 /** Everything a workspace purge deletes, in order (the job resumes by position in this list). */

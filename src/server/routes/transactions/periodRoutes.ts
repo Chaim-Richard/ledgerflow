@@ -2,12 +2,13 @@ import express from 'express';
 import { z } from 'zod';
 import { calculateNetIncome } from '../../../lib/txFilters';
 import type { Transaction } from '../../../types';
-import { getDb } from '../../db/firestore';
+import { getDb, validateWorkspaceMember } from '../../db/firestore';
 import { writeServerAuditLog } from '../../services/auditLogService';
 import { closePeriod, PeriodCloseError } from '../../services/periodCloseService';
 import { errorMessage, requestUser } from '../../auth/requestUser';
 import { FxRevaluationError, revaluateForeignBalances, undoRevaluation } from '../../services/fxRevaluationService';
 import { formatTzDate } from './helpers';
+import { listClosings, periodClosingsReady, readClosings, writeClosing } from '../../services/periodClosingService';
 import { periodBalancesReady, readSnapshotInputs, rebuildSnapshots, snapshotFromEntries, writeSnapshot } from '../../services/balanceService';
 
 const revaluationBodySchema = z.object({
@@ -123,17 +124,25 @@ export function registerPeriodRoutes(transactionRouter: express.Router): void {
       // callback, so a retried attempt starts afresh).
       const yearStart = fiscalYearStart(closingDate);
       const withSnapshot = Boolean(lockPeriod) && await periodBalancesReady(db);
-      const { year, locked } = await db.runTransaction(async (t) => {
+      // EG-3: and the closing document, from the same entries in the same transaction (no entry is posted)
+      const withClosing = Boolean(lockPeriod) && await periodClosingsReady(db);
+      const { year, locked, closingVersion } = await db.runTransaction(async (t) => {
         const wsNow = (await t.get(db.collection('workspaces').doc(workspaceId))).data() || {};
-        if (wsNow.lockDate && wsNow.lockDate >= closingDate) return { year: null, locked: String(wsNow.lockDate) };
+        if (wsNow.lockDate && wsNow.lockDate >= closingDate) return { year: null, locked: String(wsNow.lockDate), closingVersion: null };
         const { accounts, entries } = await readSnapshotInputs(db, t, workspaceId, closingDate);
         const transactions = entries as Transaction[];
+        const stored = withClosing ? await readClosings(db, t, workspaceId) : [];
         const yearFigures = calculateNetIncome(transactions, accounts, yearStart, closingDate);
         if (lockPeriod) {
           t.update(db.collection('workspaces').doc(workspaceId), { lockDate: closingDate, updatedAt: new Date().toISOString() });
-          if (withSnapshot) writeSnapshot(db, t, snapshotFromEntries(workspaceId, closingDate, accounts, entries, user.uid));
+          const snapshot = snapshotFromEntries(workspaceId, closingDate, accounts, entries, user.uid);
+          if (withSnapshot) writeSnapshot(db, t, snapshot);
+          if (withClosing) {
+            const closing = writeClosing(db, t, stored, { workspaceId, yearStart, yearEnd: closingDate, accounts, entries: transactions, snapshot, uid: user.uid, email: user.email, at: new Date().toISOString() });
+            return { year: yearFigures, locked: null, closingVersion: closing.version };
+          }
         }
-        return { year: yearFigures, locked: null };
+        return { year: yearFigures, locked: null, closingVersion: null };
       });
       if (!year) {
         return res.status(400).json({ error: `Cannot close year: Period is already locked through ${locked}.` });
@@ -162,7 +171,25 @@ export function registerPeriodRoutes(transactionRouter: express.Router): void {
         message: `Year ${yearStart} – ${closingDate} closed. Its net ${year.netIncome >= 0 ? 'profit' : 'loss'} of ${(Math.abs(year.netIncome) / 100).toFixed(2)} is carried in retained earnings on the balance sheet${lockPeriod ? ', and the year is locked' : ''}.`,
         netIncomeCents: year.netIncome,
         yearStart,
+        closingVersion,
       });
+    } catch (e) {
+      res.status(500).json({ error: errorMessage(e) });
+    }
+  });
+
+  // EG-3: the period-closing documents, every version (superseded ones too), read-only; any member, a viewer too
+  transactionRouter.get('/period-closings', async (req, res) => {
+    const workspaceId = typeof req.query.workspaceId === 'string' ? req.query.workspaceId : '';
+    if (!workspaceId) return res.status(400).json({ error: 'Missing required parameter: workspaceId.' });
+    const db = getDb();
+    try {
+      await validateWorkspaceMember(db, workspaceId, requestUser(req));
+    } catch (err) {
+      return /not found/i.test(errorMessage(err)) ? res.status(404).json({ error: 'Workspace not found.' }) : res.status(403).json({ error: 'Forbidden' });
+    }
+    try {
+      res.json({ status: 'ok', closings: await listClosings(db, workspaceId) });
     } catch (e) {
       res.status(500).json({ error: errorMessage(e) });
     }
