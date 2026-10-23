@@ -186,7 +186,7 @@ export function parseCorporateCardCsv(
       continue;
     }
 
-    let signedCents: number | null = null;
+    let signedCents: number;
     if (debitCol >= 0 && ((cols[debitCol] ?? '').trim() !== '' || (creditCol >= 0 && (cols[creditCol] ?? '').trim() !== ''))) {
       const dRaw = (cols[debitCol] ?? '').trim();
       const cRaw = creditCol >= 0 ? (cols[creditCol] ?? '').trim() : '';
@@ -198,11 +198,12 @@ export function parseCorporateCardCsv(
       }
       signedCents = Math.abs(dVal) - Math.abs(cVal);
     } else {
-      signedCents = parseSignedAmountCents(cols[amountCol] ?? '');
-      if (signedCents === null) {
+      const parsed = parseSignedAmountCents(cols[amountCol] ?? '');
+      if (parsed === null) {
         problems.push(`Row ${lineNo}: invalid amount "${String(cols[amountCol] ?? '').trim() || '(empty)'}"`);
         continue;
       }
+      signedCents = parsed;
     }
 
     const rowCurrency = currencyCol >= 0 ? String(cols[currencyCol] ?? '').trim().toUpperCase() : '';

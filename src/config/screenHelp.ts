@@ -44,6 +44,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review the recorded history of workspace actions. Find a record and inspect who changed it and when. An audit log is not an independent financial reconciliation.",
     "client-queries":
       "Questions the bookkeeper or accountant asked about entries, and the answers. Ask from an entry's edit window with \"Ask about this entry\"; answer, follow up or close the question here. Each side gets a notification; a question changes nothing in the books.",
+    "accountant-queue":
+      "One triage queue for what needs an accountant's review: open entry questions, held invoices, purchase orders and expense claims awaiting approval, unposted manual journal adjustments, and open period-lock exceptions. Filter by category and jump straight to the screen and record where each item is answered, approved, posted or closed. The queue reads current workspace state and posts nothing on its own.",
     time:
       "Log what you worked on, for which customer or project and whether it is billable, then submit it. Owners and accountants approve it or send it back and keep the hourly rates (a project's, else a customer's, else a person's). Approved billable time becomes a draft invoice for its customer; nothing is posted until that invoice is.",
     tasks:
@@ -331,6 +333,20 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Review posted entries missing required labels, customers and suppliers missing a tax ID or postal address needed for active filings, and catalogue items missing unit cost or selling price. Filter by check group, jump straight to each entry, document or item, and export CSV. Read-only: recorded tax IDs show masked last digits only, are never verified with a tax authority, and nothing here alters your books.",
     "sample-year-benchmark":
       "Inspect a deterministic 12-month small-business fixture across sales, purchases, stock moves, warehouse lots and serials, payments, bank statements, reconciliations and balanced journal entries, and run the report speed check against the 1,000 ms budget. Fixture and calculation status only: nothing here reads from, writes to or alters your workspace books.",
+    "vendor-quotes-compare":
+      "Record and compare supplier quotes per catalogue item — quoted unit price, minimum order quantity, lead days and validity date — alongside each supplier's most recent issued bill unit cost. Lowest-price badges compare non-expired quotes strictly inside the same currency without guessing exchange rates. Saving a quote stores planning metadata on the item and posts no order or bill.",
+    "customer-item-codes":
+      "Map internal catalogue items to each customer's own part number and optional buyer title, search either side instantly, and export CSV. Duplicate part numbers saved for the same customer across two items are flagged for review. Saving a mapping updates item metadata only and never alters internal SKUs, quantities or posted invoices.",
+    "shipping-methods":
+      "Configure shipping methods with carrier, zone, transit days, flat charge and optional free-shipping subtotal threshold, and preview the whole-cent fee for an order subtotal in the same currency. Each method is saved as a service item in the catalogue so it can be added directly on invoices, estimates and purchase orders. Currency mismatches are refused rather than converted.",
+    "bill-retention":
+      "Track contractual retention held back on issued milestone bills, with gross bill amount, holdback, net payable before release, scheduled release date and release status grouped strictly per currency. Past-due release dates are flagged first for review. Retention schedule notes live in bill metadata only and never alter posted bill amounts or ledger balances.",
+    "aged-inventory-by-lot":
+      "Age each lot number recorded on purchase-order goods receipts from its receipt date to the chosen date across 0–30, 31–60, 61–90, 91–180 and 181+ day buckets, valued strictly in the purchase order's currency. Because stock movements do not track lot-by-lot depletion, received units and receipt cost are shown alongside any lot references recorded on sales invoices. Read-only calculation status.",
+    "work-orders":
+      "Plan and track numbered work orders (WO-YYYY-NNN) to assemble kits from bundle components using each kit's bill of materials, checking live component stock for shortages before building. Track progress across planned, in-progress, completed and cancelled runs and export CSV pick lists. Work orders plan shop-floor builds only; stock movements and ledger entries stay in inventory adjustments and invoices.",
+    "il-annual-party-summary":
+      "Prepare an annual working paper per customer and per vendor for an Israeli accountant: annual turnover before VAT, VAT charged or input VAT, allocation-number completeness on business invoices above the threshold, payments and source tax withheld, and year-end open balances in base currency. Tax and VAT identifiers display masked last digits only. Calculation status only: this working paper never files with the Israel Tax Authority or posts to the books.",
   },
   settings: {
     "branding-profiles": "Choose the logo colour, address and footer that PDFs use for each label value, such as an entity or a branch. A value without its own branding inherits from its parent label, and then from the books. Owners and accountants edit it here; the saved branding applies to PDFs made after the save.",
