@@ -18,9 +18,10 @@ const col = (header: readonly string[], row: readonly string[], ...aliases: stri
 };
 const combinedAddress = (header: readonly string[], row: readonly string[]) => {
   const parts = [
-    col(header, row, 'Billing Street', 'Bill to street', 'Bill To Address', 'Billing Address', 'Street Address', 'Street'),
+    col(header, row, 'Billing Street', 'Bill to street', 'Bill To Address', 'Billing Address', 'Vendor Address', 'Company Address', 'Primary Address', 'Mailing Address', 'Address Line 1', 'Street Address', 'Street'),
+    col(header, row, 'Billing Street 2', 'Address Line 2', 'Street 2'),
     col(header, row, 'Billing City', 'City'),
-    col(header, row, 'Billing State', 'State', 'Province'),
+    col(header, row, 'Billing State', 'State', 'Province', 'Region'),
     col(header, row, 'Billing ZIP', 'ZIP', 'Zip Code', 'Postal Code'),
     col(header, row, 'Billing Country', 'Country'),
   ];
@@ -57,11 +58,12 @@ export function normalizeQuickBooksCsv(kind: ImportKind, table: readonly (readon
     ]),
   ];
   if (kind === 'vendors') return [
-    ['Name', 'Email', 'Phone', 'Category'],
+    ['Name', 'Email', 'Phone', 'Address', 'Category'],
     ...rows.map(row => [
       vendorName(headers, row),
       col(headers, row, 'Email', 'Email Address', 'Primary Email', 'Primary Email Address'),
       col(headers, row, 'Phone Numbers', 'Phone', 'Phone Number', 'Primary Phone', 'Main Phone'),
+      combinedAddress(headers, row),
       col(headers, row, 'Vendor Type', 'Category'),
     ]),
   ];

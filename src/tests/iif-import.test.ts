@@ -26,7 +26,7 @@ test('E-29 reads the four list sections into the app\'s own import columns', () 
   assert.deepEqual(result.tables.customers[1], ['Acme Ltd', 'acme@example.com', '+972-3-555-0101', '1 Herzl St, Apt 4, Tel Aviv', '', 'VIP', 'Net 30']);
   assert.deepEqual(result.tables.customers[2], ['Beta Co', 'beta@example.com', '+972-2-555-0202', '9 Rothschild, Jerusalem', '', '', 'Net 15']);
 
-  assert.deepEqual(result.tables.vendors[1], ['Office Supplies Ltd', 'supplies@example.com', '03-555-0303', 'Supplier']);
+  assert.deepEqual(result.tables.vendors[1], ['Office Supplies Ltd', 'supplies@example.com', '03-555-0303', '5 Haifa Rd, Haifa', 'Supplier']);
 
   assert.deepEqual(result.tables.items[1], ['Consulting hour', 'CONS-1', 'Hourly consulting', '150.00', '0', '', 'SERV']);
   assert.deepEqual(result.tables.items[2], ['Paper box', 'PAP-1', 'A box of paper', '40.00', '25.00', '', 'INVENTORY']);
