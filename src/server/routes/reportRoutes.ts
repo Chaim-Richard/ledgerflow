@@ -27,11 +27,22 @@ import { stockMovesReady } from '../services/stockMoveService';
 import { itemDetails, stockAging, type StockMove } from '../../lib/stockMoves';
 import { openingDebitCents } from '../../lib/accountUtils';
 import { grossOf, labelOpeningOf, openingBefore, openingKey } from '../reports/reportOpening';
+import { serverProvenance, type ReportProvenance } from '../../lib/reportProvenance';
 
 export const reportRouter = express.Router();
 
-const REPORT_CACHE = new Map<string, { data: unknown; expiry: number }>();
+/** a P&L or balance sheet worked out in the last minute, with the moment it was (`at`) */
+const REPORT_CACHE = new Map<string, { data: object; expiry: number; at: number }>();
 const CACHE_TTL_MS = 60000; // 60 seconds
+
+/** AUD-10: every report answer says where it comes from (reportProvenance.ts); a cached one says when */
+function withProvenance<T extends object>(data: T, cachedAt?: number): T & { provenance: ReportProvenance } {
+  return { ...data, provenance: serverProvenance(cachedAt) };
+}
+
+function remember(key: string, data: object) {
+  REPORT_CACHE.set(key, { data, expiry: Date.now() + CACHE_TTL_MS, at: Date.now() });
+}
 
 /** L-123: `snapshot` is the balance snapshot the report reads (openingKey), so a stale or rebuilt one is never answered from the cache. */
 export function getCacheKey(req: express.Request, snapshot = 'none'): string {
@@ -95,7 +106,7 @@ reportRouter.get(["/profit-and-loss", "/pl"], async (req, res) => {
   const { workspaceId, startDate, endDate } = result.data;
   const cacheKey = getCacheKey(req);
   const cached = REPORT_CACHE.get(cacheKey);
-  if (cached && cached.expiry > Date.now()) return res.json(cached.data);
+  if (cached && cached.expiry > Date.now()) return res.json(withProvenance(cached.data, cached.at));
   try {
     // N-08: on cash basis, invoices and bills count when paid (cashBasis.ts): their postings may be
     // older than the period, so the whole history up to the end is read, with the payments
@@ -104,13 +115,13 @@ reportRouter.get(["/profit-and-loss", "/pl"], async (req, res) => {
       const payments = (await getDb().collection('payments').where('workspaceId', '==', workspaceId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as CashBasisPayment);
       const { entries, leftOut } = cashBasisEntries(accounts, transactions, payments);
       const pl = { ...computeProfitAndLoss(accounts, entries, startDate, endDate), basis: 'cash', leftOut };
-      REPORT_CACHE.set(cacheKey, { data: pl, expiry: Date.now() + CACHE_TTL_MS });
-      return res.json(pl);
+      remember(cacheKey, pl);
+      return res.json(withProvenance(pl));
     }
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, startDate, endDate);
     const pl = computeProfitAndLoss(accounts, transactions, startDate, endDate);
-    REPORT_CACHE.set(cacheKey, { data: pl, expiry: Date.now() + CACHE_TTL_MS });
-    res.json(pl);
+    remember(cacheKey, pl);
+    res.json(withProvenance(pl));
   } catch (error) {
     if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
     if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
@@ -129,14 +140,14 @@ reportRouter.get("/balance-sheet", async (req, res) => {
     await authorizeWorkspace(authReq, workspaceId);
     const cacheKey = getCacheKey(req, cash ? 'none' : await openingKey(getDb(), workspaceId, endDate));
     const cached = REPORT_CACHE.get(cacheKey);
-    if (cached && cached.expiry > Date.now()) return res.json(cached.data);
+    if (cached && cached.expiry > Date.now()) return res.json(withProvenance(cached.data, cached.at));
     if (!cash && endDate) {
       const { accounts, transactions } = await getReportContext(authReq, workspaceId, endDate, endDate);
       const opening = await openingBefore(getDb(), workspaceId, accounts, endDate, { gross: true });
       if (opening) {
         const bs = computeBalanceSheet(accounts, transactions, endDate, opening.accounts);
-        REPORT_CACHE.set(cacheKey, { data: bs, expiry: Date.now() + CACHE_TTL_MS });
-        return res.json(bs);
+        remember(cacheKey, bs);
+        return res.json(withProvenance(bs));
       }
     }
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, endDate);
@@ -144,12 +155,12 @@ reportRouter.get("/balance-sheet", async (req, res) => {
     if (cash) {
       const payments = (await getDb().collection('payments').where('workspaceId', '==', workspaceId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as CashBasisPayment);
       const cashBs = cashBasisBalanceSheet(accounts, transactions, payments, endDate || undefined);
-      REPORT_CACHE.set(cacheKey, { data: cashBs, expiry: Date.now() + CACHE_TTL_MS });
-      return res.json(cashBs);
+      remember(cacheKey, cashBs);
+      return res.json(withProvenance(cashBs));
     }
     const bs = computeBalanceSheet(accounts, transactions, endDate);
-    REPORT_CACHE.set(cacheKey, { data: bs, expiry: Date.now() + CACHE_TTL_MS });
-    res.json(bs);
+    remember(cacheKey, bs);
+    res.json(withProvenance(bs));
   } catch (error) {
     if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
     if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
@@ -364,11 +375,11 @@ reportRouter.get("/trial-balance", async (req, res) => {
     if (asOfDate) {
       const day = await getReportContext(authReq, workspaceId, asOfDate, asOfDate);
       const opening = await openingBefore(getDb(), workspaceId, day.accounts, asOfDate, { gross: true });
-      if (opening) return res.json(computeTrialBalance(day.accounts, day.transactions, asOfDate, grossOf(opening)));
+      if (opening) return res.json(withProvenance(computeTrialBalance(day.accounts, day.transactions, asOfDate, grossOf(opening))));
     }
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, asOfDate);
     const tb = computeTrialBalance(accounts, transactions, asOfDate);
-    res.json(tb);
+    res.json(withProvenance(tb));
   } catch (error) {
     if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
     if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
@@ -389,7 +400,7 @@ reportRouter.get("/cash-flow", async (req, res) => {
     // balancesAsOf) and at the end (the start plus the net change)
     const before = startDate ? (await openingBefore(getDb(), workspaceId, accounts, startDate))?.accounts || {} : {};
     const openingCashCents = accounts.filter(isCashFlowCashAccount).reduce((sum, acc) => sum + openingDebitCents(acc) + (before[acc.id] || 0), 0);
-    res.json({ ...cf, openingCashCents, closingCashCents: openingCashCents + cf.netChange });
+    res.json(withProvenance({ ...cf, openingCashCents, closingCashCents: openingCashCents + cf.netChange }));
   } catch (error) {
     if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
     if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
@@ -500,11 +511,11 @@ reportRouter.get("/general-ledger", async (req, res) => {
     if (startDate) {
       const period = await getReportContext(authReq, workspaceId, startDate, endDate);
       const opening = await openingBefore(getDb(), workspaceId, period.accounts, startDate);
-      if (opening) return res.json(computeGeneralLedger(period.accounts, period.transactions, startDate, endDate, accountId, opening.accounts));
+      if (opening) return res.json(withProvenance(computeGeneralLedger(period.accounts, period.transactions, startDate, endDate, accountId, opening.accounts)));
     }
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, endDate);
     const gl = computeGeneralLedger(accounts, transactions, startDate, endDate, accountId);
-    res.json(gl);
+    res.json(withProvenance(gl));
   } catch (error) {
     if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
     if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
