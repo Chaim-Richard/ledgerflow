@@ -712,5 +712,17 @@ select pg_temp.expect_denied('profile fields remain allowlisted', 'u-view',
 select pg_temp.expect_value('the refused writes left the first book intact',
   $$select data #>> '{reportPreferences,scope-a,recentReportIds,0}' from users where id = 'u-view'$$, 'pnl');
 
+-- Where the Supabase publication exists, a second device must receive the profile change live.
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'users'
+     ) then
+    raise exception 'FAIL D-47: users is not in supabase_realtime';
+  end if;
+end $$;
+
 select 'ALL RLS TESTS PASSED' as result;
 rollback;

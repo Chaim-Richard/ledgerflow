@@ -5,3 +5,16 @@
 update public.lf_rules
 set allowed_keys = allowed_keys || array['reportPreferences']
 where table_name = 'users' and not ('reportPreferences' = any(allowed_keys));
+
+-- The document listener uses postgres_changes for another device's write. Plain PostgreSQL test
+-- databases have no Supabase publication; Supabase does. The guard also makes a repeated setup safe.
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'users'
+     ) then
+    alter publication supabase_realtime add table public.users;
+  end if;
+end $$;
