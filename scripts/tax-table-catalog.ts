@@ -308,7 +308,8 @@ export const TAX_TABLES: readonly TableSpec[] = [
 /** Non-table modules are classified so a newly added module cannot silently escape review. */
 export const NON_TABLE_MODULES: Readonly<Record<string, string>> = {
   "entityFilings.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
-  "form856.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
+  "filedReturns.ts": "Picks a saved filed tax return for a period; no embedded dated source table.",
+  "form856.ts":"Calculation, review, profile or document helper; no embedded dated source table.",
   "form856ReviewExport.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
   "ilImportServices.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
   "ilVatReturn.ts": "Calculation, review, profile or document helper; no embedded dated source table.",
