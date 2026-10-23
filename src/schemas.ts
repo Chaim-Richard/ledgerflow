@@ -23,6 +23,10 @@ export const TransactionLineSchema = z.object({
   splitAllocations: z.array(SplitAllocationSchema).optional(),
   taxRate: z.number().min(0).max(100).optional(),
   taxAmountCents: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+  /** EG-12: on an invoice's or bill's tax line, the tax code, treatment and parts the document used */
+  taxCodeId: z.string().max(200).optional(),
+  taxTreatment: z.enum(['standard', 'zero_rated', 'exempt', 'reverse_charge', 'out_of_scope']).optional(),
+  taxBreakdown: z.array(z.object({ name: z.string().max(100), rate: z.number().min(0).max(100), taxCents: z.number().int() })).max(10).optional(),
   quantity: z.number().positive().finite().optional(),
   unitPriceCents: z.number().int().nonnegative().optional(),
 });

@@ -118,6 +118,8 @@ export interface InvoiceTemplateParams {
   /** The income account of each invoice line; revenue is posted to them in proportion. */
   lineAccounts?: LineAccountWeight[];
   taxAccount?: AccountRef | null;
+  /** EG-12: the tax the document used (its code, treatment and parts), kept on the tax line */
+  taxStamp?: Partial<TransactionLine>;
   discountAccount?: AccountRef | null;
   retainageAccount?: AccountRef | null;
 }
@@ -135,6 +137,8 @@ export interface BillTemplateParams {
   /** The expense account of each bill line; the cost is posted to them in proportion. */
   lineAccounts?: LineAccountWeight[];
   taxAccount?: AccountRef | null;
+  /** EG-12: the tax the document used (its code, treatment and parts), kept on the tax line */
+  taxStamp?: Partial<TransactionLine>;
   discountAccount?: AccountRef | null;
   retainageAccount?: AccountRef | null;
 }
@@ -212,7 +216,8 @@ export class TransactionTemplates {
         accountName: params.taxAccount.name,
         amountCents: -taxCents, // Credit Tax Payable
         description: `Sales tax collected on Invoice ${params.invoiceNumber}`,
-        exchangeRate: rate
+        exchangeRate: rate,
+        ...params.taxStamp
       });
     }
 
@@ -247,7 +252,8 @@ export class TransactionTemplates {
         accountName: params.taxAccount.name,
         amountCents: taxCents, // Debit Tax Asset / Recoverable Tax
         description: `Input tax recoverable on Bill ${params.billNumber}`,
-        exchangeRate: rate
+        exchangeRate: rate,
+        ...params.taxStamp
       });
     }
 
