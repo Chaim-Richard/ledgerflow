@@ -13,7 +13,8 @@ import {
   computeBalanceSheet,
   computeTrialBalance,
   computeCashFlow,
-  computeGeneralLedger
+  computeGeneralLedger,
+  isCashFlowCashAccount
 } from "../reports/computeReports";
 import type { Bill, Budget, ChartAccount, Invoice, Transaction as LedgerTransaction } from "../../types";
 import { agingBucket, daysOverdue, outstandingBaseCents } from '../../lib/aging';
@@ -24,14 +25,17 @@ import { cashBasisBalanceSheet, cashBasisEntries, type CashBasisPayment } from '
 import { explainFigure } from '../reports/explain';
 import { stockMovesReady } from '../services/stockMoveService';
 import { itemDetails, stockAging, type StockMove } from '../../lib/stockMoves';
+import { openingDebitCents } from '../../lib/accountUtils';
+import { grossOf, labelOpeningOf, openingBefore, openingKey } from '../reports/reportOpening';
 
 export const reportRouter = express.Router();
 
 const REPORT_CACHE = new Map<string, { data: unknown; expiry: number }>();
 const CACHE_TTL_MS = 60000; // 60 seconds
 
-function getCacheKey(req: express.Request): string {
-  const payload = JSON.stringify({ path: req.path, query: req.query, body: req.body, user: requestUser(req)?.uid });
+/** L-123: `snapshot` is the balance snapshot the report reads (openingKey), so a stale or rebuilt one is never answered from the cache. */
+export function getCacheKey(req: express.Request, snapshot = 'none'): string {
+  const payload = JSON.stringify({ path: req.path, query: req.query, body: req.body, user: requestUser(req)?.uid, snapshot });
   return crypto.createHash('sha256').update(payload).digest('hex');
 }
 
@@ -119,13 +123,25 @@ reportRouter.get("/balance-sheet", async (req, res) => {
   const result = ReportRangeSchema.safeParse(req.query);
   if (!result.success) return sendError(res, "Invalid parameters", 400, result.error.issues);
   const { workspaceId, endDate } = result.data;
-  const cacheKey = getCacheKey(req);
-  const cached = REPORT_CACHE.get(cacheKey);
-  if (cached && cached.expiry > Date.now()) return res.json(cached.data);
   try {
+    const cash = req.query.basis === 'cash';
+    // L-123: the cache key carries the snapshot read, checked only once the person may see the workspace
+    await authorizeWorkspace(authReq, workspaceId);
+    const cacheKey = getCacheKey(req, cash ? 'none' : await openingKey(getDb(), workspaceId, endDate));
+    const cached = REPORT_CACHE.get(cacheKey);
+    if (cached && cached.expiry > Date.now()) return res.json(cached.data);
+    if (!cash && endDate) {
+      const { accounts, transactions } = await getReportContext(authReq, workspaceId, endDate, endDate);
+      const opening = await openingBefore(getDb(), workspaceId, accounts, endDate, { gross: true });
+      if (opening) {
+        const bs = computeBalanceSheet(accounts, transactions, endDate, opening.accounts);
+        REPORT_CACHE.set(cacheKey, { data: bs, expiry: Date.now() + CACHE_TTL_MS });
+        return res.json(bs);
+      }
+    }
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, endDate);
     // N-08: on cash basis, without trade receivables and payables (cashBasis.ts)
-    if (req.query.basis === 'cash') {
+    if (cash) {
       const payments = (await getDb().collection('payments').where('workspaceId', '==', workspaceId).get()).docs.map(d => ({ ...d.data(), id: d.id }) as CashBasisPayment);
       const cashBs = cashBasisBalanceSheet(accounts, transactions, payments, endDate || undefined);
       REPORT_CACHE.set(cacheKey, { data: cashBs, expiry: Date.now() + CACHE_TTL_MS });
@@ -288,6 +304,10 @@ reportRouter.get("/balance-sheet-by-label", async (req, res) => {
   if (!parsed.success) return sendError(res, "Choose a label, one of its values and the date", 400);
   const q = parsed.data;
   try {
+    // L-123: the opening by label from balancesAsOf, then the entries of the day
+    const day = await getReportContext(authReq, q.workspaceId, q.endDate, q.endDate);
+    const opening = await openingBefore(getDb(), q.workspaceId, day.accounts, q.endDate, { byLabel: true, gross: true });
+    if (opening) return res.json(balanceSheetByLabel(day.accounts, day.transactions, q.dimensionId, q.value, q.endDate, labelOpeningOf(opening, q.dimensionId, q.value)));
     const { accounts, transactions } = await getReportContext(authReq, q.workspaceId, undefined, q.endDate);
     res.json(balanceSheetByLabel(accounts, transactions, q.dimensionId, q.value, q.endDate));
   } catch (error) {
@@ -340,6 +360,12 @@ reportRouter.get("/trial-balance", async (req, res) => {
   }
 
   try {
+    // L-123: the opening (gross debits and credits) from balancesAsOf, then the entries of the day
+    if (asOfDate) {
+      const day = await getReportContext(authReq, workspaceId, asOfDate, asOfDate);
+      const opening = await openingBefore(getDb(), workspaceId, day.accounts, asOfDate, { gross: true });
+      if (opening) return res.json(computeTrialBalance(day.accounts, day.transactions, asOfDate, grossOf(opening)));
+    }
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, asOfDate);
     const tb = computeTrialBalance(accounts, transactions, asOfDate);
     res.json(tb);
@@ -359,7 +385,11 @@ reportRouter.get("/cash-flow", async (req, res) => {
   try {
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, startDate, endDate);
     const cf = computeCashFlow(accounts, transactions, startDate, endDate);
-    res.json(cf);
+    // L-123: the cash at the start (the accounts' opening balances and every entry before the period, from
+    // balancesAsOf) and at the end (the start plus the net change)
+    const before = startDate ? (await openingBefore(getDb(), workspaceId, accounts, startDate))?.accounts || {} : {};
+    const openingCashCents = accounts.filter(isCashFlowCashAccount).reduce((sum, acc) => sum + openingDebitCents(acc) + (before[acc.id] || 0), 0);
+    res.json({ ...cf, openingCashCents, closingCashCents: openingCashCents + cf.netChange });
   } catch (error) {
     if (errorMessage(error) === "FORBIDDEN") return sendError(res, "Forbidden", 403);
     if (errorMessage(error) === "NOT_FOUND" || errorMessage(error).includes("NOT_FOUND")) return sendError(res, "Workspace not found", 404);
@@ -466,6 +496,12 @@ reportRouter.get("/general-ledger", async (req, res) => {
   const { workspaceId, startDate, endDate, accountId } = result.data;
 
   try {
+    // L-123: the opening line from balancesAsOf (the day before the period), then the period's entries
+    if (startDate) {
+      const period = await getReportContext(authReq, workspaceId, startDate, endDate);
+      const opening = await openingBefore(getDb(), workspaceId, period.accounts, startDate);
+      if (opening) return res.json(computeGeneralLedger(period.accounts, period.transactions, startDate, endDate, accountId, opening.accounts));
+    }
     const { accounts, transactions } = await getReportContext(authReq, workspaceId, undefined, endDate);
     const gl = computeGeneralLedger(accounts, transactions, startDate, endDate, accountId);
     res.json(gl);
