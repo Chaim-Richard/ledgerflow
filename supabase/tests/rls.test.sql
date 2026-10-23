@@ -689,5 +689,28 @@ select pg_temp.expect_denied('bookkeeper adds a queue row from the browser', 'u-
 select pg_temp.expect_denied('owner deletes a queue row from the browser', 'u-owner', $$delete from "repostQueue" where id = 'ws1_stock-cost_i1'$$);
 select pg_temp.expect_value('the refused writes left it as it was', $q$select data->>'status' from "repostQueue" where id = 'ws1_stock-cost_i1'$q$, 'dirty');
 
+-- report preferences (D-47): nested records in the existing private profile. Dotted updates for
+-- two books are atomic and independent; another member cannot read or change the profile.
+select pg_temp.expect_ok('a viewer saves report preferences for the first book', 'u-view',
+  $$select lf_update('users','u-view','{"reportPreferences.scope-a":{"uid":"u-view","workspaceId":"ws1","recentReportIds":["pnl"],"pinnedPages":[{"tab":"reports","sub":"pnl"}],"updatedAt":"2026-10-24T10:00:00Z"},"notificationPrefs":{"payment.received":false}}'::jsonb)$$);
+select pg_temp.expect_ok('a second book update does not replace the first', 'u-view',
+  $$select lf_update('users','u-view','{"reportPreferences.scope-b":{"uid":"u-view","workspaceId":"ws-2fa","recentReportIds":["cash-flow"],"pinnedPages":[],"updatedAt":"2026-10-24T10:01:00Z"}}'::jsonb)$$);
+select pg_temp.expect_value('the first book is still present',
+  $$select data #>> '{reportPreferences,scope-a,recentReportIds,0}' from users where id = 'u-view'$$, 'pnl');
+select pg_temp.expect_value('the second book has its own record',
+  $$select data #>> '{reportPreferences,scope-b,recentReportIds,0}' from users where id = 'u-view'$$, 'cash-flow');
+select pg_temp.expect_value('the nested updates preserve unrelated notification preferences',
+  $$select data #>> '{notificationPrefs,payment.received}' from users where id = 'u-view'$$, 'false');
+select pg_temp.expect_count('the workspace owner cannot read a member''s private profile', 'u-owner',
+  $$select count(*) from users where id = 'u-view'$$, 0);
+select pg_temp.expect_denied('another member changes the private preferences', 'u-book',
+  $$select lf_update('users','u-view','{"reportPreferences.scope-a":{"recentReportIds":["group-summary"]}}'::jsonb)$$);
+select pg_temp.expect_denied('an outsider changes the private preferences', 'u-out',
+  $$select lf_update('users','u-view','{"reportPreferences.scope-a":{"recentReportIds":["group-summary"]}}'::jsonb)$$);
+select pg_temp.expect_denied('profile fields remain allowlisted', 'u-view',
+  $$select lf_update('users','u-view','{"ledgerTotals":{"assets":1}}'::jsonb)$$);
+select pg_temp.expect_value('the refused writes left the first book intact',
+  $$select data #>> '{reportPreferences,scope-a,recentReportIds,0}' from users where id = 'u-view'$$, 'pnl');
+
 select 'ALL RLS TESTS PASSED' as result;
 rollback;
