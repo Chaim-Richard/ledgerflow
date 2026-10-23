@@ -1,6 +1,6 @@
 # Current work — read this first (every AI, every session)
 
-Updated 20 Oct 2026 by AI #1 (Claude); 21 Oct: AI #2 closed the screen-wiring lane (see Messages in COORDINATION). This page is the one place for **what to do now**. Status of the
+Updated 23 Oct 2026 by AI #5 (Arena); AI #2 closed the screen-wiring lane on 21 Oct (see Messages in COORDINATION). The E-32/E-36–E-40 batch is in PR #355; verification evidence: [`docs/verification/ai5-e32-e40-2026-10-23.md`](docs/verification/ai5-e32-e40-2026-10-23.md). This page is the one place for **what to do now**. Status of the
 product is in [`docs/RELEASE_GATE.md`](docs/RELEASE_GATE.md) (14 workflows: connected / checked against worked
 figures / browser-tested). Full task wording is in your queue in [`docs/COORDINATION.md`](docs/COORDINATION.md).
 History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) — read it only when you need it.
@@ -22,7 +22,7 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 
 | PR | State |
 |---|---|
-| — | none open (21 Oct: #265–#272 merged; #254 replaced by #266–#270) |
+| #355 | E-32 and E-36–E-40 accountant/contact/ISO batch; open for review from `arena/981150a6-ledgerflow` |
 
 **Waiting on you (owner)** — details in `docs/FOR_YOU.md`
 - Replace the four generated secrets (item 2), try sign-up on the live site (3), deployment protection (4).
@@ -66,7 +66,7 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 | #7 (fork: Chaim-Richard) | Not active recently — its stage-A tasks moved to AI #4. When active: F-48/F-49 flakes, stability queue (F-*). How to send work: COORDINATION "AIs that work from the fork" | — |
 | #3 Arena | **A-201 + A-202 ready for review** (`arena/4c574f50-ledgerflow`: Hebrew help for all 113 reports, and "what does this number mean?" for the 10 main report totals); #306 (A-194/196/197, A-148, A-206) merged 22 Oct. Next: A-149 (rest of my screens), A-185, A-183, A-182, A-138, A-137, A-131/132, A-190/192/193, A-180, A-107, A-72 | `arena/4c574f50-ledgerflow` |
 | #4 | #324 merged (D-98 screen journey, D-99 partial role journey, D-13/D-14 docs; D-12 load measurements partial). D-44 grouped report picker in progress; D-47 sync remains open. Real authenticated W14 proof remains open. | `arena/395851ed-ledgerflow` |
-| #5 | **E-58 landed on main** (Reports → Accountant export pack: trial balance, GL, A/R, A/P, tax by period; ZIP of CSVs + print/PDF, guarded and worked-figure tested) and **E-26/E-43 landed on main** (Banking → Import statement: Israeli bank activity CSV read by column name, date order chosen not guessed, totals/balance lines refused). Queue audit done: E-18…E-27, E-30, E-31, E-41…E-43, E-48 ticked with evidence; **E-17 left open** (the 856 file is a worksheet, not the authority's fixed-width file). Next: E-28 (Xero invoices/bills), E-29 (QuickBooks IIF), E-32…E-34 (exports), E-36…E-40 (IL address, phone/email, duplicates, currency/country tables) | PR #310 now docs-only (`fd00366e`); code commits are in `main` |
+| #5 | **E-58, E-26/E-43, E-28 and E-29 are on main.** PR #355 completes the E-32 audit and E-36–E-40 batch (address suggestions, explicit opt-in phone/email cleanup, E-38 duplicate-review audit, ISO currency/country references). **E-17 remains open** pending the authority's fixed-width file specification; E-33/E-34 remain deferred until their specifications are verified. Next eligible item: E-35. Checks and the full-suite time limit are recorded in [`docs/verification/ai5-e32-e40-2026-10-23.md`](docs/verification/ai5-e32-e40-2026-10-23.md). | PR #355 open from `arena/981150a6-ledgerflow`; PR #310 is docs-only (`fd00366e`) |
 | #2 Codex | **Screen wiring C-102…C-126 is done** (21 Oct: all 50 modules in `workspaceExports.ts` reach a screen; C-115/C-117/C-120/C-121/C-122 ticked). Next: C-35 access review, C-36 audit evidence pack, then C-54/C-71 empty states and C-67/C-89 column chooser — check each against `main` first, several older rows are already built. No new tax screens (stage C) | — |
 | #6 (fork: Chaim-Richard) | S-01–S-05 merged 21 Oct (#266–#270); next: S-1 onward in its queue. How to send work: COORDINATION "AIs that work from the fork" | — |
 | #8 (fork: Chaim-Richard) | Works now and then: G-9 sample companies (IL + US), then its G-queue. How to send work: COORDINATION "AIs that work from the fork" | — |
