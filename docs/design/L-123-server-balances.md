@@ -125,3 +125,32 @@ A new table, **`periodBalances`**, written only by the server: one document per 
 - Browser: with 25,000 entries and the cap at 20,000, the balances on screen equal the server's; opening the
   books loads only open-year entries.
 - RLS: a browser cannot write `periodBalances` (`supabase/tests/rls.test.sql`).
+
+## Step 3 — what was done, and the inventory (AI #9, 23 Oct 2026)
+
+- **Route:** `GET /api/v1/balances?workspaceId&asOf[&byLabel=1]` (`src/server/routes/balanceRoutes.ts`, mounted in
+  `server.ts` with `apiAuthenticate`), any member (a viewer too); 400 for a bad date, 403 for a non-member, 404 for no
+  workspace. It answers `balancesAsOf`: `accounts` (debit-positive cents, no account openings), `retainedEarnings`,
+  `snapshot`, `entriesRead`, and `byLabel` on request.
+- **The browser rule** (`src/lib/serverBalances.ts`, `src/hooks/useServerOpening.ts`): balance on screen = the
+  account's own opening + the server's sum through the **oldest loaded day** + the loaded entries after that day
+  (summed by `LedgerEngine` as before). The loader keeps the newest 20,000 (`LEDGER_COLLECTIONS.transactions.cap`),
+  so everything after the oldest loaded day is loaded, and that day, which may be cut part-way, is counted whole by
+  the server. Until the server answers (or when it cannot be reached) the screen sums the loaded entries, as before,
+  and says so. Step 4 moves the cut-off to the newest fresh snapshot.
+- **Moved in this step:** the ledger screen's account balances (`Ledger.tsx` → chart of accounts, trial balance tab,
+  the profit figure in its header) and the account register header (`AccountRegisterView.tsx`: "Current Register
+  Balance", "Period Activity", and so the running balances, which are anchored on it). Both screens mix kinds and
+  say which: the balances are totals of every entry, the journal and the register rows are the loaded entries.
+- *Test:* `src/tests/l123-step3-balances.test.tsx` (25,000 entries built in one SQL insert, the newest 20,000
+  loaded; the hand-worked figures are in its header).
+
+### Inventory of the components that read `transactions` (107 files in `src/components`)
+
+| Kind | Components | Step |
+|---|---|---|
+| **Totals → server balance** (moved) | `ledger/Ledger.tsx` (chart of accounts, trial balance tab, profit), `finance/AccountRegisterView.tsx` (header) | 3 (done) |
+| **Totals → server balance** (next) | everything reading `useLedgerStore.computedAccounts` / `runningBalances` (`layout/Sidebar.tsx`, `finance/TaxReserveWidget.tsx`, `intelligence/DiagnosticConsole.tsx`, `intelligence/FinancialCalculatorView.tsx`, `intelligence/IntelligenceCenter.tsx`, `ledger/CashFlowView.tsx`, `platform/ToolSandbox.tsx`, `platform/settings/DeveloperSettings.tsx`); `ledger/BalanceSheetView.tsx`, `ledger/TrialBalanceView.tsx` (its own sum when given entries), `ledger/ProfitAndLossView.tsx` (balances part), `dashboard/DashboardWidgets.tsx`, `Dashboard.tsx`, `charts/AccountBalanceChart.tsx`, `planning/CashFlowPredictor.tsx`, `planning/BudgetManager.tsx`, `common/BudgetLeft.tsx`, `finance/PettyCashView.tsx`, `finance/LoansView.tsx`, `finance/TaxManager.tsx`, `finance/FinancialChartsDashboard.tsx`, `finance/Consolidation.tsx`, `finance/IntercompanyManager.tsx`, `banking/CashMovementDialog.tsx`, `banking/TransferModal.tsx` (available balance), `purchases/BillModal.tsx` (balance hints), `system/BalanceBreakPanel.tsx`, `system/HealthCheckModal.tsx`, `ledger/OwnerLens.tsx`, `ledger/MonthEndCloseView.tsx`, `ledger/CloseComparisonPanel.tsx`, `ledger/WorkpapersPanel.tsx`, `finance/FiscalPeriodManager.tsx`, `projects/Projects.tsx`, `projects/ProjectPipeline.tsx`, `reporting/PartyLinkedTrialBalanceView.tsx`, `reporting/FinancialRatiosReportView.tsx`, `reporting/EverydayReportViews.tsx`, `reporting/AccountantExportPackView.tsx` | 3b (next) |
+| **Period figures** (P&L-type, read entries of a date range; stay on loaded entries while the range is in open years, ask the server for a closed year) | `reporting/ExpenseByCategoryReportView.tsx`, `IncomeBySourceReportView.tsx`, `TopExpensesIncomeReportView.tsx`, `AverageMonthlyReportView.tsx`, `BudgetActualReportView.tsx`, `TagBreakdownReportView.tsx`, `ProfitabilityByView.tsx`, `SpreadWaterfallView.tsx`, `CustomerGrossProfitView.tsx`, `CustomerLifetimeValueReportView.tsx`, `GrossMarginByItemGroupReportView.tsx`, `SalesByItemReportView.tsx`, `RegistrationThresholdWatchReportView.tsx`, `DocumentTrendsView.tsx`, `AssetRegisterReportView.tsx`, `DepreciationLedgerReportView.tsx`, `charts/ChartExploration.tsx`, `SinceLastVisitCard.tsx` | 4 |
+| **Lists of recent entries** (stay) | `ledger/TransactionGrid.tsx`, `TransactionGridShared.tsx`, `ledger/InboxView.tsx`, `ledger/ReconciliationWizard.tsx`, `ledger/useReconciliationModel.ts`, `ledger/JournalEntryModal.tsx`, `transactions/TransactionEditModal.tsx`, `transactions/InlineEntryRow.tsx`, `transactions/EntryLinks.tsx`, `ui/RecordInlineField.tsx`, `ui/SavedViewsBar.tsx`, `ui/SavedViewsManagerModal.tsx`, `collaboration/recordChoices.ts`, `inventory/Inventory.tsx`, `inventory/StockHistoryDialog.tsx`, `sales/OrderDeliveryDialog.tsx`, `reporting/PickPackShipPanel.tsx`, `reporting/BackordersReportView.tsx`, `reporting/GoodsNotBilledReportView.tsx`, `reporting/DeliveryNotesReportView.tsx`, `reporting/BankClearanceReportView.tsx`, `reporting/JournalSheetReportView.tsx`, `reporting/RecordNotesReportView.tsx`, `reporting/OneSidedTransfersReportView.tsx`, `reporting/ExchangeRateHistoryView.tsx`, `reporting/DataQualityReportView.tsx`, `finance/CreditNotesView.tsx`, `forensics/Vault.tsx`, `dashboard/NeedsAttentionCard.tsx`, `platform/settings/RulesSettings.tsx` (rule preview), `platform/settings/DimensionsSettings.tsx`, `support/FirstMonthOnboardingHub.tsx`, `support/GuestCountrySamplePicker.tsx`, `layout/StatusBar.tsx`, `intelligence/Copilot.tsx` (counts) | stay |
+| **Search or explain across all years** (ask the server) | `ledger/QueryView.tsx`, `ledger/AskLoop.tsx`, `ledger/TimeMachine.tsx`, `ledger/GeneralLedgerView.tsx`, `reporting/TransactionsByReferenceView.tsx`, `reporting/ForensicAuditor.tsx`, `forensics/ForensicAudit.tsx`, `forensics/LedgerInterruptOverlay.tsx`, `common/CategoryWhyPopover.tsx`, `layout/CommandPortal.tsx`, `intelligence/AICommandCenter.tsx`, `system/DataHealthView.tsx`, `reporting/Reports.tsx` (year list) | 4 (history page by page) |

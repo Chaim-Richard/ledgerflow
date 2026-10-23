@@ -6,7 +6,7 @@ import { calculateDocumentTax, cashPostedWithDocumentCents } from '../../lib/doc
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
 import { allocateCents } from '../../lib/Allocation';
 import { BILL_ACCRUAL_TYPE, billItemProblem, billStockLines } from '../../lib/billStock';
-import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate, postingToday, documentMinorRate } from './postingCore';
+import { getAccounts, getTransactions, getWorkspaces, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate, postingToday, documentMinorRate, taxLineStamp } from './postingCore';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
 
 /**
@@ -152,6 +152,7 @@ export async function postBillLedger(
     apAccount,
     expenseAccount,
     taxAccount,
+    taxStamp: taxLineStamp(billData),
     lineAccounts: weights
   });
 

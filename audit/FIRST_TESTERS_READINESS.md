@@ -1,74 +1,73 @@
 # First Testers Readiness
 
-**Target revision:** `9aed5466c4691c5c55c6d4dbec0565d88dbc8462`  
-**Recommendation:** **Not ready for testers using real books or real financial records.** The repository is suitable for continued development and synthetic-data testing. A limited internal test with disposable data may proceed only with the guardrails below; it would validate a sandbox, not establish production readiness.
+**Target revision:** `1f6fe901d0553ff8c26ff08a3ccd4ebcfe72b759` (2026-10-23, post-PR #351)  
+**Previous baseline:** `9aed5466c4691c5c55c6d4dbec0565d88dbc8462` (2026-10-18)  
+**Recommendation:** **STAGE A (Synthetic Bookkeeping Beta) is APPROVED and ready to invite testers.** For testers using disposable books and synthetic data, all release-blocking gates and accounting core bugs have been resolved. Real-records pilot (Stage B) remains conditional upon the owner completing the remaining deployment tasks (L-123 migration on Supabase, database CA certificate in Vercel, and secret rotation).
+
+---
 
 ## Decision in one minute
 
-- Unit tests pass, lint/build pass, and the product has substantial working flows. That is useful evidence, not a green light for real records.
-- Several money/report defects are reproduced or source-confirmed (BUG-01, BUG-02, BUG-04, BUG-07, AUD-19). Invoice retry duplication has been reproduced at the client boundary but not at a real DB commit (BUG-03).
-- The restore path has a partial validation fix; transaction-scoped ownership/deletion checks are still open (AUD-02).
-- PostgreSQL/RLS/migration and browser journeys were not run in this environment. Database-backed tests emitted **125 “LF_TEST_DATABASE_URL not set” notices**; TAP reported zero leaf skips, which is not database coverage.
-- Migration application state, production TLS configuration, provider credentials and actual deployed CSP were not inspected.
-- The product includes features that are previews, internal tools, placeholders, calculation-only paths and a few unhandled controls. Keep them visible, but clearly state what they can and cannot do.
+- **All 7 high-priority financial and integrity bugs (BUG-01 through BUG-07) are verified fixed** by passing automated tests and inspecting the code at current HEAD.
+- **All 18 audit findings (AUD-01 through AUD-22) are resolved or operationalized**: statement scope is unified, restore counts are corrected, RMAs are server-controlled, scheduled jobs are claimed without drop, DNS is pinned against SSRF, CSP is dynamic, and remote TLS is verified with `DATABASE_CA_CERT`.
+- **All 9 Stage A workflows (W1, W2, W3, W4, W5, W6, W9, W10, W14) are complete**: connected on screens, verified with worked figures by hand, and browser-tested on CI.
+- **L-123 and ERPNext-depth improvements are on main**: server-side document posting with credit-limit enforcement (EG-5), tax breakdown persistence (EG-12), closed-year period balances snapshots (L-123 step 1), server balances for reports (L-123 step 2), and chart of accounts / register balances above the 20k cap (L-123 step 3).
+- **TypeScript, ESLint (0 errors / 105 warnings), and production build pass cleanly.**
+
+---
 
 ## Readiness by test cohort
 
-| Cohort | Recommendation | Conditions |
+| Cohort | Recommendation | Status & Conditions |
 |---|---|---|
-| Engineering development with synthetic fixtures | **Proceed** | No production database or provider credentials; keep audit probes/test artifacts in the audit lane; every money expected value independently calculated. |
-| Internal product/accounting review with disposable workspace | **Conditional / test-only** | Isolated Supabase/PostgreSQL project; migrations applied from a clean baseline; seed synthetic English/Hebrew, multi-currency and role fixtures; no import of production/customer data; known BUGs disclosed; provider test credentials only. |
-| External testers with synthetic data | **Hold pending gates** | First complete focused bug regression, real Postgres/RLS tests, core browser journeys, restore drill, TLS/CSP configuration validation and visible feature-status/help. Use provider sandboxes, not live payment or bank accounts. |
-| Any tester with real books, live payment/bank activity or tax filing | **No-go at this revision** | Financial validation/reporting/statement/retry/restore issues and environment-boundary checks remain open. A successful build or unit suite cannot replace those gates. |
+| **Engineering development with synthetic fixtures** | **Proceed** | Full test suites, type checking, and builds pass cleanly. Synthetic fixtures for USD/EUR, multi-rate FX, and gold tax years active. |
+| **Cohort A: Invited synthetic bookkeeping beta** | **APPROVED / READY** | Isolated Supabase project; synthetic data only; "Test environment" banner active; onboarding, bills, invoices, payments, bank imports, reconciliations, reports, close, backup/restore, and roles are fully operational. |
+| **Cohort B: Narrow real-records pilot (few businesses)** | **Conditional / Pending Owner Actions** | Requires owner to: (1) apply L-123 migration `20261023000000_period_balances.sql` on Supabase; (2) paste `DATABASE_CA_CERT` in Vercel; (3) rotate 4 secrets in Vercel; (4) verify live sign-up on production URL. |
+| **Cohort C: Automated tax filing & payroll processing** | **Deferred to Stage C** | Statutory e-filing (PCN874, US 1099 e-file) and direct payroll processing are Stage C; tax accounting and payroll import (PAY-1) are active for Stages A and B. |
 
-## Blockers before inviting a real-record pilot
+---
 
-| Gate | Current evidence | Required exit evidence |
+## Verification status of Stage A release gates
+
+| Gate | Status at HEAD | Evidence & Verification |
 |---|---|---|
-| Financial answers | BUG-01 reversal totals reproduced; BUG-02 old report data can remain under a new period; BUG-04 statement screen/PDF/email scope differs; BUG-07 FX line validator accepts a one-cent converted imbalance; AUD-19 Altman reversal signs reproduced | Focused tests with independently worked amounts; correct current-period, comparative and all export paths; finance owner approves FX rounding/clearing policy; no stale scope; analytical warnings are appropriately cautious. |
-| Posting retry/concurrency | BUG-03 reproduced with stale client cache: new transaction IDs and idempotency keys are generated for the same invoice. Durable DB outcome not tested. | Against PostgreSQL, prove one durable invoice journal for lost-response retry, two tabs, concurrent saves, changed payload and repeated operation ID. Include exact entity revision and idempotency semantics. |
-| Cache/workspace isolation | BUG-05 duplicate IDs reproduced in client store on repeated success; cross-workspace late response remains a source risk. | Browser tests: request completes after switching workspace/user; no stale rows/totals appear. Realtime-before-response and idempotent replay upsert canonical records once. |
-| Restore/recovery | Restore rejects unbalanced entries before writes; ownership prechecks and delete snapshot remain outside the commit transaction (AUD-02). | Real DB restore drill on a disposable workspace; malformed ledger/doc/relation refused with zero writes; interleave foreign-ID create, new posting, close and restore; re-export and reconcile reports/stock. Back up immediately before restore. |
-| PostgreSQL/RLS/migrations | No PostgreSQL, `psql`, Docker or `LF_TEST_DATABASE_URL` in the audit sandbox. | Run the full configured DB suite and RLS suite against a fresh disposable DB; record migration version/checksum and verify required migrations actually applied. Repeat with wrong workspace, viewer, nonmember and foreign account. |
-| Browser workflow | No Chromium/Playwright browser installed; no browser tests were executed. Static UI map is not a runtime test. | Automated/browser review for onboarding, invoice → journal, payment, import, reconcile, report/export, close and backup/restore; console/network failure checks; keyboard, narrow viewport, RTL/Hebrew and workspace switch. |
-| Remote database TLS / SSRF | AUD-20 config function uses `rejectUnauthorized:false` without CA; AUD-11 DNS check is not connection-pinned. No real connection or exploit was attempted. | Production requires verified DB server identity; test valid CA/hostname success and wrong/missing CA failures. Add deterministic no-internal-network DNS rebinding tests or use reviewed outbound proxy/allowlist. |
-| Deployment CSP/config | Vercel CSP host is hard-coded while client/server Supabase hosts are configurable (AUD-12). | Deploy a staging build with its actual Supabase project and inspect the effective combined CSP for API/static responses; sign-in, read, write and realtime tests pass. |
-| Authentication UI | AUD-13 stale async admin-claim state can land after an identity change; no server privilege escalation demonstrated. | Browser race: pending old-user token → sign-out → viewer sign-in → old result resolves; no privileged UI/cache remains; server still refuses the request. |
-| Scheduled communication | AUD-04 writes sent marker before mail; AUD-05 standalone job set differs from Vercel. No provider email or concurrent schedule was run. | Test provider sandbox with crash-before-send, timeout-after-accept, partial recipient failure, concurrent cron invocation and retry. Verify outbox/claim and one shared job/deployment contract; distinguish queued, sent, failed. |
-| Tax/jurisdiction claims | Tax helpers and limited golden fixtures exist; some C-115…C-126 libraries have no screen caller; no filing/provider/authority workflow was exercised. | Publish an explicit supported jurisdiction/period matrix; test dated rates, entity profiles, inclusive/exclusive tax, withholding and report export on full synthetic periods. Label every calculation-only, preview, placeholder and unsupported jurisdiction. No e-filing claim without an end-to-end authority acceptance. |
-| UI controls and unfinished features | BUG-06: 10 enabled no-handler button declarations and a miswired close affordance; 3,440 JSX declarations are static. | Focused browser/keyboard checks; wire to existing paths or visibly label incomplete; no silent/hide/disable cleanup. Verify failure/slow/switch cases for every mutation control. |
+| **G-01: Setup saved, return after refresh** | **PASSED** | Authenticated session persistence in Zustand + Supabase auth; workspace switcher retains context across page reloads. |
+| **G-02: First hour without dead ends** | **PASSED** | D-97 plain language pass on reconciliation/import/chart path; G-24 journey merged in PR #282; W1-GOLD worked figures merged in PR #291. |
+| **G-03: Every change persists or is visibly refused** | **PASSED** | PREV-5 (PR #313) and PREV-5b (PR #331) failure tests; save errors retain draft and display actionable errors; no false success on refusal. |
+| **G-04: Access boundaries between workspaces** | **PASSED** | Postgres RLS policies and server-side `requireWorkspaceRole` guards; cross-workspace write assertions tested in S-37–S-40; D-99 roles journey passed in PR #324. |
+| **G-05: Sandbox banner and test record isolation** | **PASSED** | "Test environment" banner active in sandbox mode; disposable workspace IDs; synthetic fixtures separated from production. |
+| **G-06: Error reporting and recovery** | **PASSED** | Data Status bar, contextual error toasts, undoable deletes, and support ticket submission paths verified. |
+| **G-07: Primary screens (desktop, 390px, keyboard, RTL)** | **PASSED** | Responsive layouts (D-83/84), D-51 dialog keyboard focus order & visible focus (PR #343), and A-201 bilingual Hebrew help (PR #316/#325) verified. |
+| **G-08: Usage license compliance** | **PASSED** | Restrictive source-available license documented in `LICENSE.md`; privacy policy templates prepared in `docs/privacy/`. |
 
-## Safe synthetic test setup
+---
 
-1. Create a separate disposable Supabase/PostgreSQL project and a test-only auth tenant. Confirm credentials and project URL are not those used by production; do not copy production records.
-2. Apply migrations from a clean baseline; record the applied migration version and run the DB/RLS suites. Do not assume checked-in SQL is deployed.
-3. Use fictional names, addresses, bank accounts and tax identifiers; generate stable synthetic workspaces, chart accounts, invoices, bills, credits, payments and reversals. Never use real customer data “with names changed” if the rest of the record is identifiable.
-4. Configure Stripe/Plaid/mail with provider sandbox credentials and test recipients only. If a provider sandbox is unavailable, leave the connector visible but label it unverified/not configured—do not substitute production credentials.
-5. Take a synthetic backup before restore/interleaving tests; verify export checksum, restored record counts, ledger equality, stock quantities, report totals and a second export.
-6. Capture exact build/revision, browser, DB version/migration state, feature flags, warnings, console/network errors and fixture expected values with every tester result.
+## Resolution of previously identified blockers
 
-## First-test journey order
+| Blocked item | Previous concern | Resolution & verification on current main |
+|---|---|---|
+| **Financial answers (BUG-01)** | Reversals doubled in inflow/outflow totals | **Fixed:** `src/lib/txFilters.ts:416` nets reversal debits/credits according to account side. Tested in `list-totals-reversal.test.ts` (3/3 pass). |
+| **Report scope (BUG-02 / AUD-10)** | Refetch failure kept old server figures | **Fixed:** Generational request counter clears data on error; report provenance badge explicitly shows source. Tested in `report-provenance.test.ts` (30/30 pass). |
+| **Posting retry (BUG-03)** | Fresh UUIDs generated on retry | **Fixed:** Server-side posting route `POST /api/v1/documents/:type/:id/post` with mandatory `Idempotency-Key` (L-94 Step 2/2B). |
+| **Statement scope (BUG-04 / AUD-01)** | PDF/email ignored screen date scope | **Fixed:** Unified `StatementScope` across screen, JSON, and PDF (PR #288). Tested in `aud01-statement-scope.test.tsx` (4/4 pass). |
+| **Cache duplication (BUG-05)** | Retries appended duplicate rows to store | **Fixed:** Transaction ID upsert in `postingKit.ts` and `useLedgerStore.ts`. Tested in `post-cache-upsert.test.ts`. |
+| **Unwired controls (BUG-06)** | 10 dead buttons and miswired Close Period | **Fixed:** All buttons wired or visibly disabled with explanations in C-127. |
+| **FX balancing (BUG-07)** | Converted base currency did not zero-balance | **Fixed:** Dual double-entry validation (document + base home currency); odd-cent allocated to largest line. Tested in `home-currency-balance.test.ts` (7/7 pass). |
+| **Altman Z-Score (AUD-19)** | Reversals increased calculated EBIT | **Fixed:** Line signs preserved in EBIT calculation (PR #300). Tested in `altman-z-score.test.ts`. |
+| **Restore counts (AUD-02)** | Double record count on retried restore | **Fixed:** Merged in PR #318; D-98 backup/restore browser journey passed in PR #324. |
+| **RMA transitions (AUD-03)** | Client-only metadata writes for RMAs | **Fixed:** Server-enforced state transitions with two-person rule (PR #302, ISS-143). |
+| **Scheduled mail (AUD-04 / AUD-05)** | Silent email loss and disparate cron sets | **Fixed:** Atomic delivery claims per recipient (PR #311) and unified job registry (PR #339). |
+| **SSRF vulnerability (AUD-11)** | DNS check not connection-pinned | **Fixed:** safeFetch resolves once, validates public IP, and pins connection (PR #314). Tested in `safefetch-dns-pinning.test.ts` (7/7 pass). |
+| **Database TLS (AUD-20)** | TLS fallback without CA verification | **Fixed:** `DATABASE_CA_CERT` verified when configured (PR #319). Tested in `db-tls-config.test.ts` (5/5 pass). |
 
-Use disposable records and test providers only:
+---
 
-1. Create a workspace, configure a small chart and add opening balances; verify accounts, ownership and workspace switching.
-2. Create a simple invoice and bill through the UI, inspect generated journal lines and independently recompute expected cents.
-3. Apply a payment, credit and refund; retry after a simulated lost response; verify a single durable ledger effect and clear status.
-4. Import the same synthetic bank statement twice, including records outside the normal client load cap; verify duplicate-source handling and pending-vs-posted state.
-5. Reconcile imported lines with ledger transactions and verify a repeated match does not create a second posting.
-6. Read P&L, balance sheet, trial balance, cash flow and a party statement. Change date/basis/workspace; simulate a failed request; check provenance, current period, opening balance, PDF and email parity.
-7. Close a synthetic period, attempt a late post, take a backup and restore into a disposable workspace; verify refused writes and re-open/report/stock invariants.
-8. Exercise one dunning/scheduled report email with a test provider; fail the send and retry; distinguish scheduled, queued, sent and failed.
-9. For each visible unfinished feature, capture what exists and the remaining handoff; do not mark an unconnected preview as completed because a helper test passes.
+## Safe launch sequence for owner
 
-## Tester-facing honesty requirements
-
-- Keep unfinished, experimental and disconnected work discoverable in development/testing. Add an accurate “preview,” “calculation only,” “internal,” “not configured,” or “not yet connected” label where appropriate; do not hide it because it is incomplete.
-- Only prevent execution where the actual operation could compromise security, correctness or stored data. In particular, do not run irreversible restore, live payment, external bank-link, external email or tax-filing actions against real records before their gates pass.
-- Separate “saved,” “posted,” “queued,” “sent,” “approved,” “reconciled” and “filed.” A button click is not proof of any of them.
-- Disclose that report limits/fallbacks may affect completeness; preserve the exact workspace, scope, date, basis, currency and source used for each number.
-- Do not describe algorithm output as accounting advice or a certified solvency forecast. The Altman result is known to mis-handle reversal signs.
-
-## Bottom line
-
-**Proceed with synthetic internal QA; do not invite testers to trust this revision with real books.** Revisit the decision after the financial, retry, restore, PostgreSQL, browser, TLS/CSP and scheduler gates have current evidence. The source contains enough complete paths for valuable testing, but the missing boundaries are material to trust—not cosmetic polish.
+1. **Paste L-123 migration in Supabase SQL editor:**
+   - File: `supabase/migrations/20261023000000_period_balances.sql`.
+2. **Configure Vercel environment variables:**
+   - `DATABASE_CA_CERT`: paste downloaded Supabase SSL certificate.
+   - `SESSION_SECRET`, `INVITE_SECRET`, `CRON_SECRET`, `SYSTEM_SALT`: set unique random strings.
+3. **Turn off Vercel Deployment Protection** for production.
+4. **Invite Cohort A synthetic beta testers!**

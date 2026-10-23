@@ -69,6 +69,8 @@ import { useCommandDispatcher } from '../../hooks/useSystemContext';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { Labelled } from '../ui/Labelled';
+import { useServerOpening } from '../../hooks/useServerOpening';
+import { entriesAfter, withServerOpening } from '../../lib/serverBalances';
 
 const Ledger = React.memo(() => {
   const formId = useId();
@@ -77,9 +79,16 @@ const Ledger = React.memo(() => {
   const transactions = useLedgerStore(s => s.transactions);
   const rawAccounts = useLedgerStore(s => s.accounts);
   const computedAccounts = useLedgerStore(s => s.computedAccounts);
+  // L-123 step 3: the balances (chart of accounts, trial balance, profit) = the server's through the oldest loaded day +
+  // the loaded entries after it; until the server answers, the loaded entries alone (computedAccounts), as before
+  const serverOpening = useServerOpening(transactions);
   const accounts = React.useMemo(() => {
+    if (serverOpening && rawAccounts.length > 0) return withServerOpening(rawAccounts, transactions || [], serverOpening);
     return computedAccounts && computedAccounts.length > 0 ? computedAccounts : rawAccounts;
-  }, [computedAccounts, rawAccounts]);
+  }, [computedAccounts, rawAccounts, serverOpening, transactions]);
+  const balancesNote = serverOpening
+    ? `Balances: every entry through ${serverOpening.asOf} as summed by the server, plus the ${entriesAfter(transactions || [], serverOpening.asOf).length} loaded entries after it. The journal lists the loaded entries only.`
+    : 'Balances: the loaded entries only (the server balances are not available).';
   const journalEntries = React.useMemo<JournalListEntry[]>(() => (transactions || []).filter(isPostable).map(tx => ({
     id: tx.id,
     kind: tx.type,
@@ -379,6 +388,9 @@ const Ledger = React.memo(() => {
           </div>
         }>
           
+          {(activeSubTab === 'coa' || activeSubTab === 'trial') && (transactions || []).length > 0 && (
+            <p className="text-[11px] text-[var(--muted)] mb-2" data-testid="balances-source">{balancesNote}</p>
+          )}
           {activeSubTab === 'coa' && (
             <ChartOfAccountsView 
               accounts={accounts} 

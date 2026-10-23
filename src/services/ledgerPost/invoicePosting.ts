@@ -6,7 +6,7 @@ import { calculateDocumentTax, cashPostedWithDocumentCents, depositAppliedCents 
 import { TransactionTemplates } from '../../kernel/templates/TransactionTemplates';
 import { INVOICE_COGS_TYPE, planInvoiceCogs } from '../invoiceCogs';
 import { goodsLeaveWith } from '../../lib/deliveries';
-import { getAccounts, getTransactions, getWorkspaces, loadInventory, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate, postingToday, documentMinorRate } from './postingCore';
+import { getAccounts, getTransactions, getWorkspaces, loadInventory, inBaseCurrency, verifyLockDate, findAccount, resolveAccount, lineAccounts, postTxsServerApi, reversalDate, postingToday, documentMinorRate, taxLineStamp } from './postingCore';
 import type { EntityMutation, LedgerPostContext, PostableTransaction } from './postingCore';
 import { isOpeningBalanceEquity } from '../../lib/openingBalances';
 
@@ -160,6 +160,7 @@ export async function postInvoiceLedger(
     revenueAccount,
     lineAccounts: docLines,
     taxAccount,
+    taxStamp: taxLineStamp(invoiceData),
     discountAccount,
     retainageAccount
   });

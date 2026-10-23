@@ -5,7 +5,7 @@ import { format, subMonths, endOfMonth, endOfQuarter, subQuarters, subYears, end
 import { 
   Scale, CheckCircle2, AlertCircle, Activity, 
   ArrowUpDown, ArrowUp, ArrowDown, Download, 
-  Calendar, FileSpreadsheet, RefreshCw 
+  Calendar, FileSpreadsheet 
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { exportToExcel } from '../../lib/excelExport';
@@ -17,6 +17,12 @@ import MonthNavigator from '../ui/MonthNavigator';
 import { csvMoney, downloadCsv } from '../../lib/csvExport';
 import { ACCOUNT_GROUP_INDENT_PX, accountGroupLayout, groupSubtotals, toggleAccountGroup, visibleGroupRows } from '../../lib/accountGroups';
 import { AccountGroupToggle } from './AccountGroupControls';
+import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
+import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
+import { provenanceFromResponse } from '../../lib/reportProvenance';
+
+/** the trial balance worked out here also reads the journal entries */
+const TB_COLLECTIONS = [...STATEMENT_COLLECTIONS, 'journalEntries'] as const;
 
 interface TrialBalanceViewProps {
   accounts: ChartAccount[];
@@ -36,10 +42,11 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
   const [sortField, setSortField] = useState<SortField>('code');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
-  const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
   const { fetchTrialBalance, loadingStates } = useFinancialReporting();
   const [serverData, setServerData] = useState<ServerTrialBalanceData | null>(null);
   const [isServerAuthoritative, setIsServerAuthoritative] = useState(false);
+  const [serverFailed, setServerFailed] = useState(false);
+  const browserFigures = useBrowserProvenance(TB_COLLECTIONS, serverFailed);
   const reportGen = useRef(0);
 
   const loadServerReport = useCallback(async () => {
@@ -50,8 +57,10 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
       if (gen !== reportGen.current) return;
       setServerData(res || null);
       setIsServerAuthoritative(Boolean(res));
+      setServerFailed(!res);
     } catch {
       setIsServerAuthoritative(false);
+      setServerFailed(true);
     }
   }, [fetchTrialBalance, asOfDate]);
 
@@ -308,6 +317,10 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
     });
   };
 
+  // AUD-10: the server's answer, or the figures worked out here
+  const provenance = isServerAuthoritative && serverData ? provenanceFromResponse(serverData)
+    : serverFailed || browserFigures.completeness !== 'complete' ? browserFigures : null;
+
   const renderSortIcon = (field: SortField) => {
     if (sortField !== field) return <ArrowUpDown aria-hidden="true" size={11} className="opacity-40" />;
     return sortDir === 'asc' ? <ArrowUp aria-hidden="true" size={11} className="text-emerald-400" /> : <ArrowDown aria-hidden="true" size={11} className="text-emerald-400" />;
@@ -315,37 +328,9 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
 
   return (
     <div className="space-y-4">
-      {/* Authoritative / Truncation Status Banner */}
-      {!isServerAuthoritative && isDataTruncated ? (
-        <div id="tb-statement-truncation-banner" className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-medium">
-          <div className="flex items-center gap-2">
-            <AlertCircle aria-hidden="true" className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Showing 2,000 of N transactions — totals are incomplete</span>
-          </div>
-          <button
-            onClick={loadServerReport}
-            disabled={loadingStates.trialBalance}
-            className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded text-xs transition flex items-center gap-1.5"
-          >
-            {loadingStates.trialBalance ? <RefreshCw aria-hidden="true" className="w-3.5 h-3.5 animate-spin" /> : null}
-            <span>{loadingStates.trialBalance ? "Loading Server..." : "Load Full Server Report"}</span>
-          </button>
-        </div>
-      ) : isServerAuthoritative ? (
-        <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-between text-xs font-semibold">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Server-Authoritative Trial Balance (Full History Verified)</span>
-          </div>
-          <button aria-label="Refresh server report"
-            onClick={loadServerReport} 
-            title="Refresh server report"
-            className="text-emerald-400/80 hover:text-emerald-300 p-0.5 rounded transition"
-          >
-            <RefreshCw aria-hidden="true" className={cn("w-3 h-3", loadingStates.trialBalance && "animate-spin")} />
-          </button>
-        </div>
-      ) : null}
+      {/* AUD-10: where these figures come from */}
+      <ReportProvenanceNote id="tb-statement-provenance" provenance={provenance} onRefresh={loadServerReport} busy={loadingStates.trialBalance} />
+
 
       <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative group">
         <div className="absolute technical-grid inset-0 opacity-[0.015] pointer-events-none" />

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, Layers, HandCoins, ShieldCheck, Activity, FileSpreadsheet, ArrowUp, ArrowDown, ExternalLink, CheckCircle2, RefreshCw } from 'lucide-react';
+import { AlertCircle, Layers, HandCoins, ShieldCheck, Activity, FileSpreadsheet, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { ChartAccount } from '../../types';
 import { accountGroupLayout, groupSubtotals, toggleAccountGroup, visibleGroupRows } from '../../lib/accountGroups';
@@ -10,8 +10,9 @@ import MonthNavigator from '../ui/MonthNavigator';
 import DrillDownModal from '../layout/DrillDownModal';
 import type { BalanceSheetModel } from './BalanceSheetView';
 import { StatementColumns } from './StatementColumns';
+import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
 
-export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, basis, chooseBasis, cashReady, isDataTruncated, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct }: BalanceSheetModel) {
+export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, basis, chooseBasis, cashReady, provenance, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct }: BalanceSheetModel) {
   // Account groups (K-14): the same accounts, a group's children indented under their parent with a
   // subtotal under them. A group starts open, and the section totals below are the report's own.
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
@@ -34,38 +35,9 @@ export function BalanceSheetReport({ columnMode, setColumnMode, showPercent, set
 
   return (
     <div className="space-y-6">
-      {/* Authoritative / Truncation Status Banner */}
-      {!isServerAuthoritative && isDataTruncated ? (
-        <div id="bs-statement-truncation-banner" className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-medium">
-          <div className="flex items-center gap-2">
-            <AlertCircle aria-hidden="true" className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Showing 2,000 of N transactions — totals are incomplete</span>
-          </div>
-          <button
-            onClick={loadServerReport}
-            disabled={loadingStates.balanceSheet}
-            className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded text-xs transition flex items-center gap-1.5"
-          >
-            {loadingStates.balanceSheet ? <RefreshCw aria-hidden="true" className="w-3.5 h-3.5 animate-spin" /> : null}
-            <span>{loadingStates.balanceSheet ? "Loading Server..." : "Load Full Server Report"}</span>
-          </button>
-        </div>
-      ) : isServerAuthoritative ? (
-        <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-between text-xs font-semibold">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Server-Authoritative Balance Sheet (Full History Verified)</span>
-          </div>
-          <button 
-            onClick={loadServerReport} 
-            title="Refresh server report"
-            aria-label="Refresh server report"
-            className="text-emerald-400/80 hover:text-emerald-300 p-0.5 rounded transition"
-          >
-            <RefreshCw aria-hidden="true" className={cn("w-3 h-3", loadingStates.balanceSheet && "animate-spin")} />
-          </button>
-        </div>
-      ) : null}
+      {/* AUD-10: where these figures come from */}
+      <ReportProvenanceNote id="bs-statement-provenance" provenance={provenance} onRefresh={loadServerReport} busy={loadingStates.balanceSheet} />
+
 
       {/* Period navigation/actions and aligned report filters. */}
       <div data-testid="report-controls" role="region" aria-label="Report filters" className="p-4 sm:p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs space-y-4">

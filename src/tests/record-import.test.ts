@@ -70,12 +70,12 @@ describe('Preparing an import', () => {
 
   test('every problem is listed with its spreadsheet row; good rows are typed and get defaults', () => {
     const { records, errors } = prepareImport('customers', [
-      { name: 'Acme', email: 'A@X.TEST' },
+      { name: 'Acme', email: ' A@X.TEST ' },
       { name: '', email: 'b@x.test' },
       { name: 'Beta', email: 'not-an-email', status: 'maybe' },
       { name: ' acme ' },
     ]);
-    assert.deepEqual(records.map(r => [r.row, r.data]), [[2, { status: 'active', name: 'Acme', email: 'a@x.test' }]]);
+    assert.deepEqual(records.map(r => [r.row, r.data]), [[2, { status: 'active', name: 'Acme', email: ' A@X.TEST ' }]], 'a valid email is preserved exactly unless contact cleanup is explicitly accepted');
     assert.deepEqual(errors.map(e => [e.row, e.field ?? '', e.message]), [
       [3, 'name', 'Name is missing'],
       [4, 'email', 'Email: "not-an-email" is not an email address'],
