@@ -26,6 +26,7 @@ import { explainFigure } from '../reports/explain';
 import { stockMovesReady } from '../services/stockMoveService';
 import { itemDetails, stockAging, type StockMove } from '../../lib/stockMoves';
 import { openingDebitCents } from '../../lib/accountUtils';
+export { balanceRouter } from './balanceRoutes'; // L-123 step 3, mounted at /api/v1/balances
 import { grossOf, labelOpeningOf, openingBefore, openingKey } from '../reports/reportOpening';
 
 export const reportRouter = express.Router();

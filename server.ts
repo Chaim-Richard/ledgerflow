@@ -17,7 +17,7 @@ import type { ApiLog, ServerContext } from "./src/server/http/serverKit.ts";
 import { apiAuthenticate } from "./src/server/auth/apiAuthenticate.ts";
 import { fxRouter } from "./src/server/routes/fxRoutes";
 import { aiRouter } from "./src/server/routes/aiRoutes";
-import { reportRouter } from "./src/server/routes/reportRoutes";
+import { reportRouter, balanceRouter } from "./src/server/routes/reportRoutes";
 import { accountRouter } from "./src/server/routes/accountRoutes";
 import { workspaceRouter } from "./src/server/routes/workspaceRoutes";
 import { invitePublicRouter } from "./src/server/routes/invitePublicRoutes";
@@ -127,7 +127,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   app.use("/api/v1/plaid", authenticate, plaidRouter);
 
   app.use("/api/reports", authenticate, reportRouter);
-  // /api/v1/reports is mounted once, with apiAuthenticate (signed-in users and API keys), below
+  app.use("/api/v1/balances", apiAuthenticate, balanceRouter); // L-123 step 3; /api/v1/reports is mounted once, with apiAuthenticate (signed-in users and API keys), below
 
   registerLabelingRoutes(app, routeContext);
   registerAuthRoutes(app, routeContext);
