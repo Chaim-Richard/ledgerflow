@@ -55,7 +55,7 @@ One row per settlement event. Rows are **never updated or deleted**; a reversal 
 
 | Field | Meaning |
 |---|---|
-| `id` | deterministic: `{sourceKind}-{operationId}-{documentId}`, where `operationId` is a stable id of the settling operation carried in from the request (the payment id; for `applyUnappliedPayment` / `applyCredit` an idempotency key the client sends, stored in `allocationOperations` with the request hash). A retry reuses the key and writes nothing; a second, legitimate application of the same source to the same document has a new key. A count of earlier rows is **not** used: it cannot tell a retry from a second application |
+| `id` | deterministic: `{sourceKind}-{operationId}-{sourceId}-{documentId}` (`sourceId` = the payment or credit, so `autoApplyCredits` applying two credits to one document in one request gets two ids), where `operationId` is a stable id of the settling operation carried in from the request (the payment id; for `applyUnappliedPayment` / `applyCredit` an idempotency key the client sends, stored in `allocationOperations` with the request hash). A retry reuses the key and writes nothing; a second, legitimate application of the same source to the same document has a new key. A count of earlier rows is **not** used: it cannot tell a retry from a second application |
 | `workspaceId`, `side` | `receivable` / `payable` |
 | `partyId` | customer or vendor |
 | `documentType`, `documentId` | `invoice` / `bill` — what is settled |
@@ -71,7 +71,7 @@ One row per settlement event. Rows are **never updated or deleted**; a reversal 
 | `realizedFxCents` | side-normalized, gain > 0: `baseSettledCents − baseClearedCents` for `receivable`, `baseClearedCents − baseSettledCents` for `payable` (a bill booked at 1.10 and paid at 1.12 is a loss). Readers label gains/losses from this field alone |
 | `transactionId`, `fxLineIndex` | the entry that carries this settlement and (if any) its FX line |
 | `reversesAllocationId`, `reversedBy` | reversal links (`reversedBy` is the only field ever set later — see risks) |
-| `dateSource` | `recorded` (written live), or for backfill: `payment-date`, `application-entry`, `inferred` |
+| `dateSource` | `recorded` (written live only), or for backfill: `payment-date`, `application-entry`, `write-off-date`, `inferred` |
 | `backfillRunId`, `createdAt`, `createdBy` | provenance |
 
 Indexes: `(workspace_id, documentId, date)`, `(workspace_id, partyId, date)`, `(workspace_id, sourceId)`.
@@ -99,15 +99,17 @@ openAmountAsOf(rows, doc, asOf): { cents, baseCents }
 |---|---|---|---|
 | `createPaymentInTransaction` | one `payment` row per allocation, `date = paymentDate` | `documentRate` = doc rate, `settlementRate` = `paymentExchangeRate` or doc rate | unchanged: the payment entry; FX split per row |
 | `applyUnappliedPayment` | one `advance_application` row per allocation, **`date = input.date`** (now stored) | `documentRate` = target doc's rate; `settlementRate` = the payment's rate (what the advance was booked at) | unchanged. **Step 1 refuses** an application to a document whose rate differs from the payment's stored rate (today's entry clears at the payment rate and posts no FX, so row and GL would disagree); in step 2 it is allowed, with the correcting control-account/FX entry (open question 4) |
-| `applyCredit`, `autoApplyCredits` | one `credit` row, `date` = new input (default today in the workspace timezone), `sourceId` = credit | credit's rate vs document's rate | **new**: when the base differs, a small `credit-application-fx` entry (A/R ↔ FX) so A/R in the GL clears to zero; nothing when the rates are equal (the common case) |
+| `applyCredit`, `autoApplyCredits` | one `credit` row, `date` = new input (default today in the workspace timezone; refused if before the credit's date or the document's date, as for `applyUnappliedPayment` against the payment's date), `sourceId` = credit | credit's rate vs document's rate | **new**: when the base differs, a small `credit-application-fx` entry (A/R ↔ FX) so A/R in the GL clears to zero; nothing when the rates are equal (the common case) |
 | `writeOffInvoice` | one `write_off` row, `date` = write-off date, rates = document rate | — | unchanged |
 | `reverseWriteOff` | `reversal` of that row | — | unchanged |
-| Payment void (new server route, step 4) | a `reversal` row per live row of the payment, date = the void's reversal date (`reversalDate` rule) | same as the reversed row, FX negated | the payment reversal; in the same transaction each document's `amountPaidCents` and `settledByRecordsCents` are recomputed from the remaining rows, and `status` is re-derived (`paid` / `partially_paid` / `sent` / `overdue` from the new amount and due date), as `reverseWriteOff` does (fixes the gap above) |
+| Payment void (new server route, step 4) | a `reversal` row per live row of the payment, date = the void's reversal date (`reversalDate` rule) | same as the reversed row, FX negated | the payment reversal **and a reversal of every `payment-application` entry of that payment** (`metadata.paymentId`, the advance-account → A/R/A/P transfers), same date; in the same transaction each document's `amountPaidCents` and `settledByRecordsCents` are recomputed from the remaining rows, and `status` is re-derived (`paid` / `partially_paid` / `sent` / `overdue` from the new amount and due date), as `reverseWriteOff` does (fixes the gap above) |
 | `refundCredit` | none on documents (a refund settles the credit, not a document); it is recorded on a sibling `creditMovements` view in step 6 | | |
 | Document deposit / manual "paid" | one `deposit` / `manual` row when the document posts, date = document date | doc rate | unchanged |
 
-`amountPaidCents` stays and is written in the same transaction as the row, from **Σ non-`deposit` rows** (not
-`+=`): today it excludes `depositAppliedCents` and `calculateAmountDue` subtracts both, so deposit rows must not
+`amountPaidCents` stays and is written in the same transaction as the row. **Until the cutover after step 3**
+(every source mirrored and backfilled, rows-vs-cache = 0) writers keep today's additive update and only
+*assert* it against the rows where a document has no legacy residual; from the cutover it is set from
+**Σ non-`deposit` rows** (not `+=`): today it excludes `depositAppliedCents` and `calculateAmountDue` subtracts both, so deposit rows must not
 enter it. `settledByRecordsCents` is likewise Σ of rows of kinds other than `deposit` and `manual`. The cache
 can't drift. Readers that only need "what is due now" keep reading it.
 
@@ -126,7 +128,7 @@ export interface SettlementAllocation {
   baseClearedCents: number; baseSettledCents: number; realizedFxCents: number;
   transactionId: string | null;    // entry carrying the FX line to reverse and replace
   reversed: boolean;
-  dateSource: 'recorded' | 'payment-date' | 'application-entry' | 'inferred';
+  dateSource: 'recorded' | 'payment-date' | 'application-entry' | 'write-off-date' | 'inferred';
 }
 allocationsOf(db, tx, workspaceId, documentId, { asOf? }): Promise<SettlementAllocation[]>
 // with asOf: every signed event dated ≤ asOf (originals and reversals, including originals reversed later),
@@ -147,8 +149,12 @@ marks `fx-settlement` / documentId from `min(row.date)` — EG-1's table, owned 
 
 ### Readers
 
-- **Open amount as of D** = `amountCents − Σ rows with date ≤ D` (doc currency); base at the document rate =
-  `round(amountCents × documentRate) − Σ baseClearedCents`. Documents dated > D are not open at D.
+- **Open amount as of D** = `amountCents@D − Σ rows with date ≤ D` (doc currency); base at the document rate =
+  `round(amountCents@D × minorUnitRate(documentRate@D, currency, baseCurrency)) − Σ baseClearedCents`.
+  `amountCents@D` / `documentRate@D` / void status are the **document posting version in force at D**: the
+  document's entry and any EG-1 correction or void entry dated ≤ D (read from the document's posted entries,
+  not the current record), so a correction or void made after D does not change an earlier as-of. Documents
+  dated > D are not open at D.
 - **Aging** gets `asOf`: `computePartyAging(parties, documents, side, today, allocations?)`. With allocations it
   uses `openAmountAsOf`; without (browser fallback) it keeps today's `calculateAmountDue`. Buckets still from
   `daysOverdue(doc, asOf)`.
@@ -173,9 +179,12 @@ marks `fx-settlement` / documentId from `min(row.date)` — EG-1's table, owned 
 2. **GL vs payment ledger at D** (per A/R and A/P account, base currency):
    `s × GL balance(account, D)` (from L-123 `balancesAsOf`, which is debit-positive; `s` = +1 for A/R, −1 for
    A/P, so an unpaid bill of 100 gives +100; every term below is side-normalized the same way)
-   `= Σ open documents at D (base at document rate) − Σ unapplied payments and credits at D (base)
+   `= Σ open documents at D (base at document rate) − Σ unapplied credits at D and unapplied payments **held in the control account itself** at D (base)
      + Σ FX revaluation entries on the account at D` (`fxRevaluationService.ts`, kept as its own line)
    `+ explained other entries` (manual journals to A/R/A/P: listed, not netted).
+   Unapplied payments held in a separate advance account (`advanceAccountId` ≠ the control account, e.g.
+   Customer Deposits) never touched A/R/A/P and are not subtracted; they are reconciled on that account's own
+   line (GL advance account = Σ unapplied held there).
    The report shows each term, the difference, and the entries that make it (manual journals, documents posted
    to another A/R account, inferred backfill rows).
 
@@ -183,7 +192,8 @@ marks `fx-settlement` / documentId from `min(row.date)` — EG-1's table, owned 
 
 1. **Table and writers, payments only.** Migration `paymentAllocations` (server-only, `lf_guard`, member read),
    `allocationLedger.ts`; `createPaymentInTransaction` and `applyUnappliedPayment` write rows (the latter with
-   its `date`); per-row FX split by largest remainder; `amountPaidCents` from Σ rows.
+   its `date`); per-row FX split by largest remainder; `amountPaidCents` keeps its additive update (the
+   recompute from Σ rows switches on only after step 3).
    - *Test:* a payment over two EUR invoices at 1.12 vs 1.10: Σ row `realizedFxCents` = the entry's FX line; the
      worked example's payment rows.
    - *Test:* `applyUnappliedPayment` on 11-10 for a 10-01 advance: row dated 11-10.
@@ -193,11 +203,12 @@ marks `fx-settlement` / documentId from `min(row.date)` — EG-1's table, owned 
    reverse rows.
    - *Test:* the worked example's credit row: realized gain 1.00 and A/R for the invoice ends at 0.00 in base.
    - *Test:* write off, reverse, write off again: three rows, Σ = one write-off.
-3. **Backfill** (below) as an owner-run, resumable job, then the reconciliation check (rows vs cache).
+3. **Backfill** (below) as an owner-run, resumable job, then the reconciliation check (rows vs cache); once
+   it is 0 for a workspace, the cache cutover: `amountPaidCents` / `settledByRecordsCents` are set from Σ rows.
    - *Test:* backfill of the gold ledgers (W1, W3W4, FX, YEAR-END) gives Σ rows = `amountPaidCents` for every
      document, and running it twice writes nothing.
 4. **Payment void on the server.** `POST /api/v1/payments/:id/void`: reversal entry (as `paymentPosting.ts`),
-   `reversal` rows, documents' `amountPaidCents` from Σ rows, `unappliedCents` 0.
+   `reversal` rows, reversals of the payment's `payment-application` entries, documents' `amountPaidCents` from Σ rows, `unappliedCents` 0.
    - *Test:* void the 10-15 payment of the example: invoice open €900 again; statement shows the reversal.
 5. **Refund movements, then aging and statements read rows.** Dated `creditMovements` (refunds, from
    `refundCredit` and backfilled from its entries) ship **first in this step**: "unapplied credits as of D"
@@ -219,7 +230,7 @@ One run per workspace (`POST /api/v1/payment-ledger/backfill`, owner, `dryRun`),
 | `payments.allocations[]` created with the payment | `payment` | payment `date` (`dateSource: payment-date`) | yes; per-row FX split from the payment's `realizedFxCents` by largest remainder; rates from `metadata.ratesUsed` |
 | allocations appended by `applyUnappliedPayment` | `advance_application` | the `payment-application` entry whose `metadata.documents` contains the document (`application-entry`); when the advance sat in A/R itself no entry exists → the payment date (`inferred`) | amount yes; **the date is lost when no entry was posted**. Told apart from creation-time allocations by `allocations` beyond the payment's original total (`amountCents − unappliedCents` history is not kept, so the split is by the audit log `PAYMENT_APPLIED` rows when present, else `inferred`) |
 | credits applied | `credit` | `inferred`: the later of the credit's date and the document's date | **which document is lost.** Rows only where evidence names the target (an audit-log `CREDIT_APPLIED` entry or a transaction carrying the document id). Matching totals are **not** evidence: `applyCredit` takes an explicit document, so oldest-first replay could invent history. Everything else is an `unmatched` line per party and currency in the report (used credit vs unexplained `settledByRecordsCents`), no guessed rows |
-| write-offs | `write_off` | `writtenOffAt` (`recorded`) | yes (past reversed write-offs only via audit log; not rebuilt) |
+| write-offs | `write_off` | `writtenOffAt` (`write-off-date`) | yes (past reversed write-offs only via audit log; not rebuilt) |
 | document deposits | `deposit` | document date (`inferred`) | amount yes |
 | manual "paid" (`amountPaidCents − settledByRecordsCents`) | `manual` | document date (`inferred`) | amount yes, date no |
 | voided payments whose documents still count them | none; listed as `void-still-applied` for the owner to fix with the step-4 route | | — |
@@ -314,7 +325,10 @@ a 10-31 revaluation would be its own line in the check).
 - Statements and aging at 10-31 and 11-30, computed on 12-01, give the figures above.
 - `applyUnappliedPayment` stores its date; a statement shows the application on that date.
 - FX split: Σ row FX = entry FX line, odd cents, three documents.
-- Idempotence: retried payment, retried credit application, second backfill: no new rows.
+- Dates: an application dated before its payment/credit or its document is refused.
+- As-of with a later correction: an invoice corrected (or voided) on 11-05 keeps its 10-31 aging at the old
+  amount and rate.
+- Idempotence: auto-apply of two credits to one document writes two rows; retried payment, retried credit application, second backfill: no new rows.
 - Void: reversal rows, documents due again, statement shows the reversal.
 - Write-off → reverse → write-off: rows net to one write-off; statement shows them.
 - Reconciliation: rows vs cache = 0 on the gold ledgers after backfill; GL vs payment ledger = 0 at every month
