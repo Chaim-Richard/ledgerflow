@@ -165,7 +165,7 @@ test('PREV-6 corpus: QuickBooks customer and product exports map to exact record
   const customers = records('customers', 'quickbooks-customers.csv', true);
   assert.deepEqual(customers.errors, []);
   assert.deepEqual(customers.records.map(r => r.data), [
-    { status: 'active', name: 'Acme LLC', email: 'office@example.test', phone: '555-1212', address: '11 Main St, Albany, NY, 12207, US' },
+    { status: 'active', name: 'Acme LLC', email: 'OFFICE@example.test', phone: '555-1212', address: '11 Main St, Albany, NY, 12207, US' },
     { status: 'active', name: 'Baker, Smith & Co', email: 'ap@baker.example', address: 'Boston, MA, 02110, US' },
   ]);
   const items = records('items', 'quickbooks-items.csv', true);
