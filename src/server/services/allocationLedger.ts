@@ -1,6 +1,6 @@
 /**
  * EG-2: the payment ledger (docs/design/EG-2-payment-ledger.md). One immutable row per settlement of an
- * invoice or bill in `paymentAllocations` (supabase/migrations/20261025000000_payment_allocations.sql), written
+ * invoice or bill in `paymentAllocations` (supabase/migrations/20261025010000_payment_allocations.sql), written
  * only here, in the same database transaction as the document update. Step 1: payments and later applications
  * of a payment's unapplied part. `amountPaidCents` keeps its additive update until the cutover after step 3.
  */
@@ -85,7 +85,7 @@ export async function allocationLedgerReady(db: Firestore): Promise<boolean> {
   } catch {
     ready = false;
   }
-  if (!ready) console.warn('[allocations] the paymentAllocations table is missing: apply supabase/migrations/20261025000000_payment_allocations.sql. No payment ledger rows are written until then.');
+  if (!ready) console.warn('[allocations] the paymentAllocations table is missing: apply supabase/migrations/20261025010000_payment_allocations.sql. No payment ledger rows are written until then.');
   return ready;
 }
 
