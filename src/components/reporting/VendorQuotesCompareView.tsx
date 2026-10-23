@@ -100,9 +100,6 @@ export default function VendorQuotesCompareView() {
       });
       setPriceInput('');
       setNotes('');
-      toast.success(`Saved quote from ${vendor.name} for ${targetItem.name}`);
-    } catch {
-      toast.error('Failed to save vendor quote.');
     } finally {
       setSaving(false);
     }
@@ -115,7 +112,6 @@ export default function VendorQuotesCompareView() {
     await updateEntity('inventory', targetItem.id, {
       metadata: { ...(targetItem.metadata || {}), vendorQuotes: nextQuotes },
     });
-    toast.success('Removed vendor quote');
   };
 
   if (loading) {

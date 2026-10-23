@@ -347,6 +347,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Plan and track numbered work orders (WO-YYYY-NNN) to assemble kits from bundle components using each kit's bill of materials, checking live component stock for shortages before building. Track progress across planned, in-progress, completed and cancelled runs and export CSV pick lists. Work orders plan shop-floor builds only; stock movements and ledger entries stay in inventory adjustments and invoices.",
     "il-annual-party-summary":
       "Prepare an annual working paper per customer and per vendor for an Israeli accountant: annual turnover before VAT, VAT charged or input VAT, allocation-number completeness on business invoices above the threshold, payments and source tax withheld, and year-end open balances in base currency. Tax and VAT identifiers display masked last digits only. Calculation status only: this working paper never files with the Israel Tax Authority or posts to the books.",
+    "accountant-queue":
+      "One triage queue for what needs an accountant's review: open entry questions, held invoices, purchase orders and expense claims awaiting approval, unposted manual journal adjustments, and open period-lock exceptions. Filter by category and jump straight to the screen and record where each item is answered, approved, posted or closed. The queue reads current workspace state and posts nothing on its own.",
   },
   settings: {
     "branding-profiles": "Choose the logo colour, address and footer that PDFs use for each label value, such as an entity or a branch. A value without its own branding inherits from its parent label, and then from the books. Owners and accountants edit it here; the saved branding applies to PDFs made after the save.",

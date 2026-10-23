@@ -146,7 +146,6 @@ export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition
   { id: 'banking', label: { en: 'Bank Connections', he: 'חיבורי בנק' }, icon: Building, groupId: 'transactions' },
   { id: 'audit-trail', label: { en: 'Audit Trail', he: 'יומן ביקורת' }, icon: Search, groupId: 'transactions' },
   { id: 'client-queries', label: { en: 'Questions about Entries', he: 'שאלות על תנועות' }, icon: MessageCircleQuestion, groupId: 'transactions' },
-  { id: 'accountant-queue', label: { en: 'Accountant Queue', he: 'תור רואה החשבון' }, icon: ClipboardCheck, groupId: 'transactions' },
   { id: 'tasks', label: { en: 'Tasks', he: 'משימות' }, icon: ListChecks, groupId: 'transactions' },
 
   { id: 'reconciliation', label: { en: 'Reconcile', he: 'התאמות' }, icon: RefreshCw, groupId: 'reconcile' },
@@ -481,6 +480,7 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'StockTransfersReportView': lazy(() => import('../components/reporting/StockTransfersReportView')),
   'DataQualityReportView': lazy(() => import('../components/reporting/DataQualityReportView')),
   'SampleYearBenchmarkReportView': lazy(() => import('../components/reporting/SampleYearBenchmarkReportView')),
+  'AccountantQueueView': lazy(() => import('../components/ledger/AccountantQueueView')),
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = withScreenHelp([
@@ -621,6 +621,7 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'aged-inventory-by-lot', label: { en: 'Aged Inventory by Lot', he: 'גיול מלאי לפי אצווה' }, componentName: 'AgedInventoryByLotReportView', icon: Clock },
   { id: 'work-orders', label: { en: 'Work Orders (Kit Assembly)', he: 'פקודות עבודה להרכבת ערכות' }, componentName: 'WorkOrdersView', icon: Layers },
   { id: 'il-annual-party-summary', label: { en: 'Israel: Annual Customer & Vendor Summary', he: 'ישראל: ריכוז שנתי ללקוחות וספקים' }, componentName: 'IsraeliAnnualPartySummaryView', icon: FileSpreadsheet },
+  { id: 'accountant-queue', label: { en: 'Accountant Queue', he: 'תור רואה החשבון' }, componentName: 'AccountantQueueView', icon: ClipboardCheck },
 ], 'reports');
 
 export const SETTINGS_TABS_REGISTRY = withScreenHelp([

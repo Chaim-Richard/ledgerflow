@@ -75,7 +75,6 @@ export default function BillRetentionReportView() {
     });
     setHeldInput('');
     setNotes('');
-    toast.success(`Recorded retention schedule on ${targetBill.number || targetBill.id}`);
   };
 
   const handleMarkReleased = async (targetBillId: string) => {
@@ -88,7 +87,6 @@ export default function BillRetentionReportView() {
         retention: { ...prev, releasedAt: asOfDate },
       },
     });
-    toast.success('Marked retention holdback released');
   };
 
   if (loading) {

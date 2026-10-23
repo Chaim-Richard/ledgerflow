@@ -73,7 +73,6 @@ export default function CustomerItemCodesView() {
     });
     setCustomerCode('');
     setCustomerDescription('');
-    toast.success('Saved customer item code');
   };
 
   const handleRemove = async (targetItemId: string, targetCustomerId: string) => {
@@ -86,7 +85,6 @@ export default function CustomerItemCodesView() {
     await updateEntity('inventory', targetItem.id, {
       metadata: { ...(targetItem.metadata || {}), customerItemCodes: next },
     });
-    toast.success('Removed customer item code');
   };
 
   if (loading) {

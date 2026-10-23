@@ -85,7 +85,6 @@ export default function WorkOrdersView() {
       metadata: { ...(selectedKit.metadata || {}), workOrders: nextList },
     });
     setNotes('');
-    toast.success(`Created work order ${woNumber}`);
   };
 
   const handleStatusChange = async (kitId: string, woId: string, status: WorkOrderStatus) => {
@@ -96,7 +95,6 @@ export default function WorkOrdersView() {
     await updateEntity('inventory', kit.id, {
       metadata: { ...(kit.metadata || {}), workOrders: nextList },
     });
-    toast.success(`Updated work order status to ${status.replace('_', ' ')}`);
   };
 
   if (loading) {

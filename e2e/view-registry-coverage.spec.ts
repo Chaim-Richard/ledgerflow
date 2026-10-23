@@ -38,7 +38,6 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
   const coreViews = [
     { label: 'Overview', searchHint: 'Overview' },
     { label: 'Transactions', searchHint: 'Ledger' },
-    { label: 'Accountant Queue', searchHint: 'Accountant Queue', id: 'accountant-queue' },
     { label: 'Sales', searchHint: 'Invoices' },
     { label: 'Purchases', searchHint: 'Bills' },
     { label: 'Banking', searchHint: 'Reconciliation' },
@@ -172,6 +171,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Aged Inventory by Lot', componentName: 'AgedInventoryByLotReportView' },
     { label: 'Work Orders (Kit Assembly)', componentName: 'WorkOrdersView' },
     { label: 'Israel: Annual Customer & Vendor Summary', componentName: 'IsraeliAnnualPartySummaryView' },
+    { label: 'Accountant Queue', componentName: 'AccountantQueueView', id: 'accountant-queue' },
   ];
 
   async function chooseReport(page: import('@playwright/test').Page, label: string) {

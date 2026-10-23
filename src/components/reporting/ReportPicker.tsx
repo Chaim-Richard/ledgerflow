@@ -128,6 +128,7 @@ const REPORT_GROUP: Record<string, GroupId> = {
   'inventory-turnover': 'Analysis',
   'data-quality-checks': 'Analysis',
   'sample-year-benchmark': 'Analysis',
+  'accountant-queue': 'Analysis',
   'monthly-averages': 'Analysis',
   'income-by-source': 'Analysis',
   'record-retention-review': 'Analysis',
