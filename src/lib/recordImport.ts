@@ -76,6 +76,7 @@ export const IMPORT_DEFINITIONS: Record<ImportKind, ImportKindDefinition> = {
     fields: [
       f('name', 'Name', 'text', ['vendor', 'vendor name', 'supplier', 'supplier name', 'company', 'company name', 'display name', 'payee', 'contact name', 'contactname'], true),
       ...CONTACT_FIELDS,
+      f('address', 'Address', 'longText', ['billing address', 'street', 'street address', 'mailing address']),
       f('category', 'Category', 'text', ['vendor type', 'type']),
       f('is1099', '1099 vendor', 'yesNo', ['1099', 'track 1099', 'eligible for 1099']),
       f('status', 'Status', 'status', ['active']),
@@ -266,7 +267,9 @@ function readValue(field: ImportField, raw: string): { value?: ImportValue; erro
     case 'text': return { value: clean(text, 200) };
     case 'longText': return { value: clean(text, 2000, true) };
     case 'email':
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text) && text.length <= 200 ? { value: text.toLowerCase() } : { error: `"${text}" is not an email address` };
+      // Validate the trimmed view, but preserve the imported email value. E-37 cleanup is an
+      // explicit user choice; this shared reader must not lowercase/trim email behind the preview.
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text) && raw.length <= 200 ? { value: raw } : { error: `"${text}" is not an email address` };
     case 'money': {
       const cents = parseMoneyCents(text);
       if (cents === null) return { error: `"${text}" is not an amount` };

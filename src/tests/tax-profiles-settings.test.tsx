@@ -8,6 +8,7 @@ import { auth, db } from '../firebase';
 import { getSupabase } from '../lib/db/client';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { useUIStore } from '../stores/useUIStore';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import type { Workspace } from '../types';
 import type { TaxProfiles } from '../lib/tax/profile';
@@ -27,6 +28,7 @@ beforeEach(() => {
 });
 afterEach(async()=>{
   cleanup();mock.restoreAll();globalThis.fetch=realFetch;auth.currentUser=null;
+  useUIStore.setState({language:'en'});
   getSupabase().realtime.disconnect();await getSupabase().auth.dispose();
 });
 function profiles(value: TaxProfiles) {
@@ -48,6 +50,22 @@ test('mixed-language nested profiles show inherited fields and their exact sourc
   const name=screen.getByText('Name').nextElementSibling!;
   assert.equal(name.textContent,'סניף Branch');assert.doesNotMatch(name.className,/muted/);
   assert.match(screen.getByText(/saving a profile does not verify/).textContent||'',/declarations/);
+});
+
+test('the ISO country suggestions cover the full bilingual list for tax places and registrations',()=>{
+  profiles({books:{place:{country:'IL'},registrations:[{kind:'vat',number:'123',place:{country:'IL'}}]}});
+  act(()=>useUIStore.setState({language:'he'}));
+  render(<TaxProfilesSettings/>);edit();
+  const country=screen.getByLabelText('Country') as HTMLInputElement;
+  const registrationCountry=screen.getByLabelText('Registration country') as HTMLInputElement;
+  assert.ok(country.list);
+  assert.equal(country.list!.id,registrationCountry.list?.id);
+  assert.equal(country.list!.options.length,249);
+  const israel=country.list!.querySelector('option[value="IL"]');
+  assert.equal(israel?.getAttribute('label'),'IL — ישראל / Israel');
+  fireEvent.change(country,{target:{value:'UK'}});
+  assert.equal(country.value,'UK','the suggestion list does not prevent legacy or non-ISO values from being typed');
+  act(()=>useUIStore.setState({language:'en'}));
 });
 
 test('save preserves fresh unrelated profiles, rejects duplicate activation and retains a refused draft',async()=>{

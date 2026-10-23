@@ -33,7 +33,7 @@ export interface IifReadResult {
 export const IIF_HEADERS: Record<IifKind, string[]> = {
   accounts: ['Name', 'Code', 'Type', 'Category', 'Subtype', 'Description', 'Currency'],
   customers: ['Name', 'Email', 'Phone', 'Address', 'Currency', 'Notes', 'Payment terms'],
-  vendors: ['Name', 'Email', 'Phone', 'Category'],
+  vendors: ['Name', 'Email', 'Phone', 'Address', 'Category'],
   items: ['Name', 'SKU', 'Description', 'Sale price', 'Cost', 'Quantity on hand', 'Category'],
 };
 
@@ -152,7 +152,9 @@ export function readIif(content: string): IifReadResult {
     }
 
     if (kind === 'vendors') {
-      tables.vendors.push([name, value('EMAIL'), value('PHONE1'), value('VTYPE')]);
+      const address = [value('BADDR1'), value('BADDR2'), value('BADDR3'), value('BADDR4'), value('BADDR5')]
+        .filter(Boolean).join(', ');
+      tables.vendors.push([name, value('EMAIL'), value('PHONE1'), address, value('VTYPE')]);
       continue;
     }
 

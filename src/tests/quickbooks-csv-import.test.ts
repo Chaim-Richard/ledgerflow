@@ -16,19 +16,20 @@ test('E-20 QuickBooks Online Customer Contact List preserves contact and billing
   ]);
   assert.deepEqual(result.errors, []);
   assert.equal(result.records[0].data.name, 'Acme LLC', 'QBO Customer display name outranks company');
-  assert.equal(result.records[0].data.email, 'office@example.test');
+  assert.equal(result.records[0].data.email, 'OFFICE@example.test', 'the shared importer preserves source email case unless cleanup is accepted');
   assert.equal(result.records[0].data.address, '11 Main St, Albany, NY, 12207, US');
   assert.equal(result.records[1].data.name, 'רוני שירות');
 });
 
 test('E-20 QBO vendor list uses the dedicated vendor name and existing safe importer', () => {
   const result = prepared('vendors', [
-    ['Vendor', 'Company Name', 'Email', 'Phone Numbers'],
-    ['Supplier One', 'Different Corp', 'billing@example.test', '555-0121'],
+    ['Vendor', 'Company Name', 'Email', 'Phone Numbers', 'Vendor Address', 'City', 'State', 'Postal Code', 'Country'],
+    ['Supplier One', 'Different Corp', 'billing@example.test', '555-0121', '11 Main St', 'Albany', 'NY', '12207', 'US'],
   ]);
   assert.deepEqual(result.errors, []);
   assert.equal(result.records[0].data.name, 'Supplier One');
   assert.equal(result.records[0].data.email, 'billing@example.test');
+  assert.equal(result.records[0].data.address, '11 Main St, Albany, NY, 12207, US');
   assert.ok(!('balance' in result.records[0].data));
 });
 
