@@ -94,13 +94,14 @@ describe('D-47 preference validation and identity', () => {
         { tab: 'reports', sub: 'pnl' },
         { tab: 'https://evil.example', sub: 'pnl' },
         { tab: 'settings', sub: 'branding' },
+        { tab: 'consolidation' },
         { tab: 'reports', sub: 'gone' },
         null,
       ],
     });
     assert.deepEqual(normalized, {
       recentReportIds: ['pnl'],
-      pinnedPages: [{ tab: 'reports', sub: 'pnl' }, { tab: 'settings', sub: 'branding' }],
+      pinnedPages: [{ tab: 'reports', sub: 'pnl' }, { tab: 'settings', sub: 'branding' }, { tab: 'consolidation' }],
     });
   });
 

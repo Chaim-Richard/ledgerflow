@@ -1,4 +1,4 @@
-import { APP_TABS, REPORT_TABS_REGISTRY, SETTINGS_TABS_REGISTRY } from '../config/registry';
+import { REPORT_TABS_REGISTRY, SCREEN_TABS_REGISTRY, SETTINGS_TABS_REGISTRY } from '../config/registry';
 import { normalizePinned, pageKey, type PinnedPage } from './pinnedPages';
 
 export const MAX_RECENT_REPORTS = 5;
@@ -23,7 +23,7 @@ export type ReportPreferencesSyncStatus = 'device' | 'loading' | 'saving' | 'syn
 
 const VALID_REPORT_IDS: ReadonlySet<string> = new Set(REPORT_TABS_REGISTRY.map(report => report.id));
 const VALID_PAGE_KEYS: ReadonlySet<string> = new Set([
-  ...APP_TABS.map(tab => tab.id),
+  ...SCREEN_TABS_REGISTRY.map(tab => tab.id),
   ...REPORT_TABS_REGISTRY.map(report => pageKey({ tab: 'reports', sub: report.id })),
   ...SETTINGS_TABS_REGISTRY.map(settings => pageKey({ tab: 'settings', sub: settings.id })),
 ]);
