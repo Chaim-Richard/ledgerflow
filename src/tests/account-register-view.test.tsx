@@ -68,7 +68,8 @@ describe('Cleared by the bank (CA-04)', () => {
     setComponentWorkspace(role);
     const sent: Array<{ url: string; body: Record<string, unknown> }> = [];
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-      sent.push({ url: String(input), body: JSON.parse(String(init?.body || '{}')) });
+      // L-123 step 3: the register also reads the server balances (GET); only the writes are recorded here
+      if (!String(input).startsWith('/api/v1/balances')) sent.push({ url: String(input), body: JSON.parse(String(init?.body || '{}')) });
       return new Response(JSON.stringify({ status: 'ok' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }) as typeof fetch;
     useLedgerStore.setState({

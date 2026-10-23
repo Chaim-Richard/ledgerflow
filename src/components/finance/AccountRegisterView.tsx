@@ -1,19 +1,22 @@
 import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { Transaction } from '../../types';
-import { isExpenseAccount, isPostable, lineAmount } from '../../lib/txFilters';
+import { isExpenseAccount, isPostable, lineAmount, transactionDate } from '../../lib/txFilters';
 import { formatDecimal, formatCurrency, cn, getLocalDateISO } from '../../lib/utils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { setCleared } from '../../services/clearanceActions';
 import { toast } from 'sonner';
 import { calculateAccountRegisterBalances, visibleAccountRegisterEntries } from '../../lib/accountRegister';
+import { useServerOpening } from '../../hooks/useServerOpening';
 import { BookOpen, Search, CheckCircle2, Circle, Filter, Building2 } from 'lucide-react';
 
 export const AccountRegisterView: React.FC = () => {
   const accounts = useLedgerStore(s => s.accounts);
   const transactions = useLedgerStore(s => s.transactions);
   const updateTransaction = useLedgerStore(s => s.updateTransaction);
+  // L-123 step 3: the header balance = the server's sum through the oldest loaded day + the loaded entries after it
+  const serverOpening = useServerOpening(transactions);
   const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
   const role = useCurrentRole();
   const canClear = role === 'owner' || role === 'accountant' || role === 'bookkeeper';
@@ -61,6 +64,9 @@ export const AccountRegisterView: React.FC = () => {
     }> = [];
 
     let totalActivityMinor = 0;
+    // with the server's answer, the entries it summed (dated up to its day) count through it, not one by one
+    const serverCents = serverOpening ? (serverOpening.accounts[selectedAccount.id] || 0) : 0;
+    if (serverOpening) totalActivityMinor += isDebitNature ? serverCents : -serverCents;
 
     // Filter postable transactions
     const postableTxs = transactions.filter(isPostable);
@@ -73,7 +79,7 @@ export const AccountRegisterView: React.FC = () => {
           // For debit-nature accounts: positive amount is debit (+), negative is credit (-)
           // The delta to the balance:
           const delta = isDebitNature ? amt : -amt;
-          totalActivityMinor += delta;
+          if (!serverOpening || transactionDate(tx) > serverOpening.asOf) totalActivityMinor += delta;
 
           rawEntries.push({
             id: `${tx.id}-${lineIdx}`,
@@ -114,7 +120,7 @@ export const AccountRegisterView: React.FC = () => {
       entries: rawEntries,
       registerCalculation: calc
     };
-  }, [selectedAccount, transactions]);
+  }, [selectedAccount, transactions, serverOpening]);
 
   // Filter entries based on search and uncleared filter
   const displayedEntries = useMemo(() => {
@@ -218,6 +224,12 @@ export const AccountRegisterView: React.FC = () => {
         </div>
       </div>
 
+      {/* L-123: the balances are totals of every entry, the rows are the loaded entries */}
+      <p className="px-4 pt-3 text-[11px] text-[var(--text-muted)]" data-testid="register-balances-source">
+        {serverOpening
+          ? `Balances include every entry through ${serverOpening.asOf} (summed by the server); the rows below are the loaded entries.`
+          : 'Balances and rows: the loaded entries.'}
+      </p>
       {/* Metric Cards Banner */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 border-b border-[var(--border)] bg-[var(--surface)]">
         <div className="bg-[var(--surface-sunken)] p-3 rounded-lg border border-[var(--border)]">
