@@ -14,6 +14,19 @@
  *   gizmo: 2026-05-10 buy 5 @ 5.00; then a move dated back to 2026-05-01 taking out 3 (5 → 2 in the order written)
  *     → by the dates, gizmo ends 2026-05-01 at −3: check (b) names gizmo and 2026-05-01.
  *   the 2026-03-05 move edited (−5 → −6) in the closed period → the closing's checksum no longer matches: stale (c).
+ *   a partial unlock of March refuses the closing (409); a journal of +5.00 to Inventory dated 2026-03-20 posted
+ *     during it makes the closing stale on the book side, with no item changed.
+ *
+ * Review fixes (PR #363), pure:
+ *   written first: +10 dated 2026-04-10 (quantity before 0); then −3 dated 2026-03-10 (quantity before 10, −3,000)
+ *     → the closing at 2026-03-31 is −3 / −3,000 (not 7), and check (b) through 03-31 names 2026-03-10 at −3;
+ *     through 2026-02-28 nothing is below zero.
+ *   gadget's history starts at 5 (no value), +3 for 600 → its row is 8 / 600 and the closing is incomplete (gadget 5).
+ *   L1 6 @ 1.00 (600), L2 2 @ 1.00 (200), a revaluation of +0.80 with no location → L1 +60 = 660, L2 +20 = 220, no
+ *     "No location" row; +0.07 → 7 × 6/8 = 5.25 and 7 × 2/8 = 1.75 → 5 and 1, the cent left to the larger remainder
+ *     (L2) → 5 and 2.
+ *   no stock moves and Inventory 10.00 in the books → (a) still compares: stock 0, difference −1,000.
+ *   a capped source (entries or stock history) → (a) is not compared and says why.
  */
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -23,7 +36,7 @@ import type { Server } from 'node:http';
 import type { Firestore } from '../server/db/pgFirestore';
 import type { StockMove } from '../lib/stockMoves';
 import type { ChartAccount, Transaction } from '../types';
-import { buildStockClosing, checkStockAgainstBooks, closingFreshness, datedQuantities, fnv64, negativeStockDays, STOCK_INVARIANT_CHECKS } from '../lib/stockInvariants';
+import { buildStockClosing, checkStockAgainstBooks, closingFreshness, datedQuantities, fnv64, inventoryEntriesChecksum, negativeStockDays, STOCK_INVARIANT_CHECKS } from '../lib/stockInvariants';
 import { runDataChecks } from '../lib/dataChecks';
 
 const url = process.env.LF_TEST_DATABASE_URL;
@@ -63,6 +76,52 @@ test('EG-7 pure: the worked closing, the dated quantities, the checksum and the 
   assert.equal(closingFreshness(closing, [...moves, mv({ date: '2026-04-02', quantity: 1, quantityBefore: 15, valueCents: 1_500 })]).fresh, true, 'a move after the period end does not touch it');
   const found = runDataChecks({ transactions: entries, accounts, invoices: [], bills: [], recurring: [], today: '2026-03-31', baseCurrency: 'USD', stockMoves: edited, stockClosings: [closing] }, STOCK_INVARIANT_CHECKS);
   assert.deepEqual(found.map(f => f.checkId).sort(), ['stock-closing-stale', 'stock-vs-books']);
+});
+
+test('EG-7 review: a move written first but dated later does not leak into an earlier closing; (b) is bounded to the date', () => {
+  const moves = [
+    mv({ itemId: 'late', itemName: 'Late', date: '2026-04-10', quantity: 10, quantityBefore: 0, valueCents: 10_000 }),
+    mv({ itemId: 'late', itemName: 'Late', date: '2026-03-10', kind: 'adjustment', quantity: -3, quantityBefore: 10, valueCents: -3_000 }),
+  ];
+  const march = buildStockClosing({ workspaceId: 'ws', asOf: '2026-03-31', moves, inventoryBalanceCents: -3_000, builtBy: 'u', at: 'now' });
+  assert.deepEqual(march.rows.map(r => [r.quantity, r.valueCents]), [[-3, -3_000]]);
+  assert.equal(march.complete, true);
+  assert.deepEqual(negativeStockDays(moves, '2026-03-31').items.map(i => [i.date, i.quantity]), [['2026-03-10', -3]]);
+  assert.equal(negativeStockDays(moves, '2026-02-28').ok, true);
+  assert.equal(closingFreshness(march, moves).fresh, true);
+});
+
+test('EG-7 review: units the history starts with have no value: the closing is incomplete', () => {
+  const c = buildStockClosing({ workspaceId: 'ws', asOf: '2026-03-31', moves: [mv({ itemId: 'gadget', itemName: 'Gadget', quantity: 3, quantityBefore: 5, valueCents: 600 })], inventoryBalanceCents: 600, builtBy: 'u', at: 'now' });
+  assert.deepEqual([c.complete, c.incompleteItems, c.rows.map(r => [r.locationId, r.quantity, r.valueCents])], [false, [{ itemId: 'gadget', itemName: 'Gadget', quantity: 5 }], [['', 8, 600]]]);
+});
+
+test('EG-7 review: a revaluation with no location is spread over the locations by quantity', () => {
+  const base = [
+    mv({ itemId: 'r', itemName: 'R', quantity: 6, quantityBefore: 0, valueCents: 600, locationId: 'L1' }),
+    mv({ itemId: 'r', itemName: 'R', quantity: 2, quantityBefore: 6, valueCents: 200, locationId: 'L2' }),
+  ];
+  const rows = (cents: number) => buildStockClosing({ workspaceId: 'ws', asOf: '2026-03-31', moves: [...base, mv({ itemId: 'r', itemName: 'R', kind: 'revaluation', quantity: 0, quantityBefore: 8, valueCents: cents })], inventoryBalanceCents: 0, builtBy: 'u', at: 'now' })
+    .rows.map(r => [r.locationId, r.valueCents]);
+  assert.deepEqual(rows(80), [['L1', 660], ['L2', 220]]);
+  assert.deepEqual(rows(7), [['L1', 605], ['L2', 202]]);
+});
+
+test('EG-7 review: no stock moves still compares; a capped source is not compared and says why; the book side of (c)', () => {
+  const accounts = [{ id: 'inv', name: 'Inventory', type: 'asset', category: 'Inventory' }, { id: 'eq', name: 'Equity', type: 'equity' }] as ChartAccount[];
+  const journal = { id: 'j', date: '2026-03-20', status: 'completed', type: 'journal', lines: [{ accountId: 'inv', amountCents: 1_000 }, { accountId: 'eq', amountCents: -1_000 }] } as unknown as Transaction;
+  const ctx = { transactions: [journal], accounts, invoices: [], bills: [], recurring: [], today: '2026-03-31', baseCurrency: 'USD' };
+  const none = runDataChecks({ ...ctx, stockMoves: [] }, STOCK_INVARIANT_CHECKS);
+  assert.deepEqual(none.map(f => [f.checkId, f.severity]), [['stock-vs-books', 'high']]);
+  assert.match(none[0].description, /worth 0\.00 but the Inventory account shows 10\.00/);
+  assert.deepEqual(runDataChecks(ctx, STOCK_INVARIANT_CHECKS), [], 'the browser does not load the stock moves');
+  const capped = runDataChecks({ ...ctx, stockMoves: [], truncated: ['transactions'] }, STOCK_INVARIANT_CHECKS);
+  assert.deepEqual(capped.map(f => [f.checkId, f.severity]), [['stock-vs-books', 'low']]);
+  assert.match(capped[0].description, /Only part of the entries could be read/);
+  const closing = buildStockClosing({ workspaceId: 'ws', asOf: '2026-03-31', moves: [], inventoryBalanceCents: 0, booksChecksum: inventoryEntriesChecksum([], accounts, '2026-03-31'), builtBy: 'u', at: 'now' });
+  const f = closingFreshness(closing, [], inventoryEntriesChecksum([journal], accounts, '2026-03-31'));
+  assert.deepEqual([f.fresh, f.booksChanged, f.changedItems], [false, true, []]);
+  assert.equal(closingFreshness(closing, [], inventoryEntriesChecksum([{ ...journal, date: '2026-04-02' }], accounts, '2026-03-31')).fresh, true, 'a journal after the date does not touch it');
 });
 
 describe('EG-7 stock closing on a real database', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
@@ -167,5 +226,22 @@ describe('EG-7 stock closing on a real database', { skip: !url && 'LF_TEST_DATAB
     assert.equal(got.closing.fresh, false);
     assert.equal(got.closing.changedItems.length, 1);
     assert.match(got.closing.freshness, /stale/);
+  });
+
+  test('a partial unlock refuses the closing (409); a journal to Inventory posted during it makes the closing stale', async () => {
+    const again = await send('owner', 'POST', '/api/v1/inventory/stock-closing', { workspaceId: ws });
+    assert.equal(again.status, 200, JSON.stringify(again.body));
+    assert.equal((await read('2026-03-31')).closing.fresh, true, 'taken again after the edit');
+    await db.collection('workspaces').doc(ws).update({ lockException: { fromDate: '2026-03-01', toDate: '2026-03-31', reason: 'fix a bill', byUid: 'owner' } });
+    const refused = await send('owner', 'POST', '/api/v1/inventory/stock-closing', { workspaceId: ws });
+    assert.equal(refused.status, 409);
+    assert.match(refused.body.error, /2026-03-01 to 2026-03-31 is unlocked/);
+    await db.collection('transactions').doc(id('unlock-journal')).set({
+      workspaceId: ws, uid: 'owner', date: '2026-03-20', description: 'During the unlock', status: 'completed', type: 'journal', currency: 'USD', totalAmountCents: 500,
+      lines: [{ accountId: id('inv'), amountCents: 500 }, { accountId: id('equity'), amountCents: -500 }],
+    });
+    const got = await read('2026-03-31');
+    assert.deepEqual([got.closing.fresh, got.closing.changedItems], [false, []]);
+    assert.match(got.closing.freshness, /an entry to Inventory dated on or before 2026-03-31/);
   });
 });

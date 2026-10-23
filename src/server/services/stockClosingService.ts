@@ -13,7 +13,7 @@ import type { ChartAccount, Transaction } from '../../types';
 import type { Firestore } from '../db/firestore';
 import type { StockMove } from '../../lib/stockMoves';
 import { resolveAccountRole } from '../../lib/accountUtils';
-import { buildStockClosing, checkStockAgainstBooks, closingFreshness, negativeStockDays, type StockClosing } from '../../lib/stockInvariants';
+import { buildStockClosing, checkStockAgainstBooks, closingFreshness, inventoryEntriesChecksum, negativeStockDays, type StockClosing } from '../../lib/stockInvariants';
 import { balancesAsOf } from './balanceService';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -47,6 +47,9 @@ export async function inventoryBalanceAsOf(db: Firestore, workspaceId: string, d
   return inventory.reduce((s, a) => s + (balances.accounts[a.id] || 0) + (Number(a.openingBalanceCents) || 0), 0);
 }
 
+const entriesThrough = async (db: Firestore, workspaceId: string, asOf: string) =>
+  (await db.collection('transactions').where('workspaceId', '==', workspaceId).where('date', '<=', `${asOf}T23:59:59.999Z`).get()).docs.map(d => ({ ...d.data(), id: d.id }) as Transaction);
+
 /** Takes (or takes again) the stock closing at `asOf` (default: the lock date), which must be locked. */
 export async function writeStockClosing(db: Firestore, input: { workspaceId: string; asOf?: string; uid: string }): Promise<StockClosing> {
   if (!(await stockClosingsReady(db))) throw new StockClosingError(503, 'Stock closings are not set up in this database yet (apply supabase/migrations/20261025000000_stock_closings.sql).');
@@ -57,10 +60,16 @@ export async function writeStockClosing(db: Firestore, input: { workspaceId: str
     const asOf = input.asOf || lockDate;
     if (!asOf || !DATE.test(asOf)) throw new StockClosingError(400, 'Close and lock a period first: a stock closing is taken at a locked period end.');
     if (!lockDate || asOf > lockDate) throw new StockClosingError(409, `The books are not locked through ${asOf}${lockDate ? ` (locked through ${lockDate})` : ''}: close the period first.`);
-    const moves = (await t.get(db.collection('stockMoves').where('workspaceId', '==', input.workspaceId).where('date', '<=', asOf))).docs
+    // a partial unlock reopens dates in the period: its stock and entries can still change
+    const ex = ws.lockException as { fromDate?: string; toDate?: string } | null | undefined;
+    if (ex?.fromDate && ex.fromDate <= asOf) throw new StockClosingError(409, `${ex.fromDate}${ex.toDate ? ` to ${ex.toDate}` : ''} is unlocked: lock it again before taking the stock closing of ${asOf}.`);
+    // every move, any date: an item's history start comes from its first move written, whatever its date
+    const moves = (await t.get(db.collection('stockMoves').where('workspaceId', '==', input.workspaceId))).docs
       .map(d => ({ ...d.data(), id: d.id }) as StockMove);
-    const inventoryBalanceCents = await inventoryBalanceAsOf(db, input.workspaceId, asOf);
-    const closing = buildStockClosing({ workspaceId: input.workspaceId, asOf, moves, inventoryBalanceCents, builtBy: input.uid, at: new Date().toISOString() });
+    const [entries, accounts] = await Promise.all([entriesThrough(db, input.workspaceId, asOf), accountsOf(db, input.workspaceId)]);
+    const inventoryBalanceCents = await inventoryBalanceAsOf(db, input.workspaceId, asOf, accounts);
+    const booksChecksum = inventoryEntriesChecksum(entries, accounts, asOf);
+    const closing = buildStockClosing({ workspaceId: input.workspaceId, asOf, moves, inventoryBalanceCents, booksChecksum, builtBy: input.uid, at: new Date().toISOString() });
     t.set(db.collection('stockClosings').doc(stockClosingId(input.workspaceId, asOf)), { ...closing });
     return closing;
   });
@@ -81,20 +90,21 @@ export async function stockCheckReport(db: Firestore, input: { workspaceId: stri
     : [];
   const picked = input.asOf ? all.find(c => c.asOf === input.asOf) || null : all[0] || null;
   const asOf = input.asOf || picked?.asOf || input.today;
-  const [movesSnap, entriesSnap, accounts] = await Promise.all([
+  const [movesSnap, accounts] = await Promise.all([
     db.collection('stockMoves').where('workspaceId', '==', input.workspaceId).get(),
-    db.collection('transactions').where('workspaceId', '==', input.workspaceId).where('date', '<=', `${asOf}T23:59:59.999Z`).get(),
     accountsOf(db, input.workspaceId),
   ]);
   const moves = movesSnap.docs.map(d => ({ ...d.data(), id: d.id }) as StockMove);
-  const entries = entriesSnap.docs.map(d => ({ ...d.data(), id: d.id }) as Transaction);
+  // the entries through the later of the date asked and the closing's (the closing's book side is checked too)
+  const through = picked && picked.asOf > asOf ? picked.asOf : asOf;
+  const entries = await entriesThrough(db, input.workspaceId, through);
   const inventoryBalanceCents = await inventoryBalanceAsOf(db, input.workspaceId, asOf, accounts);
-  const freshness = picked ? closingFreshness(picked, moves) : null;
+  const freshness = picked ? closingFreshness(picked, moves, inventoryEntriesChecksum(entries, accounts, picked.asOf)) : null;
   return {
     asOf,
     closing: picked && freshness ? { ...picked, fresh: freshness.fresh, freshness: freshness.message, changedItems: freshness.changedItems } : null,
     closings: all.map(c => ({ asOf: c.asOf, builtAt: c.builtAt })),
     books: checkStockAgainstBooks({ asOf, moves, entries, accounts, inventoryBalanceCents }),
-    negative: negativeStockDays(moves),
+    negative: negativeStockDays(moves, asOf),
   };
 }

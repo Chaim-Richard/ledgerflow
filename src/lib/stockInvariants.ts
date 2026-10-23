@@ -26,6 +26,7 @@ export interface StockClosingRow {
   locationId: string;
   quantity: number;
   valueCents: number;
+  /** the moves with units at this location (a revaluation without a location is spread, and counted on the item) */
   moveCount: number;
   checksum: string;
 }
@@ -36,12 +37,18 @@ export interface StockClosing {
   asOf: string;
   rows: StockClosingRow[];
   moveCount: number;
+  /** over the moves dated through `asOf` and each item's history start */
   checksum: string;
+  /** over the entries through `asOf` that touch an Inventory account (absent on closings taken before it was kept) */
+  booksChecksum?: string;
   stockValueCents: number;
   /** the Inventory accounts' balance at `asOf` (balancesAsOf, plus the accounts' opening balances) */
   inventoryBalanceCents: number;
   /** stock less books */
   differenceCents: number;
+  /** false when an item's history starts with units it has no value for (stock from before the history) */
+  complete: boolean;
+  incompleteItems: Array<{ itemId: string; itemName: string; quantity: number }>;
   builtAt: string;
   builtBy: string;
 }
@@ -61,40 +68,91 @@ export function fnv64(text: string): string {
 }
 
 /** What a move contributes to a checksum: everything that changes a quantity or a value, and its place in the order. */
-const moveKey = (m: StockMove) => [m.id || '', m.itemId, m.locationId || NO_LOCATION, day(m.date), m.seq, round6(Number(m.quantity) || 0), round6(Number(m.quantityBefore) || 0), Number(m.valueCents) || 0].join('|');
+const moveKey = (m: StockMove) => [m.id || '', m.itemId, m.locationId || NO_LOCATION, day(m.date), m.seq, round6(Number(m.quantity) || 0), Number(m.valueCents) || 0].join('|');
 
 export const movesChecksum = (moves: StockMove[]) => fnv64(moves.map(moveKey).sort().join('\n'));
 
 /** The moves a closing at `asOf` covers. */
 export const movesUpTo = (moves: StockMove[], asOf: string) => moves.filter(m => day(m.date) !== '' && day(m.date) <= asOf);
 
-/** The closing snapshot at `asOf`, per item and location (what the history starts with counts as no location). */
-export function buildStockClosing(input: { workspaceId: string; asOf: string; moves: StockMove[]; inventoryBalanceCents: number; builtBy: string; at: string }): StockClosing {
+/** Each item's history start: the quantity before its first move in the order written (over ALL its moves, any date). */
+export function historyStarts(moves: StockMove[]): Map<string, number> {
+  const byItem = new Map<string, StockMove[]>();
+  for (const m of moves) byItem.set(m.itemId, [...(byItem.get(m.itemId) || []), m]);
+  return new Map([...byItem].map(([itemId, list]) => [itemId, round6(Number(orderedMoves(list)[0].quantityBefore) || 0)]));
+}
+
+/** The entries through `asOf` that touch an Inventory account, as a checksum of their Inventory lines. */
+export function inventoryEntriesChecksum(entries: Transaction[], accounts: ChartAccount[], asOf: string): string {
+  const inventory = new Set(accounts.filter(a => resolveAccountRole(a) === 'inventory').map(a => a.id));
+  const keys: string[] = [];
+  for (const tx of entries) {
+    const d = transactionDate(tx);
+    if (!isPostable(tx) || d === '' || d > asOf) continue;
+    const lines = (tx.lines || []).filter(l => l && inventory.has(l.accountId)).map(l => `${l.accountId}:${lineAmount(l, tx)}`);
+    if (lines.length) keys.push(`${tx.id}|${d}|${lines.sort().join(',')}`);
+  }
+  const opening = accounts.filter(a => inventory.has(a.id)).map(a => `${a.id}:${Number(a.openingBalanceCents) || 0}`).sort();
+  return fnv64([...keys.sort(), `opening|${opening.join(',')}`].join('\n'));
+}
+
+/** Shares `cents` over `weights` (all positive) by the largest remainder, so the parts add back to it exactly. */
+function spread(cents: number, weights: number[]): number[] {
+  const total = weights.reduce((s, w) => s + w, 0);
+  const raw = weights.map(w => (cents * w) / total);
+  const parts = raw.map(r => Math.trunc(r));
+  let left = cents - parts.reduce((s, p) => s + p, 0);
+  const order = raw.map((r, i) => [Math.abs(r - parts[i]), i] as const).sort((a, b) => b[0] - a[0] || a[1] - b[1]);
+  for (let k = 0; left !== 0 && k < order.length; k++, left -= Math.sign(left)) parts[order[k][1]] += Math.sign(left);
+  return parts;
+}
+
+/**
+ * The closing snapshot at `asOf`, per item and location. The history is read whole (any date) for each item's start,
+ * then the moves dated through `asOf` are summed: a move written first but dated later does not leak into it.
+ * Units the history starts with have no value basis: they are kept at no location and the closing says it is
+ * incomplete. A change of value with no units and no location (a revaluation) is spread over the item's locations by
+ * their quantity on the date (largest remainder), and stays at no location only when no location holds units.
+ */
+export function buildStockClosing(input: { workspaceId: string; asOf: string; moves: StockMove[]; inventoryBalanceCents: number; booksChecksum?: string; builtBy: string; at: string }): StockClosing {
+  const starts = historyStarts(input.moves);
   const covered = movesUpTo(input.moves, input.asOf);
   const byItem = new Map<string, StockMove[]>();
   for (const m of covered) byItem.set(m.itemId, [...(byItem.get(m.itemId) || []), m]);
   const rows: StockClosingRow[] = [];
+  const incompleteItems: StockClosing['incompleteItems'] = [];
   for (const [itemId, list] of byItem) {
-    const ordered = orderedMoves(list);
     const itemName = String(list.find(m => m.itemName)?.itemName || itemId);
     const at = new Map<string, { quantity: number; valueCents: number; moves: StockMove[] }>();
     const slot = (where: string) => at.get(where) || at.set(where, { quantity: 0, valueCents: 0, moves: [] }).get(where)!;
-    if (ordered[0].quantityBefore) slot(NO_LOCATION).quantity = round6(Number(ordered[0].quantityBefore) || 0);
-    for (const m of ordered) {
+    const start = starts.get(itemId) || 0;
+    if (start) { slot(NO_LOCATION).quantity = start; incompleteItems.push({ itemId, itemName, quantity: start }); }
+    let unplaced = 0;
+    for (const m of list) {
+      if (!m.locationId && !Number(m.quantity)) { unplaced += Number(m.valueCents) || 0; continue; }
       const s = slot(m.locationId || NO_LOCATION);
       s.quantity = round6(s.quantity + (Number(m.quantity) || 0));
       s.valueCents += Number(m.valueCents) || 0;
       s.moves.push(m);
     }
+    if (unplaced) {
+      const holding = [...at].filter(([, s]) => s.quantity > 0);
+      if (holding.length) spread(unplaced, holding.map(([, s]) => s.quantity)).forEach((c, i) => { holding[i][1].valueCents += c; });
+      else slot(NO_LOCATION).valueCents += unplaced;
+    }
     for (const [locationId, s] of at) {
-      rows.push({ itemId, itemName, locationId, quantity: s.quantity, valueCents: s.valueCents, moveCount: s.moves.length, checksum: movesChecksum(s.moves) });
+      if (s.quantity === 0 && s.valueCents === 0 && s.moves.length === 0) continue;
+      rows.push({ itemId, itemName, locationId, quantity: s.quantity, valueCents: s.valueCents, moveCount: s.moves.length, checksum: fnv64(`${locationId === NO_LOCATION ? start : 0}|${movesChecksum(s.moves)}`) });
     }
   }
   rows.sort((a, b) => a.itemName.localeCompare(b.itemName) || a.locationId.localeCompare(b.locationId));
   const stockValueCents = rows.reduce((s, r) => s + r.valueCents, 0);
+  const startKey = [...byItem.keys()].sort().map(id => `${id}:${starts.get(id) || 0}`).join(',');
   return {
-    workspaceId: input.workspaceId, asOf: input.asOf, rows, moveCount: covered.length, checksum: movesChecksum(covered),
+    workspaceId: input.workspaceId, asOf: input.asOf, rows, moveCount: covered.length, checksum: fnv64(`${movesChecksum(covered)}|${startKey}`),
+    ...(input.booksChecksum ? { booksChecksum: input.booksChecksum } : {}),
     stockValueCents, inventoryBalanceCents: input.inventoryBalanceCents, differenceCents: stockValueCents - input.inventoryBalanceCents,
+    complete: incompleteItems.length === 0, incompleteItems: incompleteItems.sort((x, y) => x.itemName.localeCompare(y.itemName)),
     builtAt: input.at, builtBy: input.builtBy,
   };
 }
@@ -181,47 +239,62 @@ export function datedQuantities(moves: StockMove[]): Map<string, Array<{ date: s
   return out;
 }
 
-/** Check (b): the first day each item ended below zero. */
-export function negativeStockDays(moves: StockMove[]): { ok: boolean; items: NegativeDay[]; message: string } {
+/**
+ * Check (b): the first day, through `asOf` when given, each item ended below zero. The dated quantities are
+ * reconstructed from all the moves (any date), then read up to `asOf`.
+ */
+export function negativeStockDays(moves: StockMove[], asOf?: string): { ok: boolean; items: NegativeDay[]; message: string } {
   const names = new Map(moves.map(m => [m.itemId, String(m.itemName || m.itemId)]));
   const items: NegativeDay[] = [];
   for (const [itemId, days] of datedQuantities(moves)) {
-    const first = days.find(d => d.quantity < 0);
+    const first = days.find(d => d.quantity < 0 && (!asOf || d.date <= asOf));
     if (first) items.push({ itemId, itemName: names.get(itemId) || itemId, date: first.date, quantity: first.quantity });
   }
   items.sort((a, b) => a.date.localeCompare(b.date) || a.itemName.localeCompare(b.itemName));
   const message = items.length === 0
-    ? 'No item is below zero on any day.'
+    ? `No item is below zero on any day${asOf ? ` through ${asOf}` : ''}.`
     : items.slice(0, 5).map(i => `${i.itemName} is at ${i.quantity} at the end of ${i.date}`).join('; ') + (items.length > 5 ? `; and ${items.length - 5} more items` : '') + '.';
   return { ok: items.length === 0, items, message };
 }
 
-/** Check (c): whether the moves a snapshot covers are still the moves it was built from. */
-export function closingFreshness(closing: Pick<StockClosing, 'asOf' | 'checksum' | 'moveCount' | 'rows'>, moves: StockMove[]): { fresh: boolean; changedItems: string[]; message: string } {
-  const covered = movesUpTo(moves, closing.asOf);
-  if (movesChecksum(covered) === closing.checksum) return { fresh: true, changedItems: [], message: `The stock closing of ${closing.asOf} still matches its ${closing.moveCount} stock moves.` };
-  const now = buildStockClosing({ workspaceId: '', asOf: closing.asOf, moves: covered, inventoryBalanceCents: 0, builtBy: '', at: '' });
+/**
+ * Check (c): whether a snapshot still matches what it was built from: its stock moves (and each item's history start)
+ * and, when it kept one and `booksChecksum` is given, the entries through its date that touch Inventory (a journal
+ * posted during a partial unlock).
+ */
+export function closingFreshness(closing: Pick<StockClosing, 'asOf' | 'checksum' | 'moveCount' | 'rows'> & { booksChecksum?: string }, moves: StockMove[], booksChecksum?: string): { fresh: boolean; changedItems: string[]; booksChanged: boolean; message: string } {
+  const now = buildStockClosing({ workspaceId: '', asOf: closing.asOf, moves, inventoryBalanceCents: 0, builtBy: '', at: '' });
+  const booksChanged = Boolean(closing.booksChecksum && booksChecksum && closing.booksChecksum !== booksChecksum);
+  const movesChanged = now.checksum !== closing.checksum;
+  if (!movesChanged && !booksChanged) return { fresh: true, changedItems: [], booksChanged: false, message: `The stock closing of ${closing.asOf} still matches its ${closing.moveCount} stock moves${closing.booksChecksum && booksChecksum ? ' and the Inventory entries' : ''}.` };
   const key = (r: StockClosingRow) => `${r.itemId}\u0000${r.locationId}`;
-  const then = new Map(closing.rows.map(r => [key(r), r.checksum]));
+  const then = new Map(closing.rows.map(r => [key(r), r]));
   const nowRows = new Map(now.rows.map(r => [key(r), r]));
   const changed = new Set<string>();
-  for (const r of now.rows) if (then.get(key(r)) !== r.checksum) changed.add(r.itemName);
+  for (const r of now.rows) { const t = then.get(key(r)); if (!t || t.checksum !== r.checksum || t.valueCents !== r.valueCents || t.quantity !== r.quantity) changed.add(r.itemName); }
   for (const r of closing.rows) if (!nowRows.has(key(r))) changed.add(r.itemName);
-  const changedItems = [...changed].sort();
-  return {
-    fresh: false, changedItems,
-    message: `The stock closing of ${closing.asOf} is stale: its stock moves were changed since it was taken (${covered.length} now, ${closing.moveCount} then${changedItems.length ? `; ${changedItems.slice(0, 5).join(', ')}` : ''}).`,
-  };
+  const changedItems = movesChanged ? [...changed].sort() : [];
+  const why = [
+    movesChanged ? `its stock moves were changed since it was taken (${now.moveCount} now, ${closing.moveCount} then${changedItems.length ? `; ${changedItems.slice(0, 5).join(', ')}` : ''})` : '',
+    booksChanged ? `an entry to Inventory dated on or before ${closing.asOf} was posted, changed or removed since it was taken` : '',
+  ].filter(Boolean).join('; and ');
+  return { fresh: false, changedItems, booksChanged, message: `The stock closing of ${closing.asOf} is stale: ${why}.` };
 }
 
-/** The nightly Data Health checks (the context carries the stock moves and the stock closings). */
+/** The nightly Data Health checks (the context carries the stock moves, the stock closings and which sources were capped). */
 export const STOCK_INVARIANT_CHECKS: DataCheck[] = [
   {
     id: 'stock-vs-books',
     label: 'Stock value differs from the Inventory account (EG-7)',
     remedy: 'Open Inventory Valuation and the entries named: post the stock change with its entry, or correct the journal to Inventory.',
-    run: ({ stockMoves, transactions, accounts, today }) => {
-      if (!stockMoves?.length) return [];
+    run: ({ stockMoves, transactions, accounts, today, truncated }) => {
+      // the browser does not load the stock moves: nothing to compare (an empty list is compared: stock is then 0)
+      if (!stockMoves) return [];
+      const capped = (truncated || []).filter(t => t === 'stockMoves' || t === 'transactions');
+      if (capped.length) {
+        return [{ id: `stock-vs-books-not-compared-${capped.join('-')}`, checkId: 'stock-vs-books', severity: 'low', title: 'Stock and the Inventory account were not compared',
+          description: `Only part of the ${capped.map(c => (c === 'stockMoves' ? 'stock history' : 'entries')).join(' and the ')} could be read, so a comparison would be wrong. Open Inventory Valuation to compare them for a date.` }];
+      }
       const check = checkStockAgainstBooks({ asOf: today, moves: stockMoves, entries: transactions, accounts });
       return check.ok ? [] : [{ id: `stock-vs-books-${check.differenceCents}`, checkId: 'stock-vs-books', severity: 'high', title: `Stock and the Inventory account differ by ${money(Math.abs(check.differenceCents))}`, description: check.message }];
     },
@@ -230,7 +303,7 @@ export const STOCK_INVARIANT_CHECKS: DataCheck[] = [
     id: 'stock-negative-on-date',
     label: 'Items below zero on a day, by the moves\' dates (EG-7)',
     remedy: 'Date the stock that came in on or before the day it went out, or correct the move dated too early.',
-    run: ({ stockMoves }) => negativeStockDays(stockMoves || []).items.map((i): CheckFinding => ({
+    run: ({ stockMoves, truncated }) => (truncated || []).includes('stockMoves') ? [] : negativeStockDays(stockMoves || []).items.map((i): CheckFinding => ({
       id: `stock-negative-on-date-${i.itemId}-${i.date}`, checkId: 'stock-negative-on-date', severity: 'medium',
       title: `${i.itemName} is below zero on ${i.date}`, description: `${i.itemName} ends ${i.date} at ${i.quantity}, by the dates of its stock moves.`,
       record: { type: 'item', id: i.itemId },
@@ -238,10 +311,10 @@ export const STOCK_INVARIANT_CHECKS: DataCheck[] = [
   },
   {
     id: 'stock-closing-stale',
-    label: 'Stock closings whose stock moves changed (EG-7)',
+    label: 'Stock closings whose stock moves or Inventory entries changed (EG-7)',
     remedy: 'An owner takes the stock closing again (Inventory Valuation), after checking why a closed period\'s stock changed.',
-    run: ({ stockMoves, stockClosings }) => (stockClosings || []).flatMap(c => {
-      const f = closingFreshness(c, stockMoves || []);
+    run: ({ stockMoves, stockClosings, transactions, accounts, truncated }) => (truncated || []).some(t => t === 'stockMoves' || t === 'transactions') ? [] : (stockClosings || []).flatMap(c => {
+      const f = closingFreshness(c, stockMoves || [], inventoryEntriesChecksum(transactions, accounts, c.asOf));
       return f.fresh ? [] : [{ id: `stock-closing-stale-${c.asOf}-${c.checksum}`, checkId: 'stock-closing-stale', severity: 'high' as const, title: `The stock closing of ${c.asOf} is stale`, description: f.message }];
     }),
   },

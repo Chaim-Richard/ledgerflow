@@ -64,6 +64,8 @@ export interface CheckContext {
   stockMoves?: StockMove[];
   /** EG-7: the stock closing snapshots (server-only), checked against the moves they cover */
   stockClosings?: StockClosing[];
+  /** The sources the nightly run read only up to its cap (a check over them would compare partial lists). */
+  truncated?: string[];
   /** Payment records (CB-23: each has its entry in the ledger). */
   payments?: Array<Partial<Payment> & { id: string; number?: string; status?: string; amountCents?: number; exchangeRate?: number; paymentExchangeRate?: number; paymentDate?: string; date?: string; contactName?: string; entityName?: string }>;
 }
