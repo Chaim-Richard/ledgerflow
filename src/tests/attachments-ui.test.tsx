@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import AttachmentsPanel from '../components/common/AttachmentsPanel';
+import { attachFiles } from '../services/attachmentActions';
 import InvoiceModal from '../components/sales/InvoiceModal';
 import { setComponentWorkspace } from './helpers/componentFixtures';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -60,6 +61,44 @@ describe('The files panel', () => {
     assert.equal(writes.length, 1, 'only the file that fits is written');
     assert.deepEqual([writes[0].p_table, writes[0].p_data.name, writes[0].p_data.linkedCollection, writes[0].p_data.linkedId, writes[0].p_data.uid], ['documents', 'contract.pdf', 'invoices', 'inv1', 'test-user']);
     assert.match(String(writes[0].p_data.fileUrl), /^data:application\/pdf;base64,/);
+  });
+
+  test('dropped files use the same size check and durable attachment write as selected files', async () => {
+    setComponentWorkspace('bookkeeper');
+    render(<AttachmentsPanel target={target} />);
+    await waitFor(() => assert.equal(screen.getAllByRole('listitem').length, 2));
+    const file = new PageFile(['new file'], 'drop.pdf', { type: 'application/pdf' });
+    await act(async () => { fireEvent.drop(screen.getByTestId('attachment-dropzone'), { dataTransfer: { files: [file] } }); });
+    await waitFor(() => assert.equal(screen.getAllByRole('listitem').length, 3));
+    const writes = calls.filter(c => /\/rpc\/lf_set/.test(c.url)).map(c => (c.body as { p_table: string; p_data: Record<string, unknown> }));
+    assert.equal(writes.length, 1);
+    assert.deepEqual([writes[0].p_table, writes[0].p_data.name, writes[0].p_data.linkedCollection, writes[0].p_data.linkedId], ['documents', 'drop.pdf', 'invoices', 'inv1']);
+  });
+
+  test('a record change while FileReader is pending cancels the file write', async () => {
+    setComponentWorkspace('bookkeeper');
+    let current = true;
+    const pending = attachFiles('component-workspace', 'test-user', target, [new PageFile(['cancel me'], 'cancel.pdf', { type: 'application/pdf' })], () => current);
+    current = false;
+    const result = await pending;
+    assert.equal(result.saved.length, 0);
+    assert.deepEqual(result.refused.map(file => file.name), ['cancel.pdf']);
+    assert.match(result.refused[0].reason, /workspace changed/);
+    assert.equal(calls.filter(call => /\/rpc\/lf_set/.test(call.url)).length, 0);
+  });
+
+  test('PDF/image preview stays inside a named dialog and Escape returns to its opener', async () => {
+    setComponentWorkspace('viewer');
+    const row = stored('image1', 'photo.png', 'someone', '2026-10-06T00:00:00Z');
+    rows = [{ ...row, data: { ...row.data, fileUrl: 'data:image/png;base64,AA==', mimeType: 'image/png' } } as never];
+    render(<AttachmentsPanel target={target} />);
+    await waitFor(() => assert.equal(screen.getAllByRole('listitem').length, 1));
+    const opener = screen.getByRole('button', { name: 'Preview photo.png' });
+    fireEvent.click(opener);
+    assert.ok(screen.getByRole('dialog', { name: 'photo.png' }));
+    assert.ok(screen.getByRole('img', { name: 'photo.png' }));
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'photo.png' }), { key: 'Escape' });
+    await waitFor(() => assert.equal(screen.queryByRole('dialog'), null));
   });
 
   test('a support ticket\'s files are read from the ticket\'s own workspace (a platform admin reading feedback)', async () => {

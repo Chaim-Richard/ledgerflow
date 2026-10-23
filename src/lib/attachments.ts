@@ -14,7 +14,7 @@ export const MAX_FILES_AT_ONCE = 10;
 // chartAccounts (BD-04): a file kept with one account's workpaper for a month
 // assets (A-8): a file kept with the existing fixed asset register's maintenance log
 // inventory (A-78): a visual item reference, stored as a normal linked attachment
-export type AttachmentCollection = 'invoices' | 'bills' | 'customers' | 'vendors' | 'estimates' | 'purchaseOrders' | 'supportTickets' | 'chartAccounts' | 'assets' | 'inventory';
+export type AttachmentCollection = 'invoices' | 'bills' | 'customers' | 'vendors' | 'creditNotes' | 'vendorCredits' | 'estimates' | 'purchaseOrders' | 'supportTickets' | 'chartAccounts' | 'assets' | 'inventory';
 
 /** The record a file belongs to, and how it is named in lists ("Invoice INV-12"). */
 export interface AttachmentTarget {
@@ -39,6 +39,17 @@ export interface Attachment {
   linkedCollection?: AttachmentCollection;
   linkedId?: string;
   linkedLabel?: string;
+}
+
+export type AttachmentPreviewKind = 'image' | 'pdf' | null;
+
+/** Preview only known-safe embedded formats. Other files remain downloadable but are not embedded. */
+export function attachmentPreviewKind(file: Pick<Attachment, 'mimeType' | 'fileUrl'>): AttachmentPreviewKind {
+  const mime = String(file.mimeType || '').toLowerCase();
+  const url = String(file.fileUrl || '');
+  if (mime === 'application/pdf' && /^data:application\/pdf;base64,/i.test(url)) return 'pdf';
+  if (['image/jpeg', 'image/png', 'image/webp'].includes(mime) && url.toLowerCase().startsWith(`data:${mime};base64,`)) return 'image';
+  return null;
 }
 
 /** Why this file can't be kept, or null. */

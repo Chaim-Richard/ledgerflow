@@ -23,14 +23,30 @@ export interface AttachResult {
  * Keep files with a record (K-07). Each file is checked (size), read and saved on its own, so one
  * refused file doesn't stop the others; nothing is reported as saved unless the database took it.
  */
-export async function attachFiles(workspaceId: string, uid: string, target: AttachmentTarget, files: File[]): Promise<AttachResult> {
+export async function attachFiles(
+  workspaceId: string,
+  uid: string,
+  target: AttachmentTarget,
+  files: File[],
+  canContinue: () => boolean = () => true,
+): Promise<AttachResult> {
   const result: AttachResult = { saved: [], refused: [] };
   for (const [i, file] of files.entries()) {
     if (i >= MAX_FILES_AT_ONCE) { result.refused.push({ name: file.name, reason: `at most ${MAX_FILES_AT_ONCE} files at once` }); continue; }
+    if (!canContinue()) {
+      result.refused.push({ name: file.name, reason: 'The record or workspace changed before this file was attached' });
+      break;
+    }
     const problem = attachmentProblem(file);
     if (problem) { result.refused.push({ name: file.name, reason: problem }); continue; }
     try {
-      const record = attachmentRecord(file, await readAsDataUrl(file), target, { uid, workspaceId });
+      const fileUrl = await readAsDataUrl(file);
+      // FileReader yields to the event loop. Recheck the user's selected record before writing it.
+      if (!canContinue()) {
+        result.refused.push({ name: file.name, reason: 'The record or workspace changed before this file was attached' });
+        break;
+      }
+      const record = attachmentRecord(file, fileUrl, target, { uid, workspaceId });
       const ref = await addDoc(collection(db, 'documents'), record);
       result.saved.push({ ...record, id: ref.id });
     } catch (err) {
