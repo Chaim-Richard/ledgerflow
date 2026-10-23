@@ -131,6 +131,8 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Expense by Employee', componentName: 'ExpenseByEmployeeReportView' },
     { label: 'Time by Person and Project', componentName: 'TimeByProjectReportView' },
     { label: 'Bank Holidays and Due Dates', componentName: 'BankHolidaysReportView' },
+    { label: 'Israeli Bank and Branch Codes', componentName: 'IsraeliBankCodesReportView' },
+    { label: 'US Per Diem Rates (GSA)', componentName: 'GsaPerDiemReportView' },
     { label: 'Expense Receipt Checklist', componentName: 'ExpenseReceiptChecklistReportView' },
     { label: 'Duplicate Contact Review', componentName: 'DuplicateContactReviewReportView' },
     { label: 'Purchase Price Variance', componentName: 'PurchasePriceVarianceReportView' },
