@@ -34,7 +34,9 @@ import { isPostable } from '../../lib/txFilters';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { formatTzDate } from '../../lib/utils';
 import { spreadCents, type SpreadBasis } from '../../lib/landedCostPreview';
-import { compareMoves, type StockMove } from '../../lib/stockMoves';
+import { datedMoves, type StockMove } from '../../lib/stockMoves';
+import { calculateDocumentTax } from '../../lib/documentMath';
+import { allocateCents } from '../../lib/Allocation';
 import type { ChartAccount } from '../../types';
 import { movingAverageCents } from './cogsStockService';
 import { ledgerWrite } from './ledgerDoor';
@@ -160,20 +162,46 @@ function roleAccount(accounts: ChartAccount[], mappings: Record<string, string>,
 const INVENTORY_KEYS = ['inventory', 'stock', 'inventory asset'];
 const COGS_KEYS = ['cogs', 'cost of goods sold', 'direct costs'];
 
-/** The share of a received line's units still on hand: each later depletion of the item takes its part of the pool. */
+/**
+ * The share of a received line's units still on hand. The line's units r follow the item's history in date order
+ * (datedMoves: the pool before and after each move as dated, not as written): each depletion takes its part of the
+ * pool then on hand (r × out / pool); a sale's reversal or a customer's return gives back what that sale line took
+ * (per unit, by the invoice line it names); the line's own reversal or return to the vendor takes its units out.
+ * Share = r / the units the line brought in net.
+ * Round 2 review: 10 in, 5 sold, the sale reversed → 1.0; 10 in 10-01, 10 in 10-02 (written later), 5 sold 10-03 → 0.75.
+ */
 export function remainingShare(moves: Array<StockMove & { id?: string }>, billId: string, line: number): number {
-  const sorted = [...moves].sort(compareMoves);
-  const start = sorted.findIndex(m => m.kind === 'purchase' && m.documentType === 'bill' && m.documentId === billId && Number(m.documentLine) === line);
+  const sorted = datedMoves(moves);
+  const own = (m: StockMove) => Number(m.documentLine) === line && ((m.documentType === 'bill' && m.documentId === billId) || m.sourceBillId === billId);
+  const start = sorted.findIndex(m => m.kind === 'purchase' && own(m));
   if (start < 0) return 0;
-  let share = 1;
-  for (const m of sorted.slice(start + 1)) {
+  const saleKey = (m: StockMove) => text(m.documentLineId) || `${text(m.documentType)}:${text(m.documentId)}`;
+  const taken = new Map<string, { units: number; share: number }>();
+  let r = 0;
+  let received = 0;
+  for (const m of sorted.slice(start)) {
     const q = Number(m.quantity) || 0;
-    if (q >= 0 || TRANSFER_KINDS.includes(m.kind)) continue;
-    if (m.documentType === 'bill' && m.documentId === billId && Number(m.documentLine) === line) continue; // its own reversal: the net received is used
-    const before = Number(m.quantityBefore) || 0;
-    share = before <= 0 ? 0 : share * Math.max(0, Number(m.quantityAfter) || 0) / before;
+    if (q === 0 || TRANSFER_KINDS.includes(m.kind)) continue;
+    if (own(m)) { r = Math.max(0, r + q); received += q; continue; }
+    const pool = Number(m.quantityBefore) || 0;
+    if (q < 0) {
+      const out = pool <= 0 ? r : Math.min(r, r * -q / pool);
+      r -= out;
+      if (m.kind === 'sale') {
+        const was = taken.get(saleKey(m)) || { units: 0, share: 0 };
+        taken.set(saleKey(m), { units: was.units - q, share: was.share + out });
+      }
+    } else if (m.kind === 'sale-reversal' || m.kind === 'return') {
+      const was = taken.get(saleKey(m));
+      if (was && was.units > 0) {
+        const units = Math.min(q, was.units);
+        const back = was.share * units / was.units;
+        r += back;
+        taken.set(saleKey(m), { units: was.units - units, share: was.share - back });
+      }
+    }
   }
-  return Math.min(1, Math.max(0, share));
+  return received <= 0 ? 0 : Math.min(1, Math.max(0, r / received));
 }
 
 /** What the charge is: its amount, account and labels. */
@@ -193,7 +221,11 @@ async function readCharge(db: Firestore, t: DbTransaction, input: LandedCostInpu
   const split = ((bill.splits as Split[] | undefined) || [])[c.line];
   if (!split) throw new LandedCostError(400, `Bill ${text(bill.number) || c.billId} has no line ${c.line + 1}`);
   if (split.itemId || split.landedCost) throw new LandedCostError(400, `Line ${c.line + 1} of bill ${text(bill.number) || c.billId} is ${split.itemId ? 'an item line' : 'already spread over that bill\'s items'}: choose a freight, duty or other charge line`);
-  const cents = Math.round(Number(split.amountCents) || 0);
+  // round 2 review: the line's net expense as the bill posting booked it (buildBillLines: amount − tax, spread over the
+  // lines by their amounts), so a tax-inclusive 120.00 with 20.00 tax lands 100.00 and the tax stays reclaimable
+  const splits = (bill.splits as Split[] | undefined) || [];
+  const net = Math.round(Number(bill.amountCents) || 0) - Math.round(calculateDocumentTax(bill as never) || 0);
+  const cents = allocateCents(net, splits.map(x => Math.round(Number(x.amountCents) || 0)))[c.line] || 0;
   if (cents <= 0) throw new LandedCostError(400, 'The charge line has no amount to land');
   // EG-6 review: a live posting is one that is neither a reversal, nor marked reversed, nor reversed by another entry
   const postings = (await t.get(db.collection('transactions').where('workspaceId', '==', input.workspaceId).where('metadata.billId', '==', c.billId))).docs

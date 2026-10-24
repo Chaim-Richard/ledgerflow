@@ -92,6 +92,30 @@ describe('EG-6 landed cost: preview → post on screen', () => {
     assert.equal(within(panel).queryByRole('button', { name: 'Undo landed cost' }), null);
   });
 
+  test('a manual charge keeps its allocation id for a retry and gets a fresh one once it has posted', async () => {
+    setComponentWorkspace('owner');
+    render(<LandedCostPreviewReportView />);
+    const panel = screen.getByRole('region', { name: 'Post landed cost' });
+    await act(async () => { fireEvent.change(within(panel).getByLabelText('Charge to land'), { target: { value: '__manual__' } }); });
+    await act(async () => {
+      fireEvent.change(within(panel).getByLabelText('Amount to land'), { target: { value: '30.00' } });
+      fireEvent.change(within(panel).getByLabelText('Offset account'), { target: { value: 'freight' } });
+    });
+    const review = () => act(async () => { fireEvent.click(within(panel).getByRole('button', { name: 'Review what will post' })); });
+    const post = () => act(async () => { fireEvent.click(within(panel).getByRole('button', { name: 'Post landed cost' })); });
+    const idOf = (i: number) => (sent[i].body.charge as { allocationId: string }).allocationId;
+    await review();
+    nextPost = new Response(JSON.stringify({ error: 'Network hiccup' }), { status: 500 });
+    await post();
+    await post();
+    assert.equal(idOf(1), idOf(0));
+    assert.equal(idOf(2), idOf(0), 'a retry of the same charge keeps its id (the server posts it once)');
+    await act(async () => { fireEvent.change(within(panel).getByLabelText('Amount to land'), { target: { value: '12.00' } }); });
+    await review();
+    assert.notEqual(idOf(3), idOf(0), 'a new charge after the post gets a fresh id');
+    assert.equal((sent[3].body.charge as { amountCents: number }).amountCents, 1200);
+  });
+
   test('a plan that changed since the review is shown again, not posted', async () => {
     setComponentWorkspace('accountant');
     render(<LandedCostPreviewReportView />);
