@@ -10,6 +10,7 @@ import { getDb } from '../../db/firestore';
 import type { DocumentData } from '../../db/firestore';
 import { getAbsoluteTotal } from '../../../lib/txFilters';
 import { executeCommand } from '../../utils/commandExecutor';
+import { deriveScopedOperationKey, extractCanonicalOperationId } from '../../utils/idempotency';
 import { requirePlanCapacity } from '../../middleware/planCapacity';
 import { requireOpenPeriod } from '../../middleware/periodLock';
 import { writeServerAuditLog } from '../../services/auditLogService';
@@ -102,6 +103,15 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
     // budget figures) go through the pool, never while the transaction holds a connection.
     const user = requestUser(req);
     const db = getDb();
+    // a completed command is replayed before any check that depends on today's settings (label rules,
+    // budgets): a client recovering a lost answer gets the saved result, not a refusal
+    const operationId = extractCanonicalOperationId(req);
+    if (operationId) {
+      const done = (await db.collection('idempotencyKeys').doc(deriveScopedOperationKey(String(workspaceId).trim(), 'TRANSACTION_CREATE', operationId)).get()).data();
+      if (done?.status === 'success') {
+        return executeCommand(req, res, workspaceId, 'TRANSACTION_CREATE', async () => { throw new HttpError('The operation was not replayed', 409); });
+      }
+    }
     let validatedTx: Transaction;
     let planned: BudgetWarning[];
     try {

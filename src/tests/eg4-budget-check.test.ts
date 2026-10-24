@@ -165,4 +165,16 @@ describe('EG-4: the budget check when posting', { skip: !url && 'LF_TEST_DATABAS
     assert.equal(res.status, 200, JSON.stringify(res.body));
     assert.equal(res.body.budgetWarnings, undefined);
   });
+
+  test('10. a saved single entry retried after a refusing label rule is turned on: replayed, not refused', async () => {
+    const tx = journal('rent', 1_000, '2026-12-05');
+    const send = () => fetch(`${base}/api/v1/transactions`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': OWNER, 'idempotency-key': `eg4-replay-${tx.id}` }, body: JSON.stringify({ workspaceId: ws, transaction: tx }) });
+    const first = await send();
+    assert.equal(first.status, 200, await first.text());
+    await db.collection('workspaces').doc(ws).update({ dimensions: [{ id: 'property', name: 'Property', requiredOn: { accountIds: [id('rent')], since: '2026-12-01', refuse: true } }] });
+    const again = await send();
+    assert.equal(again.status, 200, await again.text());
+    const fresh = await single(journal('rent', 1_000, '2026-12-06'));
+    assert.equal(fresh.status, 400, 'a new entry without the label is still refused');
+  });
 });
