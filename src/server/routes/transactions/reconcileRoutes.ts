@@ -229,10 +229,10 @@ export function registerReconcileRoutes(transactionRouter: express.Router): void
   // EG-9: the bank rules again over the lines not yet matched (suggestions only; owners and accountants)
   transactionRouter.post('/bank-lines/apply-rules', async (req, res) => {
     try {
-      const { workspaceId } = z.object({ workspaceId: z.string().min(1).max(200) }).strict().parse(req.body);
+      const { workspaceId, after, limit } = z.object({ workspaceId: z.string().min(1).max(200), after: z.string().min(1).max(200).optional(), limit: z.number().int().min(1).max(5000).optional() }).strict().parse(req.body);
       const user = requestUser(req);
       if (user.developerWorkspaceId && user.developerWorkspaceId !== workspaceId) return res.status(403).json({ error: 'This API key is for another workspace' });
-      res.json(await rerunBankRules(getDb(), { workspaceId, uid: user.uid }));
+      res.json(await rerunBankRules(getDb(), { workspaceId, uid: user.uid, after, limit }));
     } catch (e) {
       if (e instanceof z.ZodError) return res.status(400).json({ error: 'Invalid request', details: e.issues });
       if (e instanceof BankRuleError) return res.status(e.status).json({ error: e.message });

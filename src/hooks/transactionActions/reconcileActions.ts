@@ -11,6 +11,7 @@ import { handleFirestoreError, OperationType } from '../../lib/firebaseUtils';
 import type { ActionContext, ReconcileOperation } from './shared';
 import { errorMessage } from './shared';
 import type { PostingHelpers } from './postingHelpers';
+import { reconcileCreateDefaults, type ReconcileCreateChoice } from '../../lib/bankRules';
 
 /** Bank reconciliation: match, ignore, create from a bank line, undo, automatic matching. (F-05, moved from useTransactionActions.) */
 export function createReconcileActions(ctx: ActionContext, posting: PostingHelpers) {
@@ -60,16 +61,30 @@ export function createReconcileActions(ctx: ActionContext, posting: PostingHelpe
     }
   };
 
-  const handleReconcileCreate = async (bankLine: BankStatementLine) => {
+  /**
+   * Create an entry from a bank line. EG-9: the bank rules' suggestion stored on the line (account,
+   * contact, labels) is the starting point; `choice` is what the person kept or changed on screen.
+   */
+  const handleReconcileCreate = async (bankLine: BankStatementLine, choice: ReconcileCreateChoice = {}) => {
     if (!user || !currentWorkspaceId) return;
     setIsSyncing(true);
     try {
       const txId = doc(collection(db, 'transactions')).id;
-      const targetAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id;
-      if (!targetAccId) throw new Error('No expense account is available for the new entry.');
-      
-      const rawLines = [{ accountId: targetAccId, accountName: 'General Expense', amountCents: bankLine.amountCents }];
+      const prefill = reconcileCreateDefaults(bankLine, accounts);
+      // what the person sent wins, also a field they cleared; the account falls back to the pre-filled one
+      const chosen: ReconcileCreateChoice = { ...prefill, ...choice, accountId: choice.accountId || prefill.accountId };
+      const target = accounts.find(a => a.id === chosen.accountId);
+      if (!target) throw new Error('No expense account is available for the new entry.');
+      const tags = chosen.tags && chosen.tags.length ? chosen.tags : undefined;
+      const dimensions = chosen.dimensions && Object.keys(chosen.dimensions).length ? chosen.dimensions : undefined;
+
+      const rawLines = [{ accountId: target.id, accountName: target.name || 'General Expense', amountCents: bankLine.amountCents, ...(tags ? { tags } : {}), ...(dimensions ? { dimensions } : {}) }];
       const balancedLines = balanceTransactionLines(rawLines, bankLine.amountCents);
+      const ruleIds = bankLine.suggestion?.ruleIds;
+      const metadata = {
+        ...(chosen.contactId ? { contactId: chosen.contactId, ...(chosen.contactKind ? { contactKind: chosen.contactKind } : {}) } : {}),
+        ...(ruleIds?.length ? { suggestedByRules: ruleIds } : {}),
+      };
 
       const txData = {
         id: txId,
@@ -81,7 +96,10 @@ export function createReconcileActions(ctx: ActionContext, posting: PostingHelpe
         status: 'reconciled',
         type: 'actual',
         createdAt: new Date().toISOString(),
-        lines: balancedLines
+        lines: balancedLines,
+        ...(tags ? { tags } : {}),
+        ...(chosen.contactName ? { payee: chosen.contactName } : {}),
+        ...(Object.keys(metadata).length ? { metadata } : {}),
       };
 
       const res = await fetch('/api/v1/transactions/reconcile', {

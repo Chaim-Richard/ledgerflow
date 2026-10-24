@@ -93,20 +93,36 @@ export async function prepareBankRuleSuggestions<L extends LineLike>(db: Firesto
   return { fieldsFor: (line: L) => fields.get(line) || {}, apply: applyHits };
 }
 
-export interface RerunResult { checked: number; changed: number; suggested: number; truncated: boolean }
+/** The fingerprints among `lines` that a bank line of the workspace already has. */
+export async function existingImportIdentities(db: Firestore, reader: Reader | null, workspaceId: string, lines: Array<{ importIdentity?: string }>): Promise<Set<string>> {
+  const wanted = [...new Set(lines.map(l => l.importIdentity).filter((v): v is string => !!v))];
+  const found = new Set<string>();
+  for (let i = 0; i < wanted.length; i += 500) {
+    const q = db.collection('bankLines').where('workspaceId', '==', workspaceId).where('importIdentity', 'in', wanted.slice(i, i + 500));
+    const snap = reader ? await reader.get(q) : await q.get();
+    snap.docs.forEach(d => { const v = d.data().importIdentity; if (typeof v === 'string') found.add(v); });
+  }
+  return found;
+}
+
+export interface RerunResult { checked: number; changed: number; suggested: number; truncated: boolean; nextCursor?: string }
 
 /** POST /api/v1/transactions/bank-lines/apply-rules: the rules again over the pending lines (owners and accountants). */
-export async function rerunBankRules(db: Firestore, input: { workspaceId: string; uid: string }): Promise<RerunResult> {
+export async function rerunBankRules(db: Firestore, input: { workspaceId: string; uid: string; after?: string; limit?: number }): Promise<RerunResult> {
   const ws = (await db.collection('workspaces').doc(input.workspaceId).get()).data();
   if (!ws) throw new BankRuleError(404, 'Workspace not found');
   const role = workspaceRole(ws as never, input.uid);
   if (role !== 'owner' && role !== 'accountant') throw new BankRuleError(403, 'Only owners and accountants re-run the bank rules');
 
   const snap = await db.collection('bankLines').where('workspaceId', '==', input.workspaceId).where('status', '==', 'pending').get();
-  const pendingIds = snap.docs.filter(d => !d.data().matchedTransactionId).map(d => d.id).sort();
-  const ids = pendingIds.slice(0, MAX_RERUN_LINES);
+  // by id, from after the cursor: a workspace with more lines than one call takes goes on with nextCursor
+  const limit = Math.max(1, Math.min(MAX_RERUN_LINES, Math.floor(input.limit ?? MAX_RERUN_LINES)));
+  const pendingIds = snap.docs.filter(d => !d.data().matchedTransactionId).map(d => d.id).sort()
+    .filter(id => input.after === undefined || id > input.after);
+  const ids = pendingIds.slice(0, limit);
   const { rules, context } = await loadBankRuleInputs(db, null, input.workspaceId);
-  const result: RerunResult = { checked: 0, changed: 0, suggested: 0, truncated: pendingIds.length > ids.length };
+  const truncated = pendingIds.length > ids.length;
+  const result: RerunResult = { checked: 0, changed: 0, suggested: 0, truncated, ...(truncated ? { nextCursor: ids[ids.length - 1] } : {}) };
   for (let i = 0; i < ids.length; i += RERUN_CHUNK) {
     const chunk = ids.slice(i, i + RERUN_CHUNK);
     const part = await db.runTransaction(async (t) => {

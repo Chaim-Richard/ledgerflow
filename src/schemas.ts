@@ -210,6 +210,8 @@ export const BankLineImportSchema = z.object({
   status: z.enum(['pending', 'matched']).default('pending'),
   matchedTransactionId: z.string().nullable().optional(),
   accountId: z.string().max(200).optional(),
+  /** EG-9: the statement line's source fingerprint (generateImportIdentity); the server keeps one line per fingerprint */
+  importIdentity: z.string().min(1).max(300).optional(),
 }).strict();
 
 /** Discount, retainage and tax fields shared by invoices and bills (src/lib/taxCodes.ts, documentMath.ts). */

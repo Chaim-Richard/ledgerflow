@@ -75,6 +75,8 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
           amountCents: tx.amountCents || 0,
           status: isResolvedCategory ? 'matched' : 'pending',
           matchedTransactionId: null as string | null,
+          // EG-9: the statement's fingerprint; the server keeps one bank line per fingerprint
+          ...(tx.importIdentity ? { importIdentity: tx.importIdentity } : {}),
           createdAt: new Date().toISOString()
         };
 
@@ -140,6 +142,8 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
 
       // Bank lines and their ledger entries go to the server together (one database transaction;
       // the browser isn't allowed to write bank lines itself)
+      let skipped = 0;
+      let storedTxs = processedTxs;
       if (processedTxs.length > 0 || bankLineRecords.length > 0) {
         const token = await user.getIdToken();
         const res = await fetch('/api/v1/transactions/bulk', {
@@ -151,13 +155,21 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
           body: JSON.stringify({
             workspaceId: currentWorkspaceId,
             transactions: processedTxs,
-            bankLines: bankLineRecords.map(({ id, date, description, amountCents, status, matchedTransactionId }) => ({ id, date, description, amountCents, status, matchedTransactionId }))
+            bankLines: bankLineRecords.map(({ id, date, description, amountCents, status, matchedTransactionId, importIdentity }) => ({ id, date, description, amountCents, status, matchedTransactionId, ...(importIdentity ? { importIdentity } : {}) }))
           })
         });
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.error || 'Server rejected bulk transaction import.');
+        }
+        // EG-9: lines of the statement already imported are skipped by the server, with their entries
+        const answer = await res.json().catch(() => ({})) as { skippedDuplicates?: number; transactions?: Array<{ id?: string }> };
+        skipped = Number(answer.skippedDuplicates) || 0;
+        const saved = answer.transactions;
+        if (skipped > 0 && Array.isArray(saved)) {
+          const written = new Set(saved.map(t => t.id));
+          storedTxs = processedTxs.filter(t => written.has(t.id));
         }
       }
 
@@ -169,8 +181,8 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
         return true;
       }
       const current = useLedgerStore.getState().transactions;
-      setTransactions([...processedTxs, ...current]);
-      toast.success(`Imported ${newTransactions.length} transactions with heuristic mapping.`, { id: loader });
+      setTransactions([...storedTxs, ...current]);
+      toast.success(`Imported ${newTransactions.length - skipped} transactions${skipped ? ` (${skipped} already imported, skipped)` : ''}.`, { id: loader });
       return true;
     } catch (error) {
       // PREV-5: handleFirestoreError rethrows, so this message never showed and the import rejected

@@ -42,11 +42,21 @@ export interface BankRuleContext {
   contacts?: BankRuleContact[];
 }
 
-/** The rule's account: the checked counterparty action first, then the older targetNodeId. */
-const ruleAccountId = (rule: AutoRule): string | undefined => rule.action?.targetAccountId || rule.action?.targetNodeId || undefined;
-
 const usable = (account: ChartAccount | undefined): account is ChartAccount =>
   !!account && !account.archived && !(account as ChartAccount & { isArchived?: boolean }).isArchived && account.isActive !== false;
+
+/**
+ * The rule's account: the checked counterparty action first, then the older targetNodeId, then an
+ * older rule's targetCategory, an account *name*, matched exactly against the active chart (as
+ * MatchingEngine.resolveCategory did). A name needs the chart: without one it suggests nothing.
+ */
+function ruleAccountId(rule: AutoRule, accounts: ChartAccount[] | undefined): string | undefined {
+  const byId = rule.action?.targetAccountId || rule.action?.targetNodeId;
+  if (byId) return byId;
+  const name = rule.action?.targetCategory;
+  if (!name || !accounts) return undefined;
+  return accounts.find(a => usable(a) && a.name === name)?.id;
+}
 
 export function orderBankRules(rules: AutoRule[]): AutoRule[] {
   return [...rules].sort((a, b) => ((a.priority ?? 100) - (b.priority ?? 100)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -64,7 +74,7 @@ export function suggestFromRules(rules: AutoRule[], line: BankRuleLine, context:
   for (const rule of orderBankRules(rules)) {
     if (!rule?.id || paused.has(ruleGroupName(rule)) || !evaluateRuleCondition(rule, asEntry)) continue;
     out.ruleIds.push(rule.id);
-    const accountId = ruleAccountId(rule);
+    const accountId = ruleAccountId(rule, context.accounts);
     if (!out.accountId && accountId) {
       const account = accounts.get(accountId);
       if (!context.accounts || usable(account)) {
@@ -95,4 +105,30 @@ export function suggestFromRules(rules: AutoRule[], line: BankRuleLine, context:
 export function sameSuggestion(a: BankRuleSuggestion | null | undefined, b: BankRuleSuggestion | null | undefined): boolean {
   const key = (s: BankRuleSuggestion | null | undefined) => s ? JSON.stringify([s.accountId ?? null, s.contactId ?? null, s.tags, Object.entries(s.dimensions).sort(), s.ruleIds]) : 'null';
   return key(a) === key(b);
+}
+
+/** EG-9: what a person keeps or changes when making an entry from a bank line (Reconciliation → Create entry). */
+export interface ReconcileCreateChoice {
+  accountId?: string;
+  contactId?: string;
+  contactKind?: 'customer' | 'vendor';
+  contactName?: string;
+  tags?: string[];
+  dimensions?: Record<string, string>;
+}
+
+/**
+ * The pre-filled choice for a bank line: the rules' suggestion when its account is still usable,
+ * otherwise the first expense account (as before the rules ran on the server).
+ */
+export function reconcileCreateDefaults(line: { suggestion?: BankRuleSuggestion | null }, accounts: ChartAccount[]): ReconcileCreateChoice {
+  const s = line.suggestion || null;
+  const suggested = s?.accountId ? accounts.find(a => a.id === s.accountId) : undefined;
+  const fallback = accounts.find(a => usable(a) && (a.type === 'expense' || a.category === 'Operations')) || accounts.find(a => a.type === 'expense' || a.category === 'Operations') || accounts[0];
+  return {
+    accountId: (usable(suggested) ? suggested : fallback)?.id,
+    ...(s?.contactId ? { contactId: s.contactId, ...(s.contactKind ? { contactKind: s.contactKind } : {}) } : {}),
+    tags: s?.tags ? [...s.tags] : [],
+    dimensions: s?.dimensions ? { ...s.dimensions } : {},
+  };
 }

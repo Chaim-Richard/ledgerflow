@@ -17,13 +17,17 @@
  * Hits after the import: R1 1, R2 1, R3 1. Re-run with nothing changed: 0 lines changed, hits unchanged.
  * Add R6 p1 contains "coffee" → 6000: re-run changes 1 line (C), R6 1, the others unchanged; again: 0.
  * Ledger entries written for the workspace throughout: 0.
+ * Same file twice (fingerprint "rent" on two lines in the file): 1st import keeps 1 line, skips 1; 2nd skips 2;
+ * the categorised line again skips the line and its entry → still 1 line, 0 entries. Re-run with limit 1 over the
+ * 4 pending lines (A, B, C, D1, by id): 3 calls truncated with nextCursor = the 1st, 2nd, 3rd id, the 4th not.
+ * Legacy targetCategory "Office Supplies" → the active account named exactly that (archived one and "…& Co" not).
  */
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
-import { suggestFromRules, sameSuggestion } from '../lib/bankRules';
+import { suggestFromRules, sameSuggestion, reconcileCreateDefaults } from '../lib/bankRules';
 import type { AutoRule, ChartAccount } from '../types';
 import { commitAsServer } from './helpers/serverCommit';
 
@@ -65,6 +69,24 @@ describe('EG-9 the bank rule function (shared by server and browser)', () => {
   test('stopProcessingOnMatch ends the run; an archived account or unknown contact is not suggested', () => {
     const stop = [rule('S', 1, { descriptionContains: 'depot' }, { targetAccountId: 'aOld', contactId: 'nobody', addTags: ['s'] }, { stopProcessingOnMatch: true }), ...RULES];
     assert.deepEqual(suggestFromRules(stop, LINE_A, context), { tags: ['s'], dimensions: {}, ruleIds: ['S'] });
+  });
+  // review 4368675689: older rules name the account in targetCategory
+  test('targetCategory "Office Supplies" suggests that account (exact name, active chart only)', () => {
+    const chart = [...accounts,
+      { id: 'aSupOld', name: 'Office Supplies', type: 'expense', archived: true },
+      { id: 'aSup', name: 'Office Supplies', type: 'expense' },
+      { id: 'aSupX', name: 'Office Supplies & Co', type: 'expense' }] as unknown as ChartAccount[];
+    const legacy = [rule('L', 1, { descriptionContains: 'staples' }, { targetCategory: 'Office Supplies' })];
+    const line = { description: 'STAPLES 0042', amountCents: -1999, date: '2026-10-20' };
+    assert.deepEqual(suggestFromRules(legacy, line, { accounts: chart }), { accountId: 'aSup', accountName: 'Office Supplies', tags: [], dimensions: {}, ruleIds: ['L'] });
+    assert.equal(suggestFromRules([rule('L', 1, { descriptionContains: 'staples' }, { targetCategory: 'office supplies' })], line, { accounts: chart })?.accountId, undefined, 'exact name only');
+    assert.equal(suggestFromRules(legacy, line)?.accountId, undefined, 'a name needs the chart');
+  });
+  test('the reconciliation pre-fill: the suggestion, or the first expense account', () => {
+    assert.deepEqual(reconcileCreateDefaults({ suggestion: { accountId: 'a7000', contactId: 'V1', contactKind: 'vendor', tags: ['t'], dimensions: { d: 'x' }, ruleIds: ['R'] } }, accounts),
+      { accountId: 'a7000', contactId: 'V1', contactKind: 'vendor', tags: ['t'], dimensions: { d: 'x' } });
+    assert.equal(reconcileCreateDefaults({ suggestion: { accountId: 'aOld', tags: [], dimensions: {}, ruleIds: ['R'] } }, accounts).accountId, 'a6000', 'archived → first expense');
+    assert.equal(reconcileCreateDefaults({}, accounts).accountId, 'a6000');
   });
 });
 
@@ -168,9 +190,51 @@ describe('EG-9 bank rules on the server', { skip: !url && 'LF_TEST_DATABASE_URL 
     assert.equal(await entries(), 0);
   });
 
+  // review 4368675668: the statement's fingerprint is kept, one line per fingerprint
+  test('importing the same file twice gives one line (and its entry once)', async () => {
+    const file = (n: string) => ({ workspaceId: ws, transactions: [], bankLines: [
+      { id: id(`D${n}`), description: 'RENT OCT', amountCents: -90000, date: '2026-10-01', status: 'pending', importIdentity: `statement_csv:line:${ws}:rent` },
+      { id: id(`E${n}`), description: 'RENT OCT', amountCents: -90000, date: '2026-10-01', status: 'pending', importIdentity: `statement_csv:line:${ws}:rent` },
+    ] });
+    const first = await commitAsServer(db as never, OWNER, file('1') as never);
+    assert.equal(first.status, 200, JSON.stringify(first.body));
+    assert.equal(first.body.skippedDuplicates, 1, 'the same fingerprint twice in one file');
+    const second = await commitAsServer(db as never, OWNER, file('2') as never);
+    assert.equal(second.status, 200, JSON.stringify(second.body));
+    assert.equal(second.body.skippedDuplicates, 2);
+    const rows = (await db.collection('bankLines').where('workspaceId', '==', ws).where('importIdentity', '==', `statement_csv:line:${ws}:rent`).get()).docs;
+    assert.deepEqual(rows.map(d => d.id), [id('D1')]);
+    // a categorised line again: the line and the entry made with it are both skipped
+    const txId = id('tx-rent');
+    const withEntry = await commitAsServer(db as never, OWNER, { workspaceId: ws, transactions: [{ id: txId, date: '2026-10-01', description: 'RENT OCT', totalAmountCents: 90000, type: 'actual', status: 'pending',
+      lines: [{ accountId: id('a6000'), amountCents: 90000 }, { accountId: id('a7000'), amountCents: -90000 }] }],
+    bankLines: [{ id: id('D3'), description: 'RENT OCT', amountCents: -90000, date: '2026-10-01', status: 'matched', matchedTransactionId: txId, importIdentity: `statement_csv:line:${ws}:rent` }] } as never);
+    assert.equal(withEntry.status, 200, JSON.stringify(withEntry.body));
+    assert.equal(withEntry.body.skippedDuplicates, 1);
+    assert.equal(await entries(), 0);
+  });
+
+  // review 4368675681: a re-run goes past one call's limit with a cursor
+  test('the re-run continues with nextCursor (limit 1)', async () => {
+    const pending = (await db.collection('bankLines').where('workspaceId', '==', ws).where('status', '==', 'pending').get()).docs
+      .filter(d => !d.data().matchedTransactionId).map(d => d.id).sort();
+    assert.equal(pending.length, 4, 'A, B, C and D1');
+    const seen: string[] = [];
+    let after: string | undefined;
+    for (let i = 0; i < 5; i++) {
+      const res = await send(OWNER, { workspaceId: ws, limit: 1, ...(after ? { after } : {}) });
+      assert.equal(res.status, 200, JSON.stringify(res.body));
+      assert.equal(res.body.checked, 1);
+      if (!res.body.truncated) { assert.equal(res.body.nextCursor, undefined); seen.push('last'); break; }
+      seen.push(res.body.nextCursor);
+      after = res.body.nextCursor;
+    }
+    assert.deepEqual(seen, [pending[0], pending[1], pending[2], 'last']);
+  });
+
   test('a line matched to an entry is left alone by the re-run', async () => {
     await db.collection('bankLines').doc(id('A')).update({ status: 'matched', matchedTransactionId: 'tx-elsewhere' });
     const res = await send(OWNER, { workspaceId: ws });
-    assert.deepEqual(res.body, { checked: 2, changed: 0, suggested: 2, truncated: false });
+    assert.deepEqual(res.body, { checked: 3, changed: 0, suggested: 2, truncated: false });
   });
 });

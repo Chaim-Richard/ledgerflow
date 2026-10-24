@@ -17,7 +17,7 @@ import { deletionSentence, deletionSnapshot } from './deletionRecord';
 import { refusedLabels, refusedLabelsMessage } from '../../lib/requiredLabels';
 import { DELIVERY_COGS_TYPE, DELIVERY_RETURN_TYPE } from '../../lib/deliveries';
 import { BudgetBlocked, budgetWarningsFor, enforceBudgetControl, type BudgetWarning } from './budgetGuard';
-import { prepareBankRuleSuggestions } from './bankRuleService';
+import { existingImportIdentities, prepareBankRuleSuggestions } from './bankRuleService';
 
 /**
  * The commit of POST /transactions/bulk, moved here unchanged (L94-STEP2) so that POST /documents/:type/:id/post, which
@@ -54,11 +54,12 @@ export type BeforeWrite = (t: Parameters<Parameters<Firestore['runTransaction']>
   Promise<{ metadata?: Record<string, unknown>; body?: Record<string, unknown>; audit?: AuditLogEntryInput }>;
 
 export async function commitLedgerBulk(db: Firestore, user: RequestUser, request: BulkRequest, options: { idempotencyKey?: string; hashOf?: unknown; beforeWrite?: BeforeWrite } = {}): Promise<BulkResult> {
-  const { transactions, workspaceId } = request;
+  const { workspaceId } = request;
+  let transactions = request.transactions;
   // may be absent: every use below checks it first (the request body was untyped before the move)
   const entityMutation = request.entityMutation as NonNullable<BulkRequest['entityMutation']>;
   // Imported bank statement lines (the browser may not write bankLines itself)
-  const bankLines = BankLineImportSchema.array().max(5000).parse(request.bankLines ?? []);
+  let bankLines = BankLineImportSchema.array().max(5000).parse(request.bankLines ?? []);
         const wsId = workspaceId || transactions?.[0]?.workspaceId;
   if (!wsId) throw new BulkRefusal(400, { error: 'Missing workspaceId' });
 
@@ -76,6 +77,29 @@ export async function commitLedgerBulk(db: Firestore, user: RequestUser, request
   const idempotencyKey = options.idempotencyKey;
   const scopedIdempotencyKey = idempotencyKey ? `${wsId}_${idempotencyKey}` : null;
   const payloadHash = scopedIdempotencyKey ? requestPayloadHash(options.hashOf ?? request) : undefined;
+
+  // EG-9: one bank line per statement fingerprint. A line already imported (or twice in this request) is
+  // skipped, with the entry made for it in this request; the check is made again inside the transaction.
+  let skippedDuplicates = 0;
+  if (bankLines.some(b => b.importIdentity)) {
+    const seen = await existingImportIdentities(db, null, wsId, bankLines);
+    const keep: typeof bankLines = [];
+    const dropTx = new Set<string>();
+    for (const b of bankLines) {
+      if (b.importIdentity && seen.has(b.importIdentity)) {
+        skippedDuplicates += 1;
+        if (b.matchedTransactionId) dropTx.add(b.matchedTransactionId);
+        continue;
+      }
+      if (b.importIdentity) seen.add(b.importIdentity);
+      keep.push(b);
+    }
+    bankLines = keep;
+    if (dropTx.size) transactions = (transactions || []).filter(tx => !dropTx.has(tx.id));
+    if (skippedDuplicates > 0 && (!transactions || transactions.length === 0) && !entityMutation && bankLines.length === 0) {
+      return { body: { status: 'ok', count: 0, skippedDuplicates }, transactions: [], committed: false };
+    }
+  }
 
   if ((!Array.isArray(transactions) || transactions.length === 0) && !entityMutation && bankLines.length === 0) {
     return { body: { status: 'ok', count: 0 }, transactions: [], committed: false };
@@ -137,7 +161,7 @@ export async function commitLedgerBulk(db: Firestore, user: RequestUser, request
 
   // ONE database transaction: the document change, the ledger entries, stock moved by cost of
   // goods sold entries, and the idempotency record all commit together or not at all.
-  let body: Record<string, unknown> = { status: 'ok', count: validatedTransactions.length };
+  let body: Record<string, unknown> = { status: 'ok', count: validatedTransactions.length, ...(skippedDuplicates ? { skippedDuplicates } : {}) };
   // S-09: an approval asked for or decided with this save, told after it commits
   let approvalNotice: { invoiceId: string; invoice: Record<string, unknown>; event: ApprovalEvent } | null = null;
   // EG-4: the budget figures are read before the transaction (through the pool; never while it holds a connection)
@@ -261,6 +285,9 @@ export async function commitLedgerBulk(db: Firestore, user: RequestUser, request
       const postedIds = new Set(validatedTransactions.map(tx => tx.id));
       const unknown = bankLines.find(b => b.matchedTransactionId && !postedIds.has(b.matchedTransactionId));
       if (unknown) throw new LedgerPostingError(400, `Bank line ${unknown.id} points to a transaction outside this request`);
+    }
+    if ((await existingImportIdentities(db, t, wsId, bankLines)).size > 0) {
+      throw new LedgerPostingError(409, 'Some of these statement lines were imported meanwhile. Import the file again; lines already there are skipped.');
     }
     // EG-9: the bank rules suggest an account, a contact and labels for each new pending line (never posted)
     const ruleSuggestions = await prepareBankRuleSuggestions(db, t, wsId, bankLines);

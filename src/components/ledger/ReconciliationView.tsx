@@ -1,5 +1,6 @@
 
 
+import { CreateFromBankLine } from './CreateFromBankLine';
 import { ArrowLeftRight, Sparkles, Search, AlertCircle, ArrowRight, ShieldCheck, Zap, RefreshCw, Link as LinkIcon, X, Check, Loader2, Lock, History, Info, Layers, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { parseLocalDate, cn, formatCurrency, resolveAccountName, formatDate } from '../../lib/utils';
@@ -514,7 +515,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
             exit={{ y: 50, opacity: 0, x: '-50%' }}
             className="fixed bottom-20 lg:bottom-10 left-1/2 -translate-x-1/2 w-full max-w-xl z-[80] px-4 md:px-6"
           >
-            <div className="bg-zinc-950 text-white p-5 rounded-[32px] border border-white/10 shadow-3xl flex items-center justify-between gap-4">
+            <div className="bg-zinc-950 text-white p-5 rounded-[32px] border border-white/10 shadow-3xl flex flex-col gap-3">
                <div className="flex items-center gap-3 pl-2">
                   <span className="relative flex h-2.5 w-2.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -522,18 +523,12 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                   </span>
                   <span className="text-xs font-bold text-zinc-400">Select a ledger entry to match, or create an entry from this bank line</span>
                </div>
-               <button
-                 onClick={async () => {
-                     const statementItem = selectedBankLine;
-                     if (statementItem) {
-                       await onAddFromBank(statementItem);
-                       setSelectedBankId(null);
-                     }
-                 }}
-                 className="px-5 py-2.5 bg-[var(--surface)]/10 hover:bg-[var(--surface)]/20 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all cursor-pointer border border-white/10 hover:border-white/20 shadow-sm whitespace-nowrap"
-               >
-                 Create entry
-               </button>
+               {selectedBankLine && (
+                 <CreateFromBankLine key={selectedBankLine.id} line={selectedBankLine} accounts={accounts} onCreate={async (choice) => {
+                   await onAddFromBank(selectedBankLine, choice);
+                   setSelectedBankId(null);
+                 }} />
+               )}
             </div>
           </motion.div>
         )}
