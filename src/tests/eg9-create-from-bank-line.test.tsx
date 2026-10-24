@@ -13,6 +13,7 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import Reconciliation from '../components/ledger/Reconciliation';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { useRecordDetailsStore } from '../stores/useRecordDetailsStore';
 import type { BankStatementLine, Vendor } from '../types';
 import { makeChartAccount } from './fixtures';
 import { markComponentCollectionsLoaded, setComponentWorkspace } from './helpers/componentFixtures';
@@ -78,10 +79,39 @@ describe('EG-9 create an entry from a bank line, pre-filled from the bank rules'
     assert.deepEqual(op.data.metadata, { suggestedByRules: ['R1'] });
   });
 
+  // review 4368816639 / 4368816643: the contact's details open in the drawer; the form keeps its line and fields; 44px targets
+  test('Edit details opens the suggested vendor and keeps the line and the edited fields', async () => {
+    const calls = stubFetchWithBodies(200, { status: 'ok' });
+    render(<Reconciliation />);
+    await click(screen.getByText('OFFICE DEPOT #12'));
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Account'), { target: { value: 'rent' } });
+      fireEvent.change(screen.getByLabelText('Labels'), { target: { value: 'kept, here' } });
+    });
+    await click(screen.getByRole('button', { name: 'Edit selected record details' }));
+    const details = useRecordDetailsStore.getState() as unknown as { open: boolean; target?: unknown };
+    assert.equal(details.open, true);
+    assert.deepEqual(details.target, { kind: 'vendors', id: 'v1' });
+    assert.equal((screen.getByLabelText('Account') as HTMLSelectElement).value, 'rent');
+    assert.equal((screen.getByLabelText('Contact') as HTMLSelectElement).value, 'vendor:v1');
+    assert.equal((screen.getByLabelText('Labels') as HTMLInputElement).value, 'kept, here');
+    for (const el of [screen.getByLabelText('Account'), screen.getByLabelText('Contact'), screen.getByLabelText('Labels'), screen.getByRole('button', { name: 'Create entry' }), screen.getByRole('button', { name: 'Edit selected record details' })]) {
+      assert.match(el.className, /\bmin-h-11\b/, el.outerHTML.slice(0, 60));
+    }
+    await click(screen.getByRole('button', { name: 'Create entry' }));
+    await waitFor(() => assert.equal(calls.length, 1));
+    const op = createOp(calls[0].body);
+    assert.equal(op.data.lines[0].accountId, 'rent');
+    assert.deepEqual(op.data.lines[0].tags, ['kept', 'here']);
+    assert.equal((op.data.metadata as { contactId?: string }).contactId, 'v1');
+    act(() => { useRecordDetailsStore.getState().close(); });
+  });
+
   test('without a suggestion the first expense account is pre-filled', async () => {
     const calls = stubFetchWithBodies(200, { status: 'ok' });
     render(<Reconciliation />);
     await click(screen.getByText('UNKNOWN 99'));
+    assert.equal(screen.queryByRole('button', { name: 'Edit selected record details' }), null, 'no contact, no details button');
     assert.equal(screen.queryByText(/Suggested by your bank rules/), null);
     assert.equal((screen.getByLabelText('Account') as HTMLSelectElement).value, 'rent');
     await click(screen.getByRole('button', { name: 'Create entry' }));
