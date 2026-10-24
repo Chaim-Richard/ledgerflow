@@ -13,6 +13,8 @@
  *   5. a bookkeeper sets budgetControl → 403; 'never' → 400; the owner sets 'block' → 200
  *   6. block: Rent 50.00 on 25 Oct: 1,100.00 + 50.00 = 1,150.00 → 409 (both routes), nothing saved
  *      "Over the budget for Rent (2026-10-01 to 2026-10-31): budget $1,000.00, spent $1,100.00, this $50.00 → $1,150.00, $150.00 over"
+ *   6b. block (review 4366372413): the same 50.00 single entry sent with a `deletedAt` the schema strips: checked as
+ *      it is saved (a live entry) → 409, nothing saved (the raw request would have hidden it from the check)
  *   7. block: a Rent refund of 100.00 (credit) → posted (it lowers spending); Rent now 1,000.00
  *   8. block: Rent 30.00 on 3 Nov → posted (November: 0.00 + 30.00 ≤ 1,000.00)
  *   9. off: Rent 50.00 on 26 Oct → posted, no warnings (1,050.00 would be over)
@@ -138,6 +140,14 @@ describe('EG-4: the budget check when posting', { skip: !url && 'LF_TEST_DATABAS
     assert.equal(await exists(b.id), false);
   });
 
+  test('6b. block: a single entry with a deletedAt the schema strips is checked as saved: 409', async () => {
+    const tx = { ...journal('rent', 5_000, '2026-10-25'), deletedAt: '2026-10-25T00:00:00Z' };
+    const res = await single(tx as ReturnType<typeof journal>);
+    assert.equal(res.status, 409, JSON.stringify(res.body));
+    assert.match(String(res.body.message), /Over the budget for Rent/);
+    assert.equal(await exists(tx.id), false);
+  });
+
   test('7. block: a 100.00 Rent refund lowers spending: posted', async () => {
     const res = await bulk(journal('rent', -10_000, '2026-10-26'));
     assert.equal(res.status, 200, JSON.stringify(res.body));
@@ -154,5 +164,17 @@ describe('EG-4: the budget check when posting', { skip: !url && 'LF_TEST_DATABAS
     const res = await bulk(journal('rent', 5_000, '2026-10-26'));
     assert.equal(res.status, 200, JSON.stringify(res.body));
     assert.equal(res.body.budgetWarnings, undefined);
+  });
+
+  test('10. a saved single entry retried after a refusing label rule is turned on: replayed, not refused', async () => {
+    const tx = journal('rent', 1_000, '2026-12-05');
+    const send = () => fetch(`${base}/api/v1/transactions`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-test-uid': OWNER, 'idempotency-key': `eg4-replay-${tx.id}` }, body: JSON.stringify({ workspaceId: ws, transaction: tx }) });
+    const first = await send();
+    assert.equal(first.status, 200, await first.text());
+    await db.collection('workspaces').doc(ws).update({ dimensions: [{ id: 'property', name: 'Property', requiredOn: { accountIds: [id('rent')], since: '2026-12-01', refuse: true } }] });
+    const again = await send();
+    assert.equal(again.status, 200, await again.text());
+    const fresh = await single(journal('rent', 1_000, '2026-12-06'));
+    assert.equal(fresh.status, 400, 'a new entry without the label is still refused');
   });
 });

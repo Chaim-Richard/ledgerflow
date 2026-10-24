@@ -78,6 +78,8 @@ export interface Workspace {
   ledgerHealth?: LedgerHealth;
   /** Alerts about the books (S-08, S-10, S-11, src/lib/bookAlerts.ts); saved by the server for owners and accountants. */
   alerts?: AlertSettings;
+  /** EG-4: a posting over a budget: 'warn' (default) posts and says so, 'block' refuses it, 'off' checks nothing. Owners change it (server only). */
+  budgetControl?: 'off' | 'warn' | 'block';
   /** What the alerts already told (written by the server only). */
   alertsSent?: AlertsSent;
   /** U-10: pay runs prepared by others wait for an owner's approval (set by owners, through the server). */
