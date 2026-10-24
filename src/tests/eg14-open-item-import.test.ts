@@ -11,13 +11,15 @@
  *   B-77 Paper Co 2026-08-20    210.00 of   310.00 open → A/P −21,000 cents, Opening Balance Equity +21,000
  *   Opening Balance Equity nets to −164,999 + 21,000 = −143,999 (a credit of 1,439.99); Sales and Supplies 0.
  * Refused, each on its row: the same number twice for a contact; a date after 2026-09-30; 500.00 open of 400.00;
- * EUR in a USD workspace; an unknown contact; and the whole file again (already in the books). The database part runs
+ * EUR in a USD workspace; an unknown contact; two contacts with the same name; and the whole file again (already in
+ * the books); INV-7 voided after the import, then imported again ("was imported and voided").
+ * Minor units by currency: JPY 100 → 100; KWD 12.345 → 12,345; USD 1,250.00 → 125,000; JPY 1.5 and USD 1.234 refused. The database part runs
  * when LF_TEST_DATABASE_URL is set.
  */
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
-import { readOpenItemsCsv } from '../lib/openItemImport';
+import { openItemMinorUnits, readOpenItemsCsv } from '../lib/openItemImport';
 import type { Transaction } from '../types';
 
 const HEAD = 'Number,Contact,Date,Due Date,Currency,Amount,Amount Still Open';
@@ -63,6 +65,20 @@ describe('Reading the file', () => {
       'Already in the books for this contact',
     ]);
     assert.equal(read.openTotalCents, 10_000);
+  });
+
+  test('amounts in the currency\'s minor units: JPY 100 → 100, KWD 12.345 → 12,345', () => {
+    assert.deepEqual([openItemMinorUnits('100', 'JPY'), openItemMinorUnits('12.345', 'KWD'), openItemMinorUnits('1,250.00', 'USD')], [100, 12_345, 125_000]);
+    assert.deepEqual([openItemMinorUnits('1.5', 'JPY'), openItemMinorUnits('1.234', 'USD')], [null, null]);
+    const yen = readOpenItemsCsv([HEAD, 'Y-1,Acme Ltd,2026-08-01,,JPY,"10,000",2500'].join('\n'), { ...opts, currency: 'JPY' });
+    assert.deepEqual(yen.rows.map(r => [r.amountCents, r.openCents, r.problem]), [[10_000, 2_500, null]]);
+    const dinar = readOpenItemsCsv([HEAD, 'K-1,Acme Ltd,2026-08-01,,KWD,12.345,12.345'].join('\n'), { ...opts, currency: 'KWD' });
+    assert.deepEqual(dinar.rows.map(r => [r.openCents, r.problem]), [[12_345, null]]);
+  });
+
+  test('two contacts with the same name: the row is refused, never matched to one of them', () => {
+    const read = readOpenItemsCsv([HEAD, 'A-1, acme ltd ,2026-08-01,,USD,100.00,100.00'].join('\n'), { ...opts, contacts: [...contacts, { id: 'c9', name: 'ACME LTD ' }] });
+    assert.deepEqual(read.rows.map(r => [r.contactId, r.problem]), [[undefined, 'More than one contact is named "acme ltd": rename one so the row names a single contact']]);
   });
 
   test('a file without the columns is refused as a whole', () => {
@@ -155,5 +171,15 @@ describe('EG-14 on the database', { skip: !url && 'LF_TEST_DATABASE_URL not set'
       (err: Error & { rows: Array<{ problem: string | null }> }) => err.rows.every(r => r.problem === 'Already in the books for this contact'));
     assert.equal(await count('invoices'), 3);
     assert.equal(await balance('ar'), 164_999);
+  });
+
+  test('a document imported and then voided: imported again it is refused, not replayed as a success', async () => {
+    const { openItemDocId } = await import('../server/services/openItemImportService');
+    const id = openItemDocId(ws, 'customer', `${ws}_c2`, 'INV-7');
+    await db.collection('invoices').doc(id).update({ status: 'void' });
+    const csv = [HEAD, 'INV-7,Beta Co,2026-09-30,,USD,99.99,99.99'].join('\n');
+    await assert.rejects(importOpenItems(db as never, owner, { workspaceId: ws, side: 'customer', csv, mode: 'confirm' }),
+      (err: Error & { status: number; rows: Array<{ problem: string | null }> }) => err.status === 400 && err.rows[0].problem === 'INV-7 was imported and voided; restore or re-enter it');
+    assert.equal((await db.collection('invoices').doc(id).get()).data()?.status, 'void');
   });
 });

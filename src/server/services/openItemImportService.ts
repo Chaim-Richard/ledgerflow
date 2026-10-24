@@ -76,6 +76,15 @@ export async function importOpenItems(db: Firestore, user: RequestUser, input: O
 
   const read = readOpenItemsCsv(input.csv, { cutOverDate, currency: String(workspace.currency || 'USD'), contacts, existing });
   if (read.fileProblem) throw new OpenItemImportError(400, read.fileProblem);
+  // a document this import saved and someone voided since: its id (and idempotency key) would replay the first save
+  for (const row of read.rows) {
+    if (row.problem || !row.contactId) continue;
+    const earlier = (await db.collection(docCollection).doc(openItemDocId(workspaceId, side, row.contactId, row.number)).get()).data();
+    if (earlier && (earlier.status === 'void' || earlier.status === 'voided' || earlier.status === 'cancelled')) {
+      row.problem = `${row.number} was imported and voided; restore or re-enter it`;
+      read.openTotalCents -= row.openCents;
+    }
+  }
   const result: OpenItemImportResult = { cutOverDate, rows: read.rows, openTotalCents: read.openTotalCents, created: [] };
   if (input.mode === 'preview') return result;
 

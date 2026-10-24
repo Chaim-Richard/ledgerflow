@@ -3,7 +3,7 @@
  * date — the workspace's opening-balance date (openingBalanceService.ts) — read from a CSV with the columns
  * number, contact, date, due date, currency, amount and amount still open. Columns are found by name (the
  * E-28 Xero reader's findColumn, so a Xero "Aged receivables" export with these headings reads too); dates are
- * YYYY-MM-DD; amounts as xeroMoneyCents reads them.
+ * YYYY-MM-DD; amounts in the workspace currency's minor units (currencyMinorUnits.ts).
  *
  * Each good row becomes one open invoice (bill) dated on its own date, for its open amount, booked against
  * Opening Balance Equity (partyOpeningBalance.ts), so receivables (payables) equal the open total and no sale or
@@ -16,7 +16,8 @@
  */
 import { parseCsvChecked } from './csv';
 import { bankStatementDate } from './bankStatementDate';
-import { findColumn, xeroMoneyCents } from './xeroDocumentsImport';
+import { findColumn } from './xeroDocumentsImport';
+import { currencyDigits } from './currencyMinorUnits';
 
 export type OpenItemSide = 'customer' | 'vendor';
 
@@ -71,12 +72,17 @@ function isoDay(value: string): string | null {
   return m ? bankStatementDate(Number(m[1]), Number(m[2]), Number(m[3])) : null;
 }
 
-function money(value: string): number | null {
-  try {
-    return xeroMoneyCents(value);
-  } catch {
-    return null;
-  }
+/** `1,234.567` → minor units of `currency` (0 decimals for JPY, 3 for KWD, currencyMinorUnits.ts); no floating point. */
+export function openItemMinorUnits(value: string, currency: string): number | null {
+  const digits = currencyDigits(currency);
+  const input = String(value ?? '').replace(/[₪$€£¥]/g, '').replace(/\u00A0/g, '').trim();
+  const fraction = digits ? `(?:\\.(\\d{1,${digits}}))?` : '';
+  const m = input.match(new RegExp(`^(\\d{1,3}(?:,\\d{3})+|\\d+)${fraction}$`));
+  if (!m) return null;
+  const whole = m[1].replace(/,/g, '');
+  if (whole.length > 14) return null;
+  const minor = BigInt(whole) * 10n ** BigInt(digits) + BigInt((m[2] || '').padEnd(digits, '0') || '0');
+  return minor > BigInt(Number.MAX_SAFE_INTEGER) ? null : Number(minor);
 }
 
 export function readOpenItemsCsv(csv: string, options: OpenItemReadOptions): OpenItemRead {
@@ -101,7 +107,13 @@ export function readOpenItemsCsv(csv: string, options: OpenItemReadOptions): Ope
     return { rows: [], openTotalCents: 0, fileProblem: `Columns missing: ${missing.join(', ')}. The first line must name the columns number, contact, date, due date, currency, amount, amount still open` };
   }
 
-  const contacts = new Map(options.contacts.map(c => [c.name.trim().toLowerCase(), c]));
+  const contacts = new Map<string, { id: string; name: string }>();
+  const ambiguous = new Set<string>();
+  for (const c of options.contacts) {
+    const k = c.name.trim().toLowerCase();
+    if (contacts.has(k)) ambiguous.add(k);
+    else contacts.set(k, c);
+  }
   const contactNames = new Map(options.contacts.map(c => [c.id, c.name]));
   const booked = new Set((options.existing || []).map(d => keyOf(d.number || '', (d.contactId && contactNames.get(d.contactId)) || d.contactName || '')));
   const seen = new Set<string>();
@@ -111,25 +123,27 @@ export function readOpenItemsCsv(csv: string, options: OpenItemReadOptions): Ope
     const cell = (k: keyof typeof col) => String(cells[col[k]] ?? '').trim();
     const number = cell('number');
     const contactName = cell('contact');
-    const contact = contacts.get(contactName.toLowerCase());
+    const isAmbiguous = ambiguous.has(contactName.toLowerCase());
+    const contact = isAmbiguous ? undefined : contacts.get(contactName.toLowerCase());
     const date = isoDay(cell('date'));
     const dueRaw = cell('dueDate');
     const dueDate = dueRaw ? isoDay(dueRaw) : date;
     const rowCurrency = (cell('currency') || currency).toUpperCase();
-    const amount = money(cell('amount'));
-    const open = money(cell('open'));
+    const amount = openItemMinorUnits(cell('amount'), currency);
+    const open = openItemMinorUnits(cell('open'), currency);
     const key = keyOf(number, contactName);
     let problem: string | null = null;
     if (!number) problem = 'The number is missing';
     else if (!contactName) problem = 'The contact is missing';
+    else if (isAmbiguous) problem = `More than one contact is named "${contactName}": rename one so the row names a single contact`
     else if (!contact) problem = `"${contactName}" is not in your contacts: add it first`;
     else if (!date) problem = 'The date must be a real date written YYYY-MM-DD';
     else if (!dueDate) problem = 'The due date must be a real date written YYYY-MM-DD';
     else if (dueDate < date) problem = 'Due before its own date';
     else if (date > options.cutOverDate) problem = `Dated after the cut-over date (${options.cutOverDate}): enter it as a normal invoice or bill`;
     else if (rowCurrency !== currency) problem = `In ${rowCurrency}, not ${currency}: nothing is converted, so enter it by hand`;
-    else if (amount === null || amount <= 0) problem = 'The amount must be above 0, with at most two decimals';
-    else if (open === null || open <= 0) problem = 'The amount still open must be above 0, with at most two decimals';
+    else if (amount === null || amount <= 0) problem = `The amount must be above 0, with at most ${currencyDigits(currency)} decimals for ${currency}`;
+    else if (open === null || open <= 0) problem = `The amount still open must be above 0, with at most ${currencyDigits(currency)} decimals for ${currency}`;
     else if (open > amount) problem = 'The amount still open is more than the amount';
     else if (seen.has(key)) problem = 'The same number appears twice for this contact';
     else if (booked.has(key)) problem = 'Already in the books for this contact';
