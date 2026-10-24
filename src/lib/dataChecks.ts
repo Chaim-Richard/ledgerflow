@@ -11,6 +11,7 @@ import { findTaxDifferences } from './taxRecompute';
 import { missingLabels } from './requiredLabels';
 import { labelRoleFindings } from './labelRoles';
 import { stockHistoryProblem, type StockMove } from './stockMoves';
+import { STOCK_INVARIANT_CHECKS, type StockClosing } from './stockInvariants';
 import { contactsMissingFilingDetails, itemsMissingPricing } from './dataQualityChecks';
 import { formatCurrency } from './utils';
 import { resolveAccountRole } from './accountUtils';
@@ -62,6 +63,10 @@ export interface CheckContext {
   dimensions?: DimensionDefinition[];
   /** The stock-moves ledger (W-02); the nightly check reads it, the browser does not load it. */
   stockMoves?: StockMove[];
+  /** EG-7: the stock closing snapshots (server-only), checked against the moves they cover */
+  stockClosings?: StockClosing[];
+  /** The sources the nightly run read only up to its cap (a check over them would compare partial lists). */
+  truncated?: string[];
   /** Payment records (CB-23: each has its entry in the ledger). */
   /** EG-2 payment-ledger rows (`paymentAllocations`); the nightly check reads them, the browser does not. */
   allocations?: Array<{ id: string; documentId?: string; documentType?: string; kind?: string; amountCents?: number }>;
@@ -458,6 +463,8 @@ export const DATA_CHECKS: DataCheck[] = [
       }));
     },
   },
+  // EG-7: stock against the books, stock below zero on a day, stale stock closings (src/lib/stockInvariants.ts)
+  ...STOCK_INVARIANT_CHECKS,
   {
     id: 'settlement-ledger',
     label: 'Amount paid on invoices and bills that their payment-ledger rows do not add up to (EG-10)',

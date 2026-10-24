@@ -664,6 +664,17 @@ select pg_temp.expect_ok('bookkeeper posts an entry the snapshot covers', 'u-boo
   $$insert into transactions(id,data) values ('tx-l123', '{"workspaceId":"ws1","date":"2026-06-01","lines":[]}')$$);
 select pg_temp.expect_value('that entry marked the snapshot stale', $q$select data->>'stale' from "periodBalances" where id = 'ws1_2026-12-31'$q$, 'true');
 
+-- stock closings (EG-7): written only by the server; members read
+select set_config('request.jwt.claims', '', true);
+insert into "stockClosings" (id, data) values ('ws1_2026-12-31', '{"workspaceId":"ws1","asOf":"2026-12-31","stockValueCents":100,"rows":[]}');
+select pg_temp.expect_count('viewer reads the stock closing', 'u-view', $$select count(*) from "stockClosings"$$, 1);
+select pg_temp.expect_count('outsider reads no stock closing', 'u-out', $$select count(*) from "stockClosings"$$, 0);
+select pg_temp.expect_denied('owner rewrites a stock closing from the browser', 'u-owner', $$select lf_update('stockClosings','ws1_2026-12-31','{"stockValueCents":999}'::jsonb)$$);
+select pg_temp.expect_denied('owner writes a stock closing with lf_set', 'u-owner', $$select lf_set('stockClosings','ws1_2025-12-31','{"workspaceId":"ws1","asOf":"2025-12-31","rows":[]}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper adds a stock closing from the browser', 'u-book',
+  $$insert into "stockClosings"(id,data) values ('ws1_2024-12-31', '{"workspaceId":"ws1","asOf":"2024-12-31","rows":[]}')$$);
+select pg_temp.expect_denied('owner deletes a stock closing from the browser', 'u-owner', $$delete from "stockClosings" where id = 'ws1_2026-12-31'$$);
+select pg_temp.expect_value('the refused writes left the stock closing as it was', $q$select data->>'stockValueCents' from "stockClosings" where id = 'ws1_2026-12-31'$q$, '100');
 -- period-closing documents (EG-3): written only by the server; members read; the browser can neither write one nor
 -- mark one superseded
 select set_config('request.jwt.claims', '', true);
