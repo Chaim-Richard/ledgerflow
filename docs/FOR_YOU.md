@@ -574,3 +574,9 @@ Paste **`supabase/migrations/20261025010000_payment_allocations.sql`** into Supa
 
 ## 24 Oct — ~~report preferences (D-47, #370)~~ **Done: applied by Claude on 24 Oct through the Supabase connector — nothing to paste.**
 `supabase/migrations/20261023200000_report_preferences.sql`: lets each person's recent and pinned reports sync between their devices.
+
+## 24 Oct — optional setting (1 minute): let the ESLint ratchet open its own PR
+The "ESLint warning ceiling" workflow lowers the warning cap by itself when warnings go down, by opening a small PR. It
+fails with "GitHub Actions is not permitted to create or approve pull requests". To let it: GitHub → the repository →
+Settings → Actions → General → Workflow permissions → tick **Allow GitHub Actions to create and approve pull requests**
+→ Save. *Default I used:* left as it is; AI #1 lowers the cap by hand (106 → 105 today). Nothing else depends on it.
