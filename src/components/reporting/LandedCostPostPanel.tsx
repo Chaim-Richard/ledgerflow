@@ -37,7 +37,8 @@ export default function LandedCostPostPanel({ workspaceId, currency, bills, acco
   const [offsetId, setOffsetId] = useState('');
   const [chosen, setChosen] = useState<string[]>(defaultReceiptId ? [defaultReceiptId] : []);
   const [basis, setBasis] = useState<SpreadBasis>('value');
-  const [allocationId] = useState(newAllocationId);
+  // one id per manual charge: kept while the same charge is retried, a fresh one once it has posted
+  const [allocationId, setAllocationId] = useState(newAllocationId);
   const [plan, setPlan] = useState<LandedCostPostResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -75,6 +76,7 @@ export default function LandedCostPostPanel({ workspaceId, currency, bills, acco
       setPlan(result);
       if (!dryRun) {
         setPostedId(result.entryId);
+        setAllocationId(newAllocationId());
         setNotice(result.replayed ? `Already posted as ${result.entryId}: nothing was posted again.` : `Posted ${result.entryId} on ${result.date}${result.movedToOpenDay ? ' (the day asked for is locked, so it is dated today)' : ''}.`);
       }
     }, e => {

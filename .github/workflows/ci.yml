@@ -263,13 +263,13 @@ jobs:
           TEST_SHARD: ${{ matrix.shard }}/2
 
   e2e_shards:
-    name: Browser shard ${{ matrix.shard }}/4
+    name: Browser shard ${{ matrix.shard }}/5
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5]
 
     services:
       postgres:
@@ -318,7 +318,7 @@ jobs:
           PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/playwright-results-${{ matrix.shard }}.json
         run: |
           set +e
-          npm run test:e2e -- --shard=${{ matrix.shard }}/4 --reporter=list,json,blob
+          npm run test:e2e -- --shard=${{ matrix.shard }}/5 --reporter=list,json,blob
           browser_exit=$?
           node scripts/playwright-ci-feedback.mjs "$PLAYWRIGHT_JSON_OUTPUT_NAME"
           exit "$browser_exit"

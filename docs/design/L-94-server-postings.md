@@ -59,7 +59,12 @@ check it is within one day of its own before comparing; otherwise the shadow che
 when it is a real date within one day of the server's today (`agreedPostingDay`, postingShadowCheck.ts), else its own.
 The day is left out of the idempotency hash, so a retry after midnight is still the same save. Test:
 `src/tests/l94-posting-day.test.ts`. Invoices and bills (step 2) are built on the server, so this concerns credit notes and
-vendor credits. Left before enforcing: the shadow logs of the first testers.
+vendor credits. ~~Left before enforcing: the shadow logs of the first testers.~~
+
+**Enforced (L94-STEP2B, checked 24 Oct):** no document entries come from the browser any more, so there is nothing
+live to compare; `/transactions/bulk` refuses invoices, bills, credit notes and vendor credits and any entry that names
+one (`documentPostedByServer` in bulkRoutes.ts). The shadow comparison stays as a test helper
+(`src/tests/helpers/postingShadowCheck.ts`) proving the server rebuilds what the browser builder would.
 
 ## What does not change
 How amounts are calculated: the same builders, the same worked-figure tests (DIM-1, W2, W3W4-GOLD, W13-GOLD,

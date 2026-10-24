@@ -26,7 +26,9 @@ export async function executeCommand<T>(
   res: Response,
   workspaceId: string,
   operationType: string,
-  action: (ctx: CommandContext, t: FirestoreTransaction) => Promise<T>
+  action: (ctx: CommandContext, t: FirestoreTransaction) => Promise<T>,
+  /** EG-4: fields added to a successful answer beside `data` (e.g. budgetWarnings), read after the action ran */
+  extra: () => Record<string, unknown> = () => ({})
 ) {
   if (!workspaceId || typeof workspaceId !== 'string' || !workspaceId.trim()) {
     return res.status(400).json({
@@ -53,7 +55,7 @@ export async function executeCommand<T>(
       const result = await db.runTransaction(async (t) => {
         return await action(ctx, t);
       });
-      return res.json({ status: 'success', data: result });
+      return res.json({ status: 'success', data: result, ...extra() });
     } catch (error) {
       const status = (error as { status?: number }).status || 500;
       if (status >= 500) {
@@ -81,7 +83,7 @@ export async function executeCommand<T>(
     const result = await executeIdempotent(scopedKey, { ...ctx, payloadHash: requestPayloadHash(req.body) }, async (t) => {
       return await action(ctx, t);
     });
-    return res.json({ status: 'success', data: result });
+    return res.json({ status: 'success', data: result, ...extra() });
   } catch (error) {
     if ((error as { status?: number }).status === 409 || errorMessage(error).includes('already in progress')) {
       return res.status(409).json({ status: 'error', message: errorMessage(error) });

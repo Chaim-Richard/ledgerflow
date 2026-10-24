@@ -30,7 +30,7 @@ Since 22 Oct:
   blocks per run, so the merge matches them by line), so the gate is slightly stricter than one run, never laxer.
   `scripts/coverage-merge.test.mjs` keeps the two sets of thresholds equal;
 - each time zone runs in **two parts**;
-- the browser tests run in **four shards** instead of two. Playwright stays at `workers: 1` inside a shard: the tests
+- the browser tests run in **five shards** (two before 22 Oct; four, then five on 24 Oct when shard 1 alone took 9 min against 5–6 for the others: Playwright splits by test count, not time). Playwright stays at `workers: 1` inside a shard: the tests
   in a shard share one dev server and one database, so more workers there would be a real isolation change, not a
   speed-up for free.
 
