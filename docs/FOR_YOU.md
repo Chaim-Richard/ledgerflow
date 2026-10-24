@@ -556,7 +556,7 @@ Paste **`supabase/migrations/20261024000000_period_closings.sql`** into Supabase
 
 *Until then:* closing a year works as before, without the closing record.
 
-## 23 Oct — one more database change to paste, after #363 merges (EG-7, AI #9)
+## 23 Oct — ~~one more database change to paste, after #363 merges (EG-7, AI #9)~~ **Done: applied by Claude on 24 Oct through the Supabase connector — nothing to paste.**
 Paste **`supabase/migrations/20261025000000_stock_closings.sql`** into Supabase → SQL editor → Run.
 - It adds the stock closing record (`stockClosings`): each item's quantity and value at a locked period end. It is readable by members and written only by the server.
 
