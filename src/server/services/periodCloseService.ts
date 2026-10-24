@@ -8,6 +8,7 @@ import { formatTzDate } from '../../lib/utils';
 import { dayNumber } from '../../lib/fiscalCalendar';
 import { writeServerAuditLog } from './auditLogService';
 import { rebuildSnapshots } from './balanceService';
+import { supersedeClosings } from './periodClosingService';
 import { addToDateISO } from '../../lib/utils';
 import { balancesAsOf, snapshotChanges, takeClosingSnapshot, type ClosingSnapshot } from '../../lib/closingSnapshot';
 import type { ChartAccount, Transaction as LedgerEntry } from '../../types';
@@ -160,6 +161,8 @@ export async function reopenPeriod(db: Firestore, input: Actor & { month: string
     const update: DocumentData = { updatedAt: now };
     if (ws.lockDate && ws.lockDate > before) update.lockDate = before;
     if (ws.softLockDate && ws.softLockDate > before) update.softLockDate = before;
+    // EG-3: a year end now after the lock is open again, so its closing document is superseded
+    await supersedeClosings(db, t, { workspaceId: input.workspaceId, lockDate: (update.lockDate ?? ws.lockDate) || null, by: input.email || input.uid, reason: `Reopened ${input.month}: ${reason}`, at: now });
     t.update(ref, update);
     t.set(periodRef(db, input.workspaceId, input.month), {
       workspaceId: input.workspaceId, periodId: input.month, status: 'open',

@@ -4,13 +4,14 @@ import { useDialog } from '../../hooks/useDialog';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { formatCurrency, getLocalDateISO, parseAmountToCents } from '../../lib/utils';
 import { claimOf, claimProblem, decimalNumber, decisionProblem, mileageLine, perDiemLine, rateInThousandths, workedLineProblem, type ClaimLine, type ClaimLineKind, type DistanceUnit } from '../../lib/expenseClaims';
-import { mileageRateFor, perDiemRateFor, rateSuggestionText, COUNTRY_NAMES, type RateCountry } from '../../lib/tax/expenseRateTables';
+import { mileageRateFor, perDiemRateFor, rateSuggestionText, COUNTRY_NAMES, type PerDiemRow, type RateCountry } from '../../lib/tax/expenseRateTables';
+import { findGsaLocality, gsaLocalitiesToPerDiemRows, gsaLocalityLabel, readGsaPerDiemCsv, type GsaPerDiemImport } from '../../lib/tax/gsaPerDiemImport';
 import type { Bill, ChartAccount, Vendor } from '../../types';
 
 export interface NewClaim { payeeName: string; date: string; lines: ClaimLine[]; note: string }
 
 /** One line of the claim form: an expense typed as an amount, or mileage / per diem worked out (BE-09, BE-10). */
-interface DraftLine { key: string; kind: ClaimLineKind; description: string; accountId: string; amount: string; from: string; to: string; distance: string; unit: DistanceUnit; rate: string; days: string; /** A-75/A-76: the country whose dated rate table suggests the rate (none = type it) */ country: string }
+interface DraftLine { key: string; kind: ClaimLineKind; description: string; accountId: string; amount: string; from: string; to: string; distance: string; unit: DistanceUnit; rate: string; days: string; /** A-75/A-76: the country whose dated rate table suggests the rate (none = type it) */ country: string; /** A-107: the GSA locality picked for a US per-diem line, as "Destination, ST" (none = the standard rate) */ locality: string }
 
 // the last mileage and per-diem rates used, per workspace, in this browser (the person's own rates: no default is made up)
 const RATES_KEY = 'lf_claim_rates';
@@ -26,7 +27,7 @@ function saveRates(lines: DraftLine[]) {
     localStorage.setItem(RATES_KEY, JSON.stringify({ ...savedRates(), ...(mileage ? { mileageRate: mileage.rate, unit: mileage.unit } : {}), ...(perDiem ? { dailyRate: perDiem.rate } : {}) }));
   } catch { /* private window: nothing remembered */ }
 }
-const blankLine = (accountId = ''): DraftLine => ({ key: crypto.randomUUID(), kind: 'expense', description: '', accountId, amount: '', from: '', to: '', distance: '', unit: 'km', rate: '', days: '', country: '' });
+const blankLine = (accountId = ''): DraftLine => ({ key: crypto.randomUUID(), kind: 'expense', description: '', accountId, amount: '', from: '', to: '', distance: '', unit: 'km', rate: '', days: '', country: '', locality: '' });
 
 /** The claim line a draft line stands for (mileage and per diem worked out), and what it still needs. */
 function toClaimLine(l: DraftLine, currency: string): { line: ClaimLine; problem: string | null } {
@@ -136,6 +137,11 @@ function NewClaimDialog({ vendors, accounts, currency, onClose, onSubmit }: {
   const [note, setNote] = useState('');
   const [lines, setLines] = useState<DraftLine[]>([blankLine()]);
   const [saving, setSaving] = useState(false);
+  // A-107: the GSA locality table read from the person's own GSA file for this claim only.
+  // It is held in the dialog and never saved: a rate it suggests fills an empty field exactly
+  // like the built-in table's, and the claim still records the rate left in the field.
+  const [gsa, setGsa] = useState<{ read: GsaPerDiemImport; rows: PerDiemRow[]; fileName: string } | null>(null);
+  const [gsaProblem, setGsaProblem] = useState('');
   const worked = lines.map(l => toClaimLine(l, currency));
   const claimLines: ClaimLine[] = worked.map(w => w.line);
   const total = claimLines.reduce((sum, l) => sum + (l.amountCents > 0 ? l.amountCents : 0), 0);
@@ -144,13 +150,21 @@ function NewClaimDialog({ vendors, accounts, currency, onClose, onSubmit }: {
   // A-75/A-76: the dated rate table suggests the rate for the claim's date and the line's country.
   // It fills the field only while the field is empty (and only in the claim's own currency and the
   // line's own distance unit) — what the person types is what the claim records.
+  // A-107: the imported row for the locality this line picked (exact "Destination, ST"), if any.
+  const gsaRowsFor = (l: DraftLine): PerDiemRow[] => {
+    if (!gsa || l.kind !== 'perDiem' || l.country !== 'US') return [];
+    const locality = findGsaLocality(gsa.read.localities, l.locality);
+    if (!locality) return [];
+    const label = gsaLocalityLabel(locality);
+    return gsa.rows.filter(r => r.area.startsWith(`${label} locality`));
+  };
   const suggestionFor = (l: DraftLine, onDate = date) => {
     if (!l.country) return null;
     const country = l.country as RateCountry;
     return l.kind === 'mileage'
       ? mileageRateFor({ country, date: onDate, unit: l.unit, currency })
       : l.kind === 'perDiem'
-        ? perDiemRateFor({ country, date: onDate, currency })
+        ? perDiemRateFor({ country, date: onDate, currency, extraRows: gsaRowsFor(l) })
         : null;
   };
   const suggestionRate = (s: ReturnType<typeof suggestionFor>): string => {
@@ -184,6 +198,30 @@ function NewClaimDialog({ vendors, accounts, currency, onClose, onSubmit }: {
           : { kind, rate: '' };
       return { ...l, ...withTableRate(l, change) };
     }));
+  };
+
+  // A-107: read the GSA fiscal-year file (saved as CSV) for this claim's locality rates.
+  // A file that does not read cleanly imports nothing and says why; a rate already typed is
+  // never overwritten — only empty US per-diem lines with their locality picked are filled.
+  const onGsaFile = async (file: File | undefined) => {
+    if (!file) return;
+    setGsaProblem('');
+    try {
+      const read = readGsaPerDiemCsv(await file.text());
+      const rows = gsaLocalitiesToPerDiemRows(read.localities, getLocalDateISO());
+      setGsa({ read, rows, fileName: file.name });
+      setLines(prev => prev.map(l => {
+        if (l.kind !== 'perDiem' || l.country !== 'US' || l.rate) return l;
+        const locality = findGsaLocality(read.localities, l.locality);
+        if (!locality) return l;
+        const label = gsaLocalityLabel(locality);
+        const suggestion = perDiemRateFor({ country: 'US', date, currency, extraRows: rows.filter(r => r.area.startsWith(`${label} locality`)) });
+        return suggestion && suggestion.matchesCurrency ? { ...l, rate: suggestion.dailyText } : l;
+      }));
+    } catch (err) {
+      setGsa(null);
+      setGsaProblem(err instanceof Error ? err.message : String(err));
+    }
   };
 
   const submit = async () => {
@@ -265,9 +303,19 @@ function NewClaimDialog({ vendors, accounts, currency, onClose, onSubmit }: {
                       <option value="">Country…</option>
                       {(Object.keys(COUNTRY_NAMES) as RateCountry[]).map(c => <option key={c} value={c}>{COUNTRY_NAMES[c]}</option>)}
                     </select>
+                    {l.kind === 'perDiem' && l.country === 'US' && gsa && (
+                      <>
+                        <input aria-label={`GSA locality, line ${i + 1}`} list="claim-gsa-localities" value={l.locality}
+                          onChange={e => setLine(l.key, withTableRate(l, { locality: e.target.value }))}
+                          placeholder="Locality (GSA)…" className={`${field} w-auto`} />
+                        <datalist id="claim-gsa-localities">{gsa.read.localities.map(loc => <option key={`${loc.state}-${loc.destination}-${loc.county}`} value={gsaLocalityLabel(loc)} />)}</datalist>
+                      </>
+                    )}
                     <p className="text-[11px] text-[var(--muted)] flex-1 min-w-[12rem]" role="note">
-                      {suggestionFor(l)
-                        ? rateSuggestionText(suggestionFor(l)!, date)
+                      {l.kind === 'perDiem' && l.country === 'US' && gsa && l.locality.trim() && !findGsaLocality(gsa.read.localities, l.locality)
+                        ? `"${l.locality.trim()}" is not a locality in the imported FY${gsa.read.fiscalYear} file — pick one from the list; until then the standard rate is suggested.`
+                        : suggestionFor(l)
+                          ? rateSuggestionText(suggestionFor(l)!, date)
                         : l.country
                           ? `No table row for ${COUNTRY_NAMES[l.country as RateCountry] || l.country} on ${date} — type the rate (the claim records the rate you type).`
                           : 'Choose a country to suggest the dated rate from the rate table (the claim records the rate you type).'}
@@ -279,6 +327,21 @@ function NewClaimDialog({ vendors, accounts, currency, onClose, onSubmit }: {
             <button type="button" onClick={() => setLines(prev => [...prev, blankLine(prev[prev.length - 1]?.accountId || '')])}
               className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">+ Add a line</button>
           </fieldset>
+          {lines.some(l => l.kind === 'perDiem') && (
+            <div className="space-y-1">
+              <label className="block">
+                <span className="block text-xs font-semibold text-[var(--muted)] mb-1">US locality rates — GSA per diem file (optional)</span>
+                <input aria-label="GSA per diem rates CSV" type="file" accept=".csv,text/csv" className={field}
+                  onChange={e => void onGsaFile(e.target.files?.[0])} />
+              </label>
+              {gsa
+                ? <p className="text-[11px] text-[var(--muted)]" role="status">
+                  {gsa.read.localities.length} FY{gsa.read.fiscalYear} localities read from {gsa.fileName}. Pick the locality on a US per-diem line to suggest its rate; the file is used for this claim only and is not saved.
+                </p>
+                : <p className="text-[11px] text-[var(--muted)]">For a listed US locality (not the standard rate): save the GSA fiscal-year per diem workbook&apos;s rates sheet as CSV and read it here, or browse it under Reports → US Per Diem Rates (GSA).</p>}
+              {gsaProblem && <p role="alert" className="text-xs text-rose-600">{gsaProblem}</p>}
+            </div>
+          )}
           <label className="block">
             <span className="block text-xs font-semibold text-[var(--muted)] mb-1">Note (optional)</span>
             <input value={note} onChange={e => setNote(e.target.value)} placeholder="Client visit, receipts in the shared folder" className={field} />

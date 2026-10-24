@@ -675,6 +675,19 @@ select pg_temp.expect_denied('bookkeeper adds a stock closing from the browser',
   $$insert into "stockClosings"(id,data) values ('ws1_2024-12-31', '{"workspaceId":"ws1","asOf":"2024-12-31","rows":[]}')$$);
 select pg_temp.expect_denied('owner deletes a stock closing from the browser', 'u-owner', $$delete from "stockClosings" where id = 'ws1_2026-12-31'$$);
 select pg_temp.expect_value('the refused writes left the stock closing as it was', $q$select data->>'stockValueCents' from "stockClosings" where id = 'ws1_2026-12-31'$q$, '100');
+-- period-closing documents (EG-3): written only by the server; members read; the browser can neither write one nor
+-- mark one superseded
+select set_config('request.jwt.claims', '', true);
+insert into "periodClosings" (id, data) values ('ws1_2026-12-31_v1', '{"workspaceId":"ws1","yearEnd":"2026-12-31","version":1,"status":"current","profitAndLoss":{"netIncome":200000}}');
+select pg_temp.expect_count('viewer reads the closing document', 'u-view', $$select count(*) from "periodClosings"$$, 1);
+select pg_temp.expect_count('outsider reads no closing document', 'u-out', $$select count(*) from "periodClosings"$$, 0);
+select pg_temp.expect_denied('owner marks a closing document superseded from the browser', 'u-owner', $$select lf_update('periodClosings','ws1_2026-12-31_v1','{"status":"superseded"}'::jsonb)$$);
+select pg_temp.expect_denied('owner writes a closing document with lf_set', 'u-owner', $$select lf_set('periodClosings','ws1_2026-12-31_v2','{"workspaceId":"ws1","yearEnd":"2026-12-31","version":2}'::jsonb)$$);
+select pg_temp.expect_denied('accountant adds a closing document from the browser', 'u-acct',
+  $$insert into "periodClosings"(id,data) values ('ws1_2025-12-31_v1', '{"workspaceId":"ws1","yearEnd":"2025-12-31"}')$$);
+select pg_temp.expect_denied('owner deletes a closing document from the browser', 'u-owner', $$delete from "periodClosings" where id = 'ws1_2026-12-31_v1'$$);
+select pg_temp.expect_value('the refused writes left it as it was', $q$select data->>'status' from "periodClosings" where id = 'ws1_2026-12-31_v1'$q$, 'current');
+
 -- repost queue (EG-1): written only by the server; members read; nobody writes it from the browser
 select set_config('request.jwt.claims', '', true);
 insert into "repostQueue" (id, data) values ('ws1_stock-cost_i1', '{"workspaceId":"ws1","kind":"stock-cost","key":"i1","fromDate":"2026-01-03","status":"dirty"}');
@@ -686,6 +699,20 @@ select pg_temp.expect_denied('bookkeeper adds a queue row from the browser', 'u-
   $$insert into "repostQueue"(id,data) values ('ws1_stock-cost_i3', '{"workspaceId":"ws1","kind":"stock-cost","key":"i3","status":"dirty"}')$$);
 select pg_temp.expect_denied('owner deletes a queue row from the browser', 'u-owner', $$delete from "repostQueue" where id = 'ws1_stock-cost_i1'$$);
 select pg_temp.expect_value('the refused writes left it as it was', $q$select data->>'status' from "repostQueue" where id = 'ws1_stock-cost_i1'$q$, 'dirty');
+
+-- payment ledger (EG-2): written only by the server; members read; nobody writes it from the browser
+select set_config('request.jwt.claims', '', true);
+insert into "paymentAllocations" (id, data) values ('payment-p1-p1-inv1', '{"workspaceId":"ws1","documentId":"inv1","kind":"payment","amountCents":100}');
+select pg_temp.expect_count('viewer reads the payment ledger', 'u-view', $$select count(*) from "paymentAllocations"$$, 1);
+select pg_temp.expect_count('outsider reads no payment ledger', 'u-out', $$select count(*) from "paymentAllocations"$$, 0);
+select pg_temp.expect_denied('owner changes an allocation row from the browser', 'u-owner', $$select lf_update('paymentAllocations','payment-p1-p1-inv1','{"amountCents":999}'::jsonb)$$);
+select pg_temp.expect_denied('owner writes an allocation row with lf_set', 'u-owner', $$select lf_set('paymentAllocations','payment-p2-p2-inv1','{"workspaceId":"ws1","documentId":"inv1","amountCents":5}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper inserts an allocation row from the browser', 'u-book',
+  $$insert into "paymentAllocations"(id,data) values ('payment-p3-p3-inv1', '{"workspaceId":"ws1","documentId":"inv1","amountCents":5}')$$);
+select pg_temp.expect_denied('owner deletes an allocation row from the browser', 'u-owner', $$delete from "paymentAllocations" where id = 'payment-p1-p1-inv1'$$);
+select pg_temp.expect_denied('bookkeeper writes an allocation operation from the browser', 'u-book',
+  $$insert into "allocationOperations"(id,data) values ('ws1:op1', '{"workspaceId":"ws1"}')$$);
+select pg_temp.expect_value('the refused writes left it as it was', $q$select data->>'amountCents' from "paymentAllocations" where id = 'payment-p1-p1-inv1'$q$, '100');
 
 select 'ALL RLS TESTS PASSED' as result;
 rollback;
