@@ -39,7 +39,7 @@ export const StockClosingPanel: React.FC<{ workspaceId: string | null | undefine
             <div>
               <p>Closing of {closing.asOf}: stock {money(closing.stockValueCents)}, Inventory account {money(closing.inventoryBalanceCents)}, difference {money(closing.differenceCents)} ({closing.moveCount} stock moves).</p>
               {closing.complete === false && (
-                <p>Incomplete: {(closing.incompleteItems || []).map(i => `${i.itemName} (${i.quantity})`).join(', ')} started the stock history with units it has no value for, so the stock value leaves them out.</p>
+                <p>Incomplete: the stock value leaves out {(closing.incompleteItems || []).map(i => `${i.itemName} (${i.reason || `the history starts with ${i.quantity} units it has no value for`})`).join('; ')}.</p>
               )}
               <table className="mt-1 w-full">
                 <caption className="sr-only">Stock at the closing of {closing.asOf}, by item and location</caption>

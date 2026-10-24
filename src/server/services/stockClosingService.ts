@@ -47,6 +47,9 @@ export async function inventoryBalanceAsOf(db: Firestore, workspaceId: string, d
   return inventory.reduce((s, a) => s + (balances.accounts[a.id] || 0) + (Number(a.openingBalanceCents) || 0), 0);
 }
 
+const itemsOf = async (db: Firestore, workspaceId: string) =>
+  (await db.collection('inventory').where('workspaceId', '==', workspaceId).get()).docs.map(d => ({ ...(d.data() as { name?: string; quantityAtHand?: number; itemType?: string }), id: d.id }));
+
 const entriesThrough = async (db: Firestore, workspaceId: string, asOf: string) =>
   (await db.collection('transactions').where('workspaceId', '==', workspaceId).where('date', '<=', `${asOf}T23:59:59.999Z`).get()).docs.map(d => ({ ...d.data(), id: d.id }) as Transaction);
 
@@ -66,10 +69,10 @@ export async function writeStockClosing(db: Firestore, input: { workspaceId: str
     // every move, any date: an item's history start comes from its first move written, whatever its date
     const moves = (await t.get(db.collection('stockMoves').where('workspaceId', '==', input.workspaceId))).docs
       .map(d => ({ ...d.data(), id: d.id }) as StockMove);
-    const [entries, accounts] = await Promise.all([entriesThrough(db, input.workspaceId, asOf), accountsOf(db, input.workspaceId)]);
+    const [entries, accounts, items] = await Promise.all([entriesThrough(db, input.workspaceId, asOf), accountsOf(db, input.workspaceId), itemsOf(db, input.workspaceId)]);
     const inventoryBalanceCents = await inventoryBalanceAsOf(db, input.workspaceId, asOf, accounts);
     const booksChecksum = inventoryEntriesChecksum(entries, accounts, asOf);
-    const closing = buildStockClosing({ workspaceId: input.workspaceId, asOf, moves, inventoryBalanceCents, booksChecksum, builtBy: input.uid, at: new Date().toISOString() });
+    const closing = buildStockClosing({ workspaceId: input.workspaceId, asOf, moves, inventoryBalanceCents, booksChecksum, items, builtBy: input.uid, at: new Date().toISOString() });
     t.set(db.collection('stockClosings').doc(stockClosingId(input.workspaceId, asOf)), { ...closing });
     return closing;
   });
@@ -84,7 +87,7 @@ export interface StockCheckReport {
 }
 
 /** The read: the closing at `asOf` (or the newest one), checks (a) and (b) at the date, and (c) on the closing. */
-export async function stockCheckReport(db: Firestore, input: { workspaceId: string; asOf?: string; today: string }): Promise<StockCheckReport> {
+export async function stockCheckReport(db: Firestore, input: { workspaceId: string; asOf?: string; today: string; currency?: string }): Promise<StockCheckReport> {
   const all = (await stockClosingsReady(db))
     ? (await db.collection('stockClosings').where('workspaceId', '==', input.workspaceId).get()).docs.map(d => d.data() as StockClosing).sort((a, b) => b.asOf.localeCompare(a.asOf))
     : [];
@@ -104,7 +107,7 @@ export async function stockCheckReport(db: Firestore, input: { workspaceId: stri
     asOf,
     closing: picked && freshness ? { ...picked, fresh: freshness.fresh, freshness: freshness.message, changedItems: freshness.changedItems } : null,
     closings: all.map(c => ({ asOf: c.asOf, builtAt: c.builtAt })),
-    books: checkStockAgainstBooks({ asOf, moves, entries, accounts, inventoryBalanceCents }),
+    books: checkStockAgainstBooks({ asOf, moves, entries, accounts, inventoryBalanceCents, currency: input.currency }),
     negative: negativeStockDays(moves, asOf),
   };
 }

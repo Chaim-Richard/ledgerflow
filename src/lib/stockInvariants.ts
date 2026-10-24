@@ -18,6 +18,7 @@ import { resolveAccountRole } from './accountUtils';
 import { isPostable, lineAmount, transactionDate } from './txFilters';
 import { datedMoves, NO_LOCATION, orderedMoves, type StockMove } from './stockMoves';
 import type { CheckFinding, DataCheck } from './dataChecks';
+import { formatCurrency } from './utils';
 
 export interface StockClosingRow {
   itemId: string;
@@ -48,14 +49,15 @@ export interface StockClosing {
   differenceCents: number;
   /** false when an item's history starts with units it has no value for (stock from before the history) */
   complete: boolean;
-  incompleteItems: Array<{ itemId: string; itemName: string; quantity: number }>;
+  incompleteItems: Array<{ itemId: string; itemName: string; quantity: number; reason?: string }>;
   builtAt: string;
   builtBy: string;
 }
 
 const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
 const day = (d: unknown) => String(d || '').slice(0, 10);
-const money = (cents: number) => (cents / 100).toFixed(2);
+/** money in the workspace currency's own minor units (JPY 0, KWD 3), with the shared formatter */
+const money = (cents: number, currency?: string) => formatCurrency(cents, currency || 'USD');
 
 /** FNV-1a, 64 bits, as hex: the same in the browser and on the server, over a list kept in order. */
 export function fnv64(text: string): string {
@@ -111,10 +113,12 @@ function spread(cents: number, weights: number[]): number[] {
  * The closing snapshot at `asOf`, per item and location. The history is read whole (any date) for each item's start,
  * then the moves dated through `asOf` are summed: a move written first but dated later does not leak into it.
  * Units the history starts with have no value basis: they are kept at no location and the closing says it is
- * incomplete. A change of value with no units and no location (a revaluation) is spread over the item's locations by
- * their quantity on the date (largest remainder), and stays at no location only when no location holds units.
+ * incomplete. A change of value with no units and no location (a revaluation) is spread, at its own place in the
+ * dated history (before the moves after it), over the locations holding units then, by their quantity (largest
+ * remainder); it stays at no location only when no location holds units. `items` (the item list), when given, adds
+ * the items with stock on hand and no stock history at all: their stock on the date is not known (incomplete).
  */
-export function buildStockClosing(input: { workspaceId: string; asOf: string; moves: StockMove[]; inventoryBalanceCents: number; booksChecksum?: string; builtBy: string; at: string }): StockClosing {
+export function buildStockClosing(input: { workspaceId: string; asOf: string; moves: StockMove[]; inventoryBalanceCents: number; booksChecksum?: string; builtBy: string; at: string; items?: Array<{ id: string; name?: string; quantityAtHand?: number; itemType?: string }> }): StockClosing {
   const starts = historyStarts(input.moves);
   const covered = movesUpTo(input.moves, input.asOf);
   const byItem = new Map<string, StockMove[]>();
@@ -127,23 +131,30 @@ export function buildStockClosing(input: { workspaceId: string; asOf: string; mo
     const slot = (where: string) => at.get(where) || at.set(where, { quantity: 0, valueCents: 0, moves: [] }).get(where)!;
     const start = starts.get(itemId) || 0;
     if (start) { slot(NO_LOCATION).quantity = start; incompleteItems.push({ itemId, itemName, quantity: start }); }
-    let unplaced = 0;
-    for (const m of list) {
-      if (!m.locationId && !Number(m.quantity)) { unplaced += Number(m.valueCents) || 0; continue; }
+    for (const m of datedMoves(list)) {
+      if (!m.locationId && !Number(m.quantity)) {
+        // a revaluation with no location: over the locations holding units at this point of the dated history
+        const cents = Number(m.valueCents) || 0;
+        const holding = [...at].filter(([, s]) => s.quantity > 0);
+        if (holding.length) spread(cents, holding.map(([, s]) => s.quantity)).forEach((c, i) => { holding[i][1].valueCents += c; });
+        else slot(NO_LOCATION).valueCents += cents;
+        continue;
+      }
       const s = slot(m.locationId || NO_LOCATION);
       s.quantity = round6(s.quantity + (Number(m.quantity) || 0));
       s.valueCents += Number(m.valueCents) || 0;
       s.moves.push(m);
     }
-    if (unplaced) {
-      const holding = [...at].filter(([, s]) => s.quantity > 0);
-      if (holding.length) spread(unplaced, holding.map(([, s]) => s.quantity)).forEach((c, i) => { holding[i][1].valueCents += c; });
-      else slot(NO_LOCATION).valueCents += unplaced;
-    }
     for (const [locationId, s] of at) {
       if (s.quantity === 0 && s.valueCents === 0 && s.moves.length === 0) continue;
       rows.push({ itemId, itemName, locationId, quantity: s.quantity, valueCents: s.valueCents, moveCount: s.moves.length, checksum: fnv64(`${locationId === NO_LOCATION ? start : 0}|${movesChecksum(s.moves)}`) });
     }
+  }
+  // stock on hand today and no stock history at all: its stock on the date is not known (as inventoryAsOf says)
+  for (const item of input.items || []) {
+    const onHand = round6(Number(item.quantityAtHand) || 0);
+    if (onHand === 0 || item.itemType === 'service' || starts.has(item.id)) continue;
+    incompleteItems.push({ itemId: item.id, itemName: String(item.name || item.id), quantity: onHand, reason: `${onHand} on hand today with no stock history, so its stock on ${input.asOf} is not known` });
   }
   rows.sort((a, b) => a.itemName.localeCompare(b.itemName) || a.locationId.localeCompare(b.locationId));
   const stockValueCents = rows.reduce((s, r) => s + r.valueCents, 0);
@@ -174,7 +185,8 @@ export interface BooksCheck {
  * Check (a). `inventoryBalanceCents` is the Inventory balance from balancesAsOf when the caller has it; without it the
  * balance is summed from `entries` (and the accounts' opening balances). The split by item reads `entries`.
  */
-export function checkStockAgainstBooks(input: { asOf: string; moves: StockMove[]; entries: Transaction[]; accounts: ChartAccount[]; inventoryBalanceCents?: number }): BooksCheck {
+export function checkStockAgainstBooks(input: { asOf: string; moves: StockMove[]; entries: Transaction[]; accounts: ChartAccount[]; inventoryBalanceCents?: number; currency?: string }): BooksCheck {
+  const fmt = (cents: number) => money(cents, input.currency);
   const inventory = new Set(input.accounts.filter(a => resolveAccountRole(a) === 'inventory').map(a => a.id));
   const covered = movesUpTo(input.moves, input.asOf);
   const names = new Map(covered.map(m => [m.itemId, String(m.itemName || m.itemId)]));
@@ -211,12 +223,12 @@ export function checkStockAgainstBooks(input: { asOf: string; moves: StockMove[]
   const differenceCents = stockValueCents - inventoryBalanceCents;
   const items = [...byItem].map(([itemId, c]) => ({ itemId, itemName: names.get(itemId) || itemId, differenceCents: c })).sort((a, b) => a.itemName.localeCompare(b.itemName));
   const parts = [
-    ...items.map(i => `${i.itemName} ${money(i.differenceCents)}`),
-    ...unattributed.map(u => `${u.description || u.transactionId}${u.date ? ` (${u.date})` : ''} ${money(u.differenceCents)}`),
+    ...items.map(i => `${i.itemName} ${fmt(i.differenceCents)}`),
+    ...unattributed.map(u => `${u.description || u.transactionId}${u.date ? ` (${u.date})` : ''} ${fmt(u.differenceCents)}`),
   ];
   const message = differenceCents === 0
-    ? `On ${input.asOf} the stock is worth ${money(stockValueCents)}, the same as the Inventory account.`
-    : `On ${input.asOf} the stock is worth ${money(stockValueCents)} but the Inventory account shows ${money(inventoryBalanceCents)}: the books have ${money(Math.abs(differenceCents))} ${differenceCents < 0 ? 'more' : 'less'} than the stock.${parts.length ? ` From: ${parts.slice(0, 5).join('; ')}${parts.length > 5 ? `; and ${parts.length - 5} more` : ''}.` : ''}`;
+    ? `On ${input.asOf} the stock is worth ${fmt(stockValueCents)}, the same as the Inventory account.`
+    : `On ${input.asOf} the stock is worth ${fmt(stockValueCents)} but the Inventory account shows ${fmt(inventoryBalanceCents)}: the books have ${fmt(Math.abs(differenceCents))} ${differenceCents < 0 ? 'more' : 'less'} than the stock.${parts.length ? ` From: ${parts.slice(0, 5).join('; ')}${parts.length > 5 ? `; and ${parts.length - 5} more` : ''}.` : ''}`;
   return { ok: differenceCents === 0, asOf: input.asOf, stockValueCents, inventoryBalanceCents, differenceCents, byItem: items, unattributed, message };
 }
 
@@ -287,7 +299,7 @@ export const STOCK_INVARIANT_CHECKS: DataCheck[] = [
     id: 'stock-vs-books',
     label: 'Stock value differs from the Inventory account (EG-7)',
     remedy: 'Open Inventory Valuation and the entries named: post the stock change with its entry, or correct the journal to Inventory.',
-    run: ({ stockMoves, transactions, accounts, today, truncated }) => {
+    run: ({ stockMoves, transactions, accounts, today, truncated, baseCurrency }) => {
       // the browser does not load the stock moves: nothing to compare (an empty list is compared: stock is then 0)
       if (!stockMoves) return [];
       const capped = (truncated || []).filter(t => t === 'stockMoves' || t === 'transactions');
@@ -295,8 +307,8 @@ export const STOCK_INVARIANT_CHECKS: DataCheck[] = [
         return [{ id: `stock-vs-books-not-compared-${capped.join('-')}`, checkId: 'stock-vs-books', severity: 'low', title: 'Stock and the Inventory account were not compared',
           description: `Only part of the ${capped.map(c => (c === 'stockMoves' ? 'stock history' : 'entries')).join(' and the ')} could be read, so a comparison would be wrong. Open Inventory Valuation to compare them for a date.` }];
       }
-      const check = checkStockAgainstBooks({ asOf: today, moves: stockMoves, entries: transactions, accounts });
-      return check.ok ? [] : [{ id: `stock-vs-books-${check.differenceCents}`, checkId: 'stock-vs-books', severity: 'high', title: `Stock and the Inventory account differ by ${money(Math.abs(check.differenceCents))}`, description: check.message }];
+      const check = checkStockAgainstBooks({ asOf: today, moves: stockMoves, entries: transactions, accounts, currency: baseCurrency });
+      return check.ok ? [] : [{ id: `stock-vs-books-${check.differenceCents}`, checkId: 'stock-vs-books', severity: 'high', title: `Stock and the Inventory account differ by ${money(Math.abs(check.differenceCents), baseCurrency)}`, description: check.message }];
     },
   },
   {

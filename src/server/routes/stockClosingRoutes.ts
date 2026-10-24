@@ -29,11 +29,14 @@ export function registerStockClosingRoutes(router: express.Router): void {
   router.get('/stock-closing', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), async (req, res) => {
     const parsed = z.object({ workspaceId: z.string().min(1).max(200), asOf: day.optional() }).safeParse(req.query);
     if (!parsed.success) return res.status(400).json({ error: 'Say the workspace and, optionally, the day (YYYY-MM-DD)' });
+    // requireWorkspaceRole checked the body's workspace before the query's: read only the one it checked
+    const bodyWs = (req.body as { workspaceId?: unknown } | undefined)?.workspaceId;
+    if (bodyWs !== undefined && bodyWs !== parsed.data.workspaceId) return res.status(400).json({ error: 'The workspace in the body and in the address differ' });
     try {
       const db = getDb();
       const ws = (await db.collection('workspaces').doc(parsed.data.workspaceId).get()).data() || {};
       const today = formatTzDate(new Date(), typeof ws.timezone === 'string' ? ws.timezone : 'UTC');
-      res.json({ status: 'ok', ...(await stockCheckReport(db, { ...parsed.data, today })) });
+      res.json({ status: 'ok', ...(await stockCheckReport(db, { ...parsed.data, today, currency: typeof ws.currency === 'string' ? ws.currency : 'USD' })) });
     } catch (e) {
       res.status(500).json({ error: errorMessage(e) });
     }
