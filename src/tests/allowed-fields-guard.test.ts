@@ -46,7 +46,7 @@ const TABLES: Record<string, [string, string[]]> = {
   // numberingSeries lives in its own collection; the field on the model is a legacy read path.
   // expensePolicy (A-74) is read by the Expense Policy Check report; the client never saves it, so the
   // workspace's allowed-field list (and the migration that carries it) stays AI #1's to add.
-  workspaces: ['Workspace', ['numberingSeries', 'retention', 'setupCompletedAt', 'openingBalanceDate', 'branding', 'scheduledReportsSent', 'closeSteps', 'ledgerHealth', 'alerts', 'alertsSent', 'payrollApproval', 'requireTwoStep', 'refuseNegativeStock', 'modules', 'goodsLeaveWith', 'allocationRules', 'priceLists', 'salesReps', 'twoPersonRule', 'roleDashboards', 'approvalDelegates', 'taxProfiles', 'brandingProfiles', 'expensePolicy']],
+  workspaces: ['Workspace', ['numberingSeries', 'retention', 'setupCompletedAt', 'openingBalanceDate', 'branding', 'scheduledReportsSent', 'closeSteps', 'ledgerHealth', 'alerts', 'alertsSent', 'payrollApproval', 'requireTwoStep', 'refuseNegativeStock', 'modules', 'goodsLeaveWith', 'allocationRules', 'priceLists', 'salesReps', 'twoPersonRule', 'roleDashboards', 'approvalDelegates', 'taxProfiles', 'brandingProfiles', 'expensePolicy', 'budgetControl']],
   notifications: ['AppNotification', []],
   purchaseOrders: ['PurchaseOrder', []],
 };
