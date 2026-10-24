@@ -27,6 +27,12 @@
  *     (L2) → 5 and 2.
  *   no stock moves and Inventory 10.00 in the books → (a) still compares: stock 0, difference −1,000.
  *   a capped source (entries or stock history) → (a) is not compared and says why.
+ * Round 2:
+ *   buy 10 at L1 for 10.00 (1,000), revalue +10.00 with no location (all 10 units at L1 then → L1 2,000), move all 10
+ *     to L2 at 20.00 (L1 −2,000, L2 +2,000) → L1 0 / 0.00, L2 10 / 20.00 (spread at its place, not at the end).
+ *   a journal of 1,000 minor units to Inventory: in JPY "¥1,000", in KWD "KWD 1.000" (not "10.00").
+ *   an item with 4 on hand and no stock history → the closing is incomplete and says its stock is not known.
+ *   GET ?workspaceId=<other> with a body naming this workspace → 400, nothing of the other workspace read.
  */
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -64,7 +70,7 @@ test('EG-7 pure: the worked closing, the dated quantities, the checksum and the 
   assert.deepEqual([books.stockValueCents, books.inventoryBalanceCents, books.differenceCents], [22_500, 23_600, -1_100]);
   assert.deepEqual(books.byItem.map(i => [i.itemName, i.differenceCents]), [['Widget', -100]], 't3 posted 74.00 against a move of 75.00');
   assert.deepEqual(books.unattributed.map(u => [u.transactionId, u.differenceCents]), [['j', -1_000]]);
-  assert.match(books.message, /books have 11\.00 more than the stock/);
+  assert.match(books.message, /books have \$11\.00 more than the stock/);
   const back = [...moves, mv({ date: '2026-01-05', kind: 'adjustment', quantity: -12, quantityBefore: 15, valueCents: -18_000 })];
   assert.deepEqual(datedQuantities(back).get('widget')?.[0], { date: '2026-01-05', quantity: -12 });
   assert.deepEqual(negativeStockDays(back).items.map(i => [i.itemName, i.date]), [['Widget', '2026-01-05']]);
@@ -113,7 +119,7 @@ test('EG-7 review: no stock moves still compares; a capped source is not compare
   const ctx = { transactions: [journal], accounts, invoices: [], bills: [], recurring: [], today: '2026-03-31', baseCurrency: 'USD' };
   const none = runDataChecks({ ...ctx, stockMoves: [] }, STOCK_INVARIANT_CHECKS);
   assert.deepEqual(none.map(f => [f.checkId, f.severity]), [['stock-vs-books', 'high']]);
-  assert.match(none[0].description, /worth 0\.00 but the Inventory account shows 10\.00/);
+  assert.match(none[0].description, /worth \$0\.00 but the Inventory account shows \$10\.00/);
   assert.deepEqual(runDataChecks(ctx, STOCK_INVARIANT_CHECKS), [], 'the browser does not load the stock moves');
   const capped = runDataChecks({ ...ctx, stockMoves: [], truncated: ['transactions'] }, STOCK_INVARIANT_CHECKS);
   assert.deepEqual(capped.map(f => [f.checkId, f.severity]), [['stock-vs-books', 'low']]);
@@ -122,6 +128,27 @@ test('EG-7 review: no stock moves still compares; a capped source is not compare
   const f = closingFreshness(closing, [], inventoryEntriesChecksum([journal], accounts, '2026-03-31'));
   assert.deepEqual([f.fresh, f.booksChanged, f.changedItems], [false, true, []]);
   assert.equal(closingFreshness(closing, [], inventoryEntriesChecksum([{ ...journal, date: '2026-04-02' }], accounts, '2026-03-31')).fresh, true, 'a journal after the date does not touch it');
+});
+
+test('EG-7 review 2: a revaluation is spread at its place in the dated history; money in minor units; items with no history', () => {
+  const moves = [
+    mv({ itemId: 'v', itemName: 'V', date: '2026-01-10', quantity: 10, quantityBefore: 0, valueCents: 1_000, locationId: 'L1' }),
+    mv({ itemId: 'v', itemName: 'V', date: '2026-01-20', kind: 'revaluation', quantity: 0, quantityBefore: 10, valueCents: 1_000 }),
+    mv({ itemId: 'v', itemName: 'V', date: '2026-02-01', kind: 'transfer-out', quantity: -10, quantityBefore: 10, valueCents: -2_000, locationId: 'L1' }),
+    mv({ itemId: 'v', itemName: 'V', date: '2026-02-01', kind: 'transfer-in', quantity: 10, quantityBefore: 0, valueCents: 2_000, locationId: 'L2' }),
+  ];
+  const c = buildStockClosing({ workspaceId: 'ws', asOf: '2026-03-31', moves, inventoryBalanceCents: 2_000, builtBy: 'u', at: 'now', items: [{ id: 'v', name: 'V', quantityAtHand: 10 }, { id: 'old', name: 'Old', quantityAtHand: 4 }, { id: 'svc', name: 'Svc', quantityAtHand: 3, itemType: 'service' }] });
+  assert.deepEqual(c.rows.map(r => [r.locationId, r.quantity, r.valueCents]), [['L1', 0, 0], ['L2', 10, 2_000]]);
+  assert.deepEqual([c.complete, c.incompleteItems.map(i => [i.itemId, i.quantity])], [false, [['old', 4]]]);
+  assert.match(c.incompleteItems[0].reason || '', /4 on hand today with no stock history/);
+  const accounts = [{ id: 'inv', name: 'Inventory', type: 'asset', category: 'Inventory' }, { id: 'eq', name: 'Equity', type: 'equity' }] as ChartAccount[];
+  const journal = { id: 'j', date: '2026-03-20', status: 'completed', type: 'journal', lines: [{ accountId: 'inv', amountCents: 1_000 }, { accountId: 'eq', amountCents: -1_000 }] } as unknown as Transaction;
+  const yen = checkStockAgainstBooks({ asOf: '2026-03-31', moves: [], entries: [journal], accounts, currency: 'JPY' });
+  assert.match(yen.message, /the books have ¥1,000 more than the stock/);
+  assert.doesNotMatch(yen.message, /10\.00/);
+  assert.match(checkStockAgainstBooks({ asOf: '2026-03-31', moves: [], entries: [journal], accounts, currency: 'KWD' }).message, /KWD\s1\.000 more/);
+  const found = runDataChecks({ transactions: [journal], accounts, invoices: [], bills: [], recurring: [], today: '2026-03-31', baseCurrency: 'JPY', stockMoves: [] }, STOCK_INVARIANT_CHECKS);
+  assert.equal(found[0].title, 'Stock and the Inventory account differ by ¥1,000');
 });
 
 describe('EG-7 stock closing on a real database', { skip: !url && 'LF_TEST_DATABASE_URL not set' }, () => {
@@ -157,6 +184,9 @@ describe('EG-7 stock closing on a real database', { skip: !url && 'LF_TEST_DATAB
     const item = (name: string, cost: number) => db.collection('inventory').doc(id(name)).set({ workspaceId: ws, name, sku: name.toUpperCase(), quantityAtHand: 0, unitCostCents: cost, unitPriceCents: 5_000, reorderPoint: 0 });
     await item('widget', 1_000);
     await item('gizmo', 500);
+    // 4 on hand and never a stock move: the closing can't know its stock (incomplete)
+    await db.collection('inventory').doc(id('legacy')).set({ workspaceId: ws, name: 'legacy', quantityAtHand: 4, unitCostCents: 100 });
+    await db.collection('workspaces').doc(`${ws}_other`).set({ uid: 'x', name: 'Other', currency: 'USD', members: ['x'] });
     const app = express();
     app.use(express.json());
     app.use((req, _res, next) => { (req as unknown as { user: { uid: string } }).user = { uid: String(req.header('x-test-uid')) }; next(); });
@@ -169,7 +199,7 @@ describe('EG-7 stock closing on a real database', { skip: !url && 'LF_TEST_DATAB
   after(async () => {
     server?.close();
     for (const table of ['transactions', 'inventory', 'chartAccounts', 'stockMoves', 'stockClosings', 'periodBalances', 'auditLogs', 'workspaces']) {
-      await db.pool.query(`delete from public."${table}" where workspace_id = $1 or id = $1`, [ws]).catch(() => {});
+      await db.pool.query(`delete from public."${table}" where workspace_id = any($1) or id = any($1)`, [[ws, `${ws}_other`]]).catch(() => {});
     }
     await db.terminate();
   });
@@ -189,11 +219,24 @@ describe('EG-7 stock closing on a real database', { skip: !url && 'LF_TEST_DATAB
     const c = r.body.closing;
     assert.deepEqual([c.asOf, c.stockValueCents, c.inventoryBalanceCents, c.differenceCents, c.moveCount], ['2026-03-31', 22_500, 22_500, 0, 3]);
     assert.deepEqual(c.rows.map((x: { itemId: string; locationId: string; quantity: number; valueCents: number; moveCount: number }) => [x.itemId, x.locationId, x.quantity, x.valueCents, x.moveCount]), [[id('widget'), '', 15, 22_500, 3]]);
+    assert.deepEqual([c.complete, c.incompleteItems.map((i: { itemId: string; quantity: number }) => [i.itemId, i.quantity])], [false, [[id('legacy'), 4]]]);
     const stored = (await db.collection('stockClosings').doc(`${ws}_2026-03-31`).get()).data();
     assert.equal(stored?.checksum, c.checksum);
     const got = await read();
     assert.deepEqual([got.closing.fresh, got.books.ok, got.books.differenceCents, got.negative.ok], [true, true, 0, true]);
     assert.equal((await send('owner', 'POST', '/api/v1/inventory/stock-closing', { workspaceId: ws, asOf: '2026-06-30' })).status, 409, 'after the lock date');
+  });
+
+  test('a GET naming another workspace in the address than in the body is refused (the role check read the body)', async () => {
+    const { request } = await import('node:http');
+    const port = (server.address() as AddressInfo).port;
+    const body = JSON.stringify({ workspaceId: ws });
+    const status = await new Promise<number>((resolve, reject) => {
+      const r = request({ host: '127.0.0.1', port, method: 'GET', path: `/api/v1/inventory/stock-closing?workspaceId=${ws}_other`, headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body), 'x-test-uid': 'view' } }, res => { res.resume(); resolve(res.statusCode || 0); });
+      r.on('error', reject);
+      r.end(body);
+    });
+    assert.equal(status, 400);
   });
 
   test('(a) a manual journal of 10.00 to Inventory: the books are 10.00 more than the stock, put on that journal', async () => {
@@ -205,7 +248,7 @@ describe('EG-7 stock closing on a real database', { skip: !url && 'LF_TEST_DATAB
     assert.deepEqual([got.books.stockValueCents, got.books.inventoryBalanceCents, got.books.differenceCents], [22_500, 23_500, -1_000]);
     assert.deepEqual(got.books.unattributed.map((u: { transactionId: string; differenceCents: number }) => [u.transactionId, u.differenceCents]), [[id('journal'), -1_000]]);
     assert.deepEqual(got.books.byItem, []);
-    assert.match(got.books.message, /books have 10\.00 more than the stock/);
+    assert.match(got.books.message, /books have \$10\.00 more than the stock/);
   });
 
   test('(b) a move dated back takes gizmo below zero on 2026-05-01', async () => {
