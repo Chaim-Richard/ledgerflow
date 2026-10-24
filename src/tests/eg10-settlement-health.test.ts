@@ -16,6 +16,14 @@
  *   With a hand entry of 1234 on A/R: 156234 vs 155000 -> difference $12.34.
  * A/P: credit 60000 (B-1) + debit 60000 (its payment) + credit 11000 (B-2, 10000 x 1.10)
  *   = -11000, shown as 11000; open dues 0 + round(10000 x 1.10) = 11000 -> agrees.
+ * Review fixes (PR #369):
+ *   - JPY invoice ¥100,000 (0 decimals) at 0.0067 = $670.00 = 67000 cents, not 100000 × 0.0067 = 670 cents.
+ *   - A/R opening balance 5000 + no entries = 5000; one invoice due 5000 -> agrees (opening counted).
+ *   - Bill B-3 `paid` with no amountPaidCents, total 30000, deposit 0: paid = 30000 - 0 = 30000;
+ *     rows 30000 -> agrees, due 0. Without the rule it read as 0 paid (mismatch) and 30000 due.
+ *   - Bill B-4 status `unpaid`, total 7000, no entries: due 7000 is counted in A/P (shared set missed it).
+ *   - Invoice `x` and bill `x` share an id: rows 1000 (invoice) and 2000 (bill) each agree, not 3000 for both.
+ *   - transactions read in part (a cap): one low "Not checked" note, no difference.
  * The database part runs when LF_TEST_DATABASE_URL is set.
  */
 import test, { after, before, describe } from 'node:test';
@@ -39,12 +47,12 @@ const bills = [
   { id: 'b2', number: 'B-2', status: 'approved', amountCents: 10000, amountPaidCents: 0, currency: 'EUR', exchangeRate: 1.1 },
 ] as unknown as Bill[];
 const allocations = [
-  { id: 'a1', documentId: 'i1', kind: 'payment', amountCents: 30000 },
-  { id: 'a2', documentId: 'i1', kind: 'payment', amountCents: 10000 },
-  { id: 'a3', documentId: 'i2', kind: 'payment', amountCents: 25000 },
-  { id: 'a4', documentId: 'i2', kind: 'reversal', amountCents: -5000 },
-  { id: 'a5', documentId: 'i3', kind: 'payment', amountCents: 20000 },
-  { id: 'a6', documentId: 'b1', kind: 'payment', amountCents: 60000 },
+  { id: 'a1', documentId: 'i1', documentType: 'invoice', kind: 'payment', amountCents: 30000 },
+  { id: 'a2', documentId: 'i1', documentType: 'invoice', kind: 'payment', amountCents: 10000 },
+  { id: 'a3', documentId: 'i2', documentType: 'invoice', kind: 'payment', amountCents: 25000 },
+  { id: 'a4', documentId: 'i2', documentType: 'invoice', kind: 'reversal', amountCents: -5000 },
+  { id: 'a5', documentId: 'i3', documentType: 'invoice', kind: 'payment', amountCents: 20000 },
+  { id: 'a6', documentId: 'b1', documentType: 'bill', kind: 'payment', amountCents: 60000 },
 ];
 const accounts = [
   { id: 'ar', name: 'Accounts receivable', type: 'asset', category: 'Receivables', role: 'ar' },
@@ -102,6 +110,49 @@ describe('EG-10 control balance check', () => {
 
   test('no control account, no finding', () => {
     assert.deepEqual(check('control-balance').run(ctx({ accounts: accounts.filter(a => a.id === 'bank') })), []);
+  });
+});
+
+describe('EG-10 review fixes', () => {
+  test('a yen invoice is converted in minor units: ¥100,000 at 0.0067 = $670.00', () => {
+    const yen = [{ id: 'j1', number: 'J-1', status: 'sent', amountCents: 100000, amountPaidCents: 0, currency: 'JPY', exchangeRate: 0.0067 }] as unknown as Invoice[];
+    const found = check('control-balance').run(ctx({ invoices: yen, bills: [], transactions: [entry('t1', 'ar', 67000, 'sales')] }));
+    assert.deepEqual(found, []);
+  });
+
+  test('the opening balance of A/R is counted', () => {
+    const opened = accounts.map(a => (a.id === 'ar' ? { ...a, openingBalanceCents: 5000 } : a));
+    const one = [{ id: 'o1', number: 'O-1', status: 'sent', amountCents: 5000, amountPaidCents: 0, currency: 'USD' }] as unknown as Invoice[];
+    assert.deepEqual(check('control-balance').run(ctx({ accounts: opened, invoices: one, bills: [], transactions: [] })), []);
+  });
+
+  test('a bill marked paid without an amount counts as fully paid; an unpaid bill counts in A/P', () => {
+    const marked = [
+      { id: 'b3', number: 'B-3', status: 'paid', amountCents: 30000, currency: 'USD' },
+      { id: 'b4', number: 'B-4', status: 'unpaid', amountCents: 7000, amountPaidCents: 0, currency: 'USD' },
+    ] as unknown as Bill[];
+    const rows = [{ id: 'r', documentId: 'b3', documentType: 'bill', kind: 'manual', amountCents: 30000 }];
+    assert.deepEqual(check('settlement-ledger').run(ctx({ invoices: [], bills: marked, allocations: rows })), []);
+    const found = check('control-balance').run(ctx({ invoices: [], bills: marked, transactions: [] }));
+    assert.equal(found.length, 1);
+    assert.match(found[0].title, /Accounts payable is \$0\.00, the open bills add up to \$70\.00/);
+  });
+
+  test('an invoice and a bill with the same id keep their own totals', () => {
+    const inv = [{ id: 'x', number: 'X', status: 'partially_paid', amountCents: 5000, amountPaidCents: 1000, currency: 'USD' }] as unknown as Invoice[];
+    const bill = [{ id: 'x', number: 'X', status: 'partially_paid', amountCents: 5000, amountPaidCents: 2000, currency: 'USD' }] as unknown as Bill[];
+    const rows = [
+      { id: 'r1', documentId: 'x', documentType: 'invoice', kind: 'payment', amountCents: 1000 },
+      { id: 'r2', documentId: 'x', documentType: 'bill', kind: 'payment', amountCents: 2000 },
+    ];
+    assert.deepEqual(check('settlement-ledger').run(ctx({ invoices: inv, bills: bill, allocations: rows })), []);
+  });
+
+  test('capped inputs say the data is incomplete instead of reporting a difference', () => {
+    const control = check('control-balance').run(ctx({ transactions: [...transactions, entry('t6', 'ar', 1234)], truncated: ['transactions'] }));
+    assert.deepEqual(control.map(f => [f.id, f.severity]), [['control-balance-incomplete', 'low']]);
+    const settled = check('settlement-ledger').run(ctx({ truncated: ['allocations'] }));
+    assert.deepEqual(settled.map(f => f.id), ['settlement-ledger-incomplete']);
   });
 });
 

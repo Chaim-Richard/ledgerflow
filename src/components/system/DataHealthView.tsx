@@ -43,6 +43,8 @@ export default function DataHealthView() {
   const bankLines = useLedgerStore(s => s.bankLines);
   const payments = useLedgerStore(s => s.payments);
   const customers = useLedgerStore(s => s.customers);
+  const truncatedCollections = useLedgerStore(s => s.truncatedCollections);
+  const isDataTruncated = useLedgerStore(s => s.isDataTruncated);
   const vendors = useLedgerStore(s => s.vendors);
   const { loading } = useLedgerCollections('bankLines', 'bills', 'inventory', 'invoices', 'recurring', 'payments');
   useLedgerCollections('customers', 'vendors');
@@ -59,7 +61,9 @@ export default function DataHealthView() {
     recurring: recurring || [], inventory: inventory || [], bankLines: bankLines || [], payments: payments || [],
     customers: customers || [], vendors: vendors || [], workspaceCountry,
     today: getLocalDateISO(), baseCurrency, dimensions,
-  }), [transactions, accounts, invoices, bills, recurring, inventory, bankLines, payments, customers, vendors, workspaceCountry, baseCurrency, dimensions]);
+    // EG-10: the browser reads the newest records only; totals over a cut collection are not compared
+    truncated: [...Object.keys(truncatedCollections || {}).filter(k => truncatedCollections[k]), ...(isDataTruncated ? ['all'] : [])],
+  }), [truncatedCollections, isDataTruncated, transactions, accounts, invoices, bills, recurring, inventory, bankLines, payments, customers, vendors, workspaceCountry, baseCurrency, dimensions]);
 
   const byCheck = useMemo(() => DATA_CHECKS.map(check => ({ check, findings: findings.filter(f => f.checkId === check.id) })), [findings]);
   const shown = byCheck.filter(g => g.findings.length > 0 && (only === 'all' || g.check.id === only));
