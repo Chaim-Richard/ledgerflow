@@ -106,9 +106,10 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
     let planned: BudgetWarning[];
     try {
       if (!transaction || !transaction.workspaceId) throw new HttpError('Invalid payload', 400);
-      transaction.uid = user.uid;
-      if (!transaction.totalAmountCents) transaction.totalAmountCents = getAbsoluteTotal(transaction);
-      const parsed = TransactionSchema.safeParse(transaction);
+      // a copy: req.body stays the client's JSON, which the idempotency fingerprint is computed from
+      const draft = { ...transaction, uid: user.uid };
+      if (!draft.totalAmountCents) draft.totalAmountCents = getAbsoluteTotal(draft);
+      const parsed = TransactionSchema.safeParse(draft);
       if (!parsed.success) throw Object.assign(new HttpError('Schema validation failed', 400), { details: parsed.error.issues });
       const transactionToSave = { ...parsed.data, id: parsed.data.id || db.collection("transactions").doc().id } as Transaction;
       const wsData = (await db.collection('workspaces').doc(transactionToSave.workspaceId).get()).data();

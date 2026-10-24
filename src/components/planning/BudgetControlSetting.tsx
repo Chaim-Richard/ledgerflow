@@ -18,8 +18,6 @@ const CHOICES: Array<{ value: BudgetControl; label: string }> = [
 export default function BudgetControlSetting() {
   const id = useId();
   const workspace = useAuthStore(s => s.getCurrentWorkspace());
-  const workspaces = useAuthStore(s => s.workspaces);
-  const setWorkspaces = useAuthStore(s => s.setWorkspaces);
   const isOwner = useCurrentRole() === 'owner';
   const stored: BudgetControl = workspace?.budgetControl ?? 'warn';
   // the choice being saved; otherwise the stored value is shown
@@ -39,7 +37,12 @@ export default function BudgetControlSetting() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || data.message || 'The budget control could not be saved');
-      setWorkspaces(workspaces.map(w => (w.id === workspace.id ? { ...w, budgetControl: next } : w)));
+      // patch the store as it is now: if the user signed out or switched account meanwhile, the
+      // workspace is no longer there and nothing is written back
+      const { workspaces: latest, setWorkspaces } = useAuthStore.getState();
+      if (latest.some(w => w.id === workspace.id)) {
+        setWorkspaces(latest.map(w => (w.id === workspace.id ? { ...w, budgetControl: next } : w)));
+      }
       toast.success('Budget control saved');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
