@@ -67,10 +67,10 @@ export interface CheckContext {
   stockMoves?: StockMove[];
   /** EG-7: the stock closing snapshots (server-only), checked against the moves they cover */
   stockClosings?: StockClosing[];
+  /** The sources read only up to a cap, by name (nightly caps; the browser's cut collections, EG-10), never an any-collection flag. */
+  truncated?: string[];
   /** EG-2 payment-ledger rows (`paymentAllocations`); the nightly check reads them, the browser does not. */
   allocations?: Array<{ id: string; documentId?: string; documentType?: string; kind?: string; amountCents?: number; baseClearedCents?: number }>;
-  /** Inputs read only in part (a limit was reached): `transactions`, `invoices`, `allocations`…; only the collections cut, never an any-collection flag. */
-  truncated?: string[];
   /** Payment records (CB-23: each has its entry in the ledger). */
   payments?: Array<Partial<Payment> & { id: string; number?: string; status?: string; amountCents?: number; exchangeRate?: number; paymentExchangeRate?: number; paymentDate?: string; date?: string; contactName?: string; entityName?: string }>;
 }
@@ -538,7 +538,11 @@ export const DATA_CHECKS: DataCheck[] = [
           const home = (cents: number) => convertMinorUnits(cents, rate, d.currency || baseCurrency, baseCurrency);
           const paid = paidCents(d);
           if (calculateAmountDue({ ...d, amountPaidCents: paid }) === 0) return s;
-          const settled = cleared.has(d.id) && cleared.get(d.id) !== 0 ? cleared.get(d.id)! : home(paid);
+          // the part paid with the document is posted by the document itself (invoicePosting/billPosting), converted
+          // on its own; the payment records' part is the rows' cleared amounts, or what is left of the amount paid
+          const withDocument = cashPostedWithDocumentCents(d);
+          const records = cleared.has(d.id) && cleared.get(d.id) !== 0 ? cleared.get(d.id)! : home(Math.max(0, paid - withDocument));
+          const settled = home(withDocument) + records;
           return s + home(Math.max(0, d.amountCents || 0)) - home(depositAppliedCents(d)) - settled;
         }, 0);
         if (ledger === expected) return [];
