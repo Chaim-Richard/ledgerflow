@@ -27,8 +27,13 @@
  * Second review round (PR #369):
  *   - EUR invoice €100.00 at 1.1001, €50.00 paid, no rows: 10000 x 1.1001 = 11001; 5000 x 1.1001 = 5500.5 -> 5501;
  *     due in A/R = 11001 - 5501 = 5500 cents (one conversion of the net 5000 gave 5501).
- *   - Same invoice paid as two rows of €25.00, baseClearedCents 2750 each (2750.25 -> 2750): 11001 - 5500 = 5501.
+ *   - Same invoice paid as two payment records (settledByRecordsCents 5000) with rows of €25.00, baseClearedCents 2750 each (2750.25 -> 2750): 11001 - 5500 = 5501.
  *   - Only bank lines cut: truncatedInputs gives ['bankLines'], and a 1234 A/R difference is still reported.
+ * Third review round (PR #369):
+ *   - $100.00 invoice, $20.00 paid with the document, then a $30.00 payment record: amountPaidCents 5000,
+ *     settledByRecordsCents 3000, so cash posted with the document = 5000 - 3000 = 2000.
+ *     With a row cleared at 3000: A/R = 10000 - 2000 - 3000 = 5000 ($50.00), not 10000 - 3000 = 7000.
+ *     Without rows: 10000 - 2000 - (5000 - 2000) = 5000 as well.
  * The database part runs when LF_TEST_DATABASE_URL is set.
  */
 import test, { after, before, describe } from 'node:test';
@@ -175,7 +180,7 @@ describe('EG-10 second review round', () => {
       { id: 'r1', documentId: 'e1', documentType: 'invoice', kind: 'payment', amountCents: 2500, baseClearedCents: 2750 },
       { id: 'r2', documentId: 'e1', documentType: 'invoice', kind: 'payment', amountCents: 2500, baseClearedCents: 2750 },
     ];
-    assert.deepEqual(only({ allocations: rows, transactions: [entry('t1', 'ar', 5501, 'sales')] }), []);
+    assert.deepEqual(only({ invoices: [{ ...eur[0], settledByRecordsCents: 5000 }], allocations: rows, transactions: [entry('t1', 'ar', 5501, 'sales')] }), []);
   });
 
   test('a cut collection the check does not read does not hide an A/R difference', () => {
@@ -183,6 +188,21 @@ describe('EG-10 second review round', () => {
     assert.deepEqual(cut, ['bankLines']);
     const found = check('control-balance').run(ctx({ transactions: [...transactions, entry('t6', 'ar', 1234)], truncated: cut }));
     assert.deepEqual(found.map(f => f.id), ['control-balance-ar']);
+  });
+});
+
+describe('EG-10 third review round', () => {
+  const inv = [{ id: 'm1', number: 'M-1', status: 'partially_paid', amountCents: 10000, amountPaidCents: 5000, settledByRecordsCents: 3000, currency: 'USD' }] as unknown as Invoice[];
+  const row = [{ id: 'r1', documentId: 'm1', documentType: 'invoice', kind: 'payment', amountCents: 3000, baseClearedCents: 3000 }];
+  const run = (rows: CheckContext['allocations'], arCents: number) => check('control-balance').run(ctx({ invoices: inv, bills: [], allocations: rows, transactions: [entry('t1', 'ar', arCents, 'sales')] }));
+
+  test('the part paid with the document plus the rows: A/R $50.00, not $70.00', () => {
+    assert.deepEqual(run(row, 5000), []);
+    assert.match(run(row, 7000)[0].title, /\$70\.00, the open invoices add up to \$50\.00/);
+  });
+
+  test('without rows the same $50.00', () => {
+    assert.deepEqual(run([], 5000), []);
   });
 });
 

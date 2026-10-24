@@ -533,7 +533,11 @@ export const DATA_CHECKS: DataCheck[] = [
           const home = (cents: number) => convertMinorUnits(cents, rate, d.currency || baseCurrency, baseCurrency);
           const paid = paidCents(d);
           if (calculateAmountDue({ ...d, amountPaidCents: paid }) === 0) return s;
-          const settled = cleared.has(d.id) && cleared.get(d.id) !== 0 ? cleared.get(d.id)! : home(paid);
+          // the part paid with the document is posted by the document itself (invoicePosting/billPosting), converted
+          // on its own; the payment records' part is the rows' cleared amounts, or what is left of the amount paid
+          const withDocument = cashPostedWithDocumentCents(d);
+          const records = cleared.has(d.id) && cleared.get(d.id) !== 0 ? cleared.get(d.id)! : home(Math.max(0, paid - withDocument));
+          const settled = home(withDocument) + records;
           return s + home(Math.max(0, d.amountCents || 0)) - home(depositAppliedCents(d)) - settled;
         }, 0);
         if (ledger === expected) return [];
