@@ -75,6 +75,11 @@ export function requireWorkspaceRole(allowedRoles: string[]) {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = req.params.workspaceId || req.body?.workspaceId || req.query.workspaceId;
     if (!workspaceId) return sendError(res, "Workspace ID required", 400);
+    // Only one workspace is checked here; a route may read it from another place (the query on a GET, the body on a
+    // POST). A request that names two different workspaces is refused, so the one checked is the one used (found in
+    // the stock-closing GET, #375).
+    const named = [req.params.workspaceId, req.body?.workspaceId, req.query.workspaceId].filter(v => v !== undefined && v !== null && v !== '').map(String);
+    if (new Set(named).size > 1) return sendError(res, 'The request names two different workspaces', 400);
 
     try {
       const db = getDb();
