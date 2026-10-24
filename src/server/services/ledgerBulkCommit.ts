@@ -17,6 +17,7 @@ import { deletionSentence, deletionSnapshot } from './deletionRecord';
 import { refusedLabels, refusedLabelsMessage } from '../../lib/requiredLabels';
 import { DELIVERY_COGS_TYPE, DELIVERY_RETURN_TYPE } from '../../lib/deliveries';
 import { BudgetBlocked, budgetWarningsFor, enforceBudgetControl, type BudgetWarning } from './budgetGuard';
+import { prepareBankRuleSuggestions } from './bankRuleService';
 
 /**
  * The commit of POST /transactions/bulk, moved here unchanged (L94-STEP2) so that POST /documents/:type/:id/post, which
@@ -261,6 +262,8 @@ export async function commitLedgerBulk(db: Firestore, user: RequestUser, request
       const unknown = bankLines.find(b => b.matchedTransactionId && !postedIds.has(b.matchedTransactionId));
       if (unknown) throw new LedgerPostingError(400, `Bank line ${unknown.id} points to a transaction outside this request`);
     }
+    // EG-9: the bank rules suggest an account, a contact and labels for each new pending line (never posted)
+    const ruleSuggestions = await prepareBankRuleSuggestions(db, t, wsId, bankLines);
 
     // Writes
     if (entityRef && (entityMutation.action === 'create' || entityMutation.action === 'update')) {
@@ -297,7 +300,8 @@ export async function commitLedgerBulk(db: Firestore, user: RequestUser, request
     }
     validatedTransactions.forEach((tx, j) => t.create(refs[j], { ...tx, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }));
     stock.apply();
-    bankLines.forEach((b, j) => t.create(bankLineRefs[j], { ...b, matchedTransactionId: b.matchedTransactionId ?? null, workspaceId: wsId, uid: user.uid, createdAt: new Date().toISOString() }));
+    bankLines.forEach((b, j) => t.create(bankLineRefs[j], { ...b, ...ruleSuggestions.fieldsFor(b), matchedTransactionId: b.matchedTransactionId ?? null, workspaceId: wsId, uid: user.uid, createdAt: new Date().toISOString() }));
+    ruleSuggestions.apply();
     if (stock.warnings.length > 0) body = { ...body, warnings: stock.warnings };
     if (extra.body) body = { ...body, ...extra.body };
     if (budgetWarnings.length > 0) body = { ...body, budgetWarnings };

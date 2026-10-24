@@ -544,6 +544,7 @@ export const AutoRuleConditionSchema = z.object({
 
 export const AutoRuleActionSchema = z.object({
   targetNodeId: z.string().optional(),
+  contactId: z.string().max(200).optional(),
   targetProject: z.string().optional(),
   targetCategory: z.string().optional(),
   targetClass: z.string().optional(),

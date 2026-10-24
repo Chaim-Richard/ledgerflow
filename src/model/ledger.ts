@@ -305,6 +305,8 @@ export interface AutoRule {
     targetAccountId?: string;
     targetTransactionKind?: 'expense' | 'transfer';
     bankAccountId?: string;
+    /** EG-9: the customer or vendor a matching bank line is suggested for */
+    contactId?: string;
     targetNodeId?: string;
     targetProject?: string;
     targetCategory?: string;
