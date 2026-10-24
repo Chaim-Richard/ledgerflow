@@ -37,8 +37,9 @@ export default function IsraeliBankCodesReportView() {
     <p className="text-sm text-[var(--muted)]">
       Every Israeli payment names its bank by the Bank of Israel&apos;s identification code — the two digits
       at the front of an IBAN&apos;s numbers and on every cheque and Masav file — followed by a three-digit
-      branch code. Look a bank up below, or check account details you were given: the bank is named from
-      this table and anything that does not read is said in words. A clean check means the details are
+      branch code. Look a bank or payment provider up below, or check account details you were given:
+      institutions in this curated table are named from the Bank of Israel&apos;s published lists, while newly
+      allocated codes not yet in this table are reported plainly rather than guessed. A clean check means the details are
       well formed, not that the account exists — each bank&apos;s own account check digit can only be
       verified by that bank, and branch names and addresses are on the{' '}
       <a href={BOI_BRANCH_LIST_URL} target="_blank" rel="noopener noreferrer">Bank of Israel&apos;s live branch list</a>,

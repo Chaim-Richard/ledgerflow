@@ -94,8 +94,9 @@ export const VIEW_COMPONENTS: Record<string, ElementType> = {
   'ask': lazy(() => import('../components/ledger/AskLoop')),
   'magic': lazy(() => import('../components/ledger/MagicEntry')),
   'vault': lazy(() => import('../components/forensics/Vault')),
-  'audit-trail': lazy(() => import('../components/forensics/AuditTrail')),
+      'audit-trail': lazy(() => import('../components/forensics/AuditTrail')),
   'client-queries': lazy(() => import('../components/ledger/ClientQueriesView')),
+  'accountant-queue': lazy(() => import('../components/ledger/AccountantQueueView')),
   'tasks': lazy(() => import('../components/collaboration/TasksView')),
   'time': lazy(() => import('../components/collaboration/TimeView')),
   'recurring': lazy(() => import('../components/ledger/RecurringTransactionsView')),
@@ -432,6 +433,13 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'Vendor1099ReadinessReportView': lazy(() => import('../components/reporting/Vendor1099ReadinessReportView')),
   'GoldenTaxFixturesReportView': lazy(() => import('../components/reporting/GoldenTaxFixturesReportView')),
   'UsQuarterJourneyReportView': lazy(() => import('../components/reporting/UsQuarterJourneyReportView')),
+  'VendorQuotesCompareView': lazy(() => import('../components/reporting/VendorQuotesCompareView')),
+  'CustomerItemCodesView': lazy(() => import('../components/reporting/CustomerItemCodesView')),
+  'ShippingMethodsView': lazy(() => import('../components/reporting/ShippingMethodsView')),
+  'BillRetentionReportView': lazy(() => import('../components/reporting/BillRetentionReportView')),
+  'AgedInventoryByLotReportView': lazy(() => import('../components/reporting/AgedInventoryByLotReportView')),
+  'WorkOrdersView': lazy(() => import('../components/reporting/WorkOrdersView')),
+  'IsraeliAnnualPartySummaryView': lazy(() => import('../components/reporting/IsraeliAnnualPartySummaryView')),
   'IsraelMonthJourneyReportView': lazy(() => import('../components/reporting/IsraelMonthJourneyReportView')),
   'RecordNotesReportView': lazy(() => import('../components/reporting/RecordNotesReportView')),
   'SerialLotLookupReportView': lazy(() => import('../components/reporting/SerialLotLookupReportView')),
@@ -472,6 +480,7 @@ export const REPORT_COMPONENTS: Record<string, ElementType> = {
   'StockTransfersReportView': lazy(() => import('../components/reporting/StockTransfersReportView')),
   'DataQualityReportView': lazy(() => import('../components/reporting/DataQualityReportView')),
   'SampleYearBenchmarkReportView': lazy(() => import('../components/reporting/SampleYearBenchmarkReportView')),
+  'AccountantQueueView': lazy(() => import('../components/ledger/AccountantQueueView')),
 };
 
 export const ANALYTICAL_LENSES_REGISTRY = withScreenHelp([
@@ -605,6 +614,14 @@ export const REPORT_TABS_REGISTRY = withScreenHelp([
   { id: 'us-filing-calendar', label: { en: 'US Filing Calendar', he: 'יומן הגשות ארה"ב' }, componentName: 'UsFilingCalendarReportView', icon: Calendar },
   { id: 'data-quality-checks', label: { en: 'Data Quality Checks', he: 'בדיקות איכות נתונים' }, componentName: 'DataQualityReportView', icon: ShieldCheck },
   { id: 'sample-year-benchmark', label: { en: '12-Month Sample Year & Speed', he: 'שנת עסק לדוגמה ומהירות דוחות' }, componentName: 'SampleYearBenchmarkReportView', icon: Activity },
+  { id: 'vendor-quotes-compare', label: { en: 'Vendor Quotes Compare', he: 'השוואת הצעות מחיר מספקים' }, componentName: 'VendorQuotesCompareView', icon: Scale },
+  { id: 'customer-item-codes', label: { en: 'Customer Item Codes', he: 'מק"טי לקוח לפריטים' }, componentName: 'CustomerItemCodesView', icon: Barcode },
+  { id: 'shipping-methods', label: { en: 'Shipping Methods & Rates', he: 'שיטות ותעריפי משלוח' }, componentName: 'ShippingMethodsView', icon: Truck },
+  { id: 'bill-retention', label: { en: 'Retention (Holdbacks) on Milestone Bills', he: 'עיכבון בחשבונות אבני דרך' }, componentName: 'BillRetentionReportView', icon: Scale },
+  { id: 'aged-inventory-by-lot', label: { en: 'Aged Inventory by Lot', he: 'גיול מלאי לפי אצווה' }, componentName: 'AgedInventoryByLotReportView', icon: Clock },
+  { id: 'work-orders', label: { en: 'Work Orders (Kit Assembly)', he: 'פקודות עבודה להרכבת ערכות' }, componentName: 'WorkOrdersView', icon: Layers },
+  { id: 'il-annual-party-summary', label: { en: 'Israel: Annual Customer & Vendor Summary', he: 'ישראל: ריכוז שנתי ללקוחות וספקים' }, componentName: 'IsraeliAnnualPartySummaryView', icon: FileSpreadsheet },
+  { id: 'accountant-queue', label: { en: 'Accountant Queue', he: 'תור רואה החשבון' }, componentName: 'AccountantQueueView', icon: ClipboardCheck },
 ], 'reports');
 
 export const SETTINGS_TABS_REGISTRY = withScreenHelp([

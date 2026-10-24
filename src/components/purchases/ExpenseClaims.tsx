@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Receipt, Plus, Trash2, X } from 'lucide-react';
 import { useDialog } from '../../hooks/useDialog';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { formatCurrency, getLocalDateISO, parseAmountToCents } from '../../lib/utils';
 import { claimOf, claimProblem, decimalNumber, decisionProblem, mileageLine, perDiemLine, rateInThousandths, workedLineProblem, type ClaimLine, type ClaimLineKind, type DistanceUnit } from '../../lib/expenseClaims';
+import { parseCorporateCardCsv, type CorporateCardImportResult } from '../../lib/corporateCardImport';
 import { mileageRateFor, perDiemRateFor, rateSuggestionText, COUNTRY_NAMES, type PerDiemRow, type RateCountry } from '../../lib/tax/expenseRateTables';
 import { findGsaLocality, gsaLocalitiesToPerDiemRows, gsaLocalityLabel, readGsaPerDiemCsv, type GsaPerDiemImport } from '../../lib/tax/gsaPerDiemImport';
 import type { Bill, ChartAccount, Vendor } from '../../types';
@@ -119,15 +120,15 @@ export default function ExpenseClaims({ bills, vendors, accounts, userRole: role
         </ul>
       )}
       {creating && (
-        <NewClaimDialog vendors={vendors} accounts={accounts} currency={currency} onClose={() => setCreating(false)}
+        <NewClaimDialog bills={bills} vendors={vendors} accounts={accounts} currency={currency} onClose={() => setCreating(false)}
           onSubmit={async claim => { await onSubmit(claim); setCreating(false); }} />
       )}
     </section>
   );
 }
 
-function NewClaimDialog({ vendors, accounts, currency, onClose, onSubmit }: {
-  vendors: Vendor[]; accounts: ChartAccount[]; currency: string; onClose: () => void; onSubmit: (claim: NewClaim) => Promise<void>;
+function NewClaimDialog({ bills, vendors, accounts, currency, onClose, onSubmit }: {
+  bills: Bill[]; vendors: Vendor[]; accounts: ChartAccount[]; currency: string; onClose: () => void; onSubmit: (claim: NewClaim) => Promise<void>;
 }) {
   const { dialogProps, titleId } = useDialog(onClose, true);
   const expenseAccounts = useMemo(() => accounts.filter(a => !a.isArchived && resolveAccountRole(a) === 'expense'), [accounts]);
@@ -142,6 +143,11 @@ function NewClaimDialog({ vendors, accounts, currency, onClose, onSubmit }: {
   // like the built-in table's, and the claim still records the rate left in the field.
   const [gsa, setGsa] = useState<{ read: GsaPerDiemImport; rows: PerDiemRow[]; fileName: string } | null>(null);
   const [gsaProblem, setGsaProblem] = useState('');
+  const gsaReadSeqRef = useRef(0);
+  // A-134: corporate card CSV statement import into editable expense claim lines.
+  const [cardImport, setCardImport] = useState<{ result: CorporateCardImportResult; fileName: string } | null>(null);
+  const [cardProblem, setCardProblem] = useState('');
+  const cardReadSeqRef = useRef(0);
   const worked = lines.map(l => toClaimLine(l, currency));
   const claimLines: ClaimLine[] = worked.map(w => w.line);
   const total = claimLines.reduce((sum, l) => sum + (l.amountCents > 0 ? l.amountCents : 0), 0);
@@ -205,9 +211,12 @@ function NewClaimDialog({ vendors, accounts, currency, onClose, onSubmit }: {
   // never overwritten — only empty US per-diem lines with their locality picked are filled.
   const onGsaFile = async (file: File | undefined) => {
     if (!file) return;
+    const seq = ++gsaReadSeqRef.current;
     setGsaProblem('');
     try {
-      const read = readGsaPerDiemCsv(await file.text());
+      const text = await file.text();
+      if (gsaReadSeqRef.current !== seq) return;
+      const read = readGsaPerDiemCsv(text);
       const rows = gsaLocalitiesToPerDiemRows(read.localities, getLocalDateISO());
       setGsa({ read, rows, fileName: file.name });
       setLines(prev => prev.map(l => {
@@ -219,8 +228,39 @@ function NewClaimDialog({ vendors, accounts, currency, onClose, onSubmit }: {
         return suggestion && suggestion.matchesCurrency ? { ...l, rate: suggestion.dailyText } : l;
       }));
     } catch (err) {
+      if (gsaReadSeqRef.current !== seq) return;
       setGsa(null);
       setGsaProblem(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  // A-134: read a corporate card CSV statement into ordinary editable expense lines on this claim.
+  const onCardStatementFile = async (file: File | undefined) => {
+    if (!file) return;
+    const seq = ++cardReadSeqRef.current;
+    setCardProblem('');
+    try {
+      const text = await file.text();
+      if (cardReadSeqRef.current !== seq) return;
+      const result = parseCorporateCardCsv(text, { claimCurrency: currency, existingBills: bills });
+      setCardImport({ result, fileName: file.name });
+      setDate(result.statementDate);
+      const holder = result.charges.find(c => c.cardholder)?.cardholder;
+      if (holder && !payeeName.trim()) setPayeeName(holder);
+      setLines(prev => {
+        const defaultAccount = prev[prev.length - 1]?.accountId || expenseAccounts[0]?.id || '';
+        const imported: DraftLine[] = result.charges.map(c => ({
+          ...blankLine(defaultAccount),
+          description: c.description,
+          amount: c.amountText,
+        }));
+        const keep = prev.filter(l => l.description.trim() || l.amount.trim() || l.kind !== 'expense');
+        return keep.length > 0 ? [...keep, ...imported] : imported;
+      });
+    } catch (err) {
+      if (cardReadSeqRef.current !== seq) return;
+      setCardImport(null);
+      setCardProblem(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -327,6 +367,23 @@ function NewClaimDialog({ vendors, accounts, currency, onClose, onSubmit }: {
             <button type="button" onClick={() => setLines(prev => [...prev, blankLine(prev[prev.length - 1]?.accountId || '')])}
               className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">+ Add a line</button>
           </fieldset>
+          <div className="space-y-1">
+            <label className="block">
+              <span className="block text-xs font-semibold text-[var(--muted)] mb-1">Import corporate card statement (CSV, optional)</span>
+              <input aria-label="Corporate card statement CSV" type="file" accept=".csv,text/csv" className={field}
+                onChange={e => void onCardStatementFile(e.target.files?.[0])} />
+            </label>
+            {cardImport ? (
+              <p className="text-[11px] text-[var(--muted)]" role="status">
+                Imported {cardImport.result.charges.length} charge{cardImport.result.charges.length === 1 ? '' : 's'} from {cardImport.fileName}
+                {cardImport.result.skippedCreditsCount > 0 ? ` (${cardImport.result.skippedCreditsCount} card payment/refund row(s) skipped)` : ''}
+                {cardImport.result.duplicateCount > 0 ? ` · ${cardImport.result.duplicateCount} possible duplicate(s) already on a claim: ${cardImport.result.charges.filter(c => c.duplicateOf).map(c => `${c.description} [${c.duplicateOf}]`).join('; ')}` : ''}. Review categories before submitting.
+              </p>
+            ) : (
+              <p className="text-[11px] text-[var(--muted)]">Load card statement rows (Date, Merchant/Description, Amount in {currency}) into editable lines above; nothing posts until approved.</p>
+            )}
+            {cardProblem && <p role="alert" className="text-xs text-rose-600">{cardProblem}</p>}
+          </div>
           {lines.some(l => l.kind === 'perDiem') && (
             <div className="space-y-1">
               <label className="block">
