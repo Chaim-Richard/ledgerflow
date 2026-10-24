@@ -1,4 +1,5 @@
 import express from 'express';
+import { BudgetBlocked, checkBudgets, type BudgetWarning } from '../../services/budgetGuard';
 import { revaluationEntryLock } from '../../services/stockRevaluationService';
 import { ledgerCreate } from '../../services/ledgerDoor';
 import { FieldValue } from '../../db/firestore';
@@ -96,6 +97,7 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
       return res.status(400).json({ status: 'error', message: 'Workspace ID is required' });
     }
 
+    let budgetWarnings: BudgetWarning[] = [];
     return executeCommand(req, res, workspaceId, 'TRANSACTION_CREATE', async (ctx, t) => {
       const { transaction } = req.body;
       const user = requestUser(req);
@@ -136,6 +138,11 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
       const missing = refusedLabels(validatedTx, wsData?.dimensions);
       if (missing.length > 0) throw new HttpError(refusedLabelsMessage(missing), 400);
 
+      // EG-4: the budget check (warn by default, 409 when the workspace blocks)
+      try { budgetWarnings = await checkBudgets(db, transactionToSave.workspaceId, wsData, [validatedTx]); } catch (err) {
+        if (err instanceof BudgetBlocked) throw new HttpError(err.message, 409);
+        throw err;
+      }
       // Execute atomic validation and create inside the single command transaction boundary
       const txRef = db.collection('transactions').doc(transactionToSave.id);
       const doc = await t.get(txRef);
@@ -150,7 +157,7 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
       });
 
       return validatedTx;
-    });
+    }, () => (budgetWarnings.length > 0 ? { budgetWarnings } : {}));
   });
 
   /**

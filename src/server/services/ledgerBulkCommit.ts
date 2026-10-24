@@ -16,6 +16,7 @@ import { writeServerAuditLog, type AuditLogEntryInput } from './auditLogService'
 import { deletionSentence, deletionSnapshot } from './deletionRecord';
 import { refusedLabels, refusedLabelsMessage } from '../../lib/requiredLabels';
 import { DELIVERY_COGS_TYPE, DELIVERY_RETURN_TYPE } from '../../lib/deliveries';
+import { BudgetBlocked, checkBudgets } from './budgetGuard';
 
 /**
  * The commit of POST /transactions/bulk, moved here unchanged (L94-STEP2) so that POST /documents/:type/:id/post, which
@@ -237,6 +238,12 @@ export async function commitLedgerBulk(db: Firestore, user: RequestUser, request
       body = { status: 'ok', count: 0, replayed: true, transactionIds: replayedIds };
       return;
     }
+    // EG-4: the budget check, after a replay is recognised (a replay adds nothing); warn or block per the workspace
+    let budgetWarnings: Awaited<ReturnType<typeof checkBudgets>>;
+    try { budgetWarnings = await checkBudgets(db, wsId, wsNow, validatedTransactions); } catch (err) {
+      if (err instanceof BudgetBlocked) throw new BulkRefusal(409, { error: err.message, code: 'OVER_BUDGET', budgetWarnings: err.warnings });
+      throw err;
+    }
     const refs = validatedTransactions.map(tx => db.collection('transactions').doc(tx.id));
     if (refs.length > 0) {
       const snaps = await t.getAll(...refs);
@@ -291,6 +298,7 @@ export async function commitLedgerBulk(db: Firestore, user: RequestUser, request
     bankLines.forEach((b, j) => t.create(bankLineRefs[j], { ...b, matchedTransactionId: b.matchedTransactionId ?? null, workspaceId: wsId, uid: user.uid, createdAt: new Date().toISOString() }));
     if (stock.warnings.length > 0) body = { ...body, warnings: stock.warnings };
     if (extra.body) body = { ...body, ...extra.body };
+    if (budgetWarnings.length > 0) body = { ...body, budgetWarnings };
     if (extra.audit) await writeServerAuditLog(extra.audit, { db, tx: t });
     if (idempotencyRef) t.set(idempotencyRef, { createdAt: FieldValue.serverTimestamp(), code: 200, body, workspaceId: wsId, actor: user.uid, payloadHash });
   });
