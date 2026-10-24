@@ -10,6 +10,7 @@ import { commissionLines, salesRepsProblem, type SalesRep } from '../lib/salesRe
 import CommissionReportView from '../components/reporting/CommissionReportView';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { getLocalDateISO } from '../lib/utils';
 
 describe('A-123 commission plans by item group', () => {
   afterEach(() => cleanup());
@@ -69,7 +70,8 @@ describe('A-123 commission plans by item group', () => {
   });
 
   test('CommissionReportView displays group rates caption and computed commission', () => {
-    const today = new Date().toISOString().slice(0, 10);
+    // The report's period is the local month, so the invoice must be dated today in local time.
+    const today = getLocalDateISO();
     useAuthStore.setState({
       user: { uid: 'u1' } as never,
       currentWorkspaceId: 'ws-comm',
