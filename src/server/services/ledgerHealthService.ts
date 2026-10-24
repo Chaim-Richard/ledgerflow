@@ -61,10 +61,8 @@ export async function checkLedgerHealth(db: Firestore, workspaceId: string, now 
     return [key, snap.docs.map(d => ({ ...d.data(), id: d.id }))] as const;
   }));
   const data = Object.fromEntries(loaded) as unknown as Omit<CheckContext, 'today' | 'baseCurrency'>;
-  // EG-7: a source read up to its cap is partial: the checks over it say so instead of comparing
-  data.truncated = loaded.filter(([key, rows]) => rows.length >= SOURCES[key as keyof typeof SOURCES].cap).map(([key]) => key);
   const today = formatTzDate(now, typeof ws.timezone === 'string' ? ws.timezone : 'UTC');
-  // EG-10: an input that reached its cap is read in part; totals over it are not compared
+  // EG-7/EG-10: an input that reached its cap is read in part; the checks over it say so instead of comparing totals
   const truncated = loaded.filter(([key, rows]) => rows.length >= SOURCES[key as keyof typeof SOURCES].cap).map(([key]) => key);
   const findings = runDataChecks({ ...data, truncated, today, baseCurrency: String(ws.currency || 'USD'), dimensions: Array.isArray(ws.dimensions) ? ws.dimensions : undefined });
   const fresh = newSeriousProblems(findings, ws.ledgerHealth as LedgerHealth | undefined);
