@@ -689,5 +689,19 @@ select pg_temp.expect_denied('bookkeeper adds a queue row from the browser', 'u-
 select pg_temp.expect_denied('owner deletes a queue row from the browser', 'u-owner', $$delete from "repostQueue" where id = 'ws1_stock-cost_i1'$$);
 select pg_temp.expect_value('the refused writes left it as it was', $q$select data->>'status' from "repostQueue" where id = 'ws1_stock-cost_i1'$q$, 'dirty');
 
+-- payment ledger (EG-2): written only by the server; members read; nobody writes it from the browser
+select set_config('request.jwt.claims', '', true);
+insert into "paymentAllocations" (id, data) values ('payment-p1-p1-inv1', '{"workspaceId":"ws1","documentId":"inv1","kind":"payment","amountCents":100}');
+select pg_temp.expect_count('viewer reads the payment ledger', 'u-view', $$select count(*) from "paymentAllocations"$$, 1);
+select pg_temp.expect_count('outsider reads no payment ledger', 'u-out', $$select count(*) from "paymentAllocations"$$, 0);
+select pg_temp.expect_denied('owner changes an allocation row from the browser', 'u-owner', $$select lf_update('paymentAllocations','payment-p1-p1-inv1','{"amountCents":999}'::jsonb)$$);
+select pg_temp.expect_denied('owner writes an allocation row with lf_set', 'u-owner', $$select lf_set('paymentAllocations','payment-p2-p2-inv1','{"workspaceId":"ws1","documentId":"inv1","amountCents":5}'::jsonb)$$);
+select pg_temp.expect_denied('bookkeeper inserts an allocation row from the browser', 'u-book',
+  $$insert into "paymentAllocations"(id,data) values ('payment-p3-p3-inv1', '{"workspaceId":"ws1","documentId":"inv1","amountCents":5}')$$);
+select pg_temp.expect_denied('owner deletes an allocation row from the browser', 'u-owner', $$delete from "paymentAllocations" where id = 'payment-p1-p1-inv1'$$);
+select pg_temp.expect_denied('bookkeeper writes an allocation operation from the browser', 'u-book',
+  $$insert into "allocationOperations"(id,data) values ('ws1:op1', '{"workspaceId":"ws1"}')$$);
+select pg_temp.expect_value('the refused writes left it as it was', $q$select data->>'amountCents' from "paymentAllocations" where id = 'payment-p1-p1-inv1'$q$, '100');
+
 select 'ALL RLS TESTS PASSED' as result;
 rollback;

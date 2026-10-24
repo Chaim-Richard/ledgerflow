@@ -13,6 +13,7 @@ import { formatCurrency } from '../../lib/utils';
 import { allocateInTransaction } from './numberingService';
 import { advanceAccount } from '../../lib/advancePayments';
 import type { DocumentReference, Firestore, Transaction } from '../db/firestore';
+import { ALLOCATION_OPERATIONS, allocationLedgerReady, assertApplicationDate, recordAllocation, splitAllocations, type AllocationSide } from './allocationLedger';
 import { allocateCents, spreadLabels, type LineAccountWeight } from '../../kernel/templates/TransactionTemplates';
 
 export interface CreatePaymentPayload {
@@ -188,6 +189,8 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     let documentRate: { recorded?: Partial<RateUsed>; date: string } | undefined;
     // DIM-1: each paid document's lines' labels, weighted by what this payment puts on that document
     const labelWeights: Array<{ cents: number; dimensions?: Record<string, string> }> = [];
+    // EG-2: what each payment-ledger row needs from its document
+    const allocDocs: Array<{ partyId: string | null; dueCents: number }> = [];
 
     for (const alloc of allocations) {
       totalAllocatedCents += alloc.amountCents;
@@ -219,6 +222,9 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
 
       const currentPaid = docData.amountPaidCents || 0;
       const remainingBalance = calculateAmountDue(docData);
+      // EG-2: a settlement is never dated before the document it settles
+      assertApplicationDate(paymentDate, undefined, docData.date || docData.issueDate, docData.number || alloc.documentId);
+      allocDocs.push({ partyId: (alloc.documentType === 'invoice' ? docData.customerId : docData.vendorId) || null, dueCents: remainingBalance });
 
       if (alloc.amountCents > remainingBalance) {
         throw new Error(`Overpayment not allowed: allocation of ${alloc.amountCents} cents exceeds remaining balance of ${remainingBalance} cents for document ${alloc.documentId}`);
@@ -427,6 +433,7 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
       ...(payload.withholdingRatePercent !== undefined ? { withholdingRatePercent: payload.withholdingRatePercent } : {}),
       ...(payload.withholdingCertificate ? { withholdingCertificate: payload.withholdingCertificate } : {}),
     });
+    const ledgerReady = allocations.length > 0 && await allocationLedgerReady(db);
     paymentNumber = await allocateInTransaction(db, tx, workspaceId, 'payment');
     paymentData.number = paymentNumber;
 
@@ -436,6 +443,22 @@ export async function createPaymentInTransaction(db: any, tx: any, payload: Crea
     }
     tx.set(paymentRef, paymentData);
     tx.set(ledgerTxRef, ledgerTxData);
+    if (ledgerReady) {
+      // EG-2: one payment-ledger row per allocation; the settled base is the applied part of the gross
+      // (cash + withholding) less the unapplied part at the settlement rate, split by largest remainder
+      const currency = paymentCurrency || baseCurrency;
+      const settlementRate = foreignPayment && typeof dayRate === 'number' && dayRate > 0 ? dayRate : paymentRate;
+      const side: AllocationSide = isReceipt ? 'receivable' : 'payable';
+      const settledBaseCents = cashBaseCents - Math.round(unmatchedCents * minorUnitRate(settlementRate, currency, baseCurrency));
+      const split = splitAllocations({ allocations, side, currency, baseCurrency, documentRate: paymentRate, settlementRate, settledBaseCents });
+      const fxLineIndex = fxAccount ? ledgerTxData.lines.findIndex((l: { accountId: string }) => l.accountId === fxAccount!.id) : -1;
+      allocations.forEach((alloc, i) => recordAllocation(db, tx, {
+        workspaceId, side, partyId: customerId || vendorId || allocDocs[i].partyId, documentType: alloc.documentType, documentId: alloc.documentId,
+        kind: 'payment', sourceType: 'payment', sourceId: paymentId, operationId: paymentId, date: paymentDate,
+        amountCents: alloc.amountCents, currency, documentRate: paymentRate, settlementRate, ...split[i],
+        transactionId: ledgerTxRef.id, fxLineIndex: fxLineIndex >= 0 ? fxLineIndex : null, createdBy: uid,
+      }, { dueCents: allocDocs[i].dueCents }));
+    }
 
     await writeServerAuditLog({
       workspaceId,
@@ -475,9 +498,16 @@ export async function applyUnappliedPayment(db: Firestore, input: {
   paymentId: string;
   allocations: Array<{ documentId: string; documentType: 'invoice' | 'bill'; amountCents: number }>;
   date: string;
+  /** EG-2: the client's idempotency key; a retry with it writes nothing and returns the first result */
+  operationId?: string;
 }) {
+  const requestHash = createHash('sha256').update(JSON.stringify({ paymentId: input.paymentId, allocations: input.allocations, date: input.date })).digest('hex');
+  const ledgerReady = await allocationLedgerReady(db);
   return db.runTransaction(async (tx) => {
     const { workspaceId, uid, paymentId, allocations, date } = input;
+    // per attempt (a serializable retry starts again from here)
+    const operationRef = ledgerReady && input.operationId ? db.collection(ALLOCATION_OPERATIONS).doc(deriveScopedOperationKey(workspaceId, 'PAYMENT_APPLY', `${paymentId}:${input.operationId}`)) : null;
+    const operationId = input.operationId || db.collection(ALLOCATION_OPERATIONS).doc().id;
     const wsSnap = await tx.get(db.collection('workspaces').doc(workspaceId));
     if (!wsSnap.exists) throw new PaymentApplyError(404, 'Workspace not found');
     const wsData = wsSnap.data() || {};
@@ -491,6 +521,13 @@ export async function applyUnappliedPayment(db: Firestore, input: {
     const payment = (await tx.get(paymentRef)).data();
     if (!payment || payment.workspaceId !== workspaceId) throw new PaymentApplyError(404, 'Payment not found');
     if (payment.status === 'void') throw new PaymentApplyError(409, 'The payment is void');
+    if (operationRef) {
+      const previous = (await tx.get(operationRef)).data();
+      if (previous) {
+        if (previous.requestHash !== requestHash || previous.actor !== uid) throw new PaymentApplyError(409, 'Idempotency key reused for a different application or actor');
+        return { ...(previous.result as Record<string, unknown>), replayed: true } as ReturnType<typeof applyResult> & { replayed: boolean };
+      }
+    }
     const unapplied = Number(payment.unappliedCents) || 0;
     const total = allocations.reduce((sum, a) => sum + a.amountCents, 0);
     if (total <= 0) throw new PaymentApplyError(400, 'Choose what to apply it to');
@@ -506,6 +543,7 @@ export async function applyUnappliedPayment(db: Firestore, input: {
     const rate = typeof payment.exchangeRate === 'number' && payment.exchangeRate > 0 ? payment.exchangeRate : 1;
     const docUpdates: Array<{ ref: DocumentReference; updates: Record<string, unknown> }> = [];
     const labelWeights: Array<{ cents: number; dimensions?: Record<string, string> }> = [];
+    const allocDocs: Array<{ partyId: string | null; dueCents: number }> = [];
     for (const alloc of allocations) {
       if (alloc.documentType !== wanted) throw new PaymentApplyError(400, `A payment ${received ? 'received' : 'made'} is applied to ${wanted}s`);
       const ref = db.collection(received ? 'invoices' : 'bills').doc(alloc.documentId);
@@ -514,7 +552,16 @@ export async function applyUnappliedPayment(db: Firestore, input: {
       if (doc.status === 'void' || doc.status === 'draft') throw new PaymentApplyError(409, `Cannot apply a payment to a ${doc.status} document`);
       if (partyId && (received ? doc.customerId : doc.vendorId) !== partyId) throw new PaymentApplyError(400, `${doc.number || alloc.documentId} belongs to another ${received ? 'customer' : 'vendor'}`);
       if (String(doc.currency || baseCurrency) !== paymentCurrency) throw new PaymentApplyError(400, `${doc.number || alloc.documentId} is in another currency than the payment`);
+      // EG-2 step 1: not dated before the payment or the document; an advance clears only at its own rate
+      try {
+        assertApplicationDate(date, payment.date || payment.paymentDate, doc.date || doc.issueDate, doc.number || alloc.documentId);
+      } catch (err) {
+        throw new PaymentApplyError(409, err instanceof Error ? err.message : String(err));
+      }
+      const docRate = String(doc.currency || baseCurrency) === baseCurrency ? 1 : (typeof doc.exchangeRate === 'number' && doc.exchangeRate > 0 ? doc.exchangeRate : 1);
+      if (docRate !== rate) throw new PaymentApplyError(409, `${doc.number || alloc.documentId} is booked at another exchange rate (${docRate}) than the payment (${rate}); applying it at another rate is not supported yet`);
       const due = calculateAmountDue(doc);
+      allocDocs.push({ partyId: (received ? doc.customerId : doc.vendorId) || null, dueCents: due });
       if (alloc.amountCents > due) throw new PaymentApplyError(409, `${doc.number || alloc.documentId} has only ${formatCurrency(due, paymentCurrency)} left to pay`);
       const paid = (Number(doc.amountPaidCents) || 0) + alloc.amountCents;
       labelWeights.push(...documentLabelWeights(doc, alloc.documentType, alloc.amountCents));
@@ -555,10 +602,27 @@ export async function applyUnappliedPayment(db: Firestore, input: {
       updatedAt: new Date().toISOString(),
     });
     if (ledgerTx) ledgerCreate(tx, db.collection('transactions').doc(String(ledgerTx.id)), { ...ledgerTx, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    const result = applyResult(paymentId, total, unapplied - total, (ledgerTx?.id as string) || null);
+    if (ledgerReady) {
+      // EG-2: one advance_application row per allocation, dated the application date, at the advance's rate
+      const side: AllocationSide = received ? 'receivable' : 'payable';
+      const split = splitAllocations({ allocations, side, currency: paymentCurrency, baseCurrency, documentRate: rate, settlementRate: rate, settledBaseCents: Math.round(total * minorUnitRate(rate, paymentCurrency, baseCurrency)) });
+      allocations.forEach((alloc, i) => recordAllocation(db, tx, {
+        workspaceId, side, partyId: partyId || allocDocs[i].partyId, documentType: alloc.documentType, documentId: alloc.documentId,
+        kind: 'advance_application', sourceType: 'payment', sourceId: paymentId, operationId, date,
+        amountCents: alloc.amountCents, currency: paymentCurrency, documentRate: rate, settlementRate: rate, ...split[i],
+        transactionId: result.transactionId, fxLineIndex: null, createdBy: uid,
+      }, { dueCents: allocDocs[i].dueCents }));
+      if (operationRef) tx.set(operationRef, { id: operationRef.id, workspaceId, actor: uid, operationType: 'PAYMENT_APPLY', paymentId, requestHash, result, createdAt: new Date().toISOString() });
+    }
     await writeServerAuditLog({
       workspaceId, uid, action: 'PAYMENT_APPLIED', entityType: 'payment', entityId: paymentId,
       details: { description: `Payment ${payment.number || paymentId}: ${formatCurrency(total, paymentCurrency)} applied to ${allocations.length} ${wanted}${allocations.length === 1 ? '' : 's'}`, amountCents: total, transactionId: ledgerTx?.id || null },
     }, { db, tx });
-    return { paymentId, appliedCents: total, unappliedCents: unapplied - total, transactionId: ledgerTx?.id || null };
+    return result;
   });
+}
+
+function applyResult(paymentId: string, appliedCents: number, unappliedCents: number, transactionId: string | null) {
+  return { paymentId, appliedCents, unappliedCents, transactionId };
 }
