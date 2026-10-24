@@ -12,6 +12,7 @@ import { setNegativeStockPolicy } from '../services/stockPolicyService';
 import { stockMovesReady, writeStockMoves } from '../services/stockMoveService';
 import { transferStock } from '../services/stockTransferService';
 import { revalueStock, StockRevaluationError } from '../services/stockRevaluationService';
+import { landedCostRouter } from './landedCostRoutes';
 import { DeliveryError, deliverOrder, returnDelivered, setGoodsLeaveWith, undoDelivery } from '../services/deliveryService';
 import { LedgerPostingError } from '../services/cogsStockService';
 import { DELIVERY_ID, RETURN_ID } from '../../lib/deliveries';
@@ -22,6 +23,8 @@ import type { Estimate, Transaction as LedgerTransaction } from '../../types';
 const STOCK_ROLES = ['owner', 'accountant', 'bookkeeper'];
 
 export const inventoryRouter = express.Router();
+// EG-6: landed cost (post, undo), owners and accountants
+inventoryRouter.use('/landed-cost', landedCostRouter);
 
 /**
  * Recognizes COGS for a sale. Reduces quantity on hand.

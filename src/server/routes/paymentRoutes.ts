@@ -222,6 +222,7 @@ paymentRouter.post('/:paymentId/apply', async (req, res) => {
     const result = await applyUnappliedPayment(db, {
       workspaceId: parsed.data.workspaceId, uid: authReq.user.uid, paymentId: String((req.params as Record<string, string>).paymentId),
       allocations: parsed.data.allocations, date: parsed.data.date || getLocalDateISO(),
+      operationId: extractCanonicalOperationId({ headers: req.headers }),
     });
     res.json({ status: 'success', data: result });
   } catch (err) {

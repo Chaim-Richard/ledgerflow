@@ -13,6 +13,7 @@ import { labelRoleFindings } from './labelRoles';
 import { stockHistoryProblem, type StockMove } from './stockMoves';
 import { contactsMissingFilingDetails, itemsMissingPricing } from './dataQualityChecks';
 import { formatCurrency } from './utils';
+import { resolveAccountRole } from './accountUtils';
 import type { RecordType } from './recordLinks';
 
 export { RECORD_TABS } from './recordLinks';
@@ -62,6 +63,8 @@ export interface CheckContext {
   /** The stock-moves ledger (W-02); the nightly check reads it, the browser does not load it. */
   stockMoves?: StockMove[];
   /** Payment records (CB-23: each has its entry in the ledger). */
+  /** EG-2 payment-ledger rows (`paymentAllocations`); the nightly check reads them, the browser does not. */
+  allocations?: Array<{ id: string; documentId?: string; documentType?: string; kind?: string; amountCents?: number }>;
   payments?: Array<Partial<Payment> & { id: string; number?: string; status?: string; amountCents?: number; exchangeRate?: number; paymentExchangeRate?: number; paymentDate?: string; date?: string; contactName?: string; entityName?: string }>;
 }
 
@@ -455,7 +458,76 @@ export const DATA_CHECKS: DataCheck[] = [
       }));
     },
   },
+  {
+    id: 'settlement-ledger',
+    label: 'Amount paid on invoices and bills that their payment-ledger rows do not add up to (EG-10)',
+    remedy: 'Open the document and compare its payments with what it says is paid; record or void the payment that is missing or extra.',
+    run: ({ invoices, bills, allocations }) => {
+      if (!allocations) return [];
+      // signed sum: a reversal row is negative, so originals + reversals = the live total
+      const sums = new Map<string, number>();
+      for (const r of allocations) if (r.documentId) sums.set(r.documentId, (sums.get(r.documentId) || 0) + (Number(r.amountCents) || 0));
+      const findings: CheckFinding[] = [];
+      const withoutRows: Record<'invoice' | 'bill', string[]> = { invoice: [], bill: [] };
+      for (const { d, type } of openDocuments(invoices, bills)) {
+        const paid = Math.round(d.amountPaidCents || 0);
+        const rows = sums.get(d.id);
+        if (rows === undefined) { if (paid !== 0) withoutRows[type].push(label(d)); continue; }
+        if (rows === paid) continue;
+        findings.push({
+          id: `settlement-ledger-${type}-${d.id}`, checkId: 'settlement-ledger', severity: 'medium',
+          title: `${type === 'invoice' ? 'Invoice' : 'Bill'} ${label(d)} says ${formatCurrency(paid, d.currency)} paid, its payment-ledger rows add up to ${formatCurrency(rows, d.currency)}`,
+          description: `Difference ${formatCurrency(paid - rows, d.currency)}.`,
+          record: { type, id: d.id },
+        });
+      }
+      for (const type of ['invoice', 'bill'] as const) {
+        const docs = withoutRows[type];
+        if (docs.length === 0) continue;
+        findings.push({
+          id: `settlement-ledger-no-rows-${type}`, checkId: 'settlement-ledger', severity: 'low',
+          title: `${docs.length} open ${type}(s) with an amount paid have no ledger rows yet, migration may not be applied`,
+          description: `Not counted as a mismatch: ${docs.slice(0, 5).join(', ')}${docs.length > 5 ? ', …' : ''}. Payments recorded before the payment ledger have no rows until the backfill runs.`,
+        });
+      }
+      return findings;
+    },
+  },
+  {
+    id: 'control-balance',
+    label: 'Receivable or payable account balance that differs from the open invoices or bills (EG-10)',
+    remedy: 'Look for entries posted to the receivable or payable account by hand, or documents whose posting is missing (Month-end close → Postings).',
+    run: ({ invoices, bills, accounts, transactions, baseCurrency }) => {
+      const open = openDocuments(invoices, bills);
+      return (['ar', 'ap'] as const).flatMap(role => {
+        const control = new Set(accounts.filter(a => resolveAccountRole(a) === role).map(a => a.id));
+        if (control.size === 0) return [];
+        let ledger = 0;
+        for (const tx of transactions) if (isPostable(tx)) for (const l of tx.lines || []) if (control.has(l.accountId)) ledger += lineAmount(l, tx);
+        if (role === 'ap') ledger = -ledger; // payables carry a credit balance
+        const type = role === 'ar' ? 'invoice' : 'bill';
+        const docs = open.filter(o => o.type === type);
+        // each document at its own rate, rounded per document as its posting is
+        const expected = docs.reduce((s, { d }) => s + Math.round(calculateAmountDue(d) * (Number(d.exchangeRate) > 0 ? Number(d.exchangeRate) : 1)), 0);
+        if (ledger === expected) return [];
+        const name = role === 'ar' ? 'Accounts receivable' : 'Accounts payable';
+        return [{
+          id: `control-balance-${role}`, checkId: 'control-balance', severity: 'medium' as const,
+          title: `${name} is ${formatCurrency(ledger, baseCurrency)}, the open ${type}s add up to ${formatCurrency(expected, baseCurrency)}`,
+          description: `Difference ${formatCurrency(ledger - expected, baseCurrency)} over ${docs.length} open ${type}(s) (home currency).`,
+        }];
+      });
+    },
+  },
 ];
+
+/** Issued, not void or draft, invoices and bills (what the receivable and payable accounts hold). */
+function openDocuments(invoices: Invoice[], bills: Bill[]) {
+  return [
+    ...invoices.map(d => ({ d, type: 'invoice' as const })),
+    ...bills.map(d => ({ d, type: 'bill' as const })),
+  ].filter(({ d }) => ISSUED.has(d.status));
+}
 
 const SUSPENSE = /suspense|uncategori[sz]ed|ask my accountant|clearing/i;
 
