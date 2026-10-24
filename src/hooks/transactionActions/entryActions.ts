@@ -4,6 +4,7 @@ import { currentIdentity, useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { Transaction, TransactionLine } from '../../types';
 import { toast } from 'sonner';
+import { showBudgetWarnings } from '../../lib/budgetWarnings';
 import { safeAsync, getLocalDateISO } from '../../lib/utils';
 import { OperationType } from '../../lib/firebaseUtils';
 import { useBillingStore } from '../../modules/billing/BillingService';
@@ -181,10 +182,10 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
         },
         body: JSON.stringify({ transaction: finalTx })
       });
-      if (!res.ok) {
-         const data = await res.json();
-         throw new Error(data.error || 'Failed to save transaction');
-      }
+      const answer = await res.json().catch(() => ({}));
+      // EG-4: a refusal over the budget comes as { message } (409); an entry posted over it lists budgetWarnings
+      if (!res.ok) throw new Error(answer.error || answer.message || 'Failed to save transaction');
+      showBudgetWarnings(answer);
       err = null;
     } catch(e) {
       err = e;
@@ -200,7 +201,7 @@ export function createEntryActions(ctx: ActionContext, posting: PostingHelpers, 
       });
     } else {
       // Handled by true sync errors
-      toast.error('Failed to add transaction. Protocol interrupted.');
+      toast.error('Failed to add transaction. Protocol interrupted.', { description: errorMessage(err) });
     }
     return !err;
   };

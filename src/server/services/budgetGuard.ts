@@ -55,10 +55,13 @@ const monthEnd = (month: string) => {
   return shift(m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`, -1);
 };
 
-/** The warnings for these entries (empty when nothing goes over); throws BudgetBlocked when the workspace blocks. */
-export async function checkBudgets(db: Firestore, workspaceId: string, workspace: Record<string, unknown> | undefined, entries: Transaction[]): Promise<BudgetWarning[]> {
-  const control = budgetControlOf(workspace);
-  if (control === 'off' || entries.length === 0) return [];
+/**
+ * The warnings for these entries (empty when nothing goes over or the workspace's control is 'off'). Reads through the
+ * pool, so it is called BEFORE the save's database transaction (a transaction holds a connection: reading through
+ * the pool inside it can wait forever on a pool of one); the save then applies `enforceBudgetControl` inside.
+ */
+export async function budgetWarningsFor(db: Firestore, workspaceId: string, workspace: Record<string, unknown> | undefined, entries: Transaction[]): Promise<BudgetWarning[]> {
+  if (budgetControlOf(workspace) === 'off' || entries.length === 0) return [];
   const budgets = (await db.collection('budgets').where('workspaceId', '==', workspaceId).get()).docs
     .map(d => ({ ...d.data(), id: d.id }) as SavedBudget)
     .filter(b => b.targetType === 'account' && typeof b.targetId === 'string');
@@ -102,6 +105,13 @@ export async function checkBudgets(db: Firestore, workspaceId: string, workspace
       });
     }
   }
-  if (warnings.length > 0 && control === 'block') throw new BudgetBlocked(warnings);
+  return warnings;
+}
+
+/** Inside the save, with the workspace as the save read it: 'block' refuses (BudgetBlocked), 'off' drops them, 'warn' keeps them. */
+export function enforceBudgetControl(workspace: Record<string, unknown> | undefined, warnings: BudgetWarning[]): BudgetWarning[] {
+  const control = budgetControlOf(workspace);
+  if (control === 'off') return [];
+  if (control === 'block' && warnings.length > 0) throw new BudgetBlocked(warnings);
   return warnings;
 }
