@@ -24,6 +24,14 @@
  *   all sold (vases): 2 bought, 2 sold, 100 landed → COGS 100, no move; the undo is still allowed
  *   one move per item (rugs): lines of 1 and 2 units, 300 by quantity → 100 + 200, one landed-cost move of 300
  *   a backdated purchase before a landed cost (desks) is refused by the repost run, nothing posted
+ * Round 2:
+ *   a reversed sale gives its units back (benches): 10 in, 5 sold (r = 10 − 10 × 5/10 = 5), the invoice voided
+ *     (+5 back to that line: r = 10) → share 10/10 = 1.0, so 5.00 landed is all Inventory, cost (10 × 10.00 + 5.00) / 10 = 10.50
+ *   dated, not written, order: 10 in 10-01, 5 sold 10-03, 10 in 10-02 written last → pool 20 on 10-03,
+ *     r = 10 − 10 × 5/20 = 7.5 → 0.75 (the written order would say 10 − 10 × 5/10 → 0.5)
+ *   a customer return gives back its sale's part per unit: 10 others + 10 in = 20, 10 sold takes 5 of the line,
+ *     4 returned give back 5 × 4/10 = 2 → r = 7 → 0.7
+ *   tax-inclusive charge: 120.00 including 20.00 tax lands 100.00 (amount − tax, as the bill posted it)
  */
 import './helpers/dom';
 import test, { after, before, describe } from 'node:test';
@@ -265,6 +273,47 @@ describe('EG-6: posting landed cost', { skip: !url && 'LF_TEST_DATABASE_URL not 
     const history = [m('opening', '2026-09-30', 100, 0), m('purchase', '2026-10-01', 10, 100, { documentType: 'bill', documentId: 'b', documentLine: 0 }), m('sale', '2026-10-03', -50, 110), m('transfer-out', '2026-10-04', -5, 60)];
     assert.equal(remainingShare(history, 'b', 0), 60 / 110);
     assert.equal(remainingShare(history, 'other', 0), 0);
+  });
+
+  test('round 2: a reversed sale restores the line, dated order is used, a return gives back its sale\'s part', () => {
+    let n = 0;
+    const m = (kind: string, date: string, quantity: number, extra: Record<string, unknown> = {}) => ({ kind, date, seq: `2026-10-24T00:00:00.${String(n++).padStart(3, '0')}Z#00000`, quantity, quantityBefore: 0, quantityAfter: 0, ...extra }) as unknown as StockMove;
+    const own = { documentType: 'bill', documentId: 'b', documentLine: 0 };
+    // quantityBefore/After are filled by datedMoves from the dates (the stored ones are ignored)
+    assert.equal(remainingShare([m('purchase', '2026-10-01', 10, own), m('sale', '2026-10-03', -5, { documentLineId: 'L1' }), m('sale-reversal', '2026-10-04', 5, { documentLineId: 'L1' })], 'b', 0), 1);
+    assert.equal(remainingShare([m('purchase', '2026-10-01', 10, own), m('sale', '2026-10-03', -5, { documentLineId: 'L1' }), m('purchase', '2026-10-02', 10, { documentType: 'bill', documentId: 'c', documentLine: 0 })], 'b', 0), 0.75);
+    assert.equal(remainingShare([m('opening', '2026-09-30', 10), m('purchase', '2026-10-01', 10, own), m('sale', '2026-10-03', -10, { documentLineId: 'L2' }), m('return', '2026-10-04', 4, { documentLineId: 'L2' })], 'b', 0), 0.7);
+  });
+
+  test('round 2: a voided sale gives its units back to the receipt; a tax-inclusive charge lands its net 100.00', async () => {
+    const benchId = `${ws}_bench`;
+    await db.collection('inventory').doc(benchId).set({ workspaceId: ws, name: 'Bench', sku: 'BENCH', itemType: 'stock', quantityAtHand: 0, unitCostCents: 0, unitPriceCents: 30_000, reorderPoint: 0, uid: OWNER });
+    ITEMS.push([benchId, 'Bench']);
+    await postBill(`${ws}_bill10`, '2026-10-01', [stockLine(benchId, 10, 1_000)]);
+    const inv = `${ws}_inv10`;
+    await sell(inv, benchId, 5);
+    const data = { ...(await db.collection('invoices').doc(inv).get()).data(), status: 'void' };
+    await postInvoiceLedger(inv, data as never, ws, OWNER, { collection: 'invoices', docId: inv, action: 'update', data }, await context());
+    assert.equal((await item(benchId)).quantityAtHand, 10, 'the void put the 5 back');
+    const res = await land({ charge: manual('alloc-bench-001', 500), receiptBillIds: [`${ws}_bill10`] });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.deepEqual(res.body.lines!.map(l => [l.inventoryCents, l.cogsCents, l.unitCostAfterCents]), [[500, 0, 1_050]]);
+
+    const tax = await send('POST', `/api/v1/workspaces/${ws}/import-records`, { kind: 'accounts', rows: [{ name: 'Tax paid', code: '1450', type: 'Expense' }] });
+    assert.equal(tax.status, 200, JSON.stringify(tax.body));
+    const taxAcc = (await all<ChartAccount>('chartAccounts')).find(a => a.code === '1450')!;
+    acct['1450'] = taxAcc;
+    const id = `${ws}_frt011`;
+    const bill = { id, workspaceId: ws, uid: OWNER, number: 'FRT11', vendorId: 'v', vendorName: 'Haulier', date: '2026-10-02', dueDate: '2026-10-02', status: 'pending' as const, currency: 'USD',
+      amountCents: 12_000, taxAmountCents: 2_000, taxInclusive: true, splits: [{ amountCents: 12_000, accountId: acct['5100'].id, description: 'Freight incl. tax' }] };
+    await db.collection('bills').doc(id).set(bill);
+    await postBillLedger(id, bill as never, ws, OWNER, { collection: 'bills', docId: id, action: 'update', data: bill }, await context());
+    const posted = (await all<Transaction>('transactions')).filter(t => t.metadata?.billId === id).flatMap(t => t.lines || []).filter(l => l.accountId === acct['5100'].id).reduce((x, l) => x + l.amountCents, 0);
+    assert.equal(posted, 10_000, 'the bill booked 100.00 of freight (and 20.00 of tax)');
+    const dry = await land({ charge: { kind: 'bill', billId: id, line: 0 }, receiptBillIds: [`${ws}_bill01`], dryRun: true });
+    assert.equal(dry.status, 200, JSON.stringify(dry.body));
+    assert.equal(dry.body.chargeCents, 10_000);
+    assert.equal(dry.body.entryLines!.find(l => l.accountId === acct['5100'].id)?.amountCents, -10_000);
   });
 
   test('review: stock on hand before the receipt shares the sales: 60/110 to Inventory, 50/110 to COGS', async () => {
