@@ -6,7 +6,7 @@
  */
 import type { BankStatementLine, Bill, ChartAccount, Customer, DimensionDefinition, Invoice, Payment, RecurringTransaction, Transaction, Vendor } from '../types';
 import { isPostable, lineAmount } from './txFilters';
-import { calculateAmountDue, cashPostedWithDocumentCents } from './documentMath';
+import { calculateAmountDue, cashPostedWithDocumentCents, depositAppliedCents } from './documentMath';
 import { convertMinorUnits } from './currencyMinorUnits';
 import { BILL_IS_ISSUED, INVOICE_IS_ISSUED } from '../server/reports/computeReports';
 import { findTaxDifferences } from './taxRecompute';
@@ -66,8 +66,8 @@ export interface CheckContext {
   stockMoves?: StockMove[];
   /** Payment records (CB-23: each has its entry in the ledger). */
   /** EG-2 payment-ledger rows (`paymentAllocations`); the nightly check reads them, the browser does not. */
-  allocations?: Array<{ id: string; documentId?: string; documentType?: string; kind?: string; amountCents?: number }>;
-  /** Inputs read only in part (a limit was reached): `transactions`, `invoices`, `allocations`…, or `all`. */
+  allocations?: Array<{ id: string; documentId?: string; documentType?: string; kind?: string; amountCents?: number; baseClearedCents?: number }>;
+  /** Inputs read only in part (a limit was reached): `transactions`, `invoices`, `allocations`…; only the collections cut, never an any-collection flag. */
   truncated?: string[];
   payments?: Array<Partial<Payment> & { id: string; number?: string; status?: string; amountCents?: number; exchangeRate?: number; paymentExchangeRate?: number; paymentDate?: string; date?: string; contactName?: string; entityName?: string }>;
 }
@@ -509,9 +509,9 @@ export const DATA_CHECKS: DataCheck[] = [
     id: 'control-balance',
     label: 'Receivable or payable account balance that differs from the open invoices or bills (EG-10)',
     remedy: 'Look for entries posted to the receivable or payable account by hand, or documents whose posting is missing (Month-end close → Postings).',
-    run: ({ invoices, bills, accounts, transactions, baseCurrency, truncated }) => {
+    run: ({ invoices, bills, accounts, transactions, allocations, baseCurrency, truncated }) => {
       // a balance over part of the entries or documents is not a difference to report
-      const cut = (truncated || []).filter(k => k === 'transactions' || k === 'accounts' || k === 'invoices' || k === 'bills' || k === 'all');
+      const cut = (truncated || []).filter(k => k === 'transactions' || k === 'accounts' || k === 'invoices' || k === 'bills');
       const open = openDocuments(invoices, bills);
       return (['ar', 'ap'] as const).flatMap(role => {
         const controls = accounts.filter(a => resolveAccountRole(a) === role);
@@ -524,9 +524,18 @@ export const DATA_CHECKS: DataCheck[] = [
         if (role === 'ap') ledger = 0 - ledger; // payables carry a credit balance
         const type = role === 'ar' ? 'invoice' : 'bill';
         const docs = open.filter(o => o.type === type);
-        // each document at its own rate, in the home currency's minor units, rounded per document as its posting is
-        const expected = docs.reduce((s, { d }) => s + convertMinorUnits(calculateAmountDue({ ...d, amountPaidCents: paidCents(d) }),
-          Number(d.exchangeRate) > 0 ? Number(d.exchangeRate) : 1, d.currency || baseCurrency, baseCurrency), 0);
+        // as posting books it: the original at the document's rate, less each settlement converted and rounded on
+        // its own (a ledger row's baseClearedCents; without rows, the amount paid in one conversion), less the deposit
+        const cleared = new Map<string, number>();
+        for (const r of allocations || []) if (r.documentType === type && r.documentId && Number.isFinite(Number(r.baseClearedCents))) cleared.set(r.documentId, (cleared.get(r.documentId) || 0) + Number(r.baseClearedCents));
+        const expected = docs.reduce((s, { d }) => {
+          const rate = Number(d.exchangeRate) > 0 ? Number(d.exchangeRate) : 1;
+          const home = (cents: number) => convertMinorUnits(cents, rate, d.currency || baseCurrency, baseCurrency);
+          const paid = paidCents(d);
+          if (calculateAmountDue({ ...d, amountPaidCents: paid }) === 0) return s;
+          const settled = cleared.has(d.id) && cleared.get(d.id) !== 0 ? cleared.get(d.id)! : home(paid);
+          return s + home(Math.max(0, d.amountCents || 0)) - home(depositAppliedCents(d)) - settled;
+        }, 0);
         if (ledger === expected) return [];
         const name = role === 'ar' ? 'Accounts receivable' : 'Accounts payable';
         return [{
@@ -551,6 +560,11 @@ function openDocuments(invoices: Invoice[], bills: Bill[]) {
 function paidCents(d: Invoice | Bill): number {
   if (d.status !== 'paid' && d.status !== 'partially_paid') return d.amountPaidCents || 0;
   return cashPostedWithDocumentCents({ ...d, settledByRecordsCents: 0 });
+}
+
+/** The browser's cut collections, by name (DataHealthView); the store's any-collection flag is not used. */
+export function truncatedInputs(truncatedCollections: Record<string, boolean> | undefined): string[] {
+  return Object.keys(truncatedCollections || {}).filter(k => truncatedCollections?.[k]);
 }
 
 function incompleteFinding(checkId: string, cut: string[]): CheckFinding {

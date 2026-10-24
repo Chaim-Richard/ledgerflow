@@ -24,13 +24,18 @@
  *   - Bill B-4 status `unpaid`, total 7000, no entries: due 7000 is counted in A/P (shared set missed it).
  *   - Invoice `x` and bill `x` share an id: rows 1000 (invoice) and 2000 (bill) each agree, not 3000 for both.
  *   - transactions read in part (a cap): one low "Not checked" note, no difference.
+ * Second review round (PR #369):
+ *   - EUR invoice €100.00 at 1.1001, €50.00 paid, no rows: 10000 x 1.1001 = 11001; 5000 x 1.1001 = 5500.5 -> 5501;
+ *     due in A/R = 11001 - 5501 = 5500 cents (one conversion of the net 5000 gave 5501).
+ *   - Same invoice paid as two rows of €25.00, baseClearedCents 2750 each (2750.25 -> 2750): 11001 - 5500 = 5501.
+ *   - Only bank lines cut: truncatedInputs gives ['bankLines'], and a 1234 A/R difference is still reported.
  * The database part runs when LF_TEST_DATABASE_URL is set.
  */
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import type { Firestore } from '../server/db/pgFirestore';
-import { DATA_CHECKS, type CheckContext } from '../lib/dataChecks';
+import { DATA_CHECKS, truncatedInputs, type CheckContext } from '../lib/dataChecks';
 import type { Bill, ChartAccount, Invoice, Transaction } from '../types';
 
 const check = (id: string) => DATA_CHECKS.find(c => c.id === id)!;
@@ -153,6 +158,31 @@ describe('EG-10 review fixes', () => {
     assert.deepEqual(control.map(f => [f.id, f.severity]), [['control-balance-incomplete', 'low']]);
     const settled = check('settlement-ledger').run(ctx({ truncated: ['allocations'] }));
     assert.deepEqual(settled.map(f => f.id), ['settlement-ledger-incomplete']);
+  });
+});
+
+describe('EG-10 second review round', () => {
+  const eur = [{ id: 'e1', number: 'E-1', status: 'partially_paid', amountCents: 10000, amountPaidCents: 5000, currency: 'EUR', exchangeRate: 1.1001 }] as unknown as Invoice[];
+  const only = (over: Partial<CheckContext>) => check('control-balance').run(ctx({ invoices: eur, bills: [], ...over }));
+
+  test('each part converted and rounded on its own: 11001 - 5501 = 5500', () => {
+    assert.deepEqual(only({ allocations: [], transactions: [entry('t1', 'ar', 5500, 'sales')] }), []);
+    assert.equal(only({ allocations: [], transactions: [entry('t1', 'ar', 5501, 'sales')] }).length, 1);
+  });
+
+  test('with ledger rows, each row\'s baseClearedCents: 11001 - 2750 - 2750 = 5501', () => {
+    const rows = [
+      { id: 'r1', documentId: 'e1', documentType: 'invoice', kind: 'payment', amountCents: 2500, baseClearedCents: 2750 },
+      { id: 'r2', documentId: 'e1', documentType: 'invoice', kind: 'payment', amountCents: 2500, baseClearedCents: 2750 },
+    ];
+    assert.deepEqual(only({ allocations: rows, transactions: [entry('t1', 'ar', 5501, 'sales')] }), []);
+  });
+
+  test('a cut collection the check does not read does not hide an A/R difference', () => {
+    const cut = truncatedInputs({ bankLines: true, transactions: false });
+    assert.deepEqual(cut, ['bankLines']);
+    const found = check('control-balance').run(ctx({ transactions: [...transactions, entry('t6', 'ar', 1234)], truncated: cut }));
+    assert.deepEqual(found.map(f => f.id), ['control-balance-ar']);
   });
 });
 
