@@ -480,7 +480,8 @@ export const DATA_CHECKS: DataCheck[] = [
       // so originals + reversals = the live total
       const sums = new Map<string, number>();
       for (const r of allocations) {
-        if (!r.documentId) continue;
+        // a document's own `manual` / `deposit` row is the cash posted with it, counted below from the document
+        if (!r.documentId || r.kind === 'manual' || r.kind === 'deposit') continue;
         const key = `${r.documentType}|${r.documentId}`;
         sums.set(key, (sums.get(key) || 0) + (Number(r.amountCents) || 0));
       }
@@ -488,12 +489,15 @@ export const DATA_CHECKS: DataCheck[] = [
       const withoutRows: Record<'invoice' | 'bill', string[]> = { invoice: [], bill: [] };
       for (const { d, type } of openDocuments(invoices, bills)) {
         const paid = Math.round(paidCents(d));
-        const rows = sums.get(`${type}|${d.id}`);
-        if (rows === undefined) { if (paid !== 0) withoutRows[type].push(label(d)); continue; }
+        // what was paid with the document has no payment record and so no row: the rows cover the rest
+        const withDocument = Math.round(cashPostedWithDocumentCents(d));
+        const rowsOnly = sums.get(`${type}|${d.id}`);
+        if (rowsOnly === undefined) { if (paid - withDocument !== 0) withoutRows[type].push(label(d)); continue; }
+        const rows = withDocument + rowsOnly;
         if (rows === paid) continue;
         findings.push({
           id: `settlement-ledger-${type}-${d.id}`, checkId: 'settlement-ledger', severity: 'medium',
-          title: `${type === 'invoice' ? 'Invoice' : 'Bill'} ${label(d)} says ${formatCurrency(paid, d.currency)} paid, its payment-ledger rows add up to ${formatCurrency(rows, d.currency)}`,
+          title: `${type === 'invoice' ? 'Invoice' : 'Bill'} ${label(d)} says ${formatCurrency(paid, d.currency)} paid, its payment-ledger rows${withDocument ? ' and the part paid with it' : ''} add up to ${formatCurrency(rows, d.currency)}`,
           description: `Difference ${formatCurrency(paid - rows, d.currency)}.`,
           record: { type, id: d.id },
         });
