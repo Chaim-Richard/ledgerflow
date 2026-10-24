@@ -14,7 +14,7 @@ import { writeServerAuditLog } from './auditLogService';
  * EG-14: opening open items, from a CSV (src/lib/openItemImport.ts). `preview` reads the file on the server against
  * the books and answers every row with its problem, writing nothing; `confirm` reads it again (the preview is never
  * trusted) and, only when no row has a problem, saves each row as an open invoice (bill) through the same server
- * posting as any invoice (documentPostService.ts): A/R debit (A/P credit) for the open amount against Opening Balance
+ * posting every invoice uses (documentPostService.ts): A/R debit (A/P credit) for the open amount against Opening Balance
  * Equity, dated on the row's own date. No revenue or expense line is made.
  *
  * The cut-over date is the workspace's opening-balance date (set by recordOpeningBalances, openingBalanceService.ts).

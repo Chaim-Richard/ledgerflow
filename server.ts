@@ -31,7 +31,6 @@ import { inventoryRouter } from "./src/server/routes/inventoryRoutes";
 import { supportRouter } from "./src/server/routes/supportRoutes";
 import { paymentRouter } from "./src/server/routes/paymentRoutes";
 import { documentRouter } from "./src/server/routes/documentRoutes";
-import { openItemImportRouter } from "./src/server/routes/openItemImportRoutes";
 import { mathRouter } from "./src/server/routes/mathRoutes";
 import { plaidRouter } from "./src/server/routes/plaidRoutes";
 import { billingRouter } from "./src/server/routes/billingRoutes";
@@ -145,8 +144,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   app.use("/api/v1/fx", apiAuthenticate, fxRouter);
   app.use("/api/v1/support", authenticate, supportRouter);
   app.use("/api/v1/payments", apiAuthenticate, paymentRouter);
-  app.use("/api/v1/documents", apiAuthenticate, documentRouter);
-  app.use("/api/v1/open-items", apiAuthenticate, openItemImportRouter); // EG-14: opening open invoices and bills from a CSV
+  app.use("/api/v1/documents", apiAuthenticate, documentRouter).use("/api/v1/open-items", apiAuthenticate, (await import("./src/server/routes/openItemImportRoutes")).openItemImportRouter); // EG-14
   app.use("/api/v1/invoices/public", publicInvoiceLimiter, publicInvoiceRouter);
   app.use("/api/v1/email-events", emailWebhookRouter); // provider bounce/complaint reports (secret token)
   app.use("/api/ai", aiRouter);
