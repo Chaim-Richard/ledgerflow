@@ -64,7 +64,9 @@ export async function checkLedgerHealth(db: Firestore, workspaceId: string, now 
   // EG-7: a source read up to its cap is partial: the checks over it say so instead of comparing
   data.truncated = loaded.filter(([key, rows]) => rows.length >= SOURCES[key as keyof typeof SOURCES].cap).map(([key]) => key);
   const today = formatTzDate(now, typeof ws.timezone === 'string' ? ws.timezone : 'UTC');
-  const findings = runDataChecks({ ...data, today, baseCurrency: String(ws.currency || 'USD'), dimensions: Array.isArray(ws.dimensions) ? ws.dimensions : undefined });
+  // EG-10: an input that reached its cap is read in part; totals over it are not compared
+  const truncated = loaded.filter(([key, rows]) => rows.length >= SOURCES[key as keyof typeof SOURCES].cap).map(([key]) => key);
+  const findings = runDataChecks({ ...data, truncated, today, baseCurrency: String(ws.currency || 'USD'), dimensions: Array.isArray(ws.dimensions) ? ws.dimensions : undefined });
   const fresh = newSeriousProblems(findings, ws.ledgerHealth as LedgerHealth | undefined);
   // S-07: a reconciled period whose books moved since (the difference to the statement is kept per reconciliation)
   const kept = ((ws.ledgerHealth as LedgerHealth | undefined)?.reconciled || {}) as Record<string, number>;
