@@ -2,7 +2,8 @@
  * EG-10: Data Health compares each open invoice's and bill's amountPaidCents with the signed sum of its
  * paymentAllocations rows, and the A/R and A/P control balances with the open documents.
  *
- * Hand-worked figures (USD home currency, cents):
+ * Hand-worked figures (USD home currency, cents). Every payment below is a payment record, so each document's
+ * settledByRecordsCents equals its amountPaidCents (nothing paid with the document) unless a test says otherwise:
  *   INV-1  total 100000, paid 40000; rows payment 30000 + payment 10000 = 40000         -> agrees
  *   INV-2  total  50000, paid 20000; rows payment 25000 + reversal -5000 = 20000        -> agrees (signed sum)
  *   INV-3  total  80000, paid 30000; rows payment 20000 = 20000                         -> mismatch, 30000 - 20000 = 10000 ($100.00)
@@ -34,6 +35,9 @@
  *     settledByRecordsCents 3000, so cash posted with the document = 5000 - 3000 = 2000.
  *     With a row cleared at 3000: A/R = 10000 - 2000 - 3000 = 5000 ($50.00), not 10000 - 3000 = 7000.
  *     Without rows: 10000 - 2000 - (5000 - 2000) = 5000 as well.
+ *   Settlement check, same invoice: amountPaid 5000 = 2000 with the document + row 3000 -> agrees
+ *     (comparing the row alone said 5000 vs 3000, a false $20.00 difference). A row of 2500 instead:
+ *     2000 + 2500 = 4500 vs 5000 -> $5.00 difference.
  * The database part runs when LF_TEST_DATABASE_URL is set.
  */
 import test, { after, before, describe } from 'node:test';
@@ -46,14 +50,14 @@ import type { Bill, ChartAccount, Invoice, Transaction } from '../types';
 const check = (id: string) => DATA_CHECKS.find(c => c.id === id)!;
 
 const invoices = [
-  { id: 'i1', number: 'INV-1', status: 'partially_paid', amountCents: 100000, amountPaidCents: 40000, currency: 'USD' },
-  { id: 'i2', number: 'INV-2', status: 'partially_paid', amountCents: 50000, amountPaidCents: 20000, currency: 'USD' },
-  { id: 'i3', number: 'INV-3', status: 'partially_paid', amountCents: 80000, amountPaidCents: 30000, currency: 'USD' },
-  { id: 'i4', number: 'INV-4', status: 'partially_paid', amountCents: 20000, amountPaidCents: 5000, currency: 'USD' },
+  { id: 'i1', number: 'INV-1', status: 'partially_paid', amountCents: 100000, amountPaidCents: 40000, settledByRecordsCents: 40000, currency: 'USD' },
+  { id: 'i2', number: 'INV-2', status: 'partially_paid', amountCents: 50000, amountPaidCents: 20000, settledByRecordsCents: 20000, currency: 'USD' },
+  { id: 'i3', number: 'INV-3', status: 'partially_paid', amountCents: 80000, amountPaidCents: 30000, settledByRecordsCents: 30000, currency: 'USD' },
+  { id: 'i4', number: 'INV-4', status: 'partially_paid', amountCents: 20000, amountPaidCents: 5000, settledByRecordsCents: 5000, currency: 'USD' },
   { id: 'i5', number: 'INV-5', status: 'draft', amountCents: 99999, amountPaidCents: 0, currency: 'USD' },
 ] as unknown as Invoice[];
 const bills = [
-  { id: 'b1', number: 'B-1', status: 'paid', amountCents: 60000, amountPaidCents: 60000, currency: 'USD' },
+  { id: 'b1', number: 'B-1', status: 'paid', amountCents: 60000, amountPaidCents: 60000, settledByRecordsCents: 60000, currency: 'USD' },
   { id: 'b2', number: 'B-2', status: 'approved', amountCents: 10000, amountPaidCents: 0, currency: 'EUR', exchangeRate: 1.1 },
 ] as unknown as Bill[];
 const allocations = [
@@ -149,8 +153,8 @@ describe('EG-10 review fixes', () => {
   });
 
   test('an invoice and a bill with the same id keep their own totals', () => {
-    const inv = [{ id: 'x', number: 'X', status: 'partially_paid', amountCents: 5000, amountPaidCents: 1000, currency: 'USD' }] as unknown as Invoice[];
-    const bill = [{ id: 'x', number: 'X', status: 'partially_paid', amountCents: 5000, amountPaidCents: 2000, currency: 'USD' }] as unknown as Bill[];
+    const inv = [{ id: 'x', number: 'X', status: 'partially_paid', amountCents: 5000, amountPaidCents: 1000, settledByRecordsCents: 1000, currency: 'USD' }] as unknown as Invoice[];
+    const bill = [{ id: 'x', number: 'X', status: 'partially_paid', amountCents: 5000, amountPaidCents: 2000, settledByRecordsCents: 2000, currency: 'USD' }] as unknown as Bill[];
     const rows = [
       { id: 'r1', documentId: 'x', documentType: 'invoice', kind: 'payment', amountCents: 1000 },
       { id: 'r2', documentId: 'x', documentType: 'bill', kind: 'payment', amountCents: 2000 },
@@ -201,6 +205,14 @@ describe('EG-10 third review round', () => {
     assert.match(run(row, 7000)[0].title, /\$70\.00, the open invoices add up to \$50\.00/);
   });
 
+  test('the settlement check counts the part paid with the document: 2000 + 3000 = 5000, no false $20.00', () => {
+    const settle = (rows: CheckContext['allocations']) => check('settlement-ledger').run(ctx({ invoices: inv, bills: [], allocations: rows }));
+    assert.deepEqual(settle(row), []);
+    const off = settle([{ ...row[0], amountCents: 2500 }]);
+    assert.equal(off.length, 1);
+    assert.match(off[0].description, /Difference \$5\.00/);
+  });
+
   test('without rows the same $50.00', () => {
     assert.deepEqual(run([], 5000), []);
   });
@@ -216,7 +228,7 @@ describe('EG-10 in the nightly check (database)', { skip: !url && 'LF_TEST_DATAB
     const { getDb } = await import('../server/db/firestore');
     db = getDb();
     await db.collection('workspaces').doc(ws).set({ uid: 'owner-1', name: 'EG-10 Co', currency: 'USD', members: ['owner-1'] });
-    await db.collection('invoices').doc(`${ws}_i3`).set({ workspaceId: ws, number: 'INV-3', status: 'partially_paid', amountCents: 80000, amountPaidCents: 30000, currency: 'USD' });
+    await db.collection('invoices').doc(`${ws}_i3`).set({ workspaceId: ws, number: 'INV-3', status: 'partially_paid', amountCents: 80000, amountPaidCents: 30000, settledByRecordsCents: 30000, currency: 'USD' });
     await db.collection('paymentAllocations').doc(`payment-p1-p1-${ws}_i3`).set({ workspaceId: ws, documentId: `${ws}_i3`, documentType: 'invoice', kind: 'payment', amountCents: 20000 });
   });
 
