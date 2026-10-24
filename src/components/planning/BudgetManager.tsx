@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import AsyncButton from '../ui/AsyncButton';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { Labelled } from '../ui/Labelled';
+import BudgetControlSetting from './BudgetControlSetting';
 
 
 
@@ -131,6 +132,7 @@ export default function BudgetManager() {
           </div>
           <h1 className="text-3xl md:text-5xl font-black text-[var(--text)] tracking-tighter">Budget Protocol</h1>
           <p className="text-[var(--muted)] font-medium text-lg mt-2 italic opacity-60">Strategic variance analysis and predictive consumption monitoring.</p>
+          <BudgetControlSetting />
         </div>
 
         <button 

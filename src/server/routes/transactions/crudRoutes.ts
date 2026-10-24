@@ -97,58 +97,43 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
       return res.status(400).json({ status: 'error', message: 'Workspace ID is required' });
     }
 
-    // EG-4: the budget figures, read before the command's transaction (through the pool; never while it holds a
-    // connection); the entry as sent, its lines in the home currency as the validator will stamp them
-    let budgetWarnings: BudgetWarning[] = [];
-    const db0 = getDb();
-    const planned = transaction?.lines ? await budgetWarningsFor(db0, workspaceId, (await db0.collection('workspaces').doc(String(workspaceId)).get()).data(), [transaction as Transaction]).catch((err: unknown) => { console.warn('[EG-4] budget check skipped:', errorMessage(err)); return []; }) : [];
-    return executeCommand(req, res, workspaceId, 'TRANSACTION_CREATE', async (ctx, t) => {
-      const { transaction } = req.body;
-      const user = requestUser(req);
-    
-      if (!transaction || !transaction.workspaceId) {
-        throw new HttpError('Invalid payload', 400);
-      }
-    
+    // EG-4 (review 4366372413): the entry is checked and prepared BEFORE the command's transaction, and that one
+    // prepared entry is both what the budget check reads and what is saved. Its reads (the workspace, the chart, the
+    // budget figures) go through the pool, never while the transaction holds a connection.
+    const user = requestUser(req);
+    const db = getDb();
+    let validatedTx: Transaction;
+    let planned: BudgetWarning[];
+    try {
+      if (!transaction || !transaction.workspaceId) throw new HttpError('Invalid payload', 400);
       transaction.uid = user.uid;
-
-      if (!transaction.totalAmountCents) {
-         transaction.totalAmountCents = getAbsoluteTotal(transaction);
-      }
-
+      if (!transaction.totalAmountCents) transaction.totalAmountCents = getAbsoluteTotal(transaction);
       const parsed = TransactionSchema.safeParse(transaction);
-      if (!parsed.success) {
-        throw Object.assign(new HttpError('Schema validation failed', 400), { details: parsed.error.issues });
-      }
-
-      const db = getDb();
-      const transactionToSave: Transaction = {
-        ...parsed.data,
-        id: parsed.data.id || db.collection("transactions").doc().id,
-      } as Transaction;
-    
-      const wsDoc = await db.collection('workspaces').doc(transactionToSave.workspaceId).get();
-      if (!wsDoc.exists || (wsDoc.data()?.uid !== user.uid && !wsDoc.data()?.members?.includes(user.uid) && !user.admin)) {
-        throw new HttpError('Not a member', 403);
-      }
-      const wsData = wsDoc.data();
-
-      const validatedTx = await TransactionValidator.validateAndPrepare(transactionToSave, {
-        workspaceId: transactionToSave.workspaceId,
-        user: { uid: user.uid, admin: user.admin },
-        wsData
-      });
+      if (!parsed.success) throw Object.assign(new HttpError('Schema validation failed', 400), { details: parsed.error.issues });
+      const transactionToSave = { ...parsed.data, id: parsed.data.id || db.collection("transactions").doc().id } as Transaction;
+      const wsData = (await db.collection('workspaces').doc(transactionToSave.workspaceId).get()).data();
+      if (!wsData || (wsData.uid !== user.uid && !wsData.members?.includes(user.uid) && !user.admin)) throw new HttpError('Not a member', 403);
+      validatedTx = await TransactionValidator.validateAndPrepare(transactionToSave, { workspaceId: transactionToSave.workspaceId, user: { uid: user.uid, admin: user.admin }, wsData });
       // Z-12: a required label whose rule refuses
       const missing = refusedLabels(validatedTx, wsData?.dimensions);
       if (missing.length > 0) throw new HttpError(refusedLabelsMessage(missing), 400);
-
-      // EG-4: the budget check (warn by default, 409 when the workspace blocks)
-      try { budgetWarnings = enforceBudgetControl(wsData, planned); } catch (err) {
+      planned = await budgetWarningsFor(db, validatedTx.workspaceId, wsData, [validatedTx]);
+    } catch (err) {
+      // answered as executeCommand answers a refusal (an unexpected error: 500 without its words)
+      const status = (err as { status?: number }).status || 500;
+      if (status >= 500) { console.error('[TRANSACTION_CREATE] prepare failed:', err); return res.status(status).json({ status: 'error', message: 'An internal server error occurred.' }); }
+      return res.status(status).json({ status: 'error', message: errorMessage(err), details: (err as { details?: unknown }).details });
+    }
+    let budgetWarnings: BudgetWarning[] = [];
+    return executeCommand(req, res, workspaceId, 'TRANSACTION_CREATE', async (_ctx, t) => {
+      // the budget control as the workspace has it at commit (warn by default, 409 when it blocks)
+      const wsNow = (await t.get(db.collection('workspaces').doc(validatedTx.workspaceId))).data();
+      try { budgetWarnings = enforceBudgetControl(wsNow, planned); } catch (err) {
         if (err instanceof BudgetBlocked) throw new HttpError(err.message, 409);
         throw err;
       }
       // Execute atomic validation and create inside the single command transaction boundary
-      const txRef = db.collection('transactions').doc(transactionToSave.id);
+      const txRef = db.collection('transactions').doc(validatedTx.id);
       const doc = await t.get(txRef);
       if (doc.exists) {
          throw new Error('Duplicate request processing: Transaction ID already exists');
