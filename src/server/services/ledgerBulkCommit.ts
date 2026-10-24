@@ -16,7 +16,7 @@ import { writeServerAuditLog, type AuditLogEntryInput } from './auditLogService'
 import { deletionSentence, deletionSnapshot } from './deletionRecord';
 import { refusedLabels, refusedLabelsMessage } from '../../lib/requiredLabels';
 import { DELIVERY_COGS_TYPE, DELIVERY_RETURN_TYPE } from '../../lib/deliveries';
-import { BudgetBlocked, checkBudgets } from './budgetGuard';
+import { BudgetBlocked, budgetWarningsFor, enforceBudgetControl, type BudgetWarning } from './budgetGuard';
 
 /**
  * The commit of POST /transactions/bulk, moved here unchanged (L94-STEP2) so that POST /documents/:type/:id/post, which
@@ -139,6 +139,8 @@ export async function commitLedgerBulk(db: Firestore, user: RequestUser, request
   let body: Record<string, unknown> = { status: 'ok', count: validatedTransactions.length };
   // S-09: an approval asked for or decided with this save, told after it commits
   let approvalNotice: { invoiceId: string; invoice: Record<string, unknown>; event: ApprovalEvent } | null = null;
+  // EG-4: the budget figures are read before the transaction (through the pool; never while it holds a connection)
+  const plannedBudgetWarnings = await budgetWarningsFor(db, wsId, wsData, validatedTransactions);
   await db.runTransaction(async (t) => {
     approvalNotice = null;
     // Reads first
@@ -238,9 +240,9 @@ export async function commitLedgerBulk(db: Firestore, user: RequestUser, request
       body = { status: 'ok', count: 0, replayed: true, transactionIds: replayedIds };
       return;
     }
-    // EG-4: the budget check, after a replay is recognised (a replay adds nothing); warn or block per the workspace
-    let budgetWarnings: Awaited<ReturnType<typeof checkBudgets>>;
-    try { budgetWarnings = await checkBudgets(db, wsId, wsNow, validatedTransactions); } catch (err) {
+    // EG-4: the budget control as the workspace has it now, after a replay is recognised (a replay adds nothing)
+    let budgetWarnings: BudgetWarning[];
+    try { budgetWarnings = enforceBudgetControl(wsNow, plannedBudgetWarnings); } catch (err) {
       if (err instanceof BudgetBlocked) throw new BulkRefusal(409, { error: err.message, code: 'OVER_BUDGET', budgetWarnings: err.warnings });
       throw err;
     }

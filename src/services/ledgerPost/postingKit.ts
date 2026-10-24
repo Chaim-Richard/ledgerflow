@@ -1,6 +1,7 @@
 import { db, getIdToken } from '../../firebase';
 import { doc, getDoc } from '../../lib/db/firestore';
 import { toast } from 'sonner';
+import { showBudgetWarnings } from '../../lib/budgetWarnings';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { Transaction, Invoice, InventoryItem } from '../../types';
@@ -70,6 +71,7 @@ async function sendToServer(
     throw new Error(data.error || 'Server rejected transaction posting');
   }
   if (Array.isArray(data.warnings)) data.warnings.forEach((w: unknown) => toast.warning(String(w)));
+  showBudgetWarnings(data);
 
   // INT-2: the server says this save had already happened (an earlier save of the same posting); the
   // entries built here were not written, so they are not added to the local list either
@@ -112,6 +114,7 @@ async function postDocumentToServer(workspaceId: string, entityMutation: EntityM
   }
   if (Array.isArray(answer.warnings)) answer.warnings.forEach((w: unknown) => toast.warning(String(w)));
   if (typeof answer.creditLimitNote === 'string') toast.info(answer.creditLimitNote);
+  showBudgetWarnings(answer);
   if (answer.replayed) return;
   putWrittenEntries(workspaceId, Array.isArray(answer.transactions) ? answer.transactions as Transaction[] : []);
 }

@@ -1,5 +1,5 @@
 import express from 'express';
-import { BudgetBlocked, checkBudgets, type BudgetWarning } from '../../services/budgetGuard';
+import { BudgetBlocked, budgetWarningsFor, enforceBudgetControl, type BudgetWarning } from '../../services/budgetGuard';
 import { revaluationEntryLock } from '../../services/stockRevaluationService';
 import { ledgerCreate } from '../../services/ledgerDoor';
 import { FieldValue } from '../../db/firestore';
@@ -97,7 +97,11 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
       return res.status(400).json({ status: 'error', message: 'Workspace ID is required' });
     }
 
+    // EG-4: the budget figures, read before the command's transaction (through the pool; never while it holds a
+    // connection); the entry as sent, its lines in the home currency as the validator will stamp them
     let budgetWarnings: BudgetWarning[] = [];
+    const db0 = getDb();
+    const planned = transaction?.lines ? await budgetWarningsFor(db0, workspaceId, (await db0.collection('workspaces').doc(String(workspaceId)).get()).data(), [transaction as Transaction]).catch((err: unknown) => { console.warn('[EG-4] budget check skipped:', errorMessage(err)); return []; }) : [];
     return executeCommand(req, res, workspaceId, 'TRANSACTION_CREATE', async (ctx, t) => {
       const { transaction } = req.body;
       const user = requestUser(req);
@@ -139,7 +143,7 @@ export function registerTransactionCrudRoutes(transactionRouter: express.Router)
       if (missing.length > 0) throw new HttpError(refusedLabelsMessage(missing), 400);
 
       // EG-4: the budget check (warn by default, 409 when the workspace blocks)
-      try { budgetWarnings = await checkBudgets(db, transactionToSave.workspaceId, wsData, [validatedTx]); } catch (err) {
+      try { budgetWarnings = enforceBudgetControl(wsData, planned); } catch (err) {
         if (err instanceof BudgetBlocked) throw new HttpError(err.message, 409);
         throw err;
       }
