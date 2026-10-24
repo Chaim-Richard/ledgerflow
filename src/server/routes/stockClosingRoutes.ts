@@ -11,7 +11,7 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 /**
  * EG-7, mounted on the inventory router (/api/v1/inventory):
  * - POST /stock-closing: an owner takes the stock closing of a locked period end (stockClosingService.ts);
- * - GET /stock-closing: any member reads it with the stock invariant checks (read only).
+ * - GET /stock-closing: every member reads it with the stock invariant checks (read only).
  */
 export function registerStockClosingRoutes(router: express.Router): void {
   router.post('/stock-closing', requireWorkspaceRole(['owner']), async (req, res) => {
