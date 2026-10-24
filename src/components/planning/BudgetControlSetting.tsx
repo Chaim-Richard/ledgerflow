@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useState } from 'react';
+import React, { useId, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
@@ -22,14 +22,14 @@ export default function BudgetControlSetting() {
   const setWorkspaces = useAuthStore(s => s.setWorkspaces);
   const isOwner = useCurrentRole() === 'owner';
   const stored: BudgetControl = workspace?.budgetControl ?? 'warn';
-  const [value, setValue] = useState<BudgetControl>(stored);
-  const [busy, setBusy] = useState(false);
-  useEffect(() => setValue(stored), [stored]);
+  // the choice being saved; otherwise the stored value is shown
+  const [pending, setPending] = useState<BudgetControl | null>(null);
+  const value = pending ?? stored;
+  const busy = pending !== null;
 
   const change = async (next: BudgetControl) => {
     if (!workspace?.id || next === stored) return;
-    setValue(next);
-    setBusy(true);
+    setPending(next);
     try {
       const token = await getIdToken().catch(() => null);
       const res = await fetch(`/api/v1/workspaces/${encodeURIComponent(workspace.id)}/budget-control`, {
@@ -42,10 +42,9 @@ export default function BudgetControlSetting() {
       setWorkspaces(workspaces.map(w => (w.id === workspace.id ? { ...w, budgetControl: next } : w)));
       toast.success('Budget control saved');
     } catch (err) {
-      setValue(stored);
       toast.error(err instanceof Error ? err.message : String(err));
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   };
 
