@@ -31,6 +31,8 @@ const SOURCES = {
   stockMoves: { table: 'stockMoves', cap: 50000 },
   // EG-7: the stock closings, checked against the moves they cover
   stockClosings: { table: 'stockClosings', cap: 200 },
+  // EG-10: the payment ledger, checked against each document's amount paid
+  allocations: { table: 'paymentAllocations', cap: 50000 },
 } as const;
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;

@@ -164,6 +164,14 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Israel: Self-Employed National Insurance', componentName: 'IlSelfEmploymentNiReportView' },
     { label: 'Israel: Advance Tax Calendar (Mikdamot)', componentName: 'IsraelAdvanceTaxReportView' },
     { label: 'Accountant export pack', componentName: 'AccountantExportPackView', id: 'accountant-export-pack' },
+    { label: 'Vendor Quotes Compare', componentName: 'VendorQuotesCompareView' },
+    { label: 'Customer Item Codes', componentName: 'CustomerItemCodesView' },
+    { label: 'Shipping Methods & Rates', componentName: 'ShippingMethodsView' },
+    { label: 'Retention (Holdbacks) on Milestone Bills', componentName: 'BillRetentionReportView' },
+    { label: 'Aged Inventory by Lot', componentName: 'AgedInventoryByLotReportView' },
+    { label: 'Work Orders (Kit Assembly)', componentName: 'WorkOrdersView' },
+    { label: 'Israel: Annual Customer & Vendor Summary', componentName: 'IsraeliAnnualPartySummaryView' },
+    { label: 'Accountant Queue', componentName: 'AccountantQueueView', id: 'accountant-queue' },
   ];
 
   async function chooseReport(page: import('@playwright/test').Page, label: string) {

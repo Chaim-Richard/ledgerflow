@@ -87,7 +87,7 @@ describe('A-107 GSA per diem import', () => {
     });
     assert.throws(() => readGsaPerDiemCsv('a,b,c\n1,2,3'), /No header row with State and Destination/);
     assert.throws(
-      () => readGsaPerDiemCsv(FY26.replace('342,92', '342,92').replace('179,92', '179,80')),
+      () => readGsaPerDiemCsv(FY26.replace('179,92', '179,80')),
       /two different M&IE rates/,
     );
   });
