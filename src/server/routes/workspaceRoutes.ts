@@ -38,6 +38,7 @@ import { numberingRouter } from './numberingRoutes';
 import { allocateNextNumber, NUMBERED_TYPES, type NumberedType } from '../services/numberingService';
 import { retentionFor, RetentionSettingsSchema, scheduledPurgeAt as purgeDate } from '../../lib/retention';
 import { RetentionError, updateRetention } from '../services/retentionService';
+import { budgetControlRouter } from './budgetControlRoutes';
 import { completeSetup, recordOpeningBalances, SetupError } from '../services/openingBalanceService';
 import { ModuleSettingError, moduleRecords, setModules } from '../services/moduleService';
 import { allocationRuleRouter, priceListRouter, salesRepRouter, roleDashboardRouter, approvalDelegateRouter, taxProfileRouter } from './savedListRoutes';
@@ -54,11 +55,7 @@ export interface AuthenticatedRequest extends express.Request {
 }
 
 function sendError(res: express.Response, message: string, status: number = 500, details?: unknown) {
-  res.status(status).json({
-    status: 'error',
-    message,
-    ...(details ? { details } : {})
-  });
+  res.status(status).json({ status: 'error', message, ...(details ? { details } : {}) });
 }
 
 /**
@@ -169,6 +166,7 @@ workspaceRouter.use('/:workspaceId/invoices', requireWorkspaceRole(['owner', 'ac
 workspaceRouter.use('/:workspaceId/bills', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), prepaidRouter);
 // merging is checked again for owner/accountant in the service; deleting is for every writer
 workspaceRouter.use('/:workspaceId/contacts', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper']), contactMergeRouter);
+workspaceRouter.use('/:workspaceId/budget-control', requireWorkspaceRole(['owner']), budgetControlRouter); // EG-4
 workspaceRouter.use('/:workspaceId/numbering', requireWorkspaceRole(['owner', 'accountant']), numberingRouter);
 // Remove a file kept with a record (K-07). Every member reaches it; who may remove which file is checked in the route
 workspaceRouter.use('/:workspaceId/attachments', requireWorkspaceRole(['owner', 'accountant', 'bookkeeper', 'viewer']), attachmentRouter);
