@@ -21,6 +21,7 @@ import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
 import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
 import { provenanceFromResponse } from '../../lib/reportProvenance';
 import ReportEmptyState from '../reporting/ReportEmptyState';
+import { useBalanceEntries } from '../../hooks/useBalanceEntries';
 
 /** the trial balance worked out here also reads the journal entries */
 const TB_COLLECTIONS = [...STATEMENT_COLLECTIONS, 'journalEntries'] as const;
@@ -40,6 +41,8 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
   const journalEntries = useLedgerStore(s => s.journalEntries || []);
   
   const [asOfDate, setAsOfDate] = useState<string>(() => format(new Date(), 'yyyy-MM-dd'));
+  // L-123 step 3c: the browser-side sum reads the server's balances through the oldest loaded day
+  const { entries: balanceTx, serverAsOf } = useBalanceEntries(transactions, asOfDate);
   const [sortField, setSortField] = useState<SortField>('code');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
@@ -111,8 +114,8 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
       };
     });
 
-    // Accumulate standard transactions
-    transactions.forEach(tx => {
+    // Accumulate standard transactions (with the server's sums through the oldest loaded day folded in)
+    balanceTx.forEach(tx => {
       if (!isPostable(tx) || !isTransactionInDateRange(tx, undefined, asOfDate)) return;
       tx.lines?.forEach(line => {
         const acc = accountById.get(line.accountId) || accountByName.get(line.accountName || '');
@@ -216,7 +219,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
     const isBalanced = totalDebits === totalCredits;
 
     return { lines, totalDebits, totalCredits, isBalanced };
-  }, [accounts, transactions, journalEntries, asOfDate, sortField, sortDir]);
+  }, [accounts, balanceTx, journalEntries, asOfDate, sortField, sortDir]);
 
   const trialBalance = useMemo(() => {
     if (isServerAuthoritative && serverData) {
@@ -331,6 +334,9 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
     <div className="space-y-4">
       {/* AUD-10: where these figures come from */}
       <ReportProvenanceNote id="tb-statement-provenance" provenance={provenance} onRefresh={loadServerReport} busy={loadingStates.trialBalance} />
+      {!(isServerAuthoritative && serverData) && serverAsOf && (
+        <p data-testid="tb-balances-source" className="text-xs text-[var(--muted)]">Balances include every entry through {serverAsOf} as summed by the server, plus the loaded entries after it.</p>
+      )}
 
 
       <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden relative group">

@@ -112,11 +112,23 @@ export function computeIsraeliAnnualSummary(input: {
 
   const customerLookup = new Map((customers || []).map(c => [c.id, c]));
 
+  // The open balance at the year end is what is open today plus what was paid on the document after the year end
+  // (a payment made in January must not lower the 31 December balance), per document, in its own currency.
+  const paidAfterEnd = new Map<string, number>();
+  for (const p of payments || []) {
+    if (p.status === 'void' || p.status === 'draft') continue;
+    const pDay = String((p as unknown as { paymentDate?: string }).paymentDate || p.date || '').slice(0, 10);
+    if (!pDay || pDay <= end) continue;
+    for (const a of p.allocations || []) if (a.documentId) paidAfterEnd.set(a.documentId, (paidAfterEnd.get(a.documentId) || 0) + (Number(a.amountCents) || 0));
+  }
+  const openAtEnd = (id: string | undefined, openNow: number, totalCents: number) =>
+    Math.min(Math.max(0, totalCents), Math.max(0, openNow) + (id ? paidAfterEnd.get(id) || 0 : 0));
+
   for (const inv of invoices || []) {
     if (!INVOICE_IS_ISSUED.has(inv.status)) continue;
     const cid = inv.customerId || `name:${inv.customerName || 'Customer'}`;
     const cObj = inv.customerId ? customerLookup.get(inv.customerId) : undefined;
-    const open = calculateAmountDue(inv);
+    const open = openAtEnd(inv.id, calculateAmountDue(inv), Number(inv.amountCents) || 0);
     if (open > 0 && String(inv.date || '').slice(0, 10) <= end) {
       ensureCust(cid, inv.customerName || 'Customer', cObj).closingOpenCents += toBaseCents(open, inv.exchangeRate);
     }
@@ -190,7 +202,7 @@ export function computeIsraeliAnnualSummary(input: {
     const vid = bill.vendorId || `name:${bill.vendorName || 'Vendor'}`;
     const vObj = bill.vendorId ? vendorLookup.get(bill.vendorId) : undefined;
     const paid = Number(bill.amountPaidCents) || 0;
-    const open = bill.status === 'paid' ? 0 : Math.max(0, (Number(bill.amountCents) || 0) - paid);
+    const open = openAtEnd(bill.id, bill.status === 'paid' ? 0 : (Number(bill.amountCents) || 0) - paid, Number(bill.amountCents) || 0);
     const bDate = String(bill.date || bill.issueDate || '').slice(0, 10);
     if (open > 0 && bDate <= end) {
       ensureVend(vid, bill.vendorName || 'Vendor', vObj).closingOpenCents += toBaseCents(open, bill.exchangeRate);
@@ -222,7 +234,8 @@ export function computeIsraeliAnnualSummary(input: {
       const vid = p.contactId || `name:${p.contactName || 'Vendor'}`;
       const row = ensureVend(vid, p.contactName || 'Vendor', p.contactId ? vendorLookup.get(p.contactId) : undefined);
       row.paymentsInYearCents += baseAmt;
-      const whtCents = Number(pRec.withholdingTaxCents || (pRec.metadata as Record<string, unknown> | undefined)?.withholdingTaxCents) || 0;
+      // payments store the tax withheld as `withheldCents` (paymentService); the older names are still read
+      const whtCents = Number(pRec.withheldCents || pRec.withholdingTaxCents || (pRec.metadata as Record<string, unknown> | undefined)?.withholdingTaxCents) || 0;
       row.taxWithheldCents += toBaseCents(Math.max(0, whtCents), p.exchangeRate);
     } else if (p.direction === 'received' || (p.allocations || []).some(a => a.documentType === 'invoice')) {
       const cid = p.contactId || `name:${p.contactName || 'Customer'}`;

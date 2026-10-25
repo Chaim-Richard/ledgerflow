@@ -1,0 +1,3 @@
+Item Name,SKU,Description,Rate,Purchase Rate,Reorder Point,Usage unit
+Consulting Hour,CONS-1,Hourly consulting service,150.00,0.00,,hour
+Paper box,PAP-1,A box of paper,40.00,25.00,20,box

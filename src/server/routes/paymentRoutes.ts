@@ -107,6 +107,7 @@ const creditApplySchema = z.object({
   creditId: z.string().min(1),
   documentId: z.string().min(1),
   amountCents: z.number().int().positive(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 const creditRefundSchema = z.object({
   workspaceId: z.string().min(1),
@@ -125,7 +126,7 @@ async function handleCredit(req: express.Request, res: express.Response, action:
     let result: Record<string, unknown>;
     if (action === 'apply') {
       const input = creditApplySchema.parse(req.body);
-      result = await applyCredit(db, input);
+      result = await applyCredit(db, { ...input, uid: user.uid, operationId: extractCanonicalOperationId({ headers: req.headers }) });
     } else {
       const input = creditRefundSchema.parse(req.body);
       result = await refundCredit(db, { ...input, uid: user.uid });
@@ -159,7 +160,7 @@ paymentRouter.post('/credits/auto-apply', ledgerWriters, async (req, res) => {
     const input = autoApplySchema.parse(req.body);
     const user = (req as AuthenticatedRequest).user;
     const db = getDb();
-    const result = await autoApplyCredits(db, input);
+    const result = await autoApplyCredits(db, { ...input, uid: user.uid });
     if (result.applications.length) {
       await writeServerAuditLog({
         workspaceId: input.workspaceId, uid: user.uid, email: user.email || '', action: 'CREDITS_AUTO_APPLIED',

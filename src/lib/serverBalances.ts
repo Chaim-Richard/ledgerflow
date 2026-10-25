@@ -73,3 +73,20 @@ export function foldServerOpening(transactions: Transaction[], opening: ServerOp
 export function periodBeforeOpening(startDate: string, opening: ServerOpening | null): boolean {
   return !!opening && !!startDate && startDate <= opening.asOf;
 }
+
+/**
+ * L-123 step 3c: the entries a balance-as-of-a-date screen sums. The server's answer is folded in
+ * (`foldServerOpening`) only when it is for the current cut-off (the oldest loaded day, as recomputeBalances checks)
+ * and of the screen's workspace, and when the balance date is on or after that day; otherwise the loaded entries.
+ * For balance math only: lists and drill-downs keep the loaded entries.
+ */
+export function balanceEntries(transactions: Transaction[], opening: ServerOpening | null, asOfDate?: string, workspaceId?: string): Transaction[] {
+  return opensFromServer(transactions, opening, asOfDate, workspaceId) ? foldServerOpening(transactions, opening) : transactions;
+}
+
+/** Whether `balanceEntries` folds the server's answer in for these arguments. */
+export function opensFromServer(transactions: Transaction[], opening: ServerOpening | null, asOfDate?: string, workspaceId?: string): opening is ServerOpening {
+  if (!opening || opening.asOf !== openingCutoff(transactions || [])) return false;
+  if (workspaceId && opening.workspaceId !== workspaceId) return false;
+  return !(asOfDate && asOfDate < opening.asOf);
+}
