@@ -92,3 +92,15 @@ export function monthEnd(month: string): string {
   const days = [31, y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
   return `${month}-${String(days).padStart(2, '0')}`;
 }
+
+/** A cheap signature (FNV-1a) of the loaded entries dated in or before `lastMonth`: id, update time, whether it posts, status, date, every line field (a void or an edit changes it). */
+export function overlapRevision(transactions: Transaction[], lastMonth: string): string {
+  let h = 0x811c9dc5;
+  const mix = (text: string) => { for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193); } };
+  for (const tx of transactions) {
+    if (!tx || typeof tx !== 'object' || transactionDate(tx).slice(0, 7) > lastMonth) continue;
+    mix(`${tx.id}|${isPostable(tx) ? 'p' : 'n'}|${String((tx as { updatedAt?: unknown }).updatedAt ?? '')}|${tx.status}|${tx.date}|`);
+    mix(JSON.stringify(tx.lines || []));
+  }
+  return (h >>> 0).toString(36);
+}

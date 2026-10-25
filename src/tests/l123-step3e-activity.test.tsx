@@ -158,11 +158,38 @@ describe('L-123 step 3e: activity per month (no database)', () => {
       return new Response(JSON.stringify({ status: 'success', workspaceId: ws, from: q.get('from'), to: q.get('to'), months: truth(ws) }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }) as typeof fetch;
     render(<BudgetLeft accountId={`${ws}_rent`} date={`${Y}-02-20`} />);
-    await waitFor(() => assert.match(screen.getByRole('status').textContent || '', new RegExp(`${formatCurrency(550).replace(/[$.]/g, '\\$&')} left`)), { timeout: 5000 });
+    await waitFor(() => { const shown = screen.getByRole('status').textContent || ''; assert.ok(shown.includes(`${formatCurrency(550)} left`), shown); }, { timeout: 5000 });
     cleanup();
     stubFetch(404);
     render(<BudgetLeft accountId={`${ws}_rent`} date={`${Y}-02-20`} />);
-    await waitFor(() => assert.match(screen.getByRole('status').textContent || '', new RegExp(`${formatCurrency(1000).replace(/[$.]/g, '\\$&')} left`)));
+    await waitFor(() => { const shown = screen.getByRole('status').textContent || ''; assert.ok(shown.includes(`${formatCurrency(1000)} left`), shown); });
+  });
+});
+
+describe('L-123 step 3e: a loaded entry edited in the cut-off month asks the server again', () => {
+  const ws = 'component-workspace';
+  afterEach(() => { cleanup(); useLedgerStore.setState({ truncatedCollections: {} }); });
+
+  test('same dates, same number of entries, a new amount: a new request and the new sums', async () => {
+    setComponentWorkspace('owner');
+    const loaded = loadedOf(entries(ws));
+    useLedgerStore.setState({ accounts: chart(ws), transactions: loaded, taxRates: [], truncatedCollections: { transactions: true } } as never);
+    // the second answer is the books after E4's sales tax line became −250 (February's tax −250, the year −650)
+    const after = truth(ws);
+    after[`${Y}-02`].accounts[`${ws}_tax`] = { net: -250, debits: 0, credits: 250 };
+    let calls = 0;
+    globalThis.fetch = (async () => {
+      calls++;
+      return new Response(JSON.stringify({ status: 'success', months: calls === 1 ? truth(ws) : after }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }) as typeof fetch;
+    render(<TaxManager />);
+    await waitFor(() => assert.ok(document.body.textContent!.includes(formatCurrency(-600))), { timeout: 5000 });
+    assert.equal(calls, 1);
+    // E5 (Y-02-15, the cut-off day) is edited in place: its date and the list's length stay
+    const edited = loaded.map(t => t.id === `${ws}_e5` ? { ...t, updatedAt: 'later', lines: [{ accountId: `${ws}_sales`, amountCents: 600 }, { accountId: `${ws}_cash`, amountCents: -600 }] } as Transaction : t);
+    useLedgerStore.setState({ transactions: edited });
+    await waitFor(() => assert.ok(document.body.textContent!.includes(formatCurrency(-650))), { timeout: 5000 });
+    assert.equal(calls, 2);
   });
 });
 

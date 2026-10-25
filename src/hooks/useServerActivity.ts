@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { workspaceScope } from '../lib/serverAction';
 import { openingCutoff } from '../lib/serverBalances';
-import { mergedActivity, type ActivityByMonth, type ServerActivity } from '../lib/periodActivity';
+import { mergedActivity, overlapRevision, type ActivityByMonth, type ServerActivity } from '../lib/periodActivity';
 
 /**
  * L-123 step 3e: the activity per account per month over `from`…`to` that a period screen sums
@@ -19,7 +19,10 @@ export function useServerActivity(from: string, to: string): { activity: Activit
   const workspaceId = useAuthStore(s => s.currentWorkspaceId) || '';
   const cutoff = useMemo(() => openingCutoff(transactions || []), [transactions]);
   const needed = capped && !!workspaceId && !!cutoff && !!from && !!to && from <= to && from.slice(0, 7) <= cutoff.slice(0, 7);
-  const key = needed ? `${workspaceId}|${from}|${to}|${cutoff}|${(transactions || []).length}` : '';
+  // the loaded entries the server's months overlap (through the cut-off month): an edit or a void there, even with the
+  // same date and the same number of entries, changes the revision and asks the server again
+  const revision = useMemo(() => (needed ? overlapRevision(transactions || [], cutoff.slice(0, 7)) : ''), [needed, transactions, cutoff]);
+  const key = needed ? `${workspaceId}|${from}|${to}|${cutoff}|${(transactions || []).length}|${revision}` : '';
   const [answer, setAnswer] = useState<{ key: string; server: ServerActivity | null } | null>(null);
 
   useEffect(() => {
