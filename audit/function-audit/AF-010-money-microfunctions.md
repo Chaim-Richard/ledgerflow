@@ -88,6 +88,32 @@ field's validation message refuse the save.
 - Everything else about the CSV writer is sound: all cells quoted, quotes doubled, line breaks
   kept inside cells, safe-number allowlist preserves real negatives, UTF-8 BOM + Blob download.
 
+## Slice 2 addendum — untrusted-input parsers and ledger predicates (same pinned SHA)
+
+Executed evidence: `src/tests/audit-af010c-expr-csv.test.ts` (3/3).
+
+- **`amountExpression.evaluateAmountExpression`** (the calculator behind money fields): exact
+  BigInt rational arithmetic, no `eval`, no identifiers — injection-safe by construction. Bounds
+  enforced: 80-char input, parenthesis depth 12, balanced parens, named errors for division by
+  zero, malformed decimals, adjacent numbers and truncated expressions; half-away-from-zero
+  verified for `±0.005`, `±2/3`. **AF-010-F7 (P3):** beyond `Number.MAX_SAFE_INTEGER` the final
+  `Number()` conversion (and the decimal branch's `Number(intPart)`) loses exactness — e.g.
+  `'1234567890123456789012345.00'` returns `1.234…e+26`, not integer cents. Unrealistic magnitude
+  for money; fix direction is to keep the result on BigInt or refuse non-safe-integer output.
+- **`csv.parseCsvChecked`/`parseCsv`:** RFC 4180 core is correct (quoted delimiters/newlines,
+  doubled quotes, BOM drop, CRLF, comma/semicolon/tab auto-detection); an unclosed quote refuses
+  the whole file and the user-facing `StatementImporter` uses the checked variant. Leniencies
+  observed (not defects for current callers): every cell is whitespace-trimmed including quoted
+  ones, and a stray quote is treated as a literal. Internal parsers (payroll, price list, Israeli
+  bank, import acceptance) use the lenient `parseCsv` and validate downstream.
+- **`txFilters.ts`** (`isPostable`, `lineAmount`, `settleHomeCurrency`, date-range and
+  inflow/outflow predicates, `calculateFilteredTotals`, `calculateNetIncome`): full body read.
+  Void/failed/draft/soft-deleted/year-end/simulation exclusions and closed-period filtering are
+  consistent; `lineAmount` prefers persisted `baseAmountCents` and otherwise rounds amount × rate;
+  `settleHomeCurrency` puts home-currency rounding on the largest line and refuses multi-rate or
+  larger-than-one-cent-per-line gaps (INT-5). The BUG-01/BUG-07 invariants here already have
+  executed regression suites (`list-totals-reversal`, `home-currency-balance`); no new defect found.
+
 ## Verified-no-finding helpers (executed at the pin)
 
 - **Kernel `allocateCents` sum invariance:** 5,000 random cases incl. negative totals and zero

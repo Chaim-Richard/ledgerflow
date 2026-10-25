@@ -27,6 +27,11 @@
 5. **P3:** `sanitizeCsvCell` neutralises formula-prefixed cells but a leading space bypasses it
    (`' =1+1'` is emitted quoted but unneutralised).
 6. **P3:** `formatDecimal(Infinity) → 'Infinity.NaN'` instead of refusing non-finite input.
+7. **P3 (slice 2, AF-010-F7):** `evaluateAmountExpression` uses exact BigInt rationals but converts
+   through `Number()`, so literals above the safe-integer range return rounded floats rather than
+   exact cents; the decimal branch also builds via `Number(intPart)`. Add a safe-integer refusal.
+   Separately verified clean: its length/depth/paren bounds, division-by-zero and half-away-from-zero
+   tie behavior, and the RFC 4180 CSV parser's whole-file unclosed-quote refusal.
 
 ## Shortest reproductions
 

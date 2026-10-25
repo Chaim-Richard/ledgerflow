@@ -11,8 +11,8 @@
 | Inventory: non-test TS/TSX source files at pin | 1,384 | `find src -name '*.ts*'`, tests excluded |
 | Inventory: function-like declarations (simple grep) | ~10,100 | Automatic inventory only, **not** reviewed |
 | Prior atlas extraction (older SHA `74b8318`, incl. tests) | 29,662 functions / 121,619 edges | Atlas stats are stale vs this SHA; regenerate before relying on them |
-| Functions fully inspected this slice (body + callers + side effects) | **42** | Enumerated below; each has executed or source-pinned evidence |
-| Verified defects (open findings) | **7** | AF-001 ×4, AF-002-F1, AF-010 ×6 — see register; AF-001 is one existing issue |
+| Functions fully inspected (body + callers + side effects), slices 1–2 | **58** | Enumerated below; each has executed or source-pinned evidence |
+| Verified defects (open findings) | **8** | AF-001 ×4, AF-002-F1, AF-010 ×7 — see register; AF-001 is one existing issue |
 | Verified-no-finding (with executed check) | 15+ helpers | plus 7,000+ property-test cases across allocators/labels |
 | DB-gated checks executed here | 0 | No `LF_TEST_DATABASE_URL` in this environment; never claimed as run |
 
@@ -34,6 +34,12 @@
   `recordAllocation`, `reverseAllocation`, `allocationsOf`), payment idempotency wrapper,
   `paymentService.documentLabelWeights/payeeLabels`, `importActions.handleImportTransactions`
   (read), and the posting guards in `invoicePosting.ts` / `billPosting.ts` that bound AF-002-F1.
+- **Slice 2 — untrusted input and ledger predicates:** `amountExpression.evaluateAmountExpression`
+  and its rational helpers, `csv.detectDelimiter/parseCsv/parseCsvChecked/readCsv`,
+  `documentMath` (8 exports incl. inclusive/exclusive tax), `taxCodes.computeTax/effectiveRate`,
+  `cents.roundCents/calculateFXCents`, and `txFilters.ts` (`isPostable`, `lineAmount`,
+  `settleHomeCurrency`, `isPeriodLocked`, date-range and inflow/outflow predicates,
+  `calculateFilteredTotals`, `calculateNetIncome`, `runningBalances`).
 
 ## Findings register (the accurate list)
 
@@ -50,6 +56,7 @@
 | AF-010-F4 | P3 | Non-Latin digits → silent 0; `Infinity` passthrough | AI #1 | this audit |
 | AF-010-F5 | P3 | CSV formula guard bypassed by a leading space | AI #8-safe? (lib) | this audit |
 | AF-010-F6 | P3 | `formatDecimal(Infinity)` → `"Infinity.NaN"` | AI #1 | this audit |
+| AF-010-F7 | P3 | `evaluateAmountExpression` loses exact cents above `Number` safe range | AI #1 | this audit |
 
 No P0 is reachable in the **stage-A synthetic beta**: AF-001 needs real bank credentials (excluded
 by the stage-A rules), and AF-002-F1 is blocked by the `amount <= 0` posting guards. Stage B (real
@@ -67,8 +74,9 @@ NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic npx tsx --test 
   src/tests/audit-af001-plaid-contract.test.ts \
   src/tests/audit-af002-label-cents.test.ts \
   src/tests/audit-af010-money-primitives.test.ts \
-  src/tests/audit-af010b-csv-dates.test.ts
-# 20 tests, all passing (TAP entries ok 190..209 in the full run)
+  src/tests/audit-af010b-csv-dates.test.ts \
+  src/tests/audit-af010c-expr-csv.test.ts
+# 23 tests, all passing (20 from slice 1 + 3 from slice 2)
 ```
 
 Full gate at the pinned SHA (this branch adds tests/docs only):

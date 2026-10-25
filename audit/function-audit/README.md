@@ -12,7 +12,8 @@ NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic \
   npx tsx --test src/tests/audit-af001-plaid-contract.test.ts \
                  src/tests/audit-af002-label-cents.test.ts \
                  src/tests/audit-af010-money-primitives.test.ts \
-                 src/tests/audit-af010b-csv-dates.test.ts
+                 src/tests/audit-af010b-csv-dates.test.ts \
+                 src/tests/audit-af010c-expr-csv.test.ts
 ```
 
 No database is required for these suites (the Postgres-gated route tests stay under
