@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Invoice } from '../../types';
+import { Customer, Invoice } from '../../types';
 import {
   Plus,
   Users,
@@ -30,7 +30,6 @@ import { allTags, hasTag, isArchivedParty } from '../../lib/contacts';
 import PartyRowActions, { ArchivedBadge, ShowArchivedToggle } from '../common/PartyRowActions';
 import EmailStatementsButton from './EmailStatementsButton';
 import DocumentTotalsFoot from '../ui/DocumentTotalsFoot';
-import { PartyDetailView } from '../common/PartyDetailView';
 import WriteOffModal from './WriteOffModal';
 import SpreadDialog from '../common/SpreadDialog';
 import { spreadProgress } from '../../lib/prepaidSchedule';
@@ -53,7 +52,6 @@ import { useCurrentRole } from '../../hooks/useCurrentRole';
 import InlineEdit from '../ui/InlineEdit';
 import InlineAdd from '../ui/InlineAdd';
 import DocumentBulkBar from '../ui/DocumentBulkBar';
-import { getDefaultTaxConfig, generateDefaultTaxRates } from '../../lib/taxRateDefaults';
 import { calculateNextOccurrence } from '../../lib/recurringEngine';
 
 import CustomerDetailView from './CustomerDetailView';
@@ -88,7 +86,7 @@ export default function Sales() {
     }
     return map;
   }, [customers, invoices, payments, creditNotes]);
-  const onAddInvoice = async (input: any) => { 
+  const onAddInvoice = async (input: Partial<Invoice> & { receiptPayment?: ReceiptPayment; attachmentFiles?: File[] }) => {
     // a sale receipt (K-03) carries where its money went; that is a payment, not part of the invoice
     // files picked for a new invoice (K-07) are kept with it once it has an id
     const { receiptPayment, attachmentFiles, ...rest } = input;
@@ -108,7 +106,7 @@ export default function Sales() {
       res = await updateEntity('invoices', id, updates); 
     } else {
       res = await addEntity('invoices', data); 
-      if (res && receiptPayment) await recordReceiptPayment(currentWorkspaceId || '', { ...data, id: res.id }, receiptPayment as ReceiptPayment);
+      if (res && receiptPayment) await recordReceiptPayment(currentWorkspaceId || '', { ...data, id: res.id }, receiptPayment);
       const uid = useAuthStore.getState().user?.uid;
       if (res && uid && Array.isArray(attachmentFiles) && attachmentFiles.length) {
         const { ok, message } = attachSummary(await attachFiles(currentWorkspaceId || '', uid, { collection: 'invoices', id: res.id, label: `Invoice ${data.number || ''}`.trim() }, attachmentFiles));
@@ -145,7 +143,7 @@ export default function Sales() {
     }
     return res;
   };
-  const onAddCustomer = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('customers', id, updates); } return addEntity('customers', data); };
+  const onAddCustomer = (data: Partial<Customer>) => { if (data.id) { const { id, ...updates } = data; return updateEntity('customers', id, updates); } return addEntity('customers', data); };
   // opens on the invoice list ('pipeline' was the default but nothing draws it: the page was blank)
   const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'customers'>('invoices');
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
@@ -717,16 +715,17 @@ export default function Sales() {
                     </td>
                   </tr>
                 ))}
-                {customers.length === 0 && (
+                {shownCustomers.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="p-24 text-center relative overflow-hidden">
-                       <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
-                       <div className="relative z-10 flex flex-col items-center gap-4">
-                          <div className="w-20 h-20 bg-slate-200/20 rounded-[32px] flex items-center justify-center text-slate-500/30">
-                             <Users size={40} />
-                          </div>
-                          <p className="text-base font-black text-slate-500/40 uppercase tracking-[0.5em]">Supplier Registry Offline</p>
-                       </div>
+                    <td colSpan={4} className="p-6">
+                      {loading ? <LoadingState what="customers" /> : (
+                        <EmptyState
+                          title={customers.length === 0 ? 'No customers yet' : 'No customers match these filters'}
+                          description={customers.length === 0 ? 'Add a customer before creating their first invoice.' : 'Choose another tag or show archived customers.'}
+                          actionLabel={customers.length === 0 ? 'Add first customer' : undefined}
+                          onAction={customers.length === 0 ? () => setIsCustomerModalOpen(true) : undefined}
+                        />
+                      )}
                     </td>
                   </tr>
                 )}

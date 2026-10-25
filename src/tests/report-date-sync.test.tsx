@@ -5,6 +5,7 @@ import React from 'react';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import ProfitAndLossView from '../components/ledger/ProfitAndLossView';
 import BalanceSheetView from '../components/ledger/BalanceSheetView';
+import TrialBalanceView from '../components/ledger/TrialBalanceView';
 import CashFlowView from '../components/ledger/CashFlowView';
 import StatementView from '../components/reporting/StatementView';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -61,6 +62,22 @@ describe('Report page date synchronization', () => {
     view.rerender(<ProfitAndLossView {...nextPeriod} />);
     await waitFor(() => assert.ok(requests().length > previousCount));
     assert.ok(requests().slice(previousCount).every(params => params.get('startDate') === nextPeriod.startDate && params.get('endDate') === nextPeriod.endDate));
+  });
+
+  test('empty statements say what to do next while keeping their report controls', () => {
+    const pl = render(<ProfitAndLossView {...period} />);
+    assert.ok(pl.getByText('No report rows in this period'));
+    assert.ok(pl.getByText(/Add an entry, clear any label filter/));
+    pl.unmount();
+
+    const balance = render(<BalanceSheetView accounts={[]} formatCurrency={String} asOfDate="2026-10-25" compareEndDate="2026-09-25" />);
+    assert.ok(balance.getByText('No accounts yet'));
+    assert.equal(dates(balance.container).length, 2);
+    balance.unmount();
+
+    const trial = render(<TrialBalanceView accounts={[]} formatCurrency={String} onDrillDown={() => {}} />);
+    assert.ok(trial.getByText('No accounts found'));
+    assert.ok(trial.getByText(/Set up the chart of accounts/));
   });
 
   test('local functional updates and disabled page synchronization retain their value', () => {

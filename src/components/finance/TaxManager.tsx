@@ -21,6 +21,7 @@ import { parseLocalDate, cn, formatCurrency, workspaceYearMonth } from '../../li
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
 import InlineEdit from '../ui/InlineEdit';
+import { EmptyState } from '../ui/EmptyState';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { safeConfirm } from '../../lib/utils';
@@ -242,6 +243,7 @@ export default function TaxManager({
         <div className="flex items-center gap-4">
           <div className="relative">
              <select 
+               aria-label="Tax reserve fiscal year"
                value={selectedYear}
                onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
                className="px-6 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] text-[10px] font-black uppercase tracking-widest text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all appearance-none cursor-pointer pr-10 shadow-sm"
@@ -348,6 +350,14 @@ export default function TaxManager({
           </div>
 
           <div className="space-y-4">
+            {taxRates.length === 0 && (
+              <EmptyState
+                title="No tax codes yet"
+                description={canEdit ? 'Add the sales, purchase, income, or payroll tax codes used in this workspace.' : 'No tax codes are configured. Ask an owner or accountant to add one.'}
+                actionLabel={canEdit ? 'Add first tax code' : undefined}
+                onAction={canEdit ? () => { setEditingRate(null); setIsModalOpen(true); } : undefined}
+              />
+            )}
             {taxRates.map(rate => (
               <motion.div 
                 key={rate.id}
@@ -395,7 +405,7 @@ export default function TaxManager({
 
           <div className="bg-[var(--surface)] rounded-[32px] border border-[var(--line)] overflow-hidden shadow-sm relative group">
             <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" role="region" aria-label="Tax liability accounts" tabIndex={0}>
               <table className="w-full text-left relative z-10 min-w-[700px]">
                 <caption className="sr-only">Tax liability accounts</caption>
               <thead>

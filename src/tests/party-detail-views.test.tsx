@@ -7,7 +7,7 @@ import { stubFetch } from './helpers/dom';
 import test, { afterEach, beforeEach, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import CustomerDetailView from '../components/sales/CustomerDetailView';
 import VendorDetailView from '../components/purchases/VendorDetailView';
 import { useLedgerStore } from '../stores/useLedgerStore';
@@ -46,5 +46,25 @@ describe('party pages', () => {
     render(<VendorDetailView vendorId="v1" onBack={() => {}} />);
     assert.match(card(/Outstanding Payable/), /\$200\.00/);
     assert.match(card(/Overdue Balance/), /\$200\.00/);
+  });
+
+  test('customer wrapper keeps its own heading, documents and back navigation', () => {
+    let backs = 0;
+    render(<CustomerDetailView customerId="c1" onBack={() => { backs += 1; }} />);
+    assert.ok(screen.getByRole('heading', { name: 'Acme', level: 1 }));
+    assert.ok(screen.getByRole('heading', { name: 'Invoices (3)' }));
+    assert.ok(screen.getByRole('button', { name: 'Tax certificates' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Customers' }));
+    assert.equal(backs, 1);
+  });
+
+  test('vendor wrapper keeps its own heading, documents and back navigation', () => {
+    let backs = 0;
+    render(<VendorDetailView vendorId="v1" onBack={() => { backs += 1; }} />);
+    assert.ok(screen.getByRole('heading', { name: 'Power Co', level: 1 }));
+    assert.ok(screen.getByRole('heading', { name: 'Bills (1)' }));
+    assert.ok(screen.getByRole('button', { name: 'Tax records' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Vendors' }));
+    assert.equal(backs, 1);
   });
 });

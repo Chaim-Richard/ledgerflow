@@ -330,6 +330,8 @@ const Reports = React.memo(() => {
               // We pass all possible props to the dynamic component. 
               // React ignores extra props, and components grab what they need.
               const standardProps = {
+                // Embedded reports keep the page's single h1; standalone registry views still own their h1.
+                embedded: true,
                 transactions: filteredReportTransactions,
                 allTransactions: transactions,
                 accounts,

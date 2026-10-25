@@ -72,6 +72,25 @@ describe('Invoice dialog', () => {
     assert.ok(!('totalCents' in inv), 'no stray totalCents field');
   });
 
+  test('moving invoice lines changes only their order; quantities, rates and totals stay intact', async () => {
+    const saved = setup();
+    type(input('Customer'), 'Acme Ltd');
+    type(input('Item / Description'), 'First');
+    type(input(/^Rate/), '10');
+    fireEvent.click(screen.getByText('Add Item'));
+    type(screen.getAllByLabelText('Item / Description')[1], 'Second');
+    type(screen.getAllByLabelText(/^Rate/)[1], '20');
+    assert.equal((screen.getByLabelText('Move line 1 up') as HTMLButtonElement).disabled, true);
+    assert.equal((screen.getByLabelText('Move line 2 down') as HTMLButtonElement).disabled, true);
+    fireEvent.click(screen.getByLabelText('Move line 2 up'));
+    assert.deepEqual(screen.getAllByLabelText('Item / Description').map(field => (field as HTMLInputElement).value), ['Second', 'First']);
+    await act(async () => { fireEvent.click(screen.getByText('Save Draft')); });
+    await waitFor(() => assert.equal(saved.length, 1));
+    assert.deepEqual(saved[0].items?.map(line => [line.description, line.quantity, line.rateCents, line.amountCents]),
+      [['Second', 1, 2000, 2000], ['First', 1, 1000, 1000]]);
+    assert.equal(saved[0].amountCents, 3000);
+  });
+
   test('prices that include tax: the total is the lines, the tax is the part inside them', async () => {
     const saved = setup();
     type(input('Customer'), 'Acme Ltd');

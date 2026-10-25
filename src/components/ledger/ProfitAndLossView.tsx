@@ -22,6 +22,7 @@ import { lineHasLabel } from '../../lib/dimensionUtils';
 import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
 import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
 import { provenanceFromResponse } from '../../lib/reportProvenance';
+import ReportEmptyState from '../reporting/ReportEmptyState';
 
 /** A P&L line as the report holds it; `parentId` is only for account groups (K-14). */
 interface PLAccount { name: string; code?: string; balance: number; parentId?: string }
@@ -126,7 +127,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   }, [fetchPL, dateRange.start, dateRange.end, isComparative, prevRange, basis]);
 
   useEffect(() => {
-    loadServerReport();
+    void Promise.resolve().then(loadServerReport);
   }, [loadServerReport]);
 
   const toggleSort = (field: 'code' | 'name' | 'balance') => {
@@ -378,6 +379,10 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           </div>
         </div>
       </div>
+
+      {incomeGroups.rows.length === 0 && expenseGroups.rows.length === 0 && Object.keys(data.cogs?.accounts || {}).length === 0 && (
+        <ReportEmptyState title="No report rows in this period" description="Add an entry, clear any label filter, or choose another period." />
+      )}
 
       {/* KPI Matrix */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

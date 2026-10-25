@@ -40,7 +40,10 @@ export default function Dashboard() {
   const transactionsLoaded = useDataNeedsStore(s => Boolean(s.loaded.transactions));
   const accountsLoaded = useDataNeedsStore(s => Boolean(s.loaded.accounts));
   const loadedWorkspaceId = useDataNeedsStore(s => s.loadedWorkspaceId);
-  const loadFailure = useDataNeedsStore(s => s.failed.transactions || s.failed.accounts);
+  const transactionsFailure = useDataNeedsStore(s => s.failed.transactions);
+  const accountsFailure = useDataNeedsStore(s => s.failed.accounts);
+  const retryCollection = useDataNeedsStore(s => s.retry);
+  const loadFailure = transactionsFailure || accountsFailure;
   const workspaceForSetup = workspaces.find(w => w.id === currentWorkspaceId);
   const needsSetup = !isGuest && Boolean(workspaceForSetup) && !workspaceForSetup?.setupCompletedAt && rawTransactions.length === 0;
   // Setup activity belongs to one workspace. Switching books must not reuse another draft.
@@ -86,7 +89,13 @@ export default function Dashboard() {
     !workspaceForSetup || loadedWorkspaceId !== currentWorkspaceId || !transactionsLoaded || !accountsLoaded
   )) {
     return loadFailure && loadedWorkspaceId === currentWorkspaceId
-      ? <div role="alert" className="p-8 text-center text-sm text-[var(--text)]">Could not load your books. Use Data Status to retry the failed collection.</div>
+      ? <div role="alert" className="p-8 text-center text-sm text-[var(--text)]">
+          <p>Could not load your books. Check your connection, then retry the failed collection.</p>
+          <button type="button" onClick={() => {
+            if (transactionsFailure) retryCollection('transactions');
+            if (accountsFailure) retryCollection('accounts');
+          }} className="mt-4 min-h-11 rounded-xl bg-[var(--text)] px-5 py-2 text-xs font-bold text-[var(--surface)]">Try again</button>
+        </div>
       : <LoadingState what="your books" />;
   }
 

@@ -1,5 +1,5 @@
 {
-  "anyCount": 50,
+  "anyCount": 39,
   "utcDateCount": 35,
   "arrayIndexKeys": 0,
   "blankNoOpener": 0,
@@ -7,7 +7,7 @@
   "serverTsLines": 188,
   "filesOver800": 0,
   "orphanFiles": 0,
-  "suppressionCount": 3,
-  "untestedViews": 44,
+  "suppressionCount": 2,
+  "untestedViews": 20,
   "overlaysWithoutDialog": 0
 }

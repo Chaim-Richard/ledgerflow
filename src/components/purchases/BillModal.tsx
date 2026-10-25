@@ -1,19 +1,15 @@
-import { amountStep, minorToMajor } from '../../lib/currencyMinorUnits';
 import { useDialog } from '../../hooks/useDialog';
 import { useSuggestedRate } from '../../hooks/useSuggestedRate';
 import { documentCurrencies } from '../../lib/exchangeRates';
 import { latestDocumentFor } from '../../lib/repeatDocument';
 import { isArchivedParty } from '../../lib/contacts';
-import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Plus, Trash2, Save, CreditCard, Sparkles } from 'lucide-react';
+import { X, Save, CreditCard, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Bill, Vendor, ChartAccount } from '../../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { BudgetLeft } from '../common/BudgetLeft';
-import { LineLabels } from '../common/LineLabels';
 import { applyRule, suggestRule } from '../../lib/allocationRules';
 import { billItemProblem } from '../../lib/billStock';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -25,6 +21,7 @@ import { documentTotals, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCo
 import { formatCurrency, getLocalDateISO, safeConfirm } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import AttachmentsPanel from '../common/AttachmentsPanel';
+import DocumentLineEditor, { type BillEditorLine } from '../common/DocumentLineEditor';
 import { attachmentProblem } from '../../lib/attachments';
 
 /** What the dialog saves: the bill, and for a new one whether it repeats (BE-08; never stored on the bill). */
@@ -101,7 +98,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     }
   }, [isOpen, editingExisting]);
 
-  const [splits, setSplits] = useState<Array<{ id: string, amountCents: number, accountId: string, description: string, dimensions?: Record<string, string>, itemId?: string, quantity?: number, landedCost?: boolean }>>([
+  const [splits, setSplits] = useState<BillEditorLine[]>([
     { id: crypto.randomUUID(), amountCents: 0, accountId: '', description: '' }
   ]);
 
@@ -192,8 +189,8 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
       foundDesc = prevBill.splits[0].description || '';
     } else {
       // Look in transaction history
-      const prevTx = storeTransactions.find(t => 
-        (((t as any).vendorId === vendorId || (t.metadata as any)?.vendorId === vendorId) || (vend && t.description?.toLowerCase().includes(vend.name.toLowerCase()))) &&
+      const prevTx = storeTransactions.find(t =>
+        ((('vendorId' in t && t.vendorId === vendorId) || t.metadata?.vendorId === vendorId) || (vend && t.description?.toLowerCase().includes(vend.name.toLowerCase()))) &&
         t.lines && t.lines.length > 0
       );
       if (prevTx && prevTx.lines) {
@@ -225,7 +222,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
     }
   };
 
-  const handleAction = async (e: React.FormEvent, actionStatus: string) => {
+  const handleAction = async (e: React.FormEvent, actionStatus: Bill['status']) => {
     e.preventDefault();
     if (isSubmitting) return;
     // the browser's own required-field messages show under the field that caused them
@@ -271,7 +268,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
         ...(repeat ? { recurringInterval: repeat } : {}),
         currency: billCurrency,
         exchangeRate: billCurrency === workspaceCurrency ? 1 : (bill.exchangeRate || 1),
-        status: finalStatus as any,
+        status: finalStatus,
         // the total owed (tax included) and the tax, explicitly (taxCodes.ts)
         amountCents: totals.amountCents,
         lineSumCents: totals.subtotalCents,
@@ -408,7 +405,7 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                 aria-invalid={Boolean(fieldErrors['bill-status'])}
                 aria-describedby={fieldErrors['bill-status'] ? 'bill-status-error' : undefined}
                 value={bill.status}
-                onChange={(e) => setBill({ ...bill, status: e.target.value as any })}
+                onChange={(e) => setBill({ ...bill, status: e.target.value as Bill['status'] })}
                 className="w-full min-h-11 px-5 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="pending">Pending</option>
@@ -511,133 +508,26 @@ export default function BillModal({ isOpen, onClose, onSave, vendors = [], accou
                 </button>
               </div>
             )}
-            <div className="flex items-center justify-between">
-              <h3 className="micro-label">Expense Allocation</h3>
-              {lastForVendor && splitsEmpty && (
+            <DocumentLineEditor
+              side="bill"
+              lines={splits}
+              onChange={setSplits}
+              createLine={() => ({ id: crypto.randomUUID(), amountCents: 0, accountId: '', description: '' })}
+              accounts={safeAccounts}
+              currency={billCurrency}
+              workspaceCurrency={workspaceCurrency}
+              exchangeRate={bill.exchangeRate}
+              documentId={bill.id}
+              date={bill.date || ''}
+              inventoryItems={stockItems}
+              fieldErrors={fieldErrors}
+              repeatAction={lastForVendor && splitsEmpty ? (
                 <button type="button" onClick={repeatLast}
                   className="ml-auto mr-2 px-3 py-2 rounded-xl text-[10px] font-semibold uppercase tracking-wider border border-[var(--line)] text-[var(--text)] hover:border-[var(--brass-line)]">
                   Same as last bill ({lastForVendor.splits?.length} line{lastForVendor.splits?.length === 1 ? '' : 's'})
                 </button>
-              )}
-              <button 
-                type="button"
-                aria-label="Add Split Expense"
-                onClick={() => setSplits([...splits, { id: crypto.randomUUID(), amountCents: 0, accountId: '', description: '' }])}
-                className="flex items-center gap-2 min-h-11 px-4 py-2 bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-[var(--elevated)] transition-all"
-              >
-                <Plus size={14} />
-                Add Split
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              {splits.map((split, idx) => (
-                <div key={split.id} className="grid grid-cols-12 gap-3 md:gap-4 items-end bg-[var(--ink)] p-3 sm:p-4 rounded-2xl sm:rounded-[32px] border border-[var(--line)]">
-                  <div className="col-span-12 md:col-span-5 min-w-0 space-y-1">
-                    <label htmlFor={`bill-split-desc-${idx}`} className="text-[10px] font-bold text-[var(--muted)] uppercase">Description</label>
-                    <input 
-                      id={`bill-split-desc-${idx}`}
-                      type="text"
-                      aria-invalid={Boolean(fieldErrors[`bill-split-desc-${idx}`])}
-                      aria-describedby={fieldErrors[`bill-split-desc-${idx}`] ? `bill-split-desc-${idx}-error` : undefined}
-                      value={split.description}
-                      onChange={(e) => {
-                        const newSplits = [...splits];
-                        newSplits[idx] = { ...newSplits[idx], description: e.target.value };
-                        setSplits(newSplits);
-                      }}
-                      placeholder="What was this for?"
-                      className="w-full min-h-11 px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
-                    />{fieldError(`bill-split-desc-${idx}`)}
-                  </div>
-                  <div className="col-span-12 md:col-span-3 min-w-0 space-y-1">
-                    <label htmlFor={`bill-split-acc-${idx}`} className="text-[10px] font-bold text-[var(--muted)] uppercase">Expense Account</label>
-                    <select 
-                      id={`bill-split-acc-${idx}`}
-                      aria-invalid={Boolean(fieldErrors[`bill-split-acc-${idx}`])}
-                      aria-describedby={fieldErrors[`bill-split-acc-${idx}`] ? `bill-split-acc-${idx}-error` : undefined}
-                      value={split.accountId}
-                      onChange={(e) => {
-                        const newSplits = [...splits];
-                        newSplits[idx] = { ...newSplits[idx], accountId: e.target.value };
-                        setSplits(newSplits);
-                      }}
-                      className="w-full min-h-11 px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
-                    >
-                      <option value="">Select Account</option>
-                      {safeAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>{fieldError(`bill-split-acc-${idx}`)}
-                    {/* M-20: what is left of this account's budget for the bill's date */}
-                    <BudgetLeft accountId={split.accountId} date={bill.date || ''} addingCents={Math.round(split.amountCents * (billCurrency === workspaceCurrency ? 1 : (bill.exchangeRate || 1)))} excludeDocumentId={bill.id} currency={workspaceCurrency} />
-                  </div>
-                  <div className="col-span-8 md:col-span-3 min-w-0 space-y-1">
-                    <label htmlFor={`bill-split-amount-${idx}`} className="text-[10px] font-bold text-[var(--muted)] uppercase">Amount ({billCurrency})</label>
-                    <input 
-                      id={`bill-split-amount-${idx}`}
-                      type="number"
-                      step={amountStep(billCurrency)}
-                      aria-invalid={Boolean(fieldErrors[`bill-split-amount-${idx}`])}
-                      aria-describedby={fieldErrors[`bill-split-amount-${idx}`] ? `bill-split-amount-${idx}-error` : undefined}
-                      value={minorToMajor(split.amountCents, billCurrency)}
-                      onChange={(e) => {
-                        const newSplits = [...splits];
-                        newSplits[idx] = { ...newSplits[idx], amountCents: TruthEngine.parseAmountToCents(e.target.value || '0', billCurrency) };
-                        setSplits(newSplits);
-                      }}
-                      className="w-full min-h-11 px-4 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono tabular-nums"
-                    />{fieldError(`bill-split-amount-${idx}`)}
-                  </div>
-                  <div className="col-span-4 md:col-span-1 pb-1 flex justify-end">
-                    <button 
-                      type="button"
-                      aria-label={`Remove split line ${idx + 1}`}
-                      title={`Remove split line ${idx + 1}`}
-                      onClick={() => setSplits(splits.filter((_, i) => i !== idx))}
-                      className="min-h-11 min-w-11 flex items-center justify-center p-2 text-[var(--muted)] hover:text-rose-500 transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                  {/* J-08: stock bought on this line (it then posts to Inventory and the units come in) */}
-                  {stockItems.length > 0 && (
-                    <div className="col-span-12 flex flex-wrap items-end gap-3 text-xs">
-                      <label className="flex flex-col gap-1 w-full sm:w-auto text-[var(--muted)]">Stock item (optional)
-                        <select aria-label={`Stock item on line ${idx + 1}`} value={split.itemId || ''}
-                          onChange={e => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, itemId: e.target.value || undefined, ...(e.target.value ? {} : { quantity: undefined }) } : sp)))}
-                          className="w-full sm:w-auto min-h-11 px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl">
-                          <option value="">None</option>
-                          {stockItems.map(it => <option key={it.id} value={it.id}>{it.name}</option>)}
-                        </select>
-                      </label>
-                      {split.itemId && (
-                        <div className="flex flex-col gap-1 w-full sm:w-auto text-[var(--muted)]">
-                          <label htmlFor={`bill-split-units-${idx}`}>Units</label>
-                          <input id={`bill-split-units-${idx}`} aria-label={`Units on line ${idx + 1}`} type="number" min="0" step="any" value={split.quantity ?? ''}
-                            aria-invalid={Boolean(fieldErrors[`bill-split-units-${idx}`])}
-                            aria-describedby={fieldErrors[`bill-split-units-${idx}`] ? `bill-split-units-${idx}-error` : undefined}
-                            onChange={e => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, quantity: e.target.value === '' ? undefined : Number(e.target.value) } : sp)))}
-                            className="w-full sm:w-24 min-h-11 px-3 py-1.5 bg-[var(--surface)] border border-[var(--line)] rounded-xl font-mono" />
-                          {fieldError(`bill-split-units-${idx}`)}
-                        </div>
-                      )}
-                      {split.itemId && <span className="pb-2 w-full sm:w-auto text-[var(--muted)]">{billItemProblem(split) || 'Posts to Inventory; the units come in with the bill.'}</span>}
-                      {!split.itemId && splits.some(sp => sp.itemId) && (
-                        <label className="flex items-center gap-2 pb-2 min-h-11 text-[var(--muted)]">
-                          <input type="checkbox" checked={Boolean(split.landedCost)} aria-label={`Spread line ${idx + 1} over the items`}
-                            onChange={e => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, landedCost: e.target.checked || undefined } : sp)))} />
-                          Spread over the items (freight, duty): adds to what they cost
-                        </label>
-                      )}
-                    </div>
-                  )}
-                  {/* BF-09: Property, Project… on this line, posted with its expense */}
-                  <div className="col-span-12">
-                    <LineLabels value={split.dimensions} lineNumber={idx + 1} accountId={split.accountId} date={bill.date || ''}
-                      onChange={dimensions => setSplits(splits.map((sp, i) => (i === idx ? { ...sp, dimensions } : sp)))} />
-                  </div>
-                </div>
-              ))}
-            </div>
+              ) : undefined}
+            />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-[var(--line)] pt-8 mt-8">

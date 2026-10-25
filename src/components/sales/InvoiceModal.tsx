@@ -7,7 +7,7 @@ import { isArchivedParty } from '../../lib/contacts';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { isIncomeAccount, isUndepositedFundsAccount, resolveAccountRole } from '../../lib/accountUtils';
-import { X, Plus, Trash2, Save, Download, Eye } from 'lucide-react';
+import { X, Save, Download, Eye } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Invoice, Customer, ChartAccount } from '../../types';
 import { format } from 'date-fns';
@@ -18,13 +18,12 @@ import { getIdToken } from '../../firebase';
 import AsyncButton from '../ui/AsyncButton';
 import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
 import { amountStep, formatCurrency, getLocalDateISO, minorToMajor, safeConfirm } from '../../lib/utils';
-import { customerPricer, findInventoryItem, lineAmountCents, setLineDescription, taxCodeToFillFromItem } from '../../lib/invoiceLines';
 import TaxExemptionNotice from './TaxExemptionNotice'; import { taxChoiceFor } from '../../lib/tax/resolveLineTax'; import { lineTaxCategory, saleDestinationSnapshot } from '../../lib/tax/usInvoiceTax'; import CreditLimitRefusalPanel from './CreditLimitRefusalPanel'; import { reportCreditLimitRefusal } from '../../lib/creditLimitPrompt';
 import { customRateCode, documentTotals, effectiveRate, taxCodeFromRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import { depositAppliedCents } from '../../lib/documentMath';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import AttachmentsPanel from '../common/AttachmentsPanel';
-import { LineLabels } from '../common/LineLabels';
+import DocumentLineEditor, { type InvoiceEditorLine } from '../common/DocumentLineEditor';
 import { attachmentProblem } from '../../lib/attachments';
 
 interface InvoiceModalProps {
@@ -69,19 +68,20 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     ...initialInvoice,
   }));
 
-  const [items, setItems] = useState<Array<{ id: string, itemId?: string, description: string, quantity: number, rateCents: number, amountCents: number, accountId: string, taxRate?: number, unitCostCents?: number, dimensions?: Record<string, string> }>>([
+  const [items, setItems] = useState<InvoiceEditorLine[]>([
     { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }
   ]);
 
-  useEffect(() => {
-    if (initialInvoice) {
-      // an existing invoice replaces the form; a new one (e.g. for a customer) fills in the defaults
-      setInvoice(prev => (initialInvoice.id ? initialInvoice : { ...prev, ...initialInvoice }));
-      if (initialInvoice.items && initialInvoice.items.length > 0) {
-        setItems(initialInvoice.items as any);
-      }
+  const [filledFrom, setFilledFrom] = useState<Partial<Invoice> | undefined>(undefined);
+  if (isOpen && initialInvoice && initialInvoice !== filledFrom) {
+    // Copy a changed pre-filled invoice once per opening (adjusting state during render).
+    setFilledFrom(initialInvoice);
+    // an existing invoice replaces the form; a new one (e.g. for a customer) fills in the defaults
+    setInvoice(prev => (initialInvoice.id ? initialInvoice : { ...prev, ...initialInvoice }));
+    if (initialInvoice.items && initialInvoice.items.length > 0) {
+      setItems(initialInvoice.items);
     }
-  }, [initialInvoice]);
+  }
 
   const editingExisting = Boolean(initialInvoice?.id);
   useEffect(() => {
@@ -132,7 +132,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     setFieldErrors(prev => ({ ...prev, [id]: message }));
     document.getElementById(id)?.focus();
   };
-  const [isSubmitting, setIsSubmitting] = useState(false); const lastStatus = useRef('pending'); // EG-5: the status a credit-limit override resends
+  const [isSubmitting, setIsSubmitting] = useState(false); const lastStatus = useRef<Invoice['status']>('pending'); // EG-5: the status a credit-limit override resends
   const [attachments, setAttachments] = useState<File[]>([]);
   const total = items.reduce((sum, item) => sum + item.amountCents, 0);
   // Tax: a saved tax code (Settings → Tax), or a custom rate typed here (older invoices)
@@ -168,7 +168,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const currencyChoices = useMemo(() => documentCurrencies(workspaceCurrency, currency, [...pastInvoices, ...safeCustomers]), [workspaceCurrency, currency, pastInvoices, safeCustomers]);
   const money = (cents: number) => formatCurrency(cents, currency);
 
-  const handleAction = async (e: React.FormEvent | null, actionStatus: string, creditLimitOverride?: { reason: string }) => {
+  const handleAction = async (e: React.FormEvent | null, actionStatus: Invoice['status'], creditLimitOverride?: { reason: string }) => {
     e?.preventDefault();
     if (isSubmitting) return;
     if (!formRef.current?.reportValidity()) return;
@@ -189,7 +189,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
     try {
       await onSave({
         ...invoice,
-        status: actionStatus as any, ...(creditLimitOverride ? { creditLimitOverride } : {}), // EG-5: sent beside the document (postingKit)
+        status: actionStatus, ...(creditLimitOverride ? { creditLimitOverride } : {}), // EG-5: sent beside the document (postingKit)
         ...(receipt ? { paymentTerms: 'due_on_receipt', dueDate: invoice.date, receiptPayment: { cashAccountId: paidIntoId, method: receiptMethod } as ReceiptPayment } : {}),
         currency,
         // the total owed (after the discount, tax included) and the tax, explicitly (taxCodes.ts)
@@ -318,7 +318,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               <label htmlFor="inv-status" className="micro-label">Status</label>
               <select id="inv-status" aria-invalid={Boolean(fieldErrors["inv-status"])} aria-describedby={fieldErrors["inv-status"] ? 'inv-status-error' : undefined}
                 value={invoice.status}
-                onChange={(e) => setInvoice({ ...invoice, status: e.target.value as any })}
+                onChange={(e) => setInvoice({ ...invoice, status: e.target.value as Invoice['status'] })}
                 className="w-full px-5 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="pending">Pending</option>
@@ -334,7 +334,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
               <label htmlFor="inv-type" className="micro-label">Invoice Type</label>
               <select id="inv-type" aria-invalid={Boolean(fieldErrors["inv-type"])} aria-describedby={fieldErrors["inv-type"] ? 'inv-type-error' : undefined}
                 value={invoice.type || 'standard'}
-                onChange={(e) => setInvoice({ ...invoice, type: e.target.value as any })}
+                onChange={(e) => setInvoice({ ...invoice, type: e.target.value as NonNullable<Invoice['type']> })}
                 className="w-full px-5 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
               >
                 <option value="standard">Standard</option>
@@ -363,7 +363,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
                  <label htmlFor="inv-recurring-interval" className="micro-label">Recurring Interval</label>
                  <select id="inv-recurring-interval" aria-invalid={Boolean(fieldErrors["inv-recurring-interval"])} aria-describedby={fieldErrors["inv-recurring-interval"] ? 'inv-recurring-interval-error' : undefined}
                    value={invoice.recurringInterval || 'monthly'}
-                   onChange={(e) => setInvoice({ ...invoice, recurringInterval: e.target.value as any })}
+                   onChange={(e) => setInvoice({ ...invoice, recurringInterval: e.target.value as NonNullable<Invoice['recurringInterval']> })}
                    className="w-full px-5 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] focus:ring-2 focus:ring-zinc-900 outline-none font-bold"
                  >
                    <option value="weekly">Weekly</option>
@@ -496,126 +496,28 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
           </div>
 
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-2 items-center justify-between">
-              <h3 className="micro-label">Line Items</h3>
-              {lastForCustomer && linesEmpty && (
+            <DocumentLineEditor
+              side="invoice"
+              lines={items}
+              onChange={setItems}
+              createLine={() => ({ id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' })}
+              accounts={safeAccounts}
+              currency={currency}
+              date={invoice.date || ''}
+              inventoryItems={inventoryItems}
+              fieldErrors={fieldErrors}
+              customerId={invoice.customerId}
+              taxCodeIds={salesCodes.map(code => code.id)}
+              onTaxCodeFill={taxCodeId => setInvoice(prev => ({ ...prev, taxCodeId, taxRate: 0 }))}
+              repeatAction={lastForCustomer && linesEmpty ? (
                 <button type="button" onClick={repeatLast}
                   className="ml-auto mr-2 px-3 py-2 rounded-xl text-[10px] font-semibold uppercase tracking-wider border border-[var(--line)] text-[var(--text)] hover:border-[var(--brass-line)]">
                   Same as last time ({lastForCustomer.number || 'last invoice'}, {lastForCustomer.items?.length} line{lastForCustomer.items?.length === 1 ? '' : 's'})
                 </button>
-              )}
-              <button 
-                type="button"
-                onClick={() => setItems([...items, { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }])}
-                className="flex items-center gap-2 min-h-11 px-4 py-2 bg-[var(--surface)] border border-[var(--line)] text-[var(--text)] rounded-xl text-[10px] font-medium uppercase tracking-wider hover:bg-zinc-200 transition-all"
-              >
-                <Plus size={14} />
-                Add Item
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              {items.map((item, idx) => (
-                <div key={item.id} className="grid grid-cols-12 gap-3 items-end bg-[var(--ink)] p-4 rounded-[32px] border border-[var(--line)]">
-                  <div className="col-span-12 md:col-span-4 min-w-0 space-y-1">
-                    <label htmlFor={`inv-item-desc-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Item / Description</label>
-                    <div className="relative">
-                      <input id={`inv-item-desc-${idx}`} aria-invalid={Boolean(fieldErrors[`inv-item-desc-${idx}`])} aria-describedby={fieldErrors[`inv-item-desc-${idx}`] ? `${`inv-item-desc-${idx}`}-error` : undefined}
-                        type="text"
-                        list={`invoice-inventory-list-${idx}`}
-                        value={item.description}
-                        onChange={(e) => {
-                          const newItems = [...items]; const fillCode = taxCodeToFillFromItem(newItems[idx].itemId, findInventoryItem(inventoryItems, e.target.value), salesCodes.map(c => c.id)); // A-7: a newly chosen item fills its tax code
-                          newItems[idx] = setLineDescription(newItems[idx], e.target.value, inventoryItems, customerPricer(useAuthStore.getState().getCurrentWorkspace()?.priceLists, invoice.customerId));
-                          setItems(newItems); if (fillCode) setInvoice(prev => ({ ...prev, taxCodeId: fillCode, taxRate: 0 }));
-                        }}
-                        placeholder="Service or Product"
-                        className="w-full min-h-11 px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
-                      />{fieldError(`inv-item-desc-${idx}`)}
-                      <datalist id={`invoice-inventory-list-${idx}`}>
-                        {inventoryItems.map(i => (
-                          <option key={i.id} value={i.name}>{i.sku ? `[${i.sku}] ` : ''}{i.name} · {formatCurrency(i.unitPriceCents)} · stock {i.quantityAtHand}</option>
-                        ))}
-                      </datalist>
-                    </div>
-                    {idx === 0 && inventoryItems.length === 0 && (
-                      <p className="text-[10px] text-[var(--muted)]">No items yet — add products in Inventory to pick them here.</p>
-                    )}
-                  </div>
-                  <div className="col-span-6 md:col-span-2 min-w-0 space-y-1">
-                    <label htmlFor={`inv-item-qty-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Qty</label>
-                    <input id={`inv-item-qty-${idx}`} aria-invalid={Boolean(fieldErrors[`inv-item-qty-${idx}`])} aria-describedby={fieldErrors[`inv-item-qty-${idx}`] ? `${`inv-item-qty-${idx}`}-error` : undefined}
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={item.quantity}
-                      onChange={(e) => {
-                        const newItems = [...items];
-                        const qty = parseFloat(e.target.value || '0');
-                        newItems[idx] = { ...newItems[idx], quantity: qty, amountCents: lineAmountCents(qty, newItems[idx].rateCents) };
-                        setItems(newItems);
-                      }}
-                      className="w-full min-h-11 px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
-                    />{fieldError(`inv-item-qty-${idx}`)}
-                  </div>
-                  <div className="col-span-6 md:col-span-2 min-w-0 space-y-1">
-                    <label htmlFor={`inv-item-rate-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Rate ({currency})</label>
-                    <input id={`inv-item-rate-${idx}`} aria-invalid={Boolean(fieldErrors[`inv-item-rate-${idx}`])} aria-describedby={fieldErrors[`inv-item-rate-${idx}`] ? `${`inv-item-rate-${idx}`}-error` : undefined}
-                      type="number"
-                      step={amountStep(currency)}
-                      min="0"
-                      value={minorToMajor(item.rateCents, currency)}
-                      onChange={(e) => {
-                        const newItems = [...items];
-                        const rateCents = TruthEngine.parseAmountToCents(e.target.value || '0', currency);
-                        newItems[idx] = { ...newItems[idx], rateCents, amountCents: lineAmountCents(newItems[idx].quantity, rateCents) };
-                        setItems(newItems);
-                      }}
-                      className="w-full min-h-11 px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900 font-mono"
-                    />{fieldError(`inv-item-rate-${idx}`)}
-                  </div>
-                  <div className="col-span-12 md:col-span-2 min-w-0 space-y-1">
-                    <label htmlFor={`inv-item-acc-${idx}`} className="text-[10px] font-bold text-zinc-400 uppercase">Income Account</label>
-                    <div className="relative">
-                      <input id={`inv-item-acc-${idx}`} aria-invalid={Boolean(fieldErrors[`inv-item-acc-${idx}`])} aria-describedby={fieldErrors[`inv-item-acc-${idx}`] ? `${`inv-item-acc-${idx}`}-error` : undefined}
-                        list={`invoice-account-${idx}`}
-                        value={safeAccounts.find(a => a.id === item.accountId)?.name || item.accountId || ''}
-                        onChange={(e) => {
-                          const acc = safeAccounts.find(a => a.name === e.target.value || a.id === e.target.value);
-                          const newItems = [...items];
-                          newItems[idx].accountId = acc ? acc.id : e.target.value;
-                          setItems(newItems);
-                        }}
-                        placeholder="Type or select account"
-                        className="w-full min-h-11 px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl outline-none focus:ring-2 focus:ring-zinc-900"
-                      />{fieldError(`inv-item-acc-${idx}`)}
-                      <datalist id={`invoice-account-${idx}`}>
-                        {safeAccounts.map(a => <option key={a.id} value={a.name} />)}
-                      </datalist>
-                    </div>
-                  </div>
-                  <div className="col-span-10 md:col-span-1 space-y-1 flex flex-col justify-end">
-                    <div className="px-2 py-2 text-right font-mono font-bold text-[var(--text)] border border-transparent tabular-nums">
-                      {money(item.amountCents)}
-                    </div>
-                  </div>
-                  <div className="col-span-2 md:col-span-1 pb-1">
-                    <button 
-                      type="button"
-                      aria-label={`Remove line ${idx + 1}`}
-                      onClick={() => setItems(items.filter((_, i) => i !== idx))}
-                      title={`Remove line ${idx + 1}`}
-                      className="min-h-11 min-w-11 flex items-center justify-center p-2 text-[var(--muted)] hover:text-rose-500 transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                  <div className="col-span-12"><LineLabels value={item.dimensions} lineNumber={idx + 1} accountId={item.accountId} date={invoice.date || ''}
-                    onChange={dimensions => setItems(items.map((it, i) => (i === idx ? { ...it, dimensions } : it)))} /></div>{/* BF-09 */}
-                </div>
-              ))}
-            </div>
+              ) : undefined}
+            />
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-[var(--line)] pt-8 mt-8">
             <div className="space-y-4">
               <div className="space-y-2">

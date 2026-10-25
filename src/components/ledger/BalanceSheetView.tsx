@@ -72,7 +72,7 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
   }, [fetchBalanceSheet, asOfDate, priorDate, isComparative, basis]);
 
   useEffect(() => {
-    loadServerReport();
+    void Promise.resolve().then(loadServerReport);
   }, [loadServerReport]);
 
   const toggleSort = (field: 'code' | 'name' | 'balance') => {
