@@ -19,12 +19,33 @@
  *   = 500.00 = due; Deposits: −600 + 300 + 600 − 300 = 0.
  * - A retry of either void: `replayed`, no new entry, no new row, the documents unchanged.
  * - Locks: lockDate 2026-10-31, void dated 10-25 → 409, nothing written; a deposited payment → 409.
+ * Review fixes (PR #394):
+ * - standalone-payment (the browser's postPaymentLedger): PAY-S $250.00 on INV-S $250.00, entry DR Bank 250.00 /
+ *   CR A/R 250.00 seeded as that path writes it (no ledger rows). Void 10-25: one reversing entry DR A/R 250.00 /
+ *   CR Bank 250.00; Bank and A/R net 0; INV-S 0 paid, `sent`. Before the fix: no entry, payment marked void anyway.
+ * - Cancelled: INV-C $100.00 paid in full by PAY-C, then cancelled. Void: amountPaidCents 10000 → 0, settled 0,
+ *   status stays `cancelled` (not re-issued as `sent`).
+ * - 102 lines: INV-M $510.00 = 51 items of $10.00, each its own label (project P01…P51). PAY-M $510.00 spreads
+ *   bank and A/R over the 51 labels: 51 × (DR Bank 10.00, CR A/R 10.00) = 102 lines. Reversal: chunk 1 = 50 label
+ *   pairs = 100 lines, chunk 2 = 1 pair = 2 lines; each sums to 0; together Bank −510.00, A/R +510.00.
+ *   balancedChunks unit case: 3 pairs of labels a, b, c with max 4 → [a, b] (4 lines), [c] (2).
  * The database part runs when LF_TEST_DATABASE_URL is set.
  */
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import { DATA_CHECKS, type CheckContext } from '../lib/dataChecks';
+import { balancedChunks } from '../server/services/paymentService';
+
+test('balancedChunks: label pairs packed into balanced chunks of at most max lines', () => {
+  const pair = (k: string, c: number) => [{ accountId: 'bank', amountCents: c, dimensions: { p: k } }, { accountId: 'ar', amountCents: -c, dimensions: { p: k } }];
+  const lines = [...pair('a', 100), ...pair('b', 200), ...pair('c', 300)];
+  const chunks = balancedChunks(lines, 4);
+  assert.deepEqual(chunks.map(c => c.map(l => l.dimensions.p)), [['a', 'a', 'b', 'b'], ['c', 'c']]);
+  assert.deepEqual(chunks.map(c => c.reduce((s, l) => s + l.amountCents, 0)), [0, 0]);
+  assert.equal(balancedChunks(lines, 100).length, 1);
+  assert.throws(() => balancedChunks([...pair('a', 1), ...pair('a', 2), ...pair('a', 3)], 4), /longer than 4/);
+});
 
 interface Entry {
   id: string; date?: string; kind?: string; documentId?: string; reversalEventId?: string;
@@ -181,5 +202,62 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
 
     await db.collection('payments').doc(pay.paymentId).update({ depositTransactionId: 'dep-1' });
     await assert.rejects(svc.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, date: '2026-11-02' }), (e: Error & { status?: number }) => e.status === 409 && /deposit/.test(e.message));
+  });
+
+  const usd = (key: string, amountCents: number, extra: Record<string, unknown> = {}) => db.collection('invoices').doc(id(key)).set({
+    workspaceId: ws, uid: 'owner-1', customerId: 'acme', number: key, date: '2026-10-01', dueDate: '2099-12-31', status: 'sent',
+    currency: 'USD', exchangeRate: 1, amountCents, amountPaidCents: 0, arAccountId: id('ar'), ...extra,
+  });
+
+  test('a standalone-payment posting (postPaymentLedger) is reversed too', async () => {
+    await usd('INV-S', 25000, { amountPaidCents: 25000, settledByRecordsCents: 25000, status: 'paid' });
+    await db.collection('payments').doc(id('PAY-S')).set({
+      workspaceId: ws, uid: 'owner-1', number: 'PAY-S', direction: 'received', status: 'posted', date: '2026-10-12', amountCents: 25000, currency: 'USD',
+      depositAccountId: id('bank'), unappliedCents: 0, allocations: [{ documentId: id('INV-S'), documentType: 'invoice', amountCents: 25000 }],
+    });
+    await db.collection('transactions').doc(id('tx-S')).set({
+      workspaceId: ws, uid: 'owner-1', date: '2026-10-12', status: 'completed', type: 'actual', currency: 'USD', totalAmountCents: 25000,
+      metadata: { paymentId: id('PAY-S'), direction: 'received', type: 'standalone-payment' },
+      lines: [{ accountId: id('bank'), amountCents: 25000 }, { accountId: id('ar'), amountCents: -25000 }],
+    });
+    const result = await svc.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: id('PAY-S'), date: '2026-10-25' });
+    assert.equal(result.transactionIds.length, 1, 'the standalone posting was reversed');
+    const txs = (await load('transactions')).filter(t => t.metadata?.paymentId === id('PAY-S'));
+    const reversal = txs.find(t => t.id === result.transactionIds[0])!;
+    assert.deepEqual([reversal.date, reversal.metadata?.reversesTxId], ['2026-10-25', id('tx-S')]);
+    assert.deepEqual(reversal.lines.map(l => [l.accountId, l.amountCents]), [[id('bank'), -25000], [id('ar'), 25000]]);
+    assert.deepEqual([balance(txs, id('bank')), balance(txs, id('ar'))], [0, 0]);
+    const inv = await doc('invoices', 'INV-S');
+    assert.deepEqual([inv.amountPaidCents, inv.status], [0, 'sent']);
+  });
+
+  test('a cancelled invoice keeps its status; only the settled amounts go', async () => {
+    await usd('INV-C', 10000);
+    const pay = await svc.createPaymentAtomic(db, receive('2026-10-12', 'USD', 10000, undefined, [['INV-C', 10000]]));
+    await db.collection('invoices').doc(id('INV-C')).update({ status: 'cancelled' });
+    const result = await svc.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, date: '2026-10-25' });
+    const inv = await doc('invoices', 'INV-C');
+    assert.deepEqual([inv.amountPaidCents, inv.settledByRecordsCents, inv.status], [0, 0, 'cancelled']);
+    assert.deepEqual(result.documents, [{ documentId: id('INV-C'), amountPaidCents: 0, status: 'cancelled' }]);
+  });
+
+  test('a 102-line payment entry is reversed in balanced chunks of at most 100 lines', async () => {
+    const items = Array.from({ length: 51 }, (_, i) => ({ description: `item ${i + 1}`, amountCents: 1000, dimensions: { project: `P${String(i + 1).padStart(2, '0')}` } }));
+    await usd('INV-M', 51000, { items });
+    const pay = await svc.createPaymentAtomic(db, receive('2026-10-12', 'USD', 51000, undefined, [['INV-M', 51000]]));
+    assert.equal(pay.ledgerTransaction.lines.length, 102);
+    const result = await svc.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, date: '2026-10-25' });
+    const txs = await load('transactions');
+    const chunks = result.transactionIds.map(t => txs.find(x => x.id === t)!);
+    assert.deepEqual(chunks.map(c => c.lines.length), [100, 2]);
+    for (const c of chunks) {
+      assert.equal(c.lines.reduce((s, l) => s + l.amountCents, 0), 0, 'each chunk balances');
+      assert.equal(c.metadata?.reversesTxId, pay.transactionId);
+    }
+    assert.deepEqual([balance(chunks, id('bank')), balance(chunks, id('ar'))], [-51000, 51000]);
+    const mine = txs.filter(t => t.metadata?.paymentId === pay.paymentId);
+    assert.deepEqual([balance(mine, id('bank')), balance(mine, id('ar'))], [0, 0]);
+    assert.equal(txs.find(t => t.id === pay.transactionId)!.reversalEventId, chunks[0].id);
+    assert.deepEqual((await doc('invoices', 'INV-M')).amountPaidCents, 0);
   });
 });
