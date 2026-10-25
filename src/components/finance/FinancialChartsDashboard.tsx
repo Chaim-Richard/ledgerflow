@@ -5,6 +5,7 @@ import { monthBrushPeriod } from '../../lib/chartDrillShapes';
 import { reportStateToParams } from '../../lib/reportPermalink';
 import { validCustomReportPeriod, type CustomReportPeriod } from '../../lib/reportCustomPeriod';
 import { computeChartsData } from '../../lib/chartsData';
+import { useBalanceEntries } from '../../hooks/useBalanceEntries';
 import ChartExploration from '../charts/ChartExploration';
 import FinancialChartPanels from '../charts/FinancialChartPanels';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -30,7 +31,9 @@ function ScopedChartsDashboard() {
 
   // Compute monthly revenue, expenses, burn rate, and profit
   // all amounts in cents of the base currency (src/lib/chartsData.ts, tested; L-155)
-  const data = useMemo(() => computeChartsData(transactions, accounts, timeRange === '6m' ? 6 : 12), [transactions, accounts, timeRange]);
+  // L-123 step 3d: the cash balances read the server's sums through the oldest loaded day (the months stay the loaded entries)
+  const { entries: balanceTx, serverAsOf } = useBalanceEntries(transactions, undefined, workspace || undefined);
+  const data = useMemo(() => computeChartsData(transactions, accounts, timeRange === '6m' ? 6 : 12, serverAsOf ? balanceTx : undefined), [transactions, accounts, timeRange, balanceTx, serverAsOf]);
   const currency = useAuthStore(state => state.getCurrentWorkspace()?.currency);
   const months = data.months.map(month => month.month);
   const defaultPeriod = monthBrushPeriod(months, 0, months.length - 1);
@@ -122,6 +125,7 @@ function ScopedChartsDashboard() {
         <p role="status">{period ? `Report period: ${period.startDate} to ${period.endDate}` : 'No plotted months available for a report period.'}</p>
         <p className="text-sm">Time plots show loaded whole-month buckets; the report link and account chart use exact selected dates.</p>
         {partial && <p role="alert">Loaded ledger history is incomplete. Time plots and summary figures are provisional; the signed-in account chart reads its balances separately from the server.</p>}
+        {serverAsOf && <p data-testid="charts-balances-source" className="text-xs text-[var(--muted)]">Cash and runway include every entry through {serverAsOf} as summed by the server, plus the loaded entries after it; the monthly figures read the loaded entries.</p>}
         <p className="text-sm">{!months.length && 'No time-series months are available to brush. '}The brush sets the report period and both time-series windows. Summary cards, cash allocation and expense mix retain their existing {timeRange === '6m' ? 'six' : 'twelve'}-month / loaded-history calculation scopes.</p>
         {period && <a className="inline-flex min-h-11 items-center underline" href={`?${reportParams}#reports`}>Open P&amp;L for selected period</a>}
         {selectedPeriod && <button type="button" className="min-h-11 px-3 border rounded ml-2" onClick={() => choosePeriod(undefined)}>Reset report period</button>}

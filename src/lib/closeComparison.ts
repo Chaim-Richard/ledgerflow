@@ -14,6 +14,7 @@ import {
 } from '../server/reports/computeReports';
 import { reportVariance } from './reportColumns';
 import { addToDateISO, monthBoundsISO, parseAmountToCents } from './utils';
+import { balanceEntries, periodEntries, type ServerOpening } from './serverBalances';
 
 /** A change is a "big move" when it is at least this percent of the month it is compared with. */
 export const CLOSE_COMPARISON_PERCENT = 20;
@@ -217,6 +218,12 @@ export function buildCloseComparison(input: {
   transactions: Transaction[];
   thresholdCents?: number;
   percent?: number;
+  /**
+   * L-123 step 3d: the server's balances through the oldest loaded day (useLedgerStore.serverOpening). Each month end
+   * on or after that day reads them (`balanceEntries`), and each month that starts after it (`periodEntries`).
+   */
+  opening?: ServerOpening | null;
+  workspaceId?: string;
 }): CloseComparisonResult {
   const month = (input.month || '').slice(0, 7);
   const thresholdCents = input.thresholdCents ?? CLOSE_COMPARISON_THRESHOLD_CENTS;
@@ -232,15 +239,19 @@ export function buildCloseComparison(input: {
     previousYear: period('previousYear', previousYearMonth),
   } as Record<CloseComparisonPeriodId, CloseComparisonPeriod>;
 
+  const opening = input.opening || null;
+  const plEntries = (p: CloseComparisonPeriod) => periodEntries(transactions, opening, p.startDate, input.workspaceId);
+  const bsEntries = (date: string) => balanceEntries(transactions, opening, date, input.workspaceId);
+
   const plPeriods = [
-    profitAndLossValues(accounts, transactions, periods.current),
-    profitAndLossValues(accounts, transactions, periods.previousMonth),
-    profitAndLossValues(accounts, transactions, periods.previousYear),
+    profitAndLossValues(accounts, plEntries(periods.current), periods.current),
+    profitAndLossValues(accounts, plEntries(periods.previousMonth), periods.previousMonth),
+    profitAndLossValues(accounts, plEntries(periods.previousYear), periods.previousYear),
   ] as [StatementValues, StatementValues, StatementValues];
   const bsPeriods = [
-    balanceSheetValues(accounts, transactions, periods.current.endDate),
-    balanceSheetValues(accounts, transactions, periods.previousMonth.endDate),
-    balanceSheetValues(accounts, transactions, periods.previousYear.endDate),
+    balanceSheetValues(accounts, bsEntries(periods.current.endDate), periods.current.endDate),
+    balanceSheetValues(accounts, bsEntries(periods.previousMonth.endDate), periods.previousMonth.endDate),
+    balanceSheetValues(accounts, bsEntries(periods.previousYear.endDate), periods.previousYear.endDate),
   ] as [StatementValues, StatementValues, StatementValues];
 
   const plRows: CloseComparisonRow[] = [];
