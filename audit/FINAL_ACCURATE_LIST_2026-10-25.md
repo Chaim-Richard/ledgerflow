@@ -66,6 +66,18 @@ passes here against a real Postgres:
 plus the server-side check if the owner wants the comparison to run without a pasted file. That is a
 **stage B** requirement, not stage A.
 
+### In flight (open PRs, not in `main`, so not in any status above)
+
+| PR | What | State |
+|---|---|---|
+| [#386](https://github.com/shmuelbiller1/ledgerflow/pull/386) | AI #7: W2/W3/W4/W6/W9 browser journeys and stability batch | **OPEN, mergeable = CONFLICTING**; needs a rebase/merge of `main` and a review decision |
+| [#387](https://github.com/shmuelbiller1/ledgerflow/pull/387) | AI #7: the standalone W2 journey | OPEN, overlaps #386 |
+
+Specs with those names already exist on `main` (`e2e/w2-invoice-payment-statement.spec.ts`,
+`w3-bill-payment-run-statement`, `w4-bank-csv-import-reconcile`, `w6-order-deposit-part-invoices`,
+`w9-sealed-period-reopen`). Whoever reviews them must decide whether they add coverage or duplicate the
+existing journeys; until merged they are not part of any gate.
+
 ---
 
 ## 4. Where the documents disagree with the code (correct the documents, not the code)
@@ -78,6 +90,7 @@ plus the server-side check if the owner wants the comparison to run without a pa
 | `docs/RELEASE_GATE.md` W11: Connected "Partly", Verified "No". | Screen + library + tests exist (AU-4). | Connected **Yes**; Verified **Yes (screen + worked figures)**; Browser **No**. |
 | `docs/RELEASE_GATE.md` W13: Browser **Yes**. | Journey spec exists (`e2e/w13-stock-journey.spec.ts`) and AI #4's integrated Postgres journey is recorded as *awaiting review*. | Keep "Yes" only if the CI run is linked; otherwise "Yes (CI, review pending)". |
 | `docs/COORDINATION.md` ticks AU-4 "[x] merged #292". | True for the screen; the gate row is the stale one. | Ticked row is right; fix W11 (§ above). |
+| `audit/FIRST_TESTERS_READINESS.md`: BUG-03 fixed by "a mandatory `Idempotency-Key`". | The header is **optional** (`documentPostRoutes.ts:41`); the safety property comes from **INT-2** — a second live posting of the same document is refused inside the commit (`ledgerBulkCommit.ts:231`, and the same for bills and payments). So no document can post twice; only the wording is wrong. | Reword to "idempotency key optional; one live posting per document enforced at commit". |
 | `docs/FOR_YOU.md`: three migrations "may or may not be applied". | Everything else is applied; those three guard stock cost and RMA writes. | Confirm and tick (§1 A3). |
 | `audit/function-audit/SCORECARD.md` pinned at `8df972da`, 67 functions. | 85 commits have landed since; this pass re-pins and adds the executed DB evidence. | Updated in this branch. |
 
