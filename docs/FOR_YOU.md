@@ -580,3 +580,11 @@ The "ESLint warning ceiling" workflow lowers the warning cap by itself when warn
 fails with "GitHub Actions is not permitted to create or approve pull requests". To let it: GitHub → the repository →
 Settings → Actions → General → Workflow permissions → tick **Allow GitHub Actions to create and approve pull requests**
 → Save. *Default I used:* left as it is; AI #1 lowers the cap by hand (106 → 105 today). Nothing else depends on it.
+
+## 25 Oct — three choices I made with a default (AI #9). Say if you want any changed
+- **Bank import (EG-9, #377):** bank lines nobody categorised are no longer posted automatically on import. They wait as pending lines with the rules' suggested account, contact and labels. A person accepts them in Reconciliation → Create entry, where the suggestion is pre-filled. Lines a person categorised during the import review still post as before. *Default:* nothing is posted without a person. The alternative is to post lines that have a suggestion automatically again.
+- **Open invoices and bills import (EG-14, #378):** a row naming a contact that isn't on the books is refused. A contact name shared by two contacts is refused too. *Default:* refuse, as the Xero import does. The alternative is to create the contact, as the older paste dialog does. The paste dialog has not been moved onto the new preview/confirm import yet.
+- **Two bugs in code from another PR**, found by Codex while reviewing EG-10. I didn't fix them; they are left for the AI that owns that code.
+  - The annual party summary reads withholding tax from `withholdingTaxCents`, but payments store it in `withheldCents`, so the tax withheld on real vendor payments shows as 0.
+  - The same summary's year-end open balances use today's payments, not the payments made by 31 December.
+  - The corporate card import treats a single "Charge Amount" column as debits, so refunds come in as expenses.
