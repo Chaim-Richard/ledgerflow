@@ -16,6 +16,10 @@
  *   `write_off` 200.00, cleared = settled = 220.00 (= the entry's 220.00), FX 0. Reversed 10-28: `reversal`
  *   −200.00 / −220.00 dated 10-28, the original marked reversedBy. Written off again 10-30: a new 200.00 row.
  *   Σ rows = 100.00 + 200.00 − 200.00 + 200.00 = 300.00 = amountPaidCents; Σ write-off rows = 200.00 (one write-off).
+ * - Period locks (review 4369192971): hard close through 2099-12-31 refuses applyCredit and autoApplyCredits for
+ *   anyone; a soft close refuses the bookkeeper and lets the owner apply CN-4 $10.00 on INV-G.
+ * - Bills dated by issueDate (review 4369192974): VC-2 $10.00 for v2; B-F has only issueDate 2099-01-01 (future),
+ *   B-G issueDate 2026-10-01: auto-apply settles B-G $10.00 and leaves B-F (sorted first) untouched.
  */
 import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -153,6 +157,35 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.equal(rows.reduce((s, r) => s + r.amountCents, 0), 30000);
     assert.equal(rows.filter(r => r.kind !== 'payment').reduce((s, r) => s + r.amountCents, 0), 20000, 'one write-off');
     assert.deepEqual((await live('INV-W')).map(r => r.kind), ['payment', 'write_off']);
+  });
+
+  test('period locks: a hard close refuses everyone, a soft close the bookkeeper (manual and auto)', async () => {
+    const wsRef = db.collection('workspaces').doc(ws);
+    await db.collection('invoices').doc(id('INV-G')).set({ workspaceId: ws, uid: 'owner-1', customerId: 'gamma', number: 'INV-G', date: '2026-10-01', status: 'sent', currency: 'USD', amountCents: 5000, amountPaidCents: 0 });
+    await db.collection('creditNotes').doc(id('CN-4')).set({ workspaceId: ws, uid: 'owner-1', customerId: 'gamma', number: 'CN-4', date: '2026-10-01', status: 'open', currency: 'USD', amountCents: 1000, remainingCents: 1000 });
+    const auto = (uid: string) => credits.autoApplyCredits(db, { workspaceId: ws, kind: 'customer', partyId: 'gamma', uid });
+    const locked = (e: Error & { status?: number }) => e.status === 409 && /Period Locked/.test(e.message);
+    await wsRef.update({ lockDate: '2099-12-31', roles: { 'bk-1': 'bookkeeper' } });
+    await assert.rejects(apply('customer', 'CN-4', 'INV-G', 1000, '2026-10-20'), locked);
+    await assert.rejects(auto('owner-1'), locked);
+    await wsRef.update({ lockDate: null, softLockDate: '2099-12-31' });
+    await assert.rejects(credits.applyCredit(db, { workspaceId: ws, uid: 'bk-1', kind: 'customer', creditId: id('CN-4'), documentId: id('INV-G'), amountCents: 1000, date: '2026-10-20' }), locked);
+    await assert.rejects(auto('bk-1'), locked);
+    assert.equal((await live('INV-G')).length, 0, 'nothing written while locked');
+    await apply('customer', 'CN-4', 'INV-G', 1000, '2026-10-20');
+    assert.equal((await live('INV-G')).length, 1, 'the owner may post in a soft-closed period');
+    await wsRef.update({ softLockDate: null });
+  });
+
+  test('auto-apply dates a bill by issueDate when it has no date', async () => {
+    const bill = (key: string, issueDate: string) => db.collection('bills').doc(id(key)).set({ workspaceId: ws, uid: 'owner-1', vendorId: 'v2', number: key, issueDate, status: 'unpaid', currency: 'USD', amountCents: 5000, amountPaidCents: 0 });
+    await bill('B-F', '2099-01-01');
+    await bill('B-G', '2026-10-01');
+    await db.collection('vendorCredits').doc(id('VC-2')).set({ workspaceId: ws, uid: 'owner-1', vendorId: 'v2', number: 'VC-2', date: '2026-10-01', status: 'open', currency: 'USD', amountCents: 1000, remainingCents: 1000 });
+    const result = await credits.autoApplyCredits(db, { workspaceId: ws, kind: 'vendor', partyId: 'v2', uid: 'owner-1' });
+    assert.deepEqual(result.applications.map(a => [a.documentId, a.amountCents]), [[id('B-G'), 1000]]);
+    assert.equal((await live('B-F')).length, 0);
+    assert.equal((await live('B-G')).length, 1);
   });
 
   test('EG-10 settlement-ledger agrees for every document; without the reversal row it would not', async () => {

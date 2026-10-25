@@ -127,6 +127,9 @@ export async function applyCredit(db: Firestore, input: ApplyCreditInput) {
     if (amountCents > remaining) throw new CreditError(400, `Only ${remaining} cents are left on this credit`);
     if (amountCents > due) throw new CreditError(400, `Only ${due} cents are due on this ${side.documentLabel}`);
     const date = input.date || todayIn(workspace);
+    // the application is dated: a closed period refuses it as it refuses a posting (soft close: owners/accountants only)
+    const lock = postingLock(date, workspace, input.uid || '');
+    if (lock) throw new CreditError(409, lockMessage(date, lock));
     if (ledgerReady) {
       try {
         assertApplicationDate(date, credit.date, document.date || document.issueDate, `the ${side.documentLabel}`);
@@ -211,7 +214,10 @@ export async function autoApplyCredits(db: Firestore, input: { workspaceId: stri
     // EG-2: dated today; an application dated before its credit or document is left for later (not refused:
     // the rest of the plan still applies)
     const date = todayIn(workspace);
-    const datable = (r: Row, ...more: Row[]) => [r, ...more].every(x => !x.date || String(x.date).slice(0, 10) <= date);
+    const lock = postingLock(date, workspace, input.uid || '');
+    if (lock) throw new CreditError(409, lockMessage(date, lock));
+    // a bill without `date` is dated by `issueDate`, as on the manual path
+    const datable = (r: Row) => { const d = r.date || r.issueDate; return !d || String(d).slice(0, 10) <= date; };
     const applications = planCreditApplications(input.kind, ledgerReady ? credits.filter(c => datable(c)) : credits, ledgerReady ? documents.filter(d => datable(d)) : documents);
     const now = new Date().toISOString();
     const creditUsed = new Map<string, number>();
