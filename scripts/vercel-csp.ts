@@ -10,21 +10,29 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { loadEnv } from 'vite';
-import { clientSupabaseUrl, staticCspHeaderValue, vercelCspValue, withVercelCsp } from '../src/server/http/contentSecurityPolicy';
+import { REPORT_ONLY_HEADER, clientSupabaseUrl, staticCspRollout, vercelCspValue, withVercelCsp } from '../src/server/http/contentSecurityPolicy';
 
 const root = path.resolve(import.meta.dirname, '..');
 const file = path.join(root, 'vercel.json');
 const env = loadEnv('production', root, 'VITE_');
 const projectUrl = clientSupabaseUrl(env);
 const config = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-const expected = staticCspHeaderValue(projectUrl);
+const rollout = staticCspRollout();
+const expected = withVercelCsp(config, projectUrl, rollout);
 
 if (process.argv.includes('--write')) {
-  fs.writeFileSync(file, `${JSON.stringify(withVercelCsp(config, projectUrl), null, 2)}\n`);
-  console.log(`vercel.json Content-Security-Policy now allows ${new URL(projectUrl).host}.`);
-} else if (vercelCspValue(config) !== expected) {
-  console.error(`vercel.json's Content-Security-Policy does not match the Supabase project this build uses (${projectUrl}).\n`
-    + 'Run `npm run csp:vercel` with the same VITE_SUPABASE_URL and commit vercel.json.\n'
-    + `Expected:\n  ${expected}\nFound:\n  ${vercelCspValue(config) ?? '(none)'}`);
-  process.exit(1);
+  fs.writeFileSync(file, `${JSON.stringify(expected, null, 2)}\n`);
+  console.log(`vercel.json Content-Security-Policy now allows ${new URL(projectUrl).host} (S-23 stage: ${rollout}).`);
+} else {
+  // S-23: both the enforced policy and the report-only one the browser measures against.
+  for (const header of ['content-security-policy', REPORT_ONLY_HEADER.toLowerCase()]) {
+    const want = vercelCspValue(expected, header);
+    const have = vercelCspValue(config, header);
+    if (want === have) continue;
+    console.error(`vercel.json's ${header} does not match the Supabase project this build uses (${projectUrl}) `
+      + `at S-23 stage "${rollout}".\n`
+      + 'Run `npm run csp:vercel` with the same VITE_SUPABASE_URL and commit vercel.json.\n'
+      + `Expected:\n  ${want ?? '(none)'}\nFound:\n  ${have ?? '(none)'}`);
+    process.exit(1);
+  }
 }
