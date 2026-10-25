@@ -10,6 +10,7 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import Reconciliation from '../components/ledger/Reconciliation';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { useUIStore } from '../stores/useUIStore';
 import type { BankStatementLine } from '../types';
 import { makeChartAccount, makeTransaction } from './fixtures';
 import { markComponentCollectionsLoaded, setComponentWorkspace } from './helpers/componentFixtures';
@@ -53,6 +54,17 @@ describe('Bank reconciliation screen', () => {
     useLedgerStore.setState({ accounts, transactions, bankLines, autoRules: [] });
   });
   afterEach(() => cleanup());
+
+  test('empty books say how to bring in work instead of implying that everything was matched', () => {
+    stubFetchWithBodies(200, {});
+    useLedgerStore.setState({ bankLines: [], transactions: [] });
+    useUIStore.setState({ activeTab: 'reconciliation' });
+    render(<Reconciliation />);
+    assert.ok(screen.getByText(/Import a statement from Bank Connections/));
+    assert.ok(screen.getByText(/add a new entry from Overview/));
+    fireEvent.click(screen.getByRole('button', { name: 'Open Bank Connections' }));
+    assert.equal(useUIStore.getState().activeTab, 'banking');
+  });
 
   test('lists pending bank lines and uncleared posted entries (no drafts, no reconciled ones)', () => {
     stubFetchWithBodies(200, {});

@@ -20,6 +20,7 @@ import { AccountGroupToggle } from './AccountGroupControls';
 import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
 import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
 import { provenanceFromResponse } from '../../lib/reportProvenance';
+import ReportEmptyState from '../reporting/ReportEmptyState';
 import { useBalanceEntries } from '../../hooks/useBalanceEntries';
 
 /** the trial balance worked out here also reads the journal entries */
@@ -68,7 +69,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
   }, [fetchTrialBalance, asOfDate]);
 
   useEffect(() => {
-    loadServerReport();
+    void Promise.resolve().then(loadServerReport);
   }, [loadServerReport]);
 
   const handleSort = (field: SortField) => {
@@ -549,7 +550,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
             {trialBalance.lines.length === 0 && (
               <tr>
                 <td colSpan={4} className="py-12 text-center text-[var(--muted)] text-xs">
-                  No accounts found in current ledger configuration.
+                  <ReportEmptyState title="No accounts found" description="Set up the chart of accounts, then add an entry or choose another date." />
                 </td>
               </tr>
             )}

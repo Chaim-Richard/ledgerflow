@@ -12,10 +12,14 @@ interface AcceptInviteViewProps {
 }
 
 export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initialToken, onSuccess }) => {
-  const [token, setToken] = useState<string>(initialToken || '');
+  const [token] = useState<string>(() => {
+    if (initialToken) return initialToken;
+    if (typeof window === 'undefined') return '';
+    return window.location.pathname.match(/\/invite\/([a-zA-Z0-9_-]+)/)?.[1] || '';
+  });
   const [inviteDetails, setInviteDetails] = useState<{ email: string; workspaceName: string; role: string } | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(Boolean(token));
+  const [error, setError] = useState<string | null>(token ? null : 'No invite token provided');
   const [accepting, setAccepting] = useState<boolean>(false);
   const [accepted, setAccepted] = useState<boolean>(false);
   const { setSafeTimeout } = useTimeout();
@@ -25,20 +29,7 @@ export const AcceptInviteView: React.FC<AcceptInviteViewProps> = ({ token: initi
   const setActiveTab = useUIStore(s => s.setActiveTab);
 
   useEffect(() => {
-    if (!initialToken && typeof window !== 'undefined') {
-      const match = window.location.pathname.match(/\/invite\/([a-zA-Z0-9_-]+)/);
-      if (match && match[1]) {
-        setToken(match[1]);
-      }
-    }
-  }, [initialToken]);
-
-  useEffect(() => {
-    if (!token) {
-      setLoading(false);
-      setError('No invite token provided');
-      return;
-    }
+    if (!token) return;
 
     const loadInvite = async () => {
       setLoading(true);

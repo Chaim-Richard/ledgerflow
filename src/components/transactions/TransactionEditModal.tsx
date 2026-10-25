@@ -214,18 +214,21 @@ function useTransactionEditModalModel({
     onClose();
   };
 
+  const handleSaveRef = useRef(handleSave);
+  useEffect(() => { handleSaveRef.current = handleSave; });
+
   useEffect(() => {
     if (!isOpen) return;
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
       } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        handleSave();
+        void handleSaveRef.current();
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [isOpen, handleSave, onClose]);
+  }, [isOpen, onClose]);
 
   const { dialogProps, titleId } = useDialog(onClose, isOpen);
   if (!isOpen) return null;

@@ -10,7 +10,15 @@ import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { Labelled } from '../ui/Labelled';
 import { resolveStatementScope } from '../../lib/statementScope';
 
-export default function StatementView({ startDate: pageStartDate, endDate: pageEndDate }: { startDate?: string; endDate?: string } = {}) {
+interface StatementViewProps {
+  startDate?: string;
+  endDate?: string;
+  /** Reports already supplies the page h1; a standalone statement supplies its own. */
+  embedded?: boolean;
+}
+
+export default function StatementView({ startDate: pageStartDate, endDate: pageEndDate, embedded = false }: StatementViewProps = {}) {
+  const Heading = embedded ? 'h2' : 'h1';
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const customers = useLedgerStore(s => s.customers);
@@ -69,7 +77,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
             <FileText className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">Account Statement</h1>
+            <Heading className="text-xl font-bold text-slate-900 dark:text-white">Account Statement</Heading>
             <p className="text-xs text-[var(--muted)] dark:text-slate-400">
               Customer and Vendor itemized account balance & transaction statements
             </p>

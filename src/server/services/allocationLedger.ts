@@ -154,6 +154,15 @@ export async function liveStoredRowsOf(db: Firestore, tx: Reader, workspaceId: s
   return snap.docs.map(d => ({ id: d.id, data: d.data() })).filter(r => r.data.kind !== 'reversal' && !r.data.reversedBy);
 }
 
+/** Every live row a source (a payment, a credit) settled, across its documents, for its void; read before any write. */
+export async function liveStoredRowsOfSource(db: Firestore, tx: Reader, workspaceId: string, sourceType: NewAllocation['sourceType'], sourceId: string): Promise<StoredAllocation[]> {
+  const query = db.collection(ALLOCATIONS).where('workspaceId', '==', workspaceId).where('sourceId', '==', sourceId);
+  const snap = tx ? await tx.get(query as never) : await query.get();
+  return snap.docs.map(d => ({ id: d.id, data: d.data() }))
+    .filter(r => r.data.sourceType === sourceType && r.data.kind !== 'reversal' && !r.data.reversedBy)
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
 /**
  * Stages the reversal of one row: a new `reversal-{id}` row with the amount and every base figure negated,
  * dated max(date, the row's date), and `reversedBy` on the original (the only field ever set later).

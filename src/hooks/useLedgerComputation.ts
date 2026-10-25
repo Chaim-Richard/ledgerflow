@@ -277,7 +277,7 @@ export function useLedgerComputation(
       discrepancies, 
       conflicts,
     };
-  }, [smartFilteredTransactions, accounts]);
+  }, [smartFilteredTransactions, accounts, accountMap]);
 
   return { smartFilteredTransactions, transactionsWithBalance, stats, conflicts: stats.conflicts };
 }
