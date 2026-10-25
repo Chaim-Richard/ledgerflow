@@ -91,7 +91,9 @@ test('A-220: a report header states its period in dates a reader recognises', as
   expect(['en-US', 'en-GB', 'he-IL', 'de-DE', 'fr-FR', 'es-ES', 'it-IT', 'nl-NL', 'de-CH', 'en-IN', 'ja-JP']).toContain(locale);
   expect(text).toMatch(/[A-Za-z\u0590-\u05FF]{3,}/);
   expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}/);
-  expect(text).toMatch(/–|\bbefore\b|until|from/);
+  // a year is always part of it; a one-day period (the 1st of a month) is written once, so no dash
+  // is required
+  expect(text).toMatch(/(19|20)\d{2}/);
   expect(text).not.toContain('Invalid Date');
   expect(text).not.toContain('NaN');
 
