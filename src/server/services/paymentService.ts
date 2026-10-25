@@ -1,19 +1,19 @@
 import { rateUsedFor, rateUsedId, type RateUsed } from '../../lib/rateUsed';
 import { minorUnitRate } from '../../lib/currencyMinorUnits';
 import { createHash } from 'node:crypto';
-import { ledgerCreate, ledgerMark } from './ledgerDoor';
+import { ledgerCreate } from './ledgerDoor';
 import { deriveScopedOperationKey } from '../utils/idempotency';
 import { isWithholdingAccount } from '../../lib/tax/withholding';
 import { calculateAmountDue, settledStatus } from '../../lib/documentMath';
 import { writeServerAuditLog } from './auditLogService';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import type { ChartAccount } from '../../types';
-import { assertPostingOpen, postingLock, workspaceRole } from '../../lib/periodLock';
-import { formatCurrency, formatTzDate } from '../../lib/utils';
+import { assertPostingOpen, workspaceRole } from '../../lib/periodLock';
+import { formatCurrency } from '../../lib/utils';
 import { allocateInTransaction } from './numberingService';
 import { advanceAccount } from '../../lib/advancePayments';
 import type { DocumentReference, Firestore, Transaction } from '../db/firestore';
-import { ALLOCATION_OPERATIONS, allocationLedgerReady, assertApplicationDate, liveStoredRowsOfSource, recordAllocation, reverseAllocation, splitAllocations, type AllocationSide } from './allocationLedger';
+import { ALLOCATION_OPERATIONS, allocationLedgerReady, assertApplicationDate, recordAllocation, splitAllocations, type AllocationSide } from './allocationLedger';
 import { allocateCents, spreadLabels, type LineAccountWeight } from '../../kernel/templates/TransactionTemplates';
 
 export interface CreatePaymentPayload {
@@ -625,140 +625,4 @@ export async function applyUnappliedPayment(db: Firestore, input: {
 
 function applyResult(paymentId: string, appliedCents: number, unappliedCents: number, transactionId: string | null) {
   return { paymentId, appliedCents, unappliedCents, transactionId };
-}
-
-type StoredEntry = {
-  id: string; date?: string; status?: string; reversalEventId?: string; description?: string; currency?: string; exchangeRate?: number;
-  totalAmountCents?: number; lines: Array<Record<string, unknown>>; metadata?: { type?: string; isReversal?: boolean; reversesTxId?: string; reversedTransactionId?: string };
-};
-const DAY = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
-const laterOf = (a: string, b: string) => (a > b ? a : b);
-
-/**
- * EG-2 step 4: void a payment on the server, in one database transaction. Its GL entries (the payment posting,
- * with any realized FX line, and every `payment-application` entry of it) get reversing entries, each dated
- * max(void date, the entry's date); each live payment-ledger row of it gets a `reversal` row through
- * allocationLedger (nothing deleted); each document's amountPaidCents / settledByRecordsCents go down by what
- * this payment put on it and its status is re-derived; the payment is `void` with nothing unapplied.
- * The void date defaults to the payment's date while open, else today (postingCore's reversalDate rule); a
- * void date in a locked period is refused (409). A payment in a bank deposit is refused (409). Voiding a
- * void payment posts nothing and returns the first result (`replayed: true`).
- */
-export async function voidPayment(db: Firestore, input: { workspaceId: string; uid: string; paymentId: string; date?: string; reason?: string }) {
-  const ledgerReady = await allocationLedgerReady(db);
-  return db.runTransaction(async (tx) => {
-    const { workspaceId, uid, paymentId } = input;
-    const wsSnap = await tx.get(db.collection('workspaces').doc(workspaceId));
-    if (!wsSnap.exists) throw new PaymentApplyError(404, 'Workspace not found');
-    const wsData = wsSnap.data() || {};
-    if (!['owner', 'accountant', 'bookkeeper'].includes(workspaceRole(wsData, uid))) throw new PaymentApplyError(403, 'Only owners, accountants and bookkeepers void payments');
-    const paymentRef = db.collection('payments').doc(paymentId);
-    const payment = (await tx.get(paymentRef)).data();
-    if (!payment || payment.workspaceId !== workspaceId) throw new PaymentApplyError(404, 'Payment not found');
-    if (payment.status === 'void') {
-      // a retry: nothing more is posted
-      return { ...(payment.voidResult as Record<string, unknown> || { paymentId, transactionIds: [], reversedAllocationIds: [], documents: [] }), replayed: true } as VoidPaymentResult & { replayed: boolean };
-    }
-    if (payment.depositTransactionId) throw new PaymentApplyError(409, 'The payment is in a bank deposit; undo the deposit first');
-
-    const paymentDate = String(payment.date || payment.paymentDate || '').slice(0, 10);
-    const today = formatTzDate(new Date(), typeof wsData.timezone === 'string' ? wsData.timezone : 'UTC');
-    const date = input.date || (paymentDate && !postingLock(paymentDate, wsData as never, uid) ? paymentDate : today);
-    if (!DAY.test(date)) throw new PaymentApplyError(400, 'Date must be YYYY-MM-DD');
-    if (paymentDate && date < paymentDate) throw new PaymentApplyError(409, `The void date ${date} is before the payment's date ${paymentDate}`);
-    try {
-      assertPostingOpen(date, wsData as never, uid);
-    } catch (err) {
-      throw new PaymentApplyError(409, err instanceof Error ? err.message : String(err));
-    }
-
-    // reads, all before any write: the payment's entries, its rows, its documents
-    const entries = (await tx.get(db.collection('transactions').where('workspaceId', '==', workspaceId).where('metadata.paymentId', '==', paymentId))).docs
-      .map(d => ({ ...d.data(), id: d.id }) as StoredEntry);
-    const reversedIds = new Set(entries.filter(e => e.metadata?.isReversal || e.metadata?.reversesTxId).map(e => String(e.metadata?.reversesTxId || e.metadata?.reversedTransactionId)));
-    const toReverse = entries
-      .filter(e => ['payment-posting', 'payment-application'].includes(String(e.metadata?.type)) || (!e.metadata?.type && !e.metadata?.isReversal))
-      .filter(e => !e.metadata?.isReversal && !e.metadata?.reversesTxId && !e.reversalEventId && !reversedIds.has(String(e.id)) && e.status !== 'void')
-      .sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.id).localeCompare(String(b.id)));
-    const rows = ledgerReady ? await liveStoredRowsOfSource(db, tx, workspaceId, 'payment', paymentId) : [];
-
-    const received = payment.direction === 'received';
-    const perDoc = new Map<string, { documentType: 'invoice' | 'bill'; cents: number }>();
-    for (const a of (payment.allocations || []) as Array<{ documentId: string; documentType: 'invoice' | 'bill'; amountCents: number }>) {
-      const prev = perDoc.get(a.documentId);
-      perDoc.set(a.documentId, { documentType: a.documentType, cents: (prev?.cents || 0) + (Number(a.amountCents) || 0) });
-    }
-    const docUpdates: Array<{ ref: DocumentReference; updates: Record<string, unknown>; documentId: string; amountPaidCents: number; status: string }> = [];
-    for (const [documentId, { documentType, cents }] of perDoc) {
-      const ref = db.collection(documentType === 'invoice' ? 'invoices' : 'bills').doc(documentId);
-      const doc = (await tx.get(ref)).data();
-      if (!doc || doc.workspaceId !== workspaceId) continue; // a deleted document: nothing to restore
-      const paid = Math.max(0, (Number(doc.amountPaidCents) || 0) - cents);
-      const overdue = doc.dueDate && String(doc.dueDate).slice(0, 10) < today;
-      const status = doc.status === 'void' ? 'void'
-        : paid > 0 ? settledStatus(doc, paid)
-        : overdue ? 'overdue' : documentType === 'invoice' ? 'sent' : 'approved';
-      docUpdates.push({ ref, documentId, amountPaidCents: paid, status, updates: {
-        amountPaidCents: paid,
-        settledByRecordsCents: Math.max(0, (Number(doc.settledByRecordsCents) || 0) - cents),
-        status,
-        updatedAt: new Date().toISOString(),
-      } });
-    }
-
-    const reason = String(input.reason || '').trim().slice(0, 300);
-    const { TransactionValidator } = await import('../../kernel/validation/TransactionValidator');
-    const reversals: Array<Record<string, unknown>> = [];
-    for (const e of toReverse) {
-      const description = `Void of payment ${payment.number || paymentId}${reason ? `: ${reason}` : ''}`;
-      const prepared = await TransactionValidator.validateAndPrepare(
-        {
-          id: db.collection('transactions').doc().id, workspaceId, uid, date: laterOf(date, String(e.date || date).slice(0, 10)), description,
-          currency: e.currency || wsData.currency || 'USD', exchangeRate: e.exchangeRate || 1, status: 'completed', type: 'actual',
-          totalAmountCents: Number(e.totalAmountCents) || 0,
-          metadata: { paymentId, type: 'payment-reversal', reversesTxId: e.id, isReversal: true, reversesType: e.metadata?.type || null },
-          lines: (e.lines || []).map(l => ({ ...l, amountCents: -(Number(l.amountCents) || 0), description: `Reversal: ${l.description || e.description || ''}` })),
-        },
-        { workspaceId, user: { uid }, wsData }, undefined, tx,
-      ).catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : String(err);
-        if (/Period Locked/i.test(message)) throw new PaymentApplyError(409, message);
-        throw err;
-      }) as unknown as Record<string, unknown>;
-      reversals.push(prepared);
-    }
-
-    // writes
-    const now = new Date().toISOString();
-    reversals.forEach((r, i) => {
-      ledgerCreate(tx, db.collection('transactions').doc(String(r.id)), { ...r, createdAt: now, updatedAt: now });
-      ledgerMark(tx, db.collection('transactions').doc(String(toReverse[i].id)), { reversalEventId: r.id, updatedAt: now });
-    });
-    const reversalOf = new Map(toReverse.map((e, i) => [String(e.id), String(reversals[i].id)]));
-    const mainReversal = reversals.find((_, i) => toReverse[i].metadata?.type === 'payment-posting') || reversals[0];
-    const reversedAllocationIds = rows.map(row => reverseAllocation(db, tx, row, date, {
-      createdBy: uid,
-      transactionId: reversalOf.get(String(row.data.transactionId)) || (mainReversal ? String(mainReversal.id) : null),
-      reason: reason || 'payment voided',
-    }));
-    for (const u of docUpdates) tx.update(u.ref, u.updates);
-    const result: VoidPaymentResult = {
-      paymentId, date, transactionIds: reversals.map(r => String(r.id)), reversedAllocationIds,
-      documents: docUpdates.map(u => ({ documentId: u.documentId, amountPaidCents: u.amountPaidCents, status: u.status })),
-    };
-    tx.update(paymentRef, { status: 'void', unappliedCents: 0, voidedAt: now, voidDate: date, voidReason: reason || null, voidedBy: uid, voidResult: result, updatedAt: now });
-    await writeServerAuditLog({
-      workspaceId, uid, action: 'PAYMENT_VOIDED', entityType: 'payment', entityId: paymentId,
-      details: { description: `Payment ${payment.number || paymentId} voided on ${date}${received ? '' : ' (payment made)'}`, transactionIds: result.transactionIds, documents: result.documents },
-    }, { db, tx });
-    return { ...result, replayed: false };
-  });
-}
-
-export interface VoidPaymentResult {
-  paymentId: string;
-  date?: string;
-  transactionIds: string[];
-  reversedAllocationIds: string[];
-  documents: Array<{ documentId: string; amountPaidCents: number; status: string }>;
 }
