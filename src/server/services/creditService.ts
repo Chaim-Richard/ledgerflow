@@ -9,18 +9,22 @@ import { lockMessage, postingLock } from '../../lib/periodLock';
 import { formatTzDate } from '../../lib/utils';
 import { createHash } from 'crypto';
 import { deriveScopedOperationKey } from '../utils/idempotency';
-import { ALLOCATION_OPERATIONS, AllocationError, allocationLedgerReady, assertApplicationDate, baseFigures, recordAllocation, type AllocationSide } from './allocationLedger';
+import { ALLOCATION_OPERATIONS, AllocationError, allocationId, allocationLedgerReady, assertApplicationDate, baseFigures, recordAllocation, type AllocationSide, type NewAllocation } from './allocationLedger';
 
 /**
  * Customer credit notes and vendor credits after they are issued:
- * - apply: settle an open invoice (bill) with the credit. No ledger entry: issuing the credit
- *   already reduced receivables (payables); applying only links the two documents.
+ * - apply: settle an open invoice (bill) with the credit. Issuing the credit already reduced receivables
+ *   (payables); applying links the two documents and, only when the credit's rate differs from the document's,
+ *   posts a small `credit-application-fx` entry (EG-2).
  * - refund: pay the credit out (customer) or receive it back (vendor): DR A/R, CR Cash
  *   (customer) or DR Cash, CR A/P (vendor), and lower what is left on the credit.
  * Each runs in one database transaction.
  * EG-2 step 2: each application is a `credit` payment-ledger row (source = the credit, dated the application
- * date, cleared at the document's rate and settled at the credit's). The small `credit-application-fx` entry
- * for credits at another rate than the document is not posted yet: the row records the difference.
+ * date, cleared at the document's rate and settled at the credit's). When the row's realized FX is not zero, a
+ * `credit-application-fx` entry in the same transaction moves it between the control account (A/R or A/P) and the
+ * exchange gain/loss account, so the control account clears to the document's booked base; the row's
+ * `transactionId` / `fxLineIndex` point at it. Its id derives from the row id, so a retry cannot post it twice.
+ * An applied credit can't be voided (creditPosting.ts), so there is no undo path to reverse it yet.
  */
 
 export class CreditError extends Error {
@@ -56,23 +60,89 @@ const rateOf = (r: DocumentData, baseCurrency: string) =>
 
 const todayIn = (workspace: DocumentData) => formatTzDate(new Date(), typeof workspace.timezone === 'string' ? workspace.timezone : 'UTC');
 
-/** Stages the `credit` row of one application (EG-2). */
-function recordCreditRow(db: Firestore, t: Parameters<typeof recordAllocation>[1], kind: CreditKind, a: {
+type CreditRowArgs = {
   workspaceId: string; workspace: DocumentData; creditId: string; credit: DocumentData; documentId: string; document: DocumentData;
   amountCents: number; dueCents: number; date: string; operationId: string; uid: string;
-}) {
+};
+
+/** The `credit` row of one application (EG-2), before it is staged. */
+function creditRowOf(kind: CreditKind, a: CreditRowArgs): NewAllocation {
   const side = SIDES[kind];
   const baseCurrency = String(a.workspace.currency || 'USD');
   const currency = String(a.document.currency || baseCurrency);
   const documentRate = rateOf(a.document, baseCurrency);
   const settlementRate = rateOf(a.credit, baseCurrency);
-  recordAllocation(db, t, {
+  return {
     workspaceId: a.workspaceId, side: side.side as AllocationSide, partyId: (a.document[side.party] as string) || null,
     documentType: side.documentType, documentId: a.documentId, kind: 'credit', sourceType: side.sourceType, sourceId: a.creditId,
     operationId: a.operationId, date: a.date, amountCents: a.amountCents, currency, documentRate, settlementRate,
     ...baseFigures(side.side as AllocationSide, a.amountCents, currency, baseCurrency, documentRate, settlementRate),
     transactionId: null, fxLineIndex: null, createdBy: a.uid,
-  }, { dueCents: a.dueCents });
+  };
+}
+
+type Accounts = Array<ChartAccount & { id: string }>;
+type Reads = { get: (q: never) => Promise<{ docs: Array<{ id: string; data: () => DocumentData }> }> };
+
+/** The workspace's chart, read inside the transaction (before any write), only when an entry is needed. */
+async function chartOf(db: Firestore, t: Reads, workspaceId: string): Promise<Accounts> {
+  const snap = await t.get(db.collection('chartAccounts').where('workspaceId', '==', workspaceId) as never);
+  return snap.docs.map(d => ({ ...(d.data() as ChartAccount), id: d.id }));
+}
+
+/**
+ * The `credit-application-fx` entry of one row with realized FX, in base currency. Accounts and signs as payment FX
+ * (paymentService): the control account is the document's (else the workspace mapping, else the chart's first with
+ * that role), the FX account the first exchange gain/loss account. With fx side-normalized (gain > 0): the control
+ * line is +fx (debit A/R by a gain; credit A/P by a loss), the FX line −fx (a gain is a credit, a loss a debit).
+ */
+function creditFxEntry(db: Firestore, kind: CreditKind, row: NewAllocation, a: CreditRowArgs, accounts: Accounts) {
+  const side = SIDES[kind];
+  const fx = row.realizedFxCents;
+  const documentControl = a.document[kind === 'customer' ? 'arAccountId' : 'apAccountId'];
+  const mappedId = a.workspace.defaultAccountMappings?.[side.control];
+  const control = accounts.find(x => x.id === documentControl && !x.isArchived) || accounts.find(x => x.id === mappedId) || accounts.find(x => !x.isArchived && resolveAccountRole(x) === side.control);
+  if (!control) throw new CreditError(400, `Add an ${side.control === 'ar' ? 'Accounts Receivable' : 'Accounts Payable'} account first`);
+  const fxAccount = accounts.find(x => !x.isArchived && (resolveAccountRole(x) === 'fx_rounding' || /exchange|fx/i.test(String(x.name || ''))) && ['income', 'expense', 'revenue'].includes(String(x.type).toLowerCase()));
+  if (!fxAccount) throw new CreditError(400, 'Add an exchange gain/loss account (category "Rounding Differences") before applying a credit at a different rate');
+  const allocation = allocationId(row.kind, row.operationId, row.sourceId, row.documentId);
+  const label = `${side.label} ${a.credit.number || a.creditId} applied to ${side.documentLabel} ${a.document.number || a.documentId}`;
+  const gain = fx > 0;
+  const lines = [
+    { accountId: control.id, accountName: control.name, amountCents: fx, description: label },
+    { accountId: fxAccount.id, accountName: fxAccount.name, amountCents: -fx, description: `Realized exchange ${gain ? 'gain' : 'loss'}: ${label}` },
+  ];
+  const ref = db.collection('transactions').doc(`cafx-${allocation}`);
+  return {
+    ref, fxLineIndex: 1,
+    entry: {
+      id: ref.id, uid: a.uid, workspaceId: a.workspaceId, date: a.date, description: `Exchange difference: ${label}`,
+      totalAmountCents: Math.abs(fx), currency: String(a.workspace.currency || 'USD'), exchangeRate: 1, status: 'completed', type: 'actual',
+      createdAt: new Date().toISOString(),
+      metadata: {
+        type: 'credit-application-fx', allocationId: allocation, creditId: a.creditId, creditKind: kind, documentId: a.documentId,
+        documentType: side.documentType, [side.party]: a.document[side.party] || null, realizedFxCents: fx,
+        documentCurrency: row.currency, documentAmountCents: row.amountCents, documentExchangeRate: row.documentRate, creditExchangeRate: row.settlementRate,
+      },
+      lines,
+    },
+  };
+}
+
+/** Stages the `credit` row and, when its FX is not zero, its `credit-application-fx` entry (EG-2). */
+function stageCreditRow(db: Firestore, t: Parameters<typeof recordAllocation>[1] & Parameters<typeof ledgerCreate>[0], kind: CreditKind, a: CreditRowArgs, accounts: Accounts | null): string | null {
+  const row = creditRowOf(kind, a);
+  let transactionId: string | null = null;
+  if (row.realizedFxCents !== 0) {
+    if (!accounts) throw new Error('credit-application-fx: the chart was not read');
+    const fx = creditFxEntry(db, kind, row, a, accounts);
+    ledgerCreate(t, fx.ref, fx.entry);
+    transactionId = fx.ref.id;
+    row.transactionId = transactionId;
+    row.fxLineIndex = fx.fxLineIndex;
+  }
+  recordAllocation(db, t, row, { dueCents: a.dueCents });
+  return transactionId;
 }
 
 function creditStatus(remaining: number): 'applied' | 'partially_applied' {
@@ -138,6 +208,14 @@ export async function applyCredit(db: Firestore, input: ApplyCreditInput) {
       }
     }
 
+    const operationId = ledgerReady ? input.operationId || db.collection(ALLOCATION_OPERATIONS).doc().id : '';
+    const rowArgs: CreditRowArgs = {
+      workspaceId: input.workspaceId, workspace, creditId: input.creditId, credit, documentId: input.documentId, document,
+      amountCents, dueCents: due, date, operationId, uid: input.uid || 'system',
+    };
+    // the chart is read only when an FX entry is due, and before any write
+    const accounts = ledgerReady && creditRowOf(input.kind, rowArgs).realizedFxCents !== 0 ? await chartOf(db, t, input.workspaceId) : null;
+
     const newRemaining = remaining - amountCents;
     const newPaid = (document.amountPaidCents || 0) + amountCents;
     const now = new Date().toISOString();
@@ -148,13 +226,10 @@ export async function applyCredit(db: Firestore, input: ApplyCreditInput) {
       status: settledStatus(document, newPaid),
       updatedAt: now,
     });
-    const result = { creditRemainingCents: newRemaining, documentAmountDueCents: due - amountCents };
+    const result: { creditRemainingCents: number; documentAmountDueCents: number; fxTransactionId?: string } = { creditRemainingCents: newRemaining, documentAmountDueCents: due - amountCents };
     if (ledgerReady) {
-      const operationId = input.operationId || db.collection(ALLOCATION_OPERATIONS).doc().id;
-      recordCreditRow(db, t, input.kind, {
-        workspaceId: input.workspaceId, workspace, creditId: input.creditId, credit, documentId: input.documentId, document,
-        amountCents, dueCents: due, date, operationId, uid: input.uid || 'system',
-      });
+      const fxTransactionId = stageCreditRow(db, t, input.kind, rowArgs, accounts);
+      if (fxTransactionId) result.fxTransactionId = fxTransactionId;
       if (operationRef) t.set(operationRef, { id: operationRef.id, workspaceId: input.workspaceId, actor: input.uid || null, operationType: 'CREDIT_APPLY', creditId: input.creditId, requestHash, result, createdAt: now });
     }
     return result;
@@ -219,6 +294,22 @@ export async function autoApplyCredits(db: Firestore, input: { workspaceId: stri
     // a bill without `date` is dated by `issueDate`, as on the manual path
     const datable = (r: Row) => { const d = r.date || r.issueDate; return !d || String(d).slice(0, 10) <= date; };
     const applications = planCreditApplications(input.kind, ledgerReady ? credits.filter(c => datable(c)) : credits, ledgerReady ? documents.filter(d => datable(d)) : documents);
+    // EG-2: the rows and their FX entries, worked out before any write (the chart is read only when one is due)
+    const operationId = db.collection(ALLOCATION_OPERATIONS).doc().id;
+    const rowArgs: CreditRowArgs[] = [];
+    if (ledgerReady) {
+      const dueLeft = new Map(documents.map(d => [d.id, calculateAmountDue(d)]));
+      for (const a of applications) {
+        const due = dueLeft.get(a.documentId) || 0;
+        rowArgs.push({
+          workspaceId: input.workspaceId, workspace, creditId: a.creditId, credit: credits.find(c => c.id === a.creditId)!,
+          documentId: a.documentId, document: documents.find(d => d.id === a.documentId)!, amountCents: a.amountCents, dueCents: due,
+          date, operationId, uid: input.uid || 'system',
+        });
+        dueLeft.set(a.documentId, due - a.amountCents);
+      }
+    }
+    const accounts = rowArgs.some(r => creditRowOf(input.kind, r).realizedFxCents !== 0) ? await chartOf(db, t, input.workspaceId) : null;
     const now = new Date().toISOString();
     const creditUsed = new Map<string, number>();
     const documentPaid = new Map<string, number>();
@@ -240,21 +331,9 @@ export async function autoApplyCredits(db: Firestore, input: { workspaceId: stri
         updatedAt: now,
       });
     }
-    if (ledgerReady && applications.length) {
-      // one operation per request; two credits to one invoice are two rows (sourceId differs)
-      const operationId = db.collection(ALLOCATION_OPERATIONS).doc().id;
-      const dueLeft = new Map(documents.map(d => [d.id, calculateAmountDue(d)]));
-      for (const a of applications) {
-        const due = dueLeft.get(a.documentId) || 0;
-        recordCreditRow(db, t, input.kind, {
-          workspaceId: input.workspaceId, workspace, creditId: a.creditId, credit: credits.find(c => c.id === a.creditId)!,
-          documentId: a.documentId, document: documents.find(d => d.id === a.documentId)!, amountCents: a.amountCents, dueCents: due,
-          date, operationId, uid: input.uid || 'system',
-        });
-        dueLeft.set(a.documentId, due - a.amountCents);
-      }
-    }
-    return { applications, totalCents: applications.reduce((sum, a) => sum + a.amountCents, 0) };
+    // one operation per request; two credits to one invoice are two rows (sourceId differs)
+    const fxTransactionIds = rowArgs.map(r => stageCreditRow(db, t, input.kind, r, accounts)).filter((x): x is string => Boolean(x));
+    return { applications, totalCents: applications.reduce((sum, a) => sum + a.amountCents, 0), fxTransactionIds };
   });
 }
 
