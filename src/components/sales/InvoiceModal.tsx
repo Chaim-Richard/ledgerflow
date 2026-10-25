@@ -41,6 +41,19 @@ interface InvoiceModalProps {
 /** What a sale receipt adds to the saved invoice: where the money went and how (not stored on the invoice). */
 export interface ReceiptPayment { cashAccountId: string; method: string }
 
+function createInvoiceFormState(initialInvoice?: Partial<Invoice>): Partial<Invoice> {
+  const today = format(new Date(), 'yyyy-MM-dd');
+  return {
+    number: `INV-${Date.now().toString().slice(-6)}`,
+    date: today,
+    status: 'pending',
+    amountCents: 0,
+    ...initialInvoice,
+    // Older records may predate dueDate. Match aging's fallback instead of blocking an unrelated edit.
+    dueDate: initialInvoice?.dueDate || initialInvoice?.date || today,
+  };
+}
+
 export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], accounts = [], initialInvoice, receipt = false }: InvoiceModalProps) {
   // Ensure we have arrays even if props were passed as null
   // archived contacts aren't offered for new documents; one already on this document stays (I-22)
@@ -59,14 +72,7 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   const [receiptMethod, setReceiptMethod] = useState('card');
   const paidIntoId = receiptAccountId || (paidIntoChoices.find(isUndepositedFundsAccount) || paidIntoChoices[0])?.id || '';
 
-  const [invoice, setInvoice] = useState<Partial<Invoice>>(() => ({
-    number: `INV-${Date.now().toString().slice(-6)}`,
-    date: format(new Date(), 'yyyy-MM-dd'),
-    dueDate: format(new Date(), 'yyyy-MM-dd'),
-    status: 'pending',
-    amountCents: 0,
-    ...initialInvoice,
-  }));
+  const [invoice, setInvoice] = useState<Partial<Invoice>>(() => createInvoiceFormState(initialInvoice));
 
   const [items, setItems] = useState<InvoiceEditorLine[]>([
     { id: crypto.randomUUID(), description: '', quantity: 1, rateCents: 0, amountCents: 0, accountId: '' }
@@ -76,8 +82,8 @@ export default function InvoiceModal({ isOpen, onClose, onSave, customers = [], 
   if (isOpen && initialInvoice && initialInvoice !== filledFrom) {
     // Copy a changed pre-filled invoice once per opening (adjusting state during render).
     setFilledFrom(initialInvoice);
-    // an existing invoice replaces the form; a new one (e.g. for a customer) fills in the defaults
-    setInvoice(prev => (initialInvoice.id ? initialInvoice : { ...prev, ...initialInvoice }));
+    // Replace an existing invoice without leaking the previous record's optional fields.
+    setInvoice(prev => (initialInvoice.id ? createInvoiceFormState(initialInvoice) : { ...prev, ...initialInvoice }));
     if (initialInvoice.items && initialInvoice.items.length > 0) {
       setItems(initialInvoice.items);
     }

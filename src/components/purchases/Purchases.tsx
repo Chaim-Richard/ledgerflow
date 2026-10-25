@@ -446,17 +446,10 @@ export default function Purchases() {
                   );
                 })}
 
-                {filteredBills.length === 0 && (
+                {loading && filteredBills.length === 0 && (
                   <tr>
                     <td colSpan={8} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
-                      {loading ? <LoadingState what="bills" /> : (
-                        <EmptyState
-                          title={searchTerm ? 'No bills match your search' : 'No bills yet'}
-                          description={searchTerm ? 'Try another vendor, number, or clear the search.' : 'Record your first bill to track what the business owes.'}
-                          actionLabel={searchTerm ? 'Clear search' : 'Record first bill'}
-                          onAction={() => searchTerm ? setSearchTerm('') : setIsBillModalOpen(true)}
-                        />
-                      )}
+                      <LoadingState what="bills" />
                     </td>
                   </tr>
                 )}
@@ -517,22 +510,35 @@ export default function Purchases() {
                   </tr>
                 ))}
 
-                {filteredVendors.length === 0 && (
+                {loading && filteredVendors.length === 0 && (
                   <tr>
                     <td colSpan={canEditContacts ? 6 : 5} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
-                      {loading ? <LoadingState what="vendors" /> : (
-                        <EmptyState
-                          title={searchTerm ? 'No vendors match your search' : 'No vendors yet'}
-                          description={searchTerm ? 'Try another name or clear the search.' : 'Add a vendor before recording their first bill.'}
-                          actionLabel={searchTerm ? 'Clear search' : 'Add first vendor'}
-                          onAction={() => searchTerm ? setSearchTerm('') : setIsVendorModalOpen(true)}
-                        />
-                      )}
+                      <LoadingState what="vendors" />
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+        {activeSubTab === 'bills' && !loading && filteredBills.length === 0 && (
+          <div className="p-3 sm:p-8">
+            <EmptyState
+              title={searchTerm ? 'No bills match your search' : 'No bills yet'}
+              description={searchTerm ? 'Try another vendor, number, or clear the search.' : 'Record your first bill to track what the business owes.'}
+              actionLabel={searchTerm ? 'Clear search' : 'Record first bill'}
+              onAction={() => searchTerm ? setSearchTerm('') : setIsBillModalOpen(true)}
+            />
+          </div>
+        )}
+        {activeSubTab === 'vendors' && !loading && filteredVendors.length === 0 && (
+          <div className="p-3 sm:p-8">
+            <EmptyState
+              title={searchTerm ? 'No vendors match your search' : 'No vendors yet'}
+              description={searchTerm ? 'Try another name or clear the search.' : 'Add a vendor before recording their first bill.'}
+              actionLabel={searchTerm ? 'Clear search' : 'Add first vendor'}
+              onAction={() => searchTerm ? setSearchTerm('') : setIsVendorModalOpen(true)}
+            />
           </div>
         )}
       </div>

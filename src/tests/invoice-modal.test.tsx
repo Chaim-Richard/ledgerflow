@@ -122,6 +122,17 @@ describe('Invoice dialog', () => {
     assert.equal(saved[0].amountCents, 5000);
   });
 
+  test('editing a legacy invoice without a due date uses its invoice date', async () => {
+    const saved = setup({
+      id: 'legacy', number: 'INV-6', customerId: 'c1', customerName: 'Acme Ltd', status: 'sent', date: '2026-05-01',
+      items: [{ id: 'l1', description: 'Work', quantity: 1, rateCents: 5000, amountCents: 5000, accountId: 'rev' }],
+    });
+    assert.equal(input('Due Date').value, '2026-05-01');
+    await act(async () => { fireEvent.click(screen.getByText('Save & Close')); });
+    await waitFor(() => assert.equal(saved.length, 1));
+    assert.equal(saved[0].dueDate, '2026-05-01');
+  });
+
   test('a new invoice in a euro workspace is in euros; nothing is saved without a customer', async () => {
     useAuthStore.setState({ workspaces: [{ id: 'w1', name: 'W', currency: 'EUR' } as Workspace] });
     const saved = setup();
