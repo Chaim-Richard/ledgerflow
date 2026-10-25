@@ -18,6 +18,11 @@ export async function postPaymentLedger(
   context?: LedgerPostContext
 ) {
   if (!workspaceId || !paymentId) return;
+  // EG-2: a void is the server's job (it reverses the entries AND makes the documents due again).
+  // The old client branch only posted reversals and left the documents marked as paid.
+  if (paymentData.status === 'void') {
+    throw new Error(`Voiding a payment is done on the server: POST /api/v1/payments/${paymentId}/void with { workspaceId, date?, reason? }.`);
+  }
 
   const paymentDate = paymentData.date || postingToday(context);
   verifyLockDate(paymentDate, context);
@@ -85,13 +90,6 @@ export async function postPaymentLedger(
       },
       lines: TransactionTemplates.buildReversalLines(prevTx.lines || [], prevTx.description)
     });
-  }
-
-  if (paymentData.status === 'void') {
-    if (txsToPost.length > 0) {
-      await postTxsServerApi(txsToPost, workspaceId, entityMutation, context);
-    }
-    return;
   }
 
   const rawAmount = paymentData.amountCents || 0;
