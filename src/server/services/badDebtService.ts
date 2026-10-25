@@ -9,6 +9,7 @@ import { workspaceRole } from '../../lib/periodLock';
 import { formatTzDate } from '../../lib/utils';
 import type { ChartAccount } from '../../types';
 import { writeServerAuditLog } from './auditLogService';
+import { allocationLedgerReady, liveStoredRowsOf, recordAllocation, reverseAllocation } from './allocationLedger';
 
 /**
  * Bad debt (K-19). Writing off an invoice posts DR Bad Debt Expense, CR Accounts Receivable for
@@ -17,6 +18,8 @@ import { writeServerAuditLog } from './auditLogService';
  * written off. If the customer pays after all, the write-off is reversed (DR receivables,
  * CR bad debt) and the invoice is open again, ready for the payment. Owner/accountant only; each
  * is one database transaction with the ledger entry, and in the audit log.
+ * EG-2 step 2: a write-off is a `write_off` payment-ledger row (source = the write-off entry, at the invoice's
+ * rate, base = the entry's amount, no FX); the reversal is a `reversal` row of it, never a delete.
  */
 
 export class BadDebtError extends Error {
@@ -74,6 +77,7 @@ async function post(db: Firestore, t: Transaction, input: Input, workspace: Docu
 }
 
 export async function writeOffInvoice(db: Firestore, input: Input & { badDebtAccountId?: string }) {
+  const ledgerReady = await allocationLedgerReady(db);
   return db.runTransaction(async (t) => {
     const { workspace, ref, invoice, date, accounts } = await prepare(db, t, input);
     if (CLOSED.has(String(invoice.status))) throw new BadDebtError(409, `The invoice is ${invoice.status}; only open invoices can be written off`);
@@ -114,6 +118,17 @@ export async function writeOffInvoice(db: Firestore, input: Input & { badDebtAcc
       writtenOffAt: date,
       updatedAt: now,
     });
+    if (ledgerReady) {
+      const currency = String(invoice.currency || workspace.currency || 'USD');
+      recordAllocation(db, t, {
+        workspaceId: input.workspaceId, side: 'receivable', partyId: invoice.customerId || null, documentType: 'invoice', documentId: input.invoiceId,
+        kind: 'write_off', sourceType: 'writeOff', sourceId: ledgerTx.id, operationId: ledgerTx.id, date,
+        amountCents: dueCents, currency, documentRate: rate, settlementRate: rate,
+        // the entry's own figure: cleared = settled = what left A/R
+        baseClearedCents: baseCents, baseSettledCents: baseCents, realizedFxCents: 0,
+        transactionId: ledgerTx.id, fxLineIndex: null, createdBy: input.uid,
+      }, { dueCents });
+    }
     await writeServerAuditLog({
       workspaceId: input.workspaceId, uid: input.uid, email: input.email, action: 'INVOICE_WRITTEN_OFF', entityType: 'invoice', entityId: input.invoiceId,
       details: { description, amountCents: dueCents, baseCents, transactionId: ledgerTx.id },
@@ -123,12 +138,17 @@ export async function writeOffInvoice(db: Firestore, input: Input & { badDebtAcc
 }
 
 export async function reverseWriteOff(db: Firestore, input: Input) {
+  const ledgerReady = await allocationLedgerReady(db);
   return db.runTransaction(async (t) => {
     const { workspace, ref, invoice, date } = await prepare(db, t, input);
     const writtenOff = Number(invoice.writtenOffCents) || 0;
     if (!writtenOff || !invoice.writeOffTransactionId) throw new BadDebtError(409, 'This invoice is not written off');
     const original = (await t.get(db.collection('transactions').doc(String(invoice.writeOffTransactionId)))).data();
     if (!original || original.workspaceId !== input.workspaceId) throw new BadDebtError(409, 'The write-off entry was not found');
+    // the write-off's live row (none for one made before the payment ledger): read before any write
+    const rows = ledgerReady
+      ? (await liveStoredRowsOf(db, t, input.workspaceId, input.invoiceId)).filter(r => r.data.kind === 'write_off' && r.data.sourceId === invoice.writeOffTransactionId)
+      : [];
 
     const reason = String(input.reason || '').trim().slice(0, 300);
     const description = `Bad debt recovered: invoice ${invoice.number || input.invoiceId}${reason ? `: ${reason}` : ''}`;
@@ -152,6 +172,7 @@ export async function reverseWriteOff(db: Firestore, input: Input) {
       writeOffReversalTransactionId: ledgerTx.id,
       updatedAt: new Date().toISOString(),
     });
+    for (const row of rows) reverseAllocation(db, t, row, date, { createdBy: input.uid, transactionId: ledgerTx.id, reason: reason || 'write-off reversed' });
     await writeServerAuditLog({
       workspaceId: input.workspaceId, uid: input.uid, email: input.email, action: 'INVOICE_WRITE_OFF_REVERSED', entityType: 'invoice', entityId: input.invoiceId,
       details: { description, amountCents: writtenOff, transactionId: ledgerTx.id },

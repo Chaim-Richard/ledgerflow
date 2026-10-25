@@ -2,7 +2,9 @@
  * EG-2: the payment ledger (docs/design/EG-2-payment-ledger.md). One immutable row per settlement of an
  * invoice or bill in `paymentAllocations` (supabase/migrations/20261025010000_payment_allocations.sql), written
  * only here, in the same database transaction as the document update. Step 1: payments and later applications
- * of a payment's unapplied part. `amountPaidCents` keeps its additive update until the cutover after step 3.
+ * of a payment's unapplied part. Step 2: credit notes / vendor credits applied, bad-debt write-offs, and the
+ * reversal of a write-off (a `reversal` row with negated figures; nothing is deleted). `amountPaidCents` keeps
+ * its additive update until the cutover after step 3.
  */
 import { minorUnitRate } from '../../lib/currencyMinorUnits';
 import { allocateCents } from '../../kernel/templates/TransactionTemplates';
@@ -133,6 +135,54 @@ export function recordAllocation(db: Firestore, tx: { create: (ref: never, data:
     ...row, id, reversesAllocationId: null, reversedBy: null, dateSource: 'recorded', backfillRunId: null,
     createdAt: new Date().toISOString(),
   });
+  return id;
+}
+
+/** Base figures of one settlement, rounded as posting rounds (BM-04: the document's minor units → the books'). */
+export function baseFigures(side: AllocationSide, amountCents: number, currency: string, baseCurrency: string, documentRate: number, settlementRate: number) {
+  const baseClearedCents = Math.round(amountCents * minorUnitRate(documentRate, currency, baseCurrency));
+  const baseSettledCents = Math.round(amountCents * minorUnitRate(settlementRate, currency, baseCurrency));
+  return { baseClearedCents, baseSettledCents, realizedFxCents: realizedFxFor(side, baseClearedCents, baseSettledCents) };
+}
+
+export interface StoredAllocation { id: string; data: Record<string, unknown> }
+
+/** A document's live (not reversed, not a reversal) rows as stored, for a reversal; read before any write. */
+export async function liveStoredRowsOf(db: Firestore, tx: Reader, workspaceId: string, documentId: string): Promise<StoredAllocation[]> {
+  const query = db.collection(ALLOCATIONS).where('workspaceId', '==', workspaceId).where('documentId', '==', documentId);
+  const snap = tx ? await tx.get(query as never) : await query.get();
+  return snap.docs.map(d => ({ id: d.id, data: d.data() })).filter(r => r.data.kind !== 'reversal' && !r.data.reversedBy);
+}
+
+/**
+ * Stages the reversal of one row: a new `reversal-{id}` row with the amount and every base figure negated,
+ * dated max(date, the row's date), and `reversedBy` on the original (the only field ever set later).
+ * A second reversal of the same row fails the transaction (the id exists).
+ */
+export function reverseAllocation(
+  db: Firestore,
+  tx: { create: (ref: never, data: Record<string, unknown>) => unknown; update: (ref: never, data: Record<string, unknown>) => unknown },
+  original: StoredAllocation,
+  date: string,
+  opts: { createdBy: string; transactionId: string | null; reason?: string },
+): string {
+  const o = original.data;
+  if (o.kind === 'reversal' || o.reversedBy) throw new AllocationError(409, `Allocation ${original.id} is already reversed`);
+  const id = `reversal-${original.id}`;
+  const rowDate = String(o.date || '').slice(0, 10);
+  const d = String(date).slice(0, 10);
+  const neg = (k: string) => -(Number(o[k]) || 0);
+  tx.create(db.collection(ALLOCATIONS).doc(id) as never, {
+    workspaceId: o.workspaceId, side: o.side, partyId: o.partyId ?? null, documentType: o.documentType, documentId: o.documentId,
+    kind: 'reversal', sourceType: o.sourceType, sourceId: o.sourceId, operationId: o.operationId,
+    date: d > rowDate ? d : rowDate, amountCents: neg('amountCents'), currency: o.currency,
+    documentRate: o.documentRate, settlementRate: o.settlementRate,
+    baseClearedCents: neg('baseClearedCents'), baseSettledCents: neg('baseSettledCents'), realizedFxCents: neg('realizedFxCents'),
+    transactionId: opts.transactionId, fxLineIndex: null, reason: opts.reason || null,
+    id, reversesAllocationId: original.id, reversedBy: null, dateSource: 'recorded', backfillRunId: null,
+    createdBy: opts.createdBy, createdAt: new Date().toISOString(),
+  });
+  tx.update(db.collection(ALLOCATIONS).doc(original.id) as never, { reversedBy: id });
   return id;
 }
 

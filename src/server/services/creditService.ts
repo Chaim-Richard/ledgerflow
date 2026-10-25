@@ -6,6 +6,10 @@ import { resolveAccountRole } from '../../lib/accountUtils';
 import { TransactionValidator } from '../../kernel/validation/TransactionValidator';
 import type { ChartAccount } from '../../types';
 import { lockMessage, postingLock } from '../../lib/periodLock';
+import { formatTzDate } from '../../lib/utils';
+import { createHash } from 'crypto';
+import { deriveScopedOperationKey } from '../utils/idempotency';
+import { ALLOCATION_OPERATIONS, AllocationError, allocationLedgerReady, assertApplicationDate, baseFigures, recordAllocation, type AllocationSide } from './allocationLedger';
 
 /**
  * Customer credit notes and vendor credits after they are issued:
@@ -14,6 +18,9 @@ import { lockMessage, postingLock } from '../../lib/periodLock';
  * - refund: pay the credit out (customer) or receive it back (vendor): DR A/R, CR Cash
  *   (customer) or DR Cash, CR A/P (vendor), and lower what is left on the credit.
  * Each runs in one database transaction.
+ * EG-2 step 2: each application is a `credit` payment-ledger row (source = the credit, dated the application
+ * date, cleared at the document's rate and settled at the credit's). The small `credit-application-fx` entry
+ * for credits at another rate than the document is not posted yet: the row records the difference.
  */
 
 export class CreditError extends Error {
@@ -26,8 +33,8 @@ export class CreditError extends Error {
 export type CreditKind = 'customer' | 'vendor';
 
 const SIDES = {
-  customer: { credits: 'creditNotes', documents: 'invoices', party: 'customerId', control: 'ar', label: 'Credit note', documentLabel: 'invoice' },
-  vendor: { credits: 'vendorCredits', documents: 'bills', party: 'vendorId', control: 'ap', label: 'Vendor credit', documentLabel: 'bill' },
+  customer: { credits: 'creditNotes', documents: 'invoices', party: 'customerId', control: 'ar', label: 'Credit note', documentLabel: 'invoice', side: 'receivable', sourceType: 'creditNote', documentType: 'invoice' },
+  vendor: { credits: 'vendorCredits', documents: 'bills', party: 'vendorId', control: 'ap', label: 'Vendor credit', documentLabel: 'bill', side: 'payable', sourceType: 'vendorCredit', documentType: 'bill' },
 } as const;
 
 const USABLE_CREDIT = new Set(['open', 'partially_applied']);
@@ -44,6 +51,30 @@ function remainingOf(credit: DocumentData): number {
   return typeof credit.remainingCents === 'number' ? credit.remainingCents : credit.amountCents || 0;
 }
 
+const rateOf = (r: DocumentData, baseCurrency: string) =>
+  String(r.currency || baseCurrency) === baseCurrency ? 1 : (typeof r.exchangeRate === 'number' && r.exchangeRate > 0 ? r.exchangeRate : 1);
+
+const todayIn = (workspace: DocumentData) => formatTzDate(new Date(), typeof workspace.timezone === 'string' ? workspace.timezone : 'UTC');
+
+/** Stages the `credit` row of one application (EG-2). */
+function recordCreditRow(db: Firestore, t: Parameters<typeof recordAllocation>[1], kind: CreditKind, a: {
+  workspaceId: string; workspace: DocumentData; creditId: string; credit: DocumentData; documentId: string; document: DocumentData;
+  amountCents: number; dueCents: number; date: string; operationId: string; uid: string;
+}) {
+  const side = SIDES[kind];
+  const baseCurrency = String(a.workspace.currency || 'USD');
+  const currency = String(a.document.currency || baseCurrency);
+  const documentRate = rateOf(a.document, baseCurrency);
+  const settlementRate = rateOf(a.credit, baseCurrency);
+  recordAllocation(db, t, {
+    workspaceId: a.workspaceId, side: side.side as AllocationSide, partyId: (a.document[side.party] as string) || null,
+    documentType: side.documentType, documentId: a.documentId, kind: 'credit', sourceType: side.sourceType, sourceId: a.creditId,
+    operationId: a.operationId, date: a.date, amountCents: a.amountCents, currency, documentRate, settlementRate,
+    ...baseFigures(side.side as AllocationSide, a.amountCents, currency, baseCurrency, documentRate, settlementRate),
+    transactionId: null, fxLineIndex: null, createdBy: a.uid,
+  }, { dueCents: a.dueCents });
+}
+
 function creditStatus(remaining: number): 'applied' | 'partially_applied' {
   return remaining === 0 ? 'applied' : 'partially_applied';
 }
@@ -54,6 +85,12 @@ export interface ApplyCreditInput {
   creditId: string;
   documentId: string;
   amountCents: number;
+  /** who applies it (the payment-ledger row's createdBy) */
+  uid?: string;
+  /** the application date (EG-2), default today in the workspace's timezone */
+  date?: string;
+  /** the client's idempotency key: a retry with the same key writes nothing */
+  operationId?: string;
 }
 
 export async function applyCredit(db: Firestore, input: ApplyCreditInput) {
@@ -61,11 +98,22 @@ export async function applyCredit(db: Firestore, input: ApplyCreditInput) {
   const amountCents = positiveCents(input.amountCents);
   const creditRef = db.collection(side.credits).doc(input.creditId);
   const documentRef = db.collection(side.documents).doc(input.documentId);
+  const workspaceRef = db.collection('workspaces').doc(input.workspaceId);
+  if (input.date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(input.date)) throw new CreditError(400, 'Date must be YYYY-MM-DD');
+  const ledgerReady = await allocationLedgerReady(db);
+  const requestHash = createHash('sha256').update(JSON.stringify({ kind: input.kind, creditId: input.creditId, documentId: input.documentId, amountCents, date: input.date || null })).digest('hex');
 
   return db.runTransaction(async (t) => {
-    const [creditSnap, documentSnap] = await t.getAll(creditRef, documentRef);
+    const operationRef = ledgerReady && input.operationId ? db.collection(ALLOCATION_OPERATIONS).doc(deriveScopedOperationKey(input.workspaceId, 'CREDIT_APPLY', `${input.creditId}:${input.operationId}`)) : null;
+    const [creditSnap, documentSnap, workspaceSnap, operationSnap] = await t.getAll(creditRef, documentRef, workspaceRef, ...(operationRef ? [operationRef] : []));
+    if (operationSnap?.exists) {
+      const previous = operationSnap.data() || {};
+      if (previous.requestHash !== requestHash || previous.actor !== (input.uid || null)) throw new CreditError(409, 'Idempotency key reused for a different application or actor');
+      return { ...(previous.result as { creditRemainingCents: number; documentAmountDueCents: number }), replayed: true };
+    }
     const credit = creditSnap.data();
     const document = documentSnap.data();
+    const workspace = workspaceSnap.data() || {};
     if (!credit || credit.workspaceId !== input.workspaceId) throw new CreditError(404, `${side.label} not found`);
     if (!document || document.workspaceId !== input.workspaceId) throw new CreditError(404, `The ${side.documentLabel} was not found`);
     if (!USABLE_CREDIT.has(credit.status)) throw new CreditError(409, `${side.label} is ${credit.status}; nothing left to apply`);
@@ -78,6 +126,14 @@ export async function applyCredit(db: Firestore, input: ApplyCreditInput) {
     if (due === 0) throw new CreditError(409, `The ${side.documentLabel} is already paid`);
     if (amountCents > remaining) throw new CreditError(400, `Only ${remaining} cents are left on this credit`);
     if (amountCents > due) throw new CreditError(400, `Only ${due} cents are due on this ${side.documentLabel}`);
+    const date = input.date || todayIn(workspace);
+    if (ledgerReady) {
+      try {
+        assertApplicationDate(date, credit.date, document.date || document.issueDate, `the ${side.documentLabel}`);
+      } catch (err) {
+        throw new CreditError(err instanceof AllocationError ? err.status : 409, (err instanceof Error ? err.message : String(err)).replace("the payment's date", "the credit's date"));
+      }
+    }
 
     const newRemaining = remaining - amountCents;
     const newPaid = (document.amountPaidCents || 0) + amountCents;
@@ -89,7 +145,16 @@ export async function applyCredit(db: Firestore, input: ApplyCreditInput) {
       status: settledStatus(document, newPaid),
       updatedAt: now,
     });
-    return { creditRemainingCents: newRemaining, documentAmountDueCents: due - amountCents };
+    const result = { creditRemainingCents: newRemaining, documentAmountDueCents: due - amountCents };
+    if (ledgerReady) {
+      const operationId = input.operationId || db.collection(ALLOCATION_OPERATIONS).doc().id;
+      recordCreditRow(db, t, input.kind, {
+        workspaceId: input.workspaceId, workspace, creditId: input.creditId, credit, documentId: input.documentId, document,
+        amountCents, dueCents: due, date, operationId, uid: input.uid || 'system',
+      });
+      if (operationRef) t.set(operationRef, { id: operationRef.id, workspaceId: input.workspaceId, actor: input.uid || null, operationType: 'CREDIT_APPLY', creditId: input.creditId, requestHash, result, createdAt: now });
+    }
+    return result;
   });
 }
 
@@ -128,9 +193,11 @@ export function planCreditApplications(kind: CreditKind, credits: Row[], documen
 }
 
 /** Applies every open credit it can (of one customer/vendor, or all), in one database transaction. */
-export async function autoApplyCredits(db: Firestore, input: { workspaceId: string; kind: CreditKind; partyId?: string }) {
+export async function autoApplyCredits(db: Firestore, input: { workspaceId: string; kind: CreditKind; partyId?: string; uid?: string }) {
   const side = SIDES[input.kind];
+  const ledgerReady = await allocationLedgerReady(db);
   return db.runTransaction(async (t) => {
+    const workspace = (await t.get(db.collection('workspaces').doc(input.workspaceId))).data() || {};
     let creditQuery = db.collection(side.credits).where('workspaceId', '==', input.workspaceId);
     if (input.partyId) creditQuery = creditQuery.where(side.party, '==', input.partyId);
     const credits: Row[] = (await t.get(creditQuery)).docs.map(d => ({ ...d.data(), id: d.id }) as Row)
@@ -141,7 +208,11 @@ export async function autoApplyCredits(db: Firestore, input: { workspaceId: stri
       const snap = await t.get(db.collection(side.documents).where('workspaceId', '==', input.workspaceId).where(side.party, '==', partyId));
       documents.push(...snap.docs.map(d => ({ ...d.data(), id: d.id }) as Row));
     }
-    const applications = planCreditApplications(input.kind, credits, documents);
+    // EG-2: dated today; an application dated before its credit or document is left for later (not refused:
+    // the rest of the plan still applies)
+    const date = todayIn(workspace);
+    const datable = (r: Row, ...more: Row[]) => [r, ...more].every(x => !x.date || String(x.date).slice(0, 10) <= date);
+    const applications = planCreditApplications(input.kind, ledgerReady ? credits.filter(c => datable(c)) : credits, ledgerReady ? documents.filter(d => datable(d)) : documents);
     const now = new Date().toISOString();
     const creditUsed = new Map<string, number>();
     const documentPaid = new Map<string, number>();
@@ -162,6 +233,20 @@ export async function autoApplyCredits(db: Firestore, input: { workspaceId: stri
         status: settledStatus(document, newPaid),
         updatedAt: now,
       });
+    }
+    if (ledgerReady && applications.length) {
+      // one operation per request; two credits to one invoice are two rows (sourceId differs)
+      const operationId = db.collection(ALLOCATION_OPERATIONS).doc().id;
+      const dueLeft = new Map(documents.map(d => [d.id, calculateAmountDue(d)]));
+      for (const a of applications) {
+        const due = dueLeft.get(a.documentId) || 0;
+        recordCreditRow(db, t, input.kind, {
+          workspaceId: input.workspaceId, workspace, creditId: a.creditId, credit: credits.find(c => c.id === a.creditId)!,
+          documentId: a.documentId, document: documents.find(d => d.id === a.documentId)!, amountCents: a.amountCents, dueCents: due,
+          date, operationId, uid: input.uid || 'system',
+        });
+        dueLeft.set(a.documentId, due - a.amountCents);
+      }
     }
     return { applications, totalCents: applications.reduce((sum, a) => sum + a.amountCents, 0) };
   });
