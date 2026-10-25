@@ -27,6 +27,7 @@ by hand; none are produced by the function under review.
 | [`AF-001-bank-cursor-durability.md`](AF-001-bank-cursor-durability.md) | Plaid cursor vs durable ingestion | Defect confirmed (tracked as issue #151) |
 | [`AF-002-label-cent-reconciliation.md`](AF-002-label-cent-reconciliation.md) | Per-label cent reconciliation (#152 regression) | Fix re-verified; one latent gap |
 | [`AF-010-money-microfunctions.md`](AF-010-money-microfunctions.md) | Allocators, amount parsers, CSV, date/period helpers | 6 findings (2 P2, 4 P3) + clean helpers |
+| [`issue-drafts/`](issue-drafts/README.md) | Ready-to-paste PR/issue/comment text (upstream writes are 403 for this token) | Owner action |
 
 ## Status vocabulary (from the mission)
 
