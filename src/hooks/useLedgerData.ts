@@ -28,6 +28,8 @@ import { LEDGER_COLLECTIONS, keysToStart } from "../lib/ledgerCollections";
 import type { LedgerCollectionSpec, LedgerKey } from "../lib/ledgerCollections";
 import { effectiveLockDate } from '../lib/periodLock';
 
+type LedgerState = ReturnType<typeof useLedgerStore.getState>;
+type AnalyticalPattern = LedgerState['analyticalPatternCache'][string];
 
 export function useLedgerData() {
   const user = useAuthStore(s => s.user);
@@ -200,10 +202,10 @@ export function useLedgerData() {
         const snapRulePatterns = await getDocs(query(collection(db, 'rulePatterns'), ...filter, limit(2000)));
         if (!stillHere()) return;
         useLedgerStore.getState().setCollectionTruncated('rulePatterns', snapRulePatterns.docs.length >= 2000);
-        const cache: Record<string, any> = {};
+        const cache: LedgerState['analyticalPatternCache'] = {};
         snapRulePatterns.docs.forEach(d => {
           const data = d.data();
-          cache[(data.description || '').toLowerCase().trim()] = data;
+          cache[(data.description || '').toLowerCase().trim()] = data as AnalyticalPattern;
         });
         useLedgerStore.getState().setAnalyticalPatternCache(cache);
 

@@ -67,6 +67,18 @@ describe('Bill dialog', () => {
     assert.deepEqual(bill.splits?.map(s => [s.accountId, s.amountCents]), [['exp', 10000], ['exp2', 5000]]);
   });
 
+  test('moving bill lines changes only their order; accounts, amounts and tax stay intact', async () => {
+    const saved = setup();
+    fillTwoLines();
+    fireEvent.click(screen.getByLabelText('Move line 2 up'));
+    assert.deepEqual(screen.getAllByLabelText('Description').map(field => (field as HTMLInputElement).value), ['', 'Paper']);
+    await click('Save & Close');
+    await waitFor(() => assert.equal(saved.length, 1));
+    assert.deepEqual(saved[0].splits?.map(line => [line.accountId, line.amountCents]), [['exp2', 5000], ['exp', 10000]]);
+    assert.equal(saved[0].amountCents, 15000);
+    assert.equal(saved[0].taxAmountCents, 1364);
+  });
+
   test('Repeat (BE-08): the chosen frequency goes with the save; editing a bill offers no Repeat', async () => {
     const saved = setup();
     fillTwoLines();

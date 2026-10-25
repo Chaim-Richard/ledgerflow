@@ -51,7 +51,7 @@ To ensure complexity does not grow over time, all "tools" are separated into thr
 - Data lives in Supabase Postgres: one table per collection (`id`, `data` jsonb, `workspace_id`), defined in `supabase/migrations/`. Code keeps a Firestore-style API: `src/lib/db/` (browser, row level security applies) and `src/server/db/pgFirestore.ts` (server, via `getDb()`).
 - All core ledger collections (`transactions`, `recurring`, `chartAccounts`, `projects`, `bankLines`, `auditLogs`) are **top-level collections** scoped by a `workspaceId` field.
 - Do NOT write transactions or recurring rules to nested subcollections like `workspaces/{id}/transactions` — nested paths are not supported and security rules expect top-level paths.
-- A new collection needs a table, an `lf_rules` row and policies in a new migration (`generateEntitySql()` in `src/lib/entityFramework.ts` writes them), plus tests in `supabase/tests/rls.test.sql`.
+- A new collection needs a table, an `lf_rules` row and policies in a new migration, following the existing migrations, plus tests in `supabase/tests/rls.test.sql`.
 - Base ledger currency defaults to the workspace currency (or USD if unspecified). Always preserve multi-currency properties (`currency`, `exchangeRate`) when generating entries.
 
 ## 6. Core Data Model Invariants & Rules

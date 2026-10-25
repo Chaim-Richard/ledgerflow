@@ -38,6 +38,14 @@ describe('tax return screen', () => {
   beforeEach(() => { window.confirm = () => true; });
   afterEach(() => cleanup());
 
+  test('an embedded tax return keeps the Reports page heading hierarchy', () => {
+    stubFetchWithBodies(200, { returns: [] });
+    setup('viewer');
+    render(<TaxLiabilityView {...period} embedded />);
+    assert.ok(screen.getByRole('heading', { name: 'Tax return', level: 2 }));
+    assert.equal(screen.queryByRole('heading', { name: 'Tax return', level: 1 }), null);
+  });
+
   test('boxes from issued documents, in the workspace currency (drafts left out)', async () => {
     stubFetchWithBodies(200, { returns: [] });
     setup('owner');

@@ -11,6 +11,7 @@ import type { TaxableDocument } from '../../lib/taxReturnDocs';
 import { TAX_TREATMENTS } from '../../lib/taxCodes';
 import type { TaxReturnBox, TaxTreatment } from '../../lib/taxCodes';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import { usePageSyncedState } from '../../hooks/usePageSyncedState';
 import { wholeWorkspaceReturn } from '../../lib/tax/filedReturns';
 
 /**
@@ -28,7 +29,15 @@ async function api(path: string, init?: RequestInit) {
   return data;
 }
 
-export default function TaxLiabilityView({ startDate: pageStartDate, endDate: pageEndDate }: { startDate?: string; endDate?: string } = {}) {
+interface TaxLiabilityViewProps {
+  startDate?: string;
+  endDate?: string;
+  /** Reports already supplies the page h1; a standalone tax return supplies its own. */
+  embedded?: boolean;
+}
+
+export default function TaxLiabilityView({ startDate: pageStartDate, endDate: pageEndDate, embedded = false }: TaxLiabilityViewProps = {}) {
+  const Heading = embedded ? 'h2' : 'h1';
   const invoices = useLedgerStore(s => s.invoices);
   const bills = useLedgerStore(s => s.bills);
   const creditNotes = useLedgerStore(s => s.creditNotes);
@@ -39,10 +48,9 @@ export default function TaxLiabilityView({ startDate: pageStartDate, endDate: pa
   const role = useCurrentRole();
   const canFile = role === 'owner' || role === 'accountant';
 
-  const [startDate, setStartDate] = useState(`${workspaceYearMonth().year}-01-01`);
-  const [endDate, setEndDate] = useState(getLocalDateISO());
-  // Follow the Reports page period when it gives one
-  useEffect(() => { if (pageStartDate) setStartDate(pageStartDate); if (pageEndDate) setEndDate(pageEndDate); }, [pageStartDate, pageEndDate]);
+  // Follow the Reports page period when it gives one; local edits survive ordinary rerenders.
+  const [startDate, setStartDate] = usePageSyncedState(pageStartDate || '', pageStartDate, () => `${workspaceYearMonth().year}-01-01`);
+  const [endDate, setEndDate] = usePageSyncedState(pageEndDate || '', pageEndDate, getLocalDateISO);
 
   const taxReturn = useMemo(() => buildTaxReturn({
     invoices: (invoices || []) as unknown as TaxableDocument[],
@@ -98,7 +106,7 @@ export default function TaxLiabilityView({ startDate: pageStartDate, endDate: pa
         <div className="flex items-center gap-3">
           <Receipt className="w-6 h-6 text-[var(--brass)]" aria-hidden="true" />
           <div>
-            <h1 className="text-xl font-bold">Tax return</h1>
+            <Heading className="text-xl font-bold">Tax return</Heading>
             <p className="text-xs text-[var(--muted)]">Tax on sales and purchases for the period, in {currency}. Drafts and voided documents are left out.</p>
           </div>
         </div>

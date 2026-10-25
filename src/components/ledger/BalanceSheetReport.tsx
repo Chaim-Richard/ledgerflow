@@ -11,6 +11,7 @@ import DrillDownModal from '../layout/DrillDownModal';
 import type { BalanceSheetModel } from './BalanceSheetView';
 import { StatementColumns } from './StatementColumns';
 import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
+import ReportEmptyState from '../reporting/ReportEmptyState';
 
 export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, basis, chooseBasis, cashReady, provenance, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct }: BalanceSheetModel) {
   // Account groups (K-14): the same accounts, a group's children indented under their parent with a
@@ -100,6 +101,10 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
           </div>
         </div>
       </div>
+
+      {accounts.length === 0 && (
+        <ReportEmptyState title="No accounts yet" description="Set up the chart of accounts, then add an entry or choose another date." />
+      )}
 
       {/* Balance check Card */}
       <div className="flex flex-col md:flex-row md:items-center justify-between p-5 bg-slate-900 rounded-xl text-white shadow-sm relative overflow-hidden border border-slate-950 gap-4">

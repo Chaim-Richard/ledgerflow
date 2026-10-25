@@ -1,30 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { ShieldAlert, Download, X } from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { getBackupHealth, BackupHealth } from '../../lib/ledgerBackupHealth';
+import { usePageSyncedState } from '../../hooks/usePageSyncedState';
 
 export const LedgerBackupReminder: React.FC = () => {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const isGuest = useAuthStore(s => s.isGuest);
   const userId = useAuthStore(s => s.user?.uid);
   const setActiveTab = useUIStore(s => s.setActiveTab);
-  const [health, setHealth] = useState<BackupHealth>(() => getBackupHealth(currentWorkspaceId));
-  const [isDismissed, setIsDismissed] = useState(false);
-  const [demoDismissed, setDemoDismissed] = useState(false);
+  const identityKey = JSON.stringify([currentWorkspaceId, isGuest, userId]);
+  const [health, setHealth] = usePageSyncedState<BackupHealth>(identityKey, getBackupHealth(currentWorkspaceId), () => getBackupHealth(currentWorkspaceId));
+  const [isDismissed, setIsDismissed] = usePageSyncedState(identityKey, false, false);
+  const [demoDismissed, setDemoDismissed] = usePageSyncedState(identityKey, false, false);
 
   useEffect(() => {
-    setHealth(getBackupHealth(currentWorkspaceId));
-    setIsDismissed(false);
-    setDemoDismissed(false);
-
     const handleBackupDone = () => {
       setHealth(getBackupHealth(currentWorkspaceId));
     };
 
     window.addEventListener('ledgerflow:backup_completed', handleBackupDone);
     return () => window.removeEventListener('ledgerflow:backup_completed', handleBackupDone);
-  }, [currentWorkspaceId, isGuest, userId]);
+  }, [currentWorkspaceId, setHealth]);
 
   const showBackup = health.isDue && !isDismissed;
   const showDemo = !userId && isGuest && !demoDismissed;

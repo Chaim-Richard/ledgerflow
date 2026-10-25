@@ -88,39 +88,39 @@ export default function PdfPreviewModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const periodStartDate = period?.startDate;
+  const periodEndDate = period?.endDate;
+
   useEffect(() => {
-    if (!isOpen || !documentId || !workspaceId) {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-        setBlobUrl(null);
-      }
-      return;
-    }
-
     let isMounted = true;
-    setIsLoading(true);
-    setError(null);
+    void Promise.resolve().then(async () => {
+      if (!isMounted) return;
+      if (!isOpen || !documentId || !workspaceId) {
+        setBlobUrl(null);
+        return;
+      }
 
-    fetchDocumentPdfBlob(documentType, documentId, workspaceId, period)
-      .then((blob) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const blob = await fetchDocumentPdfBlob(documentType, documentId, workspaceId, { startDate: periodStartDate, endDate: periodEndDate });
         if (!isMounted) return;
-        const url = URL.createObjectURL(blob);
-        setBlobUrl(url);
+        setBlobUrl(URL.createObjectURL(blob));
         setIsLoading(false);
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         if (!isMounted) return;
         setError((err as Error).message || 'Failed to load PDF preview');
         setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
       }
-    };
-  }, [isOpen, documentType, documentId, workspaceId, period?.startDate, period?.endDate]);
+    });
+
+    return () => { isMounted = false; };
+  }, [isOpen, documentType, documentId, workspaceId, periodStartDate, periodEndDate]);
+
+  // Revoke the previous URL whenever the preview changes or unmounts, without retriggering the fetch.
+  useEffect(() => () => {
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+  }, [blobUrl]);
 
   if (!isOpen) return null;
 

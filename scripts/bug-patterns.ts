@@ -44,7 +44,7 @@ const isFn = (n: ts.Node): n is ts.FunctionLikeDeclaration =>
 
 function fnName(fn: ts.Node): string {
   const p = fn.parent;
-  if (ts.isFunctionDeclaration(fn) && fn.name) return fn.name.text;
+  if ((ts.isFunctionDeclaration(fn) || ts.isFunctionExpression(fn)) && fn.name) return fn.name.text;
   if (p && ts.isVariableDeclaration(p) && ts.isIdentifier(p.name)) return p.name.text;
   if (p && ts.isPropertyAssignment(p)) return p.name.getText();
   if (ts.isMethodDeclaration(fn)) return fn.name.getText();
