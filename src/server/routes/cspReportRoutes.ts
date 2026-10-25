@@ -26,6 +26,15 @@ const reportLimiter = rateLimit({
   handler: (_req, res) => { res.status(204).end(); },
 });
 
+/** The summary is a cheap read, but an authorization check is still work done per request. */
+const summaryLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: 'error', code: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests. Try again later.' },
+});
+
 /** Browsers use application/csp-report; the Reporting API uses application/reports+json. */
 const reportBody = express.json({
   type: ['application/csp-report', 'application/reports+json', 'application/json'],
@@ -58,11 +67,11 @@ export function registerCspReportRoutes(app: express.Express): void {
     }
   });
 
-  app.get(`${CSP_REPORT_PATH}/summary`, authenticate, requireAdmin, (_req, res) => {
+  app.get(`${CSP_REPORT_PATH}/summary`, summaryLimiter, authenticate, requireAdmin, (_req, res) => {
     res.json({ rollout: cspRollout(), ...cspViolationSummary() });
   });
 
-  app.delete(`${CSP_REPORT_PATH}/summary`, authenticate, requireAdmin, (_req, res) => {
+  app.delete(`${CSP_REPORT_PATH}/summary`, summaryLimiter, authenticate, requireAdmin, (_req, res) => {
     resetCspViolations();
     res.json({ status: 'ok', ...cspViolationSummary() });
   });

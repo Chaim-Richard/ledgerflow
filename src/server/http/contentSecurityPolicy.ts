@@ -144,7 +144,9 @@ export function staticCspRollout(env: Env = process.env): CspRollout {
  */
 export function inlineScriptHashes(html: string): string[] {
   const hashes = new Set<string>();
-  for (const [, attributes, body] of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
+  // The closing tag may carry anything after the name — `</script >`, `</script\n foo>` all end the
+  // element, and a regexp that only knows `</script>` would hash past the real end of the script.
+  for (const [, attributes, body] of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script(?:\s[^>]*)?>/gi)) {
     if (/\bsrc\s*=/i.test(attributes)) continue;
     hashes.add(`'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`);
   }

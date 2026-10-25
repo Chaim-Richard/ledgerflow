@@ -111,6 +111,14 @@ describe('S-23 the inline scripts the page ships with are named by hash', () => 
     assert.equal(inlineScriptHashes(html).length, 1);
   });
 
+  test('a closing tag with whitespace or attributes still ends the script', () => {
+    const plain = inlineScriptHashes('<script>x()</script>');
+    assert.equal(plain.length, 1);
+    for (const html of ['<script>x()</script >', '<script>x()</script\n foo>', '<script>x()</script\tbar>']) {
+      assert.deepEqual(inlineScriptHashes(html), plain, `${JSON.stringify(html)} must hash the same body`);
+    }
+  });
+
   test('a different inline script gives a different hash', () => {
     assert.notDeepEqual(inlineScriptHashes('<script>a()</script>'), inlineScriptHashes('<script>b()</script>'));
   });
