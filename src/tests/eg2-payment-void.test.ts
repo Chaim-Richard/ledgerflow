@@ -35,7 +35,7 @@ import test, { after, before, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import { DATA_CHECKS, type CheckContext } from '../lib/dataChecks';
-import { balancedChunks } from '../server/services/paymentService';
+import { balancedChunks } from '../server/services/paymentVoidService';
 
 test('balancedChunks: label pairs packed into balanced chunks of at most max lines', () => {
   const pair = (k: string, c: number) => [{ accountId: 'bank', amountCents: c, dimensions: { p: k } }, { accountId: 'ar', amountCents: -c, dimensions: { p: k } }];
@@ -56,6 +56,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
   const ws = `ws_eg2void_${crypto.randomBytes(4).toString('hex')}`;
   let db: import('../server/db/pgFirestore').Firestore;
   let svc: typeof import('../server/services/paymentService');
+  let voids: typeof import('../server/services/paymentVoidService');
   let credits: typeof import('../server/services/creditService');
   let ledger: typeof import('../server/services/allocationLedger');
   const id = (s: string) => `${ws}_${s}`;
@@ -68,6 +69,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
   before(async () => {
     process.env.DATABASE_URL = process.env.LF_TEST_DATABASE_URL;
     svc = await import('../server/services/paymentService');
+    voids = await import('../server/services/paymentVoidService');
     credits = await import('../server/services/creditService');
     ledger = await import('../server/services/allocationLedger');
     const { getDb } = await import('../server/db/firestore');
@@ -108,7 +110,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.deepEqual(pay.ledgerTransaction.lines.map((l: { accountId: string; amountCents: number }) => [l.accountId, l.amountCents]), [[id('bank'), 44800], [id('ar'), -44000], [id('fx'), -800]]);
     assert.equal((await doc('invoices', 'INV-1')).amountPaidCents, 50000);
 
-    const result = await svc.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay1, date: '2026-10-25', reason: 'bounced' });
+    const result = await voids.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay1, date: '2026-10-25', reason: 'bounced' });
     assert.equal(result.replayed, false);
     assert.equal(result.transactionIds.length, 1);
     const reversal = (await load('transactions')).find(t => t.id === result.transactionIds[0])!;
@@ -152,7 +154,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
 
   test('a retry posts nothing more', async () => {
     const before = [(await load('transactions')).length, (await load('paymentAllocations')).length];
-    const again = await svc.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay1, date: '2026-10-25' });
+    const again = await voids.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay1, date: '2026-10-25' });
     assert.equal(again.replayed, true);
     assert.equal(again.transactionIds.length, 1);
     assert.deepEqual([(await load('transactions')).length, (await load('paymentAllocations')).length], before);
@@ -165,7 +167,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     const pay = await svc.createPaymentAtomic(db, receive('2026-10-10', 'USD', 80000, undefined, [['INV-D', 20000]]));
     const applied = await svc.applyUnappliedPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, allocations: [{ documentId: id('INV-D'), documentType: 'invoice', amountCents: 30000 }], date: '2026-10-20', operationId: 'op-d' });
     assert.ok(applied.transactionId);
-    const result = await svc.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, date: '2026-10-15' });
+    const result = await voids.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, date: '2026-10-15' });
     const txs = await load('transactions');
     const reversals = result.transactionIds.map(t => txs.find(x => x.id === t)!);
     assert.deepEqual(reversals.map(r => [r.date, r.metadata?.reversesTxId]), [['2026-10-15', pay.transactionId], ['2026-10-20', applied.transactionId]]);
@@ -180,7 +182,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.deepEqual(result.documents, [{ documentId: id('INV-D'), amountPaidCents: 0, status: 'sent' }]);
     const mine = txs.filter(t => t.metadata?.paymentId === pay.paymentId);
     assert.deepEqual([balance(mine, id('ar')), balance(mine, id('dep')), balance(mine, id('bank'))], [0, 0, 0]);
-    const again = await svc.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId });
+    const again = await voids.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId });
     assert.equal(again.replayed, true);
     assert.equal((await load('transactions')).length, txs.length);
   });
@@ -192,7 +194,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     await wsRef.update({ lockDate: '2026-10-31' });
     const before = [(await load('transactions')).length, (await load('paymentAllocations')).length];
     try {
-      await assert.rejects(svc.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, date: '2026-10-25' }), (e: Error & { status?: number }) => e.status === 409);
+      await assert.rejects(voids.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, date: '2026-10-25' }), (e: Error & { status?: number }) => e.status === 409);
     } finally {
       await wsRef.update({ lockDate: null });
     }
@@ -201,7 +203,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.equal((await doc('invoices', 'INV-L')).amountPaidCents, 10000);
 
     await db.collection('payments').doc(pay.paymentId).update({ depositTransactionId: 'dep-1' });
-    await assert.rejects(svc.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, date: '2026-11-02' }), (e: Error & { status?: number }) => e.status === 409 && /deposit/.test(e.message));
+    await assert.rejects(voids.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, date: '2026-11-02' }), (e: Error & { status?: number }) => e.status === 409 && /deposit/.test(e.message));
   });
 
   const usd = (key: string, amountCents: number, extra: Record<string, unknown> = {}) => db.collection('invoices').doc(id(key)).set({
@@ -220,7 +222,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
       metadata: { paymentId: id('PAY-S'), direction: 'received', type: 'standalone-payment' },
       lines: [{ accountId: id('bank'), amountCents: 25000 }, { accountId: id('ar'), amountCents: -25000 }],
     });
-    const result = await svc.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: id('PAY-S'), date: '2026-10-25' });
+    const result = await voids.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: id('PAY-S'), date: '2026-10-25' });
     assert.equal(result.transactionIds.length, 1, 'the standalone posting was reversed');
     const txs = (await load('transactions')).filter(t => t.metadata?.paymentId === id('PAY-S'));
     const reversal = txs.find(t => t.id === result.transactionIds[0])!;
@@ -235,7 +237,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     await usd('INV-C', 10000);
     const pay = await svc.createPaymentAtomic(db, receive('2026-10-12', 'USD', 10000, undefined, [['INV-C', 10000]]));
     await db.collection('invoices').doc(id('INV-C')).update({ status: 'cancelled' });
-    const result = await svc.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, date: '2026-10-25' });
+    const result = await voids.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, date: '2026-10-25' });
     const inv = await doc('invoices', 'INV-C');
     assert.deepEqual([inv.amountPaidCents, inv.settledByRecordsCents, inv.status], [0, 0, 'cancelled']);
     assert.deepEqual(result.documents, [{ documentId: id('INV-C'), amountPaidCents: 0, status: 'cancelled' }]);
@@ -246,7 +248,7 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     await usd('INV-M', 51000, { items });
     const pay = await svc.createPaymentAtomic(db, receive('2026-10-12', 'USD', 51000, undefined, [['INV-M', 51000]]));
     assert.equal(pay.ledgerTransaction.lines.length, 102);
-    const result = await svc.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, date: '2026-10-25' });
+    const result = await voids.voidPayment(db, { workspaceId: ws, uid: 'owner-1', paymentId: pay.paymentId, date: '2026-10-25' });
     const txs = await load('transactions');
     const chunks = result.transactionIds.map(t => txs.find(x => x.id === t)!);
     assert.deepEqual(chunks.map(c => c.lines.length), [100, 2]);
