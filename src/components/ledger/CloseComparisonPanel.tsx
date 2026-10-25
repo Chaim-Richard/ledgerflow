@@ -6,6 +6,7 @@
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, TrendingUp } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency } from '../../lib/utils';
 import { reportPercent } from '../../lib/reportColumns';
 import {
@@ -123,6 +124,8 @@ function BigMoveSummary({ bigMoves, currency }: { bigMoves: CloseComparisonRow[]
 export default function CloseComparisonPanel({ month, currency }: { month: string; currency?: string }) {
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
+  const serverOpening = useLedgerStore(s => s.serverOpening);
+  const workspaceId = useAuthStore(s => s.currentWorkspaceId) || undefined;
   const [thresholdInput, setThresholdInput] = useState(() => String(CLOSE_COMPARISON_THRESHOLD_CENTS / 100));
   const thresholdCents = thresholdFromInput(thresholdInput);
   const result = useMemo(() => buildCloseComparison({
@@ -130,7 +133,10 @@ export default function CloseComparisonPanel({ month, currency }: { month: strin
     accounts: accounts || [],
     transactions: transactions || [],
     ...(thresholdCents !== null ? { thresholdCents } : {}),
-  }), [month, accounts, transactions, thresholdCents]);
+    // L-123 step 3d: month ends on or after the oldest loaded day, and months after it, read the server's balances
+    opening: serverOpening,
+    workspaceId,
+  }), [month, accounts, transactions, thresholdCents, serverOpening, workspaceId]);
 
   return (
     <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 space-y-4" aria-labelledby="close-comparison">
