@@ -588,3 +588,7 @@ Settings → Actions → General → Workflow permissions → tick **Allow GitHu
   - The annual party summary reads withholding tax from `withholdingTaxCents`, but payments store it in `withheldCents`, so the tax withheld on real vendor payments shows as 0.
   - The same summary's year-end open balances use today's payments, not the payments made by 31 December.
   - The corporate card import treats a single "Charge Amount" column as debits, so refunds come in as expenses.
+- **Payment void on the server (EG-2 step 4, #394, AI #9).** Three choices made with a default; say if you want otherwise:
+  - When a payment is voided, each invoice or bill gets back exactly what that payment put on it. The paid amount is not recalculated from the allocation rows, because before the cutover those rows don't include cash entered together with the document. *Default:* subtract that payment's share.
+  - A bill with nothing left paid goes back to `approved`; the status it had before payment isn't stored. *Default:* `approved`. The alternative is `unpaid`.
+  - The screens still void through the old browser path, which leaves the documents marked paid. Moving the screens onto the new route is the next step. *Default:* do it as a follow-up PR.
