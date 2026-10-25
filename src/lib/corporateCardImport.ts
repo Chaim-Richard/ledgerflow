@@ -151,8 +151,12 @@ export function parseCorporateCardCsv(
   const dateCol = pickColumn(headers, ['transaction date', 'post date', 'date', 'posted date', 'charge date']);
   const descCol = pickColumn(headers, ['description', 'merchant', 'merchant name', 'payee', 'vendor', 'narrative', 'details']);
   const amountCol = pickColumn(headers, ['amount', 'charge amount', 'billing amount', 'total']);
-  const debitCol = pickColumn(headers, ['debit', 'charge']);
-  const creditCol = pickColumn(headers, ['credit', 'payment']);
+  // a debit/credit pair is two other columns: a single signed "Charge Amount" also matches 'charge', and read as a debit
+  // its refunds (negative) became charges (found by the EG-10 review)
+  const debitPick = pickColumn(headers, ['debit', 'charge']);
+  const creditPick = pickColumn(headers, ['credit', 'payment']);
+  const debitCol = debitPick === amountCol ? -1 : debitPick;
+  const creditCol = creditPick === amountCol ? -1 : creditPick;
   const currencyCol = pickColumn(headers, ['currency', 'billing currency', 'ccy']);
   const holderCol = pickColumn(headers, ['cardholder', 'employee', 'member name', 'card member', 'name on card']);
   const refCol = pickColumn(headers, ['reference', 'transaction id', 'ref', 'card last 4', 'card']);

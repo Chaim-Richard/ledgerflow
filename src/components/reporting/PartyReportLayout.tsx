@@ -93,7 +93,7 @@ export function PartyReportLayout<T>({
               <div className="text-[10px] uppercase font-bold tracking-wider text-neutral-500 dark:text-neutral-400">
                 {secondaryTotalLabel}
               </div>
-              <div className="text-base font-mono font-bold text-emerald-600 dark:text-emerald-400">
+              <div className="text-base font-mono font-bold text-emerald-700 dark:text-emerald-400">
                 {formatCurrency(secondaryTotalCents)}
               </div>
             </div>
