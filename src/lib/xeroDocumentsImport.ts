@@ -109,7 +109,7 @@ function key(value: string): string {
   return String(value ?? '').replace(/["'`]/g, '').replace(/[\s_.\-/]+/g, ' ').trim().toLowerCase().replace(/ /g, '');
 }
 
-function findColumn(header: string[], names: readonly string[]): number {
+export function findColumn(header: string[], names: readonly string[]): number {
   const wanted = names.map(key);
   // exact match wins; then a header that starts with a name (e.g. "Currency code")
   const exact = header.findIndex(cell => wanted.includes(key(cell)));

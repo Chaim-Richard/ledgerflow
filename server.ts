@@ -144,7 +144,7 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
   app.use("/api/v1/fx", apiAuthenticate, fxRouter);
   app.use("/api/v1/support", authenticate, supportRouter);
   app.use("/api/v1/payments", apiAuthenticate, paymentRouter);
-  app.use("/api/v1/documents", apiAuthenticate, documentRouter);
+  app.use("/api/v1/documents", apiAuthenticate, documentRouter).use("/api/v1/open-items", apiAuthenticate, (await import("./src/server/routes/openItemImportRoutes")).openItemImportRouter); // EG-14
   app.use("/api/v1/invoices/public", publicInvoiceLimiter, publicInvoiceRouter);
   app.use("/api/v1/email-events", emailWebhookRouter); // provider bounce/complaint reports (secret token)
   app.use("/api/ai", aiRouter);
