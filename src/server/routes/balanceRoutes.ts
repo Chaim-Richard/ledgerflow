@@ -1,7 +1,7 @@
 import express from 'express';
 import { errorMessage, requestUser } from '../auth/requestUser';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
-import { activityOver, balancesAsOf } from '../services/balanceService';
+import { activityOver, balancesAsOf, topLinesOver } from '../services/balanceService';
 
 /**
  * L-123 step 3 (docs/design/L-123-server-balances.md): the account balances the browser shows, read by the server.
@@ -73,5 +73,36 @@ balanceRouter.get('/activity', async (req, res) => {
   } catch (err) {
     console.error('[balances] could not read the activity', errorMessage(err));
     res.status(500).json({ status: 'error', message: 'Could not read the activity', details: errorMessage(err) });
+  }
+});
+
+/**
+ * L-123 step 4a: GET /api/v1/balances/top-lines?workspaceId=…&from=YYYY-MM-DD&to=YYYY-MM-DD[&limit=25] — any member,
+ * as GET /. The largest single expense and income lines dated from…to over every postable entry (topLinesOver),
+ * for the "Top Financial Line Items" report when the loaded list is capped. limit 1…100 (default 25). Read-only.
+ */
+balanceRouter.get('/top-lines', async (req, res) => {
+  const workspaceId = typeof req.query.workspaceId === 'string' ? req.query.workspaceId : '';
+  const from = typeof req.query.from === 'string' ? req.query.from : '';
+  const to = typeof req.query.to === 'string' ? req.query.to : '';
+  const limit = req.query.limit === undefined ? 25 : Number(req.query.limit);
+  if (!workspaceId || !validDate(from) || !validDate(to) || from > to || (Date.parse(to) - Date.parse(from)) / 86_400_000 > MAX_DAYS
+    || !Number.isInteger(limit) || limit < 1 || limit > 100) {
+    return res.status(400).json({ status: 'error', message: `workspaceId, from and to (YYYY-MM-DD, from ≤ to, at most ${MAX_DAYS} days) and a limit of 1–100 are required` });
+  }
+  const db = getDb();
+  try {
+    await validateWorkspaceMember(db, workspaceId, requestUser(req));
+  } catch (err) {
+    const message = errorMessage(err);
+    if (/not found/i.test(message)) return res.status(404).json({ status: 'error', message: 'Workspace not found' });
+    return res.status(403).json({ status: 'error', message: 'Forbidden' });
+  }
+  try {
+    const result = await topLinesOver(db, workspaceId, from, to, limit);
+    res.json({ status: 'success', workspaceId, from, to, limit, topExpenses: result.topExpenses, topIncome: result.topIncome, entriesRead: result.entriesRead });
+  } catch (err) {
+    console.error('[balances] could not read the top lines', errorMessage(err));
+    res.status(500).json({ status: 'error', message: 'Could not read the top lines', details: errorMessage(err) });
   }
 });

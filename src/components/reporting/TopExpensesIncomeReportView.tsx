@@ -1,7 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { useLedgerStore } from '../../stores/useLedgerStore';
+import React, { useState } from 'react';
 import { formatCurrency, formatDate } from '../../lib/utils';
-import { computeTopExpensesAndIncome } from '../../lib/reportGenerators';
+import { useServerTopLines } from '../../hooks/useServerTopLines';
 import { BarChart3, TrendingDown, TrendingUp } from 'lucide-react';
 
 interface Props {
@@ -15,16 +14,13 @@ export const TopExpensesIncomeReportView: React.FC<Props> = ({
   startDate,
   endDate
 }) => {
-  const transactions = useLedgerStore(s => s.transactions);
-  const accounts = useLedgerStore(s => s.accounts);
   const [activeTab, setActiveTab] = useState<'expenses' | 'income'>('expenses');
 
   const start = startDate || (selectedYear ? `${selectedYear}-01-01` : undefined);
   const end = endDate || (selectedYear ? `${selectedYear}-12-31` : undefined);
 
-  const { topExpenses, topIncome } = useMemo(() => {
-    return computeTopExpensesAndIncome(accounts, transactions, 25, start, end);
-  }, [accounts, transactions, start, end]);
+  // L-123 step 4a: with the loaded list capped, the list comes from the server (every entry of the range)
+  const { topExpenses, topIncome, source } = useServerTopLines(start, end, 25);
 
   const activeItems = activeTab === 'expenses' ? topExpenses : topIncome;
 
@@ -65,6 +61,14 @@ export const TopExpensesIncomeReportView: React.FC<Props> = ({
           </button>
         </div>
       </div>
+
+      {source !== 'loaded' && (
+        <p role="note" className="text-xs text-neutral-600" data-testid="top-lines-source">
+          {source === 'server'
+            ? 'Not every entry is loaded in this browser: this list is read from every entry on the server.'
+            : 'Not every entry is loaded in this browser and the server could not be asked: this list covers the loaded entries only, so larger lines may be missing.'}
+        </p>
+      )}
 
       {activeItems.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-neutral-200 text-neutral-500 text-xs">
