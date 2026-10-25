@@ -29,7 +29,8 @@ function signedMoney(cents: number, currency?: string): string {
   return `${cents > 0 ? '+' : '\u2212'}${amount}`;
 }
 
-function changeText(change: number, percent: number | null, currency?: string): string {
+function changeText(change: number, percent: number | null, currency?: string, comparable = true): string {
+  if (!comparable) return 'Not comparable';
   if (!change) return 'No change';
   return percent === null ? `${signedMoney(change, currency)} from zero` : `${signedMoney(change, currency)} (${reportPercent(percent)})`;
 }
@@ -58,15 +59,18 @@ function ComparisonTable({
             <th scope="col" className="p-3 text-right whitespace-nowrap">
               {monthLabel(periods.current.month)}
               <span className="block text-xs font-normal">{statement.id === 'bs' ? periods.current.endDate : 'This month'}</span>
+              {statement.incomplete.current && <span data-testid={`close-comparison-incomplete-${statement.id}-current`} className="block text-xs font-normal text-[var(--neg)]">Incomplete: loaded entries only</span>}
             </th>
             <th scope="col" className="p-3 text-right whitespace-nowrap">
               Previous month
               <span className="block text-xs font-normal">{statement.id === 'bs' ? periods.previousMonth.endDate : monthLabel(periods.previousMonth.month)}</span>
+              {statement.incomplete.previousMonth && <span data-testid={`close-comparison-incomplete-${statement.id}-previousMonth`} className="block text-xs font-normal text-[var(--neg)]">Incomplete: loaded entries only</span>}
             </th>
             <th scope="col" className="p-3 text-right whitespace-nowrap">Change</th>
             <th scope="col" className="p-3 text-right whitespace-nowrap">
               Same month last year
               <span className="block text-xs font-normal">{statement.id === 'bs' ? periods.previousYear.endDate : monthLabel(periods.previousYear.month)}</span>
+              {statement.incomplete.previousYear && <span data-testid={`close-comparison-incomplete-${statement.id}-previousYear`} className="block text-xs font-normal text-[var(--neg)]">Incomplete: loaded entries only</span>}
             </th>
             <th scope="col" className="p-3 text-right whitespace-nowrap">Change</th>
           </tr>
@@ -88,9 +92,9 @@ function ComparisonTable({
               </th>
               <td className="p-3 text-right whitespace-nowrap">{formatCurrency(row.current, currency)}</td>
               <td className="p-3 text-right whitespace-nowrap">{formatCurrency(row.previousMonth, currency)}</td>
-              <td className="p-3 text-right whitespace-nowrap">{changeText(row.changePreviousMonth, row.percentPreviousMonth, currency)}</td>
+              <td className="p-3 text-right whitespace-nowrap">{changeText(row.changePreviousMonth, row.percentPreviousMonth, currency, row.comparablePreviousMonth)}</td>
               <td className="p-3 text-right whitespace-nowrap">{formatCurrency(row.previousYear, currency)}</td>
-              <td className="p-3 text-right whitespace-nowrap">{changeText(row.changePreviousYear, row.percentPreviousYear, currency)}</td>
+              <td className="p-3 text-right whitespace-nowrap">{changeText(row.changePreviousYear, row.percentPreviousYear, currency, row.comparablePreviousYear)}</td>
             </tr>
           ))}
         </tbody>
@@ -125,6 +129,7 @@ export default function CloseComparisonPanel({ month, currency }: { month: strin
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   const serverOpening = useLedgerStore(s => s.serverOpening);
+  const truncated = useLedgerStore(s => !!s.truncatedCollections?.transactions);
   const workspaceId = useAuthStore(s => s.currentWorkspaceId) || undefined;
   const [thresholdInput, setThresholdInput] = useState(() => String(CLOSE_COMPARISON_THRESHOLD_CENTS / 100));
   const thresholdCents = thresholdFromInput(thresholdInput);
@@ -136,7 +141,8 @@ export default function CloseComparisonPanel({ month, currency }: { month: strin
     // L-123 step 3d: month ends on or after the oldest loaded day, and months after it, read the server's balances
     opening: serverOpening,
     workspaceId,
-  }), [month, accounts, transactions, thresholdCents, serverOpening, workspaceId]);
+    capped: truncated,
+  }), [month, accounts, transactions, thresholdCents, serverOpening, workspaceId, truncated]);
 
   return (
     <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 space-y-4" aria-labelledby="close-comparison">
@@ -168,6 +174,11 @@ export default function CloseComparisonPanel({ month, currency }: { month: strin
         </div>
       </div>
 
+      {[result.profitAndLoss, result.balanceSheet].some(st => Object.values(st.incomplete).some(Boolean)) && (
+        <p role="alert" data-testid="close-comparison-incomplete" className="text-sm text-[var(--neg)]">
+          The loaded ledger history is incomplete. Columns marked &quot;Incomplete&quot; read only the loaded entries and may omit older ones, so changes against them are not compared or flagged.
+        </p>
+      )}
       <BigMoveSummary bigMoves={result.bigMoves} currency={currency} />
 
       <div className="space-y-2">
