@@ -8,6 +8,7 @@ import { recordBackupCompleted } from '../../../lib/ledgerBackupHealth';
 import { isPostable } from '../../../lib/txFilters';
 import WorkspaceExportDialog from './WorkspaceExportDialog';
 import WorkspaceArchiveExport from './WorkspaceArchiveExport';
+import IifListExport from './IifListExport';
 import { backupFromWorkspaceArchive } from '../../../lib/workspaceArchive';
 
 export default function BackupExportSettings() {
@@ -240,6 +241,8 @@ export default function BackupExportSettings() {
         </div>
 
         <WorkspaceArchiveExport />
+
+        <IifListExport />
 
         <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-6">
           <div className="flex items-center gap-3 mb-4">
