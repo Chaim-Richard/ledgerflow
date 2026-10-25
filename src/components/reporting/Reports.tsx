@@ -241,27 +241,33 @@ const Reports = React.memo(() => {
       <section data-print-hide data-testid="reports-heading" aria-label="Reports heading" className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-[var(--text)]">Reports</h1>
-          <p className="text-sm text-[var(--muted)]">{periodLabel}</p>
-          {/* A-220: the same dates the report covers, in the workspace's own date style */}
-          <ReportPeriodHeading
-            className="text-xs text-[var(--muted)] tabular-nums"
-            startDate={period.startDate}
-            endDate={period.endDate}
-            compareStartDate={comparePeriod?.startDate}
-            compareEndDate={comparePeriod?.endDate}
-          />
+          {/* A-220: the period in the workspace's own date style, on the line the page already had
+              (a second line would grow the heading past the 120 px the UI guide allows) */}
+          <p className="text-sm text-[var(--muted)]">
+            {periodLabel}{' · '}
+            <ReportPeriodHeading
+              as="span"
+              className="tabular-nums"
+              startDate={period.startDate}
+              endDate={period.endDate}
+              compareStartDate={comparePeriod?.startDate}
+              compareEndDate={comparePeriod?.endDate}
+            />
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => onAction('export')} className="min-h-11 px-3 flex items-center gap-2 text-sm text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brass)]">
             <Download size={16} aria-hidden="true" /> Export
           </button>
-          <PrintLayoutControl columnCount={printColumns} />
           <button onClick={printReport} className="min-h-11 px-3 flex items-center gap-2 text-sm text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brass)]">
             <Printer size={16} aria-hidden="true" /> Print / PDF
           </button>
         </div>
       </section>
       <div data-print-hide role="region" aria-label="Report period" className="flex flex-wrap items-center gap-2 [&_button]:min-h-11 [&_select]:min-h-11 [&_button]:min-w-11">
+            {/* A-218: which paper this report prints on, beside the period controls so the page
+                heading stays within the 120 px the UI guide allows on a phone */}
+            <PrintLayoutControl columnCount={printColumns} />
             <button onClick={() => onAction('generate')} className="px-3.5 py-1.5 rounded-lg text-sm font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] hover:border-[var(--brass)] transition-all shadow-xs cursor-pointer">
               Generate
             </button>

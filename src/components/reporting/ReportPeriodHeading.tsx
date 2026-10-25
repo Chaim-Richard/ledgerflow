@@ -29,7 +29,7 @@ export function ReportPeriodHeading({
   compareStartDate?: string;
   compareEndDate?: string;
   className?: string;
-  as?: 'p' | 'h2' | 'div';
+  as?: 'p' | 'h2' | 'div' | 'span';
   asOf?: boolean;
 }) {
   const language = useUIStore(state => state.language);
