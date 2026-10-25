@@ -82,7 +82,8 @@ test('A-220: a report header states its period in dates a reader recognises', as
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/?report=pnl#reports');
 
-  const heading = page.getByTestId('report-period-heading').first();
+  // the Reports page also renders a print-only copy of this line; check the one on screen
+  const heading = page.locator('[data-testid="report-period-heading"]:visible').first();
   await expect(heading).toBeVisible({ timeout: 30000 });
   const text = (await heading.innerText()).trim();
   const locale = await heading.getAttribute('data-report-locale');
@@ -99,7 +100,7 @@ test('A-220: a report header states its period in dates a reader recognises', as
 
   // the balance sheet reads one date as "As of …"
   await page.goto('/?report=balance-sheet#reports');
-  const asOf = page.getByTestId('report-period-heading').first();
+  const asOf = page.locator('[data-testid="report-period-heading"]:visible').first();
   await expect(asOf).toBeVisible({ timeout: 30000 });
   await expect(asOf).toContainText('As of');
   expect(await asOf.innerText()).not.toMatch(/\d{4}-\d{2}-\d{2}/);
